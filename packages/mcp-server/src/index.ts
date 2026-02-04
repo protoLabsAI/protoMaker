@@ -24,7 +24,7 @@ import {
 // Configuration
 // Note: Hardcoded fallback because Claude Code doesn't pass env vars to MCP servers
 const API_URL = process.env.AUTOMAKER_API_URL || 'http://localhost:3008';
-const API_KEY = process.env.AUTOMAKER_API_KEY || '882f8e13-4a94-484b-bd69-5bef30083237';
+const API_KEY = process.env.AUTOMAKER_API_KEY || 'automaker-dev-key-2026';
 
 // Helper for API calls
 async function apiCall(
