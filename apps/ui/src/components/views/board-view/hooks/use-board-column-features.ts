@@ -96,7 +96,8 @@ export function useBoardColumnFeatures({
               .isPrimaryWorktreeBranch(projectPath, featureBranch);
           }
         } else {
-          matchesWorktree = false;
+          // No project path - show all features as fallback
+          matchesWorktree = true;
         }
       } else {
         // Match by branch name
