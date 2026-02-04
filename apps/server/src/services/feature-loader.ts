@@ -22,6 +22,7 @@ import {
   ensureAutomakerDir,
 } from '@automaker/platform';
 import { addImplementedFeature, type ImplementedFeature } from '../lib/xml-extractor.js';
+import { debugLog } from '../lib/debug-log.js';
 
 const logger = createLogger('FeatureLoader');
 
@@ -198,13 +199,19 @@ export class FeatureLoader {
    * Get all features for a project
    */
   async getAll(projectPath: string): Promise<Feature[]> {
+    debugLog('FeatureLoader', 'getAll called', { projectPath });
+
     try {
       const featuresDir = this.getFeaturesDir(projectPath);
+      debugLog('FeatureLoader', 'Features directory', { featuresDir });
 
       // Check if features directory exists
       try {
         await secureFs.access(featuresDir);
       } catch {
+        debugLog('FeatureLoader', 'Features directory does not exist, returning empty', {
+          featuresDir,
+        });
         return [];
       }
 
@@ -249,6 +256,12 @@ export class FeatureLoader {
         const aTime = a.id ? parseInt(a.id.split('-')[1] || '0') : 0;
         const bTime = b.id ? parseInt(b.id.split('-')[1] || '0') : 0;
         return aTime - bTime;
+      });
+
+      debugLog('FeatureLoader', 'getAll returning features', {
+        count: features.length,
+        projectPath,
+        featureIds: features.slice(0, 5).map((f) => f.id), // First 5 for brevity
       });
 
       return features;

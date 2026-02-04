@@ -11,7 +11,7 @@
       "args": ["packages/mcp-server/dist/index.js"],
       "env": {
         "AUTOMAKER_API_URL": "http://localhost:3008",
-        "AUTOMAKER_API_KEY": "${AUTOMAKER_API_KEY}"
+        "AUTOMAKER_API_KEY": "automaker-dev-key-2026"
       }
     }
   }
