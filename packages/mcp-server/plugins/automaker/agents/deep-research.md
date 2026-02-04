@@ -10,7 +10,7 @@ allowed-tools:
   - mcp__automaker__list_context_files
   - mcp__automaker__get_context_file
   - mcp__automaker__list_features
-model: haiku
+model: opus
 ---
 
 # Deep Research Agent

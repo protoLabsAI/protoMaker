@@ -10,7 +10,7 @@ allowed-tools:
   - mcp__automaker__list_context_files
   - mcp__automaker__get_context_file
   - mcp__automaker__list_features
-model: sonnet
+model: opus
 ---
 
 # SPARC PRD Agent

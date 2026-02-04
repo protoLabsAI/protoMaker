@@ -8,7 +8,7 @@ allowed-tools:
   - mcp__automaker__list_features
   - mcp__automaker__get_project_spec
   - mcp__automaker__update_project_spec
-model: haiku
+model: opus
 ---
 
 # Codebase Analyzer Agent

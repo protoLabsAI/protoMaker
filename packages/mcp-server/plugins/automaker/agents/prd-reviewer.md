@@ -9,7 +9,7 @@ allowed-tools:
   - mcp__automaker__list_features
   - mcp__automaker__list_context_files
   - mcp__automaker__get_context_file
-model: sonnet
+model: opus
 ---
 
 # PRD Reviewer Agent
