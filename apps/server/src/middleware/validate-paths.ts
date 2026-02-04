@@ -8,6 +8,49 @@ import type { Request, Response, NextFunction } from 'express';
 import { validatePath, PathNotAllowedError } from '@automaker/platform';
 
 /**
+ * Regex for valid slug characters: letters, numbers, hyphens, underscores
+ * No path separators, no dots (prevents ../), no special characters
+ */
+const VALID_SLUG_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9_-]*$/;
+
+/**
+ * Error thrown when a slug is invalid (contains path traversal or invalid characters)
+ */
+export class InvalidSlugError extends Error {
+  constructor(
+    public slug: string,
+    public paramName: string
+  ) {
+    super(
+      `Invalid ${paramName}: "${slug}" contains invalid characters or path traversal sequences`
+    );
+    this.name = 'InvalidSlugError';
+  }
+}
+
+/**
+ * Validates a slug to prevent path traversal attacks
+ * @param slug - The slug to validate
+ * @param paramName - Name of the parameter (for error messages)
+ * @throws InvalidSlugError if slug contains invalid characters
+ */
+export function validateSlug(slug: string, paramName: string): void {
+  if (!slug || typeof slug !== 'string') {
+    return; // Let route handlers deal with missing required params
+  }
+
+  // Check for path traversal sequences
+  if (slug.includes('..') || slug.includes('/') || slug.includes('\\')) {
+    throw new InvalidSlugError(slug, paramName);
+  }
+
+  // Check against allowed pattern
+  if (!VALID_SLUG_PATTERN.test(slug)) {
+    throw new InvalidSlugError(slug, paramName);
+  }
+}
+
+/**
  * Helper to get parameter value from request (checks body first, then query)
  */
 function getParamValue(req: Request, paramName: string): unknown {
@@ -74,6 +117,47 @@ export function validatePathParams(...paramNames: string[]) {
     } catch (error) {
       if (error instanceof PathNotAllowedError) {
         res.status(403).json({
+          success: false,
+          error: error.message,
+        });
+        return;
+      }
+
+      // Re-throw unexpected errors
+      throw error;
+    }
+  };
+}
+
+/**
+ * Creates a middleware that validates slug parameters to prevent path traversal
+ * @param paramNames - Names of slug parameters to validate (e.g., 'projectSlug', 'slug')
+ * @example
+ * router.post('/get', validateSlugs('projectSlug'), handler);
+ * router.post('/update', validateSlugs('projectSlug', 'milestoneSlug'), handler);
+ *
+ * Special syntax:
+ * - 'paramName?' - Optional parameter (only validated if present)
+ */
+export function validateSlugs(...paramNames: string[]) {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    try {
+      for (const paramName of paramNames) {
+        // Handle optional parameters (paramName?)
+        const isOptional = paramName.endsWith('?');
+        const actualName = isOptional ? paramName.slice(0, -1) : paramName;
+
+        const value = getParamValue(req, actualName);
+
+        if (value && typeof value === 'string') {
+          validateSlug(value, actualName);
+        }
+      }
+
+      next();
+    } catch (error) {
+      if (error instanceof InvalidSlugError) {
+        res.status(400).json({
           success: false,
           error: error.message,
         });

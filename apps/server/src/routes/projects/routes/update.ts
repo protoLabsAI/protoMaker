@@ -94,17 +94,18 @@ export function createUpdateHandler() {
       const projectContent = generateProjectFile(project);
       await secureFs.writeFile(projectFilePath, projectContent, 'utf-8');
 
-      // Update prd.md if PRD changed
-      if (updates.prd) {
+      // Update prd.md if PRD field is present and has a value
+      // Note: We check for presence and truthy value since PRD is a complex object
+      if ('prd' in updates && updates.prd) {
         const prdFilePath = getPrdFilePath(projectPath, projectSlug);
         const prdContent = generatePrdFile(project.title, updates.prd);
         await secureFs.writeFile(prdFilePath, prdContent, 'utf-8');
       }
 
-      // Update research.md if research summary changed
-      if (updates.researchSummary) {
+      // Update research.md if research summary field is present (use 'in' to detect explicit clearing)
+      if ('researchSummary' in updates) {
         const researchFilePath = getResearchFilePath(projectPath, projectSlug);
-        await secureFs.writeFile(researchFilePath, updates.researchSummary, 'utf-8');
+        await secureFs.writeFile(researchFilePath, updates.researchSummary ?? '', 'utf-8');
       }
 
       res.json({ success: true, project });

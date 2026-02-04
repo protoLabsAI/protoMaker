@@ -138,10 +138,12 @@ export function parseMilestoneFile(content: string, slug: string): Partial<Miles
     const trimmed = line.trim();
 
     // Parse title from first heading
+    // Handles formats: "# Milestone: Title", "# M1: Title", "# Title"
     if (trimmed.startsWith('# Milestone:') || trimmed.startsWith('# ')) {
       title = trimmed
-        .replace(/^#\s*Milestone:\s*/i, '')
-        .replace(/^#\s*/, '')
+        .replace(/^#\s*Milestone:\s*/i, '') // Strip "# Milestone:"
+        .replace(/^#\s*M\d+\s*:\s*/i, '') // Strip "# M1:" (generated format)
+        .replace(/^#\s*/, '') // Strip plain "# "
         .trim();
       continue;
     }
@@ -305,10 +307,12 @@ export function parsePhaseFile(content: string, filename: string): Phase {
     const trimmed = line.trim();
 
     // Parse title from first heading
+    // Handles formats: "# Phase: Title", "# M1 Phase 1: Title", "# Phase 1: Title", "# Title"
     if (trimmed.startsWith('# Phase:') || trimmed.startsWith('# ')) {
       title = trimmed
-        .replace(/^#\s*Phase:\s*/i, '')
-        .replace(/^#\s*/, '')
+        .replace(/^#\s*Phase:\s*/i, '') // Strip "# Phase:"
+        .replace(/^#\s*(?:M\d+\s+)?Phase\s+\d+\s*:\s*/i, '') // Strip "# M1 Phase 1:" or "# Phase 1:"
+        .replace(/^#\s*/, '') // Strip plain "# "
         .trim();
       continue;
     }

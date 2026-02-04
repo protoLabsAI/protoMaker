@@ -12,7 +12,7 @@
 
 import { Router } from 'express';
 import { FeatureLoader } from '../../services/feature-loader.js';
-import { validatePathParams } from '../../middleware/validate-paths.js';
+import { validatePathParams, validateSlugs } from '../../middleware/validate-paths.js';
 import { createListHandler } from './routes/list.js';
 import { createGetHandler } from './routes/get.js';
 import { createCreateHandler } from './routes/create.js';
@@ -23,14 +23,38 @@ import { createCreateFeaturesHandler } from './routes/create-features.js';
 export function createProjectsRoutes(featureLoader: FeatureLoader): Router {
   const router = Router();
 
+  // List doesn't need slug validation (no slug param)
   router.post('/list', validatePathParams('projectPath'), createListHandler());
-  router.post('/get', validatePathParams('projectPath'), createGetHandler());
-  router.post('/create', validatePathParams('projectPath'), createCreateHandler());
-  router.post('/update', validatePathParams('projectPath'), createUpdateHandler());
-  router.post('/delete', validatePathParams('projectPath'), createDeleteHandler());
+
+  // All other routes use projectSlug - validate to prevent path traversal
+  router.post(
+    '/get',
+    validatePathParams('projectPath'),
+    validateSlugs('projectSlug'),
+    createGetHandler()
+  );
+  router.post(
+    '/create',
+    validatePathParams('projectPath'),
+    validateSlugs('slug?'), // slug is optional, derived from title if not provided
+    createCreateHandler()
+  );
+  router.post(
+    '/update',
+    validatePathParams('projectPath'),
+    validateSlugs('projectSlug'),
+    createUpdateHandler()
+  );
+  router.post(
+    '/delete',
+    validatePathParams('projectPath'),
+    validateSlugs('projectSlug'),
+    createDeleteHandler()
+  );
   router.post(
     '/create-features',
     validatePathParams('projectPath'),
+    validateSlugs('projectSlug'),
     createCreateFeaturesHandler(featureLoader)
   );
 

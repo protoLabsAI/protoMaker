@@ -56,6 +56,7 @@ export {
 
 // Project orchestration paths
 export {
+  // Path utilities
   getProjectsDir,
   getProjectDir,
   getProjectFilePath,
@@ -66,17 +67,24 @@ export {
   getMilestoneDir,
   getMilestoneFilePath,
   getPhaseFilePath,
+  // Slug generation
   generateMilestoneSlug,
   generateProjectSlug,
   generatePhaseSlug,
+  // Directory management
   ensureProjectsDir,
   ensureProjectStructure,
   ensureMilestoneDir,
+  // Listing
   listProjectPlans,
   listMilestones,
   listPhases,
+  // Existence/deletion
   projectPlanExists,
   deleteProjectPlan,
+  // Validation
+  validateSlugInput,
+  InvalidSlugError,
 } from './projects.js';
 
 // Subprocess management

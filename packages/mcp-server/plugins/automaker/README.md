@@ -14,7 +14,11 @@ Claude Code plugin for managing Automaker's Kanban board, AI agents, and feature
 2. Symlink the plugin to Claude's plugins directory:
 
    ```bash
-   ln -s /Users/kj/dev/automaker/packages/mcp-server/plugins/automaker ~/.claude/plugins/automaker
+   # Replace <path-to-automaker> with your local repo path
+   ln -s <path-to-automaker>/packages/mcp-server/plugins/automaker ~/.claude/plugins/automaker
+
+   # Or from the automaker repo root:
+   ln -s "$PWD/packages/mcp-server/plugins/automaker" ~/.claude/plugins/automaker
    ```
 
 3. Restart Claude Code

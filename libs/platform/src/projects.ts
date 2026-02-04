@@ -28,6 +28,49 @@ import * as secureFs from './secure-fs.js';
 import { getAutomakerDir } from './paths.js';
 
 /**
+ * Regex for valid slug characters: letters, numbers, hyphens, underscores
+ * Slugs must start with alphanumeric character
+ */
+const VALID_SLUG_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9_-]*$/;
+
+/**
+ * Error thrown when a slug contains invalid characters or path traversal sequences
+ */
+export class InvalidSlugError extends Error {
+  constructor(
+    public slug: string,
+    public context: string
+  ) {
+    super(
+      `Invalid slug "${slug}" in ${context}: contains invalid characters or path traversal sequences`
+    );
+    this.name = 'InvalidSlugError';
+  }
+}
+
+/**
+ * Validates a slug to prevent path traversal attacks
+ * @param slug - The slug to validate
+ * @param context - Context for error messages (e.g., "projectSlug", "milestoneSlug")
+ * @throws InvalidSlugError if slug contains invalid characters
+ */
+export function validateSlugInput(slug: string, context: string): void {
+  if (!slug || typeof slug !== 'string') {
+    throw new InvalidSlugError(slug ?? '', context);
+  }
+
+  // Check for path traversal sequences
+  if (slug.includes('..') || slug.includes('/') || slug.includes('\\')) {
+    throw new InvalidSlugError(slug, context);
+  }
+
+  // Check against allowed pattern
+  if (!VALID_SLUG_PATTERN.test(slug)) {
+    throw new InvalidSlugError(slug, context);
+  }
+}
+
+/**
  * Get the projects directory for a project
  *
  * Contains subdirectories for each project plan.
@@ -45,8 +88,10 @@ export function getProjectsDir(projectPath: string): string {
  * @param projectPath - Absolute path to project directory
  * @param projectSlug - Project slug (e.g., "epic-support")
  * @returns Absolute path to {projectPath}/.automaker/projects/{projectSlug}
+ * @throws InvalidSlugError if projectSlug contains invalid characters
  */
 export function getProjectDir(projectPath: string, projectSlug: string): string {
+  validateSlugInput(projectSlug, 'projectSlug');
   return path.join(getProjectsDir(projectPath), projectSlug);
 }
 
@@ -112,12 +157,14 @@ export function getMilestonesDir(projectPath: string, projectSlug: string): stri
  * @param projectSlug - Project slug
  * @param milestoneSlug - Milestone slug (e.g., "01-foundation")
  * @returns Absolute path to {projectPath}/.automaker/projects/{projectSlug}/milestones/{milestoneSlug}
+ * @throws InvalidSlugError if milestoneSlug contains invalid characters
  */
 export function getMilestoneDir(
   projectPath: string,
   projectSlug: string,
   milestoneSlug: string
 ): string {
+  validateSlugInput(milestoneSlug, 'milestoneSlug');
   return path.join(getMilestonesDir(projectPath, projectSlug), milestoneSlug);
 }
 
@@ -143,9 +190,11 @@ export function getMilestoneFilePath(
  * @param projectPath - Absolute path to project directory
  * @param projectSlug - Project slug
  * @param milestoneSlug - Milestone slug
- * @param phaseNumber - Phase number (1, 2, 3, etc.)
+ * @param phaseNumber - Phase number (1, 2, 3, etc.) - must be positive integer
  * @param phaseName - Phase name slug (e.g., "types", "server")
  * @returns Absolute path to phase-XX-name.md
+ * @throws InvalidSlugError if phaseName contains invalid characters
+ * @throws Error if phaseNumber is not a positive integer
  */
 export function getPhaseFilePath(
   projectPath: string,
@@ -154,6 +203,13 @@ export function getPhaseFilePath(
   phaseNumber: number,
   phaseName: string
 ): string {
+  // Validate phase number
+  if (!Number.isInteger(phaseNumber) || phaseNumber < 1 || phaseNumber > 99) {
+    throw new Error(`Invalid phase number: ${phaseNumber} (must be integer 1-99)`);
+  }
+  // Validate phase name slug
+  validateSlugInput(phaseName, 'phaseName');
+
   const paddedNumber = String(phaseNumber).padStart(2, '0');
   return path.join(
     getMilestoneDir(projectPath, projectSlug, milestoneSlug),
@@ -261,7 +317,7 @@ export async function ensureMilestoneDir(
  * List all project plans in a project
  *
  * @param projectPath - Absolute path to project directory
- * @returns Promise resolving to array of project slugs
+ * @returns Promise resolving to array of project slugs (sorted alphabetically for deterministic order)
  */
 export async function listProjectPlans(projectPath: string): Promise<string[]> {
   const projectsDir = getProjectsDir(projectPath);
@@ -273,7 +329,10 @@ export async function listProjectPlans(projectPath: string): Promise<string[]> {
   }
 
   const entries = (await secureFs.readdir(projectsDir, { withFileTypes: true })) as any[];
-  return entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name);
+  return entries
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .sort((a, b) => a.localeCompare(b)); // Sort for deterministic output
 }
 
 /**
