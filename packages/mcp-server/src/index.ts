@@ -421,6 +421,124 @@ const tools: Tool[] = [
     },
   },
 
+  // ========== Orchestration ==========
+  {
+    name: 'set_feature_dependencies',
+    description:
+      'Set dependencies for a feature. The feature will not start until all dependencies are marked Done.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        featureId: {
+          type: 'string',
+          description: 'The feature ID to set dependencies for',
+        },
+        dependencies: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Array of feature IDs that this feature depends on',
+        },
+      },
+      required: ['projectPath', 'featureId', 'dependencies'],
+    },
+  },
+  {
+    name: 'get_dependency_graph',
+    description:
+      'Get the dependency graph for all features in a project. Shows which features block others.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+      },
+      required: ['projectPath'],
+    },
+  },
+  {
+    name: 'start_auto_mode',
+    description:
+      'Start auto-mode for a project. Agents will automatically pick up and process backlog features respecting dependencies.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        maxConcurrency: {
+          type: 'number',
+          description: 'Maximum number of features to process concurrently (default: 1)',
+          default: 1,
+        },
+        branchName: {
+          type: 'string',
+          description: 'Optional branch/worktree name to run auto-mode on',
+        },
+      },
+      required: ['projectPath'],
+    },
+  },
+  {
+    name: 'stop_auto_mode',
+    description: 'Stop auto-mode for a project.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        branchName: {
+          type: 'string',
+          description: 'Optional branch/worktree name',
+        },
+      },
+      required: ['projectPath'],
+    },
+  },
+  {
+    name: 'get_auto_mode_status',
+    description: 'Check if auto-mode is running for a project and get its status.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+      },
+      required: ['projectPath'],
+    },
+  },
+  {
+    name: 'get_execution_order',
+    description:
+      'Get the resolved execution order for features based on dependencies. Useful for planning.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        status: {
+          type: 'string',
+          enum: ['backlog', 'all'],
+          default: 'backlog',
+          description: 'Which features to include in the execution order',
+        },
+      },
+      required: ['projectPath'],
+    },
+  },
+
   // ========== Utilities ==========
   {
     name: 'health_check',
@@ -573,6 +691,107 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         projectPath: args.projectPath,
         content: args.content,
       });
+
+    // Orchestration
+    case 'set_feature_dependencies':
+      return apiCall('/features/update', {
+        projectPath: args.projectPath,
+        featureId: args.featureId,
+        updates: {
+          dependencies: args.dependencies,
+        },
+      });
+
+    case 'get_dependency_graph': {
+      const result = (await apiCall('/features/list', {
+        projectPath: args.projectPath,
+      })) as {
+        features?: Array<{ id: string; title: string; status: string; dependencies?: string[] }>;
+      };
+      const features = result.features || [];
+      const graph: Record<
+        string,
+        { title: string; status: string; dependsOn: string[]; blocks: string[] }
+      > = {};
+
+      // Build the graph
+      for (const f of features) {
+        graph[f.id] = {
+          title: f.title,
+          status: f.status,
+          dependsOn: f.dependencies || [],
+          blocks: [],
+        };
+      }
+
+      // Calculate reverse dependencies (what each feature blocks)
+      for (const f of features) {
+        for (const depId of f.dependencies || []) {
+          if (graph[depId]) {
+            graph[depId].blocks.push(f.id);
+          }
+        }
+      }
+
+      return graph;
+    }
+
+    case 'start_auto_mode':
+      return apiCall('/auto-mode/start', {
+        projectPath: args.projectPath,
+        maxConcurrency: args.maxConcurrency || 1,
+        branchName: args.branchName || null,
+      });
+
+    case 'stop_auto_mode':
+      return apiCall('/auto-mode/stop', {
+        projectPath: args.projectPath,
+        branchName: args.branchName || null,
+      });
+
+    case 'get_auto_mode_status':
+      return apiCall('/auto-mode/status', {
+        projectPath: args.projectPath,
+      });
+
+    case 'get_execution_order': {
+      const result = (await apiCall('/features/list', {
+        projectPath: args.projectPath,
+      })) as {
+        features?: Array<{ id: string; title: string; status: string; dependencies?: string[] }>;
+      };
+      const features = result.features || [];
+
+      // Filter by status if specified
+      const filtered =
+        args.status === 'all' ? features : features.filter((f) => f.status === 'backlog');
+
+      // Topological sort based on dependencies
+      const visited = new Set<string>();
+      const order: Array<{ id: string; title: string; dependencies: string[] }> = [];
+      const featureMap = new Map(filtered.map((f) => [f.id, f]));
+
+      function visit(id: string) {
+        if (visited.has(id)) return;
+        visited.add(id);
+        const feature = featureMap.get(id);
+        if (!feature) return;
+        for (const depId of feature.dependencies || []) {
+          visit(depId);
+        }
+        order.push({
+          id: feature.id,
+          title: feature.title,
+          dependencies: feature.dependencies || [],
+        });
+      }
+
+      for (const f of filtered) {
+        visit(f.id);
+      }
+
+      return { executionOrder: order, totalFeatures: order.length };
+    }
 
     // Utilities
     case 'health_check': {
