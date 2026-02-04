@@ -174,3 +174,153 @@ Use `resolveModelString()` from `@automaker/model-resolver` to convert model ali
 - `AUTOMAKER_MOCK_AGENT=true` - Enable mock agent mode for CI testing
 - `AUTOMAKER_AUTO_LOGIN=true` - Skip login prompt in development (disabled when NODE_ENV=production)
 - `VITE_HOSTNAME` - Hostname for frontend API URLs (default: localhost)
+
+## MCP Server & Claude Code Plugin
+
+Automaker includes an MCP server and Claude Code plugin for programmatic control.
+
+### Quick Setup
+
+```bash
+# 1. Ensure AUTOMAKER_API_KEY is set in .env
+echo "AUTOMAKER_API_KEY=automaker-dev-key-2026" >> .env
+
+# 2. Build the MCP server
+npm run build:packages
+
+# 3. Add the plugin marketplace and install
+claude plugin marketplace add /path/to/automaker/packages/mcp-server/plugins
+claude plugin install automaker
+```
+
+### Available MCP Tools
+
+The MCP server exposes 32 tools organized by category:
+
+**Feature Management:** `list_features`, `get_feature`, `create_feature`, `update_feature`, `delete_feature`, `move_feature`
+
+**Agent Control:** `start_agent`, `stop_agent`, `list_running_agents`, `get_agent_output`, `send_message_to_agent`
+
+**Queue Management:** `queue_feature`, `list_queue`, `clear_queue`
+
+**Context Files:** `list_context_files`, `get_context_file`, `create_context_file`, `delete_context_file`
+
+**Project Spec:** `get_project_spec`, `update_project_spec`
+
+**Orchestration:** `set_feature_dependencies`, `get_dependency_graph`, `start_auto_mode`, `stop_auto_mode`, `get_auto_mode_status`, `get_execution_order`
+
+**Project Orchestration:** `list_projects`, `get_project`, `create_project`, `update_project`, `delete_project`, `create_project_features`
+
+**Utilities:** `health_check`, `get_board_summary`
+
+### Plugin Commands
+
+- `/board` - View and manage the Kanban board
+- `/auto-mode` - Start/stop autonomous feature processing
+- `/orchestrate` - Manage feature dependencies
+- `/context` - Manage context files for AI agents
+
+See `docs/claude-plugin.md` for the complete guide.
+
+## Project Orchestration System
+
+Automaker supports hierarchical project planning with the flow:
+
+**Deep Research → SPARC PRD → Review → Approval → Scaffold → Features**
+
+### Project Structure
+
+```
+.automaker/projects/{project-slug}/
+├── project.md           # Project overview
+├── project.json         # Full project data
+├── prd.md              # SPARC PRD document
+└── milestones/
+    └── {milestone-slug}/
+        ├── milestone.md
+        └── phase-{N}-{name}.md
+```
+
+### Project Types (libs/types/src/project.ts)
+
+```typescript
+import type { Project, Milestone, Phase, SPARCPrd } from '@automaker/types';
+
+// Project status lifecycle
+type ProjectStatus =
+  | 'researching'
+  | 'drafting'
+  | 'reviewing'
+  | 'approved'
+  | 'scaffolded'
+  | 'active'
+  | 'completed';
+
+// Phase complexity for estimation
+type PhaseComplexity = 'small' | 'medium' | 'large';
+```
+
+### Project API Routes
+
+The server exposes project endpoints at `/api/projects/`:
+
+- `POST /list` - List all project plans
+- `POST /get` - Get project with milestones and phases
+- `POST /create` - Create project and scaffold files
+- `POST /update` - Update project properties
+- `POST /delete` - Delete project and files
+- `POST /create-features` - Convert phases to board features with epic support
+
+### Epic Support
+
+Features can be organized into epics for milestone grouping:
+
+```typescript
+interface Feature {
+  // ... existing fields
+  isEpic?: boolean; // True if this is an epic (container feature)
+  epicId?: string; // Parent epic ID (for child features)
+  epicColor?: string; // Badge color (hex)
+}
+```
+
+### Creating a Project via MCP
+
+```typescript
+// Create project plan
+mcp__automaker__create_project({
+  projectPath: '/path/to/project',
+  title: 'My Feature',
+  goal: 'Implement X functionality',
+  prd: {
+    situation: 'Current state...',
+    problem: 'The issue is...',
+    approach: 'We will...',
+    results: 'Expected outcomes...',
+    constraints: ['Constraint 1', 'Constraint 2'],
+  },
+  milestones: [
+    {
+      title: 'Foundation',
+      description: 'Core infrastructure',
+      phases: [
+        {
+          title: 'Add Types',
+          description: 'Create TypeScript types...',
+          filesToModify: ['src/types/index.ts'],
+          acceptanceCriteria: ['Types compile', 'Exported correctly'],
+          complexity: 'small',
+        },
+      ],
+    },
+  ],
+});
+
+// Convert to board features
+mcp__automaker__create_project_features({
+  projectPath: '/path/to/project',
+  projectSlug: 'my-feature',
+  createEpics: true,
+  setupDependencies: true,
+});
+```

@@ -115,6 +115,17 @@ Or with npx (after publishing):
 | `get_auto_mode_status`     | Check if auto-mode is running                      |
 | `get_execution_order`      | Get resolved execution order based on dependencies |
 
+### Project Orchestration
+
+| Tool                      | Description                                                       |
+| ------------------------- | ----------------------------------------------------------------- |
+| `list_projects`           | List all project plans in a project                               |
+| `get_project`             | Get project details including milestones, phases, and PRD         |
+| `create_project`          | Create a new project with SPARC PRD and milestone/phase structure |
+| `update_project`          | Update project title, goal, or status                             |
+| `delete_project`          | Delete a project plan and all its files                           |
+| `create_project_features` | Convert project phases to Kanban board features with epic support |
+
 ### Utilities
 
 | Tool                | Description                          |
