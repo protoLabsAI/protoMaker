@@ -1,0 +1,352 @@
+/**
+ * Project Orchestration Service
+ *
+ * Handles the orchestration of creating features from project plans:
+ * - Creates epic features for milestones
+ * - Creates features for phases
+ * - Sets up dependencies between features
+ * - Emits progress events for UI updates
+ */
+
+import type { Feature, FeatureFactoryResult, Project, Milestone, Phase } from '@automaker/types';
+import { getProjectJsonPath } from '@automaker/platform';
+import { secureFs } from '@automaker/platform';
+import { phaseToFeatureDescription, slugify } from '@automaker/utils';
+import { FeatureLoader } from './feature-loader.js';
+import { createEventEmitter, type EventEmitter } from '../lib/events.js';
+import { getErrorMessage } from '../routes/projects/common.js';
+
+// Epic colors for visual distinction
+const EPIC_COLORS = [
+  '#4F46E5', // Indigo
+  '#7C3AED', // Violet
+  '#EC4899', // Pink
+  '#EF4444', // Red
+  '#F97316', // Orange
+  '#EAB308', // Yellow
+  '#22C55E', // Green
+  '#06B6D4', // Cyan
+  '#3B82F6', // Blue
+];
+
+export interface OrchestrateFeaturesOptions {
+  projectPath: string;
+  projectSlug: string;
+  createEpics?: boolean;
+  setupDependencies?: boolean;
+  initialStatus?: 'backlog' | 'in-progress';
+}
+
+/**
+ * Normalize a dependency identifier for lookup
+ * Handles variations in how dependencies might be specified
+ */
+function normalizeDependencyKey(key: string): string {
+  return key
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+/**
+ * Look up a dependency ID from maps using normalized keys
+ */
+function findDependencyId(
+  depIdentifier: string,
+  milestoneSlug: string,
+  milestoneEpicMap: Record<string, string>,
+  phaseFeatureMap: Record<string, string>
+): string | undefined {
+  // Try exact match first
+  if (milestoneEpicMap[depIdentifier]) {
+    return milestoneEpicMap[depIdentifier];
+  }
+
+  // Try normalized match in milestone map
+  const normalizedDep = normalizeDependencyKey(depIdentifier);
+  for (const [key, id] of Object.entries(milestoneEpicMap)) {
+    if (normalizeDependencyKey(key) === normalizedDep) {
+      return id;
+    }
+  }
+
+  // Try as phase within same milestone
+  const phaseKey = `${milestoneSlug}:${depIdentifier}`;
+  if (phaseFeatureMap[phaseKey]) {
+    return phaseFeatureMap[phaseKey];
+  }
+
+  // Try normalized phase key
+  for (const [key, id] of Object.entries(phaseFeatureMap)) {
+    const [ms, phase] = key.split(':');
+    if (ms === milestoneSlug && normalizeDependencyKey(phase) === normalizedDep) {
+      return id;
+    }
+  }
+
+  return undefined;
+}
+
+/**
+ * Orchestrate feature creation from a project plan
+ *
+ * @param project - The loaded project with milestones and phases
+ * @param options - Configuration options
+ * @param featureLoader - Feature loader instance
+ * @param events - Optional event emitter for progress updates
+ * @returns Result with created features and any errors
+ */
+export async function orchestrateProjectFeatures(
+  project: Project,
+  options: OrchestrateFeaturesOptions,
+  featureLoader: FeatureLoader,
+  events?: EventEmitter
+): Promise<FeatureFactoryResult> {
+  const {
+    projectPath,
+    projectSlug,
+    createEpics = true,
+    setupDependencies = true,
+    initialStatus = 'backlog',
+  } = options;
+
+  // Emit start event
+  events?.emit('project:features:start', {
+    projectPath,
+    projectSlug,
+    milestoneCount: project.milestones.length,
+    createEpics,
+    setupDependencies,
+  });
+
+  const result: FeatureFactoryResult = {
+    featuresCreated: 0,
+    phaseFeatureMap: {},
+    milestoneEpicMap: {},
+    errors: [],
+  };
+
+  // Track created features for dependency resolution
+  const createdFeatures: Map<string, Feature> = new Map();
+
+  // Phase 1: Create epics and features
+  events?.emit('project:features:progress', {
+    step: 'creating-features',
+    message: 'Creating features from milestones and phases',
+  });
+
+  for (let mi = 0; mi < project.milestones.length; mi++) {
+    const milestone = project.milestones[mi];
+    let epicId: string | undefined;
+
+    // Create epic feature for milestone if requested
+    if (createEpics) {
+      try {
+        const epicFeature = await featureLoader.create(projectPath, {
+          title: `[Epic] ${milestone.title}`,
+          description: `# ${milestone.title}\n\n${milestone.description}\n\n## Phases\n${milestone.phases.map((p, i) => `${i + 1}. ${p.title}`).join('\n')}`,
+          category: 'Epic',
+          status: initialStatus,
+          isEpic: true,
+          epicColor: EPIC_COLORS[mi % EPIC_COLORS.length],
+          branchName: `epic/${slugify(milestone.title, 40)}`,
+        });
+        epicId = epicFeature.id;
+        result.milestoneEpicMap[milestone.slug] = epicId;
+        result.featuresCreated++;
+        createdFeatures.set(`epic:${milestone.slug}`, epicFeature);
+
+        events?.emit('project:features:progress', {
+          step: 'epic-created',
+          milestoneSlug: milestone.slug,
+          epicId,
+        });
+      } catch (err) {
+        const errorMsg = `Failed to create epic for milestone ${milestone.slug}: ${getErrorMessage(err)}`;
+        result.errors?.push(errorMsg);
+        events?.emit('project:features:error', { error: errorMsg });
+      }
+    }
+
+    // Process phases within milestone
+    for (const phase of milestone.phases) {
+      try {
+        // Build feature description from phase
+        const description = phaseToFeatureDescription(phase, milestone);
+
+        // Generate unique key for this phase
+        const phaseKey = `${milestone.slug}:${phase.name}`;
+
+        // Create feature
+        const feature = await featureLoader.create(projectPath, {
+          title: phase.title,
+          description,
+          category: milestone.title,
+          status: initialStatus,
+          isEpic: false,
+          epicId,
+          branchName: `feature/${slugify(milestone.title, 20)}-${slugify(phase.title, 20)}`,
+        });
+
+        result.phaseFeatureMap[phaseKey] = feature.id;
+        result.featuresCreated++;
+        createdFeatures.set(phaseKey, feature);
+
+        events?.emit('project:features:progress', {
+          step: 'feature-created',
+          phaseKey,
+          featureId: feature.id,
+        });
+      } catch (err) {
+        const errorMsg = `Failed to create feature for phase ${phase.name}: ${getErrorMessage(err)}`;
+        result.errors?.push(errorMsg);
+        events?.emit('project:features:error', { error: errorMsg });
+      }
+    }
+  }
+
+  // Phase 2: Set up dependencies
+  if (setupDependencies) {
+    events?.emit('project:features:progress', {
+      step: 'setting-dependencies',
+      message: 'Wiring feature dependencies',
+    });
+
+    for (const milestone of project.milestones) {
+      // Process milestone dependencies (epic -> epic)
+      if (milestone.dependencies && milestone.dependencies.length > 0) {
+        const epicId = result.milestoneEpicMap[milestone.slug];
+        if (epicId) {
+          const depIds: string[] = [];
+          for (const depSlug of milestone.dependencies) {
+            const depEpicId = findDependencyId(
+              depSlug,
+              milestone.slug,
+              result.milestoneEpicMap,
+              result.phaseFeatureMap
+            );
+            if (depEpicId) {
+              depIds.push(depEpicId);
+            }
+          }
+          if (depIds.length > 0) {
+            try {
+              await featureLoader.update(projectPath, epicId, { dependencies: depIds });
+            } catch (err) {
+              result.errors?.push(
+                `Failed to set dependencies for epic ${milestone.slug}: ${getErrorMessage(err)}`
+              );
+            }
+          }
+        }
+      }
+
+      // Process phase dependencies
+      for (let pi = 0; pi < milestone.phases.length; pi++) {
+        const phase = milestone.phases[pi];
+        const phaseKey = `${milestone.slug}:${phase.name}`;
+        const featureId = result.phaseFeatureMap[phaseKey];
+
+        if (!featureId) continue;
+
+        const depIds: string[] = [];
+
+        // Process explicit dependencies
+        if (phase.dependencies && phase.dependencies.length > 0) {
+          for (const depName of phase.dependencies) {
+            const depFeatureId = findDependencyId(
+              depName,
+              milestone.slug,
+              result.milestoneEpicMap,
+              result.phaseFeatureMap
+            );
+            if (depFeatureId) {
+              depIds.push(depFeatureId);
+            }
+          }
+        }
+
+        // Always apply previous phase fallback for sequential execution
+        // This ensures phases within a milestone run in order by default
+        if (phase.number > 1) {
+          const prevPhase = milestone.phases.find((p) => p.number === phase.number - 1);
+          if (prevPhase) {
+            const prevKey = `${milestone.slug}:${prevPhase.name}`;
+            const prevFeatureId = result.phaseFeatureMap[prevKey];
+            if (prevFeatureId && !depIds.includes(prevFeatureId)) {
+              depIds.push(prevFeatureId);
+            }
+          }
+        }
+
+        if (depIds.length > 0) {
+          try {
+            await featureLoader.update(projectPath, featureId, { dependencies: depIds });
+          } catch (err) {
+            result.errors?.push(
+              `Failed to set dependencies for phase ${phase.name}: ${getErrorMessage(err)}`
+            );
+          }
+        }
+      }
+    }
+  }
+
+  // Phase 3: Update project with feature links
+  events?.emit('project:features:progress', {
+    step: 'updating-project',
+    message: 'Linking features to project',
+  });
+
+  try {
+    project.status = 'active';
+    project.updatedAt = new Date().toISOString();
+
+    // Link phases to features
+    for (const milestone of project.milestones) {
+      milestone.epicId = result.milestoneEpicMap[milestone.slug];
+      for (const phase of milestone.phases) {
+        const phaseKey = `${milestone.slug}:${phase.name}`;
+        phase.featureId = result.phaseFeatureMap[phaseKey];
+      }
+    }
+
+    // Save updated project
+    const jsonPath = getProjectJsonPath(projectPath, projectSlug);
+    await secureFs.writeFile(jsonPath, JSON.stringify(project, null, 2), 'utf-8');
+  } catch (err) {
+    const errorMsg = `Failed to update project.json: ${getErrorMessage(err)}`;
+    result.errors?.push(errorMsg);
+    events?.emit('project:features:error', { error: errorMsg });
+  }
+
+  // Emit completion
+  events?.emit('project:features:done', {
+    projectSlug,
+    featuresCreated: result.featuresCreated,
+    errorCount: result.errors?.length ?? 0,
+  });
+
+  return result;
+}
+
+/**
+ * Load a project from disk
+ *
+ * @param projectPath - Path to project root
+ * @param projectSlug - Project slug
+ * @returns Loaded project or null if not found
+ */
+export async function loadProject(
+  projectPath: string,
+  projectSlug: string
+): Promise<Project | null> {
+  const jsonPath = getProjectJsonPath(projectPath, projectSlug);
+  try {
+    const jsonContent = (await secureFs.readFile(jsonPath, 'utf-8')) as string;
+    return JSON.parse(jsonContent) as Project;
+  } catch {
+    return null;
+  }
+}
