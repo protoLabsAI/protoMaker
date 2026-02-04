@@ -84,6 +84,100 @@ Login with the `AUTOMAKER_API_KEY` you set (or check `docker logs automaker-serv
 
 ---
 
+## Proxmox VM Specifications
+
+### Recommended Specs by Use Case
+
+| Use Case      | Disk      | RAM   | vCPU | Notes                                   |
+| ------------- | --------- | ----- | ---- | --------------------------------------- |
+| **Minimum**   | 25 GB     | 4 GB  | 2    | Evaluation only, expect slowness        |
+| **Baseline**  | 40 GB     | 8 GB  | 4    | Most users, comfortable operation       |
+| **Heavy Use** | 80-120 GB | 16 GB | 6-8  | Multiple concurrent agents, large repos |
+
+### Heavy Use Breakdown (Recommended)
+
+**Disk (100 GB recommended):**
+
+- OS: 6-8 GB
+- Docker images & layers: 10-20 GB
+- Automaker workspace/repos/logs: 20-40 GB
+- Git worktrees (per feature): accumulates over time
+- Headroom: 20+ GB
+
+**Memory (16 GB recommended):**
+
+- Node.js server: 512 MB - 2 GB
+- Docker overhead: 1-2 GB
+- Each agent process: 1-3 GB
+- Git operations & test runs: variable spikes
+- Running 2-3 agents concurrently can hit 10-12 GB
+
+**CPU (6 vCPUs recommended):**
+
+- Agent orchestration benefits from parallelism
+- Builds and tests spike CPU
+- Claude SDK spawns subprocesses
+
+### Proxmox-Specific Settings
+
+**Storage:**
+
+- Use thin provisioning if available
+- Use `virtio-scsi` with discard enabled
+- Enable TRIM in guest OS
+
+**Memory:**
+
+- Do NOT overcommit RAM
+- Disable ballooning (Node.js + Docker perform poorly with it)
+
+**CPU:**
+
+- Set CPU type to `host`
+- Enable NUMA only if >= 16 GB RAM
+
+**Swap (important for agent spikes):**
+
+```bash
+sudo fallocate -l 8G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+```
+
+**Docker log rotation (prevents disk bloat):**
+
+```bash
+sudo mkdir -p /etc/docker
+cat << 'EOF' | sudo tee /etc/docker/daemon.json
+{
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "10m",
+    "max-file": "3"
+  }
+}
+EOF
+sudo systemctl restart docker
+```
+
+**Periodic maintenance:**
+
+```bash
+# Clean up old git worktrees
+git worktree prune
+
+# Clean up Docker
+docker system prune -f
+```
+
+### Recommended Distro
+
+Ubuntu 22.04 LTS or Debian 12 - both have excellent Docker support.
+
+---
+
 ## Extracting Authentication Tokens
 
 ### Claude OAuth (Mac Only)
