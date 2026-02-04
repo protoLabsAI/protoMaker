@@ -562,6 +562,192 @@ const tools: Tool[] = [
     },
   },
 
+  // ========== Project Orchestration ==========
+  {
+    name: 'list_projects',
+    description:
+      'List all project plans in a project. Returns project slugs that can be used with get_project.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+      },
+      required: ['projectPath'],
+    },
+  },
+  {
+    name: 'get_project',
+    description:
+      'Get detailed information about a project plan including milestones, phases, and PRD.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        projectSlug: {
+          type: 'string',
+          description: 'The project slug (from list_projects)',
+        },
+      },
+      required: ['projectPath', 'projectSlug'],
+    },
+  },
+  {
+    name: 'create_project',
+    description:
+      'Create a new project plan with milestones and phases. This scaffolds the project structure in .automaker/projects/.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        title: {
+          type: 'string',
+          description: 'Project title',
+        },
+        goal: {
+          type: 'string',
+          description: 'Project goal/objective',
+        },
+        prd: {
+          type: 'object',
+          description: 'SPARC PRD with situation, problem, approach, results, constraints',
+          properties: {
+            situation: { type: 'string' },
+            problem: { type: 'string' },
+            approach: { type: 'string' },
+            results: { type: 'string' },
+            constraints: { type: 'array', items: { type: 'string' } },
+          },
+        },
+        milestones: {
+          type: 'array',
+          description: 'Array of milestones, each with title, description, and phases',
+          items: {
+            type: 'object',
+            properties: {
+              title: { type: 'string' },
+              description: { type: 'string' },
+              phases: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    title: { type: 'string' },
+                    description: { type: 'string' },
+                    filesToModify: { type: 'array', items: { type: 'string' } },
+                    acceptanceCriteria: { type: 'array', items: { type: 'string' } },
+                    complexity: { type: 'string', enum: ['small', 'medium', 'large'] },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      required: ['projectPath', 'title', 'goal', 'milestones'],
+    },
+  },
+  {
+    name: 'update_project',
+    description: 'Update a project plan. Can update title, goal, status, or PRD.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        projectSlug: {
+          type: 'string',
+          description: 'The project slug to update',
+        },
+        title: {
+          type: 'string',
+          description: 'New title (optional)',
+        },
+        goal: {
+          type: 'string',
+          description: 'New goal (optional)',
+        },
+        status: {
+          type: 'string',
+          enum: [
+            'researching',
+            'drafting',
+            'reviewing',
+            'approved',
+            'scaffolded',
+            'active',
+            'completed',
+          ],
+          description: 'New status (optional)',
+        },
+      },
+      required: ['projectPath', 'projectSlug'],
+    },
+  },
+  {
+    name: 'delete_project',
+    description: 'Delete a project plan and all its files.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        projectSlug: {
+          type: 'string',
+          description: 'The project slug to delete',
+        },
+      },
+      required: ['projectPath', 'projectSlug'],
+    },
+  },
+  {
+    name: 'create_project_features',
+    description:
+      'Create Kanban board features from a project plan. Converts phases to features with optional epic grouping.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        projectSlug: {
+          type: 'string',
+          description: 'The project slug to create features from',
+        },
+        createEpics: {
+          type: 'boolean',
+          default: true,
+          description: 'Create epic features for each milestone',
+        },
+        setupDependencies: {
+          type: 'boolean',
+          default: true,
+          description: 'Set up dependencies between features based on phase order',
+        },
+        initialStatus: {
+          type: 'string',
+          enum: ['backlog', 'in-progress'],
+          default: 'backlog',
+          description: 'Initial status for created features',
+        },
+      },
+      required: ['projectPath', 'projectSlug'],
+    },
+  },
+
   // ========== Utilities ==========
   {
     name: 'health_check',
@@ -822,6 +1008,54 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
 
       return { executionOrder: order, totalFeatures: order.length };
     }
+
+    // Project Orchestration
+    case 'list_projects':
+      return apiCall('/projects/list', {
+        projectPath: args.projectPath,
+      });
+
+    case 'get_project':
+      return apiCall('/projects/get', {
+        projectPath: args.projectPath,
+        projectSlug: args.projectSlug,
+      });
+
+    case 'create_project':
+      return apiCall('/projects/create', {
+        projectPath: args.projectPath,
+        title: args.title,
+        goal: args.goal,
+        prd: args.prd,
+        milestones: args.milestones,
+      });
+
+    case 'update_project': {
+      const projectUpdates: Record<string, unknown> = {};
+      if (args.title) projectUpdates.title = args.title;
+      if (args.goal) projectUpdates.goal = args.goal;
+      if (args.status) projectUpdates.status = args.status;
+      return apiCall('/projects/update', {
+        projectPath: args.projectPath,
+        projectSlug: args.projectSlug,
+        updates: projectUpdates,
+      });
+    }
+
+    case 'delete_project':
+      return apiCall('/projects/delete', {
+        projectPath: args.projectPath,
+        projectSlug: args.projectSlug,
+      });
+
+    case 'create_project_features':
+      return apiCall('/projects/create-features', {
+        projectPath: args.projectPath,
+        projectSlug: args.projectSlug,
+        createEpics: args.createEpics ?? true,
+        setupDependencies: args.setupDependencies ?? true,
+        initialStatus: args.initialStatus || 'backlog',
+      });
 
     // Utilities
     case 'health_check': {
