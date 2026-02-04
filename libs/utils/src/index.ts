@@ -123,18 +123,18 @@ export {
   formatCount,
 } from './string-utils.js';
 
-// Project parsing
+// Project orchestration parsers
 export {
-  generateProjectMarkdown,
-  generateMilestoneMarkdown,
-  generatePhaseMarkdown,
-  parseProjectMarkdown,
-  parseMilestoneMarkdown,
-  parsePhaseMarkdown,
-  generateProjectSlug,
-  generateMilestoneSlug,
-  generatePhaseFilename,
-  createProject,
+  parseProjectFile,
+  generateProjectFile,
+  parseMilestoneFile,
+  generateMilestoneFile,
+  parsePhaseFile,
+  generatePhaseFile,
+  parsePrdFile,
+  generatePrdFile,
+  parseResearchFile,
   phaseToFeatureDescription,
-  phaseToBranchName,
+  resolveMilestoneDependencies,
+  resolvePhaseDependencies,
 } from './project-parser.js';

@@ -60,6 +60,22 @@ export type {
   DescriptionHistoryEntry,
 } from './feature.js';
 
+// Project orchestration types
+export type {
+  PhaseComplexity,
+  ProjectStatus,
+  MilestoneStatus,
+  Phase,
+  Milestone,
+  Project,
+  SPARCPrd,
+  PRDReviewComment,
+  DeepResearchResult,
+  CreateProjectFromPRDOptions,
+  CreateFeaturesFromProjectOptions,
+  FeatureFactoryResult,
+} from './project.js';
+
 // Session types
 export type {
   AgentSession,

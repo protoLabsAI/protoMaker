@@ -370,7 +370,7 @@ export class FeatureLoader {
       });
     }
 
-    // Auto-generate branchName if not provided
+    // Auto-generate branchName from title if not provided
     const branchName = featureData.branchName || this.generateBranchName(featureData.title);
 
     // Ensure feature has required fields

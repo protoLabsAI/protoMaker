@@ -112,6 +112,25 @@ const tools: Tool[] = [
           default: 'backlog',
           description: "Initial status. Use 'in-progress' to immediately start an agent.",
         },
+        branchName: {
+          type: 'string',
+          description:
+            'Optional git branch name for this feature. If not provided, auto-generated from title.',
+        },
+        dependencies: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Array of feature IDs that this feature depends on.',
+        },
+        isEpic: {
+          type: 'boolean',
+          description:
+            'Set to true to mark this feature as an epic (container for child features).',
+        },
+        epicId: {
+          type: 'string',
+          description: 'ID of parent epic if this feature belongs to an epic.',
+        },
       },
       required: ['projectPath', 'title', 'description'],
     },
@@ -259,6 +278,10 @@ const tools: Tool[] = [
     inputSchema: {
       type: 'object',
       properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
         featureId: {
           type: 'string',
           description: 'The feature ID of the running agent',
@@ -268,7 +291,7 @@ const tools: Tool[] = [
           description: 'Message to send to the agent',
         },
       },
-      required: ['featureId', 'message'],
+      required: ['projectPath', 'featureId', 'message'],
     },
   },
 
@@ -580,15 +603,21 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         featureId: args.featureId,
       });
 
-    case 'create_feature':
+    case 'create_feature': {
+      const featureData: Record<string, unknown> = {
+        title: args.title,
+        description: args.description,
+        status: args.status || 'backlog',
+      };
+      if (args.branchName) featureData.branchName = args.branchName;
+      if (args.dependencies) featureData.dependencies = args.dependencies;
+      if (args.isEpic) featureData.isEpic = args.isEpic;
+      if (args.epicId) featureData.epicId = args.epicId;
       return apiCall('/features/create', {
         projectPath: args.projectPath,
-        feature: {
-          title: args.title,
-          description: args.description,
-          status: args.status || 'backlog',
-        },
+        feature: featureData,
       });
+    }
 
     case 'update_feature': {
       const updates: Record<string, unknown> = {};
@@ -617,13 +646,13 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
 
     // Agent Control
     case 'start_agent':
-      return apiCall('/agent/start', {
+      return apiCall('/auto-mode/run-feature', {
         projectPath: args.projectPath,
         featureId: args.featureId,
       });
 
     case 'stop_agent':
-      return apiCall('/agent/stop', {
+      return apiCall('/auto-mode/stop-feature', {
         featureId: args.featureId,
       });
 
@@ -637,9 +666,10 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       });
 
     case 'send_message_to_agent':
-      return apiCall('/agent/send', {
+      return apiCall('/auto-mode/follow-up-feature', {
+        projectPath: args.projectPath,
         featureId: args.featureId,
-        message: args.message,
+        prompt: args.message,
       });
 
     // Queue Management

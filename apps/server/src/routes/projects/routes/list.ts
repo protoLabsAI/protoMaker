@@ -1,12 +1,12 @@
 /**
- * POST /list endpoint - List all projects for a project path
+ * POST /list endpoint - List all project plans for a project
  */
 
 import type { Request, Response } from 'express';
+import { listProjectPlans } from '@automaker/platform';
 import { getErrorMessage, logError } from '../common.js';
-import type { ProjectService } from '../../../services/project-service.js';
 
-export function createListHandler(projectService: ProjectService) {
+export function createListHandler() {
   return async (req: Request, res: Response): Promise<void> => {
     try {
       const { projectPath } = req.body as { projectPath: string };
@@ -16,10 +16,10 @@ export function createListHandler(projectService: ProjectService) {
         return;
       }
 
-      const projects = await projectService.listProjects(projectPath);
-      res.json({ success: true, projects });
+      const projectSlugs = await listProjectPlans(projectPath);
+      res.json({ success: true, projects: projectSlugs });
     } catch (error) {
-      logError(error, 'List projects failed');
+      logError(error, 'List project plans failed');
       res.status(500).json({ success: false, error: getErrorMessage(error) });
     }
   };

@@ -54,6 +54,31 @@ export {
   ensureMilestoneDir,
 } from './paths.js';
 
+// Project orchestration paths
+export {
+  getProjectsDir,
+  getProjectDir,
+  getProjectFilePath,
+  getProjectJsonPath,
+  getResearchFilePath,
+  getPrdFilePath,
+  getMilestonesDir,
+  getMilestoneDir,
+  getMilestoneFilePath,
+  getPhaseFilePath,
+  generateMilestoneSlug,
+  generateProjectSlug,
+  generatePhaseSlug,
+  ensureProjectsDir,
+  ensureProjectStructure,
+  ensureMilestoneDir,
+  listProjectPlans,
+  listMilestones,
+  listPhases,
+  projectPlanExists,
+  deleteProjectPlan,
+} from './projects.js';
+
 // Subprocess management
 export {
   spawnJSONLProcess,

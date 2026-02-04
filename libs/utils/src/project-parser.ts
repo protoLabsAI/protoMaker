@@ -1,524 +1,662 @@
 /**
- * Project Parser - Utilities for parsing and generating project markdown files
+ * Project Parser - Parse project, milestone, and phase markdown files
  *
- * Handles parsing of project.md, milestone.md, and phase.md files
- * as well as generating markdown from Project objects.
+ * Converts markdown files into structured TypeScript objects for the
+ * project orchestration system.
  */
 
 import type {
   Project,
   Milestone,
   Phase,
-  SparcPRD,
+  SPARCPrd,
+  PhaseComplexity,
   ProjectStatus,
   MilestoneStatus,
-  PhaseStatus,
-  PhaseComplexity,
 } from '@automaker/types';
-import { slugify } from './string-utils.js';
 
 /**
- * Generate a project.md file content from a Project object
+ * Parse a project.md file into a Project object
+ *
+ * Expected format:
+ * ```markdown
+ * # Project: Epic/Milestone Support
+ *
+ * ## Goal
+ * Add hierarchical grouping to Automaker's feature management.
+ *
+ * ## Milestones
+ * 1. Foundation - Core types and server support
+ * 2. UI Components - Cards, badges, filtering
+ * ```
+ *
+ * @param content - Markdown content of the project file
+ * @param slug - Project slug (from directory name)
+ * @returns Partial project object (milestones loaded separately)
  */
-export function generateProjectMarkdown(project: Project): string {
-  const lines: string[] = [];
-
-  lines.push(`# Project: ${project.title}`);
-  lines.push('');
-  lines.push(`## Goal`);
-  lines.push(project.goal);
-  lines.push('');
-
-  if (project.prd) {
-    lines.push('## PRD');
-    lines.push('');
-    lines.push('### Situation');
-    lines.push(project.prd.situation);
-    lines.push('');
-    lines.push('### Problem');
-    lines.push(project.prd.problem);
-    lines.push('');
-    lines.push('### Approach');
-    lines.push(project.prd.approach);
-    lines.push('');
-    lines.push('### Results');
-    lines.push(project.prd.results);
-    lines.push('');
-    if (project.prd.constraints.length > 0) {
-      lines.push('### Constraints');
-      for (const constraint of project.prd.constraints) {
-        lines.push(`- ${constraint}`);
-      }
-      lines.push('');
-    }
-  }
-
-  if (project.milestones.length > 0) {
-    lines.push('## Milestones');
-    for (let i = 0; i < project.milestones.length; i++) {
-      const milestone = project.milestones[i];
-      lines.push(`${i + 1}. ${milestone.title} - ${milestone.description}`);
-    }
-    lines.push('');
-  }
-
-  return lines.join('\n');
-}
-
-/**
- * Generate a milestone.md file content from a Milestone object
- */
-export function generateMilestoneMarkdown(milestone: Milestone): string {
-  const lines: string[] = [];
-
-  lines.push(`# Milestone: ${milestone.title}`);
-  lines.push('');
-  lines.push('## Description');
-  lines.push(milestone.description);
-  lines.push('');
-
-  if (milestone.phases.length > 0) {
-    lines.push('## Phases');
-    for (let i = 0; i < milestone.phases.length; i++) {
-      const phase = milestone.phases[i];
-      lines.push(`${i + 1}. ${phase.title} - ${phase.description}`);
-    }
-    lines.push('');
-  }
-
-  if (milestone.dependencies && milestone.dependencies.length > 0) {
-    lines.push('## Dependencies');
-    for (const dep of milestone.dependencies) {
-      lines.push(`- ${dep}`);
-    }
-    lines.push('');
-  }
-
-  return lines.join('\n');
-}
-
-/**
- * Generate a phase.md file content from a Phase object
- */
-export function generatePhaseMarkdown(phase: Phase): string {
-  const lines: string[] = [];
-
-  lines.push(`# Phase: ${phase.title}`);
-  lines.push('');
-  lines.push('## Description');
-  lines.push(phase.description);
-  lines.push('');
-
-  if (phase.filesToModify && phase.filesToModify.length > 0) {
-    lines.push('## Files to Modify');
-    for (const file of phase.filesToModify) {
-      lines.push(`- ${file}`);
-    }
-    lines.push('');
-  }
-
-  if (phase.acceptanceCriteria.length > 0) {
-    lines.push('## Acceptance Criteria');
-    for (const criterion of phase.acceptanceCriteria) {
-      lines.push(`- [ ] ${criterion}`);
-    }
-    lines.push('');
-  }
-
-  lines.push('## Estimated Complexity');
-  lines.push(capitalizeFirst(phase.complexity));
-  lines.push('');
-
-  if (phase.dependencies && phase.dependencies.length > 0) {
-    lines.push('## Dependencies');
-    for (const dep of phase.dependencies) {
-      lines.push(`- ${dep}`);
-    }
-    lines.push('');
-  }
-
-  return lines.join('\n');
-}
-
-/**
- * Parse a project.md file content into partial Project data
- */
-export function parseProjectMarkdown(content: string): Partial<Project> {
+export function parseProjectFile(content: string, slug: string): Partial<Project> {
   const lines = content.split('\n');
-  const project: Partial<Project> = {
-    milestones: [],
-  };
 
+  let title = '';
+  let goal = '';
+  let milestoneList: string[] = [];
   let currentSection = '';
-  let prdSection = '';
-  const sectionContent: string[] = [];
 
   for (const line of lines) {
-    // Check for main headings
-    if (line.startsWith('# Project:')) {
-      project.title = line.replace('# Project:', '').trim();
+    const trimmed = line.trim();
+
+    // Parse title from first heading
+    if (trimmed.startsWith('# Project:') || trimmed.startsWith('# ')) {
+      title = trimmed
+        .replace(/^#\s*Project:\s*/i, '')
+        .replace(/^#\s*/, '')
+        .trim();
       continue;
     }
 
-    // Check for section headings
-    if (line.startsWith('## ')) {
-      // Save previous section
-      saveParsedSection(project, currentSection, prdSection, sectionContent.join('\n').trim());
-      sectionContent.length = 0;
-
-      currentSection = line.replace('## ', '').trim().toLowerCase();
-      prdSection = '';
+    // Track section changes
+    if (trimmed.startsWith('## ')) {
+      currentSection = trimmed.replace('## ', '').toLowerCase();
       continue;
     }
 
-    // Check for PRD sub-headings
-    if (line.startsWith('### ') && currentSection === 'prd') {
-      // Save previous PRD section
-      if (prdSection) {
-        saveParsedSection(project, currentSection, prdSection, sectionContent.join('\n').trim());
-        sectionContent.length = 0;
-      }
-      prdSection = line.replace('### ', '').trim().toLowerCase();
-      continue;
-    }
-
-    sectionContent.push(line);
-  }
-
-  // Save final section
-  saveParsedSection(project, currentSection, prdSection, sectionContent.join('\n').trim());
-
-  return project;
-}
-
-function saveParsedSection(
-  project: Partial<Project>,
-  section: string,
-  prdSection: string,
-  content: string
-): void {
-  if (!content) return;
-
-  switch (section) {
-    case 'goal':
-      project.goal = content;
-      break;
-    case 'milestones':
-      project.milestones = parseMilestoneList(content);
-      break;
-    case 'prd':
-      if (!project.prd) {
-        project.prd = {
-          situation: '',
-          problem: '',
-          approach: '',
-          results: '',
-          constraints: [],
-        };
-      }
-      switch (prdSection) {
-        case 'situation':
-          project.prd.situation = content;
-          break;
-        case 'problem':
-          project.prd.problem = content;
-          break;
-        case 'approach':
-          project.prd.approach = content;
-          break;
-        case 'results':
-          project.prd.results = content;
-          break;
-        case 'constraints':
-          project.prd.constraints = parseListItems(content);
-          break;
-      }
-      break;
-  }
-}
-
-function parseMilestoneList(content: string): Milestone[] {
-  const milestones: Milestone[] = [];
-  const lines = content.split('\n').filter((l) => l.trim());
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const match = line.match(/^\d+\.\s+(.+?)(?:\s+-\s+(.+))?$/);
-    if (match) {
-      const title = match[1].trim();
-      const description = match[2]?.trim() || '';
-      milestones.push({
-        id: `${String(i + 1).padStart(2, '0')}-${slugify(title, 30)}`,
-        title,
-        description,
-        phases: [],
-        status: 'pending' as MilestoneStatus,
-      });
+    // Parse content based on section
+    if (currentSection === 'goal' && trimmed) {
+      goal += (goal ? ' ' : '') + trimmed;
+    } else if (currentSection === 'milestones' && /^\d+\./.test(trimmed)) {
+      milestoneList.push(trimmed);
     }
   }
-
-  return milestones;
-}
-
-/**
- * Parse a milestone.md file content into partial Milestone data
- */
-export function parseMilestoneMarkdown(content: string): Partial<Milestone> {
-  const lines = content.split('\n');
-  const milestone: Partial<Milestone> = {
-    phases: [],
-  };
-
-  let currentSection = '';
-  const sectionContent: string[] = [];
-
-  for (const line of lines) {
-    if (line.startsWith('# Milestone:')) {
-      milestone.title = line.replace('# Milestone:', '').trim();
-      continue;
-    }
-
-    if (line.startsWith('## ')) {
-      // Save previous section
-      saveMilestoneSection(milestone, currentSection, sectionContent.join('\n').trim());
-      sectionContent.length = 0;
-      currentSection = line.replace('## ', '').trim().toLowerCase();
-      continue;
-    }
-
-    sectionContent.push(line);
-  }
-
-  // Save final section
-  saveMilestoneSection(milestone, currentSection, sectionContent.join('\n').trim());
-
-  return milestone;
-}
-
-function saveMilestoneSection(
-  milestone: Partial<Milestone>,
-  section: string,
-  content: string
-): void {
-  if (!content) return;
-
-  switch (section) {
-    case 'description':
-      milestone.description = content;
-      break;
-    case 'phases':
-      milestone.phases = parsePhaseList(content);
-      break;
-    case 'dependencies':
-      milestone.dependencies = parseListItems(content);
-      break;
-  }
-}
-
-function parsePhaseList(content: string): Phase[] {
-  const phases: Phase[] = [];
-  const lines = content.split('\n').filter((l) => l.trim());
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const match = line.match(/^\d+\.\s+(.+?)(?:\s+-\s+(.+))?$/);
-    if (match) {
-      const title = match[1].trim();
-      const description = match[2]?.trim() || '';
-      phases.push({
-        id: `phase-${String(i + 1).padStart(2, '0')}-${slugify(title, 30)}`,
-        title,
-        description,
-        acceptanceCriteria: [],
-        complexity: 'medium' as PhaseComplexity,
-        status: 'pending' as PhaseStatus,
-      });
-    }
-  }
-
-  return phases;
-}
-
-/**
- * Parse a phase.md file content into partial Phase data
- */
-export function parsePhaseMarkdown(content: string): Partial<Phase> {
-  const lines = content.split('\n');
-  const phase: Partial<Phase> = {
-    acceptanceCriteria: [],
-  };
-
-  let currentSection = '';
-  const sectionContent: string[] = [];
-
-  for (const line of lines) {
-    if (line.startsWith('# Phase:')) {
-      phase.title = line.replace('# Phase:', '').trim();
-      continue;
-    }
-
-    if (line.startsWith('## ')) {
-      // Save previous section
-      savePhaseSection(phase, currentSection, sectionContent.join('\n').trim());
-      sectionContent.length = 0;
-      currentSection = line.replace('## ', '').trim().toLowerCase();
-      continue;
-    }
-
-    sectionContent.push(line);
-  }
-
-  // Save final section
-  savePhaseSection(phase, currentSection, sectionContent.join('\n').trim());
-
-  return phase;
-}
-
-function savePhaseSection(phase: Partial<Phase>, section: string, content: string): void {
-  if (!content) return;
-
-  switch (section) {
-    case 'description':
-      phase.description = content;
-      break;
-    case 'files to modify':
-      phase.filesToModify = parseListItems(content);
-      break;
-    case 'acceptance criteria':
-      phase.acceptanceCriteria = parseChecklistItems(content);
-      break;
-    case 'estimated complexity':
-      phase.complexity = parseComplexity(content);
-      break;
-    case 'dependencies':
-      phase.dependencies = parseListItems(content);
-      break;
-  }
-}
-
-function parseListItems(content: string): string[] {
-  return content
-    .split('\n')
-    .map((line) => line.replace(/^[-*]\s*/, '').trim())
-    .filter((line) => line.length > 0);
-}
-
-function parseChecklistItems(content: string): string[] {
-  return content
-    .split('\n')
-    .map((line) => line.replace(/^[-*]\s*\[[ x]\]\s*/i, '').trim())
-    .filter((line) => line.length > 0);
-}
-
-function parseComplexity(content: string): PhaseComplexity {
-  const lower = content.toLowerCase().trim();
-  if (lower.includes('small') || lower.includes('low')) return 'small';
-  if (lower.includes('large') || lower.includes('high')) return 'large';
-  return 'medium';
-}
-
-function capitalizeFirst(str: string): string {
-  return str.charAt(0).toUpperCase() + str.slice(1);
-}
-
-/**
- * Generate a project slug from a title
- */
-export function generateProjectSlug(title: string): string {
-  return slugify(title, 50);
-}
-
-/**
- * Generate a milestone slug with index prefix
- */
-export function generateMilestoneSlug(index: number, title: string): string {
-  return `${String(index + 1).padStart(2, '0')}-${slugify(title, 30)}`;
-}
-
-/**
- * Generate a phase filename with index prefix
- */
-export function generatePhaseFilename(index: number, title: string): string {
-  return `phase-${String(index + 1).padStart(2, '0')}-${slugify(title, 30)}.md`;
-}
-
-/**
- * Create a new Project object with defaults
- */
-export function createProject(
-  title: string,
-  goal: string,
-  options?: {
-    prd?: SparcPRD;
-    milestones?: Omit<Milestone, 'id' | 'status' | 'epicId'>[];
-  }
-): Project {
-  const now = new Date().toISOString();
-  const slug = generateProjectSlug(title);
-
-  const milestones: Milestone[] = (options?.milestones || []).map((m, i) => ({
-    ...m,
-    id: generateMilestoneSlug(i, m.title),
-    status: 'pending' as MilestoneStatus,
-    phases: m.phases.map((p, j) => ({
-      ...p,
-      id: `${generateMilestoneSlug(i, m.title)}-phase-${String(j + 1).padStart(2, '0')}-${slugify(p.title, 20)}`,
-      status: 'pending' as PhaseStatus,
-    })),
-  }));
 
   return {
     slug,
-    title,
+    title: title || slug,
     goal,
     status: 'drafting' as ProjectStatus,
-    prd: options?.prd,
-    milestones,
-    createdAt: now,
-    updatedAt: now,
+    milestones: [],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   };
 }
 
 /**
- * Create a feature description from a Phase object
+ * Generate project.md content from a Project object
+ *
+ * @param project - The project object
+ * @returns Markdown content for project.md
  */
-export function phaseToFeatureDescription(phase: Phase, milestone?: Milestone): string {
-  const lines: string[] = [];
+export function generateProjectFile(project: Project): string {
+  let content = `# Project: ${project.title}\n\n`;
+  content += `## Goal\n${project.goal}\n\n`;
 
-  lines.push(phase.description);
-  lines.push('');
-
-  if (phase.filesToModify && phase.filesToModify.length > 0) {
-    lines.push('**Files to Modify:**');
-    for (const file of phase.filesToModify) {
-      lines.push(`- ${file}`);
+  if (project.milestones.length > 0) {
+    content += `## Milestones\n`;
+    for (const milestone of project.milestones) {
+      content += `${milestone.number}. ${milestone.title} - ${milestone.description}\n`;
     }
-    lines.push('');
   }
 
-  if (phase.acceptanceCriteria.length > 0) {
-    lines.push('**Acceptance Criteria:**');
-    for (const criterion of phase.acceptanceCriteria) {
-      lines.push(`- ${criterion}`);
-    }
-    lines.push('');
-  }
-
-  if (milestone) {
-    lines.push(`**Milestone:** ${milestone.title}`);
-    lines.push(`**Complexity:** ${capitalizeFirst(phase.complexity)}`);
-  }
-
-  return lines.join('\n').trim();
+  return content;
 }
 
 /**
- * Generate a branch name from a phase title
+ * Parse a milestone.md file into a Milestone object
+ *
+ * Expected format:
+ * ```markdown
+ * # Milestone: Foundation
+ *
+ * ## Description
+ * Core infrastructure for epic support.
+ *
+ * ## Phases
+ * 1. Types - Add isEpic, epicId fields
+ * 2. Server - Auto-detection, API endpoints
+ *
+ * ## Dependencies
+ * - None (first milestone)
+ * ```
+ *
+ * @param content - Markdown content of the milestone file
+ * @param slug - Milestone slug (from directory name)
+ * @returns Partial milestone object (phases loaded separately)
  */
-export function phaseToBranchName(
-  projectSlug: string,
-  milestoneSlug: string,
-  phaseTitle: string
-): string {
-  return `feature/${projectSlug}/${milestoneSlug}/${slugify(phaseTitle, 30)}`;
+export function parseMilestoneFile(content: string, slug: string): Partial<Milestone> {
+  const lines = content.split('\n');
+
+  let title = '';
+  let description = '';
+  let phaseList: string[] = [];
+  let dependencies: string[] = [];
+  let currentSection = '';
+
+  // Extract number from slug (e.g., "01-foundation" -> 1)
+  const numberMatch = slug.match(/^(\d+)-/);
+  const number = numberMatch ? parseInt(numberMatch[1], 10) : 1;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    // Parse title from first heading
+    if (trimmed.startsWith('# Milestone:') || trimmed.startsWith('# ')) {
+      title = trimmed
+        .replace(/^#\s*Milestone:\s*/i, '')
+        .replace(/^#\s*/, '')
+        .trim();
+      continue;
+    }
+
+    // Track section changes
+    if (trimmed.startsWith('## ')) {
+      currentSection = trimmed.replace('## ', '').toLowerCase();
+      continue;
+    }
+
+    // Parse content based on section
+    if (currentSection === 'description' && trimmed) {
+      description += (description ? ' ' : '') + trimmed;
+    } else if (currentSection === 'phases' && /^\d+\./.test(trimmed)) {
+      phaseList.push(trimmed);
+    } else if (currentSection === 'dependencies' && trimmed.startsWith('-')) {
+      const dep = trimmed.replace(/^-\s*/, '').trim();
+      if (dep.toLowerCase() !== 'none' && !dep.toLowerCase().includes('first milestone')) {
+        dependencies.push(dep);
+      }
+    }
+  }
+
+  return {
+    number,
+    slug,
+    title: title || slug,
+    description,
+    phases: [],
+    dependencies: dependencies.length > 0 ? dependencies : undefined,
+    status: 'pending' as MilestoneStatus,
+  };
+}
+
+/**
+ * Generate milestone.md content from a Milestone object
+ *
+ * Follows the detailed format from rpg-mcp:
+ * - Status, Duration, Dependencies header
+ * - Overview explaining why this matters
+ * - Phases table with durations
+ * - Success Criteria
+ * - Outputs (what this enables for next milestones)
+ * - Handoff section
+ *
+ * @param milestone - The milestone object
+ * @returns Markdown content for milestone.md
+ */
+export function generateMilestoneFile(milestone: Milestone): string {
+  let content = `# M${milestone.number}: ${milestone.title}\n\n`;
+
+  // Status header
+  const statusEmoji =
+    milestone.status === 'completed' ? '✅' : milestone.status === 'in-progress' ? '🔄' : '🔴';
+  content += `**Status**: ${statusEmoji} ${milestone.status === 'pending' ? 'Not started' : milestone.status}\n`;
+  content += `**Duration**: ${milestone.phases.length * 1}-${milestone.phases.length * 2} weeks (estimated)\n`;
+  content += `**Dependencies**: ${milestone.dependencies?.length ? milestone.dependencies.join(', ') : 'None'}\n\n`;
+  content += `---\n\n`;
+
+  // Overview
+  content += `## Overview\n\n${milestone.description}\n\n`;
+  content += `---\n\n`;
+
+  // Phases table
+  if (milestone.phases.length > 0) {
+    content += `## Phases\n\n`;
+    content += `| Phase | File | Duration | Dependencies | Owner |\n`;
+    content += `|-------|------|----------|--------------|-------|\n`;
+    for (const phase of milestone.phases) {
+      const duration =
+        phase.complexity === 'small'
+          ? '0.5 weeks'
+          : phase.complexity === 'large'
+            ? '2 weeks'
+            : '1 week';
+      const deps = phase.dependencies?.length ? phase.dependencies.join(', ') : 'None';
+      const paddedNum = String(phase.number).padStart(2, '0');
+      content += `| ${phase.number} | [phase-${paddedNum}-${phase.name}.md](./phase-${paddedNum}-${phase.name}.md) | ${duration} | ${deps} | TBD |\n`;
+    }
+    content += '\n';
+  }
+
+  content += `---\n\n`;
+
+  // Success Criteria
+  content += `## Success Criteria\n\n`;
+  content += `M${milestone.number} is **complete** when:\n\n`;
+  content += `- [ ] All phases complete\n`;
+  content += `- [ ] Tests passing\n`;
+  content += `- [ ] Documentation updated\n`;
+  content += `- [ ] Team reviewed and approved\n\n`;
+
+  content += `---\n\n`;
+
+  // Outputs
+  content += `## Outputs\n\n`;
+  content += `### For Next Milestone\n`;
+  content += `- Foundation work ready for dependent features\n`;
+  content += `- APIs stable and documented\n`;
+  content += `- Types exported and usable\n\n`;
+
+  content += `---\n\n`;
+
+  // Handoff
+  content += `## Handoff to M${milestone.number + 1}\n\n`;
+  content += `Once M${milestone.number} is complete, the following can begin:\n\n`;
+  content += `- Next milestone phases that depend on this work\n`;
+  content += `- Parallel work streams that were blocked\n\n`;
+
+  content += `---\n\n`;
+  content += `**Next**: [Phase 1](./phase-01-${milestone.phases[0]?.name || 'start'}.md)\n`;
+
+  return content;
+}
+
+/**
+ * Parse a phase-XX-name.md file into a Phase object
+ *
+ * Expected format:
+ * ```markdown
+ * # Phase: Core Type Definitions
+ *
+ * ## Description
+ * Add epic-related fields to the Feature type.
+ *
+ * ## Files to Modify
+ * - libs/types/src/feature.ts
+ *
+ * ## Acceptance Criteria
+ * - [ ] isEpic field added
+ * - [ ] epicId field added
+ *
+ * ## Estimated Complexity
+ * Small
+ *
+ * ## Dependencies
+ * - None
+ * ```
+ *
+ * @param content - Markdown content of the phase file
+ * @param filename - Phase filename (e.g., "phase-01-types.md")
+ * @returns Phase object
+ */
+export function parsePhaseFile(content: string, filename: string): Phase {
+  const lines = content.split('\n');
+
+  let title = '';
+  let description = '';
+  let filesToModify: string[] = [];
+  let acceptanceCriteria: string[] = [];
+  let complexity: PhaseComplexity = 'medium';
+  let dependencies: string[] = [];
+  let currentSection = '';
+
+  // Extract number and name from filename (e.g., "phase-01-types.md" -> number: 1, name: "types")
+  const match = filename.match(/^phase-(\d+)-(.+)\.md$/);
+  const number = match ? parseInt(match[1], 10) : 1;
+  const name = match ? match[2] : filename.replace('.md', '');
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    // Parse title from first heading
+    if (trimmed.startsWith('# Phase:') || trimmed.startsWith('# ')) {
+      title = trimmed
+        .replace(/^#\s*Phase:\s*/i, '')
+        .replace(/^#\s*/, '')
+        .trim();
+      continue;
+    }
+
+    // Track section changes
+    if (trimmed.startsWith('## ')) {
+      currentSection = trimmed.replace('## ', '').toLowerCase();
+      continue;
+    }
+
+    // Parse content based on section
+    if (currentSection === 'description' && trimmed) {
+      description += (description ? '\n' : '') + trimmed;
+    } else if (currentSection === 'files to modify' && trimmed.startsWith('-')) {
+      filesToModify.push(trimmed.replace(/^-\s*/, '').trim());
+    } else if (currentSection === 'acceptance criteria' && trimmed.startsWith('-')) {
+      // Remove checkbox markers
+      const criterion = trimmed
+        .replace(/^-\s*/, '')
+        .replace(/^\[[ x]\]\s*/i, '')
+        .trim();
+      acceptanceCriteria.push(criterion);
+    } else if (currentSection === 'estimated complexity' && trimmed) {
+      const lower = trimmed.toLowerCase();
+      if (lower === 'small' || lower === 'medium' || lower === 'large') {
+        complexity = lower as PhaseComplexity;
+      }
+    } else if (currentSection === 'dependencies' && trimmed.startsWith('-')) {
+      const dep = trimmed.replace(/^-\s*/, '').trim();
+      if (dep.toLowerCase() !== 'none') {
+        dependencies.push(dep);
+      }
+    }
+  }
+
+  return {
+    number,
+    name,
+    title: title || name,
+    description,
+    filesToModify: filesToModify.length > 0 ? filesToModify : undefined,
+    acceptanceCriteria: acceptanceCriteria.length > 0 ? acceptanceCriteria : undefined,
+    complexity,
+    dependencies: dependencies.length > 0 ? dependencies : undefined,
+  };
+}
+
+/**
+ * Generate phase-XX-name.md content from a Phase object
+ *
+ * This follows the detailed format from the rpg-mcp project:
+ * - Duration, Owner, Dependencies, Parallel Work header
+ * - Overview section
+ * - Sub-Phases (if any)
+ * - Tasks with file paths
+ * - Deliverables
+ * - Verification Commands
+ * - Handoff Checklist
+ *
+ * @param phase - The phase object
+ * @param milestone - Parent milestone (for context)
+ * @returns Markdown content for phase file
+ */
+export function generatePhaseFile(phase: Phase, milestone?: Milestone): string {
+  const milestonePrefix = milestone ? `M${milestone.number} ` : '';
+  let content = `# ${milestonePrefix}Phase ${phase.number}: ${phase.title}\n\n`;
+
+  // Header metadata
+  content += `**Duration**: ${phase.complexity === 'small' ? '0.5-1 week' : phase.complexity === 'large' ? '2+ weeks' : '1-1.5 weeks'}\n`;
+  content += `**Owner**: TBD\n`;
+  content += `**Dependencies**: ${phase.dependencies?.length ? phase.dependencies.join(', ') : 'None'}\n`;
+  content += `**Parallel Work**: Can run alongside other phases (if applicable)\n\n`;
+  content += `---\n\n`;
+
+  // Overview
+  content += `## Overview\n\n${phase.description}\n\n`;
+  content += `---\n\n`;
+
+  // Tasks section with files
+  content += `## Tasks\n\n`;
+  if (phase.filesToModify && phase.filesToModify.length > 0) {
+    content += `### Files to Create/Modify\n`;
+    for (const file of phase.filesToModify) {
+      content += `- [ ] \`${file}\`\n`;
+    }
+    content += '\n';
+  }
+
+  // Acceptance criteria as verification
+  if (phase.acceptanceCriteria && phase.acceptanceCriteria.length > 0) {
+    content += `### Verification\n`;
+    for (const criterion of phase.acceptanceCriteria) {
+      content += `- [ ] ${criterion}\n`;
+    }
+    content += '\n';
+  }
+
+  content += `---\n\n`;
+
+  // Deliverables
+  content += `## Deliverables\n\n`;
+  content += `- [ ] Code implemented and working\n`;
+  content += `- [ ] Tests passing\n`;
+  content += `- [ ] Documentation updated\n\n`;
+  content += `---\n\n`;
+
+  // Handoff checklist
+  content += `## Handoff Checklist\n\n`;
+  content += `Before marking Phase ${phase.number} complete:\n\n`;
+  content += `- [ ] All tasks complete\n`;
+  content += `- [ ] Tests passing\n`;
+  content += `- [ ] Code reviewed\n`;
+  content += `- [ ] PR merged to main\n`;
+  content += `- [ ] Team notified\n\n`;
+
+  // Next phase reference
+  const nextPhase = phase.number + 1;
+  content += `**Next**: Phase ${nextPhase}\n`;
+
+  return content;
+}
+
+/**
+ * Parse a SPARC PRD markdown file
+ *
+ * Expected format:
+ * ```markdown
+ * # PRD: Feature Name
+ *
+ * ## Situation
+ * Current state, context...
+ *
+ * ## Problem
+ * Issues to solve...
+ *
+ * ## Approach
+ * Proposed solution...
+ *
+ * ## Results
+ * Expected outcomes...
+ *
+ * ## Constraints
+ * Limitations...
+ * ```
+ *
+ * @param content - Markdown content of the PRD file
+ * @returns SPARCPrd object
+ */
+export function parsePrdFile(content: string): SPARCPrd {
+  const lines = content.split('\n');
+
+  let situation = '';
+  let problem = '';
+  let approach = '';
+  let results = '';
+  let constraints = '';
+  let currentSection = '';
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    // Track section changes (case-insensitive)
+    if (trimmed.startsWith('## ')) {
+      currentSection = trimmed.replace('## ', '').toLowerCase();
+      continue;
+    }
+
+    // Skip title line
+    if (trimmed.startsWith('# ')) {
+      continue;
+    }
+
+    // Parse content based on section
+    if (currentSection === 'situation' || currentSection === 's - situation') {
+      situation += (situation && trimmed ? '\n' : '') + line;
+    } else if (currentSection === 'problem' || currentSection === 'p - problem') {
+      problem += (problem && trimmed ? '\n' : '') + line;
+    } else if (currentSection === 'approach' || currentSection === 'a - approach') {
+      approach += (approach && trimmed ? '\n' : '') + line;
+    } else if (currentSection === 'results' || currentSection === 'r - results') {
+      results += (results && trimmed ? '\n' : '') + line;
+    } else if (currentSection === 'constraints' || currentSection === 'c - constraints') {
+      constraints += (constraints && trimmed ? '\n' : '') + line;
+    }
+  }
+
+  return {
+    situation: situation.trim(),
+    problem: problem.trim(),
+    approach: approach.trim(),
+    results: results.trim(),
+    constraints: constraints.trim(),
+    generatedAt: new Date().toISOString(),
+  };
+}
+
+/**
+ * Generate a SPARC PRD markdown file from a SPARCPrd object
+ *
+ * @param title - Title for the PRD
+ * @param prd - The SPARCPrd object
+ * @returns Markdown content for PRD file
+ */
+export function generatePrdFile(title: string, prd: SPARCPrd): string {
+  let content = `# PRD: ${title}\n\n`;
+  content += `## Situation\n${prd.situation}\n\n`;
+  content += `## Problem\n${prd.problem}\n\n`;
+  content += `## Approach\n${prd.approach}\n\n`;
+  content += `## Results\n${prd.results}\n\n`;
+  content += `## Constraints\n${prd.constraints}\n`;
+
+  return content;
+}
+
+/**
+ * Parse research.md file into a summary string
+ *
+ * @param content - Markdown content of the research file
+ * @returns Research summary
+ */
+export function parseResearchFile(content: string): string {
+  // The research file is mostly free-form, so we just return it cleaned up
+  return content.trim();
+}
+
+/**
+ * Convert a Phase to feature description format
+ *
+ * Creates a well-structured description suitable for creating a Feature.
+ *
+ * @param phase - The phase to convert
+ * @param milestone - Parent milestone (for context)
+ * @returns Description string for feature creation
+ */
+export function phaseToFeatureDescription(phase: Phase, milestone?: Milestone): string {
+  let description = '';
+
+  if (milestone) {
+    description += `**Milestone:** ${milestone.title}\n\n`;
+  }
+
+  description += phase.description;
+
+  if (phase.filesToModify && phase.filesToModify.length > 0) {
+    description += '\n\n**Files to Modify:**\n';
+    for (const file of phase.filesToModify) {
+      description += `- ${file}\n`;
+    }
+  }
+
+  if (phase.acceptanceCriteria && phase.acceptanceCriteria.length > 0) {
+    description += '\n**Acceptance Criteria:**\n';
+    for (const criterion of phase.acceptanceCriteria) {
+      description += `- [ ] ${criterion}\n`;
+    }
+  }
+
+  if (phase.complexity) {
+    description += `\n**Complexity:** ${phase.complexity}`;
+  }
+
+  return description;
+}
+
+/**
+ * Extract milestone dependencies from a list of milestone references
+ *
+ * Converts human-readable dependency references to milestone slugs.
+ *
+ * @param dependencies - Array of dependency references
+ * @param allMilestones - Array of all milestones to match against
+ * @returns Array of milestone slugs
+ */
+export function resolveMilestoneDependencies(
+  dependencies: string[] | undefined,
+  allMilestones: Milestone[]
+): string[] {
+  if (!dependencies || dependencies.length === 0) {
+    return [];
+  }
+
+  const resolved: string[] = [];
+
+  for (const dep of dependencies) {
+    // Try to match by number (e.g., "Milestone 1", "01")
+    const numberMatch = dep.match(/(\d+)/);
+    if (numberMatch) {
+      const num = parseInt(numberMatch[1], 10);
+      const milestone = allMilestones.find((m) => m.number === num);
+      if (milestone) {
+        resolved.push(milestone.slug);
+        continue;
+      }
+    }
+
+    // Try to match by title (partial, case-insensitive)
+    const lower = dep.toLowerCase();
+    const milestone = allMilestones.find(
+      (m) => m.title.toLowerCase().includes(lower) || m.slug.includes(lower)
+    );
+    if (milestone) {
+      resolved.push(milestone.slug);
+    }
+  }
+
+  return resolved;
+}
+
+/**
+ * Extract phase dependencies from a list of phase references
+ *
+ * Converts human-readable dependency references to phase names.
+ *
+ * @param dependencies - Array of dependency references
+ * @param allPhases - Array of all phases to match against
+ * @returns Array of phase names
+ */
+export function resolvePhaseDependencies(
+  dependencies: string[] | undefined,
+  allPhases: Phase[]
+): string[] {
+  if (!dependencies || dependencies.length === 0) {
+    return [];
+  }
+
+  const resolved: string[] = [];
+
+  for (const dep of dependencies) {
+    // Try to match by number (e.g., "Phase 1", "01")
+    const numberMatch = dep.match(/(\d+)/);
+    if (numberMatch) {
+      const num = parseInt(numberMatch[1], 10);
+      const phase = allPhases.find((p) => p.number === num);
+      if (phase) {
+        resolved.push(phase.name);
+        continue;
+      }
+    }
+
+    // Try to match by name/title (partial, case-insensitive)
+    const lower = dep.toLowerCase();
+    const phase = allPhases.find(
+      (p) => p.title.toLowerCase().includes(lower) || p.name.includes(lower)
+    );
+    if (phase) {
+      resolved.push(phase.name);
+    }
+  }
+
+  return resolved;
 }

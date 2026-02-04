@@ -48,10 +48,10 @@ export interface Feature {
   textFilePaths?: FeatureTextFilePath[];
   // Branch info - worktree path is derived at runtime from branchName
   branchName?: string; // Name of the feature branch (undefined = use current worktree)
-  // Epic/milestone support
+  // Epic support - hierarchical grouping
   isEpic?: boolean; // True if this feature is an epic (container for child features)
-  epicId?: string; // ID of parent epic if this feature belongs to an epic
-  epicColor?: string; // Color for epic badge display
+  epicId?: string; // ID of parent epic (if this feature belongs to an epic)
+  epicColor?: string; // Color for epic badge display (hex color)
   skipTests?: boolean;
   thinkingLevel?: ThinkingLevel;
   reasoningEffort?: ReasoningEffort;

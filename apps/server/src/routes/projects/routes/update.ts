@@ -1,39 +1,113 @@
 /**
- * POST /update endpoint - Update an existing project
+ * POST /update endpoint - Update a project plan
  */
 
 import type { Request, Response } from 'express';
+import type { Project, ProjectStatus, SPARCPrd, PRDReviewComment } from '@automaker/types';
+import {
+  getProjectJsonPath,
+  getProjectFilePath,
+  getPrdFilePath,
+  getResearchFilePath,
+  projectPlanExists,
+} from '@automaker/platform';
+import { secureFs } from '@automaker/platform';
+import { generateProjectFile, generatePrdFile } from '@automaker/utils';
 import { getErrorMessage, logError } from '../common.js';
-import type { ProjectService } from '../../../services/project-service.js';
-import type { UpdateProjectInput } from '@automaker/types';
 
-export function createUpdateHandler(projectService: ProjectService) {
+interface UpdateProjectRequest {
+  projectPath: string;
+  projectSlug: string;
+  updates: {
+    title?: string;
+    goal?: string;
+    status?: ProjectStatus;
+    prd?: SPARCPrd;
+    researchSummary?: string;
+    reviewComments?: PRDReviewComment[];
+  };
+}
+
+export function createUpdateHandler() {
   return async (req: Request, res: Response): Promise<void> => {
     try {
-      const { projectPath, projectSlug, updates } = req.body as {
-        projectPath: string;
-        projectSlug: string;
-        updates: UpdateProjectInput;
-      };
+      const { projectPath, projectSlug, updates } = req.body as UpdateProjectRequest;
 
-      if (!projectPath || !projectSlug) {
-        res.status(400).json({
-          success: false,
-          error: 'projectPath and projectSlug are required',
-        });
+      if (!projectPath) {
+        res.status(400).json({ success: false, error: 'projectPath is required' });
+        return;
+      }
+      if (!projectSlug) {
+        res.status(400).json({ success: false, error: 'projectSlug is required' });
+        return;
+      }
+      if (!updates) {
+        res.status(400).json({ success: false, error: 'updates is required' });
         return;
       }
 
-      const updated = await projectService.updateProject(projectPath, projectSlug, updates);
-      if (!updated) {
-        res.status(404).json({
-          success: false,
-          error: `Project "${projectSlug}" not found`,
-        });
+      // Check if project exists
+      const exists = await projectPlanExists(projectPath, projectSlug);
+      if (!exists) {
+        res.status(404).json({ success: false, error: `Project "${projectSlug}" not found` });
         return;
       }
 
-      res.json({ success: true, project: updated });
+      // Load existing project
+      const jsonPath = getProjectJsonPath(projectPath, projectSlug);
+      let project: Project;
+      try {
+        const jsonContent = (await secureFs.readFile(jsonPath, 'utf-8')) as string;
+        project = JSON.parse(jsonContent) as Project;
+      } catch {
+        res.status(500).json({ success: false, error: 'Failed to load project.json' });
+        return;
+      }
+
+      // Apply updates
+      if (updates.title !== undefined) {
+        project.title = updates.title;
+      }
+      if (updates.goal !== undefined) {
+        project.goal = updates.goal;
+      }
+      if (updates.status !== undefined) {
+        project.status = updates.status;
+      }
+      if (updates.prd !== undefined) {
+        project.prd = updates.prd;
+      }
+      if (updates.researchSummary !== undefined) {
+        project.researchSummary = updates.researchSummary;
+      }
+      if (updates.reviewComments !== undefined) {
+        project.reviewComments = updates.reviewComments;
+      }
+
+      project.updatedAt = new Date().toISOString();
+
+      // Save updated project.json
+      await secureFs.writeFile(jsonPath, JSON.stringify(project, null, 2), 'utf-8');
+
+      // Update project.md
+      const projectFilePath = getProjectFilePath(projectPath, projectSlug);
+      const projectContent = generateProjectFile(project);
+      await secureFs.writeFile(projectFilePath, projectContent, 'utf-8');
+
+      // Update prd.md if PRD changed
+      if (updates.prd) {
+        const prdFilePath = getPrdFilePath(projectPath, projectSlug);
+        const prdContent = generatePrdFile(project.title, updates.prd);
+        await secureFs.writeFile(prdFilePath, prdContent, 'utf-8');
+      }
+
+      // Update research.md if research summary changed
+      if (updates.researchSummary) {
+        const researchFilePath = getResearchFilePath(projectPath, projectSlug);
+        await secureFs.writeFile(researchFilePath, updates.researchSummary, 'utf-8');
+      }
+
+      res.json({ success: true, project });
     } catch (error) {
       logError(error, 'Update project failed');
       res.status(500).json({ success: false, error: getErrorMessage(error) });

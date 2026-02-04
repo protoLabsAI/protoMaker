@@ -1,5 +1,5 @@
 /**
- * Common utilities for projects routes
+ * Common utilities for project routes
  */
 
 import { createLogger } from '@automaker/utils';
