@@ -26,15 +26,25 @@ const API_URL = process.env.AUTOMAKER_API_URL || 'http://localhost:3008';
 const API_KEY = process.env.AUTOMAKER_API_KEY || '';
 
 // Helper for API calls
-async function apiCall(endpoint: string, body: Record<string, unknown>): Promise<unknown> {
-  const response = await fetch(`${API_URL}/api${endpoint}`, {
-    method: 'POST',
+async function apiCall(
+  endpoint: string,
+  body: Record<string, unknown>,
+  method: 'GET' | 'POST' = 'POST'
+): Promise<unknown> {
+  const options: RequestInit = {
+    method,
     headers: {
       'Content-Type': 'application/json',
       'X-API-Key': API_KEY,
     },
-    body: JSON.stringify(body),
-  });
+  };
+
+  // Only include body for POST requests
+  if (method === 'POST') {
+    options.body = JSON.stringify(body);
+  }
+
+  const response = await fetch(`${API_URL}/api${endpoint}`, options);
 
   if (!response.ok) {
     const text = await response.text();
@@ -843,7 +853,7 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       });
 
     case 'list_running_agents':
-      return apiCall('/running-agents/list', {});
+      return apiCall('/running-agents', {}, 'GET');
 
     case 'get_agent_output':
       return apiCall('/features/agent-output', {

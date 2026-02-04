@@ -3,9 +3,10 @@ import { memo, useEffect, useMemo, useState } from 'react';
 import { Feature, useAppStore } from '@/store/app-store';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { AlertCircle, Lock, Hand, Sparkles } from 'lucide-react';
+import { AlertCircle, Lock, Hand, Sparkles, Layers } from 'lucide-react';
 import { getBlockingDependencies } from '@automaker/dependency-resolver';
 import { useShallow } from 'zustand/react/shallow';
+import { EpicBadge } from './epic-badge';
 
 /** Uniform badge style for all card badges */
 const uniformBadgeClass =
@@ -16,35 +17,43 @@ interface CardBadgesProps {
 }
 
 /**
- * CardBadges - Shows error badges below the card header
+ * CardBadges - Shows error and epic badges below the card header
  * Note: Blocked/Lock badges are now shown in PriorityBadges for visual consistency
  */
 export const CardBadges = memo(function CardBadges({ feature }: CardBadgesProps) {
-  if (!feature.error) {
+  const hasEpic = !!feature.epicId;
+  const hasError = !!feature.error;
+
+  if (!hasError && !hasEpic) {
     return null;
   }
 
   return (
     <div className="flex flex-wrap items-center gap-1.5 px-3 pt-1.5 min-h-[24px]">
+      {/* Epic badge - shows parent epic for child features */}
+      {hasEpic && <EpicBadge feature={feature} />}
+
       {/* Error badge */}
-      <TooltipProvider delayDuration={200}>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div
-              className={cn(
-                uniformBadgeClass,
-                'bg-[var(--status-error-bg)] border-[var(--status-error)]/40 text-[var(--status-error)]'
-              )}
-              data-testid={`error-badge-${feature.id}`}
-            >
-              <AlertCircle className="w-3.5 h-3.5" />
-            </div>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" className="text-xs max-w-[250px]">
-            <p>{feature.error}</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      {hasError && (
+        <TooltipProvider delayDuration={200}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div
+                className={cn(
+                  uniformBadgeClass,
+                  'bg-[var(--status-error-bg)] border-[var(--status-error)]/40 text-[var(--status-error)]'
+                )}
+                data-testid={`error-badge-${feature.id}`}
+              >
+                <AlertCircle className="w-3.5 h-3.5" />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="text-xs max-w-[250px]">
+              <p>{feature.error}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )}
     </div>
   );
 });
