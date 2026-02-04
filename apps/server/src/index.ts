@@ -6,6 +6,11 @@
  * In web mode, this server runs on a remote host.
  */
 
+// Load environment variables FIRST, before any imports that depend on them
+// (auth.ts reads AUTOMAKER_API_KEY at module load time)
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
@@ -13,7 +18,6 @@ import cookieParser from 'cookie-parser';
 import cookie from 'cookie';
 import { WebSocketServer, WebSocket } from 'ws';
 import { createServer } from 'http';
-import dotenv from 'dotenv';
 
 import { createEventEmitter, type EventEmitter } from './lib/events.js';
 import { initAllowedPaths } from '@automaker/platform';
@@ -85,9 +89,6 @@ import { getNotificationService } from './services/notification-service.js';
 import { createEventHistoryRoutes } from './routes/event-history/index.js';
 import { getEventHistoryService } from './services/event-history-service.js';
 import { createProjectsRoutes } from './routes/projects/index.js';
-
-// Load environment variables
-dotenv.config();
 
 const PORT = parseInt(process.env.PORT || '3008', 10);
 const HOST = process.env.HOST || '0.0.0.0';

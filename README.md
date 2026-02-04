@@ -464,6 +464,39 @@ Once authenticated, Automaker will automatically detect and use your CLI credent
 - 🔊 **Audio Notifications** - Optional completion sounds (mutable in settings)
 - 💾 **Auto-save** - All work automatically persisted to `.automaker/` directory
 
+### Claude Code Integration
+
+Automaker includes a Claude Code plugin and MCP server for programmatic control directly from your terminal.
+
+- 🔌 **MCP Server** - 26 tools for managing features, agents, and orchestration
+- ⚡ **Slash Commands** - `/board`, `/auto-mode`, `/orchestrate`, `/context`
+- 🤖 **Specialized Subagents** - Feature planner, code reviewer, codebase analyzer
+- 🔄 **Full API Access** - Create features, start agents, manage dependencies
+
+**Quick Setup:**
+
+```bash
+# 1. Start Automaker with a fixed API key
+AUTOMAKER_API_KEY=your-dev-key npm run dev
+
+# 2. Add the marketplace and install the plugin
+claude plugin marketplace add /path/to/automaker/packages/mcp-server/plugins
+claude plugin install automaker
+
+# 3. Use slash commands in Claude Code
+/board                    # View your Kanban board
+/auto-mode start          # Start autonomous processing
+```
+
+**Environment Variables:**
+
+| Variable            | Description                | Default                 |
+| ------------------- | -------------------------- | ----------------------- |
+| `AUTOMAKER_API_URL` | Automaker API base URL     | `http://localhost:3008` |
+| `AUTOMAKER_API_KEY` | API key for authentication | (required)              |
+
+📖 **See [docs/claude-plugin.md](docs/claude-plugin.md) for the complete Claude Code integration guide.**
+
 ## Tech Stack
 
 ### Frontend

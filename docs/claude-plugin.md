@@ -423,7 +423,7 @@ Wave 3: [UI Components] - parallel work
 
 ## MCP Tools Reference
 
-The MCP server exposes 26 tools organized by category:
+The MCP server exposes 32 tools organized by category:
 
 ### Feature Management
 
@@ -838,6 +838,58 @@ When `createEpics: true`, each milestone becomes an epic feature:
   - Auth Routes (depends on Create Auth Service)
 
 Epics provide visual grouping on the Kanban board and help track milestone progress.
+
+## Known Issues & Improvements
+
+### Current Issues
+
+1. **`list_running_agents` endpoint mismatch**
+   - MCP tool calls `/running-agents/list` but server routing may differ
+   - Ticket: `feature-1770231844451-cj4ovhl44`
+
+2. **`start_agent` sessionId parameter**
+   - Tool calls `/auto-mode/run-feature` without required sessionId
+   - Ticket: `feature-1770231974074-du2xki49d`
+
+3. **No auto-generated branchName**
+   - Features created via MCP don't get isolated worktrees
+   - Critical for avoiding conflicts on main branch
+
+### Planned Improvements
+
+1. **Auto branchName generation**
+   - Server-side generation in FeatureLoader.create()
+   - Format: `feature/{slugified-title}-{shortId}`
+
+2. **Epic UI support**
+   - Progress bars, swimlanes, epic filtering
+   - Collapsible epic groups in list view
+
+3. **Batch feature operations**
+   - Bulk update multiple features at once
+   - Bulk dependency setting
+
+4. **Feature search/filter**
+   - Filter by title, category, dependencies
+   - Search within feature descriptions
+
+5. **Enhanced error messages**
+   - More detailed error categorization
+   - Actionable error responses
+
+### Model Assignment Reference
+
+| Component            | Model  | Rationale               |
+| -------------------- | ------ | ----------------------- |
+| `/deep-research`     | Haiku  | Fast exploration        |
+| `/codebase-analyzer` | Haiku  | Quick pattern detection |
+| `/project-scaffold`  | Haiku  | Simple file operations  |
+| `/feature-factory`   | Haiku  | Straightforward parsing |
+| `/create-project`    | Sonnet | Complex orchestration   |
+| `/sparc-prd`         | Sonnet | Sophisticated analysis  |
+| `/feature-planner`   | Sonnet | Architectural decisions |
+| `/agent-reviewer`    | Sonnet | Code quality judgment   |
+| `/prd-reviewer`      | Sonnet | PRD validation          |
 
 ## Related Documentation
 
