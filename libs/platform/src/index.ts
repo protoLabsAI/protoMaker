@@ -41,20 +41,12 @@ export {
   getIdeationDraftsDir,
   getIdeationAnalysisPath,
   ensureIdeationDir,
-  // Project orchestration paths
-  getProjectsDir,
-  getProjectDir,
-  getProjectFilePath,
-  getProjectJsonPath,
-  getMilestonesDir,
-  getMilestoneDir,
-  getMilestoneFilePath,
-  ensureProjectsDir,
-  ensureProjectDir,
-  ensureMilestoneDir,
 } from './paths.js';
 
-// Project orchestration paths
+// Project orchestration paths (from paths.js - unique exports)
+export { ensureProjectDir } from './paths.js';
+
+// Project orchestration utilities (from projects.js)
 export {
   // Path utilities
   getProjectsDir,
