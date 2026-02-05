@@ -522,6 +522,42 @@ export interface GraphiteSettings {
   useStackSubmit?: boolean;
 }
 
+// ============================================================================
+// Auto-Merge Settings - Automatic PR merging configuration
+// ============================================================================
+
+/**
+ * MergeMethod - GitHub PR merge strategies
+ *
+ * - 'merge': Standard merge commit (preserves all commits)
+ * - 'squash': Squash all commits into one
+ * - 'rebase': Rebase and merge (linear history)
+ */
+export type MergeMethod = 'merge' | 'squash' | 'rebase';
+
+/**
+ * AutoMergeSettings - Configuration for automatic PR merging
+ *
+ * Controls when and how PRs are automatically merged in auto-mode.
+ * All conditions must be satisfied for a PR to be eligible for auto-merge.
+ */
+export interface AutoMergeSettings {
+  /** Enable automatic PR merging (default: false) */
+  enabled: boolean;
+  /** GitHub merge method to use (default: 'merge') */
+  mergeMethod: MergeMethod;
+  /** Minimum number of required approving reviews (default: 0) */
+  requiredApprovals: number;
+  /** List of required CI check names that must pass (empty = all checks must pass) */
+  requiredChecks: string[];
+  /** Only auto-merge PRs with these labels (empty = any label allowed) */
+  allowedLabels: string[];
+  /** Only auto-merge PRs from these GitHub usernames (empty = any author allowed) */
+  allowedAuthors: string[];
+  /** Delete the feature branch after successful merge (default: true) */
+  deleteBranchAfterMerge: boolean;
+}
+
 /**
  * Default Graphite settings - disabled by default for backward compatibility
  */
@@ -530,6 +566,19 @@ export const DEFAULT_GRAPHITE_SETTINGS: GraphiteSettings = {
   useGraphiteCommit: false,
   autoTrackEpics: true,
   useStackSubmit: false,
+};
+
+/**
+ * Default auto-merge settings - disabled by default for safety
+ */
+export const DEFAULT_AUTO_MERGE_SETTINGS: AutoMergeSettings = {
+  enabled: false,
+  mergeMethod: 'merge',
+  requiredApprovals: 0,
+  requiredChecks: [],
+  allowedLabels: [],
+  allowedAuthors: [],
+  deleteBranchAfterMerge: true,
 };
 
 /**
@@ -1332,6 +1381,14 @@ export interface ProjectSettings {
    * @see WebhookSettings in webhook.ts
    */
   webhookSettings?: import('./webhook.js').WebhookSettings;
+
+  // Auto-Merge Settings (per-project)
+  /**
+   * Auto-merge configuration for automatic PR merging.
+   * Controls when and how PRs are automatically merged after checks pass.
+   * @see AutoMergeSettings
+   */
+  autoMerge?: AutoMergeSettings;
 
   // Deprecated Claude API Profile Override
   /**
