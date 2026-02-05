@@ -345,3 +345,14 @@ export { PR_STATES, validatePRState } from './worktree.js';
 
 // Terminal types
 export type { TerminalInfo } from './terminal.js';
+
+// Skill types
+export type {
+  Skill,
+  SkillRequirements,
+  SkillMetadata,
+  SkillFrontmatter,
+  CreateSkillOptions,
+  UpdateSkillOptions,
+  SkillExecutionResult,
+} from './skill.js';
