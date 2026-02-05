@@ -55,16 +55,16 @@ That's it! You now have access to 32 MCP tools and slash commands for managing y
 
 ### What You Can Do
 
-| Command            | Description                           |
-| ------------------ | ------------------------------------- |
-| `/board`           | View and manage your Kanban board     |
-| `/auto-mode start` | Start autonomous feature processing   |
-| `/orchestrate`     | Manage feature dependencies           |
-| `/context`         | Manage AI agent context files         |
-| `/groom`           | Review and organize the board         |
-| `/pr-review`       | Review and manage open pull requests  |
-| `/create-project`  | Full project orchestration pipeline   |
-| `/cleanup`         | Codebase maintenance and hygiene      |
+| Command            | Description                          |
+| ------------------ | ------------------------------------ |
+| `/board`           | View and manage your Kanban board    |
+| `/auto-mode start` | Start autonomous feature processing  |
+| `/orchestrate`     | Manage feature dependencies          |
+| `/context`         | Manage AI agent context files        |
+| `/groom`           | Review and organize the board        |
+| `/pr-review`       | Review and manage open pull requests |
+| `/create-project`  | Full project orchestration pipeline  |
+| `/cleanup`         | Codebase maintenance and hygiene     |
 
 ---
 
@@ -73,6 +73,7 @@ That's it! You now have access to 32 MCP tools and slash commands for managing y
 - [Overview](#overview)
 - [Installation](#installation)
 - [Configuration](#configuration)
+- [Docker Deployment](#docker-deployment)
 - [Commands Reference](#commands-reference)
 - [Subagents](#subagents)
 - [MCP Tools Reference](#mcp-tools-reference)
@@ -211,6 +212,166 @@ If you prefer to configure MCP directly, add to `~/.claude/claude_desktop_config
   }
 }
 ```
+
+## Docker Deployment
+
+For production deployments using Docker, follow these steps to configure the MCP plugin to communicate with a containerized Automaker server.
+
+### Prerequisites
+
+- Docker and Docker Compose installed
+- Automaker repository cloned
+- Claude Code CLI installed
+
+### Step 1: Configure docker-compose.override.yml
+
+Create `docker-compose.override.yml` in the automaker root directory:
+
+```yaml
+# Automaker Production Override
+# Mounts host project directories for development work
+
+services:
+  server:
+    environment:
+      # Allow access to host dev directory (same path mapping)
+      - ALLOWED_ROOT_DIRECTORY=/home/youruser/dev
+      # API key for MCP plugin
+      - AUTOMAKER_API_KEY=your-secure-api-key
+
+    volumes:
+      # Mount dev directory with SAME PATH so MCP paths work
+      # CRITICAL: The container path must match the host path exactly
+      - /home/youruser/dev:/home/youruser/dev:rw
+
+      # Keep the named volumes from base compose
+      - automaker-data:/data
+      - automaker-claude-config:/home/automaker/.claude
+      - automaker-cursor-config:/home/automaker/.cursor
+      - automaker-opencode-data:/home/automaker/.local/share/opencode
+      - automaker-opencode-config:/home/automaker/.config/opencode
+      - automaker-opencode-cache:/home/automaker/.cache/opencode
+
+    deploy:
+      resources:
+        limits:
+          memory: 8G # Adjust based on expected concurrent agents
+        reservations:
+          memory: 4G
+```
+
+**Important Path Mapping Note:** The MCP plugin runs on the host and passes paths like `/home/youruser/dev/myproject` to the containerized server. For this to work, the container must have the exact same path available. This is why we mount `/home/youruser/dev:/home/youruser/dev:rw` (same path on both sides).
+
+### Step 2: Configure .env File
+
+Create or update `.env` in the automaker root directory:
+
+```bash
+# API Authentication
+AUTOMAKER_API_KEY=your-secure-api-key
+
+# Docker user/group IDs (match host for volume permissions)
+UID=1000
+GID=1000
+
+# Server Configuration
+HOST=0.0.0.0
+PORT=3008
+CORS_ORIGIN=http://localhost:3007
+
+# Allow access to all projects under your dev directory
+ALLOWED_ROOT_DIRECTORY=/home/youruser/dev
+
+# UI Configuration
+VITE_HOSTNAME=localhost
+```
+
+### Step 3: Update Plugin Configuration
+
+Edit `packages/mcp-server/plugins/automaker/.claude-plugin/plugin.json` to use absolute paths:
+
+```json
+{
+  "name": "automaker",
+  "description": "Automaker - AI Development Studio",
+  "version": "1.0.2",
+  "mcpServers": {
+    "automaker": {
+      "command": "node",
+      "args": ["/absolute/path/to/automaker/packages/mcp-server/dist/index.js"],
+      "env": {
+        "AUTOMAKER_API_URL": "http://localhost:3008",
+        "AUTOMAKER_API_KEY": "your-secure-api-key"
+      }
+    }
+  }
+}
+```
+
+**Note:** The `args` path must be absolute (e.g., `/home/youruser/dev/automaker/packages/mcp-server/dist/index.js`), not relative. This ensures the MCP server can be found regardless of your current working directory.
+
+### Step 4: Build and Start
+
+```bash
+# Build packages including MCP server
+npm run build:packages
+
+# Start Docker containers
+docker compose up -d
+
+# Verify server is running
+curl http://localhost:3008/api/health
+```
+
+### Step 5: Install/Reinstall Plugin
+
+```bash
+# Add the plugin marketplace
+claude plugin marketplace add /path/to/automaker/packages/mcp-server/plugins
+
+# Install (or reinstall to pick up changes)
+claude plugin install automaker
+```
+
+### Step 6: Verify
+
+Test the connection from any project directory:
+
+```bash
+cd /home/youruser/dev/myproject
+claude
+> /board
+```
+
+### Memory Allocation Guidelines
+
+Adjust Docker memory limits based on your workload:
+
+| Use Case                       | Memory Limit | Reservation |
+| ------------------------------ | ------------ | ----------- |
+| Light (1-2 concurrent agents)  | 4G           | 2G          |
+| Medium (3-5 concurrent agents) | 8G           | 4G          |
+| Heavy (6+ concurrent agents)   | 16G          | 8G          |
+
+### Working with Multiple Projects
+
+With the path mapping configuration above, you can use Automaker with any project under your `ALLOWED_ROOT_DIRECTORY`:
+
+```bash
+# Project A
+cd /home/youruser/dev/project-a
+claude
+> /board
+
+# Project B (different terminal)
+cd /home/youruser/dev/project-b
+claude
+> /board
+```
+
+Each project maintains its own `.automaker/` directory with independent features, settings, and context files.
+
+---
 
 ## Commands Reference
 
@@ -503,7 +664,7 @@ Comprehensive codebase maintenance and hygiene check.
 
 **Example Output:**
 
-```
+````
 ## 🧹 Codebase Cleanup Report
 
 ### 📝 Documentation Status
@@ -527,10 +688,11 @@ git branch --merged main | xargs git branch -d
 
 # Fix vulnerabilities
 npm audit fix
-```
+````
 
 **Cleanup Scorecard:** 8/10 - Healthy codebase
-```
+
+````
 
 ## Subagents
 
@@ -557,7 +719,7 @@ Task(subagent_type: "automaker:feature-planner",
               - Password reset
               - Email verification
               Context: Using React and Express with PostgreSQL.")
-```
+````
 
 **Output:**
 
@@ -913,6 +1075,79 @@ Claude: Let me check the agent output.
    /orchestrate
    ```
    The graph view will show any cycles.
+
+### Docker-Specific Issues
+
+**"Path not found" or "Permission denied" errors:**
+
+1. Verify path mapping in `docker-compose.override.yml`:
+
+   ```yaml
+   volumes:
+     # Host path and container path MUST match
+     - /home/youruser/dev:/home/youruser/dev:rw
+   ```
+
+2. Check `ALLOWED_ROOT_DIRECTORY` includes your project:
+   ```bash
+   docker exec automaker-server-1 env | grep ALLOWED_ROOT
+   ```
+
+**"Unauthorized" or API key errors:**
+
+1. Ensure API key is set in both places:
+   - `docker-compose.override.yml` (environment section)
+   - `plugin.json` (env section)
+
+2. Verify they match exactly:
+
+   ```bash
+   # Check container
+   docker exec automaker-server-1 env | grep AUTOMAKER_API_KEY
+
+   # Check plugin
+   cat packages/mcp-server/plugins/automaker/.claude-plugin/plugin.json | grep API_KEY
+   ```
+
+3. Restart containers after changing keys:
+   ```bash
+   docker compose down && docker compose up -d
+   ```
+
+**"Cannot find module" in MCP server:**
+
+1. Ensure plugin.json uses absolute path:
+
+   ```json
+   "args": ["/home/youruser/dev/automaker/packages/mcp-server/dist/index.js"]
+   ```
+
+2. Rebuild MCP server:
+
+   ```bash
+   npm run build:packages
+   ```
+
+3. Reinstall plugin:
+   ```bash
+   claude plugin install automaker
+   ```
+
+**Container memory issues:**
+
+1. Check current memory usage:
+
+   ```bash
+   docker stats automaker-server-1
+   ```
+
+2. Increase limits in `docker-compose.override.yml`:
+   ```yaml
+   deploy:
+     resources:
+       limits:
+         memory: 16G
+   ```
 
 ## Development
 
