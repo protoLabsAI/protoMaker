@@ -367,13 +367,13 @@ export { PR_STATES, validatePRState } from './worktree.js';
 export type { TerminalInfo } from './terminal.js';
 
 // Ralph mode types (persistent retry loops with external verification)
+// Note: FailureCategory and FailureAnalysis are exported from ./failure.js
+// Ralph has its own versions - import directly from ./ralph.js if needed
 export type {
   CompletionCriteriaType,
   CompletionCriterion,
   CriterionCheckResult,
   VerificationResult,
-  FailureCategory,
-  FailureAnalysis,
   RalphIteration,
   RalphLoopStatus,
   RalphLoopConfig,

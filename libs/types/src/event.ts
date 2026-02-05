@@ -56,7 +56,7 @@ export type EventType =
   | 'recovery_started'
   | 'recovery_completed'
   | 'recovery_recorded'
-  | 'recovery_escalated';
+  | 'recovery_escalated'
   // Ralph mode events (persistent retry loops)
   | 'ralph:started'
   | 'ralph:iteration_started'
