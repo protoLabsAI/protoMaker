@@ -94,6 +94,7 @@ export type EventType =
   // Webhook events
   | 'webhook:github:issue'
   | 'webhook:github:pull_request'
-  | 'webhook:github:push';
+  | 'webhook:github:push'
+  | 'webhook:github:check_suite';
 
 export type EventCallback = (type: EventType, payload: unknown) => void;

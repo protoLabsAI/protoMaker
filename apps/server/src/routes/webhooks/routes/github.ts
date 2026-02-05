@@ -34,6 +34,33 @@ interface GitHubPullRequestPayload {
   };
 }
 
+interface GitHubCheckSuitePayload {
+  action: string;
+  check_suite: {
+    id: number;
+    status: string; // 'queued' | 'in_progress' | 'completed'
+    conclusion: string | null; // 'success' | 'failure' | 'neutral' | 'cancelled' | 'timed_out' | 'action_required' | 'stale' | null
+    head_branch: string | null;
+    head_sha: string;
+    pull_requests: Array<{
+      number: number;
+      head: {
+        ref: string;
+      };
+      base: {
+        ref: string;
+      };
+    }>;
+  };
+  repository: {
+    full_name: string;
+    owner: {
+      login: string;
+    };
+    name: string;
+  };
+}
+
 /**
  * Verify GitHub webhook signature
  */
@@ -81,6 +108,174 @@ async function findFeatureByBranch(
   }
 }
 
+/**
+ * Handle check_suite.completed event for auto-merge evaluation
+ */
+async function handleCheckSuiteEvent(
+  req: Request,
+  res: Response,
+  events: EventEmitter,
+  settingsService: SettingsService,
+  featureLoader: FeatureLoader
+): Promise<void> {
+  const payload = req.body as GitHubCheckSuitePayload;
+
+  // Only handle completed check suites
+  if (payload.action !== 'completed') {
+    logger.debug(`Ignoring check_suite action: ${payload.action}`);
+    res.json({ success: true, message: 'Check suite not completed' });
+    return;
+  }
+
+  const { check_suite, repository } = payload;
+  const { status, conclusion, head_branch, pull_requests } = check_suite;
+
+  logger.info(
+    `Check suite completed: status=${status}, conclusion=${conclusion}, branch=${head_branch}, PRs=${pull_requests.length}`
+  );
+
+  // Only proceed if check suite was successful
+  if (conclusion !== 'success') {
+    logger.info(`Check suite conclusion is not success (${conclusion}), skipping auto-merge evaluation`);
+    res.json({
+      success: true,
+      message: `Check suite conclusion: ${conclusion}`,
+    });
+    return;
+  }
+
+  // Get project settings
+  const settings = await settingsService.getGlobalSettings();
+  const currentProject = settings.projects.find((p) => p.id === settings.currentProjectId);
+  const projectPath = currentProject?.path || process.cwd();
+
+  // TODO: Get project-specific auto-merge settings once AutoMergeSettings types are available
+  // Expected: const projectSettings = await settingsService.getProjectSettings(projectPath);
+  // Expected: const autoMergeConfig = projectSettings.autoMerge;
+  // Expected: if (!autoMergeConfig?.enabled) { return; }
+
+  // For now, check if feature exists and log merge decision
+
+  // Process each PR associated with the check suite
+  const results = [];
+  for (const pr of pull_requests) {
+    const branchName = pr.head.ref;
+    const prNumber = pr.number;
+
+    // Find feature by branch name
+    const feature = await findFeatureByBranch(featureLoader, projectPath, branchName);
+
+    if (!feature) {
+      logger.debug(`No feature found for PR #${prNumber} (branch: ${branchName})`);
+      results.push({
+        prNumber,
+        branchName,
+        status: 'no_feature',
+      });
+      continue;
+    }
+
+    // Get current feature status
+    const currentFeature = await featureLoader.get(projectPath, feature.featureId);
+
+    if (!currentFeature) {
+      logger.warn(`Feature ${feature.featureId} not found`);
+      results.push({
+        prNumber,
+        branchName,
+        featureId: feature.featureId,
+        status: 'feature_not_found',
+      });
+      continue;
+    }
+
+    // Log eligibility check (services will be integrated once they're implemented)
+    logger.info(
+      `Auto-merge eligibility check for PR #${prNumber} (${feature.title}): ` +
+      `feature_status=${currentFeature.status}, checks=success`
+    );
+
+    // TODO: Integrate merge eligibility service once implemented
+    // Expected usage:
+    //   import { MergeEligibilityService } from '../../services/merge-eligibility-service.js';
+    //   const mergeEligibilityService = new MergeEligibilityService();
+    //   const eligibility = await mergeEligibilityService.checkEligibility(
+    //     projectPath,
+    //     prNumber,
+    //     {
+    //       featureId: feature.featureId,
+    //       branchName,
+    //       checksPassed: conclusion === 'success',
+    //       autoMergeConfig, // from project settings
+    //     }
+    //   );
+    //
+    //   if (!eligibility.eligible) {
+    //     logger.info(`PR #${prNumber} not eligible: ${eligibility.reason}`);
+    //     continue;
+    //   }
+
+    // TODO: Integrate auto-merge service once implemented
+    // Expected usage:
+    //   import { AutoMergeService } from '../../services/auto-merge-service.js';
+    //   const autoMergeService = new AutoMergeService();
+    //   const mergeResult = await autoMergeService.mergePullRequest(
+    //     projectPath,
+    //     prNumber,
+    //     {
+    //       featureId: feature.featureId,
+    //       method: autoMergeConfig.mergeMethod || 'squash',
+    //     }
+    //   );
+    //
+    //   if (mergeResult.success) {
+    //     logger.info(`Successfully merged PR #${prNumber}`);
+    //     // Emit feature:pr-merged event
+    //     events.emit('feature:pr-merged', {
+    //       featureId: feature.featureId,
+    //       title: feature.title,
+    //       prNumber,
+    //       branchName,
+    //       projectPath,
+    //       mergedBy: 'auto-merge',
+    //     });
+    //   } else {
+    //     logger.error(`Failed to merge PR #${prNumber}: ${mergeResult.error}`);
+    //   }
+
+    // For now, just log the decision
+    logger.info(
+      `Would evaluate auto-merge for PR #${prNumber}: ` +
+      `feature="${feature.title}", status="${currentFeature.status}", checks=success`
+    );
+
+    results.push({
+      prNumber,
+      branchName,
+      featureId: feature.featureId,
+      featureTitle: feature.title,
+      featureStatus: currentFeature.status,
+      status: 'evaluated',
+      // TODO: Add merge result once service is available
+    });
+  }
+
+  // Emit event for logging/monitoring
+  events.emit('webhook:github:check_suite', {
+    repository: repository.full_name,
+    conclusion,
+    headBranch: head_branch,
+    pullRequests: results,
+    projectPath,
+  });
+
+  res.json({
+    success: true,
+    message: `Check suite processed for ${pull_requests.length} PR(s)`,
+    results,
+  });
+}
+
 export function createGitHubWebhookHandler(
   events: EventEmitter,
   settingsService: SettingsService
@@ -125,9 +320,15 @@ export function createGitHubWebhookHandler(
 
       // Check event type
       const eventType = req.headers['x-github-event'] as string | undefined;
-      if (eventType !== 'pull_request') {
-        logger.debug(`Ignoring non-pull_request event: ${eventType}`);
+      if (eventType !== 'pull_request' && eventType !== 'check_suite') {
+        logger.debug(`Ignoring event type: ${eventType}`);
         res.json({ success: true, message: 'Event type not handled' });
+        return;
+      }
+
+      // Route to appropriate handler
+      if (eventType === 'check_suite') {
+        await handleCheckSuiteEvent(req, res, events, settingsService, featureLoader);
         return;
       }
 
