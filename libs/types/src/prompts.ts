@@ -221,6 +221,9 @@ export interface TaskExecutionPrompts {
 
   /** Template for project analysis */
   projectAnalysisPrompt?: CustomPrompt;
+
+  /** Template for resuming with PR feedback */
+  prFeedbackTemplate?: CustomPrompt;
 }
 
 /**
@@ -363,4 +366,5 @@ export interface ResolvedTaskExecutionPrompts {
   continuationAfterApprovalTemplate: string;
   resumeFeatureTemplate: string;
   projectAnalysisPrompt: string;
+  prFeedbackTemplate: string;
 }

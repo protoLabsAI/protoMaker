@@ -4715,6 +4715,75 @@ After generating the revised spec, output:
   }
 
   /**
+   * Resume or restart an agent with additional feedback context.
+   * If the agent is already running, this will throw an error.
+   * If not running, it will start execution with the feedback included in the prompt.
+   *
+   * @param projectPath - The main project path
+   * @param featureId - The feature ID to resume
+   * @param feedback - Additional feedback/context to include in the prompt
+   */
+  async resumeWithFeedback(
+    projectPath: string,
+    featureId: string,
+    feedback: string
+  ): Promise<void> {
+    // Check if already running
+    if (this.runningFeatures.has(featureId)) {
+      throw new Error('Feature is already running');
+    }
+
+    // Load feature to check it exists
+    const feature = await this.loadFeature(projectPath, featureId);
+    if (!feature) {
+      throw new Error(`Feature ${featureId} not found`);
+    }
+
+    // Emit follow-up started event
+    this.events.emit('feature:follow-up-started', {
+      featureId,
+      projectPath,
+      feedback,
+    });
+
+    // Get customized prompts from settings
+    const prompts = await getPromptCustomization(this.settingsService, '[AutoMode]');
+
+    // Build the feature prompt
+    const featurePrompt = this.buildFeaturePrompt(feature, prompts.taskExecution);
+
+    // Check if there's existing context
+    const featureDir = getFeatureDir(projectPath, featureId);
+    const contextPath = path.join(featureDir, 'agent-output.md');
+
+    let previousContext = '';
+    try {
+      await secureFs.access(contextPath);
+      previousContext = (await secureFs.readFile(contextPath, 'utf-8')) as string;
+    } catch {
+      // No previous context, that's okay
+    }
+
+    // Build continuation prompt with feedback
+    let prompt: string;
+    if (previousContext) {
+      // Use resume template with feedback added
+      prompt = prompts.taskExecution.resumeFeatureTemplate;
+      prompt = prompt.replace(/\{\{featurePrompt\}\}/g, featurePrompt);
+      prompt = prompt.replace(/\{\{previousContext\}\}/g, previousContext);
+      prompt += `\n\n## Additional Feedback\n\n${feedback}`;
+    } else {
+      // No previous context, start fresh with feedback
+      prompt = `${featurePrompt}\n\n## Additional Feedback\n\n${feedback}`;
+    }
+
+    // Execute with the feedback-enhanced prompt
+    return this.executeFeature(projectPath, featureId, true, false, undefined, {
+      continuationPrompt: prompt,
+    });
+  }
+
+  /**
    * Detect if a feature is stuck in a pipeline step and extract step information.
    * Parses the feature status to determine if it's a pipeline status (e.g., 'pipeline_step_xyz'),
    * loads the pipeline configuration, and validates that the step still exists.

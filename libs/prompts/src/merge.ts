@@ -313,6 +313,10 @@ export function mergeTaskExecutionPrompts(
       custom?.projectAnalysisPrompt,
       DEFAULT_TASK_EXECUTION_PROMPTS.projectAnalysisPrompt
     ),
+    prFeedbackTemplate: resolvePrompt(
+      custom?.prFeedbackTemplate,
+      DEFAULT_TASK_EXECUTION_PROMPTS.prFeedbackTemplate
+    ),
   };
 }
 
