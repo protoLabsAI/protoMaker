@@ -32,6 +32,7 @@ import type {
   EventHookTrigger,
   EventHookShellAction,
   EventHookHttpAction,
+  EventHookDiscordAction,
 } from '@automaker/types';
 
 const execAsync = promisify(exec);
@@ -67,6 +68,8 @@ interface HookContext {
   // Health check specific fields
   healthStatus?: string;
   healthDetails?: string;
+  // Discord specific fields
+  channelId?: string;
 }
 
 /**
@@ -429,6 +432,8 @@ export class EventHookService {
         await this.executeShellHook(hook.action, context, hookName);
       } else if (hook.action.type === 'http') {
         await this.executeHttpHook(hook.action, context, hookName);
+      } else if (hook.action.type === 'discord') {
+        await this.executeDiscordHook(hook.action, context, hookName);
       }
     } catch (error) {
       logger.error(`Hook "${hookName}" failed:`, error);
@@ -534,6 +539,117 @@ export class EventHookService {
       }
       throw error;
     }
+  }
+
+  /**
+   * Execute a Discord message hook
+   */
+  private async executeDiscordHook(
+    action: EventHookDiscordAction,
+    context: HookContext,
+    hookName: string
+  ): Promise<void> {
+    const channelId = this.substituteVariables(action.channelId, context);
+    const message = this.substituteVariables(action.message, context);
+
+    logger.info(`Executing Discord hook "${hookName}": sending to channel ${channelId}`);
+
+    // Format the message with event context
+    const formattedMessage = this.formatDiscordMessage(message, context);
+
+    try {
+      // Use Discord webhook if available (via shell/HTTP), otherwise log warning
+      // The Discord MCP server must be configured externally
+      // For now, we'll attempt to use a Discord webhook URL if provided in channelId
+      // or throw an error if Discord MCP is not available
+
+      // Check if channelId looks like a webhook URL
+      if (channelId.startsWith('http://') || channelId.startsWith('https://')) {
+        // Use webhook approach
+        await this.sendDiscordWebhook(channelId, formattedMessage, hookName);
+      } else {
+        // Requires Discord MCP - log a helpful message
+        logger.warn(
+          `Discord hook "${hookName}" requires Discord MCP to be configured. ` +
+            `To use Discord hooks with channel IDs, set up Discord MCP server. ` +
+            `Alternatively, use a Discord webhook URL as the channelId.`
+        );
+        logger.info(
+          `Would have sent to Discord channel ${channelId}: ${formattedMessage.substring(0, 100)}...`
+        );
+      }
+    } catch (error) {
+      logger.error(`Discord hook "${hookName}" failed:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Send a message via Discord webhook
+   */
+  private async sendDiscordWebhook(
+    webhookUrl: string,
+    message: string,
+    hookName: string
+  ): Promise<void> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), DEFAULT_HTTP_TIMEOUT);
+
+    try {
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          content: message,
+        }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        logger.warn(`Discord hook "${hookName}" webhook returned status ${response.status}`);
+        throw new Error(`Discord webhook failed with status ${response.status}`);
+      }
+
+      logger.info(`Discord hook "${hookName}" completed successfully via webhook`);
+    } catch (error) {
+      if ((error as Error).name === 'AbortError') {
+        logger.error(`Discord hook "${hookName}" timed out after ${DEFAULT_HTTP_TIMEOUT}ms`);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Format a Discord message with event context
+   */
+  private formatDiscordMessage(message: string, context: HookContext): string {
+    // Add emoji based on event type
+    const eventEmojis: Record<EventHookTrigger, string> = {
+      feature_created: '🎯',
+      feature_success: '✅',
+      feature_error: '❌',
+      feature_retry: '🔄',
+      feature_recovery: '🔧',
+      auto_mode_complete: '🏁',
+      auto_mode_error: '🚨',
+      auto_mode_health_check: '💚',
+      skill_created: '📚',
+      memory_learning: '🧠',
+      pr_feedback_received: '💬',
+    };
+
+    const emoji = eventEmojis[context.eventType] || '📢';
+
+    // If message is just the substituted template, enhance it
+    if (!message.includes('\n') && message.length < 100) {
+      return `${emoji} **${message}**\n\n**Event**: ${context.eventType}\n**Time**: ${context.timestamp}`;
+    }
+
+    return `${emoji} ${message}`;
   }
 
   /**

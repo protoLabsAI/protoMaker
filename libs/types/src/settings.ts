@@ -615,14 +615,31 @@ export interface EventHookHttpAction {
   body?: string;
 }
 
+/**
+ * EventHookDiscordAction - Configuration for sending a Discord message
+ *
+ * Sends a message to a Discord channel using Discord MCP tools.
+ * Supports variable substitution in channelId and message.
+ */
+export interface EventHookDiscordAction {
+  type: 'discord';
+  /** Discord channel ID. Supports {{variable}} substitution. */
+  channelId: string;
+  /** Message to send. Supports {{variable}} substitution. */
+  message: string;
+}
+
 /** Union type for all hook action configurations */
-export type EventHookAction = EventHookShellAction | EventHookHttpAction;
+export type EventHookAction =
+  | EventHookShellAction
+  | EventHookHttpAction
+  | EventHookDiscordAction;
 
 /**
  * EventHook - Configuration for a single event hook
  *
- * Event hooks allow users to execute custom shell commands or HTTP requests
- * when specific events occur in the system.
+ * Event hooks allow users to execute custom shell commands, HTTP requests,
+ * or Discord messages when specific events occur in the system.
  *
  * Available variables for substitution:
  * - {{featureId}} - ID of the feature (if applicable)
@@ -632,6 +649,7 @@ export type EventHookAction = EventHookShellAction | EventHookHttpAction;
  * - {{error}} - Error message (for error events)
  * - {{timestamp}} - ISO timestamp of the event
  * - {{eventType}} - The event type that triggered the hook
+ * - {{channelId}} - Discord channel ID (for Discord hooks)
  */
 export interface EventHook {
   /** Unique identifier for this hook */

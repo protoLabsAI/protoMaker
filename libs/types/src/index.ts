@@ -189,6 +189,7 @@ export type {
   EventHookHttpMethod,
   EventHookShellAction,
   EventHookHttpAction,
+  EventHookDiscordAction,
   EventHookAction,
   EventHook,
   // Git workflow types
