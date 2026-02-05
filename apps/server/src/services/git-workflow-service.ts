@@ -195,6 +195,33 @@ export class GitWorkflowService {
       result.commitHash = commitHash;
       logger.info(`Committed changes for feature ${featureId}: ${commitHash}`);
 
+      // Step 1.5: Restack with Graphite before pushing (if enabled)
+      // This ensures the branch is up to date with trunk/main to prevent merge conflicts
+      if (useGraphite && gitSettings.autoPush) {
+        try {
+          logger.info(`Restacking branch ${branchName} before push`);
+          const restackResult = await graphiteService.restack(workDir);
+
+          if (restackResult.conflicts) {
+            logger.warn(`Restack encountered conflicts for branch ${branchName}`);
+            result.error = 'Restack conflicts detected - manual resolution required';
+            // Don't proceed with push/PR if conflicts exist
+            return result;
+          }
+
+          if (!restackResult.success) {
+            logger.warn(`Restack failed for branch ${branchName}: ${restackResult.error}`);
+            // Log but continue - non-conflict failures shouldn't block PR creation
+          } else {
+            logger.info(`Successfully restacked branch ${branchName}`);
+          }
+        } catch (restackError) {
+          const errorMsg = restackError instanceof Error ? restackError.message : String(restackError);
+          logger.warn(`Error during restack for branch ${branchName}: ${errorMsg}`);
+          // Log but continue - restack errors shouldn't block PR creation
+        }
+      }
+
       // Step 2: Push to remote (if enabled)
       if (gitSettings.autoPush) {
         try {

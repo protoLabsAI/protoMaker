@@ -408,6 +408,33 @@ export class GraphiteService {
   }
 
   /**
+   * Restack the entire branch stack on top of the trunk
+   * This rebases all branches in the stack when the trunk (main) has changed
+   * Use this to keep feature branches up to date with main and prevent merge conflicts
+   *
+   * @param workDir - Working directory (worktree path)
+   * @returns Result indicating success, conflicts, or other errors
+   */
+  async restack(workDir: string): Promise<GraphiteSyncResult> {
+    try {
+      await execAsync('gt restack', { cwd: workDir, env: execEnv });
+      logger.info('Graphite restack successful');
+      return { success: true, rebased: true, conflicts: false };
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+
+      // Check for merge conflicts
+      if (errorMsg.includes('conflict') || errorMsg.includes('CONFLICT')) {
+        logger.warn('Graphite restack encountered conflicts');
+        return { success: false, rebased: false, conflicts: true, error: errorMsg };
+      }
+
+      logger.warn(`Graphite restack failed: ${errorMsg}`);
+      return { success: false, rebased: false, conflicts: false, error: errorMsg };
+    }
+  }
+
+  /**
    * Get stack information for the current branch
    * Returns information about the branch's position in the stack
    */

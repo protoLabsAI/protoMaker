@@ -52,6 +52,7 @@ import { createDiscardChangesHandler } from './routes/discard-changes.js';
 import { createListRemotesHandler } from './routes/list-remotes.js';
 import { createGraphiteStatusHandler } from './routes/graphite-status.js';
 import { createGraphiteSyncHandler } from './routes/graphite-sync.js';
+import { createGraphiteRestackHandler } from './routes/graphite-restack.js';
 import type { SettingsService } from '../../services/settings-service.js';
 
 export function createWorktreeRoutes(
@@ -180,6 +181,12 @@ export function createWorktreeRoutes(
     validatePathParams('worktreePath'),
     requireGitRepoOnly,
     createGraphiteSyncHandler()
+  );
+  router.post(
+    '/graphite-restack',
+    validatePathParams('worktreePath'),
+    requireGitRepoOnly,
+    createGraphiteRestackHandler()
   );
 
   return router;

@@ -1107,6 +1107,21 @@ const tools: Tool[] = [
       required: ['projectPath'],
     },
   },
+  {
+    name: 'graphite_restack',
+    description:
+      'Restack the entire branch stack on trunk using Graphite CLI. This rebases all branches in the stack when trunk (main) has changed, preventing merge conflicts during PR creation. Use this to sync feature branches with the latest main branch.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        worktreePath: {
+          type: 'string',
+          description: 'Absolute path to the worktree directory',
+        },
+      },
+      required: ['worktreePath'],
+    },
+  },
 ];
 
 // Tool implementations
@@ -1478,6 +1493,11 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       };
       return summary;
     }
+
+    case 'graphite_restack':
+      return apiCall('/worktree/graphite-restack', {
+        worktreePath: args.worktreePath,
+      });
 
     default:
       throw new Error(`Unknown tool: ${name}`);
