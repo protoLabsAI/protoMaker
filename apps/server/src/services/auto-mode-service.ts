@@ -1662,6 +1662,7 @@ export class AutoModeService {
       logger.info(
         `Pending approvals at cleanup: ${Array.from(this.pendingApprovals.keys()).join(', ') || 'none'}`
       );
+      abortController.abort();
       this.runningFeatures.delete(featureId);
 
       // Update execution state after feature completes
@@ -2212,6 +2213,7 @@ Complete the pipeline step instructions above. Review the previous work and appl
         });
       }
     } finally {
+      abortController.abort();
       this.runningFeatures.delete(featureId);
     }
   }
@@ -2543,6 +2545,7 @@ Address the follow-up instructions above. Review the previous work and make the 
         }
       }
     } finally {
+      abortController.abort();
       this.runningFeatures.delete(featureId);
     }
   }
@@ -2836,6 +2839,8 @@ Format your response as a structured markdown document.`;
         errorType: errorInfo.type,
         projectPath,
       });
+    } finally {
+      abortController.abort();
     }
   }
 
