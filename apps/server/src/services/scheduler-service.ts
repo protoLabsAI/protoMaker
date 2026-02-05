@@ -325,6 +325,7 @@ export function getNextRunTime(cronExpression: string, after: Date = new Date())
 export class SchedulerService {
   private tasks: Map<string, ScheduledTask> = new Map();
   private parsedCrons: Map<string, ParsedCron> = new Map();
+  private persistedMetadata: Map<string, PersistedTaskData> = new Map();
   private intervalId: NodeJS.Timeout | null = null;
   private running = false;
   private events: EventEmitter | null = null;
@@ -422,12 +423,11 @@ export class SchedulerService {
       // Store metadata for tasks (handlers will be registered later)
       // This allows us to restore execution history when handlers are re-registered
       for (const persistedTask of persistedTasks) {
-        // We don't create full tasks here since we don't have handlers
-        // Instead, we'll merge this data when registerTask() is called
+        this.persistedMetadata.set(persistedTask.id, persistedTask);
         logger.debug(`Loaded metadata for task: ${persistedTask.name} (${persistedTask.id})`);
       }
 
-      // Return the loaded data so it can be used by registerTask
+      logger.info(`Stored ${this.persistedMetadata.size} task metadata entries in memory`);
       return;
     } catch (error) {
       logger.error('Failed to load tasks:', error);
@@ -436,8 +436,16 @@ export class SchedulerService {
 
   /**
    * Get persisted task data by ID (used during task registration)
+   * First checks in-memory cache, then falls back to reading from disk
    */
   private async getPersistedTaskData(taskId: string): Promise<PersistedTaskData | null> {
+    // Check in-memory cache first (populated by loadTasks)
+    const cached = this.persistedMetadata.get(taskId);
+    if (cached) {
+      return cached;
+    }
+
+    // Fallback to reading from disk if not in cache
     if (!this.dataDir) {
       return null;
     }
@@ -493,6 +501,11 @@ export class SchedulerService {
     };
 
     this.tasks.set(id, task);
+
+    // Clear persisted metadata after use to avoid keeping stale data
+    if (persistedData && this.persistedMetadata.has(id)) {
+      this.persistedMetadata.delete(id);
+    }
 
     if (persistedData) {
       logger.info(
@@ -779,6 +792,7 @@ export class SchedulerService {
     this.stop();
     this.tasks.clear();
     this.parsedCrons.clear();
+    this.persistedMetadata.clear();
     this.events = null;
     logger.info('Scheduler service destroyed');
   }
