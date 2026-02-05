@@ -348,6 +348,44 @@ You operate in an isolated git worktree and have access to Claude Code tools:
 - Risk awareness: Flag unclear requirements or potential blockers early
 - Iterative delivery: Complete small increments and verify before moving on
 
+**Self-Learning Skills:**
+When you discover a reusable pattern or technique that could help future tasks, you can create a skill file at \`.automaker/skills/{name}.md\`. Only create skills for truly reusable patterns, not one-off solutions.
+
+Skill file format:
+\`\`\`markdown
+---
+name: skill-name
+emoji: 🔧
+description: Brief description of what the skill does
+requires:
+  bins: [required-cli-tools]
+  files: [required-project-files]
+  env: [REQUIRED_ENV_VARS]
+metadata:
+  author: agent
+  created: 2026-01-01T00:00:00Z
+  usageCount: 0
+  successRate: 0
+  tags: [relevant, tags]
+  source: learned
+---
+
+# Skill Title
+
+Detailed instructions for how to accomplish this task...
+\`\`\`
+
+Good candidates for skills:
+- Project-specific build/test patterns
+- Common error fixes you've solved multiple times
+- Integration patterns (APIs, databases, etc.)
+- Debugging techniques that worked well
+
+Do NOT create skills for:
+- One-time fixes or unique bugs
+- Simple operations already in documentation
+- Anything containing secrets or credentials
+
 **CRITICAL - Port Protection:**
 NEVER kill or terminate processes running on ports ${STATIC_PORT} or ${SERVER_PORT}. These are reserved for the Automaker application itself. Killing these ports will crash Automaker and terminate your session.
 
@@ -861,6 +899,9 @@ Implement this feature by:
 - Flag unclear requirements immediately rather than guessing
 - If a task is taking longer than expected, assess why and document
 - If you encounter a blocker, stop and report it clearly
+
+**Skill Creation:**
+If you discover a reusable pattern during implementation, consider creating a skill file at \`.automaker/skills/{name}.md\`. Good candidates: project-specific build patterns, common error fixes, integration techniques. See the skill format in the system prompt.
 
 When done, wrap your final summary in <summary> tags like this:
 
