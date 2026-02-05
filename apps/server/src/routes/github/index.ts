@@ -17,6 +17,7 @@ import {
   createDeleteValidationHandler,
   createMarkViewedHandler,
 } from './routes/validation-endpoints.js';
+import { createProcessCodeRabbitFeedbackHandler } from './routes/process-coderabbit-feedback.js';
 import type { SettingsService } from '../../services/settings-service.js';
 
 export function createGitHubRoutes(
@@ -52,6 +53,13 @@ export function createGitHubRoutes(
     '/validation-mark-viewed',
     validatePathParams('projectPath'),
     createMarkViewedHandler(events)
+  );
+
+  // CodeRabbit feedback processing
+  router.post(
+    '/process-coderabbit-feedback',
+    validatePathParams('projectPath'),
+    createProcessCodeRabbitFeedbackHandler(events)
   );
 
   return router;

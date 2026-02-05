@@ -85,6 +85,10 @@ export type EventType =
   | 'ralph:stopped'
   | 'ralph:max_iterations'
   | 'ralph:error'
-  | 'ralph:progress';
+  | 'ralph:progress'
+  // CodeRabbit review events
+  | 'coderabbit:review-received'
+  | 'coderabbit:feedback-processed'
+  | 'coderabbit:link-created';
 
 export type EventCallback = (type: EventType, payload: unknown) => void;

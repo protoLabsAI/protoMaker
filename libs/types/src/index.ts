@@ -393,3 +393,14 @@ export type {
   RalphEventPayload,
 } from './ralph.js';
 export { DEFAULT_COMPLETION_CRITERIA, DEFAULT_RALPH_CONFIG } from './ralph.js';
+
+// CodeRabbit feedback types
+export type {
+  CodeRabbitCommentLocation,
+  CodeRabbitSeverity,
+  CodeRabbitComment,
+  CodeRabbitReview,
+  FeatureBranchLink,
+  FeatureCodeRabbitFeedback,
+  CodeRabbitParseResult,
+} from './coderabbit.js';
