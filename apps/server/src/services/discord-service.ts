@@ -23,7 +23,7 @@ import type {
   DiscordUser,
   CreateChannelOptions,
   CreateCategoryOptions,
-  SendMessageOptions,
+  DiscordSendMessageOptions,
   ReadMessagesOptions,
   CreateWebhookOptions,
   SendWebhookMessageOptions,
@@ -276,7 +276,7 @@ export class DiscordService {
   /**
    * Send a message to a channel
    */
-  async sendMessage(options: SendMessageOptions): Promise<DiscordOperationResult<DiscordMessage>> {
+  async sendMessage(options: DiscordSendMessageOptions): Promise<DiscordOperationResult<DiscordMessage>> {
     try {
       logger.info(`Sending message to channel: ${options.channelId}`);
 

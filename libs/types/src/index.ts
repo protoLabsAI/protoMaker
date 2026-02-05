@@ -443,7 +443,7 @@ export type {
   DiscordUser,
   CreateChannelOptions,
   CreateCategoryOptions,
-  SendMessageOptions,
+  DiscordSendMessageOptions,
   ReadMessagesOptions,
   CreateWebhookOptions,
   SendWebhookMessageOptions,

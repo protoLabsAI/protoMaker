@@ -88,9 +88,9 @@ export interface CreateCategoryOptions {
 }
 
 /**
- * Options for sending a message
+ * Options for sending a Discord message
  */
-export interface SendMessageOptions {
+export interface DiscordSendMessageOptions {
   channelId: string;
   message: string;
 }
