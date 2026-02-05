@@ -9,6 +9,7 @@ export type SettingsViewId =
   | 'codex-provider'
   | 'opencode-provider'
   | 'mcp-servers'
+  | 'discord'
   | 'prompts'
   | 'model-defaults'
   | 'appearance'
