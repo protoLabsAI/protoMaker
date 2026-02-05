@@ -369,27 +369,42 @@ export class GraphiteService {
   }
 
   /**
-   * Sync and restack the current branch with its parent
-   * This ensures the branch is up-to-date and rebased cleanly before PR creation
-   * The --restack flag automatically restacks dependent branches after the sync
+   * Sync and restack the current branch with its parent.
+   * This is a convenience method that wraps sync() with proper availability checks.
+   *
+   * Use this before starting agent work to ensure the branch is fresh.
+   *
+   * @param workDir - Working directory (worktree path)
+   * @param branchName - Branch name being synced (for logging)
+   * @returns GraphiteSyncResult with success status and conflict information
    */
-  async syncAndRestack(workDir: string): Promise<GraphiteSyncResult> {
-    try {
-      await execAsync('gt sync --restack', { cwd: workDir, env: execEnv });
-      logger.info('Graphite sync --restack successful');
-      return { success: true, rebased: true, conflicts: false };
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
+  async syncAndRestack(workDir: string, branchName?: string): Promise<GraphiteSyncResult> {
+    const branchInfo = branchName ? ` for branch ${branchName}` : '';
 
-      // Check for merge conflicts
-      if (errorMsg.includes('conflict') || errorMsg.includes('CONFLICT')) {
-        logger.warn('Graphite sync --restack encountered conflicts');
-        return { success: false, rebased: false, conflicts: true, error: errorMsg };
-      }
-
-      logger.warn(`Graphite sync --restack failed: ${errorMsg}`);
-      return { success: false, rebased: false, conflicts: false, error: errorMsg };
+    // Check if Graphite is available
+    const available = await this.isAvailable();
+    if (!available) {
+      logger.debug(`Graphite CLI not available, skipping sync${branchInfo}`);
+      return {
+        success: false,
+        rebased: false,
+        conflicts: false,
+        error: 'Graphite CLI not available'
+      };
     }
+
+    logger.info(`Syncing and restacking${branchInfo}...`);
+    const result = await this.sync(workDir);
+
+    if (result.success) {
+      logger.info(`Successfully synced and restacked${branchInfo}`);
+    } else if (result.conflicts) {
+      logger.warn(`Sync encountered conflicts${branchInfo}: ${result.error}`);
+    } else {
+      logger.warn(`Sync failed${branchInfo}: ${result.error}`);
+    }
+
+    return result;
   }
 
   /**
