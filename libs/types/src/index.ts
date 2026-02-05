@@ -404,3 +404,22 @@ export type {
   FeatureCodeRabbitFeedback,
   CodeRabbitParseResult,
 } from './coderabbit.js';
+
+// Webhook types
+export type {
+  GitHubWebhookEvent,
+  GitHubIssueAction,
+  GitHubPullRequestAction,
+  GitHubUser,
+  GitHubRepository,
+  GitHubIssue,
+  GitHubPullRequest,
+  GitHubIssueWebhookPayload,
+  GitHubPullRequestWebhookPayload,
+  GitHubPushWebhookPayload,
+  GitHubPingWebhookPayload,
+  GitHubWebhookPayload,
+  WebhookVerificationResult,
+  WebhookSettings,
+} from './webhook.js';
+export { DEFAULT_WEBHOOK_SETTINGS } from './webhook.js';

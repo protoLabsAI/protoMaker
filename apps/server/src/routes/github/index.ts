@@ -18,6 +18,7 @@ import {
   createMarkViewedHandler,
 } from './routes/validation-endpoints.js';
 import { createProcessCodeRabbitFeedbackHandler } from './routes/process-coderabbit-feedback.js';
+import { createWebhookHandler } from './routes/webhook.js';
 import type { SettingsService } from '../../services/settings-service.js';
 
 export function createGitHubRoutes(
@@ -25,6 +26,12 @@ export function createGitHubRoutes(
   settingsService?: SettingsService
 ): Router {
   const router = Router();
+
+  // Webhook endpoint - must be first (no validatePathParams middleware)
+  // Uses query parameter for project path to support GitHub webhook configuration
+  if (settingsService) {
+    router.post('/webhook', createWebhookHandler(settingsService, events));
+  }
 
   router.post('/check-remote', validatePathParams('projectPath'), createCheckGitHubRemoteHandler());
   router.post('/issues', validatePathParams('projectPath'), createListIssuesHandler());

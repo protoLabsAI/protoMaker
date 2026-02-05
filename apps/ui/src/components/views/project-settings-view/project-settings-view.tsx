@@ -6,6 +6,7 @@ import { ProjectIdentitySection } from './project-identity-section';
 import { ProjectThemeSection } from './project-theme-section';
 import { WorktreePreferencesSection } from './worktree-preferences-section';
 import { ProjectModelsSection } from './project-models-section';
+import { ProjectWebhooksSection } from './project-webhooks-section';
 import { DangerZoneSection } from '../settings-view/danger-zone/danger-zone-section';
 import { DeleteProjectDialog } from '../settings-view/components/delete-project-dialog';
 import { ProjectSettingsNavigation } from './components/project-settings-navigation';
@@ -87,6 +88,8 @@ export function ProjectSettingsView() {
         return <WorktreePreferencesSection project={currentProject} />;
       case 'claude':
         return <ProjectModelsSection project={currentProject} />;
+      case 'webhooks':
+        return <ProjectWebhooksSection project={currentProject} />;
       case 'danger':
         return (
           <DangerZoneSection
