@@ -308,13 +308,13 @@ const tools: Tool[] = [
           type: 'string',
           description: 'The feature ID (UUID)',
         },
-        toStatus: {
+        status: {
           type: 'string',
           enum: ['backlog', 'in-progress', 'review', 'done'],
-          description: "Target column. Moving to 'in-progress' starts an agent.",
+          description: "Target status/column. Moving to 'in-progress' starts an agent.",
         },
       },
-      required: ['projectPath', 'featureId', 'toStatus'],
+      required: ['projectPath', 'featureId', 'status'],
     },
   },
 
@@ -969,7 +969,8 @@ const tools: Tool[] = [
   },
   {
     name: 'get_ralph_status',
-    description: 'Get the status of a Ralph loop including iteration history and verification results.',
+    description:
+      'Get the status of a Ralph loop including iteration history and verification results.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1075,7 +1076,7 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       return apiCall('/features/update', {
         projectPath: args.projectPath,
         featureId: args.featureId,
-        updates: { status: args.toStatus },
+        updates: { status: args.status },
       });
 
     // Agent Control

@@ -4,17 +4,17 @@
 
 ## Current Focus
 
-**Claude Plugin Improvements** - Refining existing plugin functionality before expanding features.
+**Self-Learning Skills** - Enabling agents to create and reuse learned skills.
 
 ## Epic Status Overview
 
-| Epic                                                      | Status  | Progress | Branch                            |
-| --------------------------------------------------------- | ------- | -------- | --------------------------------- |
-| [Foundation](#foundation)                                 | Done    | 4/4      | `epic/foundation`                 |
-| [Ralph Loops](#ralph-loops)                               | Partial | 2/3      | `epic/ralph-loops`                |
-| [Claude Plugin Improvements](#claude-plugin-improvements) | Done    | 3/3      | `epic/claude-plugin-improvements` |
-| [Self-Learning Skills](#self-learning-skills)             | Backlog | 0/4      | `epic/self-learning-skills`       |
-| [Proactive Automation](#proactive-automation)             | Backlog | 0/4      | `epic/proactive-automation`       |
+| Epic                                                      | Status      | Progress | Branch                            |
+| --------------------------------------------------------- | ----------- | -------- | --------------------------------- |
+| [Foundation](#foundation)                                 | Done        | 4/4      | `epic/foundation`                 |
+| [Ralph Loops](#ralph-loops)                               | Done        | 3/3      | `epic/ralph-loops`                |
+| [Claude Plugin Improvements](#claude-plugin-improvements) | Done        | 3/3      | `epic/claude-plugin-improvements` |
+| [Self-Learning Skills](#self-learning-skills)             | In Progress | 1/4      | `epic/self-learning-skills`       |
+| [Proactive Automation](#proactive-automation)             | Backlog     | 0/4      | `epic/proactive-automation`       |
 
 ---
 
@@ -36,16 +36,16 @@ Core infrastructure for failure classification, completion verification, and rec
 
 ## Ralph Loops
 
-**Status:** Partial (2/3)
+**Status:** Complete (3/3)
 **Branch:** `epic/ralph-loops`
 
 Persistent retry loops with external verification.
 
-| Feature                   | Status  | Notes                           |
-| ------------------------- | ------- | ------------------------------- |
-| Add Ralph Mode Types      | Done    |                                 |
-| Create Ralph Loop Service | Done    |                                 |
-| Add Ralph Mode MCP Tools  | Backlog | Blocked - needs MCP integration |
+| Feature                   | Status | Notes                                        |
+| ------------------------- | ------ | -------------------------------------------- |
+| Add Ralph Mode Types      | Done   |                                              |
+| Create Ralph Loop Service | Done   |                                              |
+| Add Ralph Mode MCP Tools  | Done   | 6 tools: start/stop/pause/resume/status/list |
 
 ---
 
@@ -68,17 +68,17 @@ All features complete!
 
 ## Self-Learning Skills
 
-**Status:** Backlog
+**Status:** In Progress (1/4)
 **Branch:** `epic/self-learning-skills`
 
 Enable agents to create reusable skills for future use.
 
-| Feature                                 | Status  | Notes      |
-| --------------------------------------- | ------- | ---------- |
-| Add Skill Types                         | Backlog |            |
-| Create Skills Loader                    | Backlog | 2 failures |
-| Update Agent Prompts for Skill Creation | Backlog | 2 failures |
-| Add Skills MCP Tools                    | Backlog |            |
+| Feature                                 | Status  | Notes         |
+| --------------------------------------- | ------- | ------------- |
+| Add Skill Types                         | Done    | PR #25 merged |
+| Create Skills Loader                    | Backlog | 2 failures    |
+| Update Agent Prompts for Skill Creation | Backlog | 2 failures    |
+| Add Skills MCP Tools                    | Backlog |               |
 
 ---
 
@@ -100,13 +100,15 @@ Health monitoring, auto-remediation, and scheduled tasks.
 
 ## Recently Completed
 
+- **Add Skill Types** - TypeScript types for self-learning skills (PR #25)
+- **Prompt & Plugin Audit** - Improved agent prompts, MCP param consistency, Graphite docs
+- **Ralph Loops Epic** - Complete (3/3) with 6 MCP tools
 - **Wiki Documentation** - Added Claude Code, Auto-Mode, Dependencies, and Epics sections
 - **Claude Plugin Improvements Epic** - Complete (3/3 features)
 - **Prompt Improvements** - Added status.md awareness and Agile best practices to agent prompts
 - **Graphite CLI Integration** - Stack-aware PR management for epic workflow
 - **Git Workflow Improvements** - Auto-target epic branches for feature PRs
 - **Foundation Epic** - Failure classification and recovery infrastructure
-- **Ralph Loops** - Persistent retry loops (types + service)
 
 ---
 
