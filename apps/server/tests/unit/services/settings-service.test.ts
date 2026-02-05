@@ -790,6 +790,163 @@ describe('settings-service.ts', () => {
     });
   });
 
+  describe('Discord settings migration (v6 -> v7)', () => {
+    it('should initialize Discord settings with defaults for v6 settings', async () => {
+      // Simulate v6 settings without Discord config
+      const v6Settings = {
+        version: 6,
+        theme: 'dark',
+        sidebarOpen: true,
+        maxConcurrency: 1,
+      };
+      const settingsPath = path.join(testDataDir, 'settings.json');
+      await fs.writeFile(settingsPath, JSON.stringify(v6Settings, null, 2));
+
+      const settings = await settingsService.getGlobalSettings();
+
+      // Verify Discord settings are initialized with defaults
+      expect(settings.discord).toBeDefined();
+      expect(settings.discord?.enabled).toBe(false);
+      expect(settings.discord?.useCredentials).toBe(true);
+      expect(settings.discord?.defaultNotifications).toEqual({
+        onFeatureSuccess: false,
+        onFeatureError: true,
+        onPRMerged: true,
+        onAutoModeComplete: true,
+      });
+      expect(settings.version).toBe(SETTINGS_VERSION);
+    });
+
+    it('should preserve existing Discord settings during migration', async () => {
+      // Simulate v6 settings that already have Discord config (manual addition)
+      const v6Settings = {
+        version: 6,
+        theme: 'dark',
+        discord: {
+          enabled: true,
+          serverId: 'my-server-123',
+          useCredentials: true,
+          defaultNotifications: {
+            onFeatureSuccess: true,
+            onFeatureError: true,
+            onPRMerged: false,
+            onAutoModeComplete: false,
+            defaultChannelId: 'channel-456',
+          },
+        },
+      };
+      const settingsPath = path.join(testDataDir, 'settings.json');
+      await fs.writeFile(settingsPath, JSON.stringify(v6Settings, null, 2));
+
+      const settings = await settingsService.getGlobalSettings();
+
+      // Verify existing Discord settings are preserved
+      expect(settings.discord).toBeDefined();
+      expect(settings.discord?.enabled).toBe(true);
+      expect(settings.discord?.serverId).toBe('my-server-123');
+      expect(settings.discord?.defaultNotifications?.onFeatureSuccess).toBe(true);
+      expect(settings.discord?.defaultNotifications?.defaultChannelId).toBe('channel-456');
+      expect(settings.version).toBe(SETTINGS_VERSION);
+    });
+
+    it('should deep merge Discord settings on update (global)', async () => {
+      // Create initial settings with Discord config
+      await settingsService.updateGlobalSettings({
+        discord: {
+          enabled: true,
+          serverId: 'server-123',
+          useCredentials: true,
+          defaultNotifications: {
+            onFeatureSuccess: true,
+            onFeatureError: true,
+            defaultChannelId: 'general-channel',
+          },
+        },
+      });
+
+      // Update nested defaultNotifications without overwriting existing fields
+      await settingsService.updateGlobalSettings({
+        discord: {
+          defaultNotifications: {
+            onPRMerged: true,
+            channelOverrides: {
+              prMerged: 'pr-channel',
+            },
+          },
+        },
+      });
+
+      const settings = await settingsService.getGlobalSettings();
+
+      // Verify deep merge preserved existing Discord fields
+      expect(settings.discord?.enabled).toBe(true);
+      expect(settings.discord?.serverId).toBe('server-123');
+      expect(settings.discord?.defaultNotifications?.onFeatureSuccess).toBe(true);
+      expect(settings.discord?.defaultNotifications?.onFeatureError).toBe(true);
+      // Verify new fields were added
+      expect(settings.discord?.defaultNotifications?.onPRMerged).toBe(true);
+      expect(settings.discord?.defaultNotifications?.channelOverrides?.prMerged).toBe(
+        'pr-channel'
+      );
+    });
+
+    it('should deep merge Discord settings on update (project)', async () => {
+      // Create initial project settings with Discord config
+      await settingsService.updateProjectSettings(testProjectDir, {
+        discord: {
+          enabled: true,
+          notifications: {
+            onFeatureSuccess: true,
+            onFeatureError: false,
+            defaultChannelId: 'project-channel',
+          },
+          announcementChannelId: 'announcements',
+        },
+      });
+
+      // Update nested notifications
+      await settingsService.updateProjectSettings(testProjectDir, {
+        discord: {
+          notifications: {
+            onPRMerged: true,
+            channelOverrides: {
+              prMerged: 'pr-merged-channel',
+            },
+          },
+        },
+      });
+
+      const settings = await settingsService.getProjectSettings(testProjectDir);
+
+      // Verify deep merge preserved existing Discord fields
+      expect(settings.discord?.enabled).toBe(true);
+      expect(settings.discord?.announcementChannelId).toBe('announcements');
+      expect(settings.discord?.notifications?.onFeatureSuccess).toBe(true);
+      expect(settings.discord?.notifications?.defaultChannelId).toBe('project-channel');
+      // Verify new fields were added
+      expect(settings.discord?.notifications?.onPRMerged).toBe(true);
+      expect(settings.discord?.notifications?.channelOverrides?.prMerged).toBe(
+        'pr-merged-channel'
+      );
+    });
+
+    it('should handle backward compatibility for projects without Discord config', async () => {
+      // Create project settings without Discord
+      await settingsService.updateProjectSettings(testProjectDir, {
+        boardBackground: {
+          imagePath: 'bg.jpg',
+        },
+      });
+
+      const settings = await settingsService.getProjectSettings(testProjectDir);
+
+      // Verify Discord is undefined (not required)
+      expect(settings.discord).toBeUndefined();
+      // Other settings should work normally
+      expect(settings.boardBackground?.imagePath).toBe('bg.jpg');
+    });
+  });
+
   describe('atomicWriteJson', () => {
     // Skip on Windows as chmod doesn't work the same way (CI runs on Linux)
     it.skipIf(process.platform === 'win32')(

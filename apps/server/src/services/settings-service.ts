@@ -231,6 +231,29 @@ export class SettingsService {
       needsSave = true;
     }
 
+    // Migration v6 -> v7: Add Discord integration settings
+    // Initializes Discord settings structure with sensible defaults for projects
+    // that don't have Discord configured yet. Ensures backward compatibility.
+    if (storedVersion < 7) {
+      logger.info('Migration v6->v7: Initializing Discord integration settings');
+      // Only initialize Discord settings if not already present
+      // This ensures we don't overwrite any manually added Discord config
+      if (!result.discord) {
+        result.discord = {
+          enabled: false,
+          useCredentials: true,
+          defaultNotifications: {
+            onFeatureSuccess: false,
+            onFeatureError: true,
+            onPRMerged: true,
+            onAutoModeComplete: true,
+          },
+        };
+        logger.info('Migration v6->v7: Discord settings initialized with defaults');
+      }
+      needsSave = true;
+    }
+
     // Update version if any migration occurred
     if (needsSave) {
       result.version = SETTINGS_VERSION;
@@ -621,6 +644,39 @@ export class SettingsService {
       };
     }
 
+    // Deep merge Discord integration settings if provided
+    // Performs three-level deep merge:
+    // 1. Top-level discord fields (enabled, serverId, useCredentials)
+    // 2. Nested defaultNotifications object
+    // 3. Nested announcementTemplates object
+    if (sanitizedUpdates.discord) {
+      updated.discord = {
+        ...current.discord,
+        ...sanitizedUpdates.discord,
+      };
+      // Deep merge nested defaultNotifications if present
+      if (sanitizedUpdates.discord.defaultNotifications) {
+        updated.discord.defaultNotifications = {
+          ...current.discord?.defaultNotifications,
+          ...sanitizedUpdates.discord.defaultNotifications,
+        };
+        // Deep merge channelOverrides if present
+        if (sanitizedUpdates.discord.defaultNotifications.channelOverrides) {
+          updated.discord.defaultNotifications.channelOverrides = {
+            ...current.discord?.defaultNotifications?.channelOverrides,
+            ...sanitizedUpdates.discord.defaultNotifications.channelOverrides,
+          };
+        }
+      }
+      // Deep merge announcementTemplates if present
+      if (sanitizedUpdates.discord.announcementTemplates) {
+        updated.discord.announcementTemplates = {
+          ...current.discord?.announcementTemplates,
+          ...sanitizedUpdates.discord.announcementTemplates,
+        };
+      }
+    }
+
     await writeSettingsJson(settingsPath, updated);
     logger.info('Global settings updated');
 
@@ -804,6 +860,31 @@ export class SettingsService {
         ...current.boardBackground,
         ...updates.boardBackground,
       };
+    }
+
+    // Deep merge Discord config if provided
+    // Performs two-level deep merge:
+    // 1. Top-level discord fields (enabled, announcementChannelId, webhookUrl)
+    // 2. Nested notifications object (onFeatureSuccess, onFeatureError, etc.)
+    if (updates.discord) {
+      updated.discord = {
+        ...current.discord,
+        ...updates.discord,
+      };
+      // Deep merge nested notifications object if present
+      if (updates.discord.notifications) {
+        updated.discord.notifications = {
+          ...current.discord?.notifications,
+          ...updates.discord.notifications,
+        };
+        // Deep merge channelOverrides if present
+        if (updates.discord.notifications.channelOverrides) {
+          updated.discord.notifications.channelOverrides = {
+            ...current.discord?.notifications?.channelOverrides,
+            ...updates.discord.notifications.channelOverrides,
+          };
+        }
+      }
     }
 
     // Handle activeClaudeApiProfileId special cases:

@@ -33,6 +33,10 @@ export type {
   // Legacy profile types (deprecated)
   ClaudeApiProfile,
   ClaudeApiProfileTemplate,
+  // Discord integration types
+  DiscordIntegrationSettings,
+  DiscordNotificationSettings,
+  DiscordConfig,
 } from '@automaker/types';
 
 export {
@@ -41,6 +45,7 @@ export {
   DEFAULT_CREDENTIALS,
   DEFAULT_PROJECT_SETTINGS,
   DEFAULT_PHASE_MODELS,
+  DEFAULT_DISCORD_INTEGRATION_SETTINGS,
   SETTINGS_VERSION,
   CREDENTIALS_VERSION,
   PROJECT_SETTINGS_VERSION,

@@ -439,6 +439,91 @@ export const CLAUDE_API_PROFILE_TEMPLATES: ClaudeApiProfileTemplate[] = [
 ];
 
 // ============================================================================
+// Discord Integration Settings
+// ============================================================================
+
+/**
+ * DiscordNotificationSettings - Configure Discord notifications for events
+ *
+ * Controls which events trigger Discord notifications and to which channels.
+ */
+export interface DiscordNotificationSettings {
+  /** Send notification when feature completes successfully */
+  onFeatureSuccess?: boolean;
+  /** Send notification when feature fails */
+  onFeatureError?: boolean;
+  /** Send notification when PR is merged */
+  onPRMerged?: boolean;
+  /** Send notification when auto-mode completes */
+  onAutoModeComplete?: boolean;
+  /** Default channel ID for notifications (if not specified per-event) */
+  defaultChannelId?: string;
+  /** Per-event channel overrides */
+  channelOverrides?: {
+    featureSuccess?: string;
+    featureError?: string;
+    prMerged?: string;
+    autoModeComplete?: string;
+  };
+}
+
+/**
+ * DiscordIntegrationSettings - Global Discord integration configuration
+ *
+ * Stored in global settings for Discord server connection and notification preferences.
+ */
+export interface DiscordIntegrationSettings {
+  /** Whether Discord integration is enabled globally */
+  enabled: boolean;
+  /** Discord server (guild) ID */
+  serverId?: string;
+  /** Discord bot token (stored in credentials.json for security) */
+  useCredentials?: boolean;
+  /** Default notification settings for all projects */
+  defaultNotifications?: DiscordNotificationSettings;
+  /** Announcement template preferences */
+  announcementTemplates?: {
+    /** Use custom templates for announcements */
+    useCustomTemplates?: boolean;
+    /** Custom template for PR merged announcements */
+    prMergedTemplate?: string;
+    /** Custom template for release announcements */
+    releaseTemplate?: string;
+  };
+}
+
+/**
+ * DiscordConfig - Project-specific Discord configuration
+ *
+ * Stored in project settings to override global Discord settings per-project.
+ * Allows different projects to have different notification channels and preferences.
+ */
+export interface DiscordConfig {
+  /** Whether Discord notifications are enabled for this project */
+  enabled?: boolean;
+  /** Project-specific notification settings (overrides global defaults) */
+  notifications?: DiscordNotificationSettings;
+  /** Project-specific announcement channel */
+  announcementChannelId?: string;
+  /** Project-specific webhook URL for automation */
+  webhookUrl?: string;
+}
+
+/**
+ * Default Discord integration settings - disabled by default
+ */
+export const DEFAULT_DISCORD_INTEGRATION_SETTINGS: DiscordIntegrationSettings = {
+  enabled: false,
+  useCredentials: true,
+  defaultNotifications: {
+    onFeatureSuccess: false,
+    onFeatureError: true,
+    onPRMerged: true,
+    onAutoModeComplete: true,
+  },
+};
+
+// ============================================================================
 // Webhook Settings - Re-export from webhook.ts for convenience
 // ============================================================================
 
@@ -1215,6 +1300,13 @@ export interface GlobalSettings {
       maxConcurrency?: number;
     }>;
   };
+
+  /**
+   * Discord integration settings for team notifications and server management.
+   * Configure Discord bot connection, default notification channels, and announcement templates.
+   * @see DiscordIntegrationSettings
+   */
+  discord?: DiscordIntegrationSettings;
 }
 
 /**
@@ -1240,6 +1332,8 @@ export interface Credentials {
     /** GitHub webhook secret for HMAC-SHA256 signature verification */
     github?: string;
   };
+  /** Discord bot token for Discord integration (sensitive - not displayed in UI) */
+  discordBotToken?: string;
 }
 
 /**
@@ -1494,6 +1588,13 @@ export interface ProjectSettings {
    * Each PhaseModelEntry can specify a providerId for provider-specific models.
    */
   activeClaudeApiProfileId?: string | null;
+
+  /**
+   * Discord configuration for this project.
+   * Overrides global Discord settings with project-specific channels and preferences.
+   * @see DiscordConfig
+   */
+  discord?: DiscordConfig;
 }
 
 /**
@@ -1527,7 +1628,7 @@ export const DEFAULT_PHASE_MODELS: PhaseModelConfig = {
 };
 
 /** Current version of the global settings schema */
-export const SETTINGS_VERSION = 6;
+export const SETTINGS_VERSION = 7;
 /** Current version of the credentials schema */
 export const CREDENTIALS_VERSION = 1;
 /** Current version of the project settings schema */
