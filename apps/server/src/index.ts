@@ -261,10 +261,10 @@ const eventHistoryService = getEventHistoryService();
 // Initialize Event Hook Service for custom event triggers (with history storage)
 eventHookService.initialize(events, settingsService, eventHistoryService, featureLoader);
 
-// Initialize Scheduler Service with event emitter
+// Initialize Scheduler Service with event emitter and data directory
 const schedulerService = getSchedulerService();
-schedulerService.initialize(events);
-schedulerService.start();
+schedulerService.initialize(events, DATA_DIR);
+void schedulerService.start();
 
 // Initialize services
 (async () => {

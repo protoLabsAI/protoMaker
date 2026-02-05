@@ -22,6 +22,8 @@
  */
 
 import { createLogger } from '@automaker/utils';
+import { secureFs } from '@automaker/platform';
+import path from 'path';
 import type { EventEmitter } from '../lib/events.js';
 
 const logger = createLogger('Scheduler');
@@ -56,6 +58,30 @@ export interface ScheduledTask {
   cronExpression: string;
   /** Task handler function */
   handler: () => Promise<void> | void;
+  /** Whether the task is currently enabled */
+  enabled: boolean;
+  /** Last time the task was executed (ISO string) */
+  lastRun?: string;
+  /** Next scheduled execution time (ISO string) */
+  nextRun?: string;
+  /** Last error message if task failed */
+  lastError?: string;
+  /** Number of consecutive failures */
+  failureCount: number;
+  /** Total number of executions */
+  executionCount: number;
+}
+
+/**
+ * Persisted task data (without handler function)
+ */
+export interface PersistedTaskData {
+  /** Unique task identifier */
+  id: string;
+  /** Human-readable task name */
+  name: string;
+  /** Cron expression defining the schedule */
+  cronExpression: string;
   /** Whether the task is currently enabled */
   enabled: boolean;
   /** Last time the task was executed (ISO string) */
@@ -299,31 +325,151 @@ export function getNextRunTime(cronExpression: string, after: Date = new Date())
 export class SchedulerService {
   private tasks: Map<string, ScheduledTask> = new Map();
   private parsedCrons: Map<string, ParsedCron> = new Map();
+  private persistedMetadata: Map<string, PersistedTaskData> = new Map();
   private intervalId: NodeJS.Timeout | null = null;
   private running = false;
   private events: EventEmitter | null = null;
+  private dataDir: string | null = null;
 
   /** Check interval in milliseconds (default: 60 seconds) */
   private checkInterval = 60000;
 
+  /** File name for persisted tasks */
+  private static readonly TASKS_FILE = 'scheduled-tasks.json';
+
   /**
-   * Initialize the scheduler with an event emitter
+   * Initialize the scheduler with an event emitter and data directory
    */
-  initialize(events: EventEmitter): void {
+  initialize(events: EventEmitter, dataDir: string): void {
     this.events = events;
+    this.dataDir = dataDir;
     logger.info('Scheduler service initialized');
+  }
+
+  /**
+   * Get the path to the tasks storage file
+   */
+  private getTasksFilePath(): string {
+    if (!this.dataDir) {
+      throw new Error('Scheduler not initialized with data directory');
+    }
+    return path.join(this.dataDir, SchedulerService.TASKS_FILE);
+  }
+
+  /**
+   * Save all task metadata to persistent storage
+   */
+  private async saveTasks(): Promise<void> {
+    if (!this.dataDir) {
+      logger.warn('Cannot save tasks: data directory not initialized');
+      return;
+    }
+
+    try {
+      const tasksFilePath = this.getTasksFilePath();
+
+      // Convert tasks to persisted format (exclude handler functions)
+      const persistedTasks: PersistedTaskData[] = Array.from(this.tasks.values()).map((task) => ({
+        id: task.id,
+        name: task.name,
+        cronExpression: task.cronExpression,
+        enabled: task.enabled,
+        lastRun: task.lastRun,
+        nextRun: task.nextRun,
+        lastError: task.lastError,
+        failureCount: task.failureCount,
+        executionCount: task.executionCount,
+      }));
+
+      // Ensure data directory exists
+      await secureFs.mkdir(this.dataDir, { recursive: true });
+
+      // Write to file
+      await secureFs.writeFile(tasksFilePath, JSON.stringify(persistedTasks, null, 2), 'utf-8');
+
+      logger.debug(`Saved ${persistedTasks.length} tasks to ${tasksFilePath}`);
+    } catch (error) {
+      logger.error('Failed to save tasks:', error);
+    }
+  }
+
+  /**
+   * Load task metadata from persistent storage
+   * Note: Handlers must be registered separately via registerTask()
+   */
+  private async loadTasks(): Promise<void> {
+    if (!this.dataDir) {
+      logger.warn('Cannot load tasks: data directory not initialized');
+      return;
+    }
+
+    try {
+      const tasksFilePath = this.getTasksFilePath();
+
+      // Check if file exists
+      try {
+        await secureFs.access(tasksFilePath);
+      } catch {
+        logger.debug('No tasks file found, starting with empty task list');
+        return;
+      }
+
+      // Read and parse file
+      const content = (await secureFs.readFile(tasksFilePath, 'utf-8')) as string;
+      const persistedTasks: PersistedTaskData[] = JSON.parse(content);
+
+      logger.info(`Loaded ${persistedTasks.length} task metadata entries from storage`);
+
+      // Store metadata for tasks (handlers will be registered later)
+      // This allows us to restore execution history when handlers are re-registered
+      for (const persistedTask of persistedTasks) {
+        this.persistedMetadata.set(persistedTask.id, persistedTask);
+        logger.debug(`Loaded metadata for task: ${persistedTask.name} (${persistedTask.id})`);
+      }
+
+      logger.info(`Stored ${this.persistedMetadata.size} task metadata entries in memory`);
+      return;
+    } catch (error) {
+      logger.error('Failed to load tasks:', error);
+    }
+  }
+
+  /**
+   * Get persisted task data by ID (used during task registration)
+   * First checks in-memory cache, then falls back to reading from disk
+   */
+  private async getPersistedTaskData(taskId: string): Promise<PersistedTaskData | null> {
+    // Check in-memory cache first (populated by loadTasks)
+    const cached = this.persistedMetadata.get(taskId);
+    if (cached) {
+      return cached;
+    }
+
+    // Fallback to reading from disk if not in cache
+    if (!this.dataDir) {
+      return null;
+    }
+
+    try {
+      const tasksFilePath = this.getTasksFilePath();
+      const content = (await secureFs.readFile(tasksFilePath, 'utf-8')) as string;
+      const persistedTasks: PersistedTaskData[] = JSON.parse(content);
+      return persistedTasks.find((t) => t.id === taskId) || null;
+    } catch {
+      return null;
+    }
   }
 
   /**
    * Register a new scheduled task
    */
-  registerTask(
+  async registerTask(
     id: string,
     name: string,
     cronExpression: string,
     handler: () => Promise<void> | void,
     enabled = true
-  ): void {
+  ): Promise<void> {
     // Validate cron expression
     const validation = validateCronExpression(cronExpression);
     if (!validation.valid) {
@@ -334,32 +480,52 @@ export class SchedulerService {
     const parsed = parseCronExpression(cronExpression);
     this.parsedCrons.set(id, parsed);
 
+    // Try to restore persisted data for this task
+    const persistedData = await this.getPersistedTaskData(id);
+
     // Calculate next run time
     const nextRun = enabled ? getNextRunTime(cronExpression).toISOString() : undefined;
 
-    // Create task
+    // Create task, merging persisted data if available
     const task: ScheduledTask = {
       id,
       name,
       cronExpression,
       handler,
-      enabled,
-      nextRun,
-      failureCount: 0,
-      executionCount: 0,
+      enabled: persistedData?.enabled ?? enabled,
+      nextRun: persistedData?.nextRun ?? nextRun,
+      lastRun: persistedData?.lastRun,
+      lastError: persistedData?.lastError,
+      failureCount: persistedData?.failureCount ?? 0,
+      executionCount: persistedData?.executionCount ?? 0,
     };
 
     this.tasks.set(id, task);
-    logger.info(`Registered task "${name}" (${id}) with schedule: ${cronExpression}`);
+
+    // Clear persisted metadata after use to avoid keeping stale data
+    if (persistedData && this.persistedMetadata.has(id)) {
+      this.persistedMetadata.delete(id);
+    }
+
+    if (persistedData) {
+      logger.info(
+        `Registered task "${name}" (${id}) with restored state (executions: ${task.executionCount}, failures: ${task.failureCount})`
+      );
+    } else {
+      logger.info(`Registered task "${name}" (${id}) with schedule: ${cronExpression}`);
+    }
 
     // Emit event
-    this.emitEvent('scheduler:task_registered', { taskId: id, name, cronExpression, enabled });
+    this.emitEvent('scheduler:task_registered', { taskId: id, name, cronExpression, enabled: task.enabled });
+
+    // Save tasks after registration
+    await this.saveTasks();
   }
 
   /**
    * Unregister a task
    */
-  unregisterTask(id: string): boolean {
+  async unregisterTask(id: string): Promise<boolean> {
     const task = this.tasks.get(id);
     if (!task) {
       return false;
@@ -370,13 +536,17 @@ export class SchedulerService {
     logger.info(`Unregistered task "${task.name}" (${id})`);
 
     this.emitEvent('scheduler:task_unregistered', { taskId: id, name: task.name });
+
+    // Save tasks after unregistration
+    await this.saveTasks();
+
     return true;
   }
 
   /**
    * Enable a task
    */
-  enableTask(id: string): boolean {
+  async enableTask(id: string): Promise<boolean> {
     const task = this.tasks.get(id);
     if (!task) {
       return false;
@@ -387,13 +557,17 @@ export class SchedulerService {
     logger.info(`Enabled task "${task.name}" (${id})`);
 
     this.emitEvent('scheduler:task_enabled', { taskId: id, name: task.name, nextRun: task.nextRun });
+
+    // Save tasks after enabling
+    await this.saveTasks();
+
     return true;
   }
 
   /**
    * Disable a task
    */
-  disableTask(id: string): boolean {
+  async disableTask(id: string): Promise<boolean> {
     const task = this.tasks.get(id);
     if (!task) {
       return false;
@@ -404,6 +578,10 @@ export class SchedulerService {
     logger.info(`Disabled task "${task.name}" (${id})`);
 
     this.emitEvent('scheduler:task_disabled', { taskId: id, name: task.name });
+
+    // Save tasks after disabling
+    await this.saveTasks();
+
     return true;
   }
 
@@ -445,11 +623,14 @@ export class SchedulerService {
   /**
    * Start the scheduler
    */
-  start(): void {
+  async start(): Promise<void> {
     if (this.running) {
       logger.warn('Scheduler is already running');
       return;
     }
+
+    // Load persisted tasks before starting
+    await this.loadTasks();
 
     this.running = true;
 
@@ -568,6 +749,9 @@ export class SchedulerService {
       nextRun: task.nextRun,
     });
 
+    // Save tasks after execution to persist updated counts and timestamps
+    await this.saveTasks();
+
     return result;
   }
 
@@ -608,6 +792,7 @@ export class SchedulerService {
     this.stop();
     this.tasks.clear();
     this.parsedCrons.clear();
+    this.persistedMetadata.clear();
     this.events = null;
     logger.info('Scheduler service destroyed');
   }
