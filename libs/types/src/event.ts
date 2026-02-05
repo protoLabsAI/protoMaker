@@ -24,6 +24,7 @@ export type EventType =
   | 'feature:committed'
   | 'feature:retry'
   | 'feature:recovery'
+  | 'feature:pr-merged'
   | 'project:analysis-started'
   | 'project:analysis-progress'
   | 'project:analysis-completed'

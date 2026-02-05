@@ -1154,6 +1154,17 @@ export interface GlobalSettings {
    * @see GraphiteSettings
    */
   graphite?: GraphiteSettings;
+
+  /**
+   * GitHub webhook settings for automated feature status transitions.
+   * When enabled, features automatically move to "done" when their PR is merged.
+   */
+  githubWebhook?: {
+    /** Whether GitHub webhook integration is enabled */
+    enabled: boolean;
+    /** Webhook secret for signature verification (HMAC-SHA256) */
+    secret: string;
+  };
 }
 
 /**
