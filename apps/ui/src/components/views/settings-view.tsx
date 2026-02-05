@@ -62,6 +62,8 @@ export function SettingsView() {
     setPromptCustomization,
     skipSandboxWarning,
     setSkipSandboxWarning,
+    githubWebhookSecret,
+    setGithubWebhookSecret,
   } = useAppStore();
 
   // Global theme (project-specific themes are managed in Project Settings)
@@ -186,6 +188,8 @@ export function SettingsView() {
           <SecuritySection
             skipSandboxWarning={skipSandboxWarning}
             onSkipSandboxWarningChange={setSkipSandboxWarning}
+            githubWebhookSecret={githubWebhookSecret}
+            onGithubWebhookSecretChange={setGithubWebhookSecret}
           />
         );
       case 'developer':

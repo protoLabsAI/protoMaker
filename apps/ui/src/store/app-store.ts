@@ -732,6 +732,9 @@ export interface AppState {
   autoLoadClaudeMd: boolean; // Auto-load CLAUDE.md files using SDK's settingSources option
   skipSandboxWarning: boolean; // Skip the sandbox environment warning dialog on startup
 
+  // GitHub Webhook Settings
+  githubWebhookSecret: string; // GitHub webhook secret for validating inbound webhook requests
+
   // MCP Servers
   mcpServers: MCPServerConfig[]; // List of configured MCP servers for agent use
 
@@ -1216,6 +1219,9 @@ export interface AppActions {
   setAutoLoadClaudeMd: (enabled: boolean) => Promise<void>;
   setSkipSandboxWarning: (skip: boolean) => Promise<void>;
 
+  // GitHub Webhook Configuration actions
+  setGithubWebhookSecret: (secret: string) => Promise<void>;
+
   // Editor Configuration actions
   setDefaultEditorCommand: (command: string | null) => void;
 
@@ -1495,6 +1501,7 @@ const initialState: AppState = {
   disabledProviders: [], // No providers disabled by default
   autoLoadClaudeMd: false, // Default to disabled (user must opt-in)
   skipSandboxWarning: false, // Default to disabled (show sandbox warning dialog)
+  githubWebhookSecret: '', // No webhook secret by default
   mcpServers: [], // No MCP servers configured by default
   defaultEditorCommand: null, // Auto-detect: Cursor > VS Code > first available
   defaultTerminalId: null, // Integrated terminal by default
@@ -2718,6 +2725,18 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
     if (!ok) {
       logger.error('Failed to sync skipSandboxWarning setting to server - reverting');
       set({ skipSandboxWarning: previous });
+    }
+  },
+
+  setGithubWebhookSecret: async (secret) => {
+    const previous = get().githubWebhookSecret;
+    set({ githubWebhookSecret: secret });
+    // Sync to server settings file
+    const { syncSettingsToServer } = await import('@/hooks/use-settings-migration');
+    const ok = await syncSettingsToServer();
+    if (!ok) {
+      logger.error('Failed to sync githubWebhookSecret setting to server - reverting');
+      set({ githubWebhookSecret: previous });
     }
   },
 

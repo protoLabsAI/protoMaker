@@ -1154,6 +1154,12 @@ export interface GlobalSettings {
    * @see GraphiteSettings
    */
   graphite?: GraphiteSettings;
+
+  /**
+   * GitHub webhook secret for validating inbound webhook requests.
+   * Used to verify that webhook payloads are coming from GitHub.
+   */
+  githubWebhookSecret?: string;
 }
 
 /**
