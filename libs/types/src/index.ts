@@ -184,6 +184,9 @@ export type {
   BoardBackgroundSettings,
   WorktreeInfo,
   ProjectSettings,
+  // Discord settings types
+  DiscordChannelMapping,
+  DiscordSettings,
   // Event hook types
   EventHookTrigger,
   EventHookHttpMethod,
@@ -226,6 +229,8 @@ export {
   DEFAULT_GIT_WORKFLOW_SETTINGS,
   // Graphite CLI defaults
   DEFAULT_GRAPHITE_SETTINGS,
+  // Discord settings defaults
+  DEFAULT_DISCORD_SETTINGS,
   // Claude-compatible provider templates (new)
   CLAUDE_PROVIDER_TEMPLATES,
   // Claude API profile constants (deprecated)

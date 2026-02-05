@@ -446,6 +446,46 @@ export type { WebhookSettings } from './webhook.js';
 export { DEFAULT_WEBHOOK_SETTINGS } from './webhook.js';
 
 // ============================================================================
+// Discord Settings - Configuration for Discord integration
+// ============================================================================
+
+/**
+ * DiscordChannelMapping - Maps project events to Discord channels
+ *
+ * Configures which Discord channels receive notifications for different event types.
+ */
+export interface DiscordChannelMapping {
+  /** Channel ID for feature creation/updates */
+  features?: string;
+  /** Channel ID for error notifications */
+  errors?: string;
+  /** Channel ID for completion notifications */
+  completions?: string;
+}
+
+/**
+ * DiscordSettings - Configuration for Discord integration at the project level
+ *
+ * Controls Discord notifications and auto-create behavior for the project.
+ * When enabled, Automaker will post notifications to Discord channels via MCP.
+ */
+export interface DiscordSettings {
+  /** Whether Discord integration is enabled for this project */
+  enabled: boolean;
+  /** Channel mappings for different event types */
+  channelMapping: DiscordChannelMapping;
+  /** Auto-create Discord channels if they don't exist */
+  autoCreateChannels: boolean;
+}
+
+/** Default Discord settings - disabled by default */
+export const DEFAULT_DISCORD_SETTINGS: DiscordSettings = {
+  enabled: false,
+  channelMapping: {},
+  autoCreateChannels: false,
+};
+
+// ============================================================================
 // Event Hooks - Custom actions triggered by system events
 // ============================================================================
 
@@ -1372,6 +1412,14 @@ export interface ProjectSettings {
    * @see WebhookSettings in webhook.ts
    */
   webhookSettings?: import('./webhook.js').WebhookSettings;
+
+  // Discord Settings (per-project)
+  /**
+   * Discord integration configuration for project notifications.
+   * Controls Discord channel mappings and auto-create behavior.
+   * @see DiscordSettings
+   */
+  discordSettings?: DiscordSettings;
 
   // Deprecated Claude API Profile Override
   /**
