@@ -34,6 +34,34 @@ import type { ClaudeProvider } from '../providers/claude-provider.js';
 const logger = createLogger('DiscordService');
 
 /**
+ * Audit-specific types for channel reorganization
+ */
+export interface AuditIssue {
+  type: 'empty_category' | 'inactive_channel' | 'duplicate_name' | 'orphaned_channel' | 'unused_webhook';
+  severity: 'low' | 'medium' | 'high';
+  channelId?: string;
+  channelName?: string;
+  categoryId?: string;
+  categoryName?: string;
+  description: string;
+  recommendation: string;
+}
+
+export interface ChannelAuditResult {
+  serverName: string;
+  totalChannels: number;
+  totalCategories: number;
+  issues: AuditIssue[];
+  summary: {
+    emptyCategories: number;
+    inactiveChannels: number;
+    duplicateNames: number;
+    orphanedChannels: number;
+    unusedWebhooks: number;
+  };
+}
+
+/**
  * Parse error from Discord MCP operation and return error type
  */
 function parseDiscordError(error: unknown): {
@@ -544,6 +572,49 @@ export class DiscordService {
         errorType: type,
       };
     }
+  }
+
+  /**
+   * Audit channels in the Discord server
+   *
+   * Scans the guild and identifies:
+   * - Empty categories (categories with no channels)
+   * - Inactive channels (no messages in 30+ days)
+   * - Duplicate channel names
+   * - Orphaned channels (not in any category)
+   * - Unused webhooks
+   *
+   * @returns Audit results with cleanup recommendations
+   */
+  async auditChannels(): Promise<ChannelAuditResult> {
+    logger.info('Starting Discord channel audit');
+    logger.warn('Discord MCP integration not yet implemented for channel audit');
+    throw new Error('Discord MCP integration not yet implemented');
+  }
+
+  /**
+   * Get channel statistics
+   */
+  async getChannelStats(): Promise<{
+    textChannels: number;
+    voiceChannels: number;
+    categories: number;
+    orphanedChannels: number;
+  }> {
+    logger.info('Getting channel statistics');
+    throw new Error('Discord MCP integration not yet implemented');
+  }
+
+  /**
+   * Validate channel structure against expected organization
+   */
+  async validateStructure(expectedCategories: string[]): Promise<{
+    valid: boolean;
+    missingCategories: string[];
+    unexpectedCategories: string[];
+  }> {
+    logger.info('Validating channel structure');
+    throw new Error('Discord MCP integration not yet implemented');
   }
 }
 
