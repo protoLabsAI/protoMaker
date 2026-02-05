@@ -56,7 +56,12 @@ export function resolveDependencies(features: Feature[]): DependencyResolutionRe
 
         // Check if dependency is incomplete (blocking)
         const depFeature = featureMap.get(depId)!;
-        if (depFeature.status !== 'completed' && depFeature.status !== 'verified') {
+        if (
+          depFeature.status !== 'completed' &&
+          depFeature.status !== 'verified' &&
+          depFeature.status !== 'done' &&
+          depFeature.status !== 'review'
+        ) {
           if (!blockedFeatures.has(feature.id)) {
             blockedFeatures.set(feature.id, []);
           }
@@ -206,8 +211,17 @@ export function areDependenciesSatisfied(
       // When skipping verification, only block if dependency is currently running
       return dep.status !== 'running';
     }
-    // Default: require 'completed' or 'verified'
-    return dep.status === 'completed' || dep.status === 'verified';
+    // Default: require 'completed', 'verified', 'done' (PR merged), or 'review' (PR open)
+    // 'done' = PR merged, final state
+    // 'review' = PR created and under review, work is complete
+    // 'completed' = agent finished, no PR workflow
+    // 'verified' = manually verified by user
+    return (
+      dep.status === 'completed' ||
+      dep.status === 'verified' ||
+      dep.status === 'done' ||
+      dep.status === 'review'
+    );
   });
 }
 
@@ -225,7 +239,13 @@ export function getBlockingDependencies(feature: Feature, allFeatures: Feature[]
 
   return feature.dependencies.filter((depId: string) => {
     const dep = allFeatures.find((f) => f.id === depId);
-    return dep && dep.status !== 'completed' && dep.status !== 'verified';
+    return (
+      dep &&
+      dep.status !== 'completed' &&
+      dep.status !== 'verified' &&
+      dep.status !== 'done' &&
+      dep.status !== 'review'
+    );
   });
 }
 
@@ -264,7 +284,13 @@ export function getBlockingDependenciesFromMap(
   const blockingDependencies: string[] = [];
   for (const depId of dependencies) {
     const dep = featureMap.get(depId);
-    if (dep && dep.status !== 'completed' && dep.status !== 'verified') {
+    if (
+      dep &&
+      dep.status !== 'completed' &&
+      dep.status !== 'verified' &&
+      dep.status !== 'done' &&
+      dep.status !== 'review'
+    ) {
       blockingDependencies.push(depId);
     }
   }
