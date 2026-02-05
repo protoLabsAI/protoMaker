@@ -421,5 +421,7 @@ export type {
   GitHubWebhookPayload,
   WebhookVerificationResult,
   WebhookSettings,
+  AutoMergeCheckType,
+  AutoMergeSettings,
 } from './webhook.js';
-export { DEFAULT_WEBHOOK_SETTINGS } from './webhook.js';
+export { DEFAULT_WEBHOOK_SETTINGS, DEFAULT_AUTO_MERGE_SETTINGS } from './webhook.js';

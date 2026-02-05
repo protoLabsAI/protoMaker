@@ -183,6 +183,43 @@ export interface WebhookVerificationResult {
 }
 
 /**
+ * AutoMergeCheckType - Type of check required for auto-merge eligibility
+ */
+export type AutoMergeCheckType =
+  | 'ci_passing' // All CI/CD checks must pass
+  | 'reviews_approved' // Required number of approvals met
+  | 'no_requested_changes' // No outstanding change requests
+  | 'conversations_resolved' // All review conversations resolved
+  | 'up_to_date'; // Branch is up to date with base
+
+/**
+ * AutoMergeSettings - Configuration for automatic PR merging
+ *
+ * Controls which checks must pass before a PR can be automatically merged.
+ * All enabled checks must pass for a PR to be eligible for auto-merge.
+ */
+export interface AutoMergeSettings {
+  /** Enable automatic PR merging when all checks pass (default: false) */
+  enabled?: boolean;
+  /** Minimum number of approving reviews required (default: 1) */
+  minApprovals?: number;
+  /** Required checks that must pass (default: all) */
+  requiredChecks?: AutoMergeCheckType[];
+  /** Merge method to use: merge, squash, or rebase (default: squash) */
+  mergeMethod?: 'merge' | 'squash' | 'rebase';
+}
+
+/**
+ * Default auto-merge settings - disabled by default for safety
+ */
+export const DEFAULT_AUTO_MERGE_SETTINGS: Required<AutoMergeSettings> = {
+  enabled: false,
+  minApprovals: 1,
+  requiredChecks: ['ci_passing', 'reviews_approved', 'no_requested_changes', 'up_to_date'],
+  mergeMethod: 'squash',
+};
+
+/**
  * WebhookSettings - Configuration for webhook handling
  */
 export interface WebhookSettings {
@@ -194,6 +231,8 @@ export interface WebhookSettings {
   autoCreateFromIssues?: boolean;
   /** Issue labels that trigger auto-creation (empty = all issues) */
   autoCreateLabels?: string[];
+  /** Auto-merge settings for PRs (default: disabled) */
+  autoMerge?: AutoMergeSettings;
 }
 
 /**
@@ -204,4 +243,5 @@ export const DEFAULT_WEBHOOK_SETTINGS: Required<WebhookSettings> = {
   webhookEnabled: false,
   autoCreateFromIssues: false,
   autoCreateLabels: [],
+  autoMerge: DEFAULT_AUTO_MERGE_SETTINGS,
 };
