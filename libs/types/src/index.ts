@@ -189,6 +189,7 @@ export type {
   EventHookAction,
   EventHook,
   // Git workflow types
+  PRMergeStrategy,
   GitWorkflowSettings,
   GitWorkflowResult,
   // Graphite CLI types

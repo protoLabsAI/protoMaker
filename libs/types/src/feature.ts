@@ -2,7 +2,7 @@
  * Feature types for AutoMaker feature management
  */
 
-import type { PlanningMode, ThinkingLevel } from './settings.js';
+import type { PlanningMode, ThinkingLevel, GitWorkflowSettings } from './settings.js';
 import type { ReasoningEffort } from './provider.js';
 import type { FeatureRalphConfig } from './ralph.js';
 
@@ -75,14 +75,8 @@ export interface Feature {
   // Ralph mode - persistent retry loops with external verification
   ralphConfig?: FeatureRalphConfig;
   /** Override global git workflow settings for this specific feature */
-  gitWorkflow?: {
-    /** Override auto-commit setting */
-    autoCommit?: boolean;
-    /** Override auto-push setting */
-    autoPush?: boolean;
-    /** Override auto-create PR setting */
-    autoCreatePR?: boolean;
-  };
+  /** Per-feature git workflow settings (overrides global settings) */
+  gitWorkflow?: Partial<GitWorkflowSettings>;
   /**
    * Feature complexity level - affects model selection
    * - small: Quick fixes, trivial changes (haiku)
