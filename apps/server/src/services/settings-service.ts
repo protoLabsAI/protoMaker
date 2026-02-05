@@ -34,7 +34,8 @@ import type {
   ClaudeApiProfile,
   ClaudeCompatibleProvider,
   ProviderModel,
-} from '../types/settings.js';
+  EventHook,
+} from '@automaker/types';
 import {
   DEFAULT_GLOBAL_SETTINGS,
   DEFAULT_CREDENTIALS,
@@ -43,7 +44,7 @@ import {
   SETTINGS_VERSION,
   CREDENTIALS_VERSION,
   PROJECT_SETTINGS_VERSION,
-} from '../types/settings.js';
+} from '@automaker/types';
 import {
   DEFAULT_MAX_CONCURRENCY,
   migrateModelId,
@@ -234,6 +235,17 @@ export class SettingsService {
     // Update version if any migration occurred
     if (needsSave) {
       result.version = SETTINGS_VERSION;
+    }
+
+    // Create default hooks on first run (when no hooks are configured yet)
+    const beforeHooks = result.eventHooks?.length || 0;
+    result = this.createDefaultHooks(result);
+    const afterHooks = result.eventHooks?.length || 0;
+
+    // Mark as needing save if default hooks were added
+    if (afterHooks > beforeHooks) {
+      needsSave = true;
+      logger.info(`Created ${afterHooks - beforeHooks} default event hook(s)`);
     }
 
     // Save migrated settings if needed
@@ -1068,6 +1080,53 @@ export class SettingsService {
         errors,
       };
     }
+  }
+
+  /**
+   * Create default event hooks on first run
+   *
+   * Creates a default hook for auto-resuming agents when PR feedback is received.
+   * This is a convenience feature to streamline the feedback-fix workflow.
+   *
+   * @param settings - Current global settings
+   * @returns Updated settings with default hooks added (if not already present)
+   */
+  private createDefaultHooks(settings: GlobalSettings): GlobalSettings {
+    // Check if hooks are already configured
+    const hasHooks = settings.eventHooks && settings.eventHooks.length > 0;
+
+    // Check if this is a fresh install (no hooks configured yet)
+    if (hasHooks) {
+      return settings;
+    }
+
+    logger.info('Creating default event hooks for first run');
+
+    // Create default PR feedback hook
+    const defaultHook: EventHook = {
+      id: `hook-${Date.now()}-pr-feedback-auto-resume`,
+      trigger: 'pr_feedback_received',
+      enabled: true,
+      name: 'Auto-resume agent on PR feedback',
+      action: {
+        type: 'http',
+        url: 'http://localhost:3008/api/agent/start',
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          projectPath: '{{projectPath}}',
+          featureId: '{{featureId}}',
+          resumeWithFeedback: true,
+        }),
+      },
+    };
+
+    return {
+      ...settings,
+      eventHooks: [defaultHook],
+    };
   }
 
   /**
