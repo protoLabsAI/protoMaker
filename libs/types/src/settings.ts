@@ -479,6 +479,40 @@ export interface GitWorkflowSettings {
   prBaseBranch?: string;
 }
 
+// ============================================================================
+// Graphite CLI Integration - Stack-aware PR management
+// ============================================================================
+
+/**
+ * GraphiteSettings - Configuration for Graphite CLI integration
+ *
+ * Graphite provides stack-aware PR management, making it easier to work with
+ * feature branches that stack on epic branches. When enabled, Automaker uses
+ * Graphite CLI commands instead of raw git/gh commands for better stack handling.
+ *
+ * @see https://graphite.dev/docs/graphite-cli
+ */
+export interface GraphiteSettings {
+  /** Enable Graphite CLI integration (default: false) */
+  enabled: boolean;
+  /** Use gt commit instead of git commit (default: false) */
+  useGraphiteCommit?: boolean;
+  /** Auto-track epic branches as stack parents (default: true) */
+  autoTrackEpics?: boolean;
+  /** Use gt stack submit for bulk PR creation (default: false) */
+  useStackSubmit?: boolean;
+}
+
+/**
+ * Default Graphite settings - disabled by default for backward compatibility
+ */
+export const DEFAULT_GRAPHITE_SETTINGS: GraphiteSettings = {
+  enabled: false,
+  useGraphiteCommit: false,
+  autoTrackEpics: true,
+  useStackSubmit: false,
+};
+
 /**
  * Default git workflow settings - all operations enabled by default
  */
@@ -1097,6 +1131,14 @@ export interface GlobalSettings {
    * @see GitWorkflowSettings
    */
   gitWorkflow?: GitWorkflowSettings;
+
+  /**
+   * Graphite CLI integration settings for stack-aware PR management.
+   * When enabled, uses Graphite CLI commands instead of raw git/gh commands.
+   * Provides better handling of stacked PRs (feature branches on epic branches).
+   * @see GraphiteSettings
+   */
+  graphite?: GraphiteSettings;
 }
 
 /**
@@ -1379,6 +1421,8 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   autoModeByWorktree: {},
   // Git workflow automation (enabled by default)
   gitWorkflow: DEFAULT_GIT_WORKFLOW_SETTINGS,
+  // Graphite CLI integration (disabled by default)
+  graphite: DEFAULT_GRAPHITE_SETTINGS,
 };
 
 /** Default credentials (empty strings - user must provide API keys) */

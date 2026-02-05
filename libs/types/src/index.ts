@@ -180,6 +180,8 @@ export type {
   // Git workflow types
   GitWorkflowSettings,
   GitWorkflowResult,
+  // Graphite CLI types
+  GraphiteSettings,
   // Claude-compatible provider types (new)
   ApiKeySource,
   ClaudeCompatibleProviderType,
@@ -207,6 +209,8 @@ export {
   EVENT_HOOK_TRIGGER_LABELS,
   // Git workflow defaults
   DEFAULT_GIT_WORKFLOW_SETTINGS,
+  // Graphite CLI defaults
+  DEFAULT_GRAPHITE_SETTINGS,
   // Claude-compatible provider templates (new)
   CLAUDE_PROVIDER_TEMPLATES,
   // Claude API profile constants (deprecated)

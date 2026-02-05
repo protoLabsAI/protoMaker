@@ -13,10 +13,12 @@ import type {
   GitWorkflowSettings,
   GitWorkflowResult,
   GlobalSettings,
+  GraphiteSettings,
 } from '@automaker/types';
-import { DEFAULT_GIT_WORKFLOW_SETTINGS } from '@automaker/types';
+import { DEFAULT_GIT_WORKFLOW_SETTINGS, DEFAULT_GRAPHITE_SETTINGS } from '@automaker/types';
 import { updateWorktreePRInfo } from '../lib/worktree-metadata.js';
 import { validatePRState } from '@automaker/types';
+import { graphiteService } from './graphite-service.js';
 
 const execAsync = promisify(exec);
 const logger = createLogger('GitWorkflow');
@@ -115,6 +117,9 @@ export class GitWorkflowService {
    * Run the complete git workflow after feature completion.
    * Operations are best-effort: failures in later steps don't prevent earlier steps from succeeding.
    *
+   * When Graphite is enabled and available, uses Graphite CLI for stack-aware
+   * commit/push/PR operations. Otherwise falls back to git/gh CLI.
+   *
    * @param projectPath - Absolute path to the main project (for storing PR metadata)
    * @param featureId - The feature ID
    * @param feature - The feature object
@@ -132,6 +137,7 @@ export class GitWorkflowService {
     epicBranchName?: string
   ): Promise<GitWorkflowResult | null> {
     const gitSettings = this.resolveGitWorkflowSettings(feature, settings);
+    const graphiteSettings = settings.graphite ?? DEFAULT_GRAPHITE_SETTINGS;
 
     // Determine PR base branch:
     // - If feature belongs to an epic and epicBranchName is provided, use it
@@ -140,8 +146,14 @@ export class GitWorkflowService {
     const prBaseBranch =
       epicBranchName && !feature.isEpic ? epicBranchName : gitSettings.prBaseBranch;
 
+    // Check if we should use Graphite for this workflow
+    const useGraphite = await graphiteService.shouldUseGraphite(graphiteSettings);
+    if (useGraphite) {
+      logger.debug(`Using Graphite CLI for git workflow (feature ${featureId})`);
+    }
+
     logger.debug(
-      `Git workflow for ${featureId}: isEpic=${feature.isEpic}, epicId=${feature.epicId}, base=${prBaseBranch}`
+      `Git workflow for ${featureId}: isEpic=${feature.isEpic}, epicId=${feature.epicId}, base=${prBaseBranch}, graphite=${useGraphite}`
     );
 
     // If all operations disabled, skip entirely
@@ -165,7 +177,17 @@ export class GitWorkflowService {
 
     try {
       // Step 1: Commit changes
-      const commitHash = await this.commitChanges(workDir, feature);
+      let commitHash: string | null;
+      if (useGraphite && graphiteSettings.useGraphiteCommit) {
+        // Use Graphite commit (updates stack metadata)
+        const title = feature.title || extractTitleFromDescription(feature.description);
+        const commitMessage = `feat: ${title}\n\nImplemented by Automaker auto-mode\nFeature ID: ${feature.id}`;
+        commitHash = await graphiteService.commit(workDir, commitMessage);
+      } else {
+        // Use standard git commit
+        commitHash = await this.commitChanges(workDir, feature);
+      }
+
       if (!commitHash) {
         logger.info(`No changes to commit for feature ${featureId}`);
         return null;
@@ -176,7 +198,13 @@ export class GitWorkflowService {
       // Step 2: Push to remote (if enabled)
       if (gitSettings.autoPush) {
         try {
-          const pushed = await this.pushToRemote(workDir, branchName);
+          let pushed: boolean;
+          if (useGraphite) {
+            // Graphite push handles force-push-with-lease for rebased stacks
+            pushed = await graphiteService.push(workDir);
+          } else {
+            pushed = await this.pushToRemote(workDir, branchName);
+          }
           result.pushed = pushed;
           if (pushed) {
             logger.info(`Pushed branch ${branchName} to remote`);
@@ -191,20 +219,32 @@ export class GitWorkflowService {
         // Step 3: Create PR (if push succeeded and PR creation enabled)
         if (result.pushed && gitSettings.autoCreatePR) {
           try {
-            const prResult = await this.createPullRequest(
-              workDir,
-              projectPath,
-              feature,
-              branchName,
-              prBaseBranch
-            );
-            result.prUrl = prResult.prUrl;
-            result.prNumber = prResult.prNumber;
-            result.prAlreadyExisted = prResult.prAlreadyExisted;
-            if (prResult.prUrl) {
-              logger.info(
-                `PR ${prResult.prAlreadyExisted ? 'exists' : 'created'}: ${prResult.prUrl}`
+            if (useGraphite) {
+              // Use Graphite submit - it handles base branch automatically via stack parent
+              const prResult = await this.createPullRequestWithGraphite(
+                workDir,
+                projectPath,
+                feature,
+                branchName
               );
+              result.prUrl = prResult.prUrl;
+              result.prNumber = prResult.prNumber;
+              result.prAlreadyExisted = prResult.prAlreadyExisted;
+            } else {
+              // Use gh CLI
+              const prResult = await this.createPullRequest(
+                workDir,
+                projectPath,
+                feature,
+                branchName,
+                prBaseBranch
+              );
+              result.prUrl = prResult.prUrl;
+              result.prNumber = prResult.prNumber;
+              result.prAlreadyExisted = prResult.prAlreadyExisted;
+            }
+            if (result.prUrl) {
+              logger.info(`PR ${result.prAlreadyExisted ? 'exists' : 'created'}: ${result.prUrl}`);
             }
           } catch (prError) {
             const errorMsg = prError instanceof Error ? prError.message : String(prError);
@@ -224,6 +264,61 @@ export class GitWorkflowService {
       result.error = errorMsg;
       return result;
     }
+  }
+
+  /**
+   * Create a pull request using Graphite CLI.
+   * Graphite automatically determines the base branch from the stack parent.
+   */
+  private async createPullRequestWithGraphite(
+    workDir: string,
+    projectPath: string,
+    feature: Feature,
+    branchName: string
+  ): Promise<{ prUrl: string | null; prNumber?: number; prAlreadyExisted?: boolean }> {
+    const title = feature.title || extractTitleFromDescription(feature.description);
+    const body = `## Summary\n\n${feature.description.substring(0, 500)}${feature.description.length > 500 ? '...' : ''}\n\n---\n*Created automatically by Automaker*`;
+
+    const submitResult = await graphiteService.submit(workDir, title, body);
+
+    if (submitResult.success && submitResult.prUrl) {
+      // Store PR info in metadata
+      await updateWorktreePRInfo(projectPath, branchName, {
+        number: submitResult.prNumber!,
+        url: submitResult.prUrl,
+        title,
+        state: 'OPEN',
+        createdAt: new Date().toISOString(),
+      });
+
+      return {
+        prUrl: submitResult.prUrl,
+        prNumber: submitResult.prNumber,
+        prAlreadyExisted: false, // Graphite submit handles existing PRs internally
+      };
+    }
+
+    // If Graphite submit failed, fall back to checking for existing PR
+    if (submitResult.error) {
+      logger.warn(`Graphite submit failed: ${submitResult.error}, checking for existing PR`);
+      const prInfo = await graphiteService.getPRInfo(workDir);
+      if (prInfo?.prUrl) {
+        await updateWorktreePRInfo(projectPath, branchName, {
+          number: prInfo.prNumber!,
+          url: prInfo.prUrl,
+          title,
+          state: 'OPEN',
+          createdAt: new Date().toISOString(),
+        });
+        return {
+          prUrl: prInfo.prUrl,
+          prNumber: prInfo.prNumber,
+          prAlreadyExisted: true,
+        };
+      }
+    }
+
+    return { prUrl: null };
   }
 
   /**
