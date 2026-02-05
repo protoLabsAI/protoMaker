@@ -23,8 +23,18 @@
 
 import { createLogger } from '@automaker/utils';
 import type { EventEmitter } from '../lib/events.js';
+import path from 'path';
+import * as secureFs from '../lib/secure-fs.js';
 
 const logger = createLogger('Scheduler');
+
+/**
+ * Get the path to the scheduler tasks file
+ */
+function getSchedulerTasksPath(): string {
+  const dataDir = process.env.DATA_DIR || './data';
+  return path.join(dataDir, 'scheduler-tasks.json');
+}
 
 /**
  * Parsed cron field with allowed values
@@ -67,6 +77,21 @@ export interface ScheduledTask {
   /** Number of consecutive failures */
   failureCount: number;
   /** Total number of executions */
+  executionCount: number;
+}
+
+/**
+ * Persisted task metadata (handler not included)
+ */
+interface PersistedTaskMetadata {
+  id: string;
+  name: string;
+  cronExpression: string;
+  enabled: boolean;
+  lastRun?: string;
+  nextRun?: string;
+  lastError?: string;
+  failureCount: number;
   executionCount: number;
 }
 
@@ -307,10 +332,57 @@ export class SchedulerService {
   private checkInterval = 60000;
 
   /**
+   * Load tasks from disk on initialization
+   * Handler functions must be re-registered programmatically
+   */
+  private loadTasks(): void {
+    try {
+      const tasksFilePath = getSchedulerTasksPath();
+      if (secureFs.existsSync(tasksFilePath)) {
+        const data = secureFs.readFileSync(tasksFilePath, 'utf-8') as string;
+        const persistedTasks = JSON.parse(data) as PersistedTaskMetadata[];
+
+        let loadedCount = 0;
+
+        for (const taskMetadata of persistedTasks) {
+          // Create a placeholder handler that will be replaced when the task is re-registered
+          const placeholderHandler = async () => {
+            logger.warn(`Task "${taskMetadata.name}" (${taskMetadata.id}) executed before handler was registered`);
+          };
+
+          // Restore task to the Map with metadata
+          const task: ScheduledTask = {
+            ...taskMetadata,
+            handler: placeholderHandler,
+          };
+
+          this.tasks.set(taskMetadata.id, task);
+
+          // Parse and store cron expression
+          try {
+            const parsed = parseCronExpression(taskMetadata.cronExpression);
+            this.parsedCrons.set(taskMetadata.id, parsed);
+            loadedCount++;
+          } catch (error) {
+            logger.warn(`Failed to parse cron expression for task "${taskMetadata.name}":`, error);
+          }
+        }
+
+        if (loadedCount > 0) {
+          logger.info(`Loaded ${loadedCount} scheduled task(s) from disk`);
+        }
+      }
+    } catch (error) {
+      logger.warn('Error loading scheduled tasks:', error);
+    }
+  }
+
+  /**
    * Initialize the scheduler with an event emitter
    */
   initialize(events: EventEmitter): void {
     this.events = events;
+    this.loadTasks();
     logger.info('Scheduler service initialized');
   }
 
