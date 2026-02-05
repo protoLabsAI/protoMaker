@@ -13,7 +13,7 @@
  * 2. Configure in settings with DISCORD_TOKEN and DISCORD_GUILD_ID
  */
 
-import { createLogger, classifyError } from '@automaker/utils';
+import { createLogger } from '@automaker/utils';
 import type {
   DiscordChannel,
   DiscordCategory,
