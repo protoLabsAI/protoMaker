@@ -118,6 +118,20 @@ export type EventType =
   | 'linear:project:updated'
   | 'linear:issue:detected'
   // GitHub monitoring events
-  | 'github:pr:detected';
+  | 'github:pr:detected'
+  // Linear monitor events
+  | 'linear-monitor:started'
+  | 'linear-monitor:stopped'
+  | 'linear-monitor:poll-requested'
+  | 'linear-monitor:poll-error'
+  | 'linear-monitor:project-detected'
+  | 'linear-monitor:trigger-error'
+  // Feature assignment events
+  | 'feature-assignment:started'
+  | 'feature-assignment:completed'
+  | 'feature-assignment:failed'
+  | 'feature-assignment:cancelled'
+  | 'feature-assignment:em-agent-spawn'
+  | 'feature-assignment:error';
 
 export type EventCallback = (type: EventType, payload: unknown) => void;
