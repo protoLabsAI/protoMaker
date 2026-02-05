@@ -315,6 +315,57 @@ void schedulerService.start();
   await agentService.initialize();
   logger.info('Agent service initialized');
 
+  // Auto-start auto-mode if enabled in settings
+  try {
+    const settings = await settingsService.getGlobalSettings();
+    if (settings.autoModeAlwaysOn?.enabled && settings.autoModeAlwaysOn.projects.length > 0) {
+      logger.info(
+        `[AUTO-START] Auto-mode always-on enabled for ${settings.autoModeAlwaysOn.projects.length} project(s), starting auto-mode...`
+      );
+
+      // Start auto-mode for each configured project
+      for (const projectConfig of settings.autoModeAlwaysOn.projects) {
+        try {
+          const { projectPath, branchName, maxConcurrency } = projectConfig;
+          const worktreeDesc = branchName ? `worktree ${branchName}` : 'main worktree';
+
+          logger.info(`[AUTO-START] Starting auto-mode for ${worktreeDesc} in ${projectPath}...`);
+
+          const resolvedMaxConcurrency = await autoModeService.startAutoLoopForProject(
+            projectPath,
+            branchName ?? null,
+            maxConcurrency
+          );
+
+          logger.info(
+            `[AUTO-START] Auto-mode started successfully for ${worktreeDesc} in ${projectPath} with maxConcurrency: ${resolvedMaxConcurrency}`
+          );
+        } catch (err) {
+          // If auto-mode is already running, that's OK (might have been restored from state)
+          const errorMsg = err instanceof Error ? err.message : String(err);
+          if (errorMsg.includes('already running')) {
+            logger.info(
+              `[AUTO-START] Auto-mode already running for ${projectConfig.projectPath}, skipping auto-start`
+            );
+          } else {
+            logger.error(
+              `[AUTO-START] Failed to start auto-mode for ${projectConfig.projectPath}:`,
+              err
+            );
+          }
+        }
+      }
+    } else if (settings.autoModeAlwaysOn?.enabled) {
+      logger.info(
+        '[AUTO-START] Auto-mode always-on enabled but no projects configured, skipping auto-start'
+      );
+    } else {
+      logger.info('[AUTO-START] Auto-mode always-on disabled, skipping auto-start');
+    }
+  } catch (err) {
+    logger.warn('[AUTO-START] Failed to check auto-mode always-on setting:', err);
+  }
+
   // Bootstrap Codex model cache in background (don't block server startup)
   void codexModelCacheService.getModels().catch((err) => {
     logger.error('Failed to bootstrap Codex model cache:', err);
@@ -331,7 +382,11 @@ setInterval(() => {
 }, VALIDATION_CLEANUP_INTERVAL_MS);
 
 // Initialize Graphite sync scheduler for nightly branch syncing
-const graphiteSyncScheduler = new GraphiteSyncScheduler(settingsService, graphiteService, process.cwd());
+const graphiteSyncScheduler = new GraphiteSyncScheduler(
+  settingsService,
+  graphiteService,
+  process.cwd()
+);
 
 // Schedule periodic Graphite sync at 2am daily (0 2 * * *)
 // This keeps all feature branches in sync with their parent branches
@@ -354,7 +409,9 @@ const graphiteSyncHandle = setTimeout(() => {
   }, GRAPHITE_SYNC_INTERVAL_MS);
 }, GRAPHITE_SYNC_INITIAL_DELAY_MS);
 
-logger.info(`Graphite sync scheduler initialized (next run in ${(GRAPHITE_SYNC_INITIAL_DELAY_MS / 1000 / 60).toFixed(1)} minutes)`);
+logger.info(
+  `Graphite sync scheduler initialized (next run in ${(GRAPHITE_SYNC_INITIAL_DELAY_MS / 1000 / 60).toFixed(1)} minutes)`
+);
 
 /**
  * Calculate milliseconds until next 2am UTC

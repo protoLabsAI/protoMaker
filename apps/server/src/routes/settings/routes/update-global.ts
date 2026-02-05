@@ -81,6 +81,15 @@ export function createUpdateGlobalHandler(settingsService: SettingsService) {
         );
       }
 
+      // Note: autoModeAlwaysOn setting changes only take effect on server restart
+      // Runtime changes would require injecting autoModeService here, which we avoid
+      // to keep the settings layer simple and dependency-free
+      if ('autoModeAlwaysOn' in updates) {
+        logger.info(
+          `Auto-mode always-on setting changed to: ${updates.autoModeAlwaysOn ? 'enabled' : 'disabled'} (takes effect on restart)`
+        );
+      }
+
       res.json({
         success: true,
         settings,

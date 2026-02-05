@@ -1196,6 +1196,25 @@ export interface GlobalSettings {
     /** Whether GitHub webhook integration is enabled */
     enabled: boolean;
   };
+
+  /**
+   * Auto-mode always-on configuration.
+   * When enabled, auto-mode automatically starts for configured projects on server startup.
+   * This enables continuous autonomous feature execution without manual intervention.
+   */
+  autoModeAlwaysOn?: {
+    /** Whether auto-mode always-on is enabled globally */
+    enabled: boolean;
+    /** Per-project auto-mode configuration */
+    projects: Array<{
+      /** Absolute path to the project directory */
+      projectPath: string;
+      /** Branch name for worktree scoping (null = main worktree) */
+      branchName: string | null;
+      /** Maximum concurrent features for this project (optional, falls back to global maxConcurrency) */
+      maxConcurrency?: number;
+    }>;
+  };
 }
 
 /**
@@ -1493,6 +1512,11 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   gitWorkflow: DEFAULT_GIT_WORKFLOW_SETTINGS,
   // Graphite CLI integration (disabled by default)
   graphite: DEFAULT_GRAPHITE_SETTINGS,
+  // Auto-mode always-on (disabled by default)
+  autoModeAlwaysOn: {
+    enabled: false,
+    projects: [],
+  },
 };
 
 /** Default credentials (empty strings - user must provide API keys) */
