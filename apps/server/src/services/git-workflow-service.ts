@@ -19,6 +19,7 @@ import { DEFAULT_GIT_WORKFLOW_SETTINGS, DEFAULT_GRAPHITE_SETTINGS } from '@autom
 import { updateWorktreePRInfo } from '../lib/worktree-metadata.js';
 import { validatePRState } from '@automaker/types';
 import { graphiteService } from './graphite-service.js';
+import { githubMergeService } from './github-merge-service.js';
 
 const execAsync = promisify(exec);
 const logger = createLogger('GitWorkflow');
@@ -109,6 +110,16 @@ export class GitWorkflowService {
         featureOverride.autoCreatePR ??
         global.autoCreatePR ??
         DEFAULT_GIT_WORKFLOW_SETTINGS.autoCreatePR,
+      autoMergePR:
+        featureOverride.autoMergePR ??
+        global.autoMergePR ??
+        DEFAULT_GIT_WORKFLOW_SETTINGS.autoMergePR,
+      prMergeStrategy:
+        featureOverride.prMergeStrategy ??
+        global.prMergeStrategy ??
+        DEFAULT_GIT_WORKFLOW_SETTINGS.prMergeStrategy,
+      waitForCI:
+        featureOverride.waitForCI ?? global.waitForCI ?? DEFAULT_GIT_WORKFLOW_SETTINGS.waitForCI,
       prBaseBranch: global.prBaseBranch ?? DEFAULT_GIT_WORKFLOW_SETTINGS.prBaseBranch,
     };
   }
@@ -216,7 +227,8 @@ export class GitWorkflowService {
             logger.info(`Successfully restacked branch ${branchName}`);
           }
         } catch (restackError) {
-          const errorMsg = restackError instanceof Error ? restackError.message : String(restackError);
+          const errorMsg =
+            restackError instanceof Error ? restackError.message : String(restackError);
           logger.warn(`Error during restack for branch ${branchName}: ${errorMsg}`);
           // Log but continue - restack errors shouldn't block PR creation
         }
@@ -254,9 +266,7 @@ export class GitWorkflowService {
                 // Conflicts detected - this requires manual intervention
                 const conflictError = `Branch ${branchName} has merge conflicts after sync. Manual resolution required.`;
                 logger.error(conflictError);
-                result.error = result.error
-                  ? `${result.error}; ${conflictError}`
-                  : conflictError;
+                result.error = result.error ? `${result.error}; ${conflictError}` : conflictError;
                 // Don't proceed with PR creation if there are conflicts
                 return result;
               } else {
@@ -321,6 +331,56 @@ export class GitWorkflowService {
               ? `${result.error}; PR failed: ${errorMsg}`
               : `PR failed: ${errorMsg}`;
             // Continue - commit and push succeeded, PR failed
+          }
+        }
+
+        // Step 5: Auto-merge PR (if PR was created/exists and auto-merge enabled)
+        if (result.prNumber && gitSettings.autoMergePR) {
+          try {
+            const mergeStrategy = gitSettings.prMergeStrategy || 'squash';
+            const waitForCI = gitSettings.waitForCI ?? true;
+
+            logger.info(
+              `Auto-merging PR #${result.prNumber} with strategy: ${mergeStrategy}, waitForCI: ${waitForCI}`
+            );
+
+            const mergeResult = await githubMergeService.mergePR(
+              workDir,
+              result.prNumber,
+              mergeStrategy,
+              waitForCI
+            );
+
+            if (mergeResult.success) {
+              result.merged = true;
+              result.mergeCommitSha = mergeResult.mergeCommitSha;
+              logger.info(
+                `Successfully merged PR #${result.prNumber}${mergeResult.mergeCommitSha ? ` (commit: ${mergeResult.mergeCommitSha})` : ''}`
+              );
+            } else {
+              result.merged = false;
+              logger.warn(`Failed to merge PR #${result.prNumber}: ${mergeResult.error}`);
+
+              // Add merge error to result but don't fail the entire workflow
+              const mergeError = `Merge failed: ${mergeResult.error}`;
+              result.error = result.error ? `${result.error}; ${mergeError}` : mergeError;
+
+              // Log specific reasons for merge failure
+              if (mergeResult.checksPending) {
+                logger.info('Merge skipped: CI checks still pending');
+              } else if (mergeResult.checksFailed) {
+                logger.warn(
+                  `Merge blocked by failed checks: ${mergeResult.failedChecks?.join(', ')}`
+                );
+              }
+            }
+          } catch (mergeError) {
+            const errorMsg = mergeError instanceof Error ? mergeError.message : String(mergeError);
+            logger.error(`Error during auto-merge for PR #${result.prNumber}: ${errorMsg}`);
+            result.merged = false;
+            result.error = result.error
+              ? `${result.error}; Merge error: ${errorMsg}`
+              : `Merge error: ${errorMsg}`;
           }
         }
       }

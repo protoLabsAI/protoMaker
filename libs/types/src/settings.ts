@@ -482,10 +482,18 @@ export type EventHookTrigger =
 // ============================================================================
 
 /**
+ * PR merge strategy for auto-merge
+ * - merge: Create a merge commit (preserves all commits)
+ * - squash: Squash all commits into a single commit
+ * - rebase: Rebase and merge (creates a linear history)
+ */
+export type PRMergeStrategy = 'merge' | 'squash' | 'rebase';
+
+/**
  * GitWorkflowSettings - Configuration for automatic git operations after feature completion
  *
  * When an agent successfully completes a feature, these settings control whether
- * to automatically commit changes, push to remote, and create a pull request.
+ * to automatically commit changes, push to remote, create a pull request, and merge it.
  */
 export interface GitWorkflowSettings {
   /** Auto-commit changes when feature reaches verified status (default: true) */
@@ -494,6 +502,12 @@ export interface GitWorkflowSettings {
   autoPush?: boolean;
   /** Auto-create PR after push - requires autoPush (default: true) */
   autoCreatePR?: boolean;
+  /** Auto-merge PR after creation - requires autoCreatePR (default: false) */
+  autoMergePR?: boolean;
+  /** PR merge strategy: merge, squash, or rebase (default: 'squash') */
+  prMergeStrategy?: PRMergeStrategy;
+  /** Wait for CI checks to pass before merging (default: true) */
+  waitForCI?: boolean;
   /** Base branch for PR creation (default: 'main') */
   prBaseBranch?: string;
 }
@@ -533,12 +547,15 @@ export const DEFAULT_GRAPHITE_SETTINGS: GraphiteSettings = {
 };
 
 /**
- * Default git workflow settings - all operations enabled by default
+ * Default git workflow settings - commit/push/PR enabled, auto-merge disabled by default
  */
 export const DEFAULT_GIT_WORKFLOW_SETTINGS: Required<GitWorkflowSettings> = {
   autoCommit: true,
   autoPush: true,
   autoCreatePR: true,
+  autoMergePR: false,
+  prMergeStrategy: 'squash',
+  waitForCI: true,
   prBaseBranch: 'main',
 };
 
@@ -556,6 +573,10 @@ export interface GitWorkflowResult {
   prNumber?: number;
   /** Whether a PR already existed for this branch */
   prAlreadyExisted?: boolean;
+  /** Whether the PR was merged (null if auto-merge disabled or failed) */
+  merged?: boolean;
+  /** Commit SHA of the merge commit (if merged) */
+  mergeCommitSha?: string;
   /** Error message if any step failed (workflow continues best-effort) */
   error?: string;
 }
