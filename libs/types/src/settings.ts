@@ -439,6 +439,13 @@ export const CLAUDE_API_PROFILE_TEMPLATES: ClaudeApiProfileTemplate[] = [
 ];
 
 // ============================================================================
+// Webhook Settings - Re-export from webhook.ts for convenience
+// ============================================================================
+
+export type { WebhookSettings } from './webhook.js';
+export { DEFAULT_WEBHOOK_SETTINGS } from './webhook.js';
+
+// ============================================================================
 // Event Hooks - Custom actions triggered by system events
 // ============================================================================
 
@@ -1317,6 +1324,14 @@ export interface ProjectSettings {
    * Allows per-project customization of which models are used for each task.
    */
   phaseModelOverrides?: Partial<PhaseModelConfig>;
+
+  // Webhook Settings (per-project)
+  /**
+   * Webhook configuration for receiving GitHub events.
+   * Allows external services to trigger actions in this project.
+   * @see WebhookSettings in webhook.ts
+   */
+  webhookSettings?: import('./webhook.js').WebhookSettings;
 
   // Deprecated Claude API Profile Override
   /**

@@ -227,7 +227,18 @@ app.use(
     credentials: true,
   })
 );
-app.use(express.json({ limit: '50mb' }));
+
+// Preserve raw body for webhook signature verification
+// This middleware must be before express.json()
+app.use(
+  express.json({
+    limit: '50mb',
+    verify: (req: any, _res, buf) => {
+      // Store raw body for routes that need it (e.g., webhook signature verification)
+      req.rawBody = buf;
+    },
+  })
+);
 app.use(cookieParser());
 
 // Create shared event emitter for streaming
