@@ -1535,6 +1535,8 @@ export const PROJECT_SETTINGS_VERSION = 1;
 
 /** Default maximum concurrent agents for auto mode */
 export const DEFAULT_MAX_CONCURRENCY = 1;
+/** Hard system limit for maximum concurrent agents - prevents resource exhaustion */
+export const MAX_SYSTEM_CONCURRENCY = 2;
 
 /** Default keyboard shortcut bindings */
 export const DEFAULT_KEYBOARD_SHORTCUTS: KeyboardShortcuts = {

@@ -95,3 +95,4 @@ data/.api-key
 data/credentials.json
 data/
 .codex/
+packages/mcp-server/plugins/automaker/.env
