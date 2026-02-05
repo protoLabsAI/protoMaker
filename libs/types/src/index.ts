@@ -237,6 +237,9 @@ export {
   DEFAULT_GRAPHITE_SETTINGS,
   // Discord integration defaults
   DEFAULT_DISCORD_SETTINGS,
+  // Integration config defaults
+  DEFAULT_LINEAR_INTEGRATION,
+  DEFAULT_DISCORD_INTEGRATION,
   // Claude-compatible provider templates (new)
   CLAUDE_PROVIDER_TEMPLATES,
   // Claude API profile constants (deprecated)

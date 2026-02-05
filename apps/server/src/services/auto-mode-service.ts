@@ -543,11 +543,11 @@ export class AutoModeService {
 
     // Restart auto-mode with the same configuration
     try {
-      await this.startAutoMode({
+      await this.startAutoLoopForProject(
         projectPath,
-        maxConcurrency: projectState.config.maxConcurrency,
-        branchName: projectState.branchName ?? undefined,
-      });
+        projectState.branchName ?? null,
+        projectState.config.maxConcurrency
+      );
     } catch (error) {
       logger.error('Failed to auto-resume after cooldown:', error);
       this.emitAutoModeEvent('auto_mode_error', {
