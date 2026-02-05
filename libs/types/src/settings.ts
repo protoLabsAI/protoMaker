@@ -458,6 +458,55 @@ export type EventHookTrigger =
   | 'auto_mode_complete'
   | 'auto_mode_error';
 
+// ============================================================================
+// Git Workflow Settings - Auto commit/push/PR after feature completion
+// ============================================================================
+
+/**
+ * GitWorkflowSettings - Configuration for automatic git operations after feature completion
+ *
+ * When an agent successfully completes a feature, these settings control whether
+ * to automatically commit changes, push to remote, and create a pull request.
+ */
+export interface GitWorkflowSettings {
+  /** Auto-commit changes when feature reaches verified status (default: true) */
+  autoCommit?: boolean;
+  /** Auto-push to remote after commit - requires autoCommit (default: true) */
+  autoPush?: boolean;
+  /** Auto-create PR after push - requires autoPush (default: true) */
+  autoCreatePR?: boolean;
+  /** Base branch for PR creation (default: 'main') */
+  prBaseBranch?: string;
+}
+
+/**
+ * Default git workflow settings - all operations enabled by default
+ */
+export const DEFAULT_GIT_WORKFLOW_SETTINGS: Required<GitWorkflowSettings> = {
+  autoCommit: true,
+  autoPush: true,
+  autoCreatePR: true,
+  prBaseBranch: 'main',
+};
+
+/**
+ * GitWorkflowResult - Result of running the git workflow after feature completion
+ */
+export interface GitWorkflowResult {
+  /** Commit hash if changes were committed (null if no changes or commit disabled) */
+  commitHash: string | null;
+  /** Whether the branch was pushed to remote */
+  pushed: boolean;
+  /** URL of created PR (null if PR creation disabled or failed) */
+  prUrl: string | null;
+  /** PR number if created */
+  prNumber?: number;
+  /** Whether a PR already existed for this branch */
+  prAlreadyExisted?: boolean;
+  /** Error message if any step failed (workflow continues best-effort) */
+  error?: string;
+}
+
 /** HTTP methods supported for webhook requests */
 export type EventHookHttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH';
 
@@ -1041,6 +1090,13 @@ export interface GlobalSettings {
       branchName: string | null;
     }
   >;
+
+  /**
+   * Git workflow automation settings for auto-mode feature completion.
+   * Controls whether to auto-commit, push, and create PRs after agent success.
+   * @see GitWorkflowSettings
+   */
+  gitWorkflow?: GitWorkflowSettings;
 }
 
 /**
@@ -1321,6 +1377,8 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   claudeApiProfiles: [],
   activeClaudeApiProfileId: null,
   autoModeByWorktree: {},
+  // Git workflow automation (enabled by default)
+  gitWorkflow: DEFAULT_GIT_WORKFLOW_SETTINGS,
 };
 
 /** Default credentials (empty strings - user must provide API keys) */

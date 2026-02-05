@@ -64,16 +64,24 @@ Access model mappings and defaults.
 import { DEFAULT_MODELS } from '@automaker/model-resolver';
 import { CLAUDE_MODEL_MAP } from '@automaker/types';
 
-// Default models for different contexts
-console.log(DEFAULT_MODELS.claude); // 'claude-sonnet-4-20250514'
-console.log(DEFAULT_MODELS.autoMode); // 'claude-sonnet-4-20250514'
-console.log(DEFAULT_MODELS.chat); // 'claude-sonnet-4-20250514'
+// Default models for different use cases
+console.log(DEFAULT_MODELS.claude); // 'claude-opus-4-5-20251101' - orchestration/planning
+console.log(DEFAULT_MODELS.autoMode); // 'claude-sonnet-4-5-20250929' - feature implementation
+console.log(DEFAULT_MODELS.trivial); // 'claude-haiku-4-5-20251001' - small/quick tasks
 
 // Model alias mappings
 console.log(CLAUDE_MODEL_MAP.haiku); // 'claude-haiku-4-5'
 console.log(CLAUDE_MODEL_MAP.sonnet); // 'claude-sonnet-4-20250514'
 console.log(CLAUDE_MODEL_MAP.opus); // 'claude-opus-4-5-20251101'
 ```
+
+### Model Hierarchy
+
+| Default Key               | Model  | Use Case                                   |
+| ------------------------- | ------ | ------------------------------------------ |
+| `DEFAULT_MODELS.claude`   | Opus   | Orchestration, planning, complex reasoning |
+| `DEFAULT_MODELS.autoMode` | Sonnet | Standard feature implementation            |
+| `DEFAULT_MODELS.trivial`  | Haiku  | Quick fixes, trivial tasks                 |
 
 ## Usage Example
 

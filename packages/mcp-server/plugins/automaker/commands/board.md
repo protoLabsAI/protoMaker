@@ -89,6 +89,19 @@ header: "Feature Details"
 question: "What should this feature do? Be specific about files, components, and expected behavior."
 ```
 
+#### Model Selection via Complexity
+
+Set the `complexity` field to control which AI model is used:
+
+| Complexity      | Model  | When to Use                                     |
+| --------------- | ------ | ----------------------------------------------- |
+| `small`         | Haiku  | Quick fixes, typos, trivial changes             |
+| `medium`        | Sonnet | Standard features (default)                     |
+| `large`         | Sonnet | Complex multi-file features                     |
+| `architectural` | Opus   | Core infrastructure, key architecture decisions |
+
+Features that fail 2+ times automatically escalate to Opus on retry.
+
 ### Moving Features
 
 When moving to `in-progress`, warn that this will start an agent:
@@ -122,6 +135,29 @@ When showing agent output, format it clearly:
 ### Full Log
 [Truncated or expandable log]
 ```
+
+### Epic Workflow
+
+Epics are container features that group related child features. The workflow is:
+
+1. **Create Epic**: Set `isEpic: true` when creating the epic feature
+2. **Create Child Features**: Set `epicId` to the epic's ID for each child feature
+3. **Feature PRs Target Epic Branch**: When child features complete, their PRs automatically target the epic's branch (not main)
+4. **Epic PR Targets Main**: The epic itself creates a PR to main, collecting all child features
+
+```
+main
+  ↑
+epic/foundation (PR #X)
+  ↑           ↑           ↑
+feature-a   feature-b   feature-c
+ (PR #1)     (PR #2)     (PR #3)
+```
+
+**Merge Order**:
+
+1. Merge feature PRs into the epic branch
+2. When all features complete, merge the epic PR into main
 
 ### Deep Code Review
 

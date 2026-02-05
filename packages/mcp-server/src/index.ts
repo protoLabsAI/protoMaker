@@ -227,6 +227,12 @@ const tools: Tool[] = [
           type: 'string',
           description: 'ID of parent epic if this feature belongs to an epic.',
         },
+        complexity: {
+          type: 'string',
+          enum: ['small', 'medium', 'large', 'architectural'],
+          description:
+            'Feature complexity level for model selection. small=haiku, medium/large=sonnet, architectural=opus. Features that fail 2+ times auto-escalate to opus.',
+        },
       },
       required: ['projectPath', 'title', 'description'],
     },
@@ -258,6 +264,12 @@ const tools: Tool[] = [
           type: 'string',
           enum: ['backlog', 'in-progress', 'review', 'done'],
           description: "New status (optional). Moving to 'in-progress' starts an agent.",
+        },
+        complexity: {
+          type: 'string',
+          enum: ['small', 'medium', 'large', 'architectural'],
+          description:
+            'Feature complexity level for model selection. small=haiku, medium/large=sonnet, architectural=opus.',
         },
       },
       required: ['projectPath', 'featureId'],
@@ -1033,6 +1045,7 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       if (args.dependencies) featureData.dependencies = args.dependencies;
       if (args.isEpic) featureData.isEpic = args.isEpic;
       if (args.epicId) featureData.epicId = args.epicId;
+      if (args.complexity) featureData.complexity = args.complexity;
       return apiCall('/features/create', {
         projectPath: args.projectPath,
         feature: featureData,
@@ -1044,6 +1057,7 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       if (args.title) updates.title = args.title;
       if (args.description) updates.description = args.description;
       if (args.status) updates.status = args.status;
+      if (args.complexity) updates.complexity = args.complexity;
       return apiCall('/features/update', {
         projectPath: args.projectPath,
         featureId: args.featureId,

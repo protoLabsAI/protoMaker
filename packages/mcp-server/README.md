@@ -133,6 +133,41 @@ Or with npx (after publishing):
 | `health_check`      | Check if Automaker server is running |
 | `get_board_summary` | Get feature counts by status         |
 
+## Feature Properties
+
+### Complexity and Model Selection
+
+Features can specify a `complexity` level that determines which AI model is used:
+
+| Complexity      | Model  | Use Case                                        |
+| --------------- | ------ | ----------------------------------------------- |
+| `small`         | Haiku  | Quick fixes, trivial changes                    |
+| `medium`        | Sonnet | Standard features (default)                     |
+| `large`         | Sonnet | Complex multi-file features                     |
+| `architectural` | Opus   | Core infrastructure, key architecture decisions |
+
+**Auto-escalation:** Features that fail 2+ times automatically escalate to Opus on retry.
+
+**Example:**
+
+```typescript
+// Create an architectural feature (uses Opus)
+mcp__automaker__create_feature({
+  projectPath: '/path/to/project',
+  title: 'Core Type System Refactor',
+  description: 'Refactor the type system to support...',
+  complexity: 'architectural',
+});
+
+// Create a simple fix (uses Haiku)
+mcp__automaker__create_feature({
+  projectPath: '/path/to/project',
+  title: 'Fix typo in README',
+  description: 'Fix spelling error...',
+  complexity: 'small',
+});
+```
+
 ## Example Usage (via Claude Code)
 
 Once configured, you can ask Claude:

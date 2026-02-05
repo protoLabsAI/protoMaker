@@ -177,6 +177,9 @@ export type {
   EventHookHttpAction,
   EventHookAction,
   EventHook,
+  // Git workflow types
+  GitWorkflowSettings,
+  GitWorkflowResult,
   // Claude-compatible provider types (new)
   ApiKeySource,
   ClaudeCompatibleProviderType,
@@ -202,6 +205,8 @@ export {
   getThinkingTokenBudget,
   // Event hook constants
   EVENT_HOOK_TRIGGER_LABELS,
+  // Git workflow defaults
+  DEFAULT_GIT_WORKFLOW_SETTINGS,
   // Claude-compatible provider templates (new)
   CLAUDE_PROVIDER_TEMPLATES,
   // Claude API profile constants (deprecated)
