@@ -850,6 +850,138 @@ const tools: Tool[] = [
     },
   },
 
+  // ========== Ralph Mode (Persistent Retry Loops) ==========
+  {
+    name: 'start_ralph_loop',
+    description:
+      'Start a Ralph loop for a feature. Ralph mode keeps retrying until all verification criteria pass. Never gives up until externally verified!',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        featureId: {
+          type: 'string',
+          description: 'The feature ID to start Ralph loop for',
+        },
+        config: {
+          type: 'object',
+          description: 'Optional Ralph loop configuration',
+          properties: {
+            maxIterations: {
+              type: 'number',
+              description: 'Maximum number of iterations before giving up (default: 10)',
+            },
+            iterationDelayMs: {
+              type: 'number',
+              description: 'Delay between iterations in milliseconds (default: 5000)',
+            },
+            completionCriteria: {
+              type: 'array',
+              description: 'Completion criteria to verify after each iteration',
+              items: {
+                type: 'object',
+                properties: {
+                  type: {
+                    type: 'string',
+                    enum: [
+                      'tests_pass',
+                      'build_succeeds',
+                      'lint_passes',
+                      'typecheck_passes',
+                      'file_exists',
+                      'file_contains',
+                      'command_succeeds',
+                      'http_endpoint',
+                    ],
+                  },
+                  name: { type: 'string' },
+                  required: { type: 'boolean' },
+                  config: { type: 'object' },
+                },
+              },
+            },
+          },
+        },
+      },
+      required: ['projectPath', 'featureId'],
+    },
+  },
+  {
+    name: 'stop_ralph_loop',
+    description: 'Stop a running Ralph loop.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        featureId: {
+          type: 'string',
+          description: 'The feature ID of the running Ralph loop',
+        },
+      },
+      required: ['featureId'],
+    },
+  },
+  {
+    name: 'pause_ralph_loop',
+    description: 'Pause a running Ralph loop. Can be resumed later.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        featureId: {
+          type: 'string',
+          description: 'The feature ID of the running Ralph loop',
+        },
+      },
+      required: ['featureId'],
+    },
+  },
+  {
+    name: 'resume_ralph_loop',
+    description: 'Resume a paused Ralph loop.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        featureId: {
+          type: 'string',
+          description: 'The feature ID of the paused Ralph loop',
+        },
+      },
+      required: ['projectPath', 'featureId'],
+    },
+  },
+  {
+    name: 'get_ralph_status',
+    description: 'Get the status of a Ralph loop including iteration history and verification results.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        featureId: {
+          type: 'string',
+          description: 'The feature ID',
+        },
+      },
+      required: ['projectPath', 'featureId'],
+    },
+  },
+  {
+    name: 'list_running_ralph_loops',
+    description: 'List all currently running Ralph loops across all projects.',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+    },
+  },
+
   // ========== Utilities ==========
   {
     name: 'health_check',
@@ -1160,6 +1292,39 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         setupDependencies: args.setupDependencies ?? true,
         initialStatus: args.initialStatus || 'backlog',
       });
+
+    // Ralph Mode
+    case 'start_ralph_loop':
+      return apiCall('/ralph/start', {
+        projectPath: args.projectPath,
+        featureId: args.featureId,
+        config: args.config,
+      });
+
+    case 'stop_ralph_loop':
+      return apiCall('/ralph/stop', {
+        featureId: args.featureId,
+      });
+
+    case 'pause_ralph_loop':
+      return apiCall('/ralph/pause', {
+        featureId: args.featureId,
+      });
+
+    case 'resume_ralph_loop':
+      return apiCall('/ralph/resume', {
+        projectPath: args.projectPath,
+        featureId: args.featureId,
+      });
+
+    case 'get_ralph_status':
+      return apiCall('/ralph/status', {
+        projectPath: args.projectPath,
+        featureId: args.featureId,
+      });
+
+    case 'list_running_ralph_loops':
+      return apiCall('/ralph/list-running', {});
 
     // Utilities
     case 'health_check': {
