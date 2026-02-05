@@ -90,6 +90,7 @@ import { createEventHistoryRoutes } from './routes/event-history/index.js';
 import { getEventHistoryService } from './services/event-history-service.js';
 import { createRalphRoutes } from './routes/ralph/index.js';
 import { RalphLoopService } from './services/ralph-loop-service.js';
+import { createSkillsRoutes } from './routes/skills/index.js';
 
 const PORT = parseInt(process.env.PORT || '3008', 10);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -350,6 +351,7 @@ app.use('/api/pipeline', createPipelineRoutes(pipelineService));
 app.use('/api/ideation', createIdeationRoutes(events, ideationService, featureLoader));
 app.use('/api/notifications', createNotificationsRoutes(notificationService));
 app.use('/api/ralph', createRalphRoutes(ralphLoopService));
+app.use('/api/skills', createSkillsRoutes());
 app.use('/api/event-history', createEventHistoryRoutes(eventHistoryService, settingsService));
 app.use('/api/projects', createProjectsRoutes(featureLoader));
 
