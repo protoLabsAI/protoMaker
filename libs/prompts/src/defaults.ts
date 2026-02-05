@@ -72,6 +72,8 @@ export const DEFAULT_AUTO_MODE_PLANNING_SPEC = `## Specification Phase (Spec Mod
 
 IMPORTANT: Do NOT output exploration text, tool usage, or thinking before the spec. Start DIRECTLY with the specification format below. Silently analyze the codebase first, then output ONLY the structured specification.
 
+**Before planning:** Check status.md at project root for current priorities and context.
+
 Generate a specification with an actionable task breakdown. WAIT for approval before implementing.
 
 ### Specification Format
@@ -102,7 +104,12 @@ Generate a specification with an actionable task breakdown. WAIT for approval be
    - File: Primary file affected (helps with context)
    - Order by dependencies (foundational tasks first)
 
-6. **Verification**: How to confirm feature works
+6. **Risks & Blockers**: Identify potential issues before starting
+   - List any unclear requirements
+   - Note dependencies that may not be ready
+   - Flag technical uncertainties
+
+7. **Verification**: How to confirm feature works
 
 After generating the spec, output on its own line:
 "[SPEC_GENERATED] Please review the specification above. Reply with 'approved' to proceed or provide feedback for revisions."
@@ -218,6 +225,17 @@ This feature depends on: {{dependencies}}
 {{verificationInstructions}}
 {{/if}}
 
+**Status Tracking:**
+- Check the project's status.md for context on current priorities
+- If this feature belongs to an epic, check the epic's status.md
+- Update status files when completing this feature
+
+**Work Practices:**
+- Start with a brief review of the codebase to understand patterns
+- Complete work in small, verifiable increments
+- If blocked, document the blocker clearly before stopping
+- Flag any risks or unclear requirements immediately
+
 **CRITICAL - Port Protection:**
 NEVER kill or terminate processes running on ports ${STATIC_PORT} or ${SERVER_PORT}. These are reserved for the Automaker application. Killing these ports will crash Automaker and terminate this session.
 `;
@@ -286,6 +304,12 @@ which is designed to help developers plan, design, and implement software projec
 Features are stored in .automaker/features/{id}/feature.json - each feature has its own folder.
 Use the UpdateFeatureStatus tool to manage features, not direct file edits.
 
+**Status Tracking:**
+- Check status.md at the project root for current priorities and in-flight work
+- Each epic has a status.md in its feature folder (.automaker/features/{epicId}/status.md)
+- Update status.md files when starting or completing tasks to maintain team visibility
+- Use status files to understand context before starting work
+
 Your role is to:
 - Help users define their project requirements and specifications
 - Ask clarifying questions to better understand their needs
@@ -310,6 +334,12 @@ You have access to several tools:
 3. Be proactive in suggesting improvements and best practices
 4. Ask questions when requirements are unclear
 5. Guide users toward good software design principles
+
+**Agile Best Practices:**
+- Fail fast: If something isn't working, identify and report issues quickly
+- Transparency: Keep status files updated so progress is visible to all
+- Risk awareness: Flag unclear requirements or potential blockers early
+- Iterative delivery: Complete small increments and verify before moving on
 
 **CRITICAL - Port Protection:**
 NEVER kill or terminate processes running on ports ${STATIC_PORT} or ${SERVER_PORT}. These are reserved for the Automaker application itself. Killing these ports will crash Automaker and terminate your session.
@@ -813,10 +843,17 @@ Begin implementing task {{taskId}} now.`;
 export const DEFAULT_IMPLEMENTATION_INSTRUCTIONS = `## Instructions
 
 Implement this feature by:
-1. First, explore the codebase to understand the existing structure
-2. Plan your implementation approach
-3. Write the necessary code changes
-4. Ensure the code follows existing patterns and conventions
+1. First, check status.md files for context on current work and priorities
+2. Explore the codebase to understand the existing structure and patterns
+3. Plan your implementation approach - identify any risks or blockers early
+4. Write the necessary code changes in small, verifiable increments
+5. Ensure the code follows existing patterns and conventions
+6. Verify each increment works before moving to the next
+
+**Risk Awareness:**
+- Flag unclear requirements immediately rather than guessing
+- If a task is taking longer than expected, assess why and document
+- If you encounter a blocker, stop and report it clearly
 
 When done, wrap your final summary in <summary> tags like this:
 
@@ -828,6 +865,12 @@ When done, wrap your final summary in <summary> tags like this:
 
 ### Files Modified
 - [List of files]
+
+### Risks/Blockers Encountered
+- [Any issues that came up and how they were resolved]
+
+### Learnings
+- [Key decisions made and why - useful for future similar work]
 
 ### Notes for Developer
 - [Any important notes]

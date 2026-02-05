@@ -79,6 +79,7 @@ For each task, create a feature with:
 - **Clear title**: Action-oriented (Add, Create, Implement, Update)
 - **Detailed description**: Include file paths, component names, expected behavior
 - **Acceptance criteria**: How to verify it's complete
+- **Complexity**: Set appropriately for model selection (see below)
 
 ```
 mcp__automaker__create_feature({
@@ -96,9 +97,28 @@ Create the User data model and TypeScript types.
 - [ ] Types are exported and can be imported
 - [ ] Types match database schema
 - [ ] No TypeScript errors`,
-  status: "backlog"
+  status: "backlog",
+  complexity: "small"  // Types-only task, use haiku
 })
 ```
+
+### Complexity Guidelines
+
+Set `complexity` to control which AI model handles the task:
+
+| Complexity      | Model  | Use For                                                   |
+| --------------- | ------ | --------------------------------------------------------- |
+| `small`         | Haiku  | Type definitions, simple utilities, config changes, docs  |
+| `medium`        | Sonnet | Standard features, API endpoints, UI components (default) |
+| `large`         | Sonnet | Multi-file refactors, complex business logic              |
+| `architectural` | Opus   | Core infrastructure, new patterns, system design          |
+
+**Examples:**
+
+- `small`: Add types, fix typos, update config
+- `medium`: Add API endpoint, create React component
+- `large`: Refactor auth system, add caching layer
+- `architectural`: Design plugin system, create new service layer
 
 ### Step 4: Set Dependencies
 

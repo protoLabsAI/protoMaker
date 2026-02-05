@@ -20,6 +20,10 @@ import {
   Image,
   TestTube,
   Brain,
+  Plug,
+  RefreshCw,
+  Network,
+  Flag,
 } from 'lucide-react';
 
 interface WikiSection {
@@ -540,6 +544,307 @@ export function WikiView() {
               <li>Enable git worktree isolation for parallel feature development</li>
               <li>Keep your app spec up to date as your project evolves</li>
             </ul>
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: 'claude-code',
+      title: 'Claude Code Integration',
+      icon: Plug,
+      content: (
+        <div className="space-y-3">
+          <p>
+            Automaker includes an MCP (Model Context Protocol) server that integrates with Claude
+            Code, allowing you to manage features and agents directly from your terminal.
+          </p>
+
+          <div className="mt-4 space-y-2">
+            <p className="font-medium text-foreground">Quick Setup:</p>
+            <CodeBlock title="Terminal">
+              {`# 1. Build the MCP server
+npm run build:packages
+
+# 2. Add the plugin marketplace
+claude plugin marketplace add /path/to/automaker/packages/mcp-server/plugins
+
+# 3. Install the plugin
+claude plugin install automaker`}
+            </CodeBlock>
+          </div>
+
+          <div className="mt-4 space-y-2">
+            <p className="font-medium text-foreground">Available Slash Commands:</p>
+            <div className="grid gap-2 mt-2">
+              {[
+                { cmd: '/board', desc: 'View and manage the Kanban board' },
+                { cmd: '/auto-mode', desc: 'Start/stop autonomous feature processing' },
+                { cmd: '/orchestrate', desc: 'Manage feature dependencies' },
+                { cmd: '/context', desc: 'Manage context files for AI agents' },
+              ].map((item) => (
+                <div
+                  key={item.cmd}
+                  className="flex items-center gap-3 p-2 rounded bg-muted/30 border border-border/50"
+                >
+                  <code className="text-xs font-mono text-brand-400 bg-brand-500/10 px-2 py-0.5 rounded">
+                    {item.cmd}
+                  </code>
+                  <span className="text-xs text-muted-foreground">{item.desc}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-4 space-y-2">
+            <p className="font-medium text-foreground">MCP Tools (32 available):</p>
+            <div className="grid grid-cols-2 gap-2 mt-2 text-xs">
+              <div className="space-y-1">
+                <p className="text-muted-foreground font-medium">Feature Management:</p>
+                <ul className="list-disc list-inside text-muted-foreground ml-2">
+                  <li>list_features, get_feature</li>
+                  <li>create_feature, update_feature</li>
+                  <li>delete_feature, move_feature</li>
+                </ul>
+              </div>
+              <div className="space-y-1">
+                <p className="text-muted-foreground font-medium">Agent Control:</p>
+                <ul className="list-disc list-inside text-muted-foreground ml-2">
+                  <li>start_agent, stop_agent</li>
+                  <li>list_running_agents</li>
+                  <li>get_agent_output, send_message</li>
+                </ul>
+              </div>
+              <div className="space-y-1">
+                <p className="text-muted-foreground font-medium">Orchestration:</p>
+                <ul className="list-disc list-inside text-muted-foreground ml-2">
+                  <li>set_feature_dependencies</li>
+                  <li>get_dependency_graph</li>
+                  <li>get_execution_order</li>
+                </ul>
+              </div>
+              <div className="space-y-1">
+                <p className="text-muted-foreground font-medium">Auto Mode:</p>
+                <ul className="list-disc list-inside text-muted-foreground ml-2">
+                  <li>start_auto_mode, stop_auto_mode</li>
+                  <li>get_auto_mode_status</li>
+                  <li>queue_feature, list_queue</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: 'auto-mode',
+      title: 'Auto Mode',
+      icon: RefreshCw,
+      content: (
+        <div className="space-y-3">
+          <p>
+            Auto Mode enables autonomous feature processing. When enabled, agents automatically pick
+            up backlog features and implement them, respecting dependencies and priorities.
+          </p>
+
+          <div className="mt-4 space-y-2">
+            <p className="font-medium text-foreground">How It Works:</p>
+            <ol className="list-decimal list-inside space-y-2 ml-2">
+              <li>Features in backlog are sorted by dependency order and priority</li>
+              <li>When a feature has no blockers, an agent is spawned to implement it</li>
+              <li>Agent works in an isolated git worktree (if enabled)</li>
+              <li>On completion, feature moves to "waiting_approval"</li>
+              <li>Auto Mode picks up the next available feature</li>
+            </ol>
+          </div>
+
+          <div className="mt-4 space-y-2">
+            <p className="font-medium text-foreground">Model Hierarchy:</p>
+            <div className="grid gap-2 mt-2">
+              {[
+                {
+                  model: 'Opus',
+                  use: 'Architectural decisions, complex work',
+                  trigger: "complexity: 'architectural' or 2+ failures",
+                },
+                {
+                  model: 'Sonnet',
+                  use: 'Standard implementation (default)',
+                  trigger: "complexity: 'medium' or 'large'",
+                },
+                {
+                  model: 'Haiku',
+                  use: 'Quick, trivial tasks',
+                  trigger: "complexity: 'small'",
+                },
+              ].map((item) => (
+                <div key={item.model} className="p-2 rounded bg-muted/30 border border-border/50">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-foreground">{item.model}</span>
+                    <span className="text-xs text-muted-foreground">{item.trigger}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">{item.use}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-4 space-y-2">
+            <p className="font-medium text-foreground">Configuration Options:</p>
+            <ul className="list-disc list-inside space-y-1 text-muted-foreground ml-2">
+              <li>
+                <strong className="text-foreground">Max Concurrency</strong> - Number of features to
+                process in parallel
+              </li>
+              <li>
+                <strong className="text-foreground">Planning Mode</strong> - lite, spec, or full
+                specification before implementation
+              </li>
+              <li>
+                <strong className="text-foreground">Plan Approval</strong> - Require human approval
+                before code changes
+              </li>
+              <li>
+                <strong className="text-foreground">Git Workflow</strong> - Auto-commit, push, and
+                create PRs on completion
+              </li>
+            </ul>
+          </div>
+
+          <div className="mt-4 p-3 rounded-lg bg-brand-500/10 border border-brand-500/20">
+            <p className="text-brand-400 text-sm">
+              <strong>Auto-escalation:</strong> Features that fail 2+ times automatically escalate
+              to Opus model on retry for more robust handling.
+            </p>
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: 'dependencies',
+      title: 'Dependencies & Orchestration',
+      icon: Network,
+      content: (
+        <div className="space-y-3">
+          <p>
+            Features can depend on other features. Automaker tracks these dependencies and ensures
+            features are executed in the correct order.
+          </p>
+
+          <div className="mt-4 space-y-2">
+            <p className="font-medium text-foreground">Setting Dependencies:</p>
+            <CodeBlock title="MCP Tool">
+              {`// Set dependencies via MCP
+mcp__automaker__set_feature_dependencies({
+  projectPath: '/path/to/project',
+  featureId: 'feature-123',
+  dependencies: ['feature-100', 'feature-101']
+})`}
+            </CodeBlock>
+          </div>
+
+          <div className="mt-4 space-y-2">
+            <p className="font-medium text-foreground">Dependency Rules:</p>
+            <ul className="list-disc list-inside space-y-1 text-muted-foreground ml-2">
+              <li>A feature won't start until all dependencies are marked "done"</li>
+              <li>Circular dependencies are detected and rejected</li>
+              <li>Execution order is computed using topological sort</li>
+              <li>Features with no dependencies can run in parallel</li>
+            </ul>
+          </div>
+
+          <div className="mt-4 space-y-2">
+            <p className="font-medium text-foreground">Viewing Dependencies:</p>
+            <ul className="list-disc list-inside space-y-1 text-muted-foreground ml-2">
+              <li>
+                <code className="px-1 py-0.5 bg-muted rounded text-xs">get_dependency_graph</code> -
+                See all dependency relationships
+              </li>
+              <li>
+                <code className="px-1 py-0.5 bg-muted rounded text-xs">get_execution_order</code> -
+                See planned execution sequence
+              </li>
+              <li>Feature cards show "Blocked by X features" badge when waiting</li>
+            </ul>
+          </div>
+
+          <div className="mt-4 p-3 rounded-lg bg-muted/30 border border-border/50">
+            <p className="text-sm text-foreground font-medium mb-2">Best Practices</p>
+            <ul className="list-disc list-inside space-y-1 text-xs text-muted-foreground">
+              <li>Put foundational/type work as early dependencies</li>
+              <li>Keep dependency chains shallow when possible</li>
+              <li>Use epics to group related features without hard dependencies</li>
+            </ul>
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: 'epics',
+      title: 'Epics & Milestones',
+      icon: Flag,
+      content: (
+        <div className="space-y-3">
+          <p>
+            Epics are container features that group related work together. They provide visual
+            organization and enable hierarchical PR workflows.
+          </p>
+
+          <div className="mt-4 space-y-2">
+            <p className="font-medium text-foreground">Creating an Epic:</p>
+            <CodeBlock title="MCP Tool">
+              {`mcp__automaker__create_feature({
+  projectPath: '/path/to/project',
+  title: '[Epic] User Authentication',
+  description: 'All auth-related features',
+  isEpic: true
+})`}
+            </CodeBlock>
+          </div>
+
+          <div className="mt-4 space-y-2">
+            <p className="font-medium text-foreground">Linking Features to Epics:</p>
+            <CodeBlock title="MCP Tool">
+              {`mcp__automaker__create_feature({
+  projectPath: '/path/to/project',
+  title: 'Add Login Form',
+  description: '...',
+  epicId: 'feature-epic-123'  // Links to parent epic
+})`}
+            </CodeBlock>
+          </div>
+
+          <div className="mt-4 space-y-2">
+            <p className="font-medium text-foreground">Epic Git Workflow:</p>
+            <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+              <pre className="text-xs font-mono text-muted-foreground">
+                {`main
+  ↑
+epic/user-auth ──────────── Epic PR (targets main)
+  ↑         ↑         ↑
+login    signup    logout    Feature PRs (target epic)`}
+              </pre>
+            </div>
+            <ul className="list-disc list-inside space-y-1 text-muted-foreground ml-2 mt-2">
+              <li>Feature PRs automatically target their epic's branch (not main)</li>
+              <li>Epic PRs target main</li>
+              <li>Merge features into epic first, then epic into main</li>
+            </ul>
+          </div>
+
+          <div className="mt-4 space-y-2">
+            <p className="font-medium text-foreground">Epic Progress Tracking:</p>
+            <ul className="list-disc list-inside space-y-1 text-muted-foreground ml-2">
+              <li>Epic cards show a progress bar with completion percentage</li>
+              <li>Progress segments colored by status (green=done, amber=in-progress)</li>
+              <li>Child features show a colored badge linking to their parent epic</li>
+            </ul>
+          </div>
+
+          <div className="mt-4 p-3 rounded-lg bg-brand-500/10 border border-brand-500/20">
+            <p className="text-brand-400 text-sm">
+              <strong>Tip:</strong> Use epics for milestone grouping without hard dependencies.
+              Features within an epic can run in any order unless you explicitly set dependencies.
+            </p>
           </div>
         </div>
       ),

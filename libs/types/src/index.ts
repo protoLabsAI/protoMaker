@@ -87,6 +87,17 @@ export type {
 // Error types
 export type { ErrorType, ErrorInfo } from './error.js';
 
+// Failure classification and recovery types
+export type {
+  FailureCategory,
+  RecoveryStrategy,
+  FailureAnalysis,
+  RecoveryResult,
+  ExecutionContext,
+  RecoveryConfig,
+} from './failure.js';
+export { DEFAULT_RECOVERY_CONFIG } from './failure.js';
+
 // Image types
 export type { ImageData, ImageContentBlock } from './image.js';
 
@@ -177,6 +188,11 @@ export type {
   EventHookHttpAction,
   EventHookAction,
   EventHook,
+  // Git workflow types
+  GitWorkflowSettings,
+  GitWorkflowResult,
+  // Graphite CLI types
+  GraphiteSettings,
   // Claude-compatible provider types (new)
   ApiKeySource,
   ClaudeCompatibleProviderType,
@@ -202,6 +218,10 @@ export {
   getThinkingTokenBudget,
   // Event hook constants
   EVENT_HOOK_TRIGGER_LABELS,
+  // Git workflow defaults
+  DEFAULT_GIT_WORKFLOW_SETTINGS,
+  // Graphite CLI defaults
+  DEFAULT_GRAPHITE_SETTINGS,
   // Claude-compatible provider templates (new)
   CLAUDE_PROVIDER_TEMPLATES,
   // Claude API profile constants (deprecated)
@@ -356,3 +376,20 @@ export type {
   UpdateSkillOptions,
   SkillExecutionResult,
 } from './skill.js';
+// Ralph mode types (persistent retry loops with external verification)
+// Note: FailureCategory and FailureAnalysis are exported from ./failure.js
+// Ralph has its own versions - import directly from ./ralph.js if needed
+export type {
+  CompletionCriteriaType,
+  CompletionCriterion,
+  CriterionCheckResult,
+  VerificationResult,
+  RalphIteration,
+  RalphLoopStatus,
+  RalphLoopConfig,
+  RalphLoopState,
+  FeatureRalphConfig,
+  RalphEventType,
+  RalphEventPayload,
+} from './ralph.js';
+export { DEFAULT_COMPLETION_CRITERIA, DEFAULT_RALPH_CONFIG } from './ralph.js';

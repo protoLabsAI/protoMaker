@@ -88,7 +88,8 @@ import { createNotificationsRoutes } from './routes/notifications/index.js';
 import { getNotificationService } from './services/notification-service.js';
 import { createEventHistoryRoutes } from './routes/event-history/index.js';
 import { getEventHistoryService } from './services/event-history-service.js';
-import { createProjectsRoutes } from './routes/projects/index.js';
+import { createRalphRoutes } from './routes/ralph/index.js';
+import { RalphLoopService } from './services/ralph-loop-service.js';
 
 const PORT = parseInt(process.env.PORT || '3008', 10);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -239,6 +240,7 @@ const codexModelCacheService = new CodexModelCacheService(DATA_DIR, codexAppServ
 const codexUsageService = new CodexUsageService(codexAppServerService);
 const mcpTestService = new MCPTestService(settingsService);
 const ideationService = new IdeationService(events, settingsService, featureLoader);
+const ralphLoopService = new RalphLoopService(events, autoModeService, settingsService);
 
 // Initialize DevServerService with event emitter for real-time log streaming
 const devServerService = getDevServerService();
@@ -347,6 +349,7 @@ app.use('/api/mcp', createMCPRoutes(mcpTestService));
 app.use('/api/pipeline', createPipelineRoutes(pipelineService));
 app.use('/api/ideation', createIdeationRoutes(events, ideationService, featureLoader));
 app.use('/api/notifications', createNotificationsRoutes(notificationService));
+app.use('/api/ralph', createRalphRoutes(ralphLoopService));
 app.use('/api/event-history', createEventHistoryRoutes(eventHistoryService, settingsService));
 app.use('/api/projects', createProjectsRoutes(featureLoader));
 

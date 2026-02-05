@@ -45,7 +45,14 @@ mcp__automaker__create_feature({
 
 ### Step 3: Create Phase Features
 
-For each phase:
+For each phase, map complexity to model selection:
+
+| Phase Complexity       | Feature Complexity | Model  |
+| ---------------------- | ------------------ | ------ |
+| `small`                | `small`            | Haiku  |
+| `medium`               | `medium`           | Sonnet |
+| `large`                | `large`            | Sonnet |
+| (architectural phases) | `architectural`    | Opus   |
 
 ```
 mcp__automaker__create_feature({
@@ -54,7 +61,8 @@ mcp__automaker__create_feature({
   description: "{Phase description with acceptance criteria}",
   status: "backlog",
   epicId: "{parent epic ID}",
-  branchName: "feature/{milestone-slug}-{phase-slug}"
+  branchName: "feature/{milestone-slug}-{phase-slug}",
+  complexity: "{phase.complexity || 'medium'}"  // Map from phase complexity
 })
 ```
 

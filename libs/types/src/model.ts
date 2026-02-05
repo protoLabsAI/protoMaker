@@ -91,11 +91,21 @@ export function getAllCodexModelIds(): CodexModelId[] {
 }
 
 /**
- * Default models per provider
+ * Default models per provider and use case
  * Uses canonical prefixed IDs for consistent routing.
+ *
+ * Model hierarchy:
+ * - opus: Orchestration, planning, complex reasoning
+ * - sonnet: Feature implementation, ticket work (best balance of capability/cost)
+ * - haiku: Trivial tasks, quick operations
  */
 export const DEFAULT_MODELS = {
+  /** Default for general Claude usage - opus for orchestration/planning */
   claude: 'claude-opus-4-5-20251101',
+  /** Default for auto-mode feature implementation - sonnet for ticket work */
+  autoMode: 'claude-sonnet-4-5-20250929',
+  /** Default for trivial/quick tasks - haiku */
+  trivial: 'claude-haiku-4-5-20251001',
   cursor: 'cursor-auto', // Cursor's recommended default (with prefix)
   codex: CODEX_MODEL_MAP.gpt52Codex, // GPT-5.2-Codex is the most advanced agentic coding model
 } as const;
