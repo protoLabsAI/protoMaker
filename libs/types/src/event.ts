@@ -51,6 +51,19 @@ export type EventType =
   | 'dev-server:started'
   | 'dev-server:output'
   | 'dev-server:stopped'
-  | 'notification:created';
+  | 'notification:created'
+  // Ralph mode events (persistent retry loops)
+  | 'ralph:started'
+  | 'ralph:iteration_started'
+  | 'ralph:iteration_completed'
+  | 'ralph:verification_started'
+  | 'ralph:verification_completed'
+  | 'ralph:verified'
+  | 'ralph:paused'
+  | 'ralph:resumed'
+  | 'ralph:stopped'
+  | 'ralph:max_iterations'
+  | 'ralph:error'
+  | 'ralph:progress';
 
 export type EventCallback = (type: EventType, payload: unknown) => void;

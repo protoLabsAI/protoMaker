@@ -4,6 +4,7 @@
 
 import type { PlanningMode, ThinkingLevel } from './settings.js';
 import type { ReasoningEffort } from './provider.js';
+import type { FeatureRalphConfig } from './ralph.js';
 
 /**
  * A single entry in the description history
@@ -71,6 +72,8 @@ export interface Feature {
   summary?: string;
   startedAt?: string;
   descriptionHistory?: DescriptionHistoryEntry[]; // History of description changes
+  // Ralph mode - persistent retry loops with external verification
+  ralphConfig?: FeatureRalphConfig;
   /** Override global git workflow settings for this specific feature */
   gitWorkflow?: {
     /** Override auto-commit setting */
