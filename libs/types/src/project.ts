@@ -116,11 +116,34 @@ export interface Project {
   /** Review comments */
   reviewComments?: PRDReviewComment[];
 
+  /** Discord channel IDs associated with this project */
+  discordChannelIds?: string[];
+
+  /** Archive metadata for soft-deleted projects */
+  archiveMetadata?: ProjectArchiveMetadata;
+
   /** Creation timestamp */
   createdAt: string;
 
   /** Last update timestamp */
   updatedAt: string;
+}
+
+/**
+ * Archive metadata for soft-deleted projects
+ */
+export interface ProjectArchiveMetadata {
+  /** When the project was archived */
+  archivedAt: string;
+
+  /** When the project will be permanently deleted (7 days after archival) */
+  scheduledDeletionAt: string;
+
+  /** Whether channels have been moved to Archive category */
+  channelsArchived: boolean;
+
+  /** ID of the Archive category (if created) */
+  archiveCategoryId?: string;
 }
 
 /**

@@ -68,6 +68,7 @@ export type {
   Phase,
   Milestone,
   Project,
+  ProjectArchiveMetadata,
   SPARCPrd,
   PRDReviewComment,
   DeepResearchResult,
