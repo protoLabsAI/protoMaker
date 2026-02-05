@@ -77,7 +77,11 @@ export default defineConfig(({ command }) => {
       },
       watch: {
         // Ignore automaker data directories to prevent hot reload during agent work
-        ignored: ['**/.automaker/**', '**/.worktrees/**'],
+        // Use absolute paths since Vite runs from apps/ui/
+        ignored: [
+          path.resolve(__dirname, '../../.automaker/**'),
+          path.resolve(__dirname, '../../.worktrees/**'),
+        ],
       },
     },
     build: {
