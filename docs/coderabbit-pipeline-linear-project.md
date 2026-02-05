@@ -4,11 +4,11 @@
 
 **Name**: CodeRabbit Integration Pipeline
 
-**Status**: Planned (Backlog)
+**Status**: In Progress (Phases 1-3 complete, Phase 4 partial, Phase 5 pending)
 
 **Target Team**: Backend / AI-ML (Infrastructure work with agent integration)
 
-**Timeline**: Post-App Overhaul
+**Linear Issues**: PRO-8 through PRO-12
 
 **Goal**: Build a comprehensive pipeline that transforms CodeRabbit feedback into actionable Discord notifications, Linear issues, and agent self-healing workflows.
 

@@ -14,6 +14,7 @@ This directory contains comprehensive documentation for Automaker's infrastructu
 | [Backup & Recovery](./backup-recovery.md) | Volume backups, restore procedures                       |
 | [systemd](./systemd.md)                   | systemd service configuration                            |
 | [Networking](./networking.md)             | Ports, nginx, CORS, WebSocket proxying                   |
+| [Secrets](./secrets.md)                   | Infisical deployment, MCP secret injection, team setup   |
 | [Security](./security.md)                 | Container security, credentials management               |
 | [Troubleshooting](./troubleshooting.md)   | Common issues and solutions                              |
 | [Architecture](./architecture.md)         | System architecture diagrams                             |

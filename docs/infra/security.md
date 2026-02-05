@@ -118,16 +118,11 @@ chmod 700 /home/automaker/.claude
 chmod 700 /home/automaker/.cursor
 ```
 
-### Secrets in Production
+### Centralized Secret Management
 
-For production, consider:
+The team uses **Infisical** for centralized secret management across all machines on the Tailscale mesh. See [secrets.md](./secrets.md) for the full deployment and integration guide.
 
-| Solution            | Description                           |
-| ------------------- | ------------------------------------- |
-| Docker Secrets      | Native Docker secret management       |
-| HashiCorp Vault     | Enterprise secret management          |
-| AWS Secrets Manager | Cloud-based secrets                   |
-| Environment files   | Simple, file-based (with permissions) |
+For production Docker deployments, secrets can also be managed via:
 
 Example with Docker Secrets:
 

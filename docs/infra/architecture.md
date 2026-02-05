@@ -330,6 +330,67 @@ Browser                 nginx (UI)              Express (Server)
 └──────────────────────────────────────────────────┘
 ```
 
+## Infrastructure Topology
+
+### Hardware Inventory
+
+| Machine  | Role                          | Specs                | Tailscale Name               |
+| -------- | ----------------------------- | -------------------- | ---------------------------- |
+| Main Rig | Development, Automaker server | 128GB RAM, 48GB VRAM | `mainrig` (adjust to actual) |
+| Proxmox  | Infrastructure services       | 32GB RAM             | `proxmox` (adjust to actual) |
+
+### Service Map
+
+```
+┌────────────────────────────────────────────────────────────────┐
+│                       Tailscale Mesh                            │
+├────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  Main Rig (128GB RAM, 48GB VRAM)                               │
+│  ├── Automaker Server (:3008)                                  │
+│  ├── Automaker UI (:3007)                                      │
+│  ├── Claude Code CLI (local)                                    │
+│  ├── MCP Servers (automaker, discord, linear)                   │
+│  └── Docker (containers + volumes)                              │
+│                                                                 │
+│  Proxmox Server (32GB RAM)                                     │
+│  ├── Infisical (:8080) — secret management                     │
+│  ├── PostgreSQL (Infisical backend)                             │
+│  ├── Redis (Infisical cache)                                    │
+│  └── (capacity for additional services)                         │
+│                                                                 │
+│  Developer Machines                                             │
+│  ├── Claude Code CLI                                            │
+│  ├── MCP Servers (secrets via Infisical)                        │
+│  └── Browser → Main Rig Automaker UI                            │
+│                                                                 │
+│  External (via Cloudflare Tunnel, if needed)                    │
+│  ├── GitHub Webhooks → Automaker Server                         │
+│  └── CI/CD → Infisical API                                      │
+│                                                                 │
+└────────────────────────────────────────────────────────────────┘
+```
+
+### Secret Flow
+
+```
+Infisical (Proxmox)
+       │
+       │  infisical run
+       ▼
+┌──────────────────┐
+│  Environment Vars │
+│  injected into:   │
+│                   │
+│  • MCP servers    │
+│  • Docker compose │
+│  • CLI tools      │
+│  • CI/CD          │
+└──────────────────┘
+```
+
+See [secrets.md](./secrets.md) for detailed Infisical setup.
+
 ## Security Boundaries
 
 ```

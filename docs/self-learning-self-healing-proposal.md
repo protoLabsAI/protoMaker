@@ -1,5 +1,12 @@
 # Self-Learning & Self-Healing Architecture Proposal
 
+> **Implementation Status (Feb 2026):**
+>
+> - Self-Learning Skills: **Implemented** (skills system, MCP tools, routes)
+> - Self-Healing Recovery: **Partially implemented** (event hooks, recovery service)
+> - Ralph Loops: **Implemented** (ralph-loop-service.ts, CompletionVerifierService)
+> - Proactive Automation: **Not started**
+
 This document outlines enhancements to Automaker's autonomous development capabilities, drawing insights from OpenClaw's self-extending skills and the Ralph Wiggum persistent loop pattern.
 
 ---

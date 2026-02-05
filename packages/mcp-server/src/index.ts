@@ -22,9 +22,16 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 
 // Configuration
-// Note: Hardcoded fallback because Claude Code doesn't pass env vars to MCP servers
 const API_URL = process.env.AUTOMAKER_API_URL || 'http://localhost:3008';
-const API_KEY = process.env.AUTOMAKER_API_KEY || 'automaker-dev-key-2026';
+
+if (!process.env.AUTOMAKER_API_KEY) {
+  console.error(
+    '[MCP] AUTOMAKER_API_KEY is not set. Set it in your environment or use a secret manager (see docs/infra/secrets.md).'
+  );
+  process.exit(1);
+}
+
+const API_KEY: string = process.env.AUTOMAKER_API_KEY;
 
 // Retry configuration
 const RETRY_CONFIG = {

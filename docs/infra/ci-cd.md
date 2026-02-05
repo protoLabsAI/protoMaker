@@ -4,14 +4,15 @@ Automaker uses GitHub Actions for continuous integration and delivery.
 
 ## Workflows Overview
 
-| Workflow             | Trigger           | Purpose               |
-| -------------------- | ----------------- | --------------------- |
-| `test.yml`           | PR, push to main  | Unit tests            |
-| `e2e-tests.yml`      | PR, push to main  | End-to-end tests      |
-| `pr-check.yml`       | PR, push to main  | Build verification    |
-| `format-check.yml`   | PR, push to main  | Code formatting       |
-| `security-audit.yml` | PR, push, weekly  | npm audit             |
-| `release.yml`        | Release published | Multi-platform builds |
+| Workflow             | Trigger           | Purpose                |
+| -------------------- | ----------------- | ---------------------- |
+| `test.yml`           | PR, push to main  | Unit tests             |
+| `e2e-tests.yml`      | PR, push to main  | End-to-end tests       |
+| `pr-check.yml`       | PR, push to main  | Build verification     |
+| `format-check.yml`   | PR, push to main  | Code formatting        |
+| `security-audit.yml` | PR, push, weekly  | npm audit              |
+| `release.yml`        | Release published | Multi-platform builds  |
+| `claude.yml`         | Manual            | Claude Code automation |
 
 ## Test Suite (`test.yml`)
 
