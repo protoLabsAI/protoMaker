@@ -75,116 +75,11 @@ export class ClaudeUsageService {
    * Uses node-pty on all platforms for consistency
    */
   private executeClaudeUsageCommand(): Promise<string> {
-    // Use node-pty on all platforms - it's more reliable than expect on macOS
     return this.executeClaudeUsageCommandPty();
   }
 
   /**
-   * macOS implementation using 'expect' command
-   */
-  private executeClaudeUsageCommandMac(): Promise<string> {
-    return new Promise((resolve, reject) => {
-      let stdout = '';
-      let stderr = '';
-      let settled = false;
-
-      // Use current working directory - likely already trusted by Claude CLI
-      const workingDirectory = process.cwd();
-
-      // Use 'expect' with an inline script to run claude /usage with a PTY
-      // Running from cwd which should already be trusted
-      const expectScript = `
-        set timeout 30
-        spawn claude /usage
-
-        # Wait for usage data or handle trust prompt if needed
-        expect {
-          -re "Ready to code|permission to work|Do you want to work" {
-            # Trust prompt appeared - send Enter to approve
-            sleep 1
-            send "\\r"
-            exp_continue
-          }
-          "Current session" {
-            # Usage data appeared - wait for full output, then exit
-            sleep 3
-            send "\\x1b"
-          }
-          "% left" {
-            # Usage percentage appeared
-            sleep 3
-            send "\\x1b"
-          }
-          timeout {
-            send "\\x1b"
-          }
-          eof {}
-        }
-        expect eof
-      `;
-
-      const proc = spawn('expect', ['-c', expectScript], {
-        cwd: workingDirectory,
-        env: {
-          ...process.env,
-          TERM: 'xterm-256color',
-        },
-      });
-
-      const timeoutId = setTimeout(() => {
-        if (!settled) {
-          settled = true;
-          proc.kill();
-          reject(new Error('Command timed out'));
-        }
-      }, this.timeout);
-
-      proc.stdout.on('data', (data) => {
-        stdout += data.toString();
-      });
-
-      proc.stderr.on('data', (data) => {
-        stderr += data.toString();
-      });
-
-      proc.on('close', (code) => {
-        clearTimeout(timeoutId);
-        if (settled) return;
-        settled = true;
-
-        // Check for authentication errors in output
-        if (
-          stdout.includes('token_expired') ||
-          stdout.includes('authentication_error') ||
-          stderr.includes('token_expired') ||
-          stderr.includes('authentication_error')
-        ) {
-          reject(new Error("Authentication required - please run 'claude login'"));
-          return;
-        }
-
-        // Even if exit code is non-zero, we might have useful output
-        if (stdout.trim()) {
-          resolve(stdout);
-        } else if (code !== 0) {
-          reject(new Error(stderr || `Command exited with code ${code}`));
-        } else {
-          reject(new Error('No output from claude command'));
-        }
-      });
-
-      proc.on('error', (err) => {
-        clearTimeout(timeoutId);
-        if (!settled) {
-          settled = true;
-          reject(new Error(`Failed to execute claude: ${err.message}`));
-        }
-      });
-    });
-  }
-
-  /**
-   * Windows/Linux implementation using node-pty
+   * Cross-platform implementation using node-pty
    */
   private executeClaudeUsageCommandPty(): Promise<string> {
     return new Promise((resolve, reject) => {
