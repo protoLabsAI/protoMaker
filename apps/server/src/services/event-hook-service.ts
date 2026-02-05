@@ -635,7 +635,7 @@ export class EventHookService {
       // Fallback: log warning if discord service not available
       logger.warn(
         `Discord hook "${hookName}" skipped: Discord service not available. ` +
-        `Ensure the Discord Service Layer is configured and initialized.`
+          `Ensure the Discord Service Layer is configured and initialized.`
       );
     } catch (error) {
       logger.error(`Discord hook "${hookName}" failed:`, error);

@@ -4,7 +4,11 @@
 
 import { Router } from 'express';
 import { DiscordService } from '../../services/discord-service.js';
-import { createReorganizeHandler, createUndoHandler, createAuditHandler } from './routes/reorganize.js';
+import {
+  createReorganizeHandler,
+  createUndoHandler,
+  createAuditHandler,
+} from './routes/reorganize.js';
 
 export function createDiscordRoutes(): Router {
   const router = Router();

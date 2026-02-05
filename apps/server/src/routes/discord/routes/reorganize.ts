@@ -69,9 +69,16 @@ interface UndoSnapshot {
 export function createReorganizeHandler(discordService: DiscordService) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
-      const { dryRun = true, targetCategories = TARGET_CATEGORIES, channelMapping = {} } = req.body as ReorganizeRequest;
+      const {
+        dryRun = true,
+        targetCategories = TARGET_CATEGORIES,
+        channelMapping = {},
+      } = req.body as ReorganizeRequest;
 
-      logger.info('Discord reorganization request', { dryRun, customMapping: Object.keys(channelMapping).length > 0 });
+      logger.info('Discord reorganization request', {
+        dryRun,
+        customMapping: Object.keys(channelMapping).length > 0,
+      });
 
       // TODO: Implement actual reorganization logic with Discord MCP tools
       // For now, return a structured plan

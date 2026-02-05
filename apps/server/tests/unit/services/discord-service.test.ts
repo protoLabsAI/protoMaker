@@ -5,7 +5,11 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { DiscordService, getDiscordService, _resetDiscordServiceForTesting } from '../../../src/services/discord-service.js';
+import {
+  DiscordService,
+  getDiscordService,
+  _resetDiscordServiceForTesting,
+} from '../../../src/services/discord-service.js';
 import type { ClaudeProvider } from '../../../src/providers/claude-provider.js';
 
 // Mock ClaudeProvider
@@ -212,7 +216,9 @@ describe('DiscordService', () => {
       expect(result).toHaveProperty('errorType');
       expect(result.success).toBe(false);
       expect(typeof result.error).toBe('string');
-      expect(['connection', 'permission', 'not_found', 'rate_limit', 'unknown']).toContain(result.errorType);
+      expect(['connection', 'permission', 'not_found', 'rate_limit', 'unknown']).toContain(
+        result.errorType
+      );
     });
   });
 });

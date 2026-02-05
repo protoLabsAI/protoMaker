@@ -480,11 +480,7 @@ export type {
 export { ROLE_CAPABILITIES } from './agent-roles.js';
 
 // Headsdown configuration types
-export type {
-  HeadsdownLoopConfig,
-  HeadsdownConfig,
-  HeadsdownState,
-} from './headsdown.js';
+export type { HeadsdownLoopConfig, HeadsdownConfig, HeadsdownState } from './headsdown.js';
 export { DEFAULT_HEADSDOWN_CONFIGS } from './headsdown.js';
 
 // GOAP (Goal-Oriented Action Planning) types

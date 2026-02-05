@@ -37,7 +37,12 @@ const logger = createLogger('DiscordService');
  * Audit-specific types for channel reorganization
  */
 export interface AuditIssue {
-  type: 'empty_category' | 'inactive_channel' | 'duplicate_name' | 'orphaned_channel' | 'unused_webhook';
+  type:
+    | 'empty_category'
+    | 'inactive_channel'
+    | 'duplicate_name'
+    | 'orphaned_channel'
+    | 'unused_webhook';
   severity: 'low' | 'medium' | 'high';
   channelId?: string;
   channelName?: string;
@@ -72,23 +77,41 @@ function parseDiscordError(error: unknown): {
   const lowerMessage = errorMessage.toLowerCase();
 
   // Connection errors
-  if (lowerMessage.includes('connect') || lowerMessage.includes('timeout') || lowerMessage.includes('econnrefused')) {
+  if (
+    lowerMessage.includes('connect') ||
+    lowerMessage.includes('timeout') ||
+    lowerMessage.includes('econnrefused')
+  ) {
     return { type: 'connection', message: 'Discord MCP server is not available or not responding' };
   }
 
   // Permission errors
-  if (lowerMessage.includes('permission') || lowerMessage.includes('forbidden') || lowerMessage.includes('403')) {
-    return { type: 'permission', message: 'Discord bot lacks required permissions for this operation' };
+  if (
+    lowerMessage.includes('permission') ||
+    lowerMessage.includes('forbidden') ||
+    lowerMessage.includes('403')
+  ) {
+    return {
+      type: 'permission',
+      message: 'Discord bot lacks required permissions for this operation',
+    };
   }
 
   // Not found errors
-  if (lowerMessage.includes('not found') || lowerMessage.includes('404') || /unknown\s+(channel|user|guild|member|role|message)/.test(lowerMessage)) {
+  if (
+    lowerMessage.includes('not found') ||
+    lowerMessage.includes('404') ||
+    /unknown\s+(channel|user|guild|member|role|message)/.test(lowerMessage)
+  ) {
     return { type: 'not_found', message: 'Discord channel, user, or resource not found' };
   }
 
   // Rate limit errors
   if (lowerMessage.includes('rate limit') || lowerMessage.includes('429')) {
-    return { type: 'rate_limit', message: 'Discord API rate limit exceeded, please try again later' };
+    return {
+      type: 'rate_limit',
+      message: 'Discord API rate limit exceeded, please try again later',
+    };
   }
 
   // Unknown errors
@@ -121,7 +144,6 @@ export class DiscordService {
 
       // For now, return a mock result to demonstrate the pattern
       throw new Error('Discord MCP integration not yet implemented in provider layer');
-
     } catch (error) {
       const { type, message } = parseDiscordError(error);
       logger.error('Failed to get server info:', message);
@@ -142,7 +164,6 @@ export class DiscordService {
 
       // Call Discord MCP tool via provider
       throw new Error('Discord MCP integration not yet implemented in provider layer');
-
     } catch (error) {
       const { type, message } = parseDiscordError(error);
       logger.error('Failed to list channels:', message);
@@ -163,7 +184,6 @@ export class DiscordService {
 
       // Call Discord MCP tool via provider
       throw new Error('Discord MCP integration not yet implemented in provider layer');
-
     } catch (error) {
       const { type, message } = parseDiscordError(error);
       logger.error(`Failed to find channel ${channelName}:`, message);
@@ -178,13 +198,14 @@ export class DiscordService {
   /**
    * Create a new text channel
    */
-  async createTextChannel(options: CreateChannelOptions): Promise<DiscordOperationResult<DiscordChannel>> {
+  async createTextChannel(
+    options: CreateChannelOptions
+  ): Promise<DiscordOperationResult<DiscordChannel>> {
     try {
       logger.info(`Creating text channel: ${options.name}`);
 
       // Call Discord MCP tool via provider
       throw new Error('Discord MCP integration not yet implemented in provider layer');
-
     } catch (error) {
       const { type, message } = parseDiscordError(error);
       logger.error(`Failed to create channel ${options.name}:`, message);
@@ -205,7 +226,6 @@ export class DiscordService {
 
       // Call Discord MCP tool via provider
       throw new Error('Discord MCP integration not yet implemented in provider layer');
-
     } catch (error) {
       const { type, message } = parseDiscordError(error);
       logger.error(`Failed to delete channel ${channelId}:`, message);
@@ -220,13 +240,14 @@ export class DiscordService {
   /**
    * Create a new category
    */
-  async createCategory(options: CreateCategoryOptions): Promise<DiscordOperationResult<DiscordCategory>> {
+  async createCategory(
+    options: CreateCategoryOptions
+  ): Promise<DiscordOperationResult<DiscordCategory>> {
     try {
       logger.info(`Creating category: ${options.name}`);
 
       // Call Discord MCP tool via provider
       throw new Error('Discord MCP integration not yet implemented in provider layer');
-
     } catch (error) {
       const { type, message } = parseDiscordError(error);
       logger.error(`Failed to create category ${options.name}:`, message);
@@ -247,7 +268,6 @@ export class DiscordService {
 
       // Call Discord MCP tool via provider
       throw new Error('Discord MCP integration not yet implemented in provider layer');
-
     } catch (error) {
       const { type, message } = parseDiscordError(error);
       logger.error(`Failed to find category ${categoryName}:`, message);
@@ -268,7 +288,6 @@ export class DiscordService {
 
       // Call Discord MCP tool via provider
       throw new Error('Discord MCP integration not yet implemented in provider layer');
-
     } catch (error) {
       const { type, message } = parseDiscordError(error);
       logger.error(`Failed to delete category ${categoryId}:`, message);
@@ -283,13 +302,14 @@ export class DiscordService {
   /**
    * List channels in a category
    */
-  async listChannelsInCategory(categoryId: string): Promise<DiscordOperationResult<DiscordChannel[]>> {
+  async listChannelsInCategory(
+    categoryId: string
+  ): Promise<DiscordOperationResult<DiscordChannel[]>> {
     try {
       logger.info(`Listing channels in category: ${categoryId}`);
 
       // Call Discord MCP tool via provider
       throw new Error('Discord MCP integration not yet implemented in provider layer');
-
     } catch (error) {
       const { type, message } = parseDiscordError(error);
       logger.error(`Failed to list channels in category ${categoryId}:`, message);
@@ -304,13 +324,14 @@ export class DiscordService {
   /**
    * Send a message to a channel
    */
-  async sendMessage(options: DiscordSendMessageOptions): Promise<DiscordOperationResult<DiscordMessage>> {
+  async sendMessage(
+    options: DiscordSendMessageOptions
+  ): Promise<DiscordOperationResult<DiscordMessage>> {
     try {
       logger.info(`Sending message to channel: ${options.channelId}`);
 
       // Call Discord MCP tool via provider
       throw new Error('Discord MCP integration not yet implemented in provider layer');
-
     } catch (error) {
       const { type, message } = parseDiscordError(error);
       logger.error(`Failed to send message to channel ${options.channelId}:`, message);
@@ -325,13 +346,14 @@ export class DiscordService {
   /**
    * Read recent messages from a channel
    */
-  async readMessages(options: ReadMessagesOptions): Promise<DiscordOperationResult<DiscordMessage[]>> {
+  async readMessages(
+    options: ReadMessagesOptions
+  ): Promise<DiscordOperationResult<DiscordMessage[]>> {
     try {
       logger.info(`Reading messages from channel: ${options.channelId}`);
 
       // Call Discord MCP tool via provider
       throw new Error('Discord MCP integration not yet implemented in provider layer');
-
     } catch (error) {
       const { type, message } = parseDiscordError(error);
       logger.error(`Failed to read messages from channel ${options.channelId}:`, message);
@@ -346,13 +368,16 @@ export class DiscordService {
   /**
    * Edit a message
    */
-  async editMessage(channelId: string, messageId: string, newContent: string): Promise<DiscordOperationResult<DiscordMessage>> {
+  async editMessage(
+    channelId: string,
+    messageId: string,
+    newContent: string
+  ): Promise<DiscordOperationResult<DiscordMessage>> {
     try {
       logger.info(`Editing message ${messageId} in channel ${channelId}`);
 
       // Call Discord MCP tool via provider
       throw new Error('Discord MCP integration not yet implemented in provider layer');
-
     } catch (error) {
       const { type, message } = parseDiscordError(error);
       logger.error(`Failed to edit message ${messageId}:`, message);
@@ -373,7 +398,6 @@ export class DiscordService {
 
       // Call Discord MCP tool via provider
       throw new Error('Discord MCP integration not yet implemented in provider layer');
-
     } catch (error) {
       const { type, message } = parseDiscordError(error);
       logger.error(`Failed to delete message ${messageId}:`, message);
@@ -388,13 +412,14 @@ export class DiscordService {
   /**
    * Create a webhook in a channel
    */
-  async createWebhook(options: CreateWebhookOptions): Promise<DiscordOperationResult<DiscordWebhook>> {
+  async createWebhook(
+    options: CreateWebhookOptions
+  ): Promise<DiscordOperationResult<DiscordWebhook>> {
     try {
       logger.info(`Creating webhook in channel: ${options.channelId}`);
 
       // Call Discord MCP tool via provider
       throw new Error('Discord MCP integration not yet implemented in provider layer');
-
     } catch (error) {
       const { type, message } = parseDiscordError(error);
       logger.error(`Failed to create webhook in channel ${options.channelId}:`, message);
@@ -415,7 +440,6 @@ export class DiscordService {
 
       // Call Discord MCP tool via provider
       throw new Error('Discord MCP integration not yet implemented in provider layer');
-
     } catch (error) {
       const { type, message } = parseDiscordError(error);
       logger.error(`Failed to list webhooks in channel ${channelId}:`, message);
@@ -430,13 +454,14 @@ export class DiscordService {
   /**
    * Send a message via webhook
    */
-  async sendWebhookMessage(options: SendWebhookMessageOptions): Promise<DiscordOperationResult<void>> {
+  async sendWebhookMessage(
+    options: SendWebhookMessageOptions
+  ): Promise<DiscordOperationResult<void>> {
     try {
       logger.info('Sending webhook message');
 
       // Call Discord MCP tool via provider
       throw new Error('Discord MCP integration not yet implemented in provider layer');
-
     } catch (error) {
       const { type, message } = parseDiscordError(error);
       logger.error('Failed to send webhook message:', message);
@@ -457,7 +482,6 @@ export class DiscordService {
 
       // Call Discord MCP tool via provider
       throw new Error('Discord MCP integration not yet implemented in provider layer');
-
     } catch (error) {
       const { type, message } = parseDiscordError(error);
       logger.error(`Failed to delete webhook ${webhookId}:`, message);
@@ -472,13 +496,16 @@ export class DiscordService {
   /**
    * Add a reaction to a message
    */
-  async addReaction(channelId: string, messageId: string, emoji: string): Promise<DiscordOperationResult<void>> {
+  async addReaction(
+    channelId: string,
+    messageId: string,
+    emoji: string
+  ): Promise<DiscordOperationResult<void>> {
     try {
       logger.info(`Adding reaction ${emoji} to message ${messageId}`);
 
       // Call Discord MCP tool via provider
       throw new Error('Discord MCP integration not yet implemented in provider layer');
-
     } catch (error) {
       const { type, message } = parseDiscordError(error);
       logger.error(`Failed to add reaction to message ${messageId}:`, message);
@@ -493,13 +520,16 @@ export class DiscordService {
   /**
    * Remove a reaction from a message
    */
-  async removeReaction(channelId: string, messageId: string, emoji: string): Promise<DiscordOperationResult<void>> {
+  async removeReaction(
+    channelId: string,
+    messageId: string,
+    emoji: string
+  ): Promise<DiscordOperationResult<void>> {
     try {
       logger.info(`Removing reaction ${emoji} from message ${messageId}`);
 
       // Call Discord MCP tool via provider
       throw new Error('Discord MCP integration not yet implemented in provider layer');
-
     } catch (error) {
       const { type, message } = parseDiscordError(error);
       logger.error(`Failed to remove reaction from message ${messageId}:`, message);
@@ -514,13 +544,15 @@ export class DiscordService {
   /**
    * Send a private message to a user
    */
-  async sendPrivateMessage(userId: string, message: string): Promise<DiscordOperationResult<DiscordMessage>> {
+  async sendPrivateMessage(
+    userId: string,
+    message: string
+  ): Promise<DiscordOperationResult<DiscordMessage>> {
     try {
       logger.info(`Sending private message to user: ${userId}`);
 
       // Call Discord MCP tool via provider
       throw new Error('Discord MCP integration not yet implemented in provider layer');
-
     } catch (error) {
       const { type, message: errorMsg } = parseDiscordError(error);
       logger.error(`Failed to send private message to user ${userId}:`, errorMsg);
@@ -535,13 +567,15 @@ export class DiscordService {
   /**
    * Read private messages with a user
    */
-  async readPrivateMessages(userId: string, count?: number): Promise<DiscordOperationResult<DiscordMessage[]>> {
+  async readPrivateMessages(
+    userId: string,
+    count?: number
+  ): Promise<DiscordOperationResult<DiscordMessage[]>> {
     try {
       logger.info(`Reading private messages with user: ${userId}`);
 
       // Call Discord MCP tool via provider
       throw new Error('Discord MCP integration not yet implemented in provider layer');
-
     } catch (error) {
       const { type, message } = parseDiscordError(error);
       logger.error(`Failed to read private messages with user ${userId}:`, message);
@@ -562,7 +596,6 @@ export class DiscordService {
 
       // Call Discord MCP tool via provider
       throw new Error('Discord MCP integration not yet implemented in provider layer');
-
     } catch (error) {
       const { type, message } = parseDiscordError(error);
       logger.error(`Failed to get user ${username}:`, message);

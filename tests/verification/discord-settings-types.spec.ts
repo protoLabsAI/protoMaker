@@ -6,7 +6,12 @@
  */
 
 import { test, expect } from '@playwright/test';
-import type { DiscordSettings, GlobalSettings, ProjectSettings, Credentials } from '@automaker/types';
+import type {
+  DiscordSettings,
+  GlobalSettings,
+  ProjectSettings,
+  Credentials,
+} from '@automaker/types';
 import { DEFAULT_DISCORD_SETTINGS } from '@automaker/types';
 
 test.describe('Discord Settings Types', () => {
