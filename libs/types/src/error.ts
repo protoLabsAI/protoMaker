@@ -8,6 +8,7 @@ export type ErrorType =
   | 'execution'
   | 'rate_limit'
   | 'quota_exhausted'
+  | 'network'
   | 'unknown';
 
 /**

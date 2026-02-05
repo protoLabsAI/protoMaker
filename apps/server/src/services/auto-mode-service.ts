@@ -333,6 +333,7 @@ interface ProjectAutoLoopState {
   pausedDueToFailures: boolean;
   hasEmittedIdleEvent: boolean;
   branchName: string | null; // null = main worktree
+  cooldownTimer: NodeJS.Timeout | null; // Timer for auto-resume after cooldown
 }
 
 /**
@@ -361,8 +362,9 @@ const DEFAULT_EXECUTION_STATE: ExecutionState = {
 };
 
 // Constants for consecutive failure tracking
-const CONSECUTIVE_FAILURE_THRESHOLD = 3; // Pause after 3 consecutive failures
+const CONSECUTIVE_FAILURE_THRESHOLD = 2; // Pause after 2 consecutive failures (circuit breaker)
 const FAILURE_WINDOW_MS = 60000; // Failures within 1 minute count as consecutive
+const COOLDOWN_PERIOD_MS = 300000; // 5 minutes cooldown before auto-resume
 
 export class AutoModeService {
   private events: EventEmitter;
@@ -422,8 +424,12 @@ export class AutoModeService {
       return true; // Should pause
     }
 
-    // Also immediately pause for known quota/rate limit errors
-    if (errorInfo.type === 'quota_exhausted' || errorInfo.type === 'rate_limit') {
+    // Immediately pause for critical errors that should trigger circuit breaker
+    if (
+      errorInfo.type === 'quota_exhausted' ||
+      errorInfo.type === 'rate_limit' ||
+      errorInfo.type === 'network'
+    ) {
       return true;
     }
 
@@ -449,8 +455,12 @@ export class AutoModeService {
       return true; // Should pause
     }
 
-    // Also immediately pause for known quota/rate limit errors
-    if (errorInfo.type === 'quota_exhausted' || errorInfo.type === 'rate_limit') {
+    // Immediately pause for critical errors that should trigger circuit breaker
+    if (
+      errorInfo.type === 'quota_exhausted' ||
+      errorInfo.type === 'rate_limit' ||
+      errorInfo.type === 'network'
+    ) {
       return true;
     }
 
@@ -481,23 +491,71 @@ export class AutoModeService {
     projectState.pausedDueToFailures = true;
     const failureCount = projectState.consecutiveFailures.length;
     logger.info(
-      `Pausing auto loop for ${projectPath} after ${failureCount} consecutive failures. Last error: ${errorInfo.type}`
+      `Circuit breaker triggered for ${projectPath} after ${failureCount} consecutive failures. Last error: ${errorInfo.type}`
     );
 
     // Emit event to notify UI
+    const cooldownMinutes = Math.floor(COOLDOWN_PERIOD_MS / 60000);
     this.emitAutoModeEvent('auto_mode_paused_failures', {
       message:
         failureCount >= CONSECUTIVE_FAILURE_THRESHOLD
-          ? `Auto Mode paused: ${failureCount} consecutive failures detected. This may indicate a quota limit or API issue. Please check your usage and try again.`
-          : 'Auto Mode paused: Usage limit or API error detected. Please wait for your quota to reset or check your API configuration.',
+          ? `Auto Mode paused: ${failureCount} consecutive failures detected. Circuit breaker activated. Auto-resume in ${cooldownMinutes} minutes.`
+          : `Auto Mode paused: Critical error detected (${errorInfo.type}). Circuit breaker activated. Auto-resume in ${cooldownMinutes} minutes.`,
       errorType: errorInfo.type,
       originalError: errorInfo.message,
       failureCount,
       projectPath,
+      cooldownMs: COOLDOWN_PERIOD_MS,
     });
 
     // Stop the auto loop for this project
     this.stopAutoLoopForProject(projectPath);
+
+    // Schedule auto-resume after cooldown period
+    projectState.cooldownTimer = setTimeout(() => {
+      this.autoResumeAfterCooldown(projectPath);
+    }, COOLDOWN_PERIOD_MS);
+  }
+
+  /**
+   * Auto-resume auto-mode after cooldown period
+   * @param projectPath - The project to resume
+   */
+  private async autoResumeAfterCooldown(projectPath: string): Promise<void> {
+    const projectState = this.autoLoopsByProject.get(projectPath);
+    if (!projectState || !projectState.pausedDueToFailures) {
+      return; // No longer paused or doesn't exist
+    }
+
+    logger.info(`Auto-resuming auto loop for ${projectPath} after cooldown period`);
+
+    // Reset failure tracking
+    projectState.pausedDueToFailures = false;
+    projectState.consecutiveFailures = [];
+    projectState.cooldownTimer = null;
+
+    // Notify user about auto-resume
+    this.emitAutoModeEvent('auto_mode_resumed', {
+      message: 'Circuit breaker cooldown complete. Auto Mode resuming...',
+      projectPath,
+      reason: 'cooldown_complete',
+    });
+
+    // Restart auto-mode with the same configuration
+    try {
+      await this.startAutoMode({
+        projectPath,
+        maxConcurrency: projectState.config.maxConcurrency,
+        branchName: projectState.branchName ?? undefined,
+      });
+    } catch (error) {
+      logger.error('Failed to auto-resume after cooldown:', error);
+      this.emitAutoModeEvent('auto_mode_error', {
+        message: 'Failed to auto-resume after cooldown',
+        error: error instanceof Error ? error.message : String(error),
+        projectPath,
+      });
+    }
   }
 
   /**
@@ -662,6 +720,7 @@ export class AutoModeService {
       pausedDueToFailures: false,
       hasEmittedIdleEvent: false,
       branchName,
+      cooldownTimer: null,
     };
 
     this.autoLoopsByProject.set(worktreeKey, projectState);
@@ -863,6 +922,12 @@ export class AutoModeService {
     const wasRunning = projectState.isRunning;
     projectState.isRunning = false;
     projectState.abortController.abort();
+
+    // Clear cooldown timer if active
+    if (projectState.cooldownTimer) {
+      clearTimeout(projectState.cooldownTimer);
+      projectState.cooldownTimer = null;
+    }
 
     // Clear execution state when auto-loop is explicitly stopped
     await this.clearExecutionState(projectPath, branchName);

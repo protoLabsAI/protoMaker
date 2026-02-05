@@ -118,6 +118,27 @@ export function isQuotaExhaustedError(error: unknown): boolean {
 }
 
 /**
+ * Check if an error is a network fetch error
+ * These errors indicate connectivity issues that should trigger immediate pause
+ *
+ * @param error - The error to check
+ * @returns True if the error is a fetch error
+ */
+export function isFetchError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error || '');
+  const lowerMessage = message.toLowerCase();
+
+  return (
+    lowerMessage.includes('fetch failed') ||
+    lowerMessage.includes('network error') ||
+    lowerMessage.includes('connection error') ||
+    lowerMessage.includes('econnrefused') ||
+    lowerMessage.includes('enotfound') ||
+    lowerMessage.includes('timeout')
+  );
+}
+
+/**
  * Extract retry-after duration from rate limit error
  *
  * @param error - The error to extract retry-after from
@@ -154,6 +175,7 @@ export function classifyError(error: unknown): ErrorInfo {
   const isCancellation = isCancellationError(message);
   const isRateLimit = isRateLimitError(error);
   const isQuotaExhausted = isQuotaExhaustedError(error);
+  const isFetch = isFetchError(error);
   const retryAfter = isRateLimit ? (extractRetryAfter(error) ?? 60) : undefined;
 
   let type: ErrorType;
@@ -162,6 +184,9 @@ export function classifyError(error: unknown): ErrorInfo {
   } else if (isQuotaExhausted) {
     // Quota exhaustion takes priority over rate limit since it's more specific
     type = 'quota_exhausted';
+  } else if (isFetch) {
+    // Fetch errors should be treated as critical network issues
+    type = 'network';
   } else if (isRateLimit) {
     type = 'rate_limit';
   } else if (isAbort) {

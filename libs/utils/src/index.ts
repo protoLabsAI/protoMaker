@@ -10,6 +10,7 @@ export {
   isAuthenticationError,
   isRateLimitError,
   isQuotaExhaustedError,
+  isFetchError,
   extractRetryAfter,
   classifyError,
   getUserFriendlyErrorMessage,
