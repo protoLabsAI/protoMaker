@@ -408,7 +408,6 @@ export class GitWorkflowService {
     // We need to explicitly set --repo to avoid gh defaulting to wrong upstream
     let upstreamRepo: string | null = null;
     let originRepo: string | null = null;
-    let originOwner: string | null = null;
 
     try {
       const { stdout: remotes } = await execAsync('git remote -v', {
@@ -431,7 +430,6 @@ export class GitWorkflowService {
           if (remoteName === 'upstream') {
             upstreamRepo = `${owner}/${repoName}`;
           } else if (remoteName === 'origin') {
-            originOwner = owner;
             originRepo = `${owner}/${repoName}`;
           }
         }
@@ -440,10 +438,11 @@ export class GitWorkflowService {
       // Couldn't parse remotes
     }
 
-    // Determine target repo: use upstream if it's a fork, otherwise use origin
+    // Determine target repo: use origin (the fork) for auto-mode PRs
+    // This keeps PRs within your fork rather than targeting upstream
     // Always use explicit --repo to avoid gh CLI defaulting to wrong repo
-    const targetRepo = upstreamRepo || originRepo;
-    const headRef = upstreamRepo && originOwner ? `${originOwner}:${branchName}` : branchName;
+    const targetRepo = originRepo || upstreamRepo;
+    const headRef = branchName; // No cross-fork PR - target our own repo
     const repoArg = targetRepo ? ` --repo "${targetRepo}"` : '';
 
     try {
@@ -483,13 +482,8 @@ export class GitWorkflowService {
       prCmd += ` --repo "${targetRepo}"`;
     }
 
-    if (upstreamRepo && originOwner) {
-      // Fork workflow: need to specify head as owner:branch
-      prCmd += ` --head "${originOwner}:${branchName}"`;
-    } else {
-      prCmd += ` --head "${branchName}"`;
-    }
-
+    // Use simple branch name since we're targeting our own repo (origin)
+    prCmd += ` --head "${branchName}"`;
     prCmd += ` --title "${title.replace(/"/g, '\\"')}" --body "${body.replace(/"/g, '\\"')}"`;
 
     try {
