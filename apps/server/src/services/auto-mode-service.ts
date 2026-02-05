@@ -76,6 +76,7 @@ import {
 import { getNotificationService } from './notification-service.js';
 import { RecoveryService, getRecoveryService } from './recovery-service.js';
 import { gitWorkflowService } from './git-workflow-service.js';
+import { graphiteService } from './graphite-service.js';
 
 const execAsync = promisify(exec);
 
@@ -1332,6 +1333,46 @@ export class AutoModeService {
       // Store model and provider in running feature for tracking
       tempRunningFeature.model = model;
       tempRunningFeature.provider = provider;
+
+      // Sync and restack the branch before agent execution
+      // This keeps the branch fresh and reduces merge conflicts
+      if (branchName && useWorktrees) {
+        logger.info(`Syncing branch ${branchName} before agent execution...`);
+        this.emitAutoModeEvent('sync_started', {
+          featureId,
+          branchName,
+          message: `Syncing branch ${branchName} with parent...`,
+        });
+
+        const syncResult = await graphiteService.syncAndRestack(workDir, branchName);
+
+        if (syncResult.success) {
+          logger.info(`Branch ${branchName} synced successfully`);
+          this.emitAutoModeEvent('sync_completed', {
+            featureId,
+            branchName,
+            message: 'Branch synchronized successfully',
+          });
+        } else if (syncResult.conflicts) {
+          // Conflicts detected - emit warning but continue (non-blocking)
+          logger.warn(`Branch ${branchName} has conflicts after sync: ${syncResult.error}`);
+          this.emitAutoModeEvent('sync_warning', {
+            featureId,
+            branchName,
+            message: `Sync encountered conflicts: ${syncResult.error}. Agent will attempt to resolve.`,
+            warning: true,
+          });
+        } else {
+          // Sync failed for other reasons - emit warning but continue (non-blocking)
+          logger.warn(`Failed to sync branch ${branchName}: ${syncResult.error || 'Unknown error'}`);
+          this.emitAutoModeEvent('sync_warning', {
+            featureId,
+            branchName,
+            message: `Sync failed: ${syncResult.error || 'Unknown error'}. Continuing with agent execution.`,
+            warning: true,
+          });
+        }
+      }
 
       // Run the agent with the feature's model and images
       // Context files are passed as system prompt for higher priority
