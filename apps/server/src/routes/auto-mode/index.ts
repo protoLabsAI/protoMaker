@@ -14,6 +14,7 @@ import { createStartHandler } from './routes/start.js';
 import { createStopHandler } from './routes/stop.js';
 import { createVerifyFeatureHandler } from './routes/verify-feature.js';
 import { createResumeFeatureHandler } from './routes/resume-feature.js';
+import { createResumeWithFeedbackHandler } from './routes/resume-with-feedback.js';
 import { createContextExistsHandler } from './routes/context-exists.js';
 import { createAnalyzeProjectHandler } from './routes/analyze-project.js';
 import { createFollowUpFeatureHandler } from './routes/follow-up-feature.js';
@@ -44,6 +45,11 @@ export function createAutoModeRoutes(autoModeService: AutoModeService): Router {
     '/resume-feature',
     validatePathParams('projectPath'),
     createResumeFeatureHandler(autoModeService)
+  );
+  router.post(
+    '/resume-with-feedback',
+    validatePathParams('projectPath'),
+    createResumeWithFeedbackHandler(autoModeService)
   );
   router.post(
     '/context-exists',
