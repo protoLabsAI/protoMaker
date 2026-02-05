@@ -532,6 +532,81 @@ export const EVENT_HOOK_TRIGGER_LABELS: Record<EventHookTrigger, string> = {
   auto_mode_error: 'Auto mode paused due to error',
 };
 
+// ============================================================================
+// Scheduled Tasks - Cron-based automation for recurring system maintenance
+// ============================================================================
+
+/**
+ * ScheduledAction - Types of actions that can be executed on a schedule
+ *
+ * Built-in actions:
+ * - health_check: Verify system health and connectivity
+ * - retry_failed_features: Attempt to re-run features that previously failed
+ * - cleanup_old_worktrees: Remove stale worktrees to free disk space
+ * - backup_memories: Export learned memories to backup storage
+ * - custom_shell: Execute a custom shell command
+ */
+export type ScheduledAction =
+  | 'health_check'
+  | 'retry_failed_features'
+  | 'cleanup_old_worktrees'
+  | 'backup_memories'
+  | 'custom_shell';
+
+/** Human-readable labels for scheduled actions */
+export const SCHEDULED_ACTION_LABELS: Record<ScheduledAction, string> = {
+  health_check: 'Health Check',
+  retry_failed_features: 'Retry Failed Features',
+  cleanup_old_worktrees: 'Cleanup Old Worktrees',
+  backup_memories: 'Backup Memories',
+  custom_shell: 'Custom Shell Command',
+};
+
+/**
+ * ScheduledTask - Configuration for a scheduled automation task
+ *
+ * Scheduled tasks run automatically based on cron expressions, enabling
+ * proactive system maintenance and automation without user intervention.
+ *
+ * Cron expression format: "minute hour day-of-month month day-of-week"
+ * Examples:
+ * - "0 * * * *" - Every hour
+ * - "0 0 * * *" - Daily at midnight
+ * - "0 0 * * 0" - Weekly on Sunday at midnight
+ * - "0 0 1 * *" - Monthly on the 1st at midnight
+ * - "0,15,30,45 * * * *" - Every 15 minutes
+ */
+export interface ScheduledTask {
+  /** Unique identifier for this task */
+  id: string;
+  /** User-friendly name for the task */
+  name: string;
+  /** Whether this task is currently enabled */
+  enabled: boolean;
+  /**
+   * Cron expression defining when the task runs.
+   * Standard 5-field cron format: minute hour day-of-month month day-of-week
+   */
+  schedule: string;
+  /** The action to execute when triggered */
+  action: ScheduledAction;
+  /**
+   * Custom shell command to execute (only used when action is 'custom_shell').
+   * Supports variable substitution using {{variableName}} syntax.
+   */
+  customCommand?: string;
+  /** Timeout in milliseconds for the action (default: 60000) */
+  timeout?: number;
+  /** ISO timestamp of the last successful run (undefined if never run) */
+  lastRun?: string;
+  /** ISO timestamp of the next scheduled run (computed from cron expression) */
+  nextRun?: string;
+  /** Result of the last run: 'success', 'failure', or undefined if never run */
+  lastRunResult?: 'success' | 'failure';
+  /** Error message from the last failed run */
+  lastRunError?: string;
+}
+
 const DEFAULT_CODEX_AUTO_LOAD_AGENTS = false;
 const DEFAULT_CODEX_SANDBOX_MODE: CodexSandboxMode = 'workspace-write';
 const DEFAULT_CODEX_APPROVAL_POLICY: CodexApprovalPolicy = 'on-request';
@@ -1009,6 +1084,13 @@ export interface GlobalSettings {
    */
   eventHooks?: EventHook[];
 
+  // Scheduled Tasks Configuration
+  /**
+   * Scheduled tasks for automated maintenance and proactive actions
+   * @see ScheduledTask for configuration details
+   */
+  scheduledTasks?: ScheduledTask[];
+
   // Claude-Compatible Providers Configuration
   /**
    * Claude-compatible provider configurations.
@@ -1321,6 +1403,8 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   claudeApiProfiles: [],
   activeClaudeApiProfileId: null,
   autoModeByWorktree: {},
+  // Scheduled tasks - empty by default
+  scheduledTasks: [],
 };
 
 /** Default credentials (empty strings - user must provide API keys) */

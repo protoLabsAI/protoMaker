@@ -177,6 +177,9 @@ export type {
   EventHookHttpAction,
   EventHookAction,
   EventHook,
+  // Scheduled task types
+  ScheduledAction,
+  ScheduledTask,
   // Claude-compatible provider types (new)
   ApiKeySource,
   ClaudeCompatibleProviderType,
@@ -202,6 +205,8 @@ export {
   getThinkingTokenBudget,
   // Event hook constants
   EVENT_HOOK_TRIGGER_LABELS,
+  // Scheduled task constants
+  SCHEDULED_ACTION_LABELS,
   // Claude-compatible provider templates (new)
   CLAUDE_PROVIDER_TEMPLATES,
   // Claude API profile constants (deprecated)
