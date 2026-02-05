@@ -9,6 +9,7 @@ Automaker is an autonomous AI development studio built as an npm workspace monor
 ## Important Guidelines
 
 - **Dev Server Management**: NEVER start, stop, restart, or otherwise manage the dev server yourself. Always ask the user to manage it, or you will break it.
+- **Git Push Policy**: NEVER push directly to `main`. Always create a feature branch and push to that instead. Use `git checkout -b <branch-name>` before pushing.
 
 ## Common Commands
 

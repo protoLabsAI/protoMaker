@@ -7,6 +7,7 @@ This document outlines enhancements to Automaker's autonomous development capabi
 ## Executive Summary
 
 Automaker already has strong foundations for autonomous development:
+
 - Memory system with smart selection and usage tracking
 - Learning extraction from agent output
 - Event hooks for external integrations
@@ -14,6 +15,7 @@ Automaker already has strong foundations for autonomous development:
 - Git worktree isolation
 
 This proposal adds four key capabilities:
+
 1. **Self-Learning Skills** - Agents can create new reusable skills
 2. **Self-Healing Recovery** - Automatic detection and repair of failures
 3. **Persistent Retry Loops** - Ralph-style "never give up" execution
@@ -25,23 +27,23 @@ This proposal adds four key capabilities:
 
 ### What OpenClaw Has That Automaker Lacks
 
-| Capability | OpenClaw | Automaker | Gap |
-|------------|----------|-----------|-----|
-| Self-extending skills | Agents write SKILL.md files | Fixed tool set | **Critical** |
-| 24/7 operation | Daemon mode with cron jobs | On-demand only | Medium |
-| Proactive outreach | Agent messages user first | Reactive only | Medium |
-| Filesystem as memory | Everything persists | Memory files only | Small |
-| Stop hook verification | External completion check | Agent self-reports | **Critical** |
+| Capability             | OpenClaw                    | Automaker          | Gap          |
+| ---------------------- | --------------------------- | ------------------ | ------------ |
+| Self-extending skills  | Agents write SKILL.md files | Fixed tool set     | **Critical** |
+| 24/7 operation         | Daemon mode with cron jobs  | On-demand only     | Medium       |
+| Proactive outreach     | Agent messages user first   | Reactive only      | Medium       |
+| Filesystem as memory   | Everything persists         | Memory files only  | Small        |
+| Stop hook verification | External completion check   | Agent self-reports | **Critical** |
 
 ### What Ralph Wiggum Has That Automaker Lacks
 
-| Capability | Ralph | Automaker | Gap |
-|------------|-------|-----------|-----|
-| Persistent retry loops | Never stops until verified | 3 failure pause | **Critical** |
-| Completion verification | Tests must pass | Agent declares done | **Critical** |
-| Progress file tracking | progress.txt per iteration | Memory only | Small |
-| Stop hook mechanism | External exit interception | Internal abort | Medium |
-| Git history as context | Full diff analysis | Limited | Small |
+| Capability              | Ralph                      | Automaker           | Gap          |
+| ----------------------- | -------------------------- | ------------------- | ------------ |
+| Persistent retry loops  | Never stops until verified | 3 failure pause     | **Critical** |
+| Completion verification | Tests must pass            | Agent declares done | **Critical** |
+| Progress file tracking  | progress.txt per iteration | Memory only         | Small        |
+| Stop hook mechanism     | External exit interception | Internal abort      | Medium       |
+| Git history as context  | Full diff analysis         | Limited             | Small        |
 
 ---
 
@@ -52,6 +54,7 @@ This proposal adds four key capabilities:
 **Inspired by OpenClaw's SKILL.md pattern**
 
 When an agent encounters a task it cannot complete with existing tools, it should be able to:
+
 1. Create a new skill definition
 2. Store it persistently
 3. Make it available to all future agents
@@ -125,18 +128,15 @@ async function loadRelevantSkills(
   projectPath: string,
   featureTitle: string,
   featureDescription: string
-): Promise<Skill[]>
+): Promise<Skill[]>;
 
-async function createSkill(
-  projectPath: string,
-  skill: Omit<Skill, 'metadata'>
-): Promise<void>
+async function createSkill(projectPath: string, skill: Omit<Skill, 'metadata'>): Promise<void>;
 
 async function recordSkillUsage(
   projectPath: string,
   skillName: string,
   success: boolean
-): Promise<void>
+): Promise<void>;
 ```
 
 ### 2.4 Agent Prompt Addition
@@ -147,6 +147,7 @@ Add to auto-mode prompts:
 ## Self-Extension Capability
 
 If you encounter a task that would benefit from a reusable skill:
+
 1. Create a skill file at `.automaker/skills/{skill-name}.md`
 2. Follow the SKILL.md format with YAML frontmatter
 3. Include clear steps, requirements, and success criteria
@@ -168,15 +169,15 @@ Only create skills for patterns that will be reused (not one-off tasks).
 // libs/types/src/failure.ts
 
 type FailureCategory =
-  | 'transient'      // Network, timeout - retry immediately
-  | 'rate_limit'     // API throttle - exponential backoff
-  | 'quota'          // Usage limit - pause and notify
-  | 'validation'     // Bad input - needs human review
-  | 'tool_error'     // Tool failed - try alternative approach
-  | 'test_failure'   // Tests failed - retry with fixes
+  | 'transient' // Network, timeout - retry immediately
+  | 'rate_limit' // API throttle - exponential backoff
+  | 'quota' // Usage limit - pause and notify
+  | 'validation' // Bad input - needs human review
+  | 'tool_error' // Tool failed - try alternative approach
+  | 'test_failure' // Tests failed - retry with fixes
   | 'merge_conflict' // Git conflict - needs resolution
-  | 'dependency'     // Missing dep - attempt auto-install
-  | 'unknown';       // Unclassified - escalate
+  | 'dependency' // Missing dep - attempt auto-install
+  | 'unknown'; // Unclassified - escalate
 
 interface FailureAnalysis {
   category: FailureCategory;
@@ -207,13 +208,13 @@ type EventHookTrigger =
   | 'feature_created'
   | 'feature_success'
   | 'feature_error'
-  | 'feature_retry'           // NEW: Feature being retried
-  | 'feature_recovery'        // NEW: Recovery action taken
+  | 'feature_retry' // NEW: Feature being retried
+  | 'feature_recovery' // NEW: Recovery action taken
   | 'auto_mode_complete'
   | 'auto_mode_error'
-  | 'auto_mode_health_check'  // NEW: Periodic health status
-  | 'skill_created'           // NEW: Agent created new skill
-  | 'memory_learning'         // NEW: New learning recorded
+  | 'auto_mode_health_check' // NEW: Periodic health status
+  | 'skill_created' // NEW: Agent created new skill
+  | 'memory_learning'; // NEW: New learning recorded
 ```
 
 ### 3.3 Recovery Action Service
@@ -229,15 +230,12 @@ class RecoveryService {
     featureId: string,
     error: Error,
     context: ExecutionContext
-  ): Promise<FailureAnalysis>
+  ): Promise<FailureAnalysis>;
 
   /**
    * Execute automatic recovery based on strategy
    */
-  async executeRecovery(
-    featureId: string,
-    analysis: FailureAnalysis
-  ): Promise<RecoveryResult>
+  async executeRecovery(featureId: string, analysis: FailureAnalysis): Promise<RecoveryResult>;
 
   /**
    * Record recovery attempt for learning
@@ -246,7 +244,7 @@ class RecoveryService {
     featureId: string,
     strategy: RecoveryStrategy,
     success: boolean
-  ): Promise<void>
+  ): Promise<void>;
 }
 ```
 
@@ -257,21 +255,14 @@ Modify `auto-mode-service.ts`:
 ```typescript
 // In executeFeatureWithAgent(), after catching error:
 
-const analysis = await this.recoveryService.analyzeFailure(
-  feature.id,
-  error,
-  executionContext
-);
+const analysis = await this.recoveryService.analyzeFailure(feature.id, error, executionContext);
 
 if (analysis.isRetryable && retryCount < analysis.maxRetries) {
   // Record retry attempt
   await this.recordFeatureRetry(feature, analysis);
 
   // Execute recovery strategy
-  const recoveryResult = await this.recoveryService.executeRecovery(
-    feature.id,
-    analysis
-  );
+  const recoveryResult = await this.recoveryService.executeRecovery(feature.id, analysis);
 
   if (recoveryResult.shouldRetry) {
     await this.sleep(analysis.suggestedDelay);
@@ -289,6 +280,7 @@ if (analysis.isRetryable && retryCount < analysis.maxRetries) {
 **Ralph Philosophy:** "Never give up until verifiable completion"
 
 Key differences from current auto-mode:
+
 1. **External Verification** - Tests/validation must pass, not agent declaration
 2. **Iteration Logging** - Each attempt logged with learnings
 3. **Context Accumulation** - Failures feed into next attempt
@@ -330,7 +322,7 @@ class CompletionVerifierService {
     projectPath: string,
     criteria: CompletionCriterion[],
     worktreePath?: string
-  ): Promise<VerificationResult>
+  ): Promise<VerificationResult>;
 
   /**
    * Run specific criterion check
@@ -338,7 +330,7 @@ class CompletionVerifierService {
   async checkCriterion(
     projectPath: string,
     criterion: CompletionCriterion
-  ): Promise<CriterionResult>
+  ): Promise<CriterionResult>;
 }
 
 interface VerificationResult {
@@ -381,9 +373,7 @@ class RalphLoopService {
       const iterationStart = Date.now();
 
       // Build context from previous failures
-      const context = config.preserveContext
-        ? this.buildIterationContext(progressLog)
-        : undefined;
+      const context = config.preserveContext ? this.buildIterationContext(progressLog) : undefined;
 
       try {
         // Execute the agent
@@ -416,7 +406,6 @@ class RalphLoopService {
 
         // Emit progress event
         this.emitProgress(feature.id, iteration, verification);
-
       } catch (error) {
         progressLog.push({
           iteration,
@@ -442,10 +431,10 @@ class RalphLoopService {
 
   private buildIterationContext(logs: IterationLog[]): string {
     // Build context from failures for next iteration
-    const failures = logs.filter(l => !l.verification?.allPassed);
-    return failures.map(f =>
-      `Iteration ${f.iteration} failed: ${f.error || f.verification?.summary}`
-    ).join('\n');
+    const failures = logs.filter((l) => !l.verification?.allPassed);
+    return failures
+      .map((f) => `Iteration ${f.iteration} failed: ${f.error || f.verification?.summary}`)
+      .join('\n');
   }
 }
 ```
@@ -456,6 +445,7 @@ class RalphLoopService {
 # Ralph Loop Progress: feature-123
 
 ## Iteration 1 (2026-02-04T10:30:00Z)
+
 - Duration: 45s
 - Status: FAILED
 - Tests: 3/5 passing
@@ -464,6 +454,7 @@ class RalphLoopService {
   - Test "should validate email" failed
 
 ## Iteration 2 (2026-02-04T10:31:00Z)
+
 - Duration: 52s
 - Status: FAILED
 - Tests: 4/5 passing
@@ -471,12 +462,14 @@ class RalphLoopService {
   - Test "should handle edge case" failed
 
 ## Iteration 3 (2026-02-04T10:32:00Z)
+
 - Duration: 38s
 - Status: SUCCESS
 - Tests: 5/5 passing
 - Verification: All criteria met
 
 ## Summary
+
 - Total iterations: 3
 - Total duration: 2m 15s
 - Final status: SUCCESS
@@ -498,10 +491,7 @@ class HealthMonitorService {
    * Start periodic health monitoring
    */
   startMonitoring(intervalMs: number = 300000) {
-    this.checkInterval = setInterval(
-      () => this.runHealthCheck(),
-      intervalMs
-    );
+    this.checkInterval = setInterval(() => this.runHealthCheck(), intervalMs);
   }
 
   private async runHealthCheck(): Promise<HealthReport> {
@@ -543,25 +533,40 @@ class HealthMonitorService {
 
 ### 5.2 Scheduled Task System
 
-**New type in `libs/types/src/settings.ts`:**
+**Implemented in `libs/types/src/settings.ts`:**
 
 ```typescript
+/**
+ * ScheduledTaskAction - Actions that can be scheduled for cron-based automation
+ */
+type ScheduledTaskAction =
+  | 'health_check' // Run health check on features/worktrees
+  | 'retry_failed_features' // Retry features that have failed
+  | 'cleanup_old_worktrees' // Remove stale/orphaned worktrees
+  | 'backup_memories' // Backup agent memories to a safe location
+  | 'custom_shell'; // Execute an arbitrary shell command
+
+/**
+ * ScheduledTask - Configuration for a cron-based scheduled task
+ */
 interface ScheduledTask {
-  id: string;
-  name: string;
-  enabled: boolean;
-  schedule: string; // Cron expression
-  action: ScheduledAction;
-  lastRun?: string;
-  nextRun?: string;
+  id: string; // Unique identifier
+  name: string; // Display name
+  enabled: boolean; // Whether task runs
+  schedule: string; // Cron expression (e.g., "0 0 */6 * *")
+  action: ScheduledTaskAction; // What to execute
+  shellCommand?: string; // For custom_shell action
+  lastRun?: string; // ISO timestamp
+  nextRun?: string; // ISO timestamp
+  lastResult?: 'success' | 'failure'; // Result of last execution
+  lastError?: string; // Error message if last execution failed
 }
 
-type ScheduledAction =
-  | { type: 'health_check' }
-  | { type: 'retry_failed_features' }
-  | { type: 'cleanup_old_worktrees'; maxAgeDays: number }
-  | { type: 'backup_memories' }
-  | { type: 'custom_shell'; command: string };
+// Added to GlobalSettings:
+interface GlobalSettings {
+  // ...existing fields
+  scheduledTasks?: ScheduledTask[];
+}
 ```
 
 ---
@@ -750,18 +755,29 @@ Add to `packages/mcp-server/src/index.ts`:
       "name": "Hourly Health Check",
       "enabled": true,
       "schedule": "0 * * * *",
-      "action": {
-        "type": "health_check"
-      }
+      "action": "health_check"
     },
     {
       "id": "retry-failed",
       "name": "Retry Failed Features",
       "enabled": true,
       "schedule": "*/30 * * * *",
-      "action": {
-        "type": "retry_failed_features"
-      }
+      "action": "retry_failed_features"
+    },
+    {
+      "id": "daily-backup",
+      "name": "Daily Memory Backup",
+      "enabled": true,
+      "schedule": "0 2 * * *",
+      "action": "backup_memories"
+    },
+    {
+      "id": "custom-cleanup",
+      "name": "Custom Cleanup Script",
+      "enabled": false,
+      "schedule": "0 0 * * 0",
+      "action": "custom_shell",
+      "shellCommand": "./scripts/weekly-cleanup.sh"
     }
   ]
 }
@@ -772,21 +788,25 @@ Add to `packages/mcp-server/src/index.ts`:
 ## Part 9: Success Metrics
 
 ### 9.1 Self-Learning Metrics
+
 - Skills created per project
 - Skill reuse rate
 - Skill success rate over time
 
 ### 9.2 Self-Healing Metrics
+
 - Auto-recovery success rate
 - Mean time to recovery (MTTR)
 - Reduction in manual interventions
 
 ### 9.3 Ralph Loop Metrics
+
 - Average iterations to completion
 - Completion rate vs max iterations reached
 - Time saved vs manual intervention
 
 ### 9.4 Overall Autonomy Score
+
 ```
 Autonomy Score = (
   (Features completed without intervention / Total features) * 0.4 +
@@ -801,6 +821,7 @@ Autonomy Score = (
 ## Appendix: File Change Summary
 
 ### New Files
+
 - `libs/types/src/failure.ts`
 - `libs/types/src/skill.ts`
 - `libs/utils/src/skills-loader.ts`
@@ -811,6 +832,7 @@ Autonomy Score = (
 - `apps/server/src/services/scheduler-service.ts`
 
 ### Modified Files
+
 - `libs/types/src/feature.ts` - Add RalphModeConfig
 - `libs/types/src/settings.ts` - Add new event triggers, scheduled tasks
 - `libs/utils/src/errors.ts` - Enhanced failure classification
@@ -819,6 +841,7 @@ Autonomy Score = (
 - `packages/mcp-server/src/index.ts` - New MCP tools
 
 ### New Directories
+
 - `.automaker/skills/` - Project skills
 - `.automaker/ralph/` - Ralph loop progress files
 - `~/.automaker/skills/` - Global user skills

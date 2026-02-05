@@ -188,6 +188,9 @@ export type {
   EventHookHttpAction,
   EventHookAction,
   EventHook,
+  // Scheduled task types
+  ScheduledTaskAction,
+  ScheduledTask,
   // Git workflow types
   GitWorkflowSettings,
   GitWorkflowResult,

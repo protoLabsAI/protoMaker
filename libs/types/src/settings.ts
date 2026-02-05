@@ -615,6 +615,55 @@ export const EVENT_HOOK_TRIGGER_LABELS: Record<EventHookTrigger, string> = {
   auto_mode_error: 'Auto mode paused due to error',
 };
 
+// ============================================================================
+// Scheduled Tasks - Cron-based automation for maintenance and cleanup
+// ============================================================================
+
+/**
+ * ScheduledTaskAction - Actions that can be scheduled for cron-based automation
+ *
+ * - health_check: Run health check on features/worktrees
+ * - retry_failed_features: Retry features that have failed
+ * - cleanup_old_worktrees: Remove stale/orphaned worktrees
+ * - backup_memories: Backup agent memories to a safe location
+ * - custom_shell: Execute an arbitrary shell command
+ */
+export type ScheduledTaskAction =
+  | 'health_check'
+  | 'retry_failed_features'
+  | 'cleanup_old_worktrees'
+  | 'backup_memories'
+  | 'custom_shell';
+
+/**
+ * ScheduledTask - Configuration for a cron-based scheduled task
+ *
+ * Scheduled tasks run on a cron schedule and can perform maintenance,
+ * cleanup, or custom shell commands automatically.
+ */
+export interface ScheduledTask {
+  /** Unique identifier for this scheduled task */
+  id: string;
+  /** Display name for the task */
+  name: string;
+  /** Whether this task is currently enabled */
+  enabled: boolean;
+  /** Cron expression defining the schedule (e.g., "0 0 *\/6 * *" for every 6 hours) */
+  schedule: string;
+  /** The action to execute when the schedule triggers */
+  action: ScheduledTaskAction;
+  /** Shell command to execute (only used when action is 'custom_shell') */
+  shellCommand?: string;
+  /** ISO timestamp of the last successful run */
+  lastRun?: string;
+  /** ISO timestamp of the next scheduled run */
+  nextRun?: string;
+  /** Result of the last execution */
+  lastResult?: 'success' | 'failure';
+  /** Error message if the last execution failed */
+  lastError?: string;
+}
+
 const DEFAULT_CODEX_AUTO_LOAD_AGENTS = false;
 const DEFAULT_CODEX_SANDBOX_MODE: CodexSandboxMode = 'workspace-write';
 const DEFAULT_CODEX_APPROVAL_POLICY: CodexApprovalPolicy = 'on-request';
@@ -1091,6 +1140,13 @@ export interface GlobalSettings {
    * @see EventHook for configuration details
    */
   eventHooks?: EventHook[];
+
+  // Scheduled Tasks Configuration
+  /**
+   * Scheduled tasks for cron-based automation (maintenance, cleanup, etc.)
+   * @see ScheduledTask for configuration details
+   */
+  scheduledTasks?: ScheduledTask[];
 
   // Claude-Compatible Providers Configuration
   /**
