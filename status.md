@@ -8,40 +8,41 @@
 
 ## Board Summary
 
-| Status | Count |
-|--------|-------|
-| Backlog | 13 features |
-| In Progress | 0 features |
-| Review | 0 features (9 open PRs) |
-| Done | 53 features |
-| **Total** | **101 features** |
+| Status      | Count                   |
+| ----------- | ----------------------- |
+| Backlog     | 13 features             |
+| In Progress | 0 features              |
+| Review      | 0 features (0 open PRs) |
+| Done        | 57 features             |
+| **Total**   | **70 features**         |
 
 ## Active Work
 
-### Critical Bug Fix (PR #65)
-- 🔴 **Fix auto-mode dependency enforcement** - HIGH PRIORITY
-  - Root cause: Dependency resolver only checked 'completed'/'verified', missed 'done'/'review' statuses
-  - Impact: Auto-mode started features in parallel despite sequential dependencies
-  - Status: Fixed and PR created, awaiting review
+### Recently Merged (Today)
 
-### Open PRs (9 total)
-- **Auto-Merge Infrastructure** (PRs #60-64) - 5 PRs for automatic PR merging
-- **Scheduled Task Improvements** (PRs #57-59) - Persistence and observability
+- ✅ **PR #68**: [Epic] Server Startup Integration
+- ✅ **PR #67**: Docker deployment guide for MCP plugin
+- ✅ **PR #65**: Fix auto-mode dependency enforcement
+- ✅ **PR #59**: Add webhook type definitions for check events
+
+### Open PRs (0 total)
+
+All PRs merged! Codebase is clean.
 
 ## Epic Status Overview
 
-| Epic | Status | Progress | Branch |
-|------|--------|----------|--------|
-| [Foundation](#foundation) | ✅ Done | 4/4 | `epic/foundation` |
-| [Ralph Loops](#ralph-loops) | ✅ Done | 3/3 | `epic/ralph-loops` |
-| [Claude Plugin Improvements](#claude-plugin-improvements) | ✅ Done | 3/3 | `epic/claude-plugin-improvements` |
-| [Self-Learning Skills](#self-learning-skills) | ✅ Done | 4/4 | `epic/self-learning-skills` |
-| [Proactive Automation](#proactive-automation) | ✅ Done | 4/4 | `epic/proactive-automation` |
-| [Scheduled Task Persistence](#scheduled-task-persistence) | ✅ Done | 4/4 | `epic/scheduled-task-persistence` |
-| [Agent Resume Integration](#agent-resume-integration) | ✅ Done | 4/4 | `epic/agent-resume-integration` |
-| [CodeRabbit Feedback Processing](#coderabbit-feedback-processing) | ✅ Done | 2/2 | `epic/coderabbit-feedback-processing` |
-| [Inbound Webhook Infrastructure](#inbound-webhook-infrastructure) | ✅ Done | 6/6 | `epic/inbound-webhook-infrastructure` |
-| [Auto-Merge Pull Requests](#auto-merge-pull-requests) | 🔄 Active | 0/15 | `epic/auto-merge-*` |
+| Epic                                                              | Status    | Progress | Branch                                |
+| ----------------------------------------------------------------- | --------- | -------- | ------------------------------------- |
+| [Foundation](#foundation)                                         | ✅ Done   | 4/4      | `epic/foundation`                     |
+| [Ralph Loops](#ralph-loops)                                       | ✅ Done   | 3/3      | `epic/ralph-loops`                    |
+| [Claude Plugin Improvements](#claude-plugin-improvements)         | ✅ Done   | 3/3      | `epic/claude-plugin-improvements`     |
+| [Self-Learning Skills](#self-learning-skills)                     | ✅ Done   | 4/4      | `epic/self-learning-skills`           |
+| [Proactive Automation](#proactive-automation)                     | ✅ Done   | 4/4      | `epic/proactive-automation`           |
+| [Scheduled Task Persistence](#scheduled-task-persistence)         | ✅ Done   | 4/4      | `epic/scheduled-task-persistence`     |
+| [Agent Resume Integration](#agent-resume-integration)             | ✅ Done   | 4/4      | `epic/agent-resume-integration`       |
+| [CodeRabbit Feedback Processing](#coderabbit-feedback-processing) | ✅ Done   | 2/2      | `epic/coderabbit-feedback-processing` |
+| [Inbound Webhook Infrastructure](#inbound-webhook-infrastructure) | ✅ Done   | 6/6      | `epic/inbound-webhook-infrastructure` |
+| [Auto-Merge Pull Requests](#auto-merge-pull-requests)             | 🔄 Active | 0/15     | `epic/auto-merge-*`                   |
 
 ---
 
@@ -52,12 +53,12 @@
 
 Core infrastructure for failure classification, completion verification, and recovery.
 
-| Feature | Status |
-|---------|--------|
-| Add Failure Classification Types | ✅ Done |
+| Feature                            | Status  |
+| ---------------------------------- | ------- |
+| Add Failure Classification Types   | ✅ Done |
 | Create Completion Verifier Service | ✅ Done |
-| Create Recovery Service | ✅ Done |
-| Integrate Recovery into Auto-Mode | ✅ Done |
+| Create Recovery Service            | ✅ Done |
+| Integrate Recovery into Auto-Mode  | ✅ Done |
 
 ---
 
@@ -68,11 +69,11 @@ Core infrastructure for failure classification, completion verification, and rec
 
 Persistent retry loops with external verification.
 
-| Feature | Status | Notes |
-|---------|--------|-------|
-| Add Ralph Mode Types | ✅ Done | |
-| Create Ralph Loop Service | ✅ Done | |
-| Add Ralph Mode MCP Tools | ✅ Done | 6 tools: start/stop/pause/resume/status/list |
+| Feature                   | Status  | Notes                                        |
+| ------------------------- | ------- | -------------------------------------------- |
+| Add Ralph Mode Types      | ✅ Done |                                              |
+| Create Ralph Loop Service | ✅ Done |                                              |
+| Add Ralph Mode MCP Tools  | ✅ Done | 6 tools: start/stop/pause/resume/status/list |
 
 ---
 
@@ -83,11 +84,11 @@ Persistent retry loops with external verification.
 
 Improving the Claude Code plugin experience.
 
-| Feature | Status | Notes |
-|---------|--------|-------|
-| Auto-generate branchName for new features | ✅ Done | Implemented in feature-loader.ts |
-| Add Epic UI components to Kanban cards | ✅ Done | epic-badge.tsx & epic-progress.tsx |
-| Update wiki with Claude Code plugin docs | ✅ Done | 4 new sections added |
+| Feature                                   | Status  | Notes                              |
+| ----------------------------------------- | ------- | ---------------------------------- |
+| Auto-generate branchName for new features | ✅ Done | Implemented in feature-loader.ts   |
+| Add Epic UI components to Kanban cards    | ✅ Done | epic-badge.tsx & epic-progress.tsx |
+| Update wiki with Claude Code plugin docs  | ✅ Done | 4 new sections added               |
 
 ---
 
@@ -98,12 +99,12 @@ Improving the Claude Code plugin experience.
 
 Enable agents to create reusable skills for future use.
 
-| Feature | Status | Notes |
-|---------|--------|-------|
-| Add Skill Types | ✅ Done | PR #25 |
-| Create Skills Loader | ✅ Done | PR #27 |
+| Feature                                 | Status  | Notes  |
+| --------------------------------------- | ------- | ------ |
+| Add Skill Types                         | ✅ Done | PR #25 |
+| Create Skills Loader                    | ✅ Done | PR #27 |
 | Update Agent Prompts for Skill Creation | ✅ Done | PR #28 |
-| Add Skills MCP Tools | ✅ Done | PR #30 |
+| Add Skills MCP Tools                    | ✅ Done | PR #30 |
 
 ---
 
@@ -114,12 +115,12 @@ Enable agents to create reusable skills for future use.
 
 Health monitoring, auto-remediation, and scheduled tasks.
 
-| Feature | Status | Notes |
-|---------|--------|-------|
-| Create Health Monitor Service | ✅ Done | PR #33 |
-| Add Scheduled Task Types | ✅ Done | PR #35 |
-| Create Scheduler Service | ✅ Done | PR #34 |
-| Add New Event Hook Triggers | ✅ Done | Event-driven automation |
+| Feature                       | Status  | Notes                   |
+| ----------------------------- | ------- | ----------------------- |
+| Create Health Monitor Service | ✅ Done | PR #33                  |
+| Add Scheduled Task Types      | ✅ Done | PR #35                  |
+| Create Scheduler Service      | ✅ Done | PR #34                  |
+| Add New Event Hook Triggers   | ✅ Done | Event-driven automation |
 
 ---
 
@@ -131,12 +132,12 @@ Health monitoring, auto-remediation, and scheduled tasks.
 
 Persist scheduled tasks across server restarts.
 
-| Feature | Status | Notes |
-|---------|--------|-------|
-| Implement saveTasks in SchedulerService | ✅ Done | Atomic writes with backups |
-| Implement loadTasks on startup | ✅ Done | Restore state on init |
-| Update task execution tracking | ✅ Done | PR #57 - Auto-save after each run |
-| Add scheduler status endpoint | ✅ Done | PR #58 - Observability |
+| Feature                                 | Status  | Notes                             |
+| --------------------------------------- | ------- | --------------------------------- |
+| Implement saveTasks in SchedulerService | ✅ Done | Atomic writes with backups        |
+| Implement loadTasks on startup          | ✅ Done | Restore state on init             |
+| Update task execution tracking          | ✅ Done | PR #57 - Auto-save after each run |
+| Add scheduler status endpoint           | ✅ Done | PR #58 - Observability            |
 
 ---
 
@@ -148,12 +149,12 @@ Persist scheduled tasks across server restarts.
 
 Resume agents with PR feedback from CodeRabbit.
 
-| Feature | Status | Notes |
-|---------|--------|-------|
-| Add Resume-with-Feedback Endpoint | ✅ Done | PR #48, #51 |
-| Add PR Feedback Event Hook Trigger | ✅ Done | PR #47 |
-| Create Default PR Feedback Hook | ✅ Done | PR #50 |
-| Add PR Feedback Prompt Template | 🔄 Backlog | Blocked by dependency |
+| Feature                            | Status     | Notes                 |
+| ---------------------------------- | ---------- | --------------------- |
+| Add Resume-with-Feedback Endpoint  | ✅ Done    | PR #48, #51           |
+| Add PR Feedback Event Hook Trigger | ✅ Done    | PR #47                |
+| Create Default PR Feedback Hook    | ✅ Done    | PR #50                |
+| Add PR Feedback Prompt Template    | 🔄 Backlog | Blocked by dependency |
 
 ---
 
@@ -165,10 +166,10 @@ Resume agents with PR feedback from CodeRabbit.
 
 Process CodeRabbit feedback and trigger agent resume.
 
-| Feature | Status |
-|---------|--------|
+| Feature                                | Status  |
+| -------------------------------------- | ------- |
 | Parse CodeRabbit feedback from webhook | ✅ Done |
-| Trigger agent resume with feedback | ✅ Done |
+| Trigger agent resume with feedback     | ✅ Done |
 
 ---
 
@@ -180,14 +181,14 @@ Process CodeRabbit feedback and trigger agent resume.
 
 GitHub webhook receiver for auto-closing features on PR merge.
 
-| Feature | Status | Notes |
-|---------|--------|-------|
-| Add webhook signature validator | ✅ Done | HMAC-SHA256 verification |
+| Feature                           | Status  | Notes                    |
+| --------------------------------- | ------- | ------------------------ |
+| Add webhook signature validator   | ✅ Done | HMAC-SHA256 verification |
 | Generate and store webhook secret | ✅ Done | Credentials.json storage |
-| Implement feature status update | ✅ Done | Auto-close on merge |
-| Create webhook routes | ✅ Done | /api/webhooks/github |
-| Register webhook routes | ✅ Done | Integrated in server |
-| Add webhook setup documentation | ✅ Done | PR #41 |
+| Implement feature status update   | ✅ Done | Auto-close on merge      |
+| Create webhook routes             | ✅ Done | /api/webhooks/github     |
+| Register webhook routes           | ✅ Done | Integrated in server     |
+| Add webhook setup documentation   | ✅ Done | PR #41                   |
 
 ---
 
@@ -199,26 +200,31 @@ GitHub webhook receiver for auto-closing features on PR merge.
 Automatically merge PRs when all checks pass (including CodeRabbit).
 
 ### Milestone 1: Event Handling Infrastructure (0/3)
+
 - 🔄 Webhook Type Definitions (in progress)
 - 🔄 Webhook Handler Extension (in progress)
 - ⏳ Event Processing Service
 
 ### Milestone 2: Merge Eligibility Logic (0/3)
+
 - ⏳ Settings Types for Auto-Merge
 - ⏳ Create Merge Eligibility Service
 - ⏳ Check Integration
 
 ### Milestone 3: Auto-Merge Execution (0/3)
+
 - ⏳ Create Merge Service
 - ⏳ Integrate Merge Service into Event Handler
 - ⏳ Add Merge Orchestration
 
 ### Milestone 4: API and UI Integration (0/3)
+
 - ⏳ Add Manual Trigger Endpoint
 - ⏳ Add Settings UI Panel
 - ⏳ Add Merge History View
 
 ### Milestone 5: Safety and Monitoring (0/3)
+
 - ⏳ Add Audit Log
 - ⏳ Add Rate Limiting
 - ⏳ Add Rollback Capability
@@ -227,33 +233,36 @@ Automatically merge PRs when all checks pass (including CodeRabbit).
 
 ## Recently Completed (Last 7 Days)
 
+- ✅ **[Epic] Server Startup Integration** (PR #68) - Server startup improvements
+- ✅ **Docker deployment guide for MCP plugin** (PR #67) - Comprehensive Docker setup docs
 - ✅ **Fix auto-mode dependency enforcement** (PR #65) - Critical bug fix for parallel execution
-- ✅ **Scheduled Task Persistence Epic** (PRs #42, #57, #58) - Complete with observability
 - ✅ **Webhook Type Definitions** (PR #59) - Check event types for auto-merge
+- ✅ **Scheduled Task Persistence Epic** (PRs #42, #57, #58) - Complete with observability
 - ✅ **Standardize feature categories for analytics** (#56) - Domain-based categorization
 - ✅ **Inbound Webhook Infrastructure Epic** (#44) - GitHub webhook receiver complete
 - ✅ **Add /pr-review plugin command** (#55) - Systematic PR review workflow
 - ✅ **GitHub webhook to auto-close features** (#41) - Auto-update on merge
 - ✅ **Agent Resume Integration Epic** (#45) - Resume with PR feedback
-- ✅ **CodeRabbit Feedback Processing Epic** (#46) - Process review comments
-- ✅ **Add /groom and /cleanup plugin commands** (#40) - Board hygiene automation
 
 ---
 
 ## Technical Debt & Maintenance
 
 ### High Priority
-- 🔧 **npm audit**: 13 vulnerabilities (1 moderate, 11 high, 0 critical)
-- 🔧 **Merged branches**: 46 local branches can be cleaned up
-- 🔧 **Stale remote branches**: 1 remote branch needs pruning
+
+- 🔧 **npm audit**: 13 vulnerabilities (1 low, 1 moderate, 11 high)
+- 🔧 **Remote branches**: 46 feature/epic branches to clean up (many merged)
+- 🔧 **Stale remote branches**: 1 merged branch needs pruning (origin/epic/self-learning-skills)
 
 ### Medium Priority
+
 - 📝 **Documentation**: Keep CLAUDE.md, README.md in sync
 - 🧪 **Test coverage**: Add tests for new webhook infrastructure
-- 📝 **TODO comments**: 16 TODO/FIXME/HACK comments in server code to review
+- 📝 **TODO comments**: 16 TODO/FIXME/HACK comments in codex provider files
 
 ### Low Priority
-- 🗂️ **Worktree cleanup**: No stale worktrees (all active < 7 days)
+
+- 🗂️ **Worktree cleanup**: No .worktrees directory (clean)
 - 📦 **Dependencies**: Review `npm outdated` for safe updates
 
 ---
@@ -261,12 +270,13 @@ Automatically merge PRs when all checks pass (including CodeRabbit).
 ## Plugin Ecosystem
 
 ### Stable Plugin Setup
-- **Location**: `/Users/kj/.claude-automaker-stable/`
+
 - **Source**: GitHub main branch (proto-labs-ai/automaker)
 - **Status**: ✅ Installed and working
-- **Projects**: automaker (dev), rpg-mcp (production)
+- **MCP Integrations**: Discord (amd64 build), Linear, Automaker
 
 ### Available Commands
+
 - `/board` - Kanban board management
 - `/auto-mode` - Autonomous feature processing
 - `/groom` - Board cleanup and organization
