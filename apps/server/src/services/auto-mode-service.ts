@@ -77,6 +77,7 @@ import { getNotificationService } from './notification-service.js';
 import { RecoveryService, getRecoveryService } from './recovery-service.js';
 import { gitWorkflowService } from './git-workflow-service.js';
 import { graphiteService } from './graphite-service.js';
+import { getDiscordNotificationService } from './discord-notification-service.js';
 
 const execAsync = promisify(exec);
 
@@ -1520,6 +1521,23 @@ export class AutoModeService {
         model: tempRunningFeature.model,
         provider: tempRunningFeature.provider,
       });
+
+      // Send Discord notification for feature completion
+      if (this.settingsService) {
+        try {
+          const discordService = getDiscordNotificationService(this.settingsService);
+          const isEnabled = await discordService.isEnabled(projectPath);
+          if (isEnabled) {
+            await discordService.notifyFeatureCompleted(
+              projectPath,
+              feature,
+              gitWorkflowResult?.prUrl ?? undefined
+            );
+          }
+        } catch (discordError) {
+          logger.warn('Discord notification failed for feature completion:', discordError);
+        }
+      }
     } catch (error) {
       const errorInfo = classifyError(error);
 
@@ -1626,6 +1644,25 @@ export class AutoModeService {
           recoveryAction: recoveryResult.actionTaken,
           failureCategory: failureAnalysis.category,
         });
+
+        // Send Discord notification for feature error
+        if (this.settingsService && feature) {
+          try {
+            const discordService = getDiscordNotificationService(this.settingsService);
+            const isEnabled = await discordService.isEnabled(projectPath);
+            if (isEnabled) {
+              const errorContext = `Recovery: ${recoveryResult.actionTaken} | Category: ${failureAnalysis.category} | Type: ${errorInfo.type}`;
+              await discordService.notifyFeatureError(
+                projectPath,
+                feature,
+                errorInfo.message,
+                errorContext
+              );
+            }
+          } catch (discordError) {
+            logger.warn('Discord notification failed for feature error:', discordError);
+          }
+        }
 
         // Track this failure and check if we should pause auto mode
         // This handles both specific quota/rate limit errors AND generic failures

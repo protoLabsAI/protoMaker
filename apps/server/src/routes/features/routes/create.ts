@@ -7,8 +7,14 @@ import { FeatureLoader } from '../../../services/feature-loader.js';
 import type { EventEmitter } from '../../../lib/events.js';
 import type { Feature } from '@automaker/types';
 import { getErrorMessage, logError } from '../common.js';
+import type { SettingsService } from '../../../services/settings-service.js';
+import { getDiscordNotificationService } from '../../../services/discord-notification-service.js';
 
-export function createCreateHandler(featureLoader: FeatureLoader, events?: EventEmitter) {
+export function createCreateHandler(
+  featureLoader: FeatureLoader,
+  events?: EventEmitter,
+  settingsService?: SettingsService
+) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
       const { projectPath, feature } = req.body as {
@@ -46,6 +52,20 @@ export function createCreateHandler(featureLoader: FeatureLoader, events?: Event
           featureName: created.name,
           projectPath,
         });
+      }
+
+      // Send Discord notification if enabled
+      if (settingsService) {
+        try {
+          const discordService = getDiscordNotificationService(settingsService);
+          const isEnabled = await discordService.isEnabled(projectPath);
+          if (isEnabled) {
+            await discordService.notifyFeatureCreated(projectPath, created);
+          }
+        } catch (discordError) {
+          // Log but don't fail the request if Discord notification fails
+          logError(discordError, 'Discord notification failed');
+        }
       }
 
       res.json({ success: true, feature: created });

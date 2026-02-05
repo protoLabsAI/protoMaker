@@ -1373,6 +1373,22 @@ export interface ProjectSettings {
    */
   webhookSettings?: import('./webhook.js').WebhookSettings;
 
+  // Discord Integration (per-project)
+  /**
+   * Discord integration configuration for sending notifications on feature events.
+   * When enabled, posts updates to Discord channels via Discord MCP server.
+   */
+  discordConfig?: {
+    /** Whether Discord notifications are enabled for this project */
+    enabled: boolean;
+    /** Channel ID for feature creation notifications (e.g., #features) */
+    featuresChannelId?: string;
+    /** Channel ID for feature completion notifications with PR links (e.g., #releases) */
+    completionsChannelId?: string;
+    /** Channel ID for error notifications (e.g., #errors or #alerts) */
+    errorsChannelId?: string;
+  };
+
   // Deprecated Claude API Profile Override
   /**
    * @deprecated Use phaseModelOverrides instead.

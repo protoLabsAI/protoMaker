@@ -29,7 +29,7 @@ export function createFeaturesRoutes(
   router.post(
     '/create',
     validatePathParams('projectPath'),
-    createCreateHandler(featureLoader, events)
+    createCreateHandler(featureLoader, events, settingsService)
   );
   router.post('/update', validatePathParams('projectPath'), createUpdateHandler(featureLoader));
   router.post(
