@@ -16,6 +16,7 @@ test.describe('Discord Settings Types', () => {
     expect(DEFAULT_DISCORD_SETTINGS.enabled).toBe(false);
     expect(DEFAULT_DISCORD_SETTINGS.tokenConfigured).toBe(false);
     expect(DEFAULT_DISCORD_SETTINGS.autoNotify).toBe(false);
+    expect(DEFAULT_DISCORD_SETTINGS.notifyOnFeatureStart).toBe(false);
     expect(DEFAULT_DISCORD_SETTINGS.notifyOnFeatureComplete).toBe(true);
     expect(DEFAULT_DISCORD_SETTINGS.notifyOnMilestoneComplete).toBe(true);
     expect(DEFAULT_DISCORD_SETTINGS.notifyOnProjectComplete).toBe(true);
