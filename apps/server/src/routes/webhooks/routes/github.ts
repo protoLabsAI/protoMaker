@@ -89,7 +89,7 @@ export function createGitHubWebhookHandler(
 
   return async (req: Request, res: Response): Promise<void> => {
     try {
-      // Get webhook settings
+      // Get webhook settings and credentials
       const settings = await settingsService.getGlobalSettings();
       const webhookConfig = settings.githubWebhook;
 
@@ -103,12 +103,15 @@ export function createGitHubWebhookHandler(
         return;
       }
 
-      // Verify signature if secret is configured
-      if (webhookConfig?.secret) {
+      // Verify signature if secret is configured in credentials
+      const credentials = await settingsService.getCredentials();
+      const webhookSecret = credentials.webhookSecrets?.github;
+
+      if (webhookSecret) {
         const signature = req.headers['x-hub-signature-256'] as string | undefined;
         const body = JSON.stringify(req.body);
 
-        if (!verifySignature(webhookConfig.secret, signature, body)) {
+        if (!verifySignature(webhookSecret, signature, body)) {
           logger.warn('GitHub webhook signature verification failed');
           res.status(401).json({
             success: false,
@@ -116,6 +119,8 @@ export function createGitHubWebhookHandler(
           });
           return;
         }
+      } else {
+        logger.warn('GitHub webhook secret not configured - requests will not be verified');
       }
 
       // Check event type
