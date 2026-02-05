@@ -1149,6 +1149,31 @@ Claude: Let me check the agent output.
          memory: 16G
    ```
 
+**Third-party MCP Docker images (ARM64 vs AMD64):**
+
+Some MCP Docker images (e.g., `saseq/discord-mcp`) are built only for ARM64 (Mac). On Linux/AMD64 you'll see:
+
+```
+WARNING: The requested image's platform (linux/arm64/v8) does not match the detected host platform (linux/amd64/v3)
+```
+
+Solution: Build locally for your platform:
+
+```bash
+# Clone the MCP repo
+git clone https://github.com/SaseQ/discord-mcp /tmp/discord-mcp
+cd /tmp/discord-mcp
+
+# Build for AMD64
+docker build --platform linux/amd64 -t discord-mcp:amd64 .
+
+# Configure Claude to use local image
+claude mcp add discord -s user -- docker run --rm -i \
+  -e "DISCORD_TOKEN=<your-token>" \
+  -e "DISCORD_GUILD_ID=<your-guild-id>" \
+  discord-mcp:amd64
+```
+
 ## Development
 
 ### Modifying the Plugin
