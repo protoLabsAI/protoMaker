@@ -92,6 +92,8 @@ import { createRalphRoutes } from './routes/ralph/index.js';
 import { RalphLoopService } from './services/ralph-loop-service.js';
 import { createSkillsRoutes } from './routes/skills/index.js';
 import { getSchedulerService } from './services/scheduler-service.js';
+import { GraphiteSyncScheduler } from './services/graphite-sync-scheduler.js';
+import { graphiteService } from './services/graphite-service.js';
 
 const PORT = parseInt(process.env.PORT || '3008', 10);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -314,6 +316,53 @@ setInterval(() => {
     logger.info(`Cleaned up ${cleaned} stale validation entries`);
   }
 }, VALIDATION_CLEANUP_INTERVAL_MS);
+
+// Initialize Graphite sync scheduler for nightly branch syncing
+const graphiteSyncScheduler = new GraphiteSyncScheduler(settingsService, graphiteService, process.cwd());
+
+// Schedule periodic Graphite sync at 2am daily (0 2 * * *)
+// This keeps all feature branches in sync with their parent branches
+const GRAPHITE_SYNC_INTERVAL_MS = 24 * 60 * 60 * 1000; // Daily
+const GRAPHITE_SYNC_INITIAL_DELAY_MS = calculateNextSyncDelay();
+
+// Run first sync after initial delay, then every 24 hours
+const graphiteSyncHandle = setTimeout(() => {
+  logger.info('Running scheduled Graphite sync (first run after startup)');
+  void graphiteSyncScheduler.runSync().catch((err) => {
+    logger.error('Scheduled Graphite sync failed:', err);
+  });
+
+  // Reschedule for every 24 hours after the first run
+  setInterval(() => {
+    logger.info('Running scheduled Graphite sync (nightly)');
+    void graphiteSyncScheduler.runSync().catch((err) => {
+      logger.error('Scheduled Graphite sync failed:', err);
+    });
+  }, GRAPHITE_SYNC_INTERVAL_MS);
+}, GRAPHITE_SYNC_INITIAL_DELAY_MS);
+
+logger.info(`Graphite sync scheduler initialized (next run in ${(GRAPHITE_SYNC_INITIAL_DELAY_MS / 1000 / 60).toFixed(1)} minutes)`);
+
+/**
+ * Calculate milliseconds until next 2am UTC
+ * This implements the cron schedule "0 2 * * *" (2am daily)
+ */
+function calculateNextSyncDelay(): number {
+  const now = new Date();
+  const next = new Date(now);
+
+  // Set to 2am UTC
+  next.setUTCHours(2, 0, 0, 0);
+
+  // If 2am has already passed today, schedule for tomorrow
+  if (next <= now) {
+    next.setUTCDate(next.getUTCDate() + 1);
+  }
+
+  const delayMs = next.getTime() - now.getTime();
+  logger.debug(`Next Graphite sync scheduled for ${next.toISOString()}`);
+  return delayMs;
+}
 
 // Require Content-Type: application/json for all API POST/PUT/PATCH requests
 // This helps prevent CSRF and content-type confusion attacks
