@@ -19,14 +19,15 @@ BACKUP_NAME="automaker-backup-${TIMESTAMP}"
 BACKUP_PATH="${BACKUP_DIR}/${BACKUP_NAME}"
 RETENTION_DAYS=30
 
-# Volumes to backup
+# Volumes to backup (use VOLUME_SUFFIX env var for prod volumes, e.g., "-prod")
+SUFFIX="${VOLUME_SUFFIX:-}"
 VOLUMES=(
-  "automaker-data"
-  "automaker-claude-config"
-  "automaker-cursor-config"
-  "automaker-opencode-data"
-  "automaker-opencode-config"
-  "automaker-opencode-cache"
+  "automaker-data${SUFFIX}"
+  "automaker-claude-config${SUFFIX}"
+  "automaker-cursor-config${SUFFIX}"
+  "automaker-opencode-data${SUFFIX}"
+  "automaker-opencode-config${SUFFIX}"
+  "automaker-opencode-cache${SUFFIX}"
 )
 
 # Colors for output
@@ -70,13 +71,11 @@ for volume in "${VOLUMES[@]}"; do
   fi
 
   # Backup using alpine container
-  docker run --rm \
+  if docker run --rm \
     -v "${volume}:/source:ro" \
     -v "${BACKUP_PATH}:/backup" \
     alpine \
-    tar czf "/backup/${volume}.tar.gz" -C /source .
-
-  if [ $? -eq 0 ]; then
+    tar czf "/backup/${volume}.tar.gz" -C /source .; then
     log "✓ Backed up ${volume}"
   else
     error "✗ Failed to backup ${volume}"
@@ -105,6 +104,6 @@ find "${BACKUP_DIR}" -maxdepth 1 -type d -name "automaker-backup-*" -mtime +${RE
 
 # List recent backups
 log "Recent backups:"
-ls -lht "${BACKUP_DIR}" | head -10
+find "${BACKUP_DIR}" -maxdepth 1 -type d -name "automaker-backup-*" -printf "%T@ %Tc %p\n" 2>/dev/null | sort -rn | head -10 | cut -d' ' -f2-
 
 exit 0

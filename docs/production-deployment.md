@@ -21,6 +21,10 @@ cd automaker
 echo "your-anthropic-api-key" | docker secret create anthropic_api_key -
 echo "your-automaker-api-key" | docker secret create automaker_api_key -
 echo "your-github-token" | docker secret create gh_token -
+openssl rand -base64 16 | docker secret create grafana_admin_password -
+# Create optional secrets (empty if not used)
+echo "" | docker secret create claude_oauth_credentials -
+echo "" | docker secret create cursor_auth_token -
 
 # 3. Deploy stack
 docker stack deploy -c docker-compose.prod.yml automaker
@@ -44,8 +48,15 @@ curl http://localhost:3008/api/health
 **Install Docker:**
 
 ```bash
-# Official Docker installation
-curl -fsSL https://get.docker.com | sh
+# Official Docker installation (recommended: review script before running)
+# Option 1: Download and inspect first (safer)
+curl -fsSL https://get.docker.com -o get-docker.sh
+less get-docker.sh  # Review the script
+sudo sh get-docker.sh
+
+# Option 2: Use official apt repository (most secure)
+# See: https://docs.docker.com/engine/install/ubuntu/
+
 sudo usermod -aG docker $USER
 
 # Enable Swarm mode (required for Docker secrets)
@@ -61,8 +72,14 @@ echo "* soft nofile 65536" | sudo tee -a /etc/security/limits.conf
 echo "* hard nofile 65536" | sudo tee -a /etc/security/limits.conf
 sudo sysctl -p
 
-# Disable swap for better performance
-sudo swapoff -a
+# Optional: Reduce swap usage (WARNING: disabling swap entirely can cause OOM kills)
+# Option 1: Reduce swappiness (recommended)
+echo "vm.swappiness = 10" | sudo tee -a /etc/sysctl.conf
+sudo sysctl -p
+
+# Option 2: Disable swap (use with caution - test workloads first, monitor memory)
+# sudo swapoff -a
+# Docker's --memory and --memory-swap flags provide better container-level control
 ```
 
 ### 2. Secret Management
@@ -79,11 +96,16 @@ openssl rand -base64 32 | docker secret create automaker_api_key -
 # GitHub token (required for git operations)
 gh auth token | docker secret create gh_token -
 
-# Optional: Claude OAuth credentials
-./scripts/get-claude-token.sh | docker secret create claude_oauth_credentials -
+# Grafana admin password (CHANGE THIS - don't use 'admin' in production!)
+openssl rand -base64 16 | docker secret create grafana_admin_password -
 
-# Optional: Cursor auth token
-./scripts/get-cursor-token.sh | docker secret create cursor_auth_token -
+# Optional: Claude OAuth credentials (create empty if not used)
+./scripts/get-claude-token.sh | docker secret create claude_oauth_credentials - || \
+  echo "" | docker secret create claude_oauth_credentials -
+
+# Optional: Cursor auth token (create empty if not used)
+./scripts/get-cursor-token.sh | docker secret create cursor_auth_token - || \
+  echo "" | docker secret create cursor_auth_token -
 ```
 
 **Verify secrets:**
@@ -202,7 +224,14 @@ Access: http://localhost:9091
 ### Grafana
 
 Access: http://localhost:3000
-Default credentials: admin/admin
+
+> **⚠️ SECURITY WARNING:** The default Grafana password is set via Docker secret.
+> You MUST change it immediately after first login:
+>
+> 1. Log in with the password from your `grafana_admin_password` secret
+> 2. Go to Administration → Users → admin → Change password
+> 3. Use a strong, unique password
+> 4. Consider restricting network access to Grafana (firewall rules, VPN)
 
 **Import Dashboards:**
 
@@ -499,8 +528,11 @@ docker stats
 # 2. Destroy volumes
 docker volume rm automaker-data
 
-# 3. Restore
-./scripts/restore-volumes.sh /test/backup/automaker-backup-*
+# 3. Restore (use exact path - don't use wildcards)
+# List available backups:
+ls -d /test/backup/automaker-backup-* | tail -1
+# Then restore with the specific path:
+./scripts/restore-volumes.sh /test/backup/automaker-backup-20260205_020000
 
 # 4. Verify
 docker stack deploy -c docker-compose.prod.yml automaker

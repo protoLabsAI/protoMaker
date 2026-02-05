@@ -60,14 +60,24 @@ log "Backup metadata:"
 cat "${BACKUP_PATH}/metadata.json"
 
 # Confirm with user
-read -p "This will OVERWRITE existing volumes. Continue? (yes/no): " confirm
+read -r -p "This will OVERWRITE existing volumes. Continue? (yes/no): " confirm
 if [ "${confirm}" != "yes" ]; then
   log "Restore cancelled"
   exit 0
 fi
 
-# Find all backup archives
-for backup_file in "${BACKUP_PATH}"/*.tar.gz; do
+# Check if any backup files exist
+shopt -s nullglob
+backup_files=("${BACKUP_PATH}"/*.tar.gz)
+shopt -u nullglob
+
+if [ ${#backup_files[@]} -eq 0 ]; then
+  error "No backup files found in ${BACKUP_PATH}"
+  exit 1
+fi
+
+# Restore each backup archive
+for backup_file in "${backup_files[@]}"; do
   volume_name=$(basename "${backup_file}" .tar.gz)
 
   log "Restoring volume: ${volume_name}"
@@ -81,13 +91,11 @@ for backup_file in "${BACKUP_PATH}"/*.tar.gz; do
   fi
 
   # Restore using alpine container
-  docker run --rm \
+  if docker run --rm \
     -v "${volume_name}:/target" \
     -v "${BACKUP_PATH}:/backup:ro" \
     alpine \
-    sh -c "rm -rf /target/* /target/.[!.]* ; tar xzf /backup/${volume_name}.tar.gz -C /target"
-
-  if [ $? -eq 0 ]; then
+    sh -c "rm -rf /target/* /target/.[!.]* ; tar xzf /backup/${volume_name}.tar.gz -C /target"; then
     log "✓ Restored ${volume_name}"
   else
     error "✗ Failed to restore ${volume_name}"

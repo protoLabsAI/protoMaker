@@ -170,7 +170,7 @@ services:
 
   # Prometheus for metrics collection
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:v3.2.1
     restart: unless-stopped
     ports:
       - '9091:9090'
@@ -191,18 +191,26 @@ services:
         reservations:
           cpus: '0.25'
           memory: 512M
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
     labels:
       - 'com.automaker.service=prometheus'
       - 'com.automaker.environment=production'
 
   # Grafana for metrics visualization
+  # WARNING: Change the default admin password immediately after deployment!
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:11.5.2
     restart: unless-stopped
     ports:
       - '3000:3000'
+    secrets:
+      - grafana_admin_password
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+      # Read password from Docker secret - CHANGE THIS after first login!
+      - GF_SECURITY_ADMIN_PASSWORD__FILE=/run/secrets/grafana_admin_password
       - GF_USERS_ALLOW_SIGN_UP=false
     volumes:
       - grafana-data:/var/lib/grafana
@@ -217,11 +225,28 @@ services:
         reservations:
           cpus: '0.25'
           memory: 256M
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETUID
+      - SETGID
+    security_opt:
+      - no-new-privileges:true
     labels:
       - 'com.automaker.service=grafana'
       - 'com.automaker.environment=production'
 
 # Docker secrets (swarm mode)
+# Create secrets before deploying:
+#   echo "your-api-key" | docker secret create anthropic_api_key -
+#   echo "your-automaker-key" | docker secret create automaker_api_key -
+#   echo "your-gh-token" | docker secret create gh_token -
+#   echo "changeme" | docker secret create grafana_admin_password -
+#
+# Optional secrets (create empty if not used):
+#   echo "" | docker secret create claude_oauth_credentials -
+#   echo "" | docker secret create cursor_auth_token -
 secrets:
   anthropic_api_key:
     external: true
@@ -229,21 +254,26 @@ secrets:
     external: true
   gh_token:
     external: true
+  grafana_admin_password:
+    external: true
   claude_oauth_credentials:
     external: true
-    required: false
   cursor_auth_token:
     external: true
-    required: false
 
 volumes:
+  # Standard Docker-managed named volumes
+  # For bind mounts, create docker-compose.override.yml with:
+  #   volumes:
+  #     automaker-data:
+  #       driver: local
+  #       driver_opts:
+  #         type: none
+  #         o: bind
+  #         device: /var/lib/automaker/data
+  # And ensure the host directory exists: sudo mkdir -p /var/lib/automaker/data && sudo chown 1001:1001 /var/lib/automaker/data
   automaker-data:
     name: automaker-data-prod
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: /var/lib/automaker/data # Adjust for your backup strategy
 
   automaker-claude-config:
     name: automaker-claude-config-prod
