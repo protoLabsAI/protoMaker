@@ -21,6 +21,7 @@ import { createGetCredentialsHandler } from './routes/get-credentials.js';
 import { createUpdateCredentialsHandler } from './routes/update-credentials.js';
 import { createGetProjectHandler } from './routes/get-project.js';
 import { createUpdateProjectHandler } from './routes/update-project.js';
+import { createUpdateDiscordChannelsHandler } from './routes/update-discord-channels.js';
 import { createMigrateHandler } from './routes/migrate.js';
 import { createStatusHandler } from './routes/status.js';
 import { createDiscoverAgentsHandler } from './routes/discover-agents.js';
@@ -39,6 +40,7 @@ import { createDiscoverAgentsHandler } from './routes/discover-agents.js';
  * - PUT /credentials - Update API keys
  * - POST /project - Get project settings (requires projectPath in body)
  * - PUT /project - Update project settings
+ * - PUT /project/discord-channels - Update Discord channel mappings
  * - POST /migrate - Migrate settings from localStorage
  * - POST /agents/discover - Discover filesystem agents from .claude/agents/ (read-only)
  *
@@ -69,6 +71,13 @@ export function createSettingsRoutes(settingsService: SettingsService): Router {
     '/project',
     validatePathParams('projectPath'),
     createUpdateProjectHandler(settingsService)
+  );
+
+  // Discord channel mappings
+  router.put(
+    '/project/discord-channels',
+    validatePathParams('projectPath'),
+    createUpdateDiscordChannelsHandler(settingsService)
   );
 
   // Migration from localStorage

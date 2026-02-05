@@ -1287,6 +1287,29 @@ export interface WorktreeInfo {
 }
 
 /**
+ * DiscordChannelMappings - Discord channel IDs for project lifecycle events
+ *
+ * Maps project lifecycle events to Discord channel IDs for notifications.
+ * Channel IDs are Discord snowflake IDs (e.g., "1234567890123456789").
+ */
+export interface DiscordChannelMappings {
+  /** Channel ID for feature creation notifications */
+  featureCreated?: string;
+  /** Channel ID for feature completion notifications */
+  featureCompleted?: string;
+  /** Channel ID for feature error notifications */
+  featureError?: string;
+  /** Channel ID for PR creation notifications */
+  prCreated?: string;
+  /** Channel ID for PR merge notifications */
+  prMerged?: string;
+  /** Channel ID for auto-mode status updates */
+  autoModeStatus?: string;
+  /** Channel ID for general project updates */
+  general?: string;
+}
+
+/**
  * ProjectSettings - Project-specific overrides stored in {projectPath}/.automaker/settings.json
  *
  * Allows per-project customization without affecting global settings.
@@ -1372,6 +1395,13 @@ export interface ProjectSettings {
    * @see WebhookSettings in webhook.ts
    */
   webhookSettings?: import('./webhook.js').WebhookSettings;
+
+  // Discord Integration (per-project)
+  /**
+   * Discord channel mappings for project lifecycle notifications.
+   * Maps lifecycle events to specific Discord channels for notifications.
+   */
+  discordChannelMappings?: DiscordChannelMappings;
 
   // Deprecated Claude API Profile Override
   /**

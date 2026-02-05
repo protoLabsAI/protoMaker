@@ -771,6 +771,10 @@ export class SettingsService {
     return {
       ...DEFAULT_PROJECT_SETTINGS,
       ...settings,
+      // Preserve Discord channel mappings from loaded settings
+      discordChannelMappings: settings.discordChannelMappings
+        ? { ...settings.discordChannelMappings }
+        : undefined,
     };
   }
 
@@ -803,6 +807,15 @@ export class SettingsService {
       updated.boardBackground = {
         ...current.boardBackground,
         ...updates.boardBackground,
+      };
+    }
+
+    // Deep merge Discord channel mappings if provided
+    // This ensures partial updates don't overwrite existing channel mappings
+    if (updates.discordChannelMappings) {
+      updated.discordChannelMappings = {
+        ...current.discordChannelMappings,
+        ...updates.discordChannelMappings,
       };
     }
 
