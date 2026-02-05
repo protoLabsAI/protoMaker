@@ -448,15 +448,25 @@ export const CLAUDE_API_PROFILE_TEMPLATES: ClaudeApiProfileTemplate[] = [
  * - feature_created: A new feature was created
  * - feature_success: Feature completed successfully
  * - feature_error: Feature failed with an error
+ * - feature_retry: Feature is being retried after a failure
+ * - feature_recovery: A recovery action was taken for a feature
  * - auto_mode_complete: Auto mode finished processing all features
  * - auto_mode_error: Auto mode encountered a critical error and paused
+ * - auto_mode_health_check: Periodic health status check
+ * - skill_created: An agent created a new reusable skill
+ * - memory_learning: A new learning was recorded from agent execution
  */
 export type EventHookTrigger =
   | 'feature_created'
   | 'feature_success'
   | 'feature_error'
+  | 'feature_retry'
+  | 'feature_recovery'
   | 'auto_mode_complete'
-  | 'auto_mode_error';
+  | 'auto_mode_error'
+  | 'auto_mode_health_check'
+  | 'skill_created'
+  | 'memory_learning';
 
 // ============================================================================
 // Git Workflow Settings - Auto commit/push/PR after feature completion
@@ -611,8 +621,13 @@ export const EVENT_HOOK_TRIGGER_LABELS: Record<EventHookTrigger, string> = {
   feature_created: 'Feature created',
   feature_success: 'Feature completed successfully',
   feature_error: 'Feature failed with error',
+  feature_retry: 'Feature retry initiated',
+  feature_recovery: 'Feature recovery action taken',
   auto_mode_complete: 'Auto mode completed all features',
   auto_mode_error: 'Auto mode paused due to error',
+  auto_mode_health_check: 'Auto mode health check',
+  skill_created: 'New skill created by agent',
+  memory_learning: 'New learning recorded',
 };
 
 const DEFAULT_CODEX_AUTO_LOAD_AGENTS = false;

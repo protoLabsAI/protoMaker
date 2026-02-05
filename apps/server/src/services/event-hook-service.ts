@@ -11,8 +11,13 @@
  * - feature_created: A new feature was created
  * - feature_success: Feature completed successfully
  * - feature_error: Feature failed with an error
+ * - feature_retry: Feature is being retried after a failure
+ * - feature_recovery: A recovery action was taken for a feature
  * - auto_mode_complete: Auto mode finished all features (idle state)
  * - auto_mode_error: Auto mode encountered a critical error
+ * - auto_mode_health_check: Periodic health status check
+ * - skill_created: An agent created a new reusable skill
+ * - memory_learning: A new learning was recorded from agent execution
  */
 
 import { exec } from 'child_process';
@@ -50,6 +55,18 @@ interface HookContext {
   errorType?: string;
   timestamp: string;
   eventType: EventHookTrigger;
+  // Retry/Recovery specific fields
+  retryCount?: number;
+  recoveryStrategy?: string;
+  // Skill specific fields
+  skillName?: string;
+  skillPath?: string;
+  // Memory/Learning specific fields
+  learningContent?: string;
+  memoryFilePath?: string;
+  // Health check specific fields
+  healthStatus?: string;
+  healthDetails?: string;
 }
 
 /**
@@ -73,6 +90,59 @@ interface FeatureCreatedPayload {
   featureId: string;
   featureName?: string;
   projectPath: string;
+}
+
+/**
+ * Feature retry event payload structure
+ */
+export interface FeatureRetryPayload {
+  featureId: string;
+  featureName?: string;
+  projectPath: string;
+  retryCount: number;
+  error?: string;
+  errorType?: string;
+}
+
+/**
+ * Feature recovery event payload structure
+ */
+export interface FeatureRecoveryPayload {
+  featureId: string;
+  featureName?: string;
+  projectPath: string;
+  recoveryStrategy: string;
+  error?: string;
+  errorType?: string;
+}
+
+/**
+ * Skill created event payload structure
+ */
+export interface SkillCreatedPayload {
+  skillName: string;
+  skillPath: string;
+  projectPath: string;
+}
+
+/**
+ * Memory learning event payload structure
+ */
+export interface MemoryLearningPayload {
+  featureId?: string;
+  featureName?: string;
+  projectPath: string;
+  learningContent: string;
+  memoryFilePath: string;
+}
+
+/**
+ * Health check event payload structure
+ */
+export interface HealthCheckPayload {
+  projectPath: string;
+  status: 'healthy' | 'degraded' | 'critical';
+  details?: string;
 }
 
 /**
@@ -108,6 +178,16 @@ export class EventHookService {
         this.handleAutoModeEvent(payload as AutoModeEventPayload);
       } else if (type === 'feature:created') {
         this.handleFeatureCreatedEvent(payload as FeatureCreatedPayload);
+      } else if (type === 'feature:retry') {
+        this.handleFeatureRetryEvent(payload as FeatureRetryPayload);
+      } else if (type === 'feature:recovery') {
+        this.handleFeatureRecoveryEvent(payload as FeatureRecoveryPayload);
+      } else if (type === 'skill:created') {
+        this.handleSkillCreatedEvent(payload as SkillCreatedPayload);
+      } else if (type === 'memory:learning') {
+        this.handleMemoryLearningEvent(payload as MemoryLearningPayload);
+      } else if (type === 'auto-mode:health-check') {
+        this.handleHealthCheckEvent(payload as HealthCheckPayload);
       }
     });
 
@@ -198,6 +278,94 @@ export class EventHookService {
     };
 
     await this.executeHooksForTrigger('feature_created', context);
+  }
+
+  /**
+   * Handle feature:retry events and trigger matching hooks
+   */
+  private async handleFeatureRetryEvent(payload: FeatureRetryPayload): Promise<void> {
+    const context: HookContext = {
+      featureId: payload.featureId,
+      featureName: payload.featureName,
+      projectPath: payload.projectPath,
+      projectName: this.extractProjectName(payload.projectPath),
+      error: payload.error,
+      errorType: payload.errorType,
+      retryCount: payload.retryCount,
+      timestamp: new Date().toISOString(),
+      eventType: 'feature_retry',
+    };
+
+    await this.executeHooksForTrigger('feature_retry', context);
+  }
+
+  /**
+   * Handle feature:recovery events and trigger matching hooks
+   */
+  private async handleFeatureRecoveryEvent(payload: FeatureRecoveryPayload): Promise<void> {
+    const context: HookContext = {
+      featureId: payload.featureId,
+      featureName: payload.featureName,
+      projectPath: payload.projectPath,
+      projectName: this.extractProjectName(payload.projectPath),
+      error: payload.error,
+      errorType: payload.errorType,
+      recoveryStrategy: payload.recoveryStrategy,
+      timestamp: new Date().toISOString(),
+      eventType: 'feature_recovery',
+    };
+
+    await this.executeHooksForTrigger('feature_recovery', context);
+  }
+
+  /**
+   * Handle skill:created events and trigger matching hooks
+   */
+  private async handleSkillCreatedEvent(payload: SkillCreatedPayload): Promise<void> {
+    const context: HookContext = {
+      projectPath: payload.projectPath,
+      projectName: this.extractProjectName(payload.projectPath),
+      skillName: payload.skillName,
+      skillPath: payload.skillPath,
+      timestamp: new Date().toISOString(),
+      eventType: 'skill_created',
+    };
+
+    await this.executeHooksForTrigger('skill_created', context);
+  }
+
+  /**
+   * Handle memory:learning events and trigger matching hooks
+   */
+  private async handleMemoryLearningEvent(payload: MemoryLearningPayload): Promise<void> {
+    const context: HookContext = {
+      featureId: payload.featureId,
+      featureName: payload.featureName,
+      projectPath: payload.projectPath,
+      projectName: this.extractProjectName(payload.projectPath),
+      learningContent: payload.learningContent,
+      memoryFilePath: payload.memoryFilePath,
+      timestamp: new Date().toISOString(),
+      eventType: 'memory_learning',
+    };
+
+    await this.executeHooksForTrigger('memory_learning', context);
+  }
+
+  /**
+   * Handle auto-mode:health-check events and trigger matching hooks
+   */
+  private async handleHealthCheckEvent(payload: HealthCheckPayload): Promise<void> {
+    const context: HookContext = {
+      projectPath: payload.projectPath,
+      projectName: this.extractProjectName(payload.projectPath),
+      healthStatus: payload.status,
+      healthDetails: payload.details,
+      timestamp: new Date().toISOString(),
+      eventType: 'auto_mode_health_check',
+    };
+
+    await this.executeHooksForTrigger('auto_mode_health_check', context);
   }
 
   /**
@@ -387,6 +555,55 @@ export class EventHookService {
   private extractProjectName(projectPath: string): string {
     const parts = projectPath.split(/[/\\]/);
     return parts[parts.length - 1] || projectPath;
+  }
+
+  // ============================================================================
+  // Public methods to emit new events programmatically
+  // ============================================================================
+
+  /**
+   * Emit a feature retry event
+   */
+  emitFeatureRetry(payload: FeatureRetryPayload): void {
+    if (this.emitter) {
+      this.emitter.emit('feature:retry', payload);
+    }
+  }
+
+  /**
+   * Emit a feature recovery event
+   */
+  emitFeatureRecovery(payload: FeatureRecoveryPayload): void {
+    if (this.emitter) {
+      this.emitter.emit('feature:recovery', payload);
+    }
+  }
+
+  /**
+   * Emit a skill created event
+   */
+  emitSkillCreated(payload: SkillCreatedPayload): void {
+    if (this.emitter) {
+      this.emitter.emit('skill:created', payload);
+    }
+  }
+
+  /**
+   * Emit a memory learning event
+   */
+  emitMemoryLearning(payload: MemoryLearningPayload): void {
+    if (this.emitter) {
+      this.emitter.emit('memory:learning', payload);
+    }
+  }
+
+  /**
+   * Emit an auto-mode health check event
+   */
+  emitHealthCheck(payload: HealthCheckPayload): void {
+    if (this.emitter) {
+      this.emitter.emit('auto-mode:health-check', payload);
+    }
   }
 }
 
