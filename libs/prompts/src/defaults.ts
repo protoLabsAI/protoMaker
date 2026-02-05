@@ -1021,6 +1021,29 @@ The following is the output from a previous implementation attempt. Continue fro
 ## Instructions
 Review the previous work and continue the implementation. If the feature appears complete, verify it works correctly.`;
 
+export const DEFAULT_PR_FEEDBACK_TEMPLATE = `## Addressing Pull Request Feedback
+
+{{featurePrompt}}
+
+## Previous Implementation
+The following is the output from the previous implementation:
+
+{{previousContext}}
+
+## Pull Request Feedback
+The pull request has received the following feedback that needs to be addressed:
+
+{{prFeedback}}
+
+## Instructions
+1. Review the PR feedback carefully
+2. Address each piece of feedback systematically
+3. Make the necessary code changes to resolve all concerns
+4. Ensure the implementation still meets the original feature requirements
+5. Verify that all changes work correctly
+
+Focus on addressing the feedback while maintaining code quality and consistency with the existing codebase.`;
+
 export const DEFAULT_PROJECT_ANALYSIS_PROMPT = `Analyze this project and provide a summary of:
 1. Project structure and architecture
 2. Main technologies and frameworks used
@@ -1043,6 +1066,7 @@ export const DEFAULT_TASK_EXECUTION_PROMPTS: ResolvedTaskExecutionPrompts = {
   continuationAfterApprovalTemplate: DEFAULT_CONTINUATION_AFTER_APPROVAL_TEMPLATE,
   resumeFeatureTemplate: DEFAULT_RESUME_FEATURE_TEMPLATE,
   projectAnalysisPrompt: DEFAULT_PROJECT_ANALYSIS_PROMPT,
+  prFeedbackTemplate: DEFAULT_PR_FEEDBACK_TEMPLATE,
 };
 
 /**
