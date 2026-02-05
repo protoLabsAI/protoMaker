@@ -669,3 +669,19 @@ export async function ensureRalphDir(projectPath: string, featureId: string): Pr
   await secureFs.mkdir(ralphDir, { recursive: true });
   return ralphDir;
 }
+
+// ============================================================================
+// Scheduler Paths (persistent task metadata and execution history)
+// ============================================================================
+
+/**
+ * Get the scheduled tasks file path
+ *
+ * Stores task metadata including lastRun, nextRun, executionCount, failureCount.
+ *
+ * @param dataDir - User data directory (from app.getPath('userData'))
+ * @returns Absolute path to {dataDir}/scheduled-tasks.json
+ */
+export function getScheduledTasksPath(dataDir: string): string {
+  return path.join(dataDir, 'scheduled-tasks.json');
+}

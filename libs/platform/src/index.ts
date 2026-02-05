@@ -46,6 +46,8 @@ export {
   getRalphStatePath,
   getRalphProgressPath,
   ensureRalphDir,
+  // Scheduler paths
+  getScheduledTasksPath,
 } from './paths.js';
 
 // Project orchestration paths (from paths.js - unique exports)

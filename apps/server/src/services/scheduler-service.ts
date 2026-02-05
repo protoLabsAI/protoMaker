@@ -21,8 +21,8 @@
  * - /: step values (*\/15 = every 15)
  */
 
-import { createLogger } from '@automaker/utils';
-import { secureFs } from '@automaker/platform';
+import { createLogger, atomicWriteJson, DEFAULT_BACKUP_COUNT } from '@automaker/utils';
+import { secureFs, getScheduledTasksPath, ensureDataDir } from '@automaker/platform';
 import path from 'path';
 import type { EventEmitter } from '../lib/events.js';
 
@@ -344,6 +344,96 @@ export class SchedulerService {
     this.events = events;
     this.dataDir = dataDir;
     logger.info('Scheduler service initialized');
+
+    // Load persisted tasks on initialization
+    void this.loadTasks();
+  }
+
+  /**
+   * Load task metadata from disk
+   */
+  private async loadTasks(): Promise<void> {
+    if (!this.dataDir) {
+      logger.warn('Cannot load tasks: dataDir not initialized');
+      return;
+    }
+
+    try {
+      const tasksPath = getScheduledTasksPath(this.dataDir);
+      const fs = await import('fs/promises');
+
+      // Check if file exists
+      try {
+        await fs.access(tasksPath);
+      } catch {
+        // File doesn't exist yet, this is normal on first run
+        logger.debug('No persisted tasks file found, starting fresh');
+        return;
+      }
+
+      const content = await fs.readFile(tasksPath, 'utf-8');
+      const persistedTasks = JSON.parse(content) as Array<{
+        id: string;
+        name: string;
+        cronExpression: string;
+        enabled: boolean;
+        lastRun?: string;
+        nextRun?: string;
+        lastError?: string;
+        failureCount: number;
+        executionCount: number;
+      }>;
+
+      // Update task metadata for registered tasks
+      for (const persisted of persistedTasks) {
+        const task = this.tasks.get(persisted.id);
+        if (task) {
+          task.lastRun = persisted.lastRun;
+          task.nextRun = persisted.nextRun;
+          task.lastError = persisted.lastError;
+          task.failureCount = persisted.failureCount;
+          task.executionCount = persisted.executionCount;
+          task.enabled = persisted.enabled;
+        }
+      }
+
+      logger.info(`Loaded metadata for ${persistedTasks.length} tasks from disk`);
+    } catch (error) {
+      logger.error('Error loading tasks from disk:', error);
+    }
+  }
+
+  /**
+   * Save task metadata to disk
+   */
+  private async saveTasks(): Promise<void> {
+    if (!this.dataDir) {
+      logger.warn('Cannot save tasks: dataDir not initialized');
+      return;
+    }
+
+    try {
+      await ensureDataDir(this.dataDir);
+      const tasksPath = getScheduledTasksPath(this.dataDir);
+
+      // Extract only the persistable data (no handler functions)
+      const persistableTasks = Array.from(this.tasks.values()).map((task) => ({
+        id: task.id,
+        name: task.name,
+        cronExpression: task.cronExpression,
+        enabled: task.enabled,
+        lastRun: task.lastRun,
+        nextRun: task.nextRun,
+        lastError: task.lastError,
+        failureCount: task.failureCount,
+        executionCount: task.executionCount,
+      }));
+
+      await atomicWriteJson(tasksPath, persistableTasks, { backupCount: DEFAULT_BACKUP_COUNT, createDirs: true });
+      logger.debug(`Saved ${persistableTasks.length} tasks to disk`);
+    } catch (error) {
+      logger.error('Error saving tasks to disk:', error);
+    }
   }
 
   /**
@@ -558,7 +648,11 @@ export class SchedulerService {
 
     this.emitEvent('scheduler:task_enabled', { taskId: id, name: task.name, nextRun: task.nextRun });
 
+<<<<<<< HEAD
     // Save tasks after enabling
+=======
+    // Save updated task metadata to disk
+>>>>>>> 623371f1 (feat: Update task execution tracking)
     await this.saveTasks();
 
     return true;
@@ -579,7 +673,11 @@ export class SchedulerService {
 
     this.emitEvent('scheduler:task_disabled', { taskId: id, name: task.name });
 
+<<<<<<< HEAD
     // Save tasks after disabling
+=======
+    // Save updated task metadata to disk
+>>>>>>> 623371f1 (feat: Update task execution tracking)
     await this.saveTasks();
 
     return true;
@@ -749,7 +847,11 @@ export class SchedulerService {
       nextRun: task.nextRun,
     });
 
+<<<<<<< HEAD
     // Save tasks after execution to persist updated counts and timestamps
+=======
+    // Save updated task metadata to disk
+>>>>>>> 623371f1 (feat: Update task execution tracking)
     await this.saveTasks();
 
     return result;
