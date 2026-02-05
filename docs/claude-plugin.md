@@ -55,13 +55,16 @@ That's it! You now have access to 32 MCP tools and slash commands for managing y
 
 ### What You Can Do
 
-| Command            | Description                         |
-| ------------------ | ----------------------------------- |
-| `/board`           | View and manage your Kanban board   |
-| `/auto-mode start` | Start autonomous feature processing |
-| `/orchestrate`     | Manage feature dependencies         |
-| `/context`         | Manage AI agent context files       |
-| `/create-project`  | Full project orchestration pipeline |
+| Command            | Description                           |
+| ------------------ | ------------------------------------- |
+| `/board`           | View and manage your Kanban board     |
+| `/auto-mode start` | Start autonomous feature processing   |
+| `/orchestrate`     | Manage feature dependencies           |
+| `/context`         | Manage AI agent context files         |
+| `/groom`           | Review and organize the board         |
+| `/pr-review`       | Review and manage open pull requests  |
+| `/create-project`  | Full project orchestration pipeline   |
+| `/cleanup`         | Codebase maintenance and hygiene      |
 
 ---
 
@@ -351,6 +354,182 @@ Creating coding-standards.md...
 - Use explicit return types on all functions
 - Prefer interfaces over type aliases for objects
 - Use const assertions for literals
+```
+
+### /groom
+
+Review and organize your Kanban board for health and maintenance.
+
+```bash
+/groom                    # Run full board grooming
+/groom quick              # Quick status check
+```
+
+**What It Does:**
+
+- Shows board summary (backlog, in-progress, review, done counts)
+- Identifies stale features (no activity > 24 hours)
+- Checks for blocked features with unmet dependencies
+- Suggests next actions based on board state
+- Provides cleanup recommendations
+
+**Example Output:**
+
+```
+## 🧹 Board Grooming Report
+
+### 📊 Board Status
+- Backlog: 15 features
+- In Progress: 2 features
+- Review: 0 features
+- Done: 48 features
+
+### ⏱️ Stale Features
+No stale features found!
+
+### 🚫 Blockers
+- [feature-xyz] blocked by [feature-abc]
+
+### 💡 Recommended Actions
+1. Start agents on 3 ready features in backlog
+2. Review and merge completed features
+```
+
+### /pr-review
+
+Systematically review and organize open pull requests.
+
+```bash
+/pr-review                # Review all open PRs
+/pr-review [pr-number]    # Review specific PR
+```
+
+**What It Does:**
+
+- Lists all open PRs with status (CodeRabbit checks, CI, conflicts)
+- Checks PR alignment (features→epics, epics→main)
+- Identifies merge conflicts
+- Suggests merge order based on dependencies
+- Finds branches with work but no PR
+
+**Example Output:**
+
+```
+## Pull Request Review
+
+### ✅ Ready to Merge (3)
+- #123: Add user authentication (all checks passed)
+- #124: Update database schema (approved, no conflicts)
+
+### ⏳ Waiting on Review (2)
+- #125: Add dashboard UI (CodeRabbit reviewing)
+
+### ⚠️ Needs Attention (1)
+- #126: Refactor API (merge conflicts with main)
+
+### 💡 Recommended Merge Order
+1. Merge #123 (blocks #127, #128)
+2. Merge #124 (independent)
+3. Resolve #126 conflicts
+```
+
+### /create-project
+
+Full project orchestration pipeline from research to implementation.
+
+```bash
+/create-project           # Start project planning wizard
+/create-project [idea]    # Quick start with an idea
+```
+
+**Workflow:**
+
+1. **Deep Research** - Analyzes codebase, identifies patterns
+2. **SPARC PRD** - Creates structured requirements document
+3. **Review** - User approves PRD
+4. **Scaffold** - Creates project directory structure
+5. **Create Features** - Generates Kanban board features with dependencies
+
+**Example:**
+
+```
+/create-project "Add real-time collaboration features"
+
+## Phase 1: Deep Research
+📊 Analyzing codebase...
+✅ Found WebSocket infrastructure in place
+✅ Identified state management patterns (Zustand)
+⚠️ No existing real-time sync mechanism
+
+## Phase 2: SPARC PRD
+Creating requirements document...
+- Situation: Users want real-time collaboration
+- Problem: No sync mechanism for multi-user edits
+- Approach: WebSocket-based operational transforms
+...
+
+[User reviews and approves PRD]
+
+## Phase 3: Scaffolding
+Creating project structure in .automaker/projects/real-time-collab/
+
+## Phase 4: Feature Creation
+Created 12 features with dependencies:
+- [Epic] Real-time Sync Infrastructure
+- WebSocket event types
+- Operational transform service
+...
+
+Ready to start auto-mode!
+```
+
+### /cleanup
+
+Comprehensive codebase maintenance and hygiene check.
+
+```bash
+/cleanup                  # Full cleanup report
+/cleanup docs             # Documentation only
+/cleanup git              # Git hygiene only
+```
+
+**What It Checks:**
+
+- **Documentation**: status.md, CLAUDE.md, README.md currency
+- **Git Hygiene**: Merged branches, stale worktrees, orphaned branches
+- **Dependencies**: npm audit, outdated packages
+- **Code Quality**: TODO comments, console.logs, unused imports
+- **Test Coverage**: Missing tests, commented tests
+
+**Example Output:**
+
+```
+## 🧹 Codebase Cleanup Report
+
+### 📝 Documentation Status
+✅ status.md - Updated
+⚠️ CLAUDE.md - Needs minor updates
+✅ README.md - Current
+
+### 🌳 Git Hygiene
+- Found 23 merged branches (cleanup recommended)
+- No stale worktrees
+- 12 remote branches with no PRs
+
+### 📦 Dependencies
+- npm audit: 12 vulnerabilities (address recommended)
+- 5 outdated packages
+
+### 🎯 Quick Cleanup Commands
+```bash
+# Delete merged branches
+git branch --merged main | xargs git branch -d
+
+# Fix vulnerabilities
+npm audit fix
+```
+
+**Cleanup Scorecard:** 8/10 - Healthy codebase
 ```
 
 ## Subagents
