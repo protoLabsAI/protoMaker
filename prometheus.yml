@@ -1,0 +1,43 @@
+# Prometheus Configuration for Automaker
+# Scrapes metrics from Automaker server and system
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    environment: 'production'
+    service: 'automaker'
+
+# Alertmanager configuration (optional)
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets:
+#             - alertmanager:9093
+
+# Load alerting rules (create alerting-rules.yml separately)
+rule_files:
+  # - "alerting-rules.yml"
+
+scrape_configs:
+  # Automaker Server Metrics
+  - job_name: 'automaker-server'
+    static_configs:
+      - targets: ['server:9090']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Docker container metrics (requires cAdvisor)
+  # - job_name: 'docker'
+  #   static_configs:
+  #     - targets: ['cadvisor:8080']
+
+  # Node exporter (host system metrics)
+  # - job_name: 'node'
+  #   static_configs:
+  #     - targets: ['node-exporter:9100']

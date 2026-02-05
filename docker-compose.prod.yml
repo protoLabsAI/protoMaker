@@ -1,0 +1,267 @@
+# Automaker Production Docker Compose
+# Production-hardened configuration with:
+# - Docker secrets for sensitive data
+# - Resource limits and reservations
+# - Enhanced health checks
+# - Logging configuration
+# - Restart policies optimized for production
+#
+# Usage:
+#   # Create secrets first:
+#   echo "your-api-key" | docker secret create anthropic_api_key -
+#   echo "your-automaker-key" | docker secret create automaker_api_key -
+#   echo "your-gh-token" | docker secret create gh_token -
+#
+#   # Deploy stack:
+#   docker stack deploy -c docker-compose.prod.yml automaker
+#
+# Or with docker-compose (swarm mode required for secrets):
+#   docker-compose -f docker-compose.prod.yml up -d
+
+services:
+  # Frontend UI
+  ui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: ui
+    restart: on-failure
+    ports:
+      - '3007:80'
+    depends_on:
+      server:
+        condition: service_healthy
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:80/']
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
+        max-file: '3'
+        labels: 'service,environment'
+    labels:
+      - 'com.automaker.service=ui'
+      - 'com.automaker.environment=production'
+
+  # Backend API Server
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: server
+      args:
+        UID: ${UID:-1001}
+        GID: ${GID:-1001}
+    restart: on-failure
+    ports:
+      - '3008:3008'
+    secrets:
+      - anthropic_api_key
+      - automaker_api_key
+      - gh_token
+      - claude_oauth_credentials
+      - cursor_auth_token
+    environment:
+      # Read secrets from Docker secrets (mounted at /run/secrets/)
+      - ANTHROPIC_API_KEY_FILE=/run/secrets/anthropic_api_key
+      - AUTOMAKER_API_KEY_FILE=/run/secrets/automaker_api_key
+      - GH_TOKEN_FILE=/run/secrets/gh_token
+      - CLAUDE_OAUTH_CREDENTIALS_FILE=/run/secrets/claude_oauth_credentials
+      - CURSOR_AUTH_TOKEN_FILE=/run/secrets/cursor_auth_token
+
+      # Production configuration
+      - NODE_ENV=production
+      - LOG_FORMAT=json
+      - LOG_LEVEL=info
+      - ENABLE_REQUEST_LOGGING=true
+
+      # Security
+      - ALLOWED_ROOT_DIRECTORY=/projects
+      - IS_CONTAINERIZED=true
+      - AUTOMAKER_SKIP_SANDBOX_WARNING=false
+
+      # Data persistence
+      - DATA_DIR=/data
+
+      # Network
+      - HOST=0.0.0.0
+      - PORT=3008
+      - CORS_ORIGIN=http://localhost:3007
+
+      # Monitoring
+      - ENABLE_METRICS=true
+      - METRICS_PORT=9090
+    volumes:
+      # Production volumes - named volumes only
+      - automaker-data:/data
+      - automaker-claude-config:/home/automaker/.claude
+      - automaker-cursor-config:/home/automaker/.cursor
+      - automaker-opencode-data:/home/automaker/.local/share/opencode
+      - automaker-opencode-config:/home/automaker/.config/opencode
+      - automaker-opencode-cache:/home/automaker/.cache/opencode
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '2'
+          memory: 8G
+          pids: 512
+        reservations:
+          cpus: '1'
+          memory: 4G
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 5
+        window: 180s
+      update_config:
+        parallelism: 1
+        delay: 30s
+        failure_action: rollback
+        monitor: 60s
+        order: start-first
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:3008/api/health']
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '100m'
+        max-file: '10'
+        labels: 'service,environment'
+        compress: 'true'
+    labels:
+      - 'com.automaker.service=server'
+      - 'com.automaker.environment=production'
+    # Security hardening
+    read_only: false # Can't be true due to npm cache, logs, etc.
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETUID
+      - SETGID
+      - DAC_OVERRIDE
+    security_opt:
+      - no-new-privileges:true
+
+  # Prometheus for metrics collection
+  prometheus:
+    image: prom/prometheus:latest
+    restart: unless-stopped
+    ports:
+      - '9091:9090'
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 512M
+    labels:
+      - 'com.automaker.service=prometheus'
+      - 'com.automaker.environment=production'
+
+  # Grafana for metrics visualization
+  grafana:
+    image: grafana/grafana:latest
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana-dashboards:/etc/grafana/provisioning/dashboards:ro
+    depends_on:
+      - prometheus
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    labels:
+      - 'com.automaker.service=grafana'
+      - 'com.automaker.environment=production'
+
+# Docker secrets (swarm mode)
+secrets:
+  anthropic_api_key:
+    external: true
+  automaker_api_key:
+    external: true
+  gh_token:
+    external: true
+  claude_oauth_credentials:
+    external: true
+    required: false
+  cursor_auth_token:
+    external: true
+    required: false
+
+volumes:
+  automaker-data:
+    name: automaker-data-prod
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /var/lib/automaker/data # Adjust for your backup strategy
+
+  automaker-claude-config:
+    name: automaker-claude-config-prod
+
+  automaker-cursor-config:
+    name: automaker-cursor-config-prod
+
+  automaker-opencode-data:
+    name: automaker-opencode-data-prod
+
+  automaker-opencode-config:
+    name: automaker-opencode-config-prod
+
+  automaker-opencode-cache:
+    name: automaker-opencode-cache-prod
+
+  prometheus-data:
+    name: automaker-prometheus-data
+
+  grafana-data:
+    name: automaker-grafana-data
