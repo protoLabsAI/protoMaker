@@ -24,8 +24,12 @@ import {
   generateMilestoneFile,
   generatePhaseFile,
   generatePrdFile,
+  createLogger,
 } from '@automaker/utils';
+import type { SettingsService } from '../../../services/settings-service.js';
 import { getErrorMessage, logError } from '../common.js';
+
+const logger = createLogger('ProjectCreate');
 
 interface CreateProjectRequest {
   projectPath: string;
@@ -49,7 +53,7 @@ interface CreateProjectRequest {
   }>;
 }
 
-export function createCreateHandler() {
+export function createCreateHandler(settingsService: SettingsService) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
       const {
@@ -186,7 +190,74 @@ export function createCreateHandler() {
         await secureFs.writeFile(researchFilePath, researchSummary, 'utf-8');
       }
 
-      res.json({ success: true, project });
+      // Handle Discord integration if enabled
+      let discordInfo: {
+        created: boolean;
+        categoryId?: string;
+        channels?: {
+          general?: string;
+          features?: string;
+          errors?: string;
+        };
+      } | null = null;
+
+      try {
+        // Check if Discord auto-creation is enabled in project settings
+        const projectSettings = await settingsService.getProjectSettings(projectPath);
+
+        if (projectSettings?.discordConfig?.autoCreateChannels?.enabled) {
+          logger.info('[ProjectCreate] Discord auto-creation enabled for project:', projectSlug);
+
+          // TODO: Implement Discord channel creation via MCP tools
+          // When Discord MCP server is configured, this would:
+          // 1. Create a category with project slug as name
+          // 2. Create #project-general, #project-features, #project-errors channels
+          // 3. Store channel IDs in project settings
+          // 4. Rollback on failure
+
+          logger.warn(
+            '[ProjectCreate] Discord channel creation requested but not yet implemented. ' +
+              'Requires Discord MCP server configuration with mcp__discord__* tools.'
+          );
+
+          discordInfo = {
+            created: false,
+          };
+        }
+      } catch (error) {
+        logger.error('[ProjectCreate] Error checking Discord settings:', error);
+        // Don't fail project creation if Discord setup fails
+      }
+
+      // If Discord channels were created, save them to settings
+      if (discordInfo?.categoryId) {
+        try {
+          const currentSettings = await settingsService.getProjectSettings(projectPath);
+          await settingsService.updateProjectSettings(projectPath, {
+            ...currentSettings,
+            discordConfig: {
+              ...currentSettings?.discordConfig,
+              autoCreateChannels: {
+                ...currentSettings?.discordConfig?.autoCreateChannels,
+                enabled: true,
+                categoryId: discordInfo.categoryId,
+                generalChannelId: discordInfo.channels?.general,
+                featuresChannelId: discordInfo.channels?.features,
+                errorsChannelId: discordInfo.channels?.errors,
+              },
+            },
+          });
+          logger.info('[ProjectCreate] Discord channel IDs saved to project settings');
+        } catch (error) {
+          logger.error('[ProjectCreate] Error saving Discord channel IDs:', error);
+        }
+      }
+
+      res.json({
+        success: true,
+        project,
+        discordInfo: discordInfo || undefined,
+      });
     } catch (error) {
       logError(error, 'Create project failed');
       res.status(500).json({ success: false, error: getErrorMessage(error) });

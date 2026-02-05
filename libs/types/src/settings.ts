@@ -1373,6 +1373,26 @@ export interface ProjectSettings {
    */
   webhookSettings?: import('./webhook.js').WebhookSettings;
 
+  // Discord Integration (per-project)
+  /**
+   * Discord integration settings for project channels.
+   * Manages automatic creation of Discord channels when projects are created.
+   */
+  discordConfig?: {
+    /** Auto-create Discord channels when project is created */
+    autoCreateChannels?: {
+      enabled: boolean;
+      /** Category ID in Discord (created automatically) */
+      categoryId?: string;
+      /** Project general discussion channel ID */
+      generalChannelId?: string;
+      /** Feature updates channel ID */
+      featuresChannelId?: string;
+      /** Error notifications channel ID */
+      errorsChannelId?: string;
+    };
+  };
+
   // Deprecated Claude API Profile Override
   /**
    * @deprecated Use phaseModelOverrides instead.

@@ -456,7 +456,7 @@ app.use('/api/fs', createFsRoutes(events));
 app.use('/api/agent', createAgentRoutes(agentService, events));
 app.use('/api/sessions', createSessionsRoutes(agentService));
 app.use('/api/features', createFeaturesRoutes(featureLoader, settingsService, events));
-app.use('/api/projects', createProjectsRoutes(featureLoader));
+app.use('/api/projects', createProjectsRoutes(featureLoader, settingsService));
 app.use('/api/auto-mode', createAutoModeRoutes(autoModeService));
 app.use('/api/enhance-prompt', createEnhancePromptRoutes(settingsService));
 app.use('/api/worktree', createWorktreeRoutes(events, settingsService));
@@ -481,7 +481,7 @@ app.use('/api/notifications', createNotificationsRoutes(notificationService));
 app.use('/api/ralph', createRalphRoutes(ralphLoopService));
 app.use('/api/skills', createSkillsRoutes());
 app.use('/api/event-history', createEventHistoryRoutes(eventHistoryService, settingsService));
-app.use('/api/projects', createProjectsRoutes(featureLoader));
+app.use('/api/projects', createProjectsRoutes(featureLoader, settingsService));
 app.use('/api/scheduler', createSchedulerRoutes(schedulerService));
 
 // Create HTTP server
