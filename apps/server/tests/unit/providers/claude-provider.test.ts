@@ -486,4 +486,71 @@ describe('claude-provider.ts', () => {
       expect(config.model).toBe('model1');
     });
   });
+
+  describe('HTTP connection pooling', () => {
+    it('should pass httpAgent and httpsAgent to SDK options', async () => {
+      vi.mocked(sdk.query).mockReturnValue(
+        (async function* () {
+          yield { type: 'text', text: 'test' };
+        })()
+      );
+
+      const generator = provider.executeQuery({
+        prompt: 'Test',
+        model: 'claude-opus-4-5-20251101',
+        cwd: '/test',
+      });
+
+      await collectAsyncGenerator(generator);
+
+      const callArgs = vi.mocked(sdk.query).mock.calls[0][0];
+      const options = callArgs.options as any;
+
+      // Verify HTTP agents are present
+      expect(options.httpAgent).toBeDefined();
+      expect(options.httpsAgent).toBeDefined();
+
+      // Verify they are Node.js Agent instances
+      expect(options.httpAgent.constructor.name).toBe('Agent');
+      expect(options.httpsAgent.constructor.name).toBe('Agent');
+    });
+
+    it('should use singleton agents across multiple queries', async () => {
+      vi.mocked(sdk.query).mockReturnValue(
+        (async function* () {
+          yield { type: 'text', text: 'test' };
+        })()
+      );
+
+      // Execute first query
+      const generator1 = provider.executeQuery({
+        prompt: 'Test 1',
+        model: 'claude-opus-4-5-20251101',
+        cwd: '/test',
+      });
+      await collectAsyncGenerator(generator1);
+
+      const firstCallArgs = vi.mocked(sdk.query).mock.calls[0][0];
+      const firstOptions = firstCallArgs.options as any;
+      const firstHttpAgent = firstOptions.httpAgent;
+      const firstHttpsAgent = firstOptions.httpsAgent;
+
+      // Execute second query
+      const generator2 = provider.executeQuery({
+        prompt: 'Test 2',
+        model: 'claude-opus-4-5-20251101',
+        cwd: '/test',
+      });
+      await collectAsyncGenerator(generator2);
+
+      const secondCallArgs = vi.mocked(sdk.query).mock.calls[1][0];
+      const secondOptions = secondCallArgs.options as any;
+      const secondHttpAgent = secondOptions.httpAgent;
+      const secondHttpsAgent = secondOptions.httpsAgent;
+
+      // Verify same agent instances are reused (singleton pattern)
+      expect(secondHttpAgent).toBe(firstHttpAgent);
+      expect(secondHttpsAgent).toBe(firstHttpsAgent);
+    });
+  });
 });
