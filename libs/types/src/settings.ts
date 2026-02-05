@@ -446,6 +446,61 @@ export type { WebhookSettings } from './webhook.js';
 export { DEFAULT_WEBHOOK_SETTINGS } from './webhook.js';
 
 // ============================================================================
+// Discord Integration Settings - Configuration for Discord bot and notifications
+// ============================================================================
+
+/**
+ * DiscordSettings - Configuration for Discord MCP integration
+ *
+ * Supports Discord bot integration via the discord-mcp server for:
+ * - Sending progress notifications to channels
+ * - Announcing feature completion
+ * - Headsdown mode status updates
+ * - Team communication automation
+ */
+export interface DiscordSettings {
+  /** Whether Discord integration is enabled */
+  enabled: boolean;
+  /** Discord bot token (stored in credentials.json for security) */
+  tokenConfigured?: boolean; // Just a flag, actual token in credentials
+  /** Discord server/guild ID */
+  guildId?: string;
+  /** Default channel ID for progress notifications */
+  notificationChannelId?: string;
+  /** Default channel name for display purposes */
+  notificationChannelName?: string;
+  /** Enable automatic progress updates during auto-mode */
+  autoNotify?: boolean;
+  /** Notify on feature start */
+  notifyOnFeatureStart?: boolean;
+  /** Notify on feature completion */
+  notifyOnFeatureComplete?: boolean;
+  /** Notify on milestone completion */
+  notifyOnMilestoneComplete?: boolean;
+  /** Notify on project completion */
+  notifyOnProjectComplete?: boolean;
+  /** Notify on agent errors/failures */
+  notifyOnError?: boolean;
+}
+
+/**
+ * Default Discord settings - disabled by default
+ */
+export const DEFAULT_DISCORD_SETTINGS: DiscordSettings = {
+  enabled: false,
+  tokenConfigured: false,
+  guildId: undefined,
+  notificationChannelId: undefined,
+  notificationChannelName: undefined,
+  autoNotify: false,
+  notifyOnFeatureStart: false,
+  notifyOnFeatureComplete: true,
+  notifyOnMilestoneComplete: true,
+  notifyOnProjectComplete: true,
+  notifyOnError: true,
+};
+
+// ============================================================================
 // Event Hooks - Custom actions triggered by system events
 // ============================================================================
 
@@ -1215,6 +1270,13 @@ export interface GlobalSettings {
       maxConcurrency?: number;
     }>;
   };
+
+  /**
+   * Discord integration settings.
+   * Configuration for Discord MCP server integration and notifications.
+   * @see DiscordSettings
+   */
+  discord?: DiscordSettings;
 }
 
 /**
@@ -1239,6 +1301,11 @@ export interface Credentials {
   webhookSecrets?: {
     /** GitHub webhook secret for HMAC-SHA256 signature verification */
     github?: string;
+  };
+  /** Discord bot tokens for MCP integration */
+  discordTokens?: {
+    /** Discord bot token for the discord-mcp server */
+    botToken?: string;
   };
 }
 
@@ -1494,6 +1561,14 @@ export interface ProjectSettings {
    * Each PhaseModelEntry can specify a providerId for provider-specific models.
    */
   activeClaudeApiProfileId?: string | null;
+
+  // Discord Integration (per-project override)
+  /**
+   * Project-specific Discord integration settings.
+   * Overrides global Discord settings for this project.
+   * @see DiscordSettings
+   */
+  discord?: DiscordSettings;
 }
 
 /**
