@@ -41,7 +41,7 @@ export interface Feature {
   description: string;
   passes?: boolean;
   priority?: number;
-  status?: string;
+  status?: FeatureStatus | string; // Allow string for extensibility
   dependencies?: string[];
   spec?: string;
   model?: string;
@@ -99,4 +99,14 @@ export interface Feature {
   [key: string]: unknown; // Keep catch-all for extensibility
 }
 
-export type FeatureStatus = 'pending' | 'running' | 'completed' | 'failed' | 'verified';
+export type FeatureStatus =
+  | 'pending' // Initial state, not yet started
+  | 'backlog' // Queued for auto-mode
+  | 'ready' // Ready to be picked up
+  | 'running' // Currently being executed by agent
+  | 'completed' // Agent finished successfully
+  | 'failed' // Agent execution failed
+  | 'verified' // Manually verified by user
+  | 'waiting_approval' // Agent completed, waiting for user review
+  | 'review' // PR created, under review
+  | 'done'; // PR merged, final state
