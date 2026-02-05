@@ -522,6 +522,95 @@ const tools: Tool[] = [
     },
   },
 
+  // ========== Skills ==========
+  {
+    name: 'list_skills',
+    description:
+      'List all learned skills in a project. Skills are reusable patterns stored in .automaker/skills/',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+      },
+      required: ['projectPath'],
+    },
+  },
+  {
+    name: 'get_skill',
+    description: 'Get the full content and metadata of a specific skill.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        skillName: {
+          type: 'string',
+          description: 'Name of the skill (without .md extension)',
+        },
+      },
+      required: ['projectPath', 'skillName'],
+    },
+  },
+  {
+    name: 'create_skill',
+    description:
+      'Create a new skill from a learned pattern. Skills help agents reuse successful approaches.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        name: {
+          type: 'string',
+          description: 'Unique name for the skill (kebab-case, e.g., "git-commit-workflow")',
+        },
+        description: {
+          type: 'string',
+          description: 'Brief description of what the skill does',
+        },
+        content: {
+          type: 'string',
+          description: 'The skill content/instructions in markdown',
+        },
+        emoji: {
+          type: 'string',
+          description: 'Optional emoji for visual identification',
+        },
+        tags: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Tags for categorization and discovery',
+        },
+      },
+      required: ['projectPath', 'name', 'description', 'content'],
+    },
+  },
+  {
+    name: 'delete_skill',
+    description: 'Delete a skill that is no longer needed.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        skillName: {
+          type: 'string',
+          description: 'Name of the skill to delete',
+        },
+      },
+      required: ['projectPath', 'skillName'],
+    },
+  },
+
   // ========== Project Spec ==========
   {
     name: 'get_project_spec',
@@ -1145,6 +1234,34 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       return apiCall('/context/delete', {
         projectPath: args.projectPath,
         filename: args.filename,
+      });
+
+    // Skills
+    case 'list_skills':
+      return apiCall('/skills/list', {
+        projectPath: args.projectPath,
+      });
+
+    case 'get_skill':
+      return apiCall('/skills/get', {
+        projectPath: args.projectPath,
+        skillName: args.skillName,
+      });
+
+    case 'create_skill':
+      return apiCall('/skills/create', {
+        projectPath: args.projectPath,
+        name: args.name,
+        description: args.description,
+        content: args.content,
+        emoji: args.emoji,
+        tags: args.tags,
+      });
+
+    case 'delete_skill':
+      return apiCall('/skills/delete', {
+        projectPath: args.projectPath,
+        skillName: args.skillName,
       });
 
     // Project Spec
