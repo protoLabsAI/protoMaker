@@ -446,6 +446,52 @@ export type { WebhookSettings } from './webhook.js';
 export { DEFAULT_WEBHOOK_SETTINGS } from './webhook.js';
 
 // ============================================================================
+// Discord Integration - Team communication settings
+// ============================================================================
+
+/**
+ * DiscordIntegrationSettings - Global Discord bot configuration
+ *
+ * Configures the Discord MCP integration for team communication.
+ * Allows sending announcements, managing channels, and coordinating team activities.
+ *
+ * @see packages/mcp-server/plugins/automaker/commands/discord.md
+ */
+export interface DiscordIntegrationSettings {
+  /** Whether Discord integration is enabled */
+  enabled: boolean;
+  /** Discord bot token (stored in credentials.json for security) */
+  botTokenConfigured?: boolean;
+  /** Discord server (guild) ID */
+  guildId?: string;
+  /** Default channel ID for announcements */
+  defaultAnnouncementChannelId?: string;
+  /** Default channel ID for PR notifications */
+  defaultPRChannelId?: string;
+  /** Default channel ID for build/CI notifications */
+  defaultBuildChannelId?: string;
+  /** Whether to send notifications for feature completion */
+  notifyOnFeatureComplete?: boolean;
+  /** Whether to send notifications for PR creation */
+  notifyOnPRCreated?: boolean;
+  /** Whether to send notifications for PR merge */
+  notifyOnPRMerged?: boolean;
+  /** Whether to send notifications for build failures */
+  notifyOnBuildFailure?: boolean;
+}
+
+/**
+ * Default Discord integration settings - disabled by default
+ */
+export const DEFAULT_DISCORD_INTEGRATION: DiscordIntegrationSettings = {
+  enabled: false,
+  notifyOnFeatureComplete: true,
+  notifyOnPRCreated: true,
+  notifyOnPRMerged: true,
+  notifyOnBuildFailure: true,
+};
+
+// ============================================================================
 // Event Hooks - Custom actions triggered by system events
 // ============================================================================
 
@@ -1215,6 +1261,13 @@ export interface GlobalSettings {
       maxConcurrency?: number;
     }>;
   };
+
+  /**
+   * Discord integration settings for team communication.
+   * Allows sending announcements, notifications, and managing Discord channels.
+   * @see DiscordIntegrationSettings
+   */
+  discord?: DiscordIntegrationSettings;
 }
 
 /**
@@ -1284,6 +1337,31 @@ export interface WorktreeInfo {
   hasChanges?: boolean;
   /** Number of files with changes */
   changedFilesCount?: number;
+}
+
+/**
+ * DiscordConfig - Project-specific Discord notification settings
+ *
+ * Allows per-project override of Discord notification preferences and channel routing.
+ * Falls back to global Discord settings if not specified.
+ */
+export interface DiscordConfig {
+  /** Override: enable/disable Discord for this project */
+  enabled?: boolean;
+  /** Override: announcement channel ID for this project */
+  announcementChannelId?: string;
+  /** Override: PR notification channel ID for this project */
+  prChannelId?: string;
+  /** Override: build notification channel ID for this project */
+  buildChannelId?: string;
+  /** Override: notify on feature completion for this project */
+  notifyOnFeatureComplete?: boolean;
+  /** Override: notify on PR creation for this project */
+  notifyOnPRCreated?: boolean;
+  /** Override: notify on PR merge for this project */
+  notifyOnPRMerged?: boolean;
+  /** Override: notify on build failure for this project */
+  notifyOnBuildFailure?: boolean;
 }
 
 /**
@@ -1372,6 +1450,14 @@ export interface ProjectSettings {
    * @see WebhookSettings in webhook.ts
    */
   webhookSettings?: import('./webhook.js').WebhookSettings;
+
+  // Discord Settings (per-project)
+  /**
+   * Discord notification configuration for this project.
+   * Overrides global Discord settings for project-specific channels and preferences.
+   * @see DiscordConfig
+   */
+  discord?: DiscordConfig;
 
   // Deprecated Claude API Profile Override
   /**
@@ -1517,6 +1603,8 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
     enabled: false,
     projects: [],
   },
+  // Discord integration (disabled by default)
+  discord: DEFAULT_DISCORD_INTEGRATION,
 };
 
 /** Default credentials (empty strings - user must provide API keys) */

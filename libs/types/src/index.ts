@@ -197,6 +197,9 @@ export type {
   GitWorkflowResult,
   // Graphite CLI types
   GraphiteSettings,
+  // Discord integration types
+  DiscordIntegrationSettings,
+  DiscordConfig,
   // Claude-compatible provider types (new)
   ApiKeySource,
   ClaudeCompatibleProviderType,
@@ -226,6 +229,8 @@ export {
   DEFAULT_GIT_WORKFLOW_SETTINGS,
   // Graphite CLI defaults
   DEFAULT_GRAPHITE_SETTINGS,
+  // Discord integration defaults
+  DEFAULT_DISCORD_INTEGRATION,
   // Claude-compatible provider templates (new)
   CLAUDE_PROVIDER_TEMPLATES,
   // Claude API profile constants (deprecated)
