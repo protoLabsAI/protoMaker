@@ -77,9 +77,9 @@ export interface VerificationResult {
 }
 
 /**
- * Categories of failures to help the agent understand what went wrong
+ * Categories of failures to help the agent understand what went wrong (Ralph-specific)
  */
-export type FailureCategory =
+export type RalphFailureCategory =
   | 'test_failure' // Tests failed
   | 'build_error' // Build failed
   | 'lint_error' // Linting issues
@@ -92,10 +92,10 @@ export type FailureCategory =
   | 'unknown'; // Unclassified error
 
 /**
- * Analysis of a failure to help the agent improve
+ * Analysis of a failure to help the agent improve (Ralph-specific)
  */
-export interface FailureAnalysis {
-  category: FailureCategory;
+export interface RalphFailureAnalysis {
+  category: RalphFailureCategory;
   /** Brief summary of what failed */
   summary: string;
   /** Detailed error output/message */
@@ -121,7 +121,7 @@ export interface RalphIteration {
   /** Verification result for this iteration */
   verification?: VerificationResult;
   /** Failure analysis if verification failed */
-  failureAnalysis?: FailureAnalysis;
+  failureAnalysis?: RalphFailureAnalysis;
   /** Agent's summary of what was done this iteration */
   agentSummary?: string;
   /** Token usage for this iteration */
@@ -258,5 +258,5 @@ export interface RalphEventPayload {
   /** Verification result (for verification events) */
   verificationResult?: VerificationResult;
   /** Failure analysis (for failed verifications) */
-  failureAnalysis?: FailureAnalysis;
+  failureAnalysis?: RalphFailureAnalysis;
 }

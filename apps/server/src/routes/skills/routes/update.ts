@@ -15,7 +15,9 @@ const fsModule: SkillsFsModule = {
   writeFile: fs.writeFile,
   readdir: fs.readdir as (path: string) => Promise<string[]>,
   stat: fs.stat,
-  mkdir: fs.mkdir,
+  mkdir: async (path, options) => {
+    await fs.mkdir(path, options);
+  },
   unlink: fs.unlink,
   access: fs.access,
 };

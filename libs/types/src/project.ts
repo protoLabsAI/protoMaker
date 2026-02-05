@@ -279,3 +279,81 @@ export interface FeatureFactoryResult {
   /** Any errors encountered */
   errors?: string[];
 }
+
+/**
+ * Input for creating a new project
+ */
+export interface CreateProjectInput {
+  /** Project slug */
+  slug: string;
+
+  /** Human-readable title */
+  title: string;
+
+  /** High-level goal/description */
+  goal: string;
+
+  /** Optional initial milestones */
+  milestones?: Array<{
+    title: string;
+    description: string;
+    phases?: Array<{
+      title: string;
+      description: string;
+      filesToModify?: string[];
+      acceptanceCriteria?: string[];
+      complexity?: PhaseComplexity;
+      dependencies?: string[];
+    }>;
+    dependencies?: string[];
+  }>;
+
+  /** Optional SPARC PRD */
+  prd?: SPARCPrd;
+
+  /** Optional research summary */
+  researchSummary?: string;
+}
+
+/**
+ * Input for updating an existing project
+ */
+export interface UpdateProjectInput {
+  /** Update title */
+  title?: string;
+
+  /** Update goal */
+  goal?: string;
+
+  /** Update status */
+  status?: ProjectStatus;
+
+  /** Update PRD */
+  prd?: SPARCPrd;
+
+  /** Update research summary */
+  researchSummary?: string;
+
+  /** Add review comments */
+  reviewComments?: PRDReviewComment[];
+}
+
+/**
+ * Result from creating features from a project
+ */
+export interface CreateFeaturesResult {
+  /** Number of features created */
+  featuresCreated: number;
+
+  /** Number of epics created */
+  epicsCreated: number;
+
+  /** Created feature IDs */
+  featureIds: string[];
+
+  /** Created epic IDs */
+  epicIds: string[];
+
+  /** Any errors encountered */
+  errors?: string[];
+}

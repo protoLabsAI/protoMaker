@@ -74,6 +74,9 @@ export type {
   CreateProjectFromPRDOptions,
   CreateFeaturesFromProjectOptions,
   FeatureFactoryResult,
+  CreateProjectInput,
+  UpdateProjectInput,
+  CreateFeaturesResult,
 } from './project.js';
 
 // Session types
@@ -379,12 +382,14 @@ export type {
 } from './skill.js';
 // Ralph mode types (persistent retry loops with external verification)
 // Note: FailureCategory and FailureAnalysis are exported from ./failure.js
-// Ralph has its own versions - import directly from ./ralph.js if needed
+// Ralph has its own RalphFailureCategory and RalphFailureAnalysis with different shapes
 export type {
   CompletionCriteriaType,
   CompletionCriterion,
   CriterionCheckResult,
   VerificationResult,
+  RalphFailureCategory,
+  RalphFailureAnalysis,
   RalphIteration,
   RalphLoopStatus,
   RalphLoopConfig,

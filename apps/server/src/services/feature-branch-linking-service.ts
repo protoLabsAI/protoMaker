@@ -56,7 +56,7 @@ export class FeatureBranchLinkingService {
 
     try {
       const result = await readJsonWithRecovery<BranchLinksData>(filePath, defaultData);
-      return result.data;
+      return result.data ?? defaultData;
     } catch {
       return defaultData;
     }
@@ -84,7 +84,7 @@ export class FeatureBranchLinkingService {
 
     try {
       const result = await readJsonWithRecovery<CodeRabbitFeedbackData>(filePath, defaultData);
-      return result.data;
+      return result.data ?? defaultData;
     } catch {
       return defaultData;
     }
@@ -140,7 +140,10 @@ export class FeatureBranchLinkingService {
   /**
    * Get feature linked to a specific branch
    */
-  async getFeatureByBranch(projectPath: string, branchName: string): Promise<FeatureBranchLink | null> {
+  async getFeatureByBranch(
+    projectPath: string,
+    branchName: string
+  ): Promise<FeatureBranchLink | null> {
     const data = await this.loadBranchLinks(projectPath);
     return data.links.find((link) => link.branchName === branchName) || null;
   }
@@ -156,7 +159,10 @@ export class FeatureBranchLinkingService {
   /**
    * Get branch link for a specific feature
    */
-  async getBranchLinkByFeature(projectPath: string, featureId: string): Promise<FeatureBranchLink | null> {
+  async getBranchLinkByFeature(
+    projectPath: string,
+    featureId: string
+  ): Promise<FeatureBranchLink | null> {
     const data = await this.loadBranchLinks(projectPath);
     return data.links.find((link) => link.featureId === featureId) || null;
   }
@@ -257,11 +263,7 @@ export class FeatureBranchLinkingService {
 
     for (const feature of features) {
       if (feature.branchName) {
-        const link = await this.linkFeatureToBranch(
-          projectPath,
-          feature.id,
-          feature.branchName
-        );
+        const link = await this.linkFeatureToBranch(projectPath, feature.id, feature.branchName);
         links.push(link);
       }
     }

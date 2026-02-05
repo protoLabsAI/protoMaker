@@ -87,10 +87,7 @@ export class ProjectService {
    * Create a new project
    */
   async createProject(projectPath: string, input: CreateProjectInput): Promise<Project> {
-    const project = createProject(input.title, input.goal, {
-      prd: input.prd,
-      milestones: input.milestones,
-    });
+    const project = createProject(input);
 
     // Ensure directories exist
     await ensureProjectDir(projectPath, project.slug);
@@ -105,21 +102,21 @@ export class ProjectService {
 
     // Write milestone directories and files
     for (const milestone of project.milestones) {
-      await ensureMilestoneDir(projectPath, project.slug, milestone.id);
+      await ensureMilestoneDir(projectPath, project.slug, milestone.slug);
 
       // Write milestone.md
-      const milestoneMdPath = getMilestoneFilePath(projectPath, project.slug, milestone.id);
-      await secureFs.writeFile(milestoneMdPath, generateMilestoneMarkdown(milestone));
+      const milestoneMdPath = getMilestoneFilePath(projectPath, project.slug, milestone.slug);
+      await secureFs.writeFile(milestoneMdPath, generateMilestoneMarkdown(milestone, project));
 
       // Write phase files
       for (let i = 0; i < milestone.phases.length; i++) {
         const phase = milestone.phases[i];
         const phaseFilename = `phase-${String(i + 1).padStart(2, '0')}-${slugify(phase.title, 30)}.md`;
         const phasePath = path.join(
-          getMilestoneDir(projectPath, project.slug, milestone.id),
+          getMilestoneDir(projectPath, project.slug, milestone.slug),
           phaseFilename
         );
-        await secureFs.writeFile(phasePath, generatePhaseMarkdown(phase));
+        await secureFs.writeFile(phasePath, generatePhaseMarkdown(phase, milestone, project));
       }
     }
 
@@ -219,7 +216,7 @@ export class ProjectService {
 
       // Create features for each phase
       for (const phase of milestone.phases) {
-        const branchName = phaseToBranchName(projectSlug, milestone.id, phase.title);
+        const branchName = phaseToBranchName(projectSlug, milestone.slug, phase.title);
         const description = phaseToFeatureDescription(phase, milestone);
 
         // Get dependencies from phase (convert phase IDs to feature IDs)
@@ -240,7 +237,7 @@ export class ProjectService {
         });
 
         featureIds.push(feature.id);
-        phaseToFeatureMap.set(phase.id, feature.id);
+        phaseToFeatureMap.set(phase.name, feature.id);
         phase.featureId = feature.id;
       }
     }
@@ -259,7 +256,6 @@ export class ProjectService {
     );
 
     return {
-      projectSlug,
       featuresCreated: featureIds.length,
       epicsCreated: epicIds.length,
       featureIds,

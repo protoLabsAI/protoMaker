@@ -5,8 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { useToast } from '@/hooks/use-toast';
-import { api } from '@/lib/api';
+import { toast } from 'sonner';
+import { useUpdateProjectSettings } from '@/hooks/mutations';
 import type { Project } from '@/lib/electron';
 import type { WebhookSettings } from '@automaker/types';
 
@@ -22,19 +22,20 @@ interface WebhookFormData {
 }
 
 export function ProjectWebhooksSection({ project }: ProjectWebhooksSectionProps) {
-  const { toast } = useToast();
-  const [isSaving, setIsSaving] = useState(false);
   const [showSecret, setShowSecret] = useState(false);
   const [copiedWebhookUrl, setCopiedWebhookUrl] = useState(false);
+  const updateProjectSettings = useUpdateProjectSettings();
 
   // Load webhook settings from project settings
   const [webhookSettings, setWebhookSettings] = useState<WebhookSettings>(() => {
-    return (project.settings?.webhookSettings as WebhookSettings) || {
-      webhookEnabled: false,
-      webhookSecret: '',
-      autoCreateFromIssues: false,
-      autoCreateLabels: [],
-    };
+    return (
+      (project.settings?.webhookSettings as WebhookSettings) || {
+        webhookEnabled: false,
+        webhookSecret: '',
+        autoCreateFromIssues: false,
+        autoCreateLabels: [],
+      }
+    );
   });
 
   const { register, handleSubmit, watch, setValue } = useForm<WebhookFormData>({
@@ -49,43 +50,39 @@ export function ProjectWebhooksSection({ project }: ProjectWebhooksSectionProps)
   const webhookEnabled = watch('webhookEnabled');
 
   const onSubmit = async (data: WebhookFormData) => {
-    setIsSaving(true);
+    // Parse comma-separated labels into array
+    const labels = data.autoCreateLabels
+      .split(',')
+      .map((label) => label.trim())
+      .filter((label) => label.length > 0);
 
-    try {
-      // Parse comma-separated labels into array
-      const labels = data.autoCreateLabels
-        .split(',')
-        .map((label) => label.trim())
-        .filter((label) => label.length > 0);
+    const newWebhookSettings: WebhookSettings = {
+      webhookEnabled: data.webhookEnabled,
+      webhookSecret: data.webhookSecret,
+      autoCreateFromIssues: data.autoCreateFromIssues,
+      autoCreateLabels: labels,
+    };
 
-      const newWebhookSettings: WebhookSettings = {
-        webhookEnabled: data.webhookEnabled,
-        webhookSecret: data.webhookSecret,
-        autoCreateFromIssues: data.autoCreateFromIssues,
-        autoCreateLabels: labels,
-      };
-
-      // Update project settings
-      await api.updateProjectSettings(project.path, {
-        webhookSettings: newWebhookSettings,
-      });
-
-      setWebhookSettings(newWebhookSettings);
-
-      toast({
-        title: 'Webhook settings saved',
-        description: 'Your webhook configuration has been updated.',
-      });
-    } catch (error) {
-      console.error('Error saving webhook settings:', error);
-      toast({
-        title: 'Failed to save settings',
-        description: error instanceof Error ? error.message : 'An unknown error occurred',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSaving(false);
-    }
+    updateProjectSettings.mutate(
+      {
+        projectPath: project.path,
+        settings: { webhookSettings: newWebhookSettings },
+      },
+      {
+        onSuccess: () => {
+          setWebhookSettings(newWebhookSettings);
+          toast.success('Webhook settings saved', {
+            description: 'Your webhook configuration has been updated.',
+          });
+        },
+        onError: (error) => {
+          console.error('Error saving webhook settings:', error);
+          toast.error('Failed to save settings', {
+            description: error instanceof Error ? error.message : 'An unknown error occurred',
+          });
+        },
+      }
+    );
   };
 
   const generateSecret = () => {
@@ -104,16 +101,13 @@ export function ProjectWebhooksSection({ project }: ProjectWebhooksSectionProps)
     try {
       await navigator.clipboard.writeText(webhookUrl);
       setCopiedWebhookUrl(true);
-      toast({
-        title: 'Webhook URL copied',
+      toast.success('Webhook URL copied', {
         description: 'The webhook URL has been copied to your clipboard.',
       });
       setTimeout(() => setCopiedWebhookUrl(false), 2000);
     } catch (error) {
-      toast({
-        title: 'Failed to copy URL',
+      toast.error('Failed to copy URL', {
         description: 'Could not copy webhook URL to clipboard.',
-        variant: 'destructive',
       });
     }
   };
@@ -249,8 +243,8 @@ export function ProjectWebhooksSection({ project }: ProjectWebhooksSectionProps)
 
         {/* Save Button */}
         <div className="flex justify-end">
-          <Button type="submit" disabled={isSaving}>
-            {isSaving ? 'Saving...' : 'Save Settings'}
+          <Button type="submit" disabled={updateProjectSettings.isPending}>
+            {updateProjectSettings.isPending ? 'Saving...' : 'Save Settings'}
           </Button>
         </div>
       </form>
@@ -261,15 +255,11 @@ export function ProjectWebhooksSection({ project }: ProjectWebhooksSectionProps)
         <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
           <li>Enable webhooks and generate a secret above</li>
           <li>Copy the webhook URL and secret</li>
-          <li>
-            Go to your GitHub repository → Settings → Webhooks → Add webhook
-          </li>
+          <li>Go to your GitHub repository → Settings → Webhooks → Add webhook</li>
           <li>Paste the webhook URL in the "Payload URL" field</li>
           <li>Set "Content type" to "application/json"</li>
           <li>Paste the secret in the "Secret" field</li>
-          <li>
-            Select individual events: Issues, Pull requests, Pushes (or "Send me everything")
-          </li>
+          <li>Select individual events: Issues, Pull requests, Pushes (or "Send me everything")</li>
           <li>Click "Add webhook"</li>
         </ol>
       </div>

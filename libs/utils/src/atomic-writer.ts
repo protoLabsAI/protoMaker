@@ -273,9 +273,9 @@ export function logRecoveryWarning<T>(
  */
 export async function readJsonWithRecovery<T>(
   filePath: string,
-  defaultValue: T,
+  defaultValue: T | null,
   options: ReadJsonRecoveryOptions = {}
-): Promise<ReadJsonRecoveryResult<T>> {
+): Promise<ReadJsonRecoveryResult<T | null>> {
   const { maxBackups = 3, autoRestore = true } = options;
   const resolvedPath = path.resolve(filePath);
   const dirPath = path.dirname(resolvedPath);

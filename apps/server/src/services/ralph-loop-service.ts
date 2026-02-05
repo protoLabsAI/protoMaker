@@ -19,11 +19,11 @@ import type {
   CompletionCriterion,
   CriterionCheckResult,
   VerificationResult,
-  FailureCategory,
-  FailureAnalysis,
+  RalphFailureAnalysis,
   RalphEventPayload,
   EventType,
 } from '@automaker/types';
+import type { RalphFailureCategory } from '@automaker/types';
 import { DEFAULT_RALPH_CONFIG } from '@automaker/types';
 import { createLogger, atomicWriteJson, readJsonWithRecovery } from '@automaker/utils';
 import { getFeatureDir, getRalphDir } from '@automaker/platform';
@@ -96,7 +96,11 @@ export class RalphLoopService {
   /**
    * Save Ralph loop state to disk
    */
-  private async saveState(projectPath: string, featureId: string, state: RalphLoopState): Promise<void> {
+  private async saveState(
+    projectPath: string,
+    featureId: string,
+    state: RalphLoopState
+  ): Promise<void> {
     const statePath = this.getRalphStatePath(projectPath, featureId);
     await secureFs.mkdir(path.dirname(statePath), { recursive: true });
     await atomicWriteJson(statePath, state, { backupCount: 3 });
@@ -241,7 +245,7 @@ export class RalphLoopService {
             throw new Error('file_contains criterion requires filePath and searchPattern config');
           }
           const fullPath = path.isAbsolute(filePath) ? filePath : path.join(workDir, filePath);
-          const content = await secureFs.readFile(fullPath, 'utf-8');
+          const content = (await secureFs.readFile(fullPath, 'utf-8')) as string;
           const regex = new RegExp(searchPattern);
           passed = regex.test(content);
           details = passed
@@ -344,7 +348,7 @@ export class RalphLoopService {
   /**
    * Analyze a verification failure to help the agent improve
    */
-  private analyzeFailure(verification: VerificationResult): FailureAnalysis {
+  private analyzeFailure(verification: VerificationResult): RalphFailureAnalysis {
     const failedResult = verification.results.find((r) => !r.passed);
     if (!failedResult) {
       return {
@@ -357,7 +361,7 @@ export class RalphLoopService {
 
     const criterion = failedResult.criterion;
     const details = failedResult.details;
-    let category: FailureCategory = 'unknown';
+    let category: RalphFailureCategory = 'unknown';
     let summary = '';
     const suggestedActions: string[] = [];
     const relevantFiles: string[] = [];
@@ -468,10 +472,7 @@ export class RalphLoopService {
   /**
    * Build the prompt addition for Ralph mode context
    */
-  private buildRalphContextPrompt(
-    state: RalphLoopState,
-    config: RalphLoopConfig
-  ): string {
+  private buildRalphContextPrompt(state: RalphLoopState, config: RalphLoopConfig): string {
     const parts: string[] = [];
 
     parts.push(`
@@ -504,7 +505,9 @@ and ensure all verification criteria pass. Never give up until verified!
           parts.push(`**Summary:** ${iter.agentSummary}`);
         }
         if (iter.verification && !iter.verification.allPassed) {
-          parts.push(`**Failed verification:** ${iter.verification.results.find(r => !r.passed)?.criterion.name || 'Unknown'}`);
+          parts.push(
+            `**Failed verification:** ${iter.verification.results.find((r) => !r.passed)?.criterion.name || 'Unknown'}`
+          );
         }
         if (iter.failureAnalysis && config.includeFailureAnalysisInContext !== false) {
           parts.push(`**Failure:** ${iter.failureAnalysis.summary}`);
@@ -584,7 +587,11 @@ and ensure all verification criteria pass. Never give up until verified!
 
     // Save initial state
     await this.saveState(projectPath, featureId, state);
-    await this.appendProgressLog(projectPath, featureId, `Ralph loop started with config:\n\`\`\`json\n${JSON.stringify(fullConfig, null, 2)}\n\`\`\``);
+    await this.appendProgressLog(
+      projectPath,
+      featureId,
+      `Ralph loop started with config:\n\`\`\`json\n${JSON.stringify(fullConfig, null, 2)}\n\`\`\``
+    );
 
     // Emit start event
     this.emitRalphEvent('ralph:started', {
@@ -675,18 +682,13 @@ and ensure all verification criteria pass. Never give up until verified!
             currentIteration: iteration,
             message: `Iteration ${state.currentIteration} agent completed`,
           });
-
         } catch (error) {
           // Agent failed - record error but continue to verification
           iteration.endedAt = new Date().toISOString();
           iteration.durationMs = Date.now() - new Date(iteration.startedAt).getTime();
 
           const errorMessage = error instanceof Error ? error.message : String(error);
-          await this.appendProgressLog(
-            projectPath,
-            featureId,
-            `Agent error: ${errorMessage}`
-          );
+          await this.appendProgressLog(projectPath, featureId, `Agent error: ${errorMessage}`);
         }
 
         // Run verification
@@ -711,13 +713,17 @@ and ensure all verification criteria pass. Never give up until verified!
           verificationResult: verification,
           message: verification.allPassed
             ? 'All verification checks passed!'
-            : `Verification failed: ${verification.results.find(r => !r.passed)?.criterion.name}`,
+            : `Verification failed: ${verification.results.find((r) => !r.passed)?.criterion.name}`,
         });
 
         await this.appendProgressLog(
           projectPath,
           featureId,
-          `Verification result: ${verification.allPassed ? 'PASSED' : 'FAILED'}\n${JSON.stringify(verification.results.map(r => ({ name: r.criterion.name, passed: r.passed })), null, 2)}`
+          `Verification result: ${verification.allPassed ? 'PASSED' : 'FAILED'}\n${JSON.stringify(
+            verification.results.map((r) => ({ name: r.criterion.name, passed: r.passed })),
+            null,
+            2
+          )}`
         );
 
         // Check if verified
@@ -754,7 +760,7 @@ and ensure all verification criteria pass. Never give up until verified!
         await this.appendProgressLog(
           projectPath,
           featureId,
-          `Failure analysis:\n- Category: ${failureAnalysis.category}\n- Summary: ${failureAnalysis.summary}\n- Suggested actions:\n${failureAnalysis.suggestedActions.map(a => `  - ${a}`).join('\n')}`
+          `Failure analysis:\n- Category: ${failureAnalysis.category}\n- Summary: ${failureAnalysis.summary}\n- Suggested actions:\n${failureAnalysis.suggestedActions.map((a) => `  - ${a}`).join('\n')}`
         );
 
         // Wait before next iteration
@@ -783,7 +789,6 @@ and ensure all verification criteria pass. Never give up until verified!
           message: `Max iterations (${maxIterations}) reached without verification success`,
         });
       }
-
     } catch (error) {
       state.status = 'error';
       state.lastError = error instanceof Error ? error.message : String(error);
@@ -824,11 +829,7 @@ and ensure all verification criteria pass. Never give up until verified!
     loop.state.totalDurationMs = Date.now() - loop.startTime;
 
     await this.saveState(loop.projectPath, featureId, loop.state);
-    await this.appendProgressLog(
-      loop.projectPath,
-      featureId,
-      '## STOPPED - Loop manually stopped'
-    );
+    await this.appendProgressLog(loop.projectPath, featureId, '## STOPPED - Loop manually stopped');
 
     this.emitRalphEvent('ralph:stopped', {
       featureId,
@@ -852,11 +853,7 @@ and ensure all verification criteria pass. Never give up until verified!
 
     loop.state.status = 'paused';
     await this.saveState(loop.projectPath, featureId, loop.state);
-    await this.appendProgressLog(
-      loop.projectPath,
-      featureId,
-      '## PAUSED - Loop paused'
-    );
+    await this.appendProgressLog(loop.projectPath, featureId, '## PAUSED - Loop paused');
 
     this.emitRalphEvent('ralph:paused', {
       featureId,
@@ -907,11 +904,7 @@ and ensure all verification criteria pass. Never give up until verified!
     this.runningLoops.set(featureId, runningLoop);
 
     await this.saveState(projectPath, featureId, state);
-    await this.appendProgressLog(
-      projectPath,
-      featureId,
-      '## RESUMED - Loop resumed'
-    );
+    await this.appendProgressLog(projectPath, featureId, '## RESUMED - Loop resumed');
 
     this.emitRalphEvent('ralph:resumed', {
       featureId,

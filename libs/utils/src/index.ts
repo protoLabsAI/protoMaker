@@ -139,6 +139,15 @@ export {
   resolvePhaseDependencies,
 } from './project-parser.js';
 
+// Project utilities
+export {
+  createProject,
+  phaseToBranchName,
+  generateProjectMarkdown,
+  generateMilestoneMarkdown,
+  generatePhaseMarkdown,
+} from './project-utils.js';
+
 // Skills loading
 export {
   getSkillsDir,
