@@ -91,6 +91,7 @@ import { getEventHistoryService } from './services/event-history-service.js';
 import { createRalphRoutes } from './routes/ralph/index.js';
 import { RalphLoopService } from './services/ralph-loop-service.js';
 import { createSkillsRoutes } from './routes/skills/index.js';
+import { getSchedulerService } from './services/scheduler-service.js';
 
 const PORT = parseInt(process.env.PORT || '3008', 10);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -256,6 +257,11 @@ const eventHistoryService = getEventHistoryService();
 
 // Initialize Event Hook Service for custom event triggers (with history storage)
 eventHookService.initialize(events, settingsService, eventHistoryService, featureLoader);
+
+// Initialize Scheduler Service with event emitter
+const schedulerService = getSchedulerService();
+schedulerService.initialize(events);
+schedulerService.start();
 
 // Initialize services
 (async () => {
