@@ -430,7 +430,7 @@ Respond with ONLY a JSON object in this exact format:
         "id": "descriptive-kebab-case-id",
         "title": "Feature title",
         "description": "Feature description",
-        "category": "feature" | "bug" | "enhancement" | "refactor",
+        "category": "Infrastructure" | "API" | "UI/UX" | "CLI" | "DevTools" | "Automation" | "Testing" | "Security" | "Data" | "Documentation",
         "dependencies": ["existing-feature-id"],
         "priority": 1
       },
@@ -467,7 +467,7 @@ Important rules:
 - Only include fields that need to change in updates
 - Ensure dependency references are valid (don't reference deleted features)
 - Provide clear, actionable descriptions
-- Maintain category consistency (feature, bug, enhancement, refactor)
+- Use domain-based categories: Infrastructure, API, UI/UX, CLI, DevTools, Automation, Testing, Security, Data, Documentation
 - When adding dependencies, ensure the referenced features exist or are being added in the same plan
 `;
 
@@ -739,7 +739,17 @@ Be thorough in your analysis. The output will be automatically formatted as stru
 export const DEFAULT_GENERATE_FEATURES_FROM_SPEC_PROMPT = `Generate a prioritized list of implementable features. For each feature provide:
 
 1. **id**: A unique lowercase-hyphenated identifier
-2. **category**: Functional category (e.g., "Core", "UI", "API", "Authentication", "Database")
+2. **category**: Domain-based category for filtering and analytics. Choose ONE from:
+   - Infrastructure (core systems, build, deploy, monitoring)
+   - API (endpoints, services, integrations)
+   - UI/UX (interface, components, interactions)
+   - CLI (command-line tools, terminal features)
+   - DevTools (development tooling, debugging)
+   - Automation (workflows, orchestration, scheduling)
+   - Testing (test infrastructure, validation)
+   - Security (auth, permissions, encryption)
+   - Data (storage, databases, migrations)
+   - Documentation (docs, guides, examples)
 3. **title**: Short descriptive title
 4. **description**: What this feature does (2-3 sentences)
 5. **priority**: 1 (high), 2 (medium), or 3 (low)
@@ -820,7 +830,7 @@ export const DEFAULT_SUGGESTIONS_PERFORMANCE_PROMPT =
 export const DEFAULT_SUGGESTIONS_BASE_TEMPLATE = `Look at the codebase and provide 3-5 concrete suggestions.
 
 For each suggestion, provide:
-1. A category (e.g., "User Experience", "Security", "Performance")
+1. A domain category: Infrastructure, API, UI/UX, CLI, DevTools, Automation, Testing, Security, Data, or Documentation
 2. A clear description of what to implement
 3. Priority (1=high, 2=medium, 3=low)
 4. Brief reasoning for why this would help
