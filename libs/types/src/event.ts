@@ -56,6 +56,7 @@ export type EventType =
   | 'dev-server:stopped'
   | 'skill:created'
   | 'memory:learning'
+  | 'pr:review-feedback'
   | 'notification:created'
   | 'health:check-completed'
   | 'health:issue-detected'

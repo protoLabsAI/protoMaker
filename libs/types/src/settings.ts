@@ -456,6 +456,7 @@ export const CLAUDE_API_PROFILE_TEMPLATES: ClaudeApiProfileTemplate[] = [
  * - skill_created: An agent created a new reusable skill
  * - memory_learning: A new learning was recorded from agent execution
  * - pr_feedback_received: Pull request received feedback that needs addressing
+ * - pr:review-feedback: PR review feedback received from webhook
  */
 export type EventHookTrigger =
   | 'feature_created'
@@ -468,7 +469,8 @@ export type EventHookTrigger =
   | 'auto_mode_health_check'
   | 'skill_created'
   | 'memory_learning'
-  | 'pr_feedback_received';
+  | 'pr_feedback_received'
+  | 'pr:review-feedback';
 
 // ============================================================================
 // Git Workflow Settings - Auto commit/push/PR after feature completion
@@ -631,6 +633,7 @@ export const EVENT_HOOK_TRIGGER_LABELS: Record<EventHookTrigger, string> = {
   skill_created: 'New skill created by agent',
   memory_learning: 'New learning recorded',
   pr_feedback_received: 'PR feedback received',
+  'pr:review-feedback': 'PR review feedback received',
 };
 
 const DEFAULT_CODEX_AUTO_LOAD_AGENTS = false;

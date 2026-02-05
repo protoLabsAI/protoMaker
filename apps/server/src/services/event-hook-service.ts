@@ -18,6 +18,7 @@
  * - auto_mode_health_check: Periodic health status check
  * - skill_created: An agent created a new reusable skill
  * - memory_learning: A new learning was recorded from agent execution
+ * - pr:review-feedback: PR review feedback received from webhook
  */
 
 import { exec } from 'child_process';
@@ -67,6 +68,11 @@ interface HookContext {
   // Health check specific fields
   healthStatus?: string;
   healthDetails?: string;
+  // PR review feedback specific fields
+  prNumber?: number;
+  prUrl?: string;
+  reviewData?: string;
+  reviewer?: string;
 }
 
 /**
@@ -146,6 +152,19 @@ export interface HealthCheckPayload {
 }
 
 /**
+ * PR review feedback event payload structure
+ */
+export interface PRReviewFeedbackPayload {
+  featureId?: string;
+  featureName?: string;
+  projectPath: string;
+  prNumber: number;
+  prUrl: string;
+  reviewData: string;
+  reviewer?: string;
+}
+
+/**
  * Event Hook Service
  *
  * Manages execution of user-configured event hooks in response to system events.
@@ -188,6 +207,8 @@ export class EventHookService {
         this.handleMemoryLearningEvent(payload as MemoryLearningPayload);
       } else if (type === 'auto-mode:health-check') {
         this.handleHealthCheckEvent(payload as HealthCheckPayload);
+      } else if (type === 'pr:review-feedback') {
+        this.handlePRReviewFeedbackEvent(payload as PRReviewFeedbackPayload);
       }
     });
 
@@ -366,6 +387,26 @@ export class EventHookService {
     };
 
     await this.executeHooksForTrigger('auto_mode_health_check', context);
+  }
+
+  /**
+   * Handle pr:review-feedback events and trigger matching hooks
+   */
+  private async handlePRReviewFeedbackEvent(payload: PRReviewFeedbackPayload): Promise<void> {
+    const context: HookContext = {
+      featureId: payload.featureId,
+      featureName: payload.featureName,
+      projectPath: payload.projectPath,
+      projectName: this.extractProjectName(payload.projectPath),
+      prNumber: payload.prNumber,
+      prUrl: payload.prUrl,
+      reviewData: payload.reviewData,
+      reviewer: payload.reviewer,
+      timestamp: new Date().toISOString(),
+      eventType: 'pr:review-feedback',
+    };
+
+    await this.executeHooksForTrigger('pr:review-feedback', context);
   }
 
   /**
@@ -603,6 +644,15 @@ export class EventHookService {
   emitHealthCheck(payload: HealthCheckPayload): void {
     if (this.emitter) {
       this.emitter.emit('auto-mode:health-check', payload);
+    }
+  }
+
+  /**
+   * Emit a PR review feedback event
+   */
+  emitPRReviewFeedback(payload: PRReviewFeedbackPayload): void {
+    if (this.emitter) {
+      this.emitter.emit('pr:review-feedback', payload);
     }
   }
 }
