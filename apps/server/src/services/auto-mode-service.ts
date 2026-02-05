@@ -665,11 +665,17 @@ export class AutoModeService {
       maxConcurrency: resolvedMaxConcurrency,
     });
 
+    // Send Discord notification for auto-mode start
+    await this.sendDiscordNotification('started', {
+      projectPath,
+      message: `Auto mode started with max ${resolvedMaxConcurrency} concurrent features`,
+    });
+
     // Save execution state for recovery after restart
     await this.saveExecutionStateForProject(projectPath, branchName, resolvedMaxConcurrency);
 
     // Run the loop in the background
-    this.runAutoLoopForProject(worktreeKey).catch((error) => {
+    this.runAutoLoopForProject(worktreeKey).catch(async (error) => {
       const worktreeDescErr = branchName ? `worktree ${branchName}` : 'main worktree';
       logger.error(`Loop error for ${worktreeDescErr} in ${projectPath}:`, error);
       const errorInfo = classifyError(error);
@@ -678,6 +684,12 @@ export class AutoModeService {
         errorType: errorInfo.type,
         projectPath,
         branchName,
+      });
+
+      // Send Discord notification for loop error
+      await this.sendDiscordNotification('error', {
+        projectPath,
+        error: errorInfo.message,
       });
     });
 
@@ -735,6 +747,22 @@ export class AutoModeService {
             });
             projectState.hasEmittedIdleEvent = true;
             logger.info(`[AutoLoop] Backlog complete, auto mode now idle for ${worktreeDesc}`);
+
+            // Send Discord notification with summary of completed features
+            try {
+              const allFeatures = await this.featureLoader.getAll(projectPath);
+              const completedFeatures: string[] = allFeatures
+                .filter((f: Feature) => f.status === 'done')
+                .map((f: Feature) => f.title)
+                .filter((title): title is string => title !== undefined);
+
+              await this.sendDiscordNotification('completed', {
+                projectPath,
+                completedFeatures,
+              });
+            } catch (error) {
+              logger.error('[Discord] Failed to send completed notification:', error);
+            }
           } else if (projectRunningCount > 0) {
             logger.info(
               `[AutoLoop] No pending features available, ${projectRunningCount} still running, waiting...`
@@ -969,13 +997,19 @@ export class AutoModeService {
     // Note: Memory folder initialization is now handled by loadContextFiles
 
     // Run the loop in the background
-    this.runAutoLoop().catch((error) => {
+    this.runAutoLoop().catch(async (error) => {
       logger.error('Loop error:', error);
       const errorInfo = classifyError(error);
       this.emitAutoModeEvent('auto_mode_error', {
         error: errorInfo.message,
         errorType: errorInfo.type,
         projectPath,
+      });
+
+      // Send Discord notification for loop error
+      await this.sendDiscordNotification('error', {
+        projectPath,
+        error: errorInfo.message,
       });
     });
   }
@@ -1009,6 +1043,22 @@ export class AutoModeService {
             });
             this.hasEmittedIdleEvent = true;
             logger.info(`[AutoLoop] Backlog complete, auto mode now idle`);
+
+            // Send Discord notification with summary of completed features
+            try {
+              const allFeatures = await this.featureLoader.getAll(this.config!.projectPath);
+              const completedFeatures: string[] = allFeatures
+                .filter((f: Feature) => f.status === 'done')
+                .map((f: Feature) => f.title)
+                .filter((title): title is string => title !== undefined);
+
+              await this.sendDiscordNotification('completed', {
+                projectPath: this.config!.projectPath,
+                completedFeatures,
+              });
+            } catch (error) {
+              logger.error('[Discord] Failed to send completed notification:', error);
+            }
           } else if (runningCount > 0) {
             logger.debug(
               `[AutoLoop] No pending features, ${runningCount} still running, waiting...`
@@ -1627,6 +1677,12 @@ export class AutoModeService {
           failureCategory: failureAnalysis.category,
         });
 
+        // Send Discord notification for feature error
+        await this.sendDiscordNotification('error', {
+          projectPath,
+          error: `Feature "${feature?.title || featureId}" failed: ${errorInfo.message}`,
+        });
+
         // Track this failure and check if we should pause auto mode
         // This handles both specific quota/rate limit errors AND generic failures
         // that may indicate quota exhaustion (SDK doesn't always return useful errors)
@@ -2195,6 +2251,12 @@ Complete the pipeline step instructions above. Review the previous work and appl
           errorType: errorInfo.type,
           projectPath,
         });
+
+        // Send Discord notification for pipeline resume error
+        await this.sendDiscordNotification('error', {
+          projectPath,
+          error: `Feature "${feature.title}" pipeline resume failed: ${errorInfo.message}`,
+        });
       }
     } finally {
       this.runningFeatures.delete(featureId);
@@ -2514,6 +2576,12 @@ Address the follow-up instructions above. Review the previous work and make the 
           projectPath,
         });
 
+        // Send Discord notification for feature execution error
+        await this.sendDiscordNotification('error', {
+          projectPath,
+          error: `Feature "${feature?.title || featureId}" execution failed: ${errorInfo.message}`,
+        });
+
         // Track this failure and check if we should pause auto mode
         const shouldPause = this.trackFailureAndCheckPause({
           type: errorInfo.type,
@@ -2820,6 +2888,12 @@ Format your response as a structured markdown document.`;
         error: errorInfo.message,
         errorType: errorInfo.type,
         projectPath,
+      });
+
+      // Send Discord notification for project analysis error
+      await this.sendDiscordNotification('error', {
+        projectPath,
+        error: `Project analysis failed: ${errorInfo.message}`,
       });
     }
   }
@@ -4948,6 +5022,137 @@ After generating the revised spec, output:
       type: eventType,
       ...data,
     });
+  }
+
+  /**
+   * Send a Discord notification for auto-mode events if configured.
+   * Requires Discord MCP server to be configured in settings.
+   */
+  private async sendDiscordNotification(
+    eventType: 'started' | 'completed' | 'error',
+    data: {
+      projectPath?: string;
+      message?: string;
+      error?: string;
+      completedFeatures?: string[];
+    }
+  ): Promise<void> {
+    try {
+      if (!this.settingsService) {
+        return;
+      }
+
+      // Load Discord integration settings
+      const globalSettings = await this.settingsService.getGlobalSettings();
+      const discordConfig = globalSettings.discordIntegration;
+
+      // Check if Discord integration is enabled and this event type is enabled
+      if (!discordConfig?.enabled || !discordConfig.notifyAutoModeEvents) {
+        return;
+      }
+
+      const notifyConfig = discordConfig.notifyAutoModeEvents;
+      if (!notifyConfig[eventType]) {
+        return;
+      }
+
+      // Get channel ID for auto-mode notifications
+      const channelId = notifyConfig.channelId;
+      if (!channelId) {
+        logger.warn('[Discord] Auto-mode channel ID not configured');
+        return;
+      }
+
+      // Find Discord MCP server in settings
+      const discordServer = globalSettings.mcpServers?.find(
+        (s) => s.enabled && s.name.toLowerCase().includes('discord')
+      );
+
+      if (!discordServer) {
+        logger.debug('[Discord] No enabled Discord MCP server found in settings');
+        return;
+      }
+
+      // Import MCP SDK dynamically
+      const { Client } = await import('@modelcontextprotocol/sdk/client/index.js');
+      const { StdioClientTransport } = await import('@modelcontextprotocol/sdk/client/stdio.js');
+
+      // Create MCP client
+      const client = new Client({
+        name: 'automaker-discord-notifier',
+        version: '1.0.0',
+      });
+
+      let transport: InstanceType<typeof StdioClientTransport> | null = null;
+
+      try {
+        // Create stdio transport
+        transport = new StdioClientTransport({
+          command: discordServer.command || 'docker',
+          args: discordServer.args || [],
+          env: discordServer.env || {},
+        });
+
+        // Connect to Discord MCP server
+        await client.connect(transport);
+
+        // Format message based on event type
+        let message = '';
+        switch (eventType) {
+          case 'started':
+            message = `🚀 **Auto-mode started**\n\n${data.message || 'Auto-mode is now running'}`;
+            if (data.projectPath) {
+              const projectName = path.basename(data.projectPath);
+              message += `\n**Project:** ${projectName}`;
+            }
+            break;
+
+          case 'completed':
+            message = `✅ **Auto-mode completed**\n\n`;
+            if (data.completedFeatures && data.completedFeatures.length > 0) {
+              message += `**Completed features:**\n`;
+              data.completedFeatures.forEach((feature) => {
+                message += `• ${feature}\n`;
+              });
+            } else {
+              message += data.message || 'All features completed successfully';
+            }
+            break;
+
+          case 'error':
+            message = `🚨 **Auto-mode error**\n\n`;
+            message += `**Error:** ${data.error || data.message || 'Unknown error occurred'}\n`;
+            if (data.projectPath) {
+              const projectName = path.basename(data.projectPath);
+              message += `**Project:** ${projectName}`;
+            }
+            break;
+        }
+
+        // Send message to Discord channel
+        await client.callTool({
+          name: 'discord_send_message',
+          arguments: {
+            channelId,
+            message,
+          },
+        });
+
+        logger.info(`[Discord] Sent ${eventType} notification to channel ${channelId}`);
+      } finally {
+        // Clean up MCP client connection
+        if (client) {
+          try {
+            await client.close();
+          } catch {
+            // Ignore cleanup errors
+          }
+        }
+      }
+    } catch (error) {
+      // Log but don't throw - Discord notifications are non-critical
+      logger.error('[Discord] Failed to send notification:', error);
+    }
   }
 
   private sleep(ms: number, signal?: AbortSignal): Promise<void> {

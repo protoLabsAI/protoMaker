@@ -1198,6 +1198,26 @@ export interface GlobalSettings {
   };
 
   /**
+   * Discord integration settings for team notifications.
+   * Requires Discord MCP server to be configured.
+   */
+  discordIntegration?: {
+    /** Whether Discord notifications are enabled */
+    enabled: boolean;
+    /** Auto-mode event notifications configuration */
+    notifyAutoModeEvents?: {
+      /** Enable notifications for auto-mode started events */
+      started?: boolean;
+      /** Enable notifications for auto-mode completed events */
+      completed?: boolean;
+      /** Enable notifications for auto-mode error events */
+      error?: boolean;
+      /** Channel ID for auto-mode notifications (e.g., "#auto-mode") */
+      channelId?: string;
+    };
+  };
+
+  /**
    * Auto-mode always-on configuration.
    * When enabled, auto-mode automatically starts for configured projects on server startup.
    * This enables continuous autonomous feature execution without manual intervention.
