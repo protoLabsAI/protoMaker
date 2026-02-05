@@ -120,3 +120,8 @@ export {
   getEngineeringManagerPrompt,
   getRoleAnalysisPrompt,
 } from './agents/engineering-manager-prompt.js';
+export { getFrontendEngineerPrompt } from './agents/frontend-engineer-prompt.js';
+export { getBackendEngineerPrompt } from './agents/backend-engineer-prompt.js';
+export { getDevOpsEngineerPrompt } from './agents/devops-engineer-prompt.js';
+export { getQAEngineerPrompt } from './agents/qa-engineer-prompt.js';
+export { getDocsEngineerPrompt } from './agents/docs-engineer-prompt.js';
