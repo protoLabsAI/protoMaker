@@ -125,10 +125,10 @@ function parseDiscordError(error: unknown): {
  * All methods return DiscordOperationResult with success/error states.
  */
 export class DiscordService {
-  private provider: ClaudeProvider;
+  private provider: ClaudeProvider | null;
 
-  constructor(provider: ClaudeProvider) {
-    this.provider = provider;
+  constructor(provider?: ClaudeProvider) {
+    this.provider = provider ?? null;
   }
 
   /**
@@ -658,7 +658,7 @@ let discordServiceInstance: DiscordService | null = null;
  * Get or create the singleton Discord service instance
  * @param provider - Claude provider for MCP tool execution
  */
-export function getDiscordService(provider: ClaudeProvider): DiscordService {
+export function getDiscordService(provider?: ClaudeProvider): DiscordService {
   if (!discordServiceInstance) {
     discordServiceInstance = new DiscordService(provider);
   }
