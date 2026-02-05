@@ -87,6 +87,9 @@ export type {
 // Error types
 export type { ErrorType, ErrorInfo } from './error.js';
 
+// Failure analysis types
+export type { FailureCategory, FailureAnalysis, RecoveryStrategy } from './failure.js';
+
 // Image types
 export type { ImageData, ImageContentBlock } from './image.js';
 
