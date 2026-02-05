@@ -58,6 +58,8 @@ export type {
   FeatureTextFilePath,
   FeatureStatus,
   DescriptionHistoryEntry,
+  CompletionCriterion,
+  RalphModeConfig,
 } from './feature.js';
 
 // Project orchestration types

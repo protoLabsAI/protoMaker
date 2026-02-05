@@ -67,6 +67,8 @@ export interface Feature {
     tasksCompleted?: number;
     tasksTotal?: number;
   };
+  /** Ralph Mode configuration for iterative agent execution */
+  ralphMode?: RalphModeConfig;
   error?: string;
   summary?: string;
   startedAt?: string;
@@ -75,3 +77,38 @@ export interface Feature {
 }
 
 export type FeatureStatus = 'pending' | 'running' | 'completed' | 'failed' | 'verified';
+
+/**
+ * Ralph Mode - Iterative agent execution with completion criteria
+ */
+
+/**
+ * Completion criterion types for Ralph Mode
+ * Determines when iterative execution should stop
+ */
+export type CompletionCriterion =
+  | { type: 'maxIterations' } // Stop after maxIterations reached
+  | { type: 'testsPass'; testCommand?: string } // Stop when tests pass
+  | { type: 'buildSucceeds'; buildCommand?: string } // Stop when build succeeds
+  | { type: 'fileExists'; filePath: string } // Stop when file exists
+  | { type: 'fileContains'; filePath: string; pattern: string } // Stop when file contains pattern
+  | { type: 'noErrors' } // Stop when no errors in agent output
+  | { type: 'custom'; script: string }; // Stop when custom script returns 0
+
+/**
+ * Configuration for Ralph Mode - iterative agent execution
+ */
+export interface RalphModeConfig {
+  /** Whether Ralph Mode is enabled for this feature */
+  enabled: boolean;
+  /** Maximum number of iterations before stopping (default: 5) */
+  maxIterations: number;
+  /** Criteria that determine when iteration should stop */
+  completionCriteria: CompletionCriterion[];
+  /** Delay in milliseconds between iterations (default: 1000) */
+  iterationDelay?: number;
+  /** Whether to preserve conversation context between iterations (default: true) */
+  preserveContext?: boolean;
+  /** Path to file for tracking iteration progress */
+  progressFile?: string;
+}
