@@ -51,6 +51,11 @@ export type EventType =
   | 'dev-server:started'
   | 'dev-server:output'
   | 'dev-server:stopped'
-  | 'notification:created';
+  | 'notification:created'
+  | 'recovery_analysis'
+  | 'recovery_started'
+  | 'recovery_completed'
+  | 'recovery_recorded'
+  | 'recovery_escalated';
 
 export type EventCallback = (type: EventType, payload: unknown) => void;

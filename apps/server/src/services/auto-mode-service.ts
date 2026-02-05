@@ -20,6 +20,8 @@ import type {
   PipelineConfig,
   ThinkingLevel,
   PlanningMode,
+  ExecutionContext,
+  FailureAnalysis,
 } from '@automaker/types';
 import {
   DEFAULT_PHASE_MODELS,
@@ -72,6 +74,7 @@ import {
   getPhaseModelWithOverrides,
 } from '../lib/settings-helpers.js';
 import { getNotificationService } from './notification-service.js';
+import { RecoveryService, getRecoveryService } from './recovery-service.js';
 
 const execAsync = promisify(exec);
 
@@ -235,6 +238,10 @@ interface RunningFeature {
   startTime: number;
   model?: string;
   provider?: ModelProvider;
+  // Recovery tracking
+  retryCount: number;
+  previousErrors: string[];
+  recoveryContext?: string;
 }
 
 interface AutoLoopState {
@@ -328,10 +335,13 @@ export class AutoModeService {
   private pausedDueToFailures = false;
   // Track if idle event has been emitted (legacy, now per-project in autoLoopsByProject)
   private hasEmittedIdleEvent = false;
+  // Recovery service for automatic failure recovery
+  private recoveryService: RecoveryService;
 
   constructor(events: EventEmitter, settingsService?: SettingsService) {
     this.events = events;
     this.settingsService = settingsService ?? null;
+    this.recoveryService = getRecoveryService(events);
   }
 
   /**
@@ -1070,6 +1080,9 @@ export class AutoModeService {
     providedWorktreePath?: string,
     options?: {
       continuationPrompt?: string;
+      retryCount?: number;
+      previousErrors?: string[];
+      recoveryContext?: string;
     }
   ): Promise<void> {
     if (this.runningFeatures.has(featureId)) {
@@ -1086,6 +1099,9 @@ export class AutoModeService {
       abortController,
       isAutoMode,
       startTime: Date.now(),
+      retryCount: options?.retryCount ?? 0,
+      previousErrors: options?.previousErrors ?? [],
+      recoveryContext: options?.recoveryContext,
     };
     this.runningFeatures.set(featureId, tempRunningFeature);
 
@@ -1237,6 +1253,15 @@ export class AutoModeService {
         const planningPrefix = await this.getPlanningPromptPrefix(feature);
         prompt = planningPrefix + featurePrompt;
 
+        // Add recovery context if this is a retry attempt
+        if (options?.recoveryContext) {
+          const recoverySection = `\n\n## Recovery Context\n\nThis is retry attempt #${options.retryCount ?? 1}. The previous attempt failed with the following context:\n\n${options.recoveryContext}\n\nPlease address these issues in your implementation.\n`;
+          prompt = recoverySection + prompt;
+          logger.info(
+            `Added recovery context for feature ${featureId} (retry #${options.retryCount})`
+          );
+        }
+
         // Emit planning mode info
         if (feature.planningMode && feature.planningMode !== 'skip') {
           this.emitAutoModeEvent('planning_started', {
@@ -1366,6 +1391,78 @@ export class AutoModeService {
         });
       } else {
         logger.error(`Feature ${featureId} failed:`, error);
+
+        // Build execution context for recovery analysis
+        const executionContext: ExecutionContext = {
+          featureId,
+          projectPath,
+          worktreePath: tempRunningFeature.worktreePath ?? undefined,
+          retryCount: tempRunningFeature.retryCount,
+          previousErrors: tempRunningFeature.previousErrors,
+          runningTime: Date.now() - tempRunningFeature.startTime,
+        };
+
+        // Analyze failure and determine recovery strategy
+        const failureAnalysis = await this.recoveryService.analyzeFailure(
+          error,
+          errorInfo,
+          executionContext
+        );
+
+        // Execute recovery strategy
+        const recoveryResult = await this.recoveryService.executeRecovery(
+          featureId,
+          failureAnalysis,
+          projectPath
+        );
+
+        if (recoveryResult.shouldRetry && failureAnalysis.isRetryable) {
+          // Recovery suggests retry - schedule it with context
+          logger.info(
+            `Recovery for feature ${featureId}: scheduling retry (attempt ${tempRunningFeature.retryCount + 1}/${failureAnalysis.maxRetries})`
+          );
+
+          this.emitAutoModeEvent('auto_mode_progress', {
+            featureId,
+            featureName: feature?.title,
+            message: `Recovery: ${recoveryResult.actionTaken}`,
+            projectPath,
+          });
+
+          // Wait for the suggested delay before retry
+          if (failureAnalysis.suggestedDelay > 0) {
+            await new Promise((resolve) => setTimeout(resolve, failureAnalysis.suggestedDelay));
+          }
+
+          // Remove from running features so retry can start
+          this.runningFeatures.delete(featureId);
+
+          // Schedule retry with accumulated context
+          const newPreviousErrors = [...tempRunningFeature.previousErrors, errorInfo.message];
+
+          // Use setImmediate to avoid stack overflow on deep retry chains
+          setImmediate(() => {
+            this.executeFeature(
+              projectPath,
+              featureId,
+              useWorktrees,
+              isAutoMode,
+              providedWorktreePath,
+              {
+                retryCount: tempRunningFeature.retryCount + 1,
+                previousErrors: newPreviousErrors,
+                recoveryContext: recoveryResult.retryContext,
+              }
+            ).catch((retryError) => {
+              logger.error(`Retry failed for feature ${featureId}:`, retryError);
+            });
+          });
+
+          // Return early - don't move to backlog or track as failure
+          return;
+        }
+
+        // Recovery didn't suggest retry or not retryable - fall back to original behavior
         await this.updateFeatureStatus(projectPath, featureId, 'backlog');
         this.emitAutoModeEvent('auto_mode_error', {
           featureId,
@@ -1374,6 +1471,9 @@ export class AutoModeService {
           error: errorInfo.message,
           errorType: errorInfo.type,
           projectPath,
+          recoveryAttempted: true,
+          recoveryAction: recoveryResult.actionTaken,
+          failureCategory: failureAnalysis.category,
         });
 
         // Track this failure and check if we should pause auto mode
@@ -1772,6 +1872,8 @@ Complete the pipeline step instructions above. Review the previous work and appl
       abortController,
       isAutoMode: false,
       startTime: Date.now(),
+      retryCount: 0,
+      previousErrors: [],
     });
 
     try {
@@ -2013,6 +2115,8 @@ Address the follow-up instructions above. Review the previous work and make the 
       startTime: Date.now(),
       model,
       provider,
+      retryCount: 0,
+      previousErrors: [],
     });
 
     try {
