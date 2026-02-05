@@ -96,6 +96,7 @@ import { GraphiteSyncScheduler } from './services/graphite-sync-scheduler.js';
 import { graphiteService } from './services/graphite-service.js';
 import { createWebhooksRoutes } from './routes/webhooks/index.js';
 import { createSchedulerRoutes } from './routes/scheduler/index.js';
+import { createDiscordRoutes } from './routes/discord/index.js';
 
 const PORT = parseInt(process.env.PORT || '3008', 10);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -483,6 +484,7 @@ app.use('/api/skills', createSkillsRoutes());
 app.use('/api/event-history', createEventHistoryRoutes(eventHistoryService, settingsService));
 app.use('/api/projects', createProjectsRoutes(featureLoader));
 app.use('/api/scheduler', createSchedulerRoutes(schedulerService));
+app.use('/api/discord', createDiscordRoutes(settingsService));
 
 // Create HTTP server
 const server = createServer(app);
