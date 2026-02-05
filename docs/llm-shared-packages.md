@@ -134,15 +134,26 @@ import { resolveModelString, DEFAULT_MODELS } from '@automaker/model-resolver';
 
 // Convert user input to model ID
 const modelId = resolveModelString('sonnet'); // → 'claude-sonnet-4-20250514'
+
+// Use default for auto-mode feature implementation
+const autoModeModel = DEFAULT_MODELS.autoMode; // → sonnet
 ```
 
 **Never import from:** `lib/model-resolver`
 
 **Model aliases:**
 
-- `haiku` → `claude-haiku-4-5` (fast, simple tasks)
-- `sonnet` → `claude-sonnet-4-20250514` (balanced, recommended)
-- `opus` → `claude-opus-4-5-20251101` (maximum capability)
+- `haiku` → `claude-haiku-4-5` (fast, simple/trivial tasks)
+- `sonnet` → `claude-sonnet-4-20250514` (balanced, feature implementation)
+- `opus` → `claude-opus-4-5-20251101` (maximum capability, orchestration/architecture)
+
+**DEFAULT_MODELS use cases:**
+
+| Key                       | Model  | Use Case                                   |
+| ------------------------- | ------ | ------------------------------------------ |
+| `DEFAULT_MODELS.claude`   | opus   | Orchestration, planning, challenging work  |
+| `DEFAULT_MODELS.autoMode` | sonnet | Auto-mode feature implementation (default) |
+| `DEFAULT_MODELS.trivial`  | haiku  | Small/quick tasks                          |
 
 ### @automaker/dependency-resolver
 

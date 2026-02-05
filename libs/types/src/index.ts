@@ -188,6 +188,11 @@ export type {
   EventHookHttpAction,
   EventHookAction,
   EventHook,
+  // Git workflow types
+  GitWorkflowSettings,
+  GitWorkflowResult,
+  // Graphite CLI types
+  GraphiteSettings,
   // Claude-compatible provider types (new)
   ApiKeySource,
   ClaudeCompatibleProviderType,
@@ -213,6 +218,10 @@ export {
   getThinkingTokenBudget,
   // Event hook constants
   EVENT_HOOK_TRIGGER_LABELS,
+  // Git workflow defaults
+  DEFAULT_GIT_WORKFLOW_SETTINGS,
+  // Graphite CLI defaults
+  DEFAULT_GRAPHITE_SETTINGS,
   // Claude-compatible provider templates (new)
   CLAUDE_PROVIDER_TEMPLATES,
   // Claude API profile constants (deprecated)
@@ -356,3 +365,21 @@ export { PR_STATES, validatePRState } from './worktree.js';
 
 // Terminal types
 export type { TerminalInfo } from './terminal.js';
+
+// Ralph mode types (persistent retry loops with external verification)
+export type {
+  CompletionCriteriaType,
+  CompletionCriterion,
+  CriterionCheckResult,
+  VerificationResult,
+  FailureCategory,
+  FailureAnalysis,
+  RalphIteration,
+  RalphLoopStatus,
+  RalphLoopConfig,
+  RalphLoopState,
+  FeatureRalphConfig,
+  RalphEventType,
+  RalphEventPayload,
+} from './ralph.js';
+export { DEFAULT_COMPLETION_CRITERIA, DEFAULT_RALPH_CONFIG } from './ralph.js';

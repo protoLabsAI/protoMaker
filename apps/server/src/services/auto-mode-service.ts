@@ -75,6 +75,7 @@ import {
 } from '../lib/settings-helpers.js';
 import { getNotificationService } from './notification-service.js';
 import { RecoveryService, getRecoveryService } from './recovery-service.js';
+import { gitWorkflowService } from './git-workflow-service.js';
 
 const execAsync = promisify(exec);
 
@@ -94,6 +95,50 @@ async function getCurrentBranch(projectPath: string): Promise<string | null> {
 }
 
 // PlanningMode type is imported from @automaker/types
+
+/**
+ * Determine the appropriate model for a feature based on complexity and failure count.
+ *
+ * Model hierarchy:
+ * - opus: Architectural work, or features that have failed 2+ times
+ * - sonnet: Standard feature implementation (default)
+ * - haiku: Small/trivial tasks
+ *
+ * @param feature - The feature to get model for
+ * @returns The model ID to use (can be overridden by feature.model)
+ */
+function getModelForFeature(feature: {
+  model?: string;
+  complexity?: string;
+  failureCount?: number;
+}): string {
+  // If feature explicitly specifies a model, use it
+  if (feature.model) {
+    return resolveModelString(feature.model, DEFAULT_MODELS.autoMode);
+  }
+
+  // Escalate to opus for architectural work
+  if (feature.complexity === 'architectural') {
+    logger.info('Using opus for architectural feature');
+    return DEFAULT_MODELS.claude; // opus
+  }
+
+  // Escalate to opus after multiple failures
+  const failureThreshold = 2;
+  if (feature.failureCount && feature.failureCount >= failureThreshold) {
+    logger.info(`Escalating to opus after ${feature.failureCount} failures`);
+    return DEFAULT_MODELS.claude; // opus
+  }
+
+  // Use haiku for trivial/small tasks
+  if (feature.complexity === 'small') {
+    logger.info('Using haiku for small feature');
+    return DEFAULT_MODELS.trivial; // haiku
+  }
+
+  // Default to sonnet for standard feature work
+  return DEFAULT_MODELS.autoMode; // sonnet
+}
 
 interface ParsedTask {
   id: string; // e.g., "T001"
@@ -1277,8 +1322,8 @@ export class AutoModeService {
         typeof img === 'string' ? img : img.path
       );
 
-      // Get model from feature and determine provider
-      const model = resolveModelString(feature.model, DEFAULT_MODELS.claude);
+      // Get model based on feature complexity and failure count
+      const model = getModelForFeature(feature);
       const provider = ProviderFactory.getProviderNameForModel(model);
       logger.info(
         `Executing feature ${featureId} with model: ${model}, provider: ${provider} in ${workDir}`
@@ -1365,6 +1410,53 @@ export class AutoModeService {
         console.warn('[AutoMode] Failed to record learnings:', learningError);
       }
 
+      // Run git workflow (commit, push, PR) if enabled
+      let gitWorkflowResult: Awaited<
+        ReturnType<typeof gitWorkflowService.runPostCompletionWorkflow>
+      > = null;
+      if (this.settingsService) {
+        try {
+          const settings = await this.settingsService.getGlobalSettings();
+
+          // Look up epic branch name if feature belongs to an epic
+          let epicBranchName: string | undefined;
+          if (feature.epicId && !feature.isEpic) {
+            const epicFeature = await this.featureLoader.get(projectPath, feature.epicId);
+            epicBranchName = epicFeature?.branchName;
+            if (epicBranchName) {
+              logger.info(`Feature ${featureId} belongs to epic, PR will target ${epicBranchName}`);
+            }
+          }
+
+          gitWorkflowResult = await gitWorkflowService.runPostCompletionWorkflow(
+            projectPath,
+            featureId,
+            feature,
+            workDir,
+            settings,
+            epicBranchName
+          );
+          if (gitWorkflowResult) {
+            this.emitAutoModeEvent('auto_mode_git_workflow', {
+              featureId,
+              committed: gitWorkflowResult.commitHash,
+              pushed: gitWorkflowResult.pushed,
+              prUrl: gitWorkflowResult.prUrl,
+              prNumber: gitWorkflowResult.prNumber,
+              prAlreadyExisted: gitWorkflowResult.prAlreadyExisted,
+              projectPath,
+            });
+          }
+        } catch (gitError) {
+          logger.warn(`Git workflow failed for ${featureId}:`, gitError);
+          // Don't fail the feature - git workflow is best-effort
+        }
+      }
+
+      const gitInfo = gitWorkflowResult?.commitHash
+        ? ` | Committed: ${gitWorkflowResult.commitHash}${gitWorkflowResult.pushed ? ', pushed' : ''}${gitWorkflowResult.prUrl ? `, PR: ${gitWorkflowResult.prUrl}` : ''}`
+        : '';
+
       this.emitAutoModeEvent('auto_mode_feature_complete', {
         featureId,
         featureName: feature.title,
@@ -1372,7 +1464,7 @@ export class AutoModeService {
         passes: true,
         message: `Feature completed in ${Math.round(
           (Date.now() - tempRunningFeature.startTime) / 1000
-        )}s${finalStatus === 'verified' ? ' - auto-verified' : ''}`,
+        )}s${finalStatus === 'verified' ? ' - auto-verified' : ''}${gitInfo}`,
         projectPath,
         model: tempRunningFeature.model,
         provider: tempRunningFeature.provider,
@@ -1463,6 +1555,14 @@ export class AutoModeService {
         }
 
         // Recovery didn't suggest retry or not retryable - fall back to original behavior
+        // Increment failure count for model escalation on retry
+        if (feature) {
+          const newFailureCount = (feature.failureCount ?? 0) + 1;
+          await this.featureLoader.update(projectPath, featureId, {
+            failureCount: newFailureCount,
+          });
+          logger.info(`Feature ${featureId} failure count: ${newFailureCount}`);
+        }
         await this.updateFeatureStatus(projectPath, featureId, 'backlog');
         this.emitAutoModeEvent('auto_mode_error', {
           featureId,
@@ -1574,8 +1674,8 @@ export class AutoModeService {
         prompts.taskExecution
       );
 
-      // Get model from feature
-      const model = resolveModelString(feature.model, DEFAULT_MODELS.claude);
+      // Get model based on feature complexity and failure count
+      const model = getModelForFeature(feature);
 
       // Run the agent for this pipeline step
       await this.runAgent(
@@ -1957,12 +2057,58 @@ Complete the pipeline step instructions above. Review the previous work and appl
 
       console.log('[AutoMode] Pipeline resume completed successfully');
 
+      // Run git workflow (commit, push, PR) if enabled
+      let gitWorkflowResult: Awaited<
+        ReturnType<typeof gitWorkflowService.runPostCompletionWorkflow>
+      > = null;
+      if (this.settingsService) {
+        try {
+          const settings = await this.settingsService.getGlobalSettings();
+
+          // Look up epic branch name if feature belongs to an epic
+          let epicBranchName: string | undefined;
+          if (feature.epicId && !feature.isEpic) {
+            const epicFeature = await this.featureLoader.get(projectPath, feature.epicId);
+            epicBranchName = epicFeature?.branchName;
+            if (epicBranchName) {
+              logger.info(`Feature ${featureId} belongs to epic, PR will target ${epicBranchName}`);
+            }
+          }
+
+          gitWorkflowResult = await gitWorkflowService.runPostCompletionWorkflow(
+            projectPath,
+            featureId,
+            feature,
+            workDir,
+            settings,
+            epicBranchName
+          );
+          if (gitWorkflowResult) {
+            this.emitAutoModeEvent('auto_mode_git_workflow', {
+              featureId,
+              committed: gitWorkflowResult.commitHash,
+              pushed: gitWorkflowResult.pushed,
+              prUrl: gitWorkflowResult.prUrl,
+              prNumber: gitWorkflowResult.prNumber,
+              prAlreadyExisted: gitWorkflowResult.prAlreadyExisted,
+              projectPath,
+            });
+          }
+        } catch (gitError) {
+          logger.warn(`Git workflow failed for ${featureId}:`, gitError);
+        }
+      }
+
+      const gitInfo = gitWorkflowResult?.commitHash
+        ? ` | Committed: ${gitWorkflowResult.commitHash}${gitWorkflowResult.pushed ? ', pushed' : ''}${gitWorkflowResult.prUrl ? `, PR: ${gitWorkflowResult.prUrl}` : ''}`
+        : '';
+
       this.emitAutoModeEvent('auto_mode_feature_complete', {
         featureId,
         featureName: feature.title,
         branchName: feature.branchName ?? null,
         passes: true,
-        message: 'Pipeline resumed and completed successfully',
+        message: `Pipeline resumed and completed successfully${gitInfo}`,
         projectPath,
       });
     } catch (error) {
@@ -2100,8 +2246,8 @@ ${prompt}
 ## Task
 Address the follow-up instructions above. Review the previous work and make the requested changes or fixes.`;
 
-    // Get model from feature and determine provider early for tracking
-    const model = resolveModelString(feature?.model, DEFAULT_MODELS.claude);
+    // Get model based on feature complexity and failure count
+    const model = feature ? getModelForFeature(feature) : DEFAULT_MODELS.autoMode;
     const provider = ProviderFactory.getProviderNameForModel(model);
     logger.info(`Follow-up for feature ${featureId} using model: ${model}, provider: ${provider}`);
 
@@ -2229,12 +2375,58 @@ Address the follow-up instructions above. Review the previous work and make the 
       // Record success to reset consecutive failure tracking
       this.recordSuccess();
 
+      // Run git workflow (commit, push, PR) if enabled
+      let gitWorkflowResult: Awaited<
+        ReturnType<typeof gitWorkflowService.runPostCompletionWorkflow>
+      > = null;
+      if (feature && this.settingsService) {
+        try {
+          const settings = await this.settingsService.getGlobalSettings();
+
+          // Look up epic branch name if feature belongs to an epic
+          let epicBranchName: string | undefined;
+          if (feature.epicId && !feature.isEpic) {
+            const epicFeature = await this.featureLoader.get(projectPath, feature.epicId);
+            epicBranchName = epicFeature?.branchName;
+            if (epicBranchName) {
+              logger.info(`Feature ${featureId} belongs to epic, PR will target ${epicBranchName}`);
+            }
+          }
+
+          gitWorkflowResult = await gitWorkflowService.runPostCompletionWorkflow(
+            projectPath,
+            featureId,
+            feature,
+            workDir,
+            settings,
+            epicBranchName
+          );
+          if (gitWorkflowResult) {
+            this.emitAutoModeEvent('auto_mode_git_workflow', {
+              featureId,
+              committed: gitWorkflowResult.commitHash,
+              pushed: gitWorkflowResult.pushed,
+              prUrl: gitWorkflowResult.prUrl,
+              prNumber: gitWorkflowResult.prNumber,
+              prAlreadyExisted: gitWorkflowResult.prAlreadyExisted,
+              projectPath,
+            });
+          }
+        } catch (gitError) {
+          logger.warn(`Git workflow failed for ${featureId}:`, gitError);
+        }
+      }
+
+      const gitInfo = gitWorkflowResult?.commitHash
+        ? ` | Committed: ${gitWorkflowResult.commitHash}${gitWorkflowResult.pushed ? ', pushed' : ''}${gitWorkflowResult.prUrl ? `, PR: ${gitWorkflowResult.prUrl}` : ''}`
+        : '';
+
       this.emitAutoModeEvent('auto_mode_feature_complete', {
         featureId,
         featureName: feature?.title,
         branchName: branchName ?? null,
         passes: true,
-        message: `Follow-up completed successfully${finalStatus === 'verified' ? ' - auto-verified' : ''}`,
+        message: `Follow-up completed successfully${finalStatus === 'verified' ? ' - auto-verified' : ''}${gitInfo}`,
         projectPath,
         model,
         provider,
@@ -4776,7 +4968,7 @@ After generating the revised spec, output:
 
       if (isClaudeModel(model) && !hasClaudeKey) {
         const fallbackModel = feature.model
-          ? resolveModelString(feature.model, DEFAULT_MODELS.claude)
+          ? resolveModelString(feature.model, DEFAULT_MODELS.autoMode)
           : null;
         if (fallbackModel && !isClaudeModel(fallbackModel)) {
           console.log(

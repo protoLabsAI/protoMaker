@@ -4,6 +4,7 @@
 
 import type { PlanningMode, ThinkingLevel } from './settings.js';
 import type { ReasoningEffort } from './provider.js';
+import type { FeatureRalphConfig } from './ralph.js';
 
 /**
  * A single entry in the description history
@@ -71,6 +72,30 @@ export interface Feature {
   summary?: string;
   startedAt?: string;
   descriptionHistory?: DescriptionHistoryEntry[]; // History of description changes
+  // Ralph mode - persistent retry loops with external verification
+  ralphConfig?: FeatureRalphConfig;
+  /** Override global git workflow settings for this specific feature */
+  gitWorkflow?: {
+    /** Override auto-commit setting */
+    autoCommit?: boolean;
+    /** Override auto-push setting */
+    autoPush?: boolean;
+    /** Override auto-create PR setting */
+    autoCreatePR?: boolean;
+  };
+  /**
+   * Feature complexity level - affects model selection
+   * - small: Quick fixes, trivial changes (haiku)
+   * - medium: Standard features (sonnet) - default
+   * - large: Complex multi-file features (sonnet)
+   * - architectural: Core infrastructure, key architecture decisions (opus)
+   */
+  complexity?: 'small' | 'medium' | 'large' | 'architectural';
+  /**
+   * Number of times this feature has failed and been retried.
+   * Used for model escalation - after multiple failures, escalate to opus.
+   */
+  failureCount?: number;
   [key: string]: unknown; // Keep catch-all for extensibility
 }
 

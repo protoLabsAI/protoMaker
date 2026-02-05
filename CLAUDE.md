@@ -167,6 +167,29 @@ Use `resolveModelString()` from `@automaker/model-resolver` to convert model ali
 - `sonnet` → `claude-sonnet-4-20250514`
 - `opus` → `claude-opus-4-5-20251101`
 
+### Model Hierarchy for Auto-Mode
+
+Auto-mode uses a tiered model selection based on feature complexity:
+
+| Model      | Use Case                                                 | Triggered By                                       |
+| ---------- | -------------------------------------------------------- | -------------------------------------------------- |
+| **Opus**   | Orchestration, architectural decisions, challenging work | `complexity: 'architectural'` or after 2+ failures |
+| **Sonnet** | Standard feature implementation (default)                | `complexity: 'medium'` or `'large'`                |
+| **Haiku**  | Trivial/quick tasks                                      | `complexity: 'small'`                              |
+
+**Auto-escalation:** Features that fail 2+ times automatically escalate to opus on retry.
+
+**Setting complexity via MCP:**
+
+```typescript
+mcp__automaker__create_feature({
+  projectPath: '/path/to/project',
+  title: 'Core Infrastructure Setup',
+  description: '...',
+  complexity: 'architectural', // Uses opus
+});
+```
+
 ## Environment Variables
 
 - `ANTHROPIC_API_KEY` - Anthropic API key (or use Claude Code CLI auth)
@@ -287,6 +310,31 @@ interface Feature {
   epicColor?: string; // Badge color (hex)
 }
 ```
+
+### Epic Git Workflow
+
+When features belong to an epic, the git workflow follows a hierarchical PR structure:
+
+```
+main
+  ↑
+epic/foundation ──────────── Epic PR (targets main)
+  ↑         ↑         ↑
+feat-a    feat-b    feat-c   Feature PRs (target epic branch)
+```
+
+**Automatic Behavior:**
+
+- Feature PRs automatically target their epic's branch (not main)
+- Epic PRs target main
+- Features without an epic target main directly
+
+**Merge Order:**
+
+1. Merge all feature PRs into the epic branch
+2. Once all features complete, merge the epic PR into main
+
+This keeps main clean while allowing incremental feature development within epics.
 
 ### Creating a Project via MCP
 

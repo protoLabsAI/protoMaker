@@ -50,6 +50,8 @@ import {
 } from './routes/init-script.js';
 import { createDiscardChangesHandler } from './routes/discard-changes.js';
 import { createListRemotesHandler } from './routes/list-remotes.js';
+import { createGraphiteStatusHandler } from './routes/graphite-status.js';
+import { createGraphiteSyncHandler } from './routes/graphite-sync.js';
 import type { SettingsService } from '../../services/settings-service.js';
 
 export function createWorktreeRoutes(
@@ -164,6 +166,20 @@ export function createWorktreeRoutes(
     validatePathParams('worktreePath'),
     requireValidWorktree,
     createListRemotesHandler()
+  );
+
+  // Graphite CLI integration routes
+  router.post(
+    '/graphite-status',
+    validatePathParams('worktreePath'),
+    requireGitRepoOnly,
+    createGraphiteStatusHandler()
+  );
+  router.post(
+    '/graphite-sync',
+    validatePathParams('worktreePath'),
+    requireGitRepoOnly,
+    createGraphiteSyncHandler()
   );
 
   return router;
