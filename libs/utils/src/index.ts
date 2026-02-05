@@ -138,3 +138,21 @@ export {
   resolveMilestoneDependencies,
   resolvePhaseDependencies,
 } from './project-parser.js';
+
+// Skills loading
+export {
+  getSkillsDir,
+  parseSkillFrontmatter,
+  serializeSkill,
+  checkRequirements,
+  listSkills,
+  getSkill,
+  loadRelevantSkills,
+  createSkill,
+  updateSkill,
+  deleteSkill,
+  recordSkillUsage,
+  initializeSkillsFolder,
+  type SkillsFsModule,
+  type SkillsLoadResult,
+} from './skills-loader.js';
