@@ -670,8 +670,26 @@ export interface EventHookHttpAction {
   body?: string;
 }
 
+/**
+ * EventHookDiscordAction - Configuration for sending a Discord message via MCP
+ *
+ * Sends notifications to Discord channels using the Discord MCP server.
+ * Supports variable substitution in all string fields.
+ */
+export interface EventHookDiscordAction {
+  type: 'discord';
+  /** Discord channel ID or name to send message to. Supports {{variable}} substitution. */
+  channelId: string;
+  /** Message content to send. Supports {{variable}} substitution and Discord markdown. */
+  message: string;
+  /** Optional username override for the webhook (if using webhook method) */
+  username?: string;
+  /** Optional avatar URL override for the webhook (if using webhook method) */
+  avatarUrl?: string;
+}
+
 /** Union type for all hook action configurations */
-export type EventHookAction = EventHookShellAction | EventHookHttpAction;
+export type EventHookAction = EventHookShellAction | EventHookHttpAction | EventHookDiscordAction;
 
 /**
  * EventHook - Configuration for a single event hook

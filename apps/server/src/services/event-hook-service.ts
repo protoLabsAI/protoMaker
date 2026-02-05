@@ -4,6 +4,7 @@
  * Listens to the event emitter and triggers configured hooks:
  * - Shell commands: Executed with configurable timeout
  * - HTTP webhooks: POST/GET/PUT/PATCH requests with variable substitution
+ * - Discord messages: Sent via Discord MCP server
  *
  * Also stores events to history for debugging and replay.
  *
@@ -32,6 +33,7 @@ import type {
   EventHookTrigger,
   EventHookShellAction,
   EventHookHttpAction,
+  EventHookDiscordAction,
 } from '@automaker/types';
 
 const execAsync = promisify(exec);
@@ -429,6 +431,8 @@ export class EventHookService {
         await this.executeShellHook(hook.action, context, hookName);
       } else if (hook.action.type === 'http') {
         await this.executeHttpHook(hook.action, context, hookName);
+      } else if (hook.action.type === 'discord') {
+        await this.executeDiscordHook(hook.action, context, hookName);
       }
     } catch (error) {
       logger.error(`Hook "${hookName}" failed:`, error);
@@ -532,6 +536,48 @@ export class EventHookService {
       if ((error as Error).name === 'AbortError') {
         logger.error(`HTTP hook "${hookName}" timed out after ${DEFAULT_HTTP_TIMEOUT}ms`);
       }
+      throw error;
+    }
+  }
+
+  /**
+   * Execute a Discord message hook via the Discord MCP server
+   *
+   * Uses dynamic import of discord-service to avoid hard dependency.
+   * The discord-service module is provided by the Discord Service Layer feature.
+   */
+  private async executeDiscordHook(
+    action: EventHookDiscordAction,
+    context: HookContext,
+    hookName: string
+  ): Promise<void> {
+    const channelId = this.substituteVariables(action.channelId, context);
+    const message = this.substituteVariables(action.message, context);
+
+    logger.info(`Executing Discord hook "${hookName}" to channel ${channelId}`);
+
+    try {
+      // Try to dynamically import discord service (provided by Discord Service Layer)
+      const discordServiceModule = await import('./discord-service.js').catch((err) => {
+        logger.debug(`Discord service module not available: ${err?.message ?? err}`);
+        return null;
+      });
+      if (discordServiceModule?.getDiscordService) {
+        const service = discordServiceModule.getDiscordService();
+        if (service) {
+          await service.sendMessage({ channelId, message });
+          logger.info(`Discord hook "${hookName}" completed successfully`);
+          return;
+        }
+      }
+
+      // Fallback: log warning if discord service not available
+      logger.warn(
+        `Discord hook "${hookName}" skipped: Discord service not available. ` +
+        `Ensure the Discord Service Layer is configured and initialized.`
+      );
+    } catch (error) {
+      logger.error(`Discord hook "${hookName}" failed:`, error);
       throw error;
     }
   }
