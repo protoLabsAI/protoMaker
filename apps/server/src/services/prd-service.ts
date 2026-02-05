@@ -74,8 +74,8 @@ export class PRDService {
   }): Promise<PRDDocument> {
     const { projectPath, prd, agentId, discordThreadId } = params;
 
-    // Generate PRD ID from title
-    const prdId = this.generatePRDId(prd.title || 'untitled');
+    // Generate PRD ID from situation summary
+    const prdId = this.generatePRDId(prd.situation?.split('\n')[0] || 'untitled');
 
     const metadata: PRDMetadata = {
       id: prdId,
@@ -173,7 +173,7 @@ export class PRDService {
   formatForDiscord(document: PRDDocument): string {
     const { prd } = document;
 
-    let markdown = `# ${prd.title || 'Product Requirements Document'}\n\n`;
+    let markdown = `# Product Requirements Document\n\n`;
 
     if (prd.situation) {
       markdown += `## 📊 Situation\n${prd.situation}\n\n`;
@@ -191,12 +191,8 @@ export class PRDService {
       markdown += `## ✅ Results\n${prd.results}\n\n`;
     }
 
-    if (prd.constraints && prd.constraints.length > 0) {
-      markdown += `## ⚠️ Constraints\n`;
-      prd.constraints.forEach((constraint) => {
-        markdown += `- ${constraint}\n`;
-      });
-      markdown += '\n';
+    if (prd.constraints) {
+      markdown += `## ⚠️ Constraints\n${prd.constraints}\n\n`;
     }
 
     markdown += `---\n*Status: ${document.metadata.status}*\n`;

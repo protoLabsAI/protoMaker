@@ -50,6 +50,7 @@
     "@types/express": "5.0.6",
     "@types/morgan": "1.9.10",
     "@types/node": "22.19.3",
+    "@types/uuid": "^10.0.0",
     "@types/ws": "8.18.1",
     "@vitest/coverage-v8": "4.0.16",
     "@vitest/ui": "4.0.16",
