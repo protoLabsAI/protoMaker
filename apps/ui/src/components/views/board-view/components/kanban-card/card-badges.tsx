@@ -3,7 +3,7 @@ import { memo, useEffect, useMemo, useState } from 'react';
 import { Feature, useAppStore } from '@/store/app-store';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { AlertCircle, Lock, Hand, Sparkles, Layers } from 'lucide-react';
+import { AlertCircle, Lock, Hand, Sparkles, Layers, MessageCircle } from 'lucide-react';
 import { getBlockingDependencies } from '@automaker/dependency-resolver';
 import { useShallow } from 'zustand/react/shallow';
 import { EpicBadge } from './epic-badge';
@@ -17,21 +17,66 @@ interface CardBadgesProps {
 }
 
 /**
- * CardBadges - Shows error and epic badges below the card header
+ * CardBadges - Shows error, epic, and Discord badges below the card header
  * Note: Blocked/Lock badges are now shown in PriorityBadges for visual consistency
  */
 export const CardBadges = memo(function CardBadges({ feature }: CardBadgesProps) {
   const hasEpic = !!feature.epicId;
   const hasError = !!feature.error;
+  const hasDiscord = !!feature.discordChannelId;
 
-  if (!hasError && !hasEpic) {
+  if (!hasError && !hasEpic && !hasDiscord) {
     return null;
   }
+
+  const handleDiscordClick = () => {
+    if (feature.discordChannelId) {
+      // Open Discord channel in browser/app
+      // Discord channel URL format: https://discord.com/channels/{server_id}/{channel_id}
+      // For now, we'll use a generic format - the server ID would need to be stored in settings
+      window.open(`https://discord.com/channels/@me/${feature.discordChannelId}`, '_blank');
+    }
+  };
+
+  // Determine if the Discord channel mapping is valid
+  // For now, we'll consider it valid if both ID and name are present
+  // In a real implementation, this could verify against Discord API
+  const discordChannelValid = !!(feature.discordChannelId && feature.discordChannelName);
 
   return (
     <div className="flex flex-wrap items-center gap-1.5 px-3 pt-1.5 min-h-[24px]">
       {/* Epic badge - shows parent epic for child features */}
       {hasEpic && <EpicBadge feature={feature} />}
+
+      {/* Discord channel badge */}
+      {hasDiscord && (
+        <TooltipProvider delayDuration={200}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={handleDiscordClick}
+                className={cn(
+                  uniformBadgeClass,
+                  'cursor-pointer transition-all hover:scale-105',
+                  discordChannelValid
+                    ? 'bg-[var(--status-success-bg)] border-[var(--status-success)]/40 text-[var(--status-success)]'
+                    : 'bg-[var(--status-error-bg)] border-[var(--status-error)]/40 text-[var(--status-error)]'
+                )}
+                data-testid={`discord-badge-${feature.id}`}
+              >
+                <MessageCircle className="w-3.5 h-3.5" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="text-xs max-w-[250px]">
+              <p>
+                {discordChannelValid
+                  ? `Discord: ${feature.discordChannelName}`
+                  : 'Discord channel mapping broken'}
+              </p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )}
 
       {/* Error badge */}
       {hasError && (

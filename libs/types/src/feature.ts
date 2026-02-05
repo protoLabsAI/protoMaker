@@ -90,6 +90,16 @@ export interface Feature {
    * Used for model escalation - after multiple failures, escalate to opus.
    */
   failureCount?: number;
+  /**
+   * Discord channel ID for feature-specific communication
+   * When present, a Discord icon will be shown on the feature card
+   */
+  discordChannelId?: string;
+  /**
+   * Discord channel name for display purposes
+   * Used in tooltips when hovering over the Discord icon
+   */
+  discordChannelName?: string;
   [key: string]: unknown; // Keep catch-all for extensibility
 }
 
