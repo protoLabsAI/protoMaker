@@ -94,6 +94,7 @@ import { createSkillsRoutes } from './routes/skills/index.js';
 import { getSchedulerService } from './services/scheduler-service.js';
 import { GraphiteSyncScheduler } from './services/graphite-sync-scheduler.js';
 import { graphiteService } from './services/graphite-service.js';
+import { createWebhooksRoutes } from './routes/webhooks/index.js';
 
 const PORT = parseInt(process.env.PORT || '3008', 10);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -368,10 +369,11 @@ function calculateNextSyncDelay(): number {
 // This helps prevent CSRF and content-type confusion attacks
 app.use('/api', requireJsonContentType);
 
-// Mount API routes - health, auth, and setup are unauthenticated
+// Mount API routes - health, auth, setup, and webhooks are unauthenticated
 app.use('/api/health', createHealthRoutes());
 app.use('/api/auth', createAuthRoutes());
 app.use('/api/setup', createSetupRoutes());
+app.use('/api/webhooks', createWebhooksRoutes());
 
 // Apply authentication to all other routes
 app.use('/api', authMiddleware);
