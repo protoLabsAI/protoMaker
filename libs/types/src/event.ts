@@ -85,6 +85,28 @@ export type EventType =
   | 'ralph:stopped'
   | 'ralph:max_iterations'
   | 'ralph:error'
-  | 'ralph:progress';
+  | 'ralph:progress'
+  // PR review feedback events
+  | 'pr:review-feedback';
 
 export type EventCallback = (type: EventType, payload: unknown) => void;
+
+/**
+ * Payload for pr:review-feedback event
+ */
+export interface PRReviewFeedbackPayload {
+  featureId: string;
+  review: {
+    provider: string;
+    status: string;
+    summary?: string;
+    comments?: Array<{
+      file?: string;
+      line?: number;
+      body: string;
+      severity?: 'info' | 'warning' | 'error';
+    }>;
+    [key: string]: unknown;
+  };
+  prUrl: string;
+}
