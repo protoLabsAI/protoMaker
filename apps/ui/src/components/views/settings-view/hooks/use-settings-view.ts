@@ -21,7 +21,8 @@ export type SettingsViewId =
   | 'account'
   | 'security'
   | 'developer'
-  | 'danger';
+  | 'danger'
+  | 'discord';
 
 interface UseSettingsViewOptions {
   initialView?: SettingsViewId;

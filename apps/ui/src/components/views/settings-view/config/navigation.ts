@@ -16,6 +16,7 @@ import {
   GitBranch,
   Code2,
   Webhook,
+  MessageSquare,
 } from 'lucide-react';
 import { AnthropicIcon, CursorIcon, OpenAIIcon, OpenCodeIcon } from '@/components/ui/provider-icon';
 import type { SettingsViewId } from '../hooks/use-settings-view';
@@ -64,6 +65,7 @@ export const GLOBAL_NAV_GROUPS: NavigationGroup[] = [
       { id: 'keyboard', label: 'Keyboard Shortcuts', icon: Settings2 },
       { id: 'audio', label: 'Audio', icon: Volume2 },
       { id: 'event-hooks', label: 'Event Hooks', icon: Webhook },
+      { id: 'discord', label: 'Discord', icon: MessageSquare },
     ],
   },
   {

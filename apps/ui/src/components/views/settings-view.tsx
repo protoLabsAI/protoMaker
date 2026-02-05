@@ -29,6 +29,7 @@ import { PromptCustomizationSection } from './settings-view/prompts';
 import { EventHooksSection } from './settings-view/event-hooks';
 import { ImportExportDialog } from './settings-view/components/import-export-dialog';
 import type { Theme } from './settings-view/shared/types';
+import { DiscordSettings } from './Settings/DiscordSettings';
 
 // Breakpoint constant for mobile (matches Tailwind lg breakpoint)
 const LG_BREAKPOINT = 1024;
@@ -156,6 +157,8 @@ export function SettingsView() {
         );
       case 'event-hooks':
         return <EventHooksSection />;
+      case 'discord':
+        return <DiscordSettings />;
       case 'defaults':
         return (
           <FeatureDefaultsSection
