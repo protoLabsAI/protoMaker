@@ -369,6 +369,30 @@ export class GraphiteService {
   }
 
   /**
+   * Sync and restack the current branch with its parent
+   * This ensures the branch is up-to-date and rebased cleanly before PR creation
+   * The --restack flag automatically restacks dependent branches after the sync
+   */
+  async syncAndRestack(workDir: string): Promise<GraphiteSyncResult> {
+    try {
+      await execAsync('gt sync --restack', { cwd: workDir, env: execEnv });
+      logger.info('Graphite sync --restack successful');
+      return { success: true, rebased: true, conflicts: false };
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+
+      // Check for merge conflicts
+      if (errorMsg.includes('conflict') || errorMsg.includes('CONFLICT')) {
+        logger.warn('Graphite sync --restack encountered conflicts');
+        return { success: false, rebased: false, conflicts: true, error: errorMsg };
+      }
+
+      logger.warn(`Graphite sync --restack failed: ${errorMsg}`);
+      return { success: false, rebased: false, conflicts: false, error: errorMsg };
+    }
+  }
+
+  /**
    * Get stack information for the current branch
    * Returns information about the branch's position in the stack
    */

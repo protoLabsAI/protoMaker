@@ -216,7 +216,48 @@ export class GitWorkflowService {
           // Continue - commit succeeded, push failed
         }
 
-        // Step 3: Create PR (if push succeeded and PR creation enabled)
+        // Step 3: Sync and restack (if using Graphite and PR creation enabled)
+        if (result.pushed && gitSettings.autoCreatePR && useGraphite) {
+          try {
+            logger.info(`Syncing and restacking branch ${branchName} before PR creation`);
+            const syncResult = await graphiteService.syncAndRestack(workDir);
+
+            if (!syncResult.success) {
+              if (syncResult.conflicts) {
+                // Conflicts detected - this requires manual intervention
+                const conflictError = `Branch ${branchName} has merge conflicts after sync. Manual resolution required.`;
+                logger.error(conflictError);
+                result.error = result.error
+                  ? `${result.error}; ${conflictError}`
+                  : conflictError;
+                // Don't proceed with PR creation if there are conflicts
+                return result;
+              } else {
+                // Sync failed for another reason - log but continue
+                logger.warn(`Sync failed but no conflicts detected: ${syncResult.error}`);
+              }
+            } else {
+              logger.info(`Branch ${branchName} synced and restacked successfully`);
+              // After successful rebase, push the rebased branch
+              try {
+                const rebased = await graphiteService.push(workDir);
+                if (!rebased) {
+                  logger.warn(`Failed to push rebased branch ${branchName}`);
+                }
+              } catch (pushError) {
+                logger.warn(
+                  `Failed to push rebased branch: ${pushError instanceof Error ? pushError.message : String(pushError)}`
+                );
+              }
+            }
+          } catch (syncError) {
+            const errorMsg = syncError instanceof Error ? syncError.message : String(syncError);
+            logger.warn(`Sync and restack failed for branch ${branchName}: ${errorMsg}`);
+            // Log the error but continue with PR creation - sync is best-effort
+          }
+        }
+
+        // Step 4: Create PR (if push succeeded and PR creation enabled)
         if (result.pushed && gitSettings.autoCreatePR) {
           try {
             if (useGraphite) {

@@ -1437,6 +1437,16 @@ export class AutoModeService {
             epicBranchName
           );
           if (gitWorkflowResult) {
+            // Check if git workflow encountered conflicts
+            if (gitWorkflowResult.error && gitWorkflowResult.error.includes('conflict')) {
+              this.emitAutoModeEvent('auto_mode_progress', {
+                featureId,
+                featureName: feature.title,
+                message: `⚠️ Git workflow warning: ${gitWorkflowResult.error}`,
+                projectPath,
+              });
+            }
+
             this.emitAutoModeEvent('auto_mode_git_workflow', {
               featureId,
               committed: gitWorkflowResult.commitHash,
@@ -2084,6 +2094,16 @@ Complete the pipeline step instructions above. Review the previous work and appl
             epicBranchName
           );
           if (gitWorkflowResult) {
+            // Check if git workflow encountered conflicts
+            if (gitWorkflowResult.error && gitWorkflowResult.error.includes('conflict')) {
+              this.emitAutoModeEvent('auto_mode_progress', {
+                featureId,
+                featureName: feature.title,
+                message: `⚠️ Git workflow warning: ${gitWorkflowResult.error}`,
+                projectPath,
+              });
+            }
+
             this.emitAutoModeEvent('auto_mode_git_workflow', {
               featureId,
               committed: gitWorkflowResult.commitHash,
@@ -2402,6 +2422,16 @@ Address the follow-up instructions above. Review the previous work and make the 
             epicBranchName
           );
           if (gitWorkflowResult) {
+            // Check if git workflow encountered conflicts
+            if (gitWorkflowResult.error && gitWorkflowResult.error.includes('conflict')) {
+              this.emitAutoModeEvent('auto_mode_progress', {
+                featureId,
+                featureName: feature.title,
+                message: `⚠️ Git workflow warning: ${gitWorkflowResult.error}`,
+                projectPath,
+              });
+            }
+
             this.emitAutoModeEvent('auto_mode_git_workflow', {
               featureId,
               committed: gitWorkflowResult.commitHash,
