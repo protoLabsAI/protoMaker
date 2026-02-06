@@ -107,6 +107,10 @@ export type EventType =
   | 'goap:action_failed'
   | 'goap:no_action_available'
   | 'goap:error'
+  | 'goap:plan_generated'
+  | 'goap:plan_invalidated'
+  | 'goap:plan_step_executed'
+  | 'goap:plan_completed'
   // CodeRabbit review events
   | 'coderabbit:review-received'
   | 'coderabbit:feedback-processed'

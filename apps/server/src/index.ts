@@ -93,6 +93,8 @@ import { createRalphRoutes } from './routes/ralph/index.js';
 import { RalphLoopService } from './services/ralph-loop-service.js';
 import { createGOAPRoutes } from './routes/goap/index.js';
 import { GOAPLoopService } from './services/goap-loop-service.js';
+import { GOAPActionRegistry } from './services/goap-action-registry.js';
+import { registerAllActions } from './services/goap-actions/index.js';
 import { HeadsdownService } from './services/headsdown-service.js';
 import { PRDService } from './services/prd-service.js';
 import { createSkillsRoutes } from './routes/skills/index.js';
@@ -290,7 +292,14 @@ const codexUsageService = new CodexUsageService(codexAppServerService);
 const mcpTestService = new MCPTestService(settingsService);
 const ideationService = new IdeationService(events, settingsService, featureLoader);
 const ralphLoopService = new RalphLoopService(events, autoModeService, settingsService);
-const goapLoopService = GOAPLoopService.getInstance(events, featureLoader, autoModeService);
+const goapActionRegistry = new GOAPActionRegistry();
+registerAllActions(goapActionRegistry, featureLoader, autoModeService);
+const goapLoopService = GOAPLoopService.getInstance(
+  events,
+  featureLoader,
+  autoModeService,
+  goapActionRegistry
+);
 
 // Initialize HeadsdownService for autonomous agent management
 const headsdownService = HeadsdownService.getInstance(events, settingsService, featureLoader);
@@ -397,6 +406,45 @@ void schedulerService.start();
   await agentService.initialize();
   logger.info('Agent service initialized');
 
+  // Recover orphaned features (stuck in running/in-progress with no agent after restart)
+  try {
+    const settings = await settingsService.getGlobalSettings();
+    const projectPaths = [
+      ...(settings.autoModeAlwaysOn?.projects?.map((p) => p.projectPath) ?? []),
+      ...(settings.goapAlwaysOn?.projects?.map((p) => p.projectPath) ?? []),
+    ];
+    // Deduplicate
+    const uniquePaths = [...new Set(projectPaths)];
+
+    for (const projectPath of uniquePaths) {
+      try {
+        const features = await featureLoader.getAll(projectPath);
+        const orphaned = features.filter((f) => f.status === 'running');
+
+        for (const feature of orphaned) {
+          logger.info(
+            `[ORPHAN-RECOVERY] Resetting orphaned feature "${feature.title || feature.id}" from "${feature.status}" to "backlog"`,
+            { projectPath, featureId: feature.id }
+          );
+          await featureLoader.update(projectPath, feature.id, {
+            status: 'backlog',
+            startedAt: undefined,
+          });
+        }
+
+        if (orphaned.length > 0) {
+          logger.info(
+            `[ORPHAN-RECOVERY] Reset ${orphaned.length} orphaned feature(s) for ${projectPath}`
+          );
+        }
+      } catch (err) {
+        logger.warn(`[ORPHAN-RECOVERY] Failed to check features for ${projectPath}:`, err);
+      }
+    }
+  } catch (err) {
+    logger.warn('[ORPHAN-RECOVERY] Failed to run orphan recovery:', err);
+  }
+
   // Auto-start auto-mode if enabled in settings
   try {
     const settings = await settingsService.getGlobalSettings();
@@ -446,6 +494,54 @@ void schedulerService.start();
     }
   } catch (err) {
     logger.warn('[AUTO-START] Failed to check auto-mode always-on setting:', err);
+  }
+
+  // Auto-start GOAP brain loop if enabled in settings
+  try {
+    const settings = await settingsService.getGlobalSettings();
+    if (settings.goapAlwaysOn?.enabled && settings.goapAlwaysOn.projects.length > 0) {
+      logger.info(
+        `[AUTO-START] GOAP always-on enabled for ${settings.goapAlwaysOn.projects.length} project(s), starting loops...`
+      );
+
+      for (const projectConfig of settings.goapAlwaysOn.projects) {
+        try {
+          const { projectPath, branchName, tickIntervalMs } = projectConfig;
+          const worktreeDesc = branchName ? `worktree ${branchName}` : 'main worktree';
+
+          logger.info(`[AUTO-START] Starting GOAP loop for ${worktreeDesc} in ${projectPath}...`);
+
+          await goapLoopService.startLoop({
+            projectPath,
+            branchName: branchName ?? null,
+            tickIntervalMs: tickIntervalMs ?? 30000,
+            maxConsecutiveErrors: 5,
+            enabled: true,
+            maxActionHistorySize: 100,
+          });
+
+          logger.info(
+            `[AUTO-START] GOAP loop started successfully for ${worktreeDesc} in ${projectPath}`
+          );
+        } catch (err) {
+          const errorMsg = err instanceof Error ? err.message : String(err);
+          if (errorMsg.includes('already running')) {
+            logger.info(
+              `[AUTO-START] GOAP loop already running for ${projectConfig.projectPath}, skipping`
+            );
+          } else {
+            logger.error(
+              `[AUTO-START] Failed to start GOAP loop for ${projectConfig.projectPath}:`,
+              err
+            );
+          }
+        }
+      }
+    } else {
+      logger.info('[AUTO-START] GOAP always-on disabled, skipping auto-start');
+    }
+  } catch (err) {
+    logger.warn('[AUTO-START] Failed to check GOAP always-on setting:', err);
   }
 
   // Bootstrap Codex model cache in background (don't block server startup)

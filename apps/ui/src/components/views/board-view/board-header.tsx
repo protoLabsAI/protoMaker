@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Wand2, GitBranch, ClipboardCheck } from 'lucide-react';
+import { Wand2, GitBranch, ClipboardCheck, Users, Bot, User } from 'lucide-react';
 import { UsagePopover } from '@/components/usage-popover';
 import { useAppStore } from '@/store/app-store';
 import { useSetupStore } from '@/store/setup-store';
@@ -16,6 +16,8 @@ import { ViewToggle, type ViewMode } from './components';
 import { HeaderMobileMenu } from './header-mobile-menu';
 
 export type { ViewMode };
+
+type AssigneeFilter = 'all' | 'my-tasks' | 'agent-tasks';
 
 interface BoardHeaderProps {
   projectPath: string;
@@ -33,6 +35,11 @@ interface BoardHeaderProps {
   onSearchChange: (query: string) => void;
   isCreatingSpec: boolean;
   creatingSpecProjectPath?: string;
+  // Assignee filter props
+  assigneeFilter: AssigneeFilter;
+  onAssigneeFilterChange: (filter: AssigneeFilter) => void;
+  boardUsername: string;
+  onBoardUsernameChange: (username: string) => void;
   // Board controls props
   onShowBoardBackground: () => void;
   // View toggle props
@@ -59,6 +66,10 @@ export function BoardHeader({
   onSearchChange,
   isCreatingSpec,
   creatingSpecProjectPath,
+  assigneeFilter,
+  onAssigneeFilterChange,
+  boardUsername,
+  onBoardUsernameChange,
   onShowBoardBackground,
   viewMode,
   onViewModeChange,
@@ -123,6 +134,57 @@ export function BoardHeader({
           creatingSpecProjectPath={creatingSpecProjectPath}
           currentProjectPath={projectPath}
         />
+        {/* Assignee Filter */}
+        {isMounted && (
+          <div className="flex items-center h-8 rounded-md bg-secondary border border-border overflow-hidden">
+            <button
+              type="button"
+              onClick={() => onAssigneeFilterChange('all')}
+              className={`flex items-center gap-1 px-2 h-full text-xs font-medium transition-colors ${
+                assigneeFilter === 'all'
+                  ? 'bg-brand-500/20 text-brand-400'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+              title="All Features"
+            >
+              <Users className="w-3.5 h-3.5" />
+              All
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (!boardUsername) {
+                  const name = window.prompt('Enter your username for "My Tasks" filter:');
+                  if (name) onBoardUsernameChange(name);
+                  else return;
+                }
+                onAssigneeFilterChange('my-tasks');
+              }}
+              className={`flex items-center gap-1 px-2 h-full text-xs font-medium transition-colors border-l border-border ${
+                assigneeFilter === 'my-tasks'
+                  ? 'bg-brand-500/20 text-brand-400'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+              title={boardUsername ? `My Tasks (${boardUsername})` : 'My Tasks'}
+            >
+              <User className="w-3.5 h-3.5" />
+              Mine
+            </button>
+            <button
+              type="button"
+              onClick={() => onAssigneeFilterChange('agent-tasks')}
+              className={`flex items-center gap-1 px-2 h-full text-xs font-medium transition-colors border-l border-border ${
+                assigneeFilter === 'agent-tasks'
+                  ? 'bg-brand-500/20 text-brand-400'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+              title="Agent Tasks"
+            >
+              <Bot className="w-3.5 h-3.5" />
+              Agent
+            </button>
+          </div>
+        )}
         {isMounted && <ViewToggle viewMode={viewMode} onViewModeChange={onViewModeChange} />}
         <BoardControls isMounted={isMounted} onShowBoardBackground={onShowBoardBackground} />
       </div>

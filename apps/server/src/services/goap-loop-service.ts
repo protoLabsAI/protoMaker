@@ -1,9 +1,22 @@
 /**
  * GOAP Loop Service - Autonomous management brain loop
  *
- * Sits above auto-mode as a management layer. Evaluates world state each tick,
- * selects the highest-priority unsatisfied goal, finds the best action to
- * address it, and executes. Uses simple greedy selection (not A*).
+ * Sits above auto-mode as a management layer. Uses A* planning to generate
+ * multi-step plans, then executes one step per tick. Re-plans on divergence.
+ *
+ * Tick algorithm:
+ * 1. Evaluate world state
+ * 2. Select role → weight goals
+ * 3. Plan lifecycle check:
+ *    a. No plan → PLAN for highest-priority unsatisfied goal
+ *    b. Plan complete (all steps done) → clear, PLAN
+ *    c. Next step preconditions unmet → invalidate, PLAN
+ *    d. Goal already satisfied → clear plan (success)
+ *    e. Higher-priority unsatisfied goal appeared → invalidate, PLAN
+ *    f. Plan valid → EXECUTE next step
+ * 4. Execute one action via registry handler
+ * 5. If success: advance step. If fail: invalidate plan.
+ * 6. Emit events, schedule next tick
  *
  * Pattern: Singleton with per-project loops stored in a Map.
  * Lifecycle: setTimeout-based (like RalphLoopService).
@@ -13,19 +26,21 @@ import type {
   GOAPState,
   GOAPGoal,
   GOAPAction,
-  GOAPCondition,
   GOAPActionResult,
   GOAPLoopConfig,
   GOAPLoopStatus,
+  GOAPRole,
+  GOAPPlan,
   WorldStateSnapshot,
   EventType,
 } from '@automaker/types';
-import { areConditionsSatisfied } from '@automaker/types';
+import { areConditionsSatisfied, planActions } from '@automaker/types';
 import { createLogger } from '@automaker/utils';
 import { randomUUID } from 'crypto';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { AutoModeService } from './auto-mode-service.js';
+import type { GOAPActionRegistry } from './goap-action-registry.js';
 import { evaluateWorldState } from './world-state-evaluator.js';
 
 const TICK_TIMEOUT_MS = 60_000; // 60s max per tick operation
@@ -41,70 +56,94 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
 
 const logger = createLogger('GOAPLoop');
 
-// ─── POC Goals (hardcoded) ───────────────────────────────────────────────────
+// ─── Base Goals (priorities assigned by roles) ──────────────────────────────
 
-const POC_GOALS: GOAPGoal[] = [
+const BASE_GOALS: Omit<GOAPGoal, 'priority'>[] = [
   {
     id: 'keep_shipping',
     name: 'Keep Shipping',
-    // Satisfied when auto-mode is running (handling backlog) or no backlog exists.
-    // start_auto_mode effect (auto_mode_running=true) directly satisfies this goal.
     conditions: [{ key: 'auto_mode_running', value: true }],
-    priority: 10,
   },
   {
     id: 'recover_failures',
     name: 'Recover Failures',
     conditions: [{ key: 'has_failed_features', value: false }],
-    priority: 9,
   },
   {
     id: 'maintain_health',
     name: 'Maintain Health',
     conditions: [{ key: 'has_stale_features', value: false }],
-    priority: 7,
   },
   {
     id: 'stay_productive',
     name: 'Stay Productive',
     conditions: [{ key: 'is_idle', value: false }],
-    priority: 5,
+  },
+  {
+    id: 'clear_pipeline',
+    name: 'Clear Pipeline',
+    conditions: [
+      { key: 'has_completed_features', value: false },
+      { key: 'has_blocked_ready_features', value: false },
+    ],
+  },
+  {
+    id: 'manage_wip',
+    name: 'Manage WIP',
+    conditions: [
+      { key: 'has_very_stale_features', value: false },
+      { key: 'has_chronic_failures', value: false },
+    ],
   },
 ];
 
-// ─── POC Actions (hardcoded) ─────────────────────────────────────────────────
+// ─── Roles (determine goal priority weighting) ─────────────────────────────
 
-const POC_ACTIONS: GOAPAction[] = [
+const ROLES: GOAPRole[] = [
   {
-    id: 'start_auto_mode',
-    name: 'Start Auto-Mode',
-    preconditions: [
-      { key: 'has_backlog_work', value: true },
-      { key: 'auto_mode_running', value: false },
-    ],
-    effects: [{ key: 'auto_mode_running', value: true }],
-    cost: 1,
+    id: 'guardian',
+    name: 'Guardian',
+    description: 'Recover from failures and restore system health',
+    goalPriorities: {
+      recover_failures: 10,
+      manage_wip: 9,
+      maintain_health: 8,
+      clear_pipeline: 6,
+      keep_shipping: 5,
+      stay_productive: 3,
+    },
+    activationConditions: [{ key: 'failed_count', value: 2, operator: 'gte' }],
+    activationPriority: 20,
   },
   {
-    id: 'retry_failed_feature',
-    name: 'Retry Failed Feature',
-    preconditions: [{ key: 'has_failed_features', value: true }],
-    effects: [{ key: 'has_failed_features', value: false }],
-    cost: 3,
+    id: 'janitor',
+    name: 'Janitor',
+    description: 'Clean up stale work and board hygiene',
+    goalPriorities: {
+      maintain_health: 10,
+      clear_pipeline: 9,
+      manage_wip: 8,
+      recover_failures: 7,
+      stay_productive: 5,
+      keep_shipping: 3,
+    },
+    activationConditions: [{ key: 'stale_feature_count', value: 2, operator: 'gte' }],
+    activationPriority: 10,
   },
   {
-    id: 'escalate_stuck_feature',
-    name: 'Escalate Stuck Feature',
-    preconditions: [{ key: 'has_stale_features', value: true }],
-    effects: [{ key: 'has_stale_features', value: false }],
-    cost: 5,
-  },
-  {
-    id: 'log_idle',
-    name: 'Log Idle',
-    preconditions: [{ key: 'is_idle', value: true }],
-    effects: [],
-    cost: 0,
+    id: 'shipper',
+    name: 'Shipper',
+    description: 'Push features through the pipeline',
+    goalPriorities: {
+      keep_shipping: 10,
+      clear_pipeline: 9,
+      recover_failures: 8,
+      maintain_health: 5,
+      manage_wip: 4,
+      stay_productive: 3,
+    },
+    activationConditions: [], // Always matches — fallback role
+    activationPriority: 0,
   },
 ];
 
@@ -125,6 +164,13 @@ interface RunningGOAPLoop {
   lastTickAt?: string;
   lastError?: string;
   loopTimer: ReturnType<typeof setTimeout> | null;
+  activeRoleId: string | null;
+  roleOverride: string | null;
+  roleSelectionReason?: string;
+  // Plan state
+  currentPlan: GOAPPlan | null;
+  currentPlanStep: number;
+  lastReplanReason?: string;
 }
 
 // ─── Service ─────────────────────────────────────────────────────────────────
@@ -135,27 +181,46 @@ export class GOAPLoopService {
   private events: EventEmitter;
   private featureLoader: FeatureLoader;
   private autoModeService: AutoModeService;
+  private registry: GOAPActionRegistry | null;
   private loops = new Map<string, RunningGOAPLoop>();
 
   private constructor(
     events: EventEmitter,
     featureLoader: FeatureLoader,
-    autoModeService: AutoModeService
+    autoModeService: AutoModeService,
+    registry: GOAPActionRegistry | null = null
   ) {
     this.events = events;
     this.featureLoader = featureLoader;
     this.autoModeService = autoModeService;
+    this.registry = registry;
   }
 
   static getInstance(
     events: EventEmitter,
     featureLoader: FeatureLoader,
-    autoModeService: AutoModeService
+    autoModeService: AutoModeService,
+    registry?: GOAPActionRegistry | null
   ): GOAPLoopService {
     if (!GOAPLoopService.instance) {
-      GOAPLoopService.instance = new GOAPLoopService(events, featureLoader, autoModeService);
+      GOAPLoopService.instance = new GOAPLoopService(
+        events,
+        featureLoader,
+        autoModeService,
+        registry ?? null
+      );
+    } else if (registry && !GOAPLoopService.instance.registry) {
+      // Allow setting registry after initial creation (for wiring order)
+      GOAPLoopService.instance.registry = registry;
     }
     return GOAPLoopService.instance;
+  }
+
+  /**
+   * Set the action registry (for deferred wiring after singleton creation).
+   */
+  setRegistry(registry: GOAPActionRegistry): void {
+    this.registry = registry;
   }
 
   // ─── Public API ──────────────────────────────────────────────────────────
@@ -179,6 +244,10 @@ export class GOAPLoopService {
       actionHistory: [],
       startedAt: new Date().toISOString(),
       loopTimer: null,
+      activeRoleId: null,
+      roleOverride: null,
+      currentPlan: null,
+      currentPlanStep: 0,
     };
 
     this.loops.set(key, loop);
@@ -257,6 +326,14 @@ export class GOAPLoopService {
     }
   }
 
+  setRoleOverride(projectPath: string, roleId: string | null): void {
+    const key = this.loopKey(projectPath);
+    const loop = this.loops.get(key);
+    if (!loop) throw new Error(`No GOAP loop running for project: ${projectPath}`);
+    loop.roleOverride = roleId;
+    logger.info('GOAP role override set', { projectPath, roleId });
+  }
+
   // ─── Tick ────────────────────────────────────────────────────────────────
 
   private scheduleTick(loop: RunningGOAPLoop): void {
@@ -302,41 +379,81 @@ export class GOAPLoopService {
       loop.lastWorldState = snapshot;
       this.emit('goap:world_state_updated', { projectPath: config.projectPath, snapshot });
 
-      // 2. Find unsatisfied goals
-      const unsatisfiedGoals = POC_GOALS.filter(
-        (g) => !areConditionsSatisfied(g.conditions, state)
-      ).sort((a, b) => b.priority - a.priority);
+      // 2. Select role (determines goal priority weighting)
+      const role = this.selectRole(loop, state);
+      loop.activeRoleId = role.id;
+
+      // 3. Apply role priorities to get GOAPGoal[] for this tick
+      const goals: GOAPGoal[] = BASE_GOALS.map((g) => ({
+        ...g,
+        priority: role.goalPriorities[g.id] ?? 0,
+      }));
+
+      // 4. Find unsatisfied goals (sorted by priority descending)
+      const unsatisfiedGoals = goals
+        .filter((g) => !areConditionsSatisfied(g.conditions, state))
+        .sort((a, b) => b.priority - a.priority);
       loop.unsatisfiedGoals = unsatisfiedGoals;
 
-      // 3. Find available actions (preconditions met)
-      const availableActions = POC_ACTIONS.filter((a) =>
+      // 5. Get available actions from registry (or empty if no registry)
+      const allActions = this.registry?.getAllDefinitions() ?? [];
+      const availableActions = allActions.filter((a) =>
         areConditionsSatisfied(a.preconditions, state)
       );
       loop.availableActions = availableActions;
 
-      // 4. Select best action
-      const selectedAction = this.selectBestAction(state, unsatisfiedGoals, availableActions);
+      // 6. Plan lifecycle
+      const action = this.planLifecycle(loop, state, unsatisfiedGoals, allActions);
 
-      // 5. Execute
-      if (selectedAction) {
+      // 7. Execute one action
+      if (action) {
         this.emit('goap:action_selected', {
           projectPath: config.projectPath,
-          action: selectedAction,
+          action,
         });
 
         const result = await withTimeout(
-          this.executeAction(config.projectPath, config.branchName, selectedAction),
+          this.executeAction(config.projectPath, config.branchName, action),
           TICK_TIMEOUT_MS,
-          `executeAction(${selectedAction.id})`
+          `executeAction(${action.id})`
         );
         this.pushActionHistory(loop, result);
 
         if (result.success) {
           loop.consecutiveErrors = 0;
+          // Advance plan step
+          if (loop.currentPlan) {
+            loop.currentPlanStep++;
+            this.emit('goap:plan_step_executed', {
+              projectPath: config.projectPath,
+              action,
+              step: loop.currentPlanStep,
+              totalSteps: loop.currentPlan.actions.length,
+            });
+            // Check if plan is now complete
+            if (loop.currentPlanStep >= loop.currentPlan.actions.length) {
+              this.emit('goap:plan_completed', {
+                projectPath: config.projectPath,
+                plan: loop.currentPlan,
+              });
+              loop.currentPlan = null;
+              loop.currentPlanStep = 0;
+            }
+          }
           this.emit('goap:action_executed', { projectPath: config.projectPath, result });
         } else {
           loop.consecutiveErrors++;
           loop.lastError = result.error;
+          // Invalidate plan on failure
+          if (loop.currentPlan) {
+            loop.lastReplanReason = `Action ${action.id} failed: ${result.error}`;
+            this.emit('goap:plan_invalidated', {
+              projectPath: config.projectPath,
+              reason: loop.lastReplanReason,
+            });
+            loop.currentPlan = null;
+            loop.currentPlanStep = 0;
+          }
           this.emit('goap:action_failed', { projectPath: config.projectPath, result });
         }
 
@@ -348,12 +465,12 @@ export class GOAPLoopService {
         });
       }
 
-      // 6. Increment tick
+      // 8. Increment tick
       loop.tickCount++;
       loop.lastTickAt = new Date().toISOString();
       this.emit('goap:tick', { projectPath: config.projectPath, status: this.toStatus(loop) });
 
-      // 7. Check error threshold
+      // 9. Check error threshold
       if (loop.consecutiveErrors >= config.maxConsecutiveErrors) {
         logger.warn('GOAP loop auto-paused due to consecutive errors', {
           projectPath: config.projectPath,
@@ -388,36 +505,178 @@ export class GOAPLoopService {
     this.scheduleTick(loop);
   }
 
-  // ─── Action Selection (greedy) ───────────────────────────────────────────
+  // ─── Plan Lifecycle ─────────────────────────────────────────────────────
 
-  private selectBestAction(
+  /**
+   * Manages the plan lifecycle:
+   * - If no plan exists, generate one for the highest-priority unsatisfied goal
+   * - If plan is complete (all steps executed), clear it and generate new
+   * - If current step's preconditions are unmet, invalidate and replan
+   * - If the goal is already satisfied, clear plan (success)
+   * - If a higher-priority goal appeared, invalidate and replan
+   * - If plan is valid, return the next action to execute
+   *
+   * Returns the action to execute this tick, or null if no action.
+   */
+  private planLifecycle(
+    loop: RunningGOAPLoop,
     state: GOAPState,
     unsatisfiedGoals: GOAPGoal[],
-    availableActions: GOAPAction[]
+    allActions: GOAPAction[]
   ): GOAPAction | null {
-    if (availableActions.length === 0) return null;
+    const { config } = loop;
 
-    // For each unsatisfied goal (highest priority first),
-    // find actions whose effects contribute to satisfying that goal
-    for (const goal of unsatisfiedGoals) {
-      const candidates = availableActions.filter((action) =>
-        action.effects.some((effect) =>
-          goal.conditions.some(
-            (condition) => condition.key === effect.key && condition.value === effect.value
-          )
-        )
-      );
+    // If no unsatisfied goals, nothing to do
+    if (unsatisfiedGoals.length === 0) {
+      if (loop.currentPlan) {
+        loop.lastReplanReason = 'All goals satisfied';
+        loop.currentPlan = null;
+        loop.currentPlanStep = 0;
+      }
+      return null;
+    }
 
-      if (candidates.length > 0) {
-        // Pick lowest cost
-        candidates.sort((a, b) => a.cost - b.cost);
-        return candidates[0];
+    const topGoal = unsatisfiedGoals[0];
+
+    // Check if existing plan is for a different (lower-priority) goal
+    if (loop.currentPlan && loop.currentPlan.goal.id !== topGoal.id) {
+      // Check if the current plan's goal still appears with equal or higher priority
+      const currentPlanGoal = unsatisfiedGoals.find((g) => g.id === loop.currentPlan!.goal.id);
+      if (!currentPlanGoal || currentPlanGoal.priority < topGoal.priority) {
+        loop.lastReplanReason = `Higher-priority goal: ${topGoal.id} (was: ${loop.currentPlan.goal.id})`;
+        this.emit('goap:plan_invalidated', {
+          projectPath: config.projectPath,
+          reason: loop.lastReplanReason,
+        });
+        loop.currentPlan = null;
+        loop.currentPlanStep = 0;
       }
     }
 
-    // Fallback: any available action (lowest cost)
-    const sorted = [...availableActions].sort((a, b) => a.cost - b.cost);
-    return sorted[0] || null;
+    // Check if current plan's goal is now satisfied
+    if (loop.currentPlan && areConditionsSatisfied(loop.currentPlan.goal.conditions, state)) {
+      this.emit('goap:plan_completed', {
+        projectPath: config.projectPath,
+        plan: loop.currentPlan,
+        reason: 'Goal already satisfied',
+      });
+      loop.currentPlan = null;
+      loop.currentPlanStep = 0;
+    }
+
+    // Check if plan is exhausted (all steps done)
+    if (loop.currentPlan && loop.currentPlanStep >= loop.currentPlan.actions.length) {
+      loop.lastReplanReason = 'Plan steps exhausted';
+      loop.currentPlan = null;
+      loop.currentPlanStep = 0;
+    }
+
+    // Generate new plan if needed
+    if (!loop.currentPlan) {
+      // Try planning for each unsatisfied goal in priority order
+      for (const goal of unsatisfiedGoals) {
+        const result = planActions(state, goal, allActions);
+        if (result.success && result.plan && result.plan.actions.length > 0) {
+          loop.currentPlan = result.plan;
+          loop.currentPlanStep = 0;
+          logger.info('GOAP plan generated', {
+            projectPath: config.projectPath,
+            goalId: goal.id,
+            steps: result.plan.actions.length,
+            totalCost: result.plan.totalCost,
+            statesEvaluated: result.statesEvaluated,
+          });
+          this.emit('goap:plan_generated', {
+            projectPath: config.projectPath,
+            plan: result.plan,
+            statesEvaluated: result.statesEvaluated,
+          });
+          break;
+        }
+      }
+    }
+
+    // If still no plan, nothing to execute
+    if (!loop.currentPlan) return null;
+
+    // Get next action from plan
+    const nextAction = loop.currentPlan.actions[loop.currentPlanStep];
+
+    // Verify preconditions are still met
+    if (!areConditionsSatisfied(nextAction.preconditions, state)) {
+      loop.lastReplanReason = `Preconditions unmet for step ${loop.currentPlanStep}: ${nextAction.id}`;
+      this.emit('goap:plan_invalidated', {
+        projectPath: config.projectPath,
+        reason: loop.lastReplanReason,
+      });
+      loop.currentPlan = null;
+      loop.currentPlanStep = 0;
+      // Try to generate a new plan immediately for this tick
+      return this.planLifecycleOnce(loop, state, unsatisfiedGoals, allActions);
+    }
+
+    return nextAction;
+  }
+
+  /**
+   * One-shot plan generation attempt (used when plan is invalidated mid-tick).
+   * Avoids infinite recursion by not calling full planLifecycle.
+   */
+  private planLifecycleOnce(
+    loop: RunningGOAPLoop,
+    state: GOAPState,
+    unsatisfiedGoals: GOAPGoal[],
+    allActions: GOAPAction[]
+  ): GOAPAction | null {
+    for (const goal of unsatisfiedGoals) {
+      const result = planActions(state, goal, allActions);
+      if (result.success && result.plan && result.plan.actions.length > 0) {
+        loop.currentPlan = result.plan;
+        loop.currentPlanStep = 0;
+        this.emit('goap:plan_generated', {
+          projectPath: loop.config.projectPath,
+          plan: result.plan,
+          statesEvaluated: result.statesEvaluated,
+        });
+
+        const nextAction = result.plan.actions[0];
+        if (areConditionsSatisfied(nextAction.preconditions, state)) {
+          return nextAction;
+        }
+      }
+    }
+    return null;
+  }
+
+  // ─── Role Selection ──────────────────────────────────────────────────────
+
+  private selectRole(loop: RunningGOAPLoop, state: GOAPState): GOAPRole {
+    // Manual override takes priority
+    if (loop.roleOverride) {
+      const role = ROLES.find((r) => r.id === loop.roleOverride);
+      if (role) {
+        loop.roleSelectionReason = 'manual override';
+        return role;
+      }
+    }
+
+    // Auto-rotate: check roles in activationPriority order (highest first)
+    const sorted = [...ROLES].sort((a, b) => b.activationPriority - a.activationPriority);
+    for (const role of sorted) {
+      if (role.activationConditions.length === 0) continue; // skip fallback
+      if (areConditionsSatisfied(role.activationConditions, state)) {
+        loop.roleSelectionReason = role.activationConditions
+          .map((c) => `${c.key} ${c.operator ?? 'eq'} ${c.value}`)
+          .join(', ');
+        return role;
+      }
+    }
+
+    // Fallback = shipper (role with no activation conditions)
+    const fallback =
+      ROLES.find((r) => r.activationConditions.length === 0) ?? ROLES[ROLES.length - 1];
+    loop.roleSelectionReason = 'default (no conditions triggered)';
+    return fallback;
   }
 
   // ─── Action Execution ────────────────────────────────────────────────────
@@ -431,70 +690,13 @@ export class GOAPLoopService {
     const start = Date.now();
 
     try {
-      switch (action.id) {
-        case 'start_auto_mode': {
-          await this.autoModeService.startAutoLoopForProject(projectPath, branchName);
-          logger.info('GOAP action: started auto-mode', { projectPath });
-          break;
-        }
-
-        case 'retry_failed_feature': {
-          const MAX_RETRIES = 3;
-          const features = await this.featureLoader.getAll(projectPath);
-          const failed = features.find(
-            (f) => f.status === 'failed' && (f.failureCount || 0) < MAX_RETRIES
-          );
-          if (failed) {
-            const newFailureCount = (failed.failureCount || 0) + 1;
-            await this.featureLoader.update(projectPath, failed.id, {
-              status: 'backlog',
-              failureCount: newFailureCount,
-              error: undefined,
-            });
-            logger.info('GOAP action: retried failed feature', {
-              projectPath,
-              featureId: failed.id,
-              failureCount: newFailureCount,
-            });
-          } else {
-            logger.debug('GOAP action: no failed features found to retry');
-          }
-          break;
-        }
-
-        case 'escalate_stuck_feature': {
-          const features = await this.featureLoader.getAll(projectPath);
-          const now = Date.now();
-          const staleThreshold = 2 * 60 * 60 * 1000;
-          const stale = features.find(
-            (f) =>
-              f.status === 'running' &&
-              f.startedAt &&
-              now - new Date(f.startedAt).getTime() > staleThreshold
-          );
-          if (stale) {
-            // Reset startedAt so the feature isn't immediately re-detected as stale
-            await this.featureLoader.update(projectPath, stale.id, {
-              complexity: 'architectural',
-              startedAt: new Date().toISOString(),
-            });
-            logger.info('GOAP action: escalated stuck feature to architectural', {
-              projectPath,
-              featureId: stale.id,
-            });
-          } else {
-            logger.debug('GOAP action: no stale features found to escalate');
-          }
-          break;
-        }
-
-        case 'log_idle': {
-          logger.debug('GOAP action: system is idle, nothing to do', { projectPath });
-          break;
-        }
-
-        default:
-          throw new Error(`Unknown GOAP action: ${action.id}`);
+      // Use registry handler if available
+      const handler = this.registry?.getHandler(action.id);
+      if (handler) {
+        await handler(projectPath, branchName);
+      } else {
+        logger.warn(`No handler registered for action: ${action.id}`);
+        throw new Error(`No handler registered for GOAP action: ${action.id}`);
       }
 
       return {
@@ -507,18 +709,6 @@ export class GOAPLoopService {
       };
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
-      // Don't treat "already running" as a failure for start_auto_mode
-      if (action.id === 'start_auto_mode' && errorMsg.includes('already running')) {
-        return {
-          action,
-          success: true,
-          appliedEffects: action.effects,
-          startedAt,
-          completedAt: new Date().toISOString(),
-          durationMs: Date.now() - start,
-        };
-      }
-
       logger.error('GOAP action failed', { actionId: action.id, error: errorMsg });
       return {
         action,
@@ -533,7 +723,7 @@ export class GOAPLoopService {
 
   // ─── Helpers ─────────────────────────────────────────────────────────────
 
-  // POC: keyed by projectPath only. Multi-branch support would require
+  // Keyed by projectPath only. Multi-branch support would require
   // threading branchName through public API and route contracts.
   private loopKey(projectPath: string): string {
     return projectPath;
@@ -569,6 +759,18 @@ export class GOAPLoopService {
       lastError: loop.lastError,
       startedAt: loop.startedAt,
       lastTickAt: loop.lastTickAt,
+      activeRole: loop.activeRoleId
+        ? {
+            id: loop.activeRoleId,
+            name: ROLES.find((r) => r.id === loop.activeRoleId)?.name ?? loop.activeRoleId,
+            selectedBy: loop.roleOverride ? 'manual' : 'auto',
+            reason: loop.roleSelectionReason,
+          }
+        : null,
+      roleOverride: loop.roleOverride,
+      currentPlan: loop.currentPlan,
+      currentPlanStep: loop.currentPlanStep,
+      lastReplanReason: loop.lastReplanReason,
     };
   }
 

@@ -492,9 +492,11 @@ export type {
   GOAPCondition,
   GOAPAction,
   GOAPGoal,
+  GOAPRole,
   GOAPPlan,
   GOAPPlanResult,
   GOAPPlannerConfig,
+  GOAPActionDefinition,
   WorldStateSnapshot,
   GOAPActionResult,
   GOAPLoopConfig,
@@ -509,6 +511,15 @@ export {
   areConditionsSatisfied,
   applyEffects,
 } from './goap.js';
+
+// GOAP A* Planner
+export {
+  planActions,
+  heuristic as goapHeuristic,
+  regressState,
+  hashState as goapHashState,
+  actionContributes,
+} from './goap-planner.js';
 
 // Policy engine types (used by @automaker/policy-engine)
 export type {

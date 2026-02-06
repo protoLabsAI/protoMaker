@@ -15,6 +15,7 @@ import { createPauseGOAPLoopHandler } from './routes/pause.js';
 import { createResumeGOAPLoopHandler } from './routes/resume.js';
 import { createGetGOAPStatusHandler } from './routes/status.js';
 import { createListGOAPLoopsHandler } from './routes/list.js';
+import { createSetRoleHandler } from './routes/set-role.js';
 
 export function createGOAPRoutes(goapLoopService: GOAPLoopService): Router {
   const router = Router();
@@ -26,6 +27,7 @@ export function createGOAPRoutes(goapLoopService: GOAPLoopService): Router {
   router.post('/resume', validatePathParams('projectPath'), createResumeGOAPLoopHandler(deps));
   router.post('/status', validatePathParams('projectPath'), createGetGOAPStatusHandler(deps));
   router.post('/list', createListGOAPLoopsHandler(deps));
+  router.post('/set-role', validatePathParams('projectPath'), createSetRoleHandler(deps));
 
   return router;
 }

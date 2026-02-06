@@ -9,10 +9,14 @@ import {
 
 type ColumnId = Feature['status'];
 
+export type BoardAssigneeFilter = 'all' | 'my-tasks' | 'agent-tasks';
+
 interface UseBoardColumnFeaturesProps {
   features: Feature[];
   runningAutoTasks: string[];
   searchQuery: string;
+  assigneeFilter: BoardAssigneeFilter;
+  boardUsername: string;
   currentWorktreePath: string | null; // Currently selected worktree path
   currentWorktreeBranch: string | null; // Branch name of the selected worktree (null = main)
   projectPath: string | null; // Main project path (for main worktree)
@@ -22,6 +26,8 @@ export function useBoardColumnFeatures({
   features,
   runningAutoTasks,
   searchQuery,
+  assigneeFilter,
+  boardUsername,
   currentWorktreePath,
   currentWorktreeBranch,
   projectPath,
@@ -41,13 +47,27 @@ export function useBoardColumnFeatures({
 
     // Filter features by search query (case-insensitive)
     const normalizedQuery = searchQuery.toLowerCase().trim();
-    const filteredFeatures = normalizedQuery
+    const searchFiltered = normalizedQuery
       ? features.filter(
           (f) =>
             f.description.toLowerCase().includes(normalizedQuery) ||
             f.category?.toLowerCase().includes(normalizedQuery)
         )
       : features;
+
+    // Filter by assignee
+    const filteredFeatures =
+      assigneeFilter === 'all'
+        ? searchFiltered
+        : assigneeFilter === 'my-tasks'
+          ? searchFiltered.filter(
+              (f) =>
+                f.assignee &&
+                f.assignee !== 'agent' &&
+                f.assignee.toLowerCase() === boardUsername.toLowerCase()
+            )
+          : // agent-tasks: unassigned or explicitly 'agent'
+            searchFiltered.filter((f) => !f.assignee || f.assignee === 'agent');
 
     // Determine the effective worktree path and branch for filtering
     // If currentWorktreePath is null, we're on the main worktree
@@ -209,6 +229,8 @@ export function useBoardColumnFeatures({
     features,
     runningAutoTasks,
     searchQuery,
+    assigneeFilter,
+    boardUsername,
     currentWorktreePath,
     currentWorktreeBranch,
     projectPath,

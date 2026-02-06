@@ -2,7 +2,8 @@
  * World State View - GOAP Brain Loop Dashboard
  *
  * Shows real-time world state, goals, actions, and action history
- * for the GOAP management loop.
+ * for the GOAP management loop. Includes role selector for manual
+ * override and auto-rotate display.
  */
 
 import { useCallback } from 'react';
@@ -25,7 +26,28 @@ import {
   Target,
   Zap,
   History,
+  Shield,
+  Truck,
+  Wrench,
+  RefreshCw,
 } from 'lucide-react';
+
+// ─── Role definitions (client-side display metadata) ────────────────────────
+
+const ROLES = [
+  { id: 'shipper', name: 'Shipper', icon: Truck, color: 'blue' },
+  { id: 'janitor', name: 'Janitor', icon: Wrench, color: 'yellow' },
+  { id: 'guardian', name: 'Guardian', icon: Shield, color: 'red' },
+] as const;
+
+// ─── Base goal names (for display when server hasn't returned data yet) ─────
+
+const BASE_GOAL_NAMES: Record<string, string> = {
+  keep_shipping: 'Keep Shipping',
+  recover_failures: 'Recover Failures',
+  maintain_health: 'Maintain Health',
+  stay_productive: 'Stay Productive',
+};
 
 export function WorldStateView() {
   const { currentProject } = useAppStore(
@@ -86,6 +108,22 @@ export function WorldStateView() {
     }
   }, [projectPath]);
 
+  const handleSetRole = useCallback(
+    async (roleId: string | null) => {
+      if (!projectPath) return;
+      try {
+        const api = getElectronAPI() as any;
+        await api.goap.setRole(projectPath, roleId);
+        toast.success(roleId ? `Role set to ${roleId}` : 'Auto-rotate enabled');
+      } catch (error) {
+        toast.error(
+          `Failed to set role: ${error instanceof Error ? error.message : String(error)}`
+        );
+      }
+    },
+    [projectPath]
+  );
+
   if (!currentProject) {
     return (
       <div className="flex h-full items-center justify-center text-muted-foreground">
@@ -105,6 +143,8 @@ export function WorldStateView() {
   const worldState = status?.lastWorldState?.state;
   const capturedAt = status?.lastWorldState?.capturedAt;
   const evalMs = status?.lastWorldState?.evaluationDurationMs;
+  const activeRole = status?.activeRole;
+  const isAutoRotate = !status?.roleOverride;
 
   return (
     <div className="flex h-full flex-col overflow-auto p-4">
@@ -154,6 +194,55 @@ export function WorldStateView() {
           )}
         </div>
       </div>
+
+      {/* Role Selector */}
+      {isRunning && (
+        <div className="mb-4 rounded-md border border-border bg-card px-4 py-3">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-sm font-medium">Active Role</span>
+            {activeRole && (
+              <span className="text-xs text-muted-foreground">
+                {activeRole.selectedBy === 'manual' ? 'Manual' : 'Auto'} &mdash; {activeRole.reason}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            {ROLES.map((role) => {
+              const Icon = role.icon;
+              const isActive = activeRole?.id === role.id;
+              const colorClasses = getRoleColorClasses(role.color, isActive);
+              return (
+                <button
+                  key={role.id}
+                  type="button"
+                  onClick={() => handleSetRole(role.id)}
+                  className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors ${colorClasses}`}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  {role.name}
+                  {isActive && !isAutoRotate && (
+                    <span className="ml-1 rounded bg-white/10 px-1 py-0.5 text-[10px] font-semibold uppercase">
+                      Manual
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+            <button
+              type="button"
+              onClick={() => handleSetRole(null)}
+              className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors ${
+                isAutoRotate
+                  ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-400'
+                  : 'border-border text-muted-foreground hover:border-emerald-500/30 hover:text-emerald-400'
+              }`}
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              Auto
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Status Bar */}
       <div className="mb-4 flex items-center gap-4 rounded-md border border-border bg-card px-4 py-2 text-sm text-muted-foreground">
@@ -213,6 +302,11 @@ export function WorldStateView() {
           <div className="flex items-center gap-2 border-b border-border px-4 py-2">
             <Zap className="h-4 w-4 text-yellow-400" />
             <span className="text-sm font-medium">Goals</span>
+            {activeRole && (
+              <span className="ml-auto text-xs text-muted-foreground">
+                {activeRole.name} priorities
+              </span>
+            )}
           </div>
           <div className="max-h-72 overflow-auto p-2">
             {status ? (
@@ -330,27 +424,47 @@ function StateValue({ value }: { value: boolean | number | string }) {
 
 /**
  * Build a merged list of all goals with satisfaction status.
- * Uses the POC goal definitions (hardcoded on the client for display),
- * cross-referencing with unsatisfied goals from the server.
+ * Uses unsatisfied goals from the server (which now include role-weighted priorities).
+ * Satisfied goals are inferred from base goal names not in the unsatisfied set.
  */
-const POC_GOALS = [
-  { id: 'keep_shipping', name: 'Keep Shipping', priority: 10 },
-  { id: 'recover_failures', name: 'Recover Failures', priority: 9 },
-  { id: 'maintain_health', name: 'Maintain Health', priority: 7 },
-  { id: 'stay_productive', name: 'Stay Productive', priority: 5 },
-];
-
 function getAllGoals(
   status: NonNullable<ReturnType<typeof useGOAPStatus>['data']>['status']
 ): Array<{ id: string; name: string; priority: number; satisfied: boolean }> {
   if (!status) return [];
 
-  const unsatisfiedIds = new Set(status.unsatisfiedGoals.map((g) => g.id));
+  const unsatisfiedMap = new Map(
+    status.unsatisfiedGoals.map((g) => [g.id, { name: g.name, priority: g.priority }])
+  );
 
-  return POC_GOALS.map((g) => ({
-    ...g,
-    satisfied: !unsatisfiedIds.has(g.id),
-  })).sort((a, b) => b.priority - a.priority);
+  // Build the full list: unsatisfied goals from server + satisfied goals (those not in unsatisfied)
+  const allGoalIds = new Set([...Object.keys(BASE_GOAL_NAMES), ...unsatisfiedMap.keys()]);
+
+  return Array.from(allGoalIds)
+    .map((id) => {
+      const unsatisfied = unsatisfiedMap.get(id);
+      if (unsatisfied) {
+        return { id, name: unsatisfied.name, priority: unsatisfied.priority, satisfied: false };
+      }
+      // Goal is satisfied — use a default priority of 0 for display ordering
+      return { id, name: BASE_GOAL_NAMES[id] ?? id, priority: 0, satisfied: true };
+    })
+    .sort((a, b) => b.priority - a.priority);
+}
+
+function getRoleColorClasses(color: string, isActive: boolean): string {
+  if (!isActive) {
+    return 'border-border text-muted-foreground hover:border-border/80';
+  }
+  switch (color) {
+    case 'blue':
+      return 'border-blue-500/50 bg-blue-500/10 text-blue-400';
+    case 'yellow':
+      return 'border-yellow-500/50 bg-yellow-500/10 text-yellow-400';
+    case 'red':
+      return 'border-red-500/50 bg-red-500/10 text-red-400';
+    default:
+      return 'border-border bg-muted text-foreground';
+  }
 }
 
 function formatTimeAgo(iso: string): string {

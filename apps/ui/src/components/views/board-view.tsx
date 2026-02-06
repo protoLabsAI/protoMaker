@@ -237,6 +237,39 @@ export function BoardView() {
 
   // Search filter for Kanban cards
   const [searchQuery, setSearchQuery] = useState('');
+  // Assignee filter for board (persisted in localStorage)
+  const [assigneeFilter, setAssigneeFilter] = useState<'all' | 'my-tasks' | 'agent-tasks'>(() => {
+    try {
+      const stored = localStorage.getItem('automaker:board-assignee-filter');
+      if (stored === 'my-tasks' || stored === 'agent-tasks') return stored;
+    } catch {
+      /* localStorage unavailable */
+    }
+    return 'all';
+  });
+  const [boardUsername, setBoardUsername] = useState(() => {
+    try {
+      return localStorage.getItem('automaker:board-username') || '';
+    } catch {
+      return '';
+    }
+  });
+  const handleAssigneeFilterChange = useCallback((filter: 'all' | 'my-tasks' | 'agent-tasks') => {
+    setAssigneeFilter(filter);
+    try {
+      localStorage.setItem('automaker:board-assignee-filter', filter);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+  const handleBoardUsernameChange = useCallback((username: string) => {
+    setBoardUsername(username);
+    try {
+      localStorage.setItem('automaker:board-username', username);
+    } catch {
+      /* ignore */
+    }
+  }, []);
   // Plan approval loading state
   const [isPlanApprovalLoading, setIsPlanApprovalLoading] = useState(false);
   // Derive spec creation state from store - check if current project is the one being created
@@ -1086,6 +1119,8 @@ export function BoardView() {
     features: hookFeatures,
     runningAutoTasks,
     searchQuery,
+    assigneeFilter,
+    boardUsername,
     currentWorktreePath,
     currentWorktreeBranch,
     projectPath: currentProject?.path || null,
@@ -1306,6 +1341,10 @@ export function BoardView() {
         onSearchChange={setSearchQuery}
         isCreatingSpec={isCreatingSpec}
         creatingSpecProjectPath={creatingSpecProjectPath}
+        assigneeFilter={assigneeFilter}
+        onAssigneeFilterChange={handleAssigneeFilterChange}
+        boardUsername={boardUsername}
+        onBoardUsernameChange={handleBoardUsernameChange}
         onShowBoardBackground={() => setShowBoardBackgroundModal(true)}
         viewMode={viewMode}
         onViewModeChange={setViewMode}

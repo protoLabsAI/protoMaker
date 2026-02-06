@@ -92,6 +92,28 @@ export interface GOAPGoal {
 }
 
 /**
+ * Role that determines goal priority weighting
+ *
+ * Roles represent different operational mindsets (Shipper, Janitor, Guardian).
+ * The GOAP loop auto-rotates between roles based on world state conditions,
+ * or a manual override can lock the loop to a specific role.
+ */
+export interface GOAPRole {
+  /** Unique role identifier */
+  id: string;
+  /** Human-readable role name */
+  name: string;
+  /** Description of what this role focuses on */
+  description: string;
+  /** Goal ID → priority mapping (higher = more important) */
+  goalPriorities: Record<string, number>;
+  /** Conditions on world state that activate this role (auto-rotate) */
+  activationConditions: GOAPCondition[];
+  /** Higher = checked first during auto-rotate. Fallback role has 0. */
+  activationPriority: number;
+}
+
+/**
  * Planned sequence of actions to achieve a goal
  *
  * Represents the result of GOAP planning - an ordered list of actions
@@ -155,6 +177,17 @@ export const DEFAULT_GOAP_PLANNER_CONFIG: GOAPPlannerConfig = {
   maxPlanCost: 100,
   useHeuristic: true,
 };
+
+/**
+ * Extended action definition with metadata for the action registry.
+ * Separates declaration (pure data for planner) from handler (impure, has services).
+ */
+export interface GOAPActionDefinition extends GOAPAction {
+  /** Human-readable description of what this action does */
+  description: string;
+  /** Category for grouping in UI and logging */
+  category: 'auto-mode' | 'failure-recovery' | 'wip-management' | 'pipeline' | 'maintenance';
+}
 
 /**
  * Helper: Check if a condition is satisfied in the given state
@@ -320,6 +353,16 @@ export interface GOAPLoopStatus {
   startedAt: string;
   /** When the last tick ran (ISO 8601) */
   lastTickAt?: string;
+  /** Currently active role (determines goal priorities) */
+  activeRole: { id: string; name: string; selectedBy: 'auto' | 'manual'; reason?: string } | null;
+  /** Whether a manual role override is set (null = auto-rotate) */
+  roleOverride: string | null;
+  /** Current multi-step plan being executed (null if no plan) */
+  currentPlan: GOAPPlan | null;
+  /** Index of the current step being executed in the plan (0-based) */
+  currentPlanStep: number;
+  /** Reason the last plan was invalidated/regenerated */
+  lastReplanReason?: string;
 }
 
 /**

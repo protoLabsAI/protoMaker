@@ -2701,6 +2701,8 @@ export class HttpApiClient implements ElectronAPI {
     resume: (projectPath: string) => this.post('/api/goap/resume', { projectPath }),
     status: (projectPath: string) => this.post('/api/goap/status', { projectPath }),
     list: () => this.post('/api/goap/list', {}),
+    setRole: (projectPath: string, roleId: string | null) =>
+      this.post('/api/goap/set-role', { projectPath, roleId }),
     onEvent: (callback: EventCallback): (() => void) => {
       const unsubs = [
         this.subscribeToEvent('goap:tick', callback),

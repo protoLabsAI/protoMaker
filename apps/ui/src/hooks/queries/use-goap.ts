@@ -59,6 +59,21 @@ export interface GOAPStatusResponse {
     lastError?: string;
     startedAt: string;
     lastTickAt?: string;
+    activeRole: {
+      id: string;
+      name: string;
+      selectedBy: 'auto' | 'manual';
+      reason?: string;
+    } | null;
+    roleOverride: string | null;
+    currentPlan: {
+      goal: { id: string; name: string };
+      actions: Array<{ id: string; name: string; cost: number }>;
+      totalCost: number;
+      createdAt: string;
+    } | null;
+    currentPlanStep: number;
+    lastReplanReason?: string;
   } | null;
   running: boolean;
   error?: string;

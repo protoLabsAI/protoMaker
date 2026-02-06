@@ -3,7 +3,7 @@ import { memo, useEffect, useMemo, useState } from 'react';
 import { Feature, useAppStore } from '@/store/app-store';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { AlertCircle, Lock, Hand, Sparkles } from 'lucide-react';
+import { AlertCircle, Lock, Hand, Sparkles, User, Calendar } from 'lucide-react';
 import { getBlockingDependencies } from '@automaker/dependency-resolver';
 import { useShallow } from 'zustand/react/shallow';
 import { EpicBadge } from './epic-badge';
@@ -23,15 +23,46 @@ interface CardBadgesProps {
 export const CardBadges = memo(function CardBadges({ feature }: CardBadgesProps) {
   const hasEpic = !!feature.epicId;
   const hasError = !!feature.error;
+  const hasAssignee = !!feature.assignee;
+  const hasDueDate = !!feature.dueDate;
 
-  if (!hasError && !hasEpic) {
+  if (!hasError && !hasEpic && !hasAssignee && !hasDueDate) {
     return null;
   }
+
+  // Check if due date is past
+  const isDueDatePast = hasDueDate && new Date(feature.dueDate!) < new Date();
 
   return (
     <div className="flex flex-wrap items-center gap-1.5 px-3 pt-1.5 min-h-[24px]">
       {/* Epic badge - shows parent epic for child features */}
       {hasEpic && <EpicBadge feature={feature} />}
+
+      {/* Assignee badge */}
+      {hasAssignee && (
+        <div className="inline-flex items-center gap-1 px-1.5 h-5 rounded text-[10px] font-medium bg-blue-500/15 text-blue-400 border border-blue-500/30">
+          <User className="w-3 h-3" />
+          {feature.assignee}
+        </div>
+      )}
+
+      {/* Due date badge */}
+      {hasDueDate && (
+        <div
+          className={cn(
+            'inline-flex items-center gap-1 px-1.5 h-5 rounded text-[10px] font-medium border',
+            isDueDatePast
+              ? 'bg-red-500/15 text-red-400 border-red-500/30'
+              : 'bg-muted/60 text-muted-foreground border-border'
+          )}
+        >
+          <Calendar className="w-3 h-3" />
+          {new Date(feature.dueDate!).toLocaleDateString(undefined, {
+            month: 'short',
+            day: 'numeric',
+          })}
+        </div>
+      )}
 
       {/* Error badge */}
       {hasError && (
