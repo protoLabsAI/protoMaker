@@ -990,6 +990,48 @@ const tools: Tool[] = [
     },
   },
 
+  // ========== Chief of Staff (CoS) ==========
+  {
+    name: 'submit_prd',
+    description:
+      'Submit a SPARC PRD from the Chief of Staff to the Project Manager for decomposition and execution. Creates a feature that enters the authority pipeline.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        title: {
+          type: 'string',
+          description: 'PRD title',
+        },
+        description: {
+          type: 'string',
+          description: 'PRD description with situation, problem, approach, results, and constraints',
+        },
+        complexity: {
+          type: 'string',
+          enum: ['small', 'medium', 'large', 'architectural'],
+          default: 'medium',
+          description: 'Feature complexity level for model selection',
+        },
+        milestones: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              title: { type: 'string' },
+              description: { type: 'string' },
+            },
+          },
+          description: 'Optional array of milestones with title and description',
+        },
+      },
+      required: ['projectPath', 'title', 'description'],
+    },
+  },
+
   // ========== Ralph Mode (Persistent Retry Loops) ==========
   {
     name: 'start_ralph_loop',
@@ -1483,6 +1525,16 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         createEpics: args.createEpics ?? true,
         setupDependencies: args.setupDependencies ?? true,
         initialStatus: args.initialStatus || 'backlog',
+      });
+
+    // Chief of Staff (CoS)
+    case 'submit_prd':
+      return apiCall('/cos/submit-prd', {
+        projectPath: args.projectPath,
+        title: args.title,
+        description: args.description,
+        complexity: args.complexity || 'medium',
+        milestones: args.milestones,
       });
 
     // Ralph Mode
