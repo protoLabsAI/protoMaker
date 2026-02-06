@@ -224,6 +224,105 @@ export function applyEffects(state: GOAPState, effects: GOAPCondition[]): GOAPSt
 }
 
 /**
+ * Snapshot of world state at a point in time
+ */
+export interface WorldStateSnapshot {
+  /** Unique snapshot identifier */
+  id: string;
+  /** Project path this state belongs to */
+  projectPath: string;
+  /** The computed world state */
+  state: GOAPState;
+  /** When this snapshot was captured (ISO 8601) */
+  capturedAt: string;
+  /** How long evaluation took in milliseconds */
+  evaluationDurationMs: number;
+}
+
+/**
+ * Result of executing a GOAP action
+ */
+export interface GOAPActionResult {
+  /** The action that was executed */
+  action: GOAPAction;
+  /** Whether the action succeeded */
+  success: boolean;
+  /** Error message if the action failed */
+  error?: string;
+  /** Effects that were applied (if successful) */
+  appliedEffects?: GOAPCondition[];
+  /** When execution started (ISO 8601) */
+  startedAt: string;
+  /** When execution completed (ISO 8601) */
+  completedAt: string;
+  /** Execution duration in milliseconds */
+  durationMs: number;
+}
+
+/**
+ * Configuration for a GOAP brain loop
+ */
+export interface GOAPLoopConfig {
+  /** Project path to manage */
+  projectPath: string;
+  /** Branch name for worktree scoping (null for main) */
+  branchName: string | null;
+  /** Milliseconds between ticks (default: 30000) */
+  tickIntervalMs: number;
+  /** Max consecutive errors before auto-pause (default: 5) */
+  maxConsecutiveErrors: number;
+  /** Whether this loop is enabled */
+  enabled: boolean;
+  /** Max action history entries to keep (default: 100) */
+  maxActionHistorySize: number;
+}
+
+/**
+ * Default GOAP loop configuration
+ */
+export const DEFAULT_GOAP_LOOP_CONFIG: Omit<GOAPLoopConfig, 'projectPath'> = {
+  branchName: null,
+  tickIntervalMs: 30000,
+  maxConsecutiveErrors: 5,
+  enabled: true,
+  maxActionHistorySize: 100,
+};
+
+/**
+ * Status of a running GOAP brain loop
+ */
+export interface GOAPLoopStatus {
+  /** Project path being managed */
+  projectPath: string;
+  /** Branch name for worktree scoping */
+  branchName: string | null;
+  /** Whether the loop is currently running */
+  isRunning: boolean;
+  /** Whether the loop is paused */
+  isPaused: boolean;
+  /** Number of ticks completed */
+  tickCount: number;
+  /** Last captured world state */
+  lastWorldState: WorldStateSnapshot | null;
+  /** Goals that are not yet satisfied */
+  unsatisfiedGoals: GOAPGoal[];
+  /** Actions whose preconditions are met */
+  availableActions: GOAPAction[];
+  /** Last action result */
+  lastAction: GOAPActionResult | null;
+  /** History of action results */
+  actionHistory: GOAPActionResult[];
+  /** Number of consecutive errors */
+  consecutiveErrors: number;
+  /** Last error message */
+  lastError?: string;
+  /** When the loop was started (ISO 8601) */
+  startedAt: string;
+  /** When the last tick ran (ISO 8601) */
+  lastTickAt?: string;
+}
+
+/**
  * Example GOAP goals for the AI dev team POC
  */
 export const EXAMPLE_GOAP_GOALS = {

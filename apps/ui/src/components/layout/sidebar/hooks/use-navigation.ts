@@ -13,6 +13,7 @@ import {
   Network,
   Bell,
   Settings,
+  Eye,
 } from 'lucide-react';
 import type { NavSection, NavItem } from '../types';
 import type { KeyboardShortcut } from '@/hooks/use-keyboard-shortcuts';
@@ -160,6 +161,11 @@ export function useNavigation({
         label: 'Agent Runner',
         icon: Bot,
         shortcut: shortcuts.agent,
+      },
+      {
+        id: 'world-state',
+        label: 'World State',
+        icon: Eye,
       },
     ];
 

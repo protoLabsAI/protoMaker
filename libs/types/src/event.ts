@@ -95,6 +95,18 @@ export type EventType =
   | 'headsdown:agent:error'
   | 'headsdown:agent:paused'
   | 'headsdown:agent:resumed'
+  // GOAP brain loop events
+  | 'goap:started'
+  | 'goap:stopped'
+  | 'goap:paused'
+  | 'goap:resumed'
+  | 'goap:tick'
+  | 'goap:world_state_updated'
+  | 'goap:action_selected'
+  | 'goap:action_executed'
+  | 'goap:action_failed'
+  | 'goap:no_action_available'
+  | 'goap:error'
   // CodeRabbit review events
   | 'coderabbit:review-received'
   | 'coderabbit:feedback-processed'

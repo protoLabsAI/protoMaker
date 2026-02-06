@@ -495,9 +495,14 @@ export type {
   GOAPPlan,
   GOAPPlanResult,
   GOAPPlannerConfig,
+  WorldStateSnapshot,
+  GOAPActionResult,
+  GOAPLoopConfig,
+  GOAPLoopStatus,
 } from './goap.js';
 export {
   DEFAULT_GOAP_PLANNER_CONFIG,
+  DEFAULT_GOAP_LOOP_CONFIG,
   EXAMPLE_GOAP_GOALS,
   EXAMPLE_GOAP_ACTIONS,
   isConditionSatisfied,

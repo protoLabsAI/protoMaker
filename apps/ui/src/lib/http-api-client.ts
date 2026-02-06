@@ -563,7 +563,15 @@ type EventType =
   | 'dev-server:started'
   | 'dev-server:output'
   | 'dev-server:stopped'
-  | 'notification:created';
+  | 'notification:created'
+  | 'goap:tick'
+  | 'goap:action_executed'
+  | 'goap:world_state_updated'
+  | 'goap:started'
+  | 'goap:stopped'
+  | 'goap:paused'
+  | 'goap:resumed'
+  | 'goap:error';
 
 /**
  * Dev server log event payloads for WebSocket streaming
@@ -2682,6 +2690,30 @@ export class HttpApiClient implements ElectronAPI {
       stepIds: string[]
     ): Promise<{ success: boolean; error?: string }> =>
       this.post('/api/pipeline/steps/reorder', { projectPath, stepIds }),
+  };
+
+  // GOAP Brain Loop API
+  goap = {
+    start: (projectPath: string, branchName?: string | null, tickIntervalMs?: number) =>
+      this.post('/api/goap/start', { projectPath, branchName, tickIntervalMs }),
+    stop: (projectPath: string) => this.post('/api/goap/stop', { projectPath }),
+    pause: (projectPath: string) => this.post('/api/goap/pause', { projectPath }),
+    resume: (projectPath: string) => this.post('/api/goap/resume', { projectPath }),
+    status: (projectPath: string) => this.post('/api/goap/status', { projectPath }),
+    list: () => this.post('/api/goap/list', {}),
+    onEvent: (callback: EventCallback): (() => void) => {
+      const unsubs = [
+        this.subscribeToEvent('goap:tick', callback),
+        this.subscribeToEvent('goap:action_executed', callback),
+        this.subscribeToEvent('goap:world_state_updated', callback),
+        this.subscribeToEvent('goap:started', callback),
+        this.subscribeToEvent('goap:stopped', callback),
+        this.subscribeToEvent('goap:paused', callback),
+        this.subscribeToEvent('goap:resumed', callback),
+        this.subscribeToEvent('goap:error', callback),
+      ];
+      return () => unsubs.forEach((u) => u());
+    },
   };
 }
 
