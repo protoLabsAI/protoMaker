@@ -89,6 +89,8 @@ import { createNotificationsRoutes } from './routes/notifications/index.js';
 import { getNotificationService } from './services/notification-service.js';
 import { createEventHistoryRoutes } from './routes/event-history/index.js';
 import { getEventHistoryService } from './services/event-history-service.js';
+import { createBriefingRoutes } from './routes/briefing/index.js';
+import { getBriefingCursorService } from './services/briefing-cursor-service.js';
 import { createRalphRoutes } from './routes/ralph/index.js';
 import { RalphLoopService } from './services/ralph-loop-service.js';
 import { createGOAPRoutes } from './routes/goap/index.js';
@@ -317,6 +319,9 @@ notificationService.setEventEmitter(events);
 
 // Initialize Event History Service
 const eventHistoryService = getEventHistoryService();
+
+// Initialize Briefing Cursor Service
+const briefingCursorService = getBriefingCursorService(DATA_DIR);
 
 // Initialize Event Hook Service for custom event triggers (with history storage)
 eventHookService.initialize(events, settingsService, eventHistoryService, featureLoader);
@@ -684,6 +689,7 @@ app.use('/api/ralph', createRalphRoutes(ralphLoopService));
 app.use('/api/goap', createGOAPRoutes(goapLoopService));
 app.use('/api/skills', createSkillsRoutes());
 app.use('/api/event-history', createEventHistoryRoutes(eventHistoryService, settingsService));
+app.use('/api/briefing', authMiddleware, createBriefingRoutes(eventHistoryService, briefingCursorService));
 app.use('/api/projects', createProjectsRoutes(featureLoader));
 app.use('/api/scheduler', createSchedulerRoutes(schedulerService));
 

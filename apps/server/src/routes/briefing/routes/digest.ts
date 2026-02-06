@@ -1,0 +1,192 @@
+/**
+ * POST /api/briefing/digest - Get briefing digest of events
+ *
+ * Request body: {
+ *   projectPath: string,
+ *   timeRange?: '1h' | '6h' | '24h' | '7d',
+ *   since?: string (ISO timestamp)
+ * }
+ * Response: {
+ *   success: true,
+ *   signals: {
+ *     critical: StoredEvent[],
+ *     high: StoredEvent[],
+ *     medium: StoredEvent[],
+ *     low: StoredEvent[]
+ *   },
+ *   summary: { critical: number, high: number, medium: number, low: number, total: number },
+ *   since: string,
+ *   projectPath: string
+ * }
+ */
+
+import type { Request, Response } from 'express';
+import type { EventHistoryService } from '../../../services/event-history-service.js';
+import type { BriefingCursorService } from '../../../services/briefing-cursor-service.js';
+import type { StoredEvent, EventHookTrigger } from '@automaker/types';
+import { getErrorMessage, logError } from '../common.js';
+
+/**
+ * Severity levels for briefing digest
+ */
+type BriefingSeverity = 'critical' | 'high' | 'medium' | 'low';
+
+/**
+ * Map event triggers to severity levels
+ * Based on importance to Ava's briefing needs
+ */
+const TRIGGER_SEVERITY_MAP: Record<EventHookTrigger, BriefingSeverity> = {
+  // Critical: System failures, auto-mode errors
+  auto_mode_error: 'critical',
+
+  // High: Feature failures, retries, recoveries
+  feature_error: 'high',
+  feature_retry: 'high',
+  feature_recovery: 'high',
+  pr_feedback_received: 'high',
+
+  // Medium: Feature successes, auto-mode completions, health checks
+  feature_success: 'medium',
+  auto_mode_complete: 'medium',
+  auto_mode_health_check: 'medium',
+  skill_created: 'medium',
+  memory_learning: 'medium',
+  project_scaffolded: 'medium',
+
+  // Low: Feature creation, project deletion
+  feature_created: 'low',
+  project_deleted: 'low',
+};
+
+/**
+ * Convert time range string to milliseconds
+ */
+function timeRangeToMs(timeRange: string): number {
+  const ranges: Record<string, number> = {
+    '1h': 60 * 60 * 1000,
+    '6h': 6 * 60 * 60 * 1000,
+    '24h': 24 * 60 * 60 * 1000,
+    '7d': 7 * 24 * 60 * 60 * 1000,
+  };
+  return ranges[timeRange] ?? ranges['24h'];
+}
+
+/**
+ * Calculate the "since" timestamp based on parameters
+ */
+async function calculateSince(
+  briefingCursorService: BriefingCursorService,
+  projectPath: string,
+  timeRange?: string,
+  since?: string
+): Promise<string> {
+  // If explicit since timestamp provided, use it
+  if (since) {
+    return since;
+  }
+
+  // If time range provided, calculate from now
+  if (timeRange) {
+    const ms = timeRangeToMs(timeRange);
+    const timestamp = new Date(Date.now() - ms).toISOString();
+    return timestamp;
+  }
+
+  // Otherwise, use cursor or default to 24h
+  const cursor = await briefingCursorService.getCursor(projectPath);
+  if (cursor) {
+    return cursor;
+  }
+
+  // Default to 24h
+  const ms = timeRangeToMs('24h');
+  return new Date(Date.now() - ms).toISOString();
+}
+
+/**
+ * Group events by severity
+ */
+function groupEventsBySeverity(events: StoredEvent[]): {
+  critical: StoredEvent[];
+  high: StoredEvent[];
+  medium: StoredEvent[];
+  low: StoredEvent[];
+} {
+  const grouped = {
+    critical: [] as StoredEvent[],
+    high: [] as StoredEvent[],
+    medium: [] as StoredEvent[],
+    low: [] as StoredEvent[],
+  };
+
+  for (const event of events) {
+    const severity = TRIGGER_SEVERITY_MAP[event.trigger] || 'low';
+    grouped[severity].push(event);
+  }
+
+  return grouped;
+}
+
+export function createDigestHandler(
+  eventHistoryService: EventHistoryService,
+  briefingCursorService: BriefingCursorService
+) {
+  return async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { projectPath, timeRange, since } = req.body as {
+        projectPath: string;
+        timeRange?: '1h' | '6h' | '24h' | '7d';
+        since?: string;
+      };
+
+      if (!projectPath || typeof projectPath !== 'string') {
+        res.status(400).json({ success: false, error: 'projectPath is required' });
+        return;
+      }
+
+      // Calculate the since timestamp
+      const sinceTimestamp = await calculateSince(
+        briefingCursorService,
+        projectPath,
+        timeRange,
+        since
+      );
+
+      // Get events since timestamp
+      const events = await eventHistoryService.getEvents(projectPath, {
+        since: sinceTimestamp,
+      });
+
+      // Load full event details for each summary
+      const fullEvents = await Promise.all(
+        events.map((summary) => eventHistoryService.getEvent(projectPath, summary.id))
+      );
+
+      // Filter out nulls (shouldn't happen but type safety)
+      const validEvents = fullEvents.filter((e): e is StoredEvent => e !== null);
+
+      // Group by severity
+      const grouped = groupEventsBySeverity(validEvents);
+
+      // Calculate summary counts
+      const summary = {
+        critical: grouped.critical.length,
+        high: grouped.high.length,
+        medium: grouped.medium.length,
+        low: grouped.low.length,
+        total: validEvents.length,
+      };
+
+      res.json({
+        success: true,
+        signals: grouped,
+        summary,
+        since: sinceTimestamp,
+        projectPath,
+      });
+    } catch (error) {
+      logError(error, 'Get briefing digest failed');
+      res.status(500).json({ success: false, error: getErrorMessage(error) });
+    }
+  };
+}
