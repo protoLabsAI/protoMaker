@@ -37,6 +37,17 @@ import { createLogger } from '@automaker/utils';
 import type { EventEmitter } from '../lib/events.js';
 import type { AuthorityService } from './authority-service.js';
 import type { FeatureLoader } from './feature-loader.js';
+import type { PMAuthorityAgent } from './authority-agents/pm-agent.js';
+import type { ProjMAuthorityAgent } from './authority-agents/projm-agent.js';
+import type { EMAuthorityAgent } from './authority-agents/em-agent.js';
+import type { StatusMonitorAgent } from './authority-agents/status-agent.js';
+
+interface AuthorityAgents {
+  pm?: PMAuthorityAgent;
+  projm?: ProjMAuthorityAgent;
+  em?: EMAuthorityAgent;
+  statusMonitor?: StatusMonitorAgent;
+}
 import * as https from 'node:https';
 import * as http from 'node:http';
 import * as fs from 'node:fs';
@@ -74,6 +85,7 @@ export class DiscordBotService {
   private readonly authorityService: AuthorityService;
   private readonly featureLoader: FeatureLoader;
   private readonly projectPath: string;
+  private readonly agents?: AuthorityAgents;
 
   private client: Client | null = null;
   private initialized = false;
@@ -91,12 +103,14 @@ export class DiscordBotService {
     events: EventEmitter,
     authorityService: AuthorityService,
     featureLoader: FeatureLoader,
-    projectPath: string
+    projectPath: string,
+    agents?: AuthorityAgents
   ) {
     this.events = events;
     this.authorityService = authorityService;
     this.featureLoader = featureLoader;
     this.projectPath = projectPath;
+    this.agents = agents;
   }
 
   /**
@@ -737,6 +751,13 @@ export class DiscordBotService {
         mimeType: 'text/plain',
         content: tf.content,
       }));
+
+      // Ensure authority agents are initialized for this project
+      // so the PM agent picks up the idea-injected event
+      if (this.agents?.pm) await this.agents.pm.initialize(this.projectPath);
+      if (this.agents?.projm) await this.agents.projm.initialize(this.projectPath);
+      if (this.agents?.em) await this.agents.em.initialize(this.projectPath);
+      if (this.agents?.statusMonitor) await this.agents.statusMonitor.initialize(this.projectPath);
 
       // Create feature in 'idea' state via the inject-idea pipeline
       const feature = await this.featureLoader.create(this.projectPath, {

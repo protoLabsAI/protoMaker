@@ -94,6 +94,51 @@ export const DEFAULT_STATUS_TRANSITIONS: StatusTransitionGuard[] = [
     to: 'in_progress',
     allowedRoles: ['CTO', 'EM', 'PE'],
   },
+
+  // === Authority pipeline workItemState transitions ===
+
+  // PM reviews ideas
+  {
+    from: 'idea',
+    to: 'pm_review',
+    allowedRoles: ['CTO', 'PM'],
+  },
+  // PM approves idea
+  {
+    from: 'pm_review',
+    to: 'approved',
+    allowedRoles: ['CTO', 'PM'],
+  },
+  // PM requests changes from CTO
+  {
+    from: 'pm_review',
+    to: 'pm_changes_requested',
+    allowedRoles: ['CTO', 'PM'],
+  },
+  // CTO resubmits after PM changes requested
+  {
+    from: 'pm_changes_requested',
+    to: 'pm_review',
+    allowedRoles: ['CTO', 'PM'],
+  },
+  // ProjM decomposes approved idea into tasks
+  {
+    from: 'approved',
+    to: 'planned',
+    allowedRoles: ['CTO', 'ProjM'],
+  },
+  // ProjM marks planned work as ready for execution
+  {
+    from: 'planned',
+    to: 'ready',
+    allowedRoles: ['CTO', 'ProjM'],
+  },
+  // EM assigns ready work to engineers
+  {
+    from: 'ready',
+    to: 'in_progress',
+    allowedRoles: ['CTO', 'EM'],
+  },
 ];
 
 /**

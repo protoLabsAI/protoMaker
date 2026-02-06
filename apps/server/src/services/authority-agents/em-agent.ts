@@ -340,7 +340,7 @@ export class EMAuthorityAgent {
       const startDecision = await this.authorityService.submitProposal(
         {
           who: agent.id,
-          what: 'transition_status',
+          what: 'assign_work',
           target: feature.id,
           justification: `Starting execution of "${feature.title}"`,
           risk: 'low',

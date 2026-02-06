@@ -38,8 +38,20 @@ export type PolicyDecisionType = 'allow' | 'deny' | 'require_approval';
 
 /**
  * WorkflowStatus - Status values used in transition guards
+ * Includes both board statuses and authority pipeline workItemState values
  */
-export type WorkflowStatus = 'backlog' | 'in_progress' | 'review' | 'done' | 'blocked';
+export type WorkflowStatus =
+  | 'backlog'
+  | 'in_progress'
+  | 'review'
+  | 'done'
+  | 'blocked'
+  | 'idea'
+  | 'pm_review'
+  | 'pm_changes_requested'
+  | 'approved'
+  | 'planned'
+  | 'ready';
 
 /**
  * AgentTrustProfile - Agent's trust credentials for policy evaluation

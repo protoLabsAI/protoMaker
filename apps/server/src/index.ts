@@ -11,6 +11,8 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+import path from 'node:path';
+import { execSync } from 'node:child_process';
 import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
@@ -120,6 +122,19 @@ const DATA_DIR = process.env.DATA_DIR || './data';
 logger.info('[SERVER_STARTUP] process.env.DATA_DIR:', process.env.DATA_DIR);
 logger.info('[SERVER_STARTUP] Resolved DATA_DIR:', DATA_DIR);
 logger.info('[SERVER_STARTUP] process.cwd():', process.cwd());
+
+// Determine the repository/project root directory
+// When running via npm workspace (npm run dev:web), process.cwd() is apps/server/
+// but services like Discord bot need the monorepo root where .automaker/ lives
+const REPO_ROOT = (() => {
+  try {
+    return execSync('git rev-parse --show-toplevel', { encoding: 'utf-8' }).trim();
+  } catch {
+    return process.cwd();
+  }
+})();
+logger.info('[SERVER_STARTUP] REPO_ROOT:', REPO_ROOT);
+
 const ENABLE_REQUEST_LOGGING_DEFAULT = process.env.ENABLE_REQUEST_LOGGING !== 'false'; // Default to true
 
 // Runtime-configurable request logging flag (can be changed via settings)
@@ -333,7 +348,8 @@ const discordBotService = new DiscordBotService(
   events,
   authorityService,
   featureLoader,
-  process.cwd()
+  REPO_ROOT,
+  { pm: pmAgent, projm: projmAgent, em: emAgent, statusMonitor }
 );
 void discordBotService.initialize();
 
@@ -449,7 +465,7 @@ setInterval(() => {
 const graphiteSyncScheduler = new GraphiteSyncScheduler(
   settingsService,
   graphiteService,
-  process.cwd()
+  REPO_ROOT
 );
 
 // Schedule periodic Graphite sync at 2am daily (0 2 * * *)
