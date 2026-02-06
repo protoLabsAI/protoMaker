@@ -97,8 +97,17 @@ export class EventHistoryService {
    * @returns Promise resolving to the stored event
    */
   async storeEvent(input: StoreEventInput): Promise<StoredEvent> {
-    const { projectPath, trigger, severity, featureId, featureName, error, errorType, passes, metadata } =
-      input;
+    const {
+      projectPath,
+      trigger,
+      severity,
+      featureId,
+      featureName,
+      error,
+      errorType,
+      passes,
+      metadata,
+    } = input;
 
     // Ensure events directory exists
     await ensureEventHistoryDir(projectPath);
@@ -129,7 +138,9 @@ export class EventHistoryService {
     // Update the index
     await this.addToIndex(projectPath, event);
 
-    logger.info(`Stored event ${eventId} (${trigger}, severity: ${severity}) for project ${projectName}`);
+    logger.info(
+      `Stored event ${eventId} (${trigger}, severity: ${severity}) for project ${projectName}`
+    );
 
     return event;
   }
@@ -301,7 +312,10 @@ export class EventHistoryService {
    * @param severity - Severity level to filter by
    * @returns Promise resolving to array of event summaries
    */
-  async getEventsBySeverity(projectPath: string, severity: EventSeverity): Promise<StoredEventSummary[]> {
+  async getEventsBySeverity(
+    projectPath: string,
+    severity: EventSeverity
+  ): Promise<StoredEventSummary[]> {
     return this.getEvents(projectPath, { severity });
   }
 
@@ -315,16 +329,11 @@ export class EventHistoryService {
   async getEventsSince(projectPath: string, since: string): Promise<StoredEvent[]> {
     const summaries = await this.getEvents(projectPath, { since });
 
-    // Load full event data for each summary
-    const events: StoredEvent[] = [];
-    for (const summary of summaries) {
-      const event = await this.getEvent(projectPath, summary.id);
-      if (event) {
-        events.push(event);
-      }
-    }
-
-    return events;
+    // Load full event data in parallel
+    const results = await Promise.all(
+      summaries.map((summary) => this.getEvent(projectPath, summary.id))
+    );
+    return results.filter((e): e is StoredEvent => e !== null);
   }
 
   /**

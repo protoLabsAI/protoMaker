@@ -49,7 +49,7 @@ const logger = createLogger('EventHooks');
  * - Medium: feature_created, feature_retry, feature_recovery
  * - Low: everything else (auto_mode_health_check, skill_created, memory_learning, pr_feedback_received, project_scaffolded, project_deleted)
  */
-function classifySeverity(trigger: EventHookTrigger, payload?: unknown): EventSeverity {
+function classifySeverity(trigger: EventHookTrigger): EventSeverity {
   // Critical events - require immediate attention
   if (trigger === 'feature_error' || trigger === 'auto_mode_error') {
     return 'critical';
@@ -61,7 +61,11 @@ function classifySeverity(trigger: EventHookTrigger, payload?: unknown): EventSe
   }
 
   // Medium priority events - routine state changes and recoveries
-  if (trigger === 'feature_created' || trigger === 'feature_retry' || trigger === 'feature_recovery') {
+  if (
+    trigger === 'feature_created' ||
+    trigger === 'feature_retry' ||
+    trigger === 'feature_recovery'
+  ) {
     return 'medium';
   }
 
@@ -471,7 +475,7 @@ export class EventHookService {
     additionalData?: { passes?: boolean }
   ): Promise<void> {
     // Classify severity
-    const severity = classifySeverity(trigger, additionalData);
+    const severity = classifySeverity(trigger);
 
     // Store event to history (even if no hooks match)
     if (this.eventHistoryService && context.projectPath) {
