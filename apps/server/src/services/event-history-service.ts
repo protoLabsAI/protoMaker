@@ -25,6 +25,7 @@ import type {
   StoredEventSummary,
   EventHistoryFilter,
   EventHookTrigger,
+  EventSeverity,
 } from '@automaker/types';
 import { DEFAULT_EVENT_HISTORY_INDEX } from '@automaker/types';
 import { randomUUID } from 'crypto';
@@ -75,6 +76,7 @@ async function readJsonFile<T>(filePath: string, defaultValue: T): Promise<T> {
  */
 export interface StoreEventInput {
   trigger: EventHookTrigger;
+  severity: EventSeverity;
   projectPath: string;
   featureId?: string;
   featureName?: string;
@@ -95,8 +97,17 @@ export class EventHistoryService {
    * @returns Promise resolving to the stored event
    */
   async storeEvent(input: StoreEventInput): Promise<StoredEvent> {
-    const { projectPath, trigger, featureId, featureName, error, errorType, passes, metadata } =
-      input;
+    const {
+      projectPath,
+      trigger,
+      severity,
+      featureId,
+      featureName,
+      error,
+      errorType,
+      passes,
+      metadata,
+    } = input;
 
     // Ensure events directory exists
     await ensureEventHistoryDir(projectPath);
@@ -108,6 +119,7 @@ export class EventHistoryService {
     const event: StoredEvent = {
       id: eventId,
       trigger,
+      severity,
       timestamp,
       projectPath,
       projectName,
@@ -126,7 +138,9 @@ export class EventHistoryService {
     // Update the index
     await this.addToIndex(projectPath, event);
 
-    logger.info(`Stored event ${eventId} (${trigger}) for project ${projectName}`);
+    logger.info(
+      `Stored event ${eventId} (${trigger}, severity: ${severity}) for project ${projectName}`
+    );
 
     return event;
   }
@@ -142,12 +156,19 @@ export class EventHistoryService {
     const indexPath = getEventHistoryIndexPath(projectPath);
     const index = await readJsonFile<StoredEventIndex>(indexPath, DEFAULT_EVENT_HISTORY_INDEX);
 
-    let events = [...index.events];
+    // Ensure backward compatibility: default severity to 'low' for old events
+    let events = index.events.map((e) => ({
+      ...e,
+      severity: e.severity || 'low',
+    }));
 
     // Apply filters
     if (filter) {
       if (filter.trigger) {
         events = events.filter((e) => e.trigger === filter.trigger);
+      }
+      if (filter.severity) {
+        events = events.filter((e) => e.severity === filter.severity);
       }
       if (filter.featureId) {
         events = events.filter((e) => e.featureId === filter.featureId);
@@ -187,7 +208,12 @@ export class EventHistoryService {
     const eventPath = getEventPath(projectPath, eventId);
     try {
       const content = (await secureFs.readFile(eventPath, 'utf-8')) as string;
-      return JSON.parse(content) as StoredEvent;
+      const event = JSON.parse(content) as StoredEvent;
+      // Ensure backward compatibility: default severity to 'low' for old events
+      return {
+        ...event,
+        severity: event.severity || 'low',
+      };
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
         return null;
@@ -280,6 +306,37 @@ export class EventHistoryService {
   }
 
   /**
+   * Get events filtered by severity level
+   *
+   * @param projectPath - Absolute path to project directory
+   * @param severity - Severity level to filter by
+   * @returns Promise resolving to array of event summaries
+   */
+  async getEventsBySeverity(
+    projectPath: string,
+    severity: EventSeverity
+  ): Promise<StoredEventSummary[]> {
+    return this.getEvents(projectPath, { severity });
+  }
+
+  /**
+   * Get events that occurred since a given timestamp
+   *
+   * @param projectPath - Absolute path to project directory
+   * @param since - ISO timestamp to filter from
+   * @returns Promise resolving to array of full stored events
+   */
+  async getEventsSince(projectPath: string, since: string): Promise<StoredEvent[]> {
+    const summaries = await this.getEvents(projectPath, { since });
+
+    // Load full event data in parallel
+    const results = await Promise.all(
+      summaries.map((summary) => this.getEvent(projectPath, summary.id))
+    );
+    return results.filter((e): e is StoredEvent => e !== null);
+  }
+
+  /**
    * Add an event to the index (internal)
    */
   private async addToIndex(projectPath: string, event: StoredEvent): Promise<void> {
@@ -289,6 +346,7 @@ export class EventHistoryService {
     const summary: StoredEventSummary = {
       id: event.id,
       trigger: event.trigger,
+      severity: event.severity,
       timestamp: event.timestamp,
       featureName: event.featureName,
       featureId: event.featureId,

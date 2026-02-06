@@ -34,10 +34,45 @@ import type {
   EventHookShellAction,
   EventHookHttpAction,
   EventHookDiscordAction,
+  EventSeverity,
 } from '@automaker/types';
 
 const execAsync = promisify(exec);
 const logger = createLogger('EventHooks');
+
+/**
+ * Classify event severity based on trigger type
+ *
+ * Classification rules:
+ * - Critical: feature_error, auto_mode_error
+ * - High: feature_success, auto_mode_complete
+ * - Medium: feature_created, feature_retry, feature_recovery
+ * - Low: everything else (auto_mode_health_check, skill_created, memory_learning, pr_feedback_received, project_scaffolded, project_deleted)
+ */
+function classifySeverity(trigger: EventHookTrigger): EventSeverity {
+  // Critical events - require immediate attention
+  if (trigger === 'feature_error' || trigger === 'auto_mode_error') {
+    return 'critical';
+  }
+
+  // High priority events - important successes and completions
+  if (trigger === 'feature_success' || trigger === 'auto_mode_complete') {
+    return 'high';
+  }
+
+  // Medium priority events - routine state changes and recoveries
+  if (
+    trigger === 'feature_created' ||
+    trigger === 'feature_retry' ||
+    trigger === 'feature_recovery'
+  ) {
+    return 'medium';
+  }
+
+  // Low priority - everything else (informational)
+  // auto_mode_health_check, skill_created, memory_learning, pr_feedback_received, project_scaffolded, project_deleted
+  return 'low';
+}
 
 /** Default timeout for shell commands (30 seconds) */
 const DEFAULT_SHELL_TIMEOUT = 30000;
@@ -439,11 +474,15 @@ export class EventHookService {
     context: HookContext,
     additionalData?: { passes?: boolean }
   ): Promise<void> {
+    // Classify severity
+    const severity = classifySeverity(trigger);
+
     // Store event to history (even if no hooks match)
     if (this.eventHistoryService && context.projectPath) {
       try {
         await this.eventHistoryService.storeEvent({
           trigger,
+          severity,
           projectPath: context.projectPath,
           featureId: context.featureId,
           featureName: context.featureName,

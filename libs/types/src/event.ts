@@ -186,3 +186,8 @@ export type EventType =
   | 'cos:prd-submitted';
 
 export type EventCallback = (type: EventType, payload: unknown) => void;
+
+/**
+ * Event severity levels for classification and filtering
+ */
+export type EventSeverity = 'critical' | 'high' | 'medium' | 'low';
