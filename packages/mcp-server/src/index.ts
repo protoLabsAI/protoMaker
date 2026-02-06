@@ -245,6 +245,11 @@ const tools: Tool[] = [
           description:
             "Who this feature is assigned to. If set to a human name (e.g., 'josh'), auto-mode will skip this feature. If set to 'agent' or undefined, auto-mode can pick it up.",
         },
+        dueDate: {
+          type: 'string',
+          description:
+            'Due date for this feature in ISO 8601 format (YYYY-MM-DD). Example: "2026-02-10".',
+        },
       },
       required: ['projectPath', 'title', 'description'],
     },
@@ -287,6 +292,11 @@ const tools: Tool[] = [
           type: 'string',
           description:
             "Who this feature is assigned to. If set to a human name (e.g., 'josh'), auto-mode will skip this feature. If set to 'agent' or undefined, auto-mode can pick it up.",
+        },
+        dueDate: {
+          type: 'string',
+          description:
+            'Due date for this feature in ISO 8601 format (YYYY-MM-DD). Pass null to clear.',
         },
       },
       required: ['projectPath', 'featureId'],
@@ -1169,6 +1179,7 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       if (args.epicId) featureData.epicId = args.epicId;
       if (args.complexity) featureData.complexity = args.complexity;
       if (args.assignee !== undefined) featureData.assignee = args.assignee;
+      if (args.dueDate) featureData.dueDate = args.dueDate;
       return apiCall('/features/create', {
         projectPath: args.projectPath,
         feature: featureData,
@@ -1182,6 +1193,7 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       if (args.status) updates.status = args.status;
       if (args.complexity) updates.complexity = args.complexity;
       if (args.assignee !== undefined) updates.assignee = args.assignee;
+      if (args.dueDate !== undefined) updates.dueDate = args.dueDate;
       return apiCall('/features/update', {
         projectPath: args.projectPath,
         featureId: args.featureId,
