@@ -247,6 +247,10 @@ export class GOAPLoopService {
       if (loop) {
         this.clearTimer(loop);
         loop.isRunning = false;
+        this.emit('goap:stopped', {
+          projectPath: loop.config.projectPath,
+          status: this.toStatus(loop),
+        });
         this.loops.delete(key);
         logger.info('GOAP loop stopped (shutdown)', { projectPath: loop.config.projectPath });
       }
@@ -435,8 +439,11 @@ export class GOAPLoopService {
         }
 
         case 'retry_failed_feature': {
+          const MAX_RETRIES = 3;
           const features = await this.featureLoader.getAll(projectPath);
-          const failed = features.find((f) => f.status === 'failed');
+          const failed = features.find(
+            (f) => f.status === 'failed' && (f.failureCount || 0) < MAX_RETRIES
+          );
           if (failed) {
             const newFailureCount = (failed.failureCount || 0) + 1;
             await this.featureLoader.update(projectPath, failed.id, {
@@ -526,6 +533,8 @@ export class GOAPLoopService {
 
   // ─── Helpers ─────────────────────────────────────────────────────────────
 
+  // POC: keyed by projectPath only. Multi-branch support would require
+  // threading branchName through public API and route contracts.
   private loopKey(projectPath: string): string {
     return projectPath;
   }
