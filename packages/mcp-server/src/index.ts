@@ -1168,7 +1168,7 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       if (args.isEpic) featureData.isEpic = args.isEpic;
       if (args.epicId) featureData.epicId = args.epicId;
       if (args.complexity) featureData.complexity = args.complexity;
-      if (args.assignee) featureData.assignee = args.assignee;
+      if (args.assignee !== undefined) featureData.assignee = args.assignee;
       return apiCall('/features/create', {
         projectPath: args.projectPath,
         feature: featureData,

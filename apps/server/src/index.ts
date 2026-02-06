@@ -11,7 +11,6 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-import path from 'node:path';
 import { execSync } from 'node:child_process';
 import express from 'express';
 import cors from 'cors';
@@ -128,7 +127,7 @@ logger.info('[SERVER_STARTUP] process.cwd():', process.cwd());
 // but services like Discord bot need the monorepo root where .automaker/ lives
 const REPO_ROOT = (() => {
   try {
-    return execSync('git rev-parse --show-toplevel', { encoding: 'utf-8' }).trim();
+    return execSync('git rev-parse --show-toplevel', { encoding: 'utf-8', timeout: 5000 }).trim();
   } catch {
     return process.cwd();
   }
