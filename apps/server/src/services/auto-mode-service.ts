@@ -3889,8 +3889,9 @@ Format your response as a structured markdown document.`;
       }
 
       // Sort by priority (lower number = higher priority, picked up first)
-      // Features without priority default to 3 (Normal)
-      readyFeatures.sort((a, b) => (a.priority ?? 3) - (b.priority ?? 3));
+      // 0 = No priority and undefined both default to 3 (Normal) for sorting
+      const priorityOrder = (p?: number | null): number => (p === 0 || p == null ? 3 : p);
+      readyFeatures.sort((a, b) => priorityOrder(a.priority) - priorityOrder(b.priority));
 
       logger.info(
         `[loadPendingFeatures] After dependency filtering: ${readyFeatures.length} ready features (skipVerification=${skipVerification})`
