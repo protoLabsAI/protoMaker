@@ -42,7 +42,13 @@ export interface Feature {
   category: string;
   description: string;
   passes?: boolean;
-  priority?: number;
+  /**
+   * Priority level for this feature.
+   * 0 = No priority, 1 = Urgent, 2 = High, 3 = Normal, 4 = Low.
+   * Auto-mode picks up higher priority (lower number) features first.
+   * Features without priority default to 3 (Normal) for sorting.
+   */
+  priority?: 0 | 1 | 2 | 3 | 4;
   status?: FeatureStatus | string; // Allow string for extensibility
   dependencies?: string[];
   spec?: string;

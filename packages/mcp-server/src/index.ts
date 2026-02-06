@@ -250,6 +250,12 @@ const tools: Tool[] = [
           description:
             'Due date for this feature in ISO 8601 format (YYYY-MM-DD). Example: "2026-02-10".',
         },
+        priority: {
+          type: 'number',
+          enum: [0, 1, 2, 3, 4],
+          description:
+            'Priority level: 0 = No priority, 1 = Urgent, 2 = High, 3 = Normal, 4 = Low. Auto-mode picks higher priority first.',
+        },
       },
       required: ['projectPath', 'title', 'description'],
     },
@@ -297,6 +303,12 @@ const tools: Tool[] = [
           type: ['string', 'null'],
           description:
             'Due date for this feature in ISO 8601 format (YYYY-MM-DD). Pass null to clear.',
+        },
+        priority: {
+          type: ['number', 'null'],
+          enum: [0, 1, 2, 3, 4, null],
+          description:
+            'Priority level: 0 = No priority, 1 = Urgent, 2 = High, 3 = Normal, 4 = Low. Pass null to clear.',
         },
       },
       required: ['projectPath', 'featureId'],
@@ -1180,6 +1192,7 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       if (args.complexity) featureData.complexity = args.complexity;
       if (args.assignee !== undefined) featureData.assignee = args.assignee;
       if (args.dueDate !== undefined) featureData.dueDate = args.dueDate;
+      if (args.priority !== undefined) featureData.priority = args.priority;
       return apiCall('/features/create', {
         projectPath: args.projectPath,
         feature: featureData,
@@ -1194,6 +1207,7 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       if (args.complexity) updates.complexity = args.complexity;
       if (args.assignee !== undefined) updates.assignee = args.assignee;
       if (args.dueDate !== undefined) updates.dueDate = args.dueDate;
+      if (args.priority !== undefined) updates.priority = args.priority;
       return apiCall('/features/update', {
         projectPath: args.projectPath,
         featureId: args.featureId,
