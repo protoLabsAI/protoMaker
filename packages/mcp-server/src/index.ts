@@ -1189,6 +1189,32 @@ const tools: Tool[] = [
     },
   },
   {
+    name: 'get_briefing',
+    description:
+      'Get a briefing digest of important events since last session. Returns events grouped by severity (critical, high, medium, low) for quick situation awareness. Use this when starting a session to understand what happened while you were away.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        timeRange: {
+          type: 'string',
+          enum: ['1h', '6h', '24h', '7d'],
+          description:
+            'Time range to retrieve events for (optional). If not specified, uses cursor from last briefing or defaults to 24h.',
+        },
+        since: {
+          type: 'string',
+          description:
+            'ISO timestamp to retrieve events since (optional). Overrides timeRange and cursor if provided.',
+        },
+      },
+      required: ['projectPath'],
+    },
+  },
+  {
     name: 'graphite_restack',
     description:
       'Restack the entire branch stack on trunk using Graphite CLI. This rebases all branches in the stack when trunk (main) has changed, preventing merge conflicts during PR creation. Use this to sync feature branches with the latest main branch.',
@@ -1574,6 +1600,19 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
     case 'health_check': {
       const response = await fetch(`${API_URL}/api/health`);
       return response.json();
+    }
+
+    case 'get_briefing': {
+      const digestResult = await apiCall('/briefing/digest', {
+        projectPath: args.projectPath,
+        timeRange: args.timeRange,
+        since: args.since,
+      });
+      // Auto-acknowledge to advance cursor after successful digest
+      await apiCall('/briefing/ack', {
+        projectPath: args.projectPath,
+      }).catch(() => {/* ack failure is non-critical */});
+      return digestResult;
     }
 
     case 'get_board_summary': {
