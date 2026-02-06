@@ -425,7 +425,12 @@ void schedulerService.start();
     for (const projectPath of uniquePaths) {
       try {
         const features = await featureLoader.getAll(projectPath);
-        const orphaned = features.filter((f) => f.status === 'running');
+        const orphaned = features.filter(
+          (f) =>
+            f.status === 'running' ||
+            f.status === 'in_progress' ||
+            (f.status && f.status.startsWith('pipeline_'))
+        );
 
         for (const feature of orphaned) {
           logger.info(
