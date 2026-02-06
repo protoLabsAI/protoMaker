@@ -1550,12 +1550,18 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       return response.json();
     }
 
-    case 'get_briefing':
-      return apiCall('/briefing/digest', {
+    case 'get_briefing': {
+      const digestResult = await apiCall('/briefing/digest', {
         projectPath: args.projectPath,
         timeRange: args.timeRange,
         since: args.since,
       });
+      // Auto-acknowledge to advance cursor after successful digest
+      await apiCall('/briefing/ack', {
+        projectPath: args.projectPath,
+      }).catch(() => {/* ack failure is non-critical */});
+      return digestResult;
+    }
 
     case 'get_board_summary': {
       const result = (await apiCall('/features/list', {

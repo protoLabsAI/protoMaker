@@ -2,7 +2,8 @@
  * POST /api/briefing/ack - Acknowledge briefing delivery
  *
  * Request body: {
- *   projectPath: string
+ *   projectPath: string,
+ *   acknowledgeUntil?: string (ISO timestamp, defaults to now)
  * }
  * Response: {
  *   success: true,
@@ -17,8 +18,9 @@ import { getErrorMessage, logError } from '../common.js';
 export function createAckHandler(briefingCursorService: BriefingCursorService) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
-      const { projectPath } = req.body as {
+      const { projectPath, acknowledgeUntil } = req.body as {
         projectPath: string;
+        acknowledgeUntil?: string;
       };
 
       if (!projectPath || typeof projectPath !== 'string') {
@@ -26,8 +28,8 @@ export function createAckHandler(briefingCursorService: BriefingCursorService) {
         return;
       }
 
-      // Update cursor to current timestamp
-      const acknowledgedAt = new Date().toISOString();
+      // Update cursor to provided timestamp or current time
+      const acknowledgedAt = acknowledgeUntil || new Date().toISOString();
       await briefingCursorService.setCursor(projectPath, acknowledgedAt);
 
       res.json({

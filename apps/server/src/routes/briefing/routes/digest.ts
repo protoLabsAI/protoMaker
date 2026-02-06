@@ -4,7 +4,8 @@
  * Request body: {
  *   projectPath: string,
  *   timeRange?: '1h' | '6h' | '24h' | '7d',
- *   since?: string (ISO timestamp)
+ *   since?: string (ISO timestamp),
+ *   limit?: number (max events, default 200, capped at 1000)
  * }
  * Response: {
  *   success: true,
@@ -16,6 +17,7 @@
  *   },
  *   summary: { critical: number, high: number, medium: number, low: number, total: number },
  *   since: string,
+ *   hasMore: boolean,
  *   projectPath: string
  * }
  */
@@ -80,8 +82,11 @@ async function calculateSince(
   timeRange?: string,
   since?: string
 ): Promise<string> {
-  // If explicit since timestamp provided, use it
+  // If explicit since timestamp provided, validate and use it
   if (since) {
+    if (isNaN(Date.parse(since))) {
+      throw new Error('Invalid "since" timestamp format');
+    }
     return since;
   }
 
@@ -133,10 +138,11 @@ export function createDigestHandler(
 ) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
-      const { projectPath, timeRange, since } = req.body as {
+      const { projectPath, timeRange, since, limit } = req.body as {
         projectPath: string;
         timeRange?: '1h' | '6h' | '24h' | '7d';
         since?: string;
+        limit?: number;
       };
 
       if (!projectPath || typeof projectPath !== 'string') {
@@ -145,21 +151,32 @@ export function createDigestHandler(
       }
 
       // Calculate the since timestamp
-      const sinceTimestamp = await calculateSince(
-        briefingCursorService,
-        projectPath,
-        timeRange,
-        since
-      );
+      let sinceTimestamp: string;
+      try {
+        sinceTimestamp = await calculateSince(
+          briefingCursorService,
+          projectPath,
+          timeRange,
+          since
+        );
+      } catch (validationError) {
+        res.status(400).json({ success: false, error: (validationError as Error).message });
+        return;
+      }
 
       // Get events since timestamp
       const events = await eventHistoryService.getEvents(projectPath, {
         since: sinceTimestamp,
       });
 
+      // Apply limit to prevent unbounded responses
+      const maxEvents = Math.min(limit || 200, 1000);
+      const hasMore = events.length > maxEvents;
+      const limitedEvents = events.slice(0, maxEvents);
+
       // Load full event details for each summary
       const fullEvents = await Promise.all(
-        events.map((summary) => eventHistoryService.getEvent(projectPath, summary.id))
+        limitedEvents.map((summary) => eventHistoryService.getEvent(projectPath, summary.id))
       );
 
       // Filter out nulls (shouldn't happen but type safety)
@@ -182,6 +199,7 @@ export function createDigestHandler(
         signals: grouped,
         summary,
         since: sinceTimestamp,
+        hasMore,
         projectPath,
       });
     } catch (error) {
