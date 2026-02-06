@@ -61,6 +61,16 @@ export function createSubmitPrdHandler(
         return;
       }
 
+      // Validate complexity if provided
+      const VALID_COMPLEXITIES = ['small', 'medium', 'large', 'architectural'] as const;
+      if (complexity && !VALID_COMPLEXITIES.includes(complexity as (typeof VALID_COMPLEXITIES)[number])) {
+        res.status(400).json({
+          success: false,
+          error: `complexity must be one of: ${VALID_COMPLEXITIES.join(', ')}`,
+        });
+        return;
+      }
+
       // Validate milestones if provided
       if (milestones) {
         if (!Array.isArray(milestones)) {
@@ -106,24 +116,28 @@ export function createSubmitPrdHandler(
 
       // Emit authority:pm-review-approved event for ProjM to pick up
       // This is the EXACT event that ProjM listens for (see projm-agent.ts:62)
-      events.emit('authority:pm-review-approved', {
-        projectPath,
-        featureId: feature.id,
-        complexity: complexity || 'medium',
-        milestones: milestones || [],
-      });
+      try {
+        events.emit('authority:pm-review-approved', {
+          projectPath,
+          featureId: feature.id,
+          complexity: complexity || 'medium',
+          milestones: milestones || [],
+        });
+
+        // Also emit cos:prd-submitted for tracking
+        events.emit('cos:prd-submitted', {
+          projectPath,
+          featureId: feature.id,
+          title,
+          milestoneCount: milestones?.length || 0,
+        });
+      } catch (emitError) {
+        logger.warn(`Event emission failed after feature creation (featureId: ${feature.id}): ${emitError}`);
+      }
 
       logger.info(
         `Emitted authority:pm-review-approved for feature ${feature.id} with ${milestones?.length || 0} milestones`
       );
-
-      // Also emit cos:prd-submitted for tracking
-      events.emit('cos:prd-submitted', {
-        projectPath,
-        featureId: feature.id,
-        title,
-        milestoneCount: milestones?.length || 0,
-      });
 
       res.json({
         success: true,

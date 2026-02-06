@@ -12,6 +12,7 @@ import type { PMAuthorityAgent } from '../../services/authority-agents/pm-agent.
 import type { ProjMAuthorityAgent } from '../../services/authority-agents/projm-agent.js';
 import type { EMAuthorityAgent } from '../../services/authority-agents/em-agent.js';
 import type { StatusMonitorAgent } from '../../services/authority-agents/status-agent.js';
+import { validatePathParams } from '../../middleware/validate-paths.js';
 import { createSubmitPrdHandler } from './routes/submit-prd.js';
 
 export interface AuthorityAgents {
@@ -32,7 +33,7 @@ export function createCosRoutes(
    * POST /api/cos/submit-prd
    * Submit a SPARC PRD from the Chief of Staff for automatic decomposition
    */
-  router.post('/submit-prd', createSubmitPrdHandler(events, featureLoader, agents));
+  router.post('/submit-prd', validatePathParams('projectPath'), createSubmitPrdHandler(events, featureLoader, agents));
 
   return router;
 }
