@@ -208,8 +208,8 @@ export function areDependenciesSatisfied(
     if (!dep) return false;
 
     if (skipVerification) {
-      // When skipping verification, only block if dependency is currently running
-      return dep.status !== 'running';
+      // When skipping verification, only block if dependency is currently running or in progress
+      return dep.status !== 'running' && dep.status !== 'in_progress';
     }
     // Default: require 'completed', 'verified', 'done' (PR merged), or 'review' (PR open)
     // 'done' = PR merged, final state
