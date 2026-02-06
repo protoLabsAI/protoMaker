@@ -107,6 +107,7 @@ import { integrationService } from './services/integration-service.js';
 import { createIntegrationRoutes } from './routes/integrations/index.js';
 import { AuthorityService } from './services/authority-service.js';
 import { createAuthorityRoutes } from './routes/authority/index.js';
+import { createCosRoutes } from './routes/cos/index.js';
 import { PMAuthorityAgent } from './services/authority-agents/pm-agent.js';
 import { ProjMAuthorityAgent } from './services/authority-agents/projm-agent.js';
 import { EMAuthorityAgent } from './services/authority-agents/em-agent.js';
@@ -676,6 +677,16 @@ app.use(
     },
     auditService
   )
+);
+app.use(
+  '/api/cos',
+  authMiddleware,
+  createCosRoutes(events, featureLoader, {
+    pm: pmAgent,
+    projm: projmAgent,
+    em: emAgent,
+    statusMonitor,
+  })
 );
 app.use('/api/pipeline', createPipelineRoutes(pipelineService));
 app.use('/api/ideation', createIdeationRoutes(events, ideationService, featureLoader));
