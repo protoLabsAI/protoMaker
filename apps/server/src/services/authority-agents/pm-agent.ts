@@ -23,7 +23,8 @@
 
 import type { Feature } from '@automaker/types';
 import type { AuthorityAgent } from '@automaker/types';
-import { createLogger } from '@automaker/utils';
+import { createLogger, loadContextFiles } from '@automaker/utils';
+import { resolveModelString } from '@automaker/model-resolver';
 import type { EventEmitter } from '../../lib/events.js';
 import type { AuthorityService } from '../authority-service.js';
 import type { FeatureLoader } from '../feature-loader.js';
@@ -35,10 +36,13 @@ const logger = createLogger('PMAgent');
 const IDEA_PROCESSING_DELAY_MS = 2000;
 
 /** Model for codebase research (cheap/fast exploration) */
-const PM_RESEARCH_MODEL = 'claude-haiku-4-5-20251001';
+const PM_RESEARCH_MODEL = resolveModelString('haiku');
 
 /** Model for SPARC PRD generation (structured writing) */
-const PM_PRD_MODEL = 'claude-sonnet-4-5-20250929';
+const PM_PRD_MODEL = resolveModelString('sonnet');
+
+/** Valid complexity values for runtime validation */
+const VALID_COMPLEXITIES = new Set(['small', 'medium', 'large', 'architectural']);
 
 interface IdeaInjectedPayload {
   projectPath: string;
@@ -251,7 +255,7 @@ export class PMAuthorityAgent {
 
       // Step 2: Transition to research state and explore codebase
       await this.featureLoader.update(projectPath, featureId, {
-        workItemState: 'research' as Feature['workItemState'],
+        workItemState: 'research',
       });
 
       this.events.emit('authority:pm-research-started', {
@@ -267,11 +271,19 @@ export class PMAuthorityAgent {
       logger.info(`Generating SPARC PRD for idea: "${feature.title}"`);
       const prdResult = await this.generateSPARCPRD(feature, researchSummary, projectPath);
 
-      // Step 4: Update feature description with full PRD
+      // Step 4: Preserve original idea and update feature description with full PRD
+      const descriptionHistory = feature.descriptionHistory || [];
+      descriptionHistory.push({
+        description: feature.description || '',
+        timestamp: new Date().toISOString(),
+        source: 'enhance' as const,
+      });
+
       await this.featureLoader.update(projectPath, featureId, {
         workItemState: 'pm_review',
         description: prdResult.prd,
         complexity: prdResult.complexity,
+        descriptionHistory,
       });
 
       // Step 5: Emit PRD ready for Discord posting
@@ -296,6 +308,14 @@ export class PMAuthorityAgent {
       await this.handleApproval(projectPath, featureId, feature, review, agent);
     } catch (error) {
       logger.error(`Failed to process idea ${featureId}:`, error);
+      // Reset to 'idea' so the feature can be retried on next scan
+      try {
+        await this.featureLoader.update(projectPath, featureId, {
+          workItemState: 'idea',
+        });
+      } catch (resetError) {
+        logger.error(`Failed to reset state for ${featureId}:`, resetError);
+      }
     } finally {
       this.processing.delete(featureId);
     }
@@ -310,7 +330,17 @@ export class PMAuthorityAgent {
     const title = feature.title || 'Untitled';
     const description = feature.description || '';
 
+    // Load project-specific context rules
+    let contextRules = '';
+    try {
+      const ctx = await loadContextFiles({ projectPath, includeMemory: false });
+      contextRules = ctx.formattedPrompt;
+    } catch {
+      logger.debug('No context files loaded for research');
+    }
+
     const systemPrompt = `You are a senior engineer conducting codebase research for a new feature idea.
+${contextRules ? `\n## Project-Specific Rules\n${contextRules}\n` : ''}
 
 Your goal is to explore the project and gather context that will help create a detailed Product Requirements Document (PRD).
 
@@ -383,8 +413,17 @@ Explore the project structure and relevant code, then provide a structured resea
       .map((f) => `\n--- Attached file: ${f.filename} ---\n${f.content}`)
       .join('\n');
 
-    const systemPrompt = `You are a senior Product Manager creating a SPARC PRD (Product Requirements Document).
+    // Load project-specific context rules
+    let contextRules = '';
+    try {
+      const ctx = await loadContextFiles({ projectPath, includeMemory: false });
+      contextRules = ctx.formattedPrompt;
+    } catch {
+      logger.debug('No context files loaded for PRD generation');
+    }
 
+    const systemPrompt = `You are a senior Product Manager creating a SPARC PRD (Product Requirements Document).
+${contextRules ? `\n## Project-Specific Rules\n${contextRules}\n` : ''}
 SPARC Framework:
 - **Situation**: Current state of the system. What exists today?
 - **Problem**: What's missing or broken? Why does this matter?
@@ -446,6 +485,11 @@ Generate a comprehensive SPARC PRD as JSON.`;
       if (!parsed.prd || !parsed.complexity) {
         logger.warn('PRD generation missing required fields, using fallback');
         return this.fallbackPRD(title, description, researchSummary);
+      }
+
+      if (!VALID_COMPLEXITIES.has(parsed.complexity)) {
+        logger.warn(`Invalid complexity "${parsed.complexity}", defaulting to medium`);
+        parsed.complexity = 'medium';
       }
 
       if (!parsed.milestones || parsed.milestones.length === 0) {

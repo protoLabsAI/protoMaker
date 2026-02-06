@@ -919,8 +919,8 @@ export class DiscordBotService {
       lines.push(`**Milestones:** ${milestones.length}`);
       lines.push('');
 
-      // Truncate PRD for Discord's 2000 char limit (leave room for header/footer)
-      const maxPrdLength = 1500;
+      // Truncate PRD for Discord's 2000 char limit (leave safe margin for header/footer)
+      const maxPrdLength = 1400;
       const truncatedPrd =
         prd.length > maxPrdLength ? prd.slice(0, maxPrdLength) + '\n...(truncated)' : prd;
       lines.push(truncatedPrd);
