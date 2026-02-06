@@ -289,12 +289,12 @@ const tools: Tool[] = [
             'Feature complexity level for model selection. small=haiku, medium/large=sonnet, architectural=opus.',
         },
         assignee: {
-          type: 'string',
+          type: ['string', 'null'],
           description:
-            "Who this feature is assigned to. If set to a human name (e.g., 'josh'), auto-mode will skip this feature. If set to 'agent' or undefined, auto-mode can pick it up.",
+            "Who this feature is assigned to. If set to a human name (e.g., 'josh'), auto-mode will skip this feature. If set to 'agent' or undefined, auto-mode can pick it up. Pass null to unassign.",
         },
         dueDate: {
-          type: 'string',
+          type: ['string', 'null'],
           description:
             'Due date for this feature in ISO 8601 format (YYYY-MM-DD). Pass null to clear.',
         },
