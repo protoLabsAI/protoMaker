@@ -274,6 +274,22 @@ describe('resolver.ts', () => {
       expect(areDependenciesSatisfied(feature, allFeatures)).toBe(false);
     });
 
+    it('should return false when any dependency is in_progress', () => {
+      const dep = createFeature('Dep', { status: 'in_progress' as any });
+      const feature = createFeature('A', { dependencies: ['Dep'] });
+      const allFeatures = [dep, feature];
+
+      expect(areDependenciesSatisfied(feature, allFeatures)).toBe(false);
+    });
+
+    it('should return false when any dependency is in_progress with skipVerification', () => {
+      const dep = createFeature('Dep', { status: 'in_progress' as any });
+      const feature = createFeature('A', { dependencies: ['Dep'] });
+      const allFeatures = [dep, feature];
+
+      expect(areDependenciesSatisfied(feature, allFeatures, { skipVerification: true })).toBe(false);
+    });
+
     it('should return false when dependency is missing', () => {
       const feature = createFeature('A', { dependencies: ['NonExistent'] });
       const allFeatures = [feature];

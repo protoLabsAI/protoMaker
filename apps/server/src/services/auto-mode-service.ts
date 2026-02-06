@@ -846,6 +846,16 @@ export class AutoModeService {
         );
 
         if (nextFeature) {
+          // Double-check we're not at capacity (defensive check before starting)
+          const currentRunningCount = await this.getRunningCountForWorktree(projectPath, branchName);
+          if (currentRunningCount >= projectState.config.maxConcurrency) {
+            logger.warn(
+              `[AutoLoop] Race condition detected: at capacity ${currentRunningCount}/${projectState.config.maxConcurrency} when trying to start feature ${nextFeature.id}, skipping`
+            );
+            await this.sleep(1000);
+            continue;
+          }
+
           logger.info(`[AutoLoop] Starting feature ${nextFeature.id}: ${nextFeature.title}`);
           // Reset idle event flag since we're doing work again
           projectState.hasEmittedIdleEvent = false;
@@ -858,6 +868,11 @@ export class AutoModeService {
           ).catch((error) => {
             logger.error(`Feature ${nextFeature.id} error:`, error);
           });
+
+          // Brief sleep to ensure executeFeature has added the feature to runningFeatures
+          // This prevents race conditions where the next iteration checks capacity
+          // before executeFeature has updated the running count
+          await this.sleep(100);
         } else {
           logger.debug(`[AutoLoop] All pending features are already running`);
         }
@@ -3843,9 +3858,16 @@ Format your response as a structured markdown document.`;
               const dep = allFeatures.find((f) => f.id === depId);
               if (!dep) return true; // Missing dependency
               if (skipVerification) {
-                return dep.status === 'running';
+                // When skipVerification is enabled, only block if dependency is actively running
+                return dep.status === 'running' || dep.status === 'in_progress';
               }
-              return dep.status !== 'completed' && dep.status !== 'verified';
+              // Default: block unless dependency is in a completed state
+              return (
+                dep.status !== 'completed' &&
+                dep.status !== 'verified' &&
+                dep.status !== 'done' &&
+                dep.status !== 'review'
+              );
             }) || [];
           blockedFeatures.push({
             feature,
