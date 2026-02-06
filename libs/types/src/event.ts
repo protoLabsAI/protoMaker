@@ -172,11 +172,17 @@ export type EventType =
   | 'milestone:completed'
   | 'milestone:cto-approval-requested'
   | 'milestone:cto-approved'
+  // Project completion events
+  | 'project:completed'
+  // CoS intake events
+  | 'cos:prd-submitted'
   // PR feedback loop events (EM dev lifecycle)
   | 'pr:feedback-received'
   | 'pr:changes-requested'
   | 'pr:approved'
   | 'feature:reassigned-for-fixes'
-  | 'feature:worktree-cleaned';
+  | 'feature:worktree-cleaned'
+  // Chief of Staff (CoS) events
+  | 'cos:prd-submitted';
 
 export type EventCallback = (type: EventType, payload: unknown) => void;

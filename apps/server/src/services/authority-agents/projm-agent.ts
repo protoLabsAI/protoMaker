@@ -520,6 +520,14 @@ Decompose this milestone into implementable phases.`;
               await this.projectService.updateProject(projectPath, slug, {
                 status: 'completed',
               });
+
+              // Emit project completion event
+              this.events.emit('project:completed', {
+                projectPath,
+                projectTitle: project.title,
+                projectSlug: slug,
+              });
+
               logger.info(`Project "${project.title}" fully completed!`);
             }
           }
