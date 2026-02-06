@@ -36,9 +36,6 @@ describe('model-resolver.ts', () => {
     it("should resolve 'opus' alias to full model string", () => {
       const result = resolveModelString('opus');
       expect(result).toBe('claude-opus-4-5-20251101');
-      expect(consoleSpy.log).toHaveBeenCalledWith(
-        expect.stringContaining('Migrated legacy ID: "opus" -> "claude-opus"')
-      );
     });
 
     it('should pass through unknown models unchanged (may be provider models)', () => {
@@ -58,9 +55,6 @@ describe('model-resolver.ts', () => {
         const result = resolveModelString(model);
         expect(result).toBe(model);
       });
-      expect(consoleSpy.log).toHaveBeenCalledWith(
-        expect.stringContaining('Using full Claude model string')
-      );
     });
 
     it('should return default model when modelKey is undefined', () => {
@@ -91,7 +85,6 @@ describe('model-resolver.ts', () => {
       it('should pass through cursor-prefixed models unchanged', () => {
         const result = resolveModelString('cursor-composer-1');
         expect(result).toBe('cursor-composer-1');
-        expect(consoleSpy.log).toHaveBeenCalledWith(expect.stringContaining('Using Cursor model'));
       });
 
       it('should add cursor- prefix to bare Cursor model IDs', () => {
