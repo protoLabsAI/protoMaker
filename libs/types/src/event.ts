@@ -177,7 +177,9 @@ export type EventType =
   | 'pr:changes-requested'
   | 'pr:approved'
   | 'feature:reassigned-for-fixes'
-  | 'feature:worktree-cleaned';
+  | 'feature:worktree-cleaned'
+  // Chief of Staff (CoS) events
+  | 'cos:prd-submitted';
 
 export type EventCallback = (type: EventType, payload: unknown) => void;
 
