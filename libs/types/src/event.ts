@@ -172,6 +172,10 @@ export type EventType =
   | 'milestone:completed'
   | 'milestone:cto-approval-requested'
   | 'milestone:cto-approved'
+  // Project completion events
+  | 'project:completed'
+  // CoS intake events
+  | 'cos:prd-submitted'
   // PR feedback loop events (EM dev lifecycle)
   | 'pr:feedback-received'
   | 'pr:changes-requested'
