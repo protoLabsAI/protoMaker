@@ -47,6 +47,8 @@ const BASE_GOAL_NAMES: Record<string, string> = {
   recover_failures: 'Recover Failures',
   maintain_health: 'Maintain Health',
   stay_productive: 'Stay Productive',
+  clear_pipeline: 'Clear Pipeline',
+  manage_wip: 'Manage WIP',
 };
 
 export function WorldStateView() {

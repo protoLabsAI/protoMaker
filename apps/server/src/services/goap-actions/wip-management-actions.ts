@@ -13,10 +13,8 @@ import type { AutoModeService } from '../auto-mode-service.js';
 
 const logger = createLogger('GOAPActions:WIPManagement');
 
-/** 2 hours in ms — standard stale threshold */
-const STALE_THRESHOLD_MS = 2 * 60 * 60 * 1000;
-/** 4 hours in ms — very stale / runaway threshold */
-const VERY_STALE_THRESHOLD_MS = 4 * 60 * 60 * 1000;
+// Import thresholds from world-state-evaluator to stay in sync
+import { STALE_THRESHOLD_MS, VERY_STALE_THRESHOLD_MS } from '../world-state-evaluator.js';
 
 export const ESCALATE_STUCK_FEATURE: GOAPActionDefinition = {
   id: 'escalate_stuck_feature',
@@ -89,8 +87,12 @@ export function registerWIPManagementActions(
       // Stop the agent and move back to backlog
       try {
         await autoModeService.stopFeature(runaway.id);
-      } catch {
-        // Agent may already be stopped
+      } catch (err) {
+        // Agent may already be stopped — log for visibility
+        logger.debug('stopFeature failed (agent may already be stopped)', {
+          featureId: runaway.id,
+          error: err,
+        });
       }
       await featureLoader.update(projectPath, runaway.id, {
         status: 'backlog',
@@ -108,9 +110,19 @@ export function registerWIPManagementActions(
   });
 
   registry.register(REBALANCE_PRIORITIES, async (projectPath) => {
-    // This is a signal action — auto-mode already sorts by priority.
-    // The effect clears the flag so we don't keep firing.
-    // In the future this could do more sophisticated reordering.
-    logger.info('Rebalance priorities signal processed', { projectPath });
+    // Sort backlog features by priority (lower number = higher priority)
+    const features = await featureLoader.getAll(projectPath);
+    const backlog = features
+      .filter((f) => f.status === 'backlog')
+      .sort((a, b) => (a.priority ?? 3) - (b.priority ?? 3));
+
+    // Update sortOrder to reflect priority ordering
+    for (let i = 0; i < backlog.length; i++) {
+      await featureLoader.update(projectPath, backlog[i].id, { sortOrder: i });
+    }
+    logger.info('Rebalanced backlog priorities', {
+      projectPath,
+      count: backlog.length,
+    });
   });
 }

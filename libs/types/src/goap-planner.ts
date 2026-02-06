@@ -173,7 +173,7 @@ export function planActions(
     const current = open.shift()!;
     statesEvaluated++;
 
-    if (statesEvaluated > config.maxStatesEvaluated) {
+    if (statesEvaluated >= config.maxStatesEvaluated) {
       return {
         success: false,
         error: `Max states evaluated (${config.maxStatesEvaluated}) exceeded`,
@@ -188,12 +188,12 @@ export function planActions(
 
     if (allSatisfied) {
       // Reconstruct plan — actions were collected in reverse (goal→start), so reverse for execution order
-      const planActions = [...current.actions].reverse();
+      const forwardActions = [...current.actions].reverse();
       return {
         success: true,
         plan: {
           goal,
-          actions: planActions,
+          actions: forwardActions,
           totalCost: current.g,
           createdAt: new Date().toISOString(),
         },

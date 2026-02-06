@@ -51,7 +51,12 @@ export function registerMaintenanceActions(
     } catch {
       // May not be running
     }
-    await autoModeService.startAutoLoopForProject(projectPath, branchName);
-    logger.info('Restarted auto-mode to nudge agent pickup', { projectPath });
+    try {
+      await autoModeService.startAutoLoopForProject(projectPath, branchName);
+      logger.info('Restarted auto-mode to nudge agent pickup', { projectPath });
+    } catch (err) {
+      logger.error('Failed to restart auto-mode after stop', { projectPath, error: err });
+      throw err; // Surface the failure so GOAP knows the action failed
+    }
   });
 }

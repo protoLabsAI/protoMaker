@@ -16,7 +16,7 @@ const MAX_RETRIES = 3;
 export const RETRY_FAILED_FEATURE: GOAPActionDefinition = {
   id: 'retry_failed_feature',
   name: 'Retry Failed Feature',
-  description: 'Move a retryable failed feature (failureCount < 3) back to backlog for retry',
+  description: 'Move a retryable failed feature (failureCount < 2) back to backlog for retry',
   category: 'failure-recovery',
   preconditions: [{ key: 'retryable_failed_count', value: 0, operator: 'gt' }],
   effects: [{ key: 'has_failed_features', value: false }],
@@ -40,9 +40,7 @@ export function registerFailureRecoveryActions(
 ): void {
   registry.register(RETRY_FAILED_FEATURE, async (projectPath) => {
     const features = await featureLoader.getAll(projectPath);
-    const failed = features.find(
-      (f) => f.status === 'failed' && (f.failureCount || 0) < MAX_RETRIES
-    );
+    const failed = features.find((f) => f.status === 'failed' && (f.failureCount || 0) < 2);
     if (failed) {
       const newFailureCount = (failed.failureCount || 0) + 1;
       await featureLoader.update(projectPath, failed.id, {

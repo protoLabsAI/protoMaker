@@ -14,9 +14,9 @@ import type { AutoModeService } from './auto-mode-service.js';
 const logger = createLogger('WorldStateEvaluator');
 
 /** Threshold for considering a feature "stale" (2 hours in ms) */
-const STALE_THRESHOLD_MS = 2 * 60 * 60 * 1000;
+export const STALE_THRESHOLD_MS = 2 * 60 * 60 * 1000;
 /** Threshold for considering a feature "very stale" / runaway (4 hours in ms) */
-const VERY_STALE_THRESHOLD_MS = 4 * 60 * 60 * 1000;
+export const VERY_STALE_THRESHOLD_MS = 4 * 60 * 60 * 1000;
 
 /**
  * Evaluate the current world state for a project.
@@ -70,7 +70,7 @@ export async function evaluateWorldState(
   });
 
   // Failure granularity
-  const retryableFailedFeatures = failedFeatures.filter((f) => (f.failureCount || 0) < 3);
+  const retryableFailedFeatures = failedFeatures.filter((f) => (f.failureCount || 0) < 2);
   const chronicFailures = failedFeatures.filter((f) => (f.failureCount || 0) >= 2);
 
   // Backlog health: detect misordered priorities
@@ -144,7 +144,7 @@ export async function evaluateWorldState(
     blocked_ready_count: blockedReadyFeatures.length,
 
     // Agent utilization
-    agents_picking_up_work: agentsRunning > 0 || !autoStatus.isAutoLoopRunning,
+    agents_picking_up_work: agentsRunning > 0 || autoStatus.isAutoLoopRunning,
   };
 
   const evaluationMs = Date.now() - startTime;

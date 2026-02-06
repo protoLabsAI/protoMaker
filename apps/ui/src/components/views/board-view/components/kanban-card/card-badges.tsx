@@ -31,7 +31,7 @@ export const CardBadges = memo(function CardBadges({ feature }: CardBadgesProps)
   }
 
   // Check if due date is past
-  const isDueDatePast = hasDueDate && new Date(feature.dueDate!) < new Date();
+  const isDueDatePast = hasDueDate && feature.dueDate! < new Date().toISOString().slice(0, 10);
 
   return (
     <div className="flex flex-wrap items-center gap-1.5 px-3 pt-1.5 min-h-[24px]">

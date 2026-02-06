@@ -26,7 +26,8 @@ export const PROMOTE_COMPLETED_TO_REVIEW: GOAPActionDefinition = {
 export const UNBLOCK_READY_FEATURES: GOAPActionDefinition = {
   id: 'unblock_ready_features',
   name: 'Unblock Ready Features',
-  description: 'Move features whose dependencies are all done from blocked state to backlog',
+  description:
+    'Clear resolved dependencies on backlog features so auto-mode picks them up without delay',
   category: 'pipeline',
   preconditions: [{ key: 'has_blocked_ready_features', value: true }],
   effects: [{ key: 'has_blocked_ready_features', value: false }],
@@ -55,20 +56,24 @@ export function registerPipelineActions(
   registry.register(UNBLOCK_READY_FEATURES, async (projectPath) => {
     const features = await featureLoader.getAll(projectPath);
     // Find features that have dependencies but all deps are satisfied
-    const blocked = features.filter(
+    const ready = features.filter(
       (f) =>
         f.status === 'backlog' &&
         f.dependencies &&
         f.dependencies.length > 0 &&
         areDependenciesSatisfied(f, features)
     );
-    // These features are already in backlog and unblocked — auto-mode will pick them up.
-    // This action just logs the observation. The effect clears the flag.
-    if (blocked.length > 0) {
-      logger.info('Identified unblocked features ready for pickup', {
+    // Clear the dependencies array so auto-mode treats them as regular unblocked backlog
+    let unblocked = 0;
+    for (const feature of ready) {
+      await featureLoader.update(projectPath, feature.id, { dependencies: [] });
+      unblocked++;
+    }
+    if (unblocked > 0) {
+      logger.info('Cleared resolved dependencies on ready features', {
         projectPath,
-        count: blocked.length,
-        featureIds: blocked.map((f) => f.id),
+        count: unblocked,
+        featureIds: ready.map((f) => f.id),
       });
     } else {
       logger.debug('No blocked-but-ready features found');
