@@ -108,6 +108,57 @@ export class IntegrationService {
           // Handle auto-mode completion events
           this.handleAutoModeEvent(payload as { type?: string; projectPath?: string });
           break;
+        case 'milestone:completed':
+          this.handleMilestoneCompleted(
+            payload as {
+              projectPath: string;
+              projectTitle: string;
+              projectSlug: string;
+              milestoneTitle: string;
+              milestoneNumber: number;
+            }
+          );
+          break;
+        case 'milestone:started':
+          this.handleMilestoneStarted(
+            payload as {
+              projectPath: string;
+              projectTitle: string;
+              projectSlug: string;
+              milestoneTitle: string;
+              milestoneNumber: number;
+            }
+          );
+          break;
+        case 'milestone:planned':
+          this.handleMilestonePlanned(
+            payload as {
+              projectPath: string;
+              projectTitle: string;
+              projectSlug: string;
+              milestoneTitle: string;
+              milestoneNumber: number;
+              phaseCount: number;
+            }
+          );
+          break;
+        case 'project:completed':
+          this.handleProjectCompleted(
+            payload as {
+              projectPath: string;
+              projectTitle: string;
+              projectSlug: string;
+            }
+          );
+          break;
+        case 'cos:prd-submitted':
+          this.handleCosPrdSubmitted(
+            payload as {
+              projectPath: string;
+              title: string;
+            }
+          );
+          break;
       }
     });
 
@@ -362,6 +413,182 @@ export class IntegrationService {
         return mapping.architectural;
       default:
         return undefined;
+    }
+  }
+
+  /**
+   * Handle milestone:completed event
+   */
+  private async handleMilestoneCompleted(payload: {
+    projectPath: string;
+    projectTitle: string;
+    projectSlug: string;
+    milestoneTitle: string;
+    milestoneNumber: number;
+  }): Promise<void> {
+    const { projectPath, projectTitle, milestoneTitle, milestoneNumber } = payload;
+
+    const integrations = await this.getProjectIntegrations(projectPath);
+    if (!integrations) return;
+
+    // Discord: Send milestone completion notification
+    if (integrations.discord?.enabled) {
+      const placeholderFeature = {
+        id: 'milestone-completed',
+        title: `Milestone ${milestoneNumber}: ${milestoneTitle}`,
+      } as Feature;
+
+      await this.emitDiscordEvent({
+        projectPath,
+        featureId: 'milestone-completed',
+        feature: placeholderFeature,
+        serverId: integrations.discord.serverId,
+        channelId: integrations.discord.channelId,
+        webhookId: integrations.discord.webhookId,
+        webhookToken: integrations.discord.webhookToken,
+        action: 'send_message',
+        content: `🏁 **${projectTitle}** - Milestone ${milestoneNumber} completed: ${milestoneTitle}`,
+      });
+    }
+  }
+
+  /**
+   * Handle milestone:started event
+   */
+  private async handleMilestoneStarted(payload: {
+    projectPath: string;
+    projectTitle: string;
+    projectSlug: string;
+    milestoneTitle: string;
+    milestoneNumber: number;
+  }): Promise<void> {
+    const { projectPath, projectTitle, milestoneTitle, milestoneNumber } = payload;
+
+    const integrations = await this.getProjectIntegrations(projectPath);
+    if (!integrations) return;
+
+    // Discord: Send milestone started notification
+    if (integrations.discord?.enabled) {
+      const placeholderFeature = {
+        id: 'milestone-started',
+        title: `Milestone ${milestoneNumber}: ${milestoneTitle}`,
+      } as Feature;
+
+      await this.emitDiscordEvent({
+        projectPath,
+        featureId: 'milestone-started',
+        feature: placeholderFeature,
+        serverId: integrations.discord.serverId,
+        channelId: integrations.discord.channelId,
+        webhookId: integrations.discord.webhookId,
+        webhookToken: integrations.discord.webhookToken,
+        action: 'send_message',
+        content: `🚀 **${projectTitle}** - Milestone ${milestoneNumber} started: ${milestoneTitle}`,
+      });
+    }
+  }
+
+  /**
+   * Handle milestone:planned event
+   */
+  private async handleMilestonePlanned(payload: {
+    projectPath: string;
+    projectTitle: string;
+    projectSlug: string;
+    milestoneTitle: string;
+    milestoneNumber: number;
+    phaseCount: number;
+  }): Promise<void> {
+    const { projectPath, projectTitle, milestoneTitle, milestoneNumber, phaseCount } = payload;
+
+    const integrations = await this.getProjectIntegrations(projectPath);
+    if (!integrations) return;
+
+    // Discord: Send milestone planned notification
+    if (integrations.discord?.enabled) {
+      const placeholderFeature = {
+        id: 'milestone-planned',
+        title: `Milestone ${milestoneNumber}: ${milestoneTitle}`,
+      } as Feature;
+
+      await this.emitDiscordEvent({
+        projectPath,
+        featureId: 'milestone-planned',
+        feature: placeholderFeature,
+        serverId: integrations.discord.serverId,
+        channelId: integrations.discord.channelId,
+        webhookId: integrations.discord.webhookId,
+        webhookToken: integrations.discord.webhookToken,
+        action: 'send_message',
+        content: `📋 **${projectTitle}** - Milestone ${milestoneNumber} planned: ${milestoneTitle} (${phaseCount} phases)`,
+      });
+    }
+  }
+
+  /**
+   * Handle project:completed event
+   */
+  private async handleProjectCompleted(payload: {
+    projectPath: string;
+    projectTitle: string;
+    projectSlug: string;
+  }): Promise<void> {
+    const { projectPath, projectTitle } = payload;
+
+    const integrations = await this.getProjectIntegrations(projectPath);
+    if (!integrations) return;
+
+    // Discord: Send project completion notification
+    if (integrations.discord?.enabled) {
+      const placeholderFeature = {
+        id: 'project-completed',
+        title: projectTitle,
+      } as Feature;
+
+      await this.emitDiscordEvent({
+        projectPath,
+        featureId: 'project-completed',
+        feature: placeholderFeature,
+        serverId: integrations.discord.serverId,
+        channelId: integrations.discord.channelId,
+        webhookId: integrations.discord.webhookId,
+        webhookToken: integrations.discord.webhookToken,
+        action: 'send_message',
+        content: `🎉 **Project completed: ${projectTitle}** — All milestones done!`,
+      });
+    }
+  }
+
+  /**
+   * Handle cos:prd-submitted event
+   */
+  private async handleCosPrdSubmitted(payload: {
+    projectPath: string;
+    title: string;
+  }): Promise<void> {
+    const { projectPath, title } = payload;
+
+    const integrations = await this.getProjectIntegrations(projectPath);
+    if (!integrations) return;
+
+    // Discord: Send CoS PRD submitted notification
+    if (integrations.discord?.enabled) {
+      const placeholderFeature = {
+        id: 'cos-prd-submitted',
+        title,
+      } as Feature;
+
+      await this.emitDiscordEvent({
+        projectPath,
+        featureId: 'cos-prd-submitted',
+        feature: placeholderFeature,
+        serverId: integrations.discord.serverId,
+        channelId: integrations.discord.channelId,
+        webhookId: integrations.discord.webhookId,
+        webhookToken: integrations.discord.webhookToken,
+        action: 'send_message',
+        content: `📝 CoS PRD submitted: **${title}** — entering pipeline for decomposition`,
+      });
     }
   }
 
