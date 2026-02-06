@@ -414,7 +414,7 @@ describe('GOAPLoopService', () => {
       expect(featureLoader.update).toHaveBeenCalledWith(
         '/test/project',
         'f1',
-        expect.objectContaining({ complexity: 'architectural' })
+        expect.objectContaining({ complexity: 'architectural', startedAt: expect.any(String) })
       );
     });
   });

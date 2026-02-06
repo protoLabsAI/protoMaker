@@ -114,6 +114,7 @@ export function WorldStateView() {
         <div className="flex items-center gap-2">
           {!isRunning && (
             <button
+              type="button"
               onClick={handleStart}
               className="inline-flex items-center gap-1.5 rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700"
             >
@@ -123,6 +124,7 @@ export function WorldStateView() {
           )}
           {isRunning && !isPaused && (
             <button
+              type="button"
               onClick={handlePause}
               className="inline-flex items-center gap-1.5 rounded-md bg-yellow-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-yellow-700"
             >
@@ -132,6 +134,7 @@ export function WorldStateView() {
           )}
           {isPaused && (
             <button
+              type="button"
               onClick={handleResume}
               className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
             >
@@ -141,6 +144,7 @@ export function WorldStateView() {
           )}
           {isRunning && (
             <button
+              type="button"
               onClick={handleStop}
               className="inline-flex items-center gap-1.5 rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700"
             >

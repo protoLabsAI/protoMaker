@@ -1,8 +1,8 @@
 /**
- * GOAP Brain Loop WebSocket Event Hook
+ * GOAP Brain Loop Event Hook
  *
- * Subscribes to GOAP events via WebSocket and invalidates
- * the React Query cache to keep the UI in sync.
+ * Subscribes to GOAP events via Electron IPC (backed by server WebSocket)
+ * and invalidates the React Query cache to keep the UI in sync.
  */
 
 import { useEffect } from 'react';

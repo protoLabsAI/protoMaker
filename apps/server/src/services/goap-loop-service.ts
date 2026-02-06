@@ -28,6 +28,17 @@ import type { FeatureLoader } from './feature-loader.js';
 import type { AutoModeService } from './auto-mode-service.js';
 import { evaluateWorldState } from './world-state-evaluator.js';
 
+const TICK_TIMEOUT_MS = 60_000; // 60s max per tick operation
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms)
+    ),
+  ]);
+}
+
 const logger = createLogger('GOAPLoop');
 
 // ─── POC Goals (hardcoded) ───────────────────────────────────────────────────
@@ -36,12 +47,9 @@ const POC_GOALS: GOAPGoal[] = [
   {
     id: 'keep_shipping',
     name: 'Keep Shipping',
-    conditions: [
-      // Satisfied when there's no unblocked backlog work OR auto-mode is already handling it
-      // We use OR logic by splitting into two goals won't work in simple GOAP,
-      // so we define: unsatisfied when has_backlog_work=true AND auto_mode_running=false
-      { key: 'has_backlog_work', value: false },
-    ],
+    // Satisfied when auto-mode is running (handling backlog) or no backlog exists.
+    // start_auto_mode effect (auto_mode_running=true) directly satisfies this goal.
+    conditions: [{ key: 'auto_mode_running', value: true }],
     priority: 10,
   },
   {
@@ -268,11 +276,15 @@ export class GOAPLoopService {
 
     try {
       // 1. Evaluate world state
-      const state = await evaluateWorldState(
-        config.projectPath,
-        config.branchName,
-        this.featureLoader,
-        this.autoModeService
+      const state = await withTimeout(
+        evaluateWorldState(
+          config.projectPath,
+          config.branchName,
+          this.featureLoader,
+          this.autoModeService
+        ),
+        TICK_TIMEOUT_MS,
+        'evaluateWorldState'
       );
 
       const evaluationDurationMs = Date.now() - tickStart;
@@ -308,10 +320,10 @@ export class GOAPLoopService {
           action: selectedAction,
         });
 
-        const result = await this.executeAction(
-          config.projectPath,
-          config.branchName,
-          selectedAction
+        const result = await withTimeout(
+          this.executeAction(config.projectPath, config.branchName, selectedAction),
+          TICK_TIMEOUT_MS,
+          `executeAction(${selectedAction.id})`
         );
         this.pushActionHistory(loop, result);
 
@@ -454,8 +466,10 @@ export class GOAPLoopService {
               now - new Date(f.startedAt).getTime() > staleThreshold
           );
           if (stale) {
+            // Reset startedAt so the feature isn't immediately re-detected as stale
             await this.featureLoader.update(projectPath, stale.id, {
               complexity: 'architectural',
+              startedAt: new Date().toISOString(),
             });
             logger.info('GOAP action: escalated stuck feature to architectural', {
               projectPath,

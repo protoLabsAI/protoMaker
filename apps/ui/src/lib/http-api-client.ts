@@ -2712,7 +2712,9 @@ export class HttpApiClient implements ElectronAPI {
         this.subscribeToEvent('goap:resumed', callback),
         this.subscribeToEvent('goap:error', callback),
       ];
-      return () => unsubs.forEach((u) => u());
+      return () => {
+        for (const u of unsubs) u();
+      };
     },
   };
 }
