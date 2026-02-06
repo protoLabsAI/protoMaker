@@ -106,6 +106,13 @@ export interface Feature {
    */
   assignedAgentId?: string;
   /**
+   * Who this feature is assigned to.
+   * - If set to a human name (e.g., 'josh'), auto-mode will skip this feature
+   * - If set to 'agent' or undefined/null, auto-mode can pick it up
+   * - Used to reserve features for human implementation while allowing agents to work on others
+   */
+  assignee?: string;
+  /**
    * Linear issue ID (if synced to Linear)
    * Links feature to external project management system.
    */

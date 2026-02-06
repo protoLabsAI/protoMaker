@@ -3712,6 +3712,13 @@ Format your response as a structured markdown document.`;
             (feature.planSpec?.status === 'approved' &&
               (feature.planSpec.tasksCompleted ?? 0) < (feature.planSpec.tasksTotal ?? 0))
           ) {
+            // Skip features assigned to humans (non-agent assignees)
+            if (feature.assignee && feature.assignee !== 'agent') {
+              logger.debug(
+                `[loadPendingFeatures] Skipping feature ${feature.id} - assigned to ${feature.assignee}`
+              );
+              continue;
+            }
             // Filter by branchName:
             // - If branchName is null (main worktree), include features with:
             //   - branchName === null (unassigned), OR

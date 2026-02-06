@@ -240,6 +240,11 @@ const tools: Tool[] = [
           description:
             'Feature complexity level for model selection. small=haiku, medium/large=sonnet, architectural=opus. Features that fail 2+ times auto-escalate to opus.',
         },
+        assignee: {
+          type: 'string',
+          description:
+            "Who this feature is assigned to. If set to a human name (e.g., 'josh'), auto-mode will skip this feature. If set to 'agent' or undefined, auto-mode can pick it up.",
+        },
       },
       required: ['projectPath', 'title', 'description'],
     },
@@ -277,6 +282,11 @@ const tools: Tool[] = [
           enum: ['small', 'medium', 'large', 'architectural'],
           description:
             'Feature complexity level for model selection. small=haiku, medium/large=sonnet, architectural=opus.',
+        },
+        assignee: {
+          type: 'string',
+          description:
+            "Who this feature is assigned to. If set to a human name (e.g., 'josh'), auto-mode will skip this feature. If set to 'agent' or undefined, auto-mode can pick it up.",
         },
       },
       required: ['projectPath', 'featureId'],
@@ -1158,6 +1168,7 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       if (args.isEpic) featureData.isEpic = args.isEpic;
       if (args.epicId) featureData.epicId = args.epicId;
       if (args.complexity) featureData.complexity = args.complexity;
+      if (args.assignee) featureData.assignee = args.assignee;
       return apiCall('/features/create', {
         projectPath: args.projectPath,
         feature: featureData,
@@ -1170,6 +1181,7 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       if (args.description) updates.description = args.description;
       if (args.status) updates.status = args.status;
       if (args.complexity) updates.complexity = args.complexity;
+      if (args.assignee !== undefined) updates.assignee = args.assignee;
       return apiCall('/features/update', {
         projectPath: args.projectPath,
         featureId: args.featureId,
