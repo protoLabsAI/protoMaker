@@ -8,6 +8,7 @@
  */
 
 import type { EventHookTrigger } from './settings.js';
+import type { EventSeverity } from './event.js';
 
 /**
  * StoredEvent - A single event record stored on disk
@@ -19,6 +20,8 @@ export interface StoredEvent {
   id: string;
   /** The hook trigger type this event maps to */
   trigger: EventHookTrigger;
+  /** Severity level of the event */
+  severity: EventSeverity;
   /** ISO timestamp when the event occurred */
   timestamp: string;
   /** ID of the feature involved (if applicable) */
@@ -59,6 +62,8 @@ export interface StoredEventSummary {
   id: string;
   /** Trigger type */
   trigger: EventHookTrigger;
+  /** Severity level of the event */
+  severity: EventSeverity;
   /** When it occurred */
   timestamp: string;
   /** Feature name for display (if applicable) */
@@ -73,6 +78,8 @@ export interface StoredEventSummary {
 export interface EventHistoryFilter {
   /** Filter by trigger type */
   trigger?: EventHookTrigger;
+  /** Filter by severity level */
+  severity?: EventSeverity;
   /** Filter by feature ID */
   featureId?: string;
   /** Filter events after this timestamp */

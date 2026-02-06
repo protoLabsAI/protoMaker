@@ -180,3 +180,8 @@ export type EventType =
   | 'feature:worktree-cleaned';
 
 export type EventCallback = (type: EventType, payload: unknown) => void;
+
+/**
+ * Event severity levels for classification and filtering
+ */
+export type EventSeverity = 'critical' | 'high' | 'medium' | 'low';
