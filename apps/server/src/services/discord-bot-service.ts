@@ -820,6 +820,22 @@ export class DiscordBotService {
         }
       }
 
+      // PM research started - post to thread
+      if (type === 'authority:pm-research-started') {
+        const featureId = data.featureId as string;
+        if (featureId) {
+          void this.postResearchStarted(featureId);
+        }
+      }
+
+      // PM PRD ready - post PRD to thread for review
+      if (type === 'authority:pm-prd-ready') {
+        const featureId = data.featureId as string;
+        if (featureId) {
+          void this.postPRDReady(featureId, data);
+        }
+      }
+
       // Epic created notification
       if (type === 'authority:pm-epic-created') {
         const epicId = data.epicId as string;
@@ -858,6 +874,66 @@ export class DiscordBotService {
       await thread.send('**PM agent is reviewing your idea...**\nThis may take a moment.');
     } catch (error) {
       logger.warn(`Failed to post review started for ${featureId}:`, error);
+    }
+  }
+
+  /**
+   * Post "PM is researching the codebase..." to the review thread.
+   */
+  private async postResearchStarted(featureId: string): Promise<void> {
+    const pending = this.pendingIdeas.get(featureId);
+    if (!pending?.threadId || !this.client) return;
+
+    try {
+      const thread = (await this.client.channels.fetch(pending.threadId)) as ThreadChannel;
+      if (!thread?.isThread()) return;
+
+      await thread.send(
+        '**PM agent is researching the codebase...**\n' +
+          'Exploring project structure, patterns, and relevant code to build a detailed PRD.'
+      );
+    } catch (error) {
+      logger.warn(`Failed to post research started for ${featureId}:`, error);
+    }
+  }
+
+  /**
+   * Post the generated SPARC PRD to the review thread.
+   */
+  private async postPRDReady(featureId: string, data: Record<string, unknown>): Promise<void> {
+    const pending = this.pendingIdeas.get(featureId);
+    if (!pending?.threadId || !this.client) return;
+
+    const prd = (data.prd as string) || '';
+    const complexity = (data.complexity as string) || 'medium';
+    const milestones = (data.milestones as Array<{ title: string }>) || [];
+
+    try {
+      const thread = (await this.client.channels.fetch(pending.threadId)) as ThreadChannel;
+      if (!thread?.isThread()) return;
+
+      const lines: string[] = [];
+      lines.push('**SPARC PRD Generated**');
+      lines.push('');
+      lines.push(`**Complexity:** ${complexity}`);
+      lines.push(`**Milestones:** ${milestones.length}`);
+      lines.push('');
+
+      // Truncate PRD for Discord's 2000 char limit (leave room for header/footer)
+      const maxPrdLength = 1500;
+      const truncatedPrd =
+        prd.length > maxPrdLength ? prd.slice(0, maxPrdLength) + '\n...(truncated)' : prd;
+      lines.push(truncatedPrd);
+      lines.push('');
+      lines.push('---');
+      lines.push(
+        'Reply **approve** to proceed or provide feedback to revise.\n' +
+          `Or use \`/approve-idea feature-id:${featureId}\``
+      );
+
+      await thread.send(lines.join('\n'));
+    } catch (error) {
+      logger.warn(`Failed to post PRD ready for ${featureId}:`, error);
     }
   }
 

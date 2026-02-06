@@ -147,6 +147,7 @@ export type EventType =
   | 'authority:cto-approved-idea'
   | 'authority:pm-research-started'
   | 'authority:pm-research-completed'
+  | 'authority:pm-prd-ready'
   | 'authority:pm-epic-created'
   // Milestone lifecycle events
   | 'milestone:planning-started'

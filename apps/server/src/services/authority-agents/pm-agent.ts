@@ -3,20 +3,19 @@
  *
  * First AI executive in the authority hierarchy. Responsible for:
  * - Picking up injected ideas (workItemState='idea')
- * - AI-powered PRD review (clarity, feasibility, scope, missing details)
+ * - Researching the codebase to understand context and patterns
+ * - Generating SPARC PRDs from research + original idea
  * - Approving ideas or suggesting changes with feedback loop
- * - Transitioning ideas through: idea → pm_review → approved (or pm_changes_requested)
- * - Creating epics for large features once approved
+ * - Transitioning ideas through: idea → pm_review → research → pm_review → approved
  *
- * The PM agent listens for 'authority:idea-injected' events and processes
- * ideas through the authority proposal system, respecting trust and policy.
- *
- * Review loop:
- *   1. CTO submits idea with spec-level description
- *   2. PM reviews via AI → APPROVE or SUGGEST_CHANGES
- *   3. If SUGGEST_CHANGES: posts feedback to Discord thread, waits for CTO
- *   4. CTO approves or revises → PM re-reviews
- *   5. On APPROVE: transitions to 'approved', ProjM picks up for decomposition
+ * Pipeline:
+ *   1. CTO submits idea (often 1-2 sentences)
+ *   2. PM transitions to pm_review, then research state
+ *   3. PM researches codebase with read-only tools (haiku, cheap/fast)
+ *   4. PM generates SPARC PRD from research findings (sonnet, structured writing)
+ *   5. PRD posted to Discord for CTO review
+ *   6. Auto-approved → ProjM picks up for decomposition
+ *   7. If CTO provides feedback → PM re-reviews with updated description
  *
  * All state transitions go through AuthorityService.submitProposal() so they
  * are subject to policy checks and approval workflows.
@@ -28,15 +27,18 @@ import { createLogger } from '@automaker/utils';
 import type { EventEmitter } from '../../lib/events.js';
 import type { AuthorityService } from '../authority-service.js';
 import type { FeatureLoader } from '../feature-loader.js';
-import { simpleQuery } from '../../providers/simple-query-service.js';
+import { simpleQuery, streamingQuery } from '../../providers/simple-query-service.js';
 
 const logger = createLogger('PMAgent');
 
 /** How long to wait before processing a new idea (debounce) */
 const IDEA_PROCESSING_DELAY_MS = 2000;
 
-/** Model to use for PM reviews */
-const PM_REVIEW_MODEL = 'claude-sonnet-4-20250514';
+/** Model for codebase research (cheap/fast exploration) */
+const PM_RESEARCH_MODEL = 'claude-haiku-4-5-20251001';
+
+/** Model for SPARC PRD generation (structured writing) */
+const PM_PRD_MODEL = 'claude-sonnet-4-5-20250929';
 
 interface IdeaInjectedPayload {
   projectPath: string;
@@ -52,6 +54,7 @@ interface PMReviewResult {
   verdict: 'approve' | 'suggest_changes';
   feedback: string;
   suggestedDescription?: string;
+  prd?: string;
   complexity: 'small' | 'medium' | 'large' | 'architectural';
   milestones?: Array<{
     title: string;
@@ -178,12 +181,13 @@ export class PMAuthorityAgent {
   }
 
   /**
-   * Process an idea through the PM review pipeline:
+   * Process an idea through the PM research + PRD pipeline:
    * 1. Transition idea → pm_review (submit proposal)
-   * 2. Run AI-powered review of the PRD/description
-   * 3. If approved: transition pm_review → approved, emit event
-   * 4. If changes needed: transition pm_review → pm_changes_requested, emit event
-   *    Wait for CTO to approve or revise (handled by handleCTOApproval)
+   * 2. Transition → research state, explore codebase with haiku
+   * 3. Generate SPARC PRD from research + original idea (sonnet)
+   * 4. Update feature description with full PRD
+   * 5. Emit authority:pm-prd-ready for Discord posting
+   * 6. Auto-approve → handleApproval()
    */
   private async processIdea(projectPath: string, featureId: string): Promise<void> {
     if (this.processing.has(featureId)) return;
@@ -245,20 +249,254 @@ export class PMAuthorityAgent {
         agentId: agent.id,
       });
 
-      // Step 2: Run AI-powered review
-      const review = await this.reviewIdea(feature, projectPath);
+      // Step 2: Transition to research state and explore codebase
+      await this.featureLoader.update(projectPath, featureId, {
+        workItemState: 'research' as Feature['workItemState'],
+      });
 
-      // Step 3: Handle review verdict
-      if (review.verdict === 'approve') {
-        await this.handleApproval(projectPath, featureId, feature, review, agent);
-      } else {
-        await this.handleChangesRequested(projectPath, featureId, feature, review, agent);
-      }
+      this.events.emit('authority:pm-research-started', {
+        projectPath,
+        featureId,
+        agentId: agent.id,
+      });
+
+      logger.info(`Researching codebase for idea: "${feature.title}"`);
+      const researchSummary = await this.researchCodebase(feature, projectPath);
+
+      // Step 3: Generate SPARC PRD from research + original idea
+      logger.info(`Generating SPARC PRD for idea: "${feature.title}"`);
+      const prdResult = await this.generateSPARCPRD(feature, researchSummary, projectPath);
+
+      // Step 4: Update feature description with full PRD
+      await this.featureLoader.update(projectPath, featureId, {
+        workItemState: 'pm_review',
+        description: prdResult.prd,
+        complexity: prdResult.complexity,
+      });
+
+      // Step 5: Emit PRD ready for Discord posting
+      this.events.emit('authority:pm-prd-ready', {
+        projectPath,
+        featureId,
+        agentId: agent.id,
+        prd: prdResult.prd,
+        complexity: prdResult.complexity,
+        milestones: prdResult.milestones,
+      });
+
+      // Step 6: Auto-approve with full PRD context
+      const review: PMReviewResult = {
+        verdict: 'approve',
+        feedback: 'PM researched codebase and generated SPARC PRD. Auto-approved.',
+        prd: prdResult.prd,
+        complexity: prdResult.complexity,
+        milestones: prdResult.milestones,
+      };
+
+      await this.handleApproval(projectPath, featureId, feature, review, agent);
     } catch (error) {
       logger.error(`Failed to process idea ${featureId}:`, error);
     } finally {
       this.processing.delete(featureId);
     }
+  }
+
+  /**
+   * Research the codebase to understand context for an idea.
+   * Uses haiku (cheap/fast) with read-only tools to explore project structure,
+   * find relevant patterns, and identify existing code to build on.
+   */
+  private async researchCodebase(feature: Feature, projectPath: string): Promise<string> {
+    const title = feature.title || 'Untitled';
+    const description = feature.description || '';
+
+    const systemPrompt = `You are a senior engineer conducting codebase research for a new feature idea.
+
+Your goal is to explore the project and gather context that will help create a detailed Product Requirements Document (PRD).
+
+Research strategy:
+1. Start by finding the project structure (look for package.json, tsconfig, src/ directories)
+2. Identify existing patterns, conventions, and architecture relevant to the idea
+3. Find files that would need to be modified or that this feature would interact with
+4. Note any existing similar functionality that could be extended
+5. Identify potential technical constraints or dependencies
+
+Be thorough but efficient. Focus on understanding:
+- Where this feature would live in the codebase
+- What existing code it would interact with
+- Patterns to follow for consistency
+- Potential challenges or blockers
+
+Provide a structured research summary at the end.`;
+
+    const prompt = `Research the codebase for this feature idea:
+
+**Title:** ${title}
+
+**Description:**
+${description}
+
+Explore the project structure and relevant code, then provide a structured research summary.`;
+
+    try {
+      const result = await streamingQuery({
+        prompt,
+        systemPrompt,
+        model: PM_RESEARCH_MODEL,
+        cwd: projectPath,
+        maxTurns: 30,
+        allowedTools: ['Read', 'Glob', 'Grep'],
+        readOnly: true,
+      });
+
+      if (result.text && result.text.length > 50) {
+        logger.info(`Research completed: ${result.text.length} chars of findings`);
+        return result.text;
+      }
+
+      logger.warn('Research returned minimal results, using original description');
+      return `Original idea: ${title}\n\n${description}`;
+    } catch (error) {
+      logger.error('Codebase research failed, continuing with original description:', error);
+      return `Original idea: ${title}\n\n${description}`;
+    }
+  }
+
+  /**
+   * Generate a SPARC PRD from research findings + original idea.
+   * Uses sonnet for high-quality structured writing.
+   */
+  private async generateSPARCPRD(
+    feature: Feature,
+    researchSummary: string,
+    projectPath: string
+  ): Promise<{
+    prd: string;
+    complexity: PMReviewResult['complexity'];
+    milestones: Array<{ title: string; description: string }>;
+  }> {
+    const title = feature.title || 'Untitled';
+    const description = feature.description || '';
+
+    // Gather text file contents if attached
+    const attachmentContext = (feature.textFilePaths || [])
+      .map((f) => `\n--- Attached file: ${f.filename} ---\n${f.content}`)
+      .join('\n');
+
+    const systemPrompt = `You are a senior Product Manager creating a SPARC PRD (Product Requirements Document).
+
+SPARC Framework:
+- **Situation**: Current state of the system. What exists today?
+- **Problem**: What's missing or broken? Why does this matter?
+- **Approach**: How will we solve it? Technical approach, key decisions, architecture.
+- **Results**: What does success look like? Acceptance criteria, measurable outcomes.
+- **Constraints**: Limitations, dependencies, risks, non-goals.
+
+You MUST respond with valid JSON matching this schema:
+{
+  "prd": "The full SPARC PRD as markdown text",
+  "complexity": "small" | "medium" | "large" | "architectural",
+  "milestones": [
+    { "title": "Milestone name", "description": "What this milestone covers" }
+  ]
+}
+
+Guidelines:
+- Write the PRD in markdown format with clear SPARC sections
+- Include specific file paths and code patterns from the research
+- Define clear acceptance criteria in the Results section
+- Break into logical milestones for iterative delivery
+- Be specific and actionable — engineers should be able to implement from this PRD
+- Complexity: small (< 1 file), medium (2-5 files), large (5-15 files), architectural (system-wide)`;
+
+    const prompt = `Create a SPARC PRD for this feature:
+
+**Title:** ${title}
+
+**Original Idea:**
+${description}${attachmentContext}
+
+**Codebase Research Findings:**
+${researchSummary}
+
+Generate a comprehensive SPARC PRD as JSON.`;
+
+    try {
+      const result = await simpleQuery({
+        prompt,
+        systemPrompt,
+        model: PM_PRD_MODEL,
+        cwd: projectPath,
+        maxTurns: 1,
+        allowedTools: [],
+      });
+
+      const jsonMatch = result.text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        logger.warn('PRD generation did not return valid JSON, using fallback');
+        return this.fallbackPRD(title, description, researchSummary);
+      }
+
+      const parsed = JSON.parse(jsonMatch[0]) as {
+        prd: string;
+        complexity: PMReviewResult['complexity'];
+        milestones: Array<{ title: string; description: string }>;
+      };
+
+      if (!parsed.prd || !parsed.complexity) {
+        logger.warn('PRD generation missing required fields, using fallback');
+        return this.fallbackPRD(title, description, researchSummary);
+      }
+
+      if (!parsed.milestones || parsed.milestones.length === 0) {
+        parsed.milestones = [{ title, description: description.slice(0, 200) }];
+      }
+
+      return parsed;
+    } catch (error) {
+      logger.error('SPARC PRD generation failed, using fallback:', error);
+      return this.fallbackPRD(title, description, researchSummary);
+    }
+  }
+
+  /**
+   * Fallback PRD when AI generation fails.
+   */
+  private fallbackPRD(
+    title: string,
+    description: string,
+    researchSummary: string
+  ): {
+    prd: string;
+    complexity: PMReviewResult['complexity'];
+    milestones: Array<{ title: string; description: string }>;
+  } {
+    const prd = `# ${title}
+
+## Situation
+This feature was requested but PRD generation encountered an issue.
+
+## Problem
+${description}
+
+## Approach
+To be determined after manual review.
+
+## Results
+- Feature is implemented as described
+- Tests pass
+
+## Constraints
+- Needs manual review and refinement
+
+## Research Notes
+${researchSummary.slice(0, 1000)}`;
+
+    return {
+      prd,
+      complexity: 'medium',
+      milestones: [{ title, description: description.slice(0, 200) }],
+    };
   }
 
   /**
@@ -318,7 +556,7 @@ Provide your review as JSON.`;
       const result = await simpleQuery({
         prompt,
         systemPrompt,
-        model: PM_REVIEW_MODEL,
+        model: PM_PRD_MODEL,
         cwd: projectPath,
         maxTurns: 1,
         allowedTools: [],
@@ -450,6 +688,7 @@ Provide your review as JSON.`;
       featureId,
       agentId: agent.id,
       feedback: review.feedback,
+      prd: review.prd,
       complexity: review.complexity,
       milestones: review.milestones,
     });
