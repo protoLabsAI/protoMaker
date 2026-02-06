@@ -64,7 +64,7 @@ export function useBoardColumnFeatures({
               (f) =>
                 f.assignee &&
                 f.assignee !== 'agent' &&
-                f.assignee.toLowerCase() === boardUsername.toLowerCase()
+                f.assignee.trim().toLowerCase() === boardUsername.trim().toLowerCase()
             )
           : // agent-tasks: unassigned or explicitly 'agent'
             searchFiltered.filter((f) => !f.assignee || f.assignee === 'agent');

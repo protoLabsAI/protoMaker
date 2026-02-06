@@ -537,6 +537,10 @@ void schedulerService.start();
           }
         }
       }
+    } else if (settings.goapAlwaysOn?.enabled) {
+      logger.info(
+        '[AUTO-START] GOAP always-on enabled but no projects configured, skipping auto-start'
+      );
     } else {
       logger.info('[AUTO-START] GOAP always-on disabled, skipping auto-start');
     }

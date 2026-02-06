@@ -330,7 +330,15 @@ export class GOAPLoopService {
     const key = this.loopKey(projectPath);
     const loop = this.loops.get(key);
     if (!loop) throw new Error(`No GOAP loop running for project: ${projectPath}`);
+    if (roleId !== null && !ROLES.find((r) => r.id === roleId)) {
+      throw new Error(
+        `Invalid role ID: ${roleId}. Available: ${ROLES.map((r) => r.id).join(', ')}`
+      );
+    }
     loop.roleOverride = roleId;
+    if (roleId === null) {
+      loop.roleSelectionReason = undefined;
+    }
     logger.info('GOAP role override set', { projectPath, roleId });
   }
 
@@ -673,8 +681,10 @@ export class GOAPLoopService {
     }
 
     // Fallback = shipper (role with no activation conditions)
-    const fallback =
-      ROLES.find((r) => r.activationConditions.length === 0) ?? ROLES[ROLES.length - 1];
+    const fallback = ROLES.find((r) => r.activationConditions.length === 0);
+    if (!fallback) {
+      throw new Error('GOAP loop: no fallback role defined (role with empty activationConditions)');
+    }
     loop.roleSelectionReason = 'default (no conditions triggered)';
     return fallback;
   }
