@@ -1006,6 +1006,7 @@ process.on('uncaughtException', (error: Error) => {
 // Graceful shutdown
 process.on('SIGTERM', () => {
   logger.info('SIGTERM received, shutting down...');
+  void goapLoopService.stopAllLoops();
   terminalService.cleanup();
   server.close(() => {
     logger.info('Server closed');
@@ -1015,6 +1016,7 @@ process.on('SIGTERM', () => {
 
 process.on('SIGINT', () => {
   logger.info('SIGINT received, shutting down...');
+  void goapLoopService.stopAllLoops();
   terminalService.cleanup();
   server.close(() => {
     logger.info('Server closed');

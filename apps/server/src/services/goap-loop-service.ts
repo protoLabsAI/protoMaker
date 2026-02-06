@@ -232,6 +232,19 @@ export class GOAPLoopService {
     return Array.from(this.loops.values()).map((loop) => this.toStatus(loop));
   }
 
+  async stopAllLoops(): Promise<void> {
+    const keys = Array.from(this.loops.keys());
+    for (const key of keys) {
+      const loop = this.loops.get(key);
+      if (loop) {
+        this.clearTimer(loop);
+        loop.isRunning = false;
+        this.loops.delete(key);
+        logger.info('GOAP loop stopped (shutdown)', { projectPath: loop.config.projectPath });
+      }
+    }
+  }
+
   // ─── Tick ────────────────────────────────────────────────────────────────
 
   private scheduleTick(loop: RunningGOAPLoop): void {

@@ -23,10 +23,11 @@ export function createPauseGOAPLoopHandler({ goapLoopService }: GOAPDeps) {
 
       res.json({ success: true, status: goapLoopService.getStatus(projectPath) });
     } catch (error) {
-      logger.error('Failed to pause GOAP loop', { error });
-      res.status(500).json({
-        error: error instanceof Error ? error.message : 'Failed to pause GOAP loop',
-      });
+      const message = error instanceof Error ? error.message : 'Failed to pause GOAP loop';
+      const isClientError = message.includes('No running') || message.includes('No GOAP loop');
+      const status = isClientError ? 409 : 500;
+      if (!isClientError) logger.error('Failed to pause GOAP loop', { error });
+      res.status(status).json({ error: message });
     }
   };
 }

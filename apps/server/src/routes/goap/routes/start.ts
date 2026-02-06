@@ -24,6 +24,14 @@ export function createStartGOAPLoopHandler({ goapLoopService }: GOAPDeps) {
         return;
       }
 
+      if (
+        tickIntervalMs !== undefined &&
+        (typeof tickIntervalMs !== 'number' || tickIntervalMs <= 0)
+      ) {
+        res.status(400).json({ error: 'tickIntervalMs must be a positive number' });
+        return;
+      }
+
       const config: GOAPLoopConfig = {
         projectPath,
         branchName: branchName ?? DEFAULT_GOAP_LOOP_CONFIG.branchName,
@@ -38,10 +46,10 @@ export function createStartGOAPLoopHandler({ goapLoopService }: GOAPDeps) {
 
       res.json({ success: true, status: goapLoopService.getStatus(projectPath) });
     } catch (error) {
-      logger.error('Failed to start GOAP loop', { error });
-      res.status(500).json({
-        error: error instanceof Error ? error.message : 'Failed to start GOAP loop',
-      });
+      const message = error instanceof Error ? error.message : 'Failed to start GOAP loop';
+      const status = message.includes('already running') ? 409 : 500;
+      if (status === 500) logger.error('Failed to start GOAP loop', { error });
+      res.status(status).json({ error: message });
     }
   };
 }
