@@ -437,18 +437,116 @@ environment:
 
 ### Updates
 
-**Update to Latest Version:**
+#### Quick Update (Standard)
 
 ```bash
-# Pull latest code
+# 1. Pre-flight health check
+curl -f http://localhost:3008/api/health
+curl -f http://localhost:3007/ -o /dev/null -w "%{http_code}\n"
+
+# 2. Pull latest code
+cd /path/to/automaker
 git pull origin main
 
-# Rebuild images
-docker-compose -f docker-compose.prod.yml build
+# 3. Rebuild images with commit SHA tracking
+docker compose build --build-arg GIT_COMMIT_SHA=$(git rev-parse HEAD)
 
-# Deploy (zero-downtime with stack)
+# 4. Deploy updated containers
+# Docker Compose (with override):
+docker compose up -d --force-recreate
+
+# OR Docker Stack (Swarm mode):
 docker stack deploy -c docker-compose.prod.yml automaker
+
+# 5. Verify deployment
+sleep 10
+curl -f http://localhost:3008/api/health
+curl -f http://localhost:3007/ -o /dev/null -w "%{http_code}\n"
+
+# 6. Confirm commit SHA matches
+docker inspect automaker-server --format '{{index .Config.Labels "automaker.git.commit.sha"}}'
+git rev-parse HEAD
+# Both should match
 ```
+
+#### Safe Update (With Backup)
+
+For major updates or when data integrity matters:
+
+```bash
+# 1. Pre-flight checks
+curl -f http://localhost:3008/api/health
+docker stats --no-stream  # Check resource usage
+
+# 2. Backup volumes before update
+./scripts/backup-volumes.sh /backup/automaker
+
+# 3. Pull and rebuild
+git pull origin main
+docker compose build --build-arg GIT_COMMIT_SHA=$(git rev-parse HEAD)
+
+# 4. Deploy
+docker compose up -d --force-recreate
+
+# 5. Verify
+sleep 10
+curl -f http://localhost:3008/api/health
+```
+
+#### Rollback
+
+If something goes wrong after an update:
+
+```bash
+# Option 1: Rebuild from a known-good commit
+git checkout <good-commit-sha>
+docker compose build --build-arg GIT_COMMIT_SHA=$(git rev-parse HEAD)
+docker compose up -d --force-recreate
+
+# Don't forget to go back to main when ready
+git checkout main
+
+# Option 2: Restore from backup (if data is corrupted)
+docker compose down
+./scripts/restore-volumes.sh /backup/automaker/automaker-backup-YYYYMMDD_HHMMSS
+docker compose up -d
+```
+
+#### Commit SHA Tracking
+
+Images are stamped with the git commit SHA at build time via the `GIT_COMMIT_SHA` build arg. This makes it easy to know exactly what code is running:
+
+```bash
+# Check what commit a running container was built from
+docker inspect automaker-server --format '{{index .Config.Labels "automaker.git.commit.sha"}}'
+
+# Check both containers
+for c in automaker-server automaker-ui; do
+  echo "$c: $(docker inspect $c --format '{{index .Config.Labels "automaker.git.commit.sha"}}')"
+done
+```
+
+If the SHA shows `unknown`, the image was built without `--build-arg GIT_COMMIT_SHA=...`. Rebuild with the arg to fix.
+
+#### Dockerfile Maintenance
+
+When adding new packages to `libs/`, the Dockerfile base stage must be updated to include the new package's `package.json`. The COPY lines in the base stage (around line 23-31) must list every lib:
+
+```dockerfile
+# Copy all libs package.json files (centralized - add new libs here)
+COPY libs/types/package*.json ./libs/types/
+COPY libs/utils/package*.json ./libs/utils/
+# ... add new libs here when created
+```
+
+Missing a COPY line causes `TS2307: Cannot find module` errors during `docker compose build`. If you see this error, check that all `libs/*/package.json` files are listed in the Dockerfile base stage.
+
+#### Notes
+
+- `docker compose up -d` may say "Running" instead of "Recreated" even with new images. Use `--force-recreate` to ensure containers are replaced.
+- The `ANTHROPIC_API_KEY` warning during build is harmless — it's only needed at runtime, not build time.
+- Server health check (`/api/health`) may take 10-15 seconds after container start. The healthcheck has a 60s `start_period`.
+- No agents should be running during an update. Check with `curl http://localhost:3008/api/agents` before updating.
 
 ### Cleanup
 
