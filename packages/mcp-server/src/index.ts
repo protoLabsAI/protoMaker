@@ -1129,6 +1129,284 @@ const tools: Tool[] = [
       required: ['worktreePath'],
     },
   },
+
+  // ========== Linear Integration ==========
+  {
+    name: 'linear_health',
+    description: 'Check Linear API connection health and authentication status.',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+    },
+  },
+  {
+    name: 'linear_viewer',
+    description: 'Get the currently authenticated Linear user.',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+    },
+  },
+  {
+    name: 'linear_organization',
+    description: 'Get information about the Linear organization.',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+    },
+  },
+  {
+    name: 'linear_users',
+    description: 'Get all users in the Linear organization.',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+    },
+  },
+  {
+    name: 'linear_teams',
+    description: 'Get all teams in the Linear organization.',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+    },
+  },
+  {
+    name: 'linear_workflow_states',
+    description: 'Get workflow states (statuses) for a specific team.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        teamId: {
+          type: 'string',
+          description: 'ID of the team to get workflow states for',
+        },
+      },
+      required: ['teamId'],
+    },
+  },
+  {
+    name: 'linear_projects',
+    description: 'Get all projects in the Linear organization.',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+    },
+  },
+  {
+    name: 'linear_labels',
+    description: 'Get all issue labels in the Linear organization.',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+    },
+  },
+  {
+    name: 'linear_search_issues',
+    description:
+      'Search for issues in Linear with optional filters. Returns issues matching the criteria.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: {
+          type: 'string',
+          description: 'Optional text search query for issue title/description',
+        },
+        teamId: {
+          type: 'string',
+          description: 'Filter by team ID',
+        },
+        projectId: {
+          type: 'string',
+          description: 'Filter by project ID',
+        },
+        assigneeId: {
+          type: 'string',
+          description: 'Filter by assignee user ID',
+        },
+        status: {
+          type: 'string',
+          description: 'Filter by status name (e.g., "In Progress", "Done")',
+        },
+        priority: {
+          type: 'number',
+          description: 'Filter by priority (0=none, 1=urgent, 2=high, 3=normal, 4=low)',
+        },
+        labels: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Filter by label names',
+        },
+        limit: {
+          type: 'number',
+          description: 'Maximum number of issues to return (default: 10)',
+        },
+        includeArchived: {
+          type: 'boolean',
+          description: 'Include archived issues (default: false)',
+        },
+      },
+    },
+  },
+  {
+    name: 'linear_get_issue',
+    description: 'Get detailed information about a specific Linear issue by ID.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        issueId: {
+          type: 'string',
+          description: 'The issue ID or identifier (e.g., "ABC-123")',
+        },
+      },
+      required: ['issueId'],
+    },
+  },
+  {
+    name: 'linear_create_issue',
+    description: 'Create a new issue in Linear.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        title: {
+          type: 'string',
+          description: 'Issue title',
+        },
+        description: {
+          type: 'string',
+          description: 'Issue description (Markdown supported)',
+        },
+        teamId: {
+          type: 'string',
+          description: 'ID of the team to create the issue in',
+        },
+        projectId: {
+          type: 'string',
+          description: 'Optional project ID',
+        },
+        priority: {
+          type: 'number',
+          description: 'Priority (0=none, 1=urgent, 2=high, 3=normal, 4=low)',
+        },
+        stateId: {
+          type: 'string',
+          description: 'Optional workflow state ID',
+        },
+        assigneeId: {
+          type: 'string',
+          description: 'Optional assignee user ID',
+        },
+        labelIds: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Optional array of label IDs',
+        },
+        estimate: {
+          type: 'number',
+          description: 'Optional estimate points',
+        },
+        dueDate: {
+          type: 'string',
+          description: 'Optional due date (ISO 8601 format)',
+        },
+      },
+      required: ['title', 'teamId'],
+    },
+  },
+  {
+    name: 'linear_update_issue',
+    description: 'Update an existing Linear issue.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: {
+          type: 'string',
+          description: 'The issue ID to update',
+        },
+        title: {
+          type: 'string',
+          description: 'New title',
+        },
+        description: {
+          type: 'string',
+          description: 'New description',
+        },
+        priority: {
+          type: 'number',
+          description: 'New priority',
+        },
+        stateId: {
+          type: 'string',
+          description: 'New workflow state ID',
+        },
+        assigneeId: {
+          type: 'string',
+          description: 'New assignee user ID',
+        },
+        labelIds: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'New label IDs (replaces existing)',
+        },
+        estimate: {
+          type: 'number',
+          description: 'New estimate points',
+        },
+        dueDate: {
+          type: 'string',
+          description: 'New due date',
+        },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'linear_user_issues',
+    description: 'Get issues assigned to a specific user or the current user.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        userId: {
+          type: 'string',
+          description: 'Optional user ID. If not provided, returns current user issues.',
+        },
+        limit: {
+          type: 'number',
+          description: 'Maximum number of issues to return (default: 50)',
+        },
+        includeArchived: {
+          type: 'boolean',
+          description: 'Include archived issues (default: false)',
+        },
+      },
+    },
+  },
+  {
+    name: 'linear_add_comment',
+    description: 'Add a comment to a Linear issue.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        issueId: {
+          type: 'string',
+          description: 'The issue ID to comment on',
+        },
+        body: {
+          type: 'string',
+          description: 'Comment body (Markdown supported)',
+        },
+        createAsUser: {
+          type: 'string',
+          description: 'Optional custom username for the comment',
+        },
+        displayIconUrl: {
+          type: 'string',
+          description: 'Optional avatar URL for the comment',
+        },
+      },
+      required: ['issueId', 'body'],
+    },
+  },
 ];
 
 // Tool implementations
@@ -1504,6 +1782,93 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
     case 'graphite_restack':
       return apiCall('/worktree/graphite-restack', {
         worktreePath: args.worktreePath,
+      });
+
+    // Linear Integration
+    case 'linear_health':
+      return apiCall('/linear/health', {});
+
+    case 'linear_viewer':
+      return apiCall('/linear/viewer', {});
+
+    case 'linear_organization':
+      return apiCall('/linear/organization', {});
+
+    case 'linear_users':
+      return apiCall('/linear/users', {});
+
+    case 'linear_teams':
+      return apiCall('/linear/teams', {});
+
+    case 'linear_workflow_states':
+      return apiCall('/linear/workflow-states', {
+        teamId: args.teamId,
+      });
+
+    case 'linear_projects':
+      return apiCall('/linear/projects', {});
+
+    case 'linear_labels':
+      return apiCall('/linear/labels', {});
+
+    case 'linear_search_issues':
+      return apiCall('/linear/issues/search', {
+        query: args.query,
+        teamId: args.teamId,
+        projectId: args.projectId,
+        assigneeId: args.assigneeId,
+        status: args.status,
+        priority: args.priority,
+        labels: args.labels,
+        limit: args.limit,
+        includeArchived: args.includeArchived,
+      });
+
+    case 'linear_get_issue':
+      return apiCall('/linear/issues/get', {
+        issueId: args.issueId,
+      });
+
+    case 'linear_create_issue':
+      return apiCall('/linear/issues/create', {
+        title: args.title,
+        description: args.description,
+        teamId: args.teamId,
+        projectId: args.projectId,
+        priority: args.priority,
+        stateId: args.stateId,
+        assigneeId: args.assigneeId,
+        labelIds: args.labelIds,
+        estimate: args.estimate,
+        dueDate: args.dueDate,
+      });
+
+    case 'linear_update_issue':
+      return apiCall('/linear/issues/update', {
+        id: args.id,
+        title: args.title,
+        description: args.description,
+        priority: args.priority,
+        stateId: args.stateId,
+        assigneeId: args.assigneeId,
+        labelIds: args.labelIds,
+        estimate: args.estimate,
+        dueDate: args.dueDate,
+      });
+
+    case 'linear_user_issues':
+      return apiCall('/linear/issues/user', {
+        userId: args.userId,
+        limit: args.limit,
+        includeArchived: args.includeArchived,
+      });
+
+    case 'linear_add_comment':
+      return apiCall('/linear/comments/create', {
+        issueId: args.issueId,
+        body: args.body,
+        createAsUser: args.createAsUser,
+        displayIconUrl: args.displayIconUrl,
       });
 
     default:

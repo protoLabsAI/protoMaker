@@ -114,6 +114,8 @@ import { PRFeedbackService } from './services/pr-feedback-service.js';
 import { WorktreeLifecycleService } from './services/worktree-lifecycle-service.js';
 import { DiscordBotService } from './services/discord-bot-service.js';
 import { ProjectService } from './services/project-service.js';
+import { createLinearRoutes } from './routes/linear/index.js';
+import { getLinearClientService } from './services/linear-client.js';
 
 const PORT = parseInt(process.env.PORT || '3008', 10);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -313,6 +315,9 @@ eventHookService.initialize(events, settingsService, eventHistoryService, featur
 // Initialize Integration Service for Linear, Discord, and other external integrations
 integrationService.initialize(events, settingsService, featureLoader);
 
+// Initialize Linear Client Service for native Linear API access
+const linearClientService = getLinearClientService(settingsService);
+
 // Initialize Authority Service for trust-based policy enforcement
 const authorityService = new AuthorityService(events);
 
@@ -394,6 +399,19 @@ void schedulerService.start();
 
   await agentService.initialize();
   logger.info('Agent service initialized');
+
+  // Initialize Linear client (non-blocking, logs status on failure)
+  const linearConnected = await linearClientService.initialize();
+  if (linearConnected) {
+    logger.info('Linear client initialized and connected');
+    // Inject Linear client into integration service for direct API calls
+    integrationService.setLinearClient(linearClientService);
+  } else {
+    const health = linearClientService.getLastHealthCheck();
+    if (health?.error) {
+      logger.warn(`Linear client not available: ${health.error}`);
+    }
+  }
 
   // Auto-start auto-mode if enabled in settings
   try {
@@ -583,6 +601,7 @@ app.use('/api/skills', createSkillsRoutes());
 app.use('/api/event-history', createEventHistoryRoutes(eventHistoryService, settingsService));
 app.use('/api/projects', createProjectsRoutes(featureLoader));
 app.use('/api/scheduler', createSchedulerRoutes(schedulerService));
+app.use('/api/linear', createLinearRoutes(settingsService));
 
 // Create HTTP server
 const server = createServer(app);

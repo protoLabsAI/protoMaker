@@ -19,6 +19,7 @@ import { createLogger } from '@automaker/utils';
 import type { EventEmitter } from '../lib/events.js';
 import type { SettingsService } from './settings-service.js';
 import type { FeatureLoader } from './feature-loader.js';
+import type { LinearClientService } from './linear-client.js';
 import type {
   LinearIntegrationConfig,
   DiscordIntegrationConfig,
@@ -78,6 +79,7 @@ export class IntegrationService {
   private emitter: EventEmitter | null = null;
   private settingsService: SettingsService | null = null;
   private featureLoader: FeatureLoader | null = null;
+  private linearClient: LinearClientService | null = null;
   private unsubscribe: (() => void) | null = null;
 
   /**
@@ -86,11 +88,13 @@ export class IntegrationService {
   initialize(
     emitter: EventEmitter,
     settingsService: SettingsService,
-    featureLoader: FeatureLoader
+    featureLoader: FeatureLoader,
+    linearClient?: LinearClientService
   ): void {
     this.emitter = emitter;
     this.settingsService = settingsService;
     this.featureLoader = featureLoader;
+    this.linearClient = linearClient || null;
 
     // Subscribe to ProtoMaker events
     this.unsubscribe = emitter.subscribe((type, payload) => {
@@ -115,6 +119,15 @@ export class IntegrationService {
   }
 
   /**
+   * Set the Linear client after initialization
+   * This allows the server to inject the Linear client after it's been initialized
+   */
+  setLinearClient(linearClient: LinearClientService): void {
+    this.linearClient = linearClient;
+    logger.info('Linear client set for integration service');
+  }
+
+  /**
    * Cleanup subscriptions
    */
   destroy(): void {
@@ -125,6 +138,7 @@ export class IntegrationService {
     this.emitter = null;
     this.settingsService = null;
     this.featureLoader = null;
+    this.linearClient = null;
   }
 
   /**
@@ -288,15 +302,96 @@ export class IntegrationService {
 
   /**
    * Emit a Linear integration event
+   * If LinearClient is available and connected, directly create/update issues
+   * Otherwise, emit events for external handlers (e.g., MCP tools via EventHooks)
    */
   private async emitLinearEvent(payload: LinearIssuePayload): Promise<void> {
     if (!this.emitter) return;
 
     logger.info(
-      `Emitting Linear ${payload.action} event for feature: ${payload.feature.title} (${payload.featureId})`
+      `Processing Linear ${payload.action} event for feature: ${payload.feature.title} (${payload.featureId})`
     );
 
+    // If LinearClient is available and connected, use it directly
+    if (this.linearClient?.isConnected() && payload.teamId) {
+      try {
+        await this.executeLinearAction(payload);
+        return;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        logger.warn(`Direct Linear API call failed, falling back to event emission: ${message}`);
+        // Fall through to emit event as fallback
+      }
+    }
+
+    // Emit event for external handlers (backward compatibility)
     this.emitter.emit('integration:linear', payload);
+  }
+
+  /**
+   * Execute Linear action directly via LinearClient
+   */
+  private async executeLinearAction(payload: LinearIssuePayload): Promise<void> {
+    if (!this.linearClient) return;
+
+    const { feature, teamId, projectId, priority, action } = payload;
+
+    switch (action) {
+      case 'create': {
+        const issue = await this.linearClient.createIssue({
+          title: feature.title || 'Untitled Feature',
+          description: feature.description || '',
+          teamId: teamId!,
+          projectId,
+          priority,
+        });
+        logger.info(
+          `Created Linear issue: ${issue.identifier} (${issue.url}) for feature ${feature.id}`
+        );
+        break;
+      }
+
+      case 'update': {
+        // For updates, we'd need the Linear issue ID stored on the feature
+        // Since we don't have that yet, we'll use search to find the issue
+        const issues = await this.linearClient.searchIssues({
+          query: feature.title,
+          teamId,
+          limit: 1,
+        });
+
+        if (issues.length > 0) {
+          const issue = issues[0];
+          // Map feature status to Linear state
+          // Note: This would require knowing the team's workflow states
+          logger.info(`Found matching Linear issue: ${issue.identifier} for feature ${feature.id}`);
+          // For now, just log - full status mapping requires workflow state lookup
+        }
+        break;
+      }
+
+      case 'comment': {
+        // Find the issue and add a completion comment
+        const issues = await this.linearClient.searchIssues({
+          query: feature.title,
+          teamId,
+          limit: 1,
+        });
+
+        if (issues.length > 0) {
+          const issue = issues[0];
+          await this.linearClient.addComment(
+            issue.id,
+            `✅ **Feature completed in Automaker**\n\n` +
+              `Feature: ${feature.title}\n` +
+              `Status: ${feature.status}\n` +
+              (feature.branchName ? `Branch: \`${feature.branchName}\`\n` : '')
+          );
+          logger.info(`Added completion comment to Linear issue: ${issue.identifier}`);
+        }
+        break;
+      }
+    }
   }
 
   /**

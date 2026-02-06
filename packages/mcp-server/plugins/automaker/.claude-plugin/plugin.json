@@ -1,7 +1,7 @@
 {
   "name": "automaker",
-  "description": "Automaker - AI Development Studio. Manage Kanban boards, AI agents, and feature orchestration.",
-  "version": "1.0.2",
+  "description": "Automaker - AI Development Studio. Manage Kanban boards, AI agents, and feature orchestration. Includes native Linear integration.",
+  "version": "1.0.3",
   "author": {
     "name": "Proto Labs AI"
   },
@@ -20,13 +20,6 @@
       "args": ["-y", "mcp-discord"],
       "env": {
         "DISCORD_BOT_TOKEN": "${DISCORD_BOT_TOKEN}"
-      }
-    },
-    "linear": {
-      "command": "npx",
-      "args": ["-y", "mcp-linear"],
-      "env": {
-        "LINEAR_API_KEY": "${LINEAR_API_KEY}"
       }
     }
   }

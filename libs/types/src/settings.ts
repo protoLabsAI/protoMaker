@@ -1325,6 +1325,8 @@ export interface Credentials {
     google: string;
     /** OpenAI API key (for compatibility or alternative providers) */
     openai: string;
+    /** Linear API key for project management integration */
+    linear?: string;
   };
   /** Webhook secrets for external integrations */
   webhookSecrets?: {
