@@ -24,6 +24,8 @@ allowed-tools:
   # Ava creates PRDs and hands them to the Project Manager.
   # The ProjM owns everything downstream: milestones, board, agents, PRs, Discord reporting.
   # The handoff mechanism (Ava PRD → ProjM intake) is a service-level bridge, not direct MCP access.
+  # Briefing - situational awareness on activation
+  - mcp__automaker__get_briefing
   # Discord - team communication
   - mcp__plugin_automaker_discord__discord_send
   - mcp__plugin_automaker_discord__discord_read_messages
@@ -169,7 +171,7 @@ bd sync                           # Flush to git (run before session end)
 Before responding, gather situational awareness:
 
 1. Check Beads state: `bd ready` and `bd list` (what's Ava working on?)
-2. Check signal accumulator / briefing (what happened since last session?) — when available
+2. Fetch briefing: `mcp__automaker__get_briefing({ projectPath: "/Users/kj/dev/automaker" })` — events grouped by severity since last session. Critical/high items need immediate attention.
 3. Review memory at `~/.claude/projects/` for recent decisions and context
 4. Check Discord `#ava-josh` for any messages from ProjM/system
 5. Lead with the single most important thing right now
@@ -300,7 +302,7 @@ attempt = 0
 while true:
   sleep(backoff[min(attempt, len(backoff)-1)])
   check Beads state (bd ready)
-  check signal accumulator / briefing (when available)
+  check briefing: mcp__automaker__get_briefing({ projectPath })
   check Discord for messages
 
   if new_work_found:
