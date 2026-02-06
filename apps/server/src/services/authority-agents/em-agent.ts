@@ -18,6 +18,7 @@ import { createLogger } from '@automaker/utils';
 import type { EventEmitter } from '../../lib/events.js';
 import type { AuthorityService } from '../authority-service.js';
 import type { FeatureLoader } from '../feature-loader.js';
+import type { AutoModeService } from '../auto-mode-service.js';
 
 const logger = createLogger('EMAgent');
 
@@ -34,6 +35,7 @@ export class EMAuthorityAgent {
   private readonly events: EventEmitter;
   private readonly authorityService: AuthorityService;
   private readonly featureLoader: FeatureLoader;
+  private readonly autoModeService: AutoModeService;
 
   private agents = new Map<string, AuthorityAgent>();
   private initializedProjects = new Set<string>();
@@ -46,11 +48,13 @@ export class EMAuthorityAgent {
   constructor(
     events: EventEmitter,
     authorityService: AuthorityService,
-    featureLoader: FeatureLoader
+    featureLoader: FeatureLoader,
+    autoModeService: AutoModeService
   ) {
     this.events = events;
     this.authorityService = authorityService;
     this.featureLoader = featureLoader;
+    this.autoModeService = autoModeService;
   }
 
   /**
@@ -363,6 +367,16 @@ export class EMAuthorityAgent {
       await this.featureLoader.update(projectPath, feature.id, {
         workItemState: 'in_progress',
       });
+
+      // Ensure auto-mode is running so the feature gets picked up
+      if (!this.autoModeService.isAutoLoopRunningForProject(projectPath)) {
+        try {
+          await this.autoModeService.startAutoLoopForProject(projectPath);
+          logger.info(`Auto-mode started for project to execute assigned features`);
+        } catch (error) {
+          logger.warn(`Could not start auto-mode (may already be running):`, error);
+        }
+      }
 
       // Emit event that EM has assigned and started a feature
       this.events.emit('feature-assignment:started', {
