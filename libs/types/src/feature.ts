@@ -113,6 +113,11 @@ export interface Feature {
    */
   assignee?: string | null;
   /**
+   * Due date for this feature (ISO 8601 date string, YYYY-MM-DD).
+   * Used to track deadlines and help with scheduling and prioritization.
+   */
+  dueDate?: string;
+  /**
    * Linear issue ID (if synced to Linear)
    * Links feature to external project management system.
    */
