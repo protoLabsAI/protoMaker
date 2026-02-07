@@ -40,6 +40,7 @@ import {
   createDeleteProjectPermissionsHandler,
   createGetExampleConfigHandler,
 } from './routes/cursor-config.js';
+import { setupProject } from './routes/project.js';
 
 export function createSetupRoutes(): Router {
   const router = Router();
@@ -87,6 +88,9 @@ export function createSetupRoutes(): Router {
   router.post('/cursor-permissions/custom', createSetCustomPermissionsHandler());
   router.delete('/cursor-permissions', createDeleteProjectPermissionsHandler());
   router.get('/cursor-permissions/example', createGetExampleConfigHandler());
+
+  // Project setup routes
+  router.post('/project', setupProject);
 
   return router;
 }
