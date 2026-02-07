@@ -71,7 +71,9 @@ export function AgentConfigPopover({ config, onConfigChange, disabled }: AgentCo
 
           {/* Max Turns */}
           <div className="space-y-2">
-            <Label className="text-xs font-medium">Max Turns</Label>
+            <Label htmlFor="agent-max-turns" className="text-xs font-medium">
+              Max Turns
+            </Label>
             <div className="flex flex-wrap gap-1.5">
               {TURN_PRESETS.map((preset) => (
                 <button
@@ -90,6 +92,7 @@ export function AgentConfigPopover({ config, onConfigChange, disabled }: AgentCo
               ))}
             </div>
             <input
+              id="agent-max-turns"
               type="number"
               min={10}
               max={5000}
@@ -103,8 +106,11 @@ export function AgentConfigPopover({ config, onConfigChange, disabled }: AgentCo
 
           {/* System Prompt Override */}
           <div className="space-y-2">
-            <Label className="text-xs font-medium">System Prompt (append)</Label>
+            <Label htmlFor="agent-system-prompt" className="text-xs font-medium">
+              System Prompt (append)
+            </Label>
             <textarea
+              id="agent-system-prompt"
               value={config.systemPromptOverride}
               onChange={(e) =>
                 onConfigChange({

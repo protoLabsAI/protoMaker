@@ -129,8 +129,7 @@ export function BoardHeader({
   const features = useAppStore((state) => state.features);
   const totalProjectCost = useMemo(() => {
     return features.reduce((sum, f) => {
-      const cost = f.costUsd as number | undefined;
-      return sum + (typeof cost === 'number' ? cost : 0);
+      return sum + (typeof f.costUsd === 'number' ? f.costUsd : 0);
     }, 0);
   }, [features]);
 

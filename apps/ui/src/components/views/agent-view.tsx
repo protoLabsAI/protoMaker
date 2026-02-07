@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useAppStore } from '@/store/app-store';
 import type { PhaseModelEntry } from '@automaker/types';
-import type { AgentConfig } from './agent-view/components/agent-config-popover';
+import { DEFAULT_MAX_TURNS, type AgentConfig } from './agent-view/components/agent-config-popover';
 import { useElectronAgent } from '@/hooks/use-electron-agent';
 import { SessionManager } from '@/components/session-manager';
 
@@ -46,7 +46,7 @@ export function AgentView() {
   const [modelSelection, setModelSelection] = useState<PhaseModelEntry>({ model: 'claude-sonnet' });
   // TODO: Wire agentConfig to useElectronAgent so maxTurns and systemPromptOverride take effect
   const [agentConfig, setAgentConfig] = useState<AgentConfig>({
-    maxTurns: 200,
+    maxTurns: DEFAULT_MAX_TURNS,
     systemPromptOverride: '',
   });
 

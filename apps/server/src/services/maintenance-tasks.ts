@@ -148,58 +148,64 @@ async function checkStaleFeatures(
 /**
  * Detect stale git worktrees (branches already merged or inactive).
  * Uses execFileAsync to avoid command injection and run asynchronously.
+ * Iterates over all known project paths to aggregate results.
  */
 async function detectStaleWorktrees(events: EventEmitter, projectPaths: string[]): Promise<void> {
   logger.info('Checking for stale worktrees...');
 
+  if (projectPaths.length === 0) {
+    logger.info('No known project paths, skipping stale worktree detection');
+    return;
+  }
+
   try {
-    // Use first known project path as cwd, or skip if none
-    const cwd = projectPaths[0];
-    if (!cwd) {
-      logger.info('No known project paths, skipping stale worktree detection');
-      return;
-    }
-
-    // List all worktrees
-    const { stdout: output } = await execFileAsync('git', ['worktree', 'list', '--porcelain'], {
-      encoding: 'utf-8',
-      timeout: 10_000,
-      cwd,
-    });
-
-    const worktrees = output
-      .split('\n\n')
-      .filter((block) => block.trim())
-      .map((block) => {
-        const lines = block.split('\n');
-        const worktreeLine = lines.find((l) => l.startsWith('worktree '));
-        const branchLine = lines.find((l) => l.startsWith('branch '));
-        return {
-          path: worktreeLine?.replace('worktree ', '') ?? '',
-          branch: branchLine?.replace('branch refs/heads/', '') ?? '',
-        };
-      })
-      .filter((w) => w.path && w.branch);
-
-    // Check which worktree branches are already merged into main
     let staleCount = 0;
     const staleWorktrees: string[] = [];
 
-    for (const wt of worktrees) {
-      if (wt.branch === 'main' || wt.branch === 'master') continue;
-
+    for (const cwd of projectPaths) {
       try {
-        // Check if branch is merged into main using execFileAsync (no shell injection)
-        await execFileAsync('git', ['merge-base', '--is-ancestor', wt.branch, 'main'], {
+        // List all worktrees for this project
+        const { stdout: output } = await execFileAsync('git', ['worktree', 'list', '--porcelain'], {
           encoding: 'utf-8',
-          timeout: 5_000,
+          timeout: 10_000,
           cwd,
         });
-        // If no error, branch IS merged into main
-        staleCount++;
-        staleWorktrees.push(`${wt.branch} (${wt.path})`);
-      } catch {
-        // Branch is not merged, it's active
+
+        const worktrees = output
+          .split('\n\n')
+          .filter((block) => block.trim())
+          .map((block) => {
+            const lines = block.split('\n');
+            const worktreeLine = lines.find((l) => l.startsWith('worktree '));
+            const branchLine = lines.find((l) => l.startsWith('branch '));
+            return {
+              path: worktreeLine?.replace('worktree ', '') ?? '',
+              branch: branchLine?.replace('branch refs/heads/', '') ?? '',
+            };
+          })
+          .filter((w) => w.path && w.branch);
+
+        // Check which worktree branches are already merged into main
+        for (const wt of worktrees) {
+          if (wt.branch === 'main' || wt.branch === 'master') continue;
+
+          try {
+            // Check if branch is merged into main using execFileAsync (no shell injection)
+            await execFileAsync('git', ['merge-base', '--is-ancestor', wt.branch, 'main'], {
+              encoding: 'utf-8',
+              timeout: 5_000,
+              cwd,
+            });
+            // If no error, branch IS merged into main
+            staleCount++;
+            staleWorktrees.push(`${wt.branch} (${wt.path})`);
+          } catch {
+            // Branch is not merged, it's active
+          }
+        }
+      } catch (error) {
+        logger.warn(`Stale worktree detection failed for ${cwd}:`, error);
+        // Continue with other project paths
       }
     }
 

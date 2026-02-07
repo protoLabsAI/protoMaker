@@ -221,36 +221,43 @@ export function classifyError(error: unknown): ErrorInfo {
 /**
  * Get a user-friendly error message
  *
+ * Uses switch on info.type to match the priority order of classifyError.
+ *
  * @param error - The error to convert
  * @returns User-friendly error message
  */
 export function getUserFriendlyErrorMessage(error: unknown): string {
   const info = classifyError(error);
 
-  if (info.isAbort) {
-    return 'Operation was cancelled';
-  }
+  switch (info.type) {
+    case 'abort':
+      return 'Operation was cancelled';
 
-  if (info.isAuth) {
-    return 'Authentication failed. Please check your API key.';
-  }
+    case 'authentication':
+      return 'Authentication failed. Please check your API key.';
 
-  if (info.isQuotaExhausted) {
-    return 'Usage limit reached. Auto Mode has been paused. Please wait for your quota to reset or upgrade your plan.';
-  }
+    case 'quota_exhausted':
+      return 'Usage limit reached. Auto Mode has been paused. Please wait for your quota to reset or upgrade your plan.';
 
-  if (info.isMaxTurns) {
-    return 'Agent exceeded the maximum number of turns. The task may be too complex for the current turn limit. Consider increasing max turns or breaking the task into smaller parts.';
-  }
+    case 'max_turns':
+      return 'Agent exceeded the maximum number of turns. The task may be too complex for the current turn limit. Consider increasing max turns or breaking the task into smaller parts.';
 
-  if (info.isRateLimit) {
-    const retryMsg = info.retryAfter
-      ? ` Please wait ${info.retryAfter} seconds before retrying.`
-      : ' Please reduce concurrency or wait before retrying.';
-    return `Rate limit exceeded (429).${retryMsg}`;
-  }
+    case 'rate_limit': {
+      const retryMsg = info.retryAfter
+        ? ` Please wait ${info.retryAfter} seconds before retrying.`
+        : ' Please reduce concurrency or wait before retrying.';
+      return `Rate limit exceeded (429).${retryMsg}`;
+    }
 
-  return info.message;
+    case 'cancellation':
+      return 'Operation was cancelled by user';
+
+    case 'network':
+      return 'Network error: unable to reach the API. Please check your connection and try again.';
+
+    default:
+      return info.message;
+  }
 }
 
 /**

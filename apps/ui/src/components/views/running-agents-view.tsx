@@ -18,12 +18,12 @@ import { AgentOutputModal } from './board-view/dialogs/agent-output-modal';
 import { useRunningAgents } from '@/hooks/queries';
 import { useStopFeature } from '@/hooks/mutations';
 
+const logger = createLogger('RunningAgentsView');
+
 export function RunningAgentsView() {
   const [selectedAgent, setSelectedAgent] = useState<RunningAgent | null>(null);
   const { setCurrentProject, projects } = useAppStore();
   const navigate = useNavigate();
-
-  const logger = createLogger('RunningAgentsView');
 
   // Use React Query for running agents with auto-refresh
   const { data, isLoading, isFetching, refetch } = useRunningAgents();
@@ -56,7 +56,7 @@ export function RunningAgentsView() {
       // Use mutation for regular features
       stopFeature.mutate({ featureId: agent.featureId, projectPath: agent.projectPath });
     },
-    [stopFeature, refetch, logger]
+    [stopFeature, refetch]
   );
 
   const handleNavigateToProject = useCallback(

@@ -12,10 +12,13 @@
  */
 
 import { createLogger } from '@automaker/utils';
-import { execSync } from 'child_process';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
 import type { Feature } from '@automaker/types';
 import type { FeatureLoader } from './feature-loader.js';
 import type { AutoModeService } from './auto-mode-service.js';
+
+const execFileAsync = promisify(execFile);
 
 const logger = createLogger('FeatureHealth');
 
@@ -65,7 +68,7 @@ export class FeatureHealthService {
     issues.push(...this.checkDanglingDependencies(features, featureMap));
     issues.push(...this.checkEpicChildrenDone(features, featureMap));
     issues.push(...(await this.checkStaleRunning(features, projectPath)));
-    issues.push(...this.checkMergedNotDone(features, projectPath));
+    issues.push(...(await this.checkMergedNotDone(features, projectPath)));
 
     // Auto-fix if requested
     if (autoFix) {
@@ -230,27 +233,29 @@ export class FeatureHealthService {
 
   /**
    * Features with branches that are merged to main (or their epic branch) but not marked done.
+   * Uses execFileAsync with argument arrays to prevent command injection.
    */
-  private checkMergedNotDone(features: Feature[], projectPath: string): HealthIssue[] {
+  private async checkMergedNotDone(
+    features: Feature[],
+    projectPath: string
+  ): Promise<HealthIssue[]> {
     const issues: HealthIssue[] = [];
     const doneStatuses = new Set(['done', 'completed', 'verified']);
 
     // Detect default branch (try main first, then master)
     let defaultBranch = 'main';
     try {
-      execSync('git rev-parse --verify main', {
+      await execFileAsync('git', ['rev-parse', '--verify', 'main'], {
         cwd: projectPath,
         encoding: 'utf-8',
         timeout: 5_000,
-        stdio: 'pipe',
       });
     } catch {
       try {
-        execSync('git rev-parse --verify master', {
+        await execFileAsync('git', ['rev-parse', '--verify', 'master'], {
           cwd: projectPath,
           encoding: 'utf-8',
           timeout: 5_000,
-          stdio: 'pipe',
         });
         defaultBranch = 'master';
       } catch {
@@ -262,11 +267,10 @@ export class FeatureHealthService {
     // Get list of branches merged into the default branch
     let mergedBranches: Set<string>;
     try {
-      const output = execSync(`git branch --merged ${defaultBranch}`, {
+      const { stdout: output } = await execFileAsync('git', ['branch', '--merged', defaultBranch], {
         cwd: projectPath,
         encoding: 'utf-8',
         timeout: 10_000,
-        stdio: 'pipe',
       });
       mergedBranches = new Set(
         output
@@ -299,12 +303,15 @@ export class FeatureHealthService {
         const epicBranch = epicBranchMap.get(feature.epicId);
         if (epicBranch) {
           try {
-            const epicMergedOutput = execSync(`git branch --merged ${epicBranch}`, {
-              cwd: projectPath,
-              encoding: 'utf-8',
-              timeout: 5_000,
-              stdio: 'pipe',
-            });
+            const { stdout: epicMergedOutput } = await execFileAsync(
+              'git',
+              ['branch', '--merged', epicBranch],
+              {
+                cwd: projectPath,
+                encoding: 'utf-8',
+                timeout: 5_000,
+              }
+            );
             const epicMergedBranches = new Set(
               epicMergedOutput
                 .split('\n')

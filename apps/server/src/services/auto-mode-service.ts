@@ -654,9 +654,14 @@ export class AutoModeService {
   /**
    * Reset failure tracking for a specific project
    * @param projectPath - The project to reset failure tracking for
+   * @param branchName - The branch name, or null for main worktree
    */
-  private resetFailureTrackingForProject(projectPath: string): void {
-    const projectState = this.autoLoopsByProject.get(projectPath);
+  private resetFailureTrackingForProject(
+    projectPath: string,
+    branchName: string | null = null
+  ): void {
+    const worktreeKey = getWorktreeAutoLoopKey(projectPath, branchName);
+    const projectState = this.autoLoopsByProject.get(worktreeKey);
     if (projectState) {
       projectState.consecutiveFailures = [];
       projectState.pausedDueToFailures = false;
@@ -674,9 +679,11 @@ export class AutoModeService {
   /**
    * Record a successful feature completion to reset consecutive failure count for a project
    * @param projectPath - The project to record success for
+   * @param branchName - The branch name, or null for main worktree
    */
-  private recordSuccessForProject(projectPath: string): void {
-    const projectState = this.autoLoopsByProject.get(projectPath);
+  private recordSuccessForProject(projectPath: string, branchName: string | null = null): void {
+    const worktreeKey = getWorktreeAutoLoopKey(projectPath, branchName);
+    const projectState = this.autoLoopsByProject.get(worktreeKey);
     if (projectState) {
       projectState.consecutiveFailures = [];
     }
@@ -1625,7 +1632,7 @@ export class AutoModeService {
       await this.updateFeatureStatus(projectPath, featureId, finalStatus);
 
       // Record success to reset consecutive failure tracking
-      this.recordSuccess();
+      this.recordSuccessForProject(projectPath, feature?.branchName ?? null);
 
       // Record learnings and memory usage after successful feature completion
       try {
@@ -1757,6 +1764,11 @@ export class AutoModeService {
           logger.error(
             `Feature ${featureId} hit max turns limit ${MAX_MAX_TURNS_RETRIES} times, giving up.`
           );
+          // Persist terminal status so the feature doesn't stay stuck in running/in-progress
+          await this.updateFeatureStatus(projectPath, featureId, 'failed');
+          await this.featureLoader.update(projectPath, featureId, {
+            error: `Exceeded max-turns retry limit (${MAX_MAX_TURNS_RETRIES} retries)`,
+          });
           this.emitAutoModeEvent('auto_mode_feature_complete', {
             featureId,
             featureName: feature.title,
@@ -1906,13 +1918,14 @@ export class AutoModeService {
         // Track this failure and check if we should pause auto mode
         // This handles both specific quota/rate limit errors AND generic failures
         // that may indicate quota exhaustion (SDK doesn't always return useful errors)
-        const shouldPause = this.trackFailureAndCheckPause({
+        const featureBranch = feature?.branchName ?? null;
+        const shouldPause = this.trackFailureAndCheckPauseForProject(projectPath, featureBranch, {
           type: errorInfo.type,
           message: errorInfo.message,
         });
 
         if (shouldPause) {
-          this.signalShouldPause({
+          this.signalShouldPauseForProject(projectPath, featureBranch, {
             type: errorInfo.type,
             message: errorInfo.message,
           });
@@ -2739,7 +2752,7 @@ Address the follow-up instructions above. Review the previous work and make the 
       await this.updateFeatureStatus(projectPath, featureId, finalStatus);
 
       // Record success to reset consecutive failure tracking
-      this.recordSuccess();
+      this.recordSuccessForProject(projectPath, branchName ?? null);
 
       // Run git workflow (commit, push, PR) if enabled
       let gitWorkflowResult: Awaited<
@@ -2829,13 +2842,17 @@ Address the follow-up instructions above. Review the previous work and make the 
         });
 
         // Track this failure and check if we should pause auto mode
-        const shouldPause = this.trackFailureAndCheckPause({
-          type: errorInfo.type,
-          message: errorInfo.message,
-        });
+        const shouldPause = this.trackFailureAndCheckPauseForProject(
+          projectPath,
+          branchName ?? null,
+          {
+            type: errorInfo.type,
+            message: errorInfo.message,
+          }
+        );
 
         if (shouldPause) {
-          this.signalShouldPause({
+          this.signalShouldPauseForProject(projectPath, branchName ?? null, {
             type: errorInfo.type,
             message: errorInfo.message,
           });

@@ -14,11 +14,14 @@
  */
 
 import { createLogger } from '@automaker/utils';
-import { execSync } from 'child_process';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { GitHubComment } from '@automaker/types';
 import { codeRabbitParserService } from './coderabbit-parser-service.js';
+
+const execFileAsync = promisify(execFile);
 
 const logger = createLogger('PRFeedbackService');
 
@@ -151,7 +154,7 @@ export class PRFeedbackService {
       if (Date.now() - pr.lastCheckedAt < POLL_INTERVAL_MS * 0.8) continue;
 
       try {
-        const reviewInfo = this.fetchPRReviewStatus(pr);
+        const reviewInfo = await this.fetchPRReviewStatus(pr);
         pr.lastCheckedAt = Date.now();
 
         if (!reviewInfo) continue;
@@ -165,12 +168,14 @@ export class PRFeedbackService {
 
   /**
    * Fetch PR review status from GitHub using gh CLI.
+   * Uses execFileAsync with argument array to prevent command injection.
    */
-  private fetchPRReviewStatus(pr: TrackedPR): PRReviewInfo | null {
+  private async fetchPRReviewStatus(pr: TrackedPR): Promise<PRReviewInfo | null> {
     try {
-      // Get PR review decision
-      const reviewJson = execSync(
-        `gh pr view ${pr.prNumber} --json reviewDecision,reviews,comments`,
+      // Get PR review decision using argument array (no shell interpolation)
+      const { stdout: reviewJson } = await execFileAsync(
+        'gh',
+        ['pr', 'view', String(pr.prNumber), '--json', 'reviewDecision,reviews,comments'],
         {
           cwd: pr.projectPath,
           timeout: 15_000,
