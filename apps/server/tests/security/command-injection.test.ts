@@ -159,11 +159,9 @@ describe('Command Injection Prevention - Merge Route', () => {
     }
   });
 
-  it.fails('should reject branch names with shell metacharacters', async () => {
-    // SECURITY ISSUE: This test currently FAILS because the merge route
-    // uses string interpolation with execAsync, allowing command injection.
-    // Lines 43, 54, 65-66, and 93 in merge.ts need to use execGitCommand
-    // instead of execAsync to prevent this vulnerability.
+  it('should reject branch names with shell metacharacters', async () => {
+    // Validates that the merge route properly rejects branch names with shell metacharacters.
+    // Fixed by PR #129 which added input validation via isValidBranchName().
     const handler = createMergeHandler();
 
     for (const maliciousBranch of BRANCH_NAME_ATTACKS.slice(0, 5)) {
