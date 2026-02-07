@@ -26,6 +26,12 @@ import type { AuthorityService } from '../authority-service.js';
 import type { FeatureLoader } from '../feature-loader.js';
 import type { ProjectService } from '../project-service.js';
 import { simpleQuery } from '../../providers/simple-query-service.js';
+import {
+  createAgentState,
+  initializeAgent,
+  withProcessingGuard,
+  type AgentState,
+} from './agent-utils.js';
 
 const logger = createLogger('ProjMAgent');
 
@@ -35,16 +41,19 @@ const POLL_INTERVAL_MS = 15_000;
 /** Model used for milestone planning */
 const PLANNING_MODEL = 'claude-sonnet-4-20250514';
 
+/** Custom state for ProjM agent */
+interface ProjMCustomState {
+  pollTimers: Map<string, ReturnType<typeof setInterval>>;
+}
+
 export class ProjMAuthorityAgent {
   private readonly events: EventEmitter;
   private readonly authorityService: AuthorityService;
   private readonly featureLoader: FeatureLoader;
   private readonly projectService: ProjectService;
 
-  private agents = new Map<string, AuthorityAgent>();
-  private initializedProjects = new Set<string>();
-  private processing = new Set<string>();
-  private pollTimers = new Map<string, ReturnType<typeof setInterval>>();
+  /** Agent state (agents, initialization, processing tracking, poll timers) */
+  private readonly state: AgentState<ProjMCustomState>;
 
   constructor(
     events: EventEmitter,
@@ -56,6 +65,9 @@ export class ProjMAuthorityAgent {
     this.authorityService = authorityService;
     this.featureLoader = featureLoader;
     this.projectService = projectService;
+    this.state = createAgentState<ProjMCustomState>({
+      pollTimers: new Map(),
+    });
 
     // Listen for PM approval events (features moving to 'approved')
     this.events.subscribe((type, payload) => {
@@ -66,7 +78,7 @@ export class ProjMAuthorityAgent {
           milestones?: Array<{ title: string; description: string }>;
           complexity?: string;
         };
-        if (this.initializedProjects.has(data.projectPath)) {
+        if (this.state.isInitialized(data.projectPath)) {
           void this.handleApprovedIdea(data);
         }
       }
@@ -74,7 +86,7 @@ export class ProjMAuthorityAgent {
       // Also listen for legacy pm-epic-created and pm-research-completed for backward compat
       if (type === 'authority:pm-epic-created') {
         const data = payload as { projectPath: string; featureId?: string; epicId?: string };
-        if (this.initializedProjects.has(data.projectPath)) {
+        if (this.state.isInitialized(data.projectPath)) {
           void this.scanForPlannedFeatures(data.projectPath);
         }
       }
@@ -85,35 +97,36 @@ export class ProjMAuthorityAgent {
    * Initialize the ProjM agent for a project.
    */
   async initialize(projectPath: string): Promise<void> {
-    if (this.initializedProjects.has(projectPath)) return;
+    await initializeAgent(
+      this.state,
+      this.authorityService,
+      'project-manager',
+      projectPath,
+      async () => {
+        // Scan for existing approved/planned features
+        await this.scanForApprovedFeatures(projectPath);
+        await this.scanForPlannedFeatures(projectPath);
 
-    const agent = await this.authorityService.registerAgent('project-manager', projectPath);
-    this.agents.set(projectPath, agent);
-    this.initializedProjects.add(projectPath);
-    logger.info(`ProjM agent registered for project: ${agent.id}`);
-
-    // Scan for existing approved/planned features
-    await this.scanForApprovedFeatures(projectPath);
-    await this.scanForPlannedFeatures(projectPath);
-
-    // Start periodic polling for milestone completion checks
-    const timer = setInterval(() => {
-      void this.scanForPlannedFeatures(projectPath);
-      void this.checkMilestoneCompletion(projectPath);
-    }, POLL_INTERVAL_MS);
-    this.pollTimers.set(projectPath, timer);
+        // Start periodic polling for milestone completion checks
+        const timer = setInterval(() => {
+          void this.scanForPlannedFeatures(projectPath);
+          void this.checkMilestoneCompletion(projectPath);
+        }, POLL_INTERVAL_MS);
+        this.state.custom.pollTimers.set(projectPath, timer);
+      }
+    );
   }
 
   /**
    * Stop the ProjM agent for a project.
    */
   stop(projectPath: string): void {
-    const timer = this.pollTimers.get(projectPath);
+    const timer = this.state.custom.pollTimers.get(projectPath);
     if (timer) {
       clearInterval(timer);
-      this.pollTimers.delete(projectPath);
+      this.state.custom.pollTimers.delete(projectPath);
     }
-    this.initializedProjects.delete(projectPath);
+    this.state.removeInitialized(projectPath);
     logger.info(`ProjM agent stopped for project: ${projectPath}`);
   }
 
@@ -128,99 +141,98 @@ export class ProjMAuthorityAgent {
     complexity?: string;
   }): Promise<void> {
     const { projectPath, featureId, milestones } = data;
-    if (this.processing.has(featureId)) return;
-    this.processing.add(featureId);
+    return withProcessingGuard(this.state, featureId, async () => {
+      try {
+        const agent = this.state.getAgent(projectPath);
+        if (!agent) return;
 
-    try {
-      const agent = this.agents.get(projectPath);
-      if (!agent) return;
+        const feature = await this.featureLoader.get(projectPath, featureId);
+        if (!feature || feature.workItemState !== 'approved') return;
 
-      const feature = await this.featureLoader.get(projectPath, featureId);
-      if (!feature || feature.workItemState !== 'approved') return;
+        logger.info(`Creating project for approved idea: "${feature.title}"`);
 
-      logger.info(`Creating project for approved idea: "${feature.title}"`);
+        // Submit proposal to create project
+        const decision = await this.authorityService.submitProposal(
+          {
+            who: agent.id,
+            what: 'create_work',
+            target: featureId,
+            justification: `Creating project with milestone-gated execution for "${feature.title}"`,
+            risk: 'low',
+          },
+          projectPath
+        );
 
-      // Submit proposal to create project
-      const decision = await this.authorityService.submitProposal(
-        {
-          who: agent.id,
-          what: 'create_work',
-          target: featureId,
-          justification: `Creating project with milestone-gated execution for "${feature.title}"`,
-          risk: 'low',
-        },
-        projectPath
-      );
+        if (decision.verdict !== 'allow') {
+          logger.warn(`Project creation not allowed for ${featureId}: ${decision.reason}`);
+          return;
+        }
 
-      if (decision.verdict !== 'allow') {
-        logger.warn(`Project creation not allowed for ${featureId}: ${decision.reason}`);
-        return;
-      }
+        // Build milestone stubs from PM analysis
+        const milestoneInputs = milestones?.length
+          ? milestones.map((m, i) => ({
+              title: m.title,
+              description: m.description,
+              // Only first milestone gets phases planned
+              phases:
+                i === 0
+                  ? [] // Will be filled by planning below
+                  : [],
+            }))
+          : [
+              {
+                title: feature.title || 'Implementation',
+                description: feature.description || '',
+                phases: [] as Array<{ title: string; description: string }>,
+              },
+            ];
 
-      // Build milestone stubs from PM analysis
-      const milestoneInputs = milestones?.length
-        ? milestones.map((m, i) => ({
-            title: m.title,
-            description: m.description,
-            // Only first milestone gets phases planned
-            phases:
-              i === 0
-                ? [] // Will be filled by planning below
-                : [],
-          }))
-        : [
-            {
-              title: feature.title || 'Implementation',
-              description: feature.description || '',
-              phases: [] as Array<{ title: string; description: string }>,
-            },
-          ];
+        // Create the project with milestone stubs
+        const slug = this.generateSlug(feature.title || 'feature');
 
-      // Create the project with milestone stubs
-      const slug = this.generateSlug(feature.title || 'feature');
-
-      const project = await this.projectService.createProject(projectPath, {
-        slug,
-        title: feature.title || 'Untitled Project',
-        goal: feature.description || '',
-        milestones: milestoneInputs,
-      });
-
-      // Link the original feature to this project
-      await this.featureLoader.update(projectPath, featureId, {
-        projectSlug: project.slug,
-        isEpic: true,
-        epicColor: '#6366f1',
-      });
-
-      // Set milestone statuses: first = 'planning', rest = 'stub'
-      for (let i = 0; i < project.milestones.length; i++) {
-        project.milestones[i].status = i === 0 ? 'planning' : ('stub' as MilestoneStatus);
-      }
-      await this.projectService.updateProject(projectPath, project.slug, {
-        status: 'active',
-      });
-
-      // Emit milestone planning started for M1
-      if (project.milestones.length > 0) {
-        this.events.emit('milestone:planning-started', {
-          projectPath,
-          projectTitle: project.title,
-          projectSlug: project.slug,
-          milestoneTitle: project.milestones[0].title,
-          milestoneNumber: 1,
+        const project = await this.projectService.createProject(projectPath, {
+          slug,
+          title: feature.title || 'Untitled Project',
+          goal: feature.description || '',
+          milestones: milestoneInputs,
         });
+
+        // Link the original feature to this project
+        await this.featureLoader.update(projectPath, featureId, {
+          projectSlug: project.slug,
+          isEpic: true,
+          epicColor: '#6366f1',
+        });
+
+        // Set milestone statuses: first = 'planning', rest = 'stub'
+        for (let i = 0; i < project.milestones.length; i++) {
+          project.milestones[i].status = i === 0 ? 'planning' : ('stub' as MilestoneStatus);
+        }
+        await this.projectService.updateProject(projectPath, project.slug, {
+          status: 'active',
+        });
+
+        // Emit milestone planning started for M1
+        if (project.milestones.length > 0) {
+          this.events.emit('milestone:planning-started', {
+            projectPath,
+            projectTitle: project.title,
+            projectSlug: project.slug,
+            milestoneTitle: project.milestones[0].title,
+            milestoneNumber: 1,
+          });
+        }
+
+        // Plan the first milestone in detail
+        await this.planMilestone(projectPath, project.slug, 0, feature);
+
+        logger.info(
+          `Project "${project.slug}" created with ${project.milestones.length} milestones`
+        );
+      } catch (error) {
+        logger.error(`Failed to create project for ${featureId}:`, error);
       }
-
-      // Plan the first milestone in detail
-      await this.planMilestone(projectPath, project.slug, 0, feature);
-
-      logger.info(`Project "${project.slug}" created with ${project.milestones.length} milestones`);
-    } catch (error) {
-      logger.error(`Failed to create project for ${featureId}:`, error);
-    } finally {
-      this.processing.delete(featureId);
-    }
+    });
   }
 
   /**
@@ -567,7 +579,7 @@ Decompose this milestone into implementable phases.`;
     try {
       const features = await this.featureLoader.getAll(projectPath);
       const approved = features.filter(
-        (f) => f.workItemState === 'approved' && !f.projectSlug && !this.processing.has(f.id)
+        (f) => f.workItemState === 'approved' && !f.projectSlug && !this.state.isProcessing(f.id)
       );
 
       for (const feature of approved) {
@@ -588,7 +600,7 @@ Decompose this milestone into implementable phases.`;
     try {
       const features = await this.featureLoader.getAll(projectPath);
       const planned = features.filter(
-        (f) => f.workItemState === 'planned' && !this.processing.has(f.id)
+        (f) => f.workItemState === 'planned' && !this.state.isProcessing(f.id)
       );
 
       for (const feature of planned) {
@@ -605,16 +617,12 @@ Decompose this milestone into implementable phases.`;
    * Transition to 'ready' state.
    */
   private async processPlannedFeature(projectPath: string, feature: Feature): Promise<void> {
-    if (this.processing.has(feature.id)) return;
-    this.processing.add(feature.id);
-
-    try {
-      const agent = this.agents.get(projectPath);
+    return withProcessingGuard(this.state, feature.id, async () => {
+      const agent = this.state.getAgent(projectPath);
       if (!agent) return;
 
       // Skip features that belong to a project (handled by milestone flow)
       if (feature.projectSlug) {
-        this.processing.delete(feature.id);
         return;
       }
 
@@ -652,11 +660,7 @@ Decompose this milestone into implementable phases.`;
       });
 
       logger.info(`Feature "${feature.title}" transitioned to ready`);
-    } catch (error) {
-      logger.error(`Failed to process planned feature ${feature.id}:`, error);
-    } finally {
-      this.processing.delete(feature.id);
-    }
+    });
   }
 
   /**
@@ -726,6 +730,6 @@ Decompose this milestone into implementable phases.`;
   }
 
   getAgent(projectPath: string): AuthorityAgent | null {
-    return this.agents.get(projectPath) ?? null;
+    return this.state.getAgent(projectPath);
   }
 }
