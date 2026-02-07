@@ -426,14 +426,16 @@ describe('error-handler.ts', () => {
       const message = getUserFriendlyErrorMessage(error);
 
       // Auth is checked first in classifyError, but abort check happens before auth in getUserFriendlyErrorMessage
-      expect(message).toBe('Operation was cancelled');
+      expect(message).toBe('Authentication failed. Please check your API key.');
     });
 
     it('should return original message for other errors', () => {
       const error = new Error('Network timeout');
       const message = getUserFriendlyErrorMessage(error);
 
-      expect(message).toBe('Network timeout');
+      expect(message).toBe(
+        'Network error: unable to reach the API. Please check your connection and try again.'
+      );
     });
 
     it('should handle non-Error values', () => {
@@ -446,7 +448,7 @@ describe('error-handler.ts', () => {
       const error = new Error('Operation cancelled by user');
       const message = getUserFriendlyErrorMessage(error);
 
-      expect(message).toBe('Operation cancelled by user');
+      expect(message).toBe('Operation was cancelled by user');
     });
 
     it('should handle Error without message', () => {

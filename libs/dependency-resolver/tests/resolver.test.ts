@@ -287,7 +287,9 @@ describe('resolver.ts', () => {
       const feature = createFeature('A', { dependencies: ['Dep'] });
       const allFeatures = [dep, feature];
 
-      expect(areDependenciesSatisfied(feature, allFeatures, { skipVerification: true })).toBe(false);
+      expect(areDependenciesSatisfied(feature, allFeatures, { skipVerification: true })).toBe(
+        false
+      );
     });
 
     it('should return false when dependency is missing', () => {

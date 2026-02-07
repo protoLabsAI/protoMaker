@@ -1008,7 +1008,8 @@ const tools: Tool[] = [
         },
         description: {
           type: 'string',
-          description: 'PRD description with situation, problem, approach, results, and constraints',
+          description:
+            'PRD description with situation, problem, approach, results, and constraints',
         },
         complexity: {
           type: 'string',
@@ -1611,7 +1612,9 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       // Auto-acknowledge to advance cursor after successful digest
       await apiCall('/briefing/ack', {
         projectPath: args.projectPath,
-      }).catch(() => {/* ack failure is non-critical */});
+      }).catch(() => {
+        /* ack failure is non-critical */
+      });
       return digestResult;
     }
 

@@ -33,7 +33,11 @@ export function createCosRoutes(
    * POST /api/cos/submit-prd
    * Submit a SPARC PRD from the Chief of Staff for automatic decomposition
    */
-  router.post('/submit-prd', validatePathParams('projectPath'), createSubmitPrdHandler(events, featureLoader, agents));
+  router.post(
+    '/submit-prd',
+    validatePathParams('projectPath'),
+    createSubmitPrdHandler(events, featureLoader, agents)
+  );
 
   return router;
 }

@@ -40,11 +40,7 @@ export function createBriefingRoutes(
   );
 
   // Acknowledge briefing
-  router.post(
-    '/ack',
-    validatePathParams('projectPath'),
-    createAckHandler(briefingCursorService)
-  );
+  router.post('/ack', validatePathParams('projectPath'), createAckHandler(briefingCursorService));
 
   return router;
 }

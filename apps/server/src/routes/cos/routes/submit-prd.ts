@@ -63,7 +63,10 @@ export function createSubmitPrdHandler(
 
       // Validate complexity if provided
       const VALID_COMPLEXITIES = ['small', 'medium', 'large', 'architectural'] as const;
-      if (complexity && !VALID_COMPLEXITIES.includes(complexity as (typeof VALID_COMPLEXITIES)[number])) {
+      if (
+        complexity &&
+        !VALID_COMPLEXITIES.includes(complexity as (typeof VALID_COMPLEXITIES)[number])
+      ) {
         res.status(400).json({
           success: false,
           error: `complexity must be one of: ${VALID_COMPLEXITIES.join(', ')}`,
@@ -132,7 +135,9 @@ export function createSubmitPrdHandler(
           milestoneCount: milestones?.length || 0,
         });
       } catch (emitError) {
-        logger.warn(`Event emission failed after feature creation (featureId: ${feature.id}): ${emitError}`);
+        logger.warn(
+          `Event emission failed after feature creation (featureId: ${feature.id}): ${emitError}`
+        );
       }
 
       logger.info(

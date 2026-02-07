@@ -153,12 +153,7 @@ export function createDigestHandler(
       // Calculate the since timestamp
       let sinceTimestamp: string;
       try {
-        sinceTimestamp = await calculateSince(
-          briefingCursorService,
-          projectPath,
-          timeRange,
-          since
-        );
+        sinceTimestamp = await calculateSince(briefingCursorService, projectPath, timeRange, since);
       } catch (validationError) {
         res.status(400).json({ success: false, error: (validationError as Error).message });
         return;
