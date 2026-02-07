@@ -1,0 +1,73 @@
+name: Generate Changelog
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      since_tag:
+        description: 'Generate changelog since this tag (e.g., v0.13.0)'
+        required: false
+        type: string
+
+jobs:
+  changelog:
+    runs-on: self-hosted
+    if: github.repository == 'proto-labs-ai/automaker'
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        run: |
+          cd /home/josh/dev/automaker
+          git fetch origin main --tags
+          git checkout main
+          git pull origin main
+
+      - name: Determine version range
+        id: range
+        run: |
+          cd /home/josh/dev/automaker
+          if [ -n "${{ inputs.since_tag }}" ]; then
+            SINCE_TAG="${{ inputs.since_tag }}"
+          else
+            SINCE_TAG=$(git tag --sort=-v:refname | head -2 | tail -1)
+          fi
+          CURRENT_TAG="${{ github.event.release.tag_name }}"
+          if [ -z "$CURRENT_TAG" ]; then
+            CURRENT_TAG=$(git tag --sort=-v:refname | head -1)
+          fi
+          echo "since_tag=${SINCE_TAG}" >> $GITHUB_OUTPUT
+          echo "current_tag=${CURRENT_TAG}" >> $GITHUB_OUTPUT
+
+      - name: Generate changelog
+        run: |
+          cd /home/josh/dev/automaker
+          ./scripts/generate-changelog.sh \
+            "${{ steps.range.outputs.since_tag }}" \
+            "${{ steps.range.outputs.current_tag }}"
+
+      - name: Commit and push
+        run: |
+          cd /home/josh/dev/automaker
+          git add CHANGELOG.md
+          if git diff --cached --quiet; then
+            echo "No changelog changes to commit"
+          else
+            git commit -m "docs: update CHANGELOG.md for ${{ steps.range.outputs.current_tag }}"
+            git push origin main
+          fi
+
+      - name: Update release notes
+        if: github.event.release.tag_name != ''
+        run: |
+          cd /home/josh/dev/automaker
+          TAG="${{ steps.range.outputs.current_tag }}"
+          if [ -f /tmp/changelog-entry.md ]; then
+            EXISTING=$(gh release view "$TAG" --json body --jq '.body' 2>/dev/null || echo "")
+            CHANGELOG=$(cat /tmp/changelog-entry.md)
+            gh release edit "$TAG" --notes "${EXISTING:+$EXISTING
+
+---
+}${CHANGELOG}" || true
+fi

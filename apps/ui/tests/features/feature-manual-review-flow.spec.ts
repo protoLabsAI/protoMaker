@@ -22,6 +22,7 @@ import {
   getKanbanColumn,
   authenticateForTests,
   handleLoginScreenIfPresent,
+  syncTestProjectToServer,
 } from '../utils';
 
 const TEST_TEMP_DIR = createTempDirPath('manual-review-test');
@@ -92,6 +93,10 @@ test.describe('Feature Manual Review Flow', () => {
     await setupRealProject(page, projectPath, projectName, { setAsCurrent: true });
 
     await authenticateForTests(page);
+
+    // Sync the test project to the server so it knows where to find features.
+    // Must be called after auth (API requires session cookie).
+    await syncTestProjectToServer(page, projectPath, projectName);
 
     // Navigate to board - feature is already on disk from beforeAll
     await page.goto('/board');

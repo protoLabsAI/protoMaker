@@ -1,0 +1,136 @@
+name: Linear Issue Sync
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  sync:
+    runs-on: self-hosted
+    if: >
+      github.repository == 'proto-labs-ai/automaker' &&
+      github.event.pull_request.merged == true
+    timeout-minutes: 5
+    steps:
+      - name: Extract Linear issue IDs
+        id: issues
+        run: |
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          PR_BODY=$(cat <<'PREOF'
+          ${{ github.event.pull_request.body }}
+          PREOF
+          )
+          PR_BRANCH="${{ github.event.pull_request.head.ref }}"
+
+          # Match PRO-NNN patterns in title, body, and branch name
+          ISSUES=$(echo "${PR_TITLE} ${PR_BODY} ${PR_BRANCH}" | grep -oP 'PRO-\d+' | sort -u | tr '\n' ' ')
+
+          if [ -z "$ISSUES" ]; then
+            echo "No Linear issue IDs found in PR"
+            echo "found=false" >> $GITHUB_OUTPUT
+          else
+            echo "Found Linear issues: ${ISSUES}"
+            echo "found=true" >> $GITHUB_OUTPUT
+            echo "issues=${ISSUES}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Update Linear issues
+        if: steps.issues.outputs.found == 'true'
+        env:
+          LINEAR_API_TOKEN: ${{ secrets.LINEAR_API_TOKEN }}
+        run: |
+          ISSUES="${{ steps.issues.outputs.issues }}"
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          PR_URL="${{ github.event.pull_request.html_url }}"
+          MERGE_COMMIT="${{ github.event.pull_request.merge_commit_sha }}"
+          SHORT_SHA="${MERGE_COMMIT:0:7}"
+
+          for ISSUE_ID in $ISSUES; do
+            echo "Processing ${ISSUE_ID}..."
+
+            # Get the issue to find its current state
+            ISSUE_DATA=$(curl -sf \
+              -H "Authorization: ${LINEAR_API_TOKEN}" \
+              -H "Content-Type: application/json" \
+              -d "{\"query\": \"query { issueSearch(filter: { identifier: { eq: \\\"${ISSUE_ID}\\\" } }) { nodes { id state { name type } } } }\"}" \
+              https://api.linear.app/graphql 2>/dev/null)
+
+            if [ -z "$ISSUE_DATA" ]; then
+              echo "  Could not fetch ${ISSUE_ID}, skipping"
+              continue
+            fi
+
+            ISSUE_UUID=$(echo "$ISSUE_DATA" | python3 -c "
+          import sys, json
+          data = json.load(sys.stdin)
+          nodes = data.get('data', {}).get('issueSearch', {}).get('nodes', [])
+          print(nodes[0]['id'] if nodes else '')
+          " 2>/dev/null)
+
+            STATE_TYPE=$(echo "$ISSUE_DATA" | python3 -c "
+          import sys, json
+          data = json.load(sys.stdin)
+          nodes = data.get('data', {}).get('issueSearch', {}).get('nodes', [])
+          print(nodes[0]['state']['type'] if nodes else '')
+          " 2>/dev/null)
+
+            if [ -z "$ISSUE_UUID" ]; then
+              echo "  Issue ${ISSUE_ID} not found in Linear"
+              continue
+            fi
+
+            # Add a comment about the merged PR
+            COMMENT_BODY="PR [#${PR_NUMBER}](${PR_URL}) merged (\`${SHORT_SHA}\`): ${PR_TITLE}"
+            curl -sf \
+              -H "Authorization: ${LINEAR_API_TOKEN}" \
+              -H "Content-Type: application/json" \
+              -d "{\"query\": \"mutation { commentCreate(input: { issueId: \\\"${ISSUE_UUID}\\\", body: \\\"${COMMENT_BODY}\\\" }) { success } }\"}" \
+              https://api.linear.app/graphql > /dev/null 2>&1
+
+            echo "  Added merge comment to ${ISSUE_ID}"
+
+            # Transition to Done if currently in a started state
+            if [ "$STATE_TYPE" = "started" ] || [ "$STATE_TYPE" = "unstarted" ]; then
+              # Get Done state ID for the team
+              DONE_STATE_ID=$(echo "$ISSUE_DATA" | python3 -c "
+          import sys, json
+          # We need to query for the Done state - use a separate query
+          " 2>/dev/null)
+
+              # Use the GraphQL API to transition
+              curl -sf \
+                -H "Authorization: ${LINEAR_API_TOKEN}" \
+                -H "Content-Type: application/json" \
+                -d "{\"query\": \"mutation { issueUpdate(id: \\\"${ISSUE_UUID}\\\", input: { stateId: \\\"98ac15fb-8720-4276-884c-91914502df38\\\" }) { success } }\"}" \
+                https://api.linear.app/graphql > /dev/null 2>&1
+
+              echo "  Transitioned ${ISSUE_ID} to Done"
+            else
+              echo "  ${ISSUE_ID} is in ${STATE_TYPE} state, not transitioning"
+            fi
+          done
+
+      - name: Notify Discord
+        if: steps.issues.outputs.found == 'true'
+        run: |
+          ISSUES="${{ steps.issues.outputs.issues }}"
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          PR_URL="${{ github.event.pull_request.html_url }}"
+
+          # Build issue links
+          ISSUE_LINKS=""
+          for ISSUE_ID in $ISSUES; do
+            ISSUE_LINKS="${ISSUE_LINKS}[${ISSUE_ID}](https://linear.app/protolabsai/issue/${ISSUE_ID}) "
+          done
+
+          MSG="PR [#${PR_NUMBER}](${PR_URL}) merged: ${PR_TITLE}\nLinear: ${ISSUE_LINKS}"
+
+          if [ -n "${DISCORD_DEPLOY_WEBHOOK:-}" ]; then
+            curl -sf -H "Content-Type: application/json" \
+              -d "{\"content\": \"${MSG}\"}" \
+              "$DISCORD_DEPLOY_WEBHOOK" 2>/dev/null || true
+          fi
+        env:
+          DISCORD_DEPLOY_WEBHOOK: ${{ secrets.DISCORD_DEPLOY_WEBHOOK }}
