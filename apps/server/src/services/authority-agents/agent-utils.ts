@@ -8,7 +8,7 @@
  * - Event listener registration
  */
 
-import type { AuthorityAgent } from '../authority-service.js';
+import type { AuthorityAgent, AuthorityRole } from '@automaker/types';
 import { createLogger } from '@automaker/utils';
 
 const logger = createLogger('AgentUtils');
@@ -222,9 +222,9 @@ export interface InitializeAgentOptions {
 export async function initializeAgent(
   state: AgentState,
   authorityService: {
-    registerAgent: (role: string, projectPath: string) => Promise<AuthorityAgent>;
+    registerAgent: (role: AuthorityRole, projectPath: string) => Promise<AuthorityAgent>;
   },
-  role: string,
+  role: AuthorityRole,
   projectPath: string,
   setup?: (agent: AuthorityAgent) => Promise<void>,
   options: InitializeAgentOptions = {}
