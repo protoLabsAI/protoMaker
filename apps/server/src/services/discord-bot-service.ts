@@ -569,7 +569,12 @@ export class DiscordBotService {
         return;
       }
 
-      const result = await response.json();
+      const result = (await response.json()) as {
+        success: boolean;
+        filesCreated: string[];
+        projectAdded: boolean;
+        error?: string;
+      };
 
       // Build success message
       const lines = [
