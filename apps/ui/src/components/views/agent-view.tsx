@@ -44,6 +44,7 @@ export function AgentView() {
   }, []);
 
   const [modelSelection, setModelSelection] = useState<PhaseModelEntry>({ model: 'claude-sonnet' });
+  // TODO: Wire agentConfig to useElectronAgent so maxTurns and systemPromptOverride take effect
   const [agentConfig, setAgentConfig] = useState<AgentConfig>({
     maxTurns: 200,
     systemPromptOverride: '',

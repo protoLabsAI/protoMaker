@@ -238,8 +238,8 @@ export class PRFeedbackService {
           .join('\n');
 
         // Parse CodeRabbit comments using structured parser for severity/category
-        const ghComments: GitHubComment[] = reviewInfo.comments.map((c) => ({
-          id: `${pr.prNumber}-${c.createdAt}`,
+        const ghComments: GitHubComment[] = reviewInfo.comments.map((c, idx) => ({
+          id: `${pr.prNumber}-${c.createdAt}-${idx}`,
           author: { login: c.author },
           body: c.body,
           createdAt: c.createdAt,

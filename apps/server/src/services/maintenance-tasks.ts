@@ -10,14 +10,18 @@
  */
 
 import { createLogger } from '@automaker/utils';
-import { execSync } from 'child_process';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
 import type { SchedulerService } from './scheduler-service.js';
-import type { FeatureLoader } from './feature-loader.js';
 import type { EventEmitter } from '../lib/events.js';
 import type { AutoModeService } from './auto-mode-service.js';
 import type { FeatureHealthService } from './feature-health-service.js';
 
+const execFileAsync = promisify(execFile);
+
 const logger = createLogger('MaintenanceTasks');
+
+const STALE_THRESHOLD_MS = 2 * 60 * 60 * 1000; // 2 hours
 
 /**
  * Register all maintenance tasks with the scheduler.
@@ -25,7 +29,6 @@ const logger = createLogger('MaintenanceTasks');
  */
 export async function registerMaintenanceTasks(
   scheduler: SchedulerService,
-  featureLoader: FeatureLoader,
   events: EventEmitter,
   autoModeService: AutoModeService,
   featureHealthService?: FeatureHealthService
@@ -38,7 +41,7 @@ export async function registerMaintenanceTasks(
     'Stale Feature Detection',
     '0 * * * *', // Every hour at :00
     async () => {
-      await checkStaleFeatures(featureLoader, events, autoModeService);
+      await checkStaleFeatures(events, autoModeService);
     }
   );
 
@@ -48,7 +51,8 @@ export async function registerMaintenanceTasks(
     'Stale Worktree Detection',
     '0 3 * * *', // Daily at 3:00 AM
     async () => {
-      await detectStaleWorktrees(events);
+      const projectPaths = getKnownProjectPaths(autoModeService);
+      await detectStaleWorktrees(events, projectPaths);
     }
   );
 
@@ -58,7 +62,8 @@ export async function registerMaintenanceTasks(
     'Merged Branch Cleanup Check',
     '0 4 * * 0', // Sunday at 4:00 AM
     async () => {
-      await checkMergedBranches(events);
+      const projectPaths = getKnownProjectPaths(autoModeService);
+      await checkMergedBranches(events, projectPaths);
     }
   );
 
@@ -69,7 +74,8 @@ export async function registerMaintenanceTasks(
       'Board Health Reconciliation',
       '0 */6 * * *', // Every 6 hours
       async () => {
-        await runBoardHealthAudit(featureHealthService, events);
+        const projectPaths = getKnownProjectPaths(autoModeService);
+        await runBoardHealthAudit(featureHealthService, events, projectPaths);
       }
     );
     logger.info('Registered 4 maintenance tasks');
@@ -79,16 +85,28 @@ export async function registerMaintenanceTasks(
 }
 
 /**
+ * Get known project paths from auto-mode service running agents.
+ * Falls back to empty array if no projects are known.
+ */
+function getKnownProjectPaths(autoModeService: AutoModeService): string[] {
+  const paths = new Set<string>();
+
+  // Add projects with active auto-loops
+  for (const p of autoModeService.getActiveAutoLoopProjects()) {
+    paths.add(p);
+  }
+
+  return Array.from(paths);
+}
+
+/**
  * Check for features stuck in running state for too long.
  * Uses the auto-mode service's running agents to detect stale executions.
  */
 async function checkStaleFeatures(
-  _featureLoader: FeatureLoader,
   events: EventEmitter,
   autoModeService: AutoModeService
 ): Promise<void> {
-  const STALE_THRESHOLD_MS = 2 * 60 * 60 * 1000; // 2 hours
-
   logger.info('Checking for stale features...');
 
   try {
@@ -129,16 +147,28 @@ async function checkStaleFeatures(
 
 /**
  * Detect stale git worktrees (branches already merged or inactive).
+ * Uses execFileAsync to avoid command injection and run asynchronously.
  */
-async function detectStaleWorktrees(events: EventEmitter): Promise<void> {
+async function detectStaleWorktrees(
+  events: EventEmitter,
+  projectPaths: string[]
+): Promise<void> {
   logger.info('Checking for stale worktrees...');
 
   try {
+    // Use first known project path as cwd, or skip if none
+    const cwd = projectPaths[0];
+    if (!cwd) {
+      logger.info('No known project paths, skipping stale worktree detection');
+      return;
+    }
+
     // List all worktrees
-    const output = execSync('git worktree list --porcelain', {
-      encoding: 'utf-8',
-      timeout: 10_000,
-    });
+    const { stdout: output } = await execFileAsync(
+      'git',
+      ['worktree', 'list', '--porcelain'],
+      { encoding: 'utf-8', timeout: 10_000, cwd }
+    );
 
     const worktrees = output
       .split('\n\n')
@@ -162,11 +192,12 @@ async function detectStaleWorktrees(events: EventEmitter): Promise<void> {
       if (wt.branch === 'main' || wt.branch === 'master') continue;
 
       try {
-        // Check if branch is merged into main
-        execSync(`git merge-base --is-ancestor ${wt.branch} main`, {
-          encoding: 'utf-8',
-          timeout: 5_000,
-        });
+        // Check if branch is merged into main using execFileAsync (no shell injection)
+        await execFileAsync(
+          'git',
+          ['merge-base', '--is-ancestor', wt.branch, 'main'],
+          { encoding: 'utf-8', timeout: 5_000, cwd }
+        );
         // If no error, branch IS merged into main
         staleCount++;
         staleWorktrees.push(`${wt.branch} (${wt.path})`);
@@ -193,16 +224,27 @@ async function detectStaleWorktrees(events: EventEmitter): Promise<void> {
 
 /**
  * Check for local branches that are already merged to main.
+ * Uses execFileAsync to avoid command injection and run asynchronously.
  */
-async function checkMergedBranches(events: EventEmitter): Promise<void> {
+async function checkMergedBranches(
+  events: EventEmitter,
+  projectPaths: string[]
+): Promise<void> {
   logger.info('Checking for merged branches...');
 
   try {
+    const cwd = projectPaths[0];
+    if (!cwd) {
+      logger.info('No known project paths, skipping merged branch check');
+      return;
+    }
+
     // Get branches merged into main
-    const output = execSync('git branch --merged main', {
-      encoding: 'utf-8',
-      timeout: 10_000,
-    });
+    const { stdout: output } = await execFileAsync(
+      'git',
+      ['branch', '--merged', 'main'],
+      { encoding: 'utf-8', timeout: 10_000, cwd }
+    );
 
     const mergedBranches = output
       .split('\n')
@@ -228,28 +270,42 @@ async function checkMergedBranches(events: EventEmitter): Promise<void> {
 /**
  * Run board health audit with auto-fix enabled.
  * Finds and fixes: orphaned epic refs, dangling deps, completed epics, stale running, merged-not-done.
+ * Runs against all known project paths rather than relying on process.cwd().
  */
 async function runBoardHealthAudit(
   featureHealthService: FeatureHealthService,
-  events: EventEmitter
+  events: EventEmitter,
+  projectPaths: string[]
 ): Promise<void> {
   logger.info('Running board health reconciliation...');
 
-  try {
-    // Use process.cwd() as the default project path for scheduled runs
-    const projectPath = process.cwd();
-    const report = await featureHealthService.audit(projectPath, true);
+  if (projectPaths.length === 0) {
+    logger.info('No known project paths, skipping board health audit');
+    return;
+  }
 
-    if (report.issues.length > 0) {
-      logger.info(
-        `Board health: ${report.issues.length} issues found, ${report.fixed.length} auto-fixed`
+  try {
+    let totalIssues = 0;
+    let totalFixed = 0;
+    const allIssueMessages: string[] = [];
+
+    for (const projectPath of projectPaths) {
+      const report = await featureHealthService.audit(projectPath, true);
+      totalIssues += report.issues.length;
+      totalFixed += report.fixed.length;
+      allIssueMessages.push(
+        ...report.issues.map((i) => `[${i.type}] ${i.featureTitle}: ${i.message}`)
       );
+    }
+
+    if (totalIssues > 0) {
+      logger.info(`Board health: ${totalIssues} issues found, ${totalFixed} auto-fixed`);
       events.emit('scheduler:task_completed' as Parameters<typeof events.emit>[0], {
         taskId: 'maintenance:board-health',
-        message: `Board health: ${report.issues.length} issue(s) found, ${report.fixed.length} auto-fixed`,
-        totalIssues: report.issues.length,
-        fixedCount: report.fixed.length,
-        issues: report.issues.map((i) => `[${i.type}] ${i.featureTitle}: ${i.message}`),
+        message: `Board health: ${totalIssues} issue(s) found, ${totalFixed} auto-fixed`,
+        totalIssues,
+        fixedCount: totalFixed,
+        issues: allIssueMessages,
       });
     } else {
       logger.info('Board health check: no issues found');

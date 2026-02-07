@@ -25,7 +25,8 @@ export const CardBadges = memo(function CardBadges({ feature }: CardBadgesProps)
   const hasError = !!feature.error;
   const hasAssignee = !!feature.assignee;
   const hasDueDate = !!feature.dueDate;
-  const costUsd = feature.costUsd as number | undefined;
+  // costUsd is typed as unknown on the Feature interface; narrow with typeof guard
+  const costUsd = typeof feature.costUsd === 'number' ? feature.costUsd : undefined;
   const hasCost = typeof costUsd === 'number' && costUsd > 0;
 
   if (!hasError && !hasEpic && !hasAssignee && !hasDueDate && !hasCost) {

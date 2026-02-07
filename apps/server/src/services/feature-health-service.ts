@@ -194,20 +194,25 @@ export class FeatureHealthService {
   }
 
   /**
-   * Features in running/in-progress status with no active agent.
+   * Features in running/in-progress/in_progress status with no active agent.
    */
   private async checkStaleRunning(
     features: Feature[],
     projectPath: string
   ): Promise<HealthIssue[]> {
     const issues: HealthIssue[] = [];
-    const runningStatuses = new Set(['running', 'in-progress']);
+    const runningStatuses = new Set(['running', 'in-progress', 'in_progress']);
 
     const runningFeatures = features.filter((f) => runningStatuses.has(f.status ?? ''));
     if (runningFeatures.length === 0) return issues;
 
     const runningAgents = await this.autoModeService.getRunningAgents();
-    const activeAgentIds = new Set(runningAgents.map((a) => a.featureId));
+    // Filter agents by projectPath so we only compare against agents for this project
+    const activeAgentIds = new Set(
+      runningAgents
+        .filter((a) => a.projectPath === projectPath)
+        .map((a) => a.featureId)
+    );
 
     for (const feature of runningFeatures) {
       if (activeAgentIds.has(feature.id)) continue;
@@ -226,19 +231,44 @@ export class FeatureHealthService {
   }
 
   /**
-   * Features with branches that are merged to main but not marked done.
+   * Features with branches that are merged to main (or their epic branch) but not marked done.
    */
   private checkMergedNotDone(features: Feature[], projectPath: string): HealthIssue[] {
     const issues: HealthIssue[] = [];
     const doneStatuses = new Set(['done', 'completed', 'verified']);
 
-    // Get list of branches merged into main
+    // Detect default branch (try main first, then master)
+    let defaultBranch = 'main';
+    try {
+      execSync('git rev-parse --verify main', {
+        cwd: projectPath,
+        encoding: 'utf-8',
+        timeout: 5_000,
+        stdio: 'pipe',
+      });
+    } catch {
+      try {
+        execSync('git rev-parse --verify master', {
+          cwd: projectPath,
+          encoding: 'utf-8',
+          timeout: 5_000,
+          stdio: 'pipe',
+        });
+        defaultBranch = 'master';
+      } catch {
+        // Neither main nor master exist, skip this check
+        return issues;
+      }
+    }
+
+    // Get list of branches merged into the default branch
     let mergedBranches: Set<string>;
     try {
-      const output = execSync('git branch --merged main', {
+      const output = execSync(`git branch --merged ${defaultBranch}`, {
         cwd: projectPath,
         encoding: 'utf-8',
         timeout: 10_000,
+        stdio: 'pipe',
       });
       mergedBranches = new Set(
         output
@@ -251,17 +281,54 @@ export class FeatureHealthService {
       return issues;
     }
 
+    // Build a map of epic branches for checking child features
+    const epicBranchMap = new Map<string, string>();
+    for (const f of features) {
+      if (f.isEpic && f.branchName) {
+        epicBranchMap.set(f.id, f.branchName);
+      }
+    }
+
     for (const feature of features) {
       if (!feature.branchName) continue;
       if (doneStatuses.has(feature.status ?? '')) continue;
       if (feature.isEpic) continue; // Epics are handled separately
 
-      if (mergedBranches.has(feature.branchName)) {
+      let isMerged = mergedBranches.has(feature.branchName);
+
+      // For features with an epicId, also check if branch is merged into the epic branch
+      if (!isMerged && feature.epicId) {
+        const epicBranch = epicBranchMap.get(feature.epicId);
+        if (epicBranch) {
+          try {
+            const epicMergedOutput = execSync(`git branch --merged ${epicBranch}`, {
+              cwd: projectPath,
+              encoding: 'utf-8',
+              timeout: 5_000,
+              stdio: 'pipe',
+            });
+            const epicMergedBranches = new Set(
+              epicMergedOutput
+                .split('\n')
+                .map((line) => line.trim().replace(/^\*\s*/, ''))
+                .filter((b) => b)
+            );
+            isMerged = epicMergedBranches.has(feature.branchName);
+          } catch {
+            // Epic branch check failed, skip for this feature
+          }
+        }
+      }
+
+      if (isMerged) {
+        const targetBranch = feature.epicId && epicBranchMap.get(feature.epicId)
+          ? epicBranchMap.get(feature.epicId)!
+          : defaultBranch;
         issues.push({
           type: 'merged_not_done',
           featureId: feature.id,
           featureTitle: feature.title ?? feature.id,
-          message: `Branch '${feature.branchName}' is merged to main but feature status is '${feature.status}'`,
+          message: `Branch '${feature.branchName}' is merged to ${targetBranch} but feature status is '${feature.status}'`,
           autoFixable: true,
           fix: 'Set status to done',
         });

@@ -23,6 +23,7 @@ export interface ErrorInfo {
   isCancellation: boolean;
   isRateLimit: boolean;
   isQuotaExhausted: boolean; // Session/weekly usage limit reached
+  isMaxTurns: boolean; // Agent exceeded max turn limit
   retryAfter?: number; // Seconds to wait before retrying (for rate limit errors)
   originalError: unknown;
 }

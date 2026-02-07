@@ -541,7 +541,7 @@ export function createAutoModeOptions(config: CreateSdkOptionsConfig): Options {
     ...claudeMdOptions,
     ...thinkingOptions,
     ...(config.abortController && { abortController: config.abortController }),
-    ...(config.maxBudgetUsd && { maxBudgetUsd: config.maxBudgetUsd }),
+    ...(config.maxBudgetUsd != null && { maxBudgetUsd: config.maxBudgetUsd }),
     ...(config.resume && { resume: config.resume }),
     ...mcpOptions.mcpServerOptions,
   };

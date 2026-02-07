@@ -18,6 +18,11 @@ import { HeaderMobileMenu } from './header-mobile-menu';
 
 export type { ViewMode };
 
+/** Format a USD cost value for display */
+function formatCostUsd(cost: number): string {
+  return cost < 0.01 ? '<$0.01' : `$${cost.toFixed(2)}`;
+}
+
 type AssigneeFilter = 'all' | 'my-tasks' | 'agent-tasks';
 
 interface BoardHeaderProps {
@@ -206,7 +211,7 @@ export function BoardHeader({
               <TooltipTrigger asChild>
                 <div className="flex items-center gap-1 px-2 h-8 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-medium">
                   <DollarSign className="w-3.5 h-3.5" />
-                  {totalProjectCost < 0.01 ? '<$0.01' : `$${totalProjectCost.toFixed(2)}`}
+                  {formatCostUsd(totalProjectCost)}
                 </div>
               </TooltipTrigger>
               <TooltipContent side="bottom" className="text-xs">

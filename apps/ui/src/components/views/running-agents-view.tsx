@@ -174,6 +174,7 @@ export function RunningAgentsView() {
                     )}
                     <div className="flex items-center gap-3">
                       <button
+                        type="button"
                         onClick={() => handleNavigateToProject(agent)}
                         className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
                       >

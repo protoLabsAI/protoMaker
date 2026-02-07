@@ -377,16 +377,20 @@ void discordBotService.initialize();
 // Initialize Scheduler Service with event emitter and data directory
 const schedulerService = getSchedulerService();
 schedulerService.initialize(events, DATA_DIR);
-void schedulerService.start().then(() => {
-  // Register preset maintenance tasks after scheduler is ready
-  void registerMaintenanceTasks(
-    schedulerService,
-    featureLoader,
-    events,
-    autoModeService,
-    featureHealthService
-  );
-});
+void schedulerService
+  .start()
+  .then(() => {
+    // Register preset maintenance tasks after scheduler is ready
+    return registerMaintenanceTasks(
+      schedulerService,
+      events,
+      autoModeService,
+      featureHealthService
+    );
+  })
+  .catch((err) => {
+    logger.error('Scheduler startup or maintenance task registration failed:', err);
+  });
 
 // Initialize Health Monitor Service for periodic health checks
 const healthMonitorService = getHealthMonitorService(featureLoader);

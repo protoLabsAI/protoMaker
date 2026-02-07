@@ -3,6 +3,8 @@ import { Activity, RefreshCw, CheckCircle, AlertTriangle, XCircle, Wrench } from
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
+import { useAppStore } from '@/store/app-store';
+import { apiFetch } from '@/lib/api-fetch';
 
 interface HealthMetrics {
   status: string;
@@ -47,9 +49,11 @@ function formatUptime(seconds: number): string {
   const days = Math.floor(seconds / 86400);
   const hours = Math.floor((seconds % 86400) / 3600);
   const mins = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
   if (days > 0) return `${days}d ${hours}h ${mins}m`;
   if (hours > 0) return `${hours}h ${mins}m`;
-  return `${mins}m`;
+  if (mins > 0) return `${mins}m`;
+  return `${secs}s`;
 }
 
 export function HealthSection() {
@@ -59,11 +63,13 @@ export function HealthSection() {
   const [boardLoading, setBoardLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const currentProject = useAppStore((state) => state.currentProject);
+
   const fetchHealth = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/health/detailed');
+      const res = await apiFetch('/api/health/detailed', 'GET', { skipAuth: true });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setMetrics(data);
@@ -74,35 +80,42 @@ export function HealthSection() {
     }
   }, []);
 
-  const fetchBoardHealth = useCallback(async (autoFix = false) => {
-    setBoardLoading(true);
-    try {
-      // Get current project path from the store
-      const projectPath = window.location.pathname.includes('/board')
-        ? localStorage.getItem('automaker-current-project-path')
-        : null;
-      if (!projectPath) return;
+  const fetchBoardHealth = useCallback(
+    async (autoFix = false) => {
+      setBoardLoading(true);
+      try {
+        const projectPath = currentProject?.path;
+        if (!projectPath) return;
 
-      const res = await fetch('/api/features/health', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ projectPath, autoFix }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      if (data.success) {
-        setBoardHealth(data.report);
+        const res = await apiFetch('/api/features/health', 'POST', {
+          body: { projectPath, autoFix },
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (data.success) {
+          setBoardHealth(data.report);
+        }
+      } catch {
+        // Board health is optional - don't block on failure
+      } finally {
+        setBoardLoading(false);
       }
-    } catch {
-      // Board health is optional - don't block on failure
-    } finally {
-      setBoardLoading(false);
-    }
-  }, []);
+    },
+    [currentProject?.path]
+  );
 
   useEffect(() => {
     fetchHealth();
   }, [fetchHealth]);
+
+  const handleAutoFix = useCallback(() => {
+    const confirmed = window.confirm(
+      'Auto-fix will automatically resolve fixable board health issues (reset stale features, clear orphaned references, etc.). Continue?'
+    );
+    if (confirmed) {
+      fetchBoardHealth(true);
+    }
+  }, [fetchBoardHealth]);
 
   const memoryPercent = metrics
     ? Math.round((metrics.memory.heapUsed / metrics.memory.heapTotal) * 100)
@@ -234,7 +247,7 @@ export function HealthSection() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => fetchBoardHealth(true)}
+                    onClick={handleAutoFix}
                     disabled={boardLoading}
                   >
                     <Wrench className="h-3 w-3 mr-1" />

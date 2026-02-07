@@ -1748,49 +1748,66 @@ export class AutoModeService {
           projectPath,
         });
       } else if (errorInfo.type === 'max_turns' && feature) {
-        // Special handling for error_max_turns: escalate turns and retry
+        // Special handling for error_max_turns: escalate turns and retry with cap
+        const MAX_MAX_TURNS_RETRIES = 3;
         const currentFailures = feature.failureCount ?? 0;
         const newFailureCount = currentFailures + 1;
-        const escalatedTurns = getTurnsForFeature({
-          ...feature,
-          failureCount: newFailureCount,
-        });
 
-        logger.warn(
-          `Feature ${featureId} hit max turns limit (failure #${newFailureCount}). ` +
-            `Escalating turns to ${escalatedTurns} for retry.`
-        );
-
-        await this.featureLoader.update(projectPath, featureId, {
-          failureCount: newFailureCount,
-        });
-
-        this.emitAutoModeEvent('auto_mode_progress', {
-          featureId,
-          featureName: feature.title,
-          message: `Hit turn limit. Retrying with ${escalatedTurns} turns (attempt ${newFailureCount + 1}).`,
-          projectPath,
-        });
-
-        // Remove from running features and retry with escalated turns
-        this.runningFeatures.delete(featureId);
-
-        setImmediate(() => {
-          this.executeFeature(
-            projectPath,
+        if (tempRunningFeature.retryCount >= MAX_MAX_TURNS_RETRIES) {
+          logger.error(
+            `Feature ${featureId} hit max turns limit ${MAX_MAX_TURNS_RETRIES} times, giving up.`
+          );
+          this.emitAutoModeEvent('auto_mode_feature_complete', {
             featureId,
-            useWorktrees,
-            isAutoMode,
-            providedWorktreePath,
-            {
-              retryCount: tempRunningFeature.retryCount + 1,
-              previousErrors: [...tempRunningFeature.previousErrors, errorInfo.message],
-            }
-          ).catch((retryError) => {
-            logger.error(`Max-turns retry failed for feature ${featureId}:`, retryError);
+            featureName: feature.title,
+            branchName: feature.branchName ?? null,
+            passes: false,
+            message: `Feature exceeded max-turns retry limit (${MAX_MAX_TURNS_RETRIES} retries)`,
+            projectPath,
           });
-        });
-        return;
+        } else {
+          const escalatedTurns = getTurnsForFeature({
+            ...feature,
+            failureCount: newFailureCount,
+          });
+
+          logger.warn(
+            `Feature ${featureId} hit max turns limit (failure #${newFailureCount}). ` +
+              `Escalating turns to ${escalatedTurns} for retry.`
+          );
+
+          await this.featureLoader.update(projectPath, featureId, {
+            failureCount: newFailureCount,
+          });
+
+          this.emitAutoModeEvent('auto_mode_progress', {
+            featureId,
+            featureName: feature.title,
+            message: `Hit turn limit. Retrying with ${escalatedTurns} turns (attempt ${newFailureCount + 1}).`,
+            projectPath,
+          });
+
+          // Remove from running features and retry with escalated turns using backoff
+          this.runningFeatures.delete(featureId);
+
+          const backoffMs = Math.min(1000 * Math.pow(2, tempRunningFeature.retryCount), 30_000);
+          setTimeout(() => {
+            this.executeFeature(
+              projectPath,
+              featureId,
+              useWorktrees,
+              isAutoMode,
+              providedWorktreePath,
+              {
+                retryCount: tempRunningFeature.retryCount + 1,
+                previousErrors: [...tempRunningFeature.previousErrors, errorInfo.message],
+              }
+            ).catch((retryError) => {
+              logger.error(`Max-turns retry failed for feature ${featureId}:`, retryError);
+            });
+          }, backoffMs);
+          return;
+        }
       } else {
         logger.error(`Feature ${featureId} failed:`, error);
 

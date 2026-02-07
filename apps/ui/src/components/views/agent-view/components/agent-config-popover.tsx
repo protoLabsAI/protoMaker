@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Settings2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
+
+export const DEFAULT_MAX_TURNS = 200;
 
 export interface AgentConfig {
   maxTurns: number;
@@ -25,8 +27,22 @@ const TURN_PRESETS = [
 
 export function AgentConfigPopover({ config, onConfigChange, disabled }: AgentConfigPopoverProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [localMaxTurns, setLocalMaxTurns] = useState(String(config.maxTurns));
 
-  const hasOverrides = config.maxTurns !== 200 || config.systemPromptOverride.length > 0;
+  // Sync local state when config changes externally (e.g. preset button or reset)
+  useEffect(() => {
+    setLocalMaxTurns(String(config.maxTurns));
+  }, [config.maxTurns]);
+
+  const hasOverrides =
+    config.maxTurns !== DEFAULT_MAX_TURNS || config.systemPromptOverride.length > 0;
+
+  const handleMaxTurnsBlur = () => {
+    const parsed = parseInt(localMaxTurns, 10);
+    const clamped = Math.max(10, Math.min(5000, Number.isNaN(parsed) ? DEFAULT_MAX_TURNS : parsed));
+    setLocalMaxTurns(String(clamped));
+    onConfigChange({ ...config, maxTurns: clamped });
+  };
 
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
@@ -77,13 +93,9 @@ export function AgentConfigPopover({ config, onConfigChange, disabled }: AgentCo
               type="number"
               min={10}
               max={5000}
-              value={config.maxTurns}
-              onChange={(e) =>
-                onConfigChange({
-                  ...config,
-                  maxTurns: Math.max(10, Math.min(5000, parseInt(e.target.value) || 200)),
-                })
-              }
+              value={localMaxTurns}
+              onChange={(e) => setLocalMaxTurns(e.target.value)}
+              onBlur={handleMaxTurnsBlur}
               className="w-full px-2 py-1 text-xs rounded-md bg-accent/30 border border-border/50 text-foreground"
               placeholder="Custom turns..."
             />
@@ -113,7 +125,7 @@ export function AgentConfigPopover({ config, onConfigChange, disabled }: AgentCo
               className="w-full text-xs"
               onClick={() =>
                 onConfigChange({
-                  maxTurns: 200,
+                  maxTurns: DEFAULT_MAX_TURNS,
                   systemPromptOverride: '',
                 })
               }

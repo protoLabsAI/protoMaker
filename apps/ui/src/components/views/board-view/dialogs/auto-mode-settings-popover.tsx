@@ -33,35 +33,57 @@ export function AutoModeSettingsPopover({
 
     for (const f of features) {
       if (f.isEpic) continue;
-      const status = f.status ?? 'backlog';
-      if (status === 'completed' || status === 'verified') {
-        done++;
-      } else if (status === 'in_progress') {
-        running++;
-      } else if (status === 'waiting_approval') {
-        done++; // Treat waiting_approval as nearly done
-      } else if (status === 'backlog') {
-        if (enableDependencyBlocking) {
-          const blocking = getBlockingDependencies(f, features);
-          if (blocking.length > 0) {
-            blocked++;
+      // Cast to string since server statuses include values beyond FeatureStatusWithPipeline
+      const status: string = f.status ?? 'backlog';
+      switch (status) {
+        case 'completed':
+        case 'verified':
+        case 'done':
+          done++;
+          break;
+        case 'in_progress':
+        case 'running':
+          running++;
+          break;
+        // waiting_approval is counted as done: the agent finished work and the feature
+        // is awaiting human review, so it is effectively complete from the queue perspective
+        case 'waiting_approval':
+        case 'review':
+          done++;
+          break;
+        case 'failed':
+        case 'backlog':
+        case 'pending':
+        case 'ready':
+          if (status === 'backlog' && enableDependencyBlocking) {
+            const blocking = getBlockingDependencies(f, features);
+            if (blocking.length > 0) {
+              blocked++;
+            } else {
+              backlog++;
+            }
           } else {
             backlog++;
           }
-        } else {
+          break;
+        default:
+          // Catch-all for any future or unknown statuses
           backlog++;
-        }
-      } else {
-        backlog++;
+          break;
       }
     }
-    return { backlog, blocked, running, done, total: features.filter((f) => !f.isEpic).length };
+    // Derive total from counters to ensure consistency
+    const total = backlog + blocked + running + done;
+    return { backlog, blocked, running, done, total };
   }, [features, enableDependencyBlocking]);
+
+  const donePercent = stats.total > 0 ? Math.round((stats.done / stats.total) * 100) : 0;
 
   return (
     <Popover>
       <PopoverTrigger asChild>
         <button
+          type="button"
           className="p-1 rounded hover:bg-accent/50 transition-colors"
           title="Auto Mode Settings"
           data-testid="auto-mode-settings-button"
@@ -131,7 +153,7 @@ export function AutoModeSettingsPopover({
           {/* Feature Queue Overview */}
           <div className="space-y-2 pt-2 border-t border-border/30">
             <h5 className="text-xs font-medium text-muted-foreground">Feature Queue</h5>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               <div className="flex items-center gap-1.5 text-xs">
                 <Clock className="w-3 h-3 text-muted-foreground" />
                 <span className="text-muted-foreground">Ready:</span>
@@ -154,7 +176,14 @@ export function AutoModeSettingsPopover({
               </div>
             </div>
             {stats.total > 0 && (
-              <div className="h-1.5 rounded-full bg-accent/30 overflow-hidden flex">
+              <div
+                className="h-1.5 rounded-full bg-accent/30 overflow-hidden flex"
+                role="progressbar"
+                aria-valuenow={donePercent}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label={`Feature progress: ${donePercent}% complete`}
+              >
                 {stats.done > 0 && (
                   <div
                     className="h-full bg-emerald-500"

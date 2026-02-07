@@ -212,6 +212,7 @@ export function classifyError(error: unknown): ErrorInfo {
     isCancellation,
     isRateLimit,
     isQuotaExhausted,
+    isMaxTurns,
     retryAfter,
     originalError: error,
   };
@@ -236,6 +237,10 @@ export function getUserFriendlyErrorMessage(error: unknown): string {
 
   if (info.isQuotaExhausted) {
     return 'Usage limit reached. Auto Mode has been paused. Please wait for your quota to reset or upgrade your plan.';
+  }
+
+  if (info.isMaxTurns) {
+    return 'Agent exceeded the maximum number of turns. The task may be too complex for the current turn limit. Consider increasing max turns or breaking the task into smaller parts.';
   }
 
   if (info.isRateLimit) {

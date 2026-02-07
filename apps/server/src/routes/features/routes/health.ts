@@ -11,12 +11,30 @@ import type { FeatureHealthService } from '../../../services/feature-health-serv
 export function createHealthHandler(healthService: FeatureHealthService) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
-      const { projectPath, autoFix = false } = req.body as {
-        projectPath: string;
-        autoFix?: boolean;
+      const { projectPath, autoFix } = req.body as {
+        projectPath: unknown;
+        autoFix?: unknown;
       };
 
-      const report = await healthService.audit(projectPath, autoFix);
+      // Validate projectPath is a non-empty string
+      if (typeof projectPath !== 'string' || projectPath.trim().length === 0) {
+        res.status(400).json({
+          success: false,
+          error: 'projectPath must be a non-empty string',
+        });
+        return;
+      }
+
+      // Validate autoFix is a boolean or undefined
+      if (autoFix !== undefined && typeof autoFix !== 'boolean') {
+        res.status(400).json({
+          success: false,
+          error: 'autoFix must be a boolean if provided',
+        });
+        return;
+      }
+
+      const report = await healthService.audit(projectPath, autoFix ?? false);
 
       res.json({
         success: true,
