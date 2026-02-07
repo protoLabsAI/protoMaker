@@ -658,7 +658,7 @@ app.use('/api', requireJsonContentType);
 // Mount unauthenticated routes
 app.use('/api/health', createHealthRoutes());
 app.use('/api/auth', createAuthRoutes());
-app.use('/api/setup', createSetupRoutes());
+app.use('/api/setup', createSetupRoutes(settingsService));
 
 // Mount webhooks at root level (unauthenticated - uses signature verification)
 app.use('/webhooks', createWebhooksRoutes(events, settingsService));

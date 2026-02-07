@@ -1168,6 +1168,21 @@ const tools: Tool[] = [
 
   // ========== Utilities ==========
   {
+    name: 'setup_lab',
+    description:
+      'Initialize Automaker for a new repository. Creates .automaker/ directory structure (features/, context/, memory/), generates protolab.config with defaults, creates initial CLAUDE.md, and adds project to settings.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory to initialize',
+        },
+      },
+      required: ['projectPath'],
+    },
+  },
+  {
     name: 'health_check',
     description: 'Check if the Automaker server is running and healthy.',
     inputSchema: {
@@ -1599,6 +1614,11 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       return apiCall('/ralph/list-running', {});
 
     // Utilities
+    case 'setup_lab':
+      return apiCall('/setup/project', {
+        projectPath: args.projectPath,
+      });
+
     case 'health_check': {
       const response = await fetch(`${API_URL}/api/health`);
       return response.json();
