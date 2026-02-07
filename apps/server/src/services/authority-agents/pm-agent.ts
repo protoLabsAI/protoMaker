@@ -29,6 +29,12 @@ import type { EventEmitter } from '../../lib/events.js';
 import type { AuthorityService } from '../authority-service.js';
 import type { FeatureLoader } from '../feature-loader.js';
 import { simpleQuery, streamingQuery } from '../../providers/simple-query-service.js';
+import {
+  createAgentState,
+  initializeAgent,
+  withProcessingGuard,
+  type AgentState,
+} from './agent-utils.js';
 
 const logger = createLogger('PMAgent');
 
@@ -71,14 +77,8 @@ export class PMAuthorityAgent {
   private readonly authorityService: AuthorityService;
   private readonly featureLoader: FeatureLoader;
 
-  /** Registered agent identities per project */
-  private agents = new Map<string, AuthorityAgent>();
-
-  /** Track initialized projects to avoid double-registration */
-  private initializedProjects = new Set<string>();
-
-  /** Track which ideas are being processed to avoid duplicates */
-  private processing = new Set<string>();
+  /** Agent state (agents, initialization, processing tracking) */
+  private readonly state: AgentState;
 
   /** Whether the global event listener has been registered */
   private listenerRegistered = false;
@@ -91,6 +91,7 @@ export class PMAuthorityAgent {
     this.events = events;
     this.authorityService = authorityService;
     this.featureLoader = featureLoader;
+    this.state = createAgentState();
 
     // Register the global idea listener once
     this.registerEventListener();
@@ -107,7 +108,7 @@ export class PMAuthorityAgent {
     this.events.subscribe((type, payload) => {
       if (type === 'authority:idea-injected') {
         const idea = payload as IdeaInjectedPayload;
-        if (this.initializedProjects.has(idea.projectPath)) {
+        if (this.state.isInitialized(idea.projectPath)) {
           this.handleIdeaInjected(idea);
         }
       }
@@ -119,7 +120,7 @@ export class PMAuthorityAgent {
           featureId: string;
           updatedDescription?: string;
         };
-        if (this.initializedProjects.has(data.projectPath)) {
+        if (this.state.isInitialized(data.projectPath)) {
           void this.handleCTOApproval(data.projectPath, data.featureId, data.updatedDescription);
         }
       }
@@ -132,18 +133,16 @@ export class PMAuthorityAgent {
    * Safe to call multiple times - subsequent calls are no-ops.
    */
   async initialize(projectPath: string): Promise<void> {
-    if (this.initializedProjects.has(projectPath)) {
-      return;
-    }
-
-    // Register as PM authority agent for this project
-    const agent = await this.authorityService.registerAgent('product-manager', projectPath);
-    this.agents.set(projectPath, agent);
-    this.initializedProjects.add(projectPath);
-    logger.info(`PM agent registered for project: ${agent.id}`);
-
-    // Scan for any existing unprocessed ideas
-    await this.scanForUnprocessedIdeas(projectPath);
+    await initializeAgent(
+      this.state,
+      this.authorityService,
+      'product-manager',
+      projectPath,
+      async () => {
+        // Scan for any existing unprocessed ideas
+        await this.scanForUnprocessedIdeas(projectPath);
+      }
+    );
   }
 
   /**
@@ -151,7 +150,7 @@ export class PMAuthorityAgent {
    * Debounces processing to avoid rapid-fire API calls.
    */
   private handleIdeaInjected(idea: IdeaInjectedPayload): void {
-    if (this.processing.has(idea.featureId)) {
+    if (this.state.isProcessing(idea.featureId)) {
       logger.debug(`Already processing idea ${idea.featureId}, skipping`);
       return;
     }
@@ -194,131 +193,128 @@ export class PMAuthorityAgent {
    * 6. Auto-approve → handleApproval()
    */
   private async processIdea(projectPath: string, featureId: string): Promise<void> {
-    if (this.processing.has(featureId)) return;
-    this.processing.add(featureId);
-
-    try {
-      const agent = this.agents.get(projectPath);
-      if (!agent) {
-        logger.error(`PM agent not initialized for project: ${projectPath}`);
-        return;
-      }
-
-      const feature = await this.featureLoader.get(projectPath, featureId);
-      if (!feature) {
-        logger.warn(`Feature ${featureId} not found, skipping`);
-        return;
-      }
-
-      if (feature.workItemState !== 'idea') {
-        logger.debug(
-          `Feature ${featureId} is not in 'idea' state (${feature.workItemState}), skipping`
-        );
-        return;
-      }
-
-      logger.info(`Processing idea: "${feature.title}" (${featureId})`);
-
-      // Step 1: Propose transition idea → pm_review
-      const reviewDecision = await this.authorityService.submitProposal(
-        {
-          who: agent.id,
-          what: 'transition_status',
-          target: featureId,
-          justification: `PM agent beginning AI-powered review of idea: "${feature.title}"`,
-          risk: 'low',
-          statusTransition: { from: 'idea', to: 'pm_review' },
-        },
-        projectPath
-      );
-
-      if (reviewDecision.verdict === 'deny') {
-        logger.warn(`PM review transition denied for ${featureId}: ${reviewDecision.reason}`);
-        return;
-      }
-
-      if (reviewDecision.verdict === 'require_approval') {
-        logger.info(`PM review transition requires approval for ${featureId}`);
-        return;
-      }
-
-      // Transition approved - update workItemState
-      await this.featureLoader.update(projectPath, featureId, {
-        workItemState: 'pm_review',
-      });
-
-      this.events.emit('authority:pm-review-started', {
-        projectPath,
-        featureId,
-        agentId: agent.id,
-      });
-
-      // Step 2: Transition to research state and explore codebase
-      await this.featureLoader.update(projectPath, featureId, {
-        workItemState: 'research',
-      });
-
-      this.events.emit('authority:pm-research-started', {
-        projectPath,
-        featureId,
-        agentId: agent.id,
-      });
-
-      logger.info(`Researching codebase for idea: "${feature.title}"`);
-      const researchSummary = await this.researchCodebase(feature, projectPath);
-
-      // Step 3: Generate SPARC PRD from research + original idea
-      logger.info(`Generating SPARC PRD for idea: "${feature.title}"`);
-      const prdResult = await this.generateSPARCPRD(feature, researchSummary, projectPath);
-
-      // Step 4: Preserve original idea and update feature description with full PRD
-      const descriptionHistory = feature.descriptionHistory || [];
-      descriptionHistory.push({
-        description: feature.description || '',
-        timestamp: new Date().toISOString(),
-        source: 'enhance' as const,
-      });
-
-      await this.featureLoader.update(projectPath, featureId, {
-        workItemState: 'pm_review',
-        description: prdResult.prd,
-        complexity: prdResult.complexity,
-        descriptionHistory,
-      });
-
-      // Step 5: Emit PRD ready for Discord posting
-      this.events.emit('authority:pm-prd-ready', {
-        projectPath,
-        featureId,
-        agentId: agent.id,
-        prd: prdResult.prd,
-        complexity: prdResult.complexity,
-        milestones: prdResult.milestones,
-      });
-
-      // Step 6: Auto-approve with full PRD context
-      const review: PMReviewResult = {
-        verdict: 'approve',
-        feedback: 'PM researched codebase and generated SPARC PRD. Auto-approved.',
-        prd: prdResult.prd,
-        complexity: prdResult.complexity,
-        milestones: prdResult.milestones,
-      };
-
-      await this.handleApproval(projectPath, featureId, feature, review, agent);
-    } catch (error) {
-      logger.error(`Failed to process idea ${featureId}:`, error);
-      // Reset to 'idea' so the feature can be retried on next scan
+    return withProcessingGuard(this.state, featureId, async () => {
       try {
+        const agent = this.state.getAgent(projectPath);
+        if (!agent) {
+          logger.error(`PM agent not initialized for project: ${projectPath}`);
+          return;
+        }
+
+        const feature = await this.featureLoader.get(projectPath, featureId);
+        if (!feature) {
+          logger.warn(`Feature ${featureId} not found, skipping`);
+          return;
+        }
+
+        if (feature.workItemState !== 'idea') {
+          logger.debug(
+            `Feature ${featureId} is not in 'idea' state (${feature.workItemState}), skipping`
+          );
+          return;
+        }
+
+        logger.info(`Processing idea: "${feature.title}" (${featureId})`);
+
+        // Step 1: Propose transition idea → pm_review
+        const reviewDecision = await this.authorityService.submitProposal(
+          {
+            who: agent.id,
+            what: 'transition_status',
+            target: featureId,
+            justification: `PM agent beginning AI-powered review of idea: "${feature.title}"`,
+            risk: 'low',
+            statusTransition: { from: 'idea', to: 'pm_review' },
+          },
+          projectPath
+        );
+
+        if (reviewDecision.verdict === 'deny') {
+          logger.warn(`PM review transition denied for ${featureId}: ${reviewDecision.reason}`);
+          return;
+        }
+
+        if (reviewDecision.verdict === 'require_approval') {
+          logger.info(`PM review transition requires approval for ${featureId}`);
+          return;
+        }
+
+        // Transition approved - update workItemState
         await this.featureLoader.update(projectPath, featureId, {
-          workItemState: 'idea',
+          workItemState: 'pm_review',
         });
-      } catch (resetError) {
-        logger.error(`Failed to reset state for ${featureId}:`, resetError);
+
+        this.events.emit('authority:pm-review-started', {
+          projectPath,
+          featureId,
+          agentId: agent.id,
+        });
+
+        // Step 2: Transition to research state and explore codebase
+        await this.featureLoader.update(projectPath, featureId, {
+          workItemState: 'research',
+        });
+
+        this.events.emit('authority:pm-research-started', {
+          projectPath,
+          featureId,
+          agentId: agent.id,
+        });
+
+        logger.info(`Researching codebase for idea: "${feature.title}"`);
+        const researchSummary = await this.researchCodebase(feature, projectPath);
+
+        // Step 3: Generate SPARC PRD from research + original idea
+        logger.info(`Generating SPARC PRD for idea: "${feature.title}"`);
+        const prdResult = await this.generateSPARCPRD(feature, researchSummary, projectPath);
+
+        // Step 4: Preserve original idea and update feature description with full PRD
+        const descriptionHistory = feature.descriptionHistory || [];
+        descriptionHistory.push({
+          description: feature.description || '',
+          timestamp: new Date().toISOString(),
+          source: 'enhance' as const,
+        });
+
+        await this.featureLoader.update(projectPath, featureId, {
+          workItemState: 'pm_review',
+          description: prdResult.prd,
+          complexity: prdResult.complexity,
+          descriptionHistory,
+        });
+
+        // Step 5: Emit PRD ready for Discord posting
+        this.events.emit('authority:pm-prd-ready', {
+          projectPath,
+          featureId,
+          agentId: agent.id,
+          prd: prdResult.prd,
+          complexity: prdResult.complexity,
+          milestones: prdResult.milestones,
+        });
+
+        // Step 6: Auto-approve with full PRD context
+        const review: PMReviewResult = {
+          verdict: 'approve',
+          feedback: 'PM researched codebase and generated SPARC PRD. Auto-approved.',
+          prd: prdResult.prd,
+          complexity: prdResult.complexity,
+          milestones: prdResult.milestones,
+        };
+
+        await this.handleApproval(projectPath, featureId, feature, review, agent);
+      } catch (error) {
+        logger.error(`Failed to process idea ${featureId}:`, error);
+        // Reset to 'idea' so the feature can be retried on next scan
+        try {
+          await this.featureLoader.update(projectPath, featureId, {
+            workItemState: 'idea',
+          });
+        } catch (resetError) {
+          logger.error(`Failed to reset state for ${featureId}:`, resetError);
+        }
       }
-    } finally {
-      this.processing.delete(featureId);
-    }
+    });
   }
 
   /**
@@ -797,68 +793,71 @@ Provide your review as JSON.`;
     featureId: string,
     updatedDescription?: string
   ): Promise<void> {
-    if (this.processing.has(featureId)) return;
-    this.processing.add(featureId);
+    return withProcessingGuard(this.state, featureId, async () => {
+      try {
+        const agent = this.state.getAgent(projectPath);
+        if (!agent) return;
 
-    try {
-      const agent = this.agents.get(projectPath);
-      if (!agent) return;
+        const feature = await this.featureLoader.get(projectPath, featureId);
+        if (!feature) return;
 
-      const feature = await this.featureLoader.get(projectPath, featureId);
-      if (!feature) return;
-
-      if (feature.workItemState !== 'pm_changes_requested') {
-        logger.debug(`Feature ${featureId} not in pm_changes_requested state, skipping`);
-        return;
-      }
-
-      // If CTO provided an updated description, update the feature and re-review
-      if (updatedDescription) {
-        await this.featureLoader.update(projectPath, featureId, {
-          description: updatedDescription,
-          workItemState: 'pm_review',
-        });
-
-        // Re-run the review with the updated description
-        const updatedFeature = { ...feature, description: updatedDescription };
-        const review = await this.reviewIdea(updatedFeature, projectPath);
-
-        if (review.verdict === 'approve') {
-          await this.handleApproval(projectPath, featureId, updatedFeature, review, agent);
-        } else {
-          await this.handleChangesRequested(projectPath, featureId, updatedFeature, review, agent);
+        if (feature.workItemState !== 'pm_changes_requested') {
+          logger.debug(`Feature ${featureId} not in pm_changes_requested state, skipping`);
+          return;
         }
-      } else {
-        // CTO approved PM's suggestion as-is
-        const review: PMReviewResult = {
-          verdict: 'approve',
-          feedback: 'CTO approved PM suggestions.',
-          complexity: (feature.complexity as PMReviewResult['complexity']) || 'medium',
-          milestones: [
-            {
-              title: feature.title || 'Untitled',
-              description: (feature.description || '').slice(0, 200),
-            },
-          ],
-        };
 
-        await this.featureLoader.update(projectPath, featureId, {
-          workItemState: 'pm_review',
-        });
+        // If CTO provided an updated description, update the feature and re-review
+        if (updatedDescription) {
+          await this.featureLoader.update(projectPath, featureId, {
+            description: updatedDescription,
+            workItemState: 'pm_review',
+          });
 
-        await this.handleApproval(projectPath, featureId, feature, review, agent);
+          // Re-run the review with the updated description
+          const updatedFeature = { ...feature, description: updatedDescription };
+          const review = await this.reviewIdea(updatedFeature, projectPath);
+
+          if (review.verdict === 'approve') {
+            await this.handleApproval(projectPath, featureId, updatedFeature, review, agent);
+          } else {
+            await this.handleChangesRequested(
+              projectPath,
+              featureId,
+              updatedFeature,
+              review,
+              agent
+            );
+          }
+        } else {
+          // CTO approved PM's suggestion as-is
+          const review: PMReviewResult = {
+            verdict: 'approve',
+            feedback: 'CTO approved PM suggestions.',
+            complexity: (feature.complexity as PMReviewResult['complexity']) || 'medium',
+            milestones: [
+              {
+                title: feature.title || 'Untitled',
+                description: (feature.description || '').slice(0, 200),
+              },
+            ],
+          };
+
+          await this.featureLoader.update(projectPath, featureId, {
+            workItemState: 'pm_review',
+          });
+
+          await this.handleApproval(projectPath, featureId, feature, review, agent);
+        }
+      } catch (error) {
+        logger.error(`Failed to handle CTO approval for ${featureId}:`, error);
       }
-    } catch (error) {
-      logger.error(`Failed to handle CTO approval for ${featureId}:`, error);
-    } finally {
-      this.processing.delete(featureId);
-    }
+    });
   }
 
   /**
    * Get the registered agent for a project.
    */
   getAgent(projectPath: string): AuthorityAgent | null {
-    return this.agents.get(projectPath) ?? null;
+    return this.state.getAgent(projectPath);
   }
 }
