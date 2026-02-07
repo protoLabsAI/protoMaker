@@ -15,13 +15,9 @@ import { BoardSearchBar } from './board-search-bar';
 import { BoardControls } from './board-controls';
 import { ViewToggle, type ViewMode } from './components';
 import { HeaderMobileMenu } from './header-mobile-menu';
+import { formatCostUsd } from '@/lib/format';
 
 export type { ViewMode };
-
-/** Format a USD cost value for display */
-function formatCostUsd(cost: number): string {
-  return cost < 0.01 ? '<$0.01' : `$${cost.toFixed(2)}`;
-}
 
 type AssigneeFilter = 'all' | 'my-tasks' | 'agent-tasks';
 

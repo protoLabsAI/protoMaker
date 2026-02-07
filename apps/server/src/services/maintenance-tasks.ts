@@ -164,6 +164,29 @@ async function detectStaleWorktrees(events: EventEmitter, projectPaths: string[]
 
     for (const cwd of projectPaths) {
       try {
+        // Detect default branch (try 'main' first, fall back to 'master')
+        let defaultBranch = 'main';
+        try {
+          await execFileAsync('git', ['rev-parse', '--verify', 'main'], {
+            cwd,
+            encoding: 'utf-8',
+            timeout: 5_000,
+          });
+        } catch {
+          try {
+            await execFileAsync('git', ['rev-parse', '--verify', 'master'], {
+              cwd,
+              encoding: 'utf-8',
+              timeout: 5_000,
+            });
+            defaultBranch = 'master';
+          } catch {
+            // Neither main nor master exist, skip this project
+            logger.warn(`No main or master branch found for ${cwd}, skipping`);
+            continue;
+          }
+        }
+
         // List all worktrees for this project
         const { stdout: output } = await execFileAsync('git', ['worktree', 'list', '--porcelain'], {
           encoding: 'utf-8',
@@ -185,18 +208,18 @@ async function detectStaleWorktrees(events: EventEmitter, projectPaths: string[]
           })
           .filter((w) => w.path && w.branch);
 
-        // Check which worktree branches are already merged into main
+        // Check which worktree branches are already merged into the default branch
         for (const wt of worktrees) {
           if (wt.branch === 'main' || wt.branch === 'master') continue;
 
           try {
-            // Check if branch is merged into main using execFileAsync (no shell injection)
-            await execFileAsync('git', ['merge-base', '--is-ancestor', wt.branch, 'main'], {
+            // Check if branch is merged into default branch using execFileAsync (no shell injection)
+            await execFileAsync('git', ['merge-base', '--is-ancestor', wt.branch, defaultBranch], {
               encoding: 'utf-8',
               timeout: 5_000,
               cwd,
             });
-            // If no error, branch IS merged into main
+            // If no error, branch IS merged into the default branch
             staleCount++;
             staleWorktrees.push(`${wt.branch} (${wt.path})`);
           } catch {

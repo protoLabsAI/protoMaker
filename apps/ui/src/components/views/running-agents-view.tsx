@@ -17,6 +17,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { AgentOutputModal } from './board-view/dialogs/agent-output-modal';
 import { useRunningAgents } from '@/hooks/queries';
 import { useStopFeature } from '@/hooks/mutations';
+import { formatCostUsd } from '@/lib/format';
 
 const logger = createLogger('RunningAgentsView');
 
@@ -184,7 +185,7 @@ export function RunningAgentsView() {
                       {typeof agent.costUsd === 'number' && agent.costUsd > 0 && (
                         <span className="inline-flex items-center gap-1 text-xs text-emerald-400">
                           <DollarSign className="w-3 h-3" />
-                          {agent.costUsd < 0.01 ? '<$0.01' : `$${agent.costUsd.toFixed(2)}`}
+                          {formatCostUsd(agent.costUsd)}
                         </span>
                       )}
                     </div>

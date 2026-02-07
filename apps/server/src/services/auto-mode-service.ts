@@ -423,6 +423,8 @@ export class AutoModeService {
   private autoLoopAbortController: AbortController | null = null;
   private config: AutoModeConfig | null = null;
   private pendingApprovals = new Map<string, PendingApproval>();
+  // Track retry timers so they can be cancelled on shutdown
+  private retryTimers = new Map<string, NodeJS.Timeout>();
   private settingsService: SettingsService | null = null;
   // Track consecutive failures to detect quota/API issues (legacy global, now per-project in autoLoopsByProject)
   private consecutiveFailures: { timestamp: number; error: string }[] = [];
@@ -1803,7 +1805,8 @@ export class AutoModeService {
           this.runningFeatures.delete(featureId);
 
           const backoffMs = Math.min(1000 * Math.pow(2, tempRunningFeature.retryCount), 30_000);
-          setTimeout(() => {
+          const retryTimer = setTimeout(() => {
+            this.retryTimers.delete(featureId);
             this.executeFeature(
               projectPath,
               featureId,
@@ -1818,6 +1821,7 @@ export class AutoModeService {
               logger.error(`Max-turns retry failed for feature ${featureId}:`, retryError);
             });
           }, backoffMs);
+          this.retryTimers.set(featureId, retryTimer);
           return;
         }
       } else {
@@ -2148,6 +2152,13 @@ Complete the pipeline step instructions above. Review the previous work and appl
       this.autoLoopAbortController.abort();
       this.autoLoopAbortController = null;
     }
+
+    // Cancel all pending retry timers
+    for (const [featureId, timer] of this.retryTimers) {
+      clearTimeout(timer);
+      logger.info(`[Shutdown] Cancelled retry timer for feature: ${featureId}`);
+    }
+    this.retryTimers.clear();
 
     // Abort all running features
     for (const [featureId, running] of this.runningFeatures) {

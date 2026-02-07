@@ -170,7 +170,7 @@ export class FeatureHealthService {
     featureMap: Map<string, Feature>
   ): HealthIssue[] {
     const issues: HealthIssue[] = [];
-    const doneStatuses = new Set(['done', 'completed', 'verified']);
+    const doneStatuses = new Set(['done', 'completed', 'verified', 'review']);
 
     const epics = features.filter((f) => f.isEpic);
 
@@ -291,6 +291,9 @@ export class FeatureHealthService {
       }
     }
 
+    // Cache epic branch --merged results to avoid redundant git calls
+    const epicMergedCache = new Map<string, Set<string>>();
+
     for (const feature of features) {
       if (!feature.branchName) continue;
       if (doneStatuses.has(feature.status ?? '')) continue;
@@ -302,26 +305,32 @@ export class FeatureHealthService {
       if (!isMerged && feature.epicId) {
         const epicBranch = epicBranchMap.get(feature.epicId);
         if (epicBranch) {
-          try {
-            const { stdout: epicMergedOutput } = await execFileAsync(
-              'git',
-              ['branch', '--merged', epicBranch],
-              {
-                cwd: projectPath,
-                encoding: 'utf-8',
-                timeout: 5_000,
-              }
-            );
-            const epicMergedBranches = new Set(
-              epicMergedOutput
-                .split('\n')
-                .map((line) => line.trim().replace(/^\*\s*/, ''))
-                .filter((b) => b)
-            );
-            isMerged = epicMergedBranches.has(feature.branchName);
-          } catch {
-            // Epic branch check failed, skip for this feature
+          let epicMergedBranches = epicMergedCache.get(epicBranch);
+          if (!epicMergedBranches) {
+            try {
+              const { stdout: epicMergedOutput } = await execFileAsync(
+                'git',
+                ['branch', '--merged', epicBranch],
+                {
+                  cwd: projectPath,
+                  encoding: 'utf-8',
+                  timeout: 5_000,
+                }
+              );
+              epicMergedBranches = new Set(
+                epicMergedOutput
+                  .split('\n')
+                  .map((line) => line.trim().replace(/^\*\s*/, ''))
+                  .filter((b) => b)
+              );
+              epicMergedCache.set(epicBranch, epicMergedBranches);
+            } catch {
+              // Epic branch check failed, cache empty set to avoid retrying
+              epicMergedBranches = new Set();
+              epicMergedCache.set(epicBranch, epicMergedBranches);
+            }
           }
+          isMerged = epicMergedBranches.has(feature.branchName);
         }
       }
 
