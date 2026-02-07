@@ -1,6 +1,7 @@
 import type { RequestHandler } from 'express';
 import path from 'node:path';
 import fs from 'node:fs/promises';
+import crypto from 'node:crypto';
 import { createLogger } from '@automaker/utils';
 import { ensureAutomakerDir } from '@automaker/platform';
 import { SettingsService } from '../../../services/settings-service.js';
@@ -182,6 +183,7 @@ Describe your development workflow here.
             projects: [
               ...(existingSettings.projects || []),
               {
+                id: crypto.randomUUID(),
                 path: realPath,
                 name: projectName,
                 lastOpened: new Date().toISOString(),
