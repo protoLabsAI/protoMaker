@@ -59,9 +59,21 @@ export interface AgentState<T = unknown> {
 }
 
 /**
- * Create a new agent state container.
+ * Create a new agent state container with no custom state.
  *
- * @param customState - Optional custom state specific to the agent type
+ * @returns Agent state with standard maps/sets and access methods
+ *
+ * @example
+ * ```typescript
+ * const state = createAgentState();
+ * ```
+ */
+export function createAgentState(): AgentState<Record<string, never>>;
+
+/**
+ * Create a new agent state container with custom state.
+ *
+ * @param customState - Custom state specific to the agent type (required when using generics)
  * @returns Agent state with standard maps/sets and access methods
  *
  * @example
@@ -75,7 +87,12 @@ export interface AgentState<T = unknown> {
  * });
  * ```
  */
-export function createAgentState<T = Record<string, never>>(customState?: T): AgentState<T> {
+export function createAgentState<T>(customState: T): AgentState<T>;
+
+// Implementation
+export function createAgentState<T = Record<string, never>>(
+  customState?: T
+): AgentState<T> | AgentState<Record<string, never>> {
   const agents = new Map<string, AuthorityAgent>();
   const initializedProjects = new Set<string>();
   const processing = new Set<string>();
@@ -243,21 +260,26 @@ export async function initializeAgent(
   // Register agent with authority service
   const agent = await authorityService.registerAgent(role, projectPath);
 
-  // Store agent in map
-  state.agents.set(projectPath, agent);
+  // Execute custom setup first (before persisting state)
+  // This ensures atomicity: if setup fails, we don't mark as initialized
+  if (setup) {
+    try {
+      await setup(agent);
+    } catch (error) {
+      // Setup failed - don't persist state
+      logger.error(`Agent setup failed for ${projectPath}, not persisting state:`, error);
+      throw error;
+    }
+  }
 
-  // Mark project as initialized
+  // Only persist state after successful setup
+  state.agents.set(projectPath, agent);
   state.markInitialized(projectPath);
 
   // Log initialization
   if (logInit) {
     const msg = logMessage ?? `${role} agent registered for project: ${agent.id}`;
     logger.info(msg);
-  }
-
-  // Execute custom setup if provided
-  if (setup) {
-    await setup(agent);
   }
 
   return agent;
@@ -281,6 +303,13 @@ export interface RegisterEventListenerOptions {
 }
 
 /**
+ * Event emitter interface with unsubscribe support.
+ */
+export interface EventEmitterWithUnsubscribe {
+  subscribe: <T>(event: string, handler: (data: T) => void | Promise<void>) => () => void;
+}
+
+/**
  * Register an event listener with common patterns.
  *
  * Common pattern across agents:
@@ -290,17 +319,19 @@ export interface RegisterEventListenerOptions {
  * 4. Set listener registered flag
  *
  * @param state - Agent state
- * @param listenerRegistered - Ref to listener registered flag (will be set to true)
- * @param events - Event emitter with subscribe method
+ * @param getListenerRegistered - Function to check if listener is registered
+ * @param setListenerRegistered - Function to set listener registered flag
+ * @param events - Event emitter with subscribe method that returns unsubscribe function
  * @param eventName - Name of event to subscribe to
  * @param handler - Event handler function
  * @param initialize - Initialize function for auto-initialization
  * @param options - Optional configuration
+ * @returns Unsubscribe function to remove the listener
  *
  * @example
  * ```typescript
  * setupEventListeners(): void {
- *   registerEventListener(
+ *   const unsubscribe = registerEventListener(
  *     this.state,
  *     () => this.listenerRegistered,
  *     (val) => { this.listenerRegistered = val; },
@@ -311,6 +342,9 @@ export interface RegisterEventListenerOptions {
  *     },
  *     (projectPath) => this.initialize(projectPath)
  *   );
+ *
+ *   // Later, to cleanup:
+ *   // unsubscribe();
  * }
  * ```
  */
@@ -318,25 +352,27 @@ export function registerEventListener<T>(
   state: AgentState,
   getListenerRegistered: () => boolean,
   setListenerRegistered: (value: boolean) => void,
-  events: { subscribe: (event: string, handler: (data: T) => void | Promise<void>) => void },
+  events: EventEmitterWithUnsubscribe,
   eventName: string,
   handler: (event: T) => void | Promise<void>,
   initialize: (projectPath: string) => Promise<void>,
   options: RegisterEventListenerOptions = {}
-): void {
+): () => void {
   const { skipIfRegistered = true, autoInitialize = true, getProjectPath, filter } = options;
 
   // Skip if already registered
   if (skipIfRegistered && getListenerRegistered()) {
-    return;
+    return () => {
+      /* Already registered, no-op unsubscribe */
+    };
   }
 
   // Default project path extractor
   const extractProjectPath =
     getProjectPath ?? ((event: unknown) => (event as { projectPath?: string }).projectPath);
 
-  // Subscribe to event
-  events.subscribe(eventName, async (event: T) => {
+  // Subscribe to event and capture unsubscribe function
+  const unsubscribe = events.subscribe(eventName, async (event: T) => {
     // Apply filter if provided
     if (filter && !filter(event)) {
       return;
@@ -365,4 +401,10 @@ export function registerEventListener<T>(
 
   // Mark listener as registered
   setListenerRegistered(true);
+
+  // Return cleanup function
+  return () => {
+    unsubscribe();
+    setListenerRegistered(false);
+  };
 }

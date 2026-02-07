@@ -160,7 +160,7 @@ setupEventListeners(): void {
 
 ## Testing
 
-**File:** `tests/unit/services/authority-agents/agent-utils.test.ts`
+**File:** `apps/server/tests/unit/services/authority-agents/agent-utils.test.ts`
 
 Comprehensive test suite covering:
 
@@ -173,7 +173,7 @@ Comprehensive test suite covering:
 **Run tests:**
 
 ```bash
-npm run test:server -- tests/unit/services/authority-agents/agent-utils.test.ts
+npm run test:server -- apps/server/tests/unit/services/authority-agents/agent-utils.test.ts
 ```
 
 ## Refactoring Guide
@@ -297,4 +297,3 @@ if (this.state.isProcessing(id)) { ... }
 
 - [Authority System Overview](../authority-service.ts)
 - [Policy Engine](../../../../../libs/policy-engine/)
-- [Agent Utilities PRD](/private/tmp/claude-501/-Users-kj-dev-automaker/ae65dfa6-202d-4e8c-9e48-96524c2d3068/scratchpad/agent-utilities-and-integrations-prd.md)
