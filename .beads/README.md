@@ -24,7 +24,7 @@ bd show <issue-id>
 
 # Update issue status
 bd update <issue-id> --status in_progress
-bd update <issue-id> --status done
+bd update <issue-id> --status closed
 
 # Sync with git remote
 bd sync
@@ -64,8 +64,11 @@ Issues in Beads are:
 Try Beads in your own projects:
 
 ```bash
-# Install Beads
+# Install Beads (review the script before running: https://github.com/steveyegge/beads/blob/main/scripts/install.sh)
 curl -sSL https://raw.githubusercontent.com/steveyegge/beads/main/scripts/install.sh | bash
+
+# Or install manually by cloning the repo and running the install script locally:
+# git clone https://github.com/steveyegge/beads.git && cd beads && bash scripts/install.sh
 
 # Initialize in your repo
 bd init
