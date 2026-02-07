@@ -22,8 +22,10 @@ interface ProjectSetupResponse {
  * POST /api/setup/project
  * Initialize Automaker for a new repository
  */
-export const setupProject: RequestHandler<unknown, ProjectSetupResponse, ProjectSetupRequest> =
-  async (req, res) => {
+export function createSetupProjectHandler(
+  settingsService: SettingsService
+): RequestHandler<unknown, ProjectSetupResponse, ProjectSetupRequest> {
+  return async (req, res) => {
     try {
       const { projectPath } = req.body;
 
@@ -39,13 +41,60 @@ export const setupProject: RequestHandler<unknown, ProjectSetupResponse, Project
 
       // Resolve absolute path
       const absolutePath = path.resolve(projectPath);
-      logger.info('Setting up project', { projectPath: absolutePath });
+
+      // Validate path exists and is a directory
+      let stats;
+      try {
+        stats = await fs.stat(absolutePath);
+      } catch (error) {
+        res.status(400).json({
+          success: false,
+          filesCreated: [],
+          projectAdded: false,
+          error: `Path does not exist or is not accessible: ${absolutePath}`,
+        });
+        return;
+      }
+
+      if (!stats.isDirectory()) {
+        res.status(400).json({
+          success: false,
+          filesCreated: [],
+          projectAdded: false,
+          error: `Path is not a directory: ${absolutePath}`,
+        });
+        return;
+      }
+
+      // Resolve symlinks and validate against base directory if configured
+      const realPath = await fs.realpath(absolutePath);
+      const allowedRoot = process.env.ALLOWED_ROOT_DIRECTORY;
+
+      if (allowedRoot) {
+        const realAllowedRoot = await fs.realpath(allowedRoot);
+        if (!realPath.startsWith(realAllowedRoot + path.sep) && realPath !== realAllowedRoot) {
+          logger.warn('Path traversal attempt blocked', {
+            requestedPath: absolutePath,
+            realPath,
+            allowedRoot: realAllowedRoot,
+          });
+          res.status(403).json({
+            success: false,
+            filesCreated: [],
+            projectAdded: false,
+            error: 'Access denied: path is outside allowed directory',
+          });
+          return;
+        }
+      }
+
+      logger.info('Setting up project', { projectPath: realPath });
 
       const filesCreated: string[] = [];
 
       // 1. Create .automaker/ directory structure
-      const automakerDir = path.join(absolutePath, '.automaker');
-      await ensureAutomakerDir(absolutePath);
+      const automakerDir = path.join(realPath, '.automaker');
+      await ensureAutomakerDir(realPath);
       filesCreated.push('.automaker/');
 
       // Create subdirectories
@@ -58,7 +107,7 @@ export const setupProject: RequestHandler<unknown, ProjectSetupResponse, Project
 
       // 2. Generate protolab.config with sensible defaults
       const protolabConfig = {
-        name: path.basename(absolutePath),
+        name: path.basename(realPath),
         version: '0.1.0',
         protolab: {
           enabled: true,
@@ -68,12 +117,18 @@ export const setupProject: RequestHandler<unknown, ProjectSetupResponse, Project
         },
       };
 
-      const configPath = path.join(absolutePath, 'protolab.config');
-      await fs.writeFile(configPath, JSON.stringify(protolabConfig, null, 2), 'utf-8');
-      filesCreated.push('protolab.config');
+      const configPath = path.join(realPath, 'protolab.config');
+      try {
+        await fs.access(configPath);
+        filesCreated.push('protolab.config (already exists)');
+      } catch {
+        // File doesn't exist, create it
+        await fs.writeFile(configPath, JSON.stringify(protolabConfig, null, 2), 'utf-8');
+        filesCreated.push('protolab.config');
+      }
 
       // 3. Create initial CLAUDE.md with project context
-      const projectName = path.basename(absolutePath);
+      const projectName = path.basename(realPath);
       const claudeMd = `# ${projectName}
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
@@ -104,17 +159,22 @@ Describe your development workflow here.
 `;
 
       const claudeMdPath = path.join(automakerDir, 'context', 'CLAUDE.md');
-      await fs.writeFile(claudeMdPath, claudeMd, 'utf-8');
-      filesCreated.push('.automaker/context/CLAUDE.md');
+      try {
+        await fs.access(claudeMdPath);
+        filesCreated.push('.automaker/context/CLAUDE.md (already exists)');
+      } catch {
+        // File doesn't exist, create it
+        await fs.writeFile(claudeMdPath, claudeMd, 'utf-8');
+        filesCreated.push('.automaker/context/CLAUDE.md');
+      }
 
       // 4. Add project to Automaker settings if not already present
-      const settingsService = SettingsService.getInstance();
       let projectAdded = false;
 
       try {
         // Check if project already exists
         const existingSettings = await settingsService.getGlobalSettings();
-        const projectExists = existingSettings.projects?.some((p) => p.path === absolutePath);
+        const projectExists = existingSettings.projects?.some((p) => p.path === realPath);
 
         if (!projectExists) {
           // Add project to settings
@@ -122,16 +182,16 @@ Describe your development workflow here.
             projects: [
               ...(existingSettings.projects || []),
               {
-                path: absolutePath,
+                path: realPath,
                 name: projectName,
                 lastOpened: new Date().toISOString(),
               },
             ],
           });
           projectAdded = true;
-          logger.info('Added project to settings', { projectPath: absolutePath });
+          logger.info('Added project to settings', { projectPath: realPath });
         } else {
-          logger.info('Project already exists in settings', { projectPath: absolutePath });
+          logger.info('Project already exists in settings', { projectPath: realPath });
         }
       } catch (error) {
         logger.warn('Failed to add project to settings', {
@@ -140,7 +200,7 @@ Describe your development workflow here.
         // Don't fail the whole operation if we can't add to settings
       }
 
-      logger.info('Project setup complete', { projectPath: absolutePath, filesCreated });
+      logger.info('Project setup complete', { projectPath: realPath, filesCreated });
 
       res.json({
         success: true,
@@ -159,3 +219,4 @@ Describe your development workflow here.
       });
     }
   };
+}

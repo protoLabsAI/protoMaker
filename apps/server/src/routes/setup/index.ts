@@ -40,9 +40,10 @@ import {
   createDeleteProjectPermissionsHandler,
   createGetExampleConfigHandler,
 } from './routes/cursor-config.js';
-import { setupProject } from './routes/project.js';
+import { createSetupProjectHandler } from './routes/project.js';
+import type { SettingsService } from '../../services/settings-service.js';
 
-export function createSetupRoutes(): Router {
+export function createSetupRoutes(settingsService: SettingsService): Router {
   const router = Router();
 
   router.get('/claude-status', createClaudeStatusHandler());
@@ -90,7 +91,7 @@ export function createSetupRoutes(): Router {
   router.get('/cursor-permissions/example', createGetExampleConfigHandler());
 
   // Project setup routes
-  router.post('/project', setupProject);
+  router.post('/project', createSetupProjectHandler(settingsService));
 
   return router;
 }
