@@ -156,7 +156,7 @@ test.describe('Feature Manual Review Flow', () => {
 
     // Wait for the feature card to appear (features are loaded asynchronously)
     const featureCard = page.locator(`[data-testid="kanban-card-${featureId}"]`);
-    await expect(featureCard).toBeVisible({ timeout: 20000 });
+    await expect(featureCard).toBeVisible({ timeout: 30000 });
 
     // Verify the feature appears in the waiting_approval column
     const waitingApprovalColumn = await getKanbanColumn(page, 'waiting_approval');

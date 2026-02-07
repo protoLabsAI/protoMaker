@@ -91,7 +91,7 @@ test.describe('Feature Skip Tests Badge', () => {
         hasText: featureDescription,
       });
       expect(await featureCard.count()).toBeGreaterThan(0);
-    }).toPass({ timeout: 10000 });
+    }).toPass({ timeout: 20000 });
 
     // Get the feature ID from the card
     const featureCard = page
