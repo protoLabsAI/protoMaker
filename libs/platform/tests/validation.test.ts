@@ -281,7 +281,9 @@ describe('validation.ts', () => {
       });
 
       it('should remove angle brackets', () => {
-        expect(sanitizeCommitMessage('Fix <script>alert(1)</script>')).toBe('Fix scriptalert(1)/script');
+        expect(sanitizeCommitMessage('Fix <script>alert(1)</script>')).toBe(
+          'Fix scriptalert(1)/script'
+        );
       });
 
       it('should replace control characters with spaces', () => {

@@ -349,7 +349,9 @@ export function assertValidSessionId(
   context?: string
 ): asserts id is ValidatedSessionId {
   if (!isValidSessionId(id)) {
-    const msg = context ? `Invalid session ID for ${context}: "${id}"` : `Invalid session ID: "${id}"`;
+    const msg = context
+      ? `Invalid session ID for ${context}: "${id}"`
+      : `Invalid session ID: "${id}"`;
     throw new Error(msg);
   }
 }
