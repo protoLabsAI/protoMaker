@@ -16,6 +16,7 @@ This document maps Automaker's UI component structure for developers working on 
 Full-featured chat interface for interacting with AI agents.
 
 **Core Components (~12 total):**
+
 - `agent-view.tsx` - Main container
 - `agent-header.tsx` - Model selector, queue display
 - `agent-chat-area.tsx` - Message scroll container
@@ -26,6 +27,7 @@ Full-featured chat interface for interacting with AI agents.
 - Queue management UI
 
 **Key Features:**
+
 - Real-time message streaming via WebSocket
 - Model selection (haiku/sonnet/opus)
 - Feature queue display
@@ -37,6 +39,7 @@ Full-featured chat interface for interacting with AI agents.
 Kanban board for feature management with extensive dialog system.
 
 **Core Components (20+ dialogs):**
+
 - `board-view.tsx` - Main Kanban board
 - `board-column.tsx` - Status columns (backlog/in-progress/review/done)
 - `board-card.tsx` - Feature cards with drag-and-drop
@@ -45,6 +48,7 @@ Kanban board for feature management with extensive dialog system.
 - `worktree-panel.tsx` - Git worktree management
 
 **Dialogs (20+ components):**
+
 - **Planning**: `plan-dialog.tsx`, `backlog-plan-dialog.tsx`, `plan-approval-dialog.tsx`, `plan-settings-dialog.tsx`
 - **PR Management**: `pr-dialog.tsx`, `pr-feedback-dialog.tsx`
 - **Worktrees**: `worktree-dialog.tsx`, `worktree-delete-dialog.tsx`
@@ -55,6 +59,7 @@ Kanban board for feature management with extensive dialog system.
 - **Projects**: `project-create-dialog.tsx`, `project-list-dialog.tsx`
 
 **Key Features:**
+
 - Drag-and-drop between columns
 - Real-time status updates via WebSocket
 - Feature search and filtering
@@ -70,60 +75,72 @@ Comprehensive configuration system with 60+ components organized by category.
 **Major Sections:**
 
 #### API Keys & Authentication
+
 - `api-keys-settings.tsx` - Anthropic, GitHub, Linear, Discord tokens
 - Provider-specific key management
 
 #### MCP Servers
+
 - `mcp-servers-settings.tsx` - Model Context Protocol server configuration
 - Server status monitoring
 - Tool permissions
 
 #### Model Configuration
+
 - `model-defaults-settings.tsx` - Default model selection per feature complexity
 - Model alias resolution (haiku/sonnet/opus)
 - Cost tracking preferences
 
 #### Prompt Templates
+
 - `prompts-settings.tsx` - System prompt customization
 - Feature-specific prompt overrides
 - Context injection rules
 
 #### Providers
+
 - `claude-provider-settings.tsx` - Claude API configuration
 - `codex-provider-settings.tsx` - OpenAI Codex settings
 - `cursor-provider-settings.tsx` - Cursor integration
 - `opencode-provider-settings.tsx` - Open source model providers
 
 #### Security
+
 - `security-settings.tsx` - ALLOWED_ROOT_DIRECTORY, path restrictions
 - Sandbox settings
 - API key visibility controls
 
 #### Terminal & Execution
+
 - `terminal-settings.tsx` - Shell preferences, history size
 - Command whitelisting
 - Process timeout configuration
 
 #### Worktrees & Git
+
 - `worktrees-settings.tsx` - Worktree cleanup policies
 - Branch naming conventions
 - Auto-merge preferences
 
 #### Feature Defaults
+
 - `feature-defaults-settings.tsx` - Default complexity, priority, status
 - Auto-assignment rules
 
 #### Event Hooks
+
 - `event-hooks-settings.tsx` - Webhook configuration for feature lifecycle events
 - Discord notifications
 - External integrations
 
 #### Keyboard Shortcuts
+
 - `keyboard-shortcuts-settings.tsx` - Customizable keybindings
 - Chord key support
 
 **Architecture Pattern:**
 Each settings section follows a consistent structure:
+
 ```tsx
 // 1. Read settings from store
 const { settings } = useAppStore();
@@ -145,6 +162,7 @@ const handleSave = async () => {
 Per-project configuration overrides.
 
 **Sections:**
+
 - `project-identity.tsx` - Name, description, owner
 - `project-models.tsx` - Project-specific model overrides
 - `claude-config.tsx` - Claude SDK configuration
@@ -153,6 +171,7 @@ Per-project configuration overrides.
 - `project-worktree-prefs.tsx` - Worktree behavior for this project
 
 **Key Features:**
+
 - Settings inheritance (global → project override)
 - Per-project API keys
 - Custom prompt templates per project
@@ -160,6 +179,7 @@ Per-project configuration overrides.
 ### Planning View
 
 **Components:**
+
 - `planning-mode-selector.tsx` - Switch between planning modes
 - `dependency-graph-view.tsx` - Visual dependency graph
 - Plan dialogs (see Board View dialogs above)
@@ -172,12 +192,14 @@ Standalone PRD → Milestones → Phases → Features workflow view. Currently p
 Manage context files that are injected into agent prompts.
 
 **Key Features:**
+
 - List all `.automaker/context/*.md` files
 - Create/edit/delete context files
 - Preview how context is injected into prompts
 - File path and description display
 
 **Use Cases:**
+
 - Add coding standards (TypeScript strict mode, naming conventions)
 - Define architectural patterns
 - Security policies
@@ -188,11 +210,13 @@ Manage context files that are injected into agent prompts.
 Idea management and prompt organization.
 
 **Components:**
+
 - `ideation-dashboard.tsx` - Overview of ideas
 - `prompt-categories.tsx` - Organized prompt library
 - `prompt-lists.tsx` - Saved prompt templates
 
 **Key Features:**
+
 - Idea capture and organization
 - Prompt template library
 - Category-based browsing
@@ -200,17 +224,20 @@ Idea management and prompt organization.
 ### GitHub Integration
 
 #### Issues View (`components/views/github-issues-view/`)
+
 - `github-issues-list.tsx` - Issue listing with filters
 - `github-issue-detail-panel.tsx` - Issue details, comments, labels
 - `github-issue-filters.tsx` - Filter by status, labels, assignee
 - `github-issue-validation.tsx` - Validate issue format
 
 **Key Features:**
+
 - Sync GitHub issues to board features
 - Bi-directional sync (board → GitHub)
 - Issue triage and labeling
 
 #### PRs View (`components/views/github-prs-view.tsx`)
+
 - PR listing and filtering
 - PR status tracking
 - Code review integration
@@ -219,37 +246,44 @@ Idea management and prompt organization.
 ### Other Views
 
 **Dashboard** (`components/views/dashboard-view.tsx`)
+
 - Project overview
 - Recent activity feed
 - Agent status summary
 - Quick actions
 
 **Notifications** (`components/views/notifications-view.tsx`)
+
 - Event stream display
 - Notification preferences
 - Mark as read/unread
 
 **Memory** (`components/views/memory-view.tsx`)
+
 - Agent memory management
 - Context file usage tracking
 - Memory file editing
 
 **Chat History** (`components/views/chat-history-view.tsx`)
+
 - Past agent conversations
 - Session replay
 - Export conversations
 
 **Interview/Onboarding** (`components/views/interview-view.tsx`, `onboarding-view.tsx`)
+
 - Initial setup wizard
 - Project configuration interview
 - Feature creation tutorial
 
 **Analysis** (`components/views/analysis-view.tsx`)
+
 - Codebase structure analysis
 - Dependency graphs
 - Code metrics
 
 **Graph View** (`components/views/graph-view.tsx`)
+
 - Visual dependency graph
 - Feature relationships
 - Epic hierarchies
@@ -263,6 +297,7 @@ Automaker uses [Zustand](https://zustand-demo.pmnd.rs/) for state management wit
 Main application state with persistence.
 
 **State Slices:**
+
 ```typescript
 interface AppStore {
   // Board state
@@ -299,11 +334,13 @@ interface AppStore {
 ```
 
 **Persistence:**
+
 - Uses `zustand/middleware` `persist`
 - Stores to `localStorage` with key `automaker-app-store`
 - Selective persistence (excludes ephemeral state like messages)
 
 **Usage Example:**
+
 ```tsx
 import { useAppStore } from '@/store/app-store';
 
@@ -323,6 +360,7 @@ function MyComponent() {
 Onboarding and setup flow state.
 
 **State:**
+
 ```typescript
 interface SetupStore {
   // Setup progress
@@ -341,6 +379,7 @@ interface SetupStore {
 ```
 
 **Persistence:**
+
 - Persists to `localStorage` with key `automaker-setup-store`
 - Cleared after setup completion
 
@@ -349,6 +388,7 @@ interface SetupStore {
 Real-time updates are managed via WebSocket connection, not Zustand:
 
 **Implementation:**
+
 ```tsx
 // apps/ui/src/lib/websocket.ts
 export class WebSocketClient {
@@ -369,6 +409,7 @@ useEffect(() => {
 ```
 
 **Events:**
+
 - `feature:created`, `feature:updated`, `feature:deleted`
 - `feature:status_changed`
 - `agent:started`, `agent:completed`, `agent:failed`
@@ -459,11 +500,13 @@ export const Route = createRootRoute({
 **Missing:** Dedicated PRD → Milestones → Phases → Features workflow UI
 
 **Current State:**
+
 - Planning is embedded in board dialogs
 - Project creation via `project-create-dialog.tsx` opens in modal
 - No dedicated view for managing project hierarchy
 
 **Desired State:**
+
 - Dedicated `/planning/:projectSlug` route
 - Visual PRD editor
 - Milestone/phase cards with drag-and-drop
@@ -471,6 +514,7 @@ export const Route = createRootRoute({
 - Dependency visualization in planning context
 
 **Related Features:**
+
 - `feature-1770360655459-xxxxxxx` - Standalone planning view (backlog)
 
 ### My Tasks Filter
@@ -478,15 +522,18 @@ export const Route = createRootRoute({
 **Missing:** Filter board by assignee to show "my work"
 
 **Current State:**
+
 - Board shows all features for selected project
 - No assignee filtering
 
 **Desired State:**
+
 - "My Tasks" button in board header
 - Filter board to show only features assigned to current user
 - Persist filter preference in app store
 
 **Related Features:**
+
 - Created in backlog, ID pending
 
 ### Priority and Due Date Badges
@@ -494,15 +541,18 @@ export const Route = createRootRoute({
 **Missing:** Visual priority indicators and due date badges on board cards
 
 **Current State:**
+
 - Features have `priority` and `dueDate` fields
 - Not displayed on board cards
 
 **Desired State:**
+
 - Priority badge (P0/P1/P2/P3) with color coding
 - Due date badge with overdue highlighting
 - Hover tooltip with full details
 
 **Related Features:**
+
 - Created in backlog, ID pending
 
 ### Auto-Mode UI Controls
@@ -510,16 +560,19 @@ export const Route = createRootRoute({
 **Missing:** Visual controls for auto-mode settings in UI
 
 **Current State:**
+
 - Auto-mode configuration via API or CLI
 - No UI for setting `maxConcurrency`, viewing queue, or pausing
 
 **Desired State:**
+
 - Auto-mode settings panel in board header
 - Real-time queue display
 - Start/stop/pause controls
 - Concurrency slider
 
 **Potential Location:**
+
 - Board view header or right sidebar panel
 
 ---

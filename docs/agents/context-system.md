@@ -330,11 +330,13 @@ Don't cache authentication endpoints - tokens change frequently!
 ### Relevance Ranking Algorithm
 
 **Inputs:**
+
 - Task title + description
 - Memory file frontmatter (tags, keywords, category)
 - Usage statistics (frequency, recency)
 
 **Algorithm:**
+
 ```typescript
 // 1. Extract search terms from task
 const taskTerms = extractTerms(taskContext.title + ' ' + taskContext.description);
@@ -360,20 +362,15 @@ for (const memoryFile of memoryFiles) {
   }[metadata.importance || 'medium'];
 
   // Combined score
-  const score = (
-    (categoryMatch ? 10 : 0) +
-    (tagMatches * 5) +
-    (keywordMatches * 3) +
-    (usageScore * 2)
-  ) * importanceMultiplier;
+  const score =
+    ((categoryMatch ? 10 : 0) + tagMatches * 5 + keywordMatches * 3 + usageScore * 2) *
+    importanceMultiplier;
 
   memoryFile.score = score;
 }
 
 // 3. Sort by score (descending) and take top N
-const topMemoryFiles = memoryFiles
-  .sort((a, b) => b.score - a.score)
-  .slice(0, maxMemoryFiles);
+const topMemoryFiles = memoryFiles.sort((a, b) => b.score - a.score).slice(0, maxMemoryFiles);
 
 return topMemoryFiles;
 ```

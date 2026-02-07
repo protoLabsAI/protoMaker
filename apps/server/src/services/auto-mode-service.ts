@@ -3711,11 +3711,7 @@ Format your response as a structured markdown document.`;
           }
 
           // Track the branch (with parent if epic, otherwise trunk)
-          const tracked = await graphiteService.trackBranch(
-            worktreePath,
-            branchName,
-            parentBranch
-          );
+          const tracked = await graphiteService.trackBranch(worktreePath, branchName, parentBranch);
           if (tracked) {
             logger.info(
               `Successfully tracked branch ${branchName} in Graphite${parentBranch ? ` with parent ${parentBranch}` : ''}`
