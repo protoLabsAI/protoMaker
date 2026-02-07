@@ -1393,7 +1393,7 @@ export class AutoModeService {
         } else {
           // Auto-create worktree if it doesn't exist
           logger.info(`Auto-creating worktree for branch "${branchName}"`);
-          worktreePath = await this.createWorktreeForBranch(projectPath, branchName);
+          worktreePath = await this.createWorktreeForBranch(projectPath, branchName, feature);
           if (worktreePath) {
             logger.info(`Created worktree for branch "${branchName}": ${worktreePath}`);
           } else {
@@ -2374,7 +2374,7 @@ Complete the pipeline step instructions above. Review the previous work and appl
         } else {
           // Auto-create worktree if it doesn't exist
           logger.info(`Auto-creating worktree for branch "${branchName}"`);
-          worktreePath = await this.createWorktreeForBranch(projectPath, branchName);
+          worktreePath = await this.createWorktreeForBranch(projectPath, branchName, feature);
           if (worktreePath) {
             logger.info(`Created worktree for branch "${branchName}": ${worktreePath}`);
           } else {
@@ -2568,7 +2568,11 @@ Complete the pipeline step instructions above. Review the previous work and appl
       } else {
         // Auto-create worktree if it doesn't exist
         logger.info(`Follow-up auto-creating worktree for branch "${branchName}"`);
-        worktreePath = await this.createWorktreeForBranch(projectPath, branchName);
+        worktreePath = await this.createWorktreeForBranch(
+          projectPath,
+          branchName,
+          feature ?? undefined
+        );
         if (worktreePath) {
           workDir = worktreePath;
           logger.info(`Follow-up created worktree for branch "${branchName}": ${workDir}`);
@@ -3639,7 +3643,8 @@ Format your response as a structured markdown document.`;
    */
   private async createWorktreeForBranch(
     projectPath: string,
-    branchName: string
+    branchName: string,
+    feature?: Feature
   ): Promise<string | null> {
     try {
       // Sanitize branch name for directory usage
@@ -3685,6 +3690,41 @@ Format your response as a structured markdown document.`;
       }
 
       logger.info(`Created worktree for branch "${branchName}" at: ${worktreePath}`);
+
+      // Track branch in Graphite if feature has an epic parent
+      if (feature && this.settingsService) {
+        const settings = await this.settingsService.getGlobalSettings();
+        const shouldUse = await graphiteService.shouldUseGraphite(settings.graphite);
+
+        if (shouldUse) {
+          let parentBranch: string | undefined;
+
+          // If feature belongs to an epic, track against epic branch
+          if (feature.epicId && !feature.isEpic) {
+            const epicFeature = await this.featureLoader.get(projectPath, feature.epicId);
+            parentBranch = epicFeature?.branchName;
+            if (parentBranch) {
+              logger.info(
+                `Feature ${feature.id} belongs to epic, tracking branch ${branchName} with parent ${parentBranch}`
+              );
+            }
+          }
+
+          // Track the branch (with parent if epic, otherwise trunk)
+          const tracked = await graphiteService.trackBranch(
+            worktreePath,
+            branchName,
+            parentBranch
+          );
+          if (tracked) {
+            logger.info(
+              `Successfully tracked branch ${branchName} in Graphite${parentBranch ? ` with parent ${parentBranch}` : ''}`
+            );
+          } else {
+            logger.warn(`Failed to track branch ${branchName} in Graphite, will use fallback`);
+          }
+        }
+      }
 
       // Attempt to restack with Graphite to sync with trunk
       const restackSuccess = await this.attemptGraphiteRestack(worktreePath, branchName);
