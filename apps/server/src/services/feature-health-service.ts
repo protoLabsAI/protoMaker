@@ -240,7 +240,7 @@ export class FeatureHealthService {
     projectPath: string
   ): Promise<HealthIssue[]> {
     const issues: HealthIssue[] = [];
-    const doneStatuses = new Set(['done', 'completed', 'verified']);
+    const doneStatuses = new Set(['done', 'completed', 'verified', 'review']);
 
     // Detect default branch (try main first, then master)
     let defaultBranch = 'main';

@@ -4411,6 +4411,7 @@ This mock response was generated because AUTOMAKER_MOCK_AGENT=true was set.
       thinkingLevel: options?.thinkingLevel, // Pass thinking level for extended thinking
       credentials, // Pass credentials for resolving 'credentials' apiKeySource
       claudeCompatibleProvider, // Pass provider for alternative endpoint configuration (GLM, MiniMax, etc.)
+      sdkSessionId: options?.resume, // Forward resume session ID for session continuity
     };
 
     // Execute via provider

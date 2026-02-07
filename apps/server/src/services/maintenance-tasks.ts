@@ -262,8 +262,29 @@ async function checkMergedBranches(events: EventEmitter, projectPaths: string[])
       return;
     }
 
-    // Get branches merged into main
-    const { stdout: output } = await execFileAsync('git', ['branch', '--merged', 'main'], {
+    // Detect default branch (try main, fall back to master)
+    let defaultBranch = 'main';
+    try {
+      await execFileAsync('git', ['rev-parse', '--verify', 'main'], {
+        encoding: 'utf-8',
+        timeout: 5_000,
+        cwd,
+      });
+    } catch {
+      try {
+        await execFileAsync('git', ['rev-parse', '--verify', 'master'], {
+          encoding: 'utf-8',
+          timeout: 5_000,
+          cwd,
+        });
+        defaultBranch = 'master';
+      } catch {
+        // Fall back to 'main' if neither exists
+      }
+    }
+
+    // Get branches merged into default branch
+    const { stdout: output } = await execFileAsync('git', ['branch', '--merged', defaultBranch], {
       encoding: 'utf-8',
       timeout: 10_000,
       cwd,
