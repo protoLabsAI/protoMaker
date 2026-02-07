@@ -17,6 +17,8 @@ import { createLogger } from '@automaker/utils';
 import { execSync } from 'child_process';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
+import type { GitHubComment } from '@automaker/types';
+import { codeRabbitParserService } from './coderabbit-parser-service.js';
 
 const logger = createLogger('PRFeedbackService');
 
@@ -229,19 +231,44 @@ export class PRFeedbackService {
         pr.reviewState = 'changes_requested';
         pr.iterationCount++;
 
-        // Extract feedback summary from reviews
+        // Extract feedback summary from human reviews
         const feedbackSummary = reviewInfo.reviews
           .filter((r) => r.state === 'CHANGES_REQUESTED')
           .map((r) => `${r.author}: ${r.body}`)
           .join('\n');
 
-        // Also include CodeRabbit comments
-        const coderabbitComments = reviewInfo.comments
-          .filter((c) => c.author === 'coderabbitai' || c.author.includes('coderabbit'))
-          .map((c) => c.body)
-          .join('\n');
+        // Parse CodeRabbit comments using structured parser for severity/category
+        const ghComments: GitHubComment[] = reviewInfo.comments.map((c) => ({
+          id: `${pr.prNumber}-${c.createdAt}`,
+          author: { login: c.author },
+          body: c.body,
+          createdAt: c.createdAt,
+        }));
 
-        const fullFeedback = [feedbackSummary, coderabbitComments].filter(Boolean).join('\n---\n');
+        const codeRabbitResult = codeRabbitParserService.parseReview(
+          pr.prNumber,
+          pr.prUrl,
+          ghComments
+        );
+
+        let coderabbitFeedback = '';
+        if (codeRabbitResult.success && codeRabbitResult.review) {
+          // Format structured CodeRabbit feedback with severity levels
+          const formattedComments = codeRabbitResult.review.comments
+            .map((c) => {
+              const location = c.location?.path ? ` (${c.location.path}${c.location.line ? `:${c.location.line}` : ''})` : '';
+              const severity = c.severity ? `[${c.severity.toUpperCase()}]` : '';
+              const suggestion = c.suggestion ? `\n  Suggestion: ${c.suggestion}` : '';
+              return `- ${severity}${location} ${c.message}${suggestion}`;
+            })
+            .join('\n');
+          coderabbitFeedback = `### CodeRabbit Review (${codeRabbitResult.review.comments.length} items)\n${formattedComments}`;
+          logger.info(
+            `Parsed ${codeRabbitResult.review.comments.length} structured CodeRabbit comments for PR #${pr.prNumber}`
+          );
+        }
+
+        const fullFeedback = [feedbackSummary, coderabbitFeedback].filter(Boolean).join('\n---\n');
 
         // Update feature with feedback info
         await this.featureLoader.update(pr.projectPath, featureId, {

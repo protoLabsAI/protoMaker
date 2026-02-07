@@ -178,8 +178,13 @@ export function classifyError(error: unknown): ErrorInfo {
   const isFetch = isFetchError(error);
   const retryAfter = isRateLimit ? (extractRetryAfter(error) ?? 60) : undefined;
 
+  // Check for SDK-specific error subtypes
+  const isMaxTurns = message.startsWith('error_max_turns:');
+
   let type: ErrorType;
-  if (isAuth) {
+  if (isMaxTurns) {
+    type = 'max_turns';
+  } else if (isAuth) {
     type = 'authentication';
   } else if (isQuotaExhausted) {
     // Quota exhaustion takes priority over rate limit since it's more specific

@@ -144,6 +144,49 @@ function getModelForFeature(feature: {
   return DEFAULT_MODELS.autoMode; // sonnet
 }
 
+/**
+ * Complexity-to-turns mapping.
+ * Maps feature complexity to appropriate max turns for agent execution.
+ * Higher complexity = more turns allowed.
+ */
+const COMPLEXITY_TURNS: Record<string, number> = {
+  small: 200,
+  medium: 500,
+  large: 750,
+  architectural: 1000,
+};
+
+/**
+ * Get the max turns for a feature based on its complexity.
+ * Per-feature maxTurns override takes precedence.
+ * Failure escalation: after error_max_turns, turns are bumped (1.5x first, 2x+opus second).
+ */
+function getTurnsForFeature(feature: {
+  maxTurns?: number;
+  complexity?: string;
+  failureCount?: number;
+}): number {
+  // Explicit per-feature override takes precedence
+  if (feature.maxTurns && feature.maxTurns > 0) {
+    return feature.maxTurns;
+  }
+
+  const baseTurns = COMPLEXITY_TURNS[feature.complexity ?? 'medium'] ?? COMPLEXITY_TURNS.medium;
+
+  // After failures, escalate turns (the model escalation is handled by getModelForFeature)
+  const failureCount = feature.failureCount ?? 0;
+  if (failureCount >= 2) {
+    // 2+ failures: double the turns
+    return Math.min(baseTurns * 2, 2000);
+  }
+  if (failureCount >= 1) {
+    // 1 failure: 1.5x the turns
+    return Math.min(Math.round(baseTurns * 1.5), 1500);
+  }
+
+  return baseTurns;
+}
+
 interface ParsedTask {
   id: string; // e.g., "T001"
   description: string; // e.g., "Create user model"
@@ -1475,9 +1518,10 @@ export class AutoModeService {
 
       // Get model based on feature complexity and failure count
       const model = getModelForFeature(feature);
+      const maxTurns = getTurnsForFeature(feature);
       const provider = ProviderFactory.getProviderNameForModel(model);
       logger.info(
-        `Executing feature ${featureId} with model: ${model}, provider: ${provider} in ${workDir}`
+        `Executing feature ${featureId} with model: ${model}, maxTurns: ${maxTurns}, provider: ${provider} in ${workDir}`
       );
 
       // Store model and provider in running feature for tracking
@@ -1528,6 +1572,15 @@ export class AutoModeService {
 
       // Run the agent with the feature's model and images
       // Context files are passed as system prompt for higher priority
+      // On retries, try to resume from the previous session if available
+      const resumeSessionId =
+        tempRunningFeature.retryCount > 0 ? feature.lastSessionId : undefined;
+      if (resumeSessionId) {
+        logger.info(
+          `Resuming feature ${featureId} from session ${resumeSessionId} (retry #${tempRunningFeature.retryCount})`
+        );
+      }
+
       await this.runAgent(
         workDir,
         featureId,
@@ -1544,6 +1597,8 @@ export class AutoModeService {
           autoLoadClaudeMd,
           thinkingLevel: feature.thinkingLevel,
           branchName: feature.branchName ?? null,
+          maxTurns,
+          resume: resumeSessionId,
         }
       );
 
@@ -1693,6 +1748,50 @@ export class AutoModeService {
           message: 'Feature stopped by user',
           projectPath,
         });
+      } else if (errorInfo.type === 'max_turns' && feature) {
+        // Special handling for error_max_turns: escalate turns and retry
+        const currentFailures = feature.failureCount ?? 0;
+        const newFailureCount = currentFailures + 1;
+        const escalatedTurns = getTurnsForFeature({
+          ...feature,
+          failureCount: newFailureCount,
+        });
+
+        logger.warn(
+          `Feature ${featureId} hit max turns limit (failure #${newFailureCount}). ` +
+          `Escalating turns to ${escalatedTurns} for retry.`
+        );
+
+        await this.featureLoader.update(projectPath, featureId, {
+          failureCount: newFailureCount,
+        });
+
+        this.emitAutoModeEvent('auto_mode_progress', {
+          featureId,
+          featureName: feature.title,
+          message: `Hit turn limit. Retrying with ${escalatedTurns} turns (attempt ${newFailureCount + 1}).`,
+          projectPath,
+        });
+
+        // Remove from running features and retry with escalated turns
+        this.runningFeatures.delete(featureId);
+
+        setImmediate(() => {
+          this.executeFeature(
+            projectPath,
+            featureId,
+            useWorktrees,
+            isAutoMode,
+            providedWorktreePath,
+            {
+              retryCount: tempRunningFeature.retryCount + 1,
+              previousErrors: [...tempRunningFeature.previousErrors, errorInfo.message],
+            }
+          ).catch((retryError) => {
+            logger.error(`Max-turns retry failed for feature ${featureId}:`, retryError);
+          });
+        });
+        return;
       } else {
         logger.error(`Feature ${featureId} failed:`, error);
 
@@ -1992,6 +2091,41 @@ Complete the pipeline step instructions above. Review the previous work and appl
     this.runningFeatures.delete(featureId);
 
     return true;
+  }
+
+  /**
+   * Graceful shutdown: stop all auto-loops and abort all running features.
+   * Called during SIGTERM/SIGINT to prevent orphaned agent processes.
+   */
+  async shutdown(): Promise<void> {
+    logger.info(
+      `[Shutdown] Stopping ${this.autoLoopsByProject.size} auto-loops and ${this.runningFeatures.size} running features`
+    );
+
+    // Stop all per-project auto-loops
+    for (const [key, projectState] of this.autoLoopsByProject) {
+      projectState.isRunning = false;
+      projectState.abortController.abort();
+      if (projectState.cooldownTimer) {
+        clearTimeout(projectState.cooldownTimer);
+      }
+      logger.info(`[Shutdown] Stopped auto-loop: ${key}`);
+    }
+    this.autoLoopsByProject.clear();
+
+    // Stop legacy auto-loop if running
+    this.autoLoopRunning = false;
+    if (this.autoLoopAbortController) {
+      this.autoLoopAbortController.abort();
+      this.autoLoopAbortController = null;
+    }
+
+    // Abort all running features
+    for (const [featureId, running] of this.runningFeatures) {
+      running.abortController.abort();
+      logger.info(`[Shutdown] Aborted feature: ${featureId}`);
+    }
+    this.runningFeatures.clear();
   }
 
   /**
@@ -3080,11 +3214,13 @@ Format your response as a structured markdown document.`;
       projectPath: string;
       projectName: string;
       isAutoMode: boolean;
+      startTime: number;
       model?: string;
       provider?: ModelProvider;
       title?: string;
       description?: string;
       branchName?: string;
+      costUsd?: number;
     }>
   > {
     const agents = await Promise.all(
@@ -3093,6 +3229,7 @@ Format your response as a structured markdown document.`;
         let title: string | undefined;
         let description: string | undefined;
         let branchName: string | undefined;
+        let costUsd: number | undefined;
 
         try {
           const feature = await this.featureLoader.get(rf.projectPath, rf.featureId);
@@ -3100,6 +3237,7 @@ Format your response as a structured markdown document.`;
             title = feature.title;
             description = feature.description;
             branchName = feature.branchName;
+            costUsd = feature.costUsd as number | undefined;
           }
         } catch (error) {
           // Silently ignore errors - title/description/branchName are optional
@@ -3110,11 +3248,13 @@ Format your response as a structured markdown document.`;
           projectPath: rf.projectPath,
           projectName: path.basename(rf.projectPath),
           isAutoMode: rf.isAutoMode,
+          startTime: rf.startTime,
           model: rf.model,
           provider: rf.provider,
           title,
           description,
           branchName,
+          costUsd,
         };
       })
     );
@@ -3605,7 +3745,11 @@ Format your response as a structured markdown document.`;
   }
 
   private isFeatureFinished(feature: Feature): boolean {
-    const isCompleted = feature.status === 'completed' || feature.status === 'verified';
+    const isCompleted =
+      feature.status === 'completed' ||
+      feature.status === 'verified' ||
+      feature.status === 'done' ||
+      feature.status === 'review';
 
     // Even if marked as completed, if it has an approved plan with pending tasks, it's not finished
     if (feature.planSpec?.status === 'approved') {
@@ -3730,6 +3874,14 @@ Format your response as a structured markdown document.`;
             (feature.planSpec?.status === 'approved' &&
               (feature.planSpec.tasksCompleted ?? 0) < (feature.planSpec.tasksTotal ?? 0))
           ) {
+            // Skip epic features - they are containers, not executable
+            if (feature.isEpic) {
+              logger.debug(
+                `[loadPendingFeatures] Skipping epic feature ${feature.id} - ${feature.title}`
+              );
+              continue;
+            }
+
             // Skip features assigned to humans (non-agent assignees)
             if (feature.assignee && feature.assignee !== 'agent') {
               logger.debug(
@@ -4029,6 +4181,8 @@ You can use the Read tool to view these images at any time during implementation
       autoLoadClaudeMd?: boolean;
       thinkingLevel?: ThinkingLevel;
       branchName?: string | null;
+      maxTurns?: number;
+      resume?: string;
     }
   ): Promise<void> {
     const finalProjectPath = options?.projectPath || projectPath;
@@ -4134,6 +4288,8 @@ This mock response was generated because AUTOMAKER_MOCK_AGENT=true was set.
       autoLoadClaudeMd,
       mcpServers: Object.keys(mcpServers).length > 0 ? mcpServers : undefined,
       thinkingLevel: options?.thinkingLevel,
+      maxTurns: options?.maxTurns,
+      resume: options?.resume,
     });
 
     // Extract model, maxTurns, and allowedTools from SDK options
@@ -4840,6 +4996,54 @@ After generating the revised spec, output:
           // The msg.result is just a summary which would lose all tool use details
           // Just ensure final write happens
           scheduleWrite();
+
+          // Capture cost and session_id from SDK result
+          const resultMsg = msg as unknown as { total_cost_usd?: number; session_id?: string };
+          if (typeof resultMsg.total_cost_usd === 'number' && resultMsg.total_cost_usd > 0) {
+            try {
+              const currentFeature = await this.featureLoader.get(projectPath, featureId);
+              const previousCost: number = currentFeature?.costUsd ?? 0;
+              await this.featureLoader.update(projectPath, featureId, {
+                costUsd: previousCost + resultMsg.total_cost_usd,
+              });
+              logger.info(`Feature ${featureId} cost: $${resultMsg.total_cost_usd.toFixed(4)} (total: $${(previousCost + resultMsg.total_cost_usd).toFixed(4)})`);
+            } catch (costError) {
+              logger.warn(`Failed to store cost for feature ${featureId}:`, costError);
+            }
+          }
+          // Store session_id for potential resume
+          if (resultMsg.session_id) {
+            try {
+              await this.featureLoader.update(projectPath, featureId, {
+                lastSessionId: resultMsg.session_id,
+              });
+            } catch {
+              // Non-critical
+            }
+          }
+        } else if (msg.type === 'result' && msg.subtype === 'error_max_turns') {
+          // Agent ran out of turns - capture session_id for resume, then throw for retry
+          scheduleWrite();
+          const errorResult = msg as unknown as { session_id?: string; total_cost_usd?: number };
+          if (errorResult.session_id || errorResult.total_cost_usd) {
+            try {
+              const updates: Record<string, unknown> = {};
+              if (errorResult.session_id) {
+                updates.lastSessionId = errorResult.session_id;
+              }
+              if (typeof errorResult.total_cost_usd === 'number' && errorResult.total_cost_usd > 0) {
+                const currentFeature = await this.featureLoader.get(projectPath, featureId);
+                const previousCost: number = currentFeature?.costUsd ?? 0;
+                updates.costUsd = previousCost + errorResult.total_cost_usd;
+              }
+              await this.featureLoader.update(projectPath, featureId, updates);
+            } catch {
+              // Non-critical
+            }
+          }
+          throw new Error(
+            `error_max_turns: Agent exhausted max turns limit. The feature may need more turns to complete.`
+          );
         }
       }
 

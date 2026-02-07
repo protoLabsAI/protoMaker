@@ -1,5 +1,6 @@
 import { Bot, PanelLeftClose, PanelLeft, Wrench, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { AgentConfigPopover, type AgentConfig } from './agent-config-popover';
 
 interface AgentHeaderProps {
   projectName: string;
@@ -11,6 +12,8 @@ interface AgentHeaderProps {
   showSessionManager: boolean;
   onToggleSessionManager: () => void;
   onClearChat: () => void;
+  agentConfig?: AgentConfig;
+  onAgentConfigChange?: (config: AgentConfig) => void;
 }
 
 export function AgentHeader({
@@ -23,6 +26,8 @@ export function AgentHeader({
   showSessionManager,
   onToggleSessionManager,
   onClearChat,
+  agentConfig,
+  onAgentConfigChange,
 }: AgentHeaderProps) {
   return (
     <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-card/50 backdrop-blur-sm">
@@ -46,6 +51,13 @@ export function AgentHeader({
             <Wrench className="w-3 h-3 text-primary" />
             <span className="font-medium">{currentTool}</span>
           </div>
+        )}
+        {currentSessionId && agentConfig && onAgentConfigChange && (
+          <AgentConfigPopover
+            config={agentConfig}
+            onConfigChange={onAgentConfigChange}
+            disabled={isProcessing}
+          />
         )}
         {currentSessionId && messagesCount > 0 && (
           <Button

@@ -221,6 +221,8 @@ export interface RunningAgent {
   isAutoMode: boolean;
   title?: string;
   description?: string;
+  branchName?: string;
+  costUsd?: number;
 }
 
 export interface RunningAgentsResult {

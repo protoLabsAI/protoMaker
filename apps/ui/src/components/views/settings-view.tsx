@@ -18,6 +18,7 @@ import { WorktreesSection } from './settings-view/worktrees';
 import { AccountSection } from './settings-view/account';
 import { SecuritySection } from './settings-view/security';
 import { DeveloperSection } from './settings-view/developer/developer-section';
+import { HealthSection } from './settings-view/health';
 import {
   ClaudeSettingsTab,
   CursorSettingsTab,
@@ -188,6 +189,8 @@ export function SettingsView() {
             onSkipSandboxWarningChange={setSkipSandboxWarning}
           />
         );
+      case 'health':
+        return <HealthSection />;
       case 'developer':
         return <DeveloperSection />;
       default:

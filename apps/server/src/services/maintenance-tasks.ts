@@ -1,0 +1,259 @@
+/**
+ * Maintenance Tasks - Preset scheduled tasks for system health
+ *
+ * Registers periodic maintenance tasks with the SchedulerService:
+ * - Stale feature detection (hourly): finds features stuck in running/in-progress
+ * - Worktree cleanup (daily): detects stale worktrees for merged branches
+ * - Branch cleanup (weekly): identifies local branches already merged to main
+ *
+ * All tasks emit events for UI display and logging.
+ */
+
+import { createLogger } from '@automaker/utils';
+import { execSync } from 'child_process';
+import type { SchedulerService } from './scheduler-service.js';
+import type { FeatureLoader } from './feature-loader.js';
+import type { EventEmitter } from '../lib/events.js';
+import type { AutoModeService } from './auto-mode-service.js';
+import type { FeatureHealthService } from './feature-health-service.js';
+
+const logger = createLogger('MaintenanceTasks');
+
+/**
+ * Register all maintenance tasks with the scheduler.
+ * Called once during server initialization.
+ */
+export async function registerMaintenanceTasks(
+  scheduler: SchedulerService,
+  featureLoader: FeatureLoader,
+  events: EventEmitter,
+  autoModeService: AutoModeService,
+  featureHealthService?: FeatureHealthService
+): Promise<void> {
+  logger.info('Registering maintenance tasks...');
+
+  // Hourly: Check for stale features (stuck in running for >2 hours)
+  await scheduler.registerTask(
+    'maintenance:stale-features',
+    'Stale Feature Detection',
+    '0 * * * *', // Every hour at :00
+    async () => {
+      await checkStaleFeatures(featureLoader, events, autoModeService);
+    }
+  );
+
+  // Daily at 3am: Detect stale worktrees
+  await scheduler.registerTask(
+    'maintenance:stale-worktrees',
+    'Stale Worktree Detection',
+    '0 3 * * *', // Daily at 3:00 AM
+    async () => {
+      await detectStaleWorktrees(events);
+    }
+  );
+
+  // Weekly on Sunday at 4am: Identify merged branches that can be cleaned up
+  await scheduler.registerTask(
+    'maintenance:branch-cleanup',
+    'Merged Branch Cleanup Check',
+    '0 4 * * 0', // Sunday at 4:00 AM
+    async () => {
+      await checkMergedBranches(events);
+    }
+  );
+
+  // Every 6 hours: Board health reconciliation with auto-fix
+  if (featureHealthService) {
+    await scheduler.registerTask(
+      'maintenance:board-health',
+      'Board Health Reconciliation',
+      '0 */6 * * *', // Every 6 hours
+      async () => {
+        await runBoardHealthAudit(featureHealthService, events);
+      }
+    );
+    logger.info('Registered 4 maintenance tasks');
+  } else {
+    logger.info('Registered 3 maintenance tasks');
+  }
+}
+
+/**
+ * Check for features stuck in running state for too long.
+ * Uses the auto-mode service's running agents to detect stale executions.
+ */
+async function checkStaleFeatures(
+  _featureLoader: FeatureLoader,
+  events: EventEmitter,
+  autoModeService: AutoModeService
+): Promise<void> {
+  const STALE_THRESHOLD_MS = 2 * 60 * 60 * 1000; // 2 hours
+
+  logger.info('Checking for stale features...');
+
+  try {
+    const runningAgents = await autoModeService.getRunningAgents();
+    const now = Date.now();
+    let staleCount = 0;
+    const staleFeatures: string[] = [];
+
+    for (const agent of runningAgents) {
+      const runningMs = now - agent.startTime;
+      if (runningMs > STALE_THRESHOLD_MS) {
+        staleCount++;
+        const runningMin = Math.round(runningMs / 60000);
+        staleFeatures.push(`${agent.featureId} (${runningMin}min)`);
+        logger.warn(
+          `Stale feature detected: ${agent.featureId} - running for ${runningMin}min in ${agent.projectPath}`
+        );
+      }
+    }
+
+    if (staleCount > 0) {
+      events.emit('scheduler:task_completed' as Parameters<typeof events.emit>[0], {
+        taskId: 'maintenance:stale-features',
+        message: `Found ${staleCount} stale feature(s) stuck in running state for >2h`,
+        staleCount,
+        staleFeatures,
+      });
+    }
+
+    logger.info(`Stale feature check complete: ${staleCount} stale, ${runningAgents.length} running`);
+  } catch (error) {
+    logger.error('Stale feature check failed:', error);
+    throw error;
+  }
+}
+
+/**
+ * Detect stale git worktrees (branches already merged or inactive).
+ */
+async function detectStaleWorktrees(events: EventEmitter): Promise<void> {
+  logger.info('Checking for stale worktrees...');
+
+  try {
+    // List all worktrees
+    const output = execSync('git worktree list --porcelain', {
+      encoding: 'utf-8',
+      timeout: 10_000,
+    });
+
+    const worktrees = output
+      .split('\n\n')
+      .filter((block) => block.trim())
+      .map((block) => {
+        const lines = block.split('\n');
+        const worktreeLine = lines.find((l) => l.startsWith('worktree '));
+        const branchLine = lines.find((l) => l.startsWith('branch '));
+        return {
+          path: worktreeLine?.replace('worktree ', '') ?? '',
+          branch: branchLine?.replace('branch refs/heads/', '') ?? '',
+        };
+      })
+      .filter((w) => w.path && w.branch);
+
+    // Check which worktree branches are already merged into main
+    let staleCount = 0;
+    const staleWorktrees: string[] = [];
+
+    for (const wt of worktrees) {
+      if (wt.branch === 'main' || wt.branch === 'master') continue;
+
+      try {
+        // Check if branch is merged into main
+        execSync(`git merge-base --is-ancestor ${wt.branch} main`, {
+          encoding: 'utf-8',
+          timeout: 5_000,
+        });
+        // If no error, branch IS merged into main
+        staleCount++;
+        staleWorktrees.push(`${wt.branch} (${wt.path})`);
+      } catch {
+        // Branch is not merged, it's active
+      }
+    }
+
+    if (staleCount > 0) {
+      logger.info(`Found ${staleCount} stale worktree(s): ${staleWorktrees.join(', ')}`);
+      events.emit('scheduler:task_completed' as Parameters<typeof events.emit>[0], {
+        taskId: 'maintenance:stale-worktrees',
+        message: `Found ${staleCount} worktree(s) with merged branches that can be removed`,
+        staleWorktrees,
+      });
+    } else {
+      logger.info('No stale worktrees found');
+    }
+  } catch (error) {
+    logger.error('Stale worktree detection failed:', error);
+    throw error;
+  }
+}
+
+/**
+ * Check for local branches that are already merged to main.
+ */
+async function checkMergedBranches(events: EventEmitter): Promise<void> {
+  logger.info('Checking for merged branches...');
+
+  try {
+    // Get branches merged into main
+    const output = execSync('git branch --merged main', {
+      encoding: 'utf-8',
+      timeout: 10_000,
+    });
+
+    const mergedBranches = output
+      .split('\n')
+      .map((line) => line.trim().replace(/^\*\s*/, ''))
+      .filter((branch) => branch && branch !== 'main' && branch !== 'master');
+
+    if (mergedBranches.length > 0) {
+      logger.info(`Found ${mergedBranches.length} merged branch(es): ${mergedBranches.join(', ')}`);
+      events.emit('scheduler:task_completed' as Parameters<typeof events.emit>[0], {
+        taskId: 'maintenance:branch-cleanup',
+        message: `Found ${mergedBranches.length} local branch(es) already merged to main`,
+        mergedBranches,
+      });
+    } else {
+      logger.info('No merged branches to clean up');
+    }
+  } catch (error) {
+    logger.error('Merged branch check failed:', error);
+    throw error;
+  }
+}
+
+/**
+ * Run board health audit with auto-fix enabled.
+ * Finds and fixes: orphaned epic refs, dangling deps, completed epics, stale running, merged-not-done.
+ */
+async function runBoardHealthAudit(
+  featureHealthService: FeatureHealthService,
+  events: EventEmitter
+): Promise<void> {
+  logger.info('Running board health reconciliation...');
+
+  try {
+    // Use process.cwd() as the default project path for scheduled runs
+    const projectPath = process.cwd();
+    const report = await featureHealthService.audit(projectPath, true);
+
+    if (report.issues.length > 0) {
+      logger.info(
+        `Board health: ${report.issues.length} issues found, ${report.fixed.length} auto-fixed`
+      );
+      events.emit('scheduler:task_completed' as Parameters<typeof events.emit>[0], {
+        taskId: 'maintenance:board-health',
+        message: `Board health: ${report.issues.length} issue(s) found, ${report.fixed.length} auto-fixed`,
+        totalIssues: report.issues.length,
+        fixedCount: report.fixed.length,
+        issues: report.issues.map((i) => `[${i.type}] ${i.featureTitle}: ${i.message}`),
+      });
+    } else {
+      logger.info('Board health check: no issues found');
+    }
+  } catch (error) {
+    logger.error('Board health reconciliation failed:', error);
+    throw error;
+  }
+}

@@ -22,6 +22,7 @@ export function createIndexHandler(autoModeService: AutoModeService) {
           projectPath: backlogPlanDetails.projectPath,
           projectName: path.basename(backlogPlanDetails.projectPath),
           isAutoMode: false,
+          startTime: Date.now(),
           title: 'Backlog plan',
           description: backlogPlanDetails.prompt,
         });
@@ -52,6 +53,7 @@ export function createIndexHandler(autoModeService: AutoModeService) {
           projectPath: generation.projectPath,
           projectName: path.basename(generation.projectPath),
           isAutoMode: false,
+          startTime: Date.now(),
           title,
           description,
         });

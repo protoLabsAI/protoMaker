@@ -102,6 +102,22 @@ export interface Feature {
    */
   failureCount?: number;
   /**
+   * Total cost in USD for all agent executions on this feature.
+   * Populated from SDK's total_cost_usd in the result message.
+   */
+  costUsd?: number;
+  /**
+   * Override max turns for this feature's agent execution.
+   * If not set, turns are derived from complexity:
+   * - small: 200, medium: 500, large: 750, architectural: 1000
+   */
+  maxTurns?: number;
+  /**
+   * Last SDK session ID from agent execution.
+   * Stored on failure so subsequent retries can resume from where the agent left off.
+   */
+  lastSessionId?: string;
+  /**
    * Assigned agent role (for headsdown agents)
    * Determines which specialized agent should work on this feature.
    */

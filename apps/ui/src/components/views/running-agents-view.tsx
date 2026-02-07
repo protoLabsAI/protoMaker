@@ -7,7 +7,7 @@
 
 import { useState, useCallback } from 'react';
 import { createLogger } from '@automaker/utils/logger';
-import { Bot, Folder, RefreshCw, Square, Activity, FileText } from 'lucide-react';
+import { Bot, Folder, RefreshCw, Square, Activity, FileText, DollarSign } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { getElectronAPI, type RunningAgent } from '@/lib/electron';
 import { useAppStore } from '@/store/app-store';
@@ -172,6 +172,7 @@ export function RunningAgentsView() {
                         {agent.description}
                       </p>
                     )}
+                    <div className="flex items-center gap-3">
                     <button
                       onClick={() => handleNavigateToProject(agent)}
                       className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
@@ -179,6 +180,13 @@ export function RunningAgentsView() {
                       <Folder className="h-3.5 w-3.5" />
                       <span className="truncate">{agent.projectName}</span>
                     </button>
+                    {typeof agent.costUsd === 'number' && agent.costUsd > 0 && (
+                      <span className="inline-flex items-center gap-1 text-xs text-emerald-400">
+                        <DollarSign className="w-3 h-3" />
+                        {agent.costUsd < 0.01 ? '<$0.01' : `$${agent.costUsd.toFixed(2)}`}
+                      </span>
+                    )}
+                    </div>
                   </div>
                 </div>
 

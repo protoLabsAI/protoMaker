@@ -1,8 +1,11 @@
+import { useMemo } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
-import { FastForward, Bot, Settings2 } from 'lucide-react';
+import { FastForward, Bot, Settings2, Lock, CheckCircle, Clock } from 'lucide-react';
+import { useAppStore } from '@/store/app-store';
+import { getBlockingDependencies } from '@automaker/dependency-resolver';
 
 interface AutoModeSettingsPopoverProps {
   skipVerificationInAutoMode: boolean;
@@ -19,6 +22,42 @@ export function AutoModeSettingsPopover({
   runningAgentsCount,
   onConcurrencyChange,
 }: AutoModeSettingsPopoverProps) {
+  const features = useAppStore((state) => state.features);
+  const enableDependencyBlocking = useAppStore((state) => state.enableDependencyBlocking);
+
+  const stats = useMemo(() => {
+    let backlog = 0;
+    let blocked = 0;
+    let running = 0;
+    let done = 0;
+
+    for (const f of features) {
+      if (f.isEpic) continue;
+      const status = f.status ?? 'backlog';
+      if (status === 'completed' || status === 'verified') {
+        done++;
+      } else if (status === 'in_progress') {
+        running++;
+      } else if (status === 'waiting_approval') {
+        done++; // Treat waiting_approval as nearly done
+      } else if (status === 'backlog') {
+        if (enableDependencyBlocking) {
+          const blocking = getBlockingDependencies(f, features);
+          if (blocking.length > 0) {
+            blocked++;
+          } else {
+            backlog++;
+          }
+        } else {
+          backlog++;
+        }
+      } else {
+        backlog++;
+      }
+    }
+    return { backlog, blocked, running, done, total: features.filter((f) => !f.isEpic).length };
+  }, [features, enableDependencyBlocking]);
+
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -88,6 +127,61 @@ export function AutoModeSettingsPopover({
             When enabled, auto mode will grab features even if their dependencies are not verified,
             as long as they are not currently running.
           </p>
+
+          {/* Feature Queue Overview */}
+          <div className="space-y-2 pt-2 border-t border-border/30">
+            <h5 className="text-xs font-medium text-muted-foreground">Feature Queue</h5>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="flex items-center gap-1.5 text-xs">
+                <Clock className="w-3 h-3 text-muted-foreground" />
+                <span className="text-muted-foreground">Ready:</span>
+                <span className="font-medium">{stats.backlog}</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs">
+                <Lock className="w-3 h-3 text-orange-500" />
+                <span className="text-muted-foreground">Blocked:</span>
+                <span className="font-medium">{stats.blocked}</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs">
+                <Bot className="w-3 h-3 text-brand-500" />
+                <span className="text-muted-foreground">Running:</span>
+                <span className="font-medium">{stats.running}</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs">
+                <CheckCircle className="w-3 h-3 text-emerald-500" />
+                <span className="text-muted-foreground">Done:</span>
+                <span className="font-medium">{stats.done}</span>
+              </div>
+            </div>
+            {stats.total > 0 && (
+              <div className="h-1.5 rounded-full bg-accent/30 overflow-hidden flex">
+                {stats.done > 0 && (
+                  <div
+                    className="h-full bg-emerald-500"
+                    style={{ width: `${(stats.done / stats.total) * 100}%` }}
+                  />
+                )}
+                {stats.running > 0 && (
+                  <div
+                    className="h-full bg-brand-500"
+                    style={{ width: `${(stats.running / stats.total) * 100}%` }}
+                  />
+                )}
+                {stats.backlog > 0 && (
+                  <div
+                    className="h-full bg-muted-foreground/30"
+                    style={{ width: `${(stats.backlog / stats.total) * 100}%` }}
+                  />
+                )}
+                {stats.blocked > 0 && (
+                  <div
+                    className="h-full bg-orange-500/40"
+                    style={{ width: `${(stats.blocked / stats.total) * 100}%` }}
+                  />
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </PopoverContent>
     </Popover>

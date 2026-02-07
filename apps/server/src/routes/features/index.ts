@@ -17,12 +17,15 @@ import { createBulkDeleteHandler } from './routes/bulk-delete.js';
 import { createDeleteHandler } from './routes/delete.js';
 import { createAgentOutputHandler, createRawOutputHandler } from './routes/agent-output.js';
 import { createGenerateTitleHandler } from './routes/generate-title.js';
+import { createHealthHandler } from './routes/health.js';
+import type { FeatureHealthService } from '../../services/feature-health-service.js';
 
 export function createFeaturesRoutes(
   featureLoader: FeatureLoader,
   settingsService?: SettingsService,
   events?: EventEmitter,
-  authorityService?: AuthorityService
+  authorityService?: AuthorityService,
+  healthService?: FeatureHealthService
 ): Router {
   const router = Router();
 
@@ -52,6 +55,14 @@ export function createFeaturesRoutes(
   router.post('/agent-output', createAgentOutputHandler(featureLoader));
   router.post('/raw-output', createRawOutputHandler(featureLoader));
   router.post('/generate-title', createGenerateTitleHandler(settingsService));
+
+  if (healthService) {
+    router.post(
+      '/health',
+      validatePathParams('projectPath'),
+      createHealthHandler(healthService)
+    );
+  }
 
   return router;
 }

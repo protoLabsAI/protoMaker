@@ -1,7 +1,8 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Wand2, GitBranch, ClipboardCheck, Users, Bot, User } from 'lucide-react';
+import { Wand2, GitBranch, ClipboardCheck, Users, Bot, User, DollarSign } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { UsagePopover } from '@/components/usage-popover';
 import { useAppStore } from '@/store/app-store';
 import { useSetupStore } from '@/store/setup-store';
@@ -119,6 +120,15 @@ export function BoardHeader({
   // Show if Codex is authenticated (CLI or API key)
   const showCodexUsage = !!codexAuthStatus?.authenticated;
 
+  // Calculate cumulative project cost from all features
+  const features = useAppStore((state) => state.features);
+  const totalProjectCost = useMemo(() => {
+    return features.reduce((sum, f) => {
+      const cost = f.costUsd as number | undefined;
+      return sum + (typeof cost === 'number' ? cost : 0);
+    }, 0);
+  }, [features]);
+
   // State for mobile actions panel
   const [showActionsPanel, setShowActionsPanel] = useState(false);
 
@@ -189,6 +199,25 @@ export function BoardHeader({
         <BoardControls isMounted={isMounted} onShowBoardBackground={onShowBoardBackground} />
       </div>
       <div className="flex gap-4 items-center">
+        {/* Project cost - show if any features have cost data */}
+        {isMounted && !isTablet && totalProjectCost > 0 && (
+          <TooltipProvider delayDuration={200}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center gap-1 px-2 h-8 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-medium">
+                  <DollarSign className="w-3.5 h-3.5" />
+                  {totalProjectCost < 0.01
+                    ? '<$0.01'
+                    : `$${totalProjectCost.toFixed(2)}`}
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="text-xs">
+                <p>Cumulative agent cost for this project</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+
         {/* Usage Popover - show if either provider is authenticated, only on desktop */}
         {isMounted && !isTablet && (showClaudeUsage || showCodexUsage) && <UsagePopover />}
 
