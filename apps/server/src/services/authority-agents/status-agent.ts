@@ -16,6 +16,7 @@ import { createLogger } from '@automaker/utils';
 import type { EventEmitter } from '../../lib/events.js';
 import type { AuthorityService } from '../authority-service.js';
 import type { FeatureLoader } from '../feature-loader.js';
+import { createAgentState, initializeAgent, type AgentState } from './agent-utils.js';
 
 const logger = createLogger('StatusAgent');
 
@@ -36,17 +37,20 @@ interface BlockerDetection {
   severity: 'low' | 'medium' | 'high';
 }
 
+/** Custom state for Status Monitor agent */
+interface StatusCustomState {
+  pollTimers: Map<string, ReturnType<typeof setInterval>>;
+  /** Track which blockers have already been escalated to avoid duplicate notifications */
+  escalatedBlockers: Set<string>;
+}
+
 export class StatusMonitorAgent {
   private readonly events: EventEmitter;
   private readonly authorityService: AuthorityService;
   private readonly featureLoader: FeatureLoader;
 
-  private agents = new Map<string, AuthorityAgent>();
-  private initializedProjects = new Set<string>();
-  private pollTimers = new Map<string, ReturnType<typeof setInterval>>();
-
-  /** Track which blockers have already been escalated to avoid duplicate notifications */
-  private escalatedBlockers = new Set<string>();
+  /** Agent state (agents, initialization, poll timers, escalated blockers) */
+  private readonly state: AgentState<StatusCustomState>;
 
   constructor(
     events: EventEmitter,
@@ -56,34 +60,38 @@ export class StatusMonitorAgent {
     this.events = events;
     this.authorityService = authorityService;
     this.featureLoader = featureLoader;
+    this.state = createAgentState<StatusCustomState>({
+      pollTimers: new Map(),
+      escalatedBlockers: new Set(),
+    });
   }
 
   async initialize(projectPath: string): Promise<void> {
-    if (this.initializedProjects.has(projectPath)) return;
+    await initializeAgent(
+      this.state,
+      this.authorityService,
+      'principal-engineer',
+      projectPath,
+      async () => {
+        // Start periodic scanning
+        const timer = setInterval(() => {
+          void this.scanForBlockers(projectPath);
+        }, SCAN_INTERVAL_MS);
+        this.state.custom.pollTimers.set(projectPath, timer);
 
-    // Register as a principal-engineer role (quality/architecture oversight)
-    const agent = await this.authorityService.registerAgent('principal-engineer', projectPath);
-    this.agents.set(projectPath, agent);
-    this.initializedProjects.add(projectPath);
-    logger.info(`Status monitor registered for project: ${agent.id}`);
-
-    // Start periodic scanning
-    const timer = setInterval(() => {
-      void this.scanForBlockers(projectPath);
-    }, SCAN_INTERVAL_MS);
-    this.pollTimers.set(projectPath, timer);
-
-    // Initial scan
-    await this.scanForBlockers(projectPath);
+        // Initial scan
+        await this.scanForBlockers(projectPath);
+      }
+    );
   }
 
   stop(projectPath: string): void {
-    const timer = this.pollTimers.get(projectPath);
+    const timer = this.state.custom.pollTimers.get(projectPath);
     if (timer) {
       clearInterval(timer);
-      this.pollTimers.delete(projectPath);
+      this.state.custom.pollTimers.delete(projectPath);
     }
-    this.initializedProjects.delete(projectPath);
+    this.state.removeInitialized(projectPath);
   }
 
   /**
@@ -136,7 +144,9 @@ export class StatusMonitorAgent {
       blockers.push(...deadlocks);
 
       // Process new blockers
-      const newBlockers = blockers.filter((b) => !this.escalatedBlockers.has(b.featureId));
+      const newBlockers = blockers.filter(
+        (b) => !this.state.custom.escalatedBlockers.has(b.featureId)
+      );
       if (newBlockers.length > 0) {
         await this.escalateBlockers(projectPath, newBlockers);
       }
@@ -202,7 +212,7 @@ export class StatusMonitorAgent {
    * Escalate detected blockers through the authority system.
    */
   private async escalateBlockers(projectPath: string, blockers: BlockerDetection[]): Promise<void> {
-    const agent = this.agents.get(projectPath);
+    const agent = this.state.getAgent(projectPath);
     if (!agent) return;
 
     for (const blocker of blockers) {
@@ -218,7 +228,7 @@ export class StatusMonitorAgent {
         projectPath
       );
 
-      this.escalatedBlockers.add(blocker.featureId);
+      this.state.custom.escalatedBlockers.add(blocker.featureId);
 
       // Emit blocker detection event (for Discord routing)
       this.events.emit('authority:awaiting-approval', {
@@ -242,6 +252,6 @@ export class StatusMonitorAgent {
   }
 
   getAgent(projectPath: string): AuthorityAgent | null {
-    return this.agents.get(projectPath) ?? null;
+    return this.state.getAgent(projectPath);
   }
 }
