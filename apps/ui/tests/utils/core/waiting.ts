@@ -63,7 +63,7 @@ export async function waitForBoardFeaturesLoaded(page: Page, timeout = 10000): P
   // First, wait for the board view to be visible (confirms project is set)
   await page.locator('[data-testid="board-view"]').waitFor({
     state: 'visible',
-    timeout
+    timeout,
   });
 
   // Wait for features to load by checking that the loading spinner is gone
