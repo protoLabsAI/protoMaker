@@ -26,6 +26,8 @@ allowed-tools:
   # The handoff mechanism (Ava PRD → ProjM intake) is a service-level bridge, not direct MCP access.
   # Briefing - situational awareness on activation
   - mcp__automaker__get_briefing
+  # Setup Lab - initialize new projects
+  - mcp__automaker__setup_lab
   # Discord - team communication
   - mcp__plugin_automaker_discord__discord_send
   - mcp__plugin_automaker_discord__discord_read_messages
