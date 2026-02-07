@@ -249,13 +249,7 @@ describe('Validation Edge Cases', () => {
   });
 
   it('should handle repeated special characters', () => {
-    const repeatedAttacks = [
-      ';;;malicious',
-      '&&&evil',
-      '|||whoami',
-      '```command',
-      '$$$vars',
-    ];
+    const repeatedAttacks = [';;;malicious', '&&&evil', '|||whoami', '```command', '$$$vars'];
 
     for (const attack of repeatedAttacks) {
       expect(() => validateSlugInput(attack, 'test')).toThrow();
