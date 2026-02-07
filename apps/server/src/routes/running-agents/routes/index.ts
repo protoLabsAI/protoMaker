@@ -55,9 +55,7 @@ export function createIndexHandler(autoModeService: AutoModeService) {
           projectPath: generation.projectPath,
           projectName: path.basename(generation.projectPath),
           isAutoMode: false,
-          startTime: generation.startedAt
-            ? new Date(generation.startedAt).getTime()
-            : Date.now(),
+          startTime: generation.startedAt ? new Date(generation.startedAt).getTime() : Date.now(),
           title,
           description,
         });

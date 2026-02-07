@@ -149,10 +149,7 @@ async function checkStaleFeatures(
  * Detect stale git worktrees (branches already merged or inactive).
  * Uses execFileAsync to avoid command injection and run asynchronously.
  */
-async function detectStaleWorktrees(
-  events: EventEmitter,
-  projectPaths: string[]
-): Promise<void> {
+async function detectStaleWorktrees(events: EventEmitter, projectPaths: string[]): Promise<void> {
   logger.info('Checking for stale worktrees...');
 
   try {
@@ -164,11 +161,11 @@ async function detectStaleWorktrees(
     }
 
     // List all worktrees
-    const { stdout: output } = await execFileAsync(
-      'git',
-      ['worktree', 'list', '--porcelain'],
-      { encoding: 'utf-8', timeout: 10_000, cwd }
-    );
+    const { stdout: output } = await execFileAsync('git', ['worktree', 'list', '--porcelain'], {
+      encoding: 'utf-8',
+      timeout: 10_000,
+      cwd,
+    });
 
     const worktrees = output
       .split('\n\n')
@@ -193,11 +190,11 @@ async function detectStaleWorktrees(
 
       try {
         // Check if branch is merged into main using execFileAsync (no shell injection)
-        await execFileAsync(
-          'git',
-          ['merge-base', '--is-ancestor', wt.branch, 'main'],
-          { encoding: 'utf-8', timeout: 5_000, cwd }
-        );
+        await execFileAsync('git', ['merge-base', '--is-ancestor', wt.branch, 'main'], {
+          encoding: 'utf-8',
+          timeout: 5_000,
+          cwd,
+        });
         // If no error, branch IS merged into main
         staleCount++;
         staleWorktrees.push(`${wt.branch} (${wt.path})`);
@@ -226,10 +223,7 @@ async function detectStaleWorktrees(
  * Check for local branches that are already merged to main.
  * Uses execFileAsync to avoid command injection and run asynchronously.
  */
-async function checkMergedBranches(
-  events: EventEmitter,
-  projectPaths: string[]
-): Promise<void> {
+async function checkMergedBranches(events: EventEmitter, projectPaths: string[]): Promise<void> {
   logger.info('Checking for merged branches...');
 
   try {
@@ -240,11 +234,11 @@ async function checkMergedBranches(
     }
 
     // Get branches merged into main
-    const { stdout: output } = await execFileAsync(
-      'git',
-      ['branch', '--merged', 'main'],
-      { encoding: 'utf-8', timeout: 10_000, cwd }
-    );
+    const { stdout: output } = await execFileAsync('git', ['branch', '--merged', 'main'], {
+      encoding: 'utf-8',
+      timeout: 10_000,
+      cwd,
+    });
 
     const mergedBranches = output
       .split('\n')

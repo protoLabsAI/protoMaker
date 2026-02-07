@@ -209,9 +209,7 @@ export class FeatureHealthService {
     const runningAgents = await this.autoModeService.getRunningAgents();
     // Filter agents by projectPath so we only compare against agents for this project
     const activeAgentIds = new Set(
-      runningAgents
-        .filter((a) => a.projectPath === projectPath)
-        .map((a) => a.featureId)
+      runningAgents.filter((a) => a.projectPath === projectPath).map((a) => a.featureId)
     );
 
     for (const feature of runningFeatures) {
@@ -321,9 +319,10 @@ export class FeatureHealthService {
       }
 
       if (isMerged) {
-        const targetBranch = feature.epicId && epicBranchMap.get(feature.epicId)
-          ? epicBranchMap.get(feature.epicId)!
-          : defaultBranch;
+        const targetBranch =
+          feature.epicId && epicBranchMap.get(feature.epicId)
+            ? epicBranchMap.get(feature.epicId)!
+            : defaultBranch;
         issues.push({
           type: 'merged_not_done',
           featureId: feature.id,
