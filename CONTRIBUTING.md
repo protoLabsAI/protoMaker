@@ -153,6 +153,16 @@ Before contributing to Automaker, ensure you have the following installed on you
 | `npm run test:packages`  | Run package tests                |
 | `npm run test:all`       | Run all tests                    |
 
+**Issue tracking setup (optional):**
+
+This repository uses [Beads](https://github.com/steveyegge/beads) for AI-native issue tracking. A custom Git merge driver is configured in `.gitattributes` for JSONL files. After cloning, run:
+
+```bash
+bd init
+```
+
+This sets up the merge driver so `.beads/issues.jsonl` merges correctly. See `.beads/README.md` for more details.
+
 ### Project Structure
 
 Automaker is organized as an npm workspace monorepo:
