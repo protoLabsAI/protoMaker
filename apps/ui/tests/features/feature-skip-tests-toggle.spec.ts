@@ -15,6 +15,7 @@ import {
   cleanupTempDir,
   setupRealProject,
   waitForNetworkIdle,
+  waitForBoardFeaturesLoaded,
   clickAddFeature,
   fillAddFeatureDialog,
   confirmAddFeature,
@@ -73,7 +74,10 @@ test.describe('Feature Skip Tests Badge', () => {
     await handleLoginScreenIfPresent(page);
     await waitForNetworkIdle(page);
 
-    await expect(page.locator('[data-testid="board-view"]')).toBeVisible({ timeout: 10000 });
+    // Wait for board to load and features to be fetched
+    // This prevents race conditions where features haven't loaded yet
+    await waitForBoardFeaturesLoaded(page);
+
     await expect(page.locator('[data-testid="kanban-column-backlog"]')).toBeVisible({
       timeout: 5000,
     });

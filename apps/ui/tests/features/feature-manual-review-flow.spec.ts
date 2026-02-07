@@ -18,6 +18,7 @@ import {
   cleanupTempDir,
   setupRealProject,
   waitForNetworkIdle,
+  waitForBoardFeaturesLoaded,
   getKanbanColumn,
   authenticateForTests,
   handleLoginScreenIfPresent,
@@ -152,9 +153,12 @@ test.describe('Feature Manual Review Flow', () => {
     await page.waitForLoadState('load');
     await handleLoginScreenIfPresent(page);
     await waitForNetworkIdle(page);
-    await expect(page.locator('[data-testid="board-view"]')).toBeVisible({ timeout: 10000 });
 
-    // Wait for the feature card to appear (features are loaded asynchronously)
+    // Wait for board to load and features to be fetched
+    // This prevents race conditions where features haven't loaded yet
+    await waitForBoardFeaturesLoaded(page);
+
+    // Wait for the feature card to appear
     const featureCard = page.locator(`[data-testid="kanban-card-${featureId}"]`);
     await expect(featureCard).toBeVisible({ timeout: 30000 });
 

@@ -12,6 +12,7 @@ import {
   cleanupTempDir,
   setupRealProject,
   waitForNetworkIdle,
+  waitForBoardFeaturesLoaded,
   authenticateForTests,
   handleLoginScreenIfPresent,
 } from '../utils';
@@ -107,7 +108,8 @@ test.describe.skip('List View Priority Column', () => {
     await handleLoginScreenIfPresent(page);
     await waitForNetworkIdle(page);
 
-    await expect(page.locator('[data-testid="board-view"]')).toBeVisible({ timeout: 10000 });
+    // Wait for board to load and features to be fetched
+    await waitForBoardFeaturesLoaded(page);
 
     // Switch to list view
     await page.click('[data-testid="view-toggle-list"]');

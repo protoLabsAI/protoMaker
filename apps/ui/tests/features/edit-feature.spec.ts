@@ -12,6 +12,7 @@ import {
   cleanupTempDir,
   setupRealProject,
   waitForNetworkIdle,
+  waitForBoardFeaturesLoaded,
   clickAddFeature,
   fillAddFeatureDialog,
   confirmAddFeature,
@@ -71,7 +72,9 @@ test.describe('Edit Feature', () => {
     await handleLoginScreenIfPresent(page);
     await waitForNetworkIdle(page);
 
-    await expect(page.locator('[data-testid="board-view"]')).toBeVisible({ timeout: 10000 });
+    // Wait for board to load and features to be fetched
+    await waitForBoardFeaturesLoaded(page);
+
     await expect(page.locator('[data-testid="kanban-column-backlog"]')).toBeVisible({
       timeout: 5000,
     });

@@ -42,6 +42,46 @@ export async function waitForElementHidden(
 }
 
 /**
+ * Wait for the board view to load features
+ *
+ * After page navigation or reload, there's a sequence of async operations:
+ * 1. Page loads (HTML/JS/CSS)
+ * 2. Settings load asynchronously
+ * 3. Current project is set in store
+ * 4. useFeatures React Query hook starts fetching (only when projectPath is available)
+ * 5. Features are fetched from API
+ * 6. Board renders with features
+ *
+ * This function waits for the board to be visible and ensures the loading state
+ * has completed before proceeding. This prevents race conditions where tests
+ * try to interact with features before they've loaded.
+ *
+ * @param page - Playwright page object
+ * @param timeout - Maximum time to wait in milliseconds (default: 10000)
+ */
+export async function waitForBoardFeaturesLoaded(page: Page, timeout = 10000): Promise<void> {
+  // First, wait for the board view to be visible (confirms project is set)
+  await page.locator('[data-testid="board-view"]').waitFor({
+    state: 'visible',
+    timeout
+  });
+
+  // Wait for features to load by checking that the loading spinner is gone
+  // The board shows board-view-loading while features are being fetched
+  await page.waitForFunction(
+    () => {
+      const loadingSpinner = document.querySelector('[data-testid="board-view-loading"]');
+      return !loadingSpinner;
+    },
+    { timeout }
+  );
+
+  // Additional safety: wait a bit for React Query cache to stabilize
+  // This ensures that any pending React state updates have completed
+  await page.waitForTimeout(500);
+}
+
+/**
  * Wait for the splash screen to disappear
  * The splash screen has z-[9999] and blocks interactions, so we need to wait for it
  */
