@@ -15,6 +15,7 @@ The infrastructure management follows a declarative approach using GitHub API an
 ### Prerequisites
 
 1. Install GitHub CLI:
+
    ```bash
    # macOS
    brew install gh
@@ -39,6 +40,7 @@ Run the idempotent settings script:
 ```
 
 This script will:
+
 1. Verify prerequisites (gh CLI, authentication)
 2. Apply repository-level merge settings
 3. Create or update the main branch ruleset
@@ -48,13 +50,13 @@ This script will:
 
 The following settings are applied at the repository level:
 
-| Setting | Value | Purpose |
-|---------|-------|---------|
-| `allow_merge_commit` | `false` | Prevent merge commits (keep linear history) |
-| `allow_rebase_merge` | `false` | Prevent rebase merges (avoid confusion) |
-| `allow_squash_merge` | `true` | Allow squash merges (clean history) |
-| `delete_branch_on_merge` | `true` | Auto-delete branches after PR merge |
-| `allow_auto_merge` | `true` | Enable auto-merge for approved PRs |
+| Setting                  | Value   | Purpose                                     |
+| ------------------------ | ------- | ------------------------------------------- |
+| `allow_merge_commit`     | `false` | Prevent merge commits (keep linear history) |
+| `allow_rebase_merge`     | `false` | Prevent rebase merges (avoid confusion)     |
+| `allow_squash_merge`     | `true`  | Allow squash merges (clean history)         |
+| `delete_branch_on_merge` | `true`  | Auto-delete branches after PR merge         |
+| `allow_auto_merge`       | `true`  | Enable auto-merge for approved PRs          |
 
 ## Branch Protection Ruleset
 
@@ -63,13 +65,16 @@ The main branch is protected by a comprehensive ruleset defined in `rulesets/mai
 ### Protection Rules
 
 #### Pull Request Requirements
+
 - **1 approving review** required before merge
 - **Dismiss stale reviews on push** - new commits invalidate approvals
 - **Require conversation resolution** - all PR comments must be resolved
 - **No last-push approval required** - approver can be the last committer
 
 #### Required Status Checks
+
 The following CI jobs must pass before merge:
+
 - `build` - PR Build Check (pr-check.yml)
 - `test` - Test Suite (test.yml)
 - `format` - Format Check (format-check.yml)
@@ -78,12 +83,15 @@ The following CI jobs must pass before merge:
 **Note**: E2E tests (`e2e`) are NOT required yet - they will be promoted to required status once proven stable.
 
 #### Additional Protections
+
 - **Linear history required** - no merge commits (enforces squash-only)
 - **Branch deletion protection** - prevents accidental deletion of main
 - **Force push protection** - prevents force pushes
 
 #### Bypass Actors
+
 Repository admins can bypass all protections when necessary:
+
 - Actor: `RepositoryRole` (ID: 5)
 - Bypass mode: `always`
 
@@ -91,19 +99,19 @@ Repository admins can bypass all protections when necessary:
 
 ### Required Workflows
 
-| Workflow | Job | Triggers | Purpose |
-|----------|-----|----------|---------|
-| `pr-check.yml` | `build` | PRs, push to main | Electron build verification |
-| `test.yml` | `test` | PRs, push to main | Package and server tests |
-| `format-check.yml` | `format` | PRs, push to main | Code formatting validation |
-| `security-audit.yml` | `audit` | PRs, push to main, weekly | npm audit for vulnerabilities |
+| Workflow             | Job      | Triggers                  | Purpose                       |
+| -------------------- | -------- | ------------------------- | ----------------------------- |
+| `pr-check.yml`       | `build`  | PRs, push to main         | Electron build verification   |
+| `test.yml`           | `test`   | PRs, push to main         | Package and server tests      |
+| `format-check.yml`   | `format` | PRs, push to main         | Code formatting validation    |
+| `security-audit.yml` | `audit`  | PRs, push to main, weekly | npm audit for vulnerabilities |
 
 ### Optional Workflows
 
-| Workflow | Job | Status | Notes |
-|----------|-----|--------|-------|
-| `e2e-tests.yml` | `e2e` | Optional | Not yet required - will be promoted when stable |
-| `release.yml` | `build` | Release-only | Runs on release publish, not for PRs |
+| Workflow        | Job     | Status       | Notes                                           |
+| --------------- | ------- | ------------ | ----------------------------------------------- |
+| `e2e-tests.yml` | `e2e`   | Optional     | Not yet required - will be promoted when stable |
+| `release.yml`   | `build` | Release-only | Runs on release publish, not for PRs            |
 
 ### Removed Workflows
 
@@ -184,6 +192,7 @@ feat-a    feat-b    feat-c   Feature PRs (target epic branch)
 ### Strict Status Checks with Graphite
 
 The ruleset uses `strict_required_status_checks_policy: true`, which means:
+
 - PRs must be up-to-date with the base branch before merging
 - When base branch changes, Graphite will automatically trigger re-checks
 - This may cause cascade re-checks in stacked PRs
@@ -197,11 +206,13 @@ Monitor this behavior and adjust if it causes excessive CI runs.
 If CI workflows don't trigger on a test PR:
 
 1. Check Actions are enabled:
+
    ```bash
    gh api repos/:owner/:repo --jq '.has_issues'
    ```
 
 2. Verify workflows are valid:
+
    ```bash
    gh workflow list
    ```
@@ -223,11 +234,13 @@ gh auth login --web
 The API returns a 404 when trying to update a ruleset that doesn't exist, or 422 if the JSON is invalid.
 
 1. Check existing rulesets:
+
    ```bash
    gh api repos/:owner/:repo/rulesets --jq '.[] | {id, name}'
    ```
 
 2. Validate JSON syntax:
+
    ```bash
    jq empty rulesets/main.json
    ```

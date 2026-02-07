@@ -169,9 +169,9 @@ main() {
     log_info "GitHub settings configuration complete!"
     log_info ""
     log_info "Next steps:"
-    log_info "  1. Delete claude.yml workflow: rm .github/workflows/claude.yml"
-    log_info "  2. Create a test PR to verify CI workflows run correctly"
-    log_info "  3. Once CI is verified working, the ruleset will enforce required checks"
+    log_info "  1. Create a test PR to verify all required status checks pass"
+    log_info "  2. The ruleset enforces: build, test, format, audit, CodeRabbit"
+    log_info "  3. Admin bypass is available for emergency merges"
 }
 
 main "$@"
