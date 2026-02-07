@@ -392,6 +392,62 @@ Recommended branch protection rules for `main`:
 | `CODECOV_TOKEN`          | (Optional) Coverage reporting    |
 | `DISCORD_DEPLOY_WEBHOOK` | Staging deploy notifications     |
 
+## Self-Hosted Runner Capabilities
+
+The `ava-staging` runner has access to resources that GitHub-hosted runners don't:
+
+| Capability                 | What It Enables                                       |
+| -------------------------- | ----------------------------------------------------- |
+| Claude CLI (authenticated) | AI-assisted PR reviews, changelog generation          |
+| Anthropic API key          | Automated code analysis, release notes                |
+| Automaker MCP server       | Board updates, feature status, agent orchestration    |
+| Docker (host)              | Staging deploys, integration tests against real infra |
+| gh CLI (authenticated)     | PR creation, issue management, release publishing     |
+| 125GB RAM / 24 CPUs        | Full E2E test suites, parallel builds                 |
+
+### Future Automation Opportunities
+
+**Release Automation:**
+
+- Auto-generate changelogs from PR descriptions using Claude
+- AI-assisted release notes with feature summaries
+- Automated version bumping based on conventional commits
+- Post-merge smoke tests against staging before release tagging
+
+**PR Workflow:**
+
+- Claude-powered PR review on self-hosted (no API key in GH secrets needed)
+- Auto-fix formatting/lint issues and push commits
+- Dependency update PRs with AI-generated migration notes
+
+**Board Integration:**
+
+- Auto-update Linear issues when PRs merge
+- Post deploy summaries to Discord with feature lists
+- Sync GitHub milestones with Linear project status
+
+**Testing:**
+
+- Run full E2E suite against staging post-deploy
+- Performance regression testing with real agent workloads
+- Security scanning with Claude code analysis
+
+### Adding New Workflows
+
+Self-hosted workflows use `runs-on: self-hosted` and have access to the host environment.
+The runner is at `/home/josh/actions-runner/` with the Automaker repo at `/home/josh/dev/automaker/`.
+
+```yaml
+jobs:
+  my-job:
+    runs-on: self-hosted
+    steps:
+      - name: Use Claude CLI
+        run: claude --version
+      - name: Use Automaker MCP
+        run: curl -sf http://localhost:3008/api/health
+```
+
 ## Local CI Simulation
 
 Run CI checks locally before pushing:
