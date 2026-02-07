@@ -16,6 +16,7 @@ Comprehensive DevOps documentation in [`docs/infra/`](./infra/README.md):
 | [Docker](./infra/docker.md)                     | Dockerfile architecture, multi-stage builds            |
 | [Docker Compose](./infra/docker-compose.md)     | Compose variants, volumes, environment                 |
 | [Deployment](./infra/deployment.md)             | Deployment options (local, Docker, systemd)            |
+| [Staging](./infra/staging-deployment.md)        | Staging server setup, high-concurrency agents          |
 | [Secrets](./infra/secrets.md)                   | Infisical setup, MCP secret injection, team onboarding |
 | [Networking](./infra/networking.md)             | Ports, nginx, CORS, WebSocket, Tailscale VPN           |
 | [Security](./infra/security.md)                 | Container security, credential management              |

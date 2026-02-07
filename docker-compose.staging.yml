@@ -1,0 +1,132 @@
+# Automaker Staging Docker Compose
+# High-memory configuration for concurrent agent execution.
+# Standalone file - replaces docker-compose.yml + override for staging deployments.
+#
+# Usage:
+#   # Quick setup:
+#   ./scripts/setup-staging.sh
+#
+#   # Or manually:
+#   docker compose -f docker-compose.staging.yml --env-file .env up -d
+#   docker compose -f docker-compose.staging.yml logs -f
+#
+# See docs/infra/staging-deployment.md for full documentation.
+
+services:
+  # Frontend UI
+  ui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: ui
+    container_name: automaker-ui
+    restart: unless-stopped
+    ports:
+      - '${UI_PORT:-3007}:80'
+    depends_on:
+      server:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:80/']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+  # Backend API Server
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: server
+      args:
+        UID: ${UID:-1001}
+        GID: ${GID:-1001}
+    container_name: automaker-server
+    restart: unless-stopped
+    ports:
+      - '${API_PORT:-3008}:3008'
+    environment:
+      # API keys (from .env or environment)
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - AUTOMAKER_API_KEY=${AUTOMAKER_API_KEY:-}
+      - GH_TOKEN=${GH_TOKEN:-}
+      - CLAUDE_OAUTH_CREDENTIALS=${CLAUDE_OAUTH_CREDENTIALS:-}
+      - CURSOR_AUTH_TOKEN=${CURSOR_AUTH_TOKEN:-}
+
+      # Staging configuration
+      - NODE_ENV=production
+      - HOST=0.0.0.0
+      - PORT=3008
+      - DATA_DIR=/data
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - ENABLE_REQUEST_LOGGING=true
+      - IS_CONTAINERIZED=true
+
+      # Project access - host path mounted at same path for MCP compatibility
+      - ALLOWED_ROOT_DIRECTORY=${ALLOWED_ROOT_DIRECTORY:-/home/josh/dev}
+
+      # CORS
+      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:3007}
+
+      # Node.js memory tuning for high-concurrency agent execution
+      - NODE_OPTIONS=--max-old-space-size=${NODE_MAX_OLD_SPACE:-32768}
+
+    volumes:
+      # Persistent data
+      - automaker-data:/data
+      - automaker-claude-config:/home/automaker/.claude
+      - automaker-cursor-config:/home/automaker/.cursor
+      - automaker-opencode-data:/home/automaker/.local/share/opencode
+      - automaker-opencode-config:/home/automaker/.config/opencode
+      - automaker-opencode-cache:/home/automaker/.cache/opencode
+
+      # Host project directory - mount at same path for MCP path compatibility
+      - ${PROJECTS_MOUNT:-/home/josh/dev}:${PROJECTS_MOUNT:-/home/josh/dev}:rw
+
+    deploy:
+      resources:
+        limits:
+          cpus: '${CPU_LIMIT:-8}'
+          memory: ${MEMORY_LIMIT:-48G}
+        reservations:
+          cpus: '2'
+          memory: 8G
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:3008/api/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    logging:
+      driver: json-file
+      options:
+        max-size: '100m'
+        max-file: '10'
+
+volumes:
+  automaker-data:
+    name: automaker-data
+  automaker-claude-config:
+    name: automaker-claude-config
+  automaker-cursor-config:
+    name: automaker-cursor-config
+  automaker-opencode-data:
+    name: automaker-opencode-data
+  automaker-opencode-config:
+    name: automaker-opencode-config
+  automaker-opencode-cache:
+    name: automaker-opencode-cache

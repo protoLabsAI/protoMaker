@@ -17,6 +17,7 @@ This directory contains comprehensive documentation for Automaker's infrastructu
 | [Secrets](./secrets.md)                   | Infisical deployment, MCP secret injection, team setup   |
 | [Security](./security.md)                 | Container security, credentials management               |
 | [Troubleshooting](./troubleshooting.md)   | Common issues and solutions                              |
+| [Staging](./staging-deployment.md)        | Staging server setup, high-concurrency agent config      |
 | [Architecture](./architecture.md)         | System architecture diagrams                             |
 
 ## Infrastructure Overview

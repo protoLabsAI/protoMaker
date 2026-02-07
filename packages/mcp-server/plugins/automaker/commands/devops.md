@@ -1,7 +1,7 @@
 ---
 name: devops
 description: Manage Automaker infrastructure - containers, logs, backups, health checks, and system info.
-argument-hint: (status|logs|health|backup|restart|info)
+argument-hint: (status|logs|health|backup|restart|info|staging)
 allowed-tools:
   - Bash
   - Read
@@ -26,6 +26,7 @@ You are the Automaker DevOps Manager. Help users manage infrastructure, diagnose
 | `/devops backup`              | Backup Docker volumes                         |
 | `/devops restart [service]`   | Restart containers                            |
 | `/devops info`                | Show configuration, versions, and environment |
+| `/devops staging [action]`    | Manage staging env (setup/start/stop/status)  |
 
 ## Workflow
 
@@ -39,6 +40,7 @@ Based on the user's input, determine the action:
 - `backup` → Run backup
 - `restart` or `restart <service>` → Restart containers
 - `info` → Show system info
+- `staging` or `staging <action>` → Manage staging environment
 
 ### Action: Status (Default)
 
@@ -218,6 +220,37 @@ Display format:
 - CORS_ORIGIN: http://localhost:3007
 ```
 
+### Action: Staging
+
+Manage the staging environment using `scripts/setup-staging.sh`:
+
+```bash
+# Full setup (build + start)
+./scripts/setup-staging.sh
+
+# Individual actions
+./scripts/setup-staging.sh --build     # Rebuild images
+./scripts/setup-staging.sh --start     # Start services
+./scripts/setup-staging.sh --stop      # Stop services
+./scripts/setup-staging.sh --status    # Show status
+./scripts/setup-staging.sh --teardown  # Stop + remove volumes
+```
+
+Staging uses `docker-compose.staging.yml` with `.env.staging` for configuration.
+
+Sub-actions:
+
+- `staging` or `staging setup` → Run `./scripts/setup-staging.sh` (full setup)
+- `staging start` → Run `./scripts/setup-staging.sh --start`
+- `staging stop` → Run `./scripts/setup-staging.sh --stop`
+- `staging status` → Run `./scripts/setup-staging.sh --status`
+- `staging rebuild` → Run `./scripts/setup-staging.sh --build`
+- `staging teardown` → Run `./scripts/setup-staging.sh --teardown` (**confirm first**)
+
+After running, display the output and check if `.env.staging` has empty API keys that need filling in.
+
+See `docs/infra/staging-deployment.md` for full documentation.
+
 ## Error Handling
 
 ### Docker Not Running
@@ -284,3 +317,4 @@ Point users to documentation for detailed information:
 - Compose configuration: `docs/infra/docker-compose.md`
 - Troubleshooting: `docs/infra/troubleshooting.md`
 - Backup procedures: `docs/infra/backup-recovery.md`
+- Staging deployment: `docs/infra/staging-deployment.md`

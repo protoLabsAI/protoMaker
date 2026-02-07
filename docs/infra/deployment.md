@@ -4,12 +4,13 @@ This guide covers different deployment options for Automaker.
 
 ## Deployment Options
 
-| Option                    | Best For          | Isolation    | Setup Complexity |
-| ------------------------- | ----------------- | ------------ | ---------------- |
-| Local Development         | Development       | None         | Low              |
-| Docker (Isolated)         | Testing, demos    | Full         | Low              |
-| Docker (Projects Mounted) | Personal use      | Partial      | Medium           |
-| systemd + Docker          | Production server | Configurable | Medium           |
+| Option                             | Best For                | Isolation    | Setup Complexity         |
+| ---------------------------------- | ----------------------- | ------------ | ------------------------ |
+| Local Development                  | Development             | None         | Low                      |
+| Docker (Isolated)                  | Testing, demos          | Full         | Low                      |
+| Docker (Projects Mounted)          | Personal use            | Partial      | Medium                   |
+| systemd + Docker                   | Production server       | Configurable | Medium                   |
+| [Staging](./staging-deployment.md) | High-concurrency agents | Partial      | Low (`setup-staging.sh`) |
 
 ## Local Development
 
