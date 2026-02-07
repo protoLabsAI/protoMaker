@@ -17,20 +17,22 @@ export const MAX_REMOTE_NAME_LENGTH = 100;
 export const MAX_COMMIT_MESSAGE_LENGTH = 10000;
 
 /** Shell metacharacters that could be used for command injection */
-const SHELL_METACHARACTERS = /[;&|`$()<>"\\'!{}[\]*?~#\n\r]/;
+const SHELL_METACHARACTERS = new RegExp('[;&|`$()<>"\\\' !{}[\\]*?~#\\n\\r]');
 
 /** Characters allowed in branch names (alphanumeric, hyphen, underscore, forward slash, dot) */
-const BRANCH_NAME_PATTERN = /^[a-zA-Z0-9._\-/]+$/;
+const BRANCH_NAME_PATTERN = new RegExp('^[a-zA-Z0-9._\\-/]+$');
 
 /** Characters allowed in remote names (alphanumeric, hyphen, underscore, dot) */
-const REMOTE_NAME_PATTERN = /^[a-zA-Z0-9._\-]+$/;
+const REMOTE_NAME_PATTERN = new RegExp('^[a-zA-Z0-9._\\-]+$');
 
 /** UUID v4 pattern for session IDs */
-const UUID_V4_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const UUID_V4_PATTERN = new RegExp(
+  '^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
+  'i'
+);
 
 /** Alphanumeric with hyphens pattern (for session IDs) */
-const ALPHANUMERIC_HYPHEN_PATTERN = /^[a-zA-Z0-9\-]+$/;
+const ALPHANUMERIC_HYPHEN_PATTERN = new RegExp('^[a-zA-Z0-9\\-]+$');
 
 // ============================================================================
 // Branded Types for Type Safety

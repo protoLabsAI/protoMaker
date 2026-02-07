@@ -10,7 +10,7 @@ import {
   MAX_BRANCH_NAME_LENGTH,
   MAX_REMOTE_NAME_LENGTH,
   MAX_COMMIT_MESSAGE_LENGTH,
-} from '../src/validation';
+} from '../src/validation.js';
 
 describe('validation.ts', () => {
   describe('isValidBranchName', () => {
@@ -370,7 +370,7 @@ describe('validation.ts', () => {
         expect(isValidSessionId(123 as any)).toBe(false);
       });
 
-      it('should reject invalid UUID formats', () => {
+      it('should accept valid session IDs that are not UUIDs', () => {
         expect(isValidSessionId('not-a-uuid')).toBe(true); // This is alphanumeric with hyphens
         expect(isValidSessionId('550e8400-e29b-41d4-a716')).toBe(true); // Short but alphanumeric
         expect(isValidSessionId('550e8400-e29b-41d4-a716-446655440000-extra')).toBe(true); // Long but alphanumeric

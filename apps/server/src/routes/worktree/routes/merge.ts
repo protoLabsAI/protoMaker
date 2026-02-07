@@ -36,8 +36,26 @@ export function createMergeHandler() {
         return;
       }
 
+      // Validate branch names before use in shell commands
+      if (!isValidBranchName(branchName)) {
+        res.status(400).json({
+          success: false,
+          error: `Invalid branch name: "${branchName}"`,
+        });
+        return;
+      }
+
       // Determine the target branch (default to 'main')
       const mergeTo = targetBranch || 'main';
+
+      // Validate target branch name if provided
+      if (targetBranch && !isValidBranchName(targetBranch)) {
+        res.status(400).json({
+          success: false,
+          error: `Invalid target branch name: "${targetBranch}"`,
+        });
+        return;
+      }
 
       // Validate source branch exists
       try {
