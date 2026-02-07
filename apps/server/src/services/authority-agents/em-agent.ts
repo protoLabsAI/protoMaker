@@ -19,6 +19,12 @@ import type { EventEmitter } from '../../lib/events.js';
 import type { AuthorityService } from '../authority-service.js';
 import type { FeatureLoader } from '../feature-loader.js';
 import type { AutoModeService } from '../auto-mode-service.js';
+import {
+  createAgentState,
+  initializeAgent,
+  withProcessingGuard,
+  type AgentState,
+} from './agent-utils.js';
 
 const logger = createLogger('EMAgent');
 
@@ -31,19 +37,21 @@ const DEFAULT_WIP_LIMIT = 3;
 /** Max PR iterations before escalating to CTO */
 const MAX_PR_ITERATIONS = 3;
 
+/** Custom state for EM agent */
+interface EMCustomState {
+  pollTimers: Map<string, ReturnType<typeof setInterval>>;
+  /** Features currently being reassigned for PR fixes (prevent double-processing) */
+  reassigning: Set<string>;
+}
+
 export class EMAuthorityAgent {
   private readonly events: EventEmitter;
   private readonly authorityService: AuthorityService;
   private readonly featureLoader: FeatureLoader;
   private readonly autoModeService: AutoModeService;
 
-  private agents = new Map<string, AuthorityAgent>();
-  private initializedProjects = new Set<string>();
-  private processing = new Set<string>();
-  private pollTimers = new Map<string, ReturnType<typeof setInterval>>();
-
-  /** Features currently being reassigned for PR fixes (prevent double-processing) */
-  private reassigning = new Set<string>();
+  /** Agent state (agents, initialization, processing tracking, poll timers, reassigning) */
+  private readonly state: AgentState<EMCustomState>;
 
   constructor(
     events: EventEmitter,
@@ -55,30 +63,35 @@ export class EMAuthorityAgent {
     this.authorityService = authorityService;
     this.featureLoader = featureLoader;
     this.autoModeService = autoModeService;
+    this.state = createAgentState<EMCustomState>({
+      pollTimers: new Map(),
+      reassigning: new Set(),
+    });
   }
 
   /**
    * Initialize the EM agent for a project.
    */
   async initialize(projectPath: string): Promise<void> {
-    if (this.initializedProjects.has(projectPath)) return;
+    await initializeAgent(
+      this.state,
+      this.authorityService,
+      'engineering-manager',
+      projectPath,
+      async () => {
+        // Listen for PR feedback events
+        this.listenForPRFeedback();
 
-    const agent = await this.authorityService.registerAgent('engineering-manager', projectPath);
-    this.agents.set(projectPath, agent);
-    this.initializedProjects.add(projectPath);
-    logger.info(`EM agent registered for project: ${agent.id}`);
+        // Scan for existing ready features
+        await this.scanForReadyFeatures(projectPath);
 
-    // Listen for PR feedback events
-    this.listenForPRFeedback();
-
-    // Scan for existing ready features
-    await this.scanForReadyFeatures(projectPath);
-
-    // Start periodic polling
-    const timer = setInterval(() => {
-      void this.scanForReadyFeatures(projectPath);
-    }, POLL_INTERVAL_MS);
-    this.pollTimers.set(projectPath, timer);
+        // Start periodic polling
+        const timer = setInterval(() => {
+          void this.scanForReadyFeatures(projectPath);
+        }, POLL_INTERVAL_MS);
+        this.state.custom.pollTimers.set(projectPath, timer);
+      }
+    );
   }
 
   /**
@@ -106,11 +119,11 @@ export class EMAuthorityAgent {
     const iterationCount = data.iterationCount as number;
     const prNumber = data.prNumber as number;
 
-    if (!featureId || !projectPath || this.reassigning.has(featureId)) return;
-    this.reassigning.add(featureId);
+    if (!featureId || !projectPath || this.state.custom.reassigning.has(featureId)) return;
+    this.state.custom.reassigning.add(featureId);
 
     try {
-      const agent = this.agents.get(projectPath);
+      const agent = this.state.getAgent(projectPath);
       if (!agent) return;
 
       const feature = await this.featureLoader.get(projectPath, featureId);
@@ -182,7 +195,7 @@ export class EMAuthorityAgent {
     } catch (error) {
       logger.error(`Failed to handle PR feedback for ${featureId}:`, error);
     } finally {
-      this.reassigning.delete(featureId);
+      this.state.custom.reassigning.delete(featureId);
     }
   }
 
@@ -214,12 +227,12 @@ export class EMAuthorityAgent {
    * Stop the EM agent for a project.
    */
   stop(projectPath: string): void {
-    const timer = this.pollTimers.get(projectPath);
+    const timer = this.state.custom.pollTimers.get(projectPath);
     if (timer) {
       clearInterval(timer);
-      this.pollTimers.delete(projectPath);
+      this.state.custom.pollTimers.delete(projectPath);
     }
-    this.initializedProjects.delete(projectPath);
+    this.state.removeInitialized(projectPath);
     logger.info(`EM agent stopped for project: ${projectPath}`);
   }
 
@@ -245,7 +258,7 @@ export class EMAuthorityAgent {
           (f) =>
             f.workItemState === 'ready' &&
             !f.isEpic && // Don't process epics directly
-            !this.processing.has(f.id)
+            !this.state.isProcessing(f.id)
         )
         .sort((a, b) => {
           // Prioritize by: dependencies resolved first, then by priority
@@ -302,96 +315,93 @@ export class EMAuthorityAgent {
    * 3. Transition ready → in_progress (triggers auto-mode)
    */
   private async processReadyFeature(projectPath: string, feature: Feature): Promise<void> {
-    if (this.processing.has(feature.id)) return;
-    this.processing.add(feature.id);
+    return withProcessingGuard(this.state, feature.id, async () => {
+      try {
+        const agent = this.state.getAgent(projectPath);
+        if (!agent) return;
 
-    try {
-      const agent = this.agents.get(projectPath);
-      if (!agent) return;
+        logger.info(`Processing ready feature: "${feature.title}" (${feature.id})`);
 
-      logger.info(`Processing ready feature: "${feature.title}" (${feature.id})`);
-
-      // Step 1: Assess and set complexity if not already set
-      if (!feature.complexity) {
-        const complexity = this.assessComplexity(feature);
-        await this.featureLoader.update(projectPath, feature.id, { complexity });
-        logger.info(`Set complexity for "${feature.title}": ${complexity}`);
-      }
-
-      // Step 2: Submit assignment proposal
-      const assignDecision = await this.authorityService.submitProposal(
-        {
-          who: agent.id,
-          what: 'assign_work',
-          target: feature.id,
-          justification: `Assigning "${feature.title}" (complexity: ${feature.complexity || 'medium'}) for auto-mode execution`,
-          risk: 'low',
-        },
-        projectPath
-      );
-
-      if (assignDecision.verdict === 'deny') {
-        logger.warn(`Assignment denied for ${feature.id}: ${assignDecision.reason}`);
-        return;
-      }
-
-      if (assignDecision.verdict === 'require_approval') {
-        logger.info(`Assignment requires approval for ${feature.id}`);
-        return;
-      }
-
-      // Step 3: Propose transition ready → in_progress
-      const startDecision = await this.authorityService.submitProposal(
-        {
-          who: agent.id,
-          what: 'assign_work',
-          target: feature.id,
-          justification: `Starting execution of "${feature.title}"`,
-          risk: 'low',
-          statusTransition: { from: 'ready', to: 'in_progress' },
-        },
-        projectPath
-      );
-
-      if (startDecision.verdict === 'deny') {
-        logger.warn(`Start transition denied for ${feature.id}: ${startDecision.reason}`);
-        return;
-      }
-
-      if (startDecision.verdict === 'require_approval') {
-        logger.info(`Start transition requires approval for ${feature.id}`);
-        return;
-      }
-
-      // Transition approved - update workItemState and trigger auto-mode
-      await this.featureLoader.update(projectPath, feature.id, {
-        workItemState: 'in_progress',
-      });
-
-      // Ensure auto-mode is running so the feature gets picked up
-      if (!this.autoModeService.isAutoLoopRunningForProject(projectPath)) {
-        try {
-          await this.autoModeService.startAutoLoopForProject(projectPath);
-          logger.info(`Auto-mode started for project to execute assigned features`);
-        } catch (error) {
-          logger.warn(`Could not start auto-mode (may already be running):`, error);
+        // Step 1: Assess and set complexity if not already set
+        if (!feature.complexity) {
+          const complexity = this.assessComplexity(feature);
+          await this.featureLoader.update(projectPath, feature.id, { complexity });
+          logger.info(`Set complexity for "${feature.title}": ${complexity}`);
         }
+
+        // Step 2: Submit assignment proposal
+        const assignDecision = await this.authorityService.submitProposal(
+          {
+            who: agent.id,
+            what: 'assign_work',
+            target: feature.id,
+            justification: `Assigning "${feature.title}" (complexity: ${feature.complexity || 'medium'}) for auto-mode execution`,
+            risk: 'low',
+          },
+          projectPath
+        );
+
+        if (assignDecision.verdict === 'deny') {
+          logger.warn(`Assignment denied for ${feature.id}: ${assignDecision.reason}`);
+          return;
+        }
+
+        if (assignDecision.verdict === 'require_approval') {
+          logger.info(`Assignment requires approval for ${feature.id}`);
+          return;
+        }
+
+        // Step 3: Propose transition ready → in_progress
+        const startDecision = await this.authorityService.submitProposal(
+          {
+            who: agent.id,
+            what: 'assign_work',
+            target: feature.id,
+            justification: `Starting execution of "${feature.title}"`,
+            risk: 'low',
+            statusTransition: { from: 'ready', to: 'in_progress' },
+          },
+          projectPath
+        );
+
+        if (startDecision.verdict === 'deny') {
+          logger.warn(`Start transition denied for ${feature.id}: ${startDecision.reason}`);
+          return;
+        }
+
+        if (startDecision.verdict === 'require_approval') {
+          logger.info(`Start transition requires approval for ${feature.id}`);
+          return;
+        }
+
+        // Transition approved - update workItemState and trigger auto-mode
+        await this.featureLoader.update(projectPath, feature.id, {
+          workItemState: 'in_progress',
+        });
+
+        // Ensure auto-mode is running so the feature gets picked up
+        if (!this.autoModeService.isAutoLoopRunningForProject(projectPath)) {
+          try {
+            await this.autoModeService.startAutoLoopForProject(projectPath);
+            logger.info(`Auto-mode started for project to execute assigned features`);
+          } catch (error) {
+            logger.warn(`Could not start auto-mode (may already be running):`, error);
+          }
+        }
+
+        // Emit event that EM has assigned and started a feature
+        this.events.emit('feature-assignment:started', {
+          projectPath,
+          featureId: feature.id,
+          assignedBy: agent.id,
+          complexity: feature.complexity || 'medium',
+        });
+
+        logger.info(`Feature "${feature.title}" assigned and transitioned to in_progress`);
+      } catch (error) {
+        logger.error(`Failed to process ready feature ${feature.id}:`, error);
       }
-
-      // Emit event that EM has assigned and started a feature
-      this.events.emit('feature-assignment:started', {
-        projectPath,
-        featureId: feature.id,
-        assignedBy: agent.id,
-        complexity: feature.complexity || 'medium',
-      });
-
-      logger.info(`Feature "${feature.title}" assigned and transitioned to in_progress`);
-    } catch (error) {
-      logger.error(`Failed to process ready feature ${feature.id}:`, error);
-    } finally {
-      this.processing.delete(feature.id);
-    }
+    });
   }
 
   /**
@@ -412,6 +422,6 @@ export class EMAuthorityAgent {
   }
 
   getAgent(projectPath: string): AuthorityAgent | null {
-    return this.agents.get(projectPath) ?? null;
+    return this.state.getAgent(projectPath);
   }
 }
