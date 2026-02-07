@@ -45,6 +45,15 @@ jobs:
           docker compose -f docker-compose.staging.yml logs --tail=50 server
           exit 1
 
+      - name: Smoke tests
+        run: |
+          cd /home/josh/dev/automaker
+          # Source API key from .env (same machine as staging server)
+          export AUTOMAKER_API_KEY=$(grep -oP 'AUTOMAKER_API_KEY=\K.*' .env || echo "")
+          ./scripts/smoke-test.sh http://localhost:3008
+        env:
+          DISCORD_ALERTS_WEBHOOK: ${{ secrets.DISCORD_ALERTS_WEBHOOK }}
+
       - name: Cleanup build artifacts
         if: always()
         run: |
