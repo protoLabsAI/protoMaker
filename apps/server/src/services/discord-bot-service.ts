@@ -532,19 +532,39 @@ export class DiscordBotService {
 
       logger.info('Setting up lab for project', { projectPath: resolvedPath });
 
-      // Call the setup endpoint
-      const response = await fetch('http://localhost:3008/api/setup/project', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ projectPath: resolvedPath }),
-      });
+      // Call the setup endpoint with timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+
+      let response;
+      try {
+        response = await fetch('http://localhost:3008/api/setup/project', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ projectPath: resolvedPath }),
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        if ((fetchError as Error).name === 'AbortError') {
+          await interaction.editReply(
+            '❌ Setup timed out after 15 seconds. The server may be overloaded.'
+          );
+        } else {
+          await interaction.editReply(
+            `❌ Setup failed: ${fetchError instanceof Error ? fetchError.message : 'Network error'}`
+          );
+        }
+        return;
+      }
 
       if (!response.ok) {
-        const error = await response.json();
+        const error = (await response.json()) as { error?: string };
         await interaction.editReply(
-          `❌ Setup failed: ${error.error || 'Unknown error'}\n\nPath: \`${resolvedPath}\``
+          `❌ Setup failed: ${error.error ?? 'Unknown error'}\n\nPath: \`${resolvedPath}\``
         );
         return;
       }
