@@ -9,6 +9,7 @@ import type { Request, Response } from 'express';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { getErrorMessage, logError } from '../common.js';
+import { sanitizeCommitMessage } from '@automaker/platform';
 
 const execAsync = promisify(exec);
 
@@ -47,8 +48,11 @@ export function createCommitHandler() {
       // Stage all changes
       await execAsync('git add -A', { cwd: worktreePath });
 
+      // Sanitize commit message to prevent injection
+      const sanitizedMessage = sanitizeCommitMessage(message);
+
       // Create commit
-      await execAsync(`git commit -m "${message.replace(/"/g, '\\"')}"`, {
+      await execAsync(`git commit -m "${sanitizedMessage}"`, {
         cwd: worktreePath,
       });
 

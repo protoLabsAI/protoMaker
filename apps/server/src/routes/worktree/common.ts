@@ -11,6 +11,14 @@ import { getErrorMessage as getErrorMessageShared, createLogError } from '../com
 const logger = createLogger('Worktree');
 export const execAsync = promisify(exec);
 
+// Re-export validation functions from platform package
+export {
+  isValidBranchName,
+  isValidRemoteName,
+  sanitizeCommitMessage,
+  MAX_BRANCH_NAME_LENGTH,
+} from '@automaker/platform';
+
 // ============================================================================
 // Secure Command Execution
 // ============================================================================
@@ -52,9 +60,6 @@ export async function execGitCommand(args: string[], cwd: string): Promise<strin
 // ============================================================================
 // Constants
 // ============================================================================
-
-/** Maximum allowed length for git branch names */
-export const MAX_BRANCH_NAME_LENGTH = 250;
 
 // ============================================================================
 // Extended PATH configuration for Electron apps
@@ -101,15 +106,6 @@ export const execEnv = {
 // ============================================================================
 // Validation utilities
 // ============================================================================
-
-/**
- * Validate branch name to prevent command injection.
- * Git branch names cannot contain: space, ~, ^, :, ?, *, [, \, or control chars.
- * We also reject shell metacharacters for safety.
- */
-export function isValidBranchName(name: string): boolean {
-  return /^[a-zA-Z0-9._\-/]+$/.test(name) && name.length < MAX_BRANCH_NAME_LENGTH;
-}
 
 /**
  * Check if gh CLI is available on the system

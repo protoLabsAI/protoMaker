@@ -9,6 +9,7 @@ import type { Request, Response } from 'express';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { getErrorMessage, logError } from '../common.js';
+import { isValidRemoteName, isValidBranchName } from '@automaker/platform';
 
 const execAsync = promisify(exec);
 
@@ -35,8 +36,26 @@ export function createPushHandler() {
       });
       const branchName = branchOutput.trim();
 
+      // Validate branch name
+      if (!isValidBranchName(branchName)) {
+        res.status(400).json({
+          success: false,
+          error: `Invalid branch name: "${branchName}"`,
+        });
+        return;
+      }
+
       // Use specified remote or default to 'origin'
       const targetRemote = remote || 'origin';
+
+      // Validate remote name
+      if (!isValidRemoteName(targetRemote)) {
+        res.status(400).json({
+          success: false,
+          error: `Invalid remote name: "${targetRemote}"`,
+        });
+        return;
+      }
 
       // Push the branch
       const forceFlag = force ? '--force' : '';

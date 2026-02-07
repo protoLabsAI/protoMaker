@@ -104,6 +104,28 @@ export {
   getAllowedPaths,
 } from './security.js';
 
+// Input validation for git operations
+export {
+  // Validation functions
+  isValidBranchName,
+  isValidRemoteName,
+  sanitizeCommitMessage,
+  isValidSessionId,
+  // Assertion functions
+  assertValidBranchName,
+  assertValidRemoteName,
+  assertValidSessionId,
+  // Branded types
+  type ValidatedBranchName,
+  type ValidatedRemoteName,
+  type SanitizedCommitMessage,
+  type ValidatedSessionId,
+  // Constants
+  MAX_BRANCH_NAME_LENGTH,
+  MAX_REMOTE_NAME_LENGTH,
+  MAX_COMMIT_MESSAGE_LENGTH,
+} from './validation.js';
+
 // Secure file system (validates paths before I/O operations)
 export * as secureFs from './secure-fs.js';
 

@@ -5,6 +5,7 @@
 import type { Request, Response } from 'express';
 import type { IdeationService } from '../../../services/ideation-service.js';
 import { getErrorMessage, logError } from '../common.js';
+import { isValidSessionId } from '@automaker/platform';
 
 export function createSessionGetHandler(ideationService: IdeationService) {
   return async (req: Request, res: Response): Promise<void> => {
@@ -21,6 +22,12 @@ export function createSessionGetHandler(ideationService: IdeationService) {
 
       if (!sessionId) {
         res.status(400).json({ success: false, error: 'sessionId is required' });
+        return;
+      }
+
+      // Validate session ID format
+      if (!isValidSessionId(sessionId)) {
+        res.status(400).json({ success: false, error: 'Invalid sessionId format' });
         return;
       }
 
