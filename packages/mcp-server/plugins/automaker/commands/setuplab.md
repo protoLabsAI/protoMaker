@@ -7,8 +7,6 @@ allowed-tools:
   - Task
   - mcp__automaker__setup_lab
   - mcp__automaker__health_check
-  - mcp__automaker__list_context_files
-  - mcp__automaker__create_context_file
 model: haiku
 ---
 
