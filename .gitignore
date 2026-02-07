@@ -96,3 +96,17 @@ data/credentials.json
 data/
 .codex/
 packages/mcp-server/plugins/automaker/.env
+
+# Beads runtime artifacts (tracked by .beads/.gitignore when present)
+.beads/*.db
+.beads/*.db-*
+.beads/daemon.*
+.beads/.jsonl.lock
+.beads/.local_version
+.beads/last-touched
+.beads/bd.sock
+.beads/sync-state.json
+.beads/sem/
+
+# Embedded git repos (should be submodules if needed)
+examples/mythxengine

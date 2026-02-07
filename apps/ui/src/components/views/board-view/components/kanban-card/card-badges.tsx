@@ -3,10 +3,11 @@ import { memo, useEffect, useMemo, useState } from 'react';
 import { Feature, useAppStore } from '@/store/app-store';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { AlertCircle, Lock, Hand, Sparkles, User, Calendar } from 'lucide-react';
+import { AlertCircle, Lock, Hand, Sparkles, User, Calendar, DollarSign } from 'lucide-react';
 import { getBlockingDependencies } from '@automaker/dependency-resolver';
 import { useShallow } from 'zustand/react/shallow';
 import { EpicBadge } from './epic-badge';
+import { formatCostUsd } from '@/lib/format';
 
 /** Uniform badge style for all card badges */
 const uniformBadgeClass =
@@ -25,8 +26,11 @@ export const CardBadges = memo(function CardBadges({ feature }: CardBadgesProps)
   const hasError = !!feature.error;
   const hasAssignee = !!feature.assignee;
   const hasDueDate = !!feature.dueDate;
+  // costUsd is typed as unknown on the Feature interface; narrow with typeof guard
+  const costUsd = typeof feature.costUsd === 'number' ? feature.costUsd : undefined;
+  const hasCost = costUsd != null && costUsd > 0;
 
-  if (!hasError && !hasEpic && !hasAssignee && !hasDueDate) {
+  if (!hasError && !hasEpic && !hasAssignee && !hasDueDate && !hasCost) {
     return null;
   }
 
@@ -67,6 +71,14 @@ export const CardBadges = memo(function CardBadges({ feature }: CardBadgesProps)
               day: 'numeric',
             });
           })()}
+        </div>
+      )}
+
+      {/* Cost badge */}
+      {hasCost && (
+        <div className="inline-flex items-center gap-1 px-1.5 h-5 rounded text-[10px] font-medium bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+          <DollarSign className="w-3 h-3" />
+          {formatCostUsd(costUsd!)}
         </div>
       )}
 

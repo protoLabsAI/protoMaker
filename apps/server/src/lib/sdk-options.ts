@@ -351,6 +351,15 @@ export interface CreateSdkOptionsConfig {
 
   /** Extended thinking level for Claude models */
   thinkingLevel?: ThinkingLevel;
+
+  /** Maximum budget in USD. Query stops with error_max_budget_usd if exceeded. */
+  maxBudgetUsd?: number;
+
+  /** Override max turns for this invocation. If not set, uses preset default. */
+  maxTurns?: number;
+
+  /** Session ID to resume from. Loads conversation history from the specified session. */
+  resume?: string;
 }
 
 // Re-export MCP types from @automaker/types for convenience
@@ -525,12 +534,15 @@ export function createAutoModeOptions(config: CreateSdkOptionsConfig): Options {
   return {
     ...getBaseOptions(),
     model: getModelForUseCase('auto', config.model),
-    maxTurns: MAX_TURNS.maximum,
+    maxTurns: config.maxTurns ?? MAX_TURNS.maximum,
     cwd: config.cwd,
     allowedTools: [...TOOL_PRESETS.fullAccess],
+    enableFileCheckpointing: true,
     ...claudeMdOptions,
     ...thinkingOptions,
     ...(config.abortController && { abortController: config.abortController }),
+    ...(config.maxBudgetUsd != null && { maxBudgetUsd: config.maxBudgetUsd }),
+    ...(config.resume && { resume: config.resume }),
     ...mcpOptions.mcpServerOptions,
   };
 }

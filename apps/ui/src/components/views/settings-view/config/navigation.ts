@@ -17,6 +17,7 @@ import {
   Code2,
   Webhook,
   MessageCircle,
+  Activity,
 } from 'lucide-react';
 import { AnthropicIcon, CursorIcon, OpenAIIcon, OpenCodeIcon } from '@/components/ui/provider-icon';
 import type { SettingsViewId } from '../hooks/use-settings-view';
@@ -74,6 +75,10 @@ export const GLOBAL_NAV_GROUPS: NavigationGroup[] = [
       { id: 'account', label: 'Account', icon: User },
       { id: 'security', label: 'Security', icon: Shield },
     ],
+  },
+  {
+    label: 'System',
+    items: [{ id: 'health', label: 'Health', icon: Activity }],
   },
   {
     label: 'Advanced',

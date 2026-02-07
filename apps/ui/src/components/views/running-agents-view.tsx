@@ -7,7 +7,7 @@
 
 import { useState, useCallback } from 'react';
 import { createLogger } from '@automaker/utils/logger';
-import { Bot, Folder, RefreshCw, Square, Activity, FileText } from 'lucide-react';
+import { Bot, Folder, RefreshCw, Square, Activity, FileText, DollarSign } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { getElectronAPI, type RunningAgent } from '@/lib/electron';
 import { useAppStore } from '@/store/app-store';
@@ -17,13 +17,14 @@ import { useNavigate } from '@tanstack/react-router';
 import { AgentOutputModal } from './board-view/dialogs/agent-output-modal';
 import { useRunningAgents } from '@/hooks/queries';
 import { useStopFeature } from '@/hooks/mutations';
+import { formatCostUsd } from '@/lib/format';
+
+const logger = createLogger('RunningAgentsView');
 
 export function RunningAgentsView() {
   const [selectedAgent, setSelectedAgent] = useState<RunningAgent | null>(null);
   const { setCurrentProject, projects } = useAppStore();
   const navigate = useNavigate();
-
-  const logger = createLogger('RunningAgentsView');
 
   // Use React Query for running agents with auto-refresh
   const { data, isLoading, isFetching, refetch } = useRunningAgents();
@@ -56,7 +57,7 @@ export function RunningAgentsView() {
       // Use mutation for regular features
       stopFeature.mutate({ featureId: agent.featureId, projectPath: agent.projectPath });
     },
-    [stopFeature, refetch, logger]
+    [stopFeature, refetch]
   );
 
   const handleNavigateToProject = useCallback(
@@ -172,13 +173,22 @@ export function RunningAgentsView() {
                         {agent.description}
                       </p>
                     )}
-                    <button
-                      onClick={() => handleNavigateToProject(agent)}
-                      className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      <Folder className="h-3.5 w-3.5" />
-                      <span className="truncate">{agent.projectName}</span>
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => handleNavigateToProject(agent)}
+                        className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        <Folder className="h-3.5 w-3.5" />
+                        <span className="truncate">{agent.projectName}</span>
+                      </button>
+                      {typeof agent.costUsd === 'number' && agent.costUsd > 0 && (
+                        <span className="inline-flex items-center gap-1 text-xs text-emerald-400">
+                          <DollarSign className="w-3 h-3" />
+                          {formatCostUsd(agent.costUsd)}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
 

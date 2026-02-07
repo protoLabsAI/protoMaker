@@ -101,6 +101,7 @@ import { HeadsdownService } from './services/headsdown-service.js';
 import { PRDService } from './services/prd-service.js';
 import { createSkillsRoutes } from './routes/skills/index.js';
 import { getSchedulerService } from './services/scheduler-service.js';
+import { getHealthMonitorService } from './services/health-monitor-service.js';
 import { GraphiteSyncScheduler } from './services/graphite-sync-scheduler.js';
 import { graphiteService } from './services/graphite-service.js';
 import { createWebhooksRoutes } from './routes/webhooks/index.js';
@@ -120,6 +121,8 @@ import { PRFeedbackService } from './services/pr-feedback-service.js';
 import { WorktreeLifecycleService } from './services/worktree-lifecycle-service.js';
 import { DiscordBotService } from './services/discord-bot-service.js';
 import { ProjectService } from './services/project-service.js';
+import { registerMaintenanceTasks } from './services/maintenance-tasks.js';
+import { FeatureHealthService } from './services/feature-health-service.js';
 
 const PORT = parseInt(process.env.PORT || '3008', 10);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -293,6 +296,7 @@ const codexAppServerService = new CodexAppServerService();
 const codexModelCacheService = new CodexModelCacheService(DATA_DIR, codexAppServerService);
 const codexUsageService = new CodexUsageService(codexAppServerService);
 const mcpTestService = new MCPTestService(settingsService);
+const featureHealthService = new FeatureHealthService(featureLoader, autoModeService);
 const ideationService = new IdeationService(events, settingsService, featureLoader);
 const ralphLoopService = new RalphLoopService(events, autoModeService, settingsService);
 const goapActionRegistry = new GOAPActionRegistry();
@@ -373,7 +377,24 @@ void discordBotService.initialize();
 // Initialize Scheduler Service with event emitter and data directory
 const schedulerService = getSchedulerService();
 schedulerService.initialize(events, DATA_DIR);
-void schedulerService.start();
+void schedulerService
+  .start()
+  .then(() => {
+    // Register preset maintenance tasks after scheduler is ready
+    return registerMaintenanceTasks(
+      schedulerService,
+      events,
+      autoModeService,
+      featureHealthService
+    );
+  })
+  .catch((err) => {
+    logger.error('Scheduler startup or maintenance task registration failed:', err);
+  });
+
+// Initialize Health Monitor Service for periodic health checks
+const healthMonitorService = getHealthMonitorService(featureLoader);
+healthMonitorService.setEventEmitter(events);
 
 // Initialize services
 (async () => {
@@ -563,6 +584,9 @@ void schedulerService.start();
   void codexModelCacheService.getModels().catch((err) => {
     logger.error('Failed to bootstrap Codex model cache:', err);
   });
+
+  // Start health monitoring after all services are fully initialized
+  healthMonitorService.startMonitoring();
 })();
 
 // Run stale validation cleanup every hour to prevent memory leaks from crashed validations
@@ -650,7 +674,13 @@ app.use('/api/agent', createAgentRoutes(agentService, events));
 app.use('/api/sessions', createSessionsRoutes(agentService));
 app.use(
   '/api/features',
-  createFeaturesRoutes(featureLoader, settingsService, events, authorityService)
+  createFeaturesRoutes(
+    featureLoader,
+    settingsService,
+    events,
+    authorityService,
+    featureHealthService
+  )
 );
 app.use('/api/projects', createProjectsRoutes(featureLoader));
 app.use('/api/auto-mode', createAutoModeRoutes(autoModeService));
@@ -705,7 +735,11 @@ app.use('/api/ralph', createRalphRoutes(ralphLoopService));
 app.use('/api/goap', createGOAPRoutes(goapLoopService));
 app.use('/api/skills', createSkillsRoutes());
 app.use('/api/event-history', createEventHistoryRoutes(eventHistoryService, settingsService));
-app.use('/api/briefing', authMiddleware, createBriefingRoutes(eventHistoryService, briefingCursorService));
+app.use(
+  '/api/briefing',
+  authMiddleware,
+  createBriefingRoutes(eventHistoryService, briefingCursorService)
+);
 app.use('/api/projects', createProjectsRoutes(featureLoader));
 app.use('/api/scheduler', createSchedulerRoutes(schedulerService));
 
@@ -1128,7 +1162,10 @@ process.on('uncaughtException', (error: Error) => {
 // Graceful shutdown
 process.on('SIGTERM', () => {
   logger.info('SIGTERM received, shutting down...');
+  void autoModeService.shutdown();
   void goapLoopService.stopAllLoops();
+  healthMonitorService.stopMonitoring();
+  schedulerService.stop();
   terminalService.cleanup();
   server.close(() => {
     logger.info('Server closed');
@@ -1138,7 +1175,10 @@ process.on('SIGTERM', () => {
 
 process.on('SIGINT', () => {
   logger.info('SIGINT received, shutting down...');
+  void autoModeService.shutdown();
   void goapLoopService.stopAllLoops();
+  healthMonitorService.stopMonitoring();
+  schedulerService.stop();
   terminalService.cleanup();
   server.close(() => {
     logger.info('Server closed');

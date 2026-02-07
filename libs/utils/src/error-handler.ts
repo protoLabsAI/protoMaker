@@ -178,8 +178,13 @@ export function classifyError(error: unknown): ErrorInfo {
   const isFetch = isFetchError(error);
   const retryAfter = isRateLimit ? (extractRetryAfter(error) ?? 60) : undefined;
 
+  // Check for SDK-specific error subtypes
+  const isMaxTurns = message.startsWith('error_max_turns:');
+
   let type: ErrorType;
-  if (isAuth) {
+  if (isMaxTurns) {
+    type = 'max_turns';
+  } else if (isAuth) {
     type = 'authentication';
   } else if (isQuotaExhausted) {
     // Quota exhaustion takes priority over rate limit since it's more specific
@@ -207,6 +212,7 @@ export function classifyError(error: unknown): ErrorInfo {
     isCancellation,
     isRateLimit,
     isQuotaExhausted,
+    isMaxTurns,
     retryAfter,
     originalError: error,
   };
@@ -215,32 +221,43 @@ export function classifyError(error: unknown): ErrorInfo {
 /**
  * Get a user-friendly error message
  *
+ * Uses switch on info.type to match the priority order of classifyError.
+ *
  * @param error - The error to convert
  * @returns User-friendly error message
  */
 export function getUserFriendlyErrorMessage(error: unknown): string {
   const info = classifyError(error);
 
-  if (info.isAbort) {
-    return 'Operation was cancelled';
-  }
+  switch (info.type) {
+    case 'abort':
+      return 'Operation was cancelled';
 
-  if (info.isAuth) {
-    return 'Authentication failed. Please check your API key.';
-  }
+    case 'authentication':
+      return 'Authentication failed. Please check your API key.';
 
-  if (info.isQuotaExhausted) {
-    return 'Usage limit reached. Auto Mode has been paused. Please wait for your quota to reset or upgrade your plan.';
-  }
+    case 'quota_exhausted':
+      return 'Usage limit reached. Auto Mode has been paused. Please wait for your quota to reset or upgrade your plan.';
 
-  if (info.isRateLimit) {
-    const retryMsg = info.retryAfter
-      ? ` Please wait ${info.retryAfter} seconds before retrying.`
-      : ' Please reduce concurrency or wait before retrying.';
-    return `Rate limit exceeded (429).${retryMsg}`;
-  }
+    case 'max_turns':
+      return 'Agent exceeded the maximum number of turns. The task may be too complex for the current turn limit. Consider increasing max turns or breaking the task into smaller parts.';
 
-  return info.message;
+    case 'rate_limit': {
+      const retryMsg = info.retryAfter
+        ? ` Please wait ${info.retryAfter} seconds before retrying.`
+        : ' Please reduce concurrency or wait before retrying.';
+      return `Rate limit exceeded (429).${retryMsg}`;
+    }
+
+    case 'cancellation':
+      return 'Operation was cancelled by user';
+
+    case 'network':
+      return 'Network error: unable to reach the API. Please check your connection and try again.';
+
+    default:
+      return info.message;
+  }
 }
 
 /**
