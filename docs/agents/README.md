@@ -264,7 +264,7 @@ Covers:
 **Questions?**
 
 - Check the official docs above
-- Ask in Discord: [Link TBD]
+- Ask in Discord: #ava-josh channel
 - Or open a discussion on GitHub
 
 ---

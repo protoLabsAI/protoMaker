@@ -325,8 +325,6 @@ export async function cachedFetch(url: string) {
 
 Don't cache authentication endpoints - tokens change frequently!
 
-````
-
 ## Smart Memory Selection
 
 ### Relevance Ranking Algorithm
@@ -378,7 +376,7 @@ const topMemoryFiles = memoryFiles
   .slice(0, maxMemoryFiles);
 
 return topMemoryFiles;
-````
+```
 
 **Example Scoring:**
 

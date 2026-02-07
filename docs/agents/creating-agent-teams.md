@@ -282,7 +282,7 @@ export interface SecurityReview {
     codeReview: CodeReviewFinding[];
   };
   severity: 'critical' | 'high' | 'medium' | 'low' | 'info';
-  blocksM merge: boolean;
+  blocksMerge: boolean;
 }
 
 // Store in .automaker/security-reviews/{prNumber}.json
