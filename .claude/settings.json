@@ -1,7 +1,5 @@
 {
-  "enabledPlugins": {
-    "automaker@automaker-plugins": true
-  },
+  "enabledPlugins": {},
   "mcpServers": {
     "automaker": {
       "command": "node",
