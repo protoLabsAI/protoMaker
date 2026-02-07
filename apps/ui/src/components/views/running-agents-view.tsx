@@ -173,19 +173,19 @@ export function RunningAgentsView() {
                       </p>
                     )}
                     <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => handleNavigateToProject(agent)}
-                      className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      <Folder className="h-3.5 w-3.5" />
-                      <span className="truncate">{agent.projectName}</span>
-                    </button>
-                    {typeof agent.costUsd === 'number' && agent.costUsd > 0 && (
-                      <span className="inline-flex items-center gap-1 text-xs text-emerald-400">
-                        <DollarSign className="w-3 h-3" />
-                        {agent.costUsd < 0.01 ? '<$0.01' : `$${agent.costUsd.toFixed(2)}`}
-                      </span>
-                    )}
+                      <button
+                        onClick={() => handleNavigateToProject(agent)}
+                        className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        <Folder className="h-3.5 w-3.5" />
+                        <span className="truncate">{agent.projectName}</span>
+                      </button>
+                      {typeof agent.costUsd === 'number' && agent.costUsd > 0 && (
+                        <span className="inline-flex items-center gap-1 text-xs text-emerald-400">
+                          <DollarSign className="w-3 h-3" />
+                          {agent.costUsd < 0.01 ? '<$0.01' : `$${agent.costUsd.toFixed(2)}`}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>

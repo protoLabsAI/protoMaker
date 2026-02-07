@@ -256,7 +256,9 @@ export class PRFeedbackService {
           // Format structured CodeRabbit feedback with severity levels
           const formattedComments = codeRabbitResult.review.comments
             .map((c) => {
-              const location = c.location?.path ? ` (${c.location.path}${c.location.line ? `:${c.location.line}` : ''})` : '';
+              const location = c.location?.path
+                ? ` (${c.location.path}${c.location.line ? `:${c.location.line}` : ''})`
+                : '';
               const severity = c.severity ? `[${c.severity.toUpperCase()}]` : '';
               const suggestion = c.suggestion ? `\n  Suggestion: ${c.suggestion}` : '';
               return `- ${severity}${location} ${c.message}${suggestion}`;

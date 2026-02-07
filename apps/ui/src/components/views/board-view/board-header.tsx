@@ -206,9 +206,7 @@ export function BoardHeader({
               <TooltipTrigger asChild>
                 <div className="flex items-center gap-1 px-2 h-8 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-medium">
                   <DollarSign className="w-3.5 h-3.5" />
-                  {totalProjectCost < 0.01
-                    ? '<$0.01'
-                    : `$${totalProjectCost.toFixed(2)}`}
+                  {totalProjectCost < 0.01 ? '<$0.01' : `$${totalProjectCost.toFixed(2)}`}
                 </div>
               </TooltipTrigger>
               <TooltipContent side="bottom" className="text-xs">

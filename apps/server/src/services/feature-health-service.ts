@@ -89,9 +89,7 @@ export class FeatureHealthService {
       fixed,
     };
 
-    logger.info(
-      `Health audit complete: ${issues.length} issues found, ${fixed.length} fixed`
-    );
+    logger.info(`Health audit complete: ${issues.length} issues found, ${fixed.length} fixed`);
 
     return report;
   }

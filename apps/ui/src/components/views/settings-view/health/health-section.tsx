@@ -108,8 +108,7 @@ export function HealthSection() {
     ? Math.round((metrics.memory.heapUsed / metrics.memory.heapTotal) * 100)
     : 0;
 
-  const memoryStatus =
-    memoryPercent > 90 ? 'critical' : memoryPercent > 70 ? 'warning' : 'healthy';
+  const memoryStatus = memoryPercent > 90 ? 'critical' : memoryPercent > 70 ? 'warning' : 'healthy';
 
   return (
     <div
@@ -127,9 +126,7 @@ export function HealthSection() {
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 flex items-center justify-center border border-emerald-500/20">
               <Activity className="w-5 h-5 text-emerald-500" />
             </div>
-            <h2 className="text-lg font-semibold text-foreground tracking-tight">
-              System Health
-            </h2>
+            <h2 className="text-lg font-semibold text-foreground tracking-tight">System Health</h2>
           </div>
           <Button
             variant="outline"
@@ -179,18 +176,9 @@ export function HealthSection() {
                   )
                 }
               />
-              <MetricCard
-                label="Uptime"
-                value={formatUptime(metrics.uptime)}
-              />
-              <MetricCard
-                label="Version"
-                value={metrics.version || 'dev'}
-              />
-              <MetricCard
-                label="Node.js"
-                value={metrics.env?.nodeVersion || 'unknown'}
-              />
+              <MetricCard label="Uptime" value={formatUptime(metrics.uptime)} />
+              <MetricCard label="Version" value={metrics.version || 'dev'} />
+              <MetricCard label="Node.js" value={metrics.env?.nodeVersion || 'unknown'} />
             </div>
 
             {/* Memory Usage */}

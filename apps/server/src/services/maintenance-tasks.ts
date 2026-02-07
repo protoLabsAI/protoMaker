@@ -118,7 +118,9 @@ async function checkStaleFeatures(
       });
     }
 
-    logger.info(`Stale feature check complete: ${staleCount} stale, ${runningAgents.length} running`);
+    logger.info(
+      `Stale feature check complete: ${staleCount} stale, ${runningAgents.length} running`
+    );
   } catch (error) {
     logger.error('Stale feature check failed:', error);
     throw error;

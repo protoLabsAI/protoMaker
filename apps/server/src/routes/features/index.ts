@@ -57,11 +57,7 @@ export function createFeaturesRoutes(
   router.post('/generate-title', createGenerateTitleHandler(settingsService));
 
   if (healthService) {
-    router.post(
-      '/health',
-      validatePathParams('projectPath'),
-      createHealthHandler(healthService)
-    );
+    router.post('/health', validatePathParams('projectPath'), createHealthHandler(healthService));
   }
 
   return router;

@@ -2,11 +2,7 @@ import { useState } from 'react';
 import { Settings2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 
 export interface AgentConfig {
@@ -27,11 +23,7 @@ const TURN_PRESETS = [
   { label: 'Long (1000)', value: 1000 },
 ];
 
-export function AgentConfigPopover({
-  config,
-  onConfigChange,
-  disabled,
-}: AgentConfigPopoverProps) {
+export function AgentConfigPopover({ config, onConfigChange, disabled }: AgentConfigPopoverProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   const hasOverrides = config.maxTurns !== 200 || config.systemPromptOverride.length > 0;
@@ -69,9 +61,7 @@ export function AgentConfigPopover({
                 <button
                   key={preset.value}
                   type="button"
-                  onClick={() =>
-                    onConfigChange({ ...config, maxTurns: preset.value })
-                  }
+                  onClick={() => onConfigChange({ ...config, maxTurns: preset.value })}
                   className={cn(
                     'px-2 py-1 text-xs rounded-md border transition-colors',
                     config.maxTurns === preset.value

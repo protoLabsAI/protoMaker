@@ -1573,8 +1573,7 @@ export class AutoModeService {
       // Run the agent with the feature's model and images
       // Context files are passed as system prompt for higher priority
       // On retries, try to resume from the previous session if available
-      const resumeSessionId =
-        tempRunningFeature.retryCount > 0 ? feature.lastSessionId : undefined;
+      const resumeSessionId = tempRunningFeature.retryCount > 0 ? feature.lastSessionId : undefined;
       if (resumeSessionId) {
         logger.info(
           `Resuming feature ${featureId} from session ${resumeSessionId} (retry #${tempRunningFeature.retryCount})`
@@ -1759,7 +1758,7 @@ export class AutoModeService {
 
         logger.warn(
           `Feature ${featureId} hit max turns limit (failure #${newFailureCount}). ` +
-          `Escalating turns to ${escalatedTurns} for retry.`
+            `Escalating turns to ${escalatedTurns} for retry.`
         );
 
         await this.featureLoader.update(projectPath, featureId, {
@@ -5006,7 +5005,9 @@ After generating the revised spec, output:
               await this.featureLoader.update(projectPath, featureId, {
                 costUsd: previousCost + resultMsg.total_cost_usd,
               });
-              logger.info(`Feature ${featureId} cost: $${resultMsg.total_cost_usd.toFixed(4)} (total: $${(previousCost + resultMsg.total_cost_usd).toFixed(4)})`);
+              logger.info(
+                `Feature ${featureId} cost: $${resultMsg.total_cost_usd.toFixed(4)} (total: $${(previousCost + resultMsg.total_cost_usd).toFixed(4)})`
+              );
             } catch (costError) {
               logger.warn(`Failed to store cost for feature ${featureId}:`, costError);
             }
@@ -5031,7 +5032,10 @@ After generating the revised spec, output:
               if (errorResult.session_id) {
                 updates.lastSessionId = errorResult.session_id;
               }
-              if (typeof errorResult.total_cost_usd === 'number' && errorResult.total_cost_usd > 0) {
+              if (
+                typeof errorResult.total_cost_usd === 'number' &&
+                errorResult.total_cost_usd > 0
+              ) {
                 const currentFeature = await this.featureLoader.get(projectPath, featureId);
                 const previousCost: number = currentFeature?.costUsd ?? 0;
                 updates.costUsd = previousCost + errorResult.total_cost_usd;

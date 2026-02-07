@@ -379,7 +379,13 @@ const schedulerService = getSchedulerService();
 schedulerService.initialize(events, DATA_DIR);
 void schedulerService.start().then(() => {
   // Register preset maintenance tasks after scheduler is ready
-  void registerMaintenanceTasks(schedulerService, featureLoader, events, autoModeService, featureHealthService);
+  void registerMaintenanceTasks(
+    schedulerService,
+    featureLoader,
+    events,
+    autoModeService,
+    featureHealthService
+  );
 });
 
 // Initialize Health Monitor Service for periodic health checks
@@ -662,7 +668,13 @@ app.use('/api/agent', createAgentRoutes(agentService, events));
 app.use('/api/sessions', createSessionsRoutes(agentService));
 app.use(
   '/api/features',
-  createFeaturesRoutes(featureLoader, settingsService, events, authorityService, featureHealthService)
+  createFeaturesRoutes(
+    featureLoader,
+    settingsService,
+    events,
+    authorityService,
+    featureHealthService
+  )
 );
 app.use('/api/projects', createProjectsRoutes(featureLoader));
 app.use('/api/auto-mode', createAutoModeRoutes(autoModeService));
@@ -717,7 +729,11 @@ app.use('/api/ralph', createRalphRoutes(ralphLoopService));
 app.use('/api/goap', createGOAPRoutes(goapLoopService));
 app.use('/api/skills', createSkillsRoutes());
 app.use('/api/event-history', createEventHistoryRoutes(eventHistoryService, settingsService));
-app.use('/api/briefing', authMiddleware, createBriefingRoutes(eventHistoryService, briefingCursorService));
+app.use(
+  '/api/briefing',
+  authMiddleware,
+  createBriefingRoutes(eventHistoryService, briefingCursorService)
+);
 app.use('/api/projects', createProjectsRoutes(featureLoader));
 app.use('/api/scheduler', createSchedulerRoutes(schedulerService));
 
