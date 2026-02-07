@@ -134,6 +134,25 @@ docker compose logs --tail=50 server 2>&1 | grep -i -E "(error|exception|failed|
 docker compose logs --tail=50 ui 2>&1 | grep -i -E "(error|failed)" | tail -5
 ```
 
+### Step 9: CI/CD Status
+
+Check recent GitHub Actions runs:
+
+```bash
+# Recent workflow runs (if gh CLI available)
+gh run list --limit 5 --json workflowName,status,conclusion,createdAt \
+  --jq '.[] | "\(.workflowName): \(.conclusion // .status)"' 2>/dev/null || echo "gh CLI: NOT AVAILABLE"
+```
+
+### Step 10: Security Audit
+
+Check for known vulnerabilities:
+
+```bash
+# npm audit (from project directory)
+cd /home/josh/dev/automaker && npm audit --audit-level=moderate 2>/dev/null | tail -5 || echo "npm audit: N/A"
+```
+
 ## Output Format
 
 Generate a health report:
@@ -182,6 +201,20 @@ Generate a health report:
 | ---------------- | ---- | ------------- |
 | automaker-server | 0.5% | 256MiB / 4GiB |
 | automaker-ui     | 0.1% | 32MiB / 1GiB  |
+
+## CI/CD Status
+
+| Workflow       | Status | Last Run |
+| -------------- | ------ | -------- |
+| Deploy Staging | ✓      | 2h ago   |
+| E2E Tests      | ✓      | 30m ago  |
+
+## Security
+
+| Check      | Status               |
+| ---------- | -------------------- |
+| npm audit  | ✓ 0 vulnerabilities  |
+| Dependabot | ✓ No critical alerts |
 
 ## Recent Issues
 

@@ -4,15 +4,17 @@ Automaker uses GitHub Actions for continuous integration and delivery.
 
 ## Workflows Overview
 
-| Workflow             | Trigger           | Purpose               |
-| -------------------- | ----------------- | --------------------- |
-| `test.yml`           | PR, push to main  | Unit tests            |
-| `e2e-tests.yml`      | PR, push to main  | End-to-end tests      |
-| `pr-check.yml`       | PR, push to main  | Build verification    |
-| `format-check.yml`   | PR, push to main  | Code formatting       |
-| `security-audit.yml` | PR, push, weekly  | npm audit             |
-| `release.yml`        | Release published | Multi-platform builds |
-| `deploy-staging.yml` | Push to main      | Auto-deploy staging   |
+| Workflow                 | Trigger           | Purpose                 |
+| ------------------------ | ----------------- | ----------------------- |
+| `test.yml`               | PR, push to main  | Unit tests              |
+| `e2e-tests.yml`          | PR, push to main  | End-to-end tests        |
+| `pr-check.yml`           | PR, push to main  | Build verification      |
+| `format-check.yml`       | PR, push to main  | Code formatting         |
+| `security-audit.yml`     | PR, push, weekly  | npm audit               |
+| `release.yml`            | Release published | Multi-platform builds   |
+| `deploy-staging.yml`     | Push to main      | Auto-deploy staging     |
+| `generate-changelog.yml` | Release published | AI changelog generation |
+| `linear-sync.yml`        | PR merge to main  | Linear issue sync       |
 
 ## Test Suite (`test.yml`)
 
@@ -294,6 +296,95 @@ jobs:
 
 3. The workflow builds and uploads artifacts
 
+## Changelog Generation (`generate-changelog.yml`)
+
+Auto-generates changelogs when a GitHub Release is published.
+
+```yaml
+name: Generate Changelog
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  changelog:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: ./scripts/generate-changelog.sh
+```
+
+### What It Does
+
+- Triggered automatically when a GitHub Release is published
+- Runs on the self-hosted runner (requires Claude CLI for AI summarization)
+- Collects all merged PRs since the last release using `gh pr list`
+- Uses Claude CLI to generate a categorized changelog with sections for:
+  - Features
+  - Bug Fixes
+  - Documentation
+  - Refactoring
+  - Infrastructure
+- Updates `CHANGELOG.md` in the repository
+- Updates the GitHub Release notes with the generated content
+- Script location: `scripts/generate-changelog.sh`
+
+### Requirements
+
+- Self-hosted runner with Claude CLI installed and authenticated
+- `gh` CLI authenticated with repository access
+- `LINEAR_API_TOKEN` for fetching issue context (optional)
+
+## Linear Issue Sync (`linear-sync.yml`)
+
+Automatically syncs Linear issues when PRs merge to main.
+
+```yaml
+name: Linear Sync
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+jobs:
+  sync:
+    if: github.event.pull_request.merged == true
+    runs-on: self-hosted
+    steps:
+      - Parses PRO-NNN from PR title, body, and branch name
+      - Adds merge comment to Linear issue via GraphQL API
+      - Transitions issue to Done state
+      - Posts notification to Discord #deployments
+```
+
+### What It Does
+
+- Triggered when a pull request is merged into the `main` branch
+- Extracts Linear issue identifiers (e.g., `PRO-123`) from:
+  - PR title
+  - PR body/description
+  - Branch name
+- Adds a comment to the Linear issue with:
+  - Link to the merged PR
+  - Merge timestamp
+  - Commit SHA
+- Automatically transitions the Linear issue status to "Done"
+- Posts a notification to the Discord `#deployments` channel with:
+  - Issue identifier and title
+  - PR link
+  - Merge author
+
+### Requirements
+
+- `LINEAR_API_TOKEN` secret for GraphQL API access
+- `DISCORD_DEPLOY_WEBHOOK` secret for Discord notifications
+- Linear issue identifier must be present in PR title, body, or branch name
+
 ## Deploy Staging (`deploy-staging.yml`)
 
 Auto-deploys to the staging server when code merges to `main`.
@@ -314,6 +405,8 @@ jobs:
       - run: ./scripts/setup-staging.sh --build
       - run: ./scripts/setup-staging.sh --start
       - run: curl -sf http://localhost:3008/api/health
+      - run: ./scripts/smoke-test.sh
+      - run: docker system prune -f --volumes
 ```
 
 ### Self-Hosted Runner
@@ -330,11 +423,33 @@ Requires a GitHub Actions runner on the staging machine:
 
 See [staging-deployment.md](./staging-deployment.md#automated-deploys) for full setup.
 
+### Deployment Steps
+
+1. **Pull Latest Code**: `git pull origin main`
+2. **Build**: Runs `./scripts/setup-staging.sh --build` to rebuild Docker images
+3. **Start Services**: Runs `./scripts/setup-staging.sh --start` to restart containers
+4. **Health Check**: Verifies `/api/health` endpoint responds
+5. **Smoke Tests**: Runs `./scripts/smoke-test.sh` to verify critical functionality
+6. **Cleanup**: Prunes unused Docker resources to free disk space
+
+### Smoke Tests
+
+The smoke test script verifies:
+
+- API health endpoint responds
+- WebSocket connection succeeds
+- MCP server tools are accessible
+- Database migrations are applied
+- Feature board loads successfully
+
+If smoke tests fail, an alert is posted to Discord `#alerts` channel via `DISCORD_ALERTS_WEBHOOK`.
+
 ### Secrets
 
-| Secret                   | Purpose                              |
-| ------------------------ | ------------------------------------ |
-| `DISCORD_DEPLOY_WEBHOOK` | Post deploy notifications to Discord |
+| Secret                   | Purpose                                   |
+| ------------------------ | ----------------------------------------- |
+| `DISCORD_DEPLOY_WEBHOOK` | Post deploy notifications to #deployments |
+| `DISCORD_ALERTS_WEBHOOK` | Post smoke test failures to #alerts       |
 
 ## Composite Actions
 
@@ -386,11 +501,13 @@ Recommended branch protection rules for `main`:
 
 ## Secrets
 
-| Secret                   | Purpose                          |
-| ------------------------ | -------------------------------- |
-| `GITHUB_TOKEN`           | Auto-provided, used for releases |
-| `CODECOV_TOKEN`          | (Optional) Coverage reporting    |
-| `DISCORD_DEPLOY_WEBHOOK` | Staging deploy notifications     |
+| Secret                   | Purpose                                     |
+| ------------------------ | ------------------------------------------- |
+| `GITHUB_TOKEN`           | Auto-provided, used for releases            |
+| `CODECOV_TOKEN`          | (Optional) Coverage reporting               |
+| `DISCORD_DEPLOY_WEBHOOK` | Staging deploy notifications (#deployments) |
+| `DISCORD_ALERTS_WEBHOOK` | Smoke test failure alerts (#alerts)         |
+| `LINEAR_API_TOKEN`       | Linear issue sync on PR merge               |
 
 ## Self-Hosted Runner Capabilities
 
@@ -405,14 +522,15 @@ The `ava-staging` runner has access to resources that GitHub-hosted runners don'
 | gh CLI (authenticated)     | PR creation, issue management, release publishing     |
 | 125GB RAM / 24 CPUs        | Full E2E test suites, parallel builds                 |
 
-### Future Automation Opportunities
+### Automation Status
 
-**Release Automation:**
+**✅ Implemented:**
 
-- Auto-generate changelogs from PR descriptions using Claude
-- AI-assisted release notes with feature summaries
-- Automated version bumping based on conventional commits
-- Post-merge smoke tests against staging before release tagging
+- **Release Automation**: Changelog generation via `generate-changelog.yml` using Claude CLI
+- **Board Integration**: Linear issue sync via `linear-sync.yml` on PR merge to main
+- **Testing**: Post-deploy smoke tests in `deploy-staging.yml` with Discord alerting
+
+**📋 Planned:**
 
 **PR Workflow:**
 
@@ -420,9 +538,13 @@ The `ava-staging` runner has access to resources that GitHub-hosted runners don'
 - Auto-fix formatting/lint issues and push commits
 - Dependency update PRs with AI-generated migration notes
 
+**Release Automation:**
+
+- Automated version bumping based on conventional commits
+- AI-assisted release notes with feature summaries from Linear context
+
 **Board Integration:**
 
-- Auto-update Linear issues when PRs merge
 - Post deploy summaries to Discord with feature lists
 - Sync GitHub milestones with Linear project status
 

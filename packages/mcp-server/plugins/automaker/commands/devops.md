@@ -18,15 +18,16 @@ You are the Automaker DevOps Manager. Help users manage infrastructure, diagnose
 
 ## Capabilities
 
-| Action                        | Description                                   |
-| ----------------------------- | --------------------------------------------- |
-| `/devops` or `/devops status` | Container status, resource usage, endpoints   |
-| `/devops logs [service]`      | View and analyze container logs               |
-| `/devops health`              | Run comprehensive health diagnostics          |
-| `/devops backup`              | Backup Docker volumes                         |
-| `/devops restart [service]`   | Restart containers                            |
-| `/devops info`                | Show configuration, versions, and environment |
-| `/devops staging [action]`    | Manage staging env (setup/start/stop/status)  |
+| Action                                  | Description                                   |
+| --------------------------------------- | --------------------------------------------- |
+| `/devops` or `/devops status`           | Container status, resource usage, endpoints   |
+| `/devops logs [service]`                | View and analyze container logs               |
+| `/devops health`                        | Run comprehensive health diagnostics          |
+| `/devops backup`                        | Backup Docker volumes                         |
+| `/devops restart [service]`             | Restart containers                            |
+| `/devops info`                          | Show configuration, versions, and environment |
+| `/devops staging [action]`              | Manage staging env (setup/start/stop/status)  |
+| `/devops ci` or `/devops ci [workflow]` | Check CI status, recent runs, workflow health |
 
 ## Workflow
 
@@ -41,6 +42,7 @@ Based on the user's input, determine the action:
 - `restart` or `restart <service>` → Restart containers
 - `info` → Show system info
 - `staging` or `staging <action>` → Manage staging environment
+- `ci` or `ci <workflow>` → Check CI/CD status
 
 ### Action: Status (Default)
 
@@ -251,6 +253,46 @@ After running, display the output and check if `.env.staging` has empty API keys
 
 See `docs/infra/staging-deployment.md` for full documentation.
 
+### Action: CI/CD
+
+Check GitHub Actions status and recent workflow runs:
+
+```bash
+# List recent runs
+gh run list --limit 5
+
+# Check specific workflow
+gh run list --workflow "Deploy Staging" --limit 3
+
+# View a failed run
+gh run view <run-id> --log-failed
+
+# List all workflows
+gh workflow list
+```
+
+Display format:
+
+```
+## CI/CD Status
+
+| Workflow | Last Run | Status | Duration |
+|----------|----------|--------|----------|
+| Deploy Staging | 2h ago | success | 3m 15s |
+| E2E Tests | 30m ago | success | 8m 42s |
+| Format Check | 30m ago | success | 45s |
+| Security Audit | 30m ago | success | 1m 10s |
+| Test Suite | 30m ago | success | 2m 30s |
+
+### GitHub Secrets Configured
+
+| Secret | Purpose |
+|--------|---------|
+| `DISCORD_DEPLOY_WEBHOOK` | Deploy notifications to #deployments |
+| `DISCORD_ALERTS_WEBHOOK` | Smoke test failure alerts to #alerts |
+| `LINEAR_API_TOKEN` | Linear issue sync on PR merge |
+```
+
 ## Error Handling
 
 ### Docker Not Running
@@ -318,3 +360,5 @@ Point users to documentation for detailed information:
 - Troubleshooting: `docs/infra/troubleshooting.md`
 - Backup procedures: `docs/infra/backup-recovery.md`
 - Staging deployment: `docs/infra/staging-deployment.md`
+- CI/CD pipelines: `docs/infra/ci-cd.md`
+- Discord channels: `docs/discord.md`

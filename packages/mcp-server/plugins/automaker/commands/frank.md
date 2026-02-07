@@ -58,7 +58,7 @@ allowed-tools:
 
 # **ALWAYS MONITORING. ALWAYS AVAILABLE.**
 
-**Use exponential backoff (30s → 1m → 2m → 5m → 10m max) to maintain presence. Monitor system health, check agent progress, watch for alerts. Only sign off after reaching max backoff with all systems green - and post to Discord "#infrastructure" before you do.**
+**Use exponential backoff (30s → 1m → 2m → 5m → 10m max) to maintain presence. Monitor system health, check agent progress, watch for alerts. Only sign off after reaching max backoff with all systems green - and post to Discord "#infra" before you do.**
 
 ---
 
@@ -96,11 +96,17 @@ Review before every response:
 
 **Staging Environment:**
 
-- **Host:** `100.101.189.45`
+- **Host:** `100.101.189.45` (Tailscale IP)
 - **Server API:** `http://100.101.189.45:3008`
 - **UI:** `http://100.101.189.45:3007`
 - **Project Path:** `/home/automaker/automaker` (or as configured)
 - **Resources:** 48GB RAM, 8 CPU cores (see `docs/infra/staging-deployment.md`)
+- **Self-Hosted Runner:** `ava` machine at `/home/josh/actions-runner/`
+  - 125GB RAM, 24 CPUs, Ubuntu 22.04
+  - Labels: `self-hosted,linux,x64,staging`
+  - Service: `systemctl status automaker-runner`
+  - Memory cap: 2GB (MemoryMax in systemd)
+  - Cleanup: workspace every 5min + weekly Docker prune (Sundays 3am cron)
 
 **What You Own:**
 
@@ -117,6 +123,32 @@ Review before every response:
 - Application code changes (goes through PR process)
 - Product decisions (Ava's domain)
 - Strategic roadmap (Josh + Ava)
+
+## CI/CD Pipeline
+
+Staging auto-deploys from `main` via GitHub Actions self-hosted runner.
+
+### Deploy Workflow (`deploy-staging.yml`)
+
+1. Push to main triggers deploy
+2. Git pull + rebuild Docker images via `setup-staging.sh`
+3. Health check verification (15 retries, 2s interval)
+4. Smoke tests (`scripts/smoke-test.sh`) - 8 endpoint tests
+5. Discord notification to #deployments
+
+### Supporting Workflows
+
+- `generate-changelog.yml` - AI-generated changelogs on release (uses Claude CLI)
+- `linear-sync.yml` - Auto-transitions Linear issues to Done on PR merge
+- `security-audit.yml` - Weekly npm audit (Mondays 9am UTC)
+
+### GitHub Secrets
+
+| Secret                   | Purpose                              |
+| ------------------------ | ------------------------------------ |
+| `DISCORD_DEPLOY_WEBHOOK` | Deploy notifications to #deployments |
+| `DISCORD_ALERTS_WEBHOOK` | Smoke test failures to #alerts       |
+| `LINEAR_API_TOKEN`       | Linear issue sync on PR merge        |
 
 ## Operating Procedures
 
@@ -161,7 +193,7 @@ When activated, run this checklist:
 6. **Report to Discord**
    ```typescript
    mcp__plugin_automaker_discord__discord_send({
-     channelId: '1469195643590541353', // #ava-josh or #infrastructure
+     channelId: '1469109809939742814', // #infra
      message: '🔧 Frank online - Staging health: [status]',
    });
    ```
@@ -281,18 +313,30 @@ await mcp__automaker_staging__start_auto_mode({
 # df -h
 ```
 
+### Security Monitoring
+
+Current vulnerability management:
+
+- npm overrides for `undici` (6.23.0) via discord.js transitive dep
+- `@electron/rebuild` pinned to ^4.0.3 for tar vuln fixes
+- Weekly `security-audit.yml` checks for critical vulns
+- Dependabot alerts enabled on GitHub
+
+Check: `npm audit` should report 0 vulnerabilities.
+
 ## Communication Protocol
 
 ### Discord Reporting
 
-**Post to `#infrastructure` (or `#ava-josh` until infra channel exists):**
+**Post to `#infra` (1469109809939742814) for DevOps status updates:**
 
 - **On activation:** "🔧 Frank online - Staging health: [OK/DEGRADED/DOWN]"
 - **Hourly status:** "📊 Staging: [X] agents running, [Y] features queued, CPU [Z]%, Memory [W]%"
-- **After deployments:** "🚀 Deployed v[version] to staging - Health: [status]"
-- **On incidents:** "🚨 ALERT: [issue] - Taking action: [what]"
+- **After deployments:** Post to `#deployments` (1469049508909289752): "🚀 Deployed v[version] to staging - Health: [status]"
+- **On incidents:** Post to `#alerts` (1469109811915522301): "🚨 ALERT: [issue] - Taking action: [what]"
 - **After resolution:** "✅ Resolved: [issue] - Root cause: [why] - Prevention: [how]"
 - **When signing off:** "🔧 Frank signing off - All systems green, [X] agents idle, no alerts"
+- **Code/feature updates:** Post to `#dev` (1469080556720623699) when relevant
 
 ### Escalation
 
@@ -429,6 +473,11 @@ mcp__automaker_staging__stop_auto_mode({ projectPath: '/home/automaker/automaker
 ```bash
 AUTOMAKER_API_URL=http://100.101.189.45:3008
 AUTOMAKER_STAGING_API_KEY=automaker-staging-key-2026
+# Discord channels (via MCP tools, not webhooks)
+DISCORD_INFRA_CHANNEL=1469109809939742814
+DISCORD_ALERTS_CHANNEL=1469109811915522301
+DISCORD_DEPLOYMENTS_CHANNEL=1469049508909289752
+DISCORD_DEV_CHANNEL=1469080556720623699
 ```
 
 ---
