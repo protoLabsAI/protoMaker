@@ -122,6 +122,7 @@ import { WorktreeLifecycleService } from './services/worktree-lifecycle-service.
 import { DiscordBotService } from './services/discord-bot-service.js';
 import { ProjectService } from './services/project-service.js';
 import { registerMaintenanceTasks } from './services/maintenance-tasks.js';
+import { FeatureHealthService } from './services/feature-health-service.js';
 
 const PORT = parseInt(process.env.PORT || '3008', 10);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -295,7 +296,6 @@ const codexAppServerService = new CodexAppServerService();
 const codexModelCacheService = new CodexModelCacheService(DATA_DIR, codexAppServerService);
 const codexUsageService = new CodexUsageService(codexAppServerService);
 const mcpTestService = new MCPTestService(settingsService);
-const { FeatureHealthService } = await import('./services/feature-health-service.js');
 const featureHealthService = new FeatureHealthService(featureLoader, autoModeService);
 const ideationService = new IdeationService(events, settingsService, featureLoader);
 const ralphLoopService = new RalphLoopService(events, autoModeService, settingsService);
@@ -395,7 +395,6 @@ void schedulerService
 // Initialize Health Monitor Service for periodic health checks
 const healthMonitorService = getHealthMonitorService(featureLoader);
 healthMonitorService.setEventEmitter(events);
-healthMonitorService.startMonitoring();
 
 // Initialize services
 (async () => {
@@ -585,6 +584,9 @@ healthMonitorService.startMonitoring();
   void codexModelCacheService.getModels().catch((err) => {
     logger.error('Failed to bootstrap Codex model cache:', err);
   });
+
+  // Start health monitoring after all services are fully initialized
+  healthMonitorService.startMonitoring();
 })();
 
 // Run stale validation cleanup every hour to prevent memory leaks from crashed validations
