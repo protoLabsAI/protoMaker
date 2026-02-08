@@ -849,6 +849,9 @@ export class AutoModeService {
 
     while (projectState.isRunning && !projectState.abortController.signal.aborted) {
       iterationCount++;
+      logger.debug(
+        `[AutoLoop] 💓 Heartbeat - Iteration ${iterationCount} for ${worktreeDesc} in ${projectPath}`
+      );
       try {
         // Count running features for THIS project/worktree only
         const projectRunningCount = await this.getRunningCountForWorktree(projectPath, branchName);
@@ -895,6 +898,11 @@ export class AutoModeService {
         // Find a feature not currently running and not yet finished
         const nextFeature = pendingFeatures.find(
           (f) => !this.runningFeatures.has(f.id) && !this.isFeatureFinished(f)
+        );
+
+        // Log selection details for debugging
+        logger.info(
+          `[AutoLoop] Feature selection from ${pendingFeatures.length} pending: ${pendingFeatures.map((f) => `${f.id}(running:${this.runningFeatures.has(f.id)},finished:${this.isFeatureFinished(f)})`).join(', ')}`
         );
 
         if (nextFeature) {
@@ -3961,25 +3969,31 @@ Format your response as a structured markdown document.`;
           // Track pending features separately, filtered by worktree/branch
           // Note: waiting_approval is NOT included - those features have completed execution
           // and are waiting for user review, they should not be picked up again
-          if (
+          const isEligibleStatus =
             feature.status === 'pending' ||
             feature.status === 'ready' ||
             feature.status === 'backlog' ||
             (feature.planSpec?.status === 'approved' &&
-              (feature.planSpec.tasksCompleted ?? 0) < (feature.planSpec.tasksTotal ?? 0))
-          ) {
+              (feature.planSpec.tasksCompleted ?? 0) < (feature.planSpec.tasksTotal ?? 0));
+
+          // Log ALL features with their eligibility status for debugging
+          logger.debug(
+            `[loadPendingFeatures] Feature ${feature.id}: status="${feature.status}", assignee="${feature.assignee ?? 'null'}", isEpic=${feature.isEpic ?? false}, branchName="${feature.branchName ?? 'null'}", eligible=${isEligibleStatus}`
+          );
+
+          if (isEligibleStatus) {
             // Skip epic features - they are containers, not executable
             if (feature.isEpic) {
-              logger.debug(
-                `[loadPendingFeatures] Skipping epic feature ${feature.id} - ${feature.title}`
+              logger.info(
+                `[loadPendingFeatures] ❌ Skipping epic feature ${feature.id} - ${feature.title}`
               );
               continue;
             }
 
             // Skip features assigned to humans (non-agent assignees)
             if (feature.assignee && feature.assignee !== 'agent') {
-              logger.debug(
-                `[loadPendingFeatures] Skipping feature ${feature.id} - assigned to ${feature.assignee}`
+              logger.info(
+                `[loadPendingFeatures] ❌ Skipping feature ${feature.id} - assigned to "${feature.assignee}" (not agent)`
               );
               continue;
             }
@@ -3997,26 +4011,37 @@ Format your response as a structured markdown document.`;
               // Orphaned = has branchName but no corresponding worktree exists
               const isOrphaned = featureBranch !== null && !worktreeBranches.has(featureBranch);
 
+              logger.debug(
+                `[loadPendingFeatures] Feature ${feature.id} branch filter - featureBranch: ${featureBranch}, primaryBranch: ${primaryBranch}, isPrimaryOrUnassigned: ${isPrimaryOrUnassigned}, isOrphaned: ${isOrphaned}`
+              );
+
               if (isPrimaryOrUnassigned || isOrphaned) {
                 if (isOrphaned) {
-                  logger.debug(
-                    `[loadPendingFeatures] Including orphaned feature ${feature.id} (branchName: ${featureBranch} has no worktree) for main worktree`
+                  logger.info(
+                    `[loadPendingFeatures] ✅ Including orphaned feature ${feature.id} (branchName: ${featureBranch} has no worktree) for main worktree`
+                  );
+                } else {
+                  logger.info(
+                    `[loadPendingFeatures] ✅ Including feature ${feature.id} for main worktree (featureBranch: ${featureBranch})`
                   );
                 }
                 pendingFeatures.push(feature);
               } else {
                 // Feature belongs to a specific worktree (has branchName with existing worktree)
-                logger.debug(
-                  `[loadPendingFeatures] Filtering out feature ${feature.id} (branchName: ${featureBranch} has worktree) for main worktree`
+                logger.info(
+                  `[loadPendingFeatures] ❌ Filtering out feature ${feature.id} (branchName: ${featureBranch} has worktree) for main worktree`
                 );
               }
             } else {
               // Feature worktree: include features with matching branchName
               if (featureBranch === branchName) {
+                logger.info(
+                  `[loadPendingFeatures] ✅ Including feature ${feature.id} for worktree ${branchName}`
+                );
                 pendingFeatures.push(feature);
               } else {
-                logger.debug(
-                  `[loadPendingFeatures] Filtering out feature ${feature.id} (branchName: ${featureBranch}, expected: ${branchName}) for worktree ${branchName}`
+                logger.info(
+                  `[loadPendingFeatures] ❌ Filtering out feature ${feature.id} (branchName: ${featureBranch}, expected: ${branchName}) for worktree ${branchName}`
                 );
               }
             }
