@@ -121,8 +121,8 @@ import { PRFeedbackService } from './services/pr-feedback-service.js';
 import { WorktreeLifecycleService } from './services/worktree-lifecycle-service.js';
 import { DiscordBotService } from './services/discord-bot-service.js';
 import { WorldStateMonitor } from './services/world-state-monitor.js';
-import { ReconciliationService } from './services/reconciliation-service.js';
-import { GitHubStateChecker } from './services/github-state-checker.js';
+// import { ReconciliationService } from './services/reconciliation-service.js'; // TODO: Re-enable when implemented
+// import { GitHubStateChecker } from './services/github-state-checker.js'; // TODO: Re-enable when implemented
 import { ProjectService } from './services/project-service.js';
 import { registerMaintenanceTasks } from './services/maintenance-tasks.js';
 import { FeatureHealthService } from './services/feature-health-service.js';
@@ -368,15 +368,16 @@ worktreeLifecycleService.initialize();
 
 // Initialize World State Monitor (GOAP-inspired reactive system)
 // Periodically checks world state and triggers corrective actions for drift
-const githubStateChecker = new GitHubStateChecker(featureLoader);
-const reconciliationService = new ReconciliationService(events, featureLoader, autoModeService);
+// TODO: Re-enable when ReconciliationService and GitHubStateChecker are implemented
+// const githubStateChecker = new GitHubStateChecker(featureLoader);
+// const reconciliationService = new ReconciliationService(events, featureLoader, autoModeService);
 const worldStateMonitor = new WorldStateMonitor(
   events,
   featureLoader,
-  reconciliationService,
-  githubStateChecker,
+  null as any, // reconciliationService placeholder
+  null as any, // githubStateChecker placeholder
   {
-    enabled: true,
+    enabled: false, // Disabled until services are implemented
     tickIntervalMs: 30000, // 30 seconds
     checks: {
       automaker: true,
@@ -389,8 +390,9 @@ const worldStateMonitor = new WorldStateMonitor(
 
 // Register the main project for GitHub state checking
 // Additional projects can be registered dynamically via API
-const mainProjectPath = process.cwd();
-githubStateChecker.registerProject(mainProjectPath);
+// TODO: Re-enable when GitHubStateChecker is implemented
+// const mainProjectPath = process.cwd();
+// githubStateChecker.registerProject(mainProjectPath);
 
 // Initialize Discord Bot Service for CTO /idea command
 // Only connects if DISCORD_BOT_TOKEN is set in environment

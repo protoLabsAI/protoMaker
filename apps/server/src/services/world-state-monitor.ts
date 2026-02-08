@@ -17,9 +17,14 @@
 import { createLogger } from '@automaker/utils';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
-import type { ReconciliationService, Drift } from './reconciliation-service.js';
-import type { GitHubStateChecker } from './github-state-checker.js';
+// import type { ReconciliationService, Drift } from './reconciliation-service.js'; // TODO: Re-enable when implemented
+// import type { GitHubStateChecker } from './github-state-checker.js'; // TODO: Re-enable when implemented
 import path from 'node:path';
+
+// Temporary stub types until reconciliation-service is implemented
+type ReconciliationService = any;
+type GitHubStateChecker = any;
+type Drift = any;
 
 const logger = createLogger('WorldStateMonitor');
 
