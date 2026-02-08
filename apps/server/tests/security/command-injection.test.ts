@@ -146,7 +146,7 @@ describe('Command Injection Prevention - Merge Route', () => {
   beforeEach(async () => {
     // Create a temporary git repo for testing
     repoPath = await fs.mkdtemp(path.join(os.tmpdir(), 'automaker-security-test-'));
-    await execAsync('git init', { cwd: repoPath });
+    await execAsync('git init -b main', { cwd: repoPath });
     await execAsync('git config user.email "test@example.com"', { cwd: repoPath });
     await execAsync('git config user.name "Test User"', { cwd: repoPath });
     await execAsync('git commit --allow-empty -m "Initial commit"', { cwd: repoPath });
