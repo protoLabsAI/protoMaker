@@ -379,6 +379,7 @@ interface ProjectAutoLoopState {
   hasEmittedIdleEvent: boolean;
   branchName: string | null; // null = main worktree
   cooldownTimer: NodeJS.Timeout | null; // Timer for auto-resume after cooldown
+  startingFeatures: Set<string>; // Track features being started to prevent race conditions
 }
 
 /**
@@ -793,6 +794,7 @@ export class AutoModeService {
       hasEmittedIdleEvent: false,
       branchName,
       cooldownTimer: null,
+      startingFeatures: new Set(),
     };
 
     this.autoLoopsByProject.set(worktreeKey, projectState);
@@ -853,10 +855,16 @@ export class AutoModeService {
         // Count running features for THIS project/worktree only
         const projectRunningCount = await this.getRunningCountForWorktree(projectPath, branchName);
 
+        // Count features that are in the process of being started
+        const startingCount = projectState.startingFeatures.size;
+
+        // Total occupied slots = running + starting
+        const totalOccupied = projectRunningCount + startingCount;
+
         // Check if we have capacity for this project/worktree
-        if (projectRunningCount >= projectState.config.maxConcurrency) {
+        if (totalOccupied >= projectState.config.maxConcurrency) {
           logger.debug(
-            `[AutoLoop] At capacity (${projectRunningCount}/${projectState.config.maxConcurrency}), waiting...`
+            `[AutoLoop] At capacity (${projectRunningCount} running + ${startingCount} starting = ${totalOccupied}/${projectState.config.maxConcurrency}), waiting...`
           );
           await this.sleep(5000);
           continue;
@@ -892,9 +900,12 @@ export class AutoModeService {
           continue;
         }
 
-        // Find a feature not currently running and not yet finished
+        // Find a feature not currently running, not being started, and not yet finished
         const nextFeature = pendingFeatures.find(
-          (f) => !this.runningFeatures.has(f.id) && !this.isFeatureFinished(f)
+          (f) =>
+            !this.runningFeatures.has(f.id) &&
+            !projectState.startingFeatures.has(f.id) &&
+            !this.isFeatureFinished(f)
         );
 
         if (nextFeature) {
@@ -903,33 +914,60 @@ export class AutoModeService {
             projectPath,
             branchName
           );
-          if (currentRunningCount >= projectState.config.maxConcurrency) {
+          const currentStartingCount = projectState.startingFeatures.size;
+          const currentTotalOccupied = currentRunningCount + currentStartingCount;
+
+          if (currentTotalOccupied >= projectState.config.maxConcurrency) {
             logger.warn(
-              `[AutoLoop] Race condition detected: at capacity ${currentRunningCount}/${projectState.config.maxConcurrency} when trying to start feature ${nextFeature.id}, skipping`
+              `[AutoLoop] Race condition detected: at capacity ${currentRunningCount} running + ${currentStartingCount} starting = ${currentTotalOccupied}/${projectState.config.maxConcurrency} when trying to start feature ${nextFeature.id}, skipping`
             );
             await this.sleep(1000);
             continue;
           }
 
+          // Mark feature as starting BEFORE calling executeFeature to prevent race conditions
+          projectState.startingFeatures.add(nextFeature.id);
+
           logger.info(`[AutoLoop] Starting feature ${nextFeature.id}: ${nextFeature.title}`);
           // Reset idle event flag since we're doing work again
           projectState.hasEmittedIdleEvent = false;
+
+          // Safety timeout: Remove from starting set after 30 seconds if still there
+          // This prevents features from getting permanently stuck in "starting" state
+          const startingTimeout = setTimeout(() => {
+            if (projectState.startingFeatures.has(nextFeature.id)) {
+              logger.warn(
+                `[AutoLoop] Feature ${nextFeature.id} stuck in starting state for 30s, cleaning up`
+              );
+              projectState.startingFeatures.delete(nextFeature.id);
+            }
+          }, 30000);
+
           // Start feature execution in background
           this.executeFeature(
             projectPath,
             nextFeature.id,
             projectState.config.useWorktrees,
             true
-          ).catch((error) => {
-            logger.error(`Feature ${nextFeature.id} error:`, error);
-          });
+          )
+            .then(() => {
+              // Remove from starting set once executeFeature completes (successfully or not)
+              clearTimeout(startingTimeout);
+              projectState.startingFeatures.delete(nextFeature.id);
+            })
+            .catch((error) => {
+              logger.error(`Feature ${nextFeature.id} error:`, error);
+              // Remove from starting set on error
+              clearTimeout(startingTimeout);
+              projectState.startingFeatures.delete(nextFeature.id);
+            });
 
-          // Brief sleep to ensure executeFeature has added the feature to runningFeatures
-          // This prevents race conditions where the next iteration checks capacity
-          // before executeFeature has updated the running count
+          // Brief sleep to ensure proper sequencing
           await this.sleep(100);
         } else {
-          logger.debug(`[AutoLoop] All pending features are already running`);
+          logger.debug(
+            `[AutoLoop] All pending features are already running or being started`
+          );
         }
 
         await this.sleep(2000);
@@ -2130,7 +2168,20 @@ Complete the pipeline step instructions above. Review the previous work and appl
     // The abort signal will still propagate to stop any ongoing execution
     this.runningFeatures.delete(featureId);
 
+    // Also clean up from startingFeatures in case it's stuck there
+    this.cleanupStartingFeature(featureId);
+
     return true;
+  }
+
+  /**
+   * Remove a feature from all startingFeatures sets
+   * Helper to prevent features from getting stuck in "starting" state
+   */
+  private cleanupStartingFeature(featureId: string): void {
+    for (const projectState of this.autoLoopsByProject.values()) {
+      projectState.startingFeatures.delete(featureId);
+    }
   }
 
   /**
@@ -2149,6 +2200,8 @@ Complete the pipeline step instructions above. Review the previous work and appl
       if (projectState.cooldownTimer) {
         clearTimeout(projectState.cooldownTimer);
       }
+      // Clear starting features to prevent leaks
+      projectState.startingFeatures.clear();
       logger.info(`[Shutdown] Stopped auto-loop: ${key}`);
     }
     this.autoLoopsByProject.clear();
