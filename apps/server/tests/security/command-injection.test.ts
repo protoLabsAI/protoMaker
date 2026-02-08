@@ -183,21 +183,20 @@ describe('Command Injection Prevention - Merge Route', () => {
 
       await handler(req, res);
 
-      // Should return error response (currently allows command injection)
+      // Should return error response with input validation message
       expect(statusSpy).toHaveBeenCalledWith(400);
       expect(jsonSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           success: false,
-          error: expect.stringContaining('does not exist'),
+          error: expect.stringContaining('Invalid branch name'),
         })
       );
     }
   });
 
-  it.fails('should sanitize commit messages', async () => {
-    // SECURITY ISSUE: This test currently FAILS because commit messages
-    // are not sanitized and are directly interpolated into shell commands.
-    // Line 66 in merge.ts uses string interpolation which allows shell injection.
+  it('should sanitize commit messages', async () => {
+    // Fixed: Commit messages are now properly validated and sanitized.
+    // No longer allows shell injection through commit message content.
     const handler = createMergeHandler();
 
     // Create a feature branch
@@ -244,9 +243,9 @@ describe('Command Injection Prevention - Merge Route', () => {
     }
   });
 
-  it.fails('should not execute commands embedded in branch names', async () => {
-    // SECURITY ISSUE: This test currently FAILS - commands ARE executed!
-    // The merge route doesn't validate branch names before passing them to shell.
+  it('should not execute commands embedded in branch names', async () => {
+    // Fixed by PR #129 which added input validation via isValidBranchName().
+    // Branch names with shell metacharacters are now properly rejected.
     const handler = createMergeHandler();
 
     // Create a marker file to detect if command execution occurred
