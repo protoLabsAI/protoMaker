@@ -944,12 +944,7 @@ export class AutoModeService {
           }, 30000);
 
           // Start feature execution in background
-          this.executeFeature(
-            projectPath,
-            nextFeature.id,
-            projectState.config.useWorktrees,
-            true
-          )
+          this.executeFeature(projectPath, nextFeature.id, projectState.config.useWorktrees, true)
             .then(() => {
               // Remove from starting set once executeFeature completes (successfully or not)
               clearTimeout(startingTimeout);
@@ -965,9 +960,7 @@ export class AutoModeService {
           // Brief sleep to ensure proper sequencing
           await this.sleep(100);
         } else {
-          logger.debug(
-            `[AutoLoop] All pending features are already running or being started`
-          );
+          logger.debug(`[AutoLoop] All pending features are already running or being started`);
         }
 
         await this.sleep(2000);
