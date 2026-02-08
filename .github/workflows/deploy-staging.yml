@@ -22,11 +22,27 @@ jobs:
           git fetch origin main
           git reset --hard origin/main
 
+      - name: Debug environment
+        run: |
+          cd /home/josh/dev/automaker
+          echo "PWD: $(pwd)"
+          echo "Script exists: $(ls -la scripts/setup-staging.sh 2>&1)"
+          echo "Compose exists: $(ls -la docker-compose.staging.yml 2>&1)"
+          echo "Bash version: $BASH_VERSION"
+          echo "Docker: $(docker --version 2>&1)"
+          echo "Docker compose: $(docker compose version 2>&1)"
+          echo "Docker daemon: $(docker info --format '{{.ServerVersion}}' 2>&1)"
+          echo ".env exists: $(ls -la .env 2>&1)"
+          echo "File head:"
+          head -3 scripts/setup-staging.sh | cat -A
+          echo "Disk: $(df -h / | tail -1)"
+          echo "Memory: $(free -h | grep Mem)"
+
       - name: Rebuild and restart staging
         run: |
           cd /home/josh/dev/automaker
-          ./scripts/setup-staging.sh --build
-          ./scripts/setup-staging.sh --start
+          bash -x ./scripts/setup-staging.sh --build 2>&1
+          bash -x ./scripts/setup-staging.sh --start 2>&1
 
       - name: Verify deployment
         run: |
