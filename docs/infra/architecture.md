@@ -461,7 +461,7 @@ coordination happens through the coordination layer (Linear + Discord).
 │  ├── Automaker Instance (primary dev team)                     │
 │  │   ├── Server (:3008)                                        │
 │  │   ├── UI (:3007)                                            │
-│  │   └── MCP Servers (automaker, discord, linear)              │
+│  │   └── MCP Servers (automaker, discord, linear, proxmox)     │
 │  ├── Claude Code CLI                                            │
 │  └── Docker (containers + volumes)                              │
 │                                                                 │
@@ -523,7 +523,70 @@ See [secrets.md](./secrets.md) for detailed Infisical setup.
 │  External APIs (HTTPS):                                          │
 │  ├── Anthropic API (authenticated)                               │
 │  ├── GitHub API (authenticated)                                  │
+│  ├── Proxmox API (authenticated, Tailscale)                      │
 │  └── npm registry (public)                                       │
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
 ```
+
+## Proxmox MCP Integration
+
+The Proxmox MCP server provides Claude Code with direct management of VMs and containers on the Proxmox hypervisor.
+
+### Setup
+
+**Repository:** [proto-labs-ai/mcp-proxmox](https://github.com/proto-labs-ai/mcp-proxmox) (hardened fork of gilby125/mcp-proxmox)
+
+**Required env vars:**
+
+| Variable                 | Description                                        |
+| ------------------------ | -------------------------------------------------- |
+| `PROXMOX_HOST`           | Proxmox IP/hostname (Tailscale IP recommended)     |
+| `PROXMOX_USER`           | API user (e.g., `root@pam` or dedicated `mcp@pve`) |
+| `PROXMOX_TOKEN_NAME`     | API token ID                                       |
+| `PROXMOX_TOKEN_VALUE`    | API token secret                                   |
+| `PROXMOX_ALLOW_ELEVATED` | `false` (read-only) or `true` (destructive ops)    |
+
+**Claude Code config (user-level in `~/.claude.json`):**
+
+```json
+{
+  "proxmox": {
+    "type": "stdio",
+    "command": "npx",
+    "args": ["-y", "github:proto-labs-ai/mcp-proxmox"],
+    "env": {
+      "PROXMOX_HOST": "${PROXMOX_HOST}",
+      "PROXMOX_TOKEN_NAME": "${PROXMOX_TOKEN_NAME}",
+      "PROXMOX_TOKEN_VALUE": "${PROXMOX_TOKEN_VALUE}",
+      "PROXMOX_USER": "${PROXMOX_USER}",
+      "PROXMOX_ALLOW_ELEVATED": "false"
+    }
+  }
+}
+```
+
+### Permission Tiers
+
+| Mode            | `PROXMOX_ALLOW_ELEVATED` | Operations                                                     |
+| --------------- | ------------------------ | -------------------------------------------------------------- |
+| Basic (default) | `false`                  | List nodes, VMs, storage, cluster status                       |
+| Elevated        | `true`                   | Create/delete VMs, snapshots, backups, disk/network management |
+
+### Security Hardening (applied in our fork)
+
+- All parameters validated before use in API URLs (node, vmid, storage, snapshot, disk, net, bridge, mp)
+- `PROXMOX_HOST` and `PROXMOX_TOKEN_VALUE` are required (no silent fallbacks)
+- Updated MCP SDK to v1.26.0
+- Deterministic lockfile committed
+- Removed unnecessary `https` npm package
+- Upstream PR: https://github.com/gilby125/mcp-proxmox/pull/3
+
+### Proxmox API Token Setup
+
+1. Log into Proxmox web UI
+2. Datacenter > Permissions > API Tokens
+3. Create a token for the desired user
+4. For read-only: no special permissions needed
+5. For elevated: grant `VM.Allocate`, `VM.PowerMgmt`, `VM.Snapshot`, `VM.Backup`, `VM.Config`
+6. **Recommended:** Use privilege separation and a dedicated `mcp@pve` user with minimal permissions
