@@ -21,13 +21,6 @@
       "env": {
         "DISCORD_BOT_TOKEN": "${DISCORD_BOT_TOKEN}"
       }
-    },
-    "linear": {
-      "command": "npx",
-      "args": ["-y", "mcp-linear"],
-      "env": {
-        "LINEAR_API_KEY": "${LINEAR_API_KEY}"
-      }
     }
   }
 }
