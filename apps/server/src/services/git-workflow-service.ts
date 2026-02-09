@@ -269,6 +269,12 @@ export class GitWorkflowService {
                 result.error = result.error ? `${result.error}; ${conflictError}` : conflictError;
                 // Don't proceed with PR creation if there are conflicts
                 return result;
+              } else if (syncResult.error?.includes('circuit breaker is open')) {
+                // Circuit breaker is open - fall back to gh CLI for PR creation
+                logger.warn(
+                  `Graphite circuit breaker is open, falling back to gh CLI for PR creation`
+                );
+                // Continue with PR creation using gh CLI fallback below
               } else {
                 // Sync failed for another reason - log but continue
                 logger.warn(`Sync failed but no conflicts detected: ${syncResult.error}`);
@@ -289,8 +295,16 @@ export class GitWorkflowService {
             }
           } catch (syncError) {
             const errorMsg = syncError instanceof Error ? syncError.message : String(syncError);
-            logger.warn(`Sync and restack failed for branch ${branchName}: ${errorMsg}`);
-            // Log the error but continue with PR creation - sync is best-effort
+            // Check if circuit breaker is open
+            if (errorMsg.includes('circuit breaker is open')) {
+              logger.warn(
+                `Graphite circuit breaker is open, falling back to gh CLI for PR creation`
+              );
+              // Continue with PR creation using gh CLI fallback below
+            } else {
+              logger.warn(`Sync and restack failed for branch ${branchName}: ${errorMsg}`);
+              // Log the error but continue with PR creation - sync is best-effort
+            }
           }
         }
 
@@ -298,16 +312,41 @@ export class GitWorkflowService {
         if (result.pushed && gitSettings.autoCreatePR) {
           try {
             if (useGraphite) {
-              // Use Graphite submit - it handles base branch automatically via stack parent
-              const prResult = await this.createPullRequestWithGraphite(
-                workDir,
-                projectPath,
-                feature,
-                branchName
-              );
-              result.prUrl = prResult.prUrl;
-              result.prNumber = prResult.prNumber;
-              result.prAlreadyExisted = prResult.prAlreadyExisted;
+              // Try Graphite submit first - it handles base branch automatically via stack parent
+              try {
+                const prResult = await this.createPullRequestWithGraphite(
+                  workDir,
+                  projectPath,
+                  feature,
+                  branchName
+                );
+                result.prUrl = prResult.prUrl;
+                result.prNumber = prResult.prNumber;
+                result.prAlreadyExisted = prResult.prAlreadyExisted;
+              } catch (graphiteError) {
+                const graphiteErrorMsg =
+                  graphiteError instanceof Error ? graphiteError.message : String(graphiteError);
+
+                // Check if circuit breaker is open - fall back to gh CLI
+                if (graphiteErrorMsg.includes('circuit breaker is open')) {
+                  logger.warn(
+                    `Graphite circuit breaker is open, falling back to gh CLI for PR creation`
+                  );
+                  const prResult = await this.createPullRequest(
+                    workDir,
+                    projectPath,
+                    feature,
+                    branchName,
+                    prBaseBranch
+                  );
+                  result.prUrl = prResult.prUrl;
+                  result.prNumber = prResult.prNumber;
+                  result.prAlreadyExisted = prResult.prAlreadyExisted;
+                } else {
+                  // Other Graphite error - rethrow
+                  throw graphiteError;
+                }
+              }
             } else {
               // Use gh CLI
               const prResult = await this.createPullRequest(

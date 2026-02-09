@@ -50,6 +50,99 @@ const execEnv = {
 };
 
 /**
+ * Retry configuration for Graphite commands
+ */
+interface RetryConfig {
+  maxRetries: number;
+  backoffMs: number[];
+}
+
+const DEFAULT_RETRY_CONFIG: RetryConfig = {
+  maxRetries: 3,
+  backoffMs: [1000, 2000, 4000],
+};
+
+/**
+ * Circuit breaker for Graphite operations.
+ * Opens after consecutive failures, preventing cascading failures.
+ */
+class GraphiteCircuitBreaker {
+  private failureCount = 0;
+  private lastFailureTime = 0;
+  private isOpen = false;
+  private readonly failureThreshold = 3;
+  private readonly cooldownMs = 60000; // 60 seconds
+
+  /**
+   * Check if the circuit breaker is currently open
+   */
+  isCircuitOpen(): boolean {
+    // Auto-reset after cooldown period
+    if (this.isOpen && Date.now() - this.lastFailureTime >= this.cooldownMs) {
+      logger.info('Circuit breaker cooldown expired, resetting to closed state');
+      this.reset();
+      return false;
+    }
+    return this.isOpen;
+  }
+
+  /**
+   * Record a successful operation - resets failure count
+   */
+  recordSuccess(): void {
+    if (this.failureCount > 0 || this.isOpen) {
+      logger.debug('Graphite operation succeeded, resetting circuit breaker');
+    }
+    this.failureCount = 0;
+    this.isOpen = false;
+  }
+
+  /**
+   * Record a failed operation - may open the circuit
+   */
+  recordFailure(): void {
+    this.failureCount++;
+    this.lastFailureTime = Date.now();
+
+    if (this.failureCount >= this.failureThreshold && !this.isOpen) {
+      this.isOpen = true;
+      logger.warn(
+        `Graphite circuit breaker opened after ${this.failureCount} consecutive failures. ` +
+          `Will retry after ${this.cooldownMs}ms cooldown.`
+      );
+    } else if (!this.isOpen) {
+      logger.debug(`Graphite failure ${this.failureCount}/${this.failureThreshold}`);
+    }
+  }
+
+  /**
+   * Reset the circuit breaker
+   */
+  reset(): void {
+    this.failureCount = 0;
+    this.isOpen = false;
+  }
+
+  /**
+   * Get current circuit breaker state for logging
+   */
+  getState(): { isOpen: boolean; failureCount: number; timeSinceLastFailure: number } {
+    return {
+      isOpen: this.isOpen,
+      failureCount: this.failureCount,
+      timeSinceLastFailure: this.lastFailureTime ? Date.now() - this.lastFailureTime : 0,
+    };
+  }
+}
+
+/**
+ * Sleep utility for retry backoff
+ */
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
  * Result from a Graphite submit operation
  */
 export interface GraphiteSubmitResult {
@@ -93,6 +186,86 @@ export class GraphiteService {
   private cachedAvailability: boolean | null = null;
   private lastAvailabilityCheck = 0;
   private readonly AVAILABILITY_CACHE_MS = 60000; // 1 minute
+  private circuitBreaker = new GraphiteCircuitBreaker();
+
+  /**
+   * Execute a Graphite command with retry logic and circuit breaker protection.
+   *
+   * @param command - The command to execute
+   * @param workDir - Working directory for the command
+   * @param retryConfig - Optional retry configuration
+   * @returns Command output
+   * @throws Error if circuit is open or all retries fail
+   */
+  private async executeWithRetry(
+    command: string,
+    workDir: string,
+    retryConfig: RetryConfig = DEFAULT_RETRY_CONFIG
+  ): Promise<{ stdout: string; stderr: string }> {
+    // Check circuit breaker first
+    if (this.circuitBreaker.isCircuitOpen()) {
+      const state = this.circuitBreaker.getState();
+      throw new Error(
+        `Graphite circuit breaker is open (${state.failureCount} failures, ` +
+          `${Math.round(state.timeSinceLastFailure / 1000)}s ago). ` +
+          `Operations disabled for ${Math.round((60000 - state.timeSinceLastFailure) / 1000)}s.`
+      );
+    }
+
+    let lastError: Error | null = null;
+
+    for (let attempt = 0; attempt < retryConfig.maxRetries; attempt++) {
+      try {
+        if (attempt > 0) {
+          logger.info(`Retry attempt ${attempt + 1}/${retryConfig.maxRetries} for: ${command}`);
+        }
+
+        const result = await execAsync(command, { cwd: workDir, env: execEnv });
+
+        // Success - record it and return
+        this.circuitBreaker.recordSuccess();
+
+        if (attempt > 0) {
+          logger.info(`Command succeeded on retry attempt ${attempt + 1}`);
+        }
+
+        return result;
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+
+        // Check for merge conflicts - don't retry these
+        const errorMsg = lastError.message.toLowerCase();
+        if (errorMsg.includes('conflict')) {
+          logger.warn(`Conflict detected in graphite command: ${command}. Not retrying.`);
+          throw lastError;
+        }
+
+        // Record failure for circuit breaker
+        this.circuitBreaker.recordFailure();
+
+        // If this isn't the last attempt, wait before retrying
+        if (attempt < retryConfig.maxRetries - 1) {
+          const backoffMs =
+            retryConfig.backoffMs[attempt] ||
+            retryConfig.backoffMs[retryConfig.backoffMs.length - 1];
+          logger.warn(
+            `Graphite command failed (attempt ${attempt + 1}/${retryConfig.maxRetries}): ${lastError.message}. ` +
+              `Retrying in ${backoffMs}ms...`
+          );
+          await sleep(backoffMs);
+        }
+      }
+    }
+
+    // All retries exhausted
+    const state = this.circuitBreaker.getState();
+    logger.error(
+      `Graphite command failed after ${retryConfig.maxRetries} attempts: ${command}. ` +
+        `Circuit breaker state: ${state.isOpen ? 'OPEN' : 'CLOSED'} (${state.failureCount} failures)`
+    );
+
+    throw lastError || new Error('Command failed with unknown error');
+  }
 
   /**
    * Check if Graphite CLI (gt) is available on the system
@@ -351,16 +524,22 @@ export class GraphiteService {
    */
   async sync(workDir: string): Promise<GraphiteSyncResult> {
     try {
-      await execAsync('gt sync', { cwd: workDir, env: execEnv });
+      await this.executeWithRetry('gt sync', workDir);
       logger.info('Graphite sync successful');
       return { success: true, rebased: true, conflicts: false };
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
 
-      // Check for merge conflicts
+      // Check for merge conflicts (don't retry conflicts)
       if (errorMsg.includes('conflict') || errorMsg.includes('CONFLICT')) {
         logger.warn('Graphite sync encountered conflicts');
         return { success: false, rebased: false, conflicts: true, error: errorMsg };
+      }
+
+      // Check if circuit breaker is open
+      if (errorMsg.includes('circuit breaker is open')) {
+        logger.warn('Graphite sync blocked by circuit breaker');
+        return { success: false, rebased: false, conflicts: false, error: errorMsg };
       }
 
       logger.warn(`Graphite sync failed: ${errorMsg}`);
@@ -417,16 +596,22 @@ export class GraphiteService {
    */
   async restack(workDir: string): Promise<GraphiteSyncResult> {
     try {
-      await execAsync('gt restack', { cwd: workDir, env: execEnv });
+      await this.executeWithRetry('gt restack', workDir);
       logger.info('Graphite restack successful');
       return { success: true, rebased: true, conflicts: false };
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
 
-      // Check for merge conflicts
+      // Check for merge conflicts (don't retry conflicts)
       if (errorMsg.includes('conflict') || errorMsg.includes('CONFLICT')) {
         logger.warn('Graphite restack encountered conflicts');
         return { success: false, rebased: false, conflicts: true, error: errorMsg };
+      }
+
+      // Check if circuit breaker is open
+      if (errorMsg.includes('circuit breaker is open')) {
+        logger.warn('Graphite restack blocked by circuit breaker');
+        return { success: false, rebased: false, conflicts: false, error: errorMsg };
       }
 
       logger.warn(`Graphite restack failed: ${errorMsg}`);
