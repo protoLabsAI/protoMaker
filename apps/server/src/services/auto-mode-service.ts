@@ -1997,7 +1997,13 @@ export class AutoModeService {
         `Pending approvals at cleanup: ${Array.from(this.pendingApprovals.keys()).join(', ') || 'none'}`
       );
       abortController?.abort();
-      this.runningFeatures.delete(featureId);
+
+      // Only delete if the current entry is still the one we created
+      // (delegated executions may have created a new entry)
+      const current = this.runningFeatures.get(featureId);
+      if (current === tempRunningFeature) {
+        this.runningFeatures.delete(featureId);
+      }
 
       // Update execution state after feature completes
       if (this.autoLoopRunning && projectPath) {
@@ -2425,7 +2431,7 @@ Complete the pipeline step instructions above. Review the previous work and appl
 
     // Add to running features immediately
     const abortController = new AbortController();
-    this.runningFeatures.set(featureId, {
+    const pipelineRunningFeature: RunningFeature = {
       featureId,
       projectPath,
       worktreePath: null, // Will be set below
@@ -2435,7 +2441,8 @@ Complete the pipeline step instructions above. Review the previous work and appl
       startTime: Date.now(),
       retryCount: 0,
       previousErrors: [],
-    });
+    };
+    this.runningFeatures.set(featureId, pipelineRunningFeature);
 
     try {
       // Validate project path
@@ -2604,7 +2611,12 @@ Complete the pipeline step instructions above. Review the previous work and appl
       }
     } finally {
       abortController.abort();
-      this.runningFeatures.delete(featureId);
+
+      // Only delete if the current entry is still the one we created
+      const current = this.runningFeatures.get(featureId);
+      if (current === pipelineRunningFeature) {
+        this.runningFeatures.delete(featureId);
+      }
     }
   }
 
@@ -2723,7 +2735,7 @@ Address the follow-up instructions above. Review the previous work and make the 
     const provider = ProviderFactory.getProviderNameForModel(model);
     logger.info(`Follow-up for feature ${featureId} using model: ${model}, provider: ${provider}`);
 
-    this.runningFeatures.set(featureId, {
+    const followUpRunningFeature: RunningFeature = {
       featureId,
       projectPath,
       worktreePath,
@@ -2735,7 +2747,8 @@ Address the follow-up instructions above. Review the previous work and make the 
       provider,
       retryCount: 0,
       previousErrors: [],
-    });
+    };
+    this.runningFeatures.set(featureId, followUpRunningFeature);
 
     try {
       // Update feature status to in_progress BEFORE emitting event
@@ -2953,7 +2966,12 @@ Address the follow-up instructions above. Review the previous work and make the 
       }
     } finally {
       abortController.abort();
-      this.runningFeatures.delete(featureId);
+
+      // Only delete if the current entry is still the one we created
+      const current = this.runningFeatures.get(featureId);
+      if (current === followUpRunningFeature) {
+        this.runningFeatures.delete(featureId);
+      }
     }
   }
 
