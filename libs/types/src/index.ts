@@ -57,8 +57,10 @@ export type {
   FeatureImagePath,
   FeatureTextFilePath,
   FeatureStatus,
+  LegacyFeatureStatus,
   DescriptionHistoryEntry,
 } from './feature.js';
+export { normalizeFeatureStatus } from './feature.js';
 
 // Project orchestration types
 export type {

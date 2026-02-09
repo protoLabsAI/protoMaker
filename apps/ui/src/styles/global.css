@@ -121,6 +121,9 @@
   --color-status-backlog: var(--status-backlog);
   --color-status-in-progress: var(--status-in-progress);
   --color-status-waiting: var(--status-waiting);
+  --color-status-review: var(--status-review);
+  --color-status-blocked: var(--status-blocked);
+  --color-status-done: var(--status-done);
 
   /* Border radius */
   --radius-sm: calc(var(--radius) - 4px);
@@ -199,6 +202,9 @@
   --status-backlog: oklch(0.5 0 0);
   --status-in-progress: oklch(0.7 0.15 70);
   --status-waiting: oklch(0.65 0.18 50);
+  --status-review: oklch(0.65 0.18 230);
+  --status-blocked: oklch(0.55 0.22 25);
+  --status-done: oklch(0.55 0.2 140);
 
   /* Shadow tokens */
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05);
@@ -297,6 +303,9 @@
     --status-backlog: oklch(0.6 0 0);
     --status-in-progress: oklch(0.75 0.15 70);
     --status-waiting: oklch(0.7 0.18 50);
+    --status-review: oklch(0.7 0.18 230);
+    --status-blocked: oklch(0.65 0.22 25);
+    --status-done: oklch(0.65 0.2 140);
 
     /* Shadow tokens - darker for dark mode */
     --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);

@@ -4041,11 +4041,9 @@ Format your response as a structured markdown document.`;
           allFeatures.push(feature);
 
           // Track pending features separately, filtered by worktree/branch
-          // Note: waiting_approval is NOT included - those features have completed execution
-          // and are waiting for user review, they should not be picked up again
+          // Note: Features in 'review', 'done', or 'verified' are NOT eligible
+          // Those features have completed execution and should not be picked up again
           const isEligibleStatus =
-            feature.status === 'pending' ||
-            feature.status === 'ready' ||
             feature.status === 'backlog' ||
             (feature.planSpec?.status === 'approved' &&
               (feature.planSpec.tasksCompleted ?? 0) < (feature.planSpec.tasksTotal ?? 0));

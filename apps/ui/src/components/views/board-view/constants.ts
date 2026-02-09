@@ -38,15 +38,31 @@ export const EMPTY_STATE_CONFIGS: Record<string, EmptyStateConfig> = {
     description: 'Drag a feature from the backlog here or click implement to start working on it.',
     icon: 'play',
   },
+  review: {
+    title: 'No PRs Under Review',
+    description: 'Features with open PRs will appear here for review and approval.',
+    icon: 'clock',
+  },
+  blocked: {
+    title: 'No Blocked Features',
+    description: 'Features that are temporarily blocked will appear here.',
+    icon: 'clock',
+  },
+  done: {
+    title: 'No Completed Features',
+    description: 'Features with merged PRs will appear here.',
+    icon: 'check',
+  },
+  verified: {
+    title: 'No Verified Features',
+    description: 'Features verified by Ralph will appear here.',
+    icon: 'check',
+  },
+  // Legacy column (deprecated, but kept for backwards compatibility)
   waiting_approval: {
     title: 'No Items Awaiting Approval',
     description: 'Features will appear here after implementation is complete and need your review.',
     icon: 'clock',
-  },
-  verified: {
-    title: 'No Verified Features',
-    description: 'Approved features will appear here. They can then be completed and archived.',
-    icon: 'check',
   },
   // Pipeline step default configuration
   pipeline_default: {
@@ -74,7 +90,7 @@ export interface Column {
   pipelineStepId?: string;
 }
 
-// Base columns (start)
+// Base columns (start) - canonical 6-status system
 const BASE_COLUMNS: Column[] = [
   { id: 'backlog', title: 'Backlog', colorClass: 'bg-[var(--status-backlog)]' },
   {
@@ -84,12 +100,22 @@ const BASE_COLUMNS: Column[] = [
   },
 ];
 
-// End columns (after pipeline)
+// End columns (after pipeline) - canonical 6-status system
 const END_COLUMNS: Column[] = [
   {
-    id: 'waiting_approval',
-    title: 'Waiting Approval',
-    colorClass: 'bg-[var(--status-waiting)]',
+    id: 'review',
+    title: 'Review',
+    colorClass: 'bg-[var(--status-review)]',
+  },
+  {
+    id: 'blocked',
+    title: 'Blocked',
+    colorClass: 'bg-[var(--status-blocked)]',
+  },
+  {
+    id: 'done',
+    title: 'Done',
+    colorClass: 'bg-[var(--status-done)]',
   },
   {
     id: 'verified',

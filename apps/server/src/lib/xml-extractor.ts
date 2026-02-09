@@ -563,7 +563,7 @@ export function extractRoadmapPhases(
     const name = nameMatch ? unescapeXml(nameMatch[1].trim()) : '';
 
     const statusMatch = phaseContent.match(/<status>([\s\S]*?)<\/status>/);
-    const status = statusMatch ? unescapeXml(statusMatch[1].trim()) : 'pending';
+    const status = statusMatch ? unescapeXml(statusMatch[1].trim()) : 'backlog';
 
     const descMatch = phaseContent.match(/<description>([\s\S]*?)<\/description>/);
     const description = descMatch ? unescapeXml(descMatch[1].trim()) : undefined;

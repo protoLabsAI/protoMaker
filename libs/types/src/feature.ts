@@ -189,14 +189,105 @@ export interface Feature {
   [key: string]: unknown; // Keep catch-all for extensibility
 }
 
+/**
+ * Canonical feature status values (6 statuses)
+ * Strategic decision: Single source of truth for all feature states
+ *
+ * Flow: backlog → in_progress → review → done
+ *                      ↓           ↓
+ *                   blocked ← ← ← ┘
+ *
+ * (verified = Ralph terminal state, autonomous loops)
+ *
+ * @deprecated Legacy values (auto-migrated):
+ * - pending, ready → backlog
+ * - running → in_progress
+ * - completed, waiting_approval → done
+ * - failed → blocked
+ */
 export type FeatureStatus =
-  | 'pending' // Initial state, not yet started
-  | 'backlog' // Queued for auto-mode
-  | 'ready' // Ready to be picked up
-  | 'running' // Currently being executed by agent
-  | 'completed' // Agent finished successfully
-  | 'failed' // Agent execution failed
-  | 'verified' // Manually verified by user
-  | 'waiting_approval' // Agent completed, waiting for user review
+  | 'backlog' // Queued, ready to start (consolidates: pending, ready)
+  | 'in_progress' // Being worked on (consolidates: running)
   | 'review' // PR created, under review
-  | 'done'; // PR merged, final state
+  | 'blocked' // Temporary halt (dependency/issue/failure - consolidates: failed)
+  | 'done' // PR merged, work complete (consolidates: completed, waiting_approval)
+  | 'verified'; // Quality checks passed (Ralph autonomous loops)
+
+/**
+ * Legacy status values for backwards compatibility
+ * @deprecated Use canonical FeatureStatus values instead
+ */
+export type LegacyFeatureStatus =
+  | 'pending'
+  | 'ready'
+  | 'running'
+  | 'completed'
+  | 'waiting_approval'
+  | 'failed';
+
+/**
+ * Normalizes legacy feature status values to canonical 6-status system
+ *
+ * Migration map:
+ * - pending, ready → backlog
+ * - running → in_progress
+ * - completed, waiting_approval → done
+ * - failed → blocked
+ *
+ * @param status - Raw status value (may be legacy or canonical)
+ * @param telemetry - Optional callback for tracking migrations
+ * @returns Canonical FeatureStatus value
+ */
+export function normalizeFeatureStatus(
+  status: string | undefined,
+  telemetry?: (from: string, to: FeatureStatus) => void
+): FeatureStatus {
+  // Default to backlog if undefined
+  if (!status) {
+    return 'backlog';
+  }
+
+  // Already canonical - fast path
+  const canonical: FeatureStatus[] = [
+    'backlog',
+    'in_progress',
+    'review',
+    'blocked',
+    'done',
+    'verified',
+  ];
+  if (canonical.includes(status as FeatureStatus)) {
+    return status as FeatureStatus;
+  }
+
+  // Normalize legacy values
+  let normalized: FeatureStatus;
+  switch (status) {
+    case 'pending':
+    case 'ready':
+      normalized = 'backlog';
+      break;
+    case 'running':
+      normalized = 'in_progress';
+      break;
+    case 'completed':
+    case 'waiting_approval':
+      normalized = 'done';
+      break;
+    case 'failed':
+      normalized = 'blocked';
+      break;
+    default:
+      // Unknown status - log warning and default to backlog
+      console.warn(`Unknown feature status "${status}", defaulting to backlog`);
+      normalized = 'backlog';
+      break;
+  }
+
+  // Track migration for telemetry
+  if (telemetry && status !== normalized) {
+    telemetry(status, normalized);
+  }
+
+  return normalized;
+}

@@ -170,6 +170,29 @@ Use `resolveModelString()` from `@automaker/model-resolver` to convert model ali
 - `sonnet` → `claude-sonnet-4-5-20250929`
 - `opus` → `claude-opus-4-5-20251101`
 
+### Feature Status System
+
+Automaker uses a canonical **6-status system** for all features:
+
+```
+backlog → in_progress → review → done
+             ↓           ↓
+          blocked ← ← ← ┘
+
+          (verified = Ralph terminal state)
+```
+
+**Status Definitions:**
+
+- `backlog` - Queued, ready to start (consolidates: pending, ready)
+- `in_progress` - Being worked on (consolidates: running)
+- `review` - PR created, under review
+- `blocked` - Temporary halt (consolidates: failed)
+- `done` - PR merged, work complete (consolidates: completed, waiting_approval)
+- `verified` - Quality checks passed (Ralph autonomous loops)
+
+**Migration:** Legacy statuses are automatically normalized on read by `FeatureLoader`. No manual migration required. See `docs/feature-status-system.md` for details.
+
 ### Model Hierarchy for Auto-Mode
 
 Auto-mode uses a tiered model selection based on feature complexity:

@@ -35,12 +35,17 @@ export function useBoardColumnFeatures({
   // Memoize column features to prevent unnecessary re-renders
   const columnFeaturesMap = useMemo(() => {
     // Use a more flexible type to support dynamic pipeline statuses
+    // Canonical 6-status system: backlog, in_progress, review, blocked, done, verified
     const map: Record<string, Feature[]> = {
       backlog: [],
       in_progress: [],
-      waiting_approval: [],
+      review: [],
+      blocked: [],
+      done: [],
       verified: [],
-      completed: [], // Completed features are shown in the archive modal, not as a column
+      // Legacy columns (backwards compatibility)
+      waiting_approval: [],
+      completed: [],
     };
     const featureMap = createFeatureMap(features);
     const runningTaskIds = new Set(runningAutoTasks);
@@ -188,7 +193,10 @@ export function useBoardColumnFeatures({
           map[status].push(f);
         }
       } else {
-        // Unknown status, default to backlog
+        // Unknown status - should not happen with normalization, but handle defensively
+        console.warn(
+          `Feature ${f.id} has unknown status "${status}", defaulting to backlog. This should not happen with status normalization.`
+        );
         if (matchesWorktree) {
           map.backlog.push(f);
         }
@@ -244,8 +252,10 @@ export function useBoardColumnFeatures({
   );
 
   // Memoize completed features for the archive modal
+  // Note: 'completed' is a legacy status that gets normalized to 'done'
+  // We filter for 'done' here (canonical), but also check 'completed' for safety
   const completedFeatures = useMemo(() => {
-    return features.filter((f) => f.status === 'completed');
+    return features.filter((f) => f.status === 'done' || f.status === 'completed');
   }, [features]);
 
   return {

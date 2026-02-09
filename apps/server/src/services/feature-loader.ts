@@ -5,6 +5,7 @@
 
 import path from 'path';
 import type { Feature, DescriptionHistoryEntry } from '@automaker/types';
+import { normalizeFeatureStatus } from '@automaker/types';
 import {
   createLogger,
   atomicWriteJson,
@@ -30,6 +31,26 @@ const logger = createLogger('FeatureLoader');
 export type { Feature };
 
 export class FeatureLoader {
+  /**
+   * Normalize feature status to canonical values
+   * Defensive: ensures all features use the 6-status system
+   */
+  private normalizeFeature(feature: Feature): Feature {
+    if (!feature.status) {
+      return { ...feature, status: 'backlog' };
+    }
+
+    const normalizedStatus = normalizeFeatureStatus(feature.status, (from, to) => {
+      logger.debug(`Normalizing feature ${feature.id} status: ${from} → ${to}`);
+    });
+
+    if (normalizedStatus !== feature.status) {
+      return { ...feature, status: normalizedStatus };
+    }
+
+    return feature;
+  }
+
   /**
    * Get the features directory path
    */
@@ -245,7 +266,8 @@ export class FeatureLoader {
           return null;
         }
 
-        return feature;
+        // Normalize status before returning
+        return this.normalizeFeature(feature);
       });
 
       const results = await Promise.all(featurePromises);
@@ -349,7 +371,8 @@ export class FeatureLoader {
 
     logRecoveryWarning(result, `Feature ${featureId}`, logger);
 
-    return result.data;
+    // Normalize status before returning
+    return result.data ? this.normalizeFeature(result.data) : null;
   }
 
   /**
