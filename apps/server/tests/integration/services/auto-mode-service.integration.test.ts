@@ -324,12 +324,12 @@ describe('auto-mode-service.ts (integration)', () => {
     }, 10000);
 
     it('should process pending features in auto loop', async () => {
-      // Create multiple pending features
+      // Create multiple backlog features
       await createTestFeature(testRepo.path, 'auto-1', {
         id: 'auto-1',
         category: 'test',
         description: 'Auto feature 1',
-        status: 'pending',
+        status: 'backlog',
         skipTests: true,
       });
 
@@ -337,7 +337,7 @@ describe('auto-mode-service.ts (integration)', () => {
         id: 'auto-2',
         category: 'test',
         description: 'Auto feature 2',
-        status: 'pending',
+        status: 'backlog',
         skipTests: true,
       });
 
@@ -478,14 +478,14 @@ describe('auto-mode-service.ts (integration)', () => {
         id: 'fail-1',
         category: 'test',
         description: 'Will fail',
-        status: 'pending',
+        status: 'backlog',
       });
 
       await createTestFeature(testRepo.path, 'success-1', {
         id: 'success-1',
         category: 'test',
         description: 'Will succeed',
-        status: 'pending',
+        status: 'backlog',
       });
 
       let callCount = 0;
