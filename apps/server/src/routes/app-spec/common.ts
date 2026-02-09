@@ -13,6 +13,7 @@ interface RunningGeneration {
   isRunning: boolean;
   type: GenerationType;
   startedAt: string;
+  lastEventAt: string;
 }
 
 // Shared state for tracking generation status - scoped by project path
@@ -64,10 +65,12 @@ export function setRunningState(
   type: GenerationType = 'spec_regeneration'
 ): void {
   if (running) {
+    const now = new Date().toISOString();
     runningProjects.set(projectPath, {
       isRunning: true,
       type,
-      startedAt: new Date().toISOString(),
+      startedAt: now,
+      lastEventAt: now,
     });
     if (controller) {
       abortControllers.set(projectPath, controller);
@@ -79,17 +82,32 @@ export function setRunningState(
 }
 
 /**
+ * Update the lastEventAt timestamp for a running generation
+ */
+export function updateLastEventAt(projectPath: string): void {
+  const generation = runningProjects.get(projectPath);
+  if (generation) {
+    runningProjects.set(projectPath, {
+      ...generation,
+      lastEventAt: new Date().toISOString(),
+    });
+  }
+}
+
+/**
  * Get all running spec/feature generations for the running agents view
  */
 export function getAllRunningGenerations(): Array<{
   projectPath: string;
   type: GenerationType;
   startedAt: string;
+  lastEventAt: string;
 }> {
   const results: Array<{
     projectPath: string;
     type: GenerationType;
     startedAt: string;
+    lastEventAt: string;
   }> = [];
 
   for (const [projectPath, generation] of runningProjects.entries()) {
@@ -98,6 +116,7 @@ export function getAllRunningGenerations(): Array<{
         projectPath,
         type: generation.type,
         startedAt: generation.startedAt,
+        lastEventAt: generation.lastEventAt,
       });
     }
   }
