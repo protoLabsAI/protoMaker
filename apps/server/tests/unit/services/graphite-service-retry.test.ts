@@ -4,23 +4,24 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { GraphiteService } from '@/services/graphite-service.js';
+import * as childProcess from 'child_process';
 
 // Mock child_process module
-const mockExec = vi.fn();
-
 vi.mock('child_process', async (importOriginal) => {
   const actual = await importOriginal<typeof import('child_process')>();
   return {
     ...actual,
-    exec: mockExec,
+    exec: vi.fn(),
   };
 });
 
 describe('GraphiteService Retry and Circuit Breaker', () => {
   let graphiteService: GraphiteService;
+  let mockExec: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     graphiteService = new GraphiteService();
+    mockExec = vi.mocked(childProcess.exec);
     vi.clearAllMocks();
   });
 
@@ -43,12 +44,12 @@ describe('GraphiteService Retry and Circuit Breaker', () => {
     });
 
     it('should succeed on second attempt after one failure', async () => {
-      const mockExec = vi.mocked(execAsync);
       mockExec
-        .mockRejectedValueOnce(new Error('Temporary network error'))
-        .mockResolvedValueOnce({
-          stdout: 'success',
-          stderr: '',
+        .mockImplementationOnce((cmd: string, opts: any, callback: any) => {
+          callback(new Error('Temporary network error'));
+        })
+        .mockImplementationOnce((cmd: string, opts: any, callback: any) => {
+          callback(null, { stdout: 'success', stderr: '' });
         });
 
       const result = await graphiteService.sync('/fake/workdir');
@@ -59,13 +60,15 @@ describe('GraphiteService Retry and Circuit Breaker', () => {
     });
 
     it('should succeed on third attempt after two failures', async () => {
-      const mockExec = vi.mocked(execAsync);
       mockExec
-        .mockRejectedValueOnce(new Error('Error 1'))
-        .mockRejectedValueOnce(new Error('Error 2'))
-        .mockResolvedValueOnce({
-          stdout: 'success',
-          stderr: '',
+        .mockImplementationOnce((cmd: string, opts: any, callback: any) => {
+          callback(new Error('Error 1'));
+        })
+        .mockImplementationOnce((cmd: string, opts: any, callback: any) => {
+          callback(new Error('Error 2'));
+        })
+        .mockImplementationOnce((cmd: string, opts: any, callback: any) => {
+          callback(null, { stdout: 'success', stderr: '' });
         });
 
       const result = await graphiteService.sync('/fake/workdir');
@@ -78,11 +81,16 @@ describe('GraphiteService Retry and Circuit Breaker', () => {
 
   describe('executeWithRetry - Failure Cases', () => {
     it('should fail after max retries (3 attempts)', async () => {
-      const mockExec = vi.mocked(execAsync);
       mockExec
-        .mockRejectedValueOnce(new Error('Fail 1'))
-        .mockRejectedValueOnce(new Error('Fail 2'))
-        .mockRejectedValueOnce(new Error('Fail 3'));
+        .mockImplementationOnce((cmd: string, opts: any, callback: any) => {
+          callback(new Error('Fail 1'));
+        })
+        .mockImplementationOnce((cmd: string, opts: any, callback: any) => {
+          callback(new Error('Fail 2'));
+        })
+        .mockImplementationOnce((cmd: string, opts: any, callback: any) => {
+          callback(new Error('Fail 3'));
+        });
 
       const result = await graphiteService.sync('/fake/workdir');
 
@@ -91,8 +99,9 @@ describe('GraphiteService Retry and Circuit Breaker', () => {
     });
 
     it('should detect merge conflicts without retrying', async () => {
-      const mockExec = vi.mocked(execAsync);
-      mockExec.mockRejectedValueOnce(new Error('CONFLICT: merge conflict detected'));
+      mockExec.mockImplementationOnce((cmd: string, opts: any, callback: any) => {
+        callback(new Error('CONFLICT: merge conflict detected'));
+      });
 
       const result = await graphiteService.sync('/fake/workdir');
 
@@ -105,13 +114,17 @@ describe('GraphiteService Retry and Circuit Breaker', () => {
 
   describe('Circuit Breaker', () => {
     it('should open circuit after 3 consecutive failures', async () => {
-      const mockExec = vi.mocked(execAsync);
-
       // First 3 failures should try normally
       mockExec
-        .mockRejectedValueOnce(new Error('Fail 1'))
-        .mockRejectedValueOnce(new Error('Fail 2'))
-        .mockRejectedValueOnce(new Error('Fail 3'));
+        .mockImplementationOnce((cmd: string, opts: any, callback: any) => {
+          callback(new Error('Fail 1'));
+        })
+        .mockImplementationOnce((cmd: string, opts: any, callback: any) => {
+          callback(new Error('Fail 2'));
+        })
+        .mockImplementationOnce((cmd: string, opts: any, callback: any) => {
+          callback(new Error('Fail 3'));
+        });
 
       const result1 = await graphiteService.sync('/fake/workdir');
       expect(result1.success).toBe(false);
@@ -121,7 +134,9 @@ describe('GraphiteService Retry and Circuit Breaker', () => {
       mockExec.mockClear();
 
       // Next call should be blocked by circuit breaker
-      mockExec.mockRejectedValueOnce(new Error('Should not reach'));
+      mockExec.mockImplementationOnce((cmd: string, opts: any, callback: any) => {
+        callback(new Error('Should not reach'));
+      });
 
       const result2 = await graphiteService.sync('/fake/workdir');
       expect(result2.success).toBe(false);
@@ -131,13 +146,17 @@ describe('GraphiteService Retry and Circuit Breaker', () => {
     });
 
     it('should reset circuit breaker after successful operation', async () => {
-      const mockExec = vi.mocked(execAsync);
-
       // 2 failures (not enough to open circuit)
       mockExec
-        .mockRejectedValueOnce(new Error('Fail 1'))
-        .mockRejectedValueOnce(new Error('Fail 2'))
-        .mockResolvedValueOnce({ stdout: 'success', stderr: '' });
+        .mockImplementationOnce((cmd: string, opts: any, callback: any) => {
+          callback(new Error('Fail 1'));
+        })
+        .mockImplementationOnce((cmd: string, opts: any, callback: any) => {
+          callback(new Error('Fail 2'));
+        })
+        .mockImplementationOnce((cmd: string, opts: any, callback: any) => {
+          callback(null, { stdout: 'success', stderr: '' });
+        });
 
       const result1 = await graphiteService.sync('/fake/workdir');
       expect(result1.success).toBe(true);
@@ -145,7 +164,9 @@ describe('GraphiteService Retry and Circuit Breaker', () => {
       mockExec.mockClear();
 
       // Next call should work normally (circuit reset)
-      mockExec.mockResolvedValueOnce({ stdout: 'success', stderr: '' });
+      mockExec.mockImplementationOnce((cmd: string, opts: any, callback: any) => {
+        callback(null, { stdout: 'success', stderr: '' });
+      });
 
       const result2 = await graphiteService.sync('/fake/workdir');
       expect(result2.success).toBe(true);
@@ -155,12 +176,15 @@ describe('GraphiteService Retry and Circuit Breaker', () => {
 
   describe('Exponential Backoff', () => {
     it('should wait between retry attempts', async () => {
-      const mockExec = vi.mocked(execAsync);
       const sleepSpy = vi.spyOn(global, 'setTimeout');
 
       mockExec
-        .mockRejectedValueOnce(new Error('Fail 1'))
-        .mockResolvedValueOnce({ stdout: 'success', stderr: '' });
+        .mockImplementationOnce((cmd: string, opts: any, callback: any) => {
+          callback(new Error('Fail 1'));
+        })
+        .mockImplementationOnce((cmd: string, opts: any, callback: any) => {
+          callback(null, { stdout: 'success', stderr: '' });
+        });
 
       await graphiteService.sync('/fake/workdir');
 
@@ -171,10 +195,13 @@ describe('GraphiteService Retry and Circuit Breaker', () => {
 
   describe('Restack with Retry', () => {
     it('should retry restack command', async () => {
-      const mockExec = vi.mocked(execAsync);
       mockExec
-        .mockRejectedValueOnce(new Error('Temporary error'))
-        .mockResolvedValueOnce({ stdout: 'success', stderr: '' });
+        .mockImplementationOnce((cmd: string, opts: any, callback: any) => {
+          callback(new Error('Temporary error'));
+        })
+        .mockImplementationOnce((cmd: string, opts: any, callback: any) => {
+          callback(null, { stdout: 'success', stderr: '' });
+        });
 
       const result = await graphiteService.restack('/fake/workdir');
 
@@ -183,8 +210,9 @@ describe('GraphiteService Retry and Circuit Breaker', () => {
     });
 
     it('should detect conflicts in restack without retrying', async () => {
-      const mockExec = vi.mocked(execAsync);
-      mockExec.mockRejectedValueOnce(new Error('conflict detected during restack'));
+      mockExec.mockImplementationOnce((cmd: string, opts: any, callback: any) => {
+        callback(new Error('conflict detected during restack'));
+      });
 
       const result = await graphiteService.restack('/fake/workdir');
 

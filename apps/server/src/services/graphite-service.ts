@@ -233,12 +233,21 @@ export class GraphiteService {
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
 
+        // Check for merge conflicts - don't retry these
+        const errorMsg = lastError.message.toLowerCase();
+        if (errorMsg.includes('conflict')) {
+          logger.warn(`Conflict detected in graphite command: ${command}. Not retrying.`);
+          throw lastError;
+        }
+
         // Record failure for circuit breaker
         this.circuitBreaker.recordFailure();
 
         // If this isn't the last attempt, wait before retrying
         if (attempt < retryConfig.maxRetries - 1) {
-          const backoffMs = retryConfig.backoffMs[attempt] || retryConfig.backoffMs[retryConfig.backoffMs.length - 1];
+          const backoffMs =
+            retryConfig.backoffMs[attempt] ||
+            retryConfig.backoffMs[retryConfig.backoffMs.length - 1];
           logger.warn(
             `Graphite command failed (attempt ${attempt + 1}/${retryConfig.maxRetries}): ${lastError.message}. ` +
               `Retrying in ${backoffMs}ms...`
