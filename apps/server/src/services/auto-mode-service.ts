@@ -1349,43 +1349,44 @@ export class AutoModeService {
       );
     }
 
-    // Declare feature and running feature outside try block so they're available in catch for error reporting
+    // Add to running features immediately to prevent duplicate execution race condition
+    // We'll update branchName right after loading the feature (minimizes null window)
+    const abortController = new AbortController();
+    const tempRunningFeature: RunningFeature = {
+      featureId,
+      projectPath,
+      worktreePath: null,
+      branchName: null, // Will be updated immediately after feature load
+      abortController,
+      isAutoMode,
+      startTime: Date.now(),
+      retryCount: options?.retryCount ?? 0,
+      previousErrors: options?.previousErrors ?? [],
+      recoveryContext: options?.recoveryContext,
+    };
+    this.runningFeatures.set(featureId, tempRunningFeature);
+
+    // Save execution state when feature starts
+    if (isAutoMode) {
+      await this.saveExecutionState(projectPath);
+    }
+
+    // Declare feature outside try block so it's available in catch for error reporting
     let feature: Awaited<ReturnType<typeof this.loadFeature>> | null = null;
-    let tempRunningFeature: RunningFeature | null = null;
-    let abortController: AbortController | null = null;
 
     try {
       // Validate that project path is allowed using centralized validation
       validateWorkingDirectory(projectPath);
 
-      // Load feature details FIRST to get branchName before adding to runningFeatures
-      // This prevents race condition where getRunningCountForWorktree() miscounts during the window
-      // where branchName is null
+      // Load feature details and immediately update branchName
+      // This minimizes the window where branchName is null
       feature = await this.loadFeature(projectPath, featureId);
       if (!feature) {
         throw new Error(`Feature ${featureId} not found`);
       }
 
-      // Now add to running features with correct branchName set immediately
-      abortController = new AbortController();
-      tempRunningFeature = {
-        featureId,
-        projectPath,
-        worktreePath: null,
-        branchName: feature.branchName ?? null,
-        abortController,
-        isAutoMode,
-        startTime: Date.now(),
-        retryCount: options?.retryCount ?? 0,
-        previousErrors: options?.previousErrors ?? [],
-        recoveryContext: options?.recoveryContext,
-      };
-      this.runningFeatures.set(featureId, tempRunningFeature);
-
-      // Save execution state when feature starts
-      if (isAutoMode) {
-        await this.saveExecutionState(projectPath);
-      }
+      // Update branchName immediately after loading
+      tempRunningFeature.branchName = feature.branchName ?? null;
 
       // Check if feature has existing context - if so, resume instead of starting fresh
       // Skip this check if we're already being called with a continuation prompt (from resumeFeature)
