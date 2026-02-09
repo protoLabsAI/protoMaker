@@ -248,7 +248,11 @@ describe('feature-loader.ts', () => {
 
       const result = await loader.get(testProjectPath, 'feature-123');
 
-      expect(result).toEqual(featureData);
+      // Feature loader normalizes features to include default status when missing
+      expect(result).toEqual({
+        ...featureData,
+        status: 'backlog',
+      });
     });
 
     it("should return null when feature doesn't exist", async () => {
