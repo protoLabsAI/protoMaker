@@ -1782,14 +1782,15 @@ export class AutoModeService {
         ? ` | Committed: ${gitWorkflowResult.commitHash}${gitWorkflowResult.pushed ? ', pushed' : ''}${gitWorkflowResult.prUrl ? `, PR: ${gitWorkflowResult.prUrl}` : ''}`
         : '';
 
+      const runtimeSec = tempRunningFeature
+        ? Math.round((Date.now() - tempRunningFeature.startTime) / 1000)
+        : 0;
       this.emitAutoModeEvent('auto_mode_feature_complete', {
         featureId,
         featureName: feature.title,
         branchName: feature.branchName ?? null,
         passes: true,
-        message: `Feature completed in ${Math.round(
-          (Date.now() - tempRunningFeature!.startTime) / 1000
-        )}s${finalStatus === 'verified' ? ' - auto-verified' : ''}${gitInfo}`,
+        message: `Feature completed in ${runtimeSec}s${finalStatus === 'verified' ? ' - auto-verified' : ''}${gitInfo}`,
         projectPath,
         model: tempRunningFeature?.model,
         provider: tempRunningFeature?.provider,
@@ -1812,7 +1813,7 @@ export class AutoModeService {
         const currentFailures = feature.failureCount ?? 0;
         const newFailureCount = currentFailures + 1;
 
-        if (tempRunningFeature!.retryCount >= MAX_MAX_TURNS_RETRIES) {
+        if (tempRunningFeature.retryCount >= MAX_MAX_TURNS_RETRIES) {
           logger.error(
             `Feature ${featureId} hit max turns limit ${MAX_MAX_TURNS_RETRIES} times, giving up.`
           );
@@ -1854,7 +1855,10 @@ export class AutoModeService {
           // Remove from running features and retry with escalated turns using backoff
           this.runningFeatures.delete(featureId);
 
-          const backoffMs = Math.min(1000 * Math.pow(2, tempRunningFeature!.retryCount), 30_000);
+          // Capture values for closure before setTimeout
+          const currentRetryCount = tempRunningFeature.retryCount;
+          const currentPreviousErrors = tempRunningFeature.previousErrors;
+          const backoffMs = Math.min(1000 * Math.pow(2, currentRetryCount), 30_000);
           const retryTimer = setTimeout(() => {
             this.retryTimers.delete(featureId);
             this.executeFeature(
@@ -1864,8 +1868,8 @@ export class AutoModeService {
               isAutoMode,
               providedWorktreePath,
               {
-                retryCount: tempRunningFeature!.retryCount + 1,
-                previousErrors: [...tempRunningFeature!.previousErrors, errorInfo.message],
+                retryCount: currentRetryCount + 1,
+                previousErrors: [...currentPreviousErrors, errorInfo.message],
               }
             ).catch((retryError) => {
               logger.error(`Max-turns retry failed for feature ${featureId}:`, retryError);
@@ -1922,8 +1926,9 @@ export class AutoModeService {
           // Remove from running features so retry can start
           this.runningFeatures.delete(featureId);
 
-          // Schedule retry with accumulated context
-          const newPreviousErrors = [...tempRunningFeature!.previousErrors, errorInfo.message];
+          // Capture values for closure before setImmediate
+          const currentRetryCount = tempRunningFeature.retryCount;
+          const newPreviousErrors = [...tempRunningFeature.previousErrors, errorInfo.message];
 
           // Use setImmediate to avoid stack overflow on deep retry chains
           setImmediate(() => {
@@ -1934,7 +1939,7 @@ export class AutoModeService {
               isAutoMode,
               providedWorktreePath,
               {
-                retryCount: tempRunningFeature!.retryCount + 1,
+                retryCount: currentRetryCount + 1,
                 previousErrors: newPreviousErrors,
                 recoveryContext: recoveryResult.retryContext,
               }
