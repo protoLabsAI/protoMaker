@@ -1349,13 +1349,14 @@ export class AutoModeService {
       );
     }
 
-    // Add to running features immediately to prevent race conditions
+    // Add to running features immediately to prevent duplicate execution race condition
+    // We'll update branchName right after loading the feature (minimizes null window)
     const abortController = new AbortController();
     const tempRunningFeature: RunningFeature = {
       featureId,
       projectPath,
       worktreePath: null,
-      branchName: null,
+      branchName: null, // Will be updated immediately after feature load
       abortController,
       isAutoMode,
       startTime: Date.now(),
@@ -1369,6 +1370,7 @@ export class AutoModeService {
     if (isAutoMode) {
       await this.saveExecutionState(projectPath);
     }
+
     // Declare feature outside try block so it's available in catch for error reporting
     let feature: Awaited<ReturnType<typeof this.loadFeature>> | null = null;
 
@@ -1376,11 +1378,15 @@ export class AutoModeService {
       // Validate that project path is allowed using centralized validation
       validateWorkingDirectory(projectPath);
 
-      // Load feature details FIRST to get status and plan info
+      // Load feature details and immediately update branchName
+      // This minimizes the window where branchName is null
       feature = await this.loadFeature(projectPath, featureId);
       if (!feature) {
         throw new Error(`Feature ${featureId} not found`);
       }
+
+      // Update branchName immediately after loading
+      tempRunningFeature.branchName = feature.branchName ?? null;
 
       // Check if feature has existing context - if so, resume instead of starting fresh
       // Skip this check if we're already being called with a continuation prompt (from resumeFeature)
@@ -1456,7 +1462,6 @@ export class AutoModeService {
 
       // Update running feature with actual worktree info
       tempRunningFeature.worktreePath = worktreePath;
-      tempRunningFeature.branchName = branchName ?? null;
 
       // Authority system policy check: verify permission before starting this feature
       if (this.authorityService && this.settingsService) {
@@ -1778,17 +1783,18 @@ export class AutoModeService {
         ? ` | Committed: ${gitWorkflowResult.commitHash}${gitWorkflowResult.pushed ? ', pushed' : ''}${gitWorkflowResult.prUrl ? `, PR: ${gitWorkflowResult.prUrl}` : ''}`
         : '';
 
+      const runtimeSec = tempRunningFeature
+        ? Math.round((Date.now() - tempRunningFeature.startTime) / 1000)
+        : 0;
       this.emitAutoModeEvent('auto_mode_feature_complete', {
         featureId,
         featureName: feature.title,
         branchName: feature.branchName ?? null,
         passes: true,
-        message: `Feature completed in ${Math.round(
-          (Date.now() - tempRunningFeature.startTime) / 1000
-        )}s${finalStatus === 'verified' ? ' - auto-verified' : ''}${gitInfo}`,
+        message: `Feature completed in ${runtimeSec}s${finalStatus === 'verified' ? ' - auto-verified' : ''}${gitInfo}`,
         projectPath,
-        model: tempRunningFeature.model,
-        provider: tempRunningFeature.provider,
+        model: tempRunningFeature?.model,
+        provider: tempRunningFeature?.provider,
       });
     } catch (error) {
       const errorInfo = classifyError(error);
@@ -1802,7 +1808,7 @@ export class AutoModeService {
           message: 'Feature stopped by user',
           projectPath,
         });
-      } else if (errorInfo.type === 'max_turns' && feature) {
+      } else if (errorInfo.type === 'max_turns' && feature && tempRunningFeature) {
         // Special handling for error_max_turns: escalate turns and retry with cap
         const MAX_MAX_TURNS_RETRIES = 3;
         const currentFailures = feature.failureCount ?? 0;
@@ -1850,7 +1856,10 @@ export class AutoModeService {
           // Remove from running features and retry with escalated turns using backoff
           this.runningFeatures.delete(featureId);
 
-          const backoffMs = Math.min(1000 * Math.pow(2, tempRunningFeature.retryCount), 30_000);
+          // Capture values for closure before setTimeout
+          const currentRetryCount = tempRunningFeature.retryCount;
+          const currentPreviousErrors = tempRunningFeature.previousErrors;
+          const backoffMs = Math.min(1000 * Math.pow(2, currentRetryCount), 30_000);
           const retryTimer = setTimeout(() => {
             this.retryTimers.delete(featureId);
             this.executeFeature(
@@ -1860,8 +1869,8 @@ export class AutoModeService {
               isAutoMode,
               providedWorktreePath,
               {
-                retryCount: tempRunningFeature.retryCount + 1,
-                previousErrors: [...tempRunningFeature.previousErrors, errorInfo.message],
+                retryCount: currentRetryCount + 1,
+                previousErrors: [...currentPreviousErrors, errorInfo.message],
               }
             ).catch((retryError) => {
               logger.error(`Max-turns retry failed for feature ${featureId}:`, retryError);
@@ -1877,10 +1886,10 @@ export class AutoModeService {
         const executionContext: ExecutionContext = {
           featureId,
           projectPath,
-          worktreePath: tempRunningFeature.worktreePath ?? undefined,
-          retryCount: tempRunningFeature.retryCount,
-          previousErrors: tempRunningFeature.previousErrors,
-          runningTime: Date.now() - tempRunningFeature.startTime,
+          worktreePath: tempRunningFeature?.worktreePath ?? undefined,
+          retryCount: tempRunningFeature?.retryCount ?? 0,
+          previousErrors: tempRunningFeature?.previousErrors ?? [],
+          runningTime: tempRunningFeature ? Date.now() - tempRunningFeature.startTime : 0,
         };
 
         // Analyze failure and determine recovery strategy
@@ -1897,7 +1906,7 @@ export class AutoModeService {
           projectPath
         );
 
-        if (recoveryResult.shouldRetry && failureAnalysis.isRetryable) {
+        if (recoveryResult.shouldRetry && failureAnalysis.isRetryable && tempRunningFeature) {
           // Recovery suggests retry - schedule it with context
           logger.info(
             `Recovery for feature ${featureId}: scheduling retry (attempt ${tempRunningFeature.retryCount + 1}/${failureAnalysis.maxRetries})`
@@ -1918,7 +1927,8 @@ export class AutoModeService {
           // Remove from running features so retry can start
           this.runningFeatures.delete(featureId);
 
-          // Schedule retry with accumulated context
+          // Capture values for closure before setImmediate
+          const currentRetryCount = tempRunningFeature.retryCount;
           const newPreviousErrors = [...tempRunningFeature.previousErrors, errorInfo.message];
 
           // Use setImmediate to avoid stack overflow on deep retry chains
@@ -1930,7 +1940,7 @@ export class AutoModeService {
               isAutoMode,
               providedWorktreePath,
               {
-                retryCount: tempRunningFeature.retryCount + 1,
+                retryCount: currentRetryCount + 1,
                 previousErrors: newPreviousErrors,
                 recoveryContext: recoveryResult.retryContext,
               }
@@ -1986,8 +1996,14 @@ export class AutoModeService {
       logger.info(
         `Pending approvals at cleanup: ${Array.from(this.pendingApprovals.keys()).join(', ') || 'none'}`
       );
-      abortController.abort();
-      this.runningFeatures.delete(featureId);
+      abortController?.abort();
+
+      // Only delete if the current entry is still the one we created
+      // (delegated executions may have created a new entry)
+      const current = this.runningFeatures.get(featureId);
+      if (current === tempRunningFeature) {
+        this.runningFeatures.delete(featureId);
+      }
 
       // Update execution state after feature completes
       if (this.autoLoopRunning && projectPath) {
@@ -2415,7 +2431,7 @@ Complete the pipeline step instructions above. Review the previous work and appl
 
     // Add to running features immediately
     const abortController = new AbortController();
-    this.runningFeatures.set(featureId, {
+    const pipelineRunningFeature: RunningFeature = {
       featureId,
       projectPath,
       worktreePath: null, // Will be set below
@@ -2425,7 +2441,8 @@ Complete the pipeline step instructions above. Review the previous work and appl
       startTime: Date.now(),
       retryCount: 0,
       previousErrors: [],
-    });
+    };
+    this.runningFeatures.set(featureId, pipelineRunningFeature);
 
     try {
       // Validate project path
@@ -2594,7 +2611,12 @@ Complete the pipeline step instructions above. Review the previous work and appl
       }
     } finally {
       abortController.abort();
-      this.runningFeatures.delete(featureId);
+
+      // Only delete if the current entry is still the one we created
+      const current = this.runningFeatures.get(featureId);
+      if (current === pipelineRunningFeature) {
+        this.runningFeatures.delete(featureId);
+      }
     }
   }
 
@@ -2713,7 +2735,7 @@ Address the follow-up instructions above. Review the previous work and make the 
     const provider = ProviderFactory.getProviderNameForModel(model);
     logger.info(`Follow-up for feature ${featureId} using model: ${model}, provider: ${provider}`);
 
-    this.runningFeatures.set(featureId, {
+    const followUpRunningFeature: RunningFeature = {
       featureId,
       projectPath,
       worktreePath,
@@ -2725,7 +2747,8 @@ Address the follow-up instructions above. Review the previous work and make the 
       provider,
       retryCount: 0,
       previousErrors: [],
-    });
+    };
+    this.runningFeatures.set(featureId, followUpRunningFeature);
 
     try {
       // Update feature status to in_progress BEFORE emitting event
@@ -2943,7 +2966,12 @@ Address the follow-up instructions above. Review the previous work and make the 
       }
     } finally {
       abortController.abort();
-      this.runningFeatures.delete(featureId);
+
+      // Only delete if the current entry is still the one we created
+      const current = this.runningFeatures.get(featureId);
+      if (current === followUpRunningFeature) {
+        this.runningFeatures.delete(featureId);
+      }
     }
   }
 
