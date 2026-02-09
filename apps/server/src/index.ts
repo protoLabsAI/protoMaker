@@ -383,7 +383,8 @@ const worldStateMonitor = new WorldStateMonitor(
       github: true,
       git: true,
     },
-  }
+  },
+  REPO_ROOT
 );
 
 // Register the main project for GitHub state checking
