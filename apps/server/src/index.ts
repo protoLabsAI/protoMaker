@@ -124,6 +124,7 @@ import { WorldStateMonitor } from './services/world-state-monitor.js';
 // import { ReconciliationService } from './services/reconciliation-service.js'; // TODO: Re-enable when implemented
 // import { GitHubStateChecker } from './services/github-state-checker.js'; // TODO: Re-enable when implemented
 import { ProjectService } from './services/project-service.js';
+import { getSpecGenerationMonitor } from './services/spec-generation-monitor.js';
 import { registerMaintenanceTasks } from './services/maintenance-tasks.js';
 import { FeatureHealthService } from './services/feature-health-service.js';
 
@@ -426,6 +427,14 @@ void schedulerService
 // Initialize Health Monitor Service for periodic health checks
 const healthMonitorService = getHealthMonitorService(featureLoader);
 healthMonitorService.setEventEmitter(events);
+
+// Initialize Spec Generation Monitor for detecting and cleaning up stalled spec regeneration jobs
+const specGenerationMonitor = getSpecGenerationMonitor(events, {
+  checkIntervalMs: 30000, // Check every 30 seconds
+  stallThresholdMs: 5 * 60 * 1000, // 5 minutes of inactivity
+  enabled: true,
+});
+specGenerationMonitor.startMonitoring();
 
 // Initialize services
 (async () => {

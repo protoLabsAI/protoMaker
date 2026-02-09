@@ -1,147 +1,212 @@
 /**
- * Spec Generation Monitor
+ * Spec Generation Monitor - Detects and cleans up stalled spec regeneration jobs
  *
- * Monitors spec regeneration events and detects stalls.
- * Uses heartbeat pattern: events update lastEventAt timestamp,
- * periodic tick checks for staleness.
+ * Monitors spec/feature generation processes for inactivity and performs cleanup:
+ * - Aborts stalled AbortControllers
+ * - Clears running state
+ * - Emits error events to notify the UI
  *
- * Pattern inspired by BullMQ job monitoring.
+ * Uses a tick-based approach similar to WorldStateMonitor for consistency.
  */
 
 import { createLogger } from '@automaker/utils';
 import type { EventEmitter } from '../lib/events.js';
+import { getSpecRegenerationStatus, setRunningState } from '../routes/app-spec/common.js';
 
 const logger = createLogger('SpecGenerationMonitor');
 
-interface SpecGenerationMonitorConfig {
-  tickIntervalMs: number;
-  stallTimeoutMs: number;
+/** Default interval for checking stalled jobs (30 seconds) */
+const DEFAULT_CHECK_INTERVAL_MS = 30 * 1000;
+
+/** Threshold for considering a job stalled (5 minutes of inactivity) */
+const STALL_THRESHOLD_MS = 5 * 60 * 1000;
+
+/**
+ * Configuration options for the spec generation monitor
+ */
+export interface SpecGenerationMonitorConfig {
+  /** Interval between checks in milliseconds */
+  checkIntervalMs?: number;
+  /** Threshold for considering a job stalled in milliseconds */
+  stallThresholdMs?: number;
+  /** Whether monitoring is enabled */
+  enabled?: boolean;
 }
 
-interface ProjectState {
-  projectPath: string;
-  lastEventAt: number;
-}
-
+/**
+ * Spec Generation Monitor Service
+ *
+ * Periodically checks for stalled spec/feature generation jobs and cleans them up.
+ */
 export class SpecGenerationMonitor {
-  private tickInterval: NodeJS.Timeout | null = null;
-  private currentTick: Promise<void> | null = null;
-  private config: SpecGenerationMonitorConfig;
+  private events: EventEmitter;
+  private intervalId: NodeJS.Timeout | null = null;
+  private config: Required<SpecGenerationMonitorConfig>;
   private isRunning = false;
-  private aborted = false;
-  private projectStates = new Map<string, ProjectState>();
-  private eventUnsubscribe: (() => void) | null = null;
+  private lastActivityTimestamps = new Map<string, number>();
 
-  constructor(
-    private events: EventEmitter,
-    config: SpecGenerationMonitorConfig
-  ) {
+  constructor(events: EventEmitter, config?: SpecGenerationMonitorConfig) {
+    this.events = events;
     this.config = {
-      tickIntervalMs: config.tickIntervalMs,
-      stallTimeoutMs: config.stallTimeoutMs,
+      checkIntervalMs: config?.checkIntervalMs ?? DEFAULT_CHECK_INTERVAL_MS,
+      stallThresholdMs: config?.stallThresholdMs ?? STALL_THRESHOLD_MS,
+      enabled: config?.enabled ?? true,
     };
+
+    // Subscribe to spec regeneration events to track activity
+    this.events.subscribe((type, payload) => {
+      if (type === 'spec-regeneration:event') {
+        const eventPayload = payload as any;
+        if (eventPayload?.projectPath) {
+          // Update last activity timestamp for this project
+          this.lastActivityTimestamps.set(eventPayload.projectPath, Date.now());
+        }
+      }
+    });
   }
 
   /**
-   * Start the spec generation monitor tick loop
+   * Start monitoring for stalled spec generation jobs
    */
-  start(): void {
+  startMonitoring(): void {
+    if (!this.config.enabled) {
+      logger.info('SpecGenerationMonitor is disabled');
+      return;
+    }
+
     if (this.isRunning) {
-      logger.warn('SpecGenerationMonitor already running');
+      logger.warn('SpecGenerationMonitor is already running');
       return;
     }
 
     this.isRunning = true;
-    this.aborted = false;
-    logger.info(
-      `Starting SpecGenerationMonitor with ${this.config.tickIntervalMs}ms interval, ${this.config.stallTimeoutMs}ms stall timeout`
-    );
+    logger.info(`Starting SpecGenerationMonitor with interval of ${this.config.checkIntervalMs}ms`);
 
-    // Subscribe to spec regeneration events
-    this.eventUnsubscribe = this.events.on('spec-regeneration:event', (payload: any) => {
-      if (payload.projectPath) {
-        this.updateLastEventAt(payload.projectPath);
-      }
+    // Set up periodic checks
+    this.intervalId = setInterval(() => {
+      this.tick().catch((error) => {
+        logger.error('Periodic check failed:', error);
+      });
+    }, this.config.checkIntervalMs);
+
+    // Run initial check
+    this.tick().catch((error) => {
+      logger.error('Initial check failed:', error);
     });
-
-    // Start tick interval
-    this.tickInterval = setInterval(() => {
-      this.currentTick = this.tick();
-    }, this.config.tickIntervalMs);
-
-    // Run first tick immediately
-    this.currentTick = this.tick();
   }
 
   /**
-   * Stop the spec generation monitor
+   * Stop monitoring
    */
-  stop(): void {
+  stopMonitoring(): void {
     if (!this.isRunning) {
+      logger.warn('SpecGenerationMonitor is not running');
       return;
+    }
+
+    if (this.intervalId) {
+      clearInterval(this.intervalId);
+      this.intervalId = null;
     }
 
     this.isRunning = false;
-    this.aborted = true;
-
-    if (this.tickInterval) {
-      clearInterval(this.tickInterval);
-      this.tickInterval = null;
-    }
-
-    if (this.eventUnsubscribe) {
-      this.eventUnsubscribe();
-      this.eventUnsubscribe = null;
-    }
-
-    logger.info('SpecGenerationMonitor stopped');
+    logger.info('Stopped SpecGenerationMonitor');
   }
 
   /**
-   * Get current in-flight tick promise for graceful shutdown
+   * Check if monitoring is currently active
    */
-  getCurrentTick(): Promise<void> | null {
-    return this.currentTick;
+  isMonitoring(): boolean {
+    return this.isRunning;
   }
 
   /**
-   * Update last event timestamp for a project
-   */
-  private updateLastEventAt(projectPath: string): void {
-    const existing = this.projectStates.get(projectPath);
-    if (existing) {
-      existing.lastEventAt = Date.now();
-    } else {
-      this.projectStates.set(projectPath, {
-        projectPath,
-        lastEventAt: Date.now(),
-      });
-    }
-    logger.debug(`Updated lastEventAt for ${projectPath}`);
-  }
-
-  /**
-   * Main tick function - runs periodically to check for stalls
+   * Main tick function - checks for stalled jobs and cleans them up
    */
   private async tick(): Promise<void> {
-    if (this.aborted) {
-      logger.debug('SpecGenerationMonitor tick aborted');
-      return;
-    }
+    const now = Date.now();
 
-    try {
-      logger.debug('SpecGenerationMonitor tick starting...');
+    // Check each project with activity
+    for (const [projectPath, lastActivity] of this.lastActivityTimestamps.entries()) {
+      const status = getSpecRegenerationStatus(projectPath);
 
-      // Check abort before heavy operations
-      if (this.aborted) {
-        return;
+      // If the job is running and hasn't had activity in the threshold time, it's stalled
+      if (status.isRunning) {
+        const inactivityDuration = now - lastActivity;
+
+        if (inactivityDuration > this.config.stallThresholdMs) {
+          logger.warn(
+            `Detected stalled spec generation for ${projectPath} (${Math.round(inactivityDuration / 1000)}s of inactivity)`
+          );
+
+          // Clean up the stalled job
+          try {
+            await this.cleanupStalledJob(projectPath);
+            logger.info(`Successfully cleaned up stalled job for ${projectPath}`);
+          } catch (error) {
+            logger.error(`Failed to cleanup stalled job for ${projectPath}:`, error);
+            // Continue to check other projects even if one fails
+          }
+        }
+      } else {
+        // Job is no longer running, remove from tracking
+        this.lastActivityTimestamps.delete(projectPath);
       }
-
-      // TODO: Add cleanup logic in next phase
-      // For now, just log
-      logger.debug('Tick complete (no cleanup logic yet)');
-    } catch (error) {
-      logger.error('SpecGenerationMonitor tick failed:', error);
     }
+  }
+
+  /**
+   * Clean up a stalled spec generation job
+   */
+  private async cleanupStalledJob(projectPath: string): Promise<void> {
+    logger.info(`Cleaning up stalled job for ${projectPath}`);
+
+    // Get the AbortController and abort if it exists
+    const status = getSpecRegenerationStatus(projectPath);
+    if (status.currentAbortController) {
+      logger.info('Aborting existing AbortController');
+      status.currentAbortController.abort();
+    }
+
+    // Clear the running state
+    setRunningState(projectPath, false, null);
+
+    // Emit error event to notify the UI
+    this.events.emit('spec-regeneration:event', {
+      type: 'spec_regeneration_error',
+      error: 'Generation timed out after 5 minutes of inactivity',
+      projectPath,
+    });
+
+    // Remove from tracking
+    this.lastActivityTimestamps.delete(projectPath);
+
+    logger.info(`Stalled job cleanup completed for ${projectPath}`);
+  }
+}
+
+// Singleton instance
+let specGenerationMonitorInstance: SpecGenerationMonitor | null = null;
+
+/**
+ * Get the singleton spec generation monitor instance
+ */
+export function getSpecGenerationMonitor(
+  events: EventEmitter,
+  config?: SpecGenerationMonitorConfig
+): SpecGenerationMonitor {
+  if (!specGenerationMonitorInstance) {
+    specGenerationMonitorInstance = new SpecGenerationMonitor(events, config);
+  }
+  return specGenerationMonitorInstance;
+}
+
+/**
+ * Reset the singleton instance (for testing)
+ */
+export function resetSpecGenerationMonitor(): void {
+  if (specGenerationMonitorInstance) {
+    specGenerationMonitorInstance.stopMonitoring();
+    specGenerationMonitorInstance = null;
   }
 }
