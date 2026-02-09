@@ -362,9 +362,14 @@ auditService.initialize(authorityService);
 const prFeedbackService = new PRFeedbackService(events, featureLoader);
 prFeedbackService.initialize();
 
-// Initialize Worktree Lifecycle Service (auto-cleanup after merge)
+// Initialize Worktree Lifecycle Service (auto-cleanup after merge + recovery)
 const worktreeLifecycleService = new WorktreeLifecycleService(events, featureLoader);
 worktreeLifecycleService.initialize();
+
+// Register worktree cleanup on shutdown
+process.on('beforeExit', () => {
+  worktreeLifecycleService.shutdown();
+});
 
 // Initialize World State Monitor (GOAP-inspired reactive system)
 // Periodically checks world state and triggers corrective actions for drift
@@ -506,6 +511,54 @@ healthMonitorService.setEventEmitter(events);
     }
   } catch (err) {
     logger.warn('[ORPHAN-RECOVERY] Failed to run orphan recovery:', err);
+  }
+
+  // Run startup worktree recovery (prune phantom worktrees before auto-mode starts)
+  try {
+    const settings = await settingsService.getGlobalSettings();
+    const projectPaths = [
+      ...(settings.autoModeAlwaysOn?.projects?.map((p) => p.projectPath) ?? []),
+      ...(settings.goapAlwaysOn?.projects?.map((p) => p.projectPath) ?? []),
+    ];
+    // Deduplicate
+    const uniquePaths = [...new Set(projectPaths)];
+
+    if (uniquePaths.length > 0) {
+      logger.info(
+        `[STARTUP-RECOVERY] Running worktree recovery for ${uniquePaths.length} project(s)...`
+      );
+
+      for (const projectPath of uniquePaths) {
+        try {
+          // Register project for periodic monitoring
+          worktreeLifecycleService.registerProject(projectPath);
+
+          // Prune phantom worktrees
+          await worktreeLifecycleService.prunePhantomWorktrees(projectPath);
+
+          // Detect any remaining drift
+          const drift = await worktreeLifecycleService.detectDrift(projectPath);
+
+          if (drift.phantoms.length > 0 || drift.orphans.length > 0) {
+            logger.warn(`[STARTUP-RECOVERY] Drift detected in ${projectPath}:`, {
+              phantoms: drift.phantoms.length,
+              orphans: drift.orphans.length,
+              healthy: drift.healthy,
+            });
+          } else {
+            logger.info(
+              `[STARTUP-RECOVERY] No drift detected in ${projectPath} (${drift.healthy} healthy worktrees)`
+            );
+          }
+        } catch (err) {
+          logger.warn(`[STARTUP-RECOVERY] Failed recovery for ${projectPath}:`, err);
+        }
+      }
+
+      logger.info('[STARTUP-RECOVERY] Worktree recovery complete');
+    }
+  } catch (err) {
+    logger.warn('[STARTUP-RECOVERY] Failed to run startup recovery:', err);
   }
 
   // Auto-start auto-mode if enabled in settings
@@ -716,7 +769,7 @@ app.use(
 app.use('/api/projects', createProjectsRoutes(featureLoader));
 app.use('/api/auto-mode', createAutoModeRoutes(autoModeService));
 app.use('/api/enhance-prompt', createEnhancePromptRoutes(settingsService));
-app.use('/api/worktree', createWorktreeRoutes(events, settingsService));
+app.use('/api/worktree', createWorktreeRoutes(events, settingsService, worktreeLifecycleService));
 app.use('/api/git', createGitRoutes());
 app.use('/api/suggestions', createSuggestionsRoutes(events, settingsService));
 app.use('/api/models', createModelsRoutes());

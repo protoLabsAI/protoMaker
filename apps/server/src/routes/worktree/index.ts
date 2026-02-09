@@ -53,11 +53,15 @@ import { createListRemotesHandler } from './routes/list-remotes.js';
 import { createGraphiteStatusHandler } from './routes/graphite-status.js';
 import { createGraphiteSyncHandler } from './routes/graphite-sync.js';
 import { createGraphiteRestackHandler } from './routes/graphite-restack.js';
+import { createHealthHandler } from './routes/health.js';
+import { createPruneHandler } from './routes/prune.js';
 import type { SettingsService } from '../../services/settings-service.js';
+import type { WorktreeLifecycleService } from '../../services/worktree-lifecycle-service.js';
 
 export function createWorktreeRoutes(
   events: EventEmitter,
-  settingsService?: SettingsService
+  settingsService?: SettingsService,
+  worktreeLifecycleService?: WorktreeLifecycleService
 ): Router {
   const router = Router();
 
@@ -188,6 +192,20 @@ export function createWorktreeRoutes(
     requireGitRepoOnly,
     createGraphiteRestackHandler()
   );
+
+  // Worktree health and recovery routes
+  if (worktreeLifecycleService) {
+    router.post(
+      '/health',
+      validatePathParams('projectPath'),
+      createHealthHandler(worktreeLifecycleService)
+    );
+    router.post(
+      '/prune',
+      validatePathParams('projectPath'),
+      createPruneHandler(worktreeLifecycleService)
+    );
+  }
 
   return router;
 }

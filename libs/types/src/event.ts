@@ -188,6 +188,9 @@ export type EventType =
   | 'pr:ci-failure'
   | 'feature:reassigned-for-fixes'
   | 'feature:worktree-cleaned'
+  // Worktree recovery events
+  | 'worktree:drift-detected'
+  | 'worktree:phantom-pruned'
   // World state monitor events
   | 'world-state:reconciliation'
   // Chief of Staff (CoS) events
