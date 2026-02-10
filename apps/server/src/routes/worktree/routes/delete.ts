@@ -8,11 +8,12 @@ import { promisify } from 'util';
 import { isGitRepo } from '@automaker/git-utils';
 import { getErrorMessage, logError, isValidBranchName, execGitCommand } from '../common.js';
 import { createLogger } from '@automaker/utils';
+import type { AutoModeService } from '../../../services/auto-mode-service.js';
 
 const execAsync = promisify(exec);
 const logger = createLogger('Worktree');
 
-export function createDeleteHandler() {
+export function createDeleteHandler(autoModeService?: AutoModeService) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
       const { projectPath, worktreePath, deleteBranch } = req.body as {
@@ -35,6 +36,31 @@ export function createDeleteHandler() {
           error: 'Not a git repository',
         });
         return;
+      }
+
+      // CRITICAL SAFETY CHECK: Prevent deletion of worktrees with running agents
+      // If Claude Code's Bash tool cd's into a worktree and that worktree is deleted,
+      // Bash permanently breaks for the session. This is a platform limitation we must guard against.
+      if (autoModeService) {
+        const runningAgents = await autoModeService.getRunningAgents();
+        const worktreeName = worktreePath.split('/').pop() || '';
+
+        const hasRunningAgent = runningAgents.some((agent) => {
+          if (agent.projectPath !== projectPath) return false;
+          if (!agent.branchName) return false;
+
+          const agentWorktreeName = agent.branchName.replace(/\//g, '-');
+          return agentWorktreeName === worktreeName;
+        });
+
+        if (hasRunningAgent) {
+          res.status(409).json({
+            success: false,
+            error:
+              'Cannot delete worktree: an agent is currently running in this worktree. Stop the agent first.',
+          });
+          return;
+        }
       }
 
       // Get branch name before removing worktree

@@ -392,7 +392,14 @@ const prFeedbackService = new PRFeedbackService(events, featureLoader);
 prFeedbackService.initialize();
 
 // Initialize Worktree Lifecycle Service (auto-cleanup after merge + recovery)
-const worktreeLifecycleService = new WorktreeLifecycleService(events, featureLoader);
+// Pass running features checker to prevent deleting worktrees with active agents
+const worktreeLifecycleService = new WorktreeLifecycleService(events, featureLoader, async () => {
+  const runningAgents = await autoModeService.getRunningAgents();
+  return runningAgents.map((agent) => ({
+    projectPath: agent.projectPath,
+    branchName: agent.branchName,
+  }));
+});
 worktreeLifecycleService.initialize();
 
 // Initialize World State Monitor (GOAP-inspired reactive system)
@@ -815,7 +822,10 @@ app.use(
 app.use('/api/projects', createProjectsRoutes(featureLoader));
 app.use('/api/auto-mode', createAutoModeRoutes(autoModeService));
 app.use('/api/enhance-prompt', createEnhancePromptRoutes(settingsService));
-app.use('/api/worktree', createWorktreeRoutes(events, settingsService, worktreeLifecycleService));
+app.use(
+  '/api/worktree',
+  createWorktreeRoutes(events, settingsService, worktreeLifecycleService, autoModeService)
+);
 app.use('/api/git', createGitRoutes());
 app.use('/api/suggestions', createSuggestionsRoutes(events, settingsService));
 app.use('/api/models', createModelsRoutes());
