@@ -1832,6 +1832,7 @@ export class AutoModeService {
           await this.updateFeatureStatus(projectPath, featureId, 'failed');
           await this.featureLoader.update(projectPath, featureId, {
             error: `Exceeded max-turns retry limit (${MAX_MAX_TURNS_RETRIES} retries)`,
+            lastFailureTime: new Date().toISOString(),
           });
           this.emitAutoModeEvent('auto_mode_feature_complete', {
             featureId,
@@ -3899,6 +3900,10 @@ Format your response as a structured markdown document.`;
       } else {
         // Clear the timestamp when moving to other statuses
         feature.justFinishedAt = undefined;
+      }
+      // Set lastFailureTime when feature fails (for auto-retry cooldown)
+      if (status === 'failed' || status === 'blocked') {
+        feature.lastFailureTime = new Date().toISOString();
       }
 
       // Use atomic write with backup support
