@@ -138,6 +138,7 @@ import { createBeadsRoutes } from './routes/beads/index.js';
 import { getAvaGatewayService } from './services/ava-gateway-service.js';
 import { getDiscordService } from './services/discord-service.js';
 import { createAvaRoutes } from './routes/ava/index.js';
+import { MAX_SYSTEM_CONCURRENCY } from '@automaker/types';
 
 const PORT = parseInt(process.env.PORT || '3008', 10);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -146,6 +147,9 @@ const DATA_DIR = process.env.DATA_DIR || './data';
 logger.info('[SERVER_STARTUP] process.env.DATA_DIR:', process.env.DATA_DIR);
 logger.info('[SERVER_STARTUP] Resolved DATA_DIR:', DATA_DIR);
 logger.info('[SERVER_STARTUP] process.cwd():', process.cwd());
+logger.info(
+  `[SERVER_STARTUP] MAX_SYSTEM_CONCURRENCY: ${MAX_SYSTEM_CONCURRENCY}${process.env.AUTOMAKER_MAX_CONCURRENCY ? ` (from AUTOMAKER_MAX_CONCURRENCY=${process.env.AUTOMAKER_MAX_CONCURRENCY})` : ' (default)'}`
+);
 
 // Determine the repository/project root directory
 // When running via npm workspace (npm run dev:web), process.cwd() is apps/server/

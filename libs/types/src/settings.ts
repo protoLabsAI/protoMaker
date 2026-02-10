@@ -1686,8 +1686,53 @@ export const PROJECT_SETTINGS_VERSION = 1;
 
 /** Default maximum concurrent agents for auto mode */
 export const DEFAULT_MAX_CONCURRENCY = 1;
+
+/**
+ * Get the effective maximum system concurrency from environment variable or default.
+ *
+ * - Reads AUTOMAKER_MAX_CONCURRENCY environment variable if set
+ * - Validates value is between 1 and 20 (inclusive)
+ * - Returns 2 as the hard limit by default (safe for dev environments)
+ * - Logs validation errors and falls back to default
+ *
+ * @returns The effective maximum concurrent agents allowed
+ */
+export function getMaxSystemConcurrency(): number {
+  const envValue = process.env.AUTOMAKER_MAX_CONCURRENCY;
+
+  if (!envValue) {
+    return 2; // Default hard limit for safe operation
+  }
+
+  const parsed = parseInt(envValue, 10);
+
+  // Validate the value
+  if (isNaN(parsed)) {
+    console.warn(
+      `[AUTOMAKER_MAX_CONCURRENCY] Invalid value "${envValue}", expected a number. Using default of 2.`
+    );
+    return 2;
+  }
+
+  if (parsed < 1) {
+    console.warn(
+      `[AUTOMAKER_MAX_CONCURRENCY] Value ${parsed} is below minimum of 1. Using minimum of 1.`
+    );
+    return 1;
+  }
+
+  if (parsed > 20) {
+    console.warn(
+      `[AUTOMAKER_MAX_CONCURRENCY] Value ${parsed} exceeds maximum of 20. Using maximum of 20.`
+    );
+    return 20;
+  }
+
+  return parsed;
+}
+
 /** Hard system limit for maximum concurrent agents - prevents resource exhaustion */
-export const MAX_SYSTEM_CONCURRENCY = 2;
+export const MAX_SYSTEM_CONCURRENCY = getMaxSystemConcurrency();
 
 /** Default keyboard shortcut bindings */
 export const DEFAULT_KEYBOARD_SHORTCUTS: KeyboardShortcuts = {
