@@ -68,6 +68,89 @@ describe('auto-mode-service.ts', () => {
     });
   });
 
+  describe('startAutoLoopForProject - race condition protection', () => {
+    it('should prevent concurrent calls from starting multiple loops (TOCTOU protection)', async () => {
+      // This test verifies that multiple concurrent calls to startAutoLoopForProject
+      // result in only ONE loop starting, even with no delay between calls
+
+      const projectPath = '/test/project';
+      const branchName = 'feature/test-branch';
+
+      // Fire 9 concurrent calls (simulating the race condition scenario)
+      const promises = Array.from({ length: 9 }, () =>
+        service.startAutoLoopForProject(projectPath, branchName, 1)
+      );
+
+      // Wait for all promises to settle
+      const results = await Promise.allSettled(promises);
+
+      // Count successes and failures
+      const successful = results.filter((r) => r.status === 'fulfilled');
+      const failed = results.filter((r) => r.status === 'rejected');
+
+      // Verify: exactly ONE should succeed
+      expect(successful).toHaveLength(1);
+      expect(failed).toHaveLength(8);
+
+      // Verify all failures have the "already running" error
+      failed.forEach((result) => {
+        if (result.status === 'rejected') {
+          expect(result.reason.message).toContain('already running');
+        }
+      });
+
+      // Cleanup
+      await service.stopAutoLoopForProject(projectPath, branchName);
+    });
+
+    it('should allow starting after stopping', async () => {
+      const projectPath = '/test/project';
+      const branchName = 'feature/test-branch';
+
+      // Start first time
+      await service.startAutoLoopForProject(projectPath, branchName, 1);
+
+      // Stop
+      await service.stopAutoLoopForProject(projectPath, branchName);
+
+      // Should be able to start again
+      await expect(
+        service.startAutoLoopForProject(projectPath, branchName, 1)
+      ).resolves.not.toThrow();
+
+      // Cleanup
+      await service.stopAutoLoopForProject(projectPath, branchName);
+    });
+
+    it('should allow different projects to run concurrently', async () => {
+      const project1 = '/test/project1';
+      const project2 = '/test/project2';
+      const branchName = 'feature/test-branch';
+
+      // Should be able to start both
+      await expect(service.startAutoLoopForProject(project1, branchName, 1)).resolves.not.toThrow();
+      await expect(service.startAutoLoopForProject(project2, branchName, 1)).resolves.not.toThrow();
+
+      // Cleanup
+      await service.stopAutoLoopForProject(project1, branchName);
+      await service.stopAutoLoopForProject(project2, branchName);
+    });
+
+    it('should allow different branches in same project to run concurrently', async () => {
+      const projectPath = '/test/project';
+      const branch1 = 'feature/branch1';
+      const branch2 = 'feature/branch2';
+
+      // Should be able to start both
+      await expect(service.startAutoLoopForProject(projectPath, branch1, 1)).resolves.not.toThrow();
+      await expect(service.startAutoLoopForProject(projectPath, branch2, 1)).resolves.not.toThrow();
+
+      // Cleanup
+      await service.stopAutoLoopForProject(projectPath, branch1);
+      await service.stopAutoLoopForProject(projectPath, branch2);
+    });
+  });
+
   describe('getRunningAgents', () => {
     // Helper to access private runningFeatures Map
     const getRunningFeaturesMap = (svc: AutoModeService) =>
