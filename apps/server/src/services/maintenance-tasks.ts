@@ -2,6 +2,7 @@
  * Maintenance Tasks - Preset scheduled tasks for system health
  *
  * Registers periodic maintenance tasks with the SchedulerService:
+ * - Ava Gateway heartbeat (every 30 minutes): board health evaluation
  * - Stale feature detection (hourly): finds features stuck in running/in-progress
  * - Worktree cleanup (daily): detects stale worktrees for merged branches
  * - Branch cleanup (weekly): identifies local branches already merged to main
@@ -16,6 +17,7 @@ import type { SchedulerService } from './scheduler-service.js';
 import type { EventEmitter } from '../lib/events.js';
 import type { AutoModeService } from './auto-mode-service.js';
 import type { FeatureHealthService } from './feature-health-service.js';
+import type { AvaGatewayService } from './ava-gateway-service.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -31,9 +33,25 @@ export async function registerMaintenanceTasks(
   scheduler: SchedulerService,
   events: EventEmitter,
   autoModeService: AutoModeService,
-  featureHealthService?: FeatureHealthService
+  featureHealthService?: FeatureHealthService,
+  avaGatewayService?: AvaGatewayService
 ): Promise<void> {
   logger.info('Registering maintenance tasks...');
+
+  let taskCount = 3; // Base: stale-features, stale-worktrees, branch-cleanup
+
+  // Every 30 minutes: Ava Gateway heartbeat check
+  if (avaGatewayService) {
+    await scheduler.registerTask(
+      'maintenance:ava-heartbeat',
+      'Ava Gateway Heartbeat',
+      '*/30 * * * *', // Every 30 minutes
+      async () => {
+        await runAvaHeartbeat(avaGatewayService, events);
+      }
+    );
+    taskCount++;
+  }
 
   // Hourly: Check for stale features (stuck in running for >2 hours)
   await scheduler.registerTask(
@@ -78,10 +96,10 @@ export async function registerMaintenanceTasks(
         await runBoardHealthAudit(featureHealthService, events, projectPaths);
       }
     );
-    logger.info('Registered 4 maintenance tasks');
-  } else {
-    logger.info('Registered 3 maintenance tasks');
+    taskCount++;
   }
+
+  logger.info(`Registered ${taskCount} maintenance tasks`);
 }
 
 /**
@@ -97,6 +115,36 @@ function getKnownProjectPaths(autoModeService: AutoModeService): string[] {
   }
 
   return Array.from(paths);
+}
+
+/**
+ * Run Ava Gateway heartbeat check to evaluate board health.
+ * Invokes Ava agent to analyze board state and identify issues.
+ */
+async function runAvaHeartbeat(
+  avaGatewayService: AvaGatewayService,
+  events: EventEmitter
+): Promise<void> {
+  logger.info('Running Ava Gateway heartbeat...');
+
+  try {
+    const result = await avaGatewayService.runHeartbeat();
+
+    if (result.status === 'alert' && result.alerts) {
+      logger.info(`Ava heartbeat: ${result.alerts.length} alert(s) raised`);
+      events.emit('scheduler:task_completed' as Parameters<typeof events.emit>[0], {
+        taskId: 'maintenance:ava-heartbeat',
+        message: `Ava identified ${result.alerts.length} alert(s) requiring attention`,
+        alertCount: result.alerts.length,
+        alerts: result.alerts,
+      });
+    } else {
+      logger.info('Ava heartbeat: all systems nominal');
+    }
+  } catch (error) {
+    logger.error('Ava heartbeat check failed:', error);
+    // Don't throw - allow scheduler to continue
+  }
 }
 
 /**

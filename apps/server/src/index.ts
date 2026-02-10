@@ -129,6 +129,8 @@ import { registerMaintenanceTasks } from './services/maintenance-tasks.js';
 import { FeatureHealthService } from './services/feature-health-service.js';
 import { BeadsService } from './services/beads-service.js';
 import { createBeadsRoutes } from './routes/beads/index.js';
+import { getAvaGatewayService } from './services/ava-gateway-service.js';
+import { getDiscordService } from './services/discord-service.js';
 
 const PORT = parseInt(process.env.PORT || '3008', 10);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -304,6 +306,13 @@ const codexUsageService = new CodexUsageService(codexAppServerService);
 const mcpTestService = new MCPTestService(settingsService);
 const featureHealthService = new FeatureHealthService(featureLoader, autoModeService);
 const beadsService = new BeadsService('bd', events);
+const discordService = getDiscordService();
+const avaGatewayService = getAvaGatewayService(
+  featureLoader,
+  beadsService,
+  discordService,
+  settingsService
+);
 const ideationService = new IdeationService(events, settingsService, featureLoader);
 const ralphLoopService = new RalphLoopService(events, autoModeService, settingsService);
 const goapActionRegistry = new GOAPActionRegistry();
@@ -420,7 +429,8 @@ void schedulerService
       schedulerService,
       events,
       autoModeService,
-      featureHealthService
+      featureHealthService,
+      avaGatewayService
     );
   })
   .catch((err) => {
@@ -430,6 +440,10 @@ void schedulerService
 // Initialize Health Monitor Service for periodic health checks
 const healthMonitorService = getHealthMonitorService(featureLoader);
 healthMonitorService.setEventEmitter(events);
+
+// Initialize Ava Gateway Service for heartbeat monitoring
+// Project path and Discord channel can be configured via settings
+avaGatewayService.initialize(events, REPO_ROOT);
 
 // Initialize Spec Generation Monitor for detecting and cleaning up stalled spec regeneration jobs
 const specGenerationMonitor = getSpecGenerationMonitor(events, {
