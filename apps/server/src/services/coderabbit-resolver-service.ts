@@ -184,17 +184,23 @@ export class CodeRabbitResolverService {
       const data = JSON.parse(stdout);
       const threads = data.data?.repository?.pullRequest?.reviewThreads?.nodes || [];
 
-      return threads.map((thread: { id: string; isResolved: boolean; comments: { nodes: Array<{ author: { login: string } }> } }) => {
-        const author = thread.comments?.nodes?.[0]?.author;
-        const isBot = author ? this.isBotAccount(author.login) : false;
+      return threads.map(
+        (thread: {
+          id: string;
+          isResolved: boolean;
+          comments: { nodes: Array<{ author: { login: string } }> };
+        }) => {
+          const author = thread.comments?.nodes?.[0]?.author;
+          const isBot = author ? this.isBotAccount(author.login) : false;
 
-        return {
-          id: thread.id,
-          isResolved: thread.isResolved,
-          author,
-          isBot,
-        };
-      });
+          return {
+            id: thread.id,
+            isResolved: thread.isResolved,
+            author,
+            isBot,
+          };
+        }
+      );
     } catch (error) {
       logger.error(`Failed to get review threads for PR #${prNumber}:`, error);
       throw error;
