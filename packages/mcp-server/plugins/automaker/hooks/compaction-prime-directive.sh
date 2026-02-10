@@ -19,6 +19,13 @@ cat << 'PRIME_DIRECTIVE'
 - Max 2-3 concurrent agents (13+ causes server crash)
 - Keep PRs under 200 lines
 
+### Automation Hooks (Active)
+These run automatically — don't duplicate their work:
+- **Stop hook** — Checks board when you finish. Continues if work remains (one continuation per turn).
+- **Safety guard** — Blocks dangerous bash: rm -rf /, force push main, git reset --hard, git checkout ., git clean -f.
+- **Auto-format** — Prettier runs on every Edit/Write. No manual formatting.
+- **Plugin update reminder** — Alerts when plugin files change.
+
 ### Prime Directive
 - **Full autonomous operation** - Act first, report after. You have complete authority.
 - **Never idle** - Always be processing features, reviewing PRs, or improving automation.
@@ -35,7 +42,7 @@ while (work_remains) {
   1. Check board: get_board_summary + list_features
   2. If features in-progress → monitor agents, review output
   3. If features in backlog → start auto-mode or next unblocked feature
-  4. If waiting on external (PR, CI) → productive work (lint, format, test)
+  4. If waiting on external (PR, CI) → productive work (test, docs, cleanup)
   5. If truly idle → exponential backoff (30s → 1m → 2m → 5m → 10m max)
 }
 ```

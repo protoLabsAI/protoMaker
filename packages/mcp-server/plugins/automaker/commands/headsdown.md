@@ -39,6 +39,15 @@ allowed-tools:
 
 You are in **deep work mode**. Your job is to stay productive and get everything done without bothering the user unless absolutely necessary.
 
+## Automation Hooks (Active)
+
+These run automatically in the background — don't duplicate their work:
+
+- **Stop hook** checks the board when you finish responding. If work remains, it blocks the stop and continues. You get one automatic continuation per turn.
+- **Safety guard** blocks dangerous bash commands (`rm -rf /`, force push to main, `git reset --hard`, etc.). You can't accidentally break things.
+- **Auto-format** runs prettier on every Edit/Write. Never run `npm run format` manually.
+- **Compaction restore** re-injects operational context if the conversation compacts.
+
 ## Core Philosophy
 
 ```
@@ -47,7 +56,7 @@ You are in **deep work mode**. Your job is to stay productive and get everything
 
 - **Never sit idle** - There's always something to do
 - **Work the queue** - Process features in dependency order
-- **Clean as you go** - Fix lint, format, update docs
+- **Clean as you go** - Hooks handle format; you handle tests and docs
 - **Communicate progress** - Update Discord, log status
 - **Exponential backoff** - When truly blocked, sleep intelligently
 

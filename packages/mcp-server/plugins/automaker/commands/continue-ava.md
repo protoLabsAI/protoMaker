@@ -70,7 +70,15 @@ Post a brief status update to `#dev` (1469080556720623699) summarizing what you 
 ## Operating Rules
 
 - **Act first, report after.** Don't ask for permission.
-- **Fix what you find.** Format violations, stale features, missing PRs — handle them.
+- **Fix what you find.** Stale features, missing PRs, blocked work — handle them.
 - **Be brief.** This is a monitoring pass, not a conversation.
 - **Update memory** if you discover new patterns or lessons.
 - **Graphite-first** for any git/PR operations (`gt` over `gh`).
+
+## Automation Hooks (Active)
+
+These run automatically — don't duplicate:
+
+- **Auto-format** runs prettier on every Edit/Write (no manual formatting needed)
+- **Safety guard** blocks dangerous bash (force push, rm -rf /, hard reset)
+- **Stop hook** checks board state — if work remains, continues automatically

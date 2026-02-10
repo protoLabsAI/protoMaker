@@ -1,5 +1,5 @@
 {
-  "description": "Automaker operational hooks - compaction restoration, plugin auto-update",
+  "description": "Automaker operational hooks — autonomous operation, safety guards, context injection",
   "hooks": {
     "SessionStart": [
       {
@@ -8,6 +8,26 @@
           {
             "type": "command",
             "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/compaction-prime-directive.sh\""
+          }
+        ]
+      },
+      {
+        "matcher": "startup",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/session-context.sh\""
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/block-dangerous.sh\""
           }
         ]
       }
@@ -19,6 +39,16 @@
           {
             "type": "command",
             "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/auto-update-plugin.sh\""
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/continue-work.sh\""
           }
         ]
       }
