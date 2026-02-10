@@ -1,13 +1,13 @@
 /**
  * Feature Manual Review Flow E2E Test
  *
- * Happy path: Manually verify a feature in the done column
+ * Happy path: Manually verify a feature in the review column
  *
  * This test verifies that:
- * 1. A feature in done column shows the mark as verified button
+ * 1. A feature in review column shows the mark as verified button
  * 2. Clicking mark as verified moves the feature to the verified column
  *
- * Note: For done features, the button is "mark-as-verified-{id}" not "manual-verify-{id}"
+ * Note: For review features, the button is "mark-as-verified-{id}" not "manual-verify-{id}"
  */
 
 import { test, expect } from '@playwright/test';
@@ -72,7 +72,7 @@ test.describe('Feature Manual Review Flow', () => {
       id: featureId,
       description: 'Test feature for manual review flow',
       category: 'test',
-      status: 'done',
+      status: 'review',
       skipTests: true,
       model: 'sonnet',
       thinkingLevel: 'none',
@@ -88,7 +88,7 @@ test.describe('Feature Manual Review Flow', () => {
     cleanupTempDir(TEST_TEMP_DIR);
   });
 
-  test('should manually verify a feature in done column', async ({ page }) => {
+  test('should manually verify a feature in review column', async ({ page }) => {
     // Set up the project in localStorage
     await setupRealProject(page, projectPath, projectName, { setAsCurrent: true });
 
@@ -112,15 +112,15 @@ test.describe('Feature Manual Review Flow', () => {
     const featureCard = page.locator(`[data-testid="kanban-card-${featureId}"]`);
     await expect(featureCard).toBeVisible({ timeout: 30000 });
 
-    // Verify the feature appears in the done column
-    const doneColumn = await getKanbanColumn(page, 'done');
-    await expect(doneColumn).toBeVisible({ timeout: 5000 });
+    // Verify the feature appears in the review column
+    const reviewColumn = await getKanbanColumn(page, 'review');
+    await expect(reviewColumn).toBeVisible({ timeout: 5000 });
 
-    // Verify the card is in the done column
-    const cardInColumn = doneColumn.locator(`[data-testid="kanban-card-${featureId}"]`);
+    // Verify the card is in the review column
+    const cardInColumn = reviewColumn.locator(`[data-testid="kanban-card-${featureId}"]`);
     await expect(cardInColumn).toBeVisible({ timeout: 5000 });
 
-    // For done features, the button is "mark-as-verified-{id}"
+    // For review features, the button is "mark-as-verified-{id}"
     const markAsVerifiedButton = page.locator(`[data-testid="mark-as-verified-${featureId}"]`);
     await expect(markAsVerifiedButton).toBeVisible({ timeout: 5000 });
 
@@ -134,11 +134,11 @@ test.describe('Feature Manual Review Flow', () => {
       expect(await cardInVerified.count()).toBe(1);
     }).toPass({ timeout: 15000 });
 
-    // Verify the feature is no longer in done column
+    // Verify the feature is no longer in review column
     await expect(async () => {
-      const doneColumn = await getKanbanColumn(page, 'done');
-      const cardInDone = doneColumn.locator(`[data-testid="kanban-card-${featureId}"]`);
-      expect(await cardInDone.count()).toBe(0);
+      const reviewColumn = await getKanbanColumn(page, 'review');
+      const cardInReview = reviewColumn.locator(`[data-testid="kanban-card-${featureId}"]`);
+      expect(await cardInReview.count()).toBe(0);
     }).toPass({ timeout: 5000 });
   });
 });

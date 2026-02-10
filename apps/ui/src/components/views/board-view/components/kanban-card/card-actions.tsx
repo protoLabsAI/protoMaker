@@ -240,7 +240,7 @@ export const CardActions = memo(function CardActions({
           )}
         </>
       )}
-      {!isCurrentAutoTask && feature.status === 'done' && (
+      {!isCurrentAutoTask && feature.status === 'review' && (
         <>
           {/* Refine prompt button */}
           {onFollowUp && (
