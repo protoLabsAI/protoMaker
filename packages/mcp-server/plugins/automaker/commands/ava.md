@@ -313,6 +313,13 @@ On exit: update memory with decisions/changes, `bd sync`
 
 Monitor board, check agents, watch for work. Only sign off at max backoff with zero pending work.
 
+**Pre-backoff checklist (run before entering monitoring loop):**
+
+- [ ] **Document progress** - Update `~/.claude/projects/-Users-kj-dev-automaker/memory/MEMORY.md` with completed work
+- [ ] **Check PRs** - Address CodeRabbit feedback, ensure no stale PRs
+- [ ] **Verify CI** - All recent PRs passing CI checks
+- [ ] **Clean up** - Stage/commit any uncommitted changes
+
 ```
 while true:
   sleep(backoff)
