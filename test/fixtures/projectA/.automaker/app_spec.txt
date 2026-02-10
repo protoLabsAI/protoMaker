@@ -1,0 +1,8 @@
+<app_spec>
+  <name>Test Project A</name>
+  <description>A test fixture project for Playwright testing</description>
+  <tech_stack>
+    <item>TypeScript</item>
+    <item>React</item>
+  </tech_stack>
+</app_spec>

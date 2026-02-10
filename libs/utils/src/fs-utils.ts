@@ -16,8 +16,11 @@ export async function mkdirSafe(dirPath: string): Promise<void> {
   try {
     const stats = await secureFs.lstat(resolvedPath);
     // Path exists - if it's a directory or symlink, consider it success
-    if (stats.isDirectory() || stats.isSymbolicLink()) {
+    if (stats?.isDirectory() || stats?.isSymbolicLink()) {
       return;
+    }
+    if (!stats) {
+      throw Object.assign(new Error(`ENOENT: ${resolvedPath}`), { code: 'ENOENT' });
     }
     // It's a file - can't create directory
     throw new Error(`Path exists and is not a directory: ${resolvedPath}`);
