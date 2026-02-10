@@ -393,17 +393,13 @@ prFeedbackService.initialize();
 
 // Initialize Worktree Lifecycle Service (auto-cleanup after merge + recovery)
 // Pass running features checker to prevent deleting worktrees with active agents
-const worktreeLifecycleService = new WorktreeLifecycleService(
-  events,
-  featureLoader,
-  async () => {
-    const runningAgents = await autoModeService.getRunningAgents();
-    return runningAgents.map((agent) => ({
-      projectPath: agent.projectPath,
-      branchName: agent.branchName,
-    }));
-  }
-);
+const worktreeLifecycleService = new WorktreeLifecycleService(events, featureLoader, async () => {
+  const runningAgents = await autoModeService.getRunningAgents();
+  return runningAgents.map((agent) => ({
+    projectPath: agent.projectPath,
+    branchName: agent.branchName,
+  }));
+});
 worktreeLifecycleService.initialize();
 
 // Initialize World State Monitor (GOAP-inspired reactive system)

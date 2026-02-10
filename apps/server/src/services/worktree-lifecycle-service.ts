@@ -210,8 +210,7 @@ export class WorktreeLifecycleService {
           (rf) =>
             rf.projectPath === projectPath &&
             rf.branchName &&
-            (rf.branchName === branchName ||
-              rf.branchName.replace(/\//g, '-') === worktreeName)
+            (rf.branchName === branchName || rf.branchName.replace(/\//g, '-') === worktreeName)
         );
 
         if (hasRunningAgent) {
