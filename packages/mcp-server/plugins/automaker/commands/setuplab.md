@@ -180,7 +180,7 @@ Sets up `my-project/` relative to current directory.
 ### Example 3: Absolute Path
 
 ```
-/setuplab /Users/kj/dev/my-project
+/setuplab /path/to/my-project
 ```
 
 Sets up the absolute path.

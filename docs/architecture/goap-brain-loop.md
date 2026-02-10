@@ -283,7 +283,7 @@ describe('World State Dashboard')
     enabled: true,
     projects: [
       {
-        projectPath: "/Users/kj/dev/automaker",
+        projectPath: "/path/to/automaker",
         branchName: null,       // null = main worktree
         tickIntervalMs: 30000   // optional, default 30s
       }

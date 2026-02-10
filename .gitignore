@@ -11,11 +11,18 @@ out/
 .next/
 .turbo/
 
-# Automaker
+# Automaker - runtime artifacts and user-generated content
 .automaker/images/
-.automaker/
-/.automaker/*
-/.automaker/
+.automaker/**/agent-output.md
+.automaker/**/images/
+.automaker/authority/
+.automaker/analysis.json
+
+# But track project plans, context files, and settings
+!.automaker/projects/
+!.automaker/context/
+!.automaker/settings.json
+!.automaker/spec.md
 
 .worktrees/
 
@@ -97,6 +104,9 @@ data/
 .codex/
 packages/mcp-server/plugins/automaker/.env
 
+# Plugin metadata files
+**/.orphaned_at
+
 # Beads runtime artifacts (tracked by .beads/.gitignore when present)
 .beads/*.db
 .beads/*.db-*
@@ -110,3 +120,5 @@ packages/mcp-server/plugins/automaker/.env
 
 # Embedded git repos (should be submodules if needed)
 examples/mythxengine
+# Ephemeral test directories
+test/*-test-*/
