@@ -39,7 +39,13 @@ import { authMiddleware, validateWsConnectionToken, checkRawAuthentication } fro
 import { requireJsonContentType } from './middleware/require-json-content-type.js';
 import { createAuthRoutes } from './routes/auth/index.js';
 import { createFsRoutes } from './routes/fs/index.js';
-import { createHealthRoutes, createDetailedHandler } from './routes/health/index.js';
+import {
+  createHealthRoutes,
+  createDetailedHandler,
+  createQuickHandler,
+  createStandardHandler,
+  createDeepHandler,
+} from './routes/health/index.js';
 import { createAgentRoutes } from './routes/agent/index.js';
 import { createSessionsRoutes } from './routes/sessions/index.js';
 import { createFeaturesRoutes } from './routes/features/index.js';
@@ -771,8 +777,17 @@ app.use('/webhooks', createWebhooksRoutes(events, settingsService));
 // Apply authentication to all /api/* routes
 app.use('/api', authMiddleware);
 
-// Protected health endpoint with detailed info
+// Protected health endpoints with detailed info
 app.get('/api/health/detailed', createDetailedHandler());
+app.get('/api/health/quick', createQuickHandler());
+app.get(
+  '/api/health/standard',
+  createStandardHandler(agentService, featureLoader, autoModeService, REPO_ROOT)
+);
+app.get(
+  '/api/health/deep',
+  createDeepHandler(agentService, featureLoader, autoModeService, REPO_ROOT, worldStateMonitor)
+);
 
 app.use('/api/fs', createFsRoutes(events));
 app.use('/api/agent', createAgentRoutes(agentService, events));

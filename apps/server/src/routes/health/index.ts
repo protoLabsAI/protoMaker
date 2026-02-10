@@ -2,7 +2,7 @@
  * Health check routes
  *
  * NOTE: Only the basic health check (/) and environment check are unauthenticated.
- * The /detailed endpoint requires authentication.
+ * The /detailed, /quick, /standard, and /deep endpoints require authentication.
  */
 
 import { Router } from 'express';
@@ -26,5 +26,8 @@ export function createHealthRoutes(): Router {
   return router;
 }
 
-// Re-export detailed handler for use in authenticated routes
+// Re-export handlers for use in authenticated routes
 export { createDetailedHandler } from './routes/detailed.js';
+export { createQuickHandler } from './routes/quick.js';
+export { createStandardHandler } from './routes/standard.js';
+export { createDeepHandler } from './routes/deep.js';
