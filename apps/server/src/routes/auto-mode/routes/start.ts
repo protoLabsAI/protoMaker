@@ -12,10 +12,11 @@ const logger = createLogger('AutoMode');
 export function createStartHandler(autoModeService: AutoModeService) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
-      const { projectPath, branchName, maxConcurrency } = req.body as {
+      const { projectPath, branchName, maxConcurrency, forceStart } = req.body as {
         projectPath: string;
         branchName?: string | null;
         maxConcurrency?: number;
+        forceStart?: boolean;
       };
 
       if (!projectPath) {
@@ -47,7 +48,8 @@ export function createStartHandler(autoModeService: AutoModeService) {
       const resolvedMaxConcurrency = await autoModeService.startAutoLoopForProject(
         projectPath,
         normalizedBranchName,
-        maxConcurrency
+        maxConcurrency,
+        forceStart ?? false
       );
 
       logger.info(

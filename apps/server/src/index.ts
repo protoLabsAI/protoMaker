@@ -354,6 +354,13 @@ devServerService.setEventEmitter(events);
 const notificationService = getNotificationService();
 notificationService.setEventEmitter(events);
 
+// Initialize Data Integrity Watchdog Service
+const { getDataIntegrityWatchdogService } = await import(
+  './services/data-integrity-watchdog-service.js'
+);
+const integrityWatchdogService = getDataIntegrityWatchdogService(DATA_DIR);
+integrityWatchdogService.setEventEmitter(events);
+
 // Initialize Event History Service
 const eventHistoryService = getEventHistoryService();
 
@@ -371,6 +378,9 @@ const authorityService = new AuthorityService(events);
 
 // Wire authority service into auto-mode for policy-gated feature execution
 autoModeService.setAuthorityService(authorityService);
+
+// Wire integrity watchdog service into auto-mode for data integrity checks
+autoModeService.setIntegrityWatchdogService(integrityWatchdogService);
 
 // Initialize Audit Trail (logs all authority events, tracks trust evolution)
 const auditService = new AuditService(events);
@@ -446,7 +456,8 @@ void schedulerService
       events,
       autoModeService,
       featureHealthService,
-      avaGatewayService
+      avaGatewayService,
+      integrityWatchdogService
     );
   })
   .catch((err) => {

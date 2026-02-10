@@ -68,6 +68,7 @@ import {
 import { FeatureLoader } from './feature-loader.js';
 import type { SettingsService } from './settings-service.js';
 import type { AuthorityService } from './authority-service.js';
+import type { DataIntegrityWatchdogService } from './data-integrity-watchdog-service.js';
 import { pipelineService, PipelineService } from './pipeline-service.js';
 import {
   getAutoLoadClaudeMdSetting,
@@ -437,6 +438,8 @@ export class AutoModeService {
   private recoveryService: RecoveryService;
   // Authority service for policy-gated feature mutations (optional)
   private authorityService: AuthorityService | null = null;
+  // Data integrity watchdog service for monitoring feature count (optional)
+  private integrityWatchdogService: DataIntegrityWatchdogService | null = null;
 
   constructor(events: EventEmitter, settingsService?: SettingsService) {
     this.events = events;
@@ -450,6 +453,14 @@ export class AutoModeService {
    */
   setAuthorityService(service: AuthorityService): void {
     this.authorityService = service;
+  }
+
+  /**
+   * Wire up the data integrity watchdog service.
+   * When set, auto-mode will check data integrity before starting.
+   */
+  setIntegrityWatchdogService(service: DataIntegrityWatchdogService): void {
+    this.integrityWatchdogService = service;
   }
 
   /**
@@ -757,8 +768,24 @@ export class AutoModeService {
   async startAutoLoopForProject(
     projectPath: string,
     branchName: string | null = null,
-    maxConcurrency?: number
+    maxConcurrency?: number,
+    forceStart: boolean = false
   ): Promise<number> {
+    // Check data integrity before starting (unless force-start is enabled)
+    if (this.integrityWatchdogService) {
+      const canStart = await this.integrityWatchdogService.canStartAutoMode(
+        projectPath,
+        forceStart
+      );
+
+      if (!canStart) {
+        const status = await this.integrityWatchdogService.getStatus(projectPath);
+        throw new Error(
+          `Auto-mode blocked due to data integrity breach. Feature count dropped from ${status.lastKnownCount} to ${status.currentCount}. Use force-start flag to bypass.`
+        );
+      }
+    }
+
     const resolvedMaxConcurrency = await this.resolveMaxConcurrency(
       projectPath,
       branchName,

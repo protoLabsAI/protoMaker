@@ -2,6 +2,7 @@
  * Maintenance Tasks - Preset scheduled tasks for system health
  *
  * Registers periodic maintenance tasks with the SchedulerService:
+ * - Data integrity check (every 5 minutes): monitors feature directory count
  * - Ava Gateway heartbeat (every 30 minutes): board health evaluation
  * - Stale feature detection (hourly): finds features stuck in running/in-progress
  * - Worktree cleanup (daily): detects stale worktrees for merged branches
@@ -18,6 +19,7 @@ import type { EventEmitter } from '../lib/events.js';
 import type { AutoModeService } from './auto-mode-service.js';
 import type { FeatureHealthService } from './feature-health-service.js';
 import type { AvaGatewayService } from './ava-gateway-service.js';
+import type { DataIntegrityWatchdogService } from './data-integrity-watchdog-service.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -34,11 +36,25 @@ export async function registerMaintenanceTasks(
   events: EventEmitter,
   autoModeService: AutoModeService,
   featureHealthService?: FeatureHealthService,
-  avaGatewayService?: AvaGatewayService
+  avaGatewayService?: AvaGatewayService,
+  integrityWatchdogService?: DataIntegrityWatchdogService
 ): Promise<void> {
   logger.info('Registering maintenance tasks...');
 
   let taskCount = 3; // Base: stale-features, stale-worktrees, branch-cleanup
+
+  // Every 5 minutes: Data integrity check
+  if (integrityWatchdogService) {
+    await scheduler.registerTask(
+      'maintenance:data-integrity',
+      'Data Integrity Check',
+      '*/5 * * * *', // Every 5 minutes
+      async () => {
+        await checkDataIntegrity(integrityWatchdogService, events, autoModeService);
+      }
+    );
+    taskCount++;
+  }
 
   // Every 30 minutes: Ava Gateway heartbeat check
   if (avaGatewayService) {
@@ -404,6 +420,63 @@ async function runBoardHealthAudit(
     }
   } catch (error) {
     logger.error('Board health reconciliation failed:', error);
+    throw error;
+  }
+}
+
+/**
+ * Check data integrity across all active projects.
+ * Monitors feature directory count and emits CRITICAL alerts on >50% drops.
+ */
+async function checkDataIntegrity(
+  integrityWatchdogService: DataIntegrityWatchdogService,
+  events: EventEmitter,
+  autoModeService: AutoModeService
+): Promise<void> {
+  logger.info('Running data integrity check...');
+
+  try {
+    const projectPaths = getKnownProjectPaths(autoModeService);
+
+    if (projectPaths.length === 0) {
+      logger.info('No known project paths, skipping data integrity check');
+      return;
+    }
+
+    let breachCount = 0;
+    const breachedProjects: string[] = [];
+
+    for (const projectPath of projectPaths) {
+      try {
+        const result = await integrityWatchdogService.checkIntegrity(projectPath);
+
+        if (!result.intact) {
+          breachCount++;
+          breachedProjects.push(
+            `${projectPath} (${result.lastKnownCount} → ${result.currentCount}, ${Math.round(result.dropPercentage)}% drop)`
+          );
+        }
+      } catch (error) {
+        logger.warn(`Data integrity check failed for ${projectPath}:`, error);
+        // Continue with other projects
+      }
+    }
+
+    if (breachCount > 0) {
+      logger.error(
+        `Data integrity check: ${breachCount} breach(es) detected - ${breachedProjects.join(', ')}`
+      );
+      events.emit('scheduler:task_completed' as Parameters<typeof events.emit>[0], {
+        taskId: 'maintenance:data-integrity',
+        message: `🔴 CRITICAL: ${breachCount} project(s) with data integrity breach`,
+        breachCount,
+        breachedProjects,
+      });
+    } else {
+      logger.debug(`Data integrity check: all ${projectPaths.length} project(s) intact`);
+    }
+  } catch (error) {
+    logger.error('Data integrity check failed:', error);
     throw error;
   }
 }
