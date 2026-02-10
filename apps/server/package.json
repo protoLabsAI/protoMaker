@@ -11,8 +11,8 @@
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
-    "dev": "node ../../node_modules/.bin/tsx watch --ignore '**/.automaker/**' --ignore '**/.worktrees/**' src/index.ts",
-    "dev:test": "node ../../node_modules/.bin/tsx src/index.ts",
+    "dev": "tsx watch --ignore '**/.automaker/**' --ignore '**/.worktrees/**' src/index.ts",
+    "dev:test": "tsx src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
     "lint": "eslint src/",
