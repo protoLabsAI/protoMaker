@@ -559,3 +559,12 @@ export { ROLE_NAME_TO_AUTHORITY, AUTHORITY_TO_ROLE_NAME } from './policy.js';
 
 // Authority and work item types
 export type { WorkItemState, AuthorityAgent, AuthorizedWorkItem } from './authority.js';
+
+// Beads task management types
+export type {
+  BeadsTask,
+  CreateBeadsTaskOptions,
+  UpdateBeadsTaskOptions,
+  ListBeadsTasksOptions,
+  BeadsOperationResult,
+} from './beads.js';
