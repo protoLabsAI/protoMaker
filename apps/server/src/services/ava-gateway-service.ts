@@ -276,10 +276,7 @@ export class AvaGatewayService {
   /**
    * Create Beads task for alert
    */
-  private async createBeadsTask(
-    projectPath: string,
-    alert: HeartbeatAlert
-  ): Promise<void> {
+  private async createBeadsTask(projectPath: string, alert: HeartbeatAlert): Promise<void> {
     if (!projectPath) {
       logger.warn('Project path not set, skipping Beads task creation');
       return;
