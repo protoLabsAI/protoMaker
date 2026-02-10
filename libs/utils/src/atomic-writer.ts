@@ -52,9 +52,7 @@ export async function rotateBackups(
   }
 
   // Determine backup location
-  const baseBackupPath = backupDir
-    ? path.join(backupDir, path.basename(filePath))
-    : filePath;
+  const baseBackupPath = backupDir ? path.join(backupDir, path.basename(filePath)) : filePath;
 
   // Create backup directory if external location is specified
   if (backupDir) {
