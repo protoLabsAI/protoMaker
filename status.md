@@ -1,8 +1,8 @@
 # Automaker - Status Report
 
-**Last Updated:** 2026-02-09
-**Branch:** `main` (e1bddb05)
-**Server Status:** Running (v0.13.0) - Staging healthy
+**Last Updated:** 2026-02-10
+**Branch:** `main`
+**Server Status:** Running - Staging healthy at 100.101.189.45
 **Linear Project:** ProtoLabsAI (PRO-\*)
 
 ---
@@ -15,43 +15,65 @@
 | GitHub Actions     | Active  | 7 workflows (test, e2e, build, format, audit, release, deploy) |
 | Self-Hosted Runner | Active  | `ava-staging` - 125GB RAM, 24 CPUs, MemoryMax=2G               |
 | Auto-Deploy        | Active  | Push to main triggers staging rebuild                          |
-| Discord MCP        | Active  | saseq/discord-mcp (AMD64 local build)                          |
-| Linear MCP         | Active  | @tacticlaunch/mcp-linear v1.0.12                               |
+| Branch Protection  | Active  | Squash-only, required checks, admin bypass, no strict policy   |
+| Headless Ava       | New     | `scripts/ava-monitor.sh` for cron/systemd loop                 |
 
 ### Open PRs
 
-**None** - All PRs merged and clean slate
+**None** - Clean slate
 
-### Recently Merged (2026-02-09)
+### Recently Merged (2026-02-10)
 
-| PR   | Title                                | Status |
-| ---- | ------------------------------------ | ------ |
-| #139 | WorldStateMonitor drift detection    | Merged |
-| #136 | Auto-mode maxConcurrency enforcement | Merged |
-| #137 | Graphite retry/circuit breaker       | Merged |
-| #138 | Auto-mode debug logging              | Merged |
-
-### Open Tickets
-
-| Ticket | Title                                    | Priority |
-| ------ | ---------------------------------------- | -------- |
-| PRO-56 | Address 6 open Dependabot security vulns | High     |
+| PR   | Title                                          | Status |
+| ---- | ---------------------------------------------- | ------ |
+| #179 | /continue-ava skill + headless monitor + hooks | Merged |
+| #178 | Auto-cleanup stale worktrees and branches      | Merged |
+| #177 | Auto-retry blocked features                    | Merged |
+| #176 | Scheduled PR merge poller                      | Merged |
+| #175 | EM agent merge execution                       | Merged |
+| #174 | Auto-resolve CodeRabbit review threads         | Merged |
+| #173 | Worktree CWD safety guards                     | Merged |
+| #172 | Feature data integrity watchdog                | Merged |
 
 ---
 
 ## Board Summary
 
-| Status      | Count  | Details                  |
-| ----------- | ------ | ------------------------ |
-| Backlog     | 0      |                          |
-| In Progress | 0      |                          |
-| Review      | 0      |                          |
-| Done        | 48     | All sprints + prior work |
-| **Total**   | **48** | Clean board              |
+| Status      | Count  | Details                                 |
+| ----------- | ------ | --------------------------------------- |
+| Backlog     | 5      | 3 epics (containers) + 2 small features |
+| In Progress | 0      |                                         |
+| Review      | 0      |                                         |
+| Done        | 12     | Automation pipeline + prior work        |
+| **Total**   | **20** |                                         |
+
+### Backlog Features
+
+| Feature                                     | Type  | Complexity |
+| ------------------------------------------- | ----- | ---------- |
+| [Epic] Close the PR-to-Merge Gap            | Epic  | -          |
+| Global auto-merge setting toggle            | Child | small      |
+| [Epic] Failure Resilience                   | Epic  | -          |
+| [Epic] Proactive Maintenance                | Epic  | -          |
+| Configurable MAX_SYSTEM_CONCURRENCY per env | Solo  | small      |
 
 ---
 
 ## Completed Projects
+
+### Full Automation Pipeline (2026-02-10) - DONE
+
+Shipped 8 PRs in one session building the complete automation loop:
+
+- Data integrity watchdog (5-min checks, CRITICAL alerts on >50% feature drop)
+- Worktree CWD safety guards (prevent cleanup of active worktrees)
+- CodeRabbit thread auto-resolution (unblocks auto-merge)
+- EM agent merge execution (programmatic PR merging)
+- Scheduled PR merge poller (5-min cycle)
+- Auto-retry blocked features (3 retries, opus escalation)
+- Stale worktree auto-cleanup (merged branch detection)
+- Headless Ava (`/continue-ava` skill + `ava-monitor.sh`)
+- Removed strict required status checks (eliminates merge cascade)
 
 ### Policy & Trust Authority System (Sprints 1-7) - DONE
 
@@ -91,7 +113,6 @@ Built trust-gated authority hierarchy where 4 first-class agents (CTO, PM, ProjM
 - Built auto-deploy pipeline (push to main → staging rebuild → Discord notify)
 - Set up Discord MCP (AMD64 local build) and Linear MCP
 - Created Discord channel structure for protoLabs server
-- Triaged 6 Dependabot vulnerabilities (PRO-56)
 
 ---
 
@@ -107,16 +128,17 @@ npm run test:server          # Server unit tests
 /devops                      # Infrastructure management
 /auto-mode                   # Start autonomous processing
 /cleanup                     # Codebase cleanup
+/ava                         # Chief of Staff mode
+/continue-ava                # Headless Ava activation
 ```
 
 ---
 
-## Cleanup Notes (2026-02-09)
+## Cleanup Notes (2026-02-10)
 
-- Working tree: clean
-- Worktrees: **All 27 orphaned worktrees removed** (~270MB freed)
-- Merged branches: All cleaned up
-- Console.logs: ~148 instances (consider migrating to logger)
-- npm audit: **0 vulnerabilities** ✅
-- TODOs: ~268 comments (review for ticket creation)
-- Outdated packages: 45 (review deferred)
+- Working tree: clean (on main)
+- Worktrees: **All 11 stale worktrees removed**
+- Local branches: **71 stale branches deleted** (1 remaining: main)
+- npm audit: **0 vulnerabilities**
+- Console.logs: ~157 instances (priority: migrate projm-agent.ts to logger)
+- TODOs: ~53 comments (reconciliation-service.ts has 7 implementation TODOs)
