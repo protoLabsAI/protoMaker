@@ -16,12 +16,18 @@ out/
 .automaker/**/images/
 .automaker/**/authority/
 .automaker/**/analysis.json
+.automaker/**/*.bak*
+.automaker/.backups/
+.automaker/events/
+.automaker/execution-state.json
+.automaker/notifications.json
 
-# But track project plans, context files, and settings
+# But track project plans, context files, settings, and feature data
 !.automaker/projects/
 !.automaker/context/
 !.automaker/settings.json
 !.automaker/spec.md
+!.automaker/features/**/feature.json
 
 .worktrees/
 
