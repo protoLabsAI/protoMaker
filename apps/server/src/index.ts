@@ -367,11 +367,6 @@ prFeedbackService.initialize();
 const worktreeLifecycleService = new WorktreeLifecycleService(events, featureLoader);
 worktreeLifecycleService.initialize();
 
-// Register worktree cleanup on shutdown
-process.on('beforeExit', () => {
-  worktreeLifecycleService.shutdown();
-});
-
 // Initialize World State Monitor (GOAP-inspired reactive system)
 // Periodically checks world state and triggers corrective actions for drift
 // TODO: Re-enable when ReconciliationService and GitHubStateChecker are implemented
@@ -1275,6 +1270,7 @@ async function gracefulShutdown() {
   healthMonitorService.stopMonitoring();
   schedulerService.stop();
   terminalService.cleanup();
+  worktreeLifecycleService.shutdown();
 
   server.close(() => {
     logger.info('Server closed');

@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { normalizeFeatureStatus, type FeatureStatus } from '../src/feature.js';
+import { normalizeFeatureStatus, type FeatureStatus } from '@automaker/types';
 
 describe('normalizeFeatureStatus', () => {
   describe('canonical statuses (passthrough)', () => {

@@ -6,6 +6,7 @@ import {
   getBlockingDependenciesFromMap,
   resolveDependencies,
 } from '@automaker/dependency-resolver';
+import { normalizeFeatureStatus } from '@automaker/types';
 
 type ColumnId = Feature['status'];
 
@@ -129,8 +130,8 @@ export function useBoardColumnFeatures({
         matchesWorktree = featureBranch === effectiveBranch;
       }
 
-      // Use the feature's status (fallback to backlog for unknown statuses)
-      const status = f.status || 'backlog';
+      // Normalize status to handle legacy values, fallback to backlog for unknown
+      const status = normalizeFeatureStatus(f.status || 'backlog');
 
       // IMPORTANT:
       // Historically, we forced "running" features into in_progress so they never disappeared

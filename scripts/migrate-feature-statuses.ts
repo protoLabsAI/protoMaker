@@ -16,7 +16,7 @@
  *   --backup   Create backup before migrating (default: true)
  */
 
-import { readdir, readFile, writeFile, mkdir, copyFile } from 'fs/promises';
+import { readdir, readFile, writeFile, mkdir, copyFile, rename } from 'fs/promises';
 import { join, dirname } from 'path';
 import { existsSync } from 'fs';
 import type { Feature } from '@automaker/types';
@@ -75,7 +75,7 @@ async function migrateFeature(
       // Write atomically (write to temp, then rename)
       const tempPath = `${featurePath}.tmp`;
       await writeFile(tempPath, JSON.stringify(updatedFeature, null, 2), 'utf-8');
-      await writeFile(featurePath, JSON.stringify(updatedFeature, null, 2), 'utf-8');
+      await rename(tempPath, featurePath);
     }
 
     return {

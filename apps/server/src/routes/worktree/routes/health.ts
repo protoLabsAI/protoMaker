@@ -1,5 +1,5 @@
 /**
- * GET /health endpoint - Worktree health check
+ * POST /health endpoint - Worktree health check
  *
  * Returns worktree drift statistics:
  * - Registered worktrees (in git)

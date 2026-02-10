@@ -14,7 +14,7 @@
  */
 
 import path from 'path';
-import { execSync } from 'child_process';
+import { exec, execSync } from 'child_process';
 import { createLogger } from '@automaker/utils';
 import * as secureFs from '../lib/secure-fs.js';
 import type { EventEmitter } from '../lib/events.js';
@@ -157,10 +157,8 @@ export class WorktreeLifecycleService {
           logger.warn(
             `[DRIFT-CHECK] Found ${drift.phantoms.length} phantom worktree(s) in ${projectPath}, auto-pruning...`
           );
-          const pruned = await this.prunePhantomWorktrees(projectPath);
-          logger.info(
-            `[DRIFT-CHECK] Auto-pruned ${pruned} phantom worktree(s) from ${projectPath}`
-          );
+          await this.prunePhantomWorktrees(projectPath);
+          logger.info(`[DRIFT-CHECK] Auto-pruned phantom worktree(s) from ${projectPath}`);
         }
 
         if (drift.orphans.length > 0) {
@@ -407,11 +405,13 @@ export class WorktreeLifecycleService {
           if (!entry.isDirectory()) continue;
 
           const diskPath = path.join(worktreesDir, entry.name);
+          const normalizedDiskPath = path.resolve(diskPath);
 
-          // Check if this path is registered
-          const isRegistered = Array.from(registeredWorktrees.keys()).some(
-            (regPath) => regPath === diskPath || regPath.endsWith(entry.name)
-          );
+          // Check if this path is registered (exact path match only)
+          const isRegistered = Array.from(registeredWorktrees.keys()).some((regPath) => {
+            const normalizedRegPath = path.resolve(regPath);
+            return normalizedRegPath === normalizedDiskPath;
+          });
 
           if (!isRegistered) {
             // Try to detect branch name
@@ -463,7 +463,6 @@ export class WorktreeLifecycleService {
     options: { cwd: string; timeout: number }
   ): Promise<{ stdout: string; stderr: string }> {
     return new Promise((resolve, reject) => {
-      const { exec } = require('child_process');
       exec(command, options, (error: Error | null, stdout: string, stderr: string) => {
         if (error) {
           reject(error);

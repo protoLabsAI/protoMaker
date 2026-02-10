@@ -30,6 +30,7 @@ import {
   MAX_SYSTEM_CONCURRENCY,
   isClaudeModel,
   stripProviderPrefix,
+  normalizeFeatureStatus,
 } from '@automaker/types';
 import {
   buildPromptWithImages,
@@ -4040,11 +4041,14 @@ Format your response as a structured markdown document.`;
 
           allFeatures.push(feature);
 
+          // Normalize status to handle legacy values
+          const canonicalStatus = normalizeFeatureStatus(feature.status);
+
           // Track pending features separately, filtered by worktree/branch
           // Note: Features in 'review', 'done', or 'verified' are NOT eligible
           // Those features have completed execution and should not be picked up again
           const isEligibleStatus =
-            feature.status === 'backlog' ||
+            canonicalStatus === 'backlog' ||
             (feature.planSpec?.status === 'approved' &&
               (feature.planSpec.tasksCompleted ?? 0) < (feature.planSpec.tasksTotal ?? 0));
 

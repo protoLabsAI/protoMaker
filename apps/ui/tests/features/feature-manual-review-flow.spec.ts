@@ -136,8 +136,10 @@ test.describe('Feature Manual Review Flow', () => {
 
     // Verify the feature is no longer in review column
     await expect(async () => {
-      const reviewColumn = await getKanbanColumn(page, 'review');
-      const cardInReview = reviewColumn.locator(`[data-testid="kanban-card-${featureId}"]`);
+      const reviewColumnAfterMove = await getKanbanColumn(page, 'review');
+      const cardInReview = reviewColumnAfterMove.locator(
+        `[data-testid="kanban-card-${featureId}"]`
+      );
       expect(await cardInReview.count()).toBe(0);
     }).toPass({ timeout: 5000 });
   });

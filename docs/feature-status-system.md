@@ -103,13 +103,14 @@ Legacy statuses are fully supported:
 
 ## Testing
 
-Unit tests verify normalization for all 15 cases:
+Unit tests verify normalization for all 14 cases:
 
 - 6 canonical statuses (passthrough)
 - 6 legacy statuses (migration)
 - Undefined status (default to backlog)
 - Unknown status (warn + default to backlog)
-- Telemetry callback invocation
+
+Additionally, tests verify telemetry callback invocation for metrics.
 
 ## Benefits
 
