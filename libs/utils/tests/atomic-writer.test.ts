@@ -707,4 +707,105 @@ describe('atomic-writer.ts', () => {
       expect(writtenData.count).toBe(6);
     });
   });
+
+  describe('External backup directory', () => {
+    it('should store backups in external directory when backupDir is specified', async () => {
+      const filePath = path.join(tempDir, 'feature', 'feature.json');
+      const backupDir = path.join(tempDir, 'backups', 'feature');
+      const data = { id: 'test', value: 'initial' };
+
+      // Mock existing file for backup
+      (secureFs.access as unknown as MockInstance).mockResolvedValue(undefined);
+      (secureFs.copyFile as unknown as MockInstance).mockResolvedValue(undefined);
+      (secureFs.writeFile as unknown as MockInstance).mockResolvedValue(undefined);
+      (secureFs.rename as unknown as MockInstance).mockResolvedValue(undefined);
+      (secureFs.mkdir as unknown as MockInstance).mockResolvedValue(undefined);
+
+      // Mock lstat for mkdirSafe to return ENOENT (directory doesn't exist)
+      const enoentError = new Error('Directory not found') as NodeJS.ErrnoException;
+      enoentError.code = 'ENOENT';
+      (secureFs.lstat as unknown as MockInstance).mockRejectedValue(enoentError);
+
+      await atomicWriteJson(filePath, data, { backupCount: 3, backupDir });
+
+      // Verify backup directory was created (mkdirSafe calls mkdir with recursive: true)
+      expect(secureFs.mkdir).toHaveBeenCalledWith(path.resolve(backupDir), { recursive: true });
+
+      // Verify backup was created in external directory
+      expect(secureFs.copyFile).toHaveBeenCalledWith(
+        path.resolve(filePath),
+        path.join(backupDir, 'feature.json.bak1')
+      );
+    });
+
+    it('should recover from external backup directory when main file is corrupted', async () => {
+      const filePath = path.join(tempDir, 'feature', 'feature.json');
+      const backupDir = path.join(tempDir, 'backups', 'feature');
+      const backupData = { id: 'test', recovered: true };
+
+      // Main file doesn't exist or is corrupted
+      const enoentError = new Error('File not found') as NodeJS.ErrnoException;
+      enoentError.code = 'ENOENT';
+      (secureFs.readFile as unknown as MockInstance)
+        .mockRejectedValueOnce(enoentError) // Main file fails
+        .mockResolvedValueOnce(JSON.stringify(backupData)); // Backup succeeds
+
+      (secureFs.readdir as unknown as MockInstance).mockResolvedValue([]);
+      (secureFs.copyFile as unknown as MockInstance).mockResolvedValue(undefined);
+
+      const result = await readJsonWithRecovery(filePath, null, {
+        maxBackups: 3,
+        autoRestore: true,
+        backupDir,
+      });
+
+      expect(result.recovered).toBe(true);
+      expect(result.source).toBe('backup');
+      expect(result.data).toEqual(backupData);
+
+      // Verify it tried to read from external backup location first
+      expect(secureFs.readFile).toHaveBeenCalledWith(
+        path.join(backupDir, 'feature.json.bak1'),
+        'utf-8'
+      );
+    });
+
+    it('should fall back to legacy backup location if external backup not found', async () => {
+      const filePath = path.join(tempDir, 'feature', 'feature.json');
+      const backupDir = path.join(tempDir, 'backups', 'feature');
+      const legacyBackupData = { id: 'test', legacy: true };
+
+      // Main file doesn't exist
+      const enoentError = new Error('File not found') as NodeJS.ErrnoException;
+      enoentError.code = 'ENOENT';
+
+      (secureFs.readFile as unknown as MockInstance)
+        .mockRejectedValueOnce(enoentError) // Main file fails
+        .mockRejectedValueOnce(enoentError) // External backup .bak1 fails
+        .mockResolvedValueOnce(JSON.stringify(legacyBackupData)); // Legacy backup succeeds
+
+      (secureFs.readdir as unknown as MockInstance).mockResolvedValue([]);
+      (secureFs.copyFile as unknown as MockInstance).mockResolvedValue(undefined);
+
+      const result = await readJsonWithRecovery(filePath, null, {
+        maxBackups: 3,
+        autoRestore: true,
+        backupDir,
+      });
+
+      expect(result.recovered).toBe(true);
+      expect(result.source).toBe('backup');
+      expect(result.data).toEqual(legacyBackupData);
+
+      // Verify it tried external location first, then fell back to legacy
+      expect(secureFs.readFile).toHaveBeenCalledWith(
+        path.join(backupDir, 'feature.json.bak1'),
+        'utf-8'
+      );
+      expect(secureFs.readFile).toHaveBeenCalledWith(
+        path.resolve(filePath) + '.bak1',
+        'utf-8'
+      );
+    });
+  });
 });

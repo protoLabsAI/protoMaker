@@ -16,6 +16,7 @@ out/
 .automaker/**/images/
 .automaker/**/authority/
 .automaker/**/analysis.json
+.automaker/.backups/
 
 # But track project plans, context files, and settings
 !.automaker/projects/

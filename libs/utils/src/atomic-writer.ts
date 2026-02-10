@@ -26,6 +26,8 @@ export interface AtomicWriteOptions {
   createDirs?: boolean;
   /** Number of backup files to keep (0 = no backups, default: 0). When > 0, rotates .bak1, .bak2, etc. */
   backupCount?: number;
+  /** External directory to store backups instead of next to the original file (default: undefined) */
+  backupDir?: string;
 }
 
 /**
@@ -34,10 +36,12 @@ export interface AtomicWriteOptions {
  *
  * @param filePath - Absolute path to the file being backed up
  * @param maxBackups - Maximum number of backup files to keep
+ * @param backupDir - Optional external directory to store backups (default: same directory as filePath)
  */
 export async function rotateBackups(
   filePath: string,
-  maxBackups: number = DEFAULT_BACKUP_COUNT
+  maxBackups: number = DEFAULT_BACKUP_COUNT,
+  backupDir?: string
 ): Promise<void> {
   // Check if the source file exists before attempting backup
   try {
@@ -47,10 +51,20 @@ export async function rotateBackups(
     return;
   }
 
+  // Determine backup location
+  const baseBackupPath = backupDir
+    ? path.join(backupDir, path.basename(filePath))
+    : filePath;
+
+  // Create backup directory if external location is specified
+  if (backupDir) {
+    await mkdirSafe(backupDir);
+  }
+
   // Rotate existing backups: .bak3 is deleted, .bak2 -> .bak3, .bak1 -> .bak2
   for (let i = maxBackups; i >= 1; i--) {
-    const currentBackup = `${filePath}.bak${i}`;
-    const nextBackup = `${filePath}.bak${i + 1}`;
+    const currentBackup = `${baseBackupPath}.bak${i}`;
+    const nextBackup = `${baseBackupPath}.bak${i + 1}`;
 
     try {
       if (i === maxBackups) {
@@ -67,7 +81,7 @@ export async function rotateBackups(
 
   // Copy current file to .bak1
   try {
-    await secureFs.copyFile(filePath, `${filePath}.bak1`);
+    await secureFs.copyFile(filePath, `${baseBackupPath}.bak1`);
   } catch (error) {
     logger.warn(`Failed to create backup of ${filePath}:`, error);
     // Continue with write even if backup fails
@@ -98,7 +112,7 @@ export async function atomicWriteJson<T>(
   data: T,
   options: AtomicWriteOptions = {}
 ): Promise<void> {
-  const { indent = 2, createDirs = false, backupCount = 0 } = options;
+  const { indent = 2, createDirs = false, backupCount = 0, backupDir } = options;
   const resolvedPath = path.resolve(filePath);
   // Use timestamp + random suffix to ensure uniqueness even for concurrent writes
   const uniqueSuffix = `${Date.now()}.${crypto.randomBytes(4).toString('hex')}`;
@@ -115,7 +129,7 @@ export async function atomicWriteJson<T>(
   try {
     // Rotate backups before writing (if backups are enabled)
     if (backupCount > 0) {
-      await rotateBackups(resolvedPath, backupCount);
+      await rotateBackups(resolvedPath, backupCount, backupDir);
     }
 
     await secureFs.writeFile(tempPath, content, 'utf-8');
@@ -219,6 +233,8 @@ export interface ReadJsonRecoveryOptions {
   maxBackups?: number;
   /** Whether to automatically restore main file from backup when corrupted. Default: true */
   autoRestore?: boolean;
+  /** External directory where backups are stored (default: undefined, checks same directory as file) */
+  backupDir?: string;
 }
 
 /**
@@ -276,7 +292,7 @@ export async function readJsonWithRecovery<T>(
   defaultValue: T | null,
   options: ReadJsonRecoveryOptions = {}
 ): Promise<ReadJsonRecoveryResult<T | null>> {
-  const { maxBackups = 3, autoRestore = true } = options;
+  const { maxBackups = 3, autoRestore = true, backupDir } = options;
   const resolvedPath = path.resolve(filePath);
   const dirPath = path.dirname(resolvedPath);
   const fileName = path.basename(resolvedPath);
@@ -333,28 +349,37 @@ export async function readJsonWithRecovery<T>(
     }
 
     // Try backup files (.bak1, .bak2, .bak3)
+    // Check external backup directory first if specified, then fall back to same directory
     for (let i = 1; i <= maxBackups; i++) {
-      const backupPath = `${resolvedPath}.bak${i}`;
-      try {
-        const content = (await secureFs.readFile(backupPath, 'utf-8')) as string;
-        const data = JSON.parse(content) as T;
+      const backupLocations = backupDir
+        ? [
+            path.join(backupDir, `${fileName}.bak${i}`), // External location
+            `${resolvedPath}.bak${i}`, // Legacy location (same directory)
+          ]
+        : [`${resolvedPath}.bak${i}`]; // Only same directory
 
-        logger.info(`Recovered data from backup: ${backupPath}`);
+      for (const backupPath of backupLocations) {
+        try {
+          const content = (await secureFs.readFile(backupPath, 'utf-8')) as string;
+          const data = JSON.parse(content) as T;
 
-        // Optionally restore main file from backup
-        if (autoRestore) {
-          try {
-            await secureFs.copyFile(backupPath, resolvedPath);
-            logger.info(`Restored main file from backup: ${backupPath}`);
-          } catch (restoreError) {
-            logger.warn(`Failed to restore main file from backup: ${restoreError}`);
+          logger.info(`Recovered data from backup: ${backupPath}`);
+
+          // Optionally restore main file from backup
+          if (autoRestore) {
+            try {
+              await secureFs.copyFile(backupPath, resolvedPath);
+              logger.info(`Restored main file from backup: ${backupPath}`);
+            } catch (restoreError) {
+              logger.warn(`Failed to restore main file from backup: ${restoreError}`);
+            }
           }
-        }
 
-        return { data, recovered: true, source: 'backup', error: errorMessage };
-      } catch {
-        // This backup doesn't exist or is corrupted, try next
-        continue;
+          return { data, recovered: true, source: 'backup', error: errorMessage };
+        } catch {
+          // This backup doesn't exist or is corrupted, try next
+          continue;
+        }
       }
     }
 

@@ -38,6 +38,31 @@ export function getFeaturesDir(projectPath: string): string {
 }
 
 /**
+ * Get the backups directory for a project
+ *
+ * Contains backup files (.bak) organized by feature ID to survive feature directory deletion.
+ *
+ * @param projectPath - Absolute path to project directory
+ * @returns Absolute path to {projectPath}/.automaker/.backups
+ */
+export function getBackupsDir(projectPath: string): string {
+  return path.join(getAutomakerDir(projectPath), '.backups');
+}
+
+/**
+ * Get the backup directory for a specific feature
+ *
+ * Contains backup files for feature.json.
+ *
+ * @param projectPath - Absolute path to project directory
+ * @param featureId - Feature identifier
+ * @returns Absolute path to {projectPath}/.automaker/.backups/features/{featureId}
+ */
+export function getFeatureBackupDir(projectPath: string, featureId: string): string {
+  return path.join(getBackupsDir(projectPath), 'features', featureId);
+}
+
+/**
  * Get the directory for a specific feature
  *
  * Contains feature-specific data like generated code, tests, and logs.

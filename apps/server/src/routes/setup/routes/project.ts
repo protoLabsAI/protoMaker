@@ -99,7 +99,7 @@ export function createSetupProjectHandler(
       filesCreated.push('.automaker/');
 
       // Create subdirectories
-      const subdirs = ['features', 'context', 'memory'];
+      const subdirs = ['features', 'context', 'memory', '.backups'];
       for (const subdir of subdirs) {
         const dirPath = path.join(automakerDir, subdir);
         await fs.mkdir(dirPath, { recursive: true });

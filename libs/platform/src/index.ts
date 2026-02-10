@@ -9,6 +9,8 @@ export {
   getFeaturesDir,
   getFeatureDir,
   getFeatureImagesDir,
+  getBackupsDir,
+  getFeatureBackupDir,
   getBoardDir,
   getImagesDir,
   getContextDir,

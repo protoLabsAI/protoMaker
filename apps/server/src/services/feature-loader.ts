@@ -19,6 +19,7 @@ import {
   getFeaturesDir,
   getFeatureDir,
   getFeatureImagesDir,
+  getFeatureBackupDir,
   getAppSpecPath,
   ensureAutomakerDir,
 } from '@automaker/platform';
@@ -246,11 +247,13 @@ export class FeatureLoader {
       const featurePromises = featureDirs.map(async (dir) => {
         const featureId = dir.name;
         const featureJsonPath = this.getFeatureJsonPath(projectPath, featureId);
+        const backupDir = getFeatureBackupDir(projectPath, featureId);
 
         // Use recovery-enabled read to handle corrupted files
         const result = await readJsonWithRecovery<Feature | null>(featureJsonPath, null, {
           maxBackups: DEFAULT_BACKUP_COUNT,
           autoRestore: true,
+          backupDir,
         });
 
         logRecoveryWarning(result, `Feature ${featureId}`, logger);
@@ -362,11 +365,13 @@ export class FeatureLoader {
    */
   async get(projectPath: string, featureId: string): Promise<Feature | null> {
     const featureJsonPath = this.getFeatureJsonPath(projectPath, featureId);
+    const backupDir = getFeatureBackupDir(projectPath, featureId);
 
     // Use recovery-enabled read to handle corrupted files
     const result = await readJsonWithRecovery<Feature | null>(featureJsonPath, null, {
       maxBackups: DEFAULT_BACKUP_COUNT,
       autoRestore: true,
+      backupDir,
     });
 
     logRecoveryWarning(result, `Feature ${featureId}`, logger);
@@ -421,7 +426,11 @@ export class FeatureLoader {
     };
 
     // Write feature.json atomically with backup support
-    await atomicWriteJson(featureJsonPath, feature, { backupCount: DEFAULT_BACKUP_COUNT });
+    const backupDir = getFeatureBackupDir(projectPath, featureId);
+    await atomicWriteJson(featureJsonPath, feature, {
+      backupCount: DEFAULT_BACKUP_COUNT,
+      backupDir,
+    });
 
     logger.info(`Created feature ${featureId}`);
     return feature;
@@ -507,7 +516,11 @@ export class FeatureLoader {
 
     // Write back to file atomically with backup support
     const featureJsonPath = this.getFeatureJsonPath(projectPath, featureId);
-    await atomicWriteJson(featureJsonPath, updatedFeature, { backupCount: DEFAULT_BACKUP_COUNT });
+    const backupDir = getFeatureBackupDir(projectPath, featureId);
+    await atomicWriteJson(featureJsonPath, updatedFeature, {
+      backupCount: DEFAULT_BACKUP_COUNT,
+      backupDir,
+    });
 
     logger.info(`Updated feature ${featureId}`);
     return updatedFeature;
