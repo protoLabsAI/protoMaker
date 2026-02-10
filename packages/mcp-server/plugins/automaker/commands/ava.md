@@ -53,6 +53,20 @@ allowed-tools:
   - mcp__plugin_automaker_automaker__submit_prd
   - mcp__plugin_automaker_automaker__get_briefing
   - mcp__plugin_automaker_automaker__setup_lab
+  # Ralph loops - autonomous verification
+  - mcp__plugin_automaker_automaker__start_ralph_loop
+  - mcp__plugin_automaker_automaker__stop_ralph_loop
+  - mcp__plugin_automaker_automaker__pause_ralph_loop
+  - mcp__plugin_automaker_automaker__resume_ralph_loop
+  - mcp__plugin_automaker_automaker__get_ralph_status
+  - mcp__plugin_automaker_automaker__list_running_ralph_loops
+  # Skills - reusable agent patterns
+  - mcp__plugin_automaker_automaker__list_skills
+  - mcp__plugin_automaker_automaker__get_skill
+  - mcp__plugin_automaker_automaker__create_skill
+  - mcp__plugin_automaker_automaker__delete_skill
+  # Graphite - stack-aware PR management
+  - mcp__plugin_automaker_automaker__graphite_restack
   # Discord - team communication
   - mcp__plugin_automaker_discord__discord_send
   - mcp__plugin_automaker_discord__discord_read_messages
@@ -67,6 +81,14 @@ allowed-tools:
   - mcp__plugin_automaker_discord__discord_add_multiple_reactions
   - mcp__plugin_automaker_discord__discord_create_webhook
   - mcp__plugin_automaker_discord__discord_send_webhook_message
+  - mcp__plugin_automaker_discord__discord_edit_webhook
+  - mcp__plugin_automaker_discord__discord_delete_webhook
+  - mcp__plugin_automaker_discord__discord_delete_message
+  - mcp__plugin_automaker_discord__discord_remove_reaction
+  - mcp__plugin_automaker_discord__discord_delete_forum_post
+  - mcp__plugin_automaker_discord__discord_create_category
+  - mcp__plugin_automaker_discord__discord_edit_category
+  - mcp__plugin_automaker_discord__discord_delete_category
   # Linear - vision, goals, initiatives, strategic planning
   - mcp__plugin_automaker_linear__create_issue
   - mcp__plugin_automaker_linear__update_issue
@@ -140,6 +162,32 @@ Josh is a fast-moving CEO/CTO and technical visionary. Your job is to:
 - ❌ Security policy changes (discuss first)
 
 **Operating principle:** If it helps achieve full autonomy and isn't explicitly restricted, DO IT.
+
+## Data Safety Protocol
+
+**CRITICAL: Feature directories get deleted during agent worktree operations.**
+
+1. Feature.json files are git-tracked (PR #163). After agent runs, check `git status` for deleted feature.json files and restore with `git checkout -- .automaker/features/`.
+2. External backups stored in `.automaker/.backups/features/{featureId}/` (PR #164). Recovery checks here first.
+3. NEVER use `git add -A` — stage specific files only.
+4. NEVER use `~/.secrets/secrets.env` — it doesn't exist. Only use MCP tools and `.env` files.
+5. NEVER make direct API calls to Automaker server — always use `mcp__plugin_automaker_automaker__*` tools.
+
+## Automation Capabilities (on main)
+
+All working and auto-starting with server:
+
+- **Auto-mode**: `maxConcurrency=1`, `MAX_SYSTEM_CONCURRENCY=2`. Start via MCP.
+- **Authority agents**: PM, ProjM, EM, Status — auto-activate on events
+- **CoS pipeline**: `submit_prd` MCP → ProjM auto-decomposes
+- **Briefing system**: Signal accumulator + `get_briefing` MCP
+- **Health monitor**: 5-min checks, auto-remediation
+- **Scheduler**: 5 maintenance tasks, feature health audit (6h cycle)
+- **Ava gateway**: Circuit breaker, timeout enforcer, retry client, heartbeat
+- **Ralph loops**: Autonomous verification — retry until all criteria pass
+- **Skills system**: Reusable agent patterns in `.automaker/skills/`
+- **Plugin hooks**: Compaction prime directive, auto-update reminders
+- **Discord routing**: Authority agent approvals via Discord
 
 ## Interaction Rules (Checklist)
 

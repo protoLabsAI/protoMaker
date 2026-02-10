@@ -2,7 +2,7 @@
   "category": "Uncategorized",
   "description": "Move AtomicWriter .bak files to `.automaker/.backups/features/{featureId}/` instead of storing them next to the original feature.json. Currently, if the feature directory is recursively deleted, backups go with it.\n\nChanges needed:\n- Update AtomicWriter in libs/utils/src/atomic-writer.ts to support configurable backup directory\n- Update FeatureLoader to pass backup directory when writing features\n- Ensure .backups/ directory is created on startup\n- Update readJsonWithRecovery to check external backup location\n\nAcceptance criteria:\n- .bak files stored in separate directory tree\n- Recovery still works from external backup location\n- Deleting a feature directory doesn't destroy its backups",
   "title": "External backup location for feature .bak files",
-  "status": "in_progress",
+  "status": "review",
   "complexity": "medium",
   "priority": 1,
   "id": "feature-1770755419295-5folpk1yz",
@@ -13,6 +13,5 @@
       "timestamp": "2026-02-10T20:30:19.295Z",
       "source": "initial"
     }
-  ],
-  "updatedAt": "2026-02-10T20:33:51.751Z"
+  ]
 }
