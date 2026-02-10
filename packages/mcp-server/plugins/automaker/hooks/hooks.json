@@ -1,0 +1,14 @@
+{
+  "PostToolUse": [
+    {
+      "matcher": "mcp__plugin_automaker_automaker__create_feature",
+      "hooks": [
+        {
+          "type": "command",
+          "timeout": 600,
+          "command": "bash ${AUTOMAKER_ROOT}/packages/mcp-server/plugins/automaker/hooks/start-agent-on-create.sh"
+        }
+      ]
+    }
+  ]
+}

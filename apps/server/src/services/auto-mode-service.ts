@@ -1018,23 +1018,22 @@ export class AutoModeService {
     projectPath: string,
     branchName: string | null
   ): Promise<number> {
-    // Get the actual primary branch name for the project
-    const primaryBranch = await getCurrentBranch(projectPath);
-
     let count = 0;
     for (const [, feature] of this.runningFeatures) {
-      // Filter by project path AND branchName to get accurate worktree-specific count
-      const featureBranch = feature.branchName ?? null;
+      if (feature.projectPath !== projectPath) continue;
+
       if (branchName === null) {
-        // Main worktree: match features with branchName === null OR branchName matching primary branch
-        const isPrimaryBranch =
-          featureBranch === null || (primaryBranch && featureBranch === primaryBranch);
-        if (feature.projectPath === projectPath && isPrimaryBranch) {
-          count++;
-        }
+        // Main worktree auto-loop: count ALL running features for this project.
+        // Features start with branchName null but get assigned feature-specific branches
+        // (e.g., feature/concurrency-auto-mode-lane) when their worktree is created.
+        // The old logic only matched null/primary-branch, missing all features that had
+        // migrated to their own worktrees - causing the count to return 0 when 9+ agents
+        // were actually running, which broke concurrency enforcement.
+        count++;
       } else {
         // Feature worktree: exact match
-        if (feature.projectPath === projectPath && featureBranch === branchName) {
+        const featureBranch = feature.branchName ?? null;
+        if (featureBranch === branchName) {
           count++;
         }
       }
@@ -3315,9 +3314,17 @@ Format your response as a structured markdown document.`;
     const runningFeatures: string[] = [];
 
     for (const [featureId, feature] of this.runningFeatures) {
-      // Filter by project path AND branchName to get worktree-specific features
-      if (feature.projectPath === projectPath && feature.branchName === branchName) {
+      if (feature.projectPath !== projectPath) continue;
+
+      if (branchName === null) {
+        // Main worktree: include ALL project features (they migrate to their own branches
+        // once worktrees are created, so exact branch matching would miss them)
         runningFeatures.push(featureId);
+      } else {
+        // Feature worktree: exact match
+        if (feature.branchName === branchName) {
+          runningFeatures.push(featureId);
+        }
       }
     }
 
