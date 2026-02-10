@@ -30,7 +30,6 @@ log_section() {
 
 # Parse arguments
 PROJECT_PATH="${1:-}"
-AUTOMAKER_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 if [ -z "$PROJECT_PATH" ]; then
   log_error "Project path is required"
@@ -82,11 +81,8 @@ if [ -f "$PROJECT_PATH/pnpm-lock.yaml" ]; then
 elif [ -f "$PROJECT_PATH/yarn.lock" ]; then
   PKG_MANAGER="yarn"
   log_success "Detected package manager: yarn"
-elif [ -f "$PROJECT_PATH/bun.lockb" ]; then
-  PKG_MANAGER="bun"
-  log_success "Detected package manager: bun"
 else
-  log_success "Detected package manager: npm"
+  log_success "Detected package manager: npm (bun not yet supported in workflows)"
 fi
 
 # Detect available scripts
@@ -95,8 +91,15 @@ HAS_TEST=false
 HAS_LINT=false
 HAS_FORMAT=false
 
+# Check if jq is installed
+if ! command -v jq &> /dev/null; then
+  log_error "jq is not installed (required for package.json parsing)"
+  log_info "Install from: https://stedolan.github.io/jq/ or your package manager"
+  exit 1
+fi
+
 if [ -f "$PROJECT_PATH/package.json" ]; then
-  SCRIPTS=$(cat "$PROJECT_PATH/package.json" | jq -r '.scripts | keys[]' 2>/dev/null || echo "")
+  SCRIPTS=$(jq -r '.scripts | keys[]' "$PROJECT_PATH/package.json" 2>/dev/null || echo "")
 
   if echo "$SCRIPTS" | grep -q "^build$"; then
     HAS_BUILD=true
@@ -249,8 +252,16 @@ EOF
   fi
 
   # Create format-check.yml
-  if [ "$CREATE_FORMAT" = true ] && [ "$HAS_LINT" = true ]; then
-    log_info "Creating format-check.yml (lint workflow)..."
+  if [ "$CREATE_FORMAT" = true ] && { [ "$HAS_LINT" = true ] || [ "$HAS_FORMAT" = true ]; }; then
+    # Determine which command to run
+    FORMAT_CMD="lint"
+    if [ "$HAS_LINT" = true ]; then
+      FORMAT_CMD="lint"
+    elif [ "$HAS_FORMAT" = true ]; then
+      FORMAT_CMD="format:check"
+    fi
+
+    log_info "Creating format-check.yml (format/lint workflow)..."
     cat > "$GITHUB_WORKFLOWS_DIR/format-check.yml" <<EOF
 name: Format Check
 
@@ -280,7 +291,7 @@ jobs:
         run: $PKG_MANAGER install
 
       - name: Check formatting
-        run: $PKG_MANAGER run lint
+        run: $PKG_MANAGER run $FORMAT_CMD
 EOF
     log_success "Created format-check.yml"
   fi
@@ -344,6 +355,15 @@ else
       echo ""
 
       if [[ $REPLY =~ ^[Yy]$ ]]; then
+        # Build required status checks array based on created workflows
+        REQUIRED_CHECKS=""
+        [ "$CREATE_BUILD" = true ] && [ "$HAS_BUILD" = true ] && REQUIRED_CHECKS="${REQUIRED_CHECKS}{\"context\": \"build\"},"
+        [ "$CREATE_TEST" = true ] && [ "$HAS_TEST" = true ] && REQUIRED_CHECKS="${REQUIRED_CHECKS}{\"context\": \"test\"},"
+        { [ "$CREATE_FORMAT" = true ] && { [ "$HAS_LINT" = true ] || [ "$HAS_FORMAT" = true ]; }; } && REQUIRED_CHECKS="${REQUIRED_CHECKS}{\"context\": \"format\"},"
+        [ "$CREATE_AUDIT" = true ] && REQUIRED_CHECKS="${REQUIRED_CHECKS}{\"context\": \"audit\"},"
+        # Remove trailing comma
+        REQUIRED_CHECKS="${REQUIRED_CHECKS%,}"
+
         # Create ruleset JSON
         RULESET_FILE="/tmp/protolab-ruleset-$$.json"
         cat > "$RULESET_FILE" <<EOF
@@ -375,10 +395,7 @@ else
         "strict_required_status_checks_policy": true,
         "do_not_enforce_on_create": true,
         "required_status_checks": [
-          {"context": "build"},
-          {"context": "test"},
-          {"context": "format"},
-          {"context": "audit"}
+          $REQUIRED_CHECKS
         ]
       }
     },
@@ -434,7 +451,7 @@ if [[ "$SETUP_ACTION" != "1" ]]; then
   echo -e "${BLUE}Workflows created:${NC}"
   [ "$CREATE_BUILD" = true ] && [ "$HAS_BUILD" = true ] && echo "  ✓ pr-check.yml (build)"
   [ "$CREATE_TEST" = true ] && [ "$HAS_TEST" = true ] && echo "  ✓ test.yml (tests)"
-  [ "$CREATE_FORMAT" = true ] && [ "$HAS_LINT" = true ] && echo "  ✓ format-check.yml (lint)"
+  { [ "$CREATE_FORMAT" = true ] && { [ "$HAS_LINT" = true ] || [ "$HAS_FORMAT" = true ]; }; } && echo "  ✓ format-check.yml (format/lint)"
   [ "$CREATE_AUDIT" = true ] && echo "  ✓ security-audit.yml (audit)"
 else
   echo -e "${BLUE}No changes made${NC}"

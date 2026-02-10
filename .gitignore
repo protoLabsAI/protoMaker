@@ -12,11 +12,10 @@ out/
 .turbo/
 
 # Automaker - runtime artifacts and user-generated content
-.automaker/images/
 .automaker/**/agent-output.md
 .automaker/**/images/
-.automaker/authority/
-.automaker/analysis.json
+.automaker/**/authority/
+.automaker/**/analysis.json
 
 # But track project plans, context files, and settings
 !.automaker/projects/

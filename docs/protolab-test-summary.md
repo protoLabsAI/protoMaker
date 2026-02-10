@@ -10,7 +10,7 @@
 
 ### 1. ProtoLab Setup (Completed)
 
-**Ran**: `npm run setup-lab -- /Users/kj/dev/protolabs-ai`
+**Ran**: `npm run setup-lab -- ~/dev/protolabs-ai`
 
 **Created:**
 
@@ -242,14 +242,14 @@ npm run setup-lab -- /path/to/project
 
 ```bash
 # Run CI setup directly
-npm run setup-ci -- /Users/kj/dev/protolabs-ai
+npm run setup-ci -- ~/dev/protolabs-ai
 
 # Follow prompts:
 # - No existing CI → Create all workflows
 # - Configure branch protection? → Yes
 
 # Then commit and push
-cd /Users/kj/dev/protolabs-ai
+cd ~/dev/protolabs-ai
 git add .github/
 git commit -m "ci: add GitHub Actions workflows and branch protection"
 git push
@@ -307,7 +307,7 @@ npm run setup-ci -- /path/to/project-with-travis
 **On protolabs-ai:**
 
 ```bash
-npm run setup-lab -- /Users/kj/dev/protolabs-ai
+npm run setup-lab -- ~/dev/protolabs-ai
 # Choose "y" when prompted for CI/CD setup
 ```
 
@@ -468,9 +468,9 @@ npm run setup-ci -- /path/to/project
 
 ### ProtoLab Project
 
-- ✅ `/Users/kj/dev/protolabs-ai/.beads/` (created)
-- ✅ `/Users/kj/dev/protolabs-ai/.automaker/` (created)
-- ✅ `/Users/kj/dev/protolabs-ai/protolab.config` (created)
+- ✅ `~/dev/protolabs-ai/.beads/` (created)
+- ✅ `~/dev/protolabs-ai/.automaker/` (created)
+- ✅ `~/dev/protolabs-ai/protolab.config` (created)
 - ✅ 3 features on board (created)
 
 ---

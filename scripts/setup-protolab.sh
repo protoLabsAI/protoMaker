@@ -102,9 +102,17 @@ if ! command -v claude &> /dev/null; then
 fi
 log_success "claude CLI is installed"
 
+# Check if jq is installed
+if ! command -v jq &> /dev/null; then
+  log_error "jq is not installed"
+  log_info "Install from: https://stedolan.github.io/jq/ or your package manager"
+  exit 1
+fi
+log_success "jq is installed"
+
 # Check if Automaker server is running
 log_info "Checking if Automaker server is running..."
-if ! curl -s http://localhost:3008/api/health &> /dev/null; then
+if ! curl -f -S -s --connect-timeout 2 --max-time 5 http://localhost:3008/api/health &> /dev/null; then
   log_warning "Automaker server is not running"
   log_info "Start it with: npm run dev"
   read -p "Continue anyway? (y/n) " -n 1 -r
@@ -156,14 +164,14 @@ if [ -d "$PROJECT_PATH/.automaker" ]; then
   else
     log_info "Calling setup_lab MCP tool..."
     # Use the MCP tool via API
-    RESPONSE=$(curl -s -X POST http://localhost:3008/api/setup/project \
+    RESPONSE=$(curl -f -S -s --connect-timeout 2 --max-time 15 -X POST http://localhost:3008/api/setup/project \
       -H "Content-Type: application/json" \
       -H "X-API-Key: ${AUTOMAKER_API_KEY:-dev-key}" \
       -d "{\"projectPath\": \"$PROJECT_PATH\"}")
 
     if echo "$RESPONSE" | jq -e '.success' &> /dev/null; then
       log_success "Automaker reinitialized"
-      echo "$RESPONSE" | jq -r '.filesCreated[]' | while read file; do
+      echo "$RESPONSE" | jq -r '.filesCreated[]' | while read -r file; do
         log_success "  $file"
       done
     else
@@ -176,14 +184,14 @@ else
   log_info "Calling setup_lab MCP tool..."
 
   # Use the MCP tool via API
-  RESPONSE=$(curl -s -X POST http://localhost:3008/api/setup/project \
+  RESPONSE=$(curl -f -S -s --connect-timeout 2 --max-time 15 -X POST http://localhost:3008/api/setup/project \
     -H "Content-Type: application/json" \
     -H "X-API-Key: ${AUTOMAKER_API_KEY:-dev-key}" \
     -d "{\"projectPath\": \"$PROJECT_PATH\"}")
 
   if echo "$RESPONSE" | jq -e '.success' &> /dev/null; then
     log_success "Automaker initialized"
-    echo "$RESPONSE" | jq -r '.filesCreated[]' | while read file; do
+    echo "$RESPONSE" | jq -r '.filesCreated[]' | while read -r file; do
       log_success "  $file"
     done
 

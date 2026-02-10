@@ -52,7 +52,7 @@ npm run setup-lab -- /path/to/project
 
 ## Test Run: protolabs-ai
 
-**Project**: `/Users/kj/dev/protolabs-ai`
+**Project**: `~/dev/protolabs-ai`
 **Result**: ✅ Success
 
 ### What Was Created
