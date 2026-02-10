@@ -20,6 +20,7 @@ import { updateWorktreePRInfo } from '../lib/worktree-metadata.js';
 import { validatePRState } from '@automaker/types';
 import { graphiteService } from './graphite-service.js';
 import { githubMergeService } from './github-merge-service.js';
+import { codeRabbitResolverService } from './coderabbit-resolver-service.js';
 
 const execAsync = promisify(exec);
 const logger = createLogger('GitWorkflow');
@@ -382,6 +383,35 @@ export class GitWorkflowService {
             logger.info(
               `Auto-merging PR #${result.prNumber} with strategy: ${mergeStrategy}, waitForCI: ${waitForCI}`
             );
+
+            // Step 5a: Resolve bot review threads before merge attempt
+            // This runs after CI passes (checked by mergePR) but before the actual merge
+            // Only resolve threads if waitForCI is true (we're checking CI status)
+            if (waitForCI) {
+              try {
+                logger.info(`Resolving bot review threads for PR #${result.prNumber}`);
+                const resolveResult = await codeRabbitResolverService.resolveThreads(
+                  workDir,
+                  result.prNumber
+                );
+
+                if (resolveResult.success && resolveResult.resolvedCount > 0) {
+                  logger.info(
+                    `Resolved ${resolveResult.resolvedCount} bot review thread(s) for PR #${result.prNumber}`
+                  );
+                } else if (!resolveResult.success) {
+                  logger.warn(
+                    `Failed to resolve bot review threads: ${resolveResult.error || 'Unknown error'}`
+                  );
+                  // Don't fail the merge if thread resolution fails - it's best effort
+                }
+              } catch (resolveError) {
+                const resolveErrorMsg =
+                  resolveError instanceof Error ? resolveError.message : String(resolveError);
+                logger.warn(`Error resolving bot review threads: ${resolveErrorMsg}`);
+                // Continue with merge attempt even if thread resolution fails
+              }
+            }
 
             const mergeResult = await githubMergeService.mergePR(
               workDir,
