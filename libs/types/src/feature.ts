@@ -186,6 +186,11 @@ export interface Feature {
    * Summary of the most recent PR review feedback.
    */
   lastReviewFeedback?: string;
+  /**
+   * Beads task ID (if linked to a Beads issue)
+   * Links feature to Ava's operational task manager.
+   */
+  beadsTaskId?: string;
   [key: string]: unknown; // Keep catch-all for extensibility
 }
 

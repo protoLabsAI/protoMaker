@@ -194,7 +194,12 @@ export type EventType =
   // World state monitor events
   | 'world-state:reconciliation'
   // Chief of Staff (CoS) events
-  | 'cos:prd-submitted';
+  | 'cos:prd-submitted'
+  // Beads task management events
+  | 'beads:task-created'
+  | 'beads:task-updated'
+  | 'beads:task-closed'
+  | 'beads:dependency-added';
 
 export type EventCallback = (type: EventType, payload: unknown) => void;
 
