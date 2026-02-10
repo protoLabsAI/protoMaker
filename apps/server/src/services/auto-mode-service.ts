@@ -4039,10 +4039,15 @@ Format your response as a structured markdown document.`;
             continue;
           }
 
-          allFeatures.push(feature);
-
           // Normalize status to handle legacy values
           const canonicalStatus = normalizeFeatureStatus(feature.status);
+
+          // Push normalized copy to allFeatures so dependency resolution sees canonical statuses
+          const normalizedFeature = {
+            ...feature,
+            status: canonicalStatus,
+          };
+          allFeatures.push(normalizedFeature);
 
           // Track pending features separately, filtered by worktree/branch
           // Note: Features in 'review', 'done', or 'verified' are NOT eligible

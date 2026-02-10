@@ -130,8 +130,11 @@ export function useBoardColumnFeatures({
         matchesWorktree = featureBranch === effectiveBranch;
       }
 
-      // Normalize status to handle legacy values, fallback to backlog for unknown
-      const status = normalizeFeatureStatus(f.status || 'backlog');
+      // Normalize status to handle legacy values, but preserve pipeline_* statuses
+      const rawStatus = f.status || 'backlog';
+      const status = rawStatus.startsWith('pipeline_')
+        ? rawStatus
+        : normalizeFeatureStatus(rawStatus);
 
       // IMPORTANT:
       // Historically, we forced "running" features into in_progress so they never disappeared

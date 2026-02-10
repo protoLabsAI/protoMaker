@@ -375,11 +375,11 @@ describe('auto-mode-service.ts (integration)', () => {
       expect(processedCount).toBeGreaterThan(0);
 
       // Verify full delegation flow completed successfully
-      const processedFeatures = [feature1, feature2].filter(
-        (f) => f?.status === 'done' || f?.status === 'in_progress'
-      );
+      // Only check agent-output.md for features with terminal status 'done'
+      // to avoid flakes from in_progress features that haven't completed yet
+      const completedFeatures = [feature1, feature2].filter((f) => f?.status === 'done');
 
-      for (const feature of processedFeatures) {
+      for (const feature of completedFeatures) {
         // Verify output artifact exists
         const outputPath = path.join(
           testRepo.path,
