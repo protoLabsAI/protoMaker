@@ -460,7 +460,9 @@ void schedulerService
       events,
       autoModeService,
       featureHealthService,
-      avaGatewayService
+      avaGatewayService,
+      featureLoader,
+      settingsService
     );
   })
   .catch((err) => {
