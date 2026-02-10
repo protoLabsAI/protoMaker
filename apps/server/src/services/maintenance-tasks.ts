@@ -18,6 +18,10 @@ import type { EventEmitter } from '../lib/events.js';
 import type { AutoModeService } from './auto-mode-service.js';
 import type { FeatureHealthService } from './feature-health-service.js';
 import type { AvaGatewayService } from './ava-gateway-service.js';
+import type { FeatureLoader } from './feature-loader.js';
+import type { SettingsService } from './settings-service.js';
+import { mergeEligibilityService } from './merge-eligibility-service.js';
+import { githubMergeService } from './github-merge-service.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -34,7 +38,9 @@ export async function registerMaintenanceTasks(
   events: EventEmitter,
   autoModeService: AutoModeService,
   featureHealthService?: FeatureHealthService,
-  avaGatewayService?: AvaGatewayService
+  avaGatewayService?: AvaGatewayService,
+  featureLoader?: FeatureLoader,
+  settingsService?: SettingsService
 ): Promise<void> {
   logger.info('Registering maintenance tasks...');
 
@@ -97,6 +103,30 @@ export async function registerMaintenanceTasks(
       }
     );
     taskCount++;
+  }
+
+  // Every 5 minutes: Auto-merge eligible PRs
+  if (featureLoader && settingsService) {
+    await scheduler.registerTask(
+      'maintenance:auto-merge-prs',
+      'Auto-Merge Eligible PRs',
+      '*/5 * * * *', // Every 5 minutes
+      async () => {
+        const projectPaths = getKnownProjectPaths(autoModeService);
+        await autoMergeEligiblePRs(
+          featureLoader,
+          settingsService,
+          events,
+          projectPaths
+        );
+      }
+    );
+    taskCount++;
+    logger.info('Registered auto-merge PRs maintenance task');
+  } else {
+    logger.warn(
+      `Skipping auto-merge PRs task registration - featureLoader: ${!!featureLoader}, settingsService: ${!!settingsService}`
+    );
   }
 
   logger.info(`Registered ${taskCount} maintenance tasks`);
@@ -404,6 +434,134 @@ async function runBoardHealthAudit(
     }
   } catch (error) {
     logger.error('Board health reconciliation failed:', error);
+    throw error;
+  }
+}
+
+/**
+ * Auto-merge eligible PRs for features in 'review' status.
+ * Polls features every 5 minutes, checks merge eligibility, and auto-merges if all checks pass.
+ */
+async function autoMergeEligiblePRs(
+  featureLoader: FeatureLoader,
+  settingsService: SettingsService,
+  events: EventEmitter,
+  projectPaths: string[]
+): Promise<void> {
+  logger.info('Checking for eligible PRs to auto-merge...');
+
+  if (projectPaths.length === 0) {
+    logger.info('No known project paths, skipping auto-merge check');
+    return;
+  }
+
+  try {
+    let totalChecked = 0;
+    let totalMerged = 0;
+    let totalSkipped = 0;
+    const mergedPRs: string[] = [];
+    const skippedPRs: Array<{ pr: string; reason: string }> = [];
+
+    for (const projectPath of projectPaths) {
+      // Get project settings to check if auto-merge is enabled
+      const projectSettings = await settingsService.getProjectSettings(projectPath);
+      const autoMergeSettings = projectSettings.webhookSettings?.autoMerge;
+
+      if (!autoMergeSettings?.enabled) {
+        logger.debug(`Auto-merge disabled for project: ${projectPath}`);
+        continue;
+      }
+
+      // Get all features in 'review' status
+      const allFeatures = await featureLoader.getAll(projectPath);
+      const reviewFeatures = allFeatures.filter((f) => f.status === 'review');
+
+      logger.debug(
+        `Found ${reviewFeatures.length} features in review status for ${projectPath}`
+      );
+
+      for (const feature of reviewFeatures) {
+        if (!feature.prNumber) {
+          logger.debug(`Feature ${feature.id} in review status but has no PR number, skipping`);
+          continue;
+        }
+
+        totalChecked++;
+
+        // Check merge eligibility using MergeEligibilityService
+        const eligibilityResult = await mergeEligibilityService.evaluatePR(
+          projectPath,
+          feature.prNumber,
+          autoMergeSettings
+        );
+
+        logger.info(
+          `PR #${feature.prNumber} (${feature.title}) eligibility: ${eligibilityResult.eligible ? 'ELIGIBLE' : 'NOT ELIGIBLE'} - ${eligibilityResult.summary}`
+        );
+
+        if (!eligibilityResult.eligible) {
+          totalSkipped++;
+          skippedPRs.push({
+            pr: `#${feature.prNumber} (${feature.title})`,
+            reason: eligibilityResult.summary,
+          });
+          continue;
+        }
+
+        // PR is eligible - attempt to merge
+        const mergeStrategy = autoMergeSettings.mergeMethod || 'squash';
+        logger.info(
+          `Attempting to auto-merge PR #${feature.prNumber} (${feature.title}) using ${mergeStrategy} strategy`
+        );
+
+        const mergeResult = await githubMergeService.mergePR(
+          projectPath,
+          feature.prNumber,
+          mergeStrategy,
+          false // Don't wait for CI - we already checked eligibility
+        );
+
+        if (mergeResult.success) {
+          totalMerged++;
+          mergedPRs.push(`#${feature.prNumber} (${feature.title})`);
+          logger.info(
+            `Successfully auto-merged PR #${feature.prNumber} (${feature.title})${mergeResult.mergeCommitSha ? ` - commit: ${mergeResult.mergeCommitSha}` : ''}`
+          );
+        } else {
+          totalSkipped++;
+          skippedPRs.push({
+            pr: `#${feature.prNumber} (${feature.title})`,
+            reason: mergeResult.error || 'Unknown error',
+          });
+          logger.warn(
+            `Failed to auto-merge PR #${feature.prNumber} (${feature.title}): ${mergeResult.error}`
+          );
+        }
+      }
+    }
+
+    // Emit completion event with results
+    if (totalChecked > 0) {
+      const message =
+        totalMerged > 0
+          ? `Auto-merged ${totalMerged}/${totalChecked} eligible PR(s)${totalSkipped > 0 ? `, skipped ${totalSkipped}` : ''}`
+          : `Checked ${totalChecked} PR(s) in review status, none were eligible for auto-merge`;
+
+      logger.info(message);
+      events.emit('scheduler:task_completed' as Parameters<typeof events.emit>[0], {
+        taskId: 'maintenance:auto-merge-prs',
+        message,
+        totalChecked,
+        totalMerged,
+        totalSkipped,
+        mergedPRs: mergedPRs.length > 0 ? mergedPRs : undefined,
+        skippedPRs: skippedPRs.length > 0 ? skippedPRs : undefined,
+      });
+    } else {
+      logger.info('No PRs in review status to check');
+    }
+  } catch (error) {
+    logger.error('Auto-merge PR check failed:', error);
     throw error;
   }
 }
