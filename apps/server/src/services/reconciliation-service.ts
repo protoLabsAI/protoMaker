@@ -356,7 +356,7 @@ export class ReconciliationService {
     await this.featureLoader.update(drift.projectPath, drift.featureId, updates);
 
     // Emit event for UI notification
-    this.events.emit('feature:auto-retry', {
+    this.events.emit('feature:retry', {
       projectPath: drift.projectPath,
       featureId: drift.featureId,
       retryCount: newRetryCount,
