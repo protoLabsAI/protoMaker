@@ -3108,7 +3108,7 @@ Address the follow-up instructions above. Review the previous work and make the 
         : `feat: Feature ${featureId}`;
 
       // Stage and commit
-      await execAsync('git add -A', { cwd: workDir });
+      await execAsync("git add -A -- ':!.automaker/'", { cwd: workDir });
       await execAsync(`git commit -m "${commitMessage.replace(/"/g, '\\"')}"`, {
         cwd: workDir,
       });
