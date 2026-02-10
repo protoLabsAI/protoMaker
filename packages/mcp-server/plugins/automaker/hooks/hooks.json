@@ -1,0 +1,27 @@
+{
+  "description": "Automaker operational hooks - compaction context restoration and plugin auto-update reminders",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/compaction-prime-directive.sh\""
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/auto-update-plugin.sh\""
+          }
+        ]
+      }
+    ]
+  }
+}
