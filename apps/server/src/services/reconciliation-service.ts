@@ -19,6 +19,7 @@ export type DriftType =
   | 'feature-no-agent'
   | 'feature-stuck'
   | 'orphaned-worktree'
+  | 'blocked-transient-retry' // Blocked feature with transient error ready for retry
   // GitHub
   | 'pr-merged-status-stale'
   | 'pr-ci-failure'
@@ -88,6 +89,10 @@ export class ReconciliationService {
 
         case 'orphaned-worktree':
           action = await this.reconcileOrphanedWorktree(drift);
+          break;
+
+        case 'blocked-transient-retry':
+          action = await this.reconcileBlockedTransientRetry(drift);
           break;
 
         // GitHub drifts
@@ -297,5 +302,70 @@ export class ReconciliationService {
     });
 
     return 'feature-marked-done';
+  }
+
+  /**
+   * Blocked feature with transient error - auto-retry after cooldown
+   */
+  private async reconcileBlockedTransientRetry(drift: Drift): Promise<string> {
+    if (!drift.featureId) {
+      throw new Error('featureId required for blocked-transient-retry');
+    }
+
+    const feature = await this.featureLoader.get(drift.projectPath, drift.featureId);
+    if (!feature) {
+      return 'feature-not-found';
+    }
+
+    // Get retry count (default 0)
+    const currentRetryCount = feature.retryCount || 0;
+
+    // Check if we've exceeded max retries (3)
+    const MAX_RETRIES = 3;
+    if (currentRetryCount >= MAX_RETRIES) {
+      logger.warn(
+        `Feature ${drift.featureId} has reached max retries (${MAX_RETRIES}), keeping as blocked`
+      );
+      return 'max-retries-exceeded';
+    }
+
+    // Increment retry count
+    const newRetryCount = currentRetryCount + 1;
+
+    // Check if we need to escalate to opus after 2nd failure
+    const shouldEscalateToOpus = newRetryCount >= 2;
+
+    logger.info(
+      `Auto-retrying feature ${drift.featureId} (attempt ${newRetryCount}/${MAX_RETRIES})${shouldEscalateToOpus ? ' with opus escalation' : ''}`
+    );
+
+    // Update feature: reset to backlog, increment retry count, escalate complexity if needed
+    const updates: Record<string, unknown> = {
+      status: 'backlog',
+      retryCount: newRetryCount,
+      // Clear error so it doesn't look permanently failed
+      error: undefined,
+    };
+
+    // Auto-escalate to opus after 2nd failure by setting complexity to architectural
+    if (shouldEscalateToOpus && feature.complexity !== 'architectural') {
+      updates.complexity = 'architectural';
+      logger.info(`Escalating feature ${drift.featureId} to opus model (architectural complexity)`);
+    }
+
+    await this.featureLoader.update(drift.projectPath, drift.featureId, updates);
+
+    // Emit event for UI notification
+    this.events.emit('feature:retry', {
+      projectPath: drift.projectPath,
+      featureId: drift.featureId,
+      retryCount: newRetryCount,
+      escalatedToOpus: shouldEscalateToOpus,
+      timestamp: Date.now(),
+    });
+
+    return shouldEscalateToOpus
+      ? `auto-retry-scheduled-with-escalation-${newRetryCount}`
+      : `auto-retry-scheduled-${newRetryCount}`;
   }
 }

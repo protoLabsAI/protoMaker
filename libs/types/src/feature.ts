@@ -102,6 +102,17 @@ export interface Feature {
    */
   failureCount?: number;
   /**
+   * Number of auto-retry attempts for this feature.
+   * Incremented each time ReconciliationService auto-resets a blocked feature.
+   * Max 3 retries per feature.
+   */
+  retryCount?: number;
+  /**
+   * Timestamp of the last failure (ISO 8601).
+   * Used to implement cooldown period before auto-retry.
+   */
+  lastFailureTime?: string;
+  /**
    * Total cost in USD for all agent executions on this feature.
    * Populated from SDK's total_cost_usd in the result message.
    */

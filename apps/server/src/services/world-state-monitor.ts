@@ -145,6 +145,37 @@ export class WorldStateMonitor {
   }
 
   /**
+   * Check if an error message indicates a transient failure
+   * Transient errors include: network issues, timeouts, API quota/rate limits
+   */
+  private isTransientError(errorMessage: string): boolean {
+    const lowerMessage = errorMessage.toLowerCase();
+
+    // Network/timeout errors
+    const isNetworkError =
+      lowerMessage.includes('timeout') ||
+      lowerMessage.includes('timed out') ||
+      lowerMessage.includes('network') ||
+      lowerMessage.includes('econnreset') ||
+      lowerMessage.includes('enotfound') ||
+      lowerMessage.includes('connection refused') ||
+      lowerMessage.includes('socket hang up') ||
+      lowerMessage.includes('fetch failed');
+
+    // API rate limit / quota errors
+    const isApiError =
+      lowerMessage.includes('rate_limit') ||
+      lowerMessage.includes('rate limit') ||
+      lowerMessage.includes('429') ||
+      lowerMessage.includes('quota exceeded') ||
+      lowerMessage.includes('quota_exceeded') ||
+      lowerMessage.includes('overloaded') ||
+      lowerMessage.includes('capacity');
+
+    return isNetworkError || isApiError;
+  }
+
+  /**
    * Main tick function - runs periodically to check world state
    */
   private async tick(): Promise<void> {
@@ -304,6 +335,61 @@ export class WorldStateMonitor {
               },
             });
           }
+        }
+      }
+
+      // Check 4: Blocked features with transient errors ready for retry
+      // Max 3 retries per feature, 5-minute cooldown between attempts
+      const COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
+      const MAX_RETRIES = 3;
+      const now = Date.now();
+
+      for (const feature of features) {
+        if (feature.status !== 'blocked') {
+          continue;
+        }
+
+        // Check retry count (default 0)
+        const retryCount = feature.retryCount || 0;
+        if (retryCount >= MAX_RETRIES) {
+          // Max retries exceeded, don't auto-retry
+          continue;
+        }
+
+        // Check if error is transient
+        const errorMessage = feature.error || '';
+        const isTransient = this.isTransientError(errorMessage);
+        if (!isTransient) {
+          // Non-transient error, needs manual intervention
+          continue;
+        }
+
+        // Check cooldown period
+        const lastFailureTime = feature.lastFailureTime
+          ? new Date(feature.lastFailureTime).getTime()
+          : 0;
+        const cooldownElapsed = now - lastFailureTime;
+
+        if (cooldownElapsed >= COOLDOWN_MS) {
+          logger.info(
+            `Drift detected: Blocked feature ${feature.id} with transient error ready for retry (attempt ${retryCount + 1}/${MAX_RETRIES})`
+          );
+          drifts.push({
+            type: 'blocked-transient-retry',
+            severity: 'medium',
+            projectPath,
+            featureId: feature.id,
+            details: {
+              title: feature.title,
+              error: errorMessage,
+              retryCount,
+              cooldownElapsed,
+            },
+          });
+        } else {
+          logger.debug(
+            `Feature ${feature.id} still in cooldown (${Math.round((COOLDOWN_MS - cooldownElapsed) / 1000)}s remaining)`
+          );
         }
       }
 
