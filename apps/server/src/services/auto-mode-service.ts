@@ -768,7 +768,8 @@ export class AutoModeService {
     // Use worktree-scoped key
     const worktreeKey = getWorktreeAutoLoopKey(projectPath, branchName);
 
-    // Check if this project/worktree already has an active autoloop
+    // ATOMIC CHECK-AND-SET: Check if this project/worktree already has an active autoloop
+    // and immediately reserve the slot to prevent race conditions
     const existingState = this.autoLoopsByProject.get(worktreeKey);
     if (existingState?.isRunning) {
       const worktreeDesc = branchName ? `worktree ${branchName}` : 'main worktree';
@@ -798,37 +799,46 @@ export class AutoModeService {
       startingFeatures: new Set(),
     };
 
+    // CRITICAL: Set state immediately BEFORE any async operations to prevent TOCTOU race
+    // This ensures that concurrent calls will see isRunning=true and fail the check above
     this.autoLoopsByProject.set(worktreeKey, projectState);
 
     const worktreeDesc = branchName ? `worktree ${branchName}` : 'main worktree';
-    logger.info(
-      `Starting auto loop for ${worktreeDesc} in project: ${projectPath} with maxConcurrency: ${resolvedMaxConcurrency}`
-    );
 
-    this.emitAutoModeEvent('auto_mode_started', {
-      message: `Auto mode started with max ${resolvedMaxConcurrency} concurrent features`,
-      projectPath,
-      branchName,
-      maxConcurrency: resolvedMaxConcurrency,
-    });
+    try {
+      logger.info(
+        `Starting auto loop for ${worktreeDesc} in project: ${projectPath} with maxConcurrency: ${resolvedMaxConcurrency}`
+      );
 
-    // Save execution state for recovery after restart
-    await this.saveExecutionStateForProject(projectPath, branchName, resolvedMaxConcurrency);
-
-    // Run the loop in the background
-    this.runAutoLoopForProject(worktreeKey).catch((error) => {
-      const worktreeDescErr = branchName ? `worktree ${branchName}` : 'main worktree';
-      logger.error(`Loop error for ${worktreeDescErr} in ${projectPath}:`, error);
-      const errorInfo = classifyError(error);
-      this.emitAutoModeEvent('auto_mode_error', {
-        error: errorInfo.message,
-        errorType: errorInfo.type,
+      this.emitAutoModeEvent('auto_mode_started', {
+        message: `Auto mode started with max ${resolvedMaxConcurrency} concurrent features`,
         projectPath,
         branchName,
+        maxConcurrency: resolvedMaxConcurrency,
       });
-    });
 
-    return resolvedMaxConcurrency;
+      // Save execution state for recovery after restart
+      await this.saveExecutionStateForProject(projectPath, branchName, resolvedMaxConcurrency);
+
+      // Run the loop in the background
+      this.runAutoLoopForProject(worktreeKey).catch((error) => {
+        const worktreeDescErr = branchName ? `worktree ${branchName}` : 'main worktree';
+        logger.error(`Loop error for ${worktreeDescErr} in ${projectPath}:`, error);
+        const errorInfo = classifyError(error);
+        this.emitAutoModeEvent('auto_mode_error', {
+          error: errorInfo.message,
+          errorType: errorInfo.type,
+          projectPath,
+          branchName,
+        });
+      });
+
+      return resolvedMaxConcurrency;
+    } catch (error) {
+      // If initialization fails, clean up the state we just set
+      this.autoLoopsByProject.delete(worktreeKey);
+      throw error;
+    }
   }
 
   /**
