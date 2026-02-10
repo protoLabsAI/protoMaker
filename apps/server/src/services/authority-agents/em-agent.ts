@@ -19,6 +19,9 @@ import type { EventEmitter } from '../../lib/events.js';
 import type { AuthorityService } from '../authority-service.js';
 import type { FeatureLoader } from '../feature-loader.js';
 import type { AutoModeService } from '../auto-mode-service.js';
+import { githubMergeService } from '../github-merge-service.js';
+import type { AuditService } from '../audit-service.js';
+import type { SettingsService } from '../settings-service.js';
 import {
   createAgentState,
   initializeAgent,
@@ -49,6 +52,8 @@ export class EMAuthorityAgent {
   private readonly authorityService: AuthorityService;
   private readonly featureLoader: FeatureLoader;
   private readonly autoModeService: AutoModeService;
+  private readonly auditService: AuditService;
+  private readonly settingsService: SettingsService;
 
   /** Agent state (agents, initialization, processing tracking, poll timers, reassigning) */
   private readonly state: AgentState<EMCustomState>;
@@ -57,12 +62,16 @@ export class EMAuthorityAgent {
     events: EventEmitter,
     authorityService: AuthorityService,
     featureLoader: FeatureLoader,
-    autoModeService: AutoModeService
+    autoModeService: AutoModeService,
+    auditService: AuditService,
+    settingsService: SettingsService
   ) {
     this.events = events;
     this.authorityService = authorityService;
     this.featureLoader = featureLoader;
     this.autoModeService = autoModeService;
+    this.auditService = auditService;
+    this.settingsService = settingsService;
     this.state = createAgentState<EMCustomState>({
       pollTimers: new Map(),
       reassigning: new Set(),
@@ -234,24 +243,129 @@ export class EMAuthorityAgent {
   }
 
   /**
-   * Handle PR approval: ensure feature transitions to done or triggers merge.
+   * Handle PR approval: merge the PR if CI passes and auto-merge is enabled.
    */
   private async handlePRApproved(data: Record<string, unknown>): Promise<void> {
     const featureId = data.featureId as string;
     const projectPath = data.projectPath as string;
     const prNumber = data.prNumber as number;
 
-    if (!featureId || !projectPath) return;
+    if (!featureId || !projectPath || !prNumber) return;
 
     try {
+      const agent = this.state.getAgent(projectPath);
+      if (!agent) return;
+
       const feature = await this.featureLoader.get(projectPath, featureId);
       if (!feature) return;
 
       logger.info(`PR #${prNumber} approved for "${feature.title}"`);
 
-      // Feature will transition to 'done' when the PR merge webhook fires.
-      // We just log it here for visibility.
-      // If auto-merge is enabled, the git workflow service handles merging.
+      // Get git workflow settings to check if auto-merge is enabled
+      const settings = await this.settingsService.getGlobalSettings();
+      const gitWorkflow = settings.gitWorkflow || {};
+      const autoMergePR = gitWorkflow.autoMergePR ?? false;
+
+      if (!autoMergePR) {
+        logger.info(
+          `Auto-merge is disabled for PR #${prNumber}. Feature will transition to 'done' when manually merged.`
+        );
+        return;
+      }
+
+      // Attempt to merge the PR
+      const mergeStrategy = gitWorkflow.prMergeStrategy || 'squash';
+      const waitForCI = gitWorkflow.waitForCI ?? true;
+
+      logger.info(
+        `Attempting to merge PR #${prNumber} with strategy: ${mergeStrategy}, waitForCI: ${waitForCI}`
+      );
+
+      const mergeResult = await githubMergeService.mergePR(
+        projectPath,
+        prNumber,
+        mergeStrategy,
+        waitForCI
+      );
+
+      if (mergeResult.success) {
+        logger.info(
+          `Successfully merged PR #${prNumber} for feature "${feature.title}" (commit: ${mergeResult.mergeCommitSha || 'unknown'})`
+        );
+
+        // Log audit event for merge decision
+        await this.auditService.logDecision(projectPath, {
+          agentId: agent.id,
+          role: 'engineering-manager',
+          decisionType: 'pr_merge',
+          action: 'merge_pr',
+          target: featureId,
+          verdict: 'approved',
+          reason: `PR #${prNumber} approved and CI passed. Auto-merged using ${mergeStrategy} strategy.`,
+          tags: ['pr', 'merge', 'auto-merge'],
+          metadata: {
+            prNumber,
+            mergeStrategy,
+            mergeCommitSha: mergeResult.mergeCommitSha,
+            featureTitle: feature.title,
+          },
+        });
+
+        // Update feature status to done
+        await this.featureLoader.update(projectPath, featureId, {
+          status: 'done',
+        });
+
+        // Emit event for UI notification
+        this.events.emit('feature:pr-merged', {
+          featureId,
+          title: feature.title,
+          prNumber,
+          projectPath,
+          mergedBy: 'em-agent',
+          mergeCommitSha: mergeResult.mergeCommitSha,
+        });
+
+        logger.info(`Feature "${feature.title}" transitioned to 'done' after PR merge`);
+      } else {
+        // Merge failed - log the reason
+        const reason = mergeResult.error || 'Unknown merge failure';
+        logger.warn(`Failed to merge PR #${prNumber} for "${feature.title}": ${reason}`);
+
+        // Log audit event for failed merge attempt
+        await this.auditService.logDecision(projectPath, {
+          agentId: agent.id,
+          role: 'engineering-manager',
+          decisionType: 'pr_merge',
+          action: 'merge_pr',
+          target: featureId,
+          verdict: 'denied',
+          reason: `Failed to auto-merge PR #${prNumber}: ${reason}`,
+          tags: ['pr', 'merge', 'auto-merge', 'failed'],
+          metadata: {
+            prNumber,
+            error: reason,
+            checksPending: mergeResult.checksPending,
+            checksFailed: mergeResult.checksFailed,
+            failedChecks: mergeResult.failedChecks,
+            featureTitle: feature.title,
+          },
+        });
+
+        // If CI is still pending or failed, keep feature in review state
+        if (mergeResult.checksPending) {
+          logger.info(`PR #${prNumber} has pending CI checks. Will retry merge after checks complete.`);
+        } else if (mergeResult.checksFailed) {
+          logger.warn(
+            `PR #${prNumber} has failed CI checks: ${mergeResult.failedChecks?.join(', ')}. Manual intervention required.`
+          );
+          // Mark feature as blocked if CI failed
+          await this.featureLoader.update(projectPath, featureId, {
+            workItemState: 'blocked',
+            error: `PR #${prNumber} CI checks failed: ${mergeResult.failedChecks?.join(', ')}`,
+          });
+        }
+      }
     } catch (error) {
       logger.error(`Failed to handle PR approval for ${featureId}:`, error);
     }

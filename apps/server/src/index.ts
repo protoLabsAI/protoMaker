@@ -380,7 +380,14 @@ auditService.initialize(authorityService);
 const pmAgent = new PMAuthorityAgent(events, authorityService, featureLoader, auditService);
 const projectService = new ProjectService(featureLoader);
 const projmAgent = new ProjMAuthorityAgent(events, authorityService, featureLoader, projectService);
-const emAgent = new EMAuthorityAgent(events, authorityService, featureLoader, autoModeService);
+const emAgent = new EMAuthorityAgent(
+  events,
+  authorityService,
+  featureLoader,
+  autoModeService,
+  auditService,
+  settingsService
+);
 const statusMonitor = new StatusMonitorAgent(events, authorityService, featureLoader);
 
 // Initialize Discord approval routing (listens for authority:awaiting-approval events)
