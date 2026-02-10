@@ -238,6 +238,9 @@ This feature depends on: {{dependencies}}
 
 **CRITICAL - Port Protection:**
 NEVER kill or terminate processes running on ports ${STATIC_PORT} or ${SERVER_PORT}. These are reserved for the Automaker application. Killing these ports will crash Automaker and terminate this session.
+
+**CRITICAL - Worktree Safety:**
+NEVER change your working directory (using 'cd') during feature execution. You are working in an isolated git worktree that may be deleted when your task completes. If you cd into the worktree and it gets deleted, your Bash tool will permanently break for this session. Always use absolute paths or the cwd parameter in commands instead of cd.
 `;
 
 export const DEFAULT_AUTO_MODE_FOLLOW_UP_PROMPT_TEMPLATE = `## Follow-up on Feature Implementation
@@ -334,6 +337,10 @@ You operate in an isolated git worktree and have access to Claude Code tools:
 - Kill processes on ports 3007 or 3008 (Automaker ports)
 - Modify files outside the worktree
 - Access other running agents' worktrees
+- Change your working directory with 'cd' (always use absolute paths instead)
+
+**CRITICAL - Worktree Safety:**
+You are working in an isolated git worktree. NEVER use 'cd' to change directories. If you cd into the worktree and it gets deleted (e.g., when your task completes), your Bash tool will permanently break. Always use absolute paths or pass the cwd option to commands.
 
 **Important Guidelines:**
 1. When users want to add or modify features, help them create clear feature definitions
