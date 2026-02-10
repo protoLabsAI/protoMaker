@@ -6,7 +6,7 @@
  * multiple autonomous agents and services.
  */
 
-import { createLogger } from '@automaker/utils';
+import { createLogger, classifyError } from '@automaker/utils';
 import type { EventEmitter } from '../lib/events.js';
 import type { EventType } from '@automaker/types';
 
@@ -64,6 +64,11 @@ export class AvaGatewayService {
    * Start the gateway service
    */
   async start(): Promise<void> {
+    if (!this.config.enabled) {
+      logger.info('Gateway disabled; not starting');
+      return;
+    }
+
     if (this.status === 'running') {
       logger.warn('Gateway is already running');
       return;
@@ -95,7 +100,7 @@ export class AvaGatewayService {
       });
     } catch (error) {
       this.status = 'error';
-      logger.error('Failed to start AvaGateway service:', error);
+      logger.error('Failed to start AvaGateway service:', classifyError(error));
 
       // Emit error event
       this.emitEvent('gateway:error', {
@@ -140,7 +145,7 @@ export class AvaGatewayService {
       this.emitEvent('gateway:stopped', {});
     } catch (error) {
       this.status = 'error';
-      logger.error('Failed to stop AvaGateway service:', error);
+      logger.error('Failed to stop AvaGateway service:', classifyError(error));
 
       // Emit error event
       this.emitEvent('gateway:error', {
@@ -198,7 +203,10 @@ export class AvaGatewayService {
    * Get gateway configuration
    */
   getConfig(): Readonly<Required<AvaGatewayConfig>> {
-    return { ...this.config };
+    return {
+      ...this.config,
+      coordinationRules: structuredClone(this.config.coordinationRules),
+    };
   }
 
   /**
@@ -224,12 +232,10 @@ export class AvaGatewayService {
   private async initialize(): Promise<void> {
     logger.debug('Initializing gateway components...');
 
-    // TODO: Initialize coordination logic, agent registrations, etc.
-    // This is where we'll add integration with:
-    // - AutoModeService coordination
-    // - GOAPLoopService orchestration
-    // - Authority service integration
-    // - Cross-project operation management
+    // Initialize integration points
+    await this.initializeAutoModeCoordination();
+    await this.initializeAuthorityIntegration();
+    await this.initializeCrossProjectManagement();
 
     logger.debug('Gateway components initialized');
   }
@@ -240,9 +246,60 @@ export class AvaGatewayService {
   private async cleanup(): Promise<void> {
     logger.debug('Cleaning up gateway components...');
 
-    // TODO: Cleanup active operations, release resources, etc.
+    // Cleanup integration points
+    await this.cleanupAutoModeCoordination();
+    await this.cleanupAuthorityIntegration();
+    await this.cleanupCrossProjectManagement();
 
     logger.debug('Gateway components cleaned up');
+  }
+
+  /**
+   * Initialize auto-mode coordination
+   * TODO: Add coordination with AutoModeService for concurrent agent management
+   */
+  private async initializeAutoModeCoordination(): Promise<void> {
+    logger.debug('Auto-mode coordination stub (not yet implemented)');
+  }
+
+  /**
+   * Initialize authority service integration
+   * TODO: Add integration with Authority agents (PM, ProjM, EM, Status)
+   */
+  private async initializeAuthorityIntegration(): Promise<void> {
+    logger.debug('Authority integration stub (not yet implemented)');
+  }
+
+  /**
+   * Initialize cross-project operation management
+   * TODO: Add cross-project monitoring and coordination
+   */
+  private async initializeCrossProjectManagement(): Promise<void> {
+    logger.debug('Cross-project management stub (not yet implemented)');
+  }
+
+  /**
+   * Cleanup auto-mode coordination
+   * TODO: Release auto-mode coordination resources
+   */
+  private async cleanupAutoModeCoordination(): Promise<void> {
+    logger.debug('Auto-mode coordination cleanup stub (not yet implemented)');
+  }
+
+  /**
+   * Cleanup authority service integration
+   * TODO: Release authority service resources
+   */
+  private async cleanupAuthorityIntegration(): Promise<void> {
+    logger.debug('Authority integration cleanup stub (not yet implemented)');
+  }
+
+  /**
+   * Cleanup cross-project operation management
+   * TODO: Release cross-project management resources
+   */
+  private async cleanupCrossProjectManagement(): Promise<void> {
+    logger.debug('Cross-project management cleanup stub (not yet implemented)');
   }
 
   /**
@@ -262,8 +319,8 @@ let avaGatewayServiceInstance: AvaGatewayService | null = null;
 /**
  * Get the singleton AvaGateway service instance
  *
- * @param events - Event emitter (required on first call)
- * @param config - Configuration options
+ * @param events - Event emitter (required on first call, optional for updates)
+ * @param config - Configuration options (optional, can update existing instance)
  * @returns Singleton instance
  */
 export function getAvaGatewayService(
@@ -272,6 +329,14 @@ export function getAvaGatewayService(
 ): AvaGatewayService {
   if (!avaGatewayServiceInstance) {
     avaGatewayServiceInstance = new AvaGatewayService(events, config);
+  } else {
+    // Allow updating events/config on existing instance
+    if (events) {
+      avaGatewayServiceInstance.setEventEmitter(events);
+    }
+    if (config) {
+      avaGatewayServiceInstance.updateConfig(config);
+    }
   }
   return avaGatewayServiceInstance;
 }
@@ -279,11 +344,11 @@ export function getAvaGatewayService(
 /**
  * Reset the singleton instance (for testing)
  */
-export function resetAvaGatewayService(): void {
+export async function resetAvaGatewayService(): Promise<void> {
   if (avaGatewayServiceInstance) {
     // Stop if running
     if (avaGatewayServiceInstance.isRunning()) {
-      void avaGatewayServiceInstance.stop();
+      await avaGatewayServiceInstance.stop();
     }
     avaGatewayServiceInstance = null;
   }
