@@ -194,7 +194,11 @@ export type EventType =
   // World state monitor events
   | 'world-state:reconciliation'
   // Chief of Staff (CoS) events
-  | 'cos:prd-submitted';
+  | 'cos:prd-submitted'
+  // Decision tracking events (via AuditService)
+  | 'decision:logged'
+  | 'decision:superseded'
+  | 'decision:reverted';
 
 export type EventCallback = (type: EventType, payload: unknown) => void;
 

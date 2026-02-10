@@ -53,6 +53,13 @@ interface AuditEntry {
   resolution?: string;
   resolvedBy?: string;
   metadata?: Record<string, unknown>;
+  // Decision tracking fields
+  isDecision?: boolean;
+  decisionType?: string;
+  tags?: string[];
+  relatedDecisions?: string[];
+  supersededBy?: string;
+  decisionId?: string; // Unique ID for this decision (for relatedDecisions/supersededBy references)
 }
 
 /** In-memory trust scores per agent (persisted via authority service) */
@@ -151,6 +158,107 @@ export class AuditService {
   }
 
   /**
+   * Query decision entries for a project.
+   * Filters for entries with isDecision === true and supports additional decision-specific filters.
+   */
+  async queryDecisions(
+    projectPath: string,
+    options?: {
+      agentId?: string;
+      decisionType?: string;
+      tags?: string[]; // Match entries containing any of these tags
+      since?: string;
+      limit?: number;
+    }
+  ): Promise<AuditEntry[]> {
+    const entries = await this.readAuditLog(projectPath);
+    let filtered = entries.filter((e) => e.isDecision === true);
+
+    if (options?.agentId) {
+      filtered = filtered.filter((e) => e.agentId === options.agentId);
+    }
+
+    if (options?.decisionType) {
+      filtered = filtered.filter((e) => e.decisionType === options.decisionType);
+    }
+
+    if (options?.tags && options.tags.length > 0) {
+      filtered = filtered.filter((e) => {
+        if (!e.tags || e.tags.length === 0) return false;
+        return options.tags!.some((tag) => e.tags!.includes(tag));
+      });
+    }
+
+    if (options?.since) {
+      const sinceDate = new Date(options.since).getTime();
+      filtered = filtered.filter((e) => new Date(e.timestamp).getTime() >= sinceDate);
+    }
+
+    if (options?.limit) {
+      filtered = filtered.slice(-options.limit);
+    }
+
+    return filtered;
+  }
+
+  /**
+   * Get decision chain (lineage) for a specific decision.
+   * Returns the decision with the given ID plus all related and superseding decisions.
+   */
+  async getDecisionChain(projectPath: string, decisionId: string): Promise<AuditEntry[]> {
+    const entries = await this.readAuditLog(projectPath);
+    const decisions = entries.filter((e) => e.isDecision === true);
+
+    const chain: AuditEntry[] = [];
+    const visited = new Set<string>();
+
+    // Find the root decision
+    const rootDecision = decisions.find((d) => d.decisionId === decisionId);
+    if (!rootDecision) {
+      return [];
+    }
+
+    // BFS to collect all related decisions
+    const queue = [rootDecision];
+
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      const currentId = current.decisionId || '';
+
+      if (!currentId || visited.has(currentId)) continue;
+      visited.add(currentId);
+      chain.push(current);
+
+      // Add related decisions
+      if (current.relatedDecisions) {
+        for (const relatedId of current.relatedDecisions) {
+          const related = decisions.find((d) => d.decisionId === relatedId);
+          if (related && !visited.has(relatedId)) {
+            queue.push(related);
+          }
+        }
+      }
+
+      // Add superseding decision
+      if (current.supersededBy) {
+        const superseding = decisions.find((d) => d.decisionId === current.supersededBy);
+        if (superseding && !visited.has(current.supersededBy)) {
+          queue.push(superseding);
+        }
+      }
+
+      // Add decisions superseded by this one
+      const superseded = decisions.filter(
+        (d) => d.supersededBy === currentId && !visited.has(d.decisionId || '')
+      );
+      queue.push(...superseded);
+    }
+
+    // Sort by timestamp
+    return chain.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+  }
+
+  /**
    * Get trust score for an agent.
    */
   getTrustScore(projectPath: string, agentId: string): TrustScore {
@@ -163,6 +271,88 @@ export class AuditService {
         escalationCount: 0,
       }
     );
+  }
+
+  /**
+   * Log a decision with structured metadata.
+   * Decisions are special audit entries marked with isDecision=true.
+   *
+   * @param projectPath - The project path
+   * @param decision - Decision details
+   * @returns The generated decision ID
+   */
+  async logDecision(
+    projectPath: string,
+    decision: {
+      agentId: string;
+      role: string;
+      decisionType: string;
+      action: string;
+      target?: string;
+      verdict: string;
+      reason: string;
+      tags?: string[];
+      relatedDecisions?: string[];
+      supersedes?: string; // Decision ID this supersedes
+      metadata?: Record<string, unknown>;
+    }
+  ): Promise<string> {
+    const decisionId = `dec_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+
+    const entry: AuditEntry = {
+      timestamp: new Date().toISOString(),
+      projectPath,
+      eventType: 'decision_logged',
+      agentId: decision.agentId,
+      role: decision.role,
+      action: decision.action,
+      target: decision.target,
+      verdict: decision.verdict,
+      reason: decision.reason,
+      isDecision: true,
+      decisionId,
+      decisionType: decision.decisionType,
+      tags: decision.tags || [],
+      relatedDecisions: decision.relatedDecisions || [],
+      metadata: decision.metadata,
+    };
+
+    // If this decision supersedes another, mark the old one
+    if (decision.supersedes) {
+      entry.relatedDecisions = [...(entry.relatedDecisions || []), decision.supersedes];
+
+      // Update the superseded decision
+      const entries = await this.readAuditLog(projectPath);
+      const supersededEntry = entries.find(
+        (e) => e.isDecision && e.decisionId === decision.supersedes
+      );
+
+      if (supersededEntry) {
+        supersededEntry.supersededBy = decisionId;
+        // Re-write the entire log to update the superseded entry
+        // This is safe because JSONL is append-only; we're just updating one entry
+        await this.rewriteAuditLog(projectPath, entries);
+
+        this.events.emit('decision:superseded', {
+          projectPath,
+          decisionId: decision.supersedes,
+          supersededBy: decisionId,
+        });
+      }
+    }
+
+    await this.appendEntry(projectPath, entry);
+
+    this.events.emit('decision:logged', {
+      projectPath,
+      decisionId,
+      agentId: decision.agentId,
+      decisionType: decision.decisionType,
+      verdict: decision.verdict,
+      reason: decision.reason,
+    });
+
+    return decisionId;
   }
 
   // --------------------------------------------------------------------------
@@ -427,6 +617,20 @@ export class AuditService {
     } catch (error) {
       logger.error('Failed to read audit log:', error);
       return [];
+    }
+  }
+
+  /**
+   * Rewrite the entire audit log.
+   * Used when updating existing entries (e.g., marking a decision as superseded).
+   */
+  private async rewriteAuditLog(projectPath: string, entries: AuditEntry[]): Promise<void> {
+    try {
+      const filePath = this.getAuditFilePath(projectPath);
+      const lines = entries.map((entry) => JSON.stringify(entry)).join('\n') + '\n';
+      await secureFs.writeFile(filePath, lines);
+    } catch (error) {
+      logger.error('Failed to rewrite audit log:', error);
     }
   }
 }

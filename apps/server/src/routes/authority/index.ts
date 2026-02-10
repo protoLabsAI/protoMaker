@@ -408,5 +408,67 @@ export function createAuthorityRoutes(
     }
   });
 
+  /**
+   * POST /api/authority/decisions
+   * Query decision history for a project.
+   * Body: { projectPath, agentId?, decisionType?, tags?, since?, limit? }
+   */
+  router.post('/decisions', async (req: Request, res: Response) => {
+    try {
+      const { projectPath, agentId, decisionType, tags, since, limit } = req.body;
+
+      if (!projectPath) {
+        res.status(400).json({ error: 'projectPath is required' });
+        return;
+      }
+
+      if (!auditService) {
+        res.status(503).json({ error: 'Audit service not available' });
+        return;
+      }
+
+      const decisions = await auditService.queryDecisions(projectPath, {
+        agentId,
+        decisionType,
+        tags,
+        since,
+        limit,
+      });
+
+      res.json({ decisions, count: decisions.length });
+    } catch (error) {
+      logger.error('Failed to query decisions:', error);
+      res.status(500).json({ error: 'Failed to query decisions' });
+    }
+  });
+
+  /**
+   * POST /api/authority/decision-chain
+   * Get decision lineage (chain of related decisions).
+   * Body: { projectPath, decisionId }
+   */
+  router.post('/decision-chain', async (req: Request, res: Response) => {
+    try {
+      const { projectPath, decisionId } = req.body;
+
+      if (!projectPath || !decisionId) {
+        res.status(400).json({ error: 'projectPath and decisionId are required' });
+        return;
+      }
+
+      if (!auditService) {
+        res.status(503).json({ error: 'Audit service not available' });
+        return;
+      }
+
+      const chain = await auditService.getDecisionChain(projectPath, decisionId);
+
+      res.json({ chain, count: chain.length });
+    } catch (error) {
+      logger.error('Failed to get decision chain:', error);
+      res.status(500).json({ error: 'Failed to get decision chain' });
+    }
+  });
+
   return router;
 }

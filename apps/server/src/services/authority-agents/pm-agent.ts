@@ -28,6 +28,7 @@ import { resolveModelString } from '@automaker/model-resolver';
 import type { EventEmitter } from '../../lib/events.js';
 import type { AuthorityService } from '../authority-service.js';
 import type { FeatureLoader } from '../feature-loader.js';
+import type { AuditService } from '../audit-service.js';
 import { simpleQuery, streamingQuery } from '../../providers/simple-query-service.js';
 import {
   createAgentState,
@@ -76,6 +77,7 @@ export class PMAuthorityAgent {
   private readonly events: EventEmitter;
   private readonly authorityService: AuthorityService;
   private readonly featureLoader: FeatureLoader;
+  private readonly auditService: AuditService | null;
 
   /** Agent state (agents, initialization, processing tracking) */
   private readonly state: AgentState;
@@ -86,11 +88,13 @@ export class PMAuthorityAgent {
   constructor(
     events: EventEmitter,
     authorityService: AuthorityService,
-    featureLoader: FeatureLoader
+    featureLoader: FeatureLoader,
+    auditService?: AuditService
   ) {
     this.events = events;
     this.authorityService = authorityService;
     this.featureLoader = featureLoader;
+    this.auditService = auditService || null;
     this.state = createAgentState();
 
     // Register the global idea listener once
@@ -807,6 +811,26 @@ Provide your review as JSON.`;
       return;
     }
 
+    // Log the approval decision with structured metadata
+    if (this.auditService) {
+      await this.auditService.logDecision(projectPath, {
+        agentId: agent.id,
+        role: 'product-manager',
+        decisionType: 'prd_approval',
+        action: 'approve_prd',
+        target: featureId,
+        verdict: 'approved',
+        reason: review.feedback,
+        tags: ['prd', 'approval', review.complexity],
+        metadata: {
+          featureTitle: feature.title,
+          complexity: review.complexity,
+          milestones: review.milestones,
+          hasPRD: !!review.prd,
+        },
+      });
+    }
+
     // Transition to approved
     await this.featureLoader.update(projectPath, featureId, {
       workItemState: 'approved',
@@ -847,6 +871,26 @@ Provide your review as JSON.`;
     review: PMReviewResult,
     agent: AuthorityAgent
   ): Promise<void> {
+    // Log the changes-requested decision
+    if (this.auditService) {
+      await this.auditService.logDecision(projectPath, {
+        agentId: agent.id,
+        role: 'product-manager',
+        decisionType: 'prd_changes_requested',
+        action: 'request_prd_changes',
+        target: featureId,
+        verdict: 'changes_requested',
+        reason: review.feedback,
+        tags: ['prd', 'changes_requested', review.complexity],
+        metadata: {
+          featureTitle: feature.title,
+          complexity: review.complexity,
+          suggestedDescription: review.suggestedDescription,
+          milestones: review.milestones,
+        },
+      });
+    }
+
     // Update feature with PM's suggested improvements
     const updates: Partial<Feature> = {
       workItemState: 'pm_changes_requested' as Feature['workItemState'],

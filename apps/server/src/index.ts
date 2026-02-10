@@ -344,8 +344,12 @@ const authorityService = new AuthorityService(events);
 // Wire authority service into auto-mode for policy-gated feature execution
 autoModeService.setAuthorityService(authorityService);
 
-// Initialize Authority Agents (AI executives)
-const pmAgent = new PMAuthorityAgent(events, authorityService, featureLoader);
+// Initialize Audit Trail (logs all authority events, tracks trust evolution)
+const auditService = new AuditService(events);
+auditService.initialize(authorityService);
+
+// Initialize Authority Agents (AI executives) - pass auditService for decision tracking
+const pmAgent = new PMAuthorityAgent(events, authorityService, featureLoader, auditService);
 const projectService = new ProjectService(featureLoader);
 const projmAgent = new ProjMAuthorityAgent(events, authorityService, featureLoader, projectService);
 const emAgent = new EMAuthorityAgent(events, authorityService, featureLoader, autoModeService);
@@ -354,10 +358,6 @@ const statusMonitor = new StatusMonitorAgent(events, authorityService, featureLo
 // Initialize Discord approval routing (listens for authority:awaiting-approval events)
 const discordApprovalRouter = new DiscordApprovalRouter(events);
 discordApprovalRouter.initialize();
-
-// Initialize Audit Trail (logs all authority events, tracks trust evolution)
-const auditService = new AuditService(events);
-auditService.initialize(authorityService);
 
 // Initialize PR Feedback Service (monitors open PRs for review comments)
 const prFeedbackService = new PRFeedbackService(events, featureLoader);
