@@ -1,5 +1,5 @@
 {
-  "description": "Automaker operational hooks - compaction context restoration and plugin auto-update reminders",
+  "description": "Automaker operational hooks - compaction restoration, plugin auto-update",
   "hooks": {
     "SessionStart": [
       {

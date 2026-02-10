@@ -1,0 +1,17 @@
+{
+  "category": "Uncategorized",
+  "description": "CRITICAL: `git add -A` at git-workflow-service.ts line 511 stages ALL changes in a worktree, including `.automaker/features/**/feature.json` files. Since feature.json is tracked by git, worktree commits capture stale feature state from the branch point. When merged to main, this overwrites current feature data.\n\n**Root cause confirmed by deep dive agent (a16d1b3):**\n- Worktree branches show ALL 7 features as `deleted file mode 100644` in diff vs main\n- If merged as-is, these branches would DELETE all features from main\n- Server writes feature updates to MAIN project path, not worktrees\n- `git add -A` blindly stages everything including `.automaker/` state\n\n**Fix:**\nReplace `git add -A` with `git add -A -- ':!.automaker/'` (or equivalent pathspec) in git-workflow-service.ts line 511. This excludes `.automaker/` from agent commits entirely.\n\n**File:** apps/server/src/services/git-workflow-service.ts (line 511)\n\n**Acceptance criteria:**\n- `git add` in worktrees excludes `.automaker/` directory\n- Agent code changes still stage correctly\n- Feature.json files in worktrees are never committed by agents\n- Existing tests pass",
+  "title": "Fix git add -A to exclude .automaker/ in worktree commits",
+  "status": "done",
+  "complexity": "small",
+  "priority": 1,
+  "id": "feature-1770757521770-yigutk2f9",
+  "branchName": "feature/fix-git-add-a-to-exclude-automaker-in",
+  "descriptionHistory": [
+    {
+      "description": "CRITICAL: `git add -A` at git-workflow-service.ts line 511 stages ALL changes in a worktree, including `.automaker/features/**/feature.json` files. Since feature.json is tracked by git, worktree commits capture stale feature state from the branch point. When merged to main, this overwrites current feature data.\n\n**Root cause confirmed by deep dive agent (a16d1b3):**\n- Worktree branches show ALL 7 features as `deleted file mode 100644` in diff vs main\n- If merged as-is, these branches would DELETE all features from main\n- Server writes feature updates to MAIN project path, not worktrees\n- `git add -A` blindly stages everything including `.automaker/` state\n\n**Fix:**\nReplace `git add -A` with `git add -A -- ':!.automaker/'` (or equivalent pathspec) in git-workflow-service.ts line 511. This excludes `.automaker/` from agent commits entirely.\n\n**File:** apps/server/src/services/git-workflow-service.ts (line 511)\n\n**Acceptance criteria:**\n- `git add` in worktrees excludes `.automaker/` directory\n- Agent code changes still stage correctly\n- Feature.json files in worktrees are never committed by agents\n- Existing tests pass",
+      "timestamp": "2026-02-10T21:05:21.770Z",
+      "source": "initial"
+    }
+  ]
+}

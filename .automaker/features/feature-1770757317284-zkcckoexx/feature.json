@@ -1,0 +1,22 @@
+{
+  "category": "Close the PR-to-Merge Gap",
+  "description": "**Milestone:** Close the PR-to-Merge Gap\n\nAdd a maintenance task that polls features in 'review' status every 5 minutes. Check merge eligibility via MergeEligibilityService. If eligible (CI passing, no unresolved human threads), auto-merge via githubMergeService. Fallback for webhook-based approach.\n\n**Files to Modify:**\n- apps/server/src/services/maintenance-tasks.ts\n- apps/server/src/services/scheduler-service.ts\n\n**Acceptance Criteria:**\n- [ ] Polls every 5 minutes\n- [ ] Checks merge eligibility\n- [ ] Auto-merges eligible PRs\n- [ ] Logs all decisions\n\n**Complexity:** medium",
+  "title": "Scheduled PR merge poller",
+  "status": "review",
+  "isEpic": false,
+  "epicId": "feature-1770757317280-ngej52nq6",
+  "branchName": "feature/close-the-pr-to-scheduled-pr-merge",
+  "id": "feature-1770757317284-zkcckoexx",
+  "descriptionHistory": [
+    {
+      "description": "**Milestone:** Close the PR-to-Merge Gap\n\nAdd a maintenance task that polls features in 'review' status every 5 minutes. Check merge eligibility via MergeEligibilityService. If eligible (CI passing, no unresolved human threads), auto-merge via githubMergeService. Fallback for webhook-based approach.\n\n**Files to Modify:**\n- apps/server/src/services/maintenance-tasks.ts\n- apps/server/src/services/scheduler-service.ts\n\n**Acceptance Criteria:**\n- [ ] Polls every 5 minutes\n- [ ] Checks merge eligibility\n- [ ] Auto-merges eligible PRs\n- [ ] Logs all decisions\n\n**Complexity:** medium",
+      "timestamp": "2026-02-10T21:01:57.285Z",
+      "source": "initial"
+    }
+  ],
+  "complexity": "medium",
+  "priority": 2,
+  "updatedAt": "2026-02-10T22:03:26.156Z",
+  "costUsd": 3.3102442499999993,
+  "lastSessionId": "03b83185-ad63-4535-b362-eb3066d9947f"
+}

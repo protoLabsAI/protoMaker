@@ -1,0 +1,20 @@
+{
+  "category": "Close the PR-to-Merge Gap",
+  "description": "**Milestone:** Close the PR-to-Merge Gap\n\nEnable autoMergePR by default in git workflow settings. Add MCP tool to toggle per-feature. Change DEFAULT_GIT_WORKFLOW_SETTINGS in libs/types/src/settings.ts to set autoMergePR: true. Add update_feature_git_settings MCP tool for per-feature control.\n\n**Files to Modify:**\n- libs/types/src/settings.ts\n- packages/mcp-server/src/tools/feature-tools.ts\n\n**Acceptance Criteria:**\n- [ ] autoMergePR defaults to true\n- [ ] Per-feature override works via MCP\n\n**Complexity:** small",
+  "title": "Global auto-merge setting toggle",
+  "status": "backlog",
+  "isEpic": false,
+  "epicId": "feature-1770757317280-ngej52nq6",
+  "branchName": "feature/close-the-pr-to-global-auto-merge",
+  "id": "feature-1770757317282-ueutnetf4",
+  "descriptionHistory": [
+    {
+      "description": "**Milestone:** Close the PR-to-Merge Gap\n\nEnable autoMergePR by default in git workflow settings. Add MCP tool to toggle per-feature. Change DEFAULT_GIT_WORKFLOW_SETTINGS in libs/types/src/settings.ts to set autoMergePR: true. Add update_feature_git_settings MCP tool for per-feature control.\n\n**Files to Modify:**\n- libs/types/src/settings.ts\n- packages/mcp-server/src/tools/feature-tools.ts\n\n**Acceptance Criteria:**\n- [ ] autoMergePR defaults to true\n- [ ] Per-feature override works via MCP\n\n**Complexity:** small",
+      "timestamp": "2026-02-10T21:01:57.282Z",
+      "source": "initial"
+    }
+  ],
+  "complexity": "small",
+  "priority": 1,
+  "updatedAt": "2026-02-10T21:23:32.500Z"
+}

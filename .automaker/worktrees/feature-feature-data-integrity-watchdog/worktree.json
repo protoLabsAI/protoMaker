@@ -1,0 +1,11 @@
+{
+  "branch": "feature/feature-data-integrity-watchdog",
+  "createdAt": "2026-02-10T21:49:16.579Z",
+  "pr": {
+    "number": 172,
+    "url": "https://github.com/proto-labs-ai/automaker/pull/172",
+    "title": "Feature data integrity watchdog",
+    "state": "OPEN",
+    "createdAt": "2026-02-10T21:49:16.579Z"
+  }
+}

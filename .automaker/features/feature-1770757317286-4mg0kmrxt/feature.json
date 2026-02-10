@@ -1,0 +1,17 @@
+{
+  "category": "Epic",
+  "description": "# Proactive Maintenance\n\nSelf-healing operations — stale resources auto-cleanup, PRs auto-rebase, worktrees auto-prune.\n\n## Phases\n1. Auto-cleanup stale worktrees and branches\n2. Auto-rebase stale PRs",
+  "title": "[Epic] Proactive Maintenance",
+  "status": "backlog",
+  "isEpic": true,
+  "epicColor": "#EC4899",
+  "branchName": "epic/proactive-maintenance",
+  "id": "feature-1770757317286-4mg0kmrxt",
+  "descriptionHistory": [
+    {
+      "description": "# Proactive Maintenance\n\nSelf-healing operations — stale resources auto-cleanup, PRs auto-rebase, worktrees auto-prune.\n\n## Phases\n1. Auto-cleanup stale worktrees and branches\n2. Auto-rebase stale PRs",
+      "timestamp": "2026-02-10T21:01:57.286Z",
+      "source": "initial"
+    }
+  ]
+}

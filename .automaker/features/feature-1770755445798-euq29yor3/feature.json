@@ -2,7 +2,7 @@
   "category": "Uncategorized",
   "description": "There's an unreferenced pm-agent.refactored.ts file alongside the active pm-agent.ts in apps/server/src/services/authority-agents/. Either promote the refactored version or delete it.\n\nFile: apps/server/src/services/authority-agents/pm-agent.refactored.ts\n\nAcceptance criteria:\n- Dead file removed or promoted\n- No imports reference the file\n- Tests still pass",
   "title": "Clean up dead code: pm-agent.refactored.ts",
-  "status": "backlog",
+  "status": "done",
   "complexity": "small",
   "priority": 4,
   "id": "feature-1770755445798-euq29yor3",

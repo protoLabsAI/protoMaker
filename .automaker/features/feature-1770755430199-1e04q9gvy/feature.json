@@ -2,7 +2,7 @@
   "category": "Uncategorized",
   "description": "HealthMonitorService uses legacy status names that don't match the canonical 6-status system:\n- `remediateStuckFeature()` resets to 'pending' (should be 'backlog')\n- `isFeatureRetryable()` checks for status === 'failed' (should be 'blocked')\n\nFile: apps/server/src/services/health-monitor-service.ts\n\nAcceptance criteria:\n- All status references use canonical names (backlog, in_progress, review, blocked, done, verified)\n- No references to 'pending', 'failed', 'running', 'completed' in health monitor\n- Existing tests pass",
   "title": "Fix HealthMonitor legacy status names",
-  "status": "backlog",
+  "status": "done",
   "complexity": "small",
   "priority": 2,
   "id": "feature-1770755430199-1e04q9gvy",

@@ -1,0 +1,11 @@
+{
+  "branch": "feature/worktree-cwd-safety-guard-cleanup",
+  "createdAt": "2026-02-10T21:56:50.930Z",
+  "pr": {
+    "number": 173,
+    "url": "https://github.com/proto-labs-ai/automaker/pull/173",
+    "title": "Worktree CWD safety: guard cleanup against running agents",
+    "state": "OPEN",
+    "createdAt": "2026-02-10T21:56:50.929Z"
+  }
+}

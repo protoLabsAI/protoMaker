@@ -2,7 +2,7 @@
   "category": "Uncategorized",
   "description": "Add a periodic check (every 5 minutes via maintenance tasks) that counts feature directories and compares to the last known count. If the count drops by more than 50%, emit a CRITICAL alert via the signal accumulator and refuse to start auto-mode.\n\nChanges needed:\n- Add new maintenance task in maintenance-tasks.ts\n- Store last known feature count in memory or data/ directory\n- Emit critical event when threshold breached\n- Auto-mode service checks integrity before starting new features\n- Post alert to Discord #infra channel\n\nAcceptance criteria:\n- Feature count monitored every 5 minutes\n- CRITICAL alert emitted on >50% drop\n- Auto-mode blocked when integrity check fails\n- Manual override available (force-start flag)",
   "title": "Feature data integrity watchdog",
-  "status": "backlog",
+  "status": "review",
   "complexity": "medium",
   "priority": 2,
   "id": "feature-1770755423042-4dj8zpyxo",
@@ -14,8 +14,9 @@
       "source": "initial"
     }
   ],
-  "dependencies": [
-    "feature-1770755413666-mn8hea1vh",
-    "feature-1770755419295-5folpk1yz"
-  ]
+  "updatedAt": "2026-02-10T21:48:42.372Z",
+  "costUsd": 3.1988732500000006,
+  "lastSessionId": "e30579e2-97a9-4117-9cc6-d40b3af02749",
+  "prUrl": "https://github.com/proto-labs-ai/automaker/pull/172",
+  "prNumber": 172
 }

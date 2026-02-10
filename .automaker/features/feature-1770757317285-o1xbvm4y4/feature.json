@@ -1,0 +1,22 @@
+{
+  "category": "Failure Resilience",
+  "description": "**Milestone:** Failure Resilience\n\nExtend ReconciliationService to detect features in 'blocked' status that have transient errors (API quota, network, timeout). Auto-reset to 'backlog' after 5-minute cooldown. Increment retry count and auto-escalate to opus model after 2nd failure. Max 3 retries per feature.\n\n**Files to Modify:**\n- apps/server/src/services/reconciliation-service.ts\n- apps/server/src/services/auto-mode-service.ts\n\n**Acceptance Criteria:**\n- [ ] Transient failures auto-retry\n- [ ] Escalates to opus after 2 failures\n- [ ] Max 3 retries respected\n- [ ] Non-transient errors stay blocked\n\n**Complexity:** medium",
+  "title": "Auto-retry blocked features",
+  "status": "review",
+  "isEpic": false,
+  "epicId": "feature-1770757317285-y055n8f1o",
+  "branchName": "feature/failure-resilience-auto-retry-blocked",
+  "id": "feature-1770757317285-o1xbvm4y4",
+  "descriptionHistory": [
+    {
+      "description": "**Milestone:** Failure Resilience\n\nExtend ReconciliationService to detect features in 'blocked' status that have transient errors (API quota, network, timeout). Auto-reset to 'backlog' after 5-minute cooldown. Increment retry count and auto-escalate to opus model after 2nd failure. Max 3 retries per feature.\n\n**Files to Modify:**\n- apps/server/src/services/reconciliation-service.ts\n- apps/server/src/services/auto-mode-service.ts\n\n**Acceptance Criteria:**\n- [ ] Transient failures auto-retry\n- [ ] Escalates to opus after 2 failures\n- [ ] Max 3 retries respected\n- [ ] Non-transient errors stay blocked\n\n**Complexity:** medium",
+      "timestamp": "2026-02-10T21:01:57.285Z",
+      "source": "initial"
+    }
+  ],
+  "complexity": "medium",
+  "priority": 2,
+  "updatedAt": "2026-02-10T22:09:00.109Z",
+  "costUsd": 2.51618525,
+  "lastSessionId": "4bad9590-c06f-4312-bea5-7eb834ea960c"
+}

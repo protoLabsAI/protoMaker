@@ -1,0 +1,190 @@
+{
+  "slug": "full-automation-pipeline",
+  "title": "Full Automation Pipeline",
+  "goal": "Close the PR-to-merge gap and achieve 90%+ autonomous operation. Features flow from creation through agent implementation, PR creation, review, merge, and deployment with zero manual intervention.",
+  "status": "active",
+  "milestones": [
+    {
+      "number": 1,
+      "slug": "01-close-the-pr-to-merge-gap",
+      "title": "Close the PR-to-Merge Gap",
+      "description": "Enable automatic PR merging — the single highest-impact change for autonomy. Features in 'review' status should auto-merge when CI passes.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "global-auto-merge-setting-toggle",
+          "title": "Global auto-merge setting toggle",
+          "description": "Enable autoMergePR by default in git workflow settings. Add MCP tool to toggle per-feature. Change DEFAULT_GIT_WORKFLOW_SETTINGS in libs/types/src/settings.ts to set autoMergePR: true. Add update_feature_git_settings MCP tool for per-feature control.",
+          "filesToModify": [
+            "libs/types/src/settings.ts",
+            "packages/mcp-server/src/tools/feature-tools.ts"
+          ],
+          "acceptanceCriteria": [
+            "autoMergePR defaults to true",
+            "Per-feature override works via MCP"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1770757317282-ueutnetf4"
+        },
+        {
+          "number": 2,
+          "name": "auto-resolve-coderabbit-review-threads",
+          "title": "Auto-resolve CodeRabbit review threads",
+          "description": "Create service that calls GitHub GraphQL resolveReviewThread mutation for bot-created review threads. Triggered after CI passes and before auto-merge attempt. Only resolves threads from known bot accounts (coderabbitai, github-actions).",
+          "filesToModify": [
+            "apps/server/src/services/coderabbit-resolver-service.ts",
+            "apps/server/src/services/git-workflow-service.ts"
+          ],
+          "acceptanceCriteria": [
+            "Bot review threads auto-resolved",
+            "Human review threads left untouched",
+            "Runs before merge attempt"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1770757317283-uqt2kw20g"
+        },
+        {
+          "number": 3,
+          "name": "em-agent-merge-execution",
+          "title": "EM agent merge execution",
+          "description": "Wire EM agent's handlePRApproved flow to call githubMergeService.mergePR(). When EM agent detects a PR is approved and CI passes, execute the squash merge via gh CLI. Emit audit event for merge decision.",
+          "filesToModify": [
+            "apps/server/src/services/authority-agents/em-agent.ts"
+          ],
+          "acceptanceCriteria": [
+            "EM agent calls mergePR on approval",
+            "Audit event emitted",
+            "Feature transitions to done after merge"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1770757317284-f5u7cmc2y"
+        },
+        {
+          "number": 4,
+          "name": "scheduled-pr-merge-poller",
+          "title": "Scheduled PR merge poller",
+          "description": "Add a maintenance task that polls features in 'review' status every 5 minutes. Check merge eligibility via MergeEligibilityService. If eligible (CI passing, no unresolved human threads), auto-merge via githubMergeService. Fallback for webhook-based approach.",
+          "filesToModify": [
+            "apps/server/src/services/maintenance-tasks.ts",
+            "apps/server/src/services/scheduler-service.ts"
+          ],
+          "acceptanceCriteria": [
+            "Polls every 5 minutes",
+            "Checks merge eligibility",
+            "Auto-merges eligible PRs",
+            "Logs all decisions"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1770757317284-zkcckoexx"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1770757317280-ngej52nq6"
+    },
+    {
+      "number": 2,
+      "slug": "02-failure-resilience",
+      "title": "Failure Resilience",
+      "description": "Auto-recover from agent failures. Blocked features should auto-retry with escalation. PR feedback should trigger automatic remediation.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "auto-retry-blocked-features",
+          "title": "Auto-retry blocked features",
+          "description": "Extend ReconciliationService to detect features in 'blocked' status that have transient errors (API quota, network, timeout). Auto-reset to 'backlog' after 5-minute cooldown. Increment retry count and auto-escalate to opus model after 2nd failure. Max 3 retries per feature.",
+          "filesToModify": [
+            "apps/server/src/services/reconciliation-service.ts",
+            "apps/server/src/services/auto-mode-service.ts"
+          ],
+          "acceptanceCriteria": [
+            "Transient failures auto-retry",
+            "Escalates to opus after 2 failures",
+            "Max 3 retries respected",
+            "Non-transient errors stay blocked"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1770757317285-o1xbvm4y4"
+        },
+        {
+          "number": 2,
+          "name": "pr-feedback-auto-remediation",
+          "title": "PR feedback auto-remediation",
+          "description": "When PRFeedbackService detects pr:changes-requested, auto-restart the dev agent with the review feedback injected into its continuation prompt. Agent sees exactly what needs fixing. Push new commits to the same PR.",
+          "filesToModify": [
+            "apps/server/src/services/pr-feedback-service.ts",
+            "apps/server/src/services/auto-mode-service.ts"
+          ],
+          "acceptanceCriteria": [
+            "Review feedback triggers agent restart",
+            "Agent receives feedback context",
+            "New commits pushed to same PR",
+            "Prevents infinite feedback loops (max 2 rounds)"
+          ],
+          "complexity": "large",
+          "featureId": "feature-1770757317286-x0ktbdio6"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1770757317285-y055n8f1o"
+    },
+    {
+      "number": 3,
+      "slug": "03-proactive-maintenance",
+      "title": "Proactive Maintenance",
+      "description": "Self-healing operations — stale resources auto-cleanup, PRs auto-rebase, worktrees auto-prune.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "auto-cleanup-stale-worktrees-and-branches",
+          "title": "Auto-cleanup stale worktrees and branches",
+          "description": "Upgrade scheduled stale worktree/branch detection tasks from detect-only to detect-and-fix. For merged branches: auto-run git worktree remove and git branch -D. Safety checks: confirm branch is merged, no uncommitted work, not the current branch.",
+          "filesToModify": [
+            "apps/server/src/services/maintenance-tasks.ts"
+          ],
+          "acceptanceCriteria": [
+            "Merged branch worktrees auto-removed",
+            "Safety checks prevent data loss",
+            "Emits cleanup events for audit"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1770757317286-6p4tngmlg"
+        },
+        {
+          "number": 2,
+          "name": "auto-rebase-stale-prs",
+          "title": "Auto-rebase stale PRs",
+          "description": "Detect PRs behind their base branch. Auto-rebase via gt restack (Graphite) or gh pr rebase. If conflicts detected, escalate to human via Discord notification instead of force-pushing.",
+          "filesToModify": [
+            "apps/server/src/services/maintenance-tasks.ts",
+            "apps/server/src/services/graphite-service.ts"
+          ],
+          "acceptanceCriteria": [
+            "Stale PRs auto-rebased",
+            "Conflicts escalate to Discord",
+            "Uses Graphite when available"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1770757317287-igl05e9me"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1770757317286-4mg0kmrxt"
+    }
+  ],
+  "prd": {
+    "situation": "Automaker has substantial automation infrastructure — auto-mode picks up backlog features, creates git worktrees, runs Claude agents, commits code, pushes branches, and creates PRs automatically. Authority agents (PM, ProjM, EM, Status) handle idea review, decomposition, and PR feedback routing. CoS pipeline automates PRD-to-feature flow. Health monitor runs 5-minute checks with auto-remediation. 10 automation systems are working on main.",
+    "problem": "The automation chain BREAKS at PR review and merge. PRs are created automatically but auto-merge is disabled by default (autoMergePR: false). Branch protection requires review approval (not automated). CodeRabbit review threads block auto-merge and require manual resolution. Failed features stay in 'blocked' status with no auto-retry. EM agent detects PR approval events but doesn't execute merges. Result: features pile up in 'review' status waiting for manual intervention, breaking the autonomous loop.",
+    "approach": "Four-phase approach targeting the highest-impact gaps first. Phase 1 closes the PR-to-merge gap (auto-merge toggle, CodeRabbit thread resolution, EM agent merge execution). Phase 2 adds failure resilience (auto-retry blocked features, PR feedback auto-remediation). Phase 3 enables proactive maintenance (stale resource cleanup, PR rebase, scheduled merge polling). Phase 4 adds intelligence (policy-driven merge decisions, learning from failures). Each phase is independently valuable — Phase 1 alone achieves 80% autonomy.",
+    "results": "Features flow from backlog to done with zero manual intervention for standard complexity work. PRs auto-merge when CI passes. Failed features auto-retry with model escalation. Stale resources auto-cleanup. The only manual intervention needed is for architectural decisions, security reviews, and infrastructure-level changes.",
+    "constraints": [
+      "Branch protection must stay enabled — safety net for main",
+      "Dev server management stays manual — crashes are destructive",
+      "Max 2-3 concurrent agents on dev hardware — staging supports 6-10",
+      "Keep PRs under 200 lines for reviewability",
+      "Feature.json files are now git-tracked — agents must not delete them",
+      "Never use git add -A with tracked feature.json files in worktrees"
+    ]
+  },
+  "createdAt": "2026-02-10T21:01:50.384Z",
+  "updatedAt": "2026-02-10T21:01:57.292Z"
+}

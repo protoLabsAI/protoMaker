@@ -1,0 +1,20 @@
+{
+  "category": "Uncategorized",
+  "description": "Once PR #164 (external backup location) is merged, we should STOP tracking feature.json in git. The git-tracking approach (PR #163) creates a fundamental conflict: the server writes to feature.json at runtime, and git manages them for branch operations. These are incompatible.\n\n**Steps:**\n1. Remove `!.automaker/features/**/feature.json` from .gitignore\n2. Run `git rm --cached -r .automaker/features/` to untrack\n3. Ensure `.automaker/features/` is fully gitignored\n4. External backup provides the safety net instead of git\n\n**Dependencies:** PR #164 (external backup) must be merged first\n\n**Acceptance criteria:**\n- feature.json files are NOT tracked by git\n- `.automaker/features/` is fully gitignored\n- External backup system provides recovery capability\n- No feature data loss during the transition",
+  "title": "Untrack feature.json from git after external backup is ready",
+  "status": "verified",
+  "complexity": "small",
+  "priority": 1,
+  "id": "feature-1770757526028-nzcjr4j5g",
+  "branchName": "feature/untrack-featurejson-from-git-after",
+  "descriptionHistory": [
+    {
+      "description": "Once PR #164 (external backup location) is merged, we should STOP tracking feature.json in git. The git-tracking approach (PR #163) creates a fundamental conflict: the server writes to feature.json at runtime, and git manages them for branch operations. These are incompatible.\n\n**Steps:**\n1. Remove `!.automaker/features/**/feature.json` from .gitignore\n2. Run `git rm --cached -r .automaker/features/` to untrack\n3. Ensure `.automaker/features/` is fully gitignored\n4. External backup provides the safety net instead of git\n\n**Dependencies:** PR #164 (external backup) must be merged first\n\n**Acceptance criteria:**\n- feature.json files are NOT tracked by git\n- `.automaker/features/` is fully gitignored\n- External backup system provides recovery capability\n- No feature data loss during the transition",
+      "timestamp": "2026-02-10T21:05:26.028Z",
+      "source": "initial"
+    }
+  ],
+  "updatedAt": "2026-02-10T21:41:36.559Z",
+  "costUsd": 0.26188724999999996,
+  "lastSessionId": "78043275-40c5-478c-8c84-f5ab04a27506"
+}
