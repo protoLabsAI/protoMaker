@@ -57,10 +57,16 @@ export class WorktreeLifecycleService {
   private initialized = false;
   private driftCheckIntervalId: NodeJS.Timeout | null = null;
   private projectsToMonitor: Set<string> = new Set();
+  private getRunningFeatures?: () => Promise<Array<{ branchName?: string; projectPath: string }>>;
 
-  constructor(events: EventEmitter, featureLoader: FeatureLoader) {
+  constructor(
+    events: EventEmitter,
+    featureLoader: FeatureLoader,
+    getRunningFeatures?: () => Promise<Array<{ branchName?: string; projectPath: string }>>
+  ) {
     this.events = events;
     this.featureLoader = featureLoader;
+    this.getRunningFeatures = getRunningFeatures;
   }
 
   initialize(): void {
@@ -195,6 +201,26 @@ export class WorktreeLifecycleService {
     const worktreePath = path.join(projectPath, '.worktrees', worktreeName);
 
     try {
+      // CRITICAL SAFETY CHECK: Prevent deletion of worktrees with running agents
+      // If Claude Code's Bash tool cd's into a worktree and that worktree is deleted,
+      // Bash permanently breaks for the session. This is a platform limitation we must guard against.
+      if (this.getRunningFeatures) {
+        const runningFeatures = await this.getRunningFeatures();
+        const hasRunningAgent = runningFeatures.some(
+          (rf) =>
+            rf.projectPath === projectPath &&
+            rf.branchName &&
+            (rf.branchName === branchName || rf.branchName.replace(/\//g, '-') === worktreeName)
+        );
+
+        if (hasRunningAgent) {
+          logger.warn(
+            `[SAFETY] Cannot clean up worktree ${worktreeName} - agent is currently running in this worktree`
+          );
+          return; // Skip cleanup - worktree is in use
+        }
+      }
+
       // Check if worktree exists
       try {
         execSync(`git worktree list --porcelain`, {
