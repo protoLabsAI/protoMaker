@@ -574,7 +574,7 @@ export class HealthMonitorService {
 
         // Emit remediation event for each successful remediation
         if (issue.remediated && this.events) {
-          this.events.emit('health:remediation' as any, {
+          this.events.emit('health:issue-remediated', {
             issue: {
               type: issue.type,
               severity: issue.severity,
@@ -592,7 +592,7 @@ export class HealthMonitorService {
     // Emit summary event
     const remediatedCount = remediableIssues.filter((i) => i.remediated).length;
     if (remediatedCount > 0 && this.events) {
-      this.events.emit('health:remediations-completed' as any, {
+      this.events.emit('health:issue-remediated', {
         total: remediableIssues.length,
         successful: remediatedCount,
         failed: remediableIssues.length - remediatedCount,

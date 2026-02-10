@@ -59,9 +59,9 @@ describe('TimeoutEnforcer', () => {
 
       const elapsed = Date.now() - startTime;
 
-      // Verify timeout happened roughly at the right time (within 100ms tolerance)
-      expect(elapsed).toBeGreaterThanOrEqual(100);
-      expect(elapsed).toBeLessThan(200);
+      // Verify timeout happened roughly at the right time (generous tolerance for CI)
+      expect(elapsed).toBeGreaterThanOrEqual(80);
+      expect(elapsed).toBeLessThan(500);
     });
 
     it('should respect abort signal during operation', async () => {

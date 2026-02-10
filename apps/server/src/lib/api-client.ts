@@ -165,10 +165,11 @@ export async function executeWithRetry<T>(
     signal,
   } = options;
 
+  const maxAttempts = Math.max(1, maxRetries);
   const retriedErrors: string[] = [];
   let lastError: unknown = null;
 
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {
       // Check for cancellation before each attempt
       if (signal?.aborted) {
@@ -176,7 +177,7 @@ export async function executeWithRetry<T>(
       }
 
       if (attempt > 0) {
-        logger.info(`Retry attempt ${attempt + 1}/${maxRetries} for ${context}`);
+        logger.info(`Retry attempt ${attempt + 1}/${maxAttempts} for ${context}`);
       }
 
       const data = await fn();

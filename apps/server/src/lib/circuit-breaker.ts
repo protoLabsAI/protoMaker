@@ -147,15 +147,15 @@ export class CircuitBreaker {
    */
   reset(): void {
     const wasOpen = this.isOpen;
-    const hadFailures = this.failureCount > 0;
+    const previousFailures = this.failureCount;
 
     this.failureCount = 0;
     this.isOpen = false;
 
-    if (wasOpen || hadFailures) {
+    if (wasOpen || previousFailures > 0) {
       logger.info(`${this.config.name}: Circuit breaker manually reset`, {
         wasOpen,
-        previousFailures: this.failureCount,
+        previousFailures,
       });
     }
   }

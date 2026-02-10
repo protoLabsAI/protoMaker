@@ -145,6 +145,9 @@ export async function withTimeout<T>(
     // Race the operation against the timeout
     const result = await Promise.race([operation(abortController.signal), timeoutPromise]);
 
+    // Abort to trigger cleanup listener which clears the timeout handle
+    abortController.abort();
+
     const elapsed = Date.now() - context.startTime;
     logger.info('Operation completed successfully', {
       operationId,

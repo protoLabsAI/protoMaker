@@ -26,6 +26,7 @@ export type EventType =
   | 'feature:retry'
   | 'feature:recovery'
   | 'feature:pr-merged'
+  | 'agent:timeout'
   | 'project:analysis-started'
   | 'project:analysis-progress'
   | 'project:analysis-completed'
