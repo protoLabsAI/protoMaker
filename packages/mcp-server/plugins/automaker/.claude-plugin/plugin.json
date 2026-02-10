@@ -1,7 +1,7 @@
 {
   "name": "automaker",
   "description": "Automaker - AI Development Studio. Manage Kanban boards, AI agents, and feature orchestration.",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "author": {
     "name": "Proto Labs AI"
   },
