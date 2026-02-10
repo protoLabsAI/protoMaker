@@ -129,6 +129,7 @@ import { registerMaintenanceTasks } from './services/maintenance-tasks.js';
 import { FeatureHealthService } from './services/feature-health-service.js';
 import { BeadsService } from './services/beads-service.js';
 import { createBeadsRoutes } from './routes/beads/index.js';
+import { getAvaGatewayService } from './services/ava-gateway-service.js';
 
 const PORT = parseInt(process.env.PORT || '3008', 10);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -334,6 +335,20 @@ const eventHistoryService = getEventHistoryService();
 
 // Initialize Briefing Cursor Service
 const briefingCursorService = getBriefingCursorService(DATA_DIR);
+
+// Initialize Ava Gateway Service for briefing polling
+const avaGatewayService = getAvaGatewayService(
+  events,
+  eventHistoryService,
+  briefingCursorService,
+  {
+    projectPath: REPO_ROOT,
+    pollInterval: 600000, // 10 minutes
+    enabled: true,
+  }
+);
+// Start polling after initialization
+avaGatewayService.start();
 
 // Initialize Event Hook Service for custom event triggers (with history storage)
 eventHookService.initialize(events, settingsService, eventHistoryService, featureLoader);
