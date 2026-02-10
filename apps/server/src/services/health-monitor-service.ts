@@ -329,7 +329,7 @@ export class HealthMonitorService {
             projectPath,
           },
           autoRemediable: true,
-          remediationAction: 'reset_to_pending',
+          remediationAction: 'reset_to_backlog',
         });
       }
 
@@ -352,7 +352,7 @@ export class HealthMonitorService {
       }
 
       // Count active features
-      if (feature.status === 'running' || feature.status === 'in_progress') {
+      if (feature.status === 'in_progress') {
         activeCount++;
       }
     }
@@ -368,9 +368,8 @@ export class HealthMonitorService {
    * Check if a feature is stuck (running for too long without progress)
    */
   private isFeatureStuck(feature: Feature): boolean {
-    // Only check features that are in running/in_progress states
-    const runningStatuses = ['running', 'in_progress'];
-    if (!feature.status || !runningStatuses.includes(feature.status)) {
+    // Only check features that are in in_progress state
+    if (!feature.status || feature.status !== 'in_progress') {
       return false;
     }
 
@@ -389,7 +388,7 @@ export class HealthMonitorService {
    */
   private isFeatureRetryable(feature: Feature): boolean {
     // Check both 'failed' and 'blocked' since FeatureLoader normalizes 'failed' to 'blocked'
-    const isFailedStatus = feature.status === 'failed' || feature.status === 'blocked';
+    const isFailedStatus = feature.status === 'blocked';
     if (!isFailedStatus || !feature.error) {
       return false;
     }
@@ -559,7 +558,7 @@ export class HealthMonitorService {
     for (const issue of remediableIssues) {
       try {
         switch (issue.remediationAction) {
-          case 'reset_to_pending':
+          case 'reset_to_backlog':
             await this.remediateStuckFeature(issue);
             break;
           case 'retry_feature':
@@ -602,7 +601,7 @@ export class HealthMonitorService {
   }
 
   /**
-   * Remediate a stuck feature by resetting it to pending
+   * Remediate a stuck feature by resetting it to backlog
    */
   private async remediateStuckFeature(issue: HealthIssue): Promise<void> {
     const { featureId, projectPath } = issue.context as {
@@ -613,13 +612,13 @@ export class HealthMonitorService {
     logger.info(`Remediating stuck feature: ${featureId}`);
 
     await this.featureLoader.update(projectPath, featureId, {
-      status: 'pending',
+      status: 'backlog',
       startedAt: undefined,
-      error: 'Auto-reset: Feature was stuck in running state',
+      error: 'Auto-reset: Feature was stuck in in_progress state',
     });
 
     issue.remediated = true;
-    logger.info(`Reset stuck feature ${featureId} to pending`);
+    logger.info(`Reset stuck feature ${featureId} to backlog`);
   }
 
   /**
@@ -649,9 +648,9 @@ export class HealthMonitorService {
       return;
     }
 
-    // Reset to pending and increment retry count
+    // Reset to backlog and increment retry count
     await this.featureLoader.update(projectPath, featureId, {
-      status: 'pending',
+      status: 'backlog',
       error: undefined,
       _autoRetryCount: currentRetries + 1,
     } as Partial<Feature>);
