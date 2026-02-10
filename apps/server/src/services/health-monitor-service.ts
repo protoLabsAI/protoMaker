@@ -388,7 +388,9 @@ export class HealthMonitorService {
    * Check if a feature has a retryable error
    */
   private isFeatureRetryable(feature: Feature): boolean {
-    if (feature.status !== 'failed' || !feature.error) {
+    // Check both 'failed' and 'blocked' since FeatureLoader normalizes 'failed' to 'blocked'
+    const isFailedStatus = feature.status === 'failed' || feature.status === 'blocked';
+    if (!isFailedStatus || !feature.error) {
       return false;
     }
 
@@ -548,6 +550,12 @@ export class HealthMonitorService {
   private async autoRemediate(issues: HealthIssue[]): Promise<void> {
     const remediableIssues = issues.filter((i) => i.autoRemediable && !i.remediated);
 
+    if (remediableIssues.length === 0) {
+      return;
+    }
+
+    logger.info(`Auto-remediating ${remediableIssues.length} issues`);
+
     for (const issue of remediableIssues) {
       try {
         switch (issue.remediationAction) {
@@ -563,9 +571,33 @@ export class HealthMonitorService {
           default:
             logger.warn(`Unknown remediation action: ${issue.remediationAction}`);
         }
+
+        // Emit remediation event for each successful remediation
+        if (issue.remediated && this.events) {
+          this.events.emit('health:remediation' as any, {
+            issue: {
+              type: issue.type,
+              severity: issue.severity,
+              message: issue.message,
+              remediationAction: issue.remediationAction,
+            },
+            timestamp: new Date().toISOString(),
+          });
+        }
       } catch (error) {
         logger.error(`Failed to remediate issue: ${issue.message}`, error);
       }
+    }
+
+    // Emit summary event
+    const remediatedCount = remediableIssues.filter((i) => i.remediated).length;
+    if (remediatedCount > 0 && this.events) {
+      this.events.emit('health:remediations-completed' as any, {
+        total: remediableIssues.length,
+        successful: remediatedCount,
+        failed: remediableIssues.length - remediatedCount,
+        timestamp: new Date().toISOString(),
+      });
     }
   }
 

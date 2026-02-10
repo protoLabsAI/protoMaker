@@ -1,12 +1,13 @@
 /**
- * Ava Gateway Service - Heartbeat monitoring for board health
+ * Ava Gateway Service - Heartbeat monitoring with resilience
  *
- * Provides a 30-minute heartbeat check that:
- * - Invokes Ava agent with board summary
- * - Asks "What needs immediate attention?"
- * - Parses response for HEARTBEAT_OK or alert message
- * - Posts alerts to Discord #infra channel
- * - Creates Beads tasks for actionable alerts
+ * Consolidates Phases 2-9 of the Ava Autonomous Operation project:
+ * - Phase 2: Model-driven heartbeat (board health monitoring)
+ * - Phase 4: Critical event subscription (real-time event routing)
+ * - Phase 5: Health auto-remediation (health monitor integration)
+ * - Phase 6: Timeout enforcement (agent operation timeouts)
+ * - Phase 7: Gateway status API (health metrics + Discord startup)
+ * - Phase 9: Circuit breaker (failure protection + exponential backoff)
  */
 
 import { createLogger } from '@automaker/utils';
@@ -17,6 +18,9 @@ import { BeadsService } from './beads-service.js';
 import { DiscordService } from './discord-service.js';
 import { ClaudeProvider } from '../providers/claude-provider.js';
 import type { SettingsService } from './settings-service.js';
+import type { HealthMonitorService } from './health-monitor-service.js';
+import { withTimeout, isTimeoutError } from '../lib/timeout-enforcer.js';
+import { CircuitBreaker } from '../lib/circuit-breaker.js';
 
 const logger = createLogger('AvaGatewayService');
 
@@ -37,6 +41,24 @@ export interface HeartbeatAlert {
   title: string;
   description: string;
   suggestedAction?: string;
+}
+
+/**
+ * Gateway status for health monitoring (Phase 7)
+ */
+export interface GatewayStatus {
+  initialized: boolean;
+  listening: boolean;
+  projectPath: string | null;
+  infraChannelId: string | null;
+  lastHeartbeat: string | null;
+  lastHeartbeatStatus: 'ok' | 'alert' | null;
+  totalHeartbeats: number;
+  totalAlerts: number;
+  circuitBreaker: {
+    isOpen: boolean;
+    failureCount: number;
+  };
 }
 
 /**
@@ -66,7 +88,8 @@ interface BoardSummary {
  *
  * Runs periodic heartbeat checks on the Automaker board to identify
  * issues requiring immediate attention. Integrates with Discord and Beads
- * for notifications and task creation.
+ * for notifications and task creation. Includes resilience features:
+ * circuit breaker, timeout enforcement, and critical event routing.
  */
 export class AvaGatewayService {
   private featureLoader: FeatureLoader;
@@ -75,29 +98,115 @@ export class AvaGatewayService {
   private provider: ClaudeProvider | null = null;
   private events: EventEmitter | null = null;
   private settingsService: SettingsService | null = null;
+  private healthMonitor: HealthMonitorService | null = null;
   private projectPath: string | null = null;
   private infraChannelId: string | null = null;
+
+  // Phase 4: Critical event subscription
+  private unsubscribe: (() => void) | null = null;
+  private isListening = false;
+
+  // Phase 7: Status tracking
+  private initialized = false;
+  private lastHeartbeat: string | null = null;
+  private lastHeartbeatStatus: 'ok' | 'alert' | null = null;
+  private totalHeartbeats = 0;
+  private totalAlerts = 0;
+
+  // Phase 9: Circuit breaker
+  private circuitBreaker: CircuitBreaker;
+  private backoffDelayMs = 0;
 
   constructor(
     featureLoader: FeatureLoader,
     beadsService: BeadsService,
     discordService: DiscordService,
-    settingsService?: SettingsService
+    settingsService?: SettingsService,
+    healthMonitor?: HealthMonitorService
   ) {
     this.featureLoader = featureLoader;
     this.beadsService = beadsService;
     this.discordService = discordService;
     this.settingsService = settingsService ?? null;
+    this.healthMonitor = healthMonitor ?? null;
+
+    // Initialize circuit breaker: 5 failures, 5 minute cooldown
+    this.circuitBreaker = new CircuitBreaker({
+      failureThreshold: 5,
+      cooldownMs: 300000,
+      name: 'AvaGateway',
+    });
   }
 
   /**
-   * Initialize the service with required configuration
+   * Initialize the service with required configuration (Phase 7: async)
    */
-  initialize(events: EventEmitter, projectPath?: string, infraChannelId?: string): void {
+  async initialize(
+    events: EventEmitter,
+    projectPath?: string,
+    infraChannelId?: string
+  ): Promise<void> {
     this.events = events;
     this.projectPath = projectPath ?? null;
     this.infraChannelId = infraChannelId ?? null;
+    this.initialized = true;
+
+    // Phase 5: Register project with health monitor for auto-remediation
+    if (this.healthMonitor && this.projectPath) {
+      this.healthMonitor.addProjectPath(this.projectPath);
+      logger.info('Registered project with health monitor', { projectPath: this.projectPath });
+    }
+
     logger.info('Ava Gateway Service initialized', { projectPath, infraChannelId });
+
+    // Phase 7: Post startup message to Discord
+    await this.postStartupMessage();
+  }
+
+  /**
+   * Start listening to critical events (Phase 4)
+   */
+  start(): void {
+    if (this.isListening) {
+      logger.warn('Ava Gateway already listening to events');
+      return;
+    }
+
+    if (!this.events) {
+      logger.error('Cannot start Ava Gateway: EventEmitter not initialized');
+      throw new Error('EventEmitter not initialized. Call initialize() first.');
+    }
+
+    this.unsubscribe = this.events.subscribe((type, payload) => {
+      this.handleCriticalEvent(type, payload);
+    });
+
+    this.isListening = true;
+    logger.info('Ava Gateway started - listening to critical events');
+  }
+
+  /**
+   * Stop listening to critical events (Phase 4)
+   */
+  stop(): void {
+    if (!this.isListening) {
+      return;
+    }
+
+    if (this.unsubscribe) {
+      this.unsubscribe();
+      this.unsubscribe = null;
+    }
+
+    this.isListening = false;
+    logger.info('Ava Gateway stopped');
+  }
+
+  /**
+   * Check if the gateway is currently listening (Phase 4)
+   */
+  isActive(): boolean {
+    return this.isListening;
   }
 
   /**
@@ -105,6 +214,12 @@ export class AvaGatewayService {
    */
   setProjectPath(projectPath: string): void {
     this.projectPath = projectPath;
+
+    // Phase 5: Register with health monitor
+    if (this.healthMonitor) {
+      this.healthMonitor.addProjectPath(projectPath);
+    }
+
     logger.info('Ava Gateway project path updated', { projectPath });
   }
 
@@ -117,12 +232,157 @@ export class AvaGatewayService {
   }
 
   /**
+   * Get current gateway status (Phase 7)
+   */
+  getStatus(): GatewayStatus {
+    return {
+      initialized: this.initialized,
+      listening: this.isListening,
+      projectPath: this.projectPath,
+      infraChannelId: this.infraChannelId,
+      lastHeartbeat: this.lastHeartbeat,
+      lastHeartbeatStatus: this.lastHeartbeatStatus,
+      totalHeartbeats: this.totalHeartbeats,
+      totalAlerts: this.totalAlerts,
+      circuitBreaker: {
+        isOpen: this.circuitBreaker.isCircuitOpen(),
+        failureCount: this.circuitBreaker.getFailureCount(),
+      },
+    };
+  }
+
+  /**
+   * Post startup message to Discord (Phase 7)
+   */
+  private async postStartupMessage(): Promise<void> {
+    if (!this.infraChannelId) {
+      return;
+    }
+
+    const message =
+      `**Ava Gateway Started**\n\n` +
+      `**Status:** Online and monitoring\n` +
+      `**Project:** ${this.projectPath || 'Not configured'}\n` +
+      `**Timestamp:** ${new Date().toISOString()}`;
+
+    try {
+      await this.discordService.sendMessage({
+        channelId: this.infraChannelId,
+        message,
+      });
+      logger.info('Posted startup message to Discord #infra');
+    } catch (error) {
+      logger.error('Error posting startup message to Discord', error);
+    }
+  }
+
+  /**
+   * Handle critical events from the event bus (Phase 4)
+   */
+  private handleCriticalEvent(type: string, payload: unknown): void {
+    const data = payload as Record<string, unknown>;
+
+    switch (type) {
+      case 'feature:error':
+        this.handleFeatureError(data);
+        break;
+      case 'auto-mode:error':
+        this.handleAutoModeError(data);
+        break;
+      case 'authority:awaiting-approval':
+        this.handleAwaitingApproval(data);
+        break;
+      case 'health:issue-detected':
+        this.handleHealthIssue(data);
+        break;
+      case 'feature:blocked':
+        this.handleFeatureBlocked(data);
+        break;
+      case 'pr:ci-failure':
+        this.handlePRFailure(data);
+        break;
+      default:
+        break;
+    }
+  }
+
+  private handleFeatureError(payload: Record<string, unknown>): void {
+    const alert: HeartbeatAlert = {
+      severity: 'high',
+      title: `Feature Error: ${payload.featureId}`,
+      description: `Feature ${payload.featureId} encountered an error: ${payload.error}`,
+      suggestedAction: 'Review error logs and retry or reassign feature',
+    };
+    void this.postToDiscord(alert);
+    if (this.projectPath) void this.createBeadsTask(this.projectPath, alert);
+  }
+
+  private handleAutoModeError(payload: Record<string, unknown>): void {
+    const alert: HeartbeatAlert = {
+      severity: 'critical',
+      title: 'Auto-mode Error',
+      description: `Auto-mode encountered a critical error: ${payload.error}`,
+      suggestedAction: 'Check auto-mode status and restart if needed',
+    };
+    void this.postToDiscord(alert);
+    if (this.projectPath) void this.createBeadsTask(this.projectPath, alert);
+  }
+
+  private handleAwaitingApproval(payload: Record<string, unknown>): void {
+    const alert: HeartbeatAlert = {
+      severity: 'medium',
+      title: 'Approval Required',
+      description: `Proposal ${payload.proposalId} (${payload.proposalType}) is awaiting approval`,
+      suggestedAction: 'Review and approve/reject the proposal',
+    };
+    void this.postToDiscord(alert);
+  }
+
+  private handleHealthIssue(payload: Record<string, unknown>): void {
+    const severity = payload.severity as string;
+    const alertSeverity: HeartbeatAlert['severity'] =
+      severity === 'critical' ? 'critical' : severity === 'warning' ? 'high' : 'medium';
+
+    const alert: HeartbeatAlert = {
+      severity: alertSeverity,
+      title: `Health Issue: ${payload.type}`,
+      description: payload.message as string,
+      suggestedAction: 'Review health dashboard and remediate if needed',
+    };
+    void this.postToDiscord(alert);
+    if (this.projectPath && (alertSeverity === 'critical' || alertSeverity === 'high')) {
+      void this.createBeadsTask(this.projectPath, alert);
+    }
+  }
+
+  private handleFeatureBlocked(payload: Record<string, unknown>): void {
+    const alert: HeartbeatAlert = {
+      severity: 'high',
+      title: `Feature Blocked: ${payload.featureId}`,
+      description: `Feature ${payload.featureId} is blocked: ${payload.reason}`,
+      suggestedAction: 'Unblock feature dependencies or resolve blockers',
+    };
+    void this.postToDiscord(alert);
+    if (this.projectPath) void this.createBeadsTask(this.projectPath, alert);
+  }
+
+  private handlePRFailure(payload: Record<string, unknown>): void {
+    const alert: HeartbeatAlert = {
+      severity: 'high',
+      title: `PR CI Failure: #${payload.prNumber}`,
+      description: `PR #${payload.prNumber} (feature ${payload.featureId}) failed CI check: ${payload.checkName}`,
+      suggestedAction: 'Review CI logs and fix failing tests or checks',
+    };
+    void this.postToDiscord(alert);
+    if (this.projectPath) void this.createBeadsTask(this.projectPath, alert);
+  }
+
+  /**
    * Generate board summary for heartbeat evaluation
    */
   private async generateBoardSummary(projectPath: string): Promise<BoardSummary> {
     const features = await this.featureLoader.getAll(projectPath);
 
-    // Count by status
     const byStatus: Record<string, number> = {};
     let blockedCount = 0;
     let inProgressCount = 0;
@@ -133,16 +393,12 @@ export class AvaGatewayService {
     const STALE_THRESHOLD_DAYS = 7;
 
     for (const feature of features) {
-      // Count by status
       const status = feature.status || 'backlog';
       byStatus[status] = (byStatus[status] || 0) + 1;
 
-      // Track blocked and in-progress
       if (status === 'blocked') blockedCount++;
       if (status === 'in_progress') inProgressCount++;
 
-      // Find stale features (not updated in 7+ days)
-      // Use startedAt as proxy for last update time
       if (feature.startedAt) {
         const startedTime = new Date(feature.startedAt).getTime();
         const daysSinceUpdate = Math.floor((now - startedTime) / (1000 * 60 * 60 * 24));
@@ -157,9 +413,7 @@ export class AvaGatewayService {
         }
       }
 
-      // Track failed PRs (in review but checks failed or has open feedback)
       if (status === 'review' && feature.prNumber) {
-        // This is a simplified check - in production you'd check GitHub PR status
         failedPRs.push({
           id: feature.id,
           title: feature.title || 'Untitled',
@@ -174,8 +428,8 @@ export class AvaGatewayService {
       byStatus,
       blockedCount,
       inProgressCount,
-      staleFeatures: staleFeatures.slice(0, 10), // Limit to 10 most stale
-      failedPRs: failedPRs.slice(0, 10), // Limit to 10
+      staleFeatures: staleFeatures.slice(0, 10),
+      failedPRs: failedPRs.slice(0, 10),
     };
   }
 
@@ -183,16 +437,10 @@ export class AvaGatewayService {
    * Parse Ava's response to extract heartbeat result
    */
   private parseHeartbeatResponse(response: string): HeartbeatResult {
-    // Check for explicit HEARTBEAT_OK marker
     if (response.includes('HEARTBEAT_OK')) {
-      return {
-        status: 'ok',
-        message: 'All systems nominal',
-      };
+      return { status: 'ok', message: 'All systems nominal' };
     }
 
-    // Extract alerts from response
-    // Format expected: **ALERT: [severity] title**\ndescription\n---
     const alerts: HeartbeatAlert[] = [];
     const alertRegex =
       /\*\*ALERT:\s*\[(low|medium|high|critical)\]\s*(.+?)\*\*\s*\n([\s\S]+?)(?=\n---|$)/gi;
@@ -207,16 +455,10 @@ export class AvaGatewayService {
       });
     }
 
-    // If we found alerts, return them
     if (alerts.length > 0) {
-      return {
-        status: 'alert',
-        alerts,
-      };
+      return { status: 'alert', alerts };
     }
 
-    // If response doesn't contain HEARTBEAT_OK but also no explicit alerts,
-    // treat the entire response as an alert message
     if (response.trim().length > 0 && !response.includes('No immediate attention')) {
       return {
         status: 'alert',
@@ -231,11 +473,7 @@ export class AvaGatewayService {
       };
     }
 
-    // Default: everything is OK
-    return {
-      status: 'ok',
-      message: 'No immediate attention required',
-    };
+    return { status: 'ok', message: 'No immediate attention required' };
   }
 
   /**
@@ -243,7 +481,6 @@ export class AvaGatewayService {
    */
   private async postToDiscord(alert: HeartbeatAlert): Promise<void> {
     if (!this.infraChannelId) {
-      logger.warn('Discord infra channel not configured, skipping Discord notification');
       return;
     }
 
@@ -278,14 +515,11 @@ export class AvaGatewayService {
    */
   private async createBeadsTask(projectPath: string, alert: HeartbeatAlert): Promise<void> {
     if (!projectPath) {
-      logger.warn('Project path not set, skipping Beads task creation');
       return;
     }
 
-    // Check if Beads CLI is available
     const beadsAvailable = await this.beadsService.checkCliAvailable();
     if (!beadsAvailable) {
-      logger.warn('Beads CLI not available, skipping task creation');
       return;
     }
 
@@ -297,74 +531,116 @@ export class AvaGatewayService {
     };
 
     try {
-      const result = await this.beadsService.createTask(projectPath, {
+      await this.beadsService.createTask(projectPath, {
         title: `[Ava Alert] ${alert.title}`,
         description: `${alert.description}${alert.suggestedAction ? `\n\nSuggested Action: ${alert.suggestedAction}` : ''}`,
         priority: priorityMap[alert.severity],
         issueType: 'task',
         labels: ['ava-alert', `severity-${alert.severity}`],
       });
-
-      if (result.success) {
-        logger.info('Created Beads task for alert', {
-          title: alert.title,
-          taskId: result.data?.id,
-        });
-      } else {
-        logger.error('Failed to create Beads task', { error: result.error });
-      }
     } catch (error) {
       logger.error('Error creating Beads task', error);
     }
   }
 
   /**
-   * Run heartbeat check
+   * Calculate exponential backoff delay (Phase 9)
+   */
+  private calculateBackoffDelay(failureCount: number): number {
+    if (failureCount < 3) return 0;
+    return Math.pow(2, failureCount - 3) * 30000;
+  }
+
+  /**
+   * Send emergency stop alert to Discord (Phase 9)
+   */
+  private async sendEmergencyStopAlert(): Promise<void> {
+    if (!this.infraChannelId) return;
+
+    const message =
+      `**CRITICAL: Ava Gateway Emergency Stop**\n\n` +
+      `The circuit breaker has opened after 5 consecutive failures.\n\n` +
+      `**Status:** Gateway stopped\n` +
+      `**Action Required:** Investigate heartbeat failures\n` +
+      `**Cooldown:** Will retry after 5 minutes`;
+
+    try {
+      await this.discordService.sendMessage({
+        channelId: this.infraChannelId,
+        message,
+      });
+      logger.info('Emergency stop alert sent to Discord #infra');
+    } catch (error) {
+      logger.error('Error sending emergency stop alert', error);
+    }
+  }
+
+  /**
+   * Run heartbeat check (with circuit breaker + timeout)
    */
   async runHeartbeat(): Promise<HeartbeatResult> {
-    logger.info('Running Ava heartbeat check');
+    const startTime = Date.now();
 
-    if (!this.projectPath) {
-      logger.warn('Ava Gateway: No project path configured, skipping heartbeat');
+    // Phase 9: Check circuit breaker
+    if (this.circuitBreaker.isCircuitOpen()) {
+      logger.warn('Circuit breaker is OPEN, skipping heartbeat');
       return {
-        status: 'ok',
-        message: 'No project path configured',
+        status: 'alert',
+        message: 'Circuit breaker is open - gateway stopped after consecutive failures',
+        alerts: [
+          {
+            severity: 'critical',
+            title: 'Ava Gateway Circuit Breaker Open',
+            description: 'Gateway in emergency stop. Will retry after cooldown.',
+          },
+        ],
       };
     }
 
-    // Lazily create provider if not set
+    if (!this.projectPath) {
+      return { status: 'ok', message: 'No project path configured' };
+    }
+
+    // Phase 9: Apply exponential backoff if needed
+    if (this.circuitBreaker.shouldBackoff(3)) {
+      this.backoffDelayMs = this.calculateBackoffDelay(this.circuitBreaker.getFailureCount());
+      if (this.backoffDelayMs > 0) {
+        logger.info(`Applying backoff delay: ${this.backoffDelayMs}ms`);
+        await new Promise((resolve) => setTimeout(resolve, this.backoffDelayMs));
+      }
+    }
+
     if (!this.provider) {
       this.provider = new ClaudeProvider();
     }
 
     try {
-      // Generate board summary
       const summary = await this.generateBoardSummary(this.projectPath);
-
-      // Build prompt with board summary
       const prompt = this.buildHeartbeatPrompt(summary);
 
-      // Invoke Ava agent
-      logger.debug('Invoking Ava agent with board summary');
+      logger.info('Invoking Ava agent with board summary');
       const response = await this.invokeAva(prompt);
-
-      // Parse response
       const result = this.parseHeartbeatResponse(response);
 
-      // Handle alerts
+      // Phase 9: Record success
+      this.circuitBreaker.recordSuccess();
+      this.backoffDelayMs = 0;
+
+      // Phase 7: Update statistics
+      this.totalHeartbeats++;
+      this.lastHeartbeat = new Date().toISOString();
+      this.lastHeartbeatStatus = result.status;
+
       if (result.status === 'alert' && result.alerts) {
-        logger.info(`Heartbeat identified ${result.alerts.length} alerts`);
+        this.totalAlerts += result.alerts.length;
+        const duration = Date.now() - startTime;
+        logger.info(`Heartbeat identified ${result.alerts.length} alert(s) (${duration}ms)`);
 
-        // Process each alert
         for (const alert of result.alerts) {
-          // Post to Discord
           await this.postToDiscord(alert);
-
-          // Create Beads task
           await this.createBeadsTask(this.projectPath, alert);
         }
 
-        // Emit event (cast to any since ava-gateway events aren't defined in EventType yet)
         if (this.events) {
           (this.events as any).emit('ava-gateway:alerts', {
             alertCount: result.alerts.length,
@@ -372,9 +648,9 @@ export class AvaGatewayService {
           });
         }
       } else {
-        logger.info('Heartbeat OK - no issues requiring attention');
+        const duration = Date.now() - startTime;
+        logger.info(`Heartbeat OK (${duration}ms)`);
 
-        // Emit event (cast to any since ava-gateway events aren't defined in EventType yet)
         if (this.events) {
           (this.events as any).emit('ava-gateway:heartbeat-ok', {
             message: result.message,
@@ -384,7 +660,21 @@ export class AvaGatewayService {
 
       return result;
     } catch (error) {
-      logger.error('Heartbeat check failed', error);
+      const duration = Date.now() - startTime;
+      logger.error(`Heartbeat check failed after ${duration}ms`, error);
+
+      // Phase 9: Record failure
+      const circuitOpened = this.circuitBreaker.recordFailure();
+      if (circuitOpened) {
+        await this.sendEmergencyStopAlert();
+        if (this.events) {
+          (this.events as any).emit('ava-gateway:emergency-stop', {
+            failureCount: this.circuitBreaker.getFailureCount(),
+            cooldownMs: 300000,
+          });
+        }
+      }
+
       throw error;
     }
   }
@@ -431,36 +721,52 @@ Analyze the board state and respond with either HEARTBEAT_OK or one or more aler
   }
 
   /**
-   * Invoke Ava agent with prompt
+   * Invoke Ava agent with prompt (Phase 6: timeout enforcement)
    */
   private async invokeAva(prompt: string): Promise<string> {
     if (!this.provider) {
       throw new Error('Provider not initialized');
     }
 
-    // Use the provider's executeQuery generator to get Ava's response
-    const generator = this.provider.executeQuery({
-      prompt,
-      model: 'claude-sonnet-4-5-20250929', // Use Sonnet for cost efficiency
-      cwd: this.projectPath || process.cwd(),
-    });
+    const result = await withTimeout(
+      async (signal: AbortSignal) => {
+        const generator = this.provider!.executeQuery({
+          prompt,
+          model: 'claude-sonnet-4-5-20250929',
+          cwd: this.projectPath || process.cwd(),
+        });
 
-    // Collect all messages from the generator
-    let fullResponse = '';
-    for await (const message of generator) {
-      if (message.type === 'assistant' && message.message?.content) {
-        // Extract text from content blocks
-        for (const block of message.message.content) {
-          if (block.type === 'text' && 'text' in block) {
-            fullResponse += block.text;
+        let fullResponse = '';
+        for await (const message of generator) {
+          if (signal.aborted) {
+            throw new Error('Operation aborted due to timeout');
+          }
+
+          if (message.type === 'assistant' && message.message?.content) {
+            for (const block of message.message.content) {
+              if (block.type === 'text' && 'text' in block) {
+                fullResponse += block.text;
+              }
+            }
+          } else if (message.type === 'result' && message.result) {
+            fullResponse += message.result;
           }
         }
-      } else if (message.type === 'result' && message.result) {
-        fullResponse += message.result;
-      }
-    }
 
-    return fullResponse;
+        return fullResponse;
+      },
+      {
+        operationId: `ava-heartbeat-${Date.now()}`,
+        complexity: 'medium',
+        events: this.events ?? undefined,
+        metadata: {
+          operation: 'ava-heartbeat',
+          projectPath: this.projectPath,
+        },
+      }
+    );
+
+    return result;
   }
 }
 
@@ -474,14 +780,16 @@ export function getAvaGatewayService(
   featureLoader: FeatureLoader,
   beadsService: BeadsService,
   discordService: DiscordService,
-  settingsService?: SettingsService
+  settingsService?: SettingsService,
+  healthMonitor?: HealthMonitorService
 ): AvaGatewayService {
   if (!avaGatewayServiceInstance) {
     avaGatewayServiceInstance = new AvaGatewayService(
       featureLoader,
       beadsService,
       discordService,
-      settingsService
+      settingsService,
+      healthMonitor
     );
   }
   return avaGatewayServiceInstance;

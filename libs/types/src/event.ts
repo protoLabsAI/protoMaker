@@ -4,6 +4,7 @@
 
 export type EventType =
   | 'agent:stream'
+  | 'agent:timeout'
   | 'auto-mode:event'
   | 'auto-mode:started'
   | 'auto-mode:stopped'

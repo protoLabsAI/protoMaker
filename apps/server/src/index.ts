@@ -137,6 +137,7 @@ import { BeadsService } from './services/beads-service.js';
 import { createBeadsRoutes } from './routes/beads/index.js';
 import { getAvaGatewayService } from './services/ava-gateway-service.js';
 import { getDiscordService } from './services/discord-service.js';
+import { createAvaRoutes } from './routes/ava/index.js';
 
 const PORT = parseInt(process.env.PORT || '3008', 10);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -313,11 +314,20 @@ const mcpTestService = new MCPTestService(settingsService);
 const featureHealthService = new FeatureHealthService(featureLoader, autoModeService);
 const beadsService = new BeadsService('bd', events);
 const discordService = getDiscordService();
+
+// Initialize Health Monitor Service early with autoRemediate enabled
+const healthMonitorService = getHealthMonitorService(featureLoader, {
+  autoRemediate: true,
+  checkIntervalMs: 5 * 60 * 1000,
+  stuckThresholdMs: 30 * 60 * 1000,
+});
+
 const avaGatewayService = getAvaGatewayService(
   featureLoader,
   beadsService,
   discordService,
-  settingsService
+  settingsService,
+  healthMonitorService
 );
 const ideationService = new IdeationService(events, settingsService, featureLoader);
 const ralphLoopService = new RalphLoopService(events, autoModeService, settingsService);
@@ -443,13 +453,13 @@ void schedulerService
     logger.error('Scheduler startup or maintenance task registration failed:', err);
   });
 
-// Initialize Health Monitor Service for periodic health checks
-const healthMonitorService = getHealthMonitorService(featureLoader);
+// Initialize Health Monitor Service event emitter
 healthMonitorService.setEventEmitter(events);
 
 // Initialize Ava Gateway Service for heartbeat monitoring
-// Project path and Discord channel can be configured via settings
-avaGatewayService.initialize(events, REPO_ROOT);
+void avaGatewayService.initialize(events, REPO_ROOT).catch((err) => {
+  logger.error('Ava Gateway Service initialization failed:', err);
+});
 
 // Initialize Spec Generation Monitor for detecting and cleaning up stalled spec regeneration jobs
 const specGenerationMonitor = getSpecGenerationMonitor(events, {
@@ -863,6 +873,7 @@ app.use(
 );
 app.use('/api/projects', createProjectsRoutes(featureLoader));
 app.use('/api/scheduler', createSchedulerRoutes(schedulerService));
+app.use('/api/ava', createAvaRoutes(avaGatewayService));
 
 // Create HTTP server
 const server = createServer(app);
