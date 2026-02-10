@@ -354,7 +354,9 @@ export class EMAuthorityAgent {
 
         // If CI is still pending or failed, keep feature in review state
         if (mergeResult.checksPending) {
-          logger.info(`PR #${prNumber} has pending CI checks. Will retry merge after checks complete.`);
+          logger.info(
+            `PR #${prNumber} has pending CI checks. Will retry merge after checks complete.`
+          );
         } else if (mergeResult.checksFailed) {
           logger.warn(
             `PR #${prNumber} has failed CI checks: ${mergeResult.failedChecks?.join(', ')}. Manual intervention required.`
