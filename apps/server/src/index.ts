@@ -129,6 +129,7 @@ import { registerMaintenanceTasks } from './services/maintenance-tasks.js';
 import { FeatureHealthService } from './services/feature-health-service.js';
 import { BeadsService } from './services/beads-service.js';
 import { createBeadsRoutes } from './routes/beads/index.js';
+import { getAvaGatewayService } from './services/ava-gateway-service.js';
 
 const PORT = parseInt(process.env.PORT || '3008', 10);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -431,6 +432,10 @@ void schedulerService
 const healthMonitorService = getHealthMonitorService(featureLoader);
 healthMonitorService.setEventEmitter(events);
 
+// Initialize Ava Gateway Service for AI coordination
+const avaGatewayService = getAvaGatewayService(events);
+avaGatewayService.setEventEmitter(events);
+
 // Initialize Spec Generation Monitor for detecting and cleaning up stalled spec regeneration jobs
 const specGenerationMonitor = getSpecGenerationMonitor(events, {
   checkIntervalMs: 30000, // Check every 30 seconds
@@ -678,6 +683,14 @@ specGenerationMonitor.startMonitoring();
 
   // Start health monitoring after all services are fully initialized
   healthMonitorService.startMonitoring();
+
+  // Start Ava Gateway Service
+  try {
+    await avaGatewayService.start();
+    logger.info('✓ Ava Gateway Service started');
+  } catch (err) {
+    logger.error('Failed to start Ava Gateway Service:', err);
+  }
 })();
 
 // Run stale validation cleanup every hour to prevent memory leaks from crashed validations
@@ -1275,6 +1288,14 @@ async function gracefulShutdown() {
   schedulerService.stop();
   terminalService.cleanup();
   worktreeLifecycleService.shutdown();
+
+  // Stop Ava Gateway Service
+  try {
+    await avaGatewayService.stop();
+    logger.info('✓ Ava Gateway Service stopped');
+  } catch (err) {
+    logger.error('Failed to stop Ava Gateway Service:', err);
+  }
 
   server.close(() => {
     logger.info('Server closed');

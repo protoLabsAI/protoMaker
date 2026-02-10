@@ -203,7 +203,16 @@ export type EventType =
   | 'beads:task-created'
   | 'beads:task-updated'
   | 'beads:task-closed'
-  | 'beads:dependency-added';
+  | 'beads:dependency-added'
+  // Ava Gateway lifecycle events
+  | 'gateway:starting'
+  | 'gateway:started'
+  | 'gateway:stopping'
+  | 'gateway:stopped'
+  | 'gateway:restarting'
+  | 'gateway:restarted'
+  | 'gateway:error'
+  | 'gateway:config-updated';
 
 export type EventCallback = (type: EventType, payload: unknown) => void;
 
