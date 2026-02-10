@@ -190,9 +190,7 @@ export class DataIntegrityWatchdogService {
       };
       await this.writeState(state);
 
-      logger.info(
-        `Initialized integrity monitoring for ${projectPath}: ${currentCount} features`
-      );
+      logger.info(`Initialized integrity monitoring for ${projectPath}: ${currentCount} features`);
 
       return {
         intact: true,

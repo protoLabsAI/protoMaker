@@ -355,9 +355,8 @@ const notificationService = getNotificationService();
 notificationService.setEventEmitter(events);
 
 // Initialize Data Integrity Watchdog Service
-const { getDataIntegrityWatchdogService } = await import(
-  './services/data-integrity-watchdog-service.js'
-);
+const { getDataIntegrityWatchdogService } =
+  await import('./services/data-integrity-watchdog-service.js');
 const integrityWatchdogService = getDataIntegrityWatchdogService(DATA_DIR);
 integrityWatchdogService.setEventEmitter(events);
 
