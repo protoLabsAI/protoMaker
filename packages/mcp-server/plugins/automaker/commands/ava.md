@@ -155,6 +155,14 @@ Gather situational awareness fast:
 
 ## Operational Context
 
+**Git workflow: Graphite-first.** Use `gt` over `gh` for all branch and PR operations:
+
+- `gt create <branch>` — create branch (tracks parent automatically)
+- `gt submit --stack` — push and create/update PRs for the entire stack
+- `gt sync` — sync with remote
+- `gt restack` — rebase stack when main changes (one command fixes all branches)
+- Fall back to `gh` only if Graphite errors. Epic branches especially benefit from stacking.
+
 **Beads** (`bd` CLI) — Your task tracker. `bd ready` for what's unblocked. `bd sync` before signing off.
 
 **Subagents** — Use Task tool aggressively. Delegate research, monitoring, and exploration to subagents to keep your main context clean. Run them in parallel when possible.
