@@ -57,11 +57,13 @@ import { createHealthHandler } from './routes/health.js';
 import { createPruneHandler } from './routes/prune.js';
 import type { SettingsService } from '../../services/settings-service.js';
 import type { WorktreeLifecycleService } from '../../services/worktree-lifecycle-service.js';
+import type { AutoModeService } from '../../services/auto-mode-service.js';
 
 export function createWorktreeRoutes(
   events: EventEmitter,
   settingsService?: SettingsService,
-  worktreeLifecycleService?: WorktreeLifecycleService
+  worktreeLifecycleService?: WorktreeLifecycleService,
+  autoModeService?: AutoModeService
 ): Router {
   const router = Router();
 
@@ -77,7 +79,11 @@ export function createWorktreeRoutes(
     createMergeHandler()
   );
   router.post('/create', validatePathParams('projectPath'), createCreateHandler(events));
-  router.post('/delete', validatePathParams('projectPath', 'worktreePath'), createDeleteHandler());
+  router.post(
+    '/delete',
+    validatePathParams('projectPath', 'worktreePath'),
+    createDeleteHandler(autoModeService)
+  );
   router.post('/create-pr', createCreatePRHandler());
   router.post('/pr-info', createPRInfoHandler());
   router.post(
