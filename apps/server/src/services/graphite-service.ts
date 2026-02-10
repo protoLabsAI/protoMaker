@@ -386,7 +386,7 @@ export class GraphiteService {
   async commit(workDir: string, message: string): Promise<string | null> {
     try {
       // Stage all changes first
-      await execAsync('git add -A', { cwd: workDir, env: execEnv });
+      await execAsync("git add -A -- ':!.automaker/'", { cwd: workDir, env: execEnv });
 
       // Check for changes
       const { stdout: status } = await execAsync('git status --porcelain', {

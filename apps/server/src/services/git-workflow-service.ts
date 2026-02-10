@@ -508,7 +508,7 @@ export class GitWorkflowService {
     const commitMessage = `feat: ${title}\n\nImplemented by Automaker auto-mode\nFeature ID: ${feature.id}`;
 
     // Stage all changes
-    await execAsync('git add -A', { cwd: workDir, env: execEnv });
+    await execAsync("git add -A -- ':!.automaker/'", { cwd: workDir, env: execEnv });
 
     // Create commit
     await execAsync(`git commit -m "${commitMessage.replace(/"/g, '\\"')}"`, {
