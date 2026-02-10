@@ -113,12 +113,7 @@ export async function registerMaintenanceTasks(
       '*/5 * * * *', // Every 5 minutes
       async () => {
         const projectPaths = getKnownProjectPaths(autoModeService);
-        await autoMergeEligiblePRs(
-          featureLoader,
-          settingsService,
-          events,
-          projectPaths
-        );
+        await autoMergeEligiblePRs(featureLoader, settingsService, events, projectPaths);
       }
     );
     taskCount++;
@@ -476,9 +471,7 @@ async function autoMergeEligiblePRs(
       const allFeatures = await featureLoader.getAll(projectPath);
       const reviewFeatures = allFeatures.filter((f) => f.status === 'review');
 
-      logger.debug(
-        `Found ${reviewFeatures.length} features in review status for ${projectPath}`
-      );
+      logger.debug(`Found ${reviewFeatures.length} features in review status for ${projectPath}`);
 
       for (const feature of reviewFeatures) {
         if (!feature.prNumber) {
