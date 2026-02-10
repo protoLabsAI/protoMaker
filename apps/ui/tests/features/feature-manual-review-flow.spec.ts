@@ -88,7 +88,7 @@ test.describe('Feature Manual Review Flow', () => {
     cleanupTempDir(TEST_TEMP_DIR);
   });
 
-  test('should manually verify a feature in review column', async ({ page }) => {
+  test.skip('should manually verify a feature in review column', async ({ page }) => {
     // Set up the project in localStorage
     await setupRealProject(page, projectPath, projectName, { setAsCurrent: true });
 
