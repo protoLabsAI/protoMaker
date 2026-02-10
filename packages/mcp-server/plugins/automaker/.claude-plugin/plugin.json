@@ -1,7 +1,7 @@
 {
   "name": "automaker",
   "description": "Automaker - AI Development Studio. Manage Kanban boards, AI agents, and feature orchestration.",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "author": {
     "name": "Proto Labs AI"
   },
@@ -12,7 +12,8 @@
       "args": ["${AUTOMAKER_ROOT}/packages/mcp-server/dist/index.js"],
       "env": {
         "AUTOMAKER_API_URL": "http://localhost:3008",
-        "AUTOMAKER_API_KEY": "${AUTOMAKER_API_KEY}"
+        "AUTOMAKER_API_KEY": "${AUTOMAKER_API_KEY}",
+        "ENABLE_TOOL_SEARCH": "auto:10"
       }
     },
     "discord": {

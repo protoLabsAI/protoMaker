@@ -198,7 +198,12 @@ export type EventType =
   // Decision tracking events (via AuditService)
   | 'decision:logged'
   | 'decision:superseded'
-  | 'decision:reverted';
+  | 'decision:reverted'
+  // Beads task management events
+  | 'beads:task-created'
+  | 'beads:task-updated'
+  | 'beads:task-closed'
+  | 'beads:dependency-added';
 
 export type EventCallback = (type: EventType, payload: unknown) => void;
 

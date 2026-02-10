@@ -127,6 +127,8 @@ import { ProjectService } from './services/project-service.js';
 import { getSpecGenerationMonitor } from './services/spec-generation-monitor.js';
 import { registerMaintenanceTasks } from './services/maintenance-tasks.js';
 import { FeatureHealthService } from './services/feature-health-service.js';
+import { BeadsService } from './services/beads-service.js';
+import { createBeadsRoutes } from './routes/beads/index.js';
 
 const PORT = parseInt(process.env.PORT || '3008', 10);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -301,6 +303,7 @@ const codexModelCacheService = new CodexModelCacheService(DATA_DIR, codexAppServ
 const codexUsageService = new CodexUsageService(codexAppServerService);
 const mcpTestService = new MCPTestService(settingsService);
 const featureHealthService = new FeatureHealthService(featureLoader, autoModeService);
+const beadsService = new BeadsService('bd', events);
 const ideationService = new IdeationService(events, settingsService, featureLoader);
 const ralphLoopService = new RalphLoopService(events, autoModeService, settingsService);
 const goapActionRegistry = new GOAPActionRegistry();
@@ -788,6 +791,7 @@ app.use('/api/codex', createCodexRoutes(codexUsageService, codexModelCacheServic
 app.use('/api/github', createGitHubRoutes(events, settingsService));
 app.use('/api/context', createContextRoutes(settingsService));
 app.use('/api/backlog-plan', createBacklogPlanRoutes(events, settingsService));
+app.use('/api/beads', createBeadsRoutes(beadsService));
 app.use('/api/mcp', createMCPRoutes(mcpTestService));
 app.use('/api/integrations', authMiddleware, createIntegrationRoutes(settingsService));
 app.use(
