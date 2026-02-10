@@ -802,10 +802,7 @@ describe('atomic-writer.ts', () => {
         path.join(backupDir, 'feature.json.bak1'),
         'utf-8'
       );
-      expect(secureFs.readFile).toHaveBeenCalledWith(
-        path.resolve(filePath) + '.bak1',
-        'utf-8'
-      );
+      expect(secureFs.readFile).toHaveBeenCalledWith(path.resolve(filePath) + '.bak1', 'utf-8');
     });
   });
 });
