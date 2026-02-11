@@ -1920,11 +1920,7 @@ export class AutoModeService {
             model: tempRunningFeature.model || 'unknown',
             success: false,
             error: errorInfo.message,
-            trigger: isAutoMode
-              ? tempRunningFeature.retryCount > 0
-                ? 'retry'
-                : 'auto'
-              : 'manual',
+            trigger: isAutoMode ? (tempRunningFeature.retryCount > 0 ? 'retry' : 'auto') : 'manual',
           };
           const history = currentFeature?.executionHistory ?? [];
           await this.featureLoader.update(projectPath, featureId, {
