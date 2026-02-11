@@ -25,6 +25,7 @@ import type {
   ProjectIntegrations,
 } from '@automaker/types';
 import type { Feature } from '@automaker/types';
+import type { CeremonyService } from './ceremony-service.js';
 
 const logger = createLogger('Integrations');
 
@@ -78,6 +79,7 @@ export class IntegrationService {
   private emitter: EventEmitter | null = null;
   private settingsService: SettingsService | null = null;
   private featureLoader: FeatureLoader | null = null;
+  private ceremonyService: CeremonyService | null = null;
   private unsubscribe: (() => void) | null = null;
 
   /**
@@ -86,11 +88,13 @@ export class IntegrationService {
   initialize(
     emitter: EventEmitter,
     settingsService: SettingsService,
-    featureLoader: FeatureLoader
+    featureLoader: FeatureLoader,
+    ceremonyService?: CeremonyService
   ): void {
     this.emitter = emitter;
     this.settingsService = settingsService;
     this.featureLoader = featureLoader;
+    this.ceremonyService = ceremonyService || null;
 
     // Subscribe to ProtoMaker events
     this.unsubscribe = emitter.subscribe((type, payload) => {
