@@ -1363,6 +1363,190 @@ const tools: Tool[] = [
       required: ['worktreePath'],
     },
   },
+  // ========== Worktree Management ==========
+  {
+    name: 'list_worktrees',
+    description:
+      'List all git worktrees for a project. Returns worktree paths, branches, and optionally PR info.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        includeDetails: {
+          type: 'boolean',
+          description: 'Include file change counts and PR info (default: false)',
+        },
+      },
+      required: ['projectPath'],
+    },
+  },
+  {
+    name: 'get_worktree_status',
+    description:
+      'Get the git status of a specific worktree for a feature. Returns modified files, diff stats, and recent commits.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        featureId: {
+          type: 'string',
+          description: 'The feature ID to get worktree status for',
+        },
+      },
+      required: ['projectPath', 'featureId'],
+    },
+  },
+  {
+    name: 'create_pr_from_worktree',
+    description:
+      'Commit, push, and create a PR from a worktree. Handles the full workflow: stage changes, commit, push branch, create GitHub PR.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        worktreePath: {
+          type: 'string',
+          description: 'Absolute path to the worktree directory',
+        },
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the main project directory (optional)',
+        },
+        commitMessage: {
+          type: 'string',
+          description: 'Commit message (optional, auto-generated if not provided)',
+        },
+        prTitle: {
+          type: 'string',
+          description: 'PR title (optional, auto-generated if not provided)',
+        },
+        prBody: {
+          type: 'string',
+          description: 'PR body/description (optional)',
+        },
+        baseBranch: {
+          type: 'string',
+          description: 'Base branch for the PR (optional, defaults to main)',
+        },
+        draft: {
+          type: 'boolean',
+          description: 'Create as draft PR (default: false)',
+        },
+      },
+      required: ['worktreePath'],
+    },
+  },
+  // ========== Observability ==========
+  {
+    name: 'get_detailed_health',
+    description:
+      'Get detailed server health including memory usage, uptime, and environment info. Use this to monitor server resource consumption.',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+    },
+  },
+  {
+    name: 'get_settings',
+    description:
+      'Get global Automaker settings including theme, log level, auto-mode config, and project profiles.',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+    },
+  },
+  {
+    name: 'update_settings',
+    description: 'Update global Automaker settings. Pass only the fields you want to change.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        settings: {
+          type: 'object',
+          description: 'Partial settings object with fields to update',
+        },
+      },
+      required: ['settings'],
+    },
+  },
+  {
+    name: 'list_events',
+    description:
+      'List event history for a project with optional filtering by type, severity, feature, and date range.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        filter: {
+          type: 'object',
+          description:
+            'Optional filter: { trigger?, severity?, featureId?, since?, until?, limit?, offset? }',
+        },
+      },
+      required: ['projectPath'],
+    },
+  },
+  {
+    name: 'list_notifications',
+    description:
+      'List system notifications for a project. Returns unread notifications about feature completions, verifications, and agent events.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+      },
+      required: ['projectPath'],
+    },
+  },
+  {
+    name: 'start_goap_loop',
+    description:
+      'Start the GOAP (Goal-Oriented Action Planning) autonomous loop for a project. The GOAP loop continuously evaluates world state and executes actions to achieve goals.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        branchName: {
+          type: ['string', 'null'],
+          description: 'Optional branch/worktree name to run GOAP on',
+        },
+        tickIntervalMs: {
+          type: 'number',
+          description: 'Interval between GOAP ticks in milliseconds (optional)',
+        },
+      },
+      required: ['projectPath'],
+    },
+  },
+  {
+    name: 'get_goap_status',
+    description:
+      'Get the status of the GOAP autonomous loop including current goals, available actions, action history, and active role.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+      },
+      required: ['projectPath'],
+    },
+  },
 ];
 
 // Tool implementations
@@ -1812,6 +1996,78 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       return apiCall('/github/process-coderabbit-feedback', {
         projectPath: args.projectPath,
         prNumber: args.prNumber,
+      });
+
+    // Worktree Management
+    case 'list_worktrees':
+      return apiCall('/worktree/list', {
+        projectPath: args.projectPath,
+        includeDetails: args.includeDetails ?? false,
+      });
+
+    case 'get_worktree_status':
+      return apiCall('/worktree/status', {
+        projectPath: args.projectPath,
+        featureId: args.featureId,
+      });
+
+    case 'create_pr_from_worktree':
+      return apiCall('/worktree/create-pr', {
+        worktreePath: args.worktreePath,
+        projectPath: args.projectPath,
+        commitMessage: args.commitMessage,
+        prTitle: args.prTitle,
+        prBody: args.prBody,
+        baseBranch: args.baseBranch,
+        draft: args.draft,
+      });
+
+    // Observability
+    case 'get_detailed_health':
+      return apiCall('/health/detailed', {}, 'GET');
+
+    case 'get_settings':
+      return apiCall('/settings/global', {}, 'GET');
+
+    case 'update_settings': {
+      const settingsBody = (args.settings || {}) as Record<string, unknown>;
+      const options: RequestInit = {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': API_KEY,
+        },
+        body: JSON.stringify(settingsBody),
+      };
+      const response = await fetch(`${API_URL}/api/settings/global`, options);
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`API error ${response.status}: ${text}`);
+      }
+      return response.json();
+    }
+
+    case 'list_events':
+      return apiCall('/event-history/list', {
+        projectPath: args.projectPath,
+        filter: args.filter,
+      });
+
+    case 'list_notifications':
+      return apiCall('/notifications/list', {
+        projectPath: args.projectPath,
+      });
+
+    case 'start_goap_loop':
+      return apiCall('/goap/start', {
+        projectPath: args.projectPath,
+        branchName: args.branchName,
+        tickIntervalMs: args.tickIntervalMs,
+      });
+
+    case 'get_goap_status':
+      return apiCall('/goap/status', {
+        projectPath: args.projectPath,
       });
 
     default:
