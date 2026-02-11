@@ -1006,6 +1006,7 @@ export class DiscordBotService {
           // Emit routed message event
           this.events.emit('discord:user-message:routed', {
             projectPath: this.projectPath,
+            userId,
             username: message.author.username,
             agentId,
             messages,
@@ -1013,10 +1014,13 @@ export class DiscordBotService {
           });
 
           logger.info(
-            `Routed ${messages.length} message(s) from ${message.author.username} to agent ${agentId}`
+            `Routed ${messages.length} message(s) from ${userId} (${message.author.username}) to agent ${agentId}`
           );
         } catch (error) {
-          logger.error(`Failed to route buffered messages for ${message.author.username}:`, error);
+          logger.error(
+            `Failed to route buffered messages for ${userId} (${message.author.username}):`,
+            error
+          );
         }
       })();
     }, 3000);
