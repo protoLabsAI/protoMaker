@@ -1487,6 +1487,56 @@ export class DiscordBotService {
   }
 
   /**
+   * Read recent messages from a channel.
+   */
+  async readMessages(
+    channelId: string,
+    limit: number = 10
+  ): Promise<Array<{ id: string; content: string; author: string }>> {
+    if (!this.client) return [];
+
+    try {
+      const channel = (await this.client.channels.fetch(channelId)) as TextChannel;
+      if (!channel?.isTextBased()) return [];
+
+      const messages = await channel.messages.fetch({ limit });
+      return Array.from(messages.values()).map((msg) => ({
+        id: msg.id,
+        content: msg.content,
+        author: msg.author.username,
+      }));
+    } catch (error) {
+      logger.error(`Failed to read messages from channel ${channelId}:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * Create a thread for an extended conversation.
+   */
+  async createThread(channelId: string, messageId: string, name: string): Promise<string | null> {
+    if (!this.client) return null;
+
+    try {
+      const channel = (await this.client.channels.fetch(channelId)) as TextChannel;
+      if (!channel?.isTextBased()) return null;
+
+      const thread = await channel.threads.create({
+        name: name.slice(0, 100), // Discord thread name limit
+        autoArchiveDuration: 1440, // 24 hours
+        type: ChannelType.PublicThread,
+        startMessage: messageId,
+      });
+
+      logger.info(`Created thread ${thread.id} in channel ${channelId}`);
+      return thread.id;
+    } catch (error) {
+      logger.error(`Failed to create thread in channel ${channelId}:`, error);
+      return null;
+    }
+  }
+
+  /**
    * Check if the bot is connected.
    */
   isConnected(): boolean {

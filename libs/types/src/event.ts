@@ -140,6 +140,7 @@ export type EventType =
   // Discord DM events
   | 'discord:dm:received'
   | 'discord:dm:sent'
+  | 'discord:user-message:routed'
   // Linear monitoring events
   | 'linear:project:updated'
   | 'linear:issue:detected'

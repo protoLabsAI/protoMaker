@@ -474,6 +474,7 @@ export type {
   DiscordAttachment,
   DiscordReplyContext,
   DiscordRoutedMessage,
+  DiscordUserMessageRoutedPayload,
 } from './discord.js';
 
 // Agent role types (headsdown agents)

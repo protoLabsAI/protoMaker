@@ -188,3 +188,14 @@ export interface DiscordRoutedMessage {
     enabled: boolean;
   };
 }
+
+/**
+ * Payload for discord:user-message:routed event
+ */
+export interface DiscordUserMessageRoutedPayload {
+  channelId: string;
+  userId: string;
+  username: string;
+  content: string;
+  routedToAgent: string;
+}
