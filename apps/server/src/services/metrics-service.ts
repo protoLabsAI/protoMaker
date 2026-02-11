@@ -91,12 +91,12 @@ export class MetricsService {
       // Track costs and tokens from executionHistory (primary source)
       if (feature.executionHistory?.length) {
         for (const exec of feature.executionHistory) {
-          if (exec.costUsd) {
+          if (exec.costUsd != null) {
             totalCostUsd += exec.costUsd;
             costByModel[exec.model] = (costByModel[exec.model] || 0) + exec.costUsd;
           }
-          if (exec.inputTokens) totalInputTokens += exec.inputTokens;
-          if (exec.outputTokens) totalOutputTokens += exec.outputTokens;
+          if (exec.inputTokens != null) totalInputTokens += exec.inputTokens;
+          if (exec.outputTokens != null) totalOutputTokens += exec.outputTokens;
         }
       } else if (feature.costUsd) {
         // Fallback: aggregate cost from feature-level field
@@ -108,7 +108,9 @@ export class MetricsService {
       // Track completion status
       if (feature.status === 'done' || feature.status === 'verified') {
         completedCount++;
-      } else if (feature.status === 'blocked') {
+      }
+      // Count failures from executionHistory (blocked is temporary, not a failure)
+      if (feature.executionHistory?.some((exec) => !exec.success)) {
         failedCount++;
       }
 
@@ -139,11 +141,10 @@ export class MetricsService {
         prReviewTimeCount++;
       }
 
-      // Track time period using createdAt
-      const dateRef = feature.createdAt || feature.startedAt;
-      if (dateRef) {
-        if (!periodStart || dateRef < periodStart) periodStart = dateRef;
-        if (!periodEnd || dateRef > periodEnd) periodEnd = dateRef;
+      // Track time period using completed features only for accurate throughput
+      if (isDone && feature.completedAt) {
+        if (!periodStart || feature.completedAt < periodStart) periodStart = feature.completedAt;
+        if (!periodEnd || feature.completedAt > periodEnd) periodEnd = feature.completedAt;
       }
     }
 
@@ -224,8 +225,9 @@ export class MetricsService {
         ? (backlogCount * avgCompletionTimeMs) / maxConcurrency
         : 0;
 
-    // Calculate utilization
-    const utilizationPercent = maxConcurrency > 0 ? (inProgressCount / maxConcurrency) * 100 : 0;
+    // Calculate utilization (capped at 100%)
+    const utilizationPercent =
+      maxConcurrency > 0 ? Math.min((inProgressCount / maxConcurrency) * 100, 100) : 0;
 
     return {
       currentConcurrency: inProgressCount,
