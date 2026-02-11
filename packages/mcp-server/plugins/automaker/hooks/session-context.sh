@@ -18,6 +18,7 @@ fi
 BACKLOG=0
 IN_PROGRESS=0
 REVIEW=0
+BLOCKED=0
 DONE=0
 BLOCKED=0
 TOTAL=0
@@ -33,6 +34,7 @@ for dir in "$FEATURES_DIR"/*/; do
     backlog) BACKLOG=$((BACKLOG + 1)) ;;
     in_progress) IN_PROGRESS=$((IN_PROGRESS + 1)) ;;
     review) REVIEW=$((REVIEW + 1)) ;;
+    blocked) BLOCKED=$((BLOCKED + 1)) ;;
     done|verified) DONE=$((DONE + 1)) ;;
     blocked) BLOCKED=$((BLOCKED + 1)) ;;
   esac

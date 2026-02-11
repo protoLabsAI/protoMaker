@@ -5,8 +5,8 @@ argument-hint: <project path (relative or absolute)>
 allowed-tools:
   - AskUserQuestion
   - Task
-  - mcp__automaker__setup_lab
-  - mcp__automaker__health_check
+  - mcp__plugin_automaker_automaker__setup_lab
+  - mcp__plugin_automaker_automaker__health_check
 model: haiku
 ---
 
@@ -32,7 +32,7 @@ You can:
 Check if Automaker server is running:
 
 ```
-mcp__automaker__health_check()
+mcp__plugin_automaker_automaker__health_check()
 ```
 
 If it fails, inform the user: "Automaker server is not running. Start it with `npm run dev` in the automaker directory."
@@ -66,7 +66,7 @@ Resolve relative paths to absolute paths:
 Invoke the setup_lab MCP tool with the resolved path:
 
 ```
-mcp__automaker__setup_lab({
+mcp__plugin_automaker_automaker__setup_lab({
   projectPath: <resolved path>,
 })
 ```

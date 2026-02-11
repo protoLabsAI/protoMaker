@@ -5,10 +5,10 @@ argument-hint: <project slug>
 allowed-tools:
   - Read
   - AskUserQuestion
-  - mcp__automaker__list_features
-  - mcp__automaker__create_feature
-  - mcp__automaker__set_feature_dependencies
-  - mcp__automaker__health_check
+  - mcp__plugin_automaker_automaker__list_features
+  - mcp__plugin_automaker_automaker__create_feature
+  - mcp__plugin_automaker_automaker__set_feature_dependencies
+  - mcp__plugin_automaker_automaker__health_check
 model: haiku
 ---
 
@@ -62,7 +62,7 @@ Dependencies are translated:
 ### Step 1: Verify Server
 
 ```
-mcp__automaker__health_check()
+mcp__plugin_automaker_automaker__health_check()
 ```
 
 ### Step 2: Load Project

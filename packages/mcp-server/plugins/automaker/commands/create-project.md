@@ -9,13 +9,13 @@ allowed-tools:
   - Task
   - AskUserQuestion
   - Write
-  - mcp__automaker__get_project_spec
-  - mcp__automaker__list_context_files
-  - mcp__automaker__get_context_file
-  - mcp__automaker__list_features
-  - mcp__automaker__create_feature
-  - mcp__automaker__set_feature_dependencies
-  - mcp__automaker__health_check
+  - mcp__plugin_automaker_automaker__get_project_spec
+  - mcp__plugin_automaker_automaker__list_context_files
+  - mcp__plugin_automaker_automaker__get_context_file
+  - mcp__plugin_automaker_automaker__list_features
+  - mcp__plugin_automaker_automaker__create_feature
+  - mcp__plugin_automaker_automaker__set_feature_dependencies
+  - mcp__plugin_automaker_automaker__health_check
 model: sonnet
 ---
 
@@ -36,7 +36,7 @@ Complete project orchestration pipeline:
 Check Automaker server health:
 
 ```
-mcp__automaker__health_check()
+mcp__plugin_automaker_automaker__health_check()
 ```
 
 Get project path confirmation:

@@ -6,21 +6,21 @@ allowed-tools:
   - AskUserQuestion
   - Task
   # Feature Management
-  - mcp__automaker__list_features
-  - mcp__automaker__get_feature
-  - mcp__automaker__create_feature
-  - mcp__automaker__update_feature
-  - mcp__automaker__delete_feature
-  - mcp__automaker__move_feature
+  - mcp__plugin_automaker_automaker__list_features
+  - mcp__plugin_automaker_automaker__get_feature
+  - mcp__plugin_automaker_automaker__create_feature
+  - mcp__plugin_automaker_automaker__update_feature
+  - mcp__plugin_automaker_automaker__delete_feature
+  - mcp__plugin_automaker_automaker__move_feature
   # Agent Control
-  - mcp__automaker__start_agent
-  - mcp__automaker__stop_agent
-  - mcp__automaker__list_running_agents
-  - mcp__automaker__get_agent_output
-  - mcp__automaker__send_message_to_agent
+  - mcp__plugin_automaker_automaker__start_agent
+  - mcp__plugin_automaker_automaker__stop_agent
+  - mcp__plugin_automaker_automaker__list_running_agents
+  - mcp__plugin_automaker_automaker__get_agent_output
+  - mcp__plugin_automaker_automaker__send_message_to_agent
   # Utilities
-  - mcp__automaker__health_check
-  - mcp__automaker__get_board_summary
+  - mcp__plugin_automaker_automaker__health_check
+  - mcp__plugin_automaker_automaker__get_board_summary
 ---
 
 # Automaker Board Manager
@@ -45,7 +45,7 @@ You can:
 1. First, check if the Automaker server is running:
 
    ```
-   mcp__automaker__health_check()
+   mcp__plugin_automaker_automaker__health_check()
    ```
 
    If it fails, inform the user: "Automaker server is not running. Start it with `npm run dev` in the automaker directory."
@@ -56,7 +56,7 @@ You can:
 
 ### Board Overview
 
-When showing the board, use `mcp__automaker__get_board_summary()` first for counts, then `mcp__automaker__list_features()` for details.
+When showing the board, use `mcp__plugin_automaker_automaker__get_board_summary()` first for counts, then `mcp__plugin_automaker_automaker__list_features()` for details.
 
 Display format:
 

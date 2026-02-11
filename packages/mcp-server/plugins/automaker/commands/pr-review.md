@@ -8,11 +8,11 @@ allowed-tools:
   - AskUserQuestion
   - Task
   # Feature Management
-  - mcp__automaker__list_features
-  - mcp__automaker__get_feature
-  - mcp__automaker__get_board_summary
+  - mcp__plugin_automaker_automaker__list_features
+  - mcp__plugin_automaker_automaker__get_feature
+  - mcp__plugin_automaker_automaker__get_board_summary
   # Utilities
-  - mcp__automaker__health_check
+  - mcp__plugin_automaker_automaker__health_check
 ---
 
 # Automaker PR Reviewer
@@ -37,7 +37,7 @@ You can:
 1. First, check if the Automaker server is running:
 
    ```
-   mcp__automaker__health_check()
+   mcp__plugin_automaker_automaker__health_check()
    ```
 
    If it fails, inform the user: "Automaker server is not running. Start it with `npm run dev` in the automaker directory."
@@ -71,7 +71,7 @@ For each PR, extract:
 Query the board to understand epic structure:
 
 ```
-mcp__automaker__list_features()
+mcp__plugin_automaker_automaker__list_features()
 ```
 
 Build a map of:

@@ -6,8 +6,8 @@ allowed-tools:
   - Read
   - Write
   - AskUserQuestion
-  - mcp__automaker__get_project_spec
-  - mcp__automaker__list_features
+  - mcp__plugin_automaker_automaker__get_project_spec
+  - mcp__plugin_automaker_automaker__list_features
 model: haiku
 ---
 
