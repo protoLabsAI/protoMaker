@@ -40,11 +40,48 @@ for dir in "$FEATURES_DIR"/*/; do
   esac
 done
 
+# Also count blocked features for escalation logic
+BLOCKED=0
+for dir in "$FEATURES_DIR"/*/; do
+  [ -d "$dir" ] || continue
+  feature_file="$dir/feature.json"
+  [ -f "$feature_file" ] || continue
+
+  is_epic=$(jq -r '.isEpic // false' "$feature_file" 2>/dev/null)
+  [ "$is_epic" = "true" ] && continue
+
+  status=$(jq -r '.status // empty' "$feature_file" 2>/dev/null)
+  [ "$status" = "blocked" ] && BLOCKED=$((BLOCKED + 1))
+done
+
 TOTAL=$((BACKLOG + IN_PROGRESS + REVIEW))
+ACTIONABLE=$TOTAL  # Features that can be worked on
+
+# Check if ALL remaining features are blocked
+if [ "$TOTAL" -eq 0 ] && [ "$BLOCKED" -gt 0 ]; then
+  # Output JSON decision to block stop with escalation message
+  cat <<EOF
+{
+  "hookSpecificOutput": {
+    "decision": "block",
+    "reason": "⚠️ Board blocked: ${BLOCKED} blocked features, 0 actionable. Review blocked features and unblock them, or escalate to Josh if dependencies are external."
+  }
+}
+EOF
+  exit 0
+fi
 
 if [ "$TOTAL" -gt 0 ]; then
-  echo "Board has active work: ${BACKLOG} backlog, ${IN_PROGRESS} in-progress, ${REVIEW} in review. Continue processing." >&2
-  exit 2  # Block stop, continue working
+  # Output JSON decision to block stop with work continuation message
+  cat <<EOF
+{
+  "hookSpecificOutput": {
+    "decision": "block",
+    "reason": "Board has active work: ${BACKLOG} backlog, ${IN_PROGRESS} in-progress, ${REVIEW} in review. Continue processing."
+  }
+}
+EOF
+  exit 0
 fi
 
 # Board is clear — check if we should run idle tasks
@@ -56,11 +93,29 @@ if [ -f "$IDLE_COOLDOWN_FILE" ]; then
   NOW=$(date +%s)
   ELAPSED=$((NOW - LAST_IDLE))
   if [ "$ELAPSED" -lt "$IDLE_COOLDOWN_SECONDS" ]; then
-    exit 0  # Cooldown active, allow stop
+    # Allow stop (cooldown active)
+    cat <<EOF
+{
+  "hookSpecificOutput": {
+    "decision": "allow",
+    "reason": "Idle cooldown active (${ELAPSED}s/${IDLE_COOLDOWN_SECONDS}s). Board clear."
+  }
+}
+EOF
+    exit 0
   fi
 fi
 
 # Set cooldown timestamp and trigger idle work
 date +%s > "$IDLE_COOLDOWN_FILE"
-echo "Board is clear. Running idle work cycle (cleanup, health checks). Next idle in ${IDLE_COOLDOWN_SECONDS}s." >&2
-exit 2  # Block stop, run idle tasks
+
+# Output JSON decision to block stop with structured idle task list
+cat <<EOF
+{
+  "hookSpecificOutput": {
+    "decision": "block",
+    "reason": "Board clear. Running idle cycle (next in ${IDLE_COOLDOWN_SECONDS}s):\n\n📋 **Idle Tasks:**\n• Check Linear for new initiatives or unassigned issues\n• Review Beads backlog for operational improvements\n• Run maintenance tasks (dependency updates, security audits)\n• Check for configuration drift or stale branches\n• Review recent PRs for follow-up work\n• Update documentation if needed"
+  }
+}
+EOF
+exit 0
