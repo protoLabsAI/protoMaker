@@ -1519,6 +1519,62 @@ const tools: Tool[] = [
       required: ['projectPath'],
     },
   },
+  // ========== Metrics ==========
+  {
+    name: 'get_project_metrics',
+    description:
+      'Get aggregated project metrics including cycle time, cost, throughput, success rate, and token usage.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+      },
+      required: ['projectPath'],
+    },
+  },
+  {
+    name: 'get_capacity_metrics',
+    description:
+      'Get capacity utilization metrics including concurrency, backlog size, and estimated backlog clearance time.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        maxConcurrency: {
+          type: 'number',
+          description: 'Maximum concurrent features for utilization calculation (default: 3)',
+        },
+      },
+      required: ['projectPath'],
+    },
+  },
+  {
+    name: 'get_forecast',
+    description:
+      'Estimate duration and cost for a new feature based on historical averages scaled by complexity.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        complexity: {
+          type: 'string',
+          enum: ['small', 'medium', 'large', 'architectural'],
+          description: 'Feature complexity level for forecast scaling (default: medium)',
+        },
+      },
+      required: ['projectPath'],
+    },
+  },
+
   {
     name: 'start_goap_loop',
     description:
@@ -2098,6 +2154,24 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
     case 'list_notifications':
       return apiCall('/notifications/list', {
         projectPath: args.projectPath,
+      });
+
+    // Metrics
+    case 'get_project_metrics':
+      return apiCall('/metrics/summary', {
+        projectPath: args.projectPath,
+      });
+
+    case 'get_capacity_metrics':
+      return apiCall('/metrics/capacity', {
+        projectPath: args.projectPath,
+        maxConcurrency: args.maxConcurrency,
+      });
+
+    case 'get_forecast':
+      return apiCall('/metrics/forecast', {
+        projectPath: args.projectPath,
+        complexity: args.complexity || 'medium',
       });
 
     case 'start_goap_loop':
