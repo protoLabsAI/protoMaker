@@ -29,7 +29,7 @@ nohup ./scripts/ava-monitor.sh --loop 300 > /dev/null 2>&1 &
 
 ## What Each Pass Does
 
-The `/continue-ava` skill runs these checks in order:
+The `/ava` skill runs these checks in order:
 
 1. **Board State** — Moves stuck features (merged PRs → done, no agent → backlog)
 2. **PR Pipeline** — Enables auto-merge, resolves CodeRabbit threads, fixes format/build failures, updates behind branches
