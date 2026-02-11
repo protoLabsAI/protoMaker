@@ -2,6 +2,7 @@
 # continue-work.sh — Stop hook that checks board state and continues if work remains.
 # Reads feature.json files directly from disk (no API calls needed).
 # Uses stop_hook_active guard to prevent infinite loops (one continuation per turn).
+# Outputs JSON with decision (block/allow) and reason instead of exit 2.
 
 INPUT=$(cat)
 STOP_HOOK_ACTIVE=$(echo "$INPUT" | jq -r '.stop_hook_active // "false"')
@@ -21,6 +22,7 @@ fi
 
 # Count actionable (non-epic) features in active states
 BACKLOG=0
+BLOCKED=0
 IN_PROGRESS=0
 REVIEW=0
 
@@ -35,6 +37,7 @@ for dir in "$FEATURES_DIR"/*/; do
   status=$(jq -r '.status // empty' "$feature_file" 2>/dev/null)
   case "$status" in
     backlog) BACKLOG=$((BACKLOG + 1)) ;;
+    blocked) BLOCKED=$((BLOCKED + 1)) ;;
     in_progress) IN_PROGRESS=$((IN_PROGRESS + 1)) ;;
     review) REVIEW=$((REVIEW + 1)) ;;
   esac
@@ -42,9 +45,17 @@ done
 
 TOTAL=$((BACKLOG + IN_PROGRESS + REVIEW))
 
+# Check for escalation case: all remaining features are blocked
+if [ "$TOTAL" -eq 0 ] && [ "$BLOCKED" -gt 0 ]; then
+  jq -n --arg reason "All $BLOCKED remaining features are blocked. Manual intervention required for dependency resolution or unblocking." \
+    '{hookSpecificOutput: {decision: "block", reason: $reason}}'
+  exit 0
+fi
+
 if [ "$TOTAL" -gt 0 ]; then
-  echo "Board has active work: ${BACKLOG} backlog, ${IN_PROGRESS} in-progress, ${REVIEW} in review. Continue processing." >&2
-  exit 2  # Block stop, continue working
+  jq -n --arg reason "Board has active work: ${BACKLOG} backlog, ${IN_PROGRESS} in-progress, ${REVIEW} in review. Continue processing." \
+    '{hookSpecificOutput: {decision: "block", reason: $reason}}'
+  exit 0
 fi
 
 # Board is clear — check if we should run idle tasks
@@ -60,7 +71,20 @@ if [ -f "$IDLE_COOLDOWN_FILE" ]; then
   fi
 fi
 
-# Set cooldown timestamp and trigger idle work
+# Set cooldown timestamp and trigger idle work cycle with structured task list
 date +%s > "$IDLE_COOLDOWN_FILE"
-echo "Board is clear. Running idle work cycle (cleanup, health checks). Next idle in ${IDLE_COOLDOWN_SECONDS}s." >&2
-exit 2  # Block stop, run idle tasks
+
+IDLE_TASKS=$(cat <<'EOF'
+Board is clear. Running idle work cycle:
+- Check Linear for new initiatives or high-priority issues
+- Review Beads backlog for operational tasks
+- Run maintenance tasks (format check, dependency updates, security audit)
+- Check for documentation drift (MEMORY.md, CLAUDE.md)
+- Review open PRs for merge readiness
+Next idle cycle in 10 minutes.
+EOF
+)
+
+jq -n --arg reason "$IDLE_TASKS" \
+  '{hookSpecificOutput: {decision: "block", reason: $reason}}'
+exit 0
