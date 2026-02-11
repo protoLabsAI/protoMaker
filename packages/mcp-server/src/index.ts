@@ -1654,60 +1654,6 @@ const tools: Tool[] = [
     },
   },
 
-  // ========== Metrics ==========
-  {
-    name: 'get_project_metrics',
-    description:
-      'Get aggregated project metrics including feature counts, completion rates, and agent performance.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        projectPath: {
-          type: 'string',
-          description: 'Absolute path to the project directory',
-        },
-      },
-      required: ['projectPath'],
-    },
-  },
-  {
-    name: 'get_capacity_metrics',
-    description:
-      'Get capacity utilization metrics including current concurrent agent count and available slots.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        projectPath: {
-          type: 'string',
-          description: 'Absolute path to the project directory',
-        },
-        maxConcurrency: {
-          type: 'number',
-          description: 'Maximum concurrent agents allowed (optional)',
-        },
-      },
-      required: ['projectPath'],
-    },
-  },
-  {
-    name: 'get_forecast',
-    description: 'Estimate duration and cost for a feature by complexity level.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        projectPath: {
-          type: 'string',
-          description: 'Absolute path to the project directory',
-        },
-        complexity: {
-          type: 'string',
-          enum: ['small', 'medium', 'large', 'architectural'],
-          description: 'Feature complexity level for estimation',
-        },
-      },
-      required: ['projectPath', 'complexity'],
-    },
-  },
 ];
 
 // Tool implementations
@@ -2292,24 +2238,6 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
     case 'get_goap_status':
       return apiCall('/goap/status', {
         projectPath: args.projectPath,
-      });
-
-    // Metrics
-    case 'get_project_metrics':
-      return apiCall('/metrics/summary', {
-        projectPath: args.projectPath,
-      });
-
-    case 'get_capacity_metrics':
-      return apiCall('/metrics/capacity', {
-        projectPath: args.projectPath,
-        maxConcurrency: args.maxConcurrency,
-      });
-
-    case 'get_forecast':
-      return apiCall('/metrics/forecast', {
-        projectPath: args.projectPath,
-        complexity: args.complexity,
       });
 
     default:
