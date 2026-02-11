@@ -19,6 +19,8 @@ import {
 } from './routes/validation-endpoints.js';
 import { createProcessCodeRabbitFeedbackHandler } from './routes/process-coderabbit-feedback.js';
 import { createWebhookHandler } from './routes/webhook.js';
+import { createMergePRHandler } from './routes/merge-pr.js';
+import { createCheckPRStatusHandler } from './routes/check-pr-status.js';
 import type { SettingsService } from '../../services/settings-service.js';
 
 export function createGitHubRoutes(
@@ -68,6 +70,10 @@ export function createGitHubRoutes(
     validatePathParams('projectPath'),
     createProcessCodeRabbitFeedbackHandler(events)
   );
+
+  // PR merge and status endpoints
+  router.post('/merge-pr', validatePathParams('projectPath'), createMergePRHandler());
+  router.post('/check-pr-status', validatePathParams('projectPath'), createCheckPRStatusHandler());
 
   return router;
 }
