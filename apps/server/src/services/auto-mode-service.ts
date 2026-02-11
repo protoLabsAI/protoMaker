@@ -1456,6 +1456,7 @@ export class AutoModeService {
     // Execution tracking — declared outside try for catch block access
     const executionId = randomUUID();
     const executionStartedAt = new Date().toISOString();
+    let startingCostUsd = 0;
 
     try {
       // Validate that project path is allowed using centralized validation
@@ -1467,6 +1468,9 @@ export class AutoModeService {
       if (!feature) {
         throw new Error(`Feature ${featureId} not found`);
       }
+
+      // Capture starting cost for execution-specific cost tracking
+      startingCostUsd = feature.costUsd ?? 0;
 
       // Update branchName immediately after loading
       tempRunningFeature.branchName = feature.branchName ?? null;
@@ -1775,15 +1779,17 @@ export class AutoModeService {
         const completedAt = new Date().toISOString();
         const durationMs = Date.now() - tempRunningFeature.startTime;
         const currentFeature = await this.featureLoader.get(projectPath, featureId);
+        // Calculate execution-specific cost delta (not cumulative cost)
+        const executionCostUsd = Math.max(0, (currentFeature?.costUsd ?? 0) - startingCostUsd);
         const record: ExecutionRecord = {
           id: executionId,
           startedAt: executionStartedAt,
           completedAt,
           durationMs,
-          costUsd: currentFeature?.costUsd,
+          costUsd: executionCostUsd,
           model,
           success: true,
-          trigger: isAutoMode ? 'auto' : 'manual',
+          trigger: isAutoMode ? (tempRunningFeature.retryCount > 0 ? 'retry' : 'auto') : 'manual',
         };
         const history = currentFeature?.executionHistory ?? [];
         await this.featureLoader.update(projectPath, featureId, {
@@ -1911,12 +1917,14 @@ export class AutoModeService {
           const completedAt = new Date().toISOString();
           const durationMs = Date.now() - tempRunningFeature.startTime;
           const currentFeature = await this.featureLoader.get(projectPath, featureId);
+          // Calculate execution-specific cost delta (not cumulative cost)
+          const executionCostUsd = Math.max(0, (currentFeature?.costUsd ?? 0) - startingCostUsd);
           const record: ExecutionRecord = {
             id: executionId,
             startedAt: executionStartedAt,
             completedAt,
             durationMs,
-            costUsd: currentFeature?.costUsd,
+            costUsd: executionCostUsd,
             model: tempRunningFeature.model || 'unknown',
             success: false,
             error: errorInfo.message,
