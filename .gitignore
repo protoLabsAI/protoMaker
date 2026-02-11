@@ -22,12 +22,14 @@ out/
 .automaker/execution-state.json
 .automaker/notifications.json
 
-# But track project plans, context files, settings, and feature data
+# Feature data is runtime-managed by the server — never git-track
+.automaker/features/
+
+# But track project plans, context files, settings, and spec
 !.automaker/projects/
 !.automaker/context/
 !.automaker/settings.json
 !.automaker/spec.md
-!.automaker/features/**/feature.json
 
 .worktrees/
 
