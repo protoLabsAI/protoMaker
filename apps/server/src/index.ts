@@ -993,13 +993,20 @@ wss.on('connection', (ws: WebSocket) => {
     });
 
     if (ws.readyState === WebSocket.OPEN) {
-      const message = JSON.stringify({ type, payload });
-      logger.info('Sending event to client:', {
-        type,
-        messageLength: message.length,
-        sessionId: (payload as any)?.sessionId,
-      });
-      ws.send(message);
+      try {
+        const message = JSON.stringify({ type, payload });
+        logger.info('Sending event to client:', {
+          type,
+          messageLength: message.length,
+          sessionId: (payload as any)?.sessionId,
+        });
+        ws.send(message);
+      } catch (err) {
+        logger.warn('Failed to send WebSocket message:', {
+          type,
+          error: (err as Error).message,
+        });
+      }
     } else {
       logger.info('WARNING: Cannot send event, WebSocket not open. ReadyState:', ws.readyState);
     }
@@ -1323,9 +1330,31 @@ process.on('uncaughtException', (error: Error) => {
     message: error.message,
     stack: error.stack,
   });
-  // Exit on uncaught exceptions to prevent undefined behavior
-  // The process is in an unknown state after an uncaught exception
-  process.exit(1);
+
+  // Known non-fatal errors: log and continue instead of crashing
+  const nonFatalCodes = [
+    'ECONNRESET',
+    'EPIPE',
+    'ERR_STREAM_DESTROYED',
+    'ERR_STREAM_WRITE_AFTER_END',
+  ];
+  const errorCode = (error as NodeJS.ErrnoException).code;
+  if (errorCode && nonFatalCodes.includes(errorCode)) {
+    logger.warn(`Non-fatal uncaught exception (${errorCode}), continuing...`);
+    return;
+  }
+
+  // For truly fatal exceptions: attempt graceful shutdown with timeout
+  logger.error('Fatal uncaught exception — initiating graceful shutdown...');
+  const forceExitTimeout = setTimeout(() => {
+    logger.error('Graceful shutdown timed out after 10s, forcing exit');
+    process.exit(1);
+  }, 10_000);
+  forceExitTimeout.unref(); // Don't keep process alive just for this timer
+
+  gracefulShutdown()
+    .catch((err) => logger.error('Shutdown failed during uncaught exception handling:', err))
+    .finally(() => process.exit(1));
 });
 
 // Graceful shutdown with WorldStateMonitor tick timeout
