@@ -50,6 +50,37 @@ export interface StatusTransition {
   reason?: string;
 }
 
+/**
+ * Records a single agent execution on a feature.
+ * Pushed to executionHistory array for each agent run (success or failure).
+ */
+export interface ExecutionRecord {
+  /** Unique identifier for this execution */
+  id: string;
+  /** ISO 8601 timestamp when the agent started */
+  startedAt: string;
+  /** ISO 8601 timestamp when the agent finished (success or failure) */
+  completedAt?: string;
+  /** Duration of the execution in milliseconds */
+  durationMs?: number;
+  /** Total cost in USD for this execution */
+  costUsd?: number;
+  /** Number of input tokens consumed */
+  inputTokens?: number;
+  /** Number of output tokens produced */
+  outputTokens?: number;
+  /** Model used for this execution */
+  model: string;
+  /** Whether the execution completed successfully */
+  success: boolean;
+  /** Error message if the execution failed */
+  error?: string;
+  /** Number of turns the agent took */
+  turnCount?: number;
+  /** What triggered this execution (auto-mode, manual, retry) */
+  trigger: 'auto' | 'manual' | 'retry';
+}
+
 export interface Feature {
   id: string;
   title?: string;
@@ -132,6 +163,11 @@ export interface Feature {
    * Populated from SDK's total_cost_usd in the result message.
    */
   costUsd?: number;
+  /**
+   * History of all agent executions on this feature.
+   * Each record captures timing, cost, tokens, model, and outcome.
+   */
+  executionHistory?: ExecutionRecord[];
   /**
    * Override max turns for this feature's agent execution.
    * If not set, turns are derived from complexity:
