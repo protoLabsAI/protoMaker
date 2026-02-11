@@ -423,6 +423,7 @@ export class GitWorkflowService {
             if (mergeResult.success) {
               result.merged = true;
               result.mergeCommitSha = mergeResult.mergeCommitSha;
+              result.prMergedAt = new Date().toISOString();
               logger.info(
                 `Successfully merged PR #${result.prNumber}${mergeResult.mergeCommitSha ? ` (commit: ${mergeResult.mergeCommitSha})` : ''}`
               );
@@ -472,26 +473,34 @@ export class GitWorkflowService {
     projectPath: string,
     feature: Feature,
     branchName: string
-  ): Promise<{ prUrl: string | null; prNumber?: number; prAlreadyExisted?: boolean }> {
+  ): Promise<{
+    prUrl: string | null;
+    prNumber?: number;
+    prAlreadyExisted?: boolean;
+    prCreatedAt?: string;
+  }> {
     const title = feature.title || extractTitleFromDescription(feature.description);
     const body = `## Summary\n\n${feature.description.substring(0, 500)}${feature.description.length > 500 ? '...' : ''}\n\n---\n*Created automatically by Automaker*`;
 
     const submitResult = await graphiteService.submit(workDir, title, body);
 
     if (submitResult.success && submitResult.prUrl) {
+      const prCreatedAt = new Date().toISOString();
+
       // Store PR info in metadata
       await updateWorktreePRInfo(projectPath, branchName, {
         number: submitResult.prNumber!,
         url: submitResult.prUrl,
         title,
         state: 'OPEN',
-        createdAt: new Date().toISOString(),
+        createdAt: prCreatedAt,
       });
 
       return {
         prUrl: submitResult.prUrl,
         prNumber: submitResult.prNumber,
         prAlreadyExisted: false, // Graphite submit handles existing PRs internally
+        prCreatedAt,
       };
     }
 
@@ -590,7 +599,12 @@ export class GitWorkflowService {
     feature: Feature,
     branchName: string,
     baseBranch: string
-  ): Promise<{ prUrl: string | null; prNumber?: number; prAlreadyExisted?: boolean }> {
+  ): Promise<{
+    prUrl: string | null;
+    prNumber?: number;
+    prAlreadyExisted?: boolean;
+    prCreatedAt?: string;
+  }> {
     // Check if gh CLI is available
     const ghAvailable = await isGhCliAvailable();
     if (!ghAvailable) {
@@ -692,6 +706,7 @@ export class GitWorkflowService {
 
       // Extract PR number and store metadata
       let prNumber: number | undefined;
+      const prCreatedAt = new Date().toISOString();
       const prMatch = prUrl.match(/\/pull\/(\d+)/);
       if (prMatch) {
         prNumber = parseInt(prMatch[1], 10);
@@ -701,11 +716,11 @@ export class GitWorkflowService {
           url: prUrl,
           title,
           state: 'OPEN',
-          createdAt: new Date().toISOString(),
+          createdAt: prCreatedAt,
         });
       }
 
-      return { prUrl, prNumber, prAlreadyExisted: false };
+      return { prUrl, prNumber, prAlreadyExisted: false, prCreatedAt };
     } catch (error) {
       // Check if error indicates PR already exists
       const errorMessage = error instanceof Error ? error.message : String(error);

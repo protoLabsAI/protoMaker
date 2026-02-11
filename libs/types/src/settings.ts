@@ -657,6 +657,10 @@ export interface GitWorkflowResult {
   merged?: boolean;
   /** Commit SHA of the merge commit (if merged) */
   mergeCommitSha?: string;
+  /** Timestamp when the PR was created (ISO 8601) */
+  prCreatedAt?: string;
+  /** Timestamp when the PR was merged (ISO 8601) */
+  prMergedAt?: string;
   /** Error message if any step failed (workflow continues best-effort) */
   error?: string;
 }

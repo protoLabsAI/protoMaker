@@ -228,9 +228,21 @@ export class ReconciliationService {
 
     logger.info(`Moving feature ${drift.featureId} to 'done' - PR merged`);
 
-    await this.featureLoader.update(drift.projectPath, drift.featureId, {
+    const feature = await this.featureLoader.get(drift.projectPath, drift.featureId);
+    const prMergedAt = new Date().toISOString();
+    const updates: Record<string, unknown> = {
       status: 'done',
-    });
+      prMergedAt,
+    };
+
+    // Calculate review duration if prCreatedAt is available
+    if (feature?.prCreatedAt) {
+      const createdAt = new Date(feature.prCreatedAt);
+      const mergedAt = new Date(prMergedAt);
+      updates.prReviewDurationMs = mergedAt.getTime() - createdAt.getTime();
+    }
+
+    await this.featureLoader.update(drift.projectPath, drift.featureId, updates);
 
     return 'feature-marked-done';
   }

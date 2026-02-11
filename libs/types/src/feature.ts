@@ -254,6 +254,21 @@ export interface Feature {
    */
   beadsTaskId?: string;
   /**
+   * Timestamp when the PR was created (ISO 8601).
+   * Set by git-workflow-service when auto-creating a PR.
+   */
+  prCreatedAt?: string;
+  /**
+   * Timestamp when the PR was merged (ISO 8601).
+   * Set by git-workflow-service after successful merge.
+   */
+  prMergedAt?: string;
+  /**
+   * Duration of PR review in milliseconds.
+   * Computed as: prMergedAt - prCreatedAt
+   */
+  prReviewDurationMs?: number;
+  /**
    * Lifecycle timestamps for tracking feature progression through statuses.
    * All timestamps are ISO 8601 strings.
    */

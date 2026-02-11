@@ -311,10 +311,21 @@ export class EMAuthorityAgent {
           },
         });
 
-        // Update feature status to done
-        await this.featureLoader.update(projectPath, featureId, {
+        // Update feature status to done and set merge timestamps
+        const prMergedAt = new Date().toISOString();
+        const updates: Partial<Feature> = {
           status: 'done',
-        });
+          prMergedAt,
+        };
+
+        // Calculate review duration if prCreatedAt is available
+        if (feature.prCreatedAt) {
+          const createdAt = new Date(feature.prCreatedAt);
+          const mergedAt = new Date(prMergedAt);
+          updates.prReviewDurationMs = mergedAt.getTime() - createdAt.getTime();
+        }
+
+        await this.featureLoader.update(projectPath, featureId, updates);
 
         // Emit event for UI notification
         this.events.emit('feature:pr-merged', {

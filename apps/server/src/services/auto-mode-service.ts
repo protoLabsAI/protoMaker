@@ -1876,13 +1876,35 @@ export class AutoModeService {
               projectPath,
             });
 
-            // Transition feature to 'review' so the merge webhook can move it to 'done'
+            // Transition feature to 'review' or 'done' based on merge status
             if (gitWorkflowResult.prUrl) {
-              await this.featureLoader.update(projectPath, featureId, {
-                status: 'review',
+              const updates: Record<string, unknown> = {
                 prUrl: gitWorkflowResult.prUrl,
                 prNumber: gitWorkflowResult.prNumber,
-              });
+              };
+
+              // Set PR creation timestamp
+              if (gitWorkflowResult.prCreatedAt) {
+                updates.prCreatedAt = gitWorkflowResult.prCreatedAt;
+              }
+
+              // If PR was auto-merged, set merge timestamp and status to 'done'
+              if (gitWorkflowResult.merged && gitWorkflowResult.prMergedAt) {
+                updates.status = 'done';
+                updates.prMergedAt = gitWorkflowResult.prMergedAt;
+
+                // Calculate review duration if prCreatedAt is available
+                if (gitWorkflowResult.prCreatedAt) {
+                  const createdAt = new Date(gitWorkflowResult.prCreatedAt);
+                  const mergedAt = new Date(gitWorkflowResult.prMergedAt);
+                  updates.prReviewDurationMs = mergedAt.getTime() - createdAt.getTime();
+                }
+              } else {
+                // PR created but not merged - transition to 'review'
+                updates.status = 'review';
+              }
+
+              await this.featureLoader.update(projectPath, featureId, updates);
             }
           }
         } catch (gitError) {
@@ -3048,13 +3070,35 @@ Address the follow-up instructions above. Review the previous work and make the 
               projectPath,
             });
 
-            // Transition feature to 'review' so the merge webhook can move it to 'done'
+            // Transition feature to 'review' or 'done' based on merge status
             if (gitWorkflowResult.prUrl) {
-              await this.featureLoader.update(projectPath, featureId, {
-                status: 'review',
+              const updates: Record<string, unknown> = {
                 prUrl: gitWorkflowResult.prUrl,
                 prNumber: gitWorkflowResult.prNumber,
-              });
+              };
+
+              // Set PR creation timestamp
+              if (gitWorkflowResult.prCreatedAt) {
+                updates.prCreatedAt = gitWorkflowResult.prCreatedAt;
+              }
+
+              // If PR was auto-merged, set merge timestamp and status to 'done'
+              if (gitWorkflowResult.merged && gitWorkflowResult.prMergedAt) {
+                updates.status = 'done';
+                updates.prMergedAt = gitWorkflowResult.prMergedAt;
+
+                // Calculate review duration if prCreatedAt is available
+                if (gitWorkflowResult.prCreatedAt) {
+                  const createdAt = new Date(gitWorkflowResult.prCreatedAt);
+                  const mergedAt = new Date(gitWorkflowResult.prMergedAt);
+                  updates.prReviewDurationMs = mergedAt.getTime() - createdAt.getTime();
+                }
+              } else {
+                // PR created but not merged - transition to 'review'
+                updates.status = 'review';
+              }
+
+              await this.featureLoader.update(projectPath, featureId, updates);
             }
           }
         } catch (gitError) {
