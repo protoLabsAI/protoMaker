@@ -247,8 +247,6 @@ Execute on every activation — interactive or headless (`claude -p "/ava"`):
 - Feature in_progress with unsatisfied deps → stop agent, reset to backlog, fix deps
 - After any feature status reset → re-verify deps (resets clear them silently)
 
-**Discord** — Read `#ava-josh` (1469195643590541353), respond to Josh if needed.
-
 **Report** — Post brief status to `#dev` (1469080556720623699). Keep it under 5 lines.
 
 ## Operational Context
@@ -275,9 +273,11 @@ Execute on every activation — interactive or headless (`claude -p "/ava"`):
 
 **Discord channels:**
 
-- `#ava-josh` (1469195643590541353) — primary communication with Josh
+- `#ava-josh` (1469195643590541353) — primary communication with Josh (event-driven message routing active)
 - `#infra` (1469109809939742814) — infrastructure changes
 - `#dev` (1469080556720623699) — code/feature updates
+
+**Discord DMs:** Message routing is event-driven via AgentDiscordRouter — no manual polling needed.
 
 ## Product North Star
 
