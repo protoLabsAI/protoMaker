@@ -48,13 +48,13 @@ TOTAL=$((BACKLOG + IN_PROGRESS + REVIEW))
 # Check for escalation case: all remaining features are blocked
 if [ "$TOTAL" -eq 0 ] && [ "$BLOCKED" -gt 0 ]; then
   jq -n --arg reason "All $BLOCKED remaining features are blocked. Manual intervention required for dependency resolution or unblocking." \
-    '{hookSpecificOutput: {decision: "block", reason: $reason}}'
+    '{decision: "block", reason: $reason}'
   exit 0
 fi
 
 if [ "$TOTAL" -gt 0 ]; then
   jq -n --arg reason "Board has active work: ${BACKLOG} backlog, ${IN_PROGRESS} in-progress, ${REVIEW} in review. Continue processing." \
-    '{hookSpecificOutput: {decision: "block", reason: $reason}}'
+    '{decision: "block", reason: $reason}'
   exit 0
 fi
 
@@ -86,5 +86,5 @@ EOF
 )
 
 jq -n --arg reason "$IDLE_TASKS" \
-  '{hookSpecificOutput: {decision: "block", reason: $reason}}'
+  '{decision: "block", reason: $reason}'
 exit 0
