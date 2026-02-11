@@ -471,6 +471,9 @@ export type {
   CreateWebhookOptions,
   SendWebhookMessageOptions,
   DiscordOperationResult,
+  DiscordAttachment,
+  DiscordReplyContext,
+  DiscordRoutedMessage,
 } from './discord.js';
 
 // Agent role types (headsdown agents)

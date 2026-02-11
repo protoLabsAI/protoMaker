@@ -458,6 +458,7 @@ const discordBotService = new DiscordBotService(
   events,
   authorityService,
   featureLoader,
+  settingsService,
   REPO_ROOT,
   { pm: pmAgent, projm: projmAgent, em: emAgent, statusMonitor }
 );

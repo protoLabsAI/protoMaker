@@ -41,6 +41,7 @@ import type { PMAuthorityAgent } from './authority-agents/pm-agent.js';
 import type { ProjMAuthorityAgent } from './authority-agents/projm-agent.js';
 import type { EMAuthorityAgent } from './authority-agents/em-agent.js';
 import type { StatusMonitorAgent } from './authority-agents/status-agent.js';
+import type { SettingsService } from './settings-service.js';
 
 interface AuthorityAgents {
   pm?: PMAuthorityAgent;
@@ -84,6 +85,7 @@ export class DiscordBotService {
   private readonly events: EventEmitter;
   private readonly authorityService: AuthorityService;
   private readonly featureLoader: FeatureLoader;
+  private readonly settingsService: SettingsService;
   private readonly projectPath: string;
   private readonly agents?: AuthorityAgents;
 
@@ -103,12 +105,14 @@ export class DiscordBotService {
     events: EventEmitter,
     authorityService: AuthorityService,
     featureLoader: FeatureLoader,
+    settingsService: SettingsService,
     projectPath: string,
     agents?: AuthorityAgents
   ) {
     this.events = events;
     this.authorityService = authorityService;
     this.featureLoader = featureLoader;
+    this.settingsService = settingsService;
     this.projectPath = projectPath;
     this.agents = agents;
   }
@@ -612,6 +616,90 @@ export class DiscordBotService {
   }
 
   /**
+   * Build a complete DiscordRoutedMessage payload with context.
+   */
+  private async buildRoutedMessage(
+    message: Message,
+    userId: string,
+    agentType: string,
+    enabled: boolean
+  ): Promise<{
+    message: {
+      id: string;
+      channelId: string;
+      authorId: string;
+      authorName: string;
+      content: string;
+      timestamp: string;
+    };
+    recentMessages: Array<{
+      id: string;
+      channelId: string;
+      authorId: string;
+      authorName: string;
+      content: string;
+      timestamp: string;
+    }>;
+    attachments: {
+      textFiles?: Array<{ filename: string; content: string }>;
+      imagePaths?: string[];
+    };
+    replyTo?: {
+      messageId: string;
+      authorId: string;
+      authorName: string;
+      content: string;
+      timestamp: string;
+    };
+    routingConfig: { userId: string; agentType: string; enabled: boolean };
+  }> {
+    // 1. Convert message to simple object
+    const messageData = {
+      id: message.id,
+      channelId: message.channelId,
+      authorId: message.author.id,
+      authorName: message.author.username,
+      content: message.content,
+      timestamp: message.createdAt.toISOString(),
+    };
+
+    // 2. Fetch recent messages for conversational context
+    const recentMessages = await this.fetchRecentMessages(message.channelId, 10);
+
+    // 3. Process attachments on the triggering message
+    let attachments: {
+      textFiles?: Array<{ filename: string; content: string }>;
+      imagePaths?: string[];
+    } = {};
+    if (message.attachments.size > 0) {
+      for (const attachment of message.attachments.values()) {
+        const processed = await this.processAttachment(attachment);
+        if (processed.textFiles) {
+          attachments.textFiles = [...(attachments.textFiles || []), ...processed.textFiles];
+        }
+        if (processed.imagePaths) {
+          attachments.imagePaths = [...(attachments.imagePaths || []), ...processed.imagePaths];
+        }
+      }
+    }
+
+    // 4. Get reply context if message is a reply
+    const replyTo = await this.getReplyContext(message);
+
+    return {
+      message: messageData,
+      recentMessages,
+      attachments,
+      replyTo,
+      routingConfig: {
+        userId,
+        agentType,
+        enabled,
+      },
+    };
+  }
+
+  /**
    * Handle message-prefix commands and thread replies.
    */
   private async handleMessage(message: Message): Promise<void> {
@@ -752,6 +840,76 @@ export class DiscordBotService {
     } catch (error) {
       logger.error('Error handling !idea command:', error);
       await message.reply('Error submitting idea.');
+    }
+  }
+
+  /**
+   * Fetch the last N messages from a channel for conversational context.
+   */
+  private async fetchRecentMessages(
+    channelId: string,
+    limit: number = 10
+  ): Promise<
+    Array<{ id: string; authorId: string; authorName: string; content: string; timestamp: string }>
+  > {
+    if (!this.client) return [];
+
+    try {
+      const channel = await this.client.channels.fetch(channelId);
+      if (!channel || !channel.isTextBased()) return [];
+
+      const messages = await (channel as TextChannel).messages.fetch({ limit });
+
+      return Array.from(messages.values())
+        .map((msg) => ({
+          id: msg.id,
+          channelId: msg.channelId,
+          authorId: msg.author.id,
+          authorName: msg.author.username,
+          content: msg.content,
+          timestamp: msg.createdAt.toISOString(),
+        }))
+        .reverse(); // oldest to newest
+    } catch (error) {
+      logger.warn(`Failed to fetch recent messages from channel ${channelId}:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * Get reply context if the message is replying to another message.
+   */
+  private async getReplyContext(message: Message): Promise<
+    | {
+        messageId: string;
+        authorId: string;
+        authorName: string;
+        content: string;
+        timestamp: string;
+      }
+    | undefined
+  > {
+    if (!message.reference?.messageId) return undefined;
+
+    try {
+      const channel = message.channel;
+      if (!channel.isTextBased()) return undefined;
+
+      const referencedMessage = await (channel as TextChannel).messages.fetch(
+        message.reference.messageId
+      );
+      if (!referencedMessage) return undefined;
+
+      return {
+        messageId: referencedMessage.id,
+        authorId: referencedMessage.author.id,
+        authorName: referencedMessage.author.username,
+        content: referencedMessage.content,
+        timestamp: referencedMessage.createdAt.toISOString(),
+      };
+    } catch (error) {
+      logger.warn(`Failed to fetch reply context for message ${message.id}:`, error);
+      return undefined;
     }
   }
 

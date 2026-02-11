@@ -149,3 +149,42 @@ export interface DiscordOperationResult<T = unknown> {
   error?: string;
   errorType?: 'connection' | 'permission' | 'not_found' | 'rate_limit' | 'unknown';
 }
+
+/**
+ * Attachment data processed from Discord
+ */
+export interface DiscordAttachment {
+  textFiles?: Array<{ filename: string; content: string }>;
+  imagePaths?: string[];
+}
+
+/**
+ * Reply context - the message being replied to
+ */
+export interface DiscordReplyContext {
+  messageId: string;
+  authorId: string;
+  authorName: string;
+  content: string;
+  timestamp: string;
+}
+
+/**
+ * Message routed to an agent with full context
+ */
+export interface DiscordRoutedMessage {
+  /** The triggering message */
+  message: DiscordMessage;
+  /** Last N messages from the channel for conversational context */
+  recentMessages: DiscordMessage[];
+  /** Processed attachments (images, files) from the triggering message */
+  attachments: DiscordAttachment;
+  /** Reply context if the message is a reply */
+  replyTo?: DiscordReplyContext;
+  /** The user routing config that triggered this route */
+  routingConfig: {
+    userId: string;
+    agentType: string;
+    enabled: boolean;
+  };
+}
