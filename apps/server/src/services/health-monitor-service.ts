@@ -26,8 +26,8 @@ import { promisify } from 'util';
 const execAsync = promisify(exec);
 const logger = createLogger('HealthMonitor');
 
-/** Default interval for health checks (5 minutes) */
-const DEFAULT_CHECK_INTERVAL_MS = 5 * 60 * 1000;
+/** Default interval for health checks (30 seconds for faster memory monitoring) */
+const DEFAULT_CHECK_INTERVAL_MS = 30 * 1000;
 
 /** Threshold for considering a feature stuck (30 minutes) */
 const STUCK_FEATURE_THRESHOLD_MS = 30 * 60 * 1000;

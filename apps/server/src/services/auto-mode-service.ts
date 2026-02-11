@@ -440,6 +440,12 @@ export class AutoModeService {
   private authorityService: AuthorityService | null = null;
   // Data integrity watchdog service for monitoring feature count (optional)
   private integrityWatchdogService: DataIntegrityWatchdogService | null = null;
+  // Rate-limiting for auto_mode_progress events (per feature)
+  private lastProgressEventTime = new Map<string, number>();
+  private readonly PROGRESS_EVENT_MIN_INTERVAL_MS = 100; // Max 1 event per 100ms per feature
+  // Memory management thresholds
+  private readonly HEAP_USAGE_STOP_NEW_AGENTS_THRESHOLD = 0.8; // 80%
+  private readonly HEAP_USAGE_ABORT_AGENTS_THRESHOLD = 0.9; // 90%
 
   constructor(events: EventEmitter, settingsService?: SettingsService) {
     this.events = events;
@@ -955,6 +961,36 @@ export class AutoModeService {
         );
 
         if (nextFeature) {
+          // Check heap usage before starting new agents
+          const heapUsage = this.getHeapUsagePercent();
+
+          // At 90% heap usage, abort most recent agent to free memory
+          if (heapUsage >= this.HEAP_USAGE_ABORT_AGENTS_THRESHOLD) {
+            const mostRecent = this.getMostRecentRunningFeature(projectPath);
+            if (mostRecent && mostRecent.abortController) {
+              logger.warn(
+                `[AutoLoop] Critical heap usage (${Math.round(heapUsage * 100)}%), aborting most recent agent: ${mostRecent.featureId}`
+              );
+              mostRecent.abortController.abort();
+              this.emitAutoModeEvent('auto_mode_progress', {
+                featureId: mostRecent.featureId,
+                message: `⚠️ Agent aborted due to critical memory usage (${Math.round(heapUsage * 100)}%)`,
+                projectPath,
+              });
+            }
+            await this.sleep(2000);
+            continue;
+          }
+
+          // At 80% heap usage, stop accepting new agents
+          if (heapUsage >= this.HEAP_USAGE_STOP_NEW_AGENTS_THRESHOLD) {
+            logger.warn(
+              `[AutoLoop] High heap usage (${Math.round(heapUsage * 100)}%), deferring new agent start`
+            );
+            await this.sleep(5000);
+            continue;
+          }
+
           // Double-check we're not at capacity (defensive check before starting)
           const currentRunningCount = await this.getRunningCountForWorktree(
             projectPath,
@@ -4644,6 +4680,8 @@ This mock response was generated because AUTOMAKER_MOCK_AGENT=true was set.
     // Incremental file writing state
     let writeTimeout: ReturnType<typeof setTimeout> | null = null;
     const WRITE_DEBOUNCE_MS = 500; // Batch writes every 500ms
+    const RESPONSE_TEXT_MAX_SIZE = 5 * 1024 * 1024; // 5MB threshold for responseText
+    let responseTextFlushedToFile = false; // Track if we've hit the threshold
 
     // Raw output accumulator for debugging (NDJSON format)
     let rawOutputLines: string[] = [];
@@ -4710,6 +4748,22 @@ This mock response was generated because AUTOMAKER_MOCK_AGENT=true was set.
       );
     }, STREAM_HEARTBEAT_MS);
 
+    // Memory monitoring heartbeat - check heap usage every 30 seconds during execution
+    const MEMORY_CHECK_MS = 30_000;
+    const memoryHeartbeat = setInterval(() => {
+      const heapUsage = this.getHeapUsagePercent();
+      if (heapUsage >= this.HEAP_USAGE_ABORT_AGENTS_THRESHOLD) {
+        logger.error(
+          `[Agent ${featureId}] Critical heap usage (${Math.round(heapUsage * 100)}%), aborting agent`
+        );
+        abortController.abort();
+      } else if (heapUsage >= this.HEAP_USAGE_STOP_NEW_AGENTS_THRESHOLD) {
+        logger.warn(
+          `[Agent ${featureId}] High heap usage (${Math.round(heapUsage * 100)}%) during execution`
+        );
+      }
+    }, MEMORY_CHECK_MS);
+
     // Wrap stream processing in try/finally to ensure timeout cleanup on any error/abort
     try {
       streamLoop: for await (const msg of stream) {
@@ -4748,6 +4802,26 @@ This mock response was generated because AUTOMAKER_MOCK_AGENT=true was set.
                 }
               }
               responseText += newText;
+
+              // Check if responseText exceeds threshold and flush to disk
+              if (
+                !responseTextFlushedToFile &&
+                Buffer.byteLength(responseText, 'utf8') > RESPONSE_TEXT_MAX_SIZE
+              ) {
+                logger.info(
+                  `responseText exceeded ${RESPONSE_TEXT_MAX_SIZE / (1024 * 1024)}MB for feature ${featureId}, flushing to disk`
+                );
+                // Flush to disk immediately
+                await writeToFile();
+                // Keep only last 100KB in memory for context
+                const keepSize = 100 * 1024;
+                const textBuffer = Buffer.from(responseText, 'utf8');
+                if (textBuffer.length > keepSize) {
+                  const truncatedBuffer = textBuffer.subarray(textBuffer.length - keepSize);
+                  responseText = `[...previous content flushed to disk...]\n\n${truncatedBuffer.toString('utf8')}`;
+                }
+                responseTextFlushedToFile = true;
+              }
 
               // Check for authentication errors in the response
               if (
@@ -5316,6 +5390,7 @@ After generating the revised spec, output:
       }
     } finally {
       clearInterval(streamHeartbeat);
+      clearInterval(memoryHeartbeat);
       // ALWAYS clear pending timeouts to prevent memory leaks
       // This runs on success, error, or abort
       if (writeTimeout) {
@@ -5579,13 +5654,55 @@ After generating the revised spec, output:
    * Emit an auto-mode event wrapped in the correct format for the client.
    * All auto-mode events are sent as type "auto-mode:event" with the actual
    * event type and data in the payload.
+   * Rate-limits auto_mode_progress events to max 1 per 100ms per feature.
    */
   private emitAutoModeEvent(eventType: string, data: Record<string, unknown>): void {
+    // Rate-limit auto_mode_progress events to prevent WebSocket overload
+    if (eventType === 'auto_mode_progress') {
+      const featureId = (data.featureId as string) || '';
+      const now = Date.now();
+      const lastTime = this.lastProgressEventTime.get(featureId) || 0;
+
+      // Drop event if too soon since last progress event for this feature
+      if (now - lastTime < this.PROGRESS_EVENT_MIN_INTERVAL_MS) {
+        return;
+      }
+
+      this.lastProgressEventTime.set(featureId, now);
+    }
+
     // Wrap the event in auto-mode:event format expected by the client
     this.events.emit('auto-mode:event', {
       type: eventType,
       ...data,
     });
+  }
+
+  /**
+   * Check current heap usage and return percentage
+   */
+  private getHeapUsagePercent(): number {
+    const memoryUsage = process.memoryUsage();
+    return memoryUsage.heapUsed / memoryUsage.heapTotal;
+  }
+
+  /**
+   * Get the most recently started running feature for a project (to abort if needed)
+   */
+  private getMostRecentRunningFeature(projectPath: string): RunningFeature | null {
+    let mostRecent: RunningFeature | null = null;
+    let mostRecentTime = 0;
+
+    for (const [, feature] of this.runningFeatures) {
+      if (feature.projectPath === projectPath && feature.startTime) {
+        if (feature.startTime > mostRecentTime) {
+          mostRecentTime = feature.startTime;
+          mostRecent = feature;
+        }
+      }
+    }
+
+    return mostRecent;
   }
 
   private sleep(ms: number, signal?: AbortSignal): Promise<void> {

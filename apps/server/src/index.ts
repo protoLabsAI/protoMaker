@@ -982,6 +982,9 @@ server.on('upgrade', (request, socket, head) => {
 wss.on('connection', (ws: WebSocket) => {
   logger.info('Client connected, ready state:', ws.readyState);
 
+  // WebSocket backpressure threshold (256KB)
+  const WS_BACKPRESSURE_THRESHOLD = 256 * 1024;
+
   // Subscribe to all events and forward to this client
   const unsubscribe = events.subscribe((type, payload) => {
     logger.info('Event received:', {
@@ -994,11 +997,22 @@ wss.on('connection', (ws: WebSocket) => {
 
     if (ws.readyState === WebSocket.OPEN) {
       try {
+        // Check backpressure before sending
+        if (ws.bufferedAmount > WS_BACKPRESSURE_THRESHOLD) {
+          logger.warn('WebSocket backpressure detected, dropping event:', {
+            type,
+            bufferedAmount: ws.bufferedAmount,
+            threshold: WS_BACKPRESSURE_THRESHOLD,
+          });
+          return;
+        }
+
         const message = JSON.stringify({ type, payload });
         logger.info('Sending event to client:', {
           type,
           messageLength: message.length,
           sessionId: (payload as any)?.sessionId,
+          bufferedAmount: ws.bufferedAmount,
         });
         ws.send(message);
       } catch (err) {
