@@ -137,6 +137,9 @@ export type EventType =
   | 'prd:status:updated'
   // Discord monitoring events
   | 'discord:message:detected'
+  // Discord DM events
+  | 'discord:dm:received'
+  | 'discord:dm:sent'
   // Linear monitoring events
   | 'linear:project:updated'
   | 'linear:issue:detected'

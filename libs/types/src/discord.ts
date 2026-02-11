@@ -72,6 +72,27 @@ export interface DiscordUser {
 }
 
 /**
+ * Discord DM message
+ *
+ * Represents a direct message that can be sent or received by agents.
+ * Agents can send DMs to their assigned human by username lookup.
+ */
+export interface DiscordDMMessage {
+  /** Message ID (if received) */
+  id?: string;
+  /** Username to send to or username of sender */
+  username: string;
+  /** Message content */
+  content: string;
+  /** ISO timestamp when message was sent/received */
+  timestamp: string;
+  /** Direction of the message */
+  direction: 'sent' | 'received';
+  /** Agent role that sent the message (if sent by agent) */
+  agentRole?: string;
+}
+
+/**
  * Options for creating a text channel
  */
 export interface CreateChannelOptions {

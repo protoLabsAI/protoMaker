@@ -451,6 +451,21 @@ export { DEFAULT_WEBHOOK_SETTINGS } from './webhook.js';
 // ============================================================================
 
 /**
+ * DiscordUserDMConfig - Configuration for user-specific Discord DM functionality
+ *
+ * Maps a human user to their Discord username for agent DM capabilities.
+ * Agents can send DMs to their assigned human using this configuration.
+ */
+export interface DiscordUserDMConfig {
+  /** Human's identifier/email/name (used internally) */
+  userId: string;
+  /** Discord username to send DMs to */
+  discordUsername: string;
+  /** Whether this user has opted in to receive DMs from agents */
+  dmEnabled: boolean;
+}
+
+/**
  * DiscordSettings - Configuration for Discord MCP integration
  *
  * Supports Discord bot integration via the discord-mcp server for:
@@ -458,6 +473,7 @@ export { DEFAULT_WEBHOOK_SETTINGS } from './webhook.js';
  * - Announcing feature completion
  * - Headsdown mode status updates
  * - Team communication automation
+ * - Direct messages between agents and their assigned humans
  */
 export interface DiscordSettings {
   /** Whether Discord integration is enabled */
@@ -482,6 +498,8 @@ export interface DiscordSettings {
   notifyOnProjectComplete?: boolean;
   /** Notify on agent errors/failures */
   notifyOnError?: boolean;
+  /** User DM configurations (maps users to Discord usernames) */
+  userDMConfig?: DiscordUserDMConfig[];
 }
 
 /**
