@@ -569,3 +569,6 @@ export type {
   ListBeadsTasksOptions,
   BeadsOperationResult,
 } from './beads.js';
+
+// Ceremony types (milestone updates and project retrospectives)
+export type { CeremonyType, MilestoneUpdateData, ProjectRetroData } from './ceremony.js';

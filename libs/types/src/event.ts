@@ -206,7 +206,10 @@ export type EventType =
   | 'beads:task-created'
   | 'beads:task-updated'
   | 'beads:task-closed'
-  | 'beads:dependency-added';
+  | 'beads:dependency-added'
+  // Ceremony events (milestone updates and project retrospectives)
+  | 'ceremony:milestone-update'
+  | 'ceremony:project-retro';
 
 export type EventCallback = (type: EventType, payload: unknown) => void;
 

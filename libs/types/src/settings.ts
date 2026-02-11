@@ -535,7 +535,9 @@ export type EventHookTrigger =
   | 'memory_learning'
   | 'pr_feedback_received'
   | 'project_scaffolded'
-  | 'project_deleted';
+  | 'project_deleted'
+  | 'milestone_completed'
+  | 'project_completed';
 
 // ============================================================================
 // Git Workflow Settings - Auto commit/push/PR after feature completion
@@ -743,6 +745,8 @@ export const EVENT_HOOK_TRIGGER_LABELS: Record<EventHookTrigger, string> = {
   pr_feedback_received: 'PR feedback received',
   project_scaffolded: 'Project scaffolded with features',
   project_deleted: 'Project deleted',
+  milestone_completed: 'Milestone completed',
+  project_completed: 'Project completed',
 };
 
 const DEFAULT_CODEX_AUTO_LOAD_AGENTS = false;

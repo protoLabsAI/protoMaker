@@ -55,9 +55,11 @@ const TRIGGER_SEVERITY_MAP: Record<EventHookTrigger, BriefingSeverity> = {
   memory_learning: 'medium',
   project_scaffolded: 'medium',
 
-  // Low: Feature creation, project deletion
+  // Low: Feature creation, project deletion, ceremony events
   feature_created: 'low',
   project_deleted: 'low',
+  milestone_completed: 'medium',
+  project_completed: 'medium',
 };
 
 /**
