@@ -24,6 +24,7 @@ import type { FeatureLoader } from './feature-loader.js';
 import type { SettingsService } from './settings-service.js';
 import { mergeEligibilityService } from './merge-eligibility-service.js';
 import { githubMergeService } from './github-merge-service.js';
+import { graphiteService } from './graphite-service.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -186,6 +187,25 @@ export async function registerMaintenanceTasks(
   } else {
     logger.warn(
       `Skipping auto-merge PRs task registration - featureLoader: ${!!featureLoader}, settingsService: ${!!settingsService}`
+    );
+  }
+
+  // Every 30 minutes: Auto-rebase stale PRs
+  if (featureLoader && settingsService) {
+    await scheduler.registerTask(
+      'maintenance:auto-rebase-stale-prs',
+      'Auto-Rebase Stale PRs',
+      '*/30 * * * *', // Every 30 minutes
+      async () => {
+        const projectPaths = getKnownProjectPaths(autoModeService);
+        await autoRebaseStalePRs(featureLoader, settingsService, events, projectPaths);
+      }
+    );
+    taskCount++;
+    logger.info('Registered auto-rebase stale PRs maintenance task');
+  } else {
+    logger.warn(
+      `Skipping auto-rebase stale PRs task registration - featureLoader: ${!!featureLoader}, settingsService: ${!!settingsService}`
     );
   }
 
@@ -812,6 +832,320 @@ async function autoMergeEligiblePRs(
     }
   } catch (error) {
     logger.error('Auto-merge PR check failed:', error);
+    throw error;
+  }
+}
+
+/**
+ * Result from checking if a PR is behind its base branch
+ */
+interface PRBehindStatus {
+  prNumber: number;
+  branchName: string;
+  baseBranch: string;
+  isBehind: boolean;
+  behindBy?: number; // Number of commits behind
+}
+
+/**
+ * Check if a PR is behind its base branch using GitHub CLI
+ */
+async function checkPRBehindStatus(
+  projectPath: string,
+  prNumber: number
+): Promise<PRBehindStatus | null> {
+  try {
+    // Get PR details including head branch, base branch, and mergeable status
+    const { stdout } = await execFileAsync(
+      'gh',
+      ['pr', 'view', String(prNumber), '--json', 'headRefName,baseRefName,mergeable'],
+      {
+        cwd: projectPath,
+        encoding: 'utf-8',
+        timeout: 10_000,
+      }
+    );
+
+    const prData = JSON.parse(stdout);
+    const headBranch = prData.headRefName;
+    const baseBranch = prData.baseRefName;
+
+    // Check how many commits the head branch is behind the base branch
+    const { stdout: revListOutput } = await execFileAsync(
+      'git',
+      ['rev-list', '--count', `${headBranch}..${baseBranch}`],
+      {
+        cwd: projectPath,
+        encoding: 'utf-8',
+        timeout: 10_000,
+      }
+    );
+
+    const behindBy = parseInt(revListOutput.trim(), 10);
+    const isBehind = behindBy > 0;
+
+    return {
+      prNumber,
+      branchName: headBranch,
+      baseBranch,
+      isBehind,
+      behindBy: isBehind ? behindBy : undefined,
+    };
+  } catch (error) {
+    logger.warn(`Failed to check if PR #${prNumber} is behind base:`, error);
+    return null;
+  }
+}
+
+/**
+ * Send a Discord notification about a PR conflict requiring human attention
+ */
+async function sendDiscordConflictAlert(
+  prNumber: number,
+  branchName: string,
+  baseBranch: string,
+  prUrl: string,
+  errorMessage: string
+): Promise<void> {
+  try {
+    logger.info(`Sending Discord notification for PR #${prNumber} conflict`);
+
+    // Use Discord MCP tool to send notification
+    // Note: This requires Discord MCP to be configured
+    // The MCP tools are available via the claude plugin system
+
+    // For now, we'll log the alert - in production, this would call the Discord MCP tool
+    logger.warn(
+      `🔴 PR CONFLICT ALERT:\n` +
+        `PR #${prNumber}: ${branchName}\n` +
+        `Base: ${baseBranch}\n` +
+        `URL: ${prUrl}\n` +
+        `Error: ${errorMessage}\n` +
+        `Action Required: Manual resolution needed`
+    );
+
+    // TODO: Implement Discord MCP call when Discord service is fully integrated
+    // Example (when Discord MCP is available):
+    // await discordService.sendMessage({
+    //   channelId: settings.discord.alertChannelId,
+    //   content: `🔴 **PR Conflict Alert**\n\n` +
+    //     `PR #${prNumber}: \`${branchName}\`\n` +
+    //     `Base: \`${baseBranch}\`\n` +
+    //     `${prUrl}\n\n` +
+    //     `**Error:** ${errorMessage}\n\n` +
+    //     `⚠️ Manual resolution required - automatic rebase failed due to conflicts.`
+    // });
+  } catch (error) {
+    logger.error(`Failed to send Discord conflict alert for PR #${prNumber}:`, error);
+  }
+}
+
+/**
+ * Auto-rebase stale PRs that are behind their base branch.
+ * Uses Graphite (gt restack) when available, falls back to gh pr rebase.
+ * If conflicts are detected, escalates to human via Discord notification.
+ */
+async function autoRebaseStalePRs(
+  featureLoader: FeatureLoader,
+  settingsService: SettingsService,
+  events: EventEmitter,
+  projectPaths: string[]
+): Promise<void> {
+  logger.info('Checking for stale PRs to auto-rebase...');
+
+  if (projectPaths.length === 0) {
+    logger.info('No known project paths, skipping stale PR rebase check');
+    return;
+  }
+
+  try {
+    let totalChecked = 0;
+    let totalRebased = 0;
+    let totalConflicts = 0;
+    let totalSkipped = 0;
+    const rebasedPRs: string[] = [];
+    const conflictPRs: Array<{ pr: string; reason: string }> = [];
+    const skippedPRs: Array<{ pr: string; reason: string }> = [];
+
+    for (const projectPath of projectPaths) {
+      // Get global settings for Graphite configuration
+      const globalSettings = await settingsService.getGlobalSettings();
+
+      // Check if Graphite is enabled
+      const useGraphite = await graphiteService.shouldUseGraphite(globalSettings.graphite);
+
+      // Get all features in 'review' status
+      const allFeatures = await featureLoader.getAll(projectPath);
+      const reviewFeatures = allFeatures.filter((f) => f.status === 'review');
+
+      logger.debug(
+        `Found ${reviewFeatures.length} features in review status for ${projectPath}`
+      );
+
+      for (const feature of reviewFeatures) {
+        if (!feature.prNumber || !feature.branchName) {
+          logger.debug(
+            `Feature ${feature.id} in review status but missing PR number or branch name, skipping`
+          );
+          continue;
+        }
+
+        totalChecked++;
+
+        // Check if PR is behind its base branch
+        const behindStatus = await checkPRBehindStatus(projectPath, feature.prNumber);
+
+        if (!behindStatus) {
+          totalSkipped++;
+          skippedPRs.push({
+            pr: `#${feature.prNumber} (${feature.title})`,
+            reason: 'Failed to check behind status',
+          });
+          continue;
+        }
+
+        if (!behindStatus.isBehind) {
+          logger.debug(
+            `PR #${feature.prNumber} (${feature.title}) is up to date with base branch`
+          );
+          continue;
+        }
+
+        logger.info(
+          `PR #${feature.prNumber} (${feature.title}) is ${behindStatus.behindBy} commit(s) behind ${behindStatus.baseBranch}`
+        );
+
+        // Get worktree path for the feature
+        const worktreePath = `${projectPath}/.worktrees/${feature.branchName}`;
+
+        try {
+          // Try to rebase using Graphite if available
+          if (useGraphite) {
+            logger.info(
+              `Attempting Graphite restack for PR #${feature.prNumber} (${feature.title})`
+            );
+
+            const restackResult = await graphiteService.restack(worktreePath);
+
+            if (restackResult.success) {
+              totalRebased++;
+              rebasedPRs.push(`#${feature.prNumber} (${feature.title})`);
+              logger.info(
+                `Successfully rebased PR #${feature.prNumber} (${feature.title}) using Graphite`
+              );
+
+              // Push the rebased branch
+              await graphiteService.push(worktreePath);
+            } else if (restackResult.conflicts) {
+              totalConflicts++;
+              conflictPRs.push({
+                pr: `#${feature.prNumber} (${feature.title})`,
+                reason: restackResult.error || 'Merge conflicts detected',
+              });
+
+              // Send Discord notification about conflict
+              const prUrl = feature.prUrl || `https://github.com/???/pull/${feature.prNumber}`;
+              await sendDiscordConflictAlert(
+                feature.prNumber,
+                feature.branchName,
+                behindStatus.baseBranch,
+                prUrl,
+                restackResult.error || 'Merge conflicts during restack'
+              );
+
+              logger.warn(
+                `PR #${feature.prNumber} (${feature.title}) has conflicts - escalated to Discord`
+              );
+            } else {
+              totalSkipped++;
+              skippedPRs.push({
+                pr: `#${feature.prNumber} (${feature.title})`,
+                reason: restackResult.error || 'Graphite restack failed',
+              });
+            }
+          } else {
+            // Fall back to gh pr rebase
+            logger.info(
+              `Attempting GitHub CLI rebase for PR #${feature.prNumber} (${feature.title})`
+            );
+
+            const { stdout, stderr } = await execFileAsync(
+              'gh',
+              ['pr', 'rebase', String(feature.prNumber)],
+              {
+                cwd: projectPath,
+                encoding: 'utf-8',
+                timeout: 60_000, // Longer timeout for rebase operations
+              }
+            );
+
+            totalRebased++;
+            rebasedPRs.push(`#${feature.prNumber} (${feature.title})`);
+            logger.info(
+              `Successfully rebased PR #${feature.prNumber} (${feature.title}) using GitHub CLI`
+            );
+          }
+        } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          const lowerErrorMsg = errorMsg.toLowerCase();
+
+          // Check if error is due to conflicts
+          if (lowerErrorMsg.includes('conflict') || lowerErrorMsg.includes('merge conflict')) {
+            totalConflicts++;
+            conflictPRs.push({
+              pr: `#${feature.prNumber} (${feature.title})`,
+              reason: errorMsg,
+            });
+
+            // Send Discord notification about conflict
+            const prUrl = feature.prUrl || `https://github.com/???/pull/${feature.prNumber}`;
+            await sendDiscordConflictAlert(
+              feature.prNumber,
+              feature.branchName,
+              behindStatus.baseBranch,
+              prUrl,
+              errorMsg
+            );
+
+            logger.warn(
+              `PR #${feature.prNumber} (${feature.title}) has conflicts - escalated to Discord`
+            );
+          } else {
+            totalSkipped++;
+            skippedPRs.push({
+              pr: `#${feature.prNumber} (${feature.title})`,
+              reason: errorMsg,
+            });
+            logger.warn(`Failed to rebase PR #${feature.prNumber} (${feature.title}): ${errorMsg}`);
+          }
+        }
+      }
+    }
+
+    // Emit completion event with results
+    if (totalChecked > 0) {
+      const message =
+        totalRebased > 0
+          ? `Auto-rebased ${totalRebased}/${totalChecked} stale PR(s)${totalConflicts > 0 ? `, ${totalConflicts} conflict(s) escalated` : ''}${totalSkipped > 0 ? `, skipped ${totalSkipped}` : ''}`
+          : `Checked ${totalChecked} PR(s), none required rebasing`;
+
+      logger.info(message);
+      events.emit('scheduler:task_completed' as Parameters<typeof events.emit>[0], {
+        taskId: 'maintenance:auto-rebase-stale-prs',
+        message,
+        totalChecked,
+        totalRebased,
+        totalConflicts,
+        totalSkipped,
+        rebasedPRs: rebasedPRs.length > 0 ? rebasedPRs : undefined,
+        conflictPRs: conflictPRs.length > 0 ? conflictPRs : undefined,
+        skippedPRs: skippedPRs.length > 0 ? skippedPRs : undefined,
+      });
+    } else {
+      logger.info('No PRs in review status to check for stale rebase');
+    }
+  } catch (error) {
+    logger.error('Auto-rebase stale PRs check failed:', error);
     throw error;
   }
 }
