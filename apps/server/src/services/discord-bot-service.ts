@@ -101,6 +101,12 @@ export class DiscordBotService {
   /** Map thread IDs to feature IDs for CTO reply handling */
   private reviewThreads = new Map<string, string>();
 
+  /** Map Discord usernames to their assigned AI agents for message routing */
+  private userRouting: Map<string, { agentId: string; enabled: boolean }> = new Map();
+
+  /** Message debounce buffer to batch rapid messages from the same user */
+  private messageBuffer: Map<string, { messages: Message[]; timer: NodeJS.Timeout }> = new Map();
+
   constructor(
     events: EventEmitter,
     authorityService: AuthorityService,
@@ -719,6 +725,13 @@ export class DiscordBotService {
     // Handle !idea prefix command
     if (content.startsWith(IDEA_PREFIX)) {
       await this.handleBangIdeaCommand(message, content);
+      return;
+    }
+
+    // Route messages from mapped Discord users to their assigned AI agents (fallback handler)
+    const routing = this.userRouting.get(message.author.username);
+    if (routing?.enabled) {
+      await this.bufferAndRouteMessage(message, routing.agentId);
     }
   }
 
@@ -918,6 +931,72 @@ export class DiscordBotService {
       logger.warn(`Failed to fetch reply context for message ${message.id}:`, error);
       return undefined;
     }
+  }
+
+  /**
+   * Buffer and route messages from Discord users to their assigned AI agents.
+   * Uses a 3-second debounce to batch rapid messages together.
+   */
+  private async bufferAndRouteMessage(message: Message, agentId: string): Promise<void> {
+    const userId = message.author.username;
+
+    // Get or create buffer entry
+    let bufferEntry = this.messageBuffer.get(userId);
+
+    if (bufferEntry) {
+      // Clear existing timer and add message to buffer
+      clearTimeout(bufferEntry.timer);
+      bufferEntry.messages.push(message);
+    } else {
+      // Create new buffer entry
+      bufferEntry = {
+        messages: [message],
+        timer: setTimeout(() => {}, 0), // Placeholder, will be replaced below
+      };
+      this.messageBuffer.set(userId, bufferEntry);
+    }
+
+    // Set 3-second debounce timer
+    bufferEntry.timer = setTimeout(async () => {
+      const entry = this.messageBuffer.get(userId);
+      if (!entry) return;
+
+      // Remove from buffer
+      this.messageBuffer.delete(userId);
+
+      // Process all buffered messages
+      const messages = await Promise.all(
+        entry.messages.map(async (msg) => {
+          let attachmentData: {
+            textFiles?: Array<{ filename: string; content: string }>;
+            imagePaths?: string[];
+          } = {};
+
+          // Process attachments if present
+          if (msg.attachments.size > 0) {
+            const firstAttachment = msg.attachments.first()!;
+            attachmentData = await this.processAttachment(firstAttachment);
+          }
+
+          return {
+            content: msg.content,
+            attachments: attachmentData,
+            timestamp: msg.createdTimestamp,
+          };
+        })
+      );
+
+      // Emit routed message event
+      this.events.emit('discord:user-message:routed', {
+        projectPath: this.projectPath,
+        username: userId,
+        agentId,
+        messages,
+        channelId: entry.messages[0].channelId,
+      });
+
+      logger.info(`Routed ${messages.length} message(s) from ${userId} to agent ${agentId}`);
+    }, 3000);
   }
 
   /**
