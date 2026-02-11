@@ -443,9 +443,13 @@ export class AutoModeService {
   // Rate-limiting for auto_mode_progress events (per feature)
   private lastProgressEventTime = new Map<string, number>();
   private readonly PROGRESS_EVENT_MIN_INTERVAL_MS = 100; // Max 1 event per 100ms per feature
-  // Memory management thresholds
-  private readonly HEAP_USAGE_STOP_NEW_AGENTS_THRESHOLD = 0.8; // 80%
-  private readonly HEAP_USAGE_ABORT_AGENTS_THRESHOLD = 0.9; // 90%
+  // Memory management thresholds (configurable via env vars)
+  private readonly HEAP_USAGE_STOP_NEW_AGENTS_THRESHOLD = parseFloat(
+    process.env.HEAP_STOP_THRESHOLD || '0.8'
+  ); // Default 80%
+  private readonly HEAP_USAGE_ABORT_AGENTS_THRESHOLD = parseFloat(
+    process.env.HEAP_ABORT_THRESHOLD || '0.9'
+  ); // Default 90%
 
   constructor(events: EventEmitter, settingsService?: SettingsService) {
     this.events = events;
