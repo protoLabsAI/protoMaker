@@ -107,8 +107,8 @@ export class AgentDiscordRouter {
         `Response sent to channel ${channelId}${tracker.threadId ? ` (thread ${tracker.threadId})` : ''}`
       );
     } catch (error) {
-      const { message, code } = classifyError(error);
-      logger.error(`Failed to process message for agent ${routedToAgent}:`, { message, code });
+      const { message, type } = classifyError(error);
+      logger.error(`Failed to process message for agent ${routedToAgent}:`, { message, type });
 
       // Send error message to Discord (but don't crash)
       try {
