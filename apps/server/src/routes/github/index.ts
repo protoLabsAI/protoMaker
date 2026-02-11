@@ -71,7 +71,7 @@ export function createGitHubRoutes(
     createProcessCodeRabbitFeedbackHandler(events)
   );
 
-  // PR merge and status endpoints
+  // PR merge operations
   router.post('/merge-pr', validatePathParams('projectPath'), createMergePRHandler());
   router.post('/check-pr-status', validatePathParams('projectPath'), createCheckPRStatusHandler());
 

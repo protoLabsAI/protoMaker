@@ -1214,6 +1214,76 @@ const tools: Tool[] = [
     },
   },
 
+  // ========== GitHub Operations ==========
+  {
+    name: 'merge_pr',
+    description:
+      'Merge a pull request using GitHub CLI. Supports different merge strategies (merge, squash, rebase) and can optionally wait for CI checks to pass before merging.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        prNumber: {
+          type: 'number',
+          description: 'PR number to merge',
+        },
+        strategy: {
+          type: 'string',
+          enum: ['merge', 'squash', 'rebase'],
+          default: 'squash',
+          description: 'Merge strategy to use (default: squash)',
+        },
+        waitForCI: {
+          type: 'boolean',
+          default: true,
+          description: 'Whether to wait for CI checks to pass before merging (default: true)',
+        },
+      },
+      required: ['projectPath', 'prNumber'],
+    },
+  },
+  {
+    name: 'check_pr_status',
+    description:
+      'Check the CI check status of a pull request. Returns information about passed, failed, and pending checks.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        prNumber: {
+          type: 'number',
+          description: 'PR number to check status for',
+        },
+      },
+      required: ['projectPath', 'prNumber'],
+    },
+  },
+  {
+    name: 'resolve_review_threads',
+    description:
+      'Process and resolve CodeRabbit review threads for a PR. Fetches CodeRabbit comments, parses them, and links them to the associated feature for auto-remediation.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        prNumber: {
+          type: 'number',
+          description: 'PR number to process CodeRabbit feedback for',
+        },
+      },
+      required: ['projectPath', 'prNumber'],
+    },
+  },
+
   // ========== Utilities ==========
   {
     name: 'setup_lab',
@@ -1721,6 +1791,27 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
     case 'graphite_restack':
       return apiCall('/worktree/graphite-restack', {
         worktreePath: args.worktreePath,
+      });
+
+    // GitHub Operations
+    case 'merge_pr':
+      return apiCall('/github/merge-pr', {
+        projectPath: args.projectPath,
+        prNumber: args.prNumber,
+        strategy: args.strategy || 'squash',
+        waitForCI: args.waitForCI ?? true,
+      });
+
+    case 'check_pr_status':
+      return apiCall('/github/check-pr-status', {
+        projectPath: args.projectPath,
+        prNumber: args.prNumber,
+      });
+
+    case 'resolve_review_threads':
+      return apiCall('/github/process-coderabbit-feedback', {
+        projectPath: args.projectPath,
+        prNumber: args.prNumber,
       });
 
     default:
