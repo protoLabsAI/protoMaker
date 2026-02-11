@@ -392,6 +392,11 @@ auditService.initialize(authorityService);
 // Initialize Authority Agents (AI executives) - pass auditService for decision tracking
 const pmAgent = new PMAuthorityAgent(events, authorityService, featureLoader, auditService);
 const projectService = new ProjectService(featureLoader);
+
+// Initialize Ceremony Service for milestone completion ceremonies
+const { ceremonyService } = await import('./services/ceremony-service.js');
+ceremonyService.initialize(events, settingsService, featureLoader, projectService);
+
 const projmAgent = new ProjMAuthorityAgent(events, authorityService, featureLoader, projectService);
 const emAgent = new EMAuthorityAgent(
   events,
