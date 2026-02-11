@@ -30,14 +30,11 @@ allowed-tools:
   # Reactions
   - mcp__plugin_automaker_discord__add_reaction
   - mcp__plugin_automaker_discord__remove_reaction
-  # Private Messages
-  - mcp__plugin_automaker_discord__send_private_message
-  - mcp__plugin_automaker_discord__read_private_messages
-  - mcp__plugin_automaker_discord__edit_private_message
-  - mcp__plugin_automaker_discord__delete_private_message
+  # Private Messages (via Automaker bot)
+  - mcp__plugin_automaker_automaker__send_discord_dm
+  - mcp__plugin_automaker_automaker__read_discord_dms
   # User & Server
-  - mcp__plugin_automaker_discord__get_user_id_by_name
-  - mcp__plugin_automaker_discord__get_server_info
+  - mcp__plugin_automaker_discord__discord_get_server_info
 ---
 
 # Discord Manager
@@ -247,33 +244,30 @@ options:
 
 ## Action: Members
 
-### Lookup Member by Username
+### Send DM to a Member
 
 ```
-mcp__plugin_automaker_discord__get_user_id_by_name({ username: "username" })
+mcp__plugin_automaker_automaker__send_discord_dm({
+  username: "username",
+  content: "Your message here"
+})
 ```
 
-Display:
+### Read DMs from a Member
 
-```markdown
-## 👤 Member Info
-
-**Username**: @username
-**User ID**: 123456789
-**Mention**: <@123456789>
-
-### Actions
-
-- Send DM: `/discord dm @username <message>`
-- Mention in channel: Use `<@123456789>` in messages
+```
+mcp__plugin_automaker_automaker__read_discord_dms({
+  username: "username",
+  limit: 10
+})
 ```
 
 ### Send Direct Message
 
 ```
-mcp__plugin_automaker_discord__send_private_message({
-  userId: "123456789",
-  message: "Your message here"
+mcp__plugin_automaker_automaker__send_discord_dm({
+  username: "username",
+  content: "Your message here"
 })
 ```
 
@@ -512,10 +506,9 @@ To get a channel ID:
 
 ### User Mentions
 
-To mention a user in a message:
+To mention a user in a message, use their Discord user ID format: `<@USER_ID>`.
 
-1. Get their ID: `mcp__plugin_automaker_discord__get_user_id_by_name({ username: "name" })`
-2. Use in message: `<@USER_ID>`
+To DM a user directly: `mcp__plugin_automaker_automaker__send_discord_dm({ username: "name", content: "message" })`
 
 ### Emoji Reactions
 
