@@ -978,9 +978,7 @@ async function autoRebaseStalePRs(
       const allFeatures = await featureLoader.getAll(projectPath);
       const reviewFeatures = allFeatures.filter((f) => f.status === 'review');
 
-      logger.debug(
-        `Found ${reviewFeatures.length} features in review status for ${projectPath}`
-      );
+      logger.debug(`Found ${reviewFeatures.length} features in review status for ${projectPath}`);
 
       for (const feature of reviewFeatures) {
         if (!feature.prNumber || !feature.branchName) {
@@ -1005,9 +1003,7 @@ async function autoRebaseStalePRs(
         }
 
         if (!behindStatus.isBehind) {
-          logger.debug(
-            `PR #${feature.prNumber} (${feature.title}) is up to date with base branch`
-          );
+          logger.debug(`PR #${feature.prNumber} (${feature.title}) is up to date with base branch`);
           continue;
         }
 
