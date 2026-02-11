@@ -409,6 +409,8 @@ discordApprovalRouter.initialize();
 
 // Initialize PR Feedback Service (monitors open PRs for review comments)
 const prFeedbackService = new PRFeedbackService(events, featureLoader);
+// Wire up AutoModeService for automatic agent restart on PR feedback
+prFeedbackService.setAutoModeService(autoModeService);
 prFeedbackService.initialize();
 
 // Initialize Worktree Lifecycle Service (auto-cleanup after merge + recovery)

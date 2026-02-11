@@ -18,6 +18,7 @@ import { execFile } from 'child_process';
 import { promisify } from 'util';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
+import type { AutoModeService } from './auto-mode-service.js';
 import type { GitHubComment } from '@automaker/types';
 import { codeRabbitParserService } from './coderabbit-parser-service.js';
 
@@ -28,8 +29,8 @@ const logger = createLogger('PRFeedbackService');
 /** How often to poll for PR reviews */
 const POLL_INTERVAL_MS = 60_000; // 1 minute
 
-/** Max iterations before escalating to CTO */
-const MAX_PR_ITERATIONS = 3;
+/** Max iterations before escalating to CTO - prevents infinite feedback loops */
+const MAX_PR_ITERATIONS = 2;
 
 interface TrackedPR {
   featureId: string;
@@ -60,6 +61,7 @@ interface PRReviewInfo {
 export class PRFeedbackService {
   private readonly events: EventEmitter;
   private readonly featureLoader: FeatureLoader;
+  private autoModeService: AutoModeService | null = null;
 
   /** PRs we're actively monitoring, keyed by featureId */
   private trackedPRs = new Map<string, TrackedPR>();
@@ -69,6 +71,14 @@ export class PRFeedbackService {
   constructor(events: EventEmitter, featureLoader: FeatureLoader) {
     this.events = events;
     this.featureLoader = featureLoader;
+  }
+
+  /**
+   * Set the AutoModeService reference for automatic agent restart on PR feedback.
+   * This enables the service to directly restart dev agents when changes are requested.
+   */
+  setAutoModeService(service: AutoModeService): void {
+    this.autoModeService = service;
   }
 
   initialize(): void {
@@ -311,7 +321,10 @@ export class PRFeedbackService {
             error: `PR exceeded ${MAX_PR_ITERATIONS} review iterations. Escalated to CTO.`,
           });
         } else {
-          // Normal feedback - emit for EM to handle reassignment
+          // Normal feedback - auto-restart the dev agent with feedback context
+          // This enables automatic PR fix cycles without manual intervention
+
+          // First emit the event for EM and other listeners
           this.events.emit('pr:changes-requested', {
             projectPath: pr.projectPath,
             featureId,
@@ -324,6 +337,64 @@ export class PRFeedbackService {
               .filter((r) => r.state === 'CHANGES_REQUESTED')
               .map((r) => r.author),
           });
+
+          // Auto-restart dev agent with feedback if AutoModeService is available
+          if (this.autoModeService) {
+            logger.info(
+              `Auto-restarting dev agent for ${featureId} with PR feedback (iteration ${pr.iterationCount})`
+            );
+
+            try {
+              // Build continuation prompt with PR feedback
+              const continuationPrompt = this.buildFeedbackPrompt(
+                fullFeedback,
+                pr.prNumber,
+                pr.iterationCount
+              );
+
+              // Update feature status to backlog so it's picked up by auto-loop
+              // Keep the PR info so the agent can push to the same branch
+              await this.featureLoader.update(pr.projectPath, featureId, {
+                status: 'backlog',
+                workItemState: 'in_progress',
+                prIterationCount: pr.iterationCount,
+                error: undefined, // Clear previous errors
+              });
+
+              // Restart the agent execution with the feedback as a continuation prompt
+              // This will pick up the existing worktree and push new commits to the same PR
+              void this.autoModeService.executeFeature(
+                pr.projectPath,
+                featureId,
+                true, // useWorktrees
+                true, // isAutoMode
+                undefined, // providedWorktreePath (will find existing)
+                {
+                  continuationPrompt,
+                  retryCount: pr.iterationCount,
+                  previousErrors: [], // PR feedback isn't an error, it's requested changes
+                  recoveryContext: `PR #${pr.prNumber} review feedback (iteration ${pr.iterationCount})`,
+                }
+              );
+
+              logger.info(
+                `Dev agent restarted for ${featureId} to address PR #${pr.prNumber} feedback`
+              );
+            } catch (error) {
+              logger.error(`Failed to restart dev agent for ${featureId}:`, error);
+              // Emit error event but don't block - EM agent will handle reassignment as fallback
+              this.events.emit('pr:agent-restart-failed', {
+                projectPath: pr.projectPath,
+                featureId,
+                prNumber: pr.prNumber,
+                error: String(error),
+              });
+            }
+          } else {
+            logger.warn(
+              `AutoModeService not available, falling back to EM agent reassignment for ${featureId}`
+            );
+          }
         }
 
         this.events.emit('pr:feedback-received', {
@@ -374,6 +445,32 @@ export class PRFeedbackService {
         break;
       }
     }
+  }
+
+  /**
+   * Build a continuation prompt that injects PR feedback into the agent's context.
+   * This prompt guides the agent to fix the specific issues raised in the review.
+   *
+   * @param feedback - The formatted PR feedback (human reviews + CodeRabbit comments)
+   * @param prNumber - The PR number
+   * @param iterationCount - How many times we've iterated on this PR
+   * @returns A continuation prompt for the agent
+   */
+  private buildFeedbackPrompt(feedback: string, prNumber: number, iterationCount: number): string {
+    return `## PR Review Feedback - Iteration ${iterationCount}
+
+Your pull request #${prNumber} has received review feedback. Please address the following issues:
+
+${feedback}
+
+**Important Instructions:**
+- Only fix the issues mentioned in the review above
+- Do not refactor or change unrelated code
+- Commit your fixes to the same branch (the worktree is already set up)
+- The fixes will be pushed to the existing PR #${prNumber}
+- After fixing, verify the changes work correctly
+
+This is iteration ${iterationCount} of the review cycle. Focus on addressing the feedback precisely.`;
   }
 
   /**

@@ -37,8 +37,8 @@ const POLL_INTERVAL_MS = 10_000;
 /** Default WIP limit per project */
 const DEFAULT_WIP_LIMIT = 3;
 
-/** Max PR iterations before escalating to CTO */
-const MAX_PR_ITERATIONS = 3;
+/** Max PR iterations before escalating to CTO - prevents infinite feedback loops */
+const MAX_PR_ITERATIONS = 2;
 
 /** Custom state for EM agent */
 interface EMCustomState {

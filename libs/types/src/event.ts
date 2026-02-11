@@ -188,6 +188,7 @@ export type EventType =
   | 'pr:changes-requested'
   | 'pr:approved'
   | 'pr:ci-failure'
+  | 'pr:agent-restart-failed'
   | 'feature:reassigned-for-fixes'
   | 'feature:worktree-cleaned'
   // Worktree recovery events
