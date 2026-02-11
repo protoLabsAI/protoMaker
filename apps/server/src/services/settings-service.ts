@@ -155,12 +155,12 @@ export class SettingsService {
       },
       graphite: {
         ...DEFAULT_GLOBAL_SETTINGS.graphite,
-        ...settings.graphite,
-      },
+        ...(settings.graphite ?? {}),
+      } as typeof DEFAULT_GLOBAL_SETTINGS.graphite,
       autoModeAlwaysOn: {
         ...DEFAULT_GLOBAL_SETTINGS.autoModeAlwaysOn,
-        ...settings.autoModeAlwaysOn,
-      },
+        ...(settings.autoModeAlwaysOn ?? {}),
+      } as typeof DEFAULT_GLOBAL_SETTINGS.autoModeAlwaysOn,
       phaseModels: migratedPhaseModels,
     };
 
