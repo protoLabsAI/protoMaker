@@ -4,7 +4,12 @@
  */
 
 import path from 'path';
-import type { Feature, DescriptionHistoryEntry, FeatureStatus } from '@automaker/types';
+import type {
+  Feature,
+  DescriptionHistoryEntry,
+  FeatureStatus,
+  StatusTransition,
+} from '@automaker/types';
 import { normalizeFeatureStatus } from '@automaker/types';
 import {
   createLogger,
@@ -526,15 +531,15 @@ export class FeatureLoader {
       const timestamp = new Date().toISOString();
 
       // Add status transition to history
-      updatedStatusHistory = [
-        ...updatedStatusHistory,
-        {
-          from: feature.status,
-          to: updates.status,
-          timestamp,
-          reason: updates.statusChangeReason,
-        },
-      ];
+      const transition: StatusTransition = {
+        from: (feature.status as FeatureStatus) ?? null,
+        to: updates.status as FeatureStatus,
+        timestamp,
+        ...(typeof updates.statusChangeReason === 'string'
+          ? { reason: updates.statusChangeReason }
+          : {}),
+      };
+      updatedStatusHistory = [...updatedStatusHistory, transition];
 
       // Set lifecycle timestamps based on status
       if (updates.status === 'review' && !feature.reviewStartedAt) {
