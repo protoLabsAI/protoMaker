@@ -1137,6 +1137,16 @@ export class AutoModeService {
       projectState.cooldownTimer = null;
     }
 
+    // Clear retry timers for features in this project to prevent zombie restarts
+    for (const [featureId, timer] of this.retryTimers) {
+      const running = this.runningFeatures.get(featureId);
+      if (running && running.projectPath === projectPath) {
+        clearTimeout(timer);
+        this.retryTimers.delete(featureId);
+        logger.info(`Cancelled retry timer for feature ${featureId} during auto-loop stop`);
+      }
+    }
+
     // Clear execution state when auto-loop is explicitly stopped
     await this.clearExecutionState(projectPath, branchName);
 
@@ -2347,6 +2357,14 @@ Complete the pipeline step instructions above. Review the previous work and appl
     // Remove from running features immediately to allow resume
     // The abort signal will still propagate to stop any ongoing execution
     this.runningFeatures.delete(featureId);
+
+    // Cancel retry timer to prevent zombie restart loop
+    const retryTimer = this.retryTimers.get(featureId);
+    if (retryTimer) {
+      clearTimeout(retryTimer);
+      this.retryTimers.delete(featureId);
+      logger.info(`Cancelled retry timer for stopped feature ${featureId}`);
+    }
 
     // Also clean up from startingFeatures in case it's stuck there
     this.cleanupStartingFeature(featureId);

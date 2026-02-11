@@ -905,12 +905,22 @@ Begin implementing task {{taskId}} now.`;
 export const DEFAULT_IMPLEMENTATION_INSTRUCTIONS = `## Instructions
 
 Implement this feature by:
-1. First, check status.md files for context on current work and priorities
-2. Explore the codebase to understand the existing structure and patterns
-3. Plan your implementation approach - identify any risks or blockers early
-4. Write the necessary code changes in small, verifiable increments
-5. Ensure the code follows existing patterns and conventions
-6. Verify each increment works before moving to the next
+1. Read the feature description carefully - identify the specific files to create or modify
+2. Read ONLY those files (2-4 files max) to understand the existing patterns
+3. Write the code changes
+4. Build and verify the changes compile
+5. Commit your work
+
+**CRITICAL: Scope Discipline**
+- Implement EXACTLY what the feature description says. Nothing more.
+- If the description says "create ServiceX", create ONLY ServiceX. Do NOT create routes, modify index.ts, or wire it into the server unless the description explicitly asks.
+- Other features in the backlog will handle remaining integration work. Over-delivering causes merge conflicts and blocks other agents working on those features.
+- When in doubt, do LESS, not more.
+
+**CRITICAL: Turn Budget**
+- Do NOT spend more than 20% of your turns reading/exploring code
+- If you're still reading files after 8 turns, you're behind schedule
+- Do NOT try to understand the entire codebase - focus only on files relevant to your task
 
 **Risk Awareness:**
 - Flag unclear requirements immediately rather than guessing
