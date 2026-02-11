@@ -14,6 +14,7 @@ import { simpleQuery } from '../providers/simple-query-service.js';
 import type {
   ExecuteOptions,
   Feature,
+  ExecutionRecord,
   ModelProvider,
   PipelineStep,
   FeatureStatusWithPipeline,
@@ -57,6 +58,7 @@ import {
 } from '@automaker/platform';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { randomUUID } from 'crypto';
 import path from 'path';
 import * as secureFs from '../lib/secure-fs.js';
 import type { EventEmitter } from '../lib/events.js';
@@ -1451,6 +1453,10 @@ export class AutoModeService {
     // Declare feature outside try block so it's available in catch for error reporting
     let feature: Awaited<ReturnType<typeof this.loadFeature>> | null = null;
 
+    // Execution tracking — declared outside try for catch block access
+    const executionId = randomUUID();
+    const executionStartedAt = new Date().toISOString();
+
     try {
       // Validate that project path is allowed using centralized validation
       validateWorkingDirectory(projectPath);
@@ -1764,6 +1770,29 @@ export class AutoModeService {
       // Record success to reset consecutive failure tracking
       this.recordSuccessForProject(projectPath, feature?.branchName ?? null);
 
+      // Capture execution record on success
+      try {
+        const completedAt = new Date().toISOString();
+        const durationMs = Date.now() - tempRunningFeature.startTime;
+        const currentFeature = await this.featureLoader.get(projectPath, featureId);
+        const record: ExecutionRecord = {
+          id: executionId,
+          startedAt: executionStartedAt,
+          completedAt,
+          durationMs,
+          costUsd: currentFeature?.costUsd,
+          model,
+          success: true,
+          trigger: isAutoMode ? 'auto' : 'manual',
+        };
+        const history = currentFeature?.executionHistory ?? [];
+        await this.featureLoader.update(projectPath, featureId, {
+          executionHistory: [...history, record],
+        });
+      } catch (recordError) {
+        logger.warn(`Failed to save execution record for ${featureId}:`, recordError);
+      }
+
       // Record learnings and memory usage after successful feature completion
       try {
         const featureDir = getFeatureDir(projectPath, featureId);
@@ -1875,6 +1904,36 @@ export class AutoModeService {
       });
     } catch (error) {
       const errorInfo = classifyError(error);
+
+      // Capture execution record on failure (skip aborts — not real executions)
+      if (!errorInfo.isAbort && tempRunningFeature.startTime) {
+        try {
+          const completedAt = new Date().toISOString();
+          const durationMs = Date.now() - tempRunningFeature.startTime;
+          const currentFeature = await this.featureLoader.get(projectPath, featureId);
+          const record: ExecutionRecord = {
+            id: executionId,
+            startedAt: executionStartedAt,
+            completedAt,
+            durationMs,
+            costUsd: currentFeature?.costUsd,
+            model: tempRunningFeature.model || 'unknown',
+            success: false,
+            error: errorInfo.message,
+            trigger: isAutoMode
+              ? tempRunningFeature.retryCount > 0
+                ? 'retry'
+                : 'auto'
+              : 'manual',
+          };
+          const history = currentFeature?.executionHistory ?? [];
+          await this.featureLoader.update(projectPath, featureId, {
+            executionHistory: [...history, record],
+          });
+        } catch (recordError) {
+          logger.warn(`Failed to save execution record for ${featureId}:`, recordError);
+        }
+      }
 
       if (errorInfo.isAbort) {
         this.emitAutoModeEvent('auto_mode_feature_complete', {
