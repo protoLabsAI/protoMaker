@@ -47,5 +47,20 @@ if [ "$TOTAL" -gt 0 ]; then
   exit 2  # Block stop, continue working
 fi
 
-# Board is clear
-exit 0
+# Board is clear — check if we should run idle tasks
+IDLE_COOLDOWN_FILE="/tmp/ava-idle-cooldown"
+IDLE_COOLDOWN_SECONDS=600  # 10 minutes between idle cycles
+
+if [ -f "$IDLE_COOLDOWN_FILE" ]; then
+  LAST_IDLE=$(cat "$IDLE_COOLDOWN_FILE" 2>/dev/null || echo "0")
+  NOW=$(date +%s)
+  ELAPSED=$((NOW - LAST_IDLE))
+  if [ "$ELAPSED" -lt "$IDLE_COOLDOWN_SECONDS" ]; then
+    exit 0  # Cooldown active, allow stop
+  fi
+fi
+
+# Set cooldown timestamp and trigger idle work
+date +%s > "$IDLE_COOLDOWN_FILE"
+echo "Board is clear. Running idle work cycle (cleanup, health checks). Next idle in ${IDLE_COOLDOWN_SECONDS}s." >&2
+exit 2  # Block stop, run idle tasks
