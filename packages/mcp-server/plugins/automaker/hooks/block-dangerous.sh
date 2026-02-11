@@ -16,6 +16,18 @@ if echo "$COMMAND" | grep -qE 'rm\s+-rf\s+(/\s|/;|/$|~|"\$HOME"|\$HOME/?\s|\.\.)
   exit 2
 fi
 
+# Block rm -rf with --no-preserve-root
+if echo "$COMMAND" | grep -qE 'rm\s+.*--no-preserve-root'; then
+  echo "Blocked: rm with --no-preserve-root" >&2
+  exit 2
+fi
+
+# Block find with -delete targeting root
+if echo "$COMMAND" | grep -qE 'find\s+/\s.*-delete'; then
+  echo "Blocked: find / -delete targets entire filesystem" >&2
+  exit 2
+fi
+
 # Block force push to main/master
 if echo "$COMMAND" | grep -qE 'git\s+push\s+.*--force.*\s+(main|master)'; then
   echo "Blocked: force push to main/master" >&2
@@ -33,7 +45,8 @@ if echo "$COMMAND" | grep -qE 'git\s+reset\s+--hard'; then
 fi
 
 # Block git checkout . or git restore . (wipes all unstaged changes)
-if echo "$COMMAND" | grep -qE 'git\s+(checkout|restore)\s+\.$'; then
+# Also catches "git checkout -- ." variant
+if echo "$COMMAND" | grep -qE 'git\s+(checkout|restore)\s+(--\s+)?\.$'; then
   echo "Blocked: git checkout/restore . wipes all unstaged changes" >&2
   exit 2
 fi

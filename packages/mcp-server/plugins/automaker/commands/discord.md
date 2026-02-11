@@ -8,36 +8,36 @@ allowed-tools:
   - Bash
   - Read
   # Channel Management
-  - mcp__discord__list_channels
-  - mcp__discord__create_text_channel
-  - mcp__discord__delete_channel
-  - mcp__discord__find_channel
+  - mcp__plugin_automaker_discord__list_channels
+  - mcp__plugin_automaker_discord__create_text_channel
+  - mcp__plugin_automaker_discord__delete_channel
+  - mcp__plugin_automaker_discord__find_channel
   # Category Management
-  - mcp__discord__create_category
-  - mcp__discord__find_category
-  - mcp__discord__delete_category
-  - mcp__discord__list_channels_in_category
+  - mcp__plugin_automaker_discord__create_category
+  - mcp__plugin_automaker_discord__find_category
+  - mcp__plugin_automaker_discord__delete_category
+  - mcp__plugin_automaker_discord__list_channels_in_category
   # Message Management
-  - mcp__discord__send_message
-  - mcp__discord__read_messages
-  - mcp__discord__edit_message
-  - mcp__discord__delete_message
+  - mcp__plugin_automaker_discord__send_message
+  - mcp__plugin_automaker_discord__read_messages
+  - mcp__plugin_automaker_discord__edit_message
+  - mcp__plugin_automaker_discord__delete_message
   # Webhook Management
-  - mcp__discord__create_webhook
-  - mcp__discord__list_webhooks
-  - mcp__discord__send_webhook_message
-  - mcp__discord__delete_webhook
+  - mcp__plugin_automaker_discord__create_webhook
+  - mcp__plugin_automaker_discord__list_webhooks
+  - mcp__plugin_automaker_discord__send_webhook_message
+  - mcp__plugin_automaker_discord__delete_webhook
   # Reactions
-  - mcp__discord__add_reaction
-  - mcp__discord__remove_reaction
+  - mcp__plugin_automaker_discord__add_reaction
+  - mcp__plugin_automaker_discord__remove_reaction
   # Private Messages
-  - mcp__discord__send_private_message
-  - mcp__discord__read_private_messages
-  - mcp__discord__edit_private_message
-  - mcp__discord__delete_private_message
+  - mcp__plugin_automaker_discord__send_private_message
+  - mcp__plugin_automaker_discord__read_private_messages
+  - mcp__plugin_automaker_discord__edit_private_message
+  - mcp__plugin_automaker_discord__delete_private_message
   # User & Server
-  - mcp__discord__get_user_id_by_name
-  - mcp__discord__get_server_info
+  - mcp__plugin_automaker_discord__get_user_id_by_name
+  - mcp__plugin_automaker_discord__get_server_info
 ---
 
 # Discord Manager
@@ -77,8 +77,8 @@ Based on the user's input, determine the action:
 Show a comprehensive server overview:
 
 ```
-mcp__discord__get_server_info()
-mcp__discord__list_channels()
+mcp__plugin_automaker_discord__get_server_info()
+mcp__plugin_automaker_discord__list_channels()
 ```
 
 Display format:
@@ -129,7 +129,7 @@ options:
 ### Send the announcement:
 
 ```
-mcp__discord__send_message({
+mcp__plugin_automaker_discord__send_message({
   channelId: "<selected_channel_id>",
   message: "<announcement_content>"
 })
@@ -184,7 +184,7 @@ Agenda:
 ### List Channels
 
 ```
-mcp__discord__list_channels()
+mcp__plugin_automaker_discord__list_channels()
 ```
 
 Display organized by category:
@@ -224,9 +224,9 @@ options:
 Then:
 
 ```
-mcp__discord__create_text_channel({ name: "channel-name", categoryId: "optional" })
+mcp__plugin_automaker_discord__create_text_channel({ name: "channel-name", categoryId: "optional" })
 # or
-mcp__discord__create_category({ name: "Category Name" })
+mcp__plugin_automaker_discord__create_category({ name: "Category Name" })
 ```
 
 ### Delete Channel
@@ -250,7 +250,7 @@ options:
 ### Lookup Member by Username
 
 ```
-mcp__discord__get_user_id_by_name({ username: "username" })
+mcp__plugin_automaker_discord__get_user_id_by_name({ username: "username" })
 ```
 
 Display:
@@ -271,7 +271,7 @@ Display:
 ### Send Direct Message
 
 ```
-mcp__discord__send_private_message({
+mcp__plugin_automaker_discord__send_private_message({
   userId: "123456789",
   message: "Your message here"
 })
@@ -284,7 +284,7 @@ mcp__discord__send_private_message({
 ### Read Recent Messages
 
 ```
-mcp__discord__read_messages({
+mcp__plugin_automaker_discord__read_messages({
   channelId: "<channel_id>",
   count: "20"
 })
@@ -307,7 +307,7 @@ _Showing last 20 messages_
 ### Send Message
 
 ```
-mcp__discord__send_message({
+mcp__plugin_automaker_discord__send_message({
   channelId: "<channel_id>",
   message: "Message content"
 })
@@ -316,7 +316,7 @@ mcp__discord__send_message({
 ### React to Message
 
 ```
-mcp__discord__add_reaction({
+mcp__plugin_automaker_discord__add_reaction({
   channelId: "<channel_id>",
   messageId: "<message_id>",
   emoji: "👍"
@@ -330,7 +330,7 @@ mcp__discord__add_reaction({
 ### List Webhooks
 
 ```
-mcp__discord__list_webhooks({ channelId: "<channel_id>" })
+mcp__plugin_automaker_discord__list_webhooks({ channelId: "<channel_id>" })
 ```
 
 Display:
@@ -347,7 +347,7 @@ Display:
 ### Create Webhook
 
 ```
-mcp__discord__create_webhook({
+mcp__plugin_automaker_discord__create_webhook({
   channelId: "<channel_id>",
   name: "Webhook Name"
 })
@@ -358,7 +358,7 @@ mcp__discord__create_webhook({
 ### Send via Webhook
 
 ```
-mcp__discord__send_webhook_message({
+mcp__plugin_automaker_discord__send_webhook_message({
   webhookUrl: "<full_webhook_url>",
   message: "Message content"
 })
@@ -405,7 +405,7 @@ Analyze the server for cleanup opportunities:
 ### Daily Standup Reminder
 
 ```
-mcp__discord__send_message({
+mcp__plugin_automaker_discord__send_message({
   channelId: "<standup_channel>",
   message: "🌅 **Daily Standup**\n\nPlease share:\n1. What you did yesterday\n2. What you're doing today\n3. Any blockers\n\n@everyone"
 })
@@ -414,7 +414,7 @@ mcp__discord__send_message({
 ### PR Notification
 
 ```
-mcp__discord__send_message({
+mcp__plugin_automaker_discord__send_message({
   channelId: "<dev_channel>",
   message: "🚀 **PR Ready for Review**\n\n**Title**: [PR Title]\n**Author**: @[author]\n**Link**: [PR URL]\n\nPlease review when available!"
 })
@@ -423,7 +423,7 @@ mcp__discord__send_message({
 ### Incident Alert
 
 ```
-mcp__discord__send_message({
+mcp__plugin_automaker_discord__send_message({
   channelId: "<alerts_channel>",
   message: "🚨 **Incident Alert**\n\n**Severity**: [High/Medium/Low]\n**Service**: [service name]\n**Status**: Investigating\n\n@oncall"
 })
@@ -508,13 +508,13 @@ Task(subagent_type: "automaker:discord-bulk",
 To get a channel ID:
 
 1. Use `/discord channels` to list with IDs
-2. Or use `mcp__discord__find_channel({ channelName: "channel-name" })`
+2. Or use `mcp__plugin_automaker_discord__find_channel({ channelName: "channel-name" })`
 
 ### User Mentions
 
 To mention a user in a message:
 
-1. Get their ID: `mcp__discord__get_user_id_by_name({ username: "name" })`
+1. Get their ID: `mcp__plugin_automaker_discord__get_user_id_by_name({ username: "name" })`
 2. Use in message: `<@USER_ID>`
 
 ### Emoji Reactions

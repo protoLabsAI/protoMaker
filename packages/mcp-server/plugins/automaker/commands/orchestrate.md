@@ -6,14 +6,14 @@ allowed-tools:
   - AskUserQuestion
   - Task
   # Orchestration
-  - mcp__automaker__set_feature_dependencies
-  - mcp__automaker__get_dependency_graph
-  - mcp__automaker__get_execution_order
+  - mcp__plugin_automaker_automaker__set_feature_dependencies
+  - mcp__plugin_automaker_automaker__get_dependency_graph
+  - mcp__plugin_automaker_automaker__get_execution_order
   # Feature tools for context
-  - mcp__automaker__list_features
-  - mcp__automaker__get_feature
-  - mcp__automaker__get_board_summary
-  - mcp__automaker__health_check
+  - mcp__plugin_automaker_automaker__list_features
+  - mcp__plugin_automaker_automaker__get_feature
+  - mcp__plugin_automaker_automaker__get_board_summary
+  - mcp__plugin_automaker_automaker__health_check
 ---
 
 # Automaker Orchestrator
@@ -60,7 +60,7 @@ The resolved order features should be processed, respecting dependencies:
 ### View Dependency Graph
 
 ```
-mcp__automaker__get_dependency_graph({ projectPath })
+mcp__plugin_automaker_automaker__get_dependency_graph({ projectPath })
 ```
 
 Display as:
@@ -103,7 +103,7 @@ multiSelect: true
 Then:
 
 ```
-mcp__automaker__set_feature_dependencies({
+mcp__plugin_automaker_automaker__set_feature_dependencies({
   projectPath,
   featureId: "<feature>",
   dependencies: ["abc-123", "def-456"]
@@ -113,7 +113,7 @@ mcp__automaker__set_feature_dependencies({
 ### View Execution Order
 
 ```
-mcp__automaker__get_execution_order({ projectPath, status: "backlog" })
+mcp__plugin_automaker_automaker__get_execution_order({ projectPath, status: "backlog" })
 ```
 
 Display:

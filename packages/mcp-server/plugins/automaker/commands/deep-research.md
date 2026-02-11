@@ -8,10 +8,10 @@ allowed-tools:
   - Grep
   - Task
   - AskUserQuestion
-  - mcp__automaker__get_project_spec
-  - mcp__automaker__list_context_files
-  - mcp__automaker__get_context_file
-  - mcp__automaker__list_features
+  - mcp__plugin_automaker_automaker__get_project_spec
+  - mcp__plugin_automaker_automaker__list_context_files
+  - mcp__plugin_automaker_automaker__get_context_file
+  - mcp__plugin_automaker_automaker__list_features
 model: haiku
 ---
 
@@ -50,18 +50,18 @@ options:
 1. Get the project specification:
 
    ```
-   mcp__automaker__get_project_spec({ projectPath })
+   mcp__plugin_automaker_automaker__get_project_spec({ projectPath })
    ```
 
 2. Check context files for coding standards:
 
    ```
-   mcp__automaker__list_context_files({ projectPath })
+   mcp__plugin_automaker_automaker__list_context_files({ projectPath })
    ```
 
 3. Review existing features for related work:
    ```
-   mcp__automaker__list_features({ projectPath })
+   mcp__plugin_automaker_automaker__list_features({ projectPath })
    ```
 
 ### Step 3: Explore the Codebase

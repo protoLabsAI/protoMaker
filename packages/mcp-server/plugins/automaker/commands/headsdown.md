@@ -31,8 +31,8 @@ allowed-tools:
   - mcp__plugin_automaker_automaker__get_board_summary
   - mcp__plugin_automaker_automaker__get_execution_order
   - mcp__plugin_automaker_automaker__health_check
-  - mcp__discord__send_message
-  - mcp__discord__list_channels
+  - mcp__plugin_automaker_discord__send_message
+  - mcp__plugin_automaker_discord__list_channels
 ---
 
 # Heads Down Mode

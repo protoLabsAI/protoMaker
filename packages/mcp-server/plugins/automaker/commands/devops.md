@@ -9,7 +9,7 @@ allowed-tools:
   - Glob
   - AskUserQuestion
   - Task
-  - mcp__automaker__health_check
+  - mcp__plugin_automaker_automaker__health_check
 ---
 
 # Automaker DevOps Manager
@@ -117,7 +117,7 @@ Quick health check:
 curl -s http://localhost:3008/api/health | jq .
 
 # Or use MCP tool
-mcp__automaker__health_check()
+mcp__plugin_automaker_automaker__health_check()
 ```
 
 ### Action: Backup
