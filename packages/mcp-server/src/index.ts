@@ -1575,6 +1575,46 @@ const tools: Tool[] = [
     },
   },
 
+  // ========== Discord DM ==========
+  {
+    name: 'send_discord_dm',
+    description:
+      'Send a direct message to a Discord user by username. Uses the Automaker Discord bot to deliver the DM.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        username: {
+          type: 'string',
+          description: 'Discord username to send the DM to (e.g., "chukz")',
+        },
+        content: {
+          type: 'string',
+          description: 'Message content to send',
+        },
+      },
+      required: ['username', 'content'],
+    },
+  },
+  {
+    name: 'read_discord_dms',
+    description:
+      'Read recent direct messages with a Discord user by username. Returns messages from the DM channel between the bot and the user.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        username: {
+          type: 'string',
+          description: 'Discord username to read DMs from (e.g., "chukz")',
+        },
+        limit: {
+          type: 'number',
+          description: 'Maximum number of messages to return (default: 10, max: 100)',
+        },
+      },
+      required: ['username'],
+    },
+  },
+
   {
     name: 'start_goap_loop',
     description:
@@ -2172,6 +2212,19 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       return apiCall('/metrics/forecast', {
         projectPath: args.projectPath,
         complexity: args.complexity || 'medium',
+      });
+
+    // Discord DM
+    case 'send_discord_dm':
+      return apiCall('/discord/send-dm', {
+        username: args.username,
+        content: args.content,
+      });
+
+    case 'read_discord_dms':
+      return apiCall('/discord/read-dms', {
+        username: args.username,
+        limit: args.limit || 10,
       });
 
     case 'start_goap_loop':
