@@ -202,6 +202,7 @@ export type {
   GraphiteSettings,
   // Discord integration types
   DiscordSettings,
+  DiscordUserDMConfig,
   // Ceremony types
   CeremonySettings,
   // Project integration types
@@ -462,6 +463,7 @@ export type {
   DiscordMessage,
   DiscordWebhook,
   DiscordUser,
+  DiscordDMMessage,
   CreateChannelOptions,
   CreateCategoryOptions,
   DiscordSendMessageOptions,
