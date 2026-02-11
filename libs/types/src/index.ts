@@ -202,6 +202,8 @@ export type {
   GraphiteSettings,
   // Discord integration types
   DiscordSettings,
+  // Ceremony types
+  CeremonySettings,
   // Project integration types
   LinearIntegrationConfig,
   DiscordIntegrationConfig,
@@ -240,6 +242,8 @@ export {
   DEFAULT_GRAPHITE_SETTINGS,
   // Discord integration defaults
   DEFAULT_DISCORD_SETTINGS,
+  // Ceremony defaults
+  DEFAULT_CEREMONY_SETTINGS,
   // Integration config defaults
   DEFAULT_LINEAR_INTEGRATION,
   DEFAULT_DISCORD_INTEGRATION,

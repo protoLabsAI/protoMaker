@@ -783,6 +783,35 @@ export interface PhaseModelEntry {
 }
 
 /**
+ * CeremonySettings - Configuration for milestone and project ceremony features
+ *
+ * Ceremonies are automated events that mark significant project progress:
+ * - Milestone completions: Sent to Discord when all features in a milestone are done
+ * - Project retrospectives: AI-generated reflections when projects complete
+ */
+export interface CeremonySettings {
+  /** Whether ceremony features are enabled for this project */
+  enabled: boolean;
+  /** Discord channel ID for ceremony announcements (overrides project default) */
+  discordChannelId?: string;
+  /** Enable milestone completion announcements (default: true) */
+  enableMilestoneUpdates?: boolean;
+  /** Enable project retrospective generation (default: true) */
+  enableProjectRetros?: boolean;
+  /** Model configuration for generating retrospectives */
+  retroModel?: PhaseModelEntry;
+}
+
+/**
+ * DEFAULT_CEREMONY_SETTINGS - Default ceremony configuration
+ */
+export const DEFAULT_CEREMONY_SETTINGS: CeremonySettings = {
+  enabled: false,
+  enableMilestoneUpdates: true,
+  enableProjectRetros: true,
+};
+
+/**
  * PhaseModelConfig - Configuration for AI models used in different application phases
  *
  * Allows users to choose which model (Claude or Cursor) to use for each distinct
@@ -821,6 +850,10 @@ export interface PhaseModelConfig {
   // Quick tasks - commit messages
   /** Model for generating git commit messages from diffs */
   commitMessageModel: PhaseModelEntry;
+
+  // Ceremony tasks - retrospectives and milestone announcements
+  /** Model for generating project retrospectives and ceremony content */
+  ceremonyModel: PhaseModelEntry;
 }
 
 /** Keys of PhaseModelConfig for type-safe access */
@@ -1645,6 +1678,14 @@ export interface ProjectSettings {
    * @see DiscordSettings
    */
   discord?: DiscordSettings;
+
+  // Ceremony Settings (per-project)
+  /**
+   * Project-specific ceremony configuration for milestone updates and retrospectives.
+   * Overrides global ceremony settings for this project.
+   * @see CeremonySettings
+   */
+  ceremonySettings?: CeremonySettings;
 }
 
 /**
@@ -1675,6 +1716,9 @@ export const DEFAULT_PHASE_MODELS: PhaseModelConfig = {
 
   // Commit messages - use fast model for speed
   commitMessageModel: { model: 'claude-haiku' },
+
+  // Ceremony - use capable model for retrospectives and announcements
+  ceremonyModel: { model: 'claude-sonnet' },
 };
 
 /** Current version of the global settings schema */
