@@ -850,7 +850,14 @@ export class DiscordBotService {
     channelId: string,
     limit: number = 10
   ): Promise<
-    Array<{ id: string; authorId: string; authorName: string; content: string; timestamp: string }>
+    Array<{
+      id: string;
+      channelId: string;
+      authorId: string;
+      authorName: string;
+      content: string;
+      timestamp: string;
+    }>
   > {
     if (!this.client) return [];
 
