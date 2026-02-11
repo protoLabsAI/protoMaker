@@ -23,6 +23,7 @@
 import {
   Client,
   GatewayIntentBits,
+  Partials,
   SlashCommandBuilder,
   REST,
   Routes,
@@ -145,7 +146,9 @@ export class DiscordBotService {
           GatewayIntentBits.GuildMessages,
           GatewayIntentBits.MessageContent,
           GatewayIntentBits.GuildMessageReactions,
+          GatewayIntentBits.DirectMessages,
         ],
+        partials: [Partials.Channel],
       });
 
       // Set up event handlers
@@ -713,6 +716,12 @@ export class DiscordBotService {
 
     const content = message.content.trim();
 
+    // Handle DMs - must check BEFORE guild-based handlers (DMs have no guild context)
+    if (message.channel.type === ChannelType.DM) {
+      await this.handleDM(message);
+      return;
+    }
+
     // Handle CTO replies in review threads
     if (message.channel.isThread()) {
       const featureId = this.reviewThreads.get(message.channelId);
@@ -732,6 +741,60 @@ export class DiscordBotService {
     const routing = this.userRouting.get(message.author.id);
     if (routing?.enabled) {
       await this.bufferAndRouteMessage(message, routing.agentId);
+    }
+  }
+
+  /**
+   * Get Discord integration config from settings.
+   */
+  private async getConfig() {
+    const settings = await this.settingsService.getProjectSettings(this.projectPath);
+    return settings?.integrations?.discord;
+  }
+
+  /**
+   * Handle DM messages from mapped users.
+   * Emits `discord:dm:received` event for routed users.
+   */
+  private async handleDM(message: Message): Promise<void> {
+    try {
+      const username = message.author.username;
+
+      // Check if this user is mapped in userRouting
+      const config = await this.getConfig();
+      if (!config?.userRouting) {
+        logger.debug(`DM from ${username} but no userRouting configured`);
+        return;
+      }
+
+      // userRouting is a Record<string, { agentType: string; enabled: boolean }>
+      // where the key is the Discord username
+      const routingInfo = config.userRouting[username];
+      if (!routingInfo || !routingInfo.enabled) {
+        logger.debug(`DM from ${username} but not in userRouting map or disabled`);
+        return;
+      }
+
+      // Extract attachments
+      const attachments = message.attachments.map((att) => ({
+        id: att.id,
+        name: att.name ?? 'unknown',
+        url: att.url,
+        contentType: att.contentType ?? undefined,
+        size: att.size,
+      }));
+
+      // Emit discord:dm:received event
+      this.events.emit('discord:dm:received', {
+        username,
+        content: message.content,
+        attachments,
+        timestamp: Date.now(),
+      });
+
+      logger.info(`DM received from routed user: ${username}`);
+    } catch (error) {
+      logger.error('Error handling DM:', error);
     }
   }
 
@@ -1572,6 +1635,61 @@ export class DiscordBotService {
       }
 
       this.approvalMessages.delete(messageId);
+    }
+  }
+
+  /**
+   * Send a direct message to a user by username.
+   * @param username Discord username (e.g., "john_doe")
+   * @param content Message content to send
+   * @returns true if message was sent successfully
+   */
+  async sendDM(username: string, content: string): Promise<boolean> {
+    if (!this.client) {
+      logger.error('Cannot send DM: Discord client not initialized');
+      return false;
+    }
+
+    try {
+      // Fetch guild to search for user
+      const guild = await this.client.guilds.fetch(GUILD_ID);
+      if (!guild) {
+        logger.error(`Guild ${GUILD_ID} not found`);
+        return false;
+      }
+
+      // Search for user by username
+      const members = await guild.members.fetch({ query: username, limit: 1 });
+      if (members.size === 0) {
+        logger.error(`User ${username} not found in guild`);
+        return false;
+      }
+
+      const member = members.first();
+      if (!member) {
+        logger.error(`Failed to get member for username ${username}`);
+        return false;
+      }
+
+      // Send DM
+      await member.user.send(content);
+
+      // Emit DM sent event
+      this.events.emit('discord:dm:sent', {
+        username,
+        content,
+        timestamp: new Date().toISOString(),
+      });
+
+      logger.info(`DM sent to ${username}`);
+      return true;
+    } catch (error) {
+      logger.error(`Failed to send DM to ${username}:`, error);
+      // Common error: user has DMs disabled
+      if (error instanceof Error && error.message.includes('Cannot send messages to this user')) {
+        logger.warn(`User ${username} has DMs disabled`);
+      }
+      return false;
     }
   }
 
