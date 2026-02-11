@@ -63,9 +63,16 @@ allowed-tools:
   - mcp__plugin_automaker_automaker__get_skill
   - mcp__plugin_automaker_automaker__create_skill
   - mcp__plugin_automaker_automaker__delete_skill
+  # Metrics
+  - mcp__plugin_automaker_automaker__get_project_metrics
+  - mcp__plugin_automaker_automaker__get_capacity_metrics
+  - mcp__plugin_automaker_automaker__get_forecast
   # Graphite
   - mcp__plugin_automaker_automaker__graphite_restack
-  # Discord
+  # Discord DMs (via Automaker bot)
+  - mcp__plugin_automaker_automaker__send_discord_dm
+  - mcp__plugin_automaker_automaker__read_discord_dms
+  # Discord (via external MCP)
   - mcp__plugin_automaker_discord__discord_send
   - mcp__plugin_automaker_discord__discord_read_messages
   - mcp__plugin_automaker_discord__discord_get_server_info
