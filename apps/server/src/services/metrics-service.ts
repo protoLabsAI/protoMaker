@@ -206,10 +206,7 @@ export class MetricsService {
     let completionCount = 0;
 
     for (const feature of features) {
-      if (
-        (feature.status === 'done' || feature.status === 'verified') &&
-        feature.startedAt
-      ) {
+      if ((feature.status === 'done' || feature.status === 'verified') && feature.startedAt) {
         const startTime = new Date(feature.startedAt).getTime();
         const endTime = this.getFeatureEndTime(feature);
         if (endTime) {
@@ -219,8 +216,7 @@ export class MetricsService {
       }
     }
 
-    const avgCompletionTimeMs =
-      completionCount > 0 ? totalCompletionTimeMs / completionCount : 0;
+    const avgCompletionTimeMs = completionCount > 0 ? totalCompletionTimeMs / completionCount : 0;
 
     // Estimate time to clear backlog
     const estimatedBacklogTimeMs =
@@ -229,9 +225,7 @@ export class MetricsService {
         : 0;
 
     // Calculate utilization
-    const utilizationPercent = maxConcurrency > 0
-      ? (inProgressCount / maxConcurrency) * 100
-      : 0;
+    const utilizationPercent = maxConcurrency > 0 ? (inProgressCount / maxConcurrency) * 100 : 0;
 
     return {
       currentConcurrency: inProgressCount,
