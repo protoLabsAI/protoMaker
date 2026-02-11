@@ -13,6 +13,7 @@ import type { SettingsService } from './settings-service.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { ProjectService } from './project-service.js';
 import type { Feature, CeremonySettings } from '@automaker/types';
+import { simpleQuery } from '../providers/simple-query-service.js';
 
 const logger = createLogger('CeremonyService');
 
@@ -25,6 +26,24 @@ interface MilestoneCompletedPayload {
   projectSlug: string;
   milestoneTitle: string;
   milestoneNumber: number;
+}
+
+/**
+ * Project completion payload from the event system
+ */
+interface ProjectCompletedPayload {
+  projectPath: string;
+  projectTitle: string;
+  projectSlug: string;
+  totalMilestones: number;
+  totalFeatures: number;
+  totalCostUsd: number;
+  failureCount: number;
+  milestoneSummaries: Array<{
+    milestoneTitle: string;
+    featureCount: number;
+    costUsd: number;
+  }>;
 }
 
 /**
@@ -58,10 +77,12 @@ export class CeremonyService {
     this.featureLoader = featureLoader;
     this.projectService = projectService;
 
-    // Subscribe to milestone:completed events
+    // Subscribe to milestone:completed and project:completed events
     this.unsubscribe = emitter.subscribe((type, payload) => {
       if (type === 'milestone:completed') {
         this.handleMilestoneCompleted(payload as MilestoneCompletedPayload);
+      } else if (type === 'project:completed') {
+        this.handleProjectCompleted(payload as ProjectCompletedPayload);
       }
     });
 
@@ -123,6 +144,102 @@ export class CeremonyService {
       );
     } catch (error) {
       logger.error('Failed to generate milestone ceremony:', error);
+    }
+  }
+
+  /**
+   * Handle project:completed event
+   * Generate a retrospective using LLM based on all project features and post to Discord
+   */
+  private async handleProjectCompleted(payload: ProjectCompletedPayload): Promise<void> {
+    const { projectPath, projectTitle, projectSlug, totalMilestones, totalFeatures } = payload;
+
+    // Check if ceremonies are enabled
+    const ceremonySettings = await this.getCeremonySettings(projectPath);
+    if (!ceremonySettings?.enabled || !ceremonySettings?.enableMilestoneUpdates) {
+      logger.debug('Ceremonies disabled, skipping project retrospective');
+      return;
+    }
+
+    try {
+      // Load all features across all milestones
+      const allFeatures = await this.featureLoader!.getAll(projectPath);
+
+      // Aggregate stats
+      const shipped = allFeatures.filter((f) => f.status === 'done' && f.prUrl);
+      const failed = allFeatures.filter((f) => (f.failureCount || 0) > 0);
+      const totalCost = allFeatures.reduce((sum, f) => sum + (f.costUsd || 0), 0);
+
+      // Group by milestone for cost breakdown
+      const milestoneBreakdown = new Map<string, { featureCount: number; costUsd: number }>();
+      for (const feature of allFeatures) {
+        if (feature.milestoneSlug) {
+          const existing = milestoneBreakdown.get(feature.milestoneSlug) || {
+            featureCount: 0,
+            costUsd: 0,
+          };
+          milestoneBreakdown.set(feature.milestoneSlug, {
+            featureCount: existing.featureCount + 1,
+            costUsd: existing.costUsd + (feature.costUsd || 0),
+          });
+        }
+      }
+
+      // Build the data summary for the LLM
+      const dataSummary = this.buildProjectDataSummary(
+        projectTitle,
+        totalMilestones,
+        totalFeatures,
+        shipped,
+        failed,
+        totalCost,
+        milestoneBreakdown
+      );
+
+      // Get ceremony model (default: sonnet)
+      const model = ceremonySettings.retroModel?.model || 'sonnet';
+
+      // Call LLM with retrospective prompt
+      const retroPrompt = `Given these project completion stats, write a concise retrospective covering:
+- **What Went Well**: Highlight successes, efficient patterns, high-value features
+- **What Went Wrong**: Identify failures, blockers, or inefficiencies
+- **Lessons Learned**: Key takeaways from the project
+- **Action Items**: Concrete improvements for future projects
+
+Be specific, reference actual features and numbers from the data. Keep it engaging and actionable.
+
+Project Data:
+${dataSummary}`;
+
+      logger.info(`Generating project retrospective for ${projectTitle} using model: ${model}`);
+      const result = await simpleQuery({
+        prompt: retroPrompt,
+        model,
+        cwd: projectPath,
+        maxTurns: 1,
+        allowedTools: [],
+      });
+      const retrospective = result.text;
+
+      // Format the retrospective with header
+      const formattedRetro = `🎉 **${projectTitle}** — Project Complete!\n\n${retrospective}`;
+
+      // Split into chunks if needed (Discord limit: 2000 chars)
+      const messages = this.splitMessage(formattedRetro, 2000);
+
+      // Post to Discord
+      for (const message of messages) {
+        await this.emitDiscordEvent(
+          projectPath,
+          ceremonySettings.discordChannelId,
+          message,
+          `Project Complete: ${projectTitle}`
+        );
+      }
+
+      logger.info(`Posted project retrospective for ${projectTitle}`);
+    } catch (error) {
+      logger.error('Failed to generate project retrospective:', error);
     }
   }
 
@@ -240,6 +357,68 @@ export class CeremonyService {
     // Load all features and filter by milestone
     const allFeatures = await this.featureLoader!.getAll(projectPath);
     return allFeatures.filter((f) => f.milestoneSlug === milestoneSlug);
+  }
+
+  /**
+   * Build project data summary for LLM retrospective prompt
+   */
+  private buildProjectDataSummary(
+    projectTitle: string,
+    totalMilestones: number,
+    totalFeatures: number,
+    shipped: Feature[],
+    failed: Feature[],
+    totalCost: number,
+    milestoneBreakdown: Map<string, { featureCount: number; costUsd: number }>
+  ): string {
+    const lines: string[] = [];
+
+    // Project overview
+    lines.push(`## ${projectTitle} — Project Overview`);
+    lines.push(`- Total Milestones: ${totalMilestones}`);
+    lines.push(`- Total Features: ${totalFeatures}`);
+    lines.push(`- Total Cost: $${totalCost.toFixed(2)}`);
+    lines.push('');
+
+    // Features shipped
+    lines.push(`### Features Shipped (${shipped.length})`);
+    if (shipped.length > 0) {
+      for (const feature of shipped) {
+        const title = feature.title || 'Untitled';
+        const prLink = feature.prUrl || 'No PR';
+        const cost = feature.costUsd ? `$${feature.costUsd.toFixed(2)}` : '$0.00';
+        lines.push(`- **${title}** — PR: ${prLink}, Cost: ${cost}`);
+      }
+    } else {
+      lines.push('- None');
+    }
+    lines.push('');
+
+    // Failures
+    lines.push(`### Failures/Blockers (${failed.length})`);
+    if (failed.length > 0) {
+      for (const feature of failed) {
+        const title = feature.title || 'Untitled';
+        const failCount = feature.failureCount || 0;
+        const error = feature.error ? `Error: ${feature.error.slice(0, 150)}` : '';
+        lines.push(`- **${title}** — Fail Count: ${failCount}${error ? `, ${error}` : ''}`);
+      }
+    } else {
+      lines.push('- None');
+    }
+    lines.push('');
+
+    // Milestone breakdown
+    lines.push(`### Milestone Cost Breakdown`);
+    if (milestoneBreakdown.size > 0) {
+      for (const [slug, data] of milestoneBreakdown) {
+        lines.push(`- **${slug}**: ${data.featureCount} features, $${data.costUsd.toFixed(2)}`);
+      }
+    } else {
+      lines.push('- No milestone data');
+    }
+
+    return lines.join('\n');
   }
 
   /**
