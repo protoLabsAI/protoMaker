@@ -59,6 +59,7 @@ export type {
   FeatureStatus,
   LegacyFeatureStatus,
   DescriptionHistoryEntry,
+  StatusTransition,
 } from './feature.js';
 export { normalizeFeatureStatus } from './feature.js';
 

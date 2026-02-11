@@ -35,6 +35,21 @@ export interface FeatureTextFilePath {
   [key: string]: unknown;
 }
 
+/**
+ * Records a status transition in a feature's lifecycle.
+ * Pushed to statusHistory array whenever the feature status changes.
+ */
+export interface StatusTransition {
+  /** Previous status (null if this is the initial status) */
+  from: FeatureStatus | null;
+  /** New status */
+  to: FeatureStatus;
+  /** ISO 8601 timestamp when the transition occurred */
+  timestamp: string;
+  /** Optional reason for the status change (e.g., error message, PR merged) */
+  reason?: string;
+}
+
 export interface Feature {
   id: string;
   title?: string;
@@ -202,6 +217,18 @@ export interface Feature {
    * Links feature to Ava's operational task manager.
    */
   beadsTaskId?: string;
+  /**
+   * Lifecycle timestamps for tracking feature progression through statuses.
+   * All timestamps are ISO 8601 strings.
+   */
+  createdAt?: string; // When the feature was first created
+  completedAt?: string; // When the feature was marked as done or verified
+  reviewStartedAt?: string; // When the feature entered review status
+  /**
+   * History of all status transitions for this feature.
+   * Each transition records the from/to status, timestamp, and optional reason.
+   */
+  statusHistory?: StatusTransition[];
   [key: string]: unknown; // Keep catch-all for extensibility
 }
 

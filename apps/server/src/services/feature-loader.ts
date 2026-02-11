@@ -4,7 +4,12 @@
  */
 
 import path from 'path';
-import type { Feature, DescriptionHistoryEntry } from '@automaker/types';
+import type {
+  Feature,
+  DescriptionHistoryEntry,
+  FeatureStatus,
+  StatusTransition,
+} from '@automaker/types';
 import { normalizeFeatureStatus } from '@automaker/types';
 import {
   createLogger,
@@ -414,6 +419,10 @@ export class FeatureLoader {
     // Auto-generate branchName from title if not provided
     const branchName = featureData.branchName || this.generateBranchName(featureData.title);
 
+    // Set lifecycle timestamps
+    const createdAt = new Date().toISOString();
+    const initialStatus = (featureData.status || 'backlog') as FeatureStatus;
+
     // Ensure feature has required fields
     const feature: Feature = {
       category: featureData.category || 'Uncategorized',
@@ -423,6 +432,15 @@ export class FeatureLoader {
       branchName,
       imagePaths: migratedImagePaths,
       descriptionHistory: initialHistory,
+      createdAt,
+      statusHistory: [
+        {
+          from: null,
+          to: initialStatus,
+          timestamp: createdAt,
+          reason: 'Feature created',
+        },
+      ],
     };
 
     // Write feature.json atomically with backup support
@@ -506,12 +524,42 @@ export class FeatureLoader {
       updatedHistory = [...updatedHistory, historyEntry];
     }
 
+    // Track status history and lifecycle timestamps if status changed
+    let updatedStatusHistory = feature.statusHistory || [];
+    let lifecycleUpdates = {};
+    if (updates.status !== undefined && updates.status !== feature.status) {
+      const timestamp = new Date().toISOString();
+
+      // Add status transition to history
+      const transition: StatusTransition = {
+        from: (feature.status as FeatureStatus) ?? null,
+        to: updates.status as FeatureStatus,
+        timestamp,
+        ...(typeof updates.statusChangeReason === 'string'
+          ? { reason: updates.statusChangeReason }
+          : {}),
+      };
+      updatedStatusHistory = [...updatedStatusHistory, transition];
+
+      // Set lifecycle timestamps based on status
+      if (updates.status === 'review' && !feature.reviewStartedAt) {
+        lifecycleUpdates = { ...lifecycleUpdates, reviewStartedAt: timestamp };
+      } else if (
+        (updates.status === 'done' || updates.status === 'verified') &&
+        !feature.completedAt
+      ) {
+        lifecycleUpdates = { ...lifecycleUpdates, completedAt: timestamp };
+      }
+    }
+
     // Merge updates
     const updatedFeature: Feature = {
       ...feature,
       ...updates,
       ...(updatedImagePaths !== undefined ? { imagePaths: updatedImagePaths } : {}),
       descriptionHistory: updatedHistory,
+      statusHistory: updatedStatusHistory,
+      ...lifecycleUpdates,
     };
 
     // Write back to file atomically with backup support
