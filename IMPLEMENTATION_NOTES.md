@@ -1,11 +1,13 @@
 # Phase 2: Critical MCP Tools - Implementation Notes
 
 ## Overview
+
 Added 3 new MCP tools for GitHub PR operations: `merge_pr`, `check_pr_status`, and `resolve_review_threads`.
 
 ## Files Created
 
 ### Server Routes
+
 1. **apps/server/src/routes/github/routes/merge-pr.ts**
    - POST `/api/github/merge-pr` endpoint
    - Merges a PR using `githubMergeService.mergePR()`
@@ -18,33 +20,40 @@ Added 3 new MCP tools for GitHub PR operations: `merge_pr`, `check_pr_status`, a
    - Returns passed/failed/pending check counts
 
 ### MCP Tools
+
 Updated **packages/mcp-server/src/index.ts**:
+
 - Added `merge_pr` tool definition (lines ~1135-1163)
 - Added `check_pr_status` tool definition (lines ~1164-1181)
 - Added `resolve_review_threads` tool definition (lines ~1182-1200)
 - Added handlers in `handleTool` switch statement (lines ~1665-1680)
 
 ### Router Registration
+
 Updated **apps/server/src/routes/github/index.ts**:
+
 - Imported new handlers
 - Registered routes at lines ~72-73
 
 ## API Endpoints
 
 ### 1. POST /api/github/merge-pr
+
 Merges a pull request.
 
 **Request:**
+
 ```json
 {
   "projectPath": "/path/to/project",
   "prNumber": 123,
-  "strategy": "squash",  // Optional: "merge" | "squash" | "rebase"
-  "waitForCI": true      // Optional: default true
+  "strategy": "squash", // Optional: "merge" | "squash" | "rebase"
+  "waitForCI": true // Optional: default true
 }
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -58,9 +67,11 @@ Merges a pull request.
 ```
 
 ### 2. POST /api/github/check-pr-status
+
 Checks CI status of a PR.
 
 **Request:**
+
 ```json
 {
   "projectPath": "/path/to/project",
@@ -69,6 +80,7 @@ Checks CI status of a PR.
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -81,9 +93,11 @@ Checks CI status of a PR.
 ```
 
 ### 3. POST /api/github/process-coderabbit-feedback
+
 Processes CodeRabbit review comments (already existed, now exposed via MCP).
 
 **Request:**
+
 ```json
 {
   "projectPath": "/path/to/project",
@@ -92,6 +106,7 @@ Processes CodeRabbit review comments (already existed, now exposed via MCP).
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -103,37 +118,42 @@ Processes CodeRabbit review comments (already existed, now exposed via MCP).
 ## MCP Tools Usage
 
 ### merge_pr
+
 ```typescript
 mcp__automaker__merge_pr({
   projectPath: '/path/to/project',
   prNumber: 123,
   strategy: 'squash',
-  waitForCI: true
-})
+  waitForCI: true,
+});
 ```
 
 ### check_pr_status
+
 ```typescript
 mcp__automaker__check_pr_status({
   projectPath: '/path/to/project',
-  prNumber: 123
-})
+  prNumber: 123,
+});
 ```
 
 ### resolve_review_threads
+
 ```typescript
 mcp__automaker__resolve_review_threads({
   projectPath: '/path/to/project',
-  prNumber: 123
-})
+  prNumber: 123,
+});
 ```
 
 ## Testing
 
 ### Manual Testing
+
 1. Ensure Automaker server is running
 2. Ensure a GitHub repo with PRs exists
 3. Test via MCP:
+
 ```bash
 # List all tools (should show 53 tools now, was 50)
 claude mcp test automaker
@@ -148,6 +168,7 @@ mcp__automaker__merge_pr({
 ```
 
 ### Verification Checklist
+
 - [x] Routes compile without TypeScript errors
 - [x] MCP tools defined in packages/mcp-server/src/index.ts
 - [x] MCP server builds successfully (dist/index.js contains new tools)

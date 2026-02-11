@@ -31,7 +31,12 @@ interface MergePRResponse {
 export function createMergePRHandler() {
   return async (req: Request, res: Response): Promise<void> => {
     try {
-      const { projectPath, prNumber, strategy = 'squash', waitForCI = true } = req.body as MergePRRequest;
+      const {
+        projectPath,
+        prNumber,
+        strategy = 'squash',
+        waitForCI = true,
+      } = req.body as MergePRRequest;
 
       if (!projectPath) {
         res.status(400).json({ success: false, error: 'projectPath is required' });
@@ -68,12 +73,7 @@ export function createMergePRHandler() {
       logger.info(`Merging PR #${prNumber} with strategy: ${strategy}, waitForCI: ${waitForCI}`);
 
       // Attempt to merge the PR
-      const result = await githubMergeService.mergePR(
-        projectPath,
-        prNumber,
-        strategy,
-        waitForCI
-      );
+      const result = await githubMergeService.mergePR(projectPath, prNumber, strategy, waitForCI);
 
       // Return result
       if (result.success) {
