@@ -1502,6 +1502,8 @@ export interface DiscordIntegrationConfig {
   webhookId?: string;
   /** Webhook token (if useWebhook is true) */
   webhookToken?: string;
+  /** User routing configuration - maps Discord usernames to agent types */
+  userRouting?: Record<string, { agentType: string; enabled: boolean }>;
 }
 
 /**
@@ -1915,6 +1917,10 @@ export const DEFAULT_DISCORD_INTEGRATION: DiscordIntegrationConfig = {
   notifyOnError: true,
   notifyOnAutoModeComplete: true,
   useWebhook: false,
+  userRouting: {
+    chukz: { agentType: 'ava', enabled: true },
+    abdelly: { agentType: 'gtm', enabled: false },
+  },
 };
 
 /** Default project settings (empty - all settings are optional and fall back to global) */
