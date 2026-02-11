@@ -521,6 +521,134 @@ Decompose this milestone into implementable phases.`;
   }
 
   /**
+   * Aggregate feature statistics for a milestone.
+   */
+  private async aggregateMilestoneStats(
+    projectPath: string,
+    milestone: Milestone
+  ): Promise<{
+    featureCount: number;
+    totalCostUsd: number;
+    failureCount: number;
+    prUrls: string[];
+    featureSummaries: Array<{
+      id: string;
+      title: string;
+      status: string;
+      costUsd: number;
+      prUrl?: string;
+      failureCount?: number;
+    }>;
+  }> {
+    const features = await this.featureLoader.getAll(projectPath);
+    const milestoneFeatures = features.filter((f) =>
+      milestone.phases.some((p) => p.featureId === f.id)
+    );
+
+    let totalCostUsd = 0;
+    let failureCount = 0;
+    const prUrls: string[] = [];
+    const featureSummaries: Array<{
+      id: string;
+      title: string;
+      status: string;
+      costUsd: number;
+      prUrl?: string;
+      failureCount?: number;
+    }> = [];
+
+    for (const feature of milestoneFeatures) {
+      const costUsd = feature.costUsd || 0;
+      const featureFailures = feature.failureCount || 0;
+
+      totalCostUsd += costUsd;
+      if (featureFailures > 0) {
+        failureCount++;
+      }
+
+      if (feature.prUrl) {
+        prUrls.push(feature.prUrl);
+      }
+
+      featureSummaries.push({
+        id: feature.id,
+        title: feature.title || 'Untitled',
+        status: feature.status || 'backlog',
+        costUsd,
+        prUrl: feature.prUrl,
+        failureCount: featureFailures,
+      });
+    }
+
+    return {
+      featureCount: milestoneFeatures.length,
+      totalCostUsd,
+      failureCount,
+      prUrls,
+      featureSummaries,
+    };
+  }
+
+  /**
+   * Aggregate statistics for an entire project.
+   */
+  private async aggregateProjectStats(
+    projectPath: string,
+    project: { title: string; slug: string; milestones: Milestone[] }
+  ): Promise<{
+    totalMilestones: number;
+    totalFeatures: number;
+    totalCostUsd: number;
+    failureCount: number;
+    milestoneSummaries: Array<{
+      milestoneTitle: string;
+      milestoneNumber: number;
+      featureCount: number;
+      totalCostUsd: number;
+      failureCount: number;
+      prUrls: string[];
+    }>;
+  }> {
+    let totalFeatures = 0;
+    let totalCostUsd = 0;
+    let failureCount = 0;
+    const milestoneSummaries: Array<{
+      milestoneTitle: string;
+      milestoneNumber: number;
+      featureCount: number;
+      totalCostUsd: number;
+      failureCount: number;
+      prUrls: string[];
+    }> = [];
+
+    for (let i = 0; i < project.milestones.length; i++) {
+      const milestone = project.milestones[i];
+      const stats = await this.aggregateMilestoneStats(projectPath, milestone);
+
+      totalFeatures += stats.featureCount;
+      totalCostUsd += stats.totalCostUsd;
+      failureCount += stats.failureCount;
+
+      milestoneSummaries.push({
+        milestoneTitle: milestone.title,
+        milestoneNumber: i + 1,
+        featureCount: stats.featureCount,
+        totalCostUsd: stats.totalCostUsd,
+        failureCount: stats.failureCount,
+        prUrls: stats.prUrls,
+      });
+    }
+
+    return {
+      totalMilestones: project.milestones.length,
+      totalFeatures,
+      totalCostUsd,
+      failureCount,
+      milestoneSummaries,
+    };
+  }
+
+  /**
    * Check if any in-progress milestones have completed (all features done).
    * If so, plan and start the next milestone.
    */
@@ -549,12 +677,20 @@ Decompose this milestone into implementable phases.`;
               status: project.status,
             });
 
+            // Aggregate feature stats for this milestone
+            const stats = await this.aggregateMilestoneStats(projectPath, milestone);
+
             this.events.emit('milestone:completed', {
               projectPath,
               projectTitle: project.title,
               projectSlug: slug,
               milestoneTitle: milestone.title,
               milestoneNumber: i + 1,
+              featureCount: stats.featureCount,
+              totalCostUsd: stats.totalCostUsd,
+              failureCount: stats.failureCount,
+              prUrls: stats.prUrls,
+              featureSummaries: stats.featureSummaries,
             });
 
             // Find and plan the next stub milestone
@@ -584,11 +720,19 @@ Decompose this milestone into implementable phases.`;
                 status: 'completed',
               });
 
+              // Aggregate stats for the entire project
+              const projectStats = await this.aggregateProjectStats(projectPath, project);
+
               // Emit project completion event
               this.events.emit('project:completed', {
                 projectPath,
                 projectTitle: project.title,
                 projectSlug: slug,
+                totalMilestones: projectStats.totalMilestones,
+                totalFeatures: projectStats.totalFeatures,
+                totalCostUsd: projectStats.totalCostUsd,
+                failureCount: projectStats.failureCount,
+                milestoneSummaries: projectStats.milestoneSummaries,
               });
 
               logger.info(`Project "${project.title}" fully completed!`);
