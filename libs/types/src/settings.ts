@@ -1698,7 +1698,11 @@ export const DEFAULT_MAX_CONCURRENCY = 1;
  * @returns The effective maximum concurrent agents allowed
  */
 export function getMaxSystemConcurrency(): number {
-  const envValue = process.env.AUTOMAKER_MAX_CONCURRENCY;
+  // Guard against browser environments where process is undefined
+  const envValue =
+    typeof process !== 'undefined' && process.env
+      ? process.env.AUTOMAKER_MAX_CONCURRENCY
+      : undefined;
 
   if (!envValue) {
     return 2; // Default hard limit for safe operation
