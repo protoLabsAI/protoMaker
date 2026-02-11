@@ -1653,7 +1653,6 @@ const tools: Tool[] = [
       required: ['projectPath'],
     },
   },
-
 ];
 
 // Tool implementations
