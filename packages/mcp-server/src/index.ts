@@ -185,6 +185,11 @@ const tools: Tool[] = [
           type: 'string',
           description: 'The feature ID (UUID)',
         },
+        includeHistory: {
+          type: 'boolean',
+          description:
+            'Include full executionHistory, descriptionHistory, statusHistory, and planSpec (default: false to save context)',
+        },
       },
       required: ['projectPath', 'featureId'],
     },
@@ -467,6 +472,11 @@ const tools: Tool[] = [
         featureId: {
           type: 'string',
           description: 'The feature ID',
+        },
+        maxLines: {
+          type: 'number',
+          description:
+            'Maximum lines to return (default: 200). Use -1 for unlimited. Returns the last N lines.',
         },
       },
       required: ['projectPath', 'featureId'],
@@ -1560,11 +1570,29 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         compact: true, // Use compact mode to reduce response size
       });
 
-    case 'get_feature':
-      return apiCall('/features/get', {
+    case 'get_feature': {
+      const featureResult = (await apiCall('/features/get', {
         projectPath: args.projectPath,
         featureId: args.featureId,
-      });
+      })) as { success?: boolean; feature?: Record<string, unknown> };
+      // Strip heavy history fields to reduce context usage unless explicitly requested
+      if (featureResult.feature && !args.includeHistory) {
+        const f = featureResult.feature;
+        const execHistory = f.executionHistory as unknown[] | undefined;
+        const descHistory = f.descriptionHistory as unknown[] | undefined;
+        if (execHistory?.length) {
+          f.executionCount = execHistory.length;
+          delete f.executionHistory;
+        }
+        if (descHistory?.length) {
+          f.descriptionRevisions = descHistory.length;
+          delete f.descriptionHistory;
+        }
+        delete f.statusHistory;
+        delete f.planSpec;
+      }
+      return featureResult;
+    }
 
     case 'create_feature': {
       const featureData: Record<string, unknown> = {
@@ -1647,11 +1675,25 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
     case 'list_running_agents':
       return apiCall('/running-agents', {}, 'GET');
 
-    case 'get_agent_output':
-      return apiCall('/features/agent-output', {
+    case 'get_agent_output': {
+      const agentOutput = (await apiCall('/features/agent-output', {
         projectPath: args.projectPath,
         featureId: args.featureId,
-      });
+      })) as { success?: boolean; content?: string };
+      // Truncate to last N lines to prevent context window bloat
+      const maxLines = (args.maxLines as number) ?? 200;
+      if (agentOutput.content && maxLines > 0) {
+        const lines = agentOutput.content.split('\n');
+        if (lines.length > maxLines) {
+          agentOutput.content = [
+            `[Truncated: showing last ${maxLines} of ${lines.length} lines. Use maxLines: -1 for full output]`,
+            '',
+            ...lines.slice(-maxLines),
+          ].join('\n');
+        }
+      }
+      return agentOutput;
+    }
 
     case 'send_message_to_agent':
       return apiCall('/auto-mode/follow-up-feature', {
