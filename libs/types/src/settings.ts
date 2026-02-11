@@ -607,13 +607,13 @@ export const DEFAULT_GRAPHITE_SETTINGS: GraphiteSettings = {
 };
 
 /**
- * Default git workflow settings - commit/push/PR enabled, auto-merge disabled by default
+ * Default git workflow settings - commit/push/PR/auto-merge enabled by default
  */
 export const DEFAULT_GIT_WORKFLOW_SETTINGS: Required<GitWorkflowSettings> = {
   autoCommit: true,
   autoPush: true,
   autoCreatePR: true,
-  autoMergePR: false,
+  autoMergePR: true,
   prMergeStrategy: 'squash',
   waitForCI: true,
   prBaseBranch: 'main',

@@ -356,6 +356,54 @@ const tools: Tool[] = [
       required: ['projectPath', 'featureId', 'status'],
     },
   },
+  {
+    name: 'update_feature_git_settings',
+    description:
+      'Update git workflow settings for a specific feature. Override global git workflow settings (auto-commit, auto-push, auto-PR, auto-merge) on a per-feature basis.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        featureId: {
+          type: 'string',
+          description: 'The feature ID (UUID)',
+        },
+        autoCommit: {
+          type: 'boolean',
+          description: 'Auto-commit changes when feature completes (optional)',
+        },
+        autoPush: {
+          type: 'boolean',
+          description: 'Auto-push to remote after commit (optional)',
+        },
+        autoCreatePR: {
+          type: 'boolean',
+          description: 'Auto-create pull request after push (optional)',
+        },
+        autoMergePR: {
+          type: 'boolean',
+          description: 'Auto-merge pull request after creation (optional)',
+        },
+        prMergeStrategy: {
+          type: 'string',
+          enum: ['merge', 'squash', 'rebase'],
+          description: 'PR merge strategy: merge, squash, or rebase (optional)',
+        },
+        waitForCI: {
+          type: 'boolean',
+          description: 'Wait for CI checks to pass before merging (optional)',
+        },
+        prBaseBranch: {
+          type: 'string',
+          description: 'Base branch for PR creation (optional, default: main)',
+        },
+      },
+      required: ['projectPath', 'featureId'],
+    },
+  },
 
   // ========== Agent Control ==========
   {
@@ -1312,6 +1360,22 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         featureId: args.featureId,
         updates: { status: args.status },
       });
+
+    case 'update_feature_git_settings': {
+      const gitWorkflow: Record<string, unknown> = {};
+      if (args.autoCommit !== undefined) gitWorkflow.autoCommit = args.autoCommit;
+      if (args.autoPush !== undefined) gitWorkflow.autoPush = args.autoPush;
+      if (args.autoCreatePR !== undefined) gitWorkflow.autoCreatePR = args.autoCreatePR;
+      if (args.autoMergePR !== undefined) gitWorkflow.autoMergePR = args.autoMergePR;
+      if (args.prMergeStrategy !== undefined) gitWorkflow.prMergeStrategy = args.prMergeStrategy;
+      if (args.waitForCI !== undefined) gitWorkflow.waitForCI = args.waitForCI;
+      if (args.prBaseBranch !== undefined) gitWorkflow.prBaseBranch = args.prBaseBranch;
+      return apiCall('/features/update', {
+        projectPath: args.projectPath,
+        featureId: args.featureId,
+        updates: { gitWorkflow },
+      });
+    }
 
     // Agent Control
     case 'start_agent':

@@ -140,6 +140,7 @@ export class SettingsService {
     const migratedModelSettings = this.migrateModelSettings(settings);
 
     // Apply any missing defaults (for backwards compatibility)
+    // Deep-merge nested objects so partial saves don't lose default fields
     let result: GlobalSettings = {
       ...DEFAULT_GLOBAL_SETTINGS,
       ...settings,
@@ -147,6 +148,18 @@ export class SettingsService {
       keyboardShortcuts: {
         ...DEFAULT_GLOBAL_SETTINGS.keyboardShortcuts,
         ...settings.keyboardShortcuts,
+      },
+      gitWorkflow: {
+        ...DEFAULT_GLOBAL_SETTINGS.gitWorkflow,
+        ...settings.gitWorkflow,
+      },
+      graphite: {
+        ...DEFAULT_GLOBAL_SETTINGS.graphite,
+        ...settings.graphite,
+      },
+      autoModeAlwaysOn: {
+        ...DEFAULT_GLOBAL_SETTINGS.autoModeAlwaysOn,
+        ...settings.autoModeAlwaysOn,
       },
       phaseModels: migratedPhaseModels,
     };
