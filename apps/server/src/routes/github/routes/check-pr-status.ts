@@ -120,12 +120,7 @@ export function createCheckPRStatusHandler() {
         const rollup = checksData.statusCheckRollup || [];
 
         const checks: PRCheckResult[] = rollup.map(
-          (check: {
-            name: string;
-            status: string;
-            conclusion?: string;
-            context?: string;
-          }) => {
+          (check: { name: string; status: string; conclusion?: string; context?: string }) => {
             const status = check.status?.toUpperCase() || 'UNKNOWN';
             const conclusion = check.conclusion?.toUpperCase();
             const name = check.name || check.context || 'Unknown check';
@@ -134,9 +129,7 @@ export function createCheckPRStatusHandler() {
             let passed = false;
             if (status === 'COMPLETED') {
               passed =
-                conclusion === 'SUCCESS' ||
-                conclusion === 'NEUTRAL' ||
-                conclusion === 'SKIPPED';
+                conclusion === 'SUCCESS' || conclusion === 'NEUTRAL' || conclusion === 'SKIPPED';
             }
 
             return {
