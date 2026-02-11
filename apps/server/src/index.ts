@@ -137,6 +137,7 @@ import { BeadsService } from './services/beads-service.js';
 import { createBeadsRoutes } from './routes/beads/index.js';
 import { getAvaGatewayService } from './services/ava-gateway-service.js';
 import { getDiscordService } from './services/discord-service.js';
+import { createDiscordRoutes } from './routes/discord/index.js';
 import { createAvaRoutes } from './routes/ava/index.js';
 import { MAX_SYSTEM_CONCURRENCY } from '@automaker/types';
 
@@ -921,6 +922,7 @@ app.use(
 app.use('/api/projects', createProjectsRoutes(featureLoader));
 app.use('/api/scheduler', createSchedulerRoutes(schedulerService));
 app.use('/api/ava', createAvaRoutes(avaGatewayService));
+app.use('/api/discord', createDiscordRoutes(discordBotService));
 
 // Create HTTP server
 const server = createServer(app);

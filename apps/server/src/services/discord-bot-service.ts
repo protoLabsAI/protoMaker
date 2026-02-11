@@ -1694,6 +1694,55 @@ export class DiscordBotService {
   }
 
   /**
+   * Read direct messages from a user by username.
+   * @param username Discord username (e.g., "john_doe")
+   * @param limit Maximum number of messages to return (default: 10)
+   * @returns Array of message objects
+   */
+  async readDMs(
+    username: string,
+    limit: number = 10
+  ): Promise<Array<{ id: string; content: string; author: string; timestamp: string }>> {
+    if (!this.client) {
+      logger.error('Cannot read DMs: Discord client not initialized');
+      return [];
+    }
+
+    try {
+      const guild = await this.client.guilds.fetch(GUILD_ID);
+      if (!guild) {
+        logger.error(`Guild ${GUILD_ID} not found`);
+        return [];
+      }
+
+      const members = await guild.members.fetch({ query: username, limit: 1 });
+      if (members.size === 0) {
+        logger.error(`User ${username} not found in guild`);
+        return [];
+      }
+
+      const member = members.first();
+      if (!member) {
+        logger.error(`Failed to get member for username ${username}`);
+        return [];
+      }
+
+      const dmChannel = await member.user.createDM();
+      const messages = await dmChannel.messages.fetch({ limit });
+
+      return Array.from(messages.values()).map((msg) => ({
+        id: msg.id,
+        content: msg.content,
+        author: msg.author.username,
+        timestamp: msg.createdAt.toISOString(),
+      }));
+    } catch (error) {
+      logger.error(`Failed to read DMs for ${username}:`, error);
+      return [];
+    }
+  }
+
+  /**
    * Send a message to a specific channel.
    */
   async sendToChannel(channelId: string, content: string): Promise<boolean> {

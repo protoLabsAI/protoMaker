@@ -1575,6 +1575,46 @@ const tools: Tool[] = [
     },
   },
 
+  // ========== Discord DM ==========
+  {
+    name: 'send_discord_dm',
+    description:
+      'Send a direct message to a Discord user by username. Uses the Automaker Discord bot to deliver the DM.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        username: {
+          type: 'string',
+          description: 'Discord username to send the DM to (e.g., "chukz")',
+        },
+        content: {
+          type: 'string',
+          description: 'Message content to send',
+        },
+      },
+      required: ['username', 'content'],
+    },
+  },
+  {
+    name: 'read_discord_dms',
+    description:
+      'Read recent direct messages with a Discord user by username. Returns messages from the DM channel between the bot and the user.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        username: {
+          type: 'string',
+          description: 'Discord username to read DMs from (e.g., "chukz")',
+        },
+        limit: {
+          type: 'number',
+          description: 'Maximum number of messages to return (default: 10, max: 100)',
+        },
+      },
+      required: ['username'],
+    },
+  },
+
   {
     name: 'start_goap_loop',
     description:
@@ -1611,6 +1651,61 @@ const tools: Tool[] = [
         },
       },
       required: ['projectPath'],
+    },
+  },
+
+  // ========== Metrics ==========
+  {
+    name: 'get_project_metrics',
+    description:
+      'Get aggregated project metrics including feature counts, completion rates, and agent performance.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+      },
+      required: ['projectPath'],
+    },
+  },
+  {
+    name: 'get_capacity_metrics',
+    description:
+      'Get capacity utilization metrics including current concurrent agent count and available slots.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        maxConcurrency: {
+          type: 'number',
+          description: 'Maximum concurrent agents allowed (optional)',
+        },
+      },
+      required: ['projectPath'],
+    },
+  },
+  {
+    name: 'get_forecast',
+    description: 'Estimate duration and cost for a feature by complexity level.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        complexity: {
+          type: 'string',
+          enum: ['small', 'medium', 'large', 'architectural'],
+          description: 'Feature complexity level for estimation',
+        },
+      },
+      required: ['projectPath', 'complexity'],
     },
   },
 ];
@@ -2174,6 +2269,19 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         complexity: args.complexity || 'medium',
       });
 
+    // Discord DM
+    case 'send_discord_dm':
+      return apiCall('/discord/send-dm', {
+        username: args.username,
+        content: args.content,
+      });
+
+    case 'read_discord_dms':
+      return apiCall('/discord/read-dms', {
+        username: args.username,
+        limit: args.limit || 10,
+      });
+
     case 'start_goap_loop':
       return apiCall('/goap/start', {
         projectPath: args.projectPath,
@@ -2184,6 +2292,24 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
     case 'get_goap_status':
       return apiCall('/goap/status', {
         projectPath: args.projectPath,
+      });
+
+    // Metrics
+    case 'get_project_metrics':
+      return apiCall('/metrics/summary', {
+        projectPath: args.projectPath,
+      });
+
+    case 'get_capacity_metrics':
+      return apiCall('/metrics/capacity', {
+        projectPath: args.projectPath,
+        maxConcurrency: args.maxConcurrency,
+      });
+
+    case 'get_forecast':
+      return apiCall('/metrics/forecast', {
+        projectPath: args.projectPath,
+        complexity: args.complexity,
       });
 
     default:
