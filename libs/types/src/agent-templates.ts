@@ -60,6 +60,70 @@ const GitHubAssignmentSchema = z.object({
 });
 
 /**
+ * Comparison operators for desired state conditions.
+ */
+const StateOperatorSchema = z.enum(['==', '!=', '<', '<=', '>', '>=']);
+
+/**
+ * A single desired state condition — defines an invariant the agent maintains.
+ *
+ * When the actual world state diverges from a condition, the agent activates
+ * to restore equilibrium. The agent itself decides HOW to fix the divergence;
+ * the condition just defines WHAT equilibrium looks like.
+ */
+const DesiredStateConditionSchema = z.object({
+  /** World state key to monitor (e.g., "open_prs", "unread_dms") */
+  key: z.string(),
+  /** Comparison operator */
+  operator: StateOperatorSchema,
+  /** The desired/threshold value */
+  value: z.union([z.string(), z.number(), z.boolean()]),
+  /** Human-readable description shown to the agent when diverged */
+  description: z.string().optional(),
+  /** Urgency when diverged: 0 = background, 10 = critical (default: 5) */
+  priority: z.number().int().min(0).max(10).default(5),
+  /** Optional: only evaluate this condition when these monitors are active */
+  requiresMonitor: z.enum(['discord', 'linear', 'github']).optional(),
+});
+
+/**
+ * Known world state keys and their descriptions.
+ * Monitors populate these values into the world state map.
+ */
+export const WORLD_STATE_KEYS = {
+  // Board state
+  backlog_count: 'Features in backlog',
+  in_progress_count: 'Features currently in progress',
+  blocked_count: 'Features that are blocked',
+  review_count: 'Features in review (PR open)',
+
+  // GitHub
+  open_prs: 'Open pull requests',
+  failing_ci_count: 'PRs with failing CI checks',
+  unresolved_review_threads: 'Unresolved CodeRabbit/review threads',
+  stale_prs: 'PRs with no activity in 24h',
+
+  // Discord
+  unread_dms: 'Unread Discord direct messages',
+  unanswered_mentions: 'Unanswered @mentions in watched channels',
+  pending_messages: 'Messages awaiting response',
+
+  // Linear
+  unread_notifications: 'Unread Linear notifications',
+  assigned_issues: 'Issues assigned to this agent',
+  overdue_issues: 'Issues past their due date',
+
+  // Agent health
+  consecutive_errors: 'Consecutive errors in current loop',
+  total_turns: 'Total turns consumed',
+  idle_duration_ms: 'Milliseconds agent has been idle',
+
+  // Infrastructure
+  heap_usage_percent: 'Server heap memory usage percentage',
+  running_agents: 'Currently running agent count',
+} as const;
+
+/**
  * Headsdown loop configuration for persistent agents.
  */
 const HeadsdownConfigSchema = z.object({
@@ -157,6 +221,11 @@ export const AgentTemplateSchema = z.object({
   /** Configuration for persistent agent loops */
   headsdownConfig: HeadsdownConfigSchema.optional(),
 
+  // --- Desired State (Reactive Invariants) ---
+  /** Conditions the agent is responsible for maintaining.
+   *  When world state diverges from these conditions, the agent activates. */
+  desiredState: z.array(DesiredStateConditionSchema).optional(),
+
   // --- Metadata ---
   /** Who created this template */
   author: z.string().optional(),
@@ -175,11 +244,15 @@ export {
   LinearAssignmentSchema,
   GitHubAssignmentSchema,
   HeadsdownConfigSchema,
+  DesiredStateConditionSchema,
+  StateOperatorSchema,
 };
 export type DiscordAssignment = z.infer<typeof DiscordAssignmentSchema>;
 export type LinearAssignment = z.infer<typeof LinearAssignmentSchema>;
 export type GitHubAssignment = z.infer<typeof GitHubAssignmentSchema>;
 export type AgentHeadsdownConfig = z.infer<typeof HeadsdownConfigSchema>;
+export type DesiredStateCondition = z.infer<typeof DesiredStateConditionSchema>;
+export type StateOperator = z.infer<typeof StateOperatorSchema>;
 
 /** The known built-in roles */
 export const KNOWN_AGENT_ROLES = KNOWN_ROLES;

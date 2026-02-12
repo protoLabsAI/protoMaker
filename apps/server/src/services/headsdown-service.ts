@@ -15,12 +15,14 @@ import type {
   HeadsdownState,
   WorkItem,
   IdleTaskType,
+  DesiredStateCondition,
+  StateOperator,
 } from '@automaker/types';
 import { DEFAULT_HEADSDOWN_CONFIGS } from '@automaker/types';
 import { createLogger, atomicWriteJson, readJsonWithRecovery } from '@automaker/utils';
 import type { RoleRegistryService } from './role-registry-service.js';
 
-/** Simplified goal type for work evaluation (GOAP removed) */
+/** Goal type for work evaluation */
 interface WorkGoal {
   id: string;
   name: string;
@@ -28,8 +30,18 @@ interface WorkGoal {
   priority: number;
 }
 
-/** Simplified world state for work evaluation */
+/** World state — a flat map of observable metrics populated by monitors */
 type WorldState = Record<string, boolean | number | string>;
+
+/** A divergence between desired and actual world state */
+export interface StateDivergence {
+  /** The desired state condition that diverged */
+  condition: DesiredStateCondition;
+  /** The actual value observed */
+  actualValue: boolean | number | string | undefined;
+  /** Human-readable summary for the agent */
+  summary: string;
+}
 import { DiscordMonitor } from './discord-monitor.js';
 import { LinearMonitor } from './linear-monitor.js';
 import { GitHubMonitor } from './github-monitor.js';
@@ -70,7 +82,7 @@ export class HeadsdownService {
   /** GitHub monitor for detecting PRs needing review */
   private githubMonitor: GitHubMonitor;
 
-  /** Optional role registry for dynamic role resolution */
+  /** Optional role registry for dynamic role resolution + desired state */
   private roleRegistry?: RoleRegistryService;
 
   constructor(
@@ -384,10 +396,12 @@ export class HeadsdownService {
   }
 
   /**
-   * Check for available work using goal evaluation
+   * Check for available work using desired state evaluation + goal evaluation.
    *
-   * Evaluates current world state and determines what work is available
-   * based on agent role and monitoring configuration.
+   * Priority order:
+   * 1. Desired state divergences (reactive — restore equilibrium)
+   * 2. Role-specific goals (proactive — achieve objectives)
+   * 3. Idle tasks (opportunistic — productive waiting)
    */
   private async checkForWork(agent: AgentInstance): Promise<WorkItem[]> {
     const workItems: WorkItem[] = [];
@@ -395,10 +409,26 @@ export class HeadsdownService {
     // Build current world state
     const worldState = await this.buildWorldState(agent);
 
-    // Get relevant goals for agent role
-    const goals = this.getGoalsForRole(agent.role);
+    // 1. Check desired state conditions from registry template
+    const divergences = this.evaluateDesiredState(agent.role, worldState);
+    for (const div of divergences) {
+      workItems.push({
+        id: `divergence:${div.condition.key}`,
+        type: 'state_divergence',
+        description: div.summary,
+        priority: div.condition.priority ?? 5,
+        source: 'desired_state',
+        metadata: {
+          key: div.condition.key,
+          operator: div.condition.operator,
+          expected: String(div.condition.value),
+          actual: String(div.actualValue ?? 'undefined'),
+        },
+      } as WorkItem);
+    }
 
-    // Evaluate goals and generate work items
+    // 2. Evaluate role-specific goals
+    const goals = this.getGoalsForRole(agent.role);
     for (const goal of goals) {
       const workItem = await this.evaluateGoal(agent, goal, worldState);
       if (workItem) {
@@ -419,6 +449,79 @@ export class HeadsdownService {
   }
 
   /**
+   * Evaluate desired state conditions against current world state.
+   * Returns divergences — conditions where reality doesn't match the desired state.
+   */
+  evaluateDesiredState(role: AgentRole, worldState: WorldState): StateDivergence[] {
+    if (!this.roleRegistry) return [];
+
+    const template = this.roleRegistry.get(role);
+    if (!template?.desiredState || template.desiredState.length === 0) return [];
+
+    const divergences: StateDivergence[] = [];
+
+    for (const condition of template.desiredState) {
+      // Skip conditions that require a monitor that isn't active
+      if (condition.requiresMonitor) {
+        const monitorActive = worldState[`${condition.requiresMonitor}_monitoring_active`];
+        if (!monitorActive) continue;
+      }
+
+      const actual = worldState[condition.key];
+
+      // If the key doesn't exist in world state, we can't evaluate
+      if (actual === undefined) {
+        logger.debug(`World state key "${condition.key}" not available, skipping condition`);
+        continue;
+      }
+
+      const satisfied = this.evaluateCondition(actual, condition.operator, condition.value);
+
+      if (!satisfied) {
+        const desc =
+          condition.description ?? `${condition.key} ${condition.operator} ${condition.value}`;
+        divergences.push({
+          condition,
+          actualValue: actual,
+          summary: `State divergence: ${desc} (expected ${condition.operator} ${condition.value}, got ${actual})`,
+        });
+
+        logger.info(
+          `Desired state diverged for ${role}: ${condition.key}=${actual} (want ${condition.operator} ${condition.value})`
+        );
+      }
+    }
+
+    return divergences;
+  }
+
+  /**
+   * Evaluate a single condition: does `actual` satisfy `operator value`?
+   */
+  private evaluateCondition(
+    actual: boolean | number | string,
+    operator: StateOperator,
+    expected: boolean | number | string
+  ): boolean {
+    switch (operator) {
+      case '==':
+        return actual === expected;
+      case '!=':
+        return actual !== expected;
+      case '<':
+        return actual < expected;
+      case '<=':
+        return actual <= expected;
+      case '>':
+        return actual > expected;
+      case '>=':
+        return actual >= expected;
+      default:
+        return false;
+    }
+  }
+
+  /**
    * Build world state for work evaluation
    */
   private async buildWorldState(agent: AgentInstance): Promise<WorldState> {
@@ -427,6 +530,8 @@ export class HeadsdownService {
       agent_role: agent.role,
       agent_idle: agent.status === 'idle',
       total_turns: agent.stats.totalTurns,
+      consecutive_errors: 0, // TODO: track from loop errors
+      idle_duration_ms: 0, // TODO: track from last work timestamp
 
       // Monitoring state
       discord_monitoring_active: !!agent.monitoring.discord,
@@ -446,8 +551,47 @@ export class HeadsdownService {
       user_approved_prd: false,
     };
 
-    // TODO: Query actual monitoring sources to populate state
-    // For now, return base state
+    // Populate board-level metrics from feature loader
+    if (agent.projectPath) {
+      try {
+        const features = await this.featureLoader.getAll(agent.projectPath);
+        let backlog = 0;
+        let inProgress = 0;
+        let blocked = 0;
+        let review = 0;
+
+        for (const feature of features) {
+          switch (feature.status) {
+            case 'backlog':
+              backlog++;
+              break;
+            case 'in_progress':
+              inProgress++;
+              break;
+            case 'blocked':
+              blocked++;
+              break;
+            case 'review':
+              review++;
+              break;
+          }
+        }
+
+        state.backlog_count = backlog;
+        state.in_progress_count = inProgress;
+        state.blocked_count = blocked;
+        state.review_count = review;
+        state.feature_available = backlog > 0;
+      } catch (error) {
+        logger.debug(`Failed to load features for world state: ${error}`);
+      }
+    }
+
+    // Populate infrastructure metrics
+    const memUsage = process.memoryUsage();
+    const heapPercent = Math.round((memUsage.heapUsed / memUsage.heapTotal) * 100);
+    state.heap_usage_percent = heapPercent;
+    state.running_agents = this.agents.size;
 
     return state;
   }

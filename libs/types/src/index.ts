@@ -579,7 +579,10 @@ export {
   LinearAssignmentSchema,
   GitHubAssignmentSchema,
   HeadsdownConfigSchema,
+  DesiredStateConditionSchema,
+  StateOperatorSchema,
   KNOWN_AGENT_ROLES,
+  WORLD_STATE_KEYS,
 } from './agent-templates.js';
 export type {
   AgentTemplate,
@@ -587,4 +590,6 @@ export type {
   LinearAssignment,
   GitHubAssignment,
   AgentHeadsdownConfig,
+  DesiredStateCondition,
+  StateOperator,
 } from './agent-templates.js';
