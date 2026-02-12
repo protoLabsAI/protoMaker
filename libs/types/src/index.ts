@@ -567,3 +567,20 @@ export type {
   AlignmentProposal,
   SetupPipelineResult,
 } from './setup.js';
+
+// Agent template types (dynamic role registry)
+export {
+  AgentTemplateSchema,
+  DiscordAssignmentSchema,
+  LinearAssignmentSchema,
+  GitHubAssignmentSchema,
+  HeadsdownConfigSchema,
+  KNOWN_AGENT_ROLES,
+} from './agent-templates.js';
+export type {
+  AgentTemplate,
+  DiscordAssignment,
+  LinearAssignment,
+  GitHubAssignment,
+  AgentHeadsdownConfig,
+} from './agent-templates.js';
