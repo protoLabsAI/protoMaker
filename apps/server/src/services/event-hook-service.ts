@@ -28,6 +28,7 @@ import type { EventEmitter } from '../lib/events.js';
 import type { SettingsService } from './settings-service.js';
 import type { EventHistoryService } from './event-history-service.js';
 import type { FeatureLoader } from './feature-loader.js';
+import type { DiscordBotService } from './discord-bot-service.js';
 import type {
   EventHook,
   EventHookTrigger,
@@ -217,6 +218,7 @@ export class EventHookService {
   private settingsService: SettingsService | null = null;
   private eventHistoryService: EventHistoryService | null = null;
   private featureLoader: FeatureLoader | null = null;
+  private discordBotService: DiscordBotService | null = null;
   private unsubscribe: (() => void) | null = null;
 
   /**
@@ -226,12 +228,14 @@ export class EventHookService {
     emitter: EventEmitter,
     settingsService: SettingsService,
     eventHistoryService?: EventHistoryService,
-    featureLoader?: FeatureLoader
+    featureLoader?: FeatureLoader,
+    discordBotService?: DiscordBotService
   ): void {
     this.emitter = emitter;
     this.settingsService = settingsService;
     this.eventHistoryService = eventHistoryService || null;
     this.featureLoader = featureLoader || null;
+    this.discordBotService = discordBotService || null;
 
     // Subscribe to events
     this.unsubscribe = emitter.subscribe((type, payload) => {
@@ -271,6 +275,7 @@ export class EventHookService {
     this.settingsService = null;
     this.eventHistoryService = null;
     this.featureLoader = null;
+    this.discordBotService = null;
   }
 
   /**
@@ -641,10 +646,7 @@ export class EventHookService {
   }
 
   /**
-   * Execute a Discord message hook via the Discord MCP server
-   *
-   * Uses dynamic import of discord-service to avoid hard dependency.
-   * The discord-service module is provided by the Discord Service Layer feature.
+   * Execute a Discord message hook via DiscordBotService
    */
   private async executeDiscordHook(
     action: EventHookDiscordAction,
@@ -657,24 +659,24 @@ export class EventHookService {
     logger.info(`Executing Discord hook "${hookName}" to channel ${channelId}`);
 
     try {
-      // Try to dynamically import discord service (provided by Discord Service Layer)
-      const discordServiceModule = await import('./discord-service.js').catch((err) => {
-        logger.debug(`Discord service module not available: ${err?.message ?? err}`);
-        return null;
-      });
-      if (discordServiceModule?.getDiscordService) {
-        const service = discordServiceModule.getDiscordService();
-        if (service) {
-          await service.sendMessage({ channelId, message });
+      // Use DiscordBotService if available
+      if (this.discordBotService) {
+        const success = await this.discordBotService.sendToChannel(channelId, message);
+        if (success) {
           logger.info(`Discord hook "${hookName}" completed successfully`);
+          return;
+        } else {
+          logger.warn(
+            `Discord hook "${hookName}" failed: Could not send message to channel ${channelId}`
+          );
           return;
         }
       }
 
-      // Fallback: log warning if discord service not available
+      // Fallback: log warning if Discord bot service not available
       logger.warn(
-        `Discord hook "${hookName}" skipped: Discord service not available. ` +
-          `Ensure the Discord Service Layer is configured and initialized.`
+        `Discord hook "${hookName}" skipped: Discord bot service not available. ` +
+          `Ensure DISCORD_BOT_TOKEN is configured in environment variables.`
       );
     } catch (error) {
       logger.error(`Discord hook "${hookName}" failed:`, error);
