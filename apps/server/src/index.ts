@@ -125,6 +125,9 @@ import { PRFeedbackService } from './services/pr-feedback-service.js';
 import { WorktreeLifecycleService } from './services/worktree-lifecycle-service.js';
 import { DiscordBotService } from './services/discord-bot-service.js';
 import { RoleRegistryService } from './services/role-registry-service.js';
+import { AgentFactoryService } from './services/agent-factory-service.js';
+import { DynamicAgentExecutor } from './services/dynamic-agent-executor.js';
+import { createAgentManagementRoutes } from './routes/agents/index.js';
 // import { ReconciliationService } from './services/reconciliation-service.js'; // TODO: Re-enable when implemented
 // import { GitHubStateChecker } from './services/github-state-checker.js'; // TODO: Re-enable when implemented
 import { ProjectService } from './services/project-service.js';
@@ -337,6 +340,10 @@ const ideationService = new IdeationService(events, settingsService, featureLoad
 const ralphLoopService = new RalphLoopService(events, autoModeService, settingsService);
 // Initialize Role Registry (shared agent template registry)
 const roleRegistryService = new RoleRegistryService(events);
+
+// Initialize Agent Factory and Dynamic Executor (uses registry for template resolution)
+const agentFactoryService = new AgentFactoryService(roleRegistryService, events);
+const dynamicAgentExecutor = new DynamicAgentExecutor(events);
 
 // Initialize HeadsdownService for autonomous agent management
 const headsdownService = HeadsdownService.getInstance(
@@ -839,6 +846,10 @@ app.use('/api/projects', createProjectsRoutes(featureLoader));
 app.use('/api/scheduler', createSchedulerRoutes(schedulerService));
 app.use('/api/ava', createAvaRoutes(avaGatewayService));
 app.use('/api/discord', createDiscordRoutes(discordBotService));
+app.use(
+  '/api/agents',
+  createAgentManagementRoutes(roleRegistryService, agentFactoryService, dynamicAgentExecutor)
+);
 
 // Create HTTP server
 const server = createServer(app);
