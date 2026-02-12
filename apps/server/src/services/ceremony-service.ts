@@ -18,9 +18,9 @@ import { simpleQuery } from '../providers/simple-query-service.js';
 const logger = createLogger('CeremonyService');
 
 /**
- * Milestone completion payload from the event system
+ * Milestone event payload from the event system
  */
-interface MilestoneCompletedPayload {
+interface MilestoneEventPayload {
   projectPath: string;
   projectTitle: string;
   projectSlug: string;
@@ -77,10 +77,12 @@ export class CeremonyService {
     this.featureLoader = featureLoader;
     this.projectService = projectService;
 
-    // Subscribe to milestone:completed and project:completed events
+    // Subscribe to milestone and project lifecycle events
     this.unsubscribe = emitter.subscribe((type, payload) => {
-      if (type === 'milestone:completed') {
-        this.handleMilestoneCompleted(payload as MilestoneCompletedPayload);
+      if (type === 'milestone:started') {
+        this.handleMilestoneStarted(payload as MilestoneEventPayload);
+      } else if (type === 'milestone:completed') {
+        this.handleMilestoneCompleted(payload as MilestoneEventPayload);
       } else if (type === 'project:completed') {
         this.handleProjectCompleted(payload as ProjectCompletedPayload);
       }
@@ -104,9 +106,49 @@ export class CeremonyService {
   }
 
   /**
+   * Handle milestone:started event — post standup with planned scope
+   */
+  private async handleMilestoneStarted(payload: MilestoneEventPayload): Promise<void> {
+    const { projectPath, projectTitle, projectSlug, milestoneTitle, milestoneNumber } = payload;
+
+    const ceremonySettings = await this.getCeremonySettings(projectPath);
+    if (!ceremonySettings?.enabled || !ceremonySettings?.enableStandups) {
+      logger.debug('Standups disabled, skipping milestone standup');
+      return;
+    }
+
+    try {
+      const content = await this.generateMilestoneStandup(
+        projectPath,
+        projectSlug,
+        projectTitle,
+        milestoneTitle,
+        milestoneNumber
+      );
+
+      const messages = this.splitMessage(content, 2000);
+
+      for (const message of messages) {
+        await this.emitDiscordEvent(
+          projectPath,
+          ceremonySettings.discordChannelId,
+          message,
+          `Standup: Milestone ${milestoneNumber} — ${milestoneTitle}`
+        );
+      }
+
+      logger.info(
+        `Posted milestone standup for ${projectTitle} - Milestone ${milestoneNumber}: ${milestoneTitle}`
+      );
+    } catch (error) {
+      logger.error('Failed to generate milestone standup:', error);
+    }
+  }
+
+  /**
    * Handle milestone:completed event
    */
-  private async handleMilestoneCompleted(payload: MilestoneCompletedPayload): Promise<void> {
+  private async handleMilestoneCompleted(payload: MilestoneEventPayload): Promise<void> {
     const { projectPath, projectTitle, projectSlug, milestoneTitle, milestoneNumber } = payload;
 
     // Check if ceremonies are enabled
@@ -241,6 +283,72 @@ ${dataSummary}`;
     } catch (error) {
       logger.error('Failed to generate project retrospective:', error);
     }
+  }
+
+  /**
+   * Generate milestone standup content — planned scope, phases, and goals
+   */
+  private async generateMilestoneStandup(
+    projectPath: string,
+    projectSlug: string,
+    projectTitle: string,
+    milestoneTitle: string,
+    milestoneNumber: number
+  ): Promise<string> {
+    const project = await this.projectService!.getProject(projectPath, projectSlug);
+    if (!project) {
+      throw new Error(`Project not found: ${projectSlug}`);
+    }
+
+    const milestone = project.milestones.find((m) => m.number === milestoneNumber);
+    if (!milestone) {
+      throw new Error(`Milestone ${milestoneNumber} not found in project ${projectSlug}`);
+    }
+
+    const totalMilestones = project.milestones.length;
+    const lines: string[] = [];
+
+    // Header
+    lines.push(`🚀 **${projectTitle}** — Milestone ${milestoneNumber}/${totalMilestones} Starting`);
+    lines.push(`### Standup: ${milestoneTitle}\n`);
+
+    // Scope
+    lines.push(`**Planned Phases:** ${milestone.phases.length}`);
+    if (milestone.phases.length > 0) {
+      for (const phase of milestone.phases) {
+        const complexity = phase.complexity ? ` [${phase.complexity}]` : '';
+        lines.push(`- ${phase.title}${complexity}`);
+      }
+      lines.push('');
+    }
+
+    // Complexity breakdown
+    const complexityCounts = { small: 0, medium: 0, large: 0 };
+    for (const phase of milestone.phases) {
+      if (phase.complexity && phase.complexity in complexityCounts) {
+        complexityCounts[phase.complexity as keyof typeof complexityCounts]++;
+      }
+    }
+    const complexityParts = Object.entries(complexityCounts)
+      .filter(([, count]) => count > 0)
+      .map(([level, count]) => `${count} ${level}`);
+    if (complexityParts.length > 0) {
+      lines.push(`**Complexity:** ${complexityParts.join(', ')}`);
+    }
+
+    // Progress context
+    const completedMilestones = project.milestones.filter((m) => m.status === 'completed').length;
+    if (completedMilestones > 0) {
+      lines.push(`**Progress:** ${completedMilestones}/${totalMilestones} milestones done`);
+    }
+
+    // Description if available
+    if (milestone.description) {
+      lines.push('');
+      lines.push(`**Goal:** ${milestone.description}`);
+    }
+
+    return lines.join('\n');
   }
 
   /**

@@ -812,7 +812,8 @@ export interface PhaseModelEntry {
  * CeremonySettings - Configuration for milestone and project ceremony features
  *
  * Ceremonies are automated events that mark significant project progress:
- * - Milestone completions: Sent to Discord when all features in a milestone are done
+ * - Milestone standups: Posted to Discord when a milestone starts with planned scope
+ * - Milestone retros: Sent to Discord when all features in a milestone are done
  * - Project retrospectives: AI-generated reflections when projects complete
  */
 export interface CeremonySettings {
@@ -820,6 +821,8 @@ export interface CeremonySettings {
   enabled: boolean;
   /** Discord channel ID for ceremony announcements (overrides project default) */
   discordChannelId?: string;
+  /** Enable milestone standup announcements at start (default: true) */
+  enableStandups?: boolean;
   /** Enable milestone completion announcements (default: true) */
   enableMilestoneUpdates?: boolean;
   /** Enable project retrospective generation (default: true) */
@@ -833,6 +836,7 @@ export interface CeremonySettings {
  */
 export const DEFAULT_CEREMONY_SETTINGS: CeremonySettings = {
   enabled: false,
+  enableStandups: true,
   enableMilestoneUpdates: true,
   enableProjectRetros: true,
 };

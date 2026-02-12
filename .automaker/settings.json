@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "webhookSettings": {
+    "webhookEnabled": false,
+    "autoCreateFromIssues": false,
+    "autoCreateLabels": [],
+    "autoMerge": {
+      "enabled": true,
+      "minApprovals": 0,
+      "requiredChecks": [
+        "ci_passing"
+      ],
+      "mergeMethod": "squash"
+    }
+  },
+  "worktreePanelVisible": false,
+  "ceremonySettings": {
+    "enabled": true,
+    "discordChannelId": "1469080556720623699",
+    "enableStandups": true,
+    "enableMilestoneUpdates": true,
+    "enableProjectRetros": true
+  }
+}
