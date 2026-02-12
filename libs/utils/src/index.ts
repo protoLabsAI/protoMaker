@@ -47,8 +47,11 @@ export {
   setLogLevel,
   setColorsEnabled,
   setTimestampsEnabled,
+  registerLogTransport,
+  clearLogTransports,
   LogLevel,
   type Logger,
+  type LogTransport,
 } from './logger.js';
 
 // File system utilities

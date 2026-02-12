@@ -112,6 +112,53 @@ function formatNodeLog(level: string, context: string, levelColor: string): stri
 }
 
 /**
+ * Log transport callback — receives structured log data for file/remote transports
+ */
+export type LogTransport = (entry: {
+  level: 'ERROR' | 'WARN' | 'INFO' | 'DEBUG';
+  context: string;
+  timestamp: string;
+  args: unknown[];
+}) => void;
+
+// Registered transports (server registers file transport at startup)
+const transports: LogTransport[] = [];
+
+/**
+ * Register a log transport that receives all log messages.
+ * Used by the server to add file-based logging.
+ */
+export function registerLogTransport(transport: LogTransport): void {
+  transports.push(transport);
+}
+
+/**
+ * Remove all registered transports
+ */
+export function clearLogTransports(): void {
+  transports.length = 0;
+}
+
+/**
+ * Dispatch a log entry to all registered transports
+ */
+function dispatchToTransports(
+  level: 'ERROR' | 'WARN' | 'INFO' | 'DEBUG',
+  context: string,
+  args: unknown[]
+): void {
+  if (transports.length === 0) return;
+  const entry = { level, context, timestamp: new Date().toISOString(), args };
+  for (const transport of transports) {
+    try {
+      transport(entry);
+    } catch {
+      // Never let transport errors affect logging
+    }
+  }
+}
+
+/**
  * Logger interface returned by createLogger
  */
 export interface Logger {
@@ -195,24 +242,28 @@ export function createLogger(context: string): Logger {
     error: (...args: unknown[]): void => {
       if (currentLogLevel >= LogLevel.ERROR) {
         console.error(formatNodeLog('ERROR', context, ANSI.red), ...args);
+        dispatchToTransports('ERROR', context, args);
       }
     },
 
     warn: (...args: unknown[]): void => {
       if (currentLogLevel >= LogLevel.WARN) {
         console.log(formatNodeLog('WARN', context, ANSI.yellow), ...args);
+        dispatchToTransports('WARN', context, args);
       }
     },
 
     info: (...args: unknown[]): void => {
       if (currentLogLevel >= LogLevel.INFO) {
         console.log(formatNodeLog('INFO', context, ANSI.cyan), ...args);
+        dispatchToTransports('INFO', context, args);
       }
     },
 
     debug: (...args: unknown[]): void => {
       if (currentLogLevel >= LogLevel.DEBUG) {
         console.log(formatNodeLog('DEBUG', context, ANSI.magenta), ...args);
+        dispatchToTransports('DEBUG', context, args);
       }
     },
   };

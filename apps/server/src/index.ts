@@ -31,7 +31,11 @@ import { createServer } from 'http';
 
 import { createEventEmitter, type EventEmitter } from './lib/events.js';
 import { initAllowedPaths } from '@automaker/platform';
-import { createLogger, setLogLevel, LogLevel } from '@automaker/utils';
+import { createLogger, setLogLevel, registerLogTransport, LogLevel } from '@automaker/utils';
+import { createFileLogTransport } from './lib/server-log.js';
+
+// Register file log transport before creating any loggers that matter
+registerLogTransport(createFileLogTransport());
 
 const logger = createLogger('Server');
 

@@ -78,6 +78,7 @@ allowed-tools:
   - mcp__plugin_automaker_automaker__get_worktree_status
   # Settings & infrastructure
   - mcp__plugin_automaker_automaker__get_detailed_health
+  - mcp__plugin_automaker_automaker__get_server_logs
   - mcp__plugin_automaker_automaker__get_settings
   - mcp__plugin_automaker_automaker__update_settings
   - mcp__plugin_automaker_automaker__list_events
@@ -277,6 +278,14 @@ Execute on every activation — interactive or headless (`claude -p "/ava"`):
 - Features with empty deps that should have them → re-set via `set_feature_dependencies`
 - Feature in_progress with unsatisfied deps → stop agent, reset to backlog, fix deps
 - After any feature status reset → re-verify deps (resets clear them silently)
+
+**Server Health** (`get_detailed_health` + `get_server_logs`):
+
+- Health check fails → check `get_server_logs` for crash cause (OOM, unhandled exception, etc.)
+- High heap usage (>80%) → alert in `#infra`, consider restarting if agents aren't running
+- Recent ERROR entries in server logs → triage: OOM requires server restart, agent errors may self-recover
+- After any server crash → review last 100 log lines with `get_server_logs({ maxLines: 100, filter: "ERROR" })` to identify root cause
+- Frank should be alerted for infrastructure-level issues — post to `#infra` with diagnosis
 
 **Report** — Post brief status to `#dev` (1469080556720623699). Keep it under 5 lines.
 

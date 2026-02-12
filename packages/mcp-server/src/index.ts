@@ -1324,6 +1324,31 @@ const tools: Tool[] = [
     },
   },
   {
+    name: 'get_server_logs',
+    description:
+      'Read server log file directly from disk. Works even when the server is down — useful for diagnosing crashes, OOM errors, agent failures, and startup issues. Returns the last N lines of the server log.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        maxLines: {
+          type: 'number',
+          description:
+            'Maximum number of lines to return (default: 200). Use -1 for unlimited. Returns the last N lines.',
+        },
+        filter: {
+          type: 'string',
+          description:
+            'Optional text filter — only return lines containing this string (case-insensitive). Example: "ERROR", "OOM", "agent", "crash".',
+        },
+        since: {
+          type: 'string',
+          description:
+            'Optional ISO timestamp — only return lines after this time. Example: "2026-02-12T10:00:00Z".',
+        },
+      },
+    },
+  },
+  {
     name: 'get_board_summary',
     description: 'Get a summary of the board state showing feature counts by status.',
     inputSchema: {
@@ -2325,6 +2350,67 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
     case 'health_check': {
       const response = await fetch(`${API_URL}/api/health`);
       return response.json();
+    }
+
+    case 'get_server_logs': {
+      // Read directly from disk — works even when server is down
+      const fs = await import('fs');
+      const path = await import('path');
+
+      // Resolve log file path: DATA_DIR/server.log
+      const dataDir =
+        process.env.DATA_DIR || path.join(process.env.AUTOMAKER_ROOT || process.cwd(), 'data');
+      const logPath = path.join(dataDir, 'server.log');
+
+      if (!fs.existsSync(logPath)) {
+        return {
+          success: false,
+          error: `Server log file not found at ${logPath}. The server may not have been started with file logging enabled.`,
+          logPath,
+        };
+      }
+
+      const maxLines = (args.maxLines as number) || 200;
+      const filterText = args.filter as string | undefined;
+      const sinceTimestamp = args.since as string | undefined;
+
+      const content = fs.readFileSync(logPath, 'utf-8');
+      let lines = content.split('\n').filter((l: string) => l.length > 0);
+
+      // Filter by timestamp if provided
+      if (sinceTimestamp) {
+        const sinceDate = new Date(sinceTimestamp);
+        lines = lines.filter((line: string) => {
+          const match = line.match(/^\[(\d{4}-\d{2}-\d{2}T[\d:.]+Z?)\]/);
+          if (!match) return true; // Keep non-timestamped lines (markers, separators)
+          const lineDate = new Date(match[1]);
+          return lineDate >= sinceDate;
+        });
+      }
+
+      // Filter by text content if provided
+      if (filterText) {
+        const lowerFilter = filterText.toLowerCase();
+        lines = lines.filter((line: string) => line.toLowerCase().includes(lowerFilter));
+      }
+
+      // Take last N lines
+      const totalLines = lines.length;
+      if (maxLines > 0 && lines.length > maxLines) {
+        lines = lines.slice(-maxLines);
+      }
+
+      const stats = fs.statSync(logPath);
+
+      return {
+        success: true,
+        logPath,
+        fileSize: `${(stats.size / 1024).toFixed(1)} KB`,
+        totalLines,
+        returnedLines: lines.length,
+        truncated: maxLines > 0 && totalLines > maxLines,
+        content: lines.join('\n'),
+      };
     }
 
     case 'get_briefing': {
