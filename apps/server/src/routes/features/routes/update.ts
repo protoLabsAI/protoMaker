@@ -14,6 +14,7 @@ import type { Feature, FeatureStatus, ActionProposal, RiskLevel } from '@automak
 import type { AuthorityService } from '../../../services/authority-service.js';
 import type { SettingsService } from '../../../services/settings-service.js';
 import type { FeatureHealthService } from '../../../services/feature-health-service.js';
+import type { EventEmitter } from '../../../lib/events.js';
 import { getErrorMessage, logError } from '../common.js';
 import { createLogger } from '@automaker/utils';
 
@@ -26,7 +27,8 @@ export function createUpdateHandler(
   featureLoader: FeatureLoader,
   settingsService?: SettingsService,
   authorityService?: AuthorityService,
-  healthService?: FeatureHealthService
+  healthService?: FeatureHealthService,
+  events?: EventEmitter
 ) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
@@ -161,6 +163,17 @@ export function createUpdateHandler(
           // Log the audit error but don't fail the update operation
           logger.error(`Failed to run board health audit after status change:`, auditError);
         }
+      }
+
+      // Emit feature:status-changed so CompletionDetectorService can cascade
+      // epic → milestone → project completion checks
+      if (newStatus && previousStatus !== newStatus && newStatus === 'done' && events) {
+        events.emit('feature:status-changed', {
+          projectPath: req.body.projectPath,
+          featureId: req.body.featureId,
+          previousStatus: previousStatus || 'unknown',
+          newStatus,
+        });
       }
 
       res.json({ success: true, feature: updated });
