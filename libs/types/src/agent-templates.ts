@@ -226,6 +226,20 @@ export const AgentTemplateSchema = z.object({
    *  When world state diverges from these conditions, the agent activates. */
   desiredState: z.array(DesiredStateConditionSchema).optional(),
 
+  // --- Exposure (CLI + Discord visibility) ---
+  /** Controls how this agent is exposed as a CLI skill and/or Discord slash command.
+   *  Registry-driven: adding exposure config auto-registers the agent. */
+  exposure: z
+    .object({
+      /** Generate a CLI skill file for this agent (invocable via /name) */
+      cli: z.boolean().optional(),
+      /** Register a Discord slash command for this agent */
+      discord: z.boolean().optional(),
+      /** Discord usernames allowed to invoke this agent (empty = everyone) */
+      allowedUsers: z.array(z.string()).optional(),
+    })
+    .optional(),
+
   // --- Metadata ---
   /** Who created this template */
   author: z.string().optional(),

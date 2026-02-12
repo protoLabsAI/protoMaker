@@ -43,6 +43,7 @@ import type { ProjMAuthorityAgent } from './authority-agents/projm-agent.js';
 import type { EMAuthorityAgent } from './authority-agents/em-agent.js';
 import type { StatusMonitorAgent } from './authority-agents/status-agent.js';
 import type { SettingsService } from './settings-service.js';
+import type { RoleRegistryService } from './role-registry-service.js';
 
 interface AuthorityAgents {
   pm?: PMAuthorityAgent;
@@ -108,6 +109,15 @@ export class DiscordBotService {
   /** Message debounce buffer to batch rapid messages from the same user */
   private messageBuffer: Map<string, { messages: Message[]; timer: NodeJS.Timeout }> = new Map();
 
+  /** Role registry for dynamic agent exposure (slash commands + CLI skills) */
+  private roleRegistry?: RoleRegistryService;
+
+  /** Set of dynamically registered agent slash command names */
+  private agentCommands = new Set<string>();
+
+  /** Map thread IDs to agent assignments for slash-command-created threads */
+  private agentThreads = new Map<string, { agentType: string; userId: string }>();
+
   constructor(
     events: EventEmitter,
     authorityService: AuthorityService,
@@ -122,6 +132,14 @@ export class DiscordBotService {
     this.settingsService = settingsService;
     this.projectPath = projectPath;
     this.agents = agents;
+  }
+
+  /**
+   * Set the role registry for dynamic agent command registration.
+   * Must be called before initialize() for commands to be registered.
+   */
+  setRoleRegistry(registry: RoleRegistryService): void {
+    this.roleRegistry = registry;
   }
 
   /**
@@ -250,6 +268,36 @@ export class DiscordBotService {
           ),
       ];
 
+      // Dynamically register agent commands from the role registry
+      if (this.roleRegistry) {
+        const templates = this.roleRegistry.list();
+        for (const tmpl of templates) {
+          if (!tmpl.exposure?.discord) continue;
+
+          // Skip if name conflicts with an existing hardcoded command
+          const existingNames = new Set(commands.map((c) => c.name));
+          if (existingNames.has(tmpl.name)) {
+            logger.warn(`Skipping agent command /${tmpl.name} — conflicts with built-in command`);
+            continue;
+          }
+
+          commands.push(
+            new SlashCommandBuilder()
+              .setName(tmpl.name)
+              .setDescription(tmpl.description.slice(0, 100))
+              .addStringOption((option) =>
+                option
+                  .setName('message')
+                  .setDescription('Message or task for the agent')
+                  .setRequired(true)
+              ) as SlashCommandBuilder
+          );
+
+          this.agentCommands.add(tmpl.name);
+          logger.info(`Registered dynamic agent command: /${tmpl.name}`);
+        }
+      }
+
       const rest = new REST({ version: '10' }).setToken(token);
 
       // Register commands for the specific guild (instant, no 1-hour cache)
@@ -287,6 +335,12 @@ export class DiscordBotService {
         break;
       case 'setuplab':
         await this.handleSetuplabCommand(interaction);
+        break;
+      default:
+        // Check if this is a dynamic agent command
+        if (this.agentCommands.has(interaction.commandName)) {
+          await this.handleAgentCommand(interaction);
+        }
         break;
     }
   }
@@ -625,6 +679,89 @@ export class DiscordBotService {
   }
 
   /**
+   * Handle a dynamic agent slash command (e.g. /ava, /gtm, /frank).
+   * Creates a thread and emits a routed message event for the agent.
+   */
+  private async handleAgentCommand(interaction: any): Promise<void> {
+    const agentName = interaction.commandName;
+    const userMessage = interaction.options.getString('message') || '';
+    const username = interaction.user.username;
+
+    // Check access control from the registry template
+    if (this.roleRegistry) {
+      const template = this.roleRegistry.get(agentName);
+      const allowedUsers = template?.exposure?.allowedUsers;
+      if (allowedUsers && allowedUsers.length > 0 && !allowedUsers.includes(username)) {
+        await interaction.reply({
+          content: `You don't have access to /${agentName}. Contact an admin.`,
+          ephemeral: true,
+        });
+        return;
+      }
+    }
+
+    await interaction.deferReply();
+
+    try {
+      const displayName = this.roleRegistry?.get(agentName)?.displayName ?? agentName;
+      const replyContent =
+        `**${displayName}** thread started.\n` + `> ${userMessage.slice(0, 200)}`;
+
+      const reply = await interaction.editReply(replyContent);
+
+      // Create a public thread from the reply
+      const channel = interaction.channel as TextChannel;
+      if (!channel || !('threads' in channel)) {
+        logger.warn(`Cannot create thread — channel doesn't support threads`);
+        return;
+      }
+
+      const threadName = `${displayName}: ${userMessage.slice(0, 80)}`;
+      const thread = await channel.threads.create({
+        name: threadName,
+        type: ChannelType.PublicThread,
+        startMessage: reply,
+      });
+
+      // Track thread → agent mapping
+      this.agentThreads.set(thread.id, {
+        agentType: agentName,
+        userId: interaction.user.id,
+      });
+
+      // Emit routed event so AgentDiscordRouter picks it up
+      this.events.emit('discord:user-message:routed', {
+        projectPath: this.projectPath,
+        userId: interaction.user.id,
+        username,
+        agentId: agentName,
+        messages: [
+          {
+            content: userMessage,
+            attachments: {},
+            timestamp: Date.now(),
+          },
+        ],
+        channelId: thread.id,
+      });
+
+      logger.info(`Created agent thread for /${agentName}`, {
+        threadId: thread.id,
+        username,
+      });
+    } catch (error) {
+      logger.error(`Error handling /${agentName} command:`, error);
+      try {
+        await interaction.editReply(
+          `Failed to start ${agentName} thread: ${error instanceof Error ? error.message : 'Unknown error'}`
+        );
+      } catch {
+        // Interaction may have expired
+      }
+    }
+  }
+
+  /**
    * Build a complete DiscordRoutedMessage payload with context.
    */
   private async buildRoutedMessage(
@@ -727,6 +864,26 @@ export class DiscordBotService {
       const featureId = this.reviewThreads.get(message.channelId);
       if (featureId) {
         await this.handleThreadReply(message, featureId);
+        return;
+      }
+
+      // Handle messages in agent slash-command threads
+      const agentThread = this.agentThreads.get(message.channelId);
+      if (agentThread) {
+        this.events.emit('discord:user-message:routed', {
+          projectPath: this.projectPath,
+          userId: message.author.id,
+          username: message.author.username,
+          agentId: agentThread.agentType,
+          messages: [
+            {
+              content: message.content,
+              attachments: {},
+              timestamp: message.createdTimestamp,
+            },
+          ],
+          channelId: message.channelId,
+        });
         return;
       }
     }

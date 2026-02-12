@@ -25,6 +25,7 @@ const BUILT_IN_TEMPLATES: AgentTemplate[] = [
     canCommit: true,
     canCreatePRs: true,
     trustLevel: 2,
+    exposure: { cli: false, discord: false },
     tags: ['implementation', 'backend', 'api'],
   },
   {
@@ -40,6 +41,7 @@ const BUILT_IN_TEMPLATES: AgentTemplate[] = [
     canCommit: true,
     canCreatePRs: true,
     trustLevel: 2,
+    exposure: { cli: false, discord: false },
     tags: ['implementation', 'frontend', 'ui'],
   },
   {
@@ -55,6 +57,7 @@ const BUILT_IN_TEMPLATES: AgentTemplate[] = [
     canCommit: true,
     canCreatePRs: true,
     trustLevel: 2,
+    exposure: { cli: true, discord: true, allowedUsers: ['chukz'] },
     tags: ['infrastructure', 'devops', 'ci-cd'],
   },
   {
@@ -70,6 +73,7 @@ const BUILT_IN_TEMPLATES: AgentTemplate[] = [
     canCommit: true,
     canCreatePRs: true,
     trustLevel: 1,
+    exposure: { cli: false, discord: false },
     tags: ['testing', 'quality', 'verification'],
   },
   {
@@ -85,6 +89,7 @@ const BUILT_IN_TEMPLATES: AgentTemplate[] = [
     canCommit: true,
     canCreatePRs: true,
     trustLevel: 1,
+    exposure: { cli: false, discord: false },
     tags: ['documentation', 'writing'],
   },
   {
@@ -100,6 +105,7 @@ const BUILT_IN_TEMPLATES: AgentTemplate[] = [
     canCommit: false,
     canCreatePRs: false,
     trustLevel: 1,
+    exposure: { cli: false, discord: false },
     tags: ['planning', 'product', 'requirements'],
   },
   {
@@ -116,6 +122,7 @@ const BUILT_IN_TEMPLATES: AgentTemplate[] = [
     canCommit: false,
     canCreatePRs: false,
     trustLevel: 1,
+    exposure: { cli: false, discord: false },
     tags: ['management', 'review', 'coordination'],
   },
   {
@@ -140,6 +147,7 @@ const BUILT_IN_TEMPLATES: AgentTemplate[] = [
       'docs-engineer',
     ],
     trustLevel: 3,
+    exposure: { cli: true, discord: true, allowedUsers: ['chukz'] },
     tags: ['operations', 'leadership', 'autonomous'],
   },
   {
@@ -155,6 +163,7 @@ const BUILT_IN_TEMPLATES: AgentTemplate[] = [
     canCommit: false,
     canCreatePRs: false,
     trustLevel: 1,
+    exposure: { cli: true, discord: true, allowedUsers: ['chukz', 'abdelly'] },
     tags: ['marketing', 'content', 'growth'],
   },
 ];
