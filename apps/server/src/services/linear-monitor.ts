@@ -7,6 +7,7 @@
 
 import type { EventEmitter } from '../lib/events.js';
 import type { LinearMonitorConfig, WorkItem } from '@automaker/types';
+import type { SettingsService } from './settings-service.js';
 import { createLogger } from '@automaker/utils';
 
 const logger = createLogger('LinearMonitor');
@@ -58,7 +59,21 @@ export class LinearMonitor {
   /** Active polling intervals */
   private intervals = new Map<string, NodeJS.Timeout>();
 
+  /** Settings service for reading OAuth token */
+  private settingsService?: SettingsService;
+
+  /** Project path for reading settings */
+  private projectPath?: string;
+
   constructor(private events: EventEmitter) {}
+
+  /**
+   * Set settings service and project path for token retrieval
+   */
+  setSettingsService(settingsService: SettingsService, projectPath: string): void {
+    this.settingsService = settingsService;
+    this.projectPath = projectPath;
+  }
 
   /**
    * Start monitoring Linear projects
@@ -138,33 +153,225 @@ export class LinearMonitor {
   }
 
   /**
-   * Fetch project details from Linear
-   *
-   * This is a placeholder - actual implementation would use Linear MCP tools
-   * or Linear API client.
+   * Get OAuth token from project settings
    */
-  private async fetchProject(projectId: string): Promise<LinearProjectItem | null> {
-    // TODO: Implement actual Linear project fetching
-    // Options:
-    // 1. Use Linear MCP tools (mcp__linear__linear_getProjects)
-    // 2. Use Linear SDK
-    // 3. Use Linear GraphQL API directly
+  private async getToken(): Promise<string | null> {
+    if (!this.settingsService || !this.projectPath) {
+      logger.error('Settings service or project path not set');
+      return null;
+    }
 
-    // For now, return null (will be implemented when Linear integration is configured)
-    return null;
+    const settings = await this.settingsService.getProjectSettings(this.projectPath);
+    const token = settings.integrations?.linear?.agentToken;
+
+    if (!token) {
+      logger.warn('Linear OAuth token not found in project settings');
+      return null;
+    }
+
+    return token;
   }
 
   /**
-   * Fetch issues for a project
-   *
-   * This is a placeholder - actual implementation would use Linear MCP tools.
+   * Fetch project details from Linear using GraphQL API
+   */
+  private async fetchProject(projectId: string): Promise<LinearProjectItem | null> {
+    const token = await this.getToken();
+    if (!token) {
+      return null;
+    }
+
+    try {
+      const query = `
+        query GetProject($id: String!) {
+          project(id: $id) {
+            id
+            name
+            state
+            teams {
+              nodes {
+                id
+              }
+            }
+            createdAt
+            updatedAt
+            url
+          }
+        }
+      `;
+
+      const response = await fetch('https://api.linear.app/graphql', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: token,
+        },
+        body: JSON.stringify({
+          query,
+          variables: { id: projectId },
+        }),
+      });
+
+      if (!response.ok) {
+        logger.error(`Linear API error: ${response.status} ${response.statusText}`);
+        return null;
+      }
+
+      const data = (await response.json()) as {
+        data?: {
+          project?: {
+            id: string;
+            name: string;
+            state: string;
+            teams: { nodes: Array<{ id: string }> };
+            createdAt: string;
+            updatedAt: string;
+            url?: string;
+          };
+        };
+        errors?: Array<{ message: string }>;
+      };
+
+      if (data.errors) {
+        logger.error('Linear GraphQL errors:', data.errors);
+        return null;
+      }
+
+      if (!data.data?.project) {
+        logger.warn(`Project ${projectId} not found in Linear`);
+        return null;
+      }
+
+      const project = data.data.project;
+      return {
+        id: project.id,
+        name: project.name,
+        description: undefined,
+        status: project.state,
+        teamId: project.teams.nodes[0]?.id || '',
+        createdAt: project.createdAt,
+        updatedAt: project.updatedAt,
+        url: project.url,
+      };
+    } catch (error) {
+      logger.error('Failed to fetch Linear project:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Fetch issues for a project using GraphQL API
    */
   private async fetchIssues(projectId: string, labels: string[]): Promise<LinearIssueItem[]> {
-    // TODO: Implement actual Linear issue fetching
-    // Use mcp__linear__linear_searchIssues or mcp__linear__linear_getProjectIssues
+    const token = await this.getToken();
+    if (!token) {
+      return [];
+    }
 
-    // For now, return empty array
-    return [];
+    try {
+      const query = `
+        query GetIssues($projectId: ID!) {
+          issues(filter: { project: { id: { eq: $projectId } } }) {
+            nodes {
+              id
+              identifier
+              title
+              description
+              state {
+                name
+              }
+              assignee {
+                id
+              }
+              labels {
+                nodes {
+                  name
+                }
+              }
+              priority
+              createdAt
+              updatedAt
+              url
+            }
+          }
+        }
+      `;
+
+      const response = await fetch('https://api.linear.app/graphql', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: token,
+        },
+        body: JSON.stringify({
+          query,
+          variables: { projectId },
+        }),
+      });
+
+      if (!response.ok) {
+        logger.error(`Linear API error: ${response.status} ${response.statusText}`);
+        return [];
+      }
+
+      const data = (await response.json()) as {
+        data?: {
+          issues?: {
+            nodes: Array<{
+              id: string;
+              identifier: string;
+              title: string;
+              description?: string;
+              state: { name: string };
+              assignee?: { id: string };
+              labels: { nodes: Array<{ name: string }> };
+              priority: number;
+              createdAt: string;
+              updatedAt: string;
+              url?: string;
+            }>;
+          };
+        };
+        errors?: Array<{ message: string }>;
+      };
+
+      if (data.errors) {
+        logger.error('Linear GraphQL errors:', data.errors);
+        return [];
+      }
+
+      if (!data.data?.issues?.nodes) {
+        return [];
+      }
+
+      const issues = data.data.issues.nodes;
+
+      // Filter by labels if specified
+      const filteredIssues =
+        labels.length > 0
+          ? issues.filter((issue) =>
+              labels.some((label) => issue.labels.nodes.some((l) => l.name === label))
+            )
+          : issues;
+
+      return filteredIssues.map((issue) => ({
+        id: issue.id,
+        identifier: issue.identifier,
+        title: issue.title,
+        description: issue.description,
+        status: issue.state.name,
+        assigneeId: issue.assignee?.id,
+        projectId,
+        labels: issue.labels.nodes.map((l) => l.name),
+        priority: issue.priority,
+        createdAt: issue.createdAt,
+        updatedAt: issue.updatedAt,
+        url: issue.url,
+      }));
+    } catch (error) {
+      logger.error('Failed to fetch Linear issues:', error);
+      return [];
+    }
   }
 
   /**

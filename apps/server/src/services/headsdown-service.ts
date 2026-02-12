@@ -165,6 +165,10 @@ export class HeadsdownService {
 
     // Start Linear monitoring if configured
     if (config.monitors.linear) {
+      // Set settings service for token retrieval
+      if (config.projectPath) {
+        this.linearMonitor.setSettingsService(this.settingsService, config.projectPath);
+      }
       await this.linearMonitor.startMonitoring(config.monitors.linear);
       logger.info(`Started Linear monitoring for agent ${agentId}`);
     }
