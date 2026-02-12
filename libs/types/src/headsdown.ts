@@ -158,6 +158,20 @@ export const DEFAULT_HEADSDOWN_CONFIGS: Record<AgentRole, Partial<HeadsdownConfi
       tasks: ['update_docs', 'update_changelog'],
     },
   },
+  'gtm-specialist': {
+    model: 'sonnet',
+    maxTurns: 250,
+    loop: {
+      enabled: true,
+      checkInterval: 30000,
+      maxConsecutiveErrors: 5,
+      workTimeout: 7200000,
+    },
+    idleTasks: {
+      enabled: false,
+      tasks: [],
+    },
+  },
 };
 
 /**

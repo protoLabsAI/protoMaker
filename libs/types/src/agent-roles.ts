@@ -23,7 +23,8 @@ export type AgentRole =
   | 'backend-engineer'
   | 'devops-engineer'
   | 'qa-engineer'
-  | 'docs-engineer';
+  | 'docs-engineer'
+  | 'gtm-specialist';
 
 /**
  * Agent task types
@@ -303,5 +304,16 @@ export const ROLE_CAPABILITIES: Record<AgentRole, RoleCapabilities> = {
     canCommit: true,
     canCreatePRs: true,
     description: 'Update documentation, generate changelogs, maintain project docs',
+  },
+  'gtm-specialist': {
+    role: 'gtm-specialist',
+    tools: ['Read', 'Grep', 'Glob', 'WebSearch', 'WebFetch', 'Write', 'Edit'],
+    maxTurns: 250,
+    canUseBash: false,
+    canModifyFiles: true,
+    canCommit: false,
+    canCreatePRs: false,
+    description:
+      'Content strategy, marketing, competitive research, brand positioning, social media coordination',
   },
 };
