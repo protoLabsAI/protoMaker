@@ -1,6 +1,6 @@
-# Staging Server Deployment
+# High-Concurrency Deployment
 
-This guide covers deploying Automaker to a staging environment with high-memory configuration for increased concurrent agent capacity.
+This guide covers deploying Automaker with high-memory configuration for increased concurrent agent capacity.
 
 ## Overview
 
@@ -685,7 +685,7 @@ Set the `DISCORD_DEPLOY_WEBHOOK` secret in GitHub repo settings to receive deplo
 **Symptoms:**
 
 - Every deploy-staging run fails in <20 seconds
-- Logs show: `cd: /home/josh/dev/automaker: No such file or directory`
+- Logs show: `cd: /path/to/automaker: No such file or directory`
 - Discord notifications never arrive
 
 **Cause:** The deploy workflow and all self-hosted runner workflows hardcode the repo path. If the repo directory is renamed or moved, every step fails on `cd`.
@@ -714,7 +714,7 @@ Set the `DISCORD_DEPLOY_WEBHOOK` secret in GitHub repo settings to receive deplo
 
 **Symptoms:**
 
-- Steps that don't explicitly `cd` fail with: `An error occurred trying to start process '/usr/bin/bash' with working directory '/home/josh/actions-runner/_work/automaker/automaker'`
+- Steps that don't explicitly `cd` fail with: `An error occurred trying to start process '/usr/bin/bash' with working directory '<runner-path>/_work/automaker/automaker'`
 - This especially affects `if: always()` steps like Cleanup and Notify Discord
 
 **Cause:** GitHub Actions self-hosted runners create a `_work/{repo}/{repo}` directory as the default working directory. If this directory doesn't exist (e.g., the runner was set up without an initial checkout), steps that don't set their own working directory fail to start.
@@ -737,7 +737,7 @@ Set the `DISCORD_DEPLOY_WEBHOOK` secret in GitHub repo settings to receive deplo
 | `DISCORD_DEPLOY_WEBHOOK` | Deploy success/failure notifications | #deployments |
 | `DISCORD_ALERTS_WEBHOOK` | Smoke test failure alerts            | #deployments |
 
-Create webhooks in Discord: Server Settings > Integrations > Webhooks > New Webhook, target the `#deployments` channel (ID: `1469049508909289752`).
+Create webhooks in Discord: Server Settings > Integrations > Webhooks > New Webhook, target the `#deployments` channel.
 
 ## Next Steps
 
@@ -751,7 +751,4 @@ After staging deployment is stable:
 
 ---
 
-**Document Version:** 1.0
-**Last Updated:** 2026-02-07
-**Author:** Ava Loveland (Chief of Staff)
 **Applies to:** Automaker v1.x with Docker deployment

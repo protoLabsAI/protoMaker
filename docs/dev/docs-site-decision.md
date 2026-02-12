@@ -2,11 +2,10 @@
 
 **Date:** 2026-02-12
 **Status:** Accepted
-**Decision makers:** Josh, Ava
 
 ## Context
 
-Automaker has 63+ markdown files across a well-organized `docs/` directory with 7 sections (agents, infra, dev, authority, protolabs, server, archived). These docs are only accessible via GitHub's markdown renderer or direct file reading. We need a generated documentation site with search, navigation, and dark mode.
+Automaker has 50+ markdown files across a well-organized `docs/` directory with multiple sections (agents, infra, dev, protolabs, server, integrations). These docs are only accessible via GitHub's markdown renderer or direct file reading. We need a generated documentation site with search, navigation, and dark mode.
 
 ## Options Evaluated
 

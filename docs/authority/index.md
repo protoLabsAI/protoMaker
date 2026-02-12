@@ -4,5 +4,5 @@ Automaker uses a trust hierarchy to manage what agents can do. The authority sys
 
 ## Documentation
 
-- **[Org Chart](./org-chart)** — Trust hierarchy, role permissions, and team design
-- **[Team Roles](./roles)** — Active team members (human and AI) with responsibilities
+- **[Org Chart](./org-chart)** — Trust hierarchy, role permissions, and policy check flow
+- **[Team Roles](./roles)** — Agent roles with responsibilities and evolution plans

@@ -261,7 +261,7 @@ docker exec automaker-server git config --list | grep credential
 ```bash
 # Check ownership inside container
 docker exec automaker-server ls -la /data
-docker exec automaker-server ls -la /home/josh/dev
+docker exec automaker-server ls -la /path/to/mounted/projects
 
 # Check host ownership
 ls -la /path/to/mounted/directory
@@ -315,11 +315,11 @@ docker volume inspect automaker-data
 2. **Path mapping mismatch (MCP issue):**
 
    ```yaml
-   # WRONG
-   - /projects:/home/josh/dev
+   # WRONG - paths don't match
+   - /projects:/home/youruser/dev
 
-   # CORRECT
-   - /home/josh/dev:/home/josh/dev
+   # CORRECT - container path matches host path
+   - /home/youruser/dev:/home/youruser/dev
    ```
 
 ## Build Issues

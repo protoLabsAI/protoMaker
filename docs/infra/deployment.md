@@ -51,7 +51,7 @@ Run Automaker in complete isolation from your filesystem:
 docker compose up -d
 ```
 
-Access at `http://localhost:3007`
+Access at `http://localhost:3007` (UI), `http://localhost:3008` (API), `http://localhost:3009` (Docs)
 
 ### Characteristics
 
@@ -103,10 +103,10 @@ docker compose up -d
 
 ```yaml
 # CORRECT - paths match
-- /home/josh/dev:/home/josh/dev:rw
+- /home/youruser/dev:/home/youruser/dev:rw
 
 # WRONG - paths don't match (MCP plugin will fail)
-- /projects:/home/josh/dev
+- /projects:/home/youruser/dev
 ```
 
 ## systemd + Docker

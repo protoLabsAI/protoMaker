@@ -557,7 +557,7 @@ The `ava-staging` runner has access to resources that GitHub-hosted runners don'
 ### Adding New Workflows
 
 Self-hosted workflows use `runs-on: self-hosted` and have access to the host environment.
-The runner is at `/home/josh/actions-runner/` with the Automaker repo at `/home/josh/dev/ava/`.
+The self-hosted runner has access to the host environment where Automaker is deployed.
 
 ```yaml
 jobs:

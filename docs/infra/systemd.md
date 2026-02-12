@@ -16,7 +16,7 @@ Requires=docker.service
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-WorkingDirectory=/home/josh/dev/ava
+WorkingDirectory=/path/to/automaker
 ExecStart=/usr/bin/docker compose up -d
 ExecStop=/usr/bin/docker compose down
 ExecReload=/usr/bin/docker compose restart
@@ -25,8 +25,8 @@ TimeoutStopSec=60
 Restart=on-failure
 RestartSec=10
 
-User=josh
-Group=josh
+User=youruser
+Group=youruser
 
 Environment=COMPOSE_PROJECT_NAME=automaker
 

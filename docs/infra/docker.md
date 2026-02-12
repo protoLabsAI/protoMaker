@@ -23,21 +23,21 @@ The production `Dockerfile` defines multiple stages:
 │  │   base   │  Common setup: Node 22, build tools           │
 │  └────┬─────┘                                               │
 │       │                                                      │
-│  ┌────┴──────────────┬──────────────────┐                   │
-│  │                   │                  │                    │
-│  ▼                   ▼                  │                    │
-│  ┌──────────────┐   ┌──────────────┐    │                   │
-│  │server-builder│   │  ui-builder  │    │                   │
-│  │  Build libs  │   │  Build libs  │    │                   │
-│  │ Build server │   │   Build UI   │    │                   │
-│  └──────┬───────┘   └──────┬───────┘    │                   │
-│         │                  │            │                    │
-│         ▼                  ▼            │                    │
-│  ┌──────────────┐   ┌──────────────┐    │                   │
-│  │    server    │   │      ui      │    │                   │
-│  │  Node.js     │   │    nginx     │    │                   │
-│  │  Production  │   │   Static     │    │                   │
-│  └──────────────┘   └──────────────┘    │                   │
+│  ┌────┴──────────────┬──────────────────┬──────────────┐    │
+│  │                   │                  │              │    │
+│  ▼                   ▼                  ▼              │    │
+│  ┌──────────────┐   ┌──────────────┐   ┌────────────┐ │    │
+│  │server-builder│   │  ui-builder  │   │docs-builder│ │    │
+│  │  Build libs  │   │  Build libs  │   │ VitePress  │ │    │
+│  │ Build server │   │   Build UI   │   │ Build docs │ │    │
+│  └──────┬───────┘   └──────┬───────┘   └─────┬──────┘ │    │
+│         │                  │                 │        │    │
+│         ▼                  ▼                 ▼        │    │
+│  ┌──────────────┐   ┌──────────────┐   ┌──────────┐  │    │
+│  │    server    │   │      ui      │   │   docs   │  │    │
+│  │  Node.js     │   │    nginx     │   │  nginx   │  │    │
+│  │  Production  │   │   Static     │   │ Static   │  │    │
+│  └──────────────┘   └──────────────┘   └──────────┘  │    │
 │                                                              │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -84,6 +84,25 @@ docker build --target ui -t automaker-ui .
 
 - `VITE_SERVER_URL` - API server URL (empty = relative URLs)
 - `GIT_COMMIT_SHA` - Track build source
+
+### Docs Target
+
+```bash
+docker build --target docs -t automaker-docs .
+```
+
+**Base image:** `nginx:alpine`
+
+**Includes:**
+
+- Pre-built VitePress static site from `docs/`
+- nginx configuration for SPA routing
+
+**Build process:**
+
+1. Installs `vitepress` standalone (avoids Vite version conflict with the monorepo)
+2. Runs `vitepress build docs` to generate static HTML
+3. Copies output to nginx serving directory
 
 ## Base Stage
 

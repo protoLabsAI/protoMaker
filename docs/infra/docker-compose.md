@@ -52,6 +52,21 @@ services:
       - automaker-opencode-config:/home/automaker/.config/opencode
       - automaker-opencode-cache:/home/automaker/.cache/opencode
 
+  docs:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: docs
+    container_name: automaker-docs
+    restart: unless-stopped
+    ports:
+      - '3009:80'
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:80/']
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
 volumes:
   automaker-data:
   automaker-claude-config:
@@ -67,6 +82,7 @@ volumes:
 - **Named volumes**: Data persists across restarts but is Docker-managed
 - **Non-root user**: Server runs as `automaker` user
 - **Restart policy**: `unless-stopped` for automatic recovery
+- **Docs site**: VitePress docs built as static files, served by nginx
 
 ## Development Configuration
 
@@ -144,9 +160,9 @@ Create `docker-compose.override.yml` for local customization (gitignored):
 services:
   server:
     volumes:
-      - /home/josh/dev:/home/josh/dev:rw
+      - /path/to/projects:/path/to/projects:rw
     environment:
-      - ALLOWED_ROOT_DIRECTORY=/home/josh/dev
+      - ALLOWED_ROOT_DIRECTORY=/path/to/projects
 ```
 
 Docker Compose automatically merges this with the base configuration.
@@ -297,17 +313,17 @@ docker inspect automaker-server --format '{{.State.Health.Status}}'
 Services communicate via Docker's internal network:
 
 ```
-┌─────────────────────────────────────────┐
-│           Docker Network                 │
-│                                          │
-│  ┌─────────┐        ┌─────────┐         │
-│  │   ui    │───────▶│ server  │         │
-│  │  :80    │  http  │  :3008  │         │
-│  └────┬────┘        └────┬────┘         │
-│       │                  │               │
-└───────┼──────────────────┼───────────────┘
-        │                  │
-   localhost:3007    localhost:3008
+┌──────────────────────────────────────────────────────┐
+│                  Docker Network                       │
+│                                                       │
+│  ┌─────────┐    ┌─────────┐    ┌─────────┐          │
+│  │   ui    │───▶│ server  │    │  docs   │          │
+│  │  :80    │http│  :3008  │    │  :80    │          │
+│  └────┬────┘    └────┬────┘    └────┬────┘          │
+│       │              │              │                │
+└───────┼──────────────┼──────────────┼────────────────┘
+        │              │              │
+   localhost:3007 localhost:3008 localhost:3009
 ```
 
-The UI container uses `http://server:3008` internally, while external access uses `localhost:3008`.
+The UI container uses `http://server:3008` internally, while the docs container serves the VitePress site independently. External access uses `localhost` on the mapped ports.

@@ -13,38 +13,47 @@ The system has three layers:
 ## Organization Chart
 
 ```
-CTO (Trust=3, Autonomous)
+GTM Specialist (Trust=2, Top-Level Orchestrator)
+ |  Go-to-market strategy, content pipeline, growth
  |
- |-- Product Manager (Trust=1, Assisted)
- |    Owns: What & Why
- |    Actions: create_work, change_scope
- |    Sub-agents: Requirements Extractor, Scope Checker
+Project Owner (Trust=3, Autonomous)
+ |  Technical architecture, product vision, final authority
  |
- |-- Project Manager (Trust=1, Assisted)
- |    Owns: When & How
- |    Actions: create_work, assign
- |    Sub-agents: Task Decomposer, Dependency Analyzer, Status Monitor
- |
- |-- Engineering Manager (Trust=1, Assisted)
- |    Owns: Who & Capacity
- |    Actions: assign, block_release
- |    Sub-agents: Frontend/Backend/DevOps/QA Engineers, Capacity Planner
- |
- |-- Principal Engineer (Trust=1, Assisted)
-      Owns: Architecture & Quality
-      Actions: modify_architecture, approve_work, block_release
-      Sub-agents: Design Review, Security Review
+ |-- Chief of Staff (Trust=2, Conditional)
+ |    Operational leader, product direction, team expansion
+ |    |
+ |    |-- DevOps Engineer (Trust=1, Assisted)
+ |    |    Infrastructure, deployment, monitoring, staging
+ |    |
+ |    |-- Product Manager (Trust=1, Assisted)
+ |    |    Owns: What & Why
+ |    |    Actions: create_work, change_scope
+ |    |
+ |    |-- Project Manager (Trust=1, Assisted)
+ |    |    Owns: When & How
+ |    |    Actions: create_work, assign
+ |    |
+ |    |-- Engineering Manager (Trust=1, Assisted)
+ |    |    Owns: Who & Capacity
+ |    |    Actions: assign, block_release
+ |    |
+ |    |-- Principal Engineer (Trust=1, Assisted)
+ |         Owns: Architecture & Quality
+ |         Actions: modify_architecture, approve_work, block_release
 ```
 
 ## Roles
 
-| Role                | Code    | Trust           | Owns                   | Description                                                                                                   |
-| ------------------- | ------- | --------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------- |
-| CTO                 | `CTO`   | 3 (Autonomous)  | Strategy & direction   | **The human user.** Full access to all actions. Injects ideas, approves/rejects proposals, sets trust levels. |
-| Product Manager     | `PM`    | 1 (Assisted)    | What & Why             | Researches ideas, creates PRDs, defines scope. Creates work and manages scope changes.                        |
-| Project Manager     | `ProjM` | 1 (Assisted)    | When & How             | Decomposes epics into tasks, manages dependencies, assigns work.                                              |
-| Engineering Manager | `EM`    | 1 (Assisted)    | Who & Capacity         | Assigns engineers, manages capacity/WIP limits, quality gates.                                                |
-| Principal Engineer  | `PE`    | 2 (Conditional) | Architecture & Quality | Reviews architecture decisions, approves work, blocks releases for quality.                                   |
+| Role                | Code     | Trust           | Owns                   | Description                                                                                         |
+| ------------------- | -------- | --------------- | ---------------------- | --------------------------------------------------------------------------------------------------- |
+| GTM Specialist      | `GTM`    | 2 (Conditional) | Growth & Go-to-Market  | Top-level orchestrator. Content pipeline, brand strategy, external outreach.                        |
+| Project Owner       | `CTO`    | 3 (Autonomous)  | Strategy & direction   | **The human user.** Full access to all actions. Sets vision, approves proposals, sets trust levels. |
+| Chief of Staff      | `CoS`    | 2 (Conditional) | Operations & alignment | AI operational leader. Product direction, audit, team expansion, context continuity.                |
+| DevOps Engineer     | `DevOps` | 1 (Assisted)    | Infrastructure         | Deployment, monitoring, staging, Docker, CI/CD, system health.                                      |
+| Product Manager     | `PM`     | 1 (Assisted)    | What & Why             | Researches ideas, creates PRDs, defines scope. Creates work and manages scope changes.              |
+| Project Manager     | `ProjM`  | 1 (Assisted)    | When & How             | Decomposes epics into tasks, manages dependencies, assigns work.                                    |
+| Engineering Manager | `EM`     | 1 (Assisted)    | Who & Capacity         | Assigns engineers, manages capacity/WIP limits, quality gates.                                      |
+| Principal Engineer  | `PE`     | 2 (Conditional) | Architecture & Quality | Reviews architecture decisions, approves work, blocks releases for quality.                         |
 
 ## Trust Levels
 
@@ -60,7 +69,7 @@ Trust evolves over time based on performance:
 - Successful actions increase trust score
 - Escalations and failures decrease trust score
 - Score crossing threshold promotes trust level (1->2, 2->3)
-- CTO can manually set trust level via API
+- The project owner can manually set trust level via API
 
 ## Risk Levels
 
@@ -69,30 +78,33 @@ Trust evolves over time based on performance:
 | `low`      | 0     | Minimal impact, easily reversible       |
 | `medium`   | 1     | Moderate impact, some effort to reverse |
 | `high`     | 2     | Significant impact, hard to reverse     |
-| `critical` | 3     | CTO-only, potentially irreversible      |
+| `critical` | 3     | Owner-only, potentially irreversible    |
 
 ## Permission Matrix
 
 ### Actions by Role
 
-| Action                | CTO | PM  | ProjM | EM  | PE  |
-| --------------------- | --- | --- | ----- | --- | --- |
-| `create_work`         | Y   | Y   | Y     | -   | -   |
-| `assign`              | Y   | -   | Y     | Y   | -   |
-| `change_scope`        | Y   | Y   | -     | -   | -   |
-| `block_release`       | Y   | -   | -     | Y   | Y   |
-| `modify_architecture` | Y   | -   | -     | -   | Y   |
-| `approve_work`        | Y   | -   | -     | -   | Y   |
+| Action                | Owner | GTM | CoS | DevOps | PM  | ProjM | EM  | PE  |
+| --------------------- | ----- | --- | --- | ------ | --- | ----- | --- | --- |
+| `create_work`         | Y     | Y   | Y   | -      | Y   | Y     | -   | -   |
+| `assign`              | Y     | -   | Y   | -      | -   | Y     | Y   | -   |
+| `change_scope`        | Y     | Y   | Y   | -      | Y   | -     | -   | -   |
+| `block_release`       | Y     | -   | Y   | Y      | -   | -     | Y   | Y   |
+| `modify_architecture` | Y     | -   | -   | -      | -   | -     | -   | Y   |
+| `approve_work`        | Y     | -   | Y   | -      | -   | -     | -   | Y   |
 
 ### Max Risk Without Approval
 
-| Role  | Max Risk               |
-| ----- | ---------------------- |
-| CTO   | `critical` (unlimited) |
-| PM    | `medium`               |
-| ProjM | `medium`               |
-| EM    | `high`                 |
-| PE    | `high`                 |
+| Role           | Max Risk               |
+| -------------- | ---------------------- |
+| Owner          | `critical` (unlimited) |
+| GTM Specialist | `medium`               |
+| Chief of Staff | `high`                 |
+| DevOps         | `medium`               |
+| PM             | `medium`               |
+| ProjM          | `medium`               |
+| EM             | `high`                 |
+| PE             | `high`                 |
 
 ### Extended Actions (Authority Layer)
 
@@ -127,16 +139,16 @@ backlog -> in_progress -> review -> done
 
 ### Transition Guards
 
-| From          | To            | Allowed Roles  | Notes                                 |
-| ------------- | ------------- | -------------- | ------------------------------------- |
-| `backlog`     | `in_progress` | CTO, ProjM, EM | Starting work                         |
-| `in_progress` | `review`      | CTO, PE, EM    | Submitting for review                 |
-| `review`      | `done`        | CTO, PE        | Requires approval above `medium` risk |
-| `in_progress` | `blocked`     | CTO, EM, PE    | Blocking work                         |
-| `review`      | `blocked`     | CTO, EM, PE    | Blocking reviewed work                |
-| `blocked`     | `in_progress` | CTO, EM, PE    | Unblocking work                       |
-| `in_progress` | `backlog`     | All roles      | Moving back to backlog                |
-| `review`      | `backlog`     | All roles      | Moving back to backlog                |
+| From          | To            | Allowed Roles         | Notes                                 |
+| ------------- | ------------- | --------------------- | ------------------------------------- |
+| `backlog`     | `in_progress` | Owner, CoS, ProjM, EM | Starting work                         |
+| `in_progress` | `review`      | Owner, CoS, PE, EM    | Submitting for review                 |
+| `review`      | `done`        | Owner, CoS, PE        | Requires approval above `medium` risk |
+| `in_progress` | `blocked`     | Owner, CoS, EM, PE    | Blocking work                         |
+| `review`      | `blocked`     | Owner, CoS, EM, PE    | Blocking reviewed work                |
+| `blocked`     | `in_progress` | Owner, CoS, EM, PE    | Unblocking work                       |
+| `in_progress` | `backlog`     | All roles             | Moving back to backlog                |
+| `review`      | `backlog`     | All roles             | Moving back to backlog                |
 
 ### Work Item States (Extended)
 
@@ -176,7 +188,7 @@ Agent proposes action
 [3] Risk Gating Check
      "Does action risk exceed agent's max risk?"
      |
-     Yes -> REQUIRE_APPROVAL (queued for human/CTO)
+     Yes -> REQUIRE_APPROVAL (queued for human/owner)
      |
      No
      v
@@ -202,7 +214,7 @@ Agents can delegate work to others based on direction:
 | Direction | Meaning                 | Example               |
 | --------- | ----------------------- | --------------------- |
 | `down`    | Delegate to subordinate | PM -> Task Decomposer |
-| `up`      | Escalate to supervisor  | EM -> CTO             |
+| `up`      | Escalate to supervisor  | EM -> Owner           |
 | `lateral` | Peer-to-peer handoff    | PM -> ProjM           |
 
 ## API Endpoints
@@ -218,8 +230,8 @@ All endpoints require authentication.
 | POST   | `/api/authority/approvals`    | List pending approvals         |
 | POST   | `/api/authority/agents`       | List authority agents          |
 | POST   | `/api/authority/trust`        | Get/set trust profiles         |
-| POST   | `/api/authority/inject-idea`  | CTO submits feature idea       |
-| POST   | `/api/authority/dashboard`    | CTO system overview            |
+| POST   | `/api/authority/inject-idea`  | Owner submits feature idea     |
+| POST   | `/api/authority/dashboard`    | Owner system overview          |
 | POST   | `/api/authority/audit`        | Query audit trail              |
 | POST   | `/api/authority/trust-scores` | View agent trust scores        |
 
@@ -258,7 +270,7 @@ The authority system emits these events via WebSocket:
 | `authority:awaiting-approval`     | `{ requestId, agentId, action, target }`    | Queued for human review |
 | `authority:agent-registered`      | `{ agentId, role, trustLevel }`             | Agent registered        |
 | `authority:trust-updated`         | `{ agentId, oldTrustLevel, newTrustLevel }` | Trust level changed     |
-| `authority:idea-injected`         | `{ projectPath, featureId, title }`         | CTO submitted idea      |
+| `authority:idea-injected`         | `{ projectPath, featureId, title }`         | Owner submitted idea    |
 | `authority:pm-research-started`   | `{ projectPath, featureId, agentId }`       | PM began research       |
 | `authority:pm-research-completed` | `{ projectPath, featureId, analysis }`      | PM finished research    |
 | `authority:pm-epic-created`       | `{ epicId, title, childCount }`             | PM created epic         |
@@ -282,7 +294,7 @@ The authority system emits these events via WebSocket:
 | `libs/types/src/authority.ts`                                          | Authority agent and work item types                |
 | `libs/policy-engine/src/engine.ts`                                     | Core `checkPolicy()` function                      |
 | `libs/policy-engine/src/defaults.ts`                                   | Default permission matrix and transitions          |
-| `libs/policy-engine/tests/engine.test.ts`                              | 37 unit tests for policy engine                    |
+| `libs/policy-engine/tests/engine.test.ts`                              | Unit tests for policy engine                       |
 | `apps/server/src/services/authority-service.ts`                        | Authority service (registry, proposals, approvals) |
 | `apps/server/src/routes/authority/index.ts`                            | REST API routes                                    |
 | `apps/server/src/services/authority-agents/pm-agent.ts`                | PM agent (idea research + PRD + epics)             |
@@ -298,9 +310,9 @@ The authority system emits these events via WebSocket:
 
 Per-project authority data stored in `.automaker/authority/`:
 
-| File                  | Contents                           |
-| --------------------- | ---------------------------------- |
-| `agents.json`         | Registered authority agents        |
-| `trust-profiles.json` | Trust profiles with stats          |
-| `approval-queue.json` | Pending and resolved approvals     |
-| `audit.jsonl`         | Append-only audit trail (Sprint 7) |
+| File                  | Contents                       |
+| --------------------- | ------------------------------ |
+| `agents.json`         | Registered authority agents    |
+| `trust-profiles.json` | Trust profiles with stats      |
+| `approval-queue.json` | Pending and resolved approvals |
+| `audit.jsonl`         | Append-only audit trail        |
