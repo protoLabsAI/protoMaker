@@ -248,7 +248,15 @@ export class RecoveryService {
       const content = (await secureFs.readFile(filePath, 'utf-8')) as string;
       const lines = content.split('\n').filter((l: string) => l.trim());
 
-      return lines.map((l: string) => JSON.parse(l) as RecoveryRecord);
+      const records: RecoveryRecord[] = [];
+      for (let i = 0; i < lines.length; i++) {
+        try {
+          records.push(JSON.parse(lines[i]) as RecoveryRecord);
+        } catch {
+          logger.warn(`Skipping malformed recovery log line ${i + 1}`);
+        }
+      }
+      return records;
     } catch (error) {
       logger.error('Failed to read recovery log:', error);
       return [];
