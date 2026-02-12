@@ -128,6 +128,10 @@ export type EventType =
   // Linear monitoring events
   | 'linear:project:updated'
   | 'linear:issue:detected'
+  // Linear agent session events (webhook-driven)
+  | 'linear:agent-session:created'
+  | 'linear:agent-session:updated'
+  | 'linear:agent-session:removed'
   // GitHub monitoring events
   | 'github:pr:detected'
   // Linear monitor events

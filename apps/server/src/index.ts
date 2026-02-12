@@ -141,6 +141,7 @@ import { getAvaGatewayService } from './services/ava-gateway-service.js';
 import { getDiscordService } from './services/discord-service.js';
 import { createDiscordRoutes } from './routes/discord/index.js';
 import { createAvaRoutes } from './routes/ava/index.js';
+import { createLinearRoutes } from './routes/linear/index.js';
 import { MAX_SYSTEM_CONCURRENCY } from '@automaker/types';
 
 const PORT = parseInt(process.env.PORT || '3008', 10);
@@ -759,6 +760,8 @@ app.use('/api/setup', createSetupRoutes(settingsService));
 
 // Mount webhooks at root level (unauthenticated - uses signature verification)
 app.use('/webhooks', createWebhooksRoutes(events, settingsService));
+// Linear agent routes (OAuth + webhook)
+app.use('/api/linear', createLinearRoutes(settingsService, events));
 
 // Apply authentication to all /api/* routes
 app.use('/api', authMiddleware);

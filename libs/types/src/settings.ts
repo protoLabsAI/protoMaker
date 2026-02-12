@@ -1556,6 +1556,16 @@ export interface LinearIntegrationConfig {
   };
   /** Custom label to apply to all synced issues */
   labelName?: string;
+
+  // Agent OAuth (actor=app) fields
+  /** OAuth access token for agent (actor=app) */
+  agentToken?: string;
+  /** OAuth refresh token */
+  refreshToken?: string;
+  /** Token expiration timestamp (ISO 8601) */
+  tokenExpiresAt?: string;
+  /** Granted OAuth scopes */
+  scopes?: string[];
 }
 
 /**
