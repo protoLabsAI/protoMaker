@@ -336,9 +336,12 @@ export class GraphiteService {
       }
 
       // Track the branch with optional parent
+      // --force auto-selects nearest tracked ancestor (main) to avoid interactive prompts
       let trackCmd = `gt track`;
       if (parentBranch) {
         trackCmd += ` --parent "${parentBranch}"`;
+      } else {
+        trackCmd += ` --force`;
       }
 
       await execAsync(trackCmd, { cwd: workDir, env: execEnv });
@@ -524,7 +527,7 @@ export class GraphiteService {
    */
   async sync(workDir: string): Promise<GraphiteSyncResult> {
     try {
-      await this.executeWithRetry('gt sync', workDir);
+      await this.executeWithRetry('gt sync --force', workDir);
       logger.info('Graphite sync successful');
       return { success: true, rebased: true, conflicts: false };
     } catch (error) {
