@@ -18,6 +18,16 @@ import { simpleQuery } from '../providers/simple-query-service.js';
 const logger = createLogger('CeremonyService');
 
 /**
+ * Epic creation event payload from the event system
+ */
+interface EpicCreatedEventPayload {
+  projectPath: string;
+  projectSlug: string;
+  milestoneSlug: string;
+  epicId: string;
+}
+
+/**
  * Milestone event payload from the event system
  */
 interface MilestoneEventPayload {
@@ -77,9 +87,14 @@ export class CeremonyService {
     this.featureLoader = featureLoader;
     this.projectService = projectService;
 
-    // Subscribe to milestone and project lifecycle events
+    // Subscribe to epic, milestone, and project lifecycle events
     this.unsubscribe = emitter.subscribe((type, payload) => {
-      if (type === 'milestone:started') {
+      if (type === 'project:features:progress') {
+        const progressPayload = payload as Record<string, unknown>;
+        if (progressPayload.step === 'epic-created') {
+          this.handleEpicCreated(progressPayload as unknown as EpicCreatedEventPayload);
+        }
+      } else if (type === 'milestone:started') {
         this.handleMilestoneStarted(payload as MilestoneEventPayload);
       } else if (type === 'milestone:completed') {
         this.handleMilestoneCompleted(payload as MilestoneEventPayload);
@@ -103,6 +118,53 @@ export class CeremonyService {
     this.settingsService = null;
     this.featureLoader = null;
     this.projectService = null;
+  }
+
+  /**
+   * Handle epic creation event — post kickoff announcement with scope and complexity
+   */
+  private async handleEpicCreated(payload: EpicCreatedEventPayload): Promise<void> {
+    const { projectPath, projectSlug, milestoneSlug } = payload;
+
+    const ceremonySettings = await this.getCeremonySettings(projectPath);
+    if (!ceremonySettings?.enabled || !ceremonySettings?.enableEpicKickoff) {
+      logger.debug('Epic kickoffs disabled, skipping epic kickoff');
+      return;
+    }
+
+    try {
+      // Load project to get milestone data
+      const project = await this.projectService!.getProject(projectPath, projectSlug);
+      if (!project) {
+        logger.warn(`Project not found: ${projectSlug}`);
+        return;
+      }
+
+      // Find the milestone by slug
+      const milestone = project.milestones.find((m) => m.slug === milestoneSlug);
+      if (!milestone) {
+        logger.warn(`Milestone not found for epic: ${milestoneSlug}`);
+        return;
+      }
+
+      // Generate the epic kickoff content
+      const content = this.generateEpicKickoff(project.title, milestone);
+
+      const messages = this.splitMessage(content, 2000);
+
+      for (const message of messages) {
+        await this.emitDiscordEvent(
+          projectPath,
+          ceremonySettings.discordChannelId,
+          message,
+          `Epic Kickoff: ${milestone.title}`
+        );
+      }
+
+      logger.info(`Posted epic kickoff for ${project.title} - Epic: ${milestone.title}`);
+    } catch (error) {
+      logger.error('Failed to generate epic kickoff:', error);
+    }
   }
 
   /**
@@ -283,6 +345,61 @@ ${dataSummary}`;
     } catch (error) {
       logger.error('Failed to generate project retrospective:', error);
     }
+  }
+
+  /**
+   * Generate epic kickoff announcement — title, planned phases, complexity breakdown, estimated scope
+   */
+  private generateEpicKickoff(
+    projectTitle: string,
+    milestone: {
+      title: string;
+      description?: string;
+      phases: Array<{ title: string; complexity?: string }>;
+    }
+  ): string {
+    const lines: string[] = [];
+
+    // Header
+    lines.push(`🎯 **${projectTitle}** — Epic Kickoff`);
+    lines.push(`### ${milestone.title}\n`);
+
+    // Description if available
+    if (milestone.description) {
+      lines.push(`**Overview:** ${milestone.description}\n`);
+    }
+
+    // Planned phases
+    lines.push(`**Planned Phases:** ${milestone.phases.length}`);
+    if (milestone.phases.length > 0) {
+      for (const phase of milestone.phases) {
+        const complexity = phase.complexity ? ` [${phase.complexity}]` : '';
+        lines.push(`- ${phase.title}${complexity}`);
+      }
+      lines.push('');
+    }
+
+    // Complexity breakdown
+    const complexityCounts = { small: 0, medium: 0, large: 0 };
+    for (const phase of milestone.phases) {
+      if (phase.complexity && phase.complexity in complexityCounts) {
+        complexityCounts[phase.complexity as keyof typeof complexityCounts]++;
+      }
+    }
+    const complexityParts = Object.entries(complexityCounts)
+      .filter(([, count]) => count > 0)
+      .map(([level, count]) => `${count} ${level}`);
+    if (complexityParts.length > 0) {
+      lines.push(`**Complexity Breakdown:** ${complexityParts.join(', ')}`);
+    }
+
+    // Estimated scope
+    const totalPhases = milestone.phases.length;
+    lines.push(
+      `**Estimated Scope:** ${totalPhases} phase${totalPhases !== 1 ? 's' : ''} to deliver`
+    );
+
+    return lines.join('\n');
   }
 
   /**

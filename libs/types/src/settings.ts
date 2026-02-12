@@ -884,6 +884,7 @@ export interface PhaseModelEntry {
  * CeremonySettings - Configuration for milestone and project ceremony features
  *
  * Ceremonies are automated events that mark significant project progress:
+ * - Epic kickoffs: Posted to Discord when an epic is created with planned scope and complexity
  * - Milestone standups: Posted to Discord when a milestone starts with planned scope
  * - Milestone retros: Sent to Discord when all features in a milestone are done
  * - Project retrospectives: AI-generated reflections when projects complete
@@ -893,6 +894,8 @@ export interface CeremonySettings {
   enabled: boolean;
   /** Discord channel ID for ceremony announcements (overrides project default) */
   discordChannelId?: string;
+  /** Enable epic kickoff announcements when created (default: true) */
+  enableEpicKickoff?: boolean;
   /** Enable milestone standup announcements at start (default: true) */
   enableStandups?: boolean;
   /** Enable milestone completion announcements (default: true) */
@@ -908,6 +911,7 @@ export interface CeremonySettings {
  */
 export const DEFAULT_CEREMONY_SETTINGS: CeremonySettings = {
   enabled: false,
+  enableEpicKickoff: true,
   enableStandups: true,
   enableMilestoneUpdates: true,
   enableProjectRetros: true,
