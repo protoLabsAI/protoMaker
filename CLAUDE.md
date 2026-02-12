@@ -91,6 +91,18 @@ The server (`apps/server/src/`) follows a modular pattern:
 - `services/authority-agents/` - AI authority agents (PM, ProjM, EM, Status, Discord approval routing)
 - `providers/` - AI provider abstraction (currently Claude via Claude Agent SDK)
 - `lib/` - Utilities (events, auth, worktree metadata)
+- `routes/linear/` - Linear agent integration (OAuth + webhook)
+
+### Multi-Agent Architecture
+
+Automaker uses a dynamic role registry and factory pattern for agents:
+
+- **Role Registry** (`RoleRegistryService`) — Stores agent templates (role, system prompt, tools, model). Built-in templates registered at startup.
+- **Agent Factory** (`AgentFactoryService`) — Creates agent instances from templates. Resolves models, injects context.
+- **Dynamic Executor** (`DynamicAgentExecutor`) — Runs agents in worktrees with the Claude Agent SDK.
+- **Linear Agent Integration** — OAuth `actor=app` flow registers Automaker as an agent in Linear. `AgentSessionEvent` webhooks route mentions/delegations to the appropriate agent.
+
+Agent roles are defined as templates with a schema validated by Zod. New agent types can be added via the REST API (`/api/agents`) or MCP tools without code changes.
 
 ### Frontend Architecture
 
