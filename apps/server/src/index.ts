@@ -463,6 +463,7 @@ const discordBotService = new DiscordBotService(
   REPO_ROOT,
   { pm: pmAgent, projm: projmAgent, em: emAgent, statusMonitor }
 );
+discordBotService.setRoleRegistry(roleRegistryService);
 void discordBotService.initialize();
 
 // Initialize Agent Discord Router for agent-to-Discord message routing

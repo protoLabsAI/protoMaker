@@ -100,6 +100,8 @@ export function generateProposal(gapAnalysis: GapAnalysisReport): AlignmentPropo
   const assignedGapIds = new Set<string>();
   const effortCount = { small: 0, medium: 0, large: 0 };
 
+  let milestoneIndex = 0;
+
   for (const def of MILESTONE_DEFS) {
     const features: AlignmentFeature[] = [];
 
@@ -114,6 +116,7 @@ export function generateProposal(gapAnalysis: GapAnalysisReport): AlignmentPropo
         complexity: gap.effort,
         priority: severityToPriority(gap.severity),
         gapId: gap.id,
+        dependsOnMilestone: milestoneIndex > 0 ? milestoneIndex - 1 : undefined,
       });
 
       effortCount[gap.effort]++;
@@ -127,7 +130,13 @@ export function generateProposal(gapAnalysis: GapAnalysisReport): AlignmentPropo
         return effortOrder[a.complexity] - effortOrder[b.complexity];
       });
 
-      milestones.push({ title: def.title, features });
+      milestones.push({
+        title: def.title,
+        features,
+        order: milestoneIndex,
+        dependsOn: milestoneIndex > 0 ? [milestoneIndex - 1] : [],
+      });
+      milestoneIndex++;
     }
   }
 
@@ -146,10 +155,17 @@ export function generateProposal(gapAnalysis: GapAnalysisReport): AlignmentPropo
     }
   }
   if (unassigned.length > 0) {
-    milestones.push({ title: 'Other', features: unassigned });
+    milestones.push({
+      title: 'Other',
+      features: unassigned,
+      order: milestoneIndex,
+      dependsOn: [], // "Other" has no dependencies — can run in parallel
+    });
+    milestoneIndex++;
   }
 
   const totalFeatures = milestones.reduce((sum, m) => sum + m.features.length, 0);
+  const dependencyOrder = milestones.map((m) => m.order);
 
   logger.info('Alignment proposal generated', {
     projectPath: gapAnalysis.projectPath,
@@ -162,5 +178,6 @@ export function generateProposal(gapAnalysis: GapAnalysisReport): AlignmentPropo
     milestones,
     totalFeatures,
     estimatedEffort: effortCount,
+    dependencyOrder,
   };
 }

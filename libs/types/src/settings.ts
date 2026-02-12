@@ -1384,6 +1384,21 @@ export interface GlobalSettings {
   activeClaudeApiProfileId?: string | null;
 
   /**
+   * Runtime overrides for agent exposure (CLI skills + Discord slash commands).
+   * Key: agent template name (e.g., "ava", "gtm-specialist").
+   * Overrides the template's built-in exposure config.
+   */
+  agentExposure?: Record<
+    string,
+    {
+      /** Override Discord slash command registration */
+      discord?: boolean;
+      /** Override allowed Discord users */
+      allowedUsers?: string[];
+    }
+  >;
+
+  /**
    * Per-worktree auto mode settings
    * Key: "${projectId}::${branchName ?? '__main__'}"
    */
@@ -2015,7 +2030,7 @@ export const DEFAULT_DISCORD_INTEGRATION: DiscordIntegrationConfig = {
   useWebhook: false,
   userRouting: {
     chukz: { agentType: 'ava', enabled: true },
-    abdelly: { agentType: 'gtm', enabled: false },
+    abdelly: { agentType: 'gtm-specialist', enabled: true },
   },
 };
 

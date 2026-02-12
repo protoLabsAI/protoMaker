@@ -218,11 +218,17 @@ export interface AlignmentFeature {
   complexity: GapEffort;
   priority: number;
   gapId: string;
+  /** Index of the milestone this feature depends on (features in later milestones depend on earlier ones) */
+  dependsOnMilestone?: number;
 }
 
 export interface AlignmentMilestone {
   title: string;
   features: AlignmentFeature[];
+  /** 0-based index of this milestone in execution order */
+  order: number;
+  /** Indices of milestones that must complete before this one */
+  dependsOn: number[];
 }
 
 export interface AlignmentProposal {
@@ -230,6 +236,8 @@ export interface AlignmentProposal {
   milestones: AlignmentMilestone[];
   totalFeatures: number;
   estimatedEffort: { small: number; medium: number; large: number };
+  /** Milestone execution order (indices into milestones array) */
+  dependencyOrder: number[];
 }
 
 // ========== Full Pipeline ==========

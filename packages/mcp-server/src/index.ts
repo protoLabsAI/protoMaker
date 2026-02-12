@@ -1306,6 +1306,11 @@ const tools: Tool[] = [
           type: 'string',
           description: 'Absolute path to the project directory to initialize',
         },
+        research: {
+          type: 'object',
+          description:
+            'Optional RepoResearchResult from research_repo. When provided, generates tech-stack-aware CLAUDE.md and coding-rules.md instead of generic templates.',
+        },
       },
       required: ['projectPath'],
     },
@@ -1840,6 +1845,36 @@ const tools: Tool[] = [
       required: ['projectPath'],
     },
   },
+  // ========== Ceremonies ==========
+  {
+    name: 'trigger_ceremony',
+    description:
+      'Manually trigger a ceremony (standup, milestone retro, or project retro). Useful for retroactively generating ceremonies for already-completed milestones or projects.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        projectSlug: {
+          type: 'string',
+          description: 'Project slug',
+        },
+        milestoneSlug: {
+          type: 'string',
+          description: 'Milestone slug (required for standup and retro types)',
+        },
+        ceremonyType: {
+          type: 'string',
+          enum: ['standup', 'retro', 'project-retro'],
+          description:
+            'Type of ceremony: "standup" (milestone kickoff), "retro" (milestone completion), "project-retro" (full project retrospective)',
+        },
+      },
+      required: ['projectPath', 'projectSlug', 'ceremonyType'],
+    },
+  },
   {
     name: 'run_full_setup',
     description:
@@ -2284,6 +2319,7 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
     case 'setup_lab':
       return apiCall('/setup/project', {
         projectPath: args.projectPath,
+        research: args.research,
       });
 
     case 'health_check': {
@@ -2345,6 +2381,15 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       return apiCall('/github/process-coderabbit-feedback', {
         projectPath: args.projectPath,
         prNumber: args.prNumber,
+      });
+
+    // Ceremonies
+    case 'trigger_ceremony':
+      return apiCall('/ceremonies/trigger', {
+        projectPath: args.projectPath,
+        projectSlug: args.projectSlug,
+        milestoneSlug: args.milestoneSlug,
+        ceremonyType: args.ceremonyType,
       });
 
     // Worktree Management
@@ -2548,9 +2593,10 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         };
       }
 
-      // Initialize .automaker
+      // Initialize .automaker (pass research for smart context generation)
       const setupResult = await apiCall('/setup/project', {
         projectPath: args.projectPath,
+        research: researchResult.research,
       });
 
       // Generate proposal
