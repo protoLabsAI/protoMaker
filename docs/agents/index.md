@@ -297,7 +297,7 @@ Covers:
 **Questions?**
 
 - Check the official docs above
-- Ask in Discord: #ava-josh channel
+- Ask in Discord community channel
 - Or open a discussion on GitHub
 
 ---

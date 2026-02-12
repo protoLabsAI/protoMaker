@@ -121,8 +121,8 @@ RestartSec=10
 - Wait 10 seconds between restart attempts
 
 ```ini
-User=josh
-Group=josh
+User=youruser
+Group=youruser
 ```
 
 - Run as a non-root user (must have Docker access)
@@ -384,8 +384,8 @@ WantedBy=multi-user.target
 Usage:
 
 ```bash
-sudo systemctl start automaker@josh
-sudo systemctl start automaker@alice
+sudo systemctl start automaker@user1
+sudo systemctl start automaker@user2
 ```
 
 ## Comparison: systemd vs Docker
