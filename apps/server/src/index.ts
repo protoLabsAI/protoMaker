@@ -124,6 +124,8 @@ import { createIntegrationRoutes } from './routes/integrations/index.js';
 import { AuthorityService } from './services/authority-service.js';
 import { createAuthorityRoutes } from './routes/authority/index.js';
 import { createCosRoutes } from './routes/cos/index.js';
+import { CompletionDetectorService } from './services/completion-detector-service.js';
+import { createCeremoniesRoutes } from './routes/ceremonies/index.js';
 import { PMAuthorityAgent } from './services/authority-agents/pm-agent.js';
 import { ProjMAuthorityAgent } from './services/authority-agents/projm-agent.js';
 import { EMAuthorityAgent } from './services/authority-agents/em-agent.js';
@@ -425,6 +427,10 @@ const projectService = new ProjectService(featureLoader);
 // Initialize Ceremony Service for milestone completion ceremonies
 const { ceremonyService } = await import('./services/ceremony-service.js');
 ceremonyService.initialize(events, settingsService, featureLoader, projectService);
+
+// Initialize Completion Detector Service — cascades feature done → epic → milestone → project
+const completionDetectorService = new CompletionDetectorService();
+completionDetectorService.initialize(events, featureLoader, projectService);
 
 const projmAgent = new ProjMAuthorityAgent(events, authorityService, featureLoader, projectService);
 const emAgent = new EMAuthorityAgent(
@@ -897,6 +903,7 @@ app.use(
   '/api/agents',
   createAgentManagementRoutes(roleRegistryService, agentFactoryService, dynamicAgentExecutor)
 );
+app.use('/api/ceremonies', createCeremoniesRoutes(events, featureLoader, projectService));
 
 // Create HTTP server
 const server = createServer(app);
