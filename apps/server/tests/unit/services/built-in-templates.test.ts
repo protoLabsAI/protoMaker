@@ -95,4 +95,24 @@ describe('registerBuiltInTemplates', () => {
     // Second call may succeed (overwrite) or fail, but total should still be 9
     expect(registry.size).toBe(9);
   });
+
+  it('chief-of-staff has systemPrompt for Discord routing', () => {
+    registerBuiltInTemplates(registry);
+    const cos = registry.get('chief-of-staff');
+    expect(cos).toBeDefined();
+    expect(cos!.systemPrompt).toBeDefined();
+    expect(cos!.systemPrompt).toContain('Ava Loveland');
+    expect(cos!.systemPrompt).toContain('Chief of Staff');
+    expect(cos!.systemPrompt).toContain('Prime Directive');
+  });
+
+  it('gtm-specialist has systemPrompt for Discord routing', () => {
+    registerBuiltInTemplates(registry);
+    const gtm = registry.get('gtm-specialist');
+    expect(gtm).toBeDefined();
+    expect(gtm!.systemPrompt).toBeDefined();
+    expect(gtm!.systemPrompt).toContain('GTM');
+    expect(gtm!.systemPrompt).toContain('protoLabs');
+    expect(gtm!.systemPrompt).toContain('Josh Mabry');
+  });
 });
