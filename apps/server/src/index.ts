@@ -151,6 +151,8 @@ import { getDiscordService } from './services/discord-service.js';
 import { createDiscordRoutes } from './routes/discord/index.js';
 import { createAvaRoutes } from './routes/ava/index.js';
 import { createLinearRoutes } from './routes/linear/index.js';
+import { LinearAgentService } from './services/linear-agent-service.js';
+import { LinearAgentRouter } from './services/linear-agent-router.js';
 import { MAX_SYSTEM_CONCURRENCY } from '@automaker/types';
 
 const PORT = parseInt(process.env.PORT || '3008', 10);
@@ -476,6 +478,18 @@ agentDiscordRouter.start();
 
 // Wire Discord bot service to headsdown service for message fetching
 headsdownService.setDiscordBotService(discordBotService);
+
+// Initialize Linear Agent Service and Router for Linear agent integration
+const linearAgentService = new LinearAgentService();
+linearAgentService.setSettingsService(settingsService, REPO_ROOT);
+const linearAgentRouter = new LinearAgentRouter(
+  events,
+  roleRegistryService,
+  linearAgentService,
+  settingsService,
+  REPO_ROOT
+);
+linearAgentRouter.start();
 
 // Initialize Scheduler Service with event emitter and data directory
 const schedulerService = getSchedulerService();
@@ -1351,6 +1365,8 @@ async function gracefulShutdown() {
   schedulerService.stop();
   terminalService.cleanup();
   worktreeLifecycleService.shutdown();
+  linearAgentRouter.stop();
+  agentDiscordRouter.stop();
 
   server.close(() => {
     logger.info('Server closed');
