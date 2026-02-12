@@ -510,6 +510,34 @@ kill_port() {
     return 1
 }
 
+kill_zombie_processes() {
+    # Kill stale automaker-related node processes (tsx watchers, old server instances, orphaned agents)
+    # This prevents zombie processes from interfering with startup
+    local script_dir
+    script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+    if [ "$IS_WINDOWS" = true ]; then
+        return 0 # Windows handles this differently
+    fi
+
+    # Find and kill tsx watch processes for this project
+    local zombie_pids
+    zombie_pids=$(pgrep -f "tsx.*watch.*src/index.ts" 2>/dev/null | head -20 || true)
+    if [ -n "$zombie_pids" ]; then
+        echo "${C_YELLOW}Killing stale tsx watcher processes...${RESET}"
+        echo "$zombie_pids" | xargs kill -9 2>/dev/null || true
+        sleep 1
+    fi
+
+    # Kill orphaned vite dev server processes for this project
+    zombie_pids=$(pgrep -f "vite.*dev.*3007" 2>/dev/null | head -20 || true)
+    if [ -n "$zombie_pids" ]; then
+        echo "${C_YELLOW}Killing stale Vite processes...${RESET}"
+        echo "$zombie_pids" | xargs kill -9 2>/dev/null || true
+        sleep 1
+    fi
+}
+
 check_ports() {
     # Auto-discover available ports (no user interaction required)
     local web_in_use=false
@@ -794,109 +822,17 @@ resolve_port_conflicts() {
 
     if [ "$web_in_use" = true ] || [ "$server_in_use" = true ]; then
         echo ""
+        # Auto-kill processes on conflicting ports (no prompt)
         if [ "$web_in_use" = true ]; then
-            center_print "Port $DEFAULT_WEB_PORT in use (PID: $web_pids)" "$C_YELLOW"
+            center_print "Port $DEFAULT_WEB_PORT in use (PID: $web_pids) — killing..." "$C_YELLOW"
+            kill_port "$DEFAULT_WEB_PORT" > /dev/null 2>&1 || true
+            center_print "✓ Port $DEFAULT_WEB_PORT is now free" "$C_GREEN"
         fi
         if [ "$server_in_use" = true ]; then
-            center_print "Port $DEFAULT_SERVER_PORT in use (PID: $server_pids)" "$C_YELLOW"
+            center_print "Port $DEFAULT_SERVER_PORT in use (PID: $server_pids) — killing..." "$C_YELLOW"
+            kill_port "$DEFAULT_SERVER_PORT" > /dev/null 2>&1 || true
+            center_print "✓ Port $DEFAULT_SERVER_PORT is now free" "$C_GREEN"
         fi
-        echo ""
-
-        # Show options
-        center_print "What would you like to do?" "$C_WHITE"
-        echo ""
-        center_print "[Enter] Auto-select available ports (Recommended)" "$C_GREEN"
-        center_print "[K] Kill processes and use default ports" "$C_MUTE"
-        center_print "[C] Choose custom ports" "$C_MUTE"
-        center_print "[X] Cancel" "$C_RED"
-        echo ""
-
-        while true; do
-            local choice_pad=$(( (TERM_COLS - 20) / 2 ))
-            printf "%${choice_pad}s" ""
-            read -r -p "Choice [Enter]: " choice
-
-            case "$choice" in
-                ""|[aA]|[aA][uU][tT][oO])
-                    # Auto-select: find next available ports
-                    echo ""
-                    local max_port=$((DEFAULT_WEB_PORT + PORT_SEARCH_MAX_ATTEMPTS - 1))
-                    if [ "$web_in_use" = true ]; then
-                        if ! WEB_PORT=$(find_next_available_port "$DEFAULT_WEB_PORT"); then
-                            center_print "No free web port in range ${DEFAULT_WEB_PORT}-${max_port}" "$C_RED"
-                            exit 1
-                        fi
-                    fi
-                    max_port=$((DEFAULT_SERVER_PORT + PORT_SEARCH_MAX_ATTEMPTS - 1))
-                    if [ "$server_in_use" = true ]; then
-                        if ! SERVER_PORT=$(find_next_available_port "$DEFAULT_SERVER_PORT"); then
-                            center_print "No free server port in range ${DEFAULT_SERVER_PORT}-${max_port}" "$C_RED"
-                            exit 1
-                        fi
-                    fi
-                    # Ensure web and server ports don't conflict with each other
-                    if [ "$WEB_PORT" -eq "$SERVER_PORT" ]; then
-                        local conflict_start=$((SERVER_PORT + 1))
-                        max_port=$((conflict_start + PORT_SEARCH_MAX_ATTEMPTS - 1))
-                        if ! SERVER_PORT=$(find_next_available_port "$conflict_start"); then
-                            center_print "No free server port in range ${conflict_start}-${max_port}" "$C_RED"
-                            exit 1
-                        fi
-                    fi
-                    center_print "✓ Auto-selected available ports:" "$C_GREEN"
-                    center_print "  Web: $WEB_PORT  |  Server: $SERVER_PORT" "$C_PRI"
-                    break
-                    ;;
-                [kK]|[kK][iI][lL][lL])
-                    echo ""
-                    if [ "$web_in_use" = true ]; then
-                        center_print "Killing process(es) on port $DEFAULT_WEB_PORT..." "$C_YELLOW"
-                        kill_port "$DEFAULT_WEB_PORT" > /dev/null 2>&1 || true
-                        center_print "✓ Port $DEFAULT_WEB_PORT is now free" "$C_GREEN"
-                    fi
-                    if [ "$server_in_use" = true ]; then
-                        center_print "Killing process(es) on port $DEFAULT_SERVER_PORT..." "$C_YELLOW"
-                        kill_port "$DEFAULT_SERVER_PORT" > /dev/null 2>&1 || true
-                        center_print "✓ Port $DEFAULT_SERVER_PORT is now free" "$C_GREEN"
-                    fi
-                    break
-                    ;;
-                [cC]|[cC][hH][oO][oO][sS][eE])
-                    echo ""
-                    local input_pad=$(( (TERM_COLS - 40) / 2 ))
-                    # Collect both ports first
-                    printf "%${input_pad}s" ""
-                    read -r -p "Enter web port (default $DEFAULT_WEB_PORT): " input_web
-                    input_web=${input_web:-$DEFAULT_WEB_PORT}
-                    printf "%${input_pad}s" ""
-                    read -r -p "Enter server port (default $DEFAULT_SERVER_PORT): " input_server
-                    input_server=${input_server:-$DEFAULT_SERVER_PORT}
-
-                    # Validate both before assigning either
-                    if ! validate_port "$input_web" "Web port"; then
-                        continue
-                    fi
-                    if ! validate_port "$input_server" "Server port"; then
-                        continue
-                    fi
-
-                    # Assign atomically after both validated
-                    WEB_PORT=$input_web
-                    SERVER_PORT=$input_server
-                    center_print "Using ports: Web=$WEB_PORT, Server=$SERVER_PORT" "$C_GREEN"
-                    break
-                    ;;
-                [xX]|[xX][cC][aA][nN][cC][eE][lL])
-                    echo ""
-                    center_print "Cancelled." "$C_MUTE"
-                    echo ""
-                    exit 0
-                    ;;
-                *)
-                    center_print "Invalid choice. Press Enter for auto-select, or K/C/X." "$C_RED"
-                    ;;
-            esac
-        done
     else
         center_print "✓ Port $DEFAULT_WEB_PORT is available" "$C_GREEN"
         center_print "✓ Port $DEFAULT_SERVER_PORT is available" "$C_GREEN"
@@ -917,6 +853,7 @@ launch_sequence() {
 
     # Show port checking for modes that use local ports
     if [[ "$MODE" == "web" || "$MODE" == "electron" ]]; then
+        kill_zombie_processes
         center_print "Checking ports ${DEFAULT_WEB_PORT} and ${DEFAULT_SERVER_PORT}..." "$C_MUTE"
         resolve_port_conflicts
         echo ""

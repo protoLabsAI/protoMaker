@@ -137,6 +137,10 @@ export type EventType =
   | 'linear-monitor:poll-error'
   | 'linear-monitor:project-detected'
   | 'linear-monitor:trigger-error'
+  // Linear agent events (webhook-based agent integration)
+  | 'linear:agent:thought'
+  | 'linear:agent:routed'
+  | 'linear:agent:error'
   // Feature assignment events
   | 'feature-assignment:started'
   | 'feature-assignment:completed'
