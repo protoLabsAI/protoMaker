@@ -9,6 +9,20 @@ import { FeatureLoader } from './feature-loader.js';
 
 const logger = createLogger('MetricsService');
 
+/**
+ * Normalize model identifiers to canonical short names (sonnet, opus, haiku).
+ * Falls back to 'sonnet' since it's the default agent model.
+ */
+function normalizeModelKey(model: string | undefined | null): string {
+  if (!model) return 'sonnet';
+  const lower = model.toLowerCase();
+  if (lower.includes('opus')) return 'opus';
+  if (lower.includes('haiku')) return 'haiku';
+  if (lower.includes('sonnet')) return 'sonnet';
+  // Unknown model string — default to sonnet (the standard agent model)
+  return 'sonnet';
+}
+
 export interface ProjectMetrics {
   // Timing metrics (in milliseconds)
   avgCycleTimeMs: number; // Average time from start to done
@@ -93,7 +107,8 @@ export class MetricsService {
         for (const exec of feature.executionHistory) {
           if (exec.costUsd != null) {
             totalCostUsd += exec.costUsd;
-            costByModel[exec.model] = (costByModel[exec.model] || 0) + exec.costUsd;
+            const modelKey = normalizeModelKey(exec.model);
+            costByModel[modelKey] = (costByModel[modelKey] || 0) + exec.costUsd;
           }
           if (exec.inputTokens != null) totalInputTokens += exec.inputTokens;
           if (exec.outputTokens != null) totalOutputTokens += exec.outputTokens;
@@ -101,8 +116,8 @@ export class MetricsService {
       } else if (feature.costUsd) {
         // Fallback: aggregate cost from feature-level field
         totalCostUsd += feature.costUsd;
-        const model = feature.model || 'unknown';
-        costByModel[model] = (costByModel[model] || 0) + feature.costUsd;
+        const modelKey = normalizeModelKey(feature.model);
+        costByModel[modelKey] = (costByModel[modelKey] || 0) + feature.costUsd;
       }
 
       // Track completion status
