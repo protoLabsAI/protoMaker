@@ -29,6 +29,16 @@ interface MilestoneEventPayload {
 }
 
 /**
+ * Epic completion payload from the event system
+ */
+interface EpicCompletedPayload {
+  projectPath: string;
+  featureId: string;
+  featureTitle: string;
+  isEpic: true;
+}
+
+/**
  * Project completion payload from the event system
  */
 interface ProjectCompletedPayload {
@@ -83,6 +93,11 @@ export class CeremonyService {
         this.handleMilestoneStarted(payload as MilestoneEventPayload);
       } else if (type === 'milestone:completed') {
         this.handleMilestoneCompleted(payload as MilestoneEventPayload);
+      } else if (type === 'feature:completed') {
+        const data = payload as EpicCompletedPayload;
+        if (data.isEpic) {
+          this.handleEpicCompleted(data);
+        }
       } else if (type === 'project:completed') {
         this.handleProjectCompleted(payload as ProjectCompletedPayload);
       }
@@ -186,6 +201,50 @@ export class CeremonyService {
       );
     } catch (error) {
       logger.error('Failed to generate milestone ceremony:', error);
+    }
+  }
+
+  /**
+   * Handle feature:completed event for epics
+   * Generate an epic delivery announcement with child features, PRs, cost, and duration
+   */
+  private async handleEpicCompleted(payload: EpicCompletedPayload): Promise<void> {
+    const { projectPath, featureId, featureTitle } = payload;
+
+    // Check if ceremonies are enabled
+    const ceremonySettings = await this.getCeremonySettings(projectPath);
+    if (!ceremonySettings?.enabled || !ceremonySettings?.enableEpicDelivery) {
+      logger.debug('Epic delivery ceremonies disabled, skipping announcement');
+      return;
+    }
+
+    try {
+      // Load the epic feature to get full details
+      const epic = await this.featureLoader!.get(projectPath, featureId);
+      if (!epic) {
+        logger.warn(`Epic ${featureId} not found for announcement`);
+        return;
+      }
+
+      // Generate the epic delivery announcement
+      const content = await this.generateEpicDeliveryAnnouncement(projectPath, epic);
+
+      // Split into chunks if needed (Discord limit: 2000 chars)
+      const messages = this.splitMessage(content, 2000);
+
+      // Emit Discord events for each message chunk
+      for (const message of messages) {
+        await this.emitDiscordEvent(
+          projectPath,
+          ceremonySettings.discordChannelId,
+          message,
+          `Epic Delivered: ${featureTitle}`
+        );
+      }
+
+      logger.info(`Posted epic delivery announcement for "${featureTitle}"`);
+    } catch (error) {
+      logger.error('Failed to generate epic delivery announcement:', error);
     }
   }
 
@@ -450,6 +509,83 @@ ${dataSummary}`;
       lines.push(`${nextMilestone.phases.length} phases planned`);
     } else {
       lines.push(`**Project Status:** All milestones complete! 🎉`);
+    }
+
+    return lines.join('\n');
+  }
+
+  /**
+   * Generate epic delivery announcement with child features, PRs, cost, and duration
+   */
+  private async generateEpicDeliveryAnnouncement(
+    projectPath: string,
+    epic: Feature
+  ): Promise<string> {
+    // Load all features to find children
+    const allFeatures = await this.featureLoader!.getAll(projectPath);
+    const childFeatures = allFeatures.filter((f) => f.epicId === epic.id && f.id !== epic.id);
+
+    // Calculate metrics
+    const totalCost = childFeatures.reduce((sum, f) => sum + (f.costUsd || 0), 0);
+    const featureCount = childFeatures.length;
+    const prLinks = childFeatures.filter((f) => f.prUrl && f.prNumber).map((f) => f.prUrl);
+
+    // Calculate duration from earliest start to now
+    let duration = '';
+    if (childFeatures.length > 0 && childFeatures[0].startedAt) {
+      const startTimes = childFeatures
+        .map((f) => (f.startedAt ? new Date(f.startedAt).getTime() : 0))
+        .filter((t) => t > 0);
+      if (startTimes.length > 0) {
+        const earliestStart = Math.min(...startTimes);
+        const durationMs = Date.now() - earliestStart;
+        const durationHours = Math.floor(durationMs / (1000 * 60 * 60));
+        const durationDays = Math.floor(durationHours / 24);
+
+        if (durationDays > 0) {
+          duration = `${durationDays}d ${durationHours % 24}h`;
+        } else {
+          duration = `${durationHours}h`;
+        }
+      }
+    }
+
+    // Build the announcement
+    const lines: string[] = [];
+
+    // Header
+    lines.push(`🎁 **${epic.title}** — Epic Delivered!`);
+    lines.push('');
+
+    // Child features shipped
+    lines.push(`**Features Shipped:** ${featureCount}`);
+    if (childFeatures.length > 0) {
+      for (const feature of childFeatures) {
+        const title = feature.title || 'Untitled';
+        const prLink = feature.prUrl ? `[PR#${feature.prNumber}](${feature.prUrl})` : 'No PR';
+        lines.push(`- ${title} — ${prLink}`);
+      }
+      lines.push('');
+    }
+
+    // Cost metrics
+    if (totalCost > 0) {
+      lines.push(`**Total Cost:** $${totalCost.toFixed(2)}`);
+      const avgCost = featureCount > 0 ? totalCost / featureCount : 0;
+      lines.push(`**Avg per Feature:** $${avgCost.toFixed(2)}`);
+      lines.push('');
+    }
+
+    // Duration
+    if (duration) {
+      lines.push(`**Duration:** ${duration}`);
+      lines.push('');
+    }
+
+    // Cost rollup summary
+    if (childFeatures.length > 0) {
+      const shippedCount = childFeatures.filter((f) => f.status === 'done' && f.prUrl).length;
+      lines.push(`**Shipped:** ${shippedCount}/${featureCount} features with PRs`);
     }
 
     return lines.join('\n');
