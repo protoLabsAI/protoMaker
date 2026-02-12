@@ -92,23 +92,26 @@ export class AgentDiscordRouter {
   }
 
   /**
-   * Get the appropriate system prompt for a given agent role.
-   * First checks the registry for a template, falls back to hardcoded prompts.
+   * Get the appropriate system prompt for a given agent.
+   * Checks registry by name, then by role, then hardcoded prompts.
+   * Throws if no prompt can be resolved — never returns a generic fallback.
    */
-  private getRolePrompt(role: AgentRole, username: string): string {
+  private getRolePrompt(agentName: string, username: string): string {
     const projectPath = process.cwd();
 
-    // Try registry first — if a template exists with a systemPrompt, use it
+    // Try registry first — resolve by name or role
     if (this.roleRegistry) {
-      const template = this.roleRegistry.get(role);
+      const template = this.roleRegistry.resolve(agentName);
       if (template?.systemPrompt) {
-        logger.debug(`Using registry template prompt for role "${role}"`);
+        logger.debug(
+          `Using registry template prompt for "${agentName}" (template: ${template.name})`
+        );
         return template.systemPrompt;
       }
     }
 
     // Fall back to hardcoded prompts for known roles
-    switch (role) {
+    switch (agentName) {
       case 'product-manager':
         return getProductManagerPrompt({ projectPath, discordChannels: [], contextFiles: [] });
       case 'engineering-manager':
@@ -124,32 +127,46 @@ export class AgentDiscordRouter {
       case 'docs-engineer':
         return getDocsEngineerPrompt({ projectPath, contextFiles: [] });
       default:
-        logger.warn(`Unknown agent role: ${role}, using generic prompt`);
-        return `You are ${role}. Responding to Discord user ${username}. Keep responses concise and helpful.`;
+        throw new Error(
+          `No prompt found for agent "${agentName}". Agent is not registered or has no system prompt configured.`
+        );
     }
   }
 
   /**
-   * Get the allowed tools for a given agent role.
-   * First checks the registry for a template, falls back to ROLE_CAPABILITIES.
+   * Get the allowed tools for a given agent.
+   * Checks registry by name, then by role, then ROLE_CAPABILITIES.
+   * Throws if no tools can be resolved — never defaults to unrestricted access.
    */
-  private getRoleTools(role: AgentRole): string[] {
-    // Try registry first
+  private getRoleTools(agentName: string): string[] {
+    // Try registry first — resolve by name or role
     if (this.roleRegistry) {
-      const template = this.roleRegistry.get(role);
+      const template = this.roleRegistry.resolve(agentName);
       if (template?.tools) {
-        logger.debug(`Using registry template tools for role "${role}"`);
+        logger.debug(
+          `Using registry template tools for "${agentName}" (template: ${template.name})`
+        );
         return template.tools;
+      }
+      // Template found but no explicit tools — use ROLE_CAPABILITIES by template's role
+      if (template) {
+        const capabilities = ROLE_CAPABILITIES[template.role as AgentRole];
+        if (capabilities) {
+          logger.debug(`Using ROLE_CAPABILITIES for "${agentName}" via role "${template.role}"`);
+          return capabilities.tools;
+        }
       }
     }
 
-    // Fall back to hardcoded capabilities
-    const capabilities = ROLE_CAPABILITIES[role];
-    if (!capabilities) {
-      logger.warn(`Unknown agent role: ${role}, allowing all tools`);
-      return [];
+    // Try ROLE_CAPABILITIES directly (agentName might be a role name)
+    const capabilities = ROLE_CAPABILITIES[agentName as AgentRole];
+    if (capabilities) {
+      return capabilities.tools;
     }
-    return capabilities.tools;
+
+    throw new Error(
+      `No tools configuration found for agent "${agentName}". Refusing to proceed with unrestricted permissions.`
+    );
   }
 
   /**
@@ -218,11 +235,9 @@ export class AgentDiscordRouter {
   ): Promise<string> {
     logger.debug(`Querying agent ${agentName} with message from ${username}`);
 
-    // Get role-specific system prompt
-    let systemPrompt = this.getRolePrompt(agentName as AgentRole, username);
-
-    // Get role-specific allowed tools
-    const allowedTools = this.getRoleTools(agentName as AgentRole);
+    // Get role-specific system prompt and tools (throws if agent not found)
+    let systemPrompt = this.getRolePrompt(agentName, username);
+    const allowedTools = this.getRoleTools(agentName);
 
     // Load conversation history if in a thread and include it in the system prompt
     if (threadId) {
@@ -251,11 +266,13 @@ export class AgentDiscordRouter {
     }
 
     // Use simpleQuery to get agent response
+    // Pass allowedTools directly — empty array means no tools, undefined means unrestricted.
+    // We always have an explicit tools list here (getRoleTools throws if it can't resolve one).
     const result = await simpleQuery({
       prompt: content,
       systemPrompt,
       cwd: process.cwd(),
-      allowedTools: allowedTools.length > 0 ? allowedTools : undefined,
+      allowedTools,
     });
 
     return result.text;

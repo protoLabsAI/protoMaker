@@ -248,31 +248,20 @@ export class LinearAgentRouter {
   }
 
   /**
-   * Build system prompt from RoleRegistry template
+   * Build system prompt from RoleRegistry template.
+   * Throws if agent type is not registered — no silent fallbacks.
    */
   private buildSystemPrompt(agentType: string, issueContext: IssueContext): string {
-    // Try to get template from registry
-    const template = this.roleRegistry.get(agentType);
+    // Resolve by name or role
+    const template = this.roleRegistry.resolve(agentType);
 
     if (template?.systemPrompt) {
       return template.systemPrompt;
     }
 
-    // Fallback to hardcoded prompts
-    if (agentType === 'jon') {
-      return `You are a Go-To-Market (GTM) agent for Automaker.
-
-Your role is to help with product positioning, messaging, documentation, and customer-facing content.
-
-When responding to Linear issues, provide actionable insights and recommendations based on the issue context.`;
-    }
-
-    // Default Ava agent prompt
-    return `You are Ava, an AI development assistant for Automaker.
-
-Your role is to help with technical questions, code analysis, and development tasks.
-
-When responding to Linear issues, provide clear technical guidance and code examples when relevant.`;
+    throw new Error(
+      `No system prompt found for agent "${agentType}". Agent is not registered or has no prompt configured.`
+    );
   }
 
   /**

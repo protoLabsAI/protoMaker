@@ -69,6 +69,51 @@ describe('RoleRegistryService', () => {
     });
   });
 
+  describe('getByRole', () => {
+    it('returns template by role name', () => {
+      registry.register(makeTemplate({ name: 'jon', role: 'gtm-specialist' }));
+      const template = registry.getByRole('gtm-specialist');
+      expect(template).toBeDefined();
+      expect(template?.name).toBe('jon');
+    });
+
+    it('returns undefined for unknown role', () => {
+      expect(registry.getByRole('nonexistent-role')).toBeUndefined();
+    });
+
+    it('returns first match when multiple templates share a role', () => {
+      registry.register(makeTemplate({ name: 'agent-aa', role: 'backend-engineer' }));
+      registry.register(makeTemplate({ name: 'agent-bb', role: 'backend-engineer', tier: 1 }));
+      const template = registry.getByRole('backend-engineer');
+      expect(template).toBeDefined();
+    });
+  });
+
+  describe('resolve', () => {
+    it('resolves by name first', () => {
+      registry.register(makeTemplate({ name: 'jon', role: 'gtm-specialist' }));
+      const template = registry.resolve('jon');
+      expect(template?.name).toBe('jon');
+    });
+
+    it('falls back to role when name not found', () => {
+      registry.register(makeTemplate({ name: 'jon', role: 'gtm-specialist' }));
+      const template = registry.resolve('gtm-specialist');
+      expect(template?.name).toBe('jon');
+    });
+
+    it('returns undefined when neither name nor role matches', () => {
+      expect(registry.resolve('nonexistent')).toBeUndefined();
+    });
+
+    it('prefers name match over role match', () => {
+      registry.register(makeTemplate({ name: 'backend-engineer', role: 'backend-engineer' }));
+      registry.register(makeTemplate({ name: 'custom-be', role: 'backend-engineer', tier: 1 }));
+      const template = registry.resolve('backend-engineer');
+      expect(template?.name).toBe('backend-engineer');
+    });
+  });
+
   describe('has', () => {
     it('returns true for registered template', () => {
       registry.register(makeTemplate());

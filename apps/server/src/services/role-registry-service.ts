@@ -67,6 +67,24 @@ export class RoleRegistryService {
   }
 
   /**
+   * Get a template by role (e.g., 'gtm-specialist'). Returns the first match.
+   * Use this when you have a role name but not the template name.
+   */
+  getByRole(role: string): AgentTemplate | undefined {
+    for (const template of this.templates.values()) {
+      if (template.role === role) return template;
+    }
+    return undefined;
+  }
+
+  /**
+   * Get a template by name or role. Tries name first, then role.
+   */
+  resolve(nameOrRole: string): AgentTemplate | undefined {
+    return this.templates.get(nameOrRole) ?? this.getByRole(nameOrRole);
+  }
+
+  /**
    * Check if a template exists.
    */
   has(name: string): boolean {
