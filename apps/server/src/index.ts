@@ -124,6 +124,7 @@ import { AuditService } from './services/audit-service.js';
 import { PRFeedbackService } from './services/pr-feedback-service.js';
 import { WorktreeLifecycleService } from './services/worktree-lifecycle-service.js';
 import { DiscordBotService } from './services/discord-bot-service.js';
+import { RoleRegistryService } from './services/role-registry-service.js';
 // import { ReconciliationService } from './services/reconciliation-service.js'; // TODO: Re-enable when implemented
 // import { GitHubStateChecker } from './services/github-state-checker.js'; // TODO: Re-enable when implemented
 import { ProjectService } from './services/project-service.js';
@@ -431,10 +432,13 @@ const discordBotService = new DiscordBotService(
 );
 void discordBotService.initialize();
 
+// Initialize Role Registry (shared agent template registry)
+const roleRegistryService = new RoleRegistryService(events);
+
 // Initialize Agent Discord Router for agent-to-Discord message routing
 // Must be imported after DiscordBotService is initialized
 const { AgentDiscordRouter } = await import('./services/agent-discord-router.js');
-const agentDiscordRouter = new AgentDiscordRouter(events, discordBotService);
+const agentDiscordRouter = new AgentDiscordRouter(events, discordBotService, roleRegistryService);
 agentDiscordRouter.start();
 
 // Initialize Scheduler Service with event emitter and data directory
