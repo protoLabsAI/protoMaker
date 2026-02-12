@@ -41,7 +41,17 @@ export class DiscordMonitor {
   /** Active polling intervals */
   private intervals = new Map<string, NodeJS.Timeout>();
 
+  /** Discord bot service for reading messages */
+  private discordBotService: any;
+
   constructor(private events: EventEmitter) {}
+
+  /**
+   * Set the Discord bot service for message fetching
+   */
+  setDiscordBotService(service: any): void {
+    this.discordBotService = service;
+  }
 
   /**
    * Start monitoring a Discord channel
@@ -137,19 +147,31 @@ export class DiscordMonitor {
 
   /**
    * Fetch recent messages from a Discord channel
-   *
-   * This is a placeholder - actual implementation would use Discord MCP tools
-   * or Discord.js library depending on how Discord integration is configured.
    */
   private async fetchMessages(channelId: string, limit: number): Promise<DiscordMessageItem[]> {
-    // TODO: Implement actual Discord message fetching
-    // Options:
-    // 1. Use Discord MCP tools (mcp__plugin_automaker_discord__discord_read_messages)
-    // 2. Use Discord.js library
-    // 3. Use Discord REST API directly
+    if (!this.discordBotService) {
+      logger.warn('DiscordBotService not configured - cannot fetch messages');
+      return [];
+    }
 
-    // For now, return empty array (will be implemented when Discord integration is configured)
-    return [];
+    try {
+      const messages = await this.discordBotService.readMessages(channelId, limit);
+
+      // Map from DiscordBotService message format to DiscordMessageItem
+      return messages.map((msg: any) => ({
+        id: msg.id,
+        channelId,
+        authorId: msg.author?.id || '',
+        authorName: msg.author?.username || 'Unknown',
+        content: msg.content,
+        timestamp: msg.timestamp || new Date().toISOString(),
+        mentions: msg.mentions || [],
+        hasAttachments: msg.hasAttachments || false,
+      }));
+    } catch (error) {
+      logger.error(`Failed to fetch messages from channel ${channelId}:`, error);
+      return [];
+    }
   }
 
   /**

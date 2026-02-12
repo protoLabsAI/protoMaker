@@ -144,6 +144,13 @@ export class HeadsdownService {
   }
 
   /**
+   * Set the Discord bot service for message fetching
+   */
+  setDiscordBotService(service: any): void {
+    this.discordMonitor.setDiscordBotService(service);
+  }
+
+  /**
    * Start a headsdown agent
    */
   async startAgent(config: HeadsdownConfig): Promise<string> {
