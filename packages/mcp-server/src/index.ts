@@ -1653,6 +1653,133 @@ const tools: Tool[] = [
       required: ['projectPath'],
     },
   },
+
+  // ========== Setup Pipeline ==========
+  {
+    name: 'research_repo',
+    description:
+      'Scan a repository to detect its current tech stack, structure, and configuration. Returns detailed research results including monorepo setup, frontend/backend frameworks, testing, CI/CD, and more. Pure heuristics, no AI calls.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the repository to scan',
+        },
+      },
+      required: ['projectPath'],
+    },
+  },
+  {
+    name: 'analyze_gaps',
+    description:
+      'Compare repository research results against the ProtoLabs gold standard. Returns a structured gap analysis report with alignment score, gaps by severity (critical/recommended/optional), and compliant items.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        research: {
+          type: 'object',
+          description: 'RepoResearchResult from research_repo tool',
+        },
+        skipChecks: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Array of gap IDs to skip (e.g., ["storybook", "payload"])',
+        },
+      },
+      required: ['projectPath', 'research'],
+    },
+  },
+  {
+    name: 'propose_alignment',
+    description:
+      'Convert gap analysis into alignment features organized into milestones. Optionally creates features on the Automaker board. Returns milestone breakdown with estimated effort.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        gapAnalysis: {
+          type: 'object',
+          description: 'GapAnalysisReport from analyze_gaps tool',
+        },
+        autoCreate: {
+          type: 'boolean',
+          description:
+            'If true, creates features on the board immediately. Default: false (returns proposal for review).',
+        },
+      },
+      required: ['projectPath', 'gapAnalysis'],
+    },
+  },
+  {
+    name: 'provision_discord',
+    description:
+      'Create Discord category and channels for a project. Creates a category named after the project with #general, #updates, and #dev channels.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        projectName: {
+          type: 'string',
+          description: 'Project name for the Discord category',
+        },
+        guildId: {
+          type: 'string',
+          description: 'Discord server (guild) ID',
+        },
+      },
+      required: ['projectPath', 'projectName', 'guildId'],
+    },
+  },
+  {
+    name: 'setup_beads',
+    description:
+      'Initialize Beads task tracker for a project. Runs bd init and configures no-daemon mode. Idempotent - safe to call on already-initialized projects.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+      },
+      required: ['projectPath'],
+    },
+  },
+  {
+    name: 'run_full_setup',
+    description:
+      'Run the complete setup pipeline: research repo, analyze gaps, initialize .automaker, and generate proposal. This is a convenience wrapper that chains research_repo → analyze_gaps → setup_lab → propose_alignment.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        skipChecks: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Array of gap IDs to skip',
+        },
+        autoCreate: {
+          type: 'boolean',
+          description: 'If true, creates alignment features on the board. Default: false.',
+        },
+      },
+      required: ['projectPath'],
+    },
+  },
 ];
 
 // Tool implementations
@@ -2238,6 +2365,84 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       return apiCall('/goap/status', {
         projectPath: args.projectPath,
       });
+
+    // Setup Pipeline
+    case 'research_repo':
+      return apiCall('/setup/research', {
+        projectPath: args.projectPath,
+      });
+
+    case 'analyze_gaps':
+      return apiCall('/setup/gap-analysis', {
+        projectPath: args.projectPath,
+        research: args.research,
+        skipChecks: args.skipChecks,
+      });
+
+    case 'propose_alignment':
+      return apiCall('/setup/propose', {
+        projectPath: args.projectPath,
+        gapAnalysis: args.gapAnalysis,
+        autoCreate: args.autoCreate ?? false,
+      });
+
+    case 'provision_discord':
+      return apiCall('/setup/discord-provision', {
+        projectPath: args.projectPath,
+        projectName: args.projectName,
+        guildId: args.guildId,
+      });
+
+    case 'setup_beads':
+      return apiCall('/setup/beads', {
+        projectPath: args.projectPath,
+      });
+
+    case 'run_full_setup': {
+      // Chain: research → gap analysis → setup lab → propose
+      const researchResult = (await apiCall('/setup/research', {
+        projectPath: args.projectPath,
+      })) as { success?: boolean; research?: Record<string, unknown> };
+
+      if (!researchResult.success || !researchResult.research) {
+        return { success: false, error: 'Research phase failed', research: researchResult };
+      }
+
+      const gapResult = (await apiCall('/setup/gap-analysis', {
+        projectPath: args.projectPath,
+        research: researchResult.research,
+        skipChecks: args.skipChecks,
+      })) as { success?: boolean; report?: Record<string, unknown> };
+
+      if (!gapResult.success || !gapResult.report) {
+        return {
+          success: false,
+          error: 'Gap analysis phase failed',
+          research: researchResult.research,
+          gapAnalysis: gapResult,
+        };
+      }
+
+      // Initialize .automaker
+      const setupResult = await apiCall('/setup/project', {
+        projectPath: args.projectPath,
+      });
+
+      // Generate proposal
+      const proposalResult = (await apiCall('/setup/propose', {
+        projectPath: args.projectPath,
+        gapAnalysis: gapResult.report,
+        autoCreate: args.autoCreate ?? false,
+      })) as { success?: boolean; proposal?: Record<string, unknown> };
+
+      return {
+        success: true,
+        research: researchResult.research,
+        gapAnalysis: gapResult.report,
+        setup: setupResult,
+        proposal: proposalResult.proposal,
+      };
+    }
 
     default:
       throw new Error(`Unknown tool: ${name}`);

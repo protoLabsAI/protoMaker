@@ -41,6 +41,11 @@ import {
   createGetExampleConfigHandler,
 } from './routes/cursor-config.js';
 import { createSetupProjectHandler } from './routes/project.js';
+import { createResearchHandler } from './routes/research.js';
+import { createGapAnalysisHandler } from './routes/gap-analysis.js';
+import { createProposeHandler } from './routes/propose.js';
+import { createDiscordProvisionHandler } from './routes/discord-provision.js';
+import { createBeadsSetupHandler } from './routes/beads.js';
 import type { SettingsService } from '../../services/settings-service.js';
 
 export function createSetupRoutes(settingsService: SettingsService): Router {
@@ -92,6 +97,13 @@ export function createSetupRoutes(settingsService: SettingsService): Router {
 
   // Project setup routes
   router.post('/project', createSetupProjectHandler(settingsService));
+
+  // Setup pipeline routes
+  router.post('/research', createResearchHandler());
+  router.post('/gap-analysis', createGapAnalysisHandler());
+  router.post('/propose', createProposeHandler());
+  router.post('/discord-provision', createDiscordProvisionHandler());
+  router.post('/beads', createBeadsSetupHandler());
 
   return router;
 }

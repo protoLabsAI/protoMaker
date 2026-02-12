@@ -1,276 +1,284 @@
 ---
 name: setuplab
-description: Set up a laboratory environment for a project. Initialize project structure, configure settings, and prepare for feature development.
+description: Point at any repo — scan it, measure the gap against our gold standard, initialize automation, and propose alignment work. The entry point for onboarding projects to ProtoLabs.
 argument-hint: <project path (relative or absolute)>
 allowed-tools:
   - AskUserQuestion
+  - Bash
+  - Read
+  - Glob
+  - Grep
   - Task
-  - mcp__plugin_automaker_automaker__setup_lab
   - mcp__plugin_automaker_automaker__health_check
-model: haiku
+  - mcp__plugin_automaker_automaker__setup_lab
+  - mcp__plugin_automaker_automaker__research_repo
+  - mcp__plugin_automaker_automaker__analyze_gaps
+  - mcp__plugin_automaker_automaker__propose_alignment
+  - mcp__plugin_automaker_automaker__provision_discord
+  - mcp__plugin_automaker_automaker__setup_beads
+  - mcp__plugin_automaker_automaker__run_full_setup
+  - mcp__plugin_automaker_automaker__create_feature
+  - mcp__plugin_automaker_automaker__set_feature_dependencies
+  - mcp__plugin_automaker_automaker__create_context_file
+  - mcp__plugin_automaker_automaker__update_project_spec
+  - mcp__plugin_automaker_discord__discord_create_category
+  - mcp__plugin_automaker_discord__discord_create_text_channel
+  - mcp__plugin_automaker_discord__discord_create_webhook
+model: sonnet
 ---
 
-# Setup Lab Command
+# /setuplab — ProtoLabs Agency Setup Pipeline
 
-Initialize a laboratory environment for a project with project structure, configuration, and settings.
+You are the ProtoLabs setup orchestrator. Your job is to take any repository, assess its current state against **our gold standard**, and bring it into alignment.
 
-## Capabilities
+**This is prescriptive, not adaptive.** We define the standard, measure the gap, and propose the alignment work. We don't accommodate — we upgrade.
 
-You can:
+## Our Gold Standard
 
-- **Check server health**: Verify Automaker server is running
-- **Validate project path**: Ensure the path exists and is accessible
-- **Initialize project structure**: Set up .automaker directory and required files
-- **Configure project settings**: Create default configuration files
-- **Display setup results**: Show what was initialized and next steps
-- **Handle errors gracefully**: Provide clear error messages for invalid paths or setup failures
+| Layer            | Standard                                                                   |
+| ---------------- | -------------------------------------------------------------------------- |
+| **Monorepo**     | pnpm + Turborepo, `apps/` + `packages/` (or `libs/`)                       |
+| **Frontend**     | React 19 + Next.js 15, app router                                          |
+| **UI**           | Tailwind CSS 4 + shadcn/ui + Radix primitives                              |
+| **Components**   | Storybook 10+ (nextjs-vite adapter)                                        |
+| **Testing**      | Vitest (unit/integration) + Playwright (E2E)                               |
+| **Linting**      | ESLint 9 flat config + typescript-eslint strict                            |
+| **Formatting**   | Prettier                                                                   |
+| **Type Safety**  | TypeScript 5.5+ strict, composite tsconfig per package                     |
+| **CI/CD**        | GitHub Actions (build, test, format, audit, CodeRabbit), branch protection |
+| **Automation**   | `.automaker/` + `.beads/` + Discord project channels                       |
+| **Git workflow** | Squash-only, branch protection, Graphite stacking                          |
 
-## Workflow
+## Pipeline Flow
 
-### Step 1: Initial Validation
+Execute these phases in order, presenting results to the user between phases.
 
-Check if Automaker server is running:
+### Phase 1: Health Check & Path Resolution
 
-```
-mcp__plugin_automaker_automaker__health_check()
-```
+1. Verify Automaker server is running:
 
-If it fails, inform the user: "Automaker server is not running. Start it with `npm run dev` in the automaker directory."
+   ```
+   mcp__plugin_automaker_automaker__health_check()
+   ```
 
-### Step 2: Get Project Path
+   If down, tell the user: "Automaker server is not running. Start it with `npm run dev` in the automaker directory."
 
-Parse the user's argument to get the project path:
+2. Resolve the project path from the user's argument:
+   - If provided, resolve to absolute path
+   - If not provided, ask the user
+   - Handle `~` expansion and relative paths
+   - Validate the path exists and is a directory
 
-- If the user provided a path, use it (relative or absolute)
-- If no path provided, ask the user for the project path:
+### Phase 2: Repository Research
 
-```
-header: "Project Path"
-question: "What project path should we set up as a lab?"
-options:
-  - label: "Current directory (.)"
-    description: "Use the current working directory"
-  - label: "Custom path"
-    description: "Specify a different directory"
-```
-
-Resolve relative paths to absolute paths:
-
-- If path starts with `/`, it's already absolute
-- Otherwise, resolve it relative to the current working directory
-- Handle `~` expansion for home directory paths
-- Validate the path exists and is a directory
-
-### Step 3: Call Setup Lab Tool
-
-Invoke the setup_lab MCP tool with the resolved path:
+Scan the target repo to understand its current state:
 
 ```
-mcp__plugin_automaker_automaker__setup_lab({
-  projectPath: <resolved path>,
-})
+mcp__plugin_automaker_automaker__research_repo({ projectPath })
 ```
 
-The tool will:
+**Present results to the user:**
 
-- Create `.automaker/` directory if it doesn't exist
-- Initialize default configuration files
-- Set up context directory for agent prompts
-- Create or update settings.json
-- Create or update spec.md
-- Return status of what was initialized
+```markdown
+## Repository Research: {projectName}
 
-### Step 4: Display Results
+**Git:** {isRepo ? remoteUrl : "Not a git repo"}
+**Package Manager:** {packageManager}
+**Monorepo:** {isMonorepo ? tool : "No"}
 
-Show the user what was set up:
+### Detected Stack
+
+- **Frontend:** {framework} {reactVersion} + {metaFramework} {metaFrameworkVersion}
+- **Styling:** {hasTailwind ? "Tailwind " + tailwindVersion : "None"} | {hasShadcn ? "shadcn/ui" : "No shadcn"}
+- **Backend:** {hasExpress ? "Express" : ""} {hasPayload ? "Payload " + payloadVersion : ""} {database}
+- **Testing:** {hasVitest ? "Vitest" : ""} {hasPlaywright ? "Playwright" : ""} {hasJest ? "Jest (legacy)" : ""}
+- **CI/CD:** {hasCI ? provider + " (" + workflows.length + " workflows)" : "None"}
+- **Quality:** {hasTypeScript ? "TS " + tsVersion + (tsStrict ? " strict" : "") : "No TS"} | {hasESLint ? "ESLint " + eslintVersion : "No ESLint"} | {hasPrettier ? "Prettier" : "No Prettier"}
+- **Automation:** {hasAutomaker ? ".automaker" : "No .automaker"} | {hasBeads ? ".beads" : "No .beads"}
+```
+
+### Phase 3: Gap Analysis
+
+Compare against our standard:
 
 ```
-## Lab Setup Complete ✓
+mcp__plugin_automaker_automaker__analyze_gaps({ projectPath, research })
+```
 
-**Project:** <projectPath>
+**Present the gap report:**
 
-### Initialized:
-- ✓ .automaker/ directory
-- ✓ .automaker/context/ (for context files)
-- ✓ .automaker/settings.json (project settings)
-- ✓ .automaker/spec.md (project specification)
+```markdown
+## Gap Analysis — {overallScore}% aligned
+
+### Summary
+
+- **Critical:** {summary.critical} (must fix for agents to work)
+- **Recommended:** {summary.recommended} (needed for full automation)
+- **Optional:** {summary.optional} (nice to have)
+- **Compliant:** {summary.compliant} (already meets standard)
+
+### Critical Gaps
+
+{for each critical gap:}
+| {title} | Current: {current} | Target: {target} | Effort: {effort} |
+
+### Recommended Gaps
+
+{for each recommended gap:}
+| {title} | Current: {current} | Target: {target} | Effort: {effort} |
+
+### Optional Gaps
+
+{for each optional gap:}
+| {title} | Current: {current} | Target: {target} | Effort: {effort} |
+
+### Already Compliant
+
+{for each compliant item:}
+
+- {title}: {detail}
+```
+
+### Phase 4: Ask to Proceed
+
+```
+AskUserQuestion:
+  header: "Proceed"
+  question: "Ready to initialize automation and create alignment features?"
+  options:
+    - label: "Full setup"
+      description: "Initialize .automaker, set up Beads, create board features"
+    - label: "Init only"
+      description: "Just initialize .automaker and context files, skip board features"
+    - label: "Review first"
+      description: "Let me review the gap report before proceeding"
+```
+
+### Phase 5: Initialize
+
+**5a. Automaker Init:**
+
+```
+mcp__plugin_automaker_automaker__setup_lab({ projectPath })
+```
+
+Then create tailored context files based on research results:
+
+- Create `.automaker/context/CLAUDE.md` with project-specific commands, architecture notes, and conventions detected from research
+- Create `.automaker/context/coding-rules.md` with rules appropriate for the detected tech stack (TypeScript, React, Python as applicable)
+- Update `.automaker/spec.md` with a project overview generated from research data
+
+Use `mcp__plugin_automaker_automaker__create_context_file` and `mcp__plugin_automaker_automaker__update_project_spec` to write these.
+
+**5b. Discord Provisioning (ask first):**
+
+```
+AskUserQuestion:
+  header: "Discord"
+  question: "Set up Discord channels for this project?"
+  options:
+    - label: "Yes"
+      description: "Create category with #general, #updates, #dev channels"
+    - label: "Skip"
+      description: "No Discord integration for now"
+```
+
+If yes, use the Discord MCP tools to create channels:
+
+1. `mcp__plugin_automaker_discord__discord_create_category({ guildId, name: projectName })`
+2. Create channels: general, updates, dev under the category
+3. Create webhook on updates channel
+
+**5c. Beads Init:**
+
+```
+mcp__plugin_automaker_automaker__setup_beads({ projectPath })
+```
+
+### Phase 6: Propose Alignment Work
+
+Generate the alignment proposal:
+
+```
+mcp__plugin_automaker_automaker__propose_alignment({ projectPath, gapAnalysis })
+```
+
+**Present the proposal:**
+
+```markdown
+## Alignment Proposal — {totalFeatures} features across {milestones.length} milestones
+
+### Estimated Effort
+
+- Small: {estimatedEffort.small} features
+- Medium: {estimatedEffort.medium} features
+- Large: {estimatedEffort.large} features
+
+{for each milestone:}
+
+### Milestone: {title}
+
+{for each feature:}
+
+- [{complexity}] {title} (Priority: {priority})
+  {description (first line)}
+```
+
+Ask if the user wants to create these features:
+
+```
+AskUserQuestion:
+  header: "Create features"
+  question: "Create these {totalFeatures} alignment features on the board?"
+  options:
+    - label: "Create all"
+      description: "Create all features with milestones and dependencies"
+    - label: "Critical only"
+      description: "Only create features for critical gaps"
+    - label: "Skip"
+      description: "Don't create features yet"
+```
+
+If approved, create features on the board:
+
+1. Create an epic for each milestone using `create_feature` with `isEpic: true`
+2. Create individual features under each epic with proper descriptions and complexity
+3. Set up dependencies between milestones using `set_feature_dependencies`:
+   - Quality Gates depends on Foundation
+   - Testing depends on Foundation
+   - UI & Components has no hard dependencies
+   - Automation & Agents depends on Quality Gates
+
+### Phase 7: Summary
+
+```markdown
+## Setup Complete
+
+**Project:** {projectName}
+**Alignment Score:** {overallScore}%
+
+### What was done:
+
+- Scanned repository structure and tech stack
+- Analyzed {gaps.length} gaps against ProtoLabs standard
+- Initialized .automaker/ with tailored context files
+  {if beads initialized:}- Initialized .beads/ task tracker
+  {if discord provisioned:}- Created Discord channels
+  {if features created:}- Created {featuresCreated} alignment features on the board
 
 ### Next Steps:
-1. View your project setup: Use `/board` to see the Kanban board
-2. Create your first feature: Use `/board` to add features
-3. Configure project rules: Use `/context` to add coding standards
-4. Start auto-mode: Use `/auto-mode` to begin autonomous feature processing
 
-### Quick Commands:
-- View board: `/board`
-- Create feature: `/board` then "Create feature"
-- Add context: `/context` then "Create context file"
-- Start work: `/auto-mode start`
+1. Review the board: `/board`
+2. Start agents on alignment work: `/auto-mode start {projectPath}`
+3. Monitor progress: `/board`
+4. Customize context: `/context`
 ```
 
-### Step 5: Error Handling
+## Important Notes
 
-If setup fails:
-
-**Invalid Path:**
-
-```
-❌ Setup Failed: Path does not exist
-
-The path you provided does not exist or is not accessible:
-  <path>
-
-Please check:
-- The path is correct
-- The directory exists
-- You have read/write permissions
-
-Try again with a valid project path.
-```
-
-**Permission Error:**
-
-```
-❌ Setup Failed: Permission Denied
-
-Could not write to the project directory:
-  <path>
-
-Please check:
-- You have write permissions to the directory
-- The directory is not read-only
-- You are not running inside a system-protected location
-
-Try again with a writable directory.
-```
-
-**Server Error:**
-
-```
-❌ Setup Failed: Server Error
-
-The Automaker server encountered an error while setting up the lab.
-
-Error: <error message>
-
-Try:
-1. Check the server logs
-2. Restart the server: `npm run dev`
-3. Try again with a different project path
-```
-
-## Usage Examples
-
-### Example 1: Current Directory
-
-```
-/setuplab .
-```
-
-Sets up the current directory as a lab.
-
-### Example 2: Relative Path
-
-```
-/setuplab my-project
-```
-
-Sets up `my-project/` relative to current directory.
-
-### Example 3: Absolute Path
-
-```
-/setuplab /path/to/my-project
-```
-
-Sets up the absolute path.
-
-### Example 4: Home Directory
-
-```
-/setuplab ~/projects/new-app
-```
-
-Sets up a directory in the home folder.
-
-## Edge Cases
-
-### Already Initialized
-
-If the project is already initialized (`.automaker/` exists):
-
-```
-## Lab Already Initialized ℹ️
-
-The project is already set up as a lab:
-  <projectPath>
-
-Would you like to:
-  [ ] Reset and reinitialize (clears existing configuration)
-  [ ] Keep existing and continue
-  [ ] View current configuration
-  [ ] Update settings
-```
-
-### Empty Project
-
-If the project directory is empty:
-
-```
-## Lab Setup Complete ✓
-
-Created new project lab structure in:
-  <projectPath>
-
-This is a fresh start! You can now:
-1. Create your first feature
-2. Add context files with project rules
-3. Configure your project specification
-4. Start building!
-```
-
-### Nested in Git Repo
-
-If the project path is inside a git repository:
-
-```
-## Lab Initialized in Git Repo
-
-Project path is inside a git repository:
-  <projectPath>
-
-Automaker will:
-- Use git for version control
-- Create worktrees for feature branches
-- Manage PRs and merges
-
-All features will be tracked in git!
-```
-
-## Output Format
-
-Use status icons for clarity:
-
-- ✓ Success / Created
-- ℹ️ Information / Already exists
-- ⚠️ Warning / Needs attention
-- ❌ Error / Failed
-
-Example:
-
-```
-## Setup Progress
-
-✓ Created .automaker/ directory
-✓ Initialized settings.json
-✓ Created context/ for agent prompts
-⚠️ Existing spec.md found (keeping existing)
-✓ Ready for feature development!
-```
-
-## Error Handling
-
-- If server is down, suggest starting it
-- If path is invalid, show what went wrong and ask for correction
-- If permissions issue, explain and suggest workarounds
-- If initialization partially fails, show what succeeded and what failed
+- **Phases 1-4 are non-destructive.** They scan, report, and propose. No code changes.
+- **Phase 5 creates files** (.automaker/, .beads/) but doesn't modify existing code.
+- **Phase 6 creates board features** but doesn't execute them.
+- **Actual code changes** only happen when agents are started (Phase 7 next steps).
+- Always present results between phases so the user stays informed.
+- If any phase fails, show the error and ask if the user wants to continue with remaining phases.

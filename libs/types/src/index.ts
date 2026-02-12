@@ -584,3 +584,21 @@ export type {
 
 // Ceremony types (milestone updates and project retrospectives)
 export type { CeremonyType, MilestoneUpdateData, ProjectRetroData } from './ceremony.js';
+
+// Setup pipeline types (ProtoLabs agency setup)
+export type {
+  RepoResearchResult,
+  GapCategory,
+  GapSeverity,
+  GapEffort,
+  GapItem,
+  ComplianceItem,
+  GapAnalysisReport,
+  ProtolabConfig,
+  DiscordProvisionResult,
+  BeadsSetupResult,
+  AlignmentFeature,
+  AlignmentMilestone,
+  AlignmentProposal,
+  SetupPipelineResult,
+} from './setup.js';
