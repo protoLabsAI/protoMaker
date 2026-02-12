@@ -183,7 +183,7 @@ export interface IdleTaskConfig {
  */
 export interface WorkItem {
   /** Work type */
-  type: 'discord_message' | 'linear_issue' | 'github_pr' | 'idle_task';
+  type: 'discord_message' | 'linear_issue' | 'github_pr' | 'idle_task' | 'state_divergence';
 
   /** Unique work item ID */
   id: string;
@@ -196,6 +196,9 @@ export interface WorkItem {
 
   /** Source URL or reference */
   url?: string;
+
+  /** Where this work item came from (e.g., "desired_state", "goal", "monitor") */
+  source?: string;
 
   /** Additional metadata */
   metadata?: Record<string, unknown>;
