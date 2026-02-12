@@ -1714,16 +1714,48 @@ export class AutoModeService {
             warning: true,
           });
         } else {
-          // Sync failed for other reasons - emit warning but continue (non-blocking)
-          logger.warn(
-            `Failed to sync branch ${branchName}: ${syncResult.error || 'Unknown error'}`
+          // Graphite unavailable or failed — fall back to plain git rebase
+          // This is the critical path: without this, agents start on stale code
+          // when dependency PRs have merged since the worktree was created
+          logger.info(
+            `Graphite sync unavailable for ${branchName}, falling back to git fetch + rebase`
           );
-          this.emitAutoModeEvent('sync_warning', {
-            featureId,
-            branchName,
-            message: `Sync failed: ${syncResult.error || 'Unknown error'}. Continuing with agent execution.`,
-            warning: true,
-          });
+          try {
+            await execAsync('git fetch origin', { cwd: workDir, timeout: 30000 });
+            await execAsync('git rebase origin/main', { cwd: workDir, timeout: 60000 });
+            logger.info(`Branch ${branchName} rebased onto origin/main via git fallback`);
+            this.emitAutoModeEvent('sync_completed', {
+              featureId,
+              branchName,
+              message: 'Branch rebased onto origin/main (git fallback)',
+            });
+          } catch (rebaseError) {
+            const rebaseMsg =
+              rebaseError instanceof Error ? rebaseError.message : String(rebaseError);
+            // If rebase fails (conflicts), abort and let agent work on current state
+            if (rebaseMsg.includes('conflict') || rebaseMsg.includes('CONFLICT')) {
+              logger.warn(`Git rebase encountered conflicts for ${branchName}, aborting rebase`);
+              try {
+                await execAsync('git rebase --abort', { cwd: workDir, timeout: 10000 });
+              } catch {
+                // Abort failed — not much we can do
+              }
+              this.emitAutoModeEvent('sync_warning', {
+                featureId,
+                branchName,
+                message: `Rebase conflicts detected. Agent will work on current branch state.`,
+                warning: true,
+              });
+            } else {
+              logger.warn(`Git rebase failed for ${branchName}: ${rebaseMsg}`);
+              this.emitAutoModeEvent('sync_warning', {
+                featureId,
+                branchName,
+                message: `Git rebase failed: ${rebaseMsg}. Continuing with agent execution.`,
+                warning: true,
+              });
+            }
+          }
         }
       }
 
