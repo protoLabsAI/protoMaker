@@ -196,7 +196,7 @@ export interface HealthCheckPayload {
  * Health check completed event payload structure (from health:check-completed)
  */
 export interface HealthCheckCompletedPayload {
-  projectPath: string;
+  projectPath?: string;
   status: 'healthy' | 'degraded' | 'critical';
   issues?: Array<{ type: string; severity: string; message: string }>;
   metrics?: Record<string, unknown>;
@@ -507,8 +507,8 @@ export class EventHookService {
         .join('; ') || 'No specific issues reported';
 
     const context: HookContext = {
-      projectPath: payload.projectPath,
-      projectName: this.extractProjectName(payload.projectPath),
+      projectPath: payload.projectPath || '',
+      projectName: payload.projectPath ? this.extractProjectName(payload.projectPath) : 'unknown',
       healthStatus: payload.status,
       healthDetails: issueSummary,
       timestamp: payload.timestamp || new Date().toISOString(),

@@ -47,6 +47,7 @@ import { LinearMonitor } from './linear-monitor.js';
 import { GitHubMonitor } from './github-monitor.js';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'node:path';
+import v8 from 'node:v8';
 import { existsSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import type { AgentFactoryService } from './agent-factory-service.js';
@@ -636,9 +637,10 @@ export class HeadsdownService {
       }
     }
 
-    // Populate infrastructure metrics
+    // Populate infrastructure metrics — use v8 heap limit for accurate percentage
     const memUsage = process.memoryUsage();
-    const heapPercent = Math.round((memUsage.heapUsed / memUsage.heapTotal) * 100);
+    const heapLimit = v8.getHeapStatistics().heap_size_limit;
+    const heapPercent = Math.round((memUsage.heapUsed / heapLimit) * 100);
     state.heap_usage_percent = heapPercent;
     state.running_agents = this.agents.size;
 

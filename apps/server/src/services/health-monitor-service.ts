@@ -22,6 +22,7 @@ import * as secureFs from '../lib/secure-fs.js';
 import path from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import v8 from 'v8';
 
 const execAsync = promisify(exec);
 const logger = createLogger('HealthMonitor');
@@ -255,11 +256,12 @@ export class HealthMonitorService {
       status = 'degraded';
     }
 
-    // Get memory metrics
+    // Get memory metrics — use v8 heap limit for accurate percentage
     const memoryUsage = process.memoryUsage();
+    const heapStats = v8.getHeapStatistics();
     const heapUsedMB = memoryUsage.heapUsed / (1024 * 1024);
-    const heapTotalMB = memoryUsage.heapTotal / (1024 * 1024);
-    const memoryUsagePercent = memoryUsage.heapUsed / memoryUsage.heapTotal;
+    const heapTotalMB = heapStats.heap_size_limit / (1024 * 1024);
+    const memoryUsagePercent = memoryUsage.heapUsed / heapStats.heap_size_limit;
 
     const result: HealthCheckResult = {
       timestamp: new Date().toISOString(),
@@ -537,16 +539,21 @@ export class HealthMonitorService {
     const issues: HealthIssue[] = [];
 
     const memoryUsage = process.memoryUsage();
-    const heapUsagePercent = memoryUsage.heapUsed / memoryUsage.heapTotal;
+    const heapStats = v8.getHeapStatistics();
+    // Use heap_size_limit (actual max from --max-old-space-size) instead of heapTotal
+    // V8 grows heapTotal conservatively, so heapUsed/heapTotal reports ~95% when
+    // actual usage is tiny (e.g., 30MB used out of 8GB limit)
+    const heapLimit = heapStats.heap_size_limit;
+    const heapUsagePercent = memoryUsage.heapUsed / heapLimit;
 
     if (heapUsagePercent > MEMORY_WARNING_THRESHOLD) {
       issues.push({
         type: 'high_memory_usage',
         severity: heapUsagePercent > 0.95 ? 'critical' : 'warning',
-        message: `High memory usage: ${Math.round(heapUsagePercent * 100)}% of heap used`,
+        message: `High memory usage: ${Math.round(heapUsagePercent * 100)}% of heap used (${Math.round(memoryUsage.heapUsed / (1024 * 1024))}MB / ${Math.round(heapLimit / (1024 * 1024))}MB limit)`,
         context: {
           heapUsed: memoryUsage.heapUsed,
-          heapTotal: memoryUsage.heapTotal,
+          heapLimit,
           heapUsagePercent,
           external: memoryUsage.external,
           rss: memoryUsage.rss,
