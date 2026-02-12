@@ -248,7 +248,7 @@ claude plugin install automaker
 
 ### Available MCP Tools
 
-The MCP server exposes 35 tools organized by category:
+The MCP server exposes 42+ tools organized by category:
 
 **Feature Management:** `list_features`, `get_feature`, `create_feature`, `update_feature`, `delete_feature`, `move_feature`
 
@@ -263,6 +263,8 @@ The MCP server exposes 35 tools organized by category:
 **Orchestration:** `set_feature_dependencies`, `get_dependency_graph`, `start_auto_mode`, `stop_auto_mode`, `get_auto_mode_status`, `get_execution_order`
 
 **Project Orchestration:** `list_projects`, `get_project`, `create_project`, `update_project`, `delete_project`, `create_project_features`
+
+**Agent Templates:** `list_agent_templates`, `get_agent_template`, `register_agent_template`, `update_agent_template`, `unregister_agent_template`, `execute_dynamic_agent`, `get_role_registry_status`
 
 **GitHub Operations:** `merge_pr`, `check_pr_status`, `resolve_review_threads`
 

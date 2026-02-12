@@ -1,6 +1,50 @@
 # Adding New Team Members
 
-How to add a new agent role to Automaker's multi-agent system. This covers the full lifecycle: type definitions, prompt templates, Discord routing, UI integration, and operational setup.
+How to add a new agent role to Automaker's multi-agent system. There are two approaches:
+
+1. **Dynamic (recommended)** — Register a template at runtime via API/MCP. No code changes needed. See [Agent Templates](./agent-templates.md).
+2. **Static** — Add to the type system, create a prompt, wire Discord routing. Requires code changes and a deploy.
+
+Use the **dynamic** approach for custom roles, experiments, and project-specific agents. Use the **static** approach when adding a new built-in role that should be available to all projects permanently.
+
+## Dynamic Approach (No Code Changes)
+
+Register a template via MCP:
+
+```typescript
+mcp__plugin_automaker_automaker__register_agent_template({
+  template: {
+    name: 'my-custom-agent',
+    displayName: 'My Custom Agent',
+    description: 'Does a specific thing',
+    role: 'backend-engineer', // Base role for capabilities
+    tier: 1,
+    model: 'sonnet',
+    maxTurns: 100,
+    canUseBash: true,
+    canModifyFiles: true,
+    tags: ['custom'],
+  },
+});
+```
+
+Then execute it:
+
+```typescript
+mcp__plugin_automaker_automaker__execute_dynamic_agent({
+  templateName: 'my-custom-agent',
+  projectPath: '/path/to/project',
+  prompt: 'Do the thing',
+});
+```
+
+For full details, see [Agent Templates & Dynamic Role Registry](./agent-templates.md).
+
+---
+
+## Static Approach (Code Changes)
+
+For adding permanent built-in roles to the type system.
 
 ## Quick Reference
 
