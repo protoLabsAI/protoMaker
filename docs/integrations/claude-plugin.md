@@ -301,7 +301,8 @@ Edit `packages/mcp-server/plugins/automaker/.claude-plugin/plugin.json` to use a
       "args": ["/absolute/path/to/automaker/packages/mcp-server/dist/index.js"],
       "env": {
         "AUTOMAKER_API_URL": "http://localhost:3008",
-        "AUTOMAKER_API_KEY": "your-secure-api-key"
+        "AUTOMAKER_API_KEY": "your-secure-api-key",
+        "GH_TOKEN": "${GH_TOKEN}"
       }
     }
   }
@@ -1075,6 +1076,15 @@ Claude: Let me check the agent output.
    /orchestrate
    ```
    The graph view will show any cycles.
+
+### GitHub Operations Fail ("gh auth login" Error)
+
+PR-related tools (`merge_pr`, `resolve_review_threads`, `check_pr_status`) require `GH_TOKEN` to be set in the server's environment:
+
+1. Get your token: `gh auth token`
+2. Add to `.env`: `GH_TOKEN=gho_xxxxx`
+3. Add to `plugin.json` env: `"GH_TOKEN": "${GH_TOKEN}"`
+4. Restart the server and reload the plugin: `npm run plugin:reload`
 
 ### Docker-Specific Issues
 
