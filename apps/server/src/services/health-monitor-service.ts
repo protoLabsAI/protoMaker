@@ -278,6 +278,21 @@ export class HealthMonitorService {
 
     this.lastCheckResult = result;
 
+    // Emit health:issue-detected for critical and warning issues BEFORE auto-remediation
+    if (this.events) {
+      for (const issue of issues) {
+        if (issue.severity === 'critical' || issue.severity === 'warning') {
+          this.events.emit('health:issue-detected', {
+            type: issue.type,
+            severity: issue.severity,
+            message: issue.message,
+            featureId: issue.context.featureId as string | undefined,
+            metrics: result.metrics,
+          });
+        }
+      }
+    }
+
     // Auto-remediate if enabled
     if (this.config.autoRemediate) {
       await this.autoRemediate(issues);
