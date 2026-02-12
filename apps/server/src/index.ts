@@ -440,9 +440,6 @@ const discordBotService = new DiscordBotService(
 );
 void discordBotService.initialize();
 
-// Initialize Role Registry (shared agent template registry)
-const roleRegistryService = new RoleRegistryService(events);
-
 // Initialize Agent Discord Router for agent-to-Discord message routing
 // Must be imported after DiscordBotService is initialized
 const { AgentDiscordRouter } = await import('./services/agent-discord-router.js');
