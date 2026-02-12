@@ -271,9 +271,7 @@ describe('AgentFactoryService', () => {
       expect(config.desiredState).toBeUndefined();
     });
 
-    it('returns undefined when desiredState added but schema strips it (pre-PR #252)', () => {
-      // Until AgentTemplateSchema includes desiredState, Zod strips unknown fields.
-      // This test documents that behavior and will need updating after PR #252 merges.
+    it('passes desiredState through when schema includes it', () => {
       const templateWithState = makeTemplate();
       (templateWithState as Record<string, unknown>).desiredState = [
         { key: 'backlog_count', operator: '>', value: 0, priority: 8 },
@@ -281,8 +279,9 @@ describe('AgentFactoryService', () => {
       registry.register(templateWithState);
 
       const config = factory.createFromTemplate('test-agent', '/project');
-      // Zod strips unknown fields, so desiredState won't survive registration
-      expect(config.desiredState).toBeUndefined();
+      expect(config.desiredState).toBeDefined();
+      expect(config.desiredState).toHaveLength(1);
+      expect(config.desiredState![0].key).toBe('backlog_count');
     });
   });
 });
