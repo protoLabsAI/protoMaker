@@ -30,6 +30,21 @@ Covers:
 
 ### Agent Development
 
+#### [Dynamic Role Registry](./dynamic-role-registry.md)
+
+**Template-based agent creation and execution**
+
+Covers:
+
+- Agent Template Schema (Zod-validated)
+- RoleRegistryService (in-memory template storage with tier enforcement)
+- AgentFactoryService (create configs from templates with overrides/inheritance)
+- DynamicAgentExecutor (execute with system prompt assembly and tool filtering)
+- Assignment routing (Discord, Linear, GitHub)
+- End-to-end flow
+
+**Read this if:** You want to create custom agent types, understand how agents are configured at runtime, or build on the template system.
+
 #### [Adding Agent Teammates](./adding-teammates.md)
 
 **How to add new authority agents (PM, EM, Designer, etc.)**
@@ -58,6 +73,20 @@ Covers:
 - Best practices
 
 **Read this if:** You want to build a multi-agent system where agents coordinate to accomplish complex goals.
+
+#### [Agile Ceremonies](./ceremonies.md)
+
+**Automated standups, retros, and project retrospectives**
+
+Covers:
+
+- Ceremony types (milestone standup, milestone retro, project retro)
+- Configuration in `.automaker/settings.json`
+- Event flow (ProjM → CeremonyService → Discord)
+- Content examples
+- Planned ceremonies (board groom, doc generation)
+
+**Read this if:** You want to understand how automated ceremonies work, configure them for a project, or add new ceremony types.
 
 ### Integration
 
@@ -187,6 +216,10 @@ Covers:
                          │
 ┌────────────────────────▼────────────────────────────────────┐
 │  Service Layer: AgentService, AutoModeService, Authority    │
+└────────────────────────┬────────────────────────────────────┘
+                         │
+┌────────────────────────▼────────────────────────────────────┐
+│  Registry Layer: RoleRegistry, AgentFactory, Executor       │
 └────────────────────────┬────────────────────────────────────┘
                          │
 ┌────────────────────────▼────────────────────────────────────┐
