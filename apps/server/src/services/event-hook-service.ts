@@ -44,14 +44,18 @@ const logger = createLogger('EventHooks');
  * Classify event severity based on trigger type
  *
  * Classification rules:
- * - Critical: feature_error, auto_mode_error
+ * - Critical: feature_error, auto_mode_error, health_check_critical
  * - High: feature_success, auto_mode_complete
  * - Medium: feature_created, feature_retry, feature_recovery
  * - Low: everything else (auto_mode_health_check, skill_created, memory_learning, pr_feedback_received, project_scaffolded, project_deleted)
  */
 function classifySeverity(trigger: EventHookTrigger): EventSeverity {
   // Critical events - require immediate attention
-  if (trigger === 'feature_error' || trigger === 'auto_mode_error') {
+  if (
+    trigger === 'feature_error' ||
+    trigger === 'auto_mode_error' ||
+    trigger === 'health_check_critical'
+  ) {
     return 'critical';
   }
 
@@ -188,6 +192,17 @@ export interface HealthCheckPayload {
 }
 
 /**
+ * Health check completed event payload structure (from health:check-completed)
+ */
+export interface HealthCheckCompletedPayload {
+  projectPath: string;
+  status: 'healthy' | 'degraded' | 'critical';
+  issues?: Array<{ type: string; severity: string; message: string }>;
+  metrics?: Record<string, unknown>;
+  timestamp: string;
+}
+
+/**
  * Project scaffolded event payload structure
  */
 export interface ProjectScaffoldedPayload {
@@ -249,6 +264,8 @@ export class EventHookService {
         this.handleMemoryLearningEvent(payload as MemoryLearningPayload);
       } else if (type === 'auto-mode:health-check') {
         this.handleHealthCheckEvent(payload as HealthCheckPayload);
+      } else if (type === 'health:check-completed') {
+        this.handleHealthCheckCompletedEvent(payload as HealthCheckCompletedPayload);
       } else if (type === 'project:scaffolded') {
         this.handleProjectScaffoldedEvent(payload as ProjectScaffoldedPayload);
       } else if (type === 'project:deleted') {
@@ -464,6 +481,36 @@ export class EventHookService {
     };
 
     await this.executeHooksForTrigger('project_deleted', context);
+  }
+
+  /**
+   * Handle health:check-completed events and trigger matching hooks
+   * Only triggers for critical or degraded status
+   */
+  private async handleHealthCheckCompletedEvent(
+    payload: HealthCheckCompletedPayload
+  ): Promise<void> {
+    // Only trigger hooks for critical or degraded status
+    if (payload.status !== 'critical' && payload.status !== 'degraded') {
+      return;
+    }
+
+    // Build issue summary from issues array
+    const issueSummary =
+      payload.issues
+        ?.map((issue) => `[${issue.severity}] ${issue.type}: ${issue.message}`)
+        .join('; ') || 'No specific issues reported';
+
+    const context: HookContext = {
+      projectPath: payload.projectPath,
+      projectName: this.extractProjectName(payload.projectPath),
+      healthStatus: payload.status,
+      healthDetails: issueSummary,
+      timestamp: payload.timestamp || new Date().toISOString(),
+      eventType: 'health_check_critical',
+    };
+
+    await this.executeHooksForTrigger('health_check_critical', context);
   }
 
   /**

@@ -38,8 +38,9 @@ type BriefingSeverity = 'critical' | 'high' | 'medium' | 'low';
  * Based on importance to Ava's briefing needs
  */
 const TRIGGER_SEVERITY_MAP: Record<EventHookTrigger, BriefingSeverity> = {
-  // Critical: System failures, auto-mode errors
+  // Critical: System failures, auto-mode errors, critical health checks
   auto_mode_error: 'critical',
+  health_check_critical: 'critical',
 
   // High: Feature failures, retries, recoveries
   feature_error: 'high',

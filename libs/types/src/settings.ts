@@ -608,6 +608,7 @@ export const DEFAULT_DISCORD_SETTINGS: DiscordSettings = {
  * - pr_feedback_received: Pull request received feedback that needs addressing
  * - project_scaffolded: A project was scaffolded and features were created
  * - project_deleted: A project was deleted
+ * - health_check_critical: Health check detected critical or degraded status
  */
 export type EventHookTrigger =
   | 'feature_created'
@@ -624,7 +625,8 @@ export type EventHookTrigger =
   | 'project_scaffolded'
   | 'project_deleted'
   | 'milestone_completed'
-  | 'project_completed';
+  | 'project_completed'
+  | 'health_check_critical';
 
 // ============================================================================
 // Git Workflow Settings - Auto commit/push/PR after feature completion
@@ -838,6 +840,7 @@ export const EVENT_HOOK_TRIGGER_LABELS: Record<EventHookTrigger, string> = {
   project_deleted: 'Project deleted',
   milestone_completed: 'Milestone completed',
   project_completed: 'Project completed',
+  health_check_critical: 'Health check critical',
 };
 
 const DEFAULT_CODEX_AUTO_LOAD_AGENTS = false;
