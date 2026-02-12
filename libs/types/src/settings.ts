@@ -1396,7 +1396,7 @@ export interface GlobalSettings {
 
   /**
    * Runtime overrides for agent exposure (CLI skills + Discord slash commands).
-   * Key: agent template name (e.g., "ava", "gtm-specialist").
+   * Key: agent template name (e.g., "ava", "jon").
    * Overrides the template's built-in exposure config.
    */
   agentExposure?: Record<
@@ -2041,7 +2041,7 @@ export const DEFAULT_DISCORD_INTEGRATION: DiscordIntegrationConfig = {
   useWebhook: false,
   userRouting: {
     chukz: { agentType: 'ava', enabled: true },
-    abdelly: { agentType: 'gtm-specialist', enabled: true },
+    abdelly: { agentType: 'jon', enabled: true },
   },
 };
 

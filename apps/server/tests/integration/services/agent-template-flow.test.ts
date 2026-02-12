@@ -41,10 +41,10 @@ describe('Agent Template Flow (integration)', () => {
       expect(config.trustLevel).toBe(2);
     });
 
-    it('creates config from built-in chief-of-staff template (opus)', () => {
+    it('creates config from built-in ava template (opus)', () => {
       registerBuiltInTemplates(registry);
 
-      const config = factory.createFromTemplate('chief-of-staff', '/test/project');
+      const config = factory.createFromTemplate('ava', '/test/project');
 
       expect(config.resolvedModel).toContain('opus');
       expect(config.maxTurns).toBe(200);

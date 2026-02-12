@@ -164,7 +164,7 @@ async function handleSessionCreated(
   const isGtmRelated = gtmKeywords.some((keyword) => prompt.includes(keyword));
 
   // Route to GTM agent if prompt contains GTM keywords, otherwise route to Ava
-  const agentType: 'gtm' | 'ava' = isGtmRelated ? 'gtm' : 'ava';
+  const agentType: 'jon' | 'ava' = isGtmRelated ? 'jon' : 'ava';
 
   events.emit('linear:agent-session:created', {
     sessionId: data.id,

@@ -271,6 +271,12 @@ export class AvaGatewayService {
       return;
     }
 
+    // Suppress startup messages in dev mode to avoid Discord spam
+    if (process.env.NODE_ENV !== 'production') {
+      logger.debug('Skipping Discord startup message (dev mode)');
+      return;
+    }
+
     const message =
       `**Ava Gateway Started**\n\n` +
       `**Status:** Online and monitoring\n` +

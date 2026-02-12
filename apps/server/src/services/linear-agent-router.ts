@@ -21,7 +21,7 @@ interface LinearAgentSessionEvent {
   sessionId: string;
   issueId: string;
   issueIdentifier?: string;
-  agentType: 'gtm' | 'ava';
+  agentType: 'jon' | 'ava';
   teamId?: string;
   trigger?: string;
 }
@@ -259,7 +259,7 @@ export class LinearAgentRouter {
     }
 
     // Fallback to hardcoded prompts
-    if (agentType === 'gtm') {
+    if (agentType === 'jon') {
       return `You are a Go-To-Market (GTM) agent for Automaker.
 
 Your role is to help with product positioning, messaging, documentation, and customer-facing content.

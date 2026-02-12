@@ -4,6 +4,7 @@ import {
   getRecoveryService,
   createRecoveryService,
 } from '../../../src/services/recovery-service.js';
+import type { RecoveryRecord } from '../../../src/services/recovery-service.js';
 import type {
   FailureAnalysis,
   ErrorInfo,
@@ -27,6 +28,21 @@ vi.mock('@automaker/utils', async () => {
     createLogger: vi.fn(() => mockLogger),
   };
 });
+
+// Mock secure-fs for JSONL persistence tests
+const mockSecureFs = vi.hoisted(() => ({
+  existsSync: vi.fn(() => false),
+  mkdir: vi.fn(async () => undefined),
+  appendFile: vi.fn(async () => undefined),
+  readFile: vi.fn(async () => ''),
+  writeFile: vi.fn(async () => undefined),
+}));
+
+vi.mock('../../../src/lib/secure-fs.js', () => mockSecureFs);
+
+vi.mock('@automaker/platform', () => ({
+  getAutomakerDir: vi.fn((p: string) => `${p}/.automaker`),
+}));
 
 describe('recovery-service.ts', () => {
   let service: RecoveryService;
@@ -618,6 +634,172 @@ describe('recovery-service.ts', () => {
       });
 
       expect(instance.getConfig().maxTransientRetries).toBe(10);
+    });
+  });
+
+  describe('JSONL persistence', () => {
+    beforeEach(() => {
+      mockSecureFs.existsSync.mockReturnValue(false);
+      mockSecureFs.mkdir.mockResolvedValue(undefined);
+      mockSecureFs.appendFile.mockResolvedValue(undefined);
+      mockSecureFs.readFile.mockResolvedValue('');
+      mockSecureFs.writeFile.mockResolvedValue(undefined);
+    });
+
+    it('recordRecoveryAttempt writes JSONL line with extra fields', async () => {
+      const strategy = { type: 'retry' as const, delay: 1000 };
+
+      await service.recordRecoveryAttempt('feature-1', strategy, false, '/test/project', {
+        category: 'test_failure',
+        explanation: 'Tests failed',
+        errorMessage: 'vitest failed',
+      });
+
+      expect(mockSecureFs.mkdir).toHaveBeenCalled();
+      expect(mockSecureFs.appendFile).toHaveBeenCalledWith(
+        '/test/project/.automaker/recovery/failures.jsonl',
+        expect.stringContaining('"category":"test_failure"')
+      );
+
+      // Verify the written line is valid JSON
+      const writtenLine = mockSecureFs.appendFile.mock.calls[0][1] as string;
+      expect(writtenLine.endsWith('\n')).toBe(true);
+      const parsed = JSON.parse(writtenLine.trim()) as RecoveryRecord;
+      expect(parsed.featureId).toBe('feature-1');
+      expect(parsed.strategyType).toBe('retry');
+      expect(parsed.success).toBe(false);
+      expect(parsed.category).toBe('test_failure');
+      expect(parsed.errorMessage).toBe('vitest failed');
+    });
+
+    it('readRecoveryLog parses JSONL correctly', async () => {
+      const records: RecoveryRecord[] = [
+        {
+          timestamp: '2026-01-01T00:00:00.000Z',
+          featureId: 'f1',
+          projectPath: '/test/project',
+          category: 'test_failure',
+          strategyType: 'retry',
+          success: false,
+          errorMessage: 'test failed',
+        },
+        {
+          timestamp: '2026-01-01T00:01:00.000Z',
+          featureId: 'f2',
+          projectPath: '/test/project',
+          category: 'transient',
+          strategyType: 'retry',
+          success: true,
+        },
+      ];
+
+      mockSecureFs.existsSync.mockReturnValue(true);
+      mockSecureFs.readFile.mockResolvedValue(
+        records.map((r) => JSON.stringify(r)).join('\n') + '\n'
+      );
+
+      const result = await service.readRecoveryLog('/test/project');
+
+      expect(result).toHaveLength(2);
+      expect(result[0].featureId).toBe('f1');
+      expect(result[0].category).toBe('test_failure');
+      expect(result[1].featureId).toBe('f2');
+      expect(result[1].success).toBe(true);
+    });
+
+    it('readRecoveryLog returns empty array when file does not exist', async () => {
+      mockSecureFs.existsSync.mockReturnValue(false);
+
+      const result = await service.readRecoveryLog('/test/project');
+
+      expect(result).toEqual([]);
+    });
+
+    it('checkAndGenerateLessons triggers after 3+ failures of same category', async () => {
+      const records: RecoveryRecord[] = [
+        {
+          timestamp: '2026-01-01T00:00:00Z',
+          featureId: 'f1',
+          projectPath: '/p',
+          category: 'test_failure',
+          strategyType: 'retry',
+          success: false,
+          errorMessage: 'assertion failed',
+        },
+        {
+          timestamp: '2026-01-01T00:01:00Z',
+          featureId: 'f2',
+          projectPath: '/p',
+          category: 'test_failure',
+          strategyType: 'retry_with_context',
+          success: false,
+          errorMessage: 'vitest error',
+        },
+        {
+          timestamp: '2026-01-01T00:02:00Z',
+          featureId: 'f3',
+          projectPath: '/p',
+          category: 'test_failure',
+          strategyType: 'retry',
+          success: true,
+        },
+      ];
+
+      mockSecureFs.existsSync.mockReturnValue(true);
+      mockSecureFs.readFile.mockResolvedValue(
+        records.map((r) => JSON.stringify(r)).join('\n') + '\n'
+      );
+
+      await service.checkAndGenerateLessons('/test/project', 'test_failure');
+
+      // Should write a context file
+      expect(mockSecureFs.writeFile).toHaveBeenCalledWith(
+        '/test/project/.automaker/context/failure-lessons-test_failure.md',
+        expect.stringContaining('# Failure Lessons: test_failure')
+      );
+
+      // Should emit event
+      expect(mockEvents.emit).toHaveBeenCalledWith('recovery_lesson_generated', {
+        projectPath: '/test/project',
+        category: 'test_failure',
+        totalAttempts: 3,
+        successRate: 33,
+      });
+    });
+
+    it('checkAndGenerateLessons does NOT trigger with fewer than 3 failures', async () => {
+      const records: RecoveryRecord[] = [
+        {
+          timestamp: '2026-01-01T00:00:00Z',
+          featureId: 'f1',
+          projectPath: '/p',
+          category: 'test_failure',
+          strategyType: 'retry',
+          success: false,
+        },
+        {
+          timestamp: '2026-01-01T00:01:00Z',
+          featureId: 'f2',
+          projectPath: '/p',
+          category: 'transient',
+          strategyType: 'retry',
+          success: false,
+        },
+      ];
+
+      mockSecureFs.existsSync.mockReturnValue(true);
+      mockSecureFs.readFile.mockResolvedValue(
+        records.map((r) => JSON.stringify(r)).join('\n') + '\n'
+      );
+
+      await service.checkAndGenerateLessons('/test/project', 'test_failure');
+
+      // Should NOT write a context file (only 1 test_failure record)
+      expect(mockSecureFs.writeFile).not.toHaveBeenCalled();
+      expect(mockEvents.emit).not.toHaveBeenCalledWith(
+        'recovery_lesson_generated',
+        expect.anything()
+      );
     });
   });
 });

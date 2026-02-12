@@ -17,7 +17,24 @@ import type {
 } from '@automaker/types';
 import { DEFAULT_RECOVERY_CONFIG } from '@automaker/types';
 import { createLogger } from '@automaker/utils';
+import { getAutomakerDir } from '@automaker/platform';
+import * as secureFs from '../lib/secure-fs.js';
+import path from 'node:path';
 import type { EventEmitter } from '../lib/events.js';
+
+/**
+ * Structured record of a recovery attempt, persisted to JSONL for learning.
+ */
+export interface RecoveryRecord {
+  timestamp: string;
+  featureId: string;
+  projectPath: string;
+  category: FailureCategory;
+  strategyType: string;
+  success: boolean;
+  errorMessage?: string;
+  explanation?: string;
+}
 
 const logger = createLogger('RecoveryService');
 
@@ -144,23 +161,50 @@ export class RecoveryService {
     });
 
     // Record the recovery attempt for learning
-    await this.recordRecoveryAttempt(featureId, strategy, result.success, projectPath);
+    await this.recordRecoveryAttempt(featureId, strategy, result.success, projectPath, {
+      category: analysis.category,
+      explanation: analysis.explanation,
+      errorMessage: analysis.originalError,
+    });
 
     return result;
   }
 
   /**
-   * Record recovery attempt for learning
+   * Record recovery attempt for learning.
+   * Persists a structured JSONL record and emits an event.
    */
   async recordRecoveryAttempt(
     featureId: string,
     strategy: RecoveryStrategy,
     success: boolean,
-    projectPath: string
+    projectPath: string,
+    extra?: { category?: FailureCategory; explanation?: string; errorMessage?: string }
   ): Promise<void> {
     logger.info(
       `Recording recovery attempt for feature ${featureId}: strategy=${strategy.type}, success=${success}`
     );
+
+    const timestamp = new Date().toISOString();
+
+    // Persist to JSONL
+    const record: RecoveryRecord = {
+      timestamp,
+      featureId,
+      projectPath,
+      category: extra?.category ?? 'unknown',
+      strategyType: strategy.type,
+      success,
+      errorMessage: extra?.errorMessage,
+      explanation: extra?.explanation,
+    };
+
+    await this.appendRecoveryRecord(projectPath, record);
+
+    // Check if we should generate lessons for this category
+    if (!success && extra?.category) {
+      await this.checkAndGenerateLessons(projectPath, extra.category);
+    }
 
     // Emit event for tracking
     this.events.emit('recovery_recorded', {
@@ -168,8 +212,165 @@ export class RecoveryService {
       projectPath,
       strategy: strategy.type,
       success,
-      timestamp: new Date().toISOString(),
+      timestamp,
     });
+  }
+
+  /**
+   * Append a recovery record to the JSONL log file.
+   */
+  private async appendRecoveryRecord(projectPath: string, record: RecoveryRecord): Promise<void> {
+    try {
+      const filePath = this.getRecoveryLogPath(projectPath);
+      const dir = path.dirname(filePath);
+
+      if (!secureFs.existsSync(dir)) {
+        await secureFs.mkdir(dir, { recursive: true });
+      }
+
+      await secureFs.appendFile(filePath, JSON.stringify(record) + '\n');
+    } catch (error) {
+      logger.error('Failed to write recovery record:', error);
+    }
+  }
+
+  /**
+   * Read all recovery records from the JSONL log.
+   */
+  async readRecoveryLog(projectPath: string): Promise<RecoveryRecord[]> {
+    try {
+      const filePath = this.getRecoveryLogPath(projectPath);
+
+      if (!secureFs.existsSync(filePath)) {
+        return [];
+      }
+
+      const content = (await secureFs.readFile(filePath, 'utf-8')) as string;
+      const lines = content.split('\n').filter((l: string) => l.trim());
+
+      return lines.map((l: string) => JSON.parse(l) as RecoveryRecord);
+    } catch (error) {
+      logger.error('Failed to read recovery log:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Check if enough failures of a category have accumulated to generate lessons.
+   * After 3+ failures of the same category, generates a context file with guidance.
+   */
+  async checkAndGenerateLessons(projectPath: string, category: FailureCategory): Promise<void> {
+    try {
+      const records = await this.readRecoveryLog(projectPath);
+      const categoryRecords = records.filter((r) => r.category === category);
+
+      if (categoryRecords.length < 3) {
+        return;
+      }
+
+      const totalAttempts = categoryRecords.length;
+      const successes = categoryRecords.filter((r) => r.success).length;
+      const failures = totalAttempts - successes;
+      const successRate = totalAttempts > 0 ? Math.round((successes / totalAttempts) * 100) : 0;
+
+      // Collect unique error messages
+      const errorMessages = [
+        ...new Set(categoryRecords.filter((r) => r.errorMessage).map((r) => r.errorMessage!)),
+      ];
+
+      // Collect unique strategies used
+      const strategies = [...new Set(categoryRecords.map((r) => r.strategyType))];
+
+      const content = `# Failure Lessons: ${category}
+
+> Auto-generated from ${totalAttempts} recovery attempts. Updated ${new Date().toISOString()}.
+
+## Statistics
+
+- **Total attempts**: ${totalAttempts}
+- **Successes**: ${successes} (${successRate}%)
+- **Failures**: ${failures}
+- **Strategies tried**: ${strategies.join(', ')}
+
+## Common Error Patterns
+
+${errorMessages
+  .slice(0, 5)
+  .map((msg) => `- ${msg}`)
+  .join('\n')}
+
+## Guidance for Agents
+
+${this.generateCategoryGuidance(category, successRate, strategies)}
+`;
+
+      // Write to context directory so it auto-injects into agent prompts
+      const contextDir = path.join(getAutomakerDir(projectPath), 'context');
+      if (!secureFs.existsSync(contextDir)) {
+        await secureFs.mkdir(contextDir, { recursive: true });
+      }
+
+      const lessonFile = path.join(contextDir, `failure-lessons-${category}.md`);
+      await secureFs.writeFile(lessonFile, content);
+
+      logger.info(`Generated failure lessons for category "${category}" at ${lessonFile}`);
+
+      this.events.emit('recovery_lesson_generated', {
+        projectPath,
+        category,
+        totalAttempts,
+        successRate,
+      });
+    } catch (error) {
+      logger.error(`Failed to generate lessons for category "${category}":`, error);
+    }
+  }
+
+  /**
+   * Generate category-specific guidance for agents based on failure patterns.
+   */
+  private generateCategoryGuidance(
+    category: FailureCategory,
+    successRate: number,
+    strategies: string[]
+  ): string {
+    const guidance: Record<string, string> = {
+      test_failure:
+        'When tests fail, read the full test output before making changes. Fix one test at a time. Run the specific failing test file rather than the full suite.',
+      merge_conflict:
+        'Before starting work, ensure your branch is rebased on the latest main. Use `git fetch origin && git rebase origin/main` before making changes.',
+      dependency:
+        'Check that all required packages are installed. Run `npm install` in the worktree before building. Verify import paths match the monorepo package structure.',
+      tool_error:
+        'If a tool command fails, check the error output carefully. Try alternative approaches rather than retrying the same command.',
+      transient:
+        'Transient errors are usually temporary. Wait briefly and retry. If they persist, check network connectivity and API status.',
+      rate_limit:
+        'Rate limits require patience. Use exponential backoff. Batch operations where possible to reduce API calls.',
+      authentication:
+        'Authentication errors require valid credentials. Do not retry — escalate to the user.',
+      validation:
+        'Validation errors indicate incorrect input. Review the expected format and correct the data before retrying.',
+      quota: 'Quota errors cannot be resolved by retrying. Escalate to the user.',
+      unknown:
+        'For unknown errors, gather as much diagnostic information as possible before retrying.',
+    };
+
+    let text = guidance[category] || guidance.unknown;
+
+    if (successRate < 30) {
+      text +=
+        '\n\n**Warning**: Recovery success rate is very low for this category. Consider a fundamentally different approach.';
+    }
+
+    return text;
+  }
+
+  /**
+   * Get the path to the recovery JSONL log file.
+   */
+  private getRecoveryLogPath(projectPath: string): string {
+    return path.join(getAutomakerDir(projectPath), 'recovery', 'failures.jsonl');
   }
 
   /**

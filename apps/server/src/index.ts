@@ -586,7 +586,7 @@ This is an automated triage request triggered by critical health status.`;
       // Spawn Frank agent asynchronously (don't block the event loop)
       void (async () => {
         try {
-          const frankConfig = agentFactoryService.createFromTemplate('devops-engineer', REPO_ROOT, {
+          const frankConfig = agentFactoryService.createFromTemplate('frank', REPO_ROOT, {
             tools: [
               'Read',
               'Glob',

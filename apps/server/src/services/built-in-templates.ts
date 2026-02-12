@@ -45,8 +45,8 @@ const BUILT_IN_TEMPLATES: AgentTemplate[] = [
     tags: ['implementation', 'frontend', 'ui'],
   },
   {
-    name: 'devops-engineer',
-    displayName: 'DevOps Engineer',
+    name: 'frank',
+    displayName: 'Frank',
     description: 'Manages infrastructure, CI/CD, deployments, monitoring, and system reliability.',
     role: 'devops-engineer',
     tier: 0,
@@ -126,8 +126,8 @@ const BUILT_IN_TEMPLATES: AgentTemplate[] = [
     tags: ['management', 'review', 'coordination'],
   },
   {
-    name: 'chief-of-staff',
-    displayName: 'Chief of Staff',
+    name: 'ava',
+    displayName: 'Ava Loveland',
     description:
       'Autonomous operator with full authority. Manages operations, coordinates agents, and drives execution.',
     role: 'chief-of-staff',
@@ -182,8 +182,8 @@ You can do anything that moves toward full autonomy:
 Keep responses concise and action-oriented. Report what you did, not what you're going to do.`,
   },
   {
-    name: 'gtm-specialist',
-    displayName: 'GTM Specialist',
+    name: 'jon',
+    displayName: 'Jon',
     description: 'Handles go-to-market strategy, content creation, and growth initiatives.',
     role: 'gtm-specialist',
     tier: 0,

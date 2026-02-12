@@ -30,18 +30,18 @@ describe('registerBuiltInTemplates', () => {
     const names = registry.list().map((t) => t.name);
     expect(names).toContain('backend-engineer');
     expect(names).toContain('frontend-engineer');
-    expect(names).toContain('devops-engineer');
+    expect(names).toContain('frank');
     expect(names).toContain('qa-engineer');
     expect(names).toContain('docs-engineer');
     expect(names).toContain('product-manager');
     expect(names).toContain('engineering-manager');
-    expect(names).toContain('chief-of-staff');
-    expect(names).toContain('gtm-specialist');
+    expect(names).toContain('ava');
+    expect(names).toContain('jon');
   });
 
-  it('chief-of-staff uses opus model', () => {
+  it('ava uses opus model', () => {
     registerBuiltInTemplates(registry);
-    const cos = registry.get('chief-of-staff');
+    const cos = registry.get('ava');
     expect(cos).toBeDefined();
     expect(cos!.model).toBe('opus');
     expect(cos!.maxTurns).toBe(200);
@@ -59,7 +59,7 @@ describe('registerBuiltInTemplates', () => {
 
   it('implementation roles have full capabilities', () => {
     registerBuiltInTemplates(registry);
-    for (const name of ['backend-engineer', 'frontend-engineer', 'devops-engineer']) {
+    for (const name of ['backend-engineer', 'frontend-engineer', 'frank']) {
       const template = registry.get(name);
       expect(template).toBeDefined();
       expect(template!.canUseBash).toBe(true);
@@ -96,9 +96,9 @@ describe('registerBuiltInTemplates', () => {
     expect(registry.size).toBe(9);
   });
 
-  it('chief-of-staff has systemPrompt for Discord routing', () => {
+  it('ava has systemPrompt for Discord routing', () => {
     registerBuiltInTemplates(registry);
-    const cos = registry.get('chief-of-staff');
+    const cos = registry.get('ava');
     expect(cos).toBeDefined();
     expect(cos!.systemPrompt).toBeDefined();
     expect(cos!.systemPrompt).toContain('Ava Loveland');
@@ -106,9 +106,9 @@ describe('registerBuiltInTemplates', () => {
     expect(cos!.systemPrompt).toContain('Prime Directive');
   });
 
-  it('gtm-specialist has systemPrompt for Discord routing', () => {
+  it('jon has systemPrompt for Discord routing', () => {
     registerBuiltInTemplates(registry);
-    const gtm = registry.get('gtm-specialist');
+    const gtm = registry.get('jon');
     expect(gtm).toBeDefined();
     expect(gtm!.systemPrompt).toBeDefined();
     expect(gtm!.systemPrompt).toContain('GTM');

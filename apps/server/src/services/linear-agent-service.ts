@@ -16,7 +16,7 @@ const logger = createLogger('LinearAgentService');
 export interface LinearAgentMetadata {
   linearIssueId: string; // Linear issue ID
   linearIssueIdentifier?: string; // Human-readable identifier like "ENG-123"
-  agentType: 'gtm' | 'ava'; // Agent type for routing
+  agentType: 'jon' | 'ava'; // Agent type for routing
   teamId?: string; // Linear team ID
 }
 
@@ -53,7 +53,7 @@ export class LinearAgentService {
   async processAgentResponse(params: {
     linearIssueId: string;
     linearIssueIdentifier?: string;
-    agentType: 'gtm' | 'ava';
+    agentType: 'jon' | 'ava';
     response: string;
   }): Promise<void> {
     const { linearIssueId, linearIssueIdentifier, agentType, response } = params;
@@ -78,7 +78,7 @@ export class LinearAgentService {
    * Handles long responses with summary + details
    */
   private formatResponse(response: string, agentType: string): string {
-    const agentLabel = agentType === 'gtm' ? '🎯 GTM Agent' : '🤖 Ava Agent';
+    const agentLabel = agentType === 'jon' ? '🎯 Jon' : '🤖 Ava';
 
     // Check if response is too long
     if (response.length <= this.MAX_COMMENT_LENGTH) {
