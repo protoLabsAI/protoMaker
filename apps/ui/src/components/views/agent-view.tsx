@@ -20,6 +20,12 @@ import { AgentInputArea } from './agent-view/input-area';
 /** Tailwind lg breakpoint in pixels */
 const LG_BREAKPOINT = 1024;
 
+interface SelectedAgentTemplate {
+  displayName: string;
+  role: string;
+  description?: string;
+}
+
 export function AgentView() {
   const { currentProject } = useAppStore();
   const [input, setInput] = useState('');
@@ -27,6 +33,10 @@ export function AgentView() {
   // Initialize session manager state - starts as true to match SSR
   // Then updates on mount based on actual screen size to prevent hydration mismatch
   const [showSessionManager, setShowSessionManager] = useState(true);
+  // State for selected agent template (null means no template selected, use defaults)
+  const [selectedAgentTemplate, setSelectedAgentTemplate] = useState<SelectedAgentTemplate | null>(
+    null
+  );
 
   // Update session manager visibility based on screen size after mount and on resize
   useEffect(() => {
@@ -154,14 +164,21 @@ export function AgentView() {
   }, [currentSessionId]);
 
   // Show welcome message if no messages yet
+  // Use template description if available, otherwise use default message
+  const getWelcomeMessage = () => {
+    if (selectedAgentTemplate?.description) {
+      return selectedAgentTemplate.description;
+    }
+    return "Hello! I'm the Automaker Agent. I can help you build software autonomously. I can read and modify files in this project, run commands, and execute tests. What would you like to create today?";
+  };
+
   const displayMessages =
     messages.length === 0
       ? [
           {
             id: 'welcome',
             role: 'assistant' as const,
-            content:
-              "Hello! I'm the Automaker Agent. I can help you build software autonomously. I can read and modify files in this project, run commands, and execute tests. What would you like to create today?",
+            content: getWelcomeMessage(),
             timestamp: new Date().toISOString(),
           },
         ]
@@ -210,6 +227,7 @@ export function AgentView() {
           onClearChat={handleClearChat}
           agentConfig={agentConfig}
           onAgentConfigChange={setAgentConfig}
+          selectedAgentTemplate={selectedAgentTemplate}
         />
 
         {/* Messages */}

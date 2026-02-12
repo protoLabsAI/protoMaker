@@ -2,6 +2,11 @@ import { Bot, PanelLeftClose, PanelLeft, Wrench, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AgentConfigPopover, type AgentConfig } from './agent-config-popover';
 
+interface SelectedAgentTemplate {
+  displayName: string;
+  role: string;
+}
+
 interface AgentHeaderProps {
   projectName: string;
   currentSessionId: string | null;
@@ -14,6 +19,7 @@ interface AgentHeaderProps {
   onClearChat: () => void;
   agentConfig?: AgentConfig;
   onAgentConfigChange?: (config: AgentConfig) => void;
+  selectedAgentTemplate?: SelectedAgentTemplate | null;
 }
 
 export function AgentHeader({
@@ -28,7 +34,12 @@ export function AgentHeader({
   onClearChat,
   agentConfig,
   onAgentConfigChange,
+  selectedAgentTemplate,
 }: AgentHeaderProps) {
+  // Determine the agent title based on selected template
+  const agentTitle = selectedAgentTemplate
+    ? `${selectedAgentTemplate.displayName} - ${selectedAgentTemplate.role}`
+    : 'AI Agent';
   return (
     <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-card/50 backdrop-blur-sm">
       <div className="flex items-center gap-4">
@@ -36,7 +47,7 @@ export function AgentHeader({
           <Bot className="w-5 h-5 text-primary" />
         </div>
         <div>
-          <h1 className="text-lg font-semibold text-foreground">AI Agent</h1>
+          <h1 className="text-lg font-semibold text-foreground">{agentTitle}</h1>
           <p className="text-sm text-muted-foreground">
             {projectName}
             {currentSessionId && !isConnected && ' - Connecting...'}
