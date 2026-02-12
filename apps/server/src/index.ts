@@ -482,7 +482,13 @@ avaGatewayService.setDiscordBot(discordBotService);
 
 // Initialize Event Hook Service for custom event triggers (with history storage)
 // Must be after DiscordBotService is created so it can use the real Discord client
-eventHookService.initialize(events, settingsService, eventHistoryService, featureLoader, discordBotService);
+eventHookService.initialize(
+  events,
+  settingsService,
+  eventHistoryService,
+  featureLoader,
+  discordBotService
+);
 
 // Initialize Agent Discord Router for agent-to-Discord message routing
 // Must be imported after DiscordBotService is initialized
