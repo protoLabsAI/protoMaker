@@ -530,13 +530,16 @@ void schedulerService
 healthMonitorService.setEventEmitter(events);
 
 // Initialize Ava Gateway Service for heartbeat monitoring
-void avaGatewayService.initialize(events, REPO_ROOT, '1469109809939742814').then(() => {
-  // Start listening to critical events after initialization
-  avaGatewayService.start();
-  logger.info('Ava Gateway Service started and listening to events');
-}).catch((err) => {
-  logger.error('Ava Gateway Service initialization failed:', err);
-});
+void avaGatewayService
+  .initialize(events, REPO_ROOT, '1469109809939742814')
+  .then(() => {
+    // Start listening to critical events after initialization
+    avaGatewayService.start();
+    logger.info('Ava Gateway Service started and listening to events');
+  })
+  .catch((err) => {
+    logger.error('Ava Gateway Service initialization failed:', err);
+  });
 
 // Initialize Spec Generation Monitor for detecting and cleaning up stalled spec regeneration jobs
 const specGenerationMonitor = getSpecGenerationMonitor(events, {
