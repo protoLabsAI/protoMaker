@@ -4348,13 +4348,26 @@ Format your response as a structured markdown document.`;
                 featureBranch === null || (primaryBranch && featureBranch === primaryBranch);
               // Orphaned = has branchName but no corresponding worktree exists
               const isOrphaned = featureBranch !== null && !worktreeBranches.has(featureBranch);
+              // Stale worktree = has branchName with existing worktree BUT feature is in backlog
+              // This happens when a previous agent attempt created the worktree but failed before starting.
+              // The agent service will reuse the existing worktree, so we should include these.
+              const hasStaleWorktree =
+                featureBranch !== null &&
+                worktreeBranches.has(featureBranch) &&
+                (feature.status === 'backlog' ||
+                  feature.status === 'pending' ||
+                  feature.status === 'ready');
 
               logger.debug(
-                `[loadPendingFeatures] Feature ${feature.id} branch filter - featureBranch: ${featureBranch}, primaryBranch: ${primaryBranch}, isPrimaryOrUnassigned: ${isPrimaryOrUnassigned}, isOrphaned: ${isOrphaned}`
+                `[loadPendingFeatures] Feature ${feature.id} branch filter - featureBranch: ${featureBranch}, primaryBranch: ${primaryBranch}, isPrimaryOrUnassigned: ${isPrimaryOrUnassigned}, isOrphaned: ${isOrphaned}, hasStaleWorktree: ${hasStaleWorktree}`
               );
 
-              if (isPrimaryOrUnassigned || isOrphaned) {
-                if (isOrphaned) {
+              if (isPrimaryOrUnassigned || isOrphaned || hasStaleWorktree) {
+                if (hasStaleWorktree) {
+                  logger.info(
+                    `[loadPendingFeatures] ✅ Including feature ${feature.id} with stale worktree (branchName: ${featureBranch}, status: ${feature.status}) for main worktree`
+                  );
+                } else if (isOrphaned) {
                   logger.info(
                     `[loadPendingFeatures] ✅ Including orphaned feature ${feature.id} (branchName: ${featureBranch} has no worktree) for main worktree`
                   );
@@ -4365,9 +4378,9 @@ Format your response as a structured markdown document.`;
                 }
                 pendingFeatures.push(feature);
               } else {
-                // Feature belongs to a specific worktree (has branchName with existing worktree)
+                // Feature belongs to a specific worktree AND is actively being worked on (in_progress)
                 logger.info(
-                  `[loadPendingFeatures] ❌ Filtering out feature ${feature.id} (branchName: ${featureBranch} has worktree) for main worktree`
+                  `[loadPendingFeatures] ❌ Filtering out feature ${feature.id} (branchName: ${featureBranch} has worktree, status: ${feature.status}) for main worktree`
                 );
               }
             } else {
