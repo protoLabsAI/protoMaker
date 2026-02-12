@@ -92,3 +92,7 @@ export { useWorkspaceDirectories } from './use-workspace';
 
 // Metrics
 export { useProjectMetrics, useCapacityMetrics, useForecast } from './use-metrics';
+
+// Agent Templates
+export { useAgentTemplates } from './use-agent-templates';
+export type { AgentTemplateMetadata } from './use-agent-templates';

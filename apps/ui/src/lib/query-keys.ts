@@ -286,6 +286,14 @@ export const queryKeys = {
     forecast: (projectPath: string, complexity?: string) =>
       ['metrics', 'forecast', projectPath, complexity] as const,
   },
+
+  // ============================================
+  // Agent Templates
+  // ============================================
+  agentTemplates: {
+    /** All registered agent templates */
+    all: (role?: string) => ['agentTemplates', role] as const,
+  },
 } as const;
 
 /**

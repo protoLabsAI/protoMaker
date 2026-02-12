@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Settings2 } from 'lucide-react';
+import { Settings2, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { AgentRole, ROLE_CAPABILITIES } from '@automaker/types';
+import { useAgentTemplates } from '@/hooks/queries';
 
 export const DEFAULT_MAX_TURNS = 200;
 
@@ -35,7 +36,8 @@ const TURN_PRESETS = [
   { label: 'Long (1000)', value: 1000 },
 ];
 
-const ROLE_OPTIONS: { value: AgentRole; label: string }[] = [
+// Fallback static list if API unavailable
+const FALLBACK_ROLE_OPTIONS: { value: AgentRole; label: string }[] = [
   { value: 'product-manager', label: 'Product Manager' },
   { value: 'engineering-manager', label: 'Engineering Manager' },
   { value: 'frontend-engineer', label: 'Frontend Engineer' },
@@ -77,6 +79,9 @@ function getToolBadgeVariant(
 export function AgentConfigPopover({ config, onConfigChange, disabled }: AgentConfigPopoverProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [localMaxTurns, setLocalMaxTurns] = useState(String(config.maxTurns));
+
+  // Fetch agent templates from registry API
+  const { data: templates, isLoading: templatesLoading } = useAgentTemplates();
 
   // Sync local state when config changes externally (e.g. preset button or reset)
   useEffect(() => {
@@ -166,18 +171,52 @@ export function AgentConfigPopover({ config, onConfigChange, disabled }: AgentCo
                   role: value as AgentRole,
                 })
               }
+              disabled={templatesLoading}
             >
               <SelectTrigger id="agent-role" className="w-full text-xs h-8">
-                <SelectValue placeholder="Select a role..." />
+                <SelectValue placeholder={templatesLoading ? 'Loading roles...' : 'Select a role...'} />
               </SelectTrigger>
               <SelectContent>
-                {ROLE_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value} className="text-xs">
-                    {option.label}
-                  </SelectItem>
-                ))}
+                {(templates || FALLBACK_ROLE_OPTIONS).map((template) => {
+                  const isTemplate = 'tier' in template;
+                  const value = isTemplate ? template.role : template.value;
+                  const label = isTemplate ? template.displayName : template.label;
+                  const description = isTemplate ? template.description : undefined;
+                  const tier = isTemplate ? template.tier : undefined;
+
+                  return (
+                    <SelectItem key={value} value={value} className="text-xs">
+                      <div className="flex items-center gap-2 w-full">
+                        <span className="flex-1">{label}</span>
+                        {tier !== undefined && (
+                          <>
+                            {tier === 0 && (
+                              <Lock className="w-3 h-3 text-muted-foreground" aria-label="Built-in role" />
+                            )}
+                            <Badge
+                              variant={tier === 0 ? 'default' : 'secondary'}
+                              className="text-[10px] px-1.5 py-0"
+                            >
+                              {tier === 0 ? 'Built-in' : 'Custom'}
+                            </Badge>
+                          </>
+                        )}
+                      </div>
+                      {description && (
+                        <div className="text-[10px] text-muted-foreground mt-0.5 line-clamp-1">
+                          {description}
+                        </div>
+                      )}
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
+            {config.role && templates?.find((t) => t.role === config.role)?.description && (
+              <p className="text-[10px] text-muted-foreground leading-tight">
+                {templates.find((t) => t.role === config.role)?.description}
+              </p>
+            )}
           </div>
 
           {/* Available Tools */}

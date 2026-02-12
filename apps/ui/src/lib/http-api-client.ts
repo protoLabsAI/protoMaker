@@ -2131,6 +2131,24 @@ export class HttpApiClient implements ElectronAPI {
     }> => this.post('/api/templates/clone', { repoUrl, projectName, parentDir }),
   };
 
+  // Agent Templates API
+  agentTemplates = {
+    list: (role?: string): Promise<{
+      success: boolean;
+      templates: Array<{
+        name: string;
+        displayName: string;
+        description: string;
+        role: string;
+        tier: number;
+        model?: string;
+        tags?: string[];
+      }>;
+      count: number;
+      error?: string;
+    }> => this.post('/api/agents/templates/list', { role }),
+  };
+
   // Settings API - persistent file-based settings
   settings = {
     // Get settings status (check if migration needed)
