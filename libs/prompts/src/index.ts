@@ -125,3 +125,4 @@ export { getBackendEngineerPrompt } from './agents/backend-engineer-prompt.js';
 export { getDevOpsEngineerPrompt } from './agents/devops-engineer-prompt.js';
 export { getQAEngineerPrompt } from './agents/qa-engineer-prompt.js';
 export { getDocsEngineerPrompt } from './agents/docs-engineer-prompt.js';
+export { getGTMSpecialistPrompt } from './agents/gtm-specialist-prompt.js';
