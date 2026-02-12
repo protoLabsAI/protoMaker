@@ -33,3 +33,15 @@ features:
     details: UI architecture, git workflow, clean code standards, and feature lifecycle management.
     link: /dev/ui-architecture
 ---
+
+## Quick Links
+
+| Service      | URL                                                                         | Description                       |
+| ------------ | --------------------------------------------------------------------------- | --------------------------------- |
+| GitHub       | [proto-labs-ai/automaker](https://github.com/proto-labs-ai/automaker)       | Source code, issues, PRs          |
+| Linear       | [protolabsai](https://linear.app/protolabsai)                               | Strategic roadmap and initiatives |
+| Graphite     | [proto-labs-ai](https://app.graphite.dev/github/pr/proto-labs-ai/automaker) | Stacked PR dashboard              |
+| Discord      | [Agentic Jumpstart](https://discord.gg/jjem7aEDKU)                          | Community and team chat           |
+| Staging UI   | [localhost:3007](http://localhost:3007)                                     | Automaker web interface           |
+| Staging API  | [localhost:3008](http://localhost:3008)                                     | Backend API server                |
+| Staging Docs | [localhost:3009](http://localhost:3009)                                     | This documentation site           |

@@ -1,5 +1,15 @@
 # Automaker Documentation
 
+## Quick Links
+
+| Service   | URL                                                                         | Description                       |
+| --------- | --------------------------------------------------------------------------- | --------------------------------- |
+| GitHub    | [proto-labs-ai/automaker](https://github.com/proto-labs-ai/automaker)       | Source code, issues, PRs          |
+| Linear    | [protolabsai](https://linear.app/protolabsai)                               | Strategic roadmap and initiatives |
+| Graphite  | [proto-labs-ai](https://app.graphite.dev/github/pr/proto-labs-ai/automaker) | Stacked PR dashboard              |
+| Discord   | [Agentic Jumpstart](https://discord.gg/jjem7aEDKU)                          | Community and team chat           |
+| Docs Site | [localhost:3009](http://localhost:3009)                                     | Generated docs site (VitePress)   |
+
 ## Quick Start
 
 - **[CLAUDE.md](../CLAUDE.md)** - Project overview, architecture, common commands
