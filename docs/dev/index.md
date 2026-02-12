@@ -4,6 +4,7 @@ Guides for contributing to and extending Automaker.
 
 ## Architecture
 
+- **[Frontend Philosophy](./frontend-philosophy)** — Gold standard frontend decisions: tokens, components, theming, tooling
 - **[UI Architecture](./ui-architecture)** — React frontend structure, routing, state management
 - **[Shared Packages](./shared-packages)** — Monorepo package architecture and dependency chain
 - **[Feature Status System](./feature-status-system)** — The 6-status feature lifecycle

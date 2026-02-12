@@ -77,6 +77,7 @@ DevOps documentation in [`docs/infra/`](./infra/):
 
 | Document                                                | Description                               |
 | ------------------------------------------------------- | ----------------------------------------- |
+| [Frontend Philosophy](./dev/frontend-philosophy.md)     | Gold standard frontend decisions          |
 | [UI Architecture](./dev/ui-architecture.md)             | Frontend structure and patterns           |
 | [Shared Packages](./dev/shared-packages.md)             | Monorepo package architecture             |
 | [Feature Status System](./dev/feature-status-system.md) | 6-status feature lifecycle                |

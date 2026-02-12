@@ -29,7 +29,7 @@ describe('registerBuiltInTemplates', () => {
     registerBuiltInTemplates(registry);
     const names = registry.list().map((t) => t.name);
     expect(names).toContain('backend-engineer');
-    expect(names).toContain('frontend-engineer');
+    expect(names).toContain('matt');
     expect(names).toContain('frank');
     expect(names).toContain('qa-engineer');
     expect(names).toContain('docs-engineer');
@@ -59,7 +59,7 @@ describe('registerBuiltInTemplates', () => {
 
   it('implementation roles have full capabilities', () => {
     registerBuiltInTemplates(registry);
-    for (const name of ['backend-engineer', 'frontend-engineer', 'frank']) {
+    for (const name of ['backend-engineer', 'matt', 'frank']) {
       const template = registry.get(name);
       expect(template).toBeDefined();
       expect(template!.canUseBash).toBe(true);
@@ -104,6 +104,17 @@ describe('registerBuiltInTemplates', () => {
     expect(cos!.systemPrompt).toContain('Ava Loveland');
     expect(cos!.systemPrompt).toContain('Chief of Staff');
     expect(cos!.systemPrompt).toContain('Prime Directive');
+  });
+
+  it('matt has systemPrompt for Discord routing', () => {
+    registerBuiltInTemplates(registry);
+    const matt = registry.get('matt');
+    expect(matt).toBeDefined();
+    expect(matt!.systemPrompt).toBeDefined();
+    expect(matt!.systemPrompt).toContain('Matt');
+    expect(matt!.systemPrompt).toContain('Frontend');
+    expect(matt!.role).toBe('frontend-engineer');
+    expect(matt!.exposure?.discord).toBe(true);
   });
 
   it('jon has systemPrompt for Discord routing', () => {
