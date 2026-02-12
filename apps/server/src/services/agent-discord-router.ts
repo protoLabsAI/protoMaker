@@ -7,10 +7,20 @@
  */
 
 import type { EventEmitter } from '../lib/events.js';
-import type { DiscordUserMessageRoutedPayload } from '@automaker/types';
+import type { DiscordUserMessageRoutedPayload, AgentRole } from '@automaker/types';
 import { createLogger, classifyError } from '@automaker/utils';
 import { DiscordBotService } from './discord-bot-service.js';
 import { simpleQuery } from '../providers/simple-query-service.js';
+import { ROLE_CAPABILITIES } from '@automaker/types';
+import {
+  getProductManagerPrompt,
+  getEngineeringManagerPrompt,
+  getFrontendEngineerPrompt,
+  getBackendEngineerPrompt,
+  getDevOpsEngineerPrompt,
+  getQAEngineerPrompt,
+  getDocsEngineerPrompt,
+} from '@automaker/prompts';
 
 const logger = createLogger('AgentDiscordRouter');
 
@@ -23,6 +33,45 @@ interface ConversationTracker {
   messageCount: number;
   firstMessageTime: number;
   threadId?: string;
+}
+
+/**
+ * Get the appropriate system prompt for a given agent role
+ */
+function getRolePrompt(role: AgentRole, username: string): string {
+  const projectPath = process.cwd();
+
+  switch (role) {
+    case 'product-manager':
+      return getProductManagerPrompt({ projectPath, discordChannels: [], contextFiles: [] });
+    case 'engineering-manager':
+      return getEngineeringManagerPrompt({ projectPath, linearProjects: [], contextFiles: [] });
+    case 'frontend-engineer':
+      return getFrontendEngineerPrompt({ projectPath, contextFiles: [] });
+    case 'backend-engineer':
+      return getBackendEngineerPrompt({ projectPath, contextFiles: [] });
+    case 'devops-engineer':
+      return getDevOpsEngineerPrompt({ projectPath, contextFiles: [] });
+    case 'qa-engineer':
+      return getQAEngineerPrompt({ projectPath, contextFiles: [] });
+    case 'docs-engineer':
+      return getDocsEngineerPrompt({ projectPath, contextFiles: [] });
+    default:
+      logger.warn(`Unknown agent role: ${role}, using generic prompt`);
+      return `You are ${role}. Responding to Discord user ${username}. Keep responses concise and helpful.`;
+  }
+}
+
+/**
+ * Get the allowed tools for a given agent role
+ */
+function getRoleTools(role: AgentRole): string[] {
+  const capabilities = ROLE_CAPABILITIES[role];
+  if (!capabilities) {
+    logger.warn(`Unknown agent role: ${role}, allowing all tools`);
+    return [];
+  }
+  return capabilities.tools;
 }
 
 /**
@@ -83,14 +132,6 @@ export class AgentDiscordRouter {
     );
 
     try {
-      // Process the message via simpleQuery
-      const response = await this.processMessage(content, routedToAgent, username);
-
-      if (!response || response.trim().length === 0) {
-        logger.warn('Agent returned empty response, skipping Discord message');
-        return;
-      }
-
       // Track conversation and check if we need a thread
       const tracker = this.trackConversation(channelId);
       const shouldUseThread = this.shouldCreateThread(tracker);
@@ -98,6 +139,14 @@ export class AgentDiscordRouter {
       // If we should use a thread but don't have one, create it
       if (shouldUseThread && !tracker.threadId) {
         tracker.threadId = await this.createThread(channelId, content);
+      }
+
+      // Process the message via simpleQuery, passing thread ID for conversation history
+      const response = await this.processMessage(content, routedToAgent, username, tracker.threadId);
+
+      if (!response || response.trim().length === 0) {
+        logger.warn('Agent returned empty response, skipping Discord message');
+        return;
       }
 
       // Send response (with message splitting if needed)
@@ -128,15 +177,49 @@ export class AgentDiscordRouter {
   private async processMessage(
     content: string,
     agentName: string,
-    username: string
+    username: string,
+    threadId?: string
   ): Promise<string> {
     logger.debug(`Querying agent ${agentName} with message from ${username}`);
+
+    // Get role-specific system prompt
+    let systemPrompt = getRolePrompt(agentName as AgentRole, username);
+
+    // Get role-specific allowed tools
+    const allowedTools = getRoleTools(agentName as AgentRole);
+
+    // Load conversation history if in a thread and include it in the system prompt
+    if (threadId) {
+      try {
+        // Fetch messages from the thread
+        const messages = await this.discordBot.readMessages(threadId, 50);
+
+        if (messages.length > 0) {
+          // Convert Discord messages to conversation history
+          // Messages are returned newest first, so reverse them
+          const conversationHistory: string[] = [];
+          messages.reverse().forEach((msg) => {
+            const role = msg.author.bot ? 'Assistant' : msg.author.username;
+            conversationHistory.push(`${role}: ${msg.content}`);
+          });
+
+          // Append conversation history to system prompt
+          systemPrompt += `\n\n## Conversation History\n\nHere is the conversation so far:\n\n${conversationHistory.join('\n\n')}`;
+
+          logger.debug(`Loaded ${messages.length} messages from thread ${threadId}`);
+        }
+      } catch (error) {
+        logger.warn(`Failed to load thread history: ${error}`);
+        // Continue without history if loading fails
+      }
+    }
 
     // Use simpleQuery to get agent response
     const result = await simpleQuery({
       prompt: content,
-      systemPrompt: `You are ${agentName}. Responding to Discord user ${username}. Keep responses concise and helpful.`,
+      systemPrompt,
       cwd: process.cwd(),
+      allowedTools: allowedTools.length > 0 ? allowedTools : undefined,
     });
 
     return result.text;
