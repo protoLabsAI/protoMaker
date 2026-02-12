@@ -18,6 +18,9 @@
   "engines": {
     "node": ">=22.0.0 <23.0.0"
   },
+  "dependencies": {
+    "zod": "^4.3.6"
+  },
   "devDependencies": {
     "@types/node": "22.19.3",
     "typescript": "5.9.3"
