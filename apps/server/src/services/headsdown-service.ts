@@ -170,7 +170,8 @@ export class HeadsdownService {
     }
 
     // Start GitHub monitoring if configured
-    if (config.monitors.github) {
+    if (config.monitors.github && config.projectPath) {
+      this.githubMonitor.setProjectPath(config.projectPath);
       await this.githubMonitor.startMonitoring(config.monitors.github);
       logger.info(`Started GitHub monitoring for agent ${agentId}`);
     }
