@@ -1,0 +1,203 @@
+{
+  "slug": "agent-runner-ui-dashboard-event-feed",
+  "title": "Agent Runner UI + Dashboard Event Feed",
+  "goal": "Transform the Agent Runner from a model-centric chat to an agent-centric interface where users select registered agents (not models), and add a project health event feed to the dashboard.",
+  "status": "completed",
+  "milestones": [
+    {
+      "number": 1,
+      "slug": "01-agent-selector-foundation",
+      "title": "Agent Selector Foundation",
+      "description": "Replace model dropdown with agent selector component and wire agentConfig to execution",
+      "phases": [
+        {
+          "number": 1,
+          "name": "create-agentselector-component",
+          "title": "Create AgentSelector component",
+          "description": "Create a new AgentSelector component in apps/ui/src/components/views/agent-view/shared/ that replaces AgentModelSelector. Uses useAgentTemplates() hook to fetch templates from the Role Registry API. Shows: agent displayName, role badge, description, model tier indicator. Includes a 'Custom Model' option at the bottom that opens the existing PhaseModelSelector for raw model selection. Default selection: first template or 'backend-engineer'. Component should be a Command-based popover (matching existing UI patterns) with search.",
+          "filesToModify": [
+            "apps/ui/src/components/views/agent-view/shared/agent-selector.tsx"
+          ],
+          "acceptanceCriteria": [
+            "Component renders list of agents from registry",
+            "Search/filter works",
+            "Custom Model fallback option exists",
+            "Selecting an agent updates parent state",
+            "Loading and error states handled"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1770925640070-k7o5despf"
+        },
+        {
+          "number": 2,
+          "name": "wire-agentselector-into-inputcontrols",
+          "title": "Wire AgentSelector into InputControls",
+          "description": "Replace AgentModelSelector with AgentSelector in input-controls.tsx (line 131). Update AgentView state to track selected agent template name instead of just model. When an agent is selected, auto-set the model from the template's model field. Pass selectedAgent to AgentInputArea and InputControls. Keep modelSelection state for the Custom Model fallback path.",
+          "filesToModify": [
+            "apps/ui/src/components/views/agent-view/input-area/input-controls.tsx",
+            "apps/ui/src/components/views/agent-view.tsx",
+            "apps/ui/src/components/views/agent-view/input-area/agent-input-area.tsx"
+          ],
+          "acceptanceCriteria": [
+            "AgentSelector appears where model dropdown was",
+            "Selecting an agent updates modelSelection automatically",
+            "Custom Model option still works for raw model selection",
+            "Build passes with no type errors"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1770925640071-r2hdojzmz"
+        },
+        {
+          "number": 3,
+          "name": "update-agentheader-with-agent-identity",
+          "title": "Update AgentHeader with agent identity",
+          "description": "Update agent-header.tsx to show the selected agent's displayName and role instead of generic 'AI Agent'. When an agent template is selected, show '[displayName] - [role]' in the header. Update the welcome message in agent-view.tsx to be agent-specific: use the template's description or a greeting derived from the system prompt. Pass selectedAgentTemplate to AgentHeader.",
+          "filesToModify": [
+            "apps/ui/src/components/views/agent-view/components/agent-header.tsx",
+            "apps/ui/src/components/views/agent-view.tsx"
+          ],
+          "acceptanceCriteria": [
+            "Header shows selected agent name and role",
+            "Welcome message changes per agent",
+            "Falls back to 'AI Agent' when no template selected",
+            "Config popover still accessible"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1770925640072-rq8vh21uw"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1770925640068-1ot4evw6h"
+    },
+    {
+      "number": 2,
+      "slug": "02-server-side-agent-execution",
+      "title": "Server-Side Agent Execution",
+      "description": "Wire agent template selection through to actual execution so selecting an agent affects behavior",
+      "phases": [
+        {
+          "number": 1,
+          "name": "add-role-parameter-to-agent-send-api",
+          "title": "Add role parameter to agent send API",
+          "description": "Update the POST /api/agent/send endpoint and AgentService.sendMessage() to accept an optional 'role' parameter (agent template name). When provided, resolve the template from RoleRegistryService, use its systemPrompt (prepended to existing system prompt), tools (as allowedTools), and model (as default, overridable). Update useElectronAgent hook to pass the role from agentConfig. This fixes the TODO on line 47 of agent-view.tsx.",
+          "filesToModify": [
+            "apps/server/src/services/agent-service.ts",
+            "apps/server/src/routes/agent/send.ts",
+            "apps/ui/src/hooks/use-electron-agent.ts"
+          ],
+          "acceptanceCriteria": [
+            "AgentService accepts role parameter",
+            "Template system prompt is prepended when role is set",
+            "Template tools restrict available tools when role is set",
+            "Template model used as default when role is set",
+            "Existing sessions without role continue to work unchanged"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1770925640074-txw5nlm5e"
+        },
+        {
+          "number": 2,
+          "name": "wire-agentconfig-to-useelectronagent",
+          "title": "Wire agentConfig to useElectronAgent",
+          "description": "Fix the TODO on line 47 of agent-view.tsx. Pass agentConfig.role, agentConfig.maxTurns, and agentConfig.systemPromptOverride to useElectronAgent. Update useElectronAgent to include these in the send API call. maxTurns should be passed as a session-level setting. systemPromptOverride should be appended to the system prompt.",
+          "filesToModify": [
+            "apps/ui/src/components/views/agent-view.tsx",
+            "apps/ui/src/hooks/use-electron-agent.ts"
+          ],
+          "acceptanceCriteria": [
+            "agentConfig.role passed to server on send",
+            "agentConfig.maxTurns affects execution",
+            "agentConfig.systemPromptOverride appended to prompt",
+            "The TODO comment is removed"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1770925640075-pllhr45qg"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1770925640072-9vxjbsqem"
+    },
+    {
+      "number": 3,
+      "slug": "03-dashboard-event-feed",
+      "title": "Dashboard Event Feed",
+      "description": "Add project health visibility to the dashboard with a live event feed and status card",
+      "phases": [
+        {
+          "number": 1,
+          "name": "create-eventfeed-component",
+          "title": "Create EventFeed component",
+          "description": "Create a reusable EventFeed component that subscribes to the WebSocket event stream at /api/events and displays recent events in a reverse-chronological list. Each event shows: timestamp, icon (color-coded by type), description. Event types to surface: feature:started, feature:completed, feature:error, feature:retry, auto-mode:started/stopped/idle, feature:pr-merged, feature:committed, health:issue-detected, health:issue-remediated, milestone:completed, project:completed. Max 25 events, auto-scrolls. Use existing WebSocket infrastructure from useElectronAgent pattern.",
+          "filesToModify": [
+            "apps/ui/src/components/views/dashboard-view/event-feed.tsx",
+            "apps/ui/src/hooks/use-event-feed.ts"
+          ],
+          "acceptanceCriteria": [
+            "Component connects to WebSocket event stream",
+            "Shows last 25 events reverse-chronologically",
+            "Events are color-coded by type (green=success, red=error, blue=info, yellow=warning)",
+            "Auto-scrolls on new events",
+            "Disconnection state handled gracefully"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1770925640077-invk02fg4"
+        },
+        {
+          "number": 2,
+          "name": "create-projecthealthcard-component",
+          "title": "Create ProjectHealthCard component",
+          "description": "Create a compact ProjectHealthCard component that shows: board state (backlog/in-progress/review/done counts), running agents count, auto-mode status, last health check result. Fetches data from existing HTTP API endpoints: /api/features/summary, /api/auto-mode/status, /api/agents/running. Polls every 30s or updates via WebSocket events. Compact single-row layout.",
+          "filesToModify": [
+            "apps/ui/src/components/views/dashboard-view/project-health-card.tsx",
+            "apps/ui/src/hooks/use-project-health.ts"
+          ],
+          "acceptanceCriteria": [
+            "Shows board counts in compact format",
+            "Shows running agent count",
+            "Shows auto-mode status (running/stopped/idle)",
+            "Refreshes on relevant WebSocket events",
+            "Loading skeleton while fetching"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1770925640078-f4jnnfaw4"
+        },
+        {
+          "number": 3,
+          "name": "integrate-event-feed-into-dashboard",
+          "title": "Integrate event feed into dashboard",
+          "description": "Add EventFeed and ProjectHealthCard to dashboard-view.tsx. Show them AFTER a project is selected (when the user has projects). Add a new section below the project list: 'Project Activity' with the health card at top and event feed below. Only show when currentProject is set. Add a collapsible toggle so users can hide it. The feed should filter events to the current project's path.",
+          "filesToModify": [
+            "apps/ui/src/components/views/dashboard-view.tsx"
+          ],
+          "acceptanceCriteria": [
+            "Event feed appears on dashboard when project is selected",
+            "Health card shows above event feed",
+            "Events filtered to current project",
+            "Collapsible/expandable",
+            "Doesn't break existing project picker layout",
+            "Clean, not overwhelming"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1770925640078-ookdhqevs"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1770925640076-p9k5hqs7n"
+    }
+  ],
+  "prd": {
+    "situation": "The Agent Runner UI currently has a model dropdown (haiku/sonnet/opus) as its primary control, with the role selector buried 2 clicks deep in a config popover. The agentConfig (role, maxTurns, systemPromptOverride) is dead state - selecting a role has zero effect on execution. The dashboard is purely a project picker with no event feed or health metrics.",
+    "problem": "Users think in agents, not models. The current UI doesn't reflect the agent-first architecture we've built (Role Registry, Agent Factory, Dynamic Executor). The dashboard provides no visibility into what agents are doing or project health. This blocks the path to full autonomy because humans can't see what's happening.",
+    "approach": "1) Replace the model dropdown with an agent selector powered by the Role Registry API. 2) Wire agentConfig to useElectronAgent so role selection actually affects execution. 3) Server-side: AgentService resolves templates from RoleRegistryService, applies system prompt + tools + model. 4) Add an event feed to the dashboard consuming the existing WebSocket event stream. 5) Add a project health card showing board state and agent status.",
+    "results": "Users can select any registered agent from the primary dropdown, chat with that agent's personality and tools, and see a live feed of agent activity and project health on the dashboard.",
+    "constraints": [
+      "Keep PRs under 200 lines each",
+      "Don't break existing model selection for non-agent use cases",
+      "Dashboard event feed must not overwhelm - clean and minimal",
+      "Use existing WebSocket event stream, don't add new endpoints",
+      "Preserve backward compatibility with existing sessions"
+    ]
+  },
+  "createdAt": "2026-02-12T19:47:13.130Z",
+  "updatedAt": "2026-02-12T20:57:16.391Z"
+}
