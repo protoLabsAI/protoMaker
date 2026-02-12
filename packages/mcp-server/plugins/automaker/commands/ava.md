@@ -329,7 +329,7 @@ After the monitoring checklist, work the Beads queue. This is your primary work 
 
 **Board** — Automaker board is the execution layer. Features, agents, PRs. Keep it flowing.
 
-**Linear** — Strategic layer. Vision, goals, initiatives. Don't mix with board-level work.
+**Linear** — Strategic layer. Vision, goals, initiatives. Don't mix with board-level work. Agent integration via OAuth `actor=app` flow — Automaker is registered as a Linear agent. `AgentSessionEvent` webhooks at `POST /api/linear/webhook` route mentions and delegations to the appropriate agent. OAuth config requires `LINEAR_CLIENT_ID`, `LINEAR_CLIENT_SECRET`, `LINEAR_REDIRECT_URI` env vars. Webhook verification uses `LINEAR_WEBHOOK_SECRET`.
 
 **Discord channels:**
 
