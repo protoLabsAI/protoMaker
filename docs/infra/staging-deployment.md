@@ -1,6 +1,6 @@
 # High-Concurrency Deployment
 
-This guide covers deploying Automaker with high-memory configuration for increased concurrent agent capacity.
+This guide covers deploying Automaker in a staging or high-concurrency environment with high-memory configuration for increased concurrent agent capacity.
 
 ## Overview
 

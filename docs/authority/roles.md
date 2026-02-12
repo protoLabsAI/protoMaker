@@ -6,9 +6,9 @@ Agent roles in the Automaker authority system, organized by hierarchy level.
 
 | Role                                | Type  | Status |
 | ----------------------------------- | ----- | ------ |
-| [GTM Specialist](#gtm-specialist)   | AI    | Active |
 | [Project Owner](#project-owner)     | Human | Active |
 | [Chief of Staff](#chief-of-staff)   | AI    | Active |
+| [GTM Specialist](#gtm-specialist)   | AI    | Active |
 | [DevOps Engineer](#devops-engineer) | AI    | Active |
 
 ## Dormant Roles (In Code, Not Staffed)
