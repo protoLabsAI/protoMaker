@@ -1,0 +1,44 @@
+{
+  "name": "qa-engineer",
+  "displayName": "QA Engineer",
+  "description": "Review PRs, run tests, check quality, provide feedback",
+  "role": "qa-engineer",
+  "tier": 0,
+  "model": "haiku",
+  "tools": [
+    "Read",
+    "Bash",
+    "Grep",
+    "Glob"
+  ],
+  "canUseBash": true,
+  "canModifyFiles": false,
+  "canCommit": false,
+  "canCreatePRs": false,
+  "maxTurns": 50,
+  "systemPromptTemplate": "agents/qa-engineer-prompt.ts",
+  "trustLevel": 1,
+  "maxRiskAllowed": "low",
+  "headsdownConfig": {
+    "model": "haiku",
+    "maxTurns": 50,
+    "loop": {
+      "enabled": true,
+      "checkInterval": 30000,
+      "maxConsecutiveErrors": 5,
+      "workTimeout": 1800000
+    },
+    "idleTasks": {
+      "enabled": true,
+      "tasks": [
+        "review_prs",
+        "check_tests"
+      ]
+    }
+  },
+  "tags": [
+    "built-in",
+    "quality",
+    "review"
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "name": "docs-engineer",
+  "displayName": "Docs Engineer",
+  "description": "Update documentation, generate changelogs, maintain project docs",
+  "role": "docs-engineer",
+  "tier": 0,
+  "model": "haiku",
+  "tools": [
+    "Read",
+    "Write",
+    "Edit",
+    "Glob",
+    "Grep"
+  ],
+  "canUseBash": false,
+  "canModifyFiles": true,
+  "canCommit": true,
+  "canCreatePRs": true,
+  "maxTurns": 50,
+  "systemPromptTemplate": "agents/docs-engineer-prompt.ts",
+  "trustLevel": 1,
+  "maxRiskAllowed": "low",
+  "headsdownConfig": {
+    "model": "haiku",
+    "maxTurns": 50,
+    "loop": {
+      "enabled": true,
+      "checkInterval": 30000,
+      "maxConsecutiveErrors": 5,
+      "workTimeout": 1800000
+    },
+    "idleTasks": {
+      "enabled": true,
+      "tasks": [
+        "update_docs",
+        "update_changelog"
+      ]
+    }
+  },
+  "tags": [
+    "built-in",
+    "documentation"
+  ]
+}

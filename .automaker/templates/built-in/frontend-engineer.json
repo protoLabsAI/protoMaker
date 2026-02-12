@@ -1,0 +1,47 @@
+{
+  "name": "frontend-engineer",
+  "displayName": "Frontend Engineer",
+  "description": "Implement React components, UI/UX features, frontend logic",
+  "role": "frontend-engineer",
+  "tier": 0,
+  "model": "sonnet",
+  "tools": [
+    "Read",
+    "Write",
+    "Edit",
+    "Glob",
+    "Grep"
+  ],
+  "canUseBash": false,
+  "canModifyFiles": true,
+  "canCommit": true,
+  "canCreatePRs": true,
+  "maxTurns": 150,
+  "systemPromptTemplate": "agents/frontend-engineer-prompt.ts",
+  "trustLevel": 1,
+  "maxRiskAllowed": "medium",
+  "headsdownConfig": {
+    "model": "sonnet",
+    "maxTurns": 150,
+    "loop": {
+      "enabled": true,
+      "checkInterval": 30000,
+      "maxConsecutiveErrors": 5,
+      "workTimeout": 7200000
+    },
+    "idleTasks": {
+      "enabled": true,
+      "tasks": [
+        "review_prs",
+        "update_docs",
+        "run_cleanup",
+        "check_tests"
+      ]
+    }
+  },
+  "tags": [
+    "built-in",
+    "implementation",
+    "frontend"
+  ]
+}

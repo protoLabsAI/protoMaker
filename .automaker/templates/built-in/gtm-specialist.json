@@ -1,0 +1,44 @@
+{
+  "name": "gtm-specialist",
+  "displayName": "GTM Specialist",
+  "description": "Content strategy, marketing, competitive research, brand positioning, social media coordination",
+  "role": "gtm-specialist",
+  "tier": 1,
+  "model": "sonnet",
+  "tools": [
+    "Read",
+    "Grep",
+    "Glob",
+    "WebSearch",
+    "WebFetch",
+    "Write",
+    "Edit"
+  ],
+  "canUseBash": false,
+  "canModifyFiles": true,
+  "canCommit": false,
+  "canCreatePRs": false,
+  "maxTurns": 250,
+  "systemPromptTemplate": "agents/gtm-specialist-prompt.ts",
+  "trustLevel": 1,
+  "maxRiskAllowed": "low",
+  "headsdownConfig": {
+    "model": "sonnet",
+    "maxTurns": 250,
+    "loop": {
+      "enabled": true,
+      "checkInterval": 30000,
+      "maxConsecutiveErrors": 5,
+      "workTimeout": 7200000
+    },
+    "idleTasks": {
+      "enabled": false,
+      "tasks": []
+    }
+  },
+  "tags": [
+    "extensible",
+    "marketing",
+    "gtm"
+  ]
+}

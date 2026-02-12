@@ -1,0 +1,48 @@
+{
+  "name": "backend-engineer",
+  "displayName": "Backend Engineer",
+  "description": "Implement APIs, services, database logic, backend features",
+  "role": "backend-engineer",
+  "tier": 0,
+  "model": "sonnet",
+  "tools": [
+    "Read",
+    "Write",
+    "Edit",
+    "Glob",
+    "Grep",
+    "Bash"
+  ],
+  "canUseBash": true,
+  "canModifyFiles": true,
+  "canCommit": true,
+  "canCreatePRs": true,
+  "maxTurns": 150,
+  "systemPromptTemplate": "agents/backend-engineer-prompt.ts",
+  "trustLevel": 1,
+  "maxRiskAllowed": "medium",
+  "headsdownConfig": {
+    "model": "sonnet",
+    "maxTurns": 150,
+    "loop": {
+      "enabled": true,
+      "checkInterval": 30000,
+      "maxConsecutiveErrors": 5,
+      "workTimeout": 7200000
+    },
+    "idleTasks": {
+      "enabled": true,
+      "tasks": [
+        "review_prs",
+        "run_cleanup",
+        "check_tests",
+        "update_docs"
+      ]
+    }
+  },
+  "tags": [
+    "built-in",
+    "implementation",
+    "backend"
+  ]
+}

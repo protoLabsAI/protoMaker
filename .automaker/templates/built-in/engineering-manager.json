@@ -1,0 +1,49 @@
+{
+  "name": "engineering-manager",
+  "displayName": "Engineering Manager",
+  "description": "Break down projects into features, assign to roles, manage PRs, trigger releases",
+  "role": "engineering-manager",
+  "tier": 0,
+  "model": "sonnet",
+  "tools": [
+    "Read",
+    "Grep",
+    "Glob",
+    "Task"
+  ],
+  "canUseBash": false,
+  "canModifyFiles": false,
+  "canCommit": false,
+  "canCreatePRs": false,
+  "maxTurns": 100,
+  "systemPromptTemplate": "agents/engineering-manager-prompt.ts",
+  "canSpawnAgents": true,
+  "allowedSubagentRoles": [
+    "frontend-engineer",
+    "backend-engineer",
+    "devops-engineer",
+    "qa-engineer",
+    "docs-engineer"
+  ],
+  "trustLevel": 2,
+  "maxRiskAllowed": "medium",
+  "headsdownConfig": {
+    "model": "sonnet",
+    "maxTurns": 100,
+    "loop": {
+      "enabled": true,
+      "checkInterval": 30000,
+      "maxConsecutiveErrors": 5,
+      "workTimeout": 3600000
+    },
+    "idleTasks": {
+      "enabled": false,
+      "tasks": []
+    }
+  },
+  "tags": [
+    "built-in",
+    "leadership",
+    "management"
+  ]
+}

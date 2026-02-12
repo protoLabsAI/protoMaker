@@ -1,0 +1,61 @@
+{
+  "name": "chief-of-staff",
+  "displayName": "Chief of Staff (Ava)",
+  "description": "Operational leadership, project orchestration, team coordination, autonomous decision-making",
+  "role": "chief-of-staff",
+  "tier": 0,
+  "model": "opus",
+  "tools": [
+    "Read",
+    "Write",
+    "Edit",
+    "Glob",
+    "Grep",
+    "Bash",
+    "WebSearch",
+    "WebFetch",
+    "Task"
+  ],
+  "canUseBash": true,
+  "canModifyFiles": true,
+  "canCommit": true,
+  "canCreatePRs": true,
+  "maxTurns": 500,
+  "canSpawnAgents": true,
+  "allowedSubagentRoles": [
+    "product-manager",
+    "engineering-manager",
+    "frontend-engineer",
+    "backend-engineer",
+    "devops-engineer",
+    "qa-engineer",
+    "docs-engineer",
+    "gtm-specialist"
+  ],
+  "trustLevel": 3,
+  "maxRiskAllowed": "high",
+  "headsdownConfig": {
+    "model": "opus",
+    "maxTurns": 500,
+    "loop": {
+      "enabled": true,
+      "checkInterval": 30000,
+      "maxConsecutiveErrors": 10,
+      "workTimeout": 14400000
+    },
+    "idleTasks": {
+      "enabled": true,
+      "tasks": [
+        "review_prs",
+        "run_cleanup",
+        "update_docs",
+        "check_tests"
+      ]
+    }
+  },
+  "tags": [
+    "built-in",
+    "leadership",
+    "autonomous"
+  ]
+}

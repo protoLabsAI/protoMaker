@@ -1,0 +1,47 @@
+{
+  "name": "product-manager",
+  "displayName": "Product Manager",
+  "description": "Research codebase, engage with users, create SPARC PRDs, create Linear projects",
+  "role": "product-manager",
+  "tier": 0,
+  "model": "opus",
+  "tools": [
+    "Read",
+    "Grep",
+    "Glob",
+    "WebSearch",
+    "WebFetch",
+    "Task"
+  ],
+  "canUseBash": false,
+  "canModifyFiles": false,
+  "canCommit": false,
+  "canCreatePRs": false,
+  "maxTurns": 250,
+  "systemPromptTemplate": "agents/product-manager-prompt.ts",
+  "canSpawnAgents": true,
+  "allowedSubagentRoles": [
+    "engineering-manager"
+  ],
+  "trustLevel": 2,
+  "maxRiskAllowed": "low",
+  "headsdownConfig": {
+    "model": "opus",
+    "maxTurns": 250,
+    "loop": {
+      "enabled": true,
+      "checkInterval": 30000,
+      "maxConsecutiveErrors": 5,
+      "workTimeout": 7200000
+    },
+    "idleTasks": {
+      "enabled": false,
+      "tasks": []
+    }
+  },
+  "tags": [
+    "built-in",
+    "leadership",
+    "planning"
+  ]
+}

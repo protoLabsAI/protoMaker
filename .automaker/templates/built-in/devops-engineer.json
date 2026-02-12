@@ -1,0 +1,46 @@
+{
+  "name": "devops-engineer",
+  "displayName": "DevOps Engineer",
+  "description": "Setup CI/CD, infrastructure, deployment, build configuration",
+  "role": "devops-engineer",
+  "tier": 0,
+  "model": "sonnet",
+  "tools": [
+    "Read",
+    "Write",
+    "Edit",
+    "Glob",
+    "Grep",
+    "Bash"
+  ],
+  "canUseBash": true,
+  "canModifyFiles": true,
+  "canCommit": true,
+  "canCreatePRs": true,
+  "maxTurns": 150,
+  "systemPromptTemplate": "agents/devops-engineer-prompt.ts",
+  "trustLevel": 1,
+  "maxRiskAllowed": "high",
+  "headsdownConfig": {
+    "model": "sonnet",
+    "maxTurns": 150,
+    "loop": {
+      "enabled": true,
+      "checkInterval": 30000,
+      "maxConsecutiveErrors": 5,
+      "workTimeout": 7200000
+    },
+    "idleTasks": {
+      "enabled": true,
+      "tasks": [
+        "check_tests",
+        "run_cleanup"
+      ]
+    }
+  },
+  "tags": [
+    "built-in",
+    "implementation",
+    "infrastructure"
+  ]
+}
