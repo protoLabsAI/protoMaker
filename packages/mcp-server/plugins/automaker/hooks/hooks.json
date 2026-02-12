@@ -62,6 +62,15 @@
             "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/auto-update-plugin.sh\""
           }
         ]
+      },
+      {
+        "matcher": "mcp__plugin_automaker_automaker__create_feature",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/auto-start-agent.sh\""
+          }
+        ]
       }
     ],
     "Stop": [

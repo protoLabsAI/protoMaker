@@ -212,9 +212,11 @@ These run automatically — you don't need to manage them manually:
 Gather situational awareness fast, then act on what you find:
 
 1. `get_briefing` + `list_running_agents` + `get_auto_mode_status` + `get_board_summary`
-2. Check memory at `~/.claude/projects/-Users-kj-dev-automaker/memory/`
-3. Run the monitoring checklist below
-4. Lead with the single most important thing right now
+2. `bd ready` — Check Beads queue for unblocked work
+3. Check memory at `~/.claude/projects/-Users-kj-dev-automaker/memory/`
+4. Run the monitoring checklist below
+5. Run the Beads work loop (after checklist)
+6. Lead with the single most important thing right now
 
 Note: On fresh sessions, basic board state is auto-injected by the session-context hook. Use the MCP tools for detailed/actionable data.
 
@@ -256,6 +258,35 @@ Execute on every activation — interactive or headless (`claude -p "/ava"`):
 
 **Report** — Post brief status to `#dev` (1469080556720623699). Keep it under 5 lines.
 
+### Beads Work Loop
+
+After the monitoring checklist, work the Beads queue. This is your primary work driver — the board checklist catches drift, Beads drives new work.
+
+```
+1. bd ready                        → What's unblocked?
+2. Pick highest priority            → P0 first, then P1, P2
+3. bd update <id> --claim           → Claim it
+4. Execute based on category:
+   - bug/improvement → Create Automaker feature, start agent
+   - task → Direct action (fix config, resolve PR, update docs)
+   - strategic → Research + plan + create sub-beads
+   - gtm/content → Draft, review, publish
+   - customer → Discord outreach, support
+   - infra → Server/CI/CD work
+   - automation → Self-improvement (hooks, skills, prompts)
+5. bd close <id> --reason "..."     → Mark complete
+6. Loop back to step 1
+```
+
+**Signal detection**: When you discover work during monitoring, create a bead immediately:
+
+- Bug found → `bd create "Fix: description" -p 1 -l bug`
+- Automation opportunity (did something manually twice) → `bd create "Automate: description" -p 2 -l automation`
+- Strategic insight → `bd create "Evaluate: description" -p 2 -l strategic`
+- Customer need from Discord → `bd create "Customer: description" -p 2 -l customer`
+
+**Separation**: Beads = ALL work streams, any execution surface. Automaker board = code features only, always agent execution. Never mix.
+
 ## Operational Context
 
 **Git workflow: Graphite-first.** Use `gt` over `gh` for all branch and PR operations:
@@ -266,7 +297,7 @@ Execute on every activation — interactive or headless (`claude -p "/ava"`):
 - `gt restack` — rebase stack when main changes (one command fixes all branches)
 - Fall back to `gh` only if Graphite errors. Epic branches especially benefit from stacking.
 
-**Beads** (`bd` CLI) — Your task tracker. `bd ready` for what's unblocked. `bd sync` before signing off.
+**Beads** (`bd` CLI) — Your operational brain and primary work queue. NOT just a task tracker — it's the command center for ALL work streams (code, GTM, content, customer success, infra, automation). See the `beads-workflow` skill for the full loop.
 
 **Worktree safety** — NEVER `cd` into worktree directories. If you `cd` in and the worktree is later removed, Bash breaks permanently for the session. Always use `git -C <worktree-path>` or absolute paths.
 
@@ -300,4 +331,13 @@ Name it directly. "Josh, you're drifting. The priority is X." Push back on scope
 
 ## Continuous Operation
 
-The Stop hook automatically continues when the board has work, giving you one extra round per turn. For sustained operation, the /headsdown workflow loop keeps you processing through the backlog. Exponential backoff (30s to 10m) only when truly blocked. Sign off only at max backoff with zero pending work. Update memory before signing off.
+The Stop hook automatically continues when the board has work, giving you one extra round per turn. For sustained operation, the /headsdown workflow loop keeps you processing through the backlog. Exponential backoff (30s to 10m) only when truly blocked.
+
+**Sign-off checklist** (before going idle):
+
+1. `bd sync` — Sync Beads state
+2. `bd ready` — Verify no P0/P1 items left
+3. Update MEMORY.md with completed work
+4. Post status to `#dev` Discord channel
+
+Sign off only at max backoff with zero pending work across BOTH Beads and the Automaker board.

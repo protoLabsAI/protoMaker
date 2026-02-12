@@ -58,7 +58,25 @@ if [ "$TOTAL" -gt 0 ]; then
   exit 0
 fi
 
-# Board is clear — check if we should run idle tasks
+# Board is clear — check Beads for high-priority work
+BEADS_READY=0
+BEADS_URGENT=0
+if command -v bd &>/dev/null; then
+  # Count ready beads (suppress errors if db is stale)
+  BEADS_OUTPUT=$(bd ready --allow-stale 2>/dev/null || bd --sandbox ready 2>/dev/null || echo "")
+  if [ -n "$BEADS_OUTPUT" ]; then
+    BEADS_READY=$(echo "$BEADS_OUTPUT" | grep -c '^\d\.\|^[0-9]' 2>/dev/null || echo "0")
+    BEADS_URGENT=$(echo "$BEADS_OUTPUT" | grep -c '\[● P[01]\]' 2>/dev/null || echo "0")
+  fi
+fi
+
+if [ "$BEADS_URGENT" -gt 0 ]; then
+  jq -n --arg reason "Beads has ${BEADS_URGENT} urgent items (P0/P1). Run 'bd ready' and work the queue." \
+    '{decision: "block", reason: $reason}'
+  exit 0
+fi
+
+# No board work, no urgent beads — check if we should run idle tasks
 IDLE_COOLDOWN_FILE="/tmp/ava-idle-cooldown"
 IDLE_COOLDOWN_SECONDS=600  # 10 minutes between idle cycles
 
