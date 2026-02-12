@@ -731,18 +731,11 @@ export class DiscordBotService {
 
       // Emit routed event so AgentDiscordRouter picks it up
       this.events.emit('discord:user-message:routed', {
-        projectPath: this.projectPath,
+        channelId: thread.id,
         userId: interaction.user.id,
         username,
-        agentId: agentName,
-        messages: [
-          {
-            content: userMessage,
-            attachments: {},
-            timestamp: Date.now(),
-          },
-        ],
-        channelId: thread.id,
+        content: userMessage,
+        routedToAgent: agentName,
       });
 
       logger.info(`Created agent thread for /${agentName}`, {
@@ -871,18 +864,11 @@ export class DiscordBotService {
       const agentThread = this.agentThreads.get(message.channelId);
       if (agentThread) {
         this.events.emit('discord:user-message:routed', {
-          projectPath: this.projectPath,
+          channelId: message.channelId,
           userId: message.author.id,
           username: message.author.username,
-          agentId: agentThread.agentType,
-          messages: [
-            {
-              content: message.content,
-              attachments: {},
-              timestamp: message.createdTimestamp,
-            },
-          ],
-          channelId: message.channelId,
+          content: message.content,
+          routedToAgent: agentThread.agentType,
         });
         return;
       }
