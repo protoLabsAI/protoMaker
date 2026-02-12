@@ -401,12 +401,12 @@ jobs:
   deploy:
     runs-on: self-hosted
     steps:
-      - run: git pull origin main
+      - uses: actions/checkout@v4
       - run: ./scripts/setup-staging.sh --build
       - run: ./scripts/setup-staging.sh --start
       - run: curl -sf http://localhost:3008/api/health
       - run: ./scripts/smoke-test.sh
-      - run: docker system prune -f --volumes
+      - run: docker image prune -f
 ```
 
 ### Self-Hosted Runner
@@ -425,12 +425,12 @@ See [staging-deployment.md](./staging-deployment.md#automated-deploys) for full 
 
 ### Deployment Steps
 
-1. **Pull Latest Code**: `git pull origin main`
+1. **Checkout Code**: Uses `actions/checkout@v4` for a clean copy in the runner workspace
 2. **Build**: Runs `./scripts/setup-staging.sh --build` to rebuild Docker images
 3. **Start Services**: Runs `./scripts/setup-staging.sh --start` to restart containers
-4. **Health Check**: Verifies `/api/health` endpoint responds
+4. **Health Check**: Verifies `/api/health` endpoint responds (15 retries, 2s interval)
 5. **Smoke Tests**: Runs `./scripts/smoke-test.sh` to verify critical functionality
-6. **Cleanup**: Prunes unused Docker resources to free disk space
+6. **Cleanup**: Prunes unused Docker images to free disk space
 
 ### Smoke Tests
 

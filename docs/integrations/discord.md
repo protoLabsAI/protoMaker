@@ -316,5 +316,5 @@ When a channel is no longer needed:
 ## Related Documentation
 
 - [Team Hierarchy Vision](../.automaker/context/team-hierarchy-vision.md) - Multi-agent hierarchy architecture
-- [Infrastructure](./infra/README.md) - Deployment and system architecture
-- [Claude Plugin](./claude-plugin.md) - MCP tools and plugin setup
+- [Infrastructure](/infra/) - Deployment and system architecture
+- [Claude Plugin](./claude-plugin) - MCP tools and plugin setup

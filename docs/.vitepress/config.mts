@@ -8,7 +8,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 /**
  * Auto-generate sidebar items from a directory of markdown files.
  * Reads .md files, extracts the first H1 as the label, and sorts alphabetically.
- * README.md files become the index page for that section.
+ * Skips README.md and index.md (those are section landing pages).
  */
 function generateSidebar(dir: string, basePath: string): { text: string; link: string }[] {
   const docsRoot = path.resolve(__dirname, '..');
@@ -18,7 +18,7 @@ function generateSidebar(dir: string, basePath: string): { text: string; link: s
 
   return fs
     .readdirSync(fullDir)
-    .filter((f) => f.endsWith('.md') && f !== 'README.md')
+    .filter((f) => f.endsWith('.md') && f !== 'README.md' && f !== 'index.md')
     .map((f) => {
       const content = fs.readFileSync(path.join(fullDir, f), 'utf-8');
       const match = content.match(/^#\s+(.+)$/m);
@@ -38,8 +38,8 @@ export default defineConfig({
   // Ignore archived docs — they clutter nav but stay accessible via direct URL
   srcExclude: ['archived/**'],
 
-  // Allow dead links for cross-references to files outside docs/ (CLAUDE.md, CONTRIBUTING, etc.)
-  ignoreDeadLinks: true,
+  // Only allow dead links to files outside docs/ (CLAUDE.md, CONTRIBUTING, etc.)
+  ignoreDeadLinks: [/^\.\.\//, /^\/(?!getting-started|agents|infra|server|authority|dev|protolabs|integrations)/],
 
   themeConfig: {
     logo: '/logo.svg',
@@ -50,20 +50,28 @@ export default defineConfig({
 
     nav: [
       { text: 'Home', link: '/' },
+      { text: 'Get Started', link: '/getting-started/' },
       { text: 'Agents', link: '/agents/' },
-      { text: 'Infrastructure', link: '/infra/' },
-      { text: 'ProtoLabs', link: '/protolabs/' },
+      { text: 'Infra', link: '/infra/' },
       {
         text: 'More',
         items: [
-          { text: 'Server', link: '/server/route-organization' },
-          { text: 'Authority', link: '/authority/org-chart' },
-          { text: 'Development', link: '/dev/ui-architecture' },
+          { text: 'Integrations', link: '/integrations/' },
+          { text: 'Server', link: '/server/' },
+          { text: 'Authority', link: '/authority/' },
+          { text: 'Development', link: '/dev/' },
+          { text: 'ProtoLabs', link: '/protolabs/' },
         ],
       },
     ],
 
     sidebar: {
+      '/getting-started/': [
+        {
+          text: 'Getting Started',
+          items: generateSidebar('getting-started', '/getting-started'),
+        },
+      ],
       '/agents/': [
         {
           text: 'Agent System',
@@ -76,22 +84,22 @@ export default defineConfig({
           items: generateSidebar('infra', '/infra'),
         },
       ],
+      '/integrations/': [
+        {
+          text: 'Integrations',
+          items: generateSidebar('integrations', '/integrations'),
+        },
+      ],
       '/server/': [
         {
-          text: 'Server',
+          text: 'Server Reference',
           items: generateSidebar('server', '/server'),
         },
       ],
       '/authority/': [
         {
           text: 'Authority System',
-          items: [
-            ...generateSidebar('authority', '/authority'),
-            {
-              text: 'Roles',
-              items: generateSidebar('authority/roles', '/authority/roles'),
-            },
-          ],
+          items: generateSidebar('authority', '/authority'),
         },
       ],
       '/dev/': [
