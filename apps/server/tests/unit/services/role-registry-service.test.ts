@@ -86,6 +86,7 @@ describe('RoleRegistryService', () => {
       registry.register(makeTemplate({ name: 'agent-bb', role: 'backend-engineer', tier: 1 }));
       const template = registry.getByRole('backend-engineer');
       expect(template).toBeDefined();
+      expect(template?.name).toBe('agent-aa');
     });
   });
 

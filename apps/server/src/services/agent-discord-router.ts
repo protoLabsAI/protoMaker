@@ -140,28 +140,26 @@ export class AgentDiscordRouter {
    */
   private getRoleTools(agentName: string): string[] {
     // Try registry first — resolve by name or role
-    if (this.roleRegistry) {
-      const template = this.roleRegistry.resolve(agentName);
-      if (template?.tools) {
-        logger.debug(
-          `Using registry template tools for "${agentName}" (template: ${template.name})`
-        );
-        return template.tools;
-      }
-      // Template found but no explicit tools — use ROLE_CAPABILITIES by template's role
-      if (template) {
-        const capabilities = ROLE_CAPABILITIES[template.role as AgentRole];
-        if (capabilities) {
-          logger.debug(`Using ROLE_CAPABILITIES for "${agentName}" via role "${template.role}"`);
-          return capabilities.tools;
-        }
+    const template = this.roleRegistry?.resolve(agentName);
+    if (template?.tools) {
+      logger.debug(`Using registry template tools for "${agentName}" (template: ${template.name})`);
+      return template.tools;
+    }
+    // Template found but no explicit tools — use ROLE_CAPABILITIES by template's role
+    if (template) {
+      const capabilities = ROLE_CAPABILITIES[template.role as AgentRole];
+      if (capabilities) {
+        logger.debug(`Using ROLE_CAPABILITIES for "${agentName}" via role "${template.role}"`);
+        return capabilities.tools;
       }
     }
 
-    // Try ROLE_CAPABILITIES directly (agentName might be a role name)
-    const capabilities = ROLE_CAPABILITIES[agentName as AgentRole];
-    if (capabilities) {
-      return capabilities.tools;
+    // Only try ROLE_CAPABILITIES directly when no template was found
+    if (!template) {
+      const capabilities = ROLE_CAPABILITIES[agentName as AgentRole];
+      if (capabilities) {
+        return capabilities.tools;
+      }
     }
 
     throw new Error(
