@@ -5,9 +5,9 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 9
-  referenced: 3
-  successfulFeatures: 3
+  loaded: 16
+  referenced: 8
+  successfulFeatures: 8
 ---
 # api
 
@@ -48,3 +48,32 @@ usageStats:
 - **Rejected:** Throwing on all failures (including permission denied) would require try-catch everywhere and could crash event loops. Always throwing makes Discord optional by requiring every caller to handle Discord.
 - **Trade-offs:** Boolean returns require explicit null checks but allow graceful degradation. Exception-based errors are harder to ignore accidentally, but force coupling to Discord error handling.
 - **Breaking if changed:** If behavior changes to throw on every failure, event processing could crash if Discord is unreachable. If behavior changes to never throw, unexpected errors (service crash) become silent and undetectable.
+
+#### [Pattern] useAgentTemplates hook returns { data, isLoading, error } tuple pattern typical of React Query, enabling conditional rendering of loading/error/success states (2026-02-12)
+- **Problem solved:** Component needed to fetch agent templates asynchronously and handle async states in UI
+- **Why this works:** React Query pattern separates concerns: hook handles data fetching and caching, component handles UI states. isLoading and error flags enable straightforward conditional rendering without promise handling in JSX.
+- **Trade-offs:** Easier: automatic caching, built-in error handling, less boilerplate. Harder: adds React Query dependency, hook behavior less obvious than simple useState.
+
+### System prompt prepended (not replaced) when role template provided (2026-02-12)
+- **Context:** AgentTemplate includes systemPrompt; AgentService already had a systemPrompt parameter for the base send operation
+- **Why:** Prepending preserves existing system prompt semantics while adding template directives on top. Allows templates to augment, not override. Backward compatible—code without templates still uses original system prompt unchanged.
+- **Rejected:** Replacing system prompt entirely: Would break existing send calls that rely on the original system prompt. Would require templates to include all base directives.
+- **Trade-offs:** Easier: zero breaking changes; templates become pure additions. Harder: order of prompt concatenation matters; template directives evaluated before base directives (priority handling not explicit)
+- **Breaking if changed:** If changed to replacement, all role-based agent executions would lose the original system prompt, breaking agents that rely on base directives. Would require deprecation period and migration guide.
+
+#### [Gotcha] HTTP API client method signature updates must maintain backward compatibility - adding optional parameters (role?, maxTurns?, systemPromptOverride?) to existing methods (send, queueAdd) requires all callers to be updated or will have stale signatures (2026-02-12)
+- **Situation:** Adding new parameters to HTTP client queueAdd method revealed it was missing from TypeScript type definitions entirely despite being implemented
+- **Root cause:** HTTP client methods are consumed by multiple UI components and hooks. Changing signature without optional parameters would break all existing calls. Optional parameters allow gradual adoption.
+- **How to avoid:** Optional parameters keep API surface small but increase method complexity. Callers must know which parameters are actually used by the backend.
+
+#### [Gotcha] API method names are inconsistent across query hooks - getAll() vs list() vs status(). Must review existing hooks before implementing new data fetching to avoid using non-existent methods. (2026-02-12)
+- **Situation:** Initially attempted to use api.features.list() and api.autoMode.getRunningAgents() which don't exist. Only discovered correct method names by examining use-features.ts and use-running-agents.ts.
+- **Root cause:** Codebase has organic growth with different naming conventions across different API endpoints. No centralized API spec or TypeScript types enforce consistency.
+- **How to avoid:** Each new integration requires archeological review of existing code. Safer against typos than if we guessed, but slower onboarding.
+
+### Error handling in data fetching throws Error when API result.success is false, rather than returning error state directly. Query system catches and exposes via error property. (2026-02-12)
+- **Context:** React Query's useQuery automatically wraps thrown errors in query.error state. Could have handled errors inside queryFn or deferred to component.
+- **Why:** Consistent with React Query patterns - framework handles error state management. Component doesn't need to handle different error formats.
+- **Rejected:** Returning { data: null, error: result.error } from queryFn. Would duplicate error handling logic.
+- **Trade-offs:** Errors are automatically serialized by React Query. If error needs domain-specific transformation before display, it happens in component not hook.
+- **Breaking if changed:** If error throwing is replaced with return values, error state in components becomes undefined and errors are silently ignored.

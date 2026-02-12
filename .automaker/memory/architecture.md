@@ -5,9 +5,9 @@ relevantTo: [architecture]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 3
-  referenced: 1
-  successfulFeatures: 1
+  loaded: 4
+  referenced: 2
+  successfulFeatures: 2
 ---
 # architecture
 
@@ -356,3 +356,117 @@ usageStats:
 - **Problem solved:** Different notification types signal different urgency levels to the on-call engineer reading #infra
 - **Why this works:** Emoji are visual and immediate. Hardcoding keeps the feature self-contained and avoids config file sprawl for a simple mapping
 - **Trade-offs:** Hardcoded emojis are simple and visible. But if severity rules change (e.g., feature_error should be 🟡 instead), code change is required. No runtime configuration. If we later add 10 more notification types, this function grows unmaintainable
+
+### Custom Model fallback option is implemented as a special CommandItem that opens PhaseModelSelector modal instead of selecting an agent (2026-02-12)
+- **Context:** Needed a way to let users provide custom model parameters when no agent template matched their needs
+- **Why:** PhaseModelSelector already exists and handles model configuration complexity. Reusing it avoids duplication and keeps model selection logic centralized. Placing it at the bottom of the agent list preserves the agent-first workflow while providing an escape hatch.
+- **Rejected:** Could have embedded model selector directly in AgentSelector or added it as a separate UI element, but that duplicates model logic and requires prop drilling
+- **Trade-offs:** Easier: no duplicate model selection code, users see agents first. Harder: requires parent component to handle both agent and custom model callbacks, two different selection paths.
+- **Breaking if changed:** If PhaseModelSelector is removed or its props change (customModel, onCustomModelSelect), the Custom Model fallback breaks. Parent components must handle both onAgentSelect and onCustomModelSelect callbacks.
+
+#### [Pattern] Template resolution applied at service layer (AgentService.sendMessage), not at route/endpoint layer (2026-02-12)
+- **Problem solved:** Adding role parameter support required deciding where template lookups and system prompt merging happens
+- **Why this works:** Service layer placement allows both template-based and non-template agent execution to coexist. Template becomes optional enhancement, not mandatory middleware. Keeps route handlers thin and focused on request/response mapping. Single source of truth for template resolution logic.
+- **Trade-offs:** Easier: maintaining template logic in one place; adding role support to other endpoints; testing. Harder: slightly more complex AgentService constructor with additional dependency injection
+
+#### [Gotcha] AgentConfig.role already existed in UI types before implementation; feature only needed plumbing to surface it (2026-02-12)
+- **Situation:** When updating agent-view.tsx, agentConfig.role was already available as a typed field
+- **Root cause:** Indicates the UI data model was designed with role support in mind before the server-side endpoint existed. Good separation: UI type definitions can evolve independently from backend implementation.
+- **How to avoid:** Easier: no type definition refactoring needed. Harder: could mask that feature discovery and requirements-gathering weren't tightly coupled
+
+#### [Pattern] Optional parameters propagate through full stack (UI → Hook → HTTP → Route → Service) without transformation (2026-02-12)
+- **Problem solved:** role parameter flowed from agent-view.tsx → useElectronAgent → HTTP client → POST /api/agent/send → route handler → AgentService.sendMessage()
+- **Why this works:** Each layer is a simple pass-through for optional parameters, avoiding parameter transformation logic. Keeps concerns separated: each layer handles its own responsibility (UI concern, HTTP concern, service concern), not intermediate mapping.
+- **Trade-offs:** Easier: simple, readable flow; each layer has one responsibility. Harder: no intermediate validation; errors bubble up from service, not caught early at HTTP boundary
+
+#### [Pattern] State is lifted from InputControls → AgentInputArea → AgentView. AgentView owns selectedAgent and passes it down via callback pattern (onAgentSelect), creating a clear unidirectional data flow. (2026-02-12)
+- **Problem solved:** Multiple nested components (InputControls, AgentModelSelector, AgentSelector) need access to agent selection state and must coordinate model auto-setting.
+- **Why this works:** Lifting state to AgentView (parent of AgentInputArea) creates a single source of truth and makes the dependency graph explicit. The callback pattern allows InputControls to communicate selection changes back up without tight coupling.
+- **Trade-offs:** Slightly more prop drilling, but vastly clearer data flow. Easier to add new features that depend on selectedAgent (logging, validation, etc.) because they all go through the same state object.
+
+### AgentSelector is a new component, not an extension of AgentModelSelector. Both coexist but are used mutually exclusively based on selectedAgent state. (2026-02-12)
+- **Context:** Could have modified AgentModelSelector to show both templates and raw models, or created a new component to replace it entirely.
+- **Why:** Separation of concerns: AgentSelector (template-based selection) and AgentModelSelector (raw model selection) have different responsibilities and APIs. Keeping them separate makes each component's intent clear and avoids feature creep.
+- **Rejected:** Merging both into one component would create a mega-selector that must handle two different modes (template vs raw), two different data sources (agent registry vs model list), and conflicting state (selectedAgent vs selectedModel).
+- **Trade-offs:** More components to maintain, but each has a single responsibility. Easier to unit test and reason about, harder to sync state if both were somehow active simultaneously.
+- **Breaking if changed:** If a future requirement demands showing both selectors at once (e.g., select a template but override its model), the mutual exclusion pattern becomes a blocker and requires significant refactoring.
+
+#### [Pattern] Layered parameter threading through React hook → TypeScript interface → HTTP client requires explicit type propagation at each boundary (2026-02-12)
+- **Problem solved:** Passing agentConfig properties (role, maxTurns, systemPromptOverride) from UI component through hook to backend API
+- **Why this works:** TypeScript's structural typing + npm workspace module resolution creates isolated type spaces. Each layer (component, hook, interface, HTTP client) maintains its own type definition. Without explicit threading, type information gets lost at boundaries.
+- **Trade-offs:** More verbose (5 files modified for 3 parameters) but gains: compile-time safety, refactoring support, clear API contracts at each layer. Refactoring one parameter requires touching all 5 files.
+
+### Scope discipline: UI layer changes only - backend parameter consumption left for separate feature despite accepting parameters at API boundary (2026-02-12)
+- **Context:** Feature accepts role, maxTurns, systemPromptOverride at HTTP API layer but backend doesn't yet use them for execution logic
+- **Why:** Prevents scope creep and enables parallel work - UI can be deployed independently. Clear contract: UI wires parameters through all layers, backend integration is decoupled feature. Matches monorepo strategy of feature isolation.
+- **Rejected:** Could implement full end-to-end in single feature - would require backend changes (process management, prompt modification) alongside UI, larger PR, harder to test independently
+- **Trade-offs:** Allows UI→API contract to be established before backend implementation is ready. Risk: if backend implementation differs from expectations, UI wiring becomes dead code until synced.
+- **Breaking if changed:** If backend never implements parameter consumption, parameters are silently dropped - creates silent failures instead of compile-time errors. No way to detect at UI layer that backend is ignoring values.
+
+### Optional prop pattern for selectedAgentTemplate with null initialization and fallback rendering (2026-02-12)
+- **Context:** Adding agent template support to AgentHeader while maintaining backward compatibility with existing sessions that have no template selected
+- **Why:** Makes the feature non-breaking: existing components work unchanged when prop is undefined/null, new features can opt-in by passing the prop. Allows incremental adoption - state can be added to agent-view without requiring all consumers to provide template data immediately
+- **Rejected:** Required prop would force all callers to provide template data upfront, breaking existing sessions and requiring coordinated changes across codebase
+- **Trade-offs:** Adds null-check logic in render path (minor), but enables shipping foundation without waiting for session persistence layer. Defers the harder dependency (storing/loading template with session) to later phase
+- **Breaking if changed:** If displayName/role rendering logic becomes required (not optional), would need to handle null case in templates that don't provide selectedAgentTemplate - creates fragile cascading failures
+
+### Deferring selectedAgentTemplate state initialization to null/undefined, not wiring state setters anywhere (2026-02-12)
+- **Context:** Feature is a 'foundation' phase that implements UI structure but doesn't wire selection logic or persistence yet
+- **Why:** Allows shipping the rendering layer without blocking on session state management (which requires ORM changes, persistence, loading logic). Creates discrete deliverable: foundation (UI shape) can be reviewed/deployed before state layer. Unblocks later phases to add selector UI, session hooks, etc. independently
+- **Rejected:** Could wire everything end-to-end immediately - but would require coordinating session persistence changes (harder to review in one PR), ORM layer changes, and UI layer changes simultaneously
+- **Trade-offs:** Component has unused state for now (slightly confusing to read), but enables parallel work - UI can be styled/reviewed while state layer is being built. Creates small tech debt of disconnected state
+- **Breaking if changed:** If state setters are never wired, the prop remains unused - would need follow-up phase to connect selector UI to state. If that phase is delayed/cancelled, the code is dead. Clear owner must exist for 'add template selection UI' to avoid this limbo
+
+#### [Pattern] Interface duplication: SelectedAgentTemplate defined separately in both agent-header.tsx and agent-view.tsx (2026-02-12)
+- **Problem solved:** Two components needed the same template shape (displayName, role, optionally description) but started from files that didn't import from shared types
+- **Why this works:** Avoided creating new shared type file and importing across components during foundation phase. Each file is self-contained and testable independently. Duplication cost is low for a 3-field interface during foundation
+- **Trade-offs:** Easier to modify one component without worrying about breaking imports. Harder to ensure consistency - if one updates to add 'description', other still doesn't have it. Creates mild maintenance burden for future changes
+
+#### [Pattern] useMemo() used to calculate boardCounts from features array. Reduces function signature complexity - hook returns flat object with computed value instead of raw data + function. (2026-02-12)
+- **Problem solved:** Features array changes frequently (polling, WebSocket invalidation). Recalculating counts on every render is cheap, but the pattern is 'compute once, return result' not 'return data for caller to compute'.
+- **Why this works:** Keeps hook interface simple (boardCounts is ready to use, not a function). Memoization prevents unnecessary re-renders of consumers when features data hasn't semantically changed (same counts, different object reference).
+- **Trade-offs:** useMemo adds callback overhead but the reducer is O(n features) which is cheap anyway. Benefit: single source of count calculation logic.
+
+### Conditional rendering of Project Activity section only when currentProject is set, rather than showing a generic 'no project selected' state (2026-02-12)
+- **Context:** Feature needed to display real-time activity for a selected project on the dashboard, but dashboard is primarily a project selector, not a project viewer
+- **Why:** The dashboard's purpose is project navigation. Showing activity only when a project context exists (currentProject !== null) prevents misleading empty states and aligns UX with actual use case.
+- **Rejected:** Could render static placeholder when no project selected, but this confuses users about the section's purpose and clutters the dashboard
+- **Trade-offs:** Simpler code and clearer UX vs potential discoverability issue if users don't know the section exists. Resolved by relying on collapsible default-expanded state.
+- **Breaking if changed:** If the app changes to show dashboard while a project is still 'active' in background, this conditional becomes problematic and needs refactoring to show project context
+
+#### [Pattern] Prop-based standalone components (EventFeed, ProjectHealthCard) that receive projectPath rather than relying on global state or context providers (2026-02-12)
+- **Problem solved:** Two new components needed to display project-specific information on the dashboard without tight coupling to dashboard's state management
+- **Why this works:** Prop-drilling is explicit and makes component dependencies clear. Avoids creating additional context providers which would complicate the state management tree. Easier to test and reuse in other views.
+- **Trade-offs:** Parent (dashboard-view) must pass props explicitly. This is more verbose but self-documenting and prevents prop hell at deeper nesting levels.
+
+#### [Gotcha] EventFeed's project filtering logic references events with project context metadata that doesn't exist yet (TODO comment in place), creating a gap between component design and actual data availability (2026-02-12)
+- **Situation:** Component was designed with filtering capability but the authority event system doesn't currently include project path metadata in event objects
+- **Root cause:** Anticipated future state where events would include context. Better to build the capability now than refactor later.
+- **How to avoid:** Filter logic is dormant (commented out) today but ready to activate. Adds ~5 lines of unused code now, saves refactoring later.
+
+#### [Pattern] ProjectHealthCard uses placeholder data structure with TODO comments for future metric integration, rather than hardcoding static values or raising errors on missing data (2026-02-12)
+- **Problem solved:** Project metrics (status, active tasks, completed today) aren't yet available from backend, but component needed for dashboard integration
+- **Why this works:** Placeholder structure is self-documenting via TODOs. Makes it obvious where real data should come from. Component is immediately usable for UI/UX validation.
+- **Trade-offs:** Component renders with fake data that could mislead if not carefully labeled. TODOs document the intent but aren't enforced.
+
+#### [Pattern] Event payload type discrimination via `isEpic` boolean flag instead of separate event type (2026-02-12)
+- **Problem solved:** CeremonyService needed to handle epic completion differently from milestone/project completion, but all three emerge from feature lifecycle events
+- **Why this works:** Single `feature:completed` event with discriminator flag reduces event proliferation. Allows gradual feature addition without schema explosion. Payload structure is self-documenting.
+- **Trade-offs:** Simpler event model (+) but requires instanceof checks at runtime (-). More scalable for future feature types (+).
+
+### Aggregate child feature costs at announcement time by loading from feature data, rather than pre-computing in epic completion event (2026-02-12)
+- **Context:** Epic delivery announcement needs to show total cost, average cost per feature, and per-feature cost breakdown. Child features and their costs exist in feature.json files.
+- **Why:** Feature data is source of truth. Loading at announcement time ensures cost reflects final state (no stale data from event emission time). Avoids redundant cost tracking in CompletionDetectorService.
+- **Rejected:** Alternative: Pass aggregate costs in EpicCompletedPayload. This couples CompletionDetectorService to ceremony announcement concerns and creates dual source of truth for cost.
+- **Trade-offs:** Requires I/O at announcement time (-) but guarantees accuracy and separation of concerns (+). One-time cost per epic completion is acceptable.
+- **Breaking if changed:** If feature data structure changes (cost field renamed/moved), announcement generation breaks silently. Needs defensive null-checks.
+
+#### [Gotcha] Discord message splitting at 2000 char limit needed for announcements with many child features, but no auto-truncation of feature list (2026-02-12)
+- **Situation:** Epics with 20+ features produce announcements exceeding Discord's single-message limit. Implementation splits messages but doesn't indicate to user when features were omitted.
+- **Root cause:** Discord API hard limit enforces split. Without splitting, entire announcement fails. Split preserves at least partial information.
+- **How to avoid:** Message fragmentation is visible but informative (+). User sees data was split (-). No indication of omitted features in split case (-).
+
+#### [Pattern] Two-level ceremony settings check: `enabled` AND `enableEpicDelivery`, both defaulting to true (2026-02-12)
+- **Problem solved:** CeremonyService needed granular control: disable all ceremonies vs. disable only epic ceremonies
+- **Why this works:** Hierarchical settings allow cost-free opt-out at multiple levels. Parent `enabled` flag kills all ceremony logic. Feature-specific flag provides fine-grained control without startup overhead.
+- **Trade-offs:** Extra condition at runtime (+/-) is negligible. Flexibility gained outweighs small cost. Default-true for both prevents silent disablement surprises (+).

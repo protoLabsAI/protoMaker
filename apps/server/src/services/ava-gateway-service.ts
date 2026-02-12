@@ -263,6 +263,8 @@ export class AvaGatewayService {
 
   /**
    * Post startup message to Discord (Phase 7)
+   * Retries up to 3 times with 3s delay to handle race condition where
+   * Discord bot hasn't finished connecting when AvaGateway initializes.
    */
   private async postStartupMessage(): Promise<void> {
     if (!this.infraChannelId || !this.discordBotService) {
@@ -275,16 +277,34 @@ export class AvaGatewayService {
       `**Project:** ${this.projectPath || 'Not configured'}\n` +
       `**Timestamp:** ${new Date().toISOString()}`;
 
-    try {
-      const success = await this.discordBotService.sendToChannel(this.infraChannelId, message);
-      if (success) {
-        logger.info('Posted startup message to Discord #infra');
-      } else {
-        logger.error('Failed to post startup message to Discord');
+    const maxRetries = 3;
+    const retryDelayMs = 3000;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const success = await this.discordBotService.sendToChannel(this.infraChannelId, message);
+        if (success) {
+          logger.info('Posted startup message to Discord #infra');
+          return;
+        }
+        // Bot likely not ready yet — wait and retry
+        if (attempt < maxRetries) {
+          logger.debug(
+            `Discord bot not ready, retrying startup message (${attempt}/${maxRetries})...`
+          );
+          await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+        }
+      } catch (error) {
+        if (attempt < maxRetries) {
+          logger.debug(`Discord startup message attempt ${attempt} failed, retrying...`);
+          await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+        } else {
+          logger.error('Failed to post startup message to Discord after retries', error);
+        }
       }
-    } catch (error) {
-      logger.error('Error posting startup message to Discord', error);
     }
+
+    logger.warn('Could not post startup message to Discord — bot may not be connected');
   }
 
   /**
