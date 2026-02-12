@@ -24,6 +24,7 @@ import {
   Trash2,
   Search,
   X,
+  ChevronRight,
   type LucideIcon,
 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
@@ -44,6 +45,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { EventFeed } from './dashboard-view/event-feed';
+import { ProjectHealthCard } from './dashboard-view/project-health-card';
 
 const logger = createLogger('DashboardView');
 
@@ -76,6 +79,7 @@ export function DashboardView() {
 
   const {
     projects,
+    currentProject,
     upsertAndSetCurrentProject,
     addProject,
     setCurrentProject,
@@ -89,6 +93,7 @@ export function DashboardView() {
   const [isOpening, setIsOpening] = useState(false);
   const [projectToRemove, setProjectToRemove] = useState<{ id: string; name: string } | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showProjectActivity, setShowProjectActivity] = useState(true);
 
   // Sort projects: favorites first, then by last opened
   const sortedProjects = [...projects].sort((a, b) => {
@@ -940,6 +945,37 @@ export function DashboardView() {
                   <Button variant="outline" size="sm" onClick={() => setSearchQuery('')}>
                     Clear search
                   </Button>
+                </div>
+              )}
+
+              {/* Project Activity Section - Only show when a project is selected */}
+              {currentProject && (
+                <div className="mt-8 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <button
+                      onClick={() => setShowProjectActivity(!showProjectActivity)}
+                      className="flex items-center gap-2 group hover:text-brand-500 transition-colors"
+                    >
+                      <ChevronRight
+                        className={`w-5 h-5 transition-transform duration-200 ${
+                          showProjectActivity ? 'rotate-90' : ''
+                        }`}
+                      />
+                      <h2 className="text-xl sm:text-2xl font-bold text-foreground">
+                        Project Activity
+                      </h2>
+                    </button>
+                  </div>
+
+                  {showProjectActivity && (
+                    <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-300">
+                      {/* Project Health Card */}
+                      <ProjectHealthCard projectPath={currentProject.path} />
+
+                      {/* Event Feed */}
+                      <EventFeed projectPath={currentProject.path} />
+                    </div>
+                  )}
                 </div>
               )}
             </div>
