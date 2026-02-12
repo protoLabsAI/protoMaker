@@ -39,7 +39,10 @@ export default defineConfig({
   srcExclude: ['archived/**'],
 
   // Only allow dead links to files outside docs/ (CLAUDE.md, CONTRIBUTING, etc.)
-  ignoreDeadLinks: [/^\.\.\//, /^\/(?!getting-started|agents|infra|server|authority|dev|protolabs|integrations)/],
+  ignoreDeadLinks: [
+    /^\.\.\//,
+    /^\/(?!getting-started|agents|infra|server|authority|dev|protolabs|integrations)/,
+  ],
 
   themeConfig: {
     logo: '/logo.svg',
