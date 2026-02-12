@@ -82,6 +82,9 @@ services:
       # CORS
       - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:3007}
 
+      # Agent concurrency limit (system hard cap)
+      - AUTOMAKER_MAX_CONCURRENCY=${AUTOMAKER_MAX_CONCURRENCY:-6}
+
       # Node.js memory tuning for high-concurrency agent execution
       - NODE_OPTIONS=--max-old-space-size=${NODE_MAX_OLD_SPACE:-32768}
 

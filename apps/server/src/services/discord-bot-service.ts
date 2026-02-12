@@ -1765,7 +1765,16 @@ export class DiscordBotService {
   async readMessages(
     channelId: string,
     limit: number = 10
-  ): Promise<Array<{ id: string; content: string; author: { username: string; bot: boolean } }>> {
+  ): Promise<
+    Array<{
+      id: string;
+      content: string;
+      author: { id: string; username: string; bot: boolean };
+      timestamp: string;
+      mentions: string[];
+      hasAttachments: boolean;
+    }>
+  > {
     if (!this.client) return [];
 
     try {
@@ -1777,9 +1786,13 @@ export class DiscordBotService {
         id: msg.id,
         content: msg.content,
         author: {
+          id: msg.author.id,
           username: msg.author.username,
           bot: msg.author.bot,
         },
+        timestamp: msg.createdAt.toISOString(),
+        mentions: Array.from(msg.mentions.users.values()).map((user) => user.id),
+        hasAttachments: msg.attachments.size > 0,
       }));
     } catch (error) {
       logger.error(`Failed to read messages from channel ${channelId}:`, error);

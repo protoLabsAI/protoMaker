@@ -73,6 +73,12 @@ export class HeadsdownService {
   /** Loop intervals for cleanup */
   private loopIntervals = new Map<string, NodeJS.Timeout>();
 
+  /** Consecutive error counts per agent */
+  private consecutiveErrors = new Map<string, number>();
+
+  /** Last work timestamp per agent (milliseconds) */
+  private lastWorkTimestamp = new Map<string, number>();
+
   /** Discord monitor for detecting user messages */
   private discordMonitor: DiscordMonitor;
 
@@ -144,6 +150,13 @@ export class HeadsdownService {
   }
 
   /**
+   * Set the Discord bot service for message fetching
+   */
+  setDiscordBotService(service: any): void {
+    this.discordMonitor.setDiscordBotService(service);
+  }
+
+  /**
    * Start a headsdown agent
    */
   async startAgent(config: HeadsdownConfig): Promise<string> {
@@ -174,7 +187,8 @@ export class HeadsdownService {
     }
 
     // Start GitHub monitoring if configured
-    if (config.monitors.github) {
+    if (config.monitors.github && config.projectPath) {
+      this.githubMonitor.setProjectPath(config.projectPath);
       await this.githubMonitor.startMonitoring(config.monitors.github);
       logger.info(`Started GitHub monitoring for agent ${agentId}`);
     }
@@ -243,6 +257,8 @@ export class HeadsdownService {
 
     // Remove from active agents
     this.agents.delete(agentId);
+    this.consecutiveErrors.delete(agentId);
+    this.lastWorkTimestamp.delete(agentId);
 
     // Emit stop event
     this.events.emit('headsdown:agent:stopped', {
@@ -324,6 +340,8 @@ export class HeadsdownService {
     };
 
     this.agents.set(agent.id, agent);
+    this.consecutiveErrors.set(agent.id, 0);
+    this.lastWorkTimestamp.set(agent.id, Date.now());
 
     return agent;
   }
@@ -384,10 +402,15 @@ export class HeadsdownService {
     } catch (error) {
       logger.error(`Work loop error for agent ${agentId}:`, error);
 
+      // Increment consecutive error count
+      const errorCount = (this.consecutiveErrors.get(agentId) ?? 0) + 1;
+      this.consecutiveErrors.set(agentId, errorCount);
+
       // Emit error event
       this.events.emit('headsdown:agent:error', {
         agentId,
         error: error instanceof Error ? error.message : String(error),
+        consecutiveErrors: errorCount,
       });
 
       // Continue loop after error
@@ -529,13 +552,17 @@ export class HeadsdownService {
    * Build world state for work evaluation
    */
   private async buildWorldState(agent: AgentInstance): Promise<WorldState> {
+    const lastWorkTime = this.lastWorkTimestamp.get(agent.id) ?? Date.now();
+    const idleDurationMs = Date.now() - lastWorkTime;
+    const consecutiveErrorCount = this.consecutiveErrors.get(agent.id) ?? 0;
+
     const state: WorldState = {
       // Agent state
       agent_role: agent.role,
       agent_idle: agent.status === 'idle',
       total_turns: agent.stats.totalTurns,
-      consecutive_errors: 0, // TODO: track from loop errors
-      idle_duration_ms: 0, // TODO: track from last work timestamp
+      consecutive_errors: consecutiveErrorCount,
+      idle_duration_ms: idleDurationMs,
 
       // Monitoring state
       discord_monitoring_active: !!agent.monitoring.discord,
@@ -797,6 +824,12 @@ export class HeadsdownService {
 
       // Update stats
       agent.stats.totalTurns++;
+
+      // Reset consecutive errors on successful work execution
+      this.consecutiveErrors.set(agent.id, 0);
+
+      // Update last work timestamp
+      this.lastWorkTimestamp.set(agent.id, Date.now());
     } catch (error) {
       logger.error(`Work execution failed for agent ${agent.id}:`, error);
       throw error;
@@ -834,11 +867,13 @@ export class HeadsdownService {
       await mkdir(stateDir, { recursive: true });
     }
 
+    const consecutiveErrorCount = this.consecutiveErrors.get(agentId) ?? 0;
+
     const state: HeadsdownState = {
       agentId: agent.id,
       status: agent.status,
       currentTurns: agent.stats.totalTurns,
-      consecutiveErrors: 0, // TODO: Track errors properly
+      consecutiveErrors: consecutiveErrorCount,
       updatedAt: new Date().toISOString(),
     };
 

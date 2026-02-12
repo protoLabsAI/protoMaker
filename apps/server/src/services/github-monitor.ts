@@ -8,7 +8,10 @@
 import type { EventEmitter } from '../lib/events.js';
 import type { GitHubMonitorConfig, WorkItem } from '@automaker/types';
 import { createLogger } from '@automaker/utils';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
 
+const execFileAsync = promisify(execFile);
 const logger = createLogger('GitHubMonitor');
 
 /**
@@ -44,7 +47,17 @@ export class GitHubMonitor {
   /** Active polling interval */
   private interval?: NodeJS.Timeout;
 
+  /** Project path for gh CLI execution */
+  private projectPath?: string;
+
   constructor(private events: EventEmitter) {}
+
+  /**
+   * Set the project path for GitHub operations
+   */
+  setProjectPath(projectPath: string): void {
+    this.projectPath = projectPath;
+  }
 
   /**
    * Start monitoring GitHub PRs
@@ -98,19 +111,75 @@ export class GitHubMonitor {
   }
 
   /**
-   * Fetch open PRs from GitHub
-   *
-   * This is a placeholder - actual implementation would use gh CLI or GitHub API.
+   * Fetch open PRs from GitHub using gh CLI
    */
   private async fetchPRs(labelFilter: string[]): Promise<GitHubPRItem[]> {
-    // TODO: Implement actual GitHub PR fetching
-    // Options:
-    // 1. Use gh CLI: `gh pr list --json number,title,body,author,labels,createdAt,updatedAt`
-    // 2. Use GitHub REST API
-    // 3. Use Octokit library
+    if (!this.projectPath) {
+      logger.debug('Project path not set, skipping PR fetch');
+      return [];
+    }
 
-    // For now, return empty array (will be implemented when GitHub integration is configured)
-    return [];
+    try {
+      // Build the gh CLI command to fetch open PRs with metadata
+      const args = [
+        'pr',
+        'list',
+        '--state',
+        'open',
+        '--json',
+        'number,title,body,author,headRefName,baseRefName,labels,createdAt,updatedAt,url,isDraft',
+      ];
+
+      // Execute gh CLI with argument array (prevents command injection)
+      const { stdout: jsonOutput } = await execFileAsync('gh', args, {
+        cwd: this.projectPath,
+        timeout: 15_000,
+        encoding: 'utf-8',
+      });
+
+      const prData = JSON.parse(jsonOutput) as Array<{
+        number: number;
+        title: string;
+        body: string;
+        author: { login: string };
+        headRefName: string;
+        baseRefName: string;
+        labels: Array<{ name: string }>;
+        createdAt: string;
+        updatedAt: string;
+        url: string;
+        isDraft: boolean;
+      }>;
+
+      // Transform gh CLI response to GitHubPRItem
+      const prs: GitHubPRItem[] = prData
+        .filter((pr) => {
+          // Filter by labels if specified
+          if (labelFilter.length === 0) return true;
+          const prLabels = pr.labels.map((l) => l.name);
+          return labelFilter.some((label) => prLabels.includes(label));
+        })
+        .map((pr) => ({
+          number: pr.number,
+          title: pr.title,
+          description: pr.body || '',
+          author: pr.author?.login || 'unknown',
+          branch: pr.headRefName,
+          baseBranch: pr.baseRefName,
+          state: 'open',
+          labels: pr.labels.map((l) => l.name),
+          createdAt: pr.createdAt,
+          updatedAt: pr.updatedAt,
+          url: pr.url,
+          isDraft: pr.isDraft,
+        }));
+
+      logger.debug(`Fetched ${prs.length} open PRs from GitHub`);
+      return prs;
+    } catch (error) {
+      logger.debug(`Failed to fetch PRs from GitHub:`, error);
+      return [];
+    }
   }
 
   /**

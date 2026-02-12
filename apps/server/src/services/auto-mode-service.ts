@@ -9,6 +9,7 @@
  * - Verification and merge workflows
  */
 
+import * as v8 from 'node:v8';
 import { ProviderFactory } from '../providers/provider-factory.js';
 import { simpleQuery } from '../providers/simple-query-service.js';
 import type {
@@ -983,6 +984,10 @@ export class AutoModeService {
                 message: `⚠️ Agent aborted due to critical memory usage (${Math.round(heapUsage * 100)}%)`,
                 projectPath,
               });
+            } else {
+              logger.warn(
+                `[AutoLoop] Critical heap usage (${Math.round(heapUsage * 100)}%), deferring agent start (no running agents to abort)`
+              );
             }
             await this.sleep(2000);
             continue;
@@ -5863,7 +5868,12 @@ After generating the revised spec, output:
    */
   private getHeapUsagePercent(): number {
     const memoryUsage = process.memoryUsage();
-    return memoryUsage.heapUsed / memoryUsage.heapTotal;
+    const heapStats = v8.getHeapStatistics();
+    // Use heap_size_limit (actual max from --max-old-space-size) instead of heapTotal
+    // (current allocation). V8 grows heapTotal conservatively, so heapUsed/heapTotal
+    // is naturally 70-90% even for idle processes — causing false positives that
+    // silently block all agent starts.
+    return memoryUsage.heapUsed / heapStats.heap_size_limit;
   }
 
   /**

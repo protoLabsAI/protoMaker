@@ -130,12 +130,25 @@ append_resource_config() {
     cpu_limit=$((cpu_count - 1))
   fi
 
+  # Auto-detect concurrency based on RAM
+  local max_concurrency
+  if [ "$total_ram_gb" -ge 96 ]; then
+    max_concurrency=8
+  elif [ "$total_ram_gb" -ge 48 ]; then
+    max_concurrency=6
+  elif [ "$total_ram_gb" -ge 24 ]; then
+    max_concurrency=4
+  else
+    max_concurrency=2
+  fi
+
   cat >> "$ENV_FILE" <<EOF
 
 # ── Resources (auto-detected: ${total_ram_gb}GB RAM, ${cpu_count} CPUs) ─────
 MEMORY_LIMIT=$memory_limit
 CPU_LIMIT=$cpu_limit
 NODE_MAX_OLD_SPACE=32768
+AUTOMAKER_MAX_CONCURRENCY=$max_concurrency
 LOG_LEVEL=info
 EOF
 

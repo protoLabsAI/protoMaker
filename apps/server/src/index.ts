@@ -471,6 +471,9 @@ const { AgentDiscordRouter } = await import('./services/agent-discord-router.js'
 const agentDiscordRouter = new AgentDiscordRouter(events, discordBotService, roleRegistryService);
 agentDiscordRouter.start();
 
+// Wire Discord bot service to headsdown service for message fetching
+headsdownService.setDiscordBotService(discordBotService);
+
 // Initialize Scheduler Service with event emitter and data directory
 const schedulerService = getSchedulerService();
 schedulerService.initialize(events, DATA_DIR);
