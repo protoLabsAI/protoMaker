@@ -4,6 +4,9 @@
  * Manages agent-to-Discord response mapping. Receives 'discord:user-message:routed' events,
  * processes them via simpleQuery, and sends responses back to Discord. Handles message
  * splitting for long responses and thread creation for extended conversations.
+ *
+ * Uses RoleRegistryService for template-based role resolution with fallback to
+ * hardcoded prompts for backward compatibility.
  */
 
 import type { EventEmitter } from '../lib/events.js';
@@ -21,6 +24,7 @@ import {
   getQAEngineerPrompt,
   getDocsEngineerPrompt,
 } from '@automaker/prompts';
+import type { RoleRegistryService } from './role-registry-service.js';
 
 const logger = createLogger('AgentDiscordRouter');
 
@@ -36,45 +40,6 @@ interface ConversationTracker {
 }
 
 /**
- * Get the appropriate system prompt for a given agent role
- */
-function getRolePrompt(role: AgentRole, username: string): string {
-  const projectPath = process.cwd();
-
-  switch (role) {
-    case 'product-manager':
-      return getProductManagerPrompt({ projectPath, discordChannels: [], contextFiles: [] });
-    case 'engineering-manager':
-      return getEngineeringManagerPrompt({ projectPath, linearProjects: [], contextFiles: [] });
-    case 'frontend-engineer':
-      return getFrontendEngineerPrompt({ projectPath, contextFiles: [] });
-    case 'backend-engineer':
-      return getBackendEngineerPrompt({ projectPath, contextFiles: [] });
-    case 'devops-engineer':
-      return getDevOpsEngineerPrompt({ projectPath, contextFiles: [] });
-    case 'qa-engineer':
-      return getQAEngineerPrompt({ projectPath, contextFiles: [] });
-    case 'docs-engineer':
-      return getDocsEngineerPrompt({ projectPath, contextFiles: [] });
-    default:
-      logger.warn(`Unknown agent role: ${role}, using generic prompt`);
-      return `You are ${role}. Responding to Discord user ${username}. Keep responses concise and helpful.`;
-  }
-}
-
-/**
- * Get the allowed tools for a given agent role
- */
-function getRoleTools(role: AgentRole): string[] {
-  const capabilities = ROLE_CAPABILITIES[role];
-  if (!capabilities) {
-    logger.warn(`Unknown agent role: ${role}, allowing all tools`);
-    return [];
-  }
-  return capabilities.tools;
-}
-
-/**
  * AgentDiscordRouter - Routes messages between agents and Discord
  *
  * Listens for routed Discord messages, processes them via agent simpleQuery,
@@ -82,15 +47,20 @@ function getRoleTools(role: AgentRole): string[] {
  * - Message splitting for long responses (>2000 chars)
  * - Thread creation for extended conversations (>3 exchanges in 5 minutes)
  * - Error handling to prevent bot crashes
+ * - Registry-based role resolution with hardcoded fallback
  */
 export class AgentDiscordRouter {
   private conversations = new Map<string, ConversationTracker>();
   private unsubscribe?: () => void;
+  private roleRegistry?: RoleRegistryService;
 
   constructor(
     private events: EventEmitter,
-    private discordBot: DiscordBotService
-  ) {}
+    private discordBot: DiscordBotService,
+    roleRegistry?: RoleRegistryService
+  ) {
+    this.roleRegistry = roleRegistry;
+  }
 
   /**
    * Start listening for routed Discord messages
@@ -119,6 +89,67 @@ export class AgentDiscordRouter {
     }
     this.conversations.clear();
     logger.info('AgentDiscordRouter stopped');
+  }
+
+  /**
+   * Get the appropriate system prompt for a given agent role.
+   * First checks the registry for a template, falls back to hardcoded prompts.
+   */
+  private getRolePrompt(role: AgentRole, username: string): string {
+    const projectPath = process.cwd();
+
+    // Try registry first — if a template exists with a systemPrompt, use it
+    if (this.roleRegistry) {
+      const template = this.roleRegistry.get(role);
+      if (template?.systemPrompt) {
+        logger.debug(`Using registry template prompt for role "${role}"`);
+        return template.systemPrompt;
+      }
+    }
+
+    // Fall back to hardcoded prompts for known roles
+    switch (role) {
+      case 'product-manager':
+        return getProductManagerPrompt({ projectPath, discordChannels: [], contextFiles: [] });
+      case 'engineering-manager':
+        return getEngineeringManagerPrompt({ projectPath, linearProjects: [], contextFiles: [] });
+      case 'frontend-engineer':
+        return getFrontendEngineerPrompt({ projectPath, contextFiles: [] });
+      case 'backend-engineer':
+        return getBackendEngineerPrompt({ projectPath, contextFiles: [] });
+      case 'devops-engineer':
+        return getDevOpsEngineerPrompt({ projectPath, contextFiles: [] });
+      case 'qa-engineer':
+        return getQAEngineerPrompt({ projectPath, contextFiles: [] });
+      case 'docs-engineer':
+        return getDocsEngineerPrompt({ projectPath, contextFiles: [] });
+      default:
+        logger.warn(`Unknown agent role: ${role}, using generic prompt`);
+        return `You are ${role}. Responding to Discord user ${username}. Keep responses concise and helpful.`;
+    }
+  }
+
+  /**
+   * Get the allowed tools for a given agent role.
+   * First checks the registry for a template, falls back to ROLE_CAPABILITIES.
+   */
+  private getRoleTools(role: AgentRole): string[] {
+    // Try registry first
+    if (this.roleRegistry) {
+      const template = this.roleRegistry.get(role);
+      if (template?.tools) {
+        logger.debug(`Using registry template tools for role "${role}"`);
+        return template.tools;
+      }
+    }
+
+    // Fall back to hardcoded capabilities
+    const capabilities = ROLE_CAPABILITIES[role];
+    if (!capabilities) {
+      logger.warn(`Unknown agent role: ${role}, allowing all tools`);
+      return [];
+    }
+    return capabilities.tools;
   }
 
   /**
@@ -188,10 +219,10 @@ export class AgentDiscordRouter {
     logger.debug(`Querying agent ${agentName} with message from ${username}`);
 
     // Get role-specific system prompt
-    let systemPrompt = getRolePrompt(agentName as AgentRole, username);
+    let systemPrompt = this.getRolePrompt(agentName as AgentRole, username);
 
     // Get role-specific allowed tools
-    const allowedTools = getRoleTools(agentName as AgentRole);
+    const allowedTools = this.getRoleTools(agentName as AgentRole);
 
     // Load conversation history if in a thread and include it in the system prompt
     if (threadId) {

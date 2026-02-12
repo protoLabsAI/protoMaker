@@ -450,7 +450,7 @@ void discordBotService.initialize();
 // Initialize Agent Discord Router for agent-to-Discord message routing
 // Must be imported after DiscordBotService is initialized
 const { AgentDiscordRouter } = await import('./services/agent-discord-router.js');
-const agentDiscordRouter = new AgentDiscordRouter(events, discordBotService);
+const agentDiscordRouter = new AgentDiscordRouter(events, discordBotService, roleRegistryService);
 agentDiscordRouter.start();
 
 // Initialize Scheduler Service with event emitter and data directory
