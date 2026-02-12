@@ -15,7 +15,7 @@ import type { EventEmitter } from '../lib/events.js';
 import type { Feature } from '@automaker/types';
 import { FeatureLoader } from './feature-loader.js';
 import { BeadsService } from './beads-service.js';
-import { DiscordService } from './discord-service.js';
+import type { DiscordBotService } from './discord-bot-service.js';
 import { ClaudeProvider } from '../providers/claude-provider.js';
 import type { SettingsService } from './settings-service.js';
 import type { HealthMonitorService } from './health-monitor-service.js';
@@ -94,7 +94,7 @@ interface BoardSummary {
 export class AvaGatewayService {
   private featureLoader: FeatureLoader;
   private beadsService: BeadsService;
-  private discordService: DiscordService;
+  private discordBotService: DiscordBotService | null = null;
   private provider: ClaudeProvider | null = null;
   private events: EventEmitter | null = null;
   private settingsService: SettingsService | null = null;
@@ -120,13 +120,11 @@ export class AvaGatewayService {
   constructor(
     featureLoader: FeatureLoader,
     beadsService: BeadsService,
-    discordService: DiscordService,
     settingsService?: SettingsService,
     healthMonitor?: HealthMonitorService
   ) {
     this.featureLoader = featureLoader;
     this.beadsService = beadsService;
-    this.discordService = discordService;
     this.settingsService = settingsService ?? null;
     this.healthMonitor = healthMonitor ?? null;
 
@@ -136,6 +134,14 @@ export class AvaGatewayService {
       cooldownMs: 300000,
       name: 'AvaGateway',
     });
+  }
+
+  /**
+   * Set Discord bot service (called after both services are initialized)
+   */
+  setDiscordBot(discordBotService: DiscordBotService): void {
+    this.discordBotService = discordBotService;
+    logger.info('Discord bot service connected to Ava Gateway');
   }
 
   /**
@@ -255,7 +261,7 @@ export class AvaGatewayService {
    * Post startup message to Discord (Phase 7)
    */
   private async postStartupMessage(): Promise<void> {
-    if (!this.infraChannelId) {
+    if (!this.infraChannelId || !this.discordBotService) {
       return;
     }
 
@@ -266,11 +272,12 @@ export class AvaGatewayService {
       `**Timestamp:** ${new Date().toISOString()}`;
 
     try {
-      await this.discordService.sendMessage({
-        channelId: this.infraChannelId,
-        message,
-      });
-      logger.info('Posted startup message to Discord #infra');
+      const success = await this.discordBotService.sendToChannel(this.infraChannelId, message);
+      if (success) {
+        logger.info('Posted startup message to Discord #infra');
+      } else {
+        logger.error('Failed to post startup message to Discord');
+      }
     } catch (error) {
       logger.error('Error posting startup message to Discord', error);
     }
@@ -480,7 +487,7 @@ export class AvaGatewayService {
    * Post alert to Discord #infra channel
    */
   private async postToDiscord(alert: HeartbeatAlert): Promise<void> {
-    if (!this.infraChannelId) {
+    if (!this.infraChannelId || !this.discordBotService) {
       return;
     }
 
@@ -495,15 +502,11 @@ export class AvaGatewayService {
     const message = `${emoji} **Ava Heartbeat Alert**\n\n**${alert.title}**\n${alert.description}${alert.suggestedAction ? `\n\n**Suggested Action:** ${alert.suggestedAction}` : ''}`;
 
     try {
-      const result = await this.discordService.sendMessage({
-        channelId: this.infraChannelId,
-        message,
-      });
-
-      if (result.success) {
+      const success = await this.discordBotService.sendToChannel(this.infraChannelId, message);
+      if (success) {
         logger.info('Posted alert to Discord #infra', { title: alert.title });
       } else {
-        logger.error('Failed to post alert to Discord', { error: result.error });
+        logger.error('Failed to post alert to Discord');
       }
     } catch (error) {
       logger.error('Error posting to Discord', error);
@@ -555,7 +558,7 @@ export class AvaGatewayService {
    * Send emergency stop alert to Discord (Phase 9)
    */
   private async sendEmergencyStopAlert(): Promise<void> {
-    if (!this.infraChannelId) return;
+    if (!this.infraChannelId || !this.discordBotService) return;
 
     const message =
       `**CRITICAL: Ava Gateway Emergency Stop**\n\n` +
@@ -565,11 +568,12 @@ export class AvaGatewayService {
       `**Cooldown:** Will retry after 5 minutes`;
 
     try {
-      await this.discordService.sendMessage({
-        channelId: this.infraChannelId,
-        message,
-      });
-      logger.info('Emergency stop alert sent to Discord #infra');
+      const success = await this.discordBotService.sendToChannel(this.infraChannelId, message);
+      if (success) {
+        logger.info('Emergency stop alert sent to Discord #infra');
+      } else {
+        logger.error('Failed to send emergency stop alert to Discord');
+      }
     } catch (error) {
       logger.error('Error sending emergency stop alert', error);
     }
@@ -779,7 +783,6 @@ let avaGatewayServiceInstance: AvaGatewayService | null = null;
 export function getAvaGatewayService(
   featureLoader: FeatureLoader,
   beadsService: BeadsService,
-  discordService: DiscordService,
   settingsService?: SettingsService,
   healthMonitor?: HealthMonitorService
 ): AvaGatewayService {
@@ -787,7 +790,6 @@ export function getAvaGatewayService(
     avaGatewayServiceInstance = new AvaGatewayService(
       featureLoader,
       beadsService,
-      discordService,
       settingsService,
       healthMonitor
     );

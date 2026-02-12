@@ -351,7 +351,6 @@ const healthMonitorService = getHealthMonitorService(featureLoader, {
 const avaGatewayService = getAvaGatewayService(
   featureLoader,
   beadsService,
-  discordService,
   settingsService,
   healthMonitorService
 );
@@ -481,6 +480,9 @@ const discordBotService = new DiscordBotService(
 discordBotService.setRoleRegistry(roleRegistryService);
 void discordBotService.initialize();
 
+// Wire Discord bot service to Ava Gateway (must be after discordBotService is created)
+avaGatewayService.setDiscordBot(discordBotService);
+
 // Initialize Agent Discord Router for agent-to-Discord message routing
 // Must be imported after DiscordBotService is initialized
 const { AgentDiscordRouter } = await import('./services/agent-discord-router.js');
@@ -528,7 +530,11 @@ void schedulerService
 healthMonitorService.setEventEmitter(events);
 
 // Initialize Ava Gateway Service for heartbeat monitoring
-void avaGatewayService.initialize(events, REPO_ROOT).catch((err) => {
+void avaGatewayService.initialize(events, REPO_ROOT, '1469109809939742814').then(() => {
+  // Start listening to critical events after initialization
+  avaGatewayService.start();
+  logger.info('Ava Gateway Service started and listening to events');
+}).catch((err) => {
   logger.error('Ava Gateway Service initialization failed:', err);
 });
 
