@@ -1615,6 +1615,129 @@ const tools: Tool[] = [
     },
   },
 
+  // ========== Agent Management ==========
+  {
+    name: 'list_agent_templates',
+    description:
+      'List all registered agent templates in the role registry. Optionally filter by role. Returns template summaries (name, displayName, description, role, tier, model, tags).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        role: {
+          type: 'string',
+          description:
+            'Filter by role (e.g., "backend-engineer", "frontend-engineer", "chief-of-staff"). Omit to list all.',
+        },
+      },
+    },
+  },
+  {
+    name: 'get_agent_template',
+    description:
+      'Get the full configuration of a specific agent template by name. Returns all template fields including capabilities, assignments, and headsdown config.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        name: {
+          type: 'string',
+          description: 'Template name (kebab-case, e.g., "ava", "pm-agent")',
+        },
+      },
+      required: ['name'],
+    },
+  },
+  {
+    name: 'register_agent_template',
+    description:
+      'Register a new agent template in the role registry. Template is validated against AgentTemplateSchema (Zod). Rejects duplicates and refuses to overwrite tier 0 (protected/system) templates.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        template: {
+          type: 'object',
+          description:
+            'Full agent template object. Required fields: name (kebab-case), displayName, description, role. Optional: tier, model, tools, maxTurns, systemPrompt, trustLevel, capabilities, assignments, headsdownConfig, tags.',
+        },
+      },
+      required: ['template'],
+    },
+  },
+  {
+    name: 'update_agent_template',
+    description:
+      'Update an existing agent template. Merges provided fields into the existing template. Cannot update tier 0 (protected) templates. Cannot change the template name.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        name: {
+          type: 'string',
+          description: 'Name of the template to update',
+        },
+        updates: {
+          type: 'object',
+          description: 'Partial template fields to merge into existing template',
+        },
+      },
+      required: ['name', 'updates'],
+    },
+  },
+  {
+    name: 'unregister_agent_template',
+    description:
+      'Remove an agent template from the registry. Refuses to unregister tier 0 (protected/system) templates.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        name: {
+          type: 'string',
+          description: 'Name of the template to remove',
+        },
+      },
+      required: ['name'],
+    },
+  },
+  {
+    name: 'execute_dynamic_agent',
+    description:
+      'Create and run a dynamic agent from a registered template. Resolves the template to a full agent config, then executes it with the given prompt. Returns the agent output, duration, and success status.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        templateName: {
+          type: 'string',
+          description: 'Name of the registered template to use',
+        },
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        prompt: {
+          type: 'string',
+          description: 'The task/prompt for the agent to execute',
+        },
+        overrides: {
+          type: 'object',
+          description:
+            'Optional field-level overrides (model, tools, maxTurns, etc.) applied on top of the template',
+        },
+        additionalSystemPrompt: {
+          type: 'string',
+          description: 'Additional system prompt to prepend to the template system prompt',
+        },
+      },
+      required: ['templateName', 'projectPath', 'prompt'],
+    },
+  },
+  {
+    name: 'get_role_registry_status',
+    description:
+      'Get the current status of the role registry: total registered templates, list of template names and roles, and known built-in roles.',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+    },
+  },
+
   // ========== Setup Pipeline ==========
   {
     name: 'research_repo',
@@ -2314,6 +2437,59 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         username: args.username,
         limit: args.limit || 10,
       });
+
+    // Agent Management
+    case 'list_agent_templates':
+      return apiCall('/agents/templates/list', {
+        role: args.role,
+      });
+
+    case 'get_agent_template':
+      return apiCall('/agents/templates/get', {
+        name: args.name,
+      });
+
+    case 'register_agent_template':
+      return apiCall('/agents/templates/register', {
+        template: args.template,
+      });
+
+    case 'update_agent_template':
+      return apiCall('/agents/templates/update', {
+        name: args.name,
+        updates: args.updates,
+      });
+
+    case 'unregister_agent_template':
+      return apiCall('/agents/templates/unregister', {
+        name: args.name,
+      });
+
+    case 'execute_dynamic_agent':
+      return apiCall('/agents/execute', {
+        templateName: args.templateName,
+        projectPath: args.projectPath,
+        prompt: args.prompt,
+        overrides: args.overrides,
+        additionalSystemPrompt: args.additionalSystemPrompt,
+      });
+
+    case 'get_role_registry_status': {
+      // List all templates to build status overview
+      const templatesResult = (await apiCall('/agents/templates/list', {})) as {
+        templates?: Array<{ name: string; role: string; tier: number }>;
+        count?: number;
+      };
+      return {
+        success: true,
+        totalTemplates: templatesResult.count || 0,
+        templates: (templatesResult.templates || []).map((t) => ({
+          name: t.name,
+          role: t.role,
+          tier: t.tier,
+        })),
+      };
+    }
 
     // Setup Pipeline
     case 'research_repo':
