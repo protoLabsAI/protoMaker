@@ -5,7 +5,7 @@ relevantTo: [testing]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 1
+  loaded: 3
   referenced: 1
   successfulFeatures: 1
 ---
@@ -40,3 +40,23 @@ usageStats:
 - **Situation:** Unit tests used type assertions to access private methods buildFeedbackPrompt and processReviewStatus, creating illusion of coverage without testing actual public behavior
 - **Root cause:** Private methods aren't directly testable from outside the service. Type assertions bypass TypeScript's visibility checks but don't create real test contracts
 - **How to avoid:** Easier: can write unit tests without refactoring code. Harder: tests don't verify public API contracts; if implementation changes without changing method signature, tests still pass; real bugs in public behavior go undetected
+
+#### [Gotcha] Event emission tests must verify BOTH presence and ordering of events - a single check for 'health:check-completed' existing won't catch missing 'health:issue-detected' events (2026-02-12)
+- **Situation:** Simple test that only verifies 'health:check-completed' exists would pass even if the 'health:issue-detected' emission was never added
+- **Root cause:** Event-driven systems are easy to test incompletely. The success of downstream behavior (health:check-completed) doesn't guarantee all intermediate events fired. Must test the event stream sequence, not just endpoints.
+- **How to avoid:** More comprehensive tests = more test code, but catches off-by-one event sequence bugs that integration tests might miss
+
+#### [Pattern] Use event spy callbacks to capture and filter multiple event types, then verify ordering with index comparisons (2026-02-12)
+- **Problem solved:** Need to verify that multiple events fire in a specific order (health:issue-detected before health:check-completed) in a single test run
+- **Why this works:** Callback spy captures full event stream with timing. Filtering by event type (call[0]) + index comparison is clearer than trying to count events or use event timestamps.
+- **Trade-offs:** More complex test (array filtering, index math) vs simpler individual event tests, but catches real bugs
+
+#### [Pattern] Template verification tests check for specific content keywords in systemPrompt strings rather than exact matches. Tests assert presence of identifiers like 'Ava Loveland', 'GTM', 'protoLabs' rather than full prompt text (2026-02-12)
+- **Problem solved:** Needed to verify systemPrompt fields exist and have appropriate content without brittle tests that break on minor prompt wording changes
+- **Why this works:** Keyword-based assertions are robust to prompt refinements. If someone rewrites the prompt but keeps the core concepts (Ava's role, GTM focus), tests still pass. Exact string matching would break on every prompt edit
+- **Trade-offs:** Keyword matching is less strict (could miss some issues) but more maintainable. Tests document 'what matters' about each prompt (identity, domain) rather than 'exact wording'
+
+#### [Gotcha] Verification script checked for implementation correctness using regex patterns on source code, but this approach cannot catch runtime logic errors (e.g., rate limit calculation off-by-one, async race conditions in postToDiscordWithRateLimit) (2026-02-12)
+- **Situation:** Created a TypeScript verification script to confirm all 10 required implementation points existed and compiled, marking feature 'verified'
+- **Root cause:** Fast feedback without spinning up full test infrastructure. Regex verification is 95% accurate for 'did the developer write the right code structure'
+- **How to avoid:** Regex verification is fast and scales, but misses: Off-by-one errors in Date.now() comparisons, async race where two concurrent notifications slip through the Map check, Discord API failures. A real test would catch these. For critical paths like notification delivery, the gap is real

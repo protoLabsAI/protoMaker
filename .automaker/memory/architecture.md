@@ -5,7 +5,7 @@ relevantTo: [architecture]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 1
+  loaded: 3
   referenced: 1
   successfulFeatures: 1
 ---
@@ -239,3 +239,120 @@ usageStats:
 - **Problem solved:** After restarting agent, feature must be re-executed by auto-loop. If status remains unchanged, auto-loop won't process it again
 - **Why this works:** Automaker's auto-loop processes features with status 'backlog' in round-robin fashion. By setting status to 'backlog' before calling executeFeature(), the feature gets picked up through normal auto-loop machinery rather than requiring special queue handling
 - **Trade-offs:** Easier: one code path for both initial execution and restart. Harder: status change is asynchronous and must complete before auto-loop processes feature, otherwise duplicate executions possible
+
+#### [Pattern] Event emission timing: issues must be emitted BEFORE auto-remediation to allow subscribers to react to raw detected state (2026-02-12)
+- **Problem solved:** HealthMonitorService detects issues, initiates auto-remediation, and notifies subscribers. If emission happened after remediation, subscribers would see already-remediated state.
+- **Why this works:** Subscribers (like AvaGatewayService) need to know about issues BEFORE remediation attempts so they can post alerts, create tasks, or trigger notifications based on the original problem state, not the post-remediation state
+- **Trade-offs:** Slightly more complex control flow (emit, then remediate) vs simpler sequential flow. Worth it because subscribers need unmodified issue data.
+
+### Payload structure includes both type-specific fields (featureId for stuck_feature) and generic fields (type, severity, message, metrics) in a flat object (2026-02-12)
+- **Context:** Need to emit events for different issue types (stuck_feature, high_memory_usage, etc.) each with their own context, but also need a consistent severity/message layer for subscribers
+- **Why:** Flat structure with optional type-specific fields allows subscribers to handle issues generically (check severity, post alert) OR type-specifically (extract featureId for stuck_feature handler) from the same event
+- **Rejected:** Nested structure like {generic: {severity, message}, typeSpecific: {featureId}} would segregate concerns but make subscriber code more verbose
+- **Trade-offs:** Flat structure is easier for subscribers but requires discipline not to duplicate generic fields. Nested would be more explicit but harder to consume.
+- **Breaking if changed:** If the generic layer (type, severity, message) was removed, subscribers would lose the ability to handle unknown issue types generically
+
+#### [Gotcha] HealthMonitorService had all detection infrastructure working correctly but the event emission was missing - a gap in an otherwise complete pipeline (2026-02-12)
+- **Situation:** Issues were detected, metrics calculated, auto-remediation wired - but AvaGatewayService had a handleHealthIssue subscriber waiting for events that were never emitted
+- **Root cause:** This highlights the risk of plumbing work: infrastructure can be 90% complete (detection, metrics, remediation) but the final 10% (notifications) gets skipped. The service worked in isolation, so no tests caught the missing piece.
+- **How to avoid:** Well-factored code (separate services) means one service can be mostly working while leaving its outbound notifications incomplete. Would've been caught faster by integration tests.
+
+#### [Pattern] Setter injection pattern for ordered service dependencies: Instead of reordering constructor calls or passing services through multiple initialization layers, use a setter method (setDiscordBot) to wire dependencies after both services are instantiated. (2026-02-12)
+- **Problem solved:** AvaGatewayService needed DiscordBotService, but DiscordBotService is created after AvaGatewayService in the initialization sequence due to other dependencies being resolved first.
+- **Why this works:** Avoids circular dependency issues and allows services to initialize independently without forcing specific construction order. Setter is called after discordBotService.initialize() completes, ensuring the dependency is fully ready before use.
+- **Trade-offs:** Cleaner initialization order (no cascade restructuring) but slightly delayed wiring (Discord posting won't work until setDiscordBot is called). Mitigated by keeping the setter call immediately after initialization.
+
+#### [Gotcha] start() method must be explicitly called after initialize() to activate event listening. Initialization alone does not begin processing events. (2026-02-12)
+- **Situation:** AvaGatewayService.initialize() was being called but the service was never actually listening to events. The health monitor and event routing had no effect because the internal event listeners were never registered.
+- **Root cause:** Separation of concerns: initialize() sets up state and configuration, start() activates the operational loop. This pattern allows for initialization without side effects, and delayed startup if needed.
+- **How to avoid:** Requires explicit two-step lifecycle (initialize then start) but prevents accidental side effects during setup and allows deferring activation if needed.
+
+### Use type-only imports (type { DiscordBotService }) instead of regular imports to break circular dependency chains. (2026-02-12)
+- **Context:** DiscordBotService is created after AvaGatewayService in the initialization sequence. Using a regular import could create a module-level circular reference if both services are instantiated in the same file.
+- **Why:** Type-only imports are stripped at runtime, so they don't create actual module dependencies. This allows AvaGatewayService to reference the type for setter parameter typing without creating a circular module dependency.
+- **Rejected:** Alternative of importing the concrete DiscordBotService class was rejected because it could force module evaluation order issues in the index.ts file where both services are instantiated.
+- **Trade-offs:** Type safety is maintained (setter parameter is typed) but the actual DiscordBotService instance must be passed at runtime via setter, not constructor. This is a worthwhile tradeoff.
+- **Breaking if changed:** If the type import is converted to a regular import without adding DiscordBotService to the constructor, the dependency won't be injected and all Discord operations will fail silently.
+
+#### [Gotcha] Event payload shape mismatches between emitters and handlers are silent failures - TypeScript doesn't catch destructuring of wrong object shapes at compile time (2026-02-12)
+- **Situation:** discord-bot-service.ts was emitting {agentId, messages: [{content}]} but agent-discord-router.ts destructured {routedToAgent, content}. Build passed but routing would fail at runtime.
+- **Root cause:** TypeScript's structural typing allows assignment of incompatible shapes if they share some properties. Destructuring doesn't validate all required fields exist - it just extracts what's there.
+- **How to avoid:** Type safety on the receiver side (handler) doesn't prevent wrong shapes being emitted. Need explicit type guards or compile-time event type registration to catch this.
+
+### Removed projectPath from internal event payload even though it's available - kept payload minimal to what handlers actually need (2026-02-12)
+- **Context:** discord-bot-service emits event, agent-discord-router receives it. projectPath was in original payload but handler never uses it.
+- **Why:** Minimal contracts prevent accidental coupling. Handler can't misuse projectPath if it's not there. Reduces payload size for internal events.
+- **Rejected:** Could have kept projectPath for 'future-proofing', but that's speculative coupling
+- **Trade-offs:** If handler later needed projectPath, would have to modify both emitter and handler. But that would indicate design change (handler shouldn't depend on project context anyway).
+- **Breaking if changed:** Any code subscribing to this event expecting projectPath breaks. Scope is internal service layer so risk is low.
+
+### Fire-and-forget async agent spawning via void IIFE pattern in event handler (2026-02-12)
+- **Context:** Need to spawn Frank agent on critical health events without blocking event loop or waiting for completion
+- **Why:** Event handlers must return quickly. Wrapping async operation in void (async () => {})() allows non-blocking spawn with error isolation. Awaiting would block event emission and delay other subscribers.
+- **Rejected:** Alternative: Store spawn promise in Set for tracking. Rejected because: (1) critical health triage is best-effort, not mission-critical to track, (2) tracking Set would require cleanup logic on agent completion, (3) event loop must stay responsive to continuous health checks
+- **Trade-offs:** Gained: non-blocking, loose coupling. Lost: observability of Frank's completion status (mitigated by Frank's own Discord posting)
+- **Breaking if changed:** If changed to await: event loop blocks during Frank initialization (5-10s), health checks queue up, metrics become stale, could miss subsequent critical events
+
+### In-memory cooldown timestamp instead of persistent state for Frank spawn throttling (2026-02-12)
+- **Context:** Prevent spawn storms when critical health persists (e.g., memory leak lasting hours). Need 10-minute window between spawns.
+- **Why:** In-memory is sufficient because: (1) Frank is diagnostic-only, not addressing root cause, (2) repeated spawning in same session indicates operator should manual intervene, (3) resets on server restart (when issues often resolve), (4) no need for cross-session state tracking
+- **Rejected:** Alternatives: (1) Persist to database - adds latency to event handler, overkill for diagnostic throttling, (2) Use HeadsdownService world-state - couples health monitor to service layer, breaks separation of concerns, (3) Track in feature database - Frank isn't tracked as a feature, would be hacky
+- **Trade-offs:** Gained: zero latency, simple implementation. Lost: cooldown resets on restart (acceptable tradeoff - restart usually resolves issues)
+- **Breaking if changed:** If removed: rapid critical events spawn Frank every 5 minutes (health check interval). With 3+ concurrent agents causing crashes, Frank spawn storms could worsen cascading failures
+
+#### [Gotcha] AgentFactoryService.createFromTemplate() with tool override doesn't auto-include base template tools - explicit enumeration required (2026-02-12)
+- **Situation:** Initial attempt passed `tools: [...]` expecting merge with template defaults. Agent had zero tools.
+- **Root cause:** Template tool list is a suggestion/default, not a contract. Service treats explicit `tools` override as 'use exactly these, ignore template defaults'. This follows principle of least privilege for critical agent spawning.
+- **How to avoid:** Gained: explicit, secure, auditable. Lost: brevity - must list all tools even if duplicating template list
+
+#### [Pattern] Event payload type assertion + property access for health status/issues extraction (2026-02-12)
+- **Problem solved:** health:check-completed event carries typed health data. Need to extract status and issue details for decision logic.
+- **Why this works:** Event emitter in codebase uses untyped payload (`any`). Type assertion documents expected shape and enables IDE autocomplete for next developers. Property access pattern (e.g., `result.status === 'critical'`) is clearer than destructuring when only checking one property.
+- **Trade-offs:** Gained: type safety without refactoring infra. Lost: compile-time checks (runtime assertion only)
+
+#### [Gotcha] Diagnostic prompt must include full issue details AND metrics as JSON for Frank to have actionable context (2026-02-12)
+- **Situation:** Initial version sent only issue summary. Frank had no concrete metrics to diagnose (CPU/memory/stuck features).
+- **Root cause:** Frank is an LLM-based agent without live system access in prompt context. Detailed metrics in prompt are the only way Frank understands 'critical'. Issue list alone is ambiguous (critical in what metric?).
+- **How to avoid:** Gained: faster triage, Frank focuses on diagnosis not data gathering. Lost: metric freshness (prompt snapshot, not live)
+
+#### [Pattern] Cooldown window calculation with min-remaining check to inform operator (2026-02-12)
+- **Problem solved:** Multiple critical events within 10-minute window. Need to communicate when Frank is throttled.
+- **Why this works:** Cooldown prevents spawn storms but creates observability gap (operator doesn't know Frank is waiting). Calculating `remainingMinutes` and logging it means: (1) operators can see throttling in logs, (2) if critical events persist, operator knows roughly when Frank will re-spawn, (3) makes cooldown duration tunable (easy to adjust 10-minute window)
+- **Trade-offs:** Gained: observability, operator can make manual intervention decisions. Lost: slightly noisier logs (one message per throttled critical event)
+
+#### [Gotcha] Service initialization order in index.ts is a hard ordering constraint - services must initialize AFTER their dependencies are instantiated, not before. (2026-02-12)
+- **Situation:** EventHookService was initialized before DiscordBotService was created, causing 'used before declaration' errors when trying to pass discordBotService to initialize().
+- **Root cause:** JavaScript evaluation is sequential. Passing an undefined reference fails immediately. The dependency graph is implicit in the initialization sequence.
+- **How to avoid:** Explicit ordering is brittle (moving one line breaks things) but makes dependencies visible in the code. Complex initialization DAG becomes hard to reason about.
+
+#### [Pattern] Stub service replacement pattern: Replace MCP stub implementations with real service instances by (1) accepting real service as dependency, (2) checking if available before calling, (3) graceful fallback if unavailable. (2026-02-12)
+- **Problem solved:** EventHookService was calling a stub DiscordService that never actually sent messages. AvaGateway had the same problem. Both needed to use the real DiscordBotService.
+- **Why this works:** Allows gradual migration from stubs to real implementations. Services remain functional even if integration is missing (logs warning instead of crashing). Matches the MCP pattern where services start without external integrations.
+- **Trade-offs:** Optional dependencies add conditional logic but increase resilience. The codebase now has multiple stub→real patterns (AvaGateway, EventHookService, likely others) suggesting this should become a formalized utility.
+
+### Registry-first pattern for role prompts: templates store systemPrompt fields directly; router checks registry before falling back to hardcoded switch cases (2026-02-12)
+- **Context:** Discord thread routing needed to map role names (chief-of-staff, gtm-specialist) to their system prompts without hardcoding logic in the router
+- **Why:** Decouples prompt management from router logic. Adding new roles only requires registering a template with systemPrompt—no router changes needed. Makes the system extensible without modifying core routing code
+- **Rejected:** Adding switch cases to agent-discord-router.ts for each role. Would couple prompt definitions to router implementation and require router changes for every new role
+- **Trade-offs:** Templates become source of truth for prompts (easier maintenance, but requires all roles to be registered). Router code stays lean (easier to reason about, but depends on registry being populated correctly)
+- **Breaking if changed:** If a template is registered without systemPrompt, the registry-first check fails and falls through to switch cases. If switch case is also missing, the role gets a generic fallback prompt instead of its intended one
+
+#### [Gotcha] Inline systemPrompt strings in template definitions can create circular dependencies if prompts import from other modules. Solution: keep prompts as inline strings or carefully manage import order (2026-02-12)
+- **Situation:** Could have imported gtm-specialist-prompt from libs/prompts, but needed to embed it directly to avoid circular dependency between template registration and prompt modules
+- **Root cause:** Built-in templates are registered at server startup. If template definitions import from modules that import from server code, circular dependency breaks initialization. Inline strings are safe
+- **How to avoid:** Inline strings are slightly harder to maintain (duplication risk) but guarantee no circular imports. Importing would be cleaner but risky during startup
+
+#### [Pattern] Event-driven notification dispatch through a centralized AvaGatewayService switch-case handler, with rate limiting enforced per notification type rather than globally (2026-02-12)
+- **Problem solved:** Needed real-time Discord notifications for critical events without flooding the channel with spam during cascading failures
+- **Why this works:** Per-type rate limiting allows different event classes to flow independently. A `feature_error` spam doesn't block `feature_waiting_approval` notifications. Switch-case in event handler is cleaner than separate listener registrations and avoids closure capture issues
+- **Trade-offs:** Per-type tracking uses more memory (one Map entry per notification type) but gives fine-grained control. Alternative: single throttle queue would be simpler but less flexible if future needs require different cadences for different event types
+
+#### [Gotcha] Notification filtering by type (feature_error, feature_waiting_approval only) is a soft contract. AvaGatewayService doesn't validate that incoming notification events match a strict schema—it just checks string equality on `type` field (2026-02-12)
+- **Situation:** During event emission in other services, typos in notification type or unexpected new types will silently drop notifications
+- **Root cause:** The current codebase has no central notification type registry. Each service emits with a string type. Hardcoding the two types in `shouldPostNotification` keeps the feature scoped to requirements but creates a hidden dependency
+- **How to avoid:** Simpler implementation now, but debugging is hard when a new service starts emitting `feature_error_v2` and notifications don't fire. Prevention: document the two valid types in MEMORY.md or create a light constants file
+
+#### [Pattern] Notification severity mapping (feature_error → 🔴 critical, feature_waiting_approval → 🟠 high) is hardcoded in postToDiscordWithRateLimit, not externalized to a severity config or enum (2026-02-12)
+- **Problem solved:** Different notification types signal different urgency levels to the on-call engineer reading #infra
+- **Why this works:** Emoji are visual and immediate. Hardcoding keeps the feature self-contained and avoids config file sprawl for a simple mapping
+- **Trade-offs:** Hardcoded emojis are simple and visible. But if severity rules change (e.g., feature_error should be 🟡 instead), code change is required. No runtime configuration. If we later add 10 more notification types, this function grows unmaintainable

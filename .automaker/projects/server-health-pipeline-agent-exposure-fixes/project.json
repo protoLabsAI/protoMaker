@@ -1,0 +1,207 @@
+{
+  "slug": "server-health-pipeline-agent-exposure-fixes",
+  "title": "Server Health Pipeline & Agent Exposure Fixes",
+  "goal": "Connect the broken health event pipeline (HealthMonitor → Discord → Frank triage), fix the Discord agent thread routing bug, replace the stub DiscordService with the working DiscordBotService, and add real-time Discord notifications for critical server events.",
+  "status": "active",
+  "milestones": [
+    {
+      "number": 1,
+      "slug": "01-connect-health-pipeline-plumbing",
+      "title": "Connect Health Pipeline Plumbing",
+      "description": "Fix the three critical breaks that prevent health events from reaching Discord: emit health:issue-detected, replace stub DiscordService, and call avaGatewayService.start().",
+      "phases": [
+        {
+          "number": 1,
+          "name": "emit-health-issue-detected-events-from-healthmonitorservice",
+          "title": "Emit health:issue-detected events from HealthMonitorService",
+          "description": "HealthMonitorService at apps/server/src/services/health-monitor-service.ts detects issues (stuck_feature, high_memory_usage, corrupted_feature, etc.) but NEVER emits health:issue-detected. The event type is defined in libs/types/src/event.ts line 69, and AvaGatewayService subscribes to it at line 295.\n\nAfter building the issues array (around line 246), emit health:issue-detected for each critical/warning issue BEFORE auto-remediation. Payload should include: type, severity, message, featureId (if applicable), metrics.\n\nFiles to modify:\n- apps/server/src/services/health-monitor-service.ts — Add emit calls for each detected issue\n\nAcceptance criteria:\n- health:issue-detected emitted for each issue with severity 'critical' or 'warning'\n- Emission happens BEFORE auto-remediation\n- health:check-completed still emitted as before (don't break existing behavior)\n- Server builds clean",
+          "filesToModify": [
+            "apps/server/src/services/health-monitor-service.ts"
+          ],
+          "acceptanceCriteria": [
+            "health:issue-detected emitted for critical and warning issues",
+            "Emission happens before auto-remediation",
+            "health:check-completed still works as before",
+            "npm run build:server passes"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1770918523062-ikz9xu87v"
+        },
+        {
+          "number": 2,
+          "name": "replace-stub-discordservice-with-discordbotservice-in-avagateway",
+          "title": "Replace stub DiscordService with DiscordBotService in AvaGateway",
+          "description": "AvaGatewayService at apps/server/src/services/ava-gateway-service.ts is constructed with DiscordService (the stub from discord-service.ts where every method throws 'not yet implemented'). It should use DiscordBotService (the working Discord.js client at discord-bot-service.ts with sendToChannel() at line 1905).\n\nChanges needed:\n1. apps/server/src/services/ava-gateway-service.ts — Change constructor to accept DiscordBotService instead of DiscordService. Update postToDiscord() to use discordBotService.sendToChannel(channelId, message). Update postStartupMessage() and sendEmergencyStopAlert() similarly.\n2. apps/server/src/index.ts — Pass discordBotService to getAvaGatewayService() instead of discordService (line 354). The discordBotService is created at line 473.\n3. apps/server/src/index.ts — Call avaGatewayService.start() after initialization (currently only .initialize() is called at line 531 but .start() which begins event listening is never called).\n4. Set the infra channel ID to '1469109809939742814'.\n\nNote: discordBotService is created AFTER avaGatewayService in index.ts (line 473 vs 351). Either reorder initialization or use a setter method like setDiscordBot(discordBotService) called after both are created.",
+          "filesToModify": [
+            "apps/server/src/services/ava-gateway-service.ts",
+            "apps/server/src/index.ts"
+          ],
+          "acceptanceCriteria": [
+            "AvaGateway uses DiscordBotService.sendToChannel() for all Discord posting",
+            "Startup message appears in Discord #infra when server starts",
+            "avaGatewayService.start() is called in index.ts",
+            "Infra channel ID 1469109809939742814 is configured",
+            "npm run build:server passes"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1770918523063-m7wz2xgb7"
+        },
+        {
+          "number": 3,
+          "name": "replace-stub-discordservice-in-eventhookservice",
+          "title": "Replace stub DiscordService in EventHookService",
+          "description": "EventHookService at apps/server/src/services/event-hook-service.ts also uses the stub DiscordService for executeDiscordHook() (line 649). This needs to use DiscordBotService for user-configurable Discord hooks to actually work.\n\nChanges:\n1. apps/server/src/services/event-hook-service.ts — Accept DiscordBotService instead of (or in addition to) DiscordService. Update executeDiscordHook() to use discordBotService.sendToChannel().\n2. apps/server/src/index.ts — Wire discordBotService to EventHookService.\n\nThis is the same pattern as the AvaGateway fix — both services need the real Discord client.",
+          "filesToModify": [
+            "apps/server/src/services/event-hook-service.ts",
+            "apps/server/src/index.ts"
+          ],
+          "acceptanceCriteria": [
+            "EventHookService uses DiscordBotService for Discord hooks",
+            "User-configurable Discord hooks actually send messages",
+            "npm run build:server passes"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1770918523064-w7aardky3"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1770918523060-089x0r2lw"
+    },
+    {
+      "number": 2,
+      "slug": "02-fix-discord-thread-routing",
+      "title": "Fix Discord Thread Routing",
+      "description": "Fix the event payload mismatch between discord-bot-service.ts and agent-discord-router.ts that breaks slash command thread conversations, and add missing role prompt fallbacks.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "fix-event-payload-mismatch-in-thread-routing",
+          "title": "Fix event payload mismatch in thread routing",
+          "description": "Two locations in discord-bot-service.ts emit discord:user-message:routed with the WRONG payload shape:\n\n1. handleAgentCommand() at lines 733-746 emits: { projectPath, userId, username, agentId, messages: [...], channelId }\n2. Thread handler in messageCreate at lines 873-886 emits same shape.\n\nBut agent-discord-router.ts handleRoutedMessage() at line 159 destructures: { channelId, userId, content, username, routedToAgent }\n\nAnd the DiscordUserMessageRoutedPayload type in libs/types/src/discord.ts lines 195-201 expects: { channelId, userId, username, content, routedToAgent }\n\nFix: Change BOTH emitters in discord-bot-service.ts to match the existing type:\n- Replace agentId → routedToAgent\n- Replace messages[0].content → content (extract the string directly)\n- Remove projectPath from payload (not in type)\n\nFiles:\n- apps/server/src/services/discord-bot-service.ts — Fix two event emit payloads",
+          "filesToModify": [
+            "apps/server/src/services/discord-bot-service.ts"
+          ],
+          "acceptanceCriteria": [
+            "handleAgentCommand emits { channelId, userId, username, content, routedToAgent }",
+            "Thread handler emits same shape",
+            "agent-discord-router correctly receives content and routedToAgent",
+            "npm run build:server passes"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1770918523065-la3ae74tf"
+        },
+        {
+          "number": 2,
+          "name": "add-missing-role-prompts-for-agent-thread-responses",
+          "title": "Add missing role prompts for agent thread responses",
+          "description": "agent-discord-router.ts getRolePrompt() switch (lines 110-129) is missing cases for chief-of-staff and gtm-specialist. Since no built-in templates have systemPrompt set, the registry-first path (lines 101-108) won't find prompts, and these roles fall through to the generic fallback.\n\nTwo options (pick one):\nOption A: Add systemPrompt fields to ava and gtm-specialist templates in built-in-templates.ts so the registry path works\nOption B: Add cases in the getRolePrompt() switch in agent-discord-router.ts\n\nOption A is better — it's the registry-driven approach and works for future templates too.\n\nFiles:\n- apps/server/src/services/built-in-templates.ts — Add systemPrompt to ava and gtm-specialist templates\n- Optionally: apps/server/src/services/agent-discord-router.ts — Add fallback cases",
+          "filesToModify": [
+            "apps/server/src/services/built-in-templates.ts",
+            "apps/server/src/services/agent-discord-router.ts"
+          ],
+          "acceptanceCriteria": [
+            "Ava and GTM specialist get their proper system prompts in thread conversations",
+            "Registry-first path finds systemPrompt for templates that have it",
+            "npm run build:server passes"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1770918523066-osx3qyfku"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1770918523064-kif6k06m0"
+    },
+    {
+      "number": 3,
+      "slug": "03-health-event-hooks-real-time-notifications",
+      "title": "Health Event Hooks & Real-Time Notifications",
+      "description": "Extend the event hook system with health-specific triggers and add real-time Discord posting for critical events (not just 30-minute heartbeat).",
+      "phases": [
+        {
+          "number": 1,
+          "name": "add-health-check-critical-event-hook-trigger",
+          "title": "Add health_check_critical event hook trigger",
+          "description": "Add a new event hook trigger type for health events so users can configure custom notifications.\n\nChanges:\n1. libs/types/src/settings.ts — Add 'health_check_critical' to EventHookTrigger type union and EVENT_HOOK_TRIGGER_LABELS\n2. apps/server/src/services/event-hook-service.ts — Subscribe to health:check-completed event. When status is 'critical' or 'degraded', trigger the health_check_critical hook.\n3. apps/server/src/routes/briefing/routes/digest.ts — Add health_check_critical: 'critical' to TRIGGER_SEVERITY_MAP\n\nThis enables users to configure Discord webhooks, shell commands, or HTTP hooks for health events through the settings UI.",
+          "filesToModify": [
+            "libs/types/src/settings.ts",
+            "apps/server/src/services/event-hook-service.ts",
+            "apps/server/src/routes/briefing/routes/digest.ts"
+          ],
+          "acceptanceCriteria": [
+            "health_check_critical trigger type exists in EventHookTrigger",
+            "Critical health events trigger configured hooks",
+            "Briefing digest includes health events with correct severity",
+            "Existing hooks continue to work unchanged",
+            "npm run build:packages && npm run build:server passes"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1770918523067-z72s3b64y"
+        },
+        {
+          "number": 2,
+          "name": "real-time-discord-notifications-for-critical-events",
+          "title": "Real-time Discord notifications for critical events",
+          "description": "Currently AvaGateway only posts to Discord during the 30-minute heartbeat check. Add real-time posting when health:issue-detected fires.\n\nThe AvaGateway already has handleHealthIssue() at line 341 which formats severity and creates alerts. The fix from Milestone 1 connects health:issue-detected → handleHealthIssue(). But we also want notification:created events to post to Discord immediately for feature_waiting_approval and feature_error types.\n\nChanges:\n1. apps/server/src/services/ava-gateway-service.ts — Subscribe to notification:created events. For high/critical severity notifications, post to Discord #infra immediately.\n2. Add rate limiting — don't post more than 1 message per event type per 5 minutes to prevent spam.\n\nThis gives Josh real-time Discord alerts instead of waiting for the 30-min heartbeat.",
+          "filesToModify": [
+            "apps/server/src/services/ava-gateway-service.ts"
+          ],
+          "acceptanceCriteria": [
+            "Critical health events post to Discord within seconds (not 30-min delay)",
+            "Feature errors post to Discord in real-time",
+            "Rate limiting prevents spam (max 1 per event type per 5 min)",
+            "Circuit breaker still works",
+            "npm run build:server passes"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1770918523068-yy5adqwom"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1770918523067-kmep52wso"
+    },
+    {
+      "number": 4,
+      "slug": "04-frank-auto-triage-on-critical-health-events",
+      "title": "Frank Auto-Triage on Critical Health Events",
+      "description": "When the server detects critical health issues, automatically spawn Frank (DevOps agent) to diagnose and report.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "auto-spawn-frank-on-critical-health-events",
+          "title": "Auto-spawn Frank on critical health events",
+          "description": "Add an event subscriber in index.ts that, on health:check-completed with status === 'critical', spawns Frank via DynamicAgentExecutor with a diagnostic prompt.\n\nFrank's template (devops-engineer) is already in the role registry. Use execute_dynamic_agent pattern:\n1. apps/server/src/index.ts — Add event listener for health:check-completed. When status is 'critical', check cooldown (don't spawn more than once per 10 minutes), then call agentFactoryService to create and run a Frank agent with prompt: 'Server health is critical: {issue details}. Read server logs with get_server_logs, check system health, diagnose the root cause, and post findings to Discord #infra.'\n2. The agent should have access to: get_server_logs, get_detailed_health, health_check MCP tools, plus Discord send.\n\nThis is the simplest approach — no HeadsdownService changes needed. Direct event → agent spawn.",
+          "filesToModify": [
+            "apps/server/src/index.ts"
+          ],
+          "acceptanceCriteria": [
+            "Critical health events spawn Frank agent for triage",
+            "Cooldown prevents spawning more than once per 10 minutes",
+            "Frank reads server logs and posts diagnosis to Discord #infra",
+            "Non-critical events don't spawn Frank",
+            "npm run build:server passes"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1770918523069-qktljlatk"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1770918523069-w27mpxkut"
+    }
+  ],
+  "prd": {
+    "situation": "Automaker has extensive health monitoring and Discord notification infrastructure already built — HealthMonitorService runs every 30s detecting stuck features, memory issues, and corrupted features; AvaGatewayService has handlers for health:issue-detected events with severity-emoji formatting and Discord posting; EventHookService supports 13 trigger types; the briefing system classifies events by severity. Additionally, Discord slash commands and thread routing for agents were shipped in PR #271, and most of the extensible agent exposure plan (Phases 3-8) is complete.",
+    "problem": "Three critical breaks prevent the health pipeline from working end-to-end: (1) health:issue-detected event is NEVER emitted by HealthMonitorService despite being defined in event.ts and subscribed to by AvaGatewayService, (2) AvaGatewayService is injected with the STUB DiscordService (every method throws 'not yet implemented') instead of the working DiscordBotService, (3) avaGatewayService.start() is never called in index.ts. Additionally, the Discord agent thread routing has a payload mismatch — discord-bot-service emits {agentId, messages[]} but agent-discord-router expects {routedToAgent, content}, causing undefined values and broken thread conversations. The notification system is in-app only with no real-time Discord posting.",
+    "approach": "Four milestones: (1) Fix the three health pipeline breaks by emitting health:issue-detected, replacing stub DiscordService with DiscordBotService in AvaGateway and EventHookService, and calling start(). (2) Fix the Discord thread routing payload mismatch and add missing role prompts. (3) Add health_check_critical event hook trigger and real-time Discord notifications. (4) Add automatic Frank DevOps triage on critical health events.",
+    "results": "Critical server health events (OOM, stuck agents, crashes) automatically post to Discord #infra channel in real-time. Frank DevOps agent automatically triages critical alerts. Discord slash command threads work correctly for all agent types. AvaGateway heartbeat monitoring is fully operational. Users can configure custom hooks for health events.",
+    "constraints": [
+      "NEVER restart the dev server from agents",
+      "Keep PRs under 200 lines each",
+      "Run npm run build:packages after any libs/ changes",
+      "Use DiscordBotService.sendToChannel() for all Discord posting — never the stub DiscordService",
+      "Test that health events don't spam Discord (circuit breaker must work)",
+      "Maintain backward compatibility with existing EventHookTrigger settings"
+    ]
+  },
+  "createdAt": "2026-02-12T17:48:37.085Z",
+  "updatedAt": "2026-02-12T17:48:43.074Z"
+}

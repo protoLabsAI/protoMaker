@@ -1,0 +1,193 @@
+{
+  "slug": "agent-metrics-forecasting",
+  "title": "Agent Metrics & Forecasting",
+  "goal": "Comprehensive timing, cost, and capacity tracking for AI agents. Capture the full lifecycle (backlog to merge), per-execution records with token usage, status transition history, and capacity snapshots. Build metrics aggregation and project forecasting on top of the raw data.",
+  "status": "active",
+  "milestones": [
+    {
+      "number": 1,
+      "slug": "01-feature-lifecycle-timestamps",
+      "title": "Feature Lifecycle Timestamps",
+      "description": "Foundation layer: add persistent timing primitives to Feature type.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "add-lifecycle-timestamp-fields-to-feature-type",
+          "title": "Add lifecycle timestamp fields to Feature type",
+          "description": "Add createdAt, completedAt, reviewStartedAt (all optional string ISO). Add StatusTransition interface { from, to, timestamp, trigger? }. Add statusHistory: StatusTransition[] on Feature.",
+          "filesToModify": [
+            "libs/types/src/feature.ts"
+          ],
+          "acceptanceCriteria": [
+            "createdAt, completedAt, reviewStartedAt fields added as optional",
+            "StatusTransition interface exported",
+            "statusHistory array field on Feature",
+            "Types compile with npm run build:packages"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1770830823967-fq2s7ob47"
+        },
+        {
+          "number": 2,
+          "name": "populate-lifecycle-timestamps",
+          "title": "Populate lifecycle timestamps",
+          "description": "Set createdAt in create(), completedAt on done/verified, reviewStartedAt on review. Push StatusTransition on every status change. Backward compat: undefined fields don't break existing features.",
+          "filesToModify": [
+            "apps/server/src/services/feature-loader.ts",
+            "apps/server/src/services/auto-mode-service.ts"
+          ],
+          "acceptanceCriteria": [
+            "createdAt set in FeatureLoader.create()",
+            "completedAt set when status changes to done or verified",
+            "reviewStartedAt set when status changes to review",
+            "StatusTransition pushed on every status change",
+            "Existing features without new fields load without error"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1770830823969-i7d1sq70q"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1770830823966-r3s6frgyu"
+    },
+    {
+      "number": 2,
+      "slug": "02-execution-records",
+      "title": "Execution Records",
+      "description": "Per-execution records for every agent run with timing, cost, tokens, model.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "add-executionrecord-type",
+          "title": "Add ExecutionRecord type",
+          "description": "ExecutionRecord: { id, startedAt, completedAt, durationMs, costUsd, inputTokens, outputTokens, model, success, error?, turnCount?, trigger }. executionHistory: ExecutionRecord[] on Feature.",
+          "filesToModify": [
+            "libs/types/src/feature.ts"
+          ],
+          "acceptanceCriteria": [
+            "ExecutionRecord interface exported",
+            "executionHistory field on Feature",
+            "Types compile with npm run build:packages"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1770830823971-o3i2jlzrg"
+        },
+        {
+          "number": 2,
+          "name": "capture-execution-records-in-automodeservice",
+          "title": "Capture execution records in AutoModeService",
+          "description": "Record start time and model when agent starts. Capture completedAt, duration, cost, tokens from SDK result on completion. Push ExecutionRecord for both success and error_max_turns. Persist to feature.json via executionHistory.",
+          "filesToModify": [
+            "apps/server/src/services/auto-mode-service.ts"
+          ],
+          "acceptanceCriteria": [
+            "ExecutionRecord created at agent start",
+            "Record updated with duration, cost, tokens on completion",
+            "Both success and failure records captured",
+            "Records persisted in feature.json"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1770830823972-uklvfbngz"
+        },
+        {
+          "number": 3,
+          "name": "pr-lifecycle-timestamps",
+          "title": "PR lifecycle timestamps",
+          "description": "Add prCreatedAt, prMergedAt, prReviewDurationMs to Feature. Set timestamps at PR creation and merge.",
+          "filesToModify": [
+            "libs/types/src/feature.ts",
+            "apps/server/src/services/git-workflow-service.ts",
+            "apps/server/src/services/auto-mode-service.ts"
+          ],
+          "acceptanceCriteria": [
+            "PR timestamp fields added to Feature type",
+            "prCreatedAt set when PR is created",
+            "prMergedAt set when PR is merged",
+            "prReviewDurationMs computed from the difference"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1770830823973-j626h5w0r"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1770830823970-cz8ipnwc6"
+    },
+    {
+      "number": 3,
+      "slug": "03-metrics-service-api",
+      "title": "Metrics Service & API",
+      "description": "Aggregation layer: throughput, cycle time, cost rates, capacity, forecasting.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "metricsservice",
+          "title": "MetricsService",
+          "description": "Create MetricsService with getProjectMetrics() and getCapacityMetrics(). Computes: avgCycleTimeMs, avgAgentTimeMs, avgPrReviewTimeMs, totalCostUsd, successRate, throughputPerDay, costByModel, tokenUsage.",
+          "filesToModify": [
+            "apps/server/src/services/metrics-service.ts"
+          ],
+          "acceptanceCriteria": [
+            "MetricsService class created",
+            "getProjectMetrics() returns aggregated metrics",
+            "getCapacityMetrics() returns utilization data",
+            "All metrics computed from feature.json data"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1770830823974-hz0zgeg7c"
+        },
+        {
+          "number": 2,
+          "name": "metrics-api-endpoints",
+          "title": "Metrics API endpoints",
+          "description": "4 API endpoints: POST /api/metrics/summary (project-level), POST /api/metrics/features (per-feature timing), POST /api/metrics/capacity (utilization), POST /api/metrics/forecast (estimate duration/cost from historical data).",
+          "filesToModify": [
+            "apps/server/src/routes/metrics/index.ts"
+          ],
+          "acceptanceCriteria": [
+            "All 4 endpoints respond with correct data",
+            "Summary endpoint returns project-level aggregates",
+            "Features endpoint returns per-feature timing breakdown",
+            "Capacity endpoint returns utilization data",
+            "Forecast endpoint estimates based on historical complexity"
+          ],
+          "complexity": "large",
+          "featureId": "feature-1770830823975-vha2ses1o"
+        },
+        {
+          "number": 3,
+          "name": "mcp-tools-for-metrics",
+          "title": "MCP tools for metrics",
+          "description": "Add MCP tools: get_project_metrics, get_feature_metrics, get_capacity_metrics, estimate_project. Enables Ava to query metrics and forecast during planning.",
+          "filesToModify": [
+            "packages/mcp-server/plugins/automaker/agents/automaker.md"
+          ],
+          "acceptanceCriteria": [
+            "4 MCP tools registered and functional",
+            "Tools return formatted metrics data",
+            "Ava can query metrics during planning"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1770830823976-yrl8cor0e"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1770830823974-l0s1cwlek"
+    }
+  ],
+  "prd": {
+    "situation": "Automaker runs AI agents that implement features, but has almost no persistent metrics. Features have costUsd (cumulative) and startedAt, but no createdAt, completedAt, status transition history, per-execution records, token counts, or PR lifecycle timestamps. All timing data is in-memory and lost on restart.",
+    "problem": "Cannot measure how long features take end-to-end (no createdAt or completedAt). Cannot break down time by phase (queue time, agent time, PR review time, merge time). Cannot track token usage per execution (only cumulative costUsd). Cannot forecast project duration or cost from historical data. Cannot model capacity (features/hour, cost/hour, utilization). Status transitions are not logged — can't identify bottlenecks.",
+    "approach": "Layer 1: Add lifecycle timestamps and status history to Feature type. Layer 2: Capture per-execution records (timing, tokens, cost, model) following RalphIteration pattern. Layer 3: Build MetricsService for aggregation (throughput, cycle time, success rate). Layer 4: Add capacity snapshots and forecasting. All data persists in feature.json — no separate database needed.",
+    "results": "Every feature has full lifecycle timestamps (created, started, reviewed, completed). Every agent execution is recorded with duration, cost, tokens, model. Status transitions are logged for bottleneck analysis. Metrics API provides throughput, cycle time, cost rates, capacity utilization. Project forecasting estimates duration and cost based on historical complexity data.",
+    "constraints": [
+      "Backward compatible — existing features without new fields must still load",
+      "No external database — persist in feature.json and JSONL files",
+      "Don't break FeatureLoader performance — new fields are lightweight",
+      "Follow the RalphIteration pattern for execution records (proven approach)",
+      "Token counts from Claude SDK must be captured alongside costUsd",
+      "Capacity snapshots must not impact server performance"
+    ]
+  },
+  "createdAt": "2026-02-11T17:26:57.639Z",
+  "updatedAt": "2026-02-11T17:27:03.986Z"
+}

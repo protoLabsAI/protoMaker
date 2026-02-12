@@ -23,13 +23,19 @@ docs/.vitepress/cache/
 .automaker/events/
 .automaker/execution-state.json
 .automaker/notifications.json
+.automaker/categories.json
+.automaker/context/context-metadata.json
+.automaker/worktrees/
+.automaker/worktree-init.sh
 
 # Feature data is runtime-managed by the server — never git-track
 .automaker/features/
 
-# But track project plans, context files, settings, and spec
+# Track project plans, context files, skills, memory, settings, and spec
 !.automaker/projects/
 !.automaker/context/
+!.automaker/skills/
+!.automaker/memory/
 !.automaker/settings.json
 !.automaker/spec.md
 
@@ -131,3 +137,6 @@ packages/mcp-server/plugins/automaker/.env
 examples/mythxengine
 # Ephemeral test directories
 test/*-test-*/
+
+# Test fixture runtime artifacts
+test/fixtures/**/.automaker/categories.json

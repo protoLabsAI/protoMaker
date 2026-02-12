@@ -1,0 +1,211 @@
+{
+  "slug": "ava-autonomy-upgrade",
+  "title": "Ava Autonomy Upgrade",
+  "goal": "Eliminate manual workarounds and enable fully autonomous operation by fixing broken tooling, adding critical MCP tools for PR/worktree lifecycle, hardening hooks for state persistence, and exposing observability endpoints",
+  "status": "active",
+  "milestones": [
+    {
+      "number": 1,
+      "slug": "01-phase-2-critical-mcp-tools",
+      "title": "Phase 2: Critical MCP Tools",
+      "description": "Add 6 MCP tools for PR lifecycle and worktree management. 3 need new server routes (GitHub merge/status), 3 wrap existing routes (worktree list/status/create-pr). Eliminates gh CLI dependency for core autonomous workflows.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "github-merge-status-server-routes",
+          "title": "GitHub merge/status server routes",
+          "description": "Create /api/github/merge-pr and /api/github/check-pr-status routes that wrap GitHubMergeService and MergeEligibilityService. Located in apps/server/src/routes/github/, follow pattern from existing process-coderabbit-feedback endpoint. Parameters: projectPath, prNumber, mergeStrategy (squash/merge/rebase), waitForCI flag. Return: merge result with status or CI check results with conclusion states.",
+          "filesToModify": [
+            "apps/server/src/routes/github/index.ts",
+            "apps/server/src/routes/github/routes/merge-pr.ts (new)",
+            "apps/server/src/routes/github/routes/check-pr-status.ts (new)"
+          ],
+          "acceptanceCriteria": [
+            "POST /api/github/merge-pr returns success/failure with merge commit",
+            "POST /api/github/check-pr-status returns CI results with passing/failing state",
+            "Routes use execFileAsync for gh CLI calls",
+            "Error handling for auth failures and PR not found"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1770775269183-ssl926pr1"
+        },
+        {
+          "number": 2,
+          "name": "mcp-tools-for-github-merge-status-threads",
+          "title": "MCP tools for GitHub merge/status/threads",
+          "description": "Add 3 MCP tools: merge_pr (calls /api/github/merge-pr), check_pr_status (calls /api/github/check-pr-status), resolve_review_threads (calls existing /api/github/process-coderabbit-feedback). In packages/mcp-server/src/index.ts, add tool definitions in tools section and handlers in handleTool switch. Follow pattern from existing MCP tools using apiCall() helper.",
+          "filesToModify": [
+            "packages/mcp-server/src/index.ts"
+          ],
+          "acceptanceCriteria": [
+            "merge_pr tool merges PR and returns result",
+            "check_pr_status tool returns CI check states",
+            "resolve_review_threads tool resolves CodeRabbit threads",
+            "All 3 tools appear in claude mcp test automaker output"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1770775269184-q7nqctpod"
+        },
+        {
+          "number": 3,
+          "name": "mcp-tools-for-worktree-management",
+          "title": "MCP tools for worktree management",
+          "description": "Add 3 MCP tools wrapping existing worktree routes: list_worktrees (calls /api/worktree/list), get_worktree_status (calls /api/worktree/status), create_pr_from_worktree (calls /api/worktree/create-pr). All routes already exist, just need MCP wrappers in packages/mcp-server/src/index.ts following apiCall() pattern.",
+          "filesToModify": [
+            "packages/mcp-server/src/index.ts"
+          ],
+          "acceptanceCriteria": [
+            "list_worktrees returns array of worktree paths and branches",
+            "get_worktree_status returns git status for specific worktree",
+            "create_pr_from_worktree commits, pushes, creates PR in one call",
+            "All 3 tools work via MCP test"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1770775269185-hpfx6ch6f"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1770775269182-meo1i2nu6"
+    },
+    {
+      "number": 2,
+      "slug": "02-phase-3-hook-improvements",
+      "title": "Phase 3: Hook Improvements",
+      "description": "Add 4 hooks for state persistence and failure detection. PreCompact saves state before context wipes, SessionEnd persists for next startup, PostToolUseFailure detects MCP failures, stop hook upgrades to JSON format with structured idle tasks.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "precompact-and-sessionend-hooks",
+          "title": "PreCompact and SessionEnd hooks",
+          "description": "Create pre-compact-save-state.sh (saves board state, current task, PR pipeline to data/ava-session-state.json before compaction) and session-end-save.sh (persists session summary on SessionEnd event). Register in hooks.json with PreCompact and SessionEnd matchers. Update session-context.sh to read saved state on startup and inject it as context.",
+          "filesToModify": [
+            "packages/mcp-server/plugins/automaker/hooks/pre-compact-save-state.sh (new)",
+            "packages/mcp-server/plugins/automaker/hooks/session-end-save.sh (new)",
+            "packages/mcp-server/plugins/automaker/hooks/session-context.sh",
+            "packages/mcp-server/plugins/automaker/hooks/hooks.json"
+          ],
+          "acceptanceCriteria": [
+            "PreCompact hook saves board counts and current work to JSON",
+            "SessionEnd hook writes session summary",
+            "session-context.sh reads saved state and injects after startup/compact/resume",
+            "Compaction no longer loses operational context"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1770775269186-tnsmqvaki"
+        },
+        {
+          "number": 2,
+          "name": "posttoolusefailure-hook-for-mcp-failures",
+          "title": "PostToolUseFailure hook for MCP failures",
+          "description": "Create handle-mcp-failure.sh hook that detects when MCP tools fail (mcp__plugin_automaker_automaker__ namespace), checks if server is unreachable, and injects diagnostic context. Register in hooks.json with PostToolUseFailure event and matcher for MCP tool names. Output suggests recovery actions (check server, verify auth, inspect logs).",
+          "filesToModify": [
+            "packages/mcp-server/plugins/automaker/hooks/handle-mcp-failure.sh (new)",
+            "packages/mcp-server/plugins/automaker/hooks/hooks.json"
+          ],
+          "acceptanceCriteria": [
+            "Hook fires when MCP tools fail",
+            "Detects server-down vs other failures",
+            "Injects recovery context to Claude",
+            "Does not fire on successful tool calls"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1770775269187-tobznmttg"
+        },
+        {
+          "number": 3,
+          "name": "stop-hook-json-upgrade-and-structured-idle",
+          "title": "Stop hook JSON upgrade and structured idle",
+          "description": "Upgrade continue-work.sh to use JSON decision output instead of exit 2 (hookSpecificOutput with decision: block/allow and reason). Add structured idle task list (check Linear for new initiatives, review Beads backlog, run maintenance tasks, check for drift). Add blocked-feature escalation logic (if all remaining features blocked, inject escalation message). Update hooks.json if needed for JSON output pattern.",
+          "filesToModify": [
+            "packages/mcp-server/plugins/automaker/hooks/continue-work.sh"
+          ],
+          "acceptanceCriteria": [
+            "Stop hook outputs JSON with decision and reason instead of exit 2",
+            "Blocked-only boards trigger escalation message",
+            "Idle cycle provides specific task list not vague cleanup message",
+            "Guard still prevents infinite loops"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1770775269188-hkrf81paj"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1770775269185-7lyqune53"
+    },
+    {
+      "number": 3,
+      "slug": "03-phase-4-observability-mcp-tools",
+      "title": "Phase 4: Observability MCP Tools",
+      "description": "Add 6 MCP tools for health, settings, events, notifications, and GOAP. All server routes already exist, just need MCP wrappers. Enables direct access to system state without UI or manual API calls.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "health-and-settings-mcp-tools",
+          "title": "Health and settings MCP tools",
+          "description": "Add 3 MCP tools: get_detailed_health (calls /api/health/detailed for memory/stuck features/resources), get_settings (calls GET /api/settings/global), update_settings (calls PUT /api/settings/global). In packages/mcp-server/src/index.ts, add tool definitions and handlers. Settings tools need auth handling since endpoints are authenticated.",
+          "filesToModify": [
+            "packages/mcp-server/src/index.ts"
+          ],
+          "acceptanceCriteria": [
+            "get_detailed_health returns memory usage and stuck feature count",
+            "get_settings returns global config including auto-merge defaults",
+            "update_settings modifies global settings and returns updated config",
+            "All 3 tools work via MCP test"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1770775269189-e1e3429l6"
+        },
+        {
+          "number": 2,
+          "name": "events-and-notifications-mcp-tools",
+          "title": "Events and notifications MCP tools",
+          "description": "Add 2 MCP tools: list_events (calls /api/event-history/list with filtering by type/feature/date), list_notifications (calls /api/notifications/list). Both routes exist, just need MCP wrappers in packages/mcp-server/src/index.ts following existing tool patterns.",
+          "filesToModify": [
+            "packages/mcp-server/src/index.ts"
+          ],
+          "acceptanceCriteria": [
+            "list_events returns filtered event history",
+            "list_notifications returns unread notifications",
+            "Both tools work via MCP test"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1770775269189-s8yasarm4"
+        },
+        {
+          "number": 3,
+          "name": "goap-loop-mcp-tools",
+          "title": "GOAP loop MCP tools",
+          "description": "Add 2 MCP tools: start_goap_loop (calls /api/goap/start), get_goap_status (calls /api/goap/status). GOAP is the autonomous planning brain. Tools enable starting and monitoring the loop. Routes exist, just need MCP wrappers. Lower priority until GOAP system stabilizes.",
+          "filesToModify": [
+            "packages/mcp-server/src/index.ts"
+          ],
+          "acceptanceCriteria": [
+            "start_goap_loop starts the GOAP planning loop",
+            "get_goap_status returns loop state and recent actions",
+            "Both tools work via MCP test"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1770775269190-q07r3w33w"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1770775269188-s5j3scv2e"
+    }
+  ],
+  "prd": {
+    "situation": "Ava has 19 skills, 39 Automaker MCP tools, ~20 Discord MCP tools, and 5 automation hooks. However, comprehensive self-audit revealed critical structural gaps: 145 broken MCP tool references across 15 skills (Phase 1 COMPLETE - PR #191), zero PR lifecycle tools forcing daily gh CLI workarounds, no worktree management beyond graphite_restack, missing PreCompact/SessionEnd hooks causing state loss, no health/settings/events/notifications MCP exposure, and vague stop hook idle behavior.",
+    "problem": "Ava cannot operate autonomously. Every PR merge requires manual gh CLI commands. Agent work in worktrees is invisible until manually inspected. Context compaction wipes operational state. MCP tool failures go undetected. Settings require UI access. These gaps force constant human intervention and make 24/7 headless operation impossible.",
+    "approach": "Four-phase rollout building on PR #191 foundation. Phase 2: Add 6 critical MCP tools (3 new server routes for GitHub merge/status, 3 wrappers for existing worktree routes). Phase 3: Add 4 hooks (PreCompact state save, SessionEnd persistence, PostToolUseFailure detection, stop hook JSON upgrade). Phase 4: Add 6 observability tools (all routes exist, just need MCP wrappers). Each phase independently valuable, prioritized by autonomy impact.",
+    "results": "Full autonomous PR lifecycle (merge, status check, thread resolution via MCP). Complete worktree visibility and control. State persistence across compaction and session boundaries. Automatic MCP failure detection and recovery. Direct settings/health/events/notifications access. Structured idle task execution. Measurable: zero manual gh CLI calls for PR operations, zero context-loss incidents post-compaction, zero undetected MCP failures.",
+    "constraints": [
+      "Phase 1 already shipped (PR #191), start from Phase 2",
+      "New server routes must follow existing patterns (execFileAsync for git/gh, service layer separation)",
+      "Hook changes require plugin reinstall not just update",
+      "MCP tools must use apiCall() pattern from existing tools",
+      "Settings tools need auth checks (authenticated endpoints)",
+      "GOAP tools low priority until GOAP system stabilizes"
+    ]
+  },
+  "createdAt": "2026-02-11T02:01:01.495Z",
+  "updatedAt": "2026-02-11T02:01:09.199Z"
+}

@@ -1,0 +1,335 @@
+{
+  "slug": "multi-agent-gtm-system",
+  "title": "Multi-Agent GTM System",
+  "goal": "Build a role-based multi-agent system starting with a GTM Coordinator agent. Agents are routable from Discord, UI, and Linear. Each agent has role-specific tools, prompts, and permissions. The GTM agent manages content strategy, marketing, competitor research, and Josh's personal brand. The system establishes the pattern for all future agent teammates.",
+  "status": "active",
+  "milestones": [
+    {
+      "number": 1,
+      "slug": "01-foundation-linear-mcp-gtm-role",
+      "title": "Foundation: Linear MCP + GTM Role",
+      "description": "Add Linear MCP to plugin, create GTM specialist role in type system, add GTM prompt template, wire LINEAR_API_KEY into setuplab pipeline.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "add-linear-mcp-to-plugin-and-setuplab",
+          "title": "Add Linear MCP to plugin and setuplab",
+          "description": "Linear MCP is already added to plugin.json. Update setuplab pipeline to provision Linear MCP in new protoLab environments. Add LINEAR_API_KEY to setup flow. Verify Linear MCP tools work (search issues, create issues, add comments).",
+          "filesToModify": [
+            "packages/mcp-server/plugins/automaker/.claude-plugin/plugin.json",
+            "apps/server/src/services/alignment-proposal-service.ts",
+            "apps/server/src/routes/setup/index.ts"
+          ],
+          "acceptanceCriteria": [
+            "Linear MCP tools available in Claude Code sessions",
+            "setuplab provisions Linear MCP for new projects",
+            "Can search and create Linear issues via MCP"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1770865925048-k4mauv6uh"
+        },
+        {
+          "number": 2,
+          "name": "create-gtm-specialist-role-and-capabilities",
+          "title": "Create GTM specialist role and capabilities",
+          "description": "Add 'gtm-specialist' to AgentRole type. Define ROLE_CAPABILITIES with tools (Read, Grep, Glob, WebSearch, WebFetch, Write, Edit), model (sonnet), maxTurns (250). Add HeadsdownConfig defaults. No Bash, no commit, no PR creation.",
+          "filesToModify": [
+            "libs/types/src/agent-roles.ts",
+            "libs/types/src/headsdown.ts"
+          ],
+          "acceptanceCriteria": [
+            "gtm-specialist in AgentRole union type",
+            "ROLE_CAPABILITIES has gtm-specialist entry",
+            "DEFAULT_HEADSDOWN_CONFIGS has gtm-specialist entry",
+            "Types build cleanly"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1770865925049-vqdxyvk5b"
+        },
+        {
+          "number": 3,
+          "name": "create-gtm-system-prompt-template",
+          "title": "Create GTM system prompt template",
+          "description": "Create getGTMSpecialistPrompt() in libs/prompts/src/agents/. Incorporate Josh's brand voice, positioning, ecosystem context, Abdellah's role, platform priorities, and operating principles from the Linear GTM Coordinator prompt draft. Add protoLabs philosophy (orchestration over implementation, AI-native methodology, proof through products).",
+          "filesToModify": [
+            "libs/prompts/src/agents/index.ts"
+          ],
+          "acceptanceCriteria": [
+            "getGTMSpecialistPrompt(config) function exists",
+            "Prompt includes brand voice guide, ecosystem, positioning",
+            "Prompt includes platform priority and content strategy",
+            "Exported from prompts package"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1770865925050-ll718p49g"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1770865925047-wbczzg5tl"
+    },
+    {
+      "number": 2,
+      "slug": "02-gtm-agent-discord-routing",
+      "title": "GTM Agent: Discord + Routing",
+      "description": "Build the GTM agent as a routable agent accessible from Discord. Upgrade AgentDiscordRouter to use role-specific prompts and tools. Add channel-based routing.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "upgrade-agentdiscordrouter-for-role-aware-dispatch",
+          "title": "Upgrade AgentDiscordRouter for role-aware dispatch",
+          "description": "Modify AgentDiscordRouter.processMessage() to load role-specific system prompts from the prompts package based on routedToAgent type. Pass role-appropriate tools via ROLE_CAPABILITIES. Add conversation history for multi-turn Discord threads. Replace the generic one-liner system prompt with the actual role prompt.",
+          "filesToModify": [
+            "apps/server/src/services/agent-discord-router.ts"
+          ],
+          "acceptanceCriteria": [
+            "processMessage uses role-specific prompt from prompts package",
+            "Tool restrictions from ROLE_CAPABILITIES enforced",
+            "Multi-turn conversation in Discord threads",
+            "Existing Ava routing still works"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1770865925052-rqyl5vnnj"
+        },
+        {
+          "number": 2,
+          "name": "add-channel-based-routing-to-discord-bot",
+          "title": "Add channel-based routing to Discord bot",
+          "description": "Extend DiscordBotService to support channelRouting in settings — map channel IDs to agent types. Add #gtm channel routing. Messages in #gtm go to GTM agent, #dev goes to engineering, #ava-josh goes to Ava. Fall back to userRouting if no channel match.",
+          "filesToModify": [
+            "apps/server/src/services/discord-bot-service.ts",
+            "libs/types/src/settings.ts"
+          ],
+          "acceptanceCriteria": [
+            "channelRouting config in settings type",
+            "Messages in #gtm channel route to GTM agent",
+            "Channel routing takes priority over user routing",
+            "Settings UI can configure channel routing"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1770865925052-er51tnoyi"
+        },
+        {
+          "number": 3,
+          "name": "create-gtm-context-files-and-memory-namespace",
+          "title": "Create GTM context files and memory namespace",
+          "description": "Create .automaker/context/gtm-specialist.md with brand context, content calendar template, competitor tracking format. Create .automaker/memory/gtm-specialist/ directory for role-specific memory. Add context file loading filter so GTM agent loads GTM context, not engineering context.",
+          "filesToModify": [
+            "libs/utils/src/context-loader.ts"
+          ],
+          "acceptanceCriteria": [
+            "GTM context file exists with brand voice and strategy",
+            "Role-specific memory directory created",
+            "Context loader can filter by role"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1770865925053-4umgrjrug"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1770865925051-lmlmh90zx"
+    },
+    {
+      "number": 3,
+      "slug": "03-agent-runner-ui-role-selector-ava-activation",
+      "title": "Agent Runner UI: Role Selector + Ava Activation",
+      "description": "Upgrade the Agent Runner UI panel to support role selection, tool configuration, and direct Ava activation. Make it the control surface for testing and running any agent.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "add-role-selector-to-agent-runner",
+          "title": "Add role selector to Agent Runner",
+          "description": "Add a role dropdown to the agent config popover in the Agent Runner UI. When a role is selected, automatically set the model, max turns, and system prompt from ROLE_CAPABILITIES and the role's prompt template. Wire agentConfig to useElectronAgent (fixes the TODO on line 47).",
+          "filesToModify": [
+            "apps/ui/src/components/views/agent-view.tsx",
+            "apps/ui/src/components/views/agent-view/components/agent-config-popover.tsx"
+          ],
+          "acceptanceCriteria": [
+            "Role dropdown shows all defined roles including gtm-specialist",
+            "Selecting a role sets model, maxTurns, systemPrompt automatically",
+            "agentConfig is wired to useElectronAgent",
+            "Can chat with GTM agent from UI"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1770865925054-sbd6ledc1"
+        },
+        {
+          "number": 2,
+          "name": "add-tool-configuration-display",
+          "title": "Add tool configuration display",
+          "description": "Show which tools are available for the selected role in the agent config popover. Display as a read-only chip list (from ROLE_CAPABILITIES.tools). In future this becomes editable for the agent builder.",
+          "filesToModify": [
+            "apps/ui/src/components/views/agent-view/components/agent-config-popover.tsx"
+          ],
+          "acceptanceCriteria": [
+            "Tool chips visible when role selected",
+            "Tools match ROLE_CAPABILITIES for selected role",
+            "Visual distinction between tool types (read, write, execute)"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1770865925055-is22hxs4k"
+        },
+        {
+          "number": 3,
+          "name": "add-ava-activation-button",
+          "title": "Add Ava activation button",
+          "description": "Add a prominent 'Activate Ava' button/mode to the Agent Runner that pre-loads Ava's full system prompt (from ava.md skill), sets opus model, and connects to the Ava agent session. This is the UI equivalent of running /ava in CLI.",
+          "filesToModify": [
+            "apps/ui/src/components/views/agent-view.tsx",
+            "apps/server/src/services/agent-service.ts"
+          ],
+          "acceptanceCriteria": [
+            "Ava activation button visible in Agent Runner",
+            "Clicking loads Ava system prompt and opus model",
+            "Can interact with Ava from UI the same as CLI",
+            "Session persists across page reloads"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1770865925056-ug42c2hq9"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1770865925054-4o6oxcdx9"
+    },
+    {
+      "number": 4,
+      "slug": "04-linear-agent-integration",
+      "title": "Linear Agent Integration",
+      "description": "Integrate with Linear's Agent API so agents can be summoned via mentions and delegations in Linear tickets. Build the webhook handler and agent session manager.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "linear-agent-oauth-app-registration",
+          "title": "Linear Agent OAuth app registration",
+          "description": "Register Automaker as a Linear agent app with actor=app OAuth flow. Implement OAuth authorize and callback routes. Store workspace tokens. Request app:assignable and app:mentionable scopes. Follow the weather-bot pattern.",
+          "filesToModify": [
+            "apps/server/src/routes/linear/index.ts",
+            "apps/server/src/routes/linear/oauth.ts"
+          ],
+          "acceptanceCriteria": [
+            "OAuth flow works — can authorize Automaker in Linear",
+            "Access token stored per workspace",
+            "Agent appears in Linear's agent list"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1770865925057-zeq05s1za"
+        },
+        {
+          "number": 2,
+          "name": "linear-webhook-handler-for-agent-sessions",
+          "title": "Linear webhook handler for agent sessions",
+          "description": "Implement POST /api/linear/webhook endpoint to receive AgentSessionEvent webhooks. Parse delegation and mention events. Emit thought activity within 10 seconds. Route to appropriate agent based on project context (GTM project -> GTM agent, engineering project -> Ava).",
+          "filesToModify": [
+            "apps/server/src/routes/linear/webhook.ts",
+            "apps/server/src/services/linear-agent-service.ts"
+          ],
+          "acceptanceCriteria": [
+            "Webhook receives AgentSessionEvent",
+            "Thought activity emitted within 10s",
+            "Delegation routes to correct agent by project",
+            "Mentions route to correct agent"
+          ],
+          "complexity": "large",
+          "featureId": "feature-1770865925057-0fkmo7snn"
+        },
+        {
+          "number": 3,
+          "name": "agent-response-posting-to-linear",
+          "title": "Agent response posting to Linear",
+          "description": "After agent processes a Linear session, post the response back as a comment on the Linear issue. Format with markdown. Handle long responses with summary + detail. Update agent session status.",
+          "filesToModify": [
+            "apps/server/src/services/linear-agent-service.ts"
+          ],
+          "acceptanceCriteria": [
+            "Agent responses appear as comments on Linear issues",
+            "Responses are well-formatted markdown",
+            "Agent session status updated after response",
+            "Works for both GTM and Ava agents"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1770865925057-7e2phm6cv"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1770865925056-g8i5mfa8d"
+    },
+    {
+      "number": 5,
+      "slug": "05-polish-setuplab-integration",
+      "title": "Polish + Setuplab Integration",
+      "description": "Integrate everything into the setuplab pipeline, add MCP tools for agent management, and verify end-to-end flows.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "add-agent-management-mcp-tools",
+          "title": "Add agent management MCP tools",
+          "description": "Add MCP tools for managing role-based agents: list_agent_roles (returns available roles and capabilities), configure_agent_routing (set channel/user routing), get_agent_status (which agents are active and what they're working on). These become the MCP surface for the agent builder UI.",
+          "filesToModify": [
+            "packages/mcp-server/src/index.ts",
+            "apps/server/src/routes/agents/index.ts"
+          ],
+          "acceptanceCriteria": [
+            "list_agent_roles MCP tool returns all roles with capabilities",
+            "configure_agent_routing MCP tool sets Discord routing",
+            "get_agent_status MCP tool shows active agents"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1770865925059-b3ajbqqsn"
+        },
+        {
+          "number": 2,
+          "name": "update-setuplab-for-multi-agent-provisioning",
+          "title": "Update setuplab for multi-agent provisioning",
+          "description": "Extend setuplab pipeline to provision agent roles, create default channel routing, and set up Linear + Discord integration for new protoLab environments. Add a phase for 'agent team configuration' after the existing Discord provisioning.",
+          "filesToModify": [
+            "packages/mcp-server/plugins/automaker/commands/setuplab.md",
+            "apps/server/src/services/alignment-proposal-service.ts"
+          ],
+          "acceptanceCriteria": [
+            "setuplab creates default agent routing config",
+            "setuplab provisions Linear MCP",
+            "New protoLab environments have agent team ready to go"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1770865925060-q8ejfk80m"
+        },
+        {
+          "number": 3,
+          "name": "end-to-end-verification-and-documentation",
+          "title": "End-to-end verification and documentation",
+          "description": "Verify all flows: GTM agent via Discord, GTM agent via UI, Ava via UI, Linear mention routing, Linear delegation routing. Update CLAUDE.md with multi-agent architecture section. Update Ava skill with Linear access instructions.",
+          "filesToModify": [
+            "CLAUDE.md",
+            "packages/mcp-server/plugins/automaker/commands/ava.md"
+          ],
+          "acceptanceCriteria": [
+            "GTM agent responds in #gtm Discord channel",
+            "GTM agent works in Agent Runner UI with role selector",
+            "Ava activatable from UI",
+            "Linear mentions route to correct agent",
+            "CLAUDE.md documents multi-agent architecture"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1770865925061-rb2yn3r24"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1770865925058-6f5dhxdjj"
+    }
+  ],
+  "prd": {
+    "situation": "Automaker has a working single-agent system (Ava as Chief of Staff) with authority agents (PM, ProjM, EM) for engineering. The GTM Strategy Linear project has content strategy, brand voice guidelines, and a first-draft GTM coordinator prompt. Discord routing exists but uses basic simpleQuery with no tools or role-specific context. The Agent Runner UI has a chat interface but no role selection. Linear MCP and Discord MCP are bundled in the plugin. Seven agent roles are defined in types but only engineering roles are connected.",
+    "problem": "There is no non-engineering agent capability. Josh and Abdellah need a GTM agent for content creation, marketing strategy, competitor analysis, and personal brand management. The existing agent infrastructure (roles, prompts, routing) is 80% built but not wired together. Discord routing is dumb (no tools, no role prompts). The Agent Runner UI can't select roles or configure agents. Linear integration exists but agents can't be summoned from Linear tickets. There's no pattern for adding new domain-specific agents.",
+    "approach": "Build in 5 milestones: (1) Linear MCP integration + GTM role foundation, (2) GTM agent with full system prompt and tools, (3) Smart Discord routing with role-aware dispatch, (4) Agent Runner UI upgrade with role selector and Ava activation, (5) Linear Agent API integration for in-ticket summoning. Use the existing ROLE_CAPABILITIES type system, extend AgentDiscordRouter for role-aware routing, and build the GTM prompt from Josh's first draft plus protoLabs philosophy.",
+    "results": "A working GTM Coordinator agent accessible from Discord (#gtm channel), the Agent Runner UI (role selector), and eventually Linear (mentions/delegation). Ava gets Linear access for full strategic visibility. The role-based agent pattern is established so future agents (Designer, QA, DevOps, etc.) can be added by defining a role + prompt + tools. All protoLab environments get Linear + Discord + Automaker MCP out of the box.",
+    "constraints": [
+      "Must use existing ROLE_CAPABILITIES type system — extend, don't rebuild",
+      "GTM agent sees only GTM Linear project, Ava sees everything",
+      "Max 2-3 concurrent agents on dev server (memory constraint)",
+      "Linear Agent API is Developer Preview — build MCP-first, Agent API second",
+      "GTM prompt must incorporate Josh's brand voice guide and protoLabs philosophy",
+      "Keep PRs under 200 lines — use Graphite stacking for epic workflows"
+    ]
+  },
+  "createdAt": "2026-02-12T03:11:58.209Z",
+  "updatedAt": "2026-02-12T03:12:05.071Z"
+}

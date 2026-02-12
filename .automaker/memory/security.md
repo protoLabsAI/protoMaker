@@ -5,7 +5,7 @@ relevantTo: [security]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 1
+  loaded: 2
   referenced: 1
   successfulFeatures: 1
 ---
@@ -39,3 +39,10 @@ usageStats:
 - **Situation:** Attempting to cleanup worktrees from within a subprocess that might have cd'ed into the worktree path
 - **Root cause:** Git worktree directory becomes locked by the process that owns the CWD. Operating system prevents directory deletion while it's in use by a process. In Claude Code specifically, if you `cd` into a worktree then try to delete it, the shell persists the broken CWD and all subsequent commands fail
 - **How to avoid:** Must verify worktree is not current directory before any removal attempt. Adds runtime check but prevents silent failures and shell corruption
+
+### Scoped tool set for Frank (7 tools) vs full agent toolkit (20+) (2026-02-12)
+- **Context:** Frank spawned automatically on critical health. Restricting tools to diagnosis-only set.
+- **Why:** Auto-spawned agents on system events are higher risk - no operator review before execution. Scoped tools prevent accidental/malicious scope creep (e.g., deleting branches, modifying Linear, committing code). Frank's role is diagnostic (read logs, check health, post findings), not remediation.
+- **Rejected:** Alternative: Give Frank full toolkit like manual agents. Rejected because: (1) unreviewed agent shouldn't have write access to critical systems, (2) diagnosis doesn't require branch creation/feature management, (3) establishes security precedent for future auto-spawned agents
+- **Trade-offs:** Gained: blast radius limited if Frank makes errors. Lost: Frank can't auto-remediate (e.g., rollback bad feature, disable agent)
+- **Breaking if changed:** If full toolkit granted: Frank could accidentally delete features, commit breaking changes, or spam Discord during diagnosis loop

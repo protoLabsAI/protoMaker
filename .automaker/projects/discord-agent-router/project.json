@@ -1,0 +1,195 @@
+{
+  "slug": "discord-agent-router",
+  "title": "Discord Agent Router",
+  "goal": "Event-driven Discord message routing that maps users to AI agents. The bot watches for messages from specific users anywhere in the server, routes them to their assigned agent, and responds in-channel. Replaces Ava's polling-based Discord monitoring with real-time event-driven handling. Includes DM capability for direct agent-human communication and establishes the pattern for all future agent teammates (GTM agent for Abdellah, etc.).",
+  "status": "active",
+  "milestones": [
+    {
+      "number": 1,
+      "slug": "01-types-config-user-routing",
+      "title": "Types, Config & User Routing",
+      "description": "Foundation layer: event types, settings schema for user-agent mapping, and DM types.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "discord-routing-types-and-event-extensions",
+          "title": "Discord routing types and event extensions",
+          "description": "Add new event types for discord message routing: 'discord:user-message:routed' (when a mapped user's message is sent to an agent), 'discord:agent-response' (when agent produces a response). Add DiscordRoutedMessage interface with fields: userId, username, channelId, guildId, content, attachments, recentContext (recent channel messages). Add to EventType union in libs/types/src/event.ts.",
+          "filesToModify": [
+            "libs/types/src/event.ts"
+          ],
+          "acceptanceCriteria": [
+            "New event types added to EventType union",
+            "DiscordRoutedMessage interface exported",
+            "Types compile with npm run build:packages"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1770797171770-nt4i1xpsx"
+        },
+        {
+          "number": 2,
+          "name": "user-agent-mapping-configuration",
+          "title": "User-agent mapping configuration",
+          "description": "Extend DiscordIntegrationConfig in libs/types/src/settings.ts with a userRouting field: Record<string, { agentType: string, enabled: boolean }>. Keys are Discord usernames (e.g., 'chukz'), values specify which agent handles their messages. Add DEFAULT values. Example: { 'chukz': { agentType: 'ava', enabled: true }, 'abdelly': { agentType: 'gtm', enabled: false } }.",
+          "filesToModify": [
+            "libs/types/src/settings.ts"
+          ],
+          "acceptanceCriteria": [
+            "userRouting field added to DiscordIntegrationConfig",
+            "Default mapping includes chukz->ava",
+            "Types compile"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1770797171771-zwl5qcqyb"
+        },
+        {
+          "number": 3,
+          "name": "dm-types-and-capability-interfaces",
+          "title": "DM types and capability interfaces",
+          "description": "Add types for Discord DM operations: DiscordDMMessage interface, agent DM send/receive methods. Add 'discord:dm:received' and 'discord:dm:sent' event types. The DM capability should be typed so any agent can send a DM to their assigned human by username lookup.",
+          "filesToModify": [
+            "libs/types/src/event.ts",
+            "libs/types/src/settings.ts"
+          ],
+          "acceptanceCriteria": [
+            "DM event types added",
+            "DiscordDMMessage interface exported",
+            "DM config in settings (opt-in per user)"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1770797171772-iy9h1odhs"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1770797171769-t6fuyvpby"
+    },
+    {
+      "number": 2,
+      "slug": "02-message-router-context-gathering",
+      "title": "Message Router & Context Gathering",
+      "description": "Core routing logic in DiscordBotService: intercept messages from mapped users, gather context, route to agents, and reply.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "extend-handlemessage-with-user-routing",
+          "title": "Extend handleMessage with user routing",
+          "description": "In apps/server/src/services/discord-bot-service.ts, extend handleMessage() to: (1) Check if message.author.username is in the userRouting map, (2) If mapped and enabled, gather the message content and attachments, (3) Emit 'discord:user-message:routed' event with full payload, (4) Do NOT break existing !idea and slash command handling — routing should be a fallback after existing handlers. Add debouncing: if a user sends multiple messages within 3 seconds, batch them into one routed event.",
+          "filesToModify": [
+            "apps/server/src/services/discord-bot-service.ts"
+          ],
+          "acceptanceCriteria": [
+            "Messages from mapped users emit routed events",
+            "Unmapped users are silently ignored",
+            "Bot messages are ignored",
+            "Existing !idea and slash commands still work",
+            "Debouncing prevents spam routing"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1770797171773-0bgsu7ba2"
+        },
+        {
+          "number": 2,
+          "name": "context-gathering-recent-messages-and-attachments",
+          "title": "Context gathering — recent messages and attachments",
+          "description": "When routing a message, gather context: (1) Fetch last 10 messages from the same channel for conversational context, (2) Process attachments on the triggering message (images, files) using the existing processAttachment() pattern, (3) Include any referenced message (reply context). Package all context into the DiscordRoutedMessage payload so the agent has full awareness of the conversation.",
+          "filesToModify": [
+            "apps/server/src/services/discord-bot-service.ts"
+          ],
+          "acceptanceCriteria": [
+            "Recent channel messages included in routed payload",
+            "Image attachments processed and included",
+            "File attachments processed and included",
+            "Reply context included when user replies to another message"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1770797171774-tlog6dgxk"
+        },
+        {
+          "number": 3,
+          "name": "agent-response-pipeline",
+          "title": "Agent response pipeline",
+          "description": "Create the response flow: (1) Agent handler receives 'discord:user-message:routed' event, (2) Processes via simpleQuery or a dedicated agent conversation, (3) Sends response back via DiscordBotService.sendToChannel(). For Ava, this means receiving the routed message, understanding it in context, and responding. Create a new AgentDiscordRouter service that manages agent-to-Discord response mapping. Handle message splitting for long responses (>2000 chars). Create threads for complex conversations (>3 back-and-forth exchanges in 5 minutes).",
+          "filesToModify": [
+            "apps/server/src/services/discord-bot-service.ts",
+            "apps/server/src/services/agent-discord-router.ts"
+          ],
+          "acceptanceCriteria": [
+            "Agent receives routed message and processes it",
+            "Response posted to same channel",
+            "Long responses split at 2000 char boundary",
+            "Thread creation for extended conversations",
+            "Error handling — agent failure doesn't crash the bot"
+          ],
+          "complexity": "large",
+          "featureId": "feature-1770797171774-d81cck1s2"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1770797171772-whmjeduhu"
+    },
+    {
+      "number": 3,
+      "slug": "03-dm-channel-ava-prompt-cleanup",
+      "title": "DM Channel & Ava Prompt Cleanup",
+      "description": "Add DM capability and remove Discord polling from Ava's monitoring checklist.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "dm-send-and-receive-capability",
+          "title": "DM send and receive capability",
+          "description": "In DiscordBotService, add: (1) sendDM(username, content) method that looks up user by username in the guild and sends a DM, (2) Handle incoming DMs in the MessageCreate handler (message.channel.type === ChannelType.DM), (3) Route incoming DMs through the same user-agent routing map, (4) Add a new MCP tool 'discord_send_dm' so Ava (via MCP) can DM Josh directly. (5) Emit 'discord:dm:received' and 'discord:dm:sent' events.",
+          "filesToModify": [
+            "apps/server/src/services/discord-bot-service.ts",
+            "packages/mcp-server/plugins/automaker/agents/discord.md"
+          ],
+          "acceptanceCriteria": [
+            "sendDM method works by Discord username",
+            "Incoming DMs routed to assigned agent",
+            "New MCP tool available for agents to send DMs",
+            "DM events emitted to server event system"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1770797171777-xrighh9en"
+        },
+        {
+          "number": 2,
+          "name": "update-ava-prompt-remove-discord-polling-add-dm-awareness",
+          "title": "Update Ava prompt — remove Discord polling, add DM awareness",
+          "description": "Remove the Discord polling step from Ava's monitoring checklist in ava.md. The bot now handles message routing automatically — Ava no longer needs to check #ava-josh on activation. Add DM awareness: Ava should know she can DM Josh via the discord_send_dm MCP tool for emergencies. Update the Discord channels section to note that message routing is event-driven. Remove the old #ava-josh polling reference.",
+          "filesToModify": [
+            "packages/mcp-server/plugins/automaker/commands/ava.md"
+          ],
+          "acceptanceCriteria": [
+            "Discord polling removed from monitoring checklist",
+            "DM tool referenced in Ava's toolset",
+            "Ava prompt is shorter and cleaner",
+            "No references to manual Discord checking"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1770797171778-g0qdxf5kl"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1770797171775-018a3vtta"
+    }
+  ],
+  "prd": {
+    "situation": "Ava currently polls Discord channels on a schedule to check for messages from Josh. This is wasteful (burns API calls checking empty channels), slow (5-min polling interval), and requires explicit channel configuration. Meanwhile, the DiscordBotService already has a live discord.js Client with GuildMessages + MessageContent intents, but drops all messages that aren't !idea commands or thread replies. The architecture for real-time message handling exists but isn't wired up for agent routing.",
+    "problem": "1) Ava must manually poll specific channels for Josh's messages — slow, wasteful, and fragile. 2) No way for Josh to DM Ava directly for emergencies or quick brainstorming. 3) No pattern exists for routing Discord users to different AI agents (needed for GTM agent for Abdellah). 4) Context is lost — when a user messages, the agent doesn't see recent conversation history, shared files, or images. 5) The monitoring checklist has Discord polling baked in, adding latency to every activation.",
+    "approach": "Extend DiscordBotService.handleMessage() to route non-command messages from mapped users to their assigned AI agent. Add configurable user-to-agent mapping in project settings. Build context gathering (recent channel messages, attachments, images) to give agents full conversational awareness. Add DM capability so agents can directly message their assigned humans. Remove Discord polling from Ava's monitoring checklist since it becomes event-driven. Establish this as the reusable pattern for all future agent teammates.",
+    "results": "1) Real-time Discord message routing — agents respond to their humans within seconds, not minutes. 2) DM channel for emergency/direct communication. 3) Full context awareness — agents see recent messages, files, images when responding. 4) Reusable user-to-agent routing pattern for future agents (GTM, PM, EM). 5) Reduced Ava prompt complexity — no more Discord polling in monitoring checklist.",
+    "constraints": [
+      "Build on existing DiscordBotService — don't create a new Discord client",
+      "User-to-agent mapping must be configurable (not hardcoded)",
+      "Must handle rate limiting — Discord limits apply to bot responses",
+      "Must ignore bot messages and unmapped users",
+      "DM messages must not leak into server channels",
+      "Agents should respond in the same channel/thread where the user messaged",
+      "Must handle attachments (images, files) and pass them to agents as context",
+      "Don't break existing !idea and slash command functionality",
+      "Two Discord clients (server + MCP plugin) share one bot token — ensure no duplicate handling"
+    ]
+  },
+  "createdAt": "2026-02-11T08:06:06.184Z",
+  "updatedAt": "2026-02-11T08:06:11.783Z"
+}

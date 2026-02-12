@@ -1,0 +1,338 @@
+{
+  "slug": "agent-architect-dynamic-role-registry-factory",
+  "title": "Agent Architect: Dynamic Role Registry & Factory",
+  "goal": "Enable runtime creation, management, and execution of AI agent roles through a dynamic registry, template system, and factory pattern — replacing static TypeScript union types with a flexible, validated, extensible system.",
+  "status": "active",
+  "milestones": [
+    {
+      "number": 1,
+      "slug": "01-foundation-template-schema-registry",
+      "title": "Foundation: Template Schema & Registry",
+      "description": "Create the type definitions, Zod schemas, and in-memory registry that form the foundation for dynamic roles. No behavior changes — purely additive.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "agent-template-schema-zod",
+          "title": "Agent Template Schema (Zod)",
+          "description": "Create AgentTemplateSchema in libs/types/src/agent-templates.ts using Zod. Define the template structure: name, displayName, description, role, model, tools, disallowedTools, systemPromptTemplate, trustLevel, maxRiskAllowed, canSpawnAgents, allowedSubagentRoles, tier (0=protected, 1=managed), hooks, author, version, tags. Export AgentTemplate type inferred from schema. Add to libs/types/src/index.ts exports. Ensure zod is already a dependency (it is in the monorepo).",
+          "filesToModify": [
+            "libs/types/src/agent-templates.ts",
+            "libs/types/src/index.ts",
+            "libs/types/package.json"
+          ],
+          "acceptanceCriteria": [
+            "AgentTemplateSchema validates correct templates",
+            "AgentTemplateSchema rejects invalid templates (bad name format, invalid role, missing required fields)",
+            "AgentTemplate type is exported from @automaker/types",
+            "npm run build:packages succeeds",
+            "Unit tests cover valid/invalid template validation"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1770870430423-35yklwpoz"
+        },
+        {
+          "number": 2,
+          "name": "role-registry-service",
+          "title": "Role Registry Service",
+          "description": "Create RoleRegistryService in apps/server/src/services/role-registry-service.ts. Implements in-memory Map<string, AgentTemplate> with register(), get(), has(), list(), unregister() methods. Loads built-in templates from JSON files on initialization. Validates all templates against AgentTemplateSchema on registration. Enforces tier restrictions: tier 0 roles cannot be unregistered or modified. Emits events on registration/unregistration for UI reactivity. Singleton pattern — one registry per server instance.",
+          "filesToModify": [
+            "apps/server/src/services/role-registry-service.ts"
+          ],
+          "acceptanceCriteria": [
+            "Registry loads built-in templates on init",
+            "register() validates template and stores it",
+            "register() rejects duplicate names",
+            "unregister() refuses tier 0 roles",
+            "get() returns template or undefined",
+            "list() returns all registered templates",
+            "Events emitted on register/unregister",
+            "Unit tests cover all methods and edge cases"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1770870430424-jmokfbmnf"
+        },
+        {
+          "number": 3,
+          "name": "extract-built-in-templates",
+          "title": "Extract Built-in Templates",
+          "description": "Extract existing 8 AgentRole definitions into JSON template files at .automaker/templates/built-in/. Create one JSON file per role: product-manager.json, engineering-manager.json, frontend-engineer.json, backend-engineer.json, devops-engineer.json, qa-engineer.json, docs-engineer.json, gtm-specialist.json. Each template includes: capabilities from ROLE_CAPABILITIES, headsdown config from DEFAULT_HEADSDOWN_CONFIGS, system prompt template reference, and tier designation (all built-in = tier 0 except gtm-specialist = tier 1). Templates must validate against AgentTemplateSchema.",
+          "filesToModify": [
+            ".automaker/templates/built-in/product-manager.json",
+            ".automaker/templates/built-in/engineering-manager.json",
+            ".automaker/templates/built-in/frontend-engineer.json",
+            ".automaker/templates/built-in/backend-engineer.json",
+            ".automaker/templates/built-in/devops-engineer.json",
+            ".automaker/templates/built-in/qa-engineer.json",
+            ".automaker/templates/built-in/docs-engineer.json",
+            ".automaker/templates/built-in/gtm-specialist.json"
+          ],
+          "acceptanceCriteria": [
+            "8 JSON template files created matching existing ROLE_CAPABILITIES",
+            "All templates validate against AgentTemplateSchema",
+            "Tier 0 assigned to core roles, tier 1 to extensible roles",
+            "Template loading test verifies all 8 load successfully",
+            "Capability parity verified: registry.get('frontend-engineer').tools === ROLE_CAPABILITIES['frontend-engineer'].tools"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1770870430425-a0dv5lsas"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1770870430422-mjl8fww15"
+    },
+    {
+      "number": 2,
+      "slug": "02-agent-factory-execution",
+      "title": "Agent Factory & Execution",
+      "description": "Build the factory service that creates agent instances from templates, and the dynamic agent executor that runs them. This enables runtime agent creation.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "agent-factory-service",
+          "title": "Agent Factory Service",
+          "description": "Create AgentFactoryService in apps/server/src/services/agent-factory-service.ts. Depends on RoleRegistryService. Methods: createFromTemplate(templateName, projectPath, overrides?) returns a configured agent-like object with resolved model, tools, system prompt. Validates overrides against schema. Supports template inheritance: custom template can extend a built-in template. Logs all agent creation events. Does NOT execute agents — just configures them.",
+          "filesToModify": [
+            "apps/server/src/services/agent-factory-service.ts"
+          ],
+          "acceptanceCriteria": [
+            "createFromTemplate returns properly configured agent config",
+            "Override merging works correctly (tools additive, model replacement)",
+            "Template not found throws descriptive error",
+            "Template inheritance resolves correctly",
+            "All creation events logged",
+            "Unit tests cover normal flow, overrides, inheritance, errors"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1770870430425-4afzdyrt8"
+        },
+        {
+          "number": 2,
+          "name": "dynamic-agent-executor",
+          "title": "Dynamic Agent Executor",
+          "description": "Create DynamicAgentExecutor in apps/server/src/services/dynamic-agent-executor.ts. Takes a factory-configured agent config and executes it using the existing simpleQuery or Claude Agent SDK. Resolves model string via @automaker/model-resolver. Applies tool restrictions from template. Builds system prompt from template's systemPromptTemplate field. Integrates with existing AgentService execution patterns for monitoring and output capture.",
+          "filesToModify": [
+            "apps/server/src/services/dynamic-agent-executor.ts"
+          ],
+          "acceptanceCriteria": [
+            "Executes agent with correct model and system prompt",
+            "Tool restrictions enforced (only allowed tools available)",
+            "Output captured and accessible via existing patterns",
+            "Error handling with classified errors",
+            "Integration test: create from template + execute returns result"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1770870430426-ocbvwqx62"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1770870430425-fsmw4zxz2"
+    },
+    {
+      "number": 3,
+      "slug": "03-consumer-migration",
+      "title": "Consumer Migration",
+      "description": "Migrate existing code that uses static AgentRole lookups to use the dynamic registry. Switch statements and Record<AgentRole,T> patterns become registry lookups with fallbacks.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "migrate-discord-router-to-registry",
+          "title": "Migrate Discord Router to Registry",
+          "description": "Refactor agent-discord-router.ts to use RoleRegistryService instead of hardcoded switch statements. getRolePrompt() becomes a registry lookup — get template, use its systemPromptTemplate to generate the prompt. getRoleTools() uses template.tools instead of ROLE_CAPABILITIES[role]. Add fallback to generic prompt for unregistered roles. Inject RoleRegistryService via constructor. Preserve exact same behavior for all 8 existing roles.",
+          "filesToModify": [
+            "apps/server/src/services/agent-discord-router.ts"
+          ],
+          "acceptanceCriteria": [
+            "All 8 existing roles produce identical prompts and tools as before",
+            "Custom/dynamic roles get their template-defined prompt and tools",
+            "Unknown roles get generic fallback (not crash)",
+            "Constructor accepts RoleRegistryService",
+            "Tests verify parity with previous switch-based behavior"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1770870430427-uuyrre7n4"
+        },
+        {
+          "number": 2,
+          "name": "migrate-headsdown-service-to-registry",
+          "title": "Migrate Headsdown Service to Registry",
+          "description": "Refactor headsdown-service.ts getGoalsForRole() to use RoleRegistryService instead of exhaustive switch. Default headsdown configs loaded from templates instead of DEFAULT_HEADSDOWN_CONFIGS. Fallback config for roles without explicit headsdown settings. Keep DEFAULT_HEADSDOWN_CONFIGS as backward compatibility layer during migration — registry takes priority, falls back to static config.",
+          "filesToModify": [
+            "apps/server/src/services/headsdown-service.ts",
+            "libs/types/src/headsdown.ts"
+          ],
+          "acceptanceCriteria": [
+            "All 8 existing roles get identical headsdown configs as before",
+            "Dynamic roles get config from their template",
+            "Roles without explicit config get sensible defaults",
+            "DEFAULT_HEADSDOWN_CONFIGS still works as fallback",
+            "Tests verify config parity for all existing roles"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1770870430427-cpbvushzd"
+        },
+        {
+          "number": 3,
+          "name": "prompt-registry-adapter",
+          "title": "Prompt Registry Adapter",
+          "description": "Create a prompt registry adapter in libs/prompts/src/prompt-registry.ts. Maps role names to their prompt generation functions with a unified interface. Adapter wraps each existing prompt function (getProductManagerPrompt, etc.) with a common signature: (config: BasePromptConfig & Record<string, unknown>) => string. Built-in prompts register on module import. Custom prompts loaded from template systemPromptTemplate strings. Export getPromptForRole(role: string, config: BasePromptConfig) function.",
+          "filesToModify": [
+            "libs/prompts/src/prompt-registry.ts",
+            "libs/prompts/src/index.ts"
+          ],
+          "acceptanceCriteria": [
+            "getPromptForRole returns correct prompt for all 8 existing roles",
+            "Custom roles with systemPromptTemplate strings generate valid prompts",
+            "Unknown roles return generic prompt (not throw)",
+            "Exported from @automaker/prompts",
+            "Unit tests verify all 8 built-in role prompts"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1770870430428-dzy20c08g"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1770870430426-bftyrigf5"
+    },
+    {
+      "number": 4,
+      "slug": "04-mcp-tools-api",
+      "title": "MCP Tools & API",
+      "description": "Expose agent management through MCP tools and REST API endpoints so Ava and other agents can create/manage roles at runtime.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "agent-management-rest-api",
+          "title": "Agent Management REST API",
+          "description": "Create apps/server/src/routes/agents/index.ts with REST endpoints: POST /api/agents/templates/list, POST /api/agents/templates/get, POST /api/agents/templates/register, POST /api/agents/templates/update, POST /api/agents/templates/unregister, POST /api/agents/execute. All endpoints require API key auth. Register/update/unregister enforce tier restrictions. Execute creates and runs a dynamic agent from a template. Follow existing route patterns (projectPath in body, error classification).",
+          "filesToModify": [
+            "apps/server/src/routes/agents/index.ts",
+            "apps/server/src/index.ts"
+          ],
+          "acceptanceCriteria": [
+            "All 6 endpoints respond correctly",
+            "Tier 0 roles rejected for update/unregister",
+            "Invalid templates rejected with Zod error details",
+            "Execute endpoint creates and runs agent, returns output",
+            "API key authentication enforced",
+            "Registered in server index.ts",
+            "Unit tests for each endpoint"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1770870430428-4ku372no6"
+        },
+        {
+          "number": 2,
+          "name": "agent-management-mcp-tools",
+          "title": "Agent Management MCP Tools",
+          "description": "Add 7 MCP tools to packages/mcp-server/src/index.ts: list_agent_templates, get_agent_template, register_agent_template, update_agent_template, unregister_agent_template, execute_dynamic_agent, get_role_registry_status. Each tool calls the corresponding REST API endpoint. Include proper input schemas with descriptions. Follow existing MCP tool patterns (projectPath param, error handling, response formatting).",
+          "filesToModify": [
+            "packages/mcp-server/src/index.ts"
+          ],
+          "acceptanceCriteria": [
+            "All 7 MCP tools registered and callable",
+            "Input schemas validate correctly",
+            "Tier restrictions enforced through API",
+            "register_agent_template validates template before sending",
+            "execute_dynamic_agent returns agent output",
+            "npm run build:packages builds successfully",
+            "MCP tools appear in dist/index.js"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1770870430429-8x4yn0fcf"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1770870430428-0dqax0anv"
+    },
+    {
+      "number": 5,
+      "slug": "05-integration-polish",
+      "title": "Integration & Polish",
+      "description": "Wire everything together, add UI support, test end-to-end, and update documentation.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "server-integration-initialization",
+          "title": "Server Integration & Initialization",
+          "description": "Wire RoleRegistryService and AgentFactoryService into the server startup in apps/server/src/index.ts. Initialize registry, load built-in templates, inject into services that need it (AgentDiscordRouter, HeadsdownService). Ensure backward compatibility — if registry fails to load, fall back to static definitions. Add health check info for registry status. Emit server event when registry is ready.",
+          "filesToModify": [
+            "apps/server/src/index.ts"
+          ],
+          "acceptanceCriteria": [
+            "Registry initializes on server start",
+            "Built-in templates loaded automatically",
+            "Services receive registry injection",
+            "Fallback to static defs if registry fails",
+            "Health check includes registry status",
+            "Server starts cleanly with all tests passing"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1770870430430-4habl4q99"
+        },
+        {
+          "number": 2,
+          "name": "ui-role-selector-enhancement",
+          "title": "UI Role Selector Enhancement",
+          "description": "Update the Agent Runner UI component to fetch available roles from the registry API instead of hardcoding AgentRole values. Show template metadata (displayName, description, tier badge). Allow selecting custom roles alongside built-in roles. Add visual indicator for tier 0 (locked icon) vs tier 1 (editable). Preserve existing UX — just extend the data source.",
+          "filesToModify": [
+            "apps/ui/src/components/views/agent-runner-view.tsx",
+            "apps/ui/src/hooks/queries/use-agent-templates.ts",
+            "apps/ui/src/lib/http-api-client.ts"
+          ],
+          "acceptanceCriteria": [
+            "Role selector shows all registered roles (built-in + custom)",
+            "Template metadata displayed (name, description, tier)",
+            "Tier 0 roles show locked indicator",
+            "Selecting a role correctly configures the agent",
+            "Graceful fallback if API unavailable (show static list)"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1770870430431-zo3ml4y24"
+        },
+        {
+          "number": 3,
+          "name": "end-to-end-testing-documentation",
+          "title": "End-to-End Testing & Documentation",
+          "description": "Write integration tests covering the full flow: register template → create agent → execute → verify output. Update docs/dev/adding-team-members.md to document the new dynamic approach alongside the static approach. Create docs/dev/agent-templates.md explaining the template schema, factory pattern, and MCP tools. Update CLAUDE.md with new MCP tools section.",
+          "filesToModify": [
+            "apps/server/tests/unit/services/role-registry-service.test.ts",
+            "apps/server/tests/unit/services/agent-factory-service.test.ts",
+            "docs/dev/adding-team-members.md",
+            "docs/dev/agent-templates.md",
+            "CLAUDE.md"
+          ],
+          "acceptanceCriteria": [
+            "Integration test: register → create → execute → verify",
+            "Unit tests for registry, factory, executor",
+            "adding-team-members.md updated with dynamic approach",
+            "agent-templates.md documents schema and MCP tools",
+            "CLAUDE.md lists new MCP tools",
+            "npm run test:all passes",
+            "npm run build succeeds"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1770870430431-jgp642ob7"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1770870430429-0qxhdvdhb"
+    }
+  ],
+  "researchSummary": "Deep research revealed THREE parallel role systems (AgentRole union, AuthorityRole, AgentRoleName) with no mapping between them. ~11 core files and ~21 indirect references use Record<AgentRole, T> patterns that lose compile-time safety when migrated to dynamic. Non-uniform prompt function signatures (different config params per role) require a unified interface or adapter layer. External research validated: Claude SDK subagent model (deny-all IAM), CrewAI role-based hierarchy (closest match), Zod schema validation for runtime safety, template-first approach with JSON definitions. Key recommendation: phased migration preserving backward compatibility, with AgentTemplateSchema (Zod), AgentFactoryService, and DynamicAgent executor.",
+  "prd": {
+    "situation": "Automaker has 8 static AgentRole types and 5 AuthorityRole types hardcoded as TypeScript union types. Adding a new role requires modifying 11+ files across types, prompts, services, and UI. The process is documented in docs/dev/adding-team-members.md but remains a 7-step manual procedure. There is no way to create roles at runtime, and the Agent Architect concept — an agent that manages other agents — cannot exist without dynamic role registration.",
+    "problem": "Three problems block agent autonomy: (1) Static role definitions prevent runtime agent creation — every new role requires code changes, rebuild, and restart. (2) No unified role registry — three parallel systems (AgentRole, AuthorityRole, AgentRoleName) with no mapping between them create confusion and inconsistency. (3) No RBAC enforcement at the tool level — agents get all-or-nothing tool access with no per-invocation policy checks. Without these, Ava cannot create specialized agents on-the-fly, and the vision of an autonomous AI development studio stalls.",
+    "approach": "Phased migration from static to dynamic roles: (1) Create AgentTemplateSchema with Zod validation for runtime type safety. (2) Build AgentFactoryService as a template registry with JSON-based role definitions. (3) Implement DynamicAgent executor that creates agent instances from templates. (4) Add tier-based RBAC — Tier 0 roles (Ava, PM, EM) are protected/immutable, Tier 1 roles are manageable via CRUD tools. (5) Expose 7 MCP tools for agent management. (6) Gradual consumer migration — switch statements and Record<AgentRole,T> patterns converted to registry lookups with fallbacks. Built-in roles remain as JSON templates, custom roles stored in .automaker/agents/.",
+    "results": "After completion: (1) New agent roles can be created at runtime via MCP tools or JSON templates — no code changes needed. (2) Ava can spawn specialized agents dynamically based on project needs. (3) Role capabilities, tools, and prompts are validated via Zod schemas. (4) Tier system prevents modification of leadership roles while enabling full CRUD on worker roles. (5) All existing functionality preserved — built-in roles work identically, just loaded from templates instead of hardcoded.",
+    "constraints": [
+      "Must be 100% backward compatible — existing static roles must work identically throughout migration",
+      "Tier 0 roles (Ava, PM, EM, GTM, orchestrators) cannot be modified or deleted via CRUD tools",
+      "No changes to AuthorityRole system in this project — focus on AgentRole/headsdown roles only",
+      "Prompt function signatures must remain individually typed — use adapter pattern, not forced unification",
+      "Template JSON files must be human-readable and version-controllable",
+      "Each phase must be independently testable and deployable"
+    ]
+  },
+  "createdAt": "2026-02-12T04:26:56.317Z",
+  "updatedAt": "2026-02-12T04:27:10.439Z"
+}

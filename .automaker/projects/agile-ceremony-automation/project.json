@@ -1,0 +1,178 @@
+{
+  "slug": "agile-ceremony-automation",
+  "title": "Agile Ceremony Automation",
+  "goal": "Auto-post rich milestone updates and LLM-generated project retros to Discord when milestones complete and projects finish. Templates for structure, LLM for spice. Per-project config. Zero manual intervention.",
+  "status": "active",
+  "milestones": [
+    {
+      "number": 1,
+      "slug": "01-types-and-configuration",
+      "title": "Types and Configuration",
+      "description": "Add ceremony types, extend EventHookTrigger, add per-project ceremony config to ProjectSettings. Foundation for all ceremony features.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "ceremony-types-and-event-extensions",
+          "title": "Ceremony types and event extensions",
+          "description": "Create ceremony types (CeremonyType, MilestoneUpdateData, ProjectRetroData) in libs/types/src/ceremony.ts. Add 'milestone_completed' and 'project_completed' to EventHookTrigger in settings.ts. Add 'ceremony:milestone-update' and 'ceremony:project-retro' to EventType in event.ts. Export from libs/types/src/index.ts.",
+          "filesToModify": [
+            "libs/types/src/ceremony.ts",
+            "libs/types/src/settings.ts",
+            "libs/types/src/event.ts",
+            "libs/types/src/index.ts"
+          ],
+          "acceptanceCriteria": [
+            "CeremonyType, MilestoneUpdateData, ProjectRetroData types exist",
+            "EventHookTrigger includes milestone_completed and project_completed",
+            "EventType includes ceremony:milestone-update and ceremony:project-retro",
+            "npm run build:packages succeeds with zero errors"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1770791611495-7d9ths9ln"
+        },
+        {
+          "number": 2,
+          "name": "per-project-ceremony-settings",
+          "title": "Per-project ceremony settings",
+          "description": "Add CeremonySettings interface to settings.ts with: enabled (boolean), discordChannelId (string, override), enableMilestoneUpdates (boolean), enableProjectRetros (boolean), retroModel (PhaseModelEntry, which LLM for retros). Add ceremonySettings field to ProjectSettings. Add DEFAULT_CEREMONY_SETTINGS constant. Add ceremonyModel to PhaseModelConfig for global default.",
+          "filesToModify": [
+            "libs/types/src/settings.ts"
+          ],
+          "acceptanceCriteria": [
+            "CeremonySettings interface exists with all fields",
+            "ProjectSettings has ceremonySettings optional field",
+            "DEFAULT_CEREMONY_SETTINGS constant exists",
+            "PhaseModelConfig has ceremonyModel field",
+            "npm run build:packages succeeds"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1770791611496-k099fzyer"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1770791611494-n5s0kb48g"
+    },
+    {
+      "number": 2,
+      "slug": "02-ceremony-service",
+      "title": "Ceremony Service",
+      "description": "Core service that generates ceremony content and posts to Discord. Enriches event payloads, generates templates, calls LLM for retro spice.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "enrich-milestone-project-event-payloads",
+          "title": "Enrich milestone/project event payloads",
+          "description": "In projm-agent.ts, when emitting milestone:completed and project:completed events, load all features for the milestone/project and aggregate stats: featureCount, totalCostUsd, totalDurationSec, failureCount, prUrls, feature summaries. Pass these in the event payload so downstream consumers have rich data without needing to re-query.",
+          "filesToModify": [
+            "apps/server/src/services/authority-agents/projm-agent.ts"
+          ],
+          "acceptanceCriteria": [
+            "milestone:completed payload includes featureCount, totalCostUsd, featureSummaries array",
+            "project:completed payload includes totalMilestones, totalFeatures, totalCostUsd, milestoneSummaries",
+            "Existing event consumers still work (payload is additive, not breaking)",
+            "npm run build:server succeeds"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1770791611498-j8gihhfjm"
+        },
+        {
+          "number": 2,
+          "name": "ceremonyservice-milestone-updates",
+          "title": "CeremonyService — milestone updates",
+          "description": "Create apps/server/src/services/ceremony-service.ts. Subscribe to milestone:completed events. Load ceremony config from project settings. If ceremonies enabled, generate milestone update content from template: project title, milestone N/total, features shipped (title + PR link), cost, duration, blockers, what's next. Post to Discord via integration event (integration:discord) targeting configured channel. Split messages if >2000 chars. Replace the existing one-liner in IntegrationService.handleMilestoneCompleted with a delegation to CeremonyService (if ceremonies enabled, let CeremonyService handle it; otherwise keep the one-liner).",
+          "filesToModify": [
+            "apps/server/src/services/ceremony-service.ts",
+            "apps/server/src/services/integration-service.ts"
+          ],
+          "acceptanceCriteria": [
+            "CeremonyService class exists with handleMilestoneCompleted method",
+            "Milestone update includes features shipped, cost, duration, next milestone",
+            "Messages split at 2000 char boundary",
+            "IntegrationService delegates to CeremonyService when ceremonies enabled",
+            "Falls back to one-liner when ceremonies disabled"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1770791611498-jxp2z4fyn"
+        },
+        {
+          "number": 3,
+          "name": "ceremonyservice-llm-project-retros",
+          "title": "CeremonyService — LLM project retros",
+          "description": "Add handleProjectCompleted to CeremonyService. Load all features across all milestones. Aggregate: what shipped (PR URLs, titles), failure patterns (features with failureCount > 0), cost breakdown per milestone. Call simpleQuery (from simple-query-service.ts) with a retro prompt: 'Given these project stats, write a concise retrospective covering: What Went Well, What Went Wrong, Lessons Learned, Action Items. Be specific, reference actual features and numbers. Keep it engaging.' Post the LLM response to Discord as the retro. Use ceremony model from settings (default sonnet).",
+          "filesToModify": [
+            "apps/server/src/services/ceremony-service.ts"
+          ],
+          "acceptanceCriteria": [
+            "handleProjectCompleted loads all features and aggregates stats",
+            "LLM is called via simpleQuery with retro prompt and feature data",
+            "Retro includes What Shipped, What Went Well, What Went Wrong, Lessons, Action Items",
+            "Output posted to Discord, split if needed",
+            "Uses configurable ceremony model (default sonnet)"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1770791611499-fm5clagvf"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1770791611497-gx59cw27d"
+    },
+    {
+      "number": 3,
+      "slug": "03-wiring-and-mcp-tools",
+      "title": "Wiring and MCP Tools",
+      "description": "Wire CeremonyService into server initialization, add MCP tool for manual ceremony triggers, and register service in the DI container.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "wire-ceremonyservice-into-server",
+          "title": "Wire CeremonyService into server",
+          "description": "Register CeremonyService in the server initialization (apps/server/src/index.ts or wherever services are initialized). Pass it the event emitter, FeatureLoader, ProjectService, and SimpleQueryService. Ensure it starts listening on server boot. Add trigger_ceremony MCP tool to packages/mcp-server/src/index.ts that allows manually triggering a milestone update or project retro (useful for testing and retroactive ceremonies). Tool params: projectPath, projectSlug, type ('milestone_update' | 'project_retro'), milestoneNumber (optional for milestone updates).",
+          "filesToModify": [
+            "apps/server/src/index.ts",
+            "packages/mcp-server/src/index.ts",
+            "apps/server/src/routes/ceremony.ts"
+          ],
+          "acceptanceCriteria": [
+            "CeremonyService instantiated and listening on server boot",
+            "trigger_ceremony MCP tool available",
+            "POST /api/ceremony/trigger route exists",
+            "Manual trigger works for both milestone update and project retro",
+            "npm run build:server && npm run build:packages succeeds"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1770791611501-qztnbd13b"
+        },
+        {
+          "number": 2,
+          "name": "tests-and-validation",
+          "title": "Tests and validation",
+          "description": "Add unit tests for CeremonyService: test milestone update generation, test retro content generation (mock simpleQuery), test message splitting at 2000 chars, test config loading (enabled/disabled), test channel override. Add integration test that verifies ceremony events fire when milestones complete. Run full test suite to ensure no regressions.",
+          "filesToModify": [
+            "apps/server/tests/unit/ceremony-service.test.ts"
+          ],
+          "acceptanceCriteria": [
+            "Unit tests for milestone update generation pass",
+            "Unit tests for retro generation pass",
+            "Message splitting test passes",
+            "Config toggle test (enabled/disabled) passes",
+            "npm run test:server passes",
+            "npm run test:all passes"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1770791611502-db5hksylf"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1770791611500-2393dsrvf"
+    }
+  ],
+  "prd": {
+    "situation": "Automaker already detects milestone and project completion via ProjM agent (15s polling), emits milestone:completed and project:completed events, and the IntegrationService posts one-line notifications to Discord. DiscordSettings already has notifyOnMilestoneComplete and notifyOnProjectComplete flags. EventHookTrigger supports configurable actions but lacks milestone/project triggers. Feature data (cost, duration, errors, PRs) exists but is not aggregated into event payloads.",
+    "problem": "Milestone and project completion notifications are one-line messages with zero context. Teams get '🏁 Project X - Milestone 1 completed: Foundation' but no stats on what shipped, what failed, what the cost was, or what's next. There's no retrospective analysis — lessons learned, patterns of failure, and action items are lost. This means the team has no automated way to reflect on completed work or celebrate wins. Manual retros are inconsistent and often skipped.",
+    "approach": "Create a CeremonyService that subscribes to milestone:completed and project:completed events, loads feature/project data, generates rich ceremony content using templates (for structure) plus LLM (for retro analysis and engagement), and posts to Discord. Add ceremony configuration to ProjectSettings for per-project control (enable/disable, channel override, template selection). Extend EventHookTrigger with milestone_completed and project_completed for user-configurable hooks. Enrich event payloads from ProjM agent with aggregated feature stats.",
+    "results": "Every milestone completion auto-posts a rich update to Discord #dev with: features shipped, PRs merged, cost, duration, blockers encountered, and what's next. Every project completion auto-posts an LLM-generated retro with: what shipped, what went well, what went wrong, lessons learned, and action items. All content is auto-generated, requiring zero manual effort. Per-project config allows teams to customize channel, toggle ceremonies, and adjust templates.",
+    "constraints": "Must not duplicate existing Discord notifications (IntegrationService already posts one-liners — replace, don't add). LLM calls for retros must use simpleQuery pattern (existing in codebase). Discord messages have 2000 char limit — split long content into multiple messages. Must work with MCP Discord tools (not DiscordBotService directly, since that has hardcoded channels). Templates must be customizable per-project via .automaker/context/ or settings."
+  },
+  "createdAt": "2026-02-11T06:33:25.147Z",
+  "updatedAt": "2026-02-11T06:33:31.510Z"
+}
