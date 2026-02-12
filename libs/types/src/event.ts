@@ -208,7 +208,10 @@ export type EventType =
   | 'beads:dependency-added'
   // Ceremony events (milestone updates and project retrospectives)
   | 'ceremony:milestone-update'
-  | 'ceremony:project-retro';
+  | 'ceremony:project-retro'
+  | 'ceremony:triggered'
+  // Feature lifecycle events
+  | 'feature:status-changed';
 
 export type EventCallback = (type: EventType, payload: unknown) => void;
 

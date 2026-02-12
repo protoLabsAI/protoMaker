@@ -945,10 +945,13 @@ export class AutoModeService {
             logger.info(
               `[AutoLoop] No pending features available, ${projectRunningCount} still running, waiting...`
             );
-          } else {
-            logger.warn(
-              `[AutoLoop] No pending features found for ${worktreeDesc} (branchName: ${branchName === null ? 'null (main)' : branchName}). Check server logs for filtering details.`
+          } else if (projectState.hasEmittedIdleEvent) {
+            // Already emitted idle event and still no work — stop the loop to prevent spam
+            logger.info(
+              `[AutoLoop] No pending features and idle already reported. Stopping loop for ${worktreeDesc}.`
             );
+            projectState.isRunning = false;
+            break;
           }
           await this.sleep(10000);
           continue;
@@ -1314,8 +1317,11 @@ export class AutoModeService {
             logger.debug(
               `[AutoLoop] No pending features, ${runningCount} still running, waiting...`
             );
-          } else {
-            logger.debug(`[AutoLoop] No pending features, waiting for new items...`);
+          } else if (this.hasEmittedIdleEvent) {
+            // Already emitted idle event and still no work — stop the loop to prevent spam
+            logger.info(`[AutoLoop] No pending features and idle already reported. Stopping loop.`);
+            this.autoLoopRunning = false;
+            break;
           }
           await this.sleep(10000);
           continue;
