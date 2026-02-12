@@ -142,7 +142,12 @@ export class AgentDiscordRouter {
       }
 
       // Process the message via simpleQuery, passing thread ID for conversation history
-      const response = await this.processMessage(content, routedToAgent, username, tracker.threadId);
+      const response = await this.processMessage(
+        content,
+        routedToAgent,
+        username,
+        tracker.threadId
+      );
 
       if (!response || response.trim().length === 0) {
         logger.warn('Agent returned empty response, skipping Discord message');
