@@ -174,6 +174,7 @@ export type {
   ThinkingLevel,
   ServerLogLevel,
   ModelProvider,
+  DeploymentEnvironment,
   PhaseModelEntry,
   PhaseModelConfig,
   PhaseModelKey,
@@ -254,6 +255,9 @@ export {
   CLAUDE_PROVIDER_TEMPLATES,
   // Claude API profile constants (deprecated)
   CLAUDE_API_PROFILE_TEMPLATES,
+  // Environment presets
+  ENVIRONMENT_PRESETS,
+  getDeploymentEnvironment,
 } from './settings.js';
 
 // Model display constants

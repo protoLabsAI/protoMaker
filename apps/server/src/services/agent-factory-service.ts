@@ -6,7 +6,11 @@
  * ready for execution. Does NOT execute agents.
  */
 
-import { AgentTemplateSchema, type AgentTemplate } from '@automaker/types';
+import {
+  AgentTemplateSchema,
+  type AgentTemplate,
+  type DeploymentEnvironment,
+} from '@automaker/types';
 import { createLogger } from '@automaker/utils';
 import { resolveModelString } from '@automaker/model-resolver';
 import type { RoleRegistryService } from './role-registry-service.js';
@@ -55,6 +59,16 @@ export interface AgentConfig {
   headsdownConfig?: AgentTemplate['headsdownConfig'];
   /** Routing assignments */
   assignments?: AgentTemplate['assignments'];
+  /** Desired state conditions for reactive activation (from AgentTemplate.desiredState) */
+  desiredState?: Array<{
+    key: string;
+    operator: string;
+    value: string | number | boolean;
+    description?: string;
+    priority?: number;
+  }>;
+  /** Deployment environment (dev/staging/prod) */
+  environment: DeploymentEnvironment;
   /** Project path this agent is configured for */
   projectPath: string;
 }
@@ -83,10 +97,16 @@ const DEFAULT_TRUST_LEVEL = 1;
 export class AgentFactoryService {
   private registry: RoleRegistryService;
   private events?: EventEmitter;
+  private environment: DeploymentEnvironment;
 
-  constructor(registry: RoleRegistryService, events?: EventEmitter) {
+  constructor(
+    registry: RoleRegistryService,
+    events?: EventEmitter,
+    environment?: DeploymentEnvironment
+  ) {
     this.registry = registry;
     this.events = events;
+    this.environment = environment ?? 'development';
   }
 
   /**
@@ -267,6 +287,9 @@ export class AgentFactoryService {
       allowedSubagentRoles: template.allowedSubagentRoles ?? [],
       headsdownConfig: template.headsdownConfig,
       assignments: template.assignments,
+      desiredState: (template as Record<string, unknown>)
+        .desiredState as AgentConfig['desiredState'],
+      environment: this.environment,
       projectPath,
     };
   }

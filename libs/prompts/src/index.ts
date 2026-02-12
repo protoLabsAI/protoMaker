@@ -114,6 +114,16 @@ export type {
   ResolvedTaskExecutionPrompts,
 } from '@automaker/types';
 
+// Prompt registry (unified role → prompt mapping)
+export {
+  getPromptForRole,
+  registerPrompt,
+  createPromptFromTemplate,
+  listRegisteredRoles,
+  hasPrompt,
+} from './prompt-registry.js';
+export type { BasePromptConfig } from './prompt-registry.js';
+
 // Agent role prompts
 export { getProductManagerPrompt, getResearchPrompt } from './agents/product-manager-prompt.js';
 export {

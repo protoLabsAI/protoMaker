@@ -175,6 +175,18 @@ export class DynamicAgentExecutor {
       parts.push(additional);
     }
 
+    // Environment context
+    if (config.environment) {
+      parts.push(
+        `## Environment\nYou are running in **${config.environment}** mode. ` +
+          (config.environment === 'development'
+            ? 'This is a local development environment — be conservative with resources and concurrency.'
+            : config.environment === 'staging'
+              ? 'This is a staging environment with higher capacity — you can run more agents and use more memory.'
+              : 'This is a production environment — prioritize stability and reliability.')
+      );
+    }
+
     // Capability constraints
     const constraints: string[] = [];
     if (!config.capabilities.canUseBash) {

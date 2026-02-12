@@ -32,6 +32,7 @@ function makeConfig(overrides: Partial<AgentConfig> = {}): AgentConfig {
       canSpawnAgents: false,
     },
     allowedSubagentRoles: [],
+    environment: 'development',
     projectPath: '/test/project',
     ...overrides,
   };

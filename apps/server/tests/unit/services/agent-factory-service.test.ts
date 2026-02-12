@@ -241,4 +241,48 @@ describe('AgentFactoryService', () => {
       });
     });
   });
+
+  describe('environment', () => {
+    it('defaults to development when no environment specified', () => {
+      registry.register(makeTemplate());
+      const config = factory.createFromTemplate('test-agent', '/project');
+      expect(config.environment).toBe('development');
+    });
+
+    it('uses environment from constructor', () => {
+      const stagingFactory = new AgentFactoryService(registry, undefined, 'staging');
+      registry.register(makeTemplate());
+      const config = stagingFactory.createFromTemplate('test-agent', '/project');
+      expect(config.environment).toBe('staging');
+    });
+
+    it('passes production environment through', () => {
+      const prodFactory = new AgentFactoryService(registry, undefined, 'production');
+      registry.register(makeTemplate());
+      const config = prodFactory.createFromTemplate('test-agent', '/project');
+      expect(config.environment).toBe('production');
+    });
+  });
+
+  describe('desiredState pass-through', () => {
+    it('returns undefined when template has no desiredState', () => {
+      registry.register(makeTemplate());
+      const config = factory.createFromTemplate('test-agent', '/project');
+      expect(config.desiredState).toBeUndefined();
+    });
+
+    it('returns undefined when desiredState added but schema strips it (pre-PR #252)', () => {
+      // Until AgentTemplateSchema includes desiredState, Zod strips unknown fields.
+      // This test documents that behavior and will need updating after PR #252 merges.
+      const templateWithState = makeTemplate();
+      (templateWithState as Record<string, unknown>).desiredState = [
+        { key: 'backlog_count', operator: '>', value: 0, priority: 8 },
+      ];
+      registry.register(templateWithState);
+
+      const config = factory.createFromTemplate('test-agent', '/project');
+      // Zod strips unknown fields, so desiredState won't survive registration
+      expect(config.desiredState).toBeUndefined();
+    });
+  });
 });
