@@ -16,7 +16,9 @@ import type {
   WorkItem,
   IdleTaskType,
 } from '@automaker/types';
+import { DEFAULT_HEADSDOWN_CONFIGS } from '@automaker/types';
 import { createLogger, atomicWriteJson, readJsonWithRecovery } from '@automaker/utils';
+import type { RoleRegistryService } from './role-registry-service.js';
 
 /** Simplified goal type for work evaluation (GOAP removed) */
 interface WorkGoal {
@@ -68,11 +70,16 @@ export class HeadsdownService {
   /** GitHub monitor for detecting PRs needing review */
   private githubMonitor: GitHubMonitor;
 
+  /** Optional role registry for dynamic role resolution */
+  private roleRegistry?: RoleRegistryService;
+
   constructor(
     private events: EventEmitter,
     private settingsService: SettingsService,
-    private featureLoader: FeatureLoader
+    private featureLoader: FeatureLoader,
+    roleRegistry?: RoleRegistryService
   ) {
+    this.roleRegistry = roleRegistry;
     this.discordMonitor = new DiscordMonitor(events);
     this.linearMonitor = new LinearMonitor(events);
     this.githubMonitor = new GitHubMonitor(events);
@@ -110,10 +117,16 @@ export class HeadsdownService {
   static getInstance(
     events: EventEmitter,
     settingsService: SettingsService,
-    featureLoader: FeatureLoader
+    featureLoader: FeatureLoader,
+    roleRegistry?: RoleRegistryService
   ): HeadsdownService {
     if (!HeadsdownService.instance) {
-      HeadsdownService.instance = new HeadsdownService(events, settingsService, featureLoader);
+      HeadsdownService.instance = new HeadsdownService(
+        events,
+        settingsService,
+        featureLoader,
+        roleRegistry
+      );
     }
     return HeadsdownService.instance;
   }
@@ -440,11 +453,44 @@ export class HeadsdownService {
   }
 
   /**
-   * Get relevant goals for agent role
+   * Get relevant goals for agent role.
+   * Checks registry for template-defined idle tasks first, falls back to hardcoded goals.
    */
   private getGoalsForRole(role: AgentRole): WorkGoal[] {
     const goals: WorkGoal[] = [];
 
+    // Try registry first — if a template exists with headsdown config, derive goals from it
+    if (this.roleRegistry) {
+      const template = this.roleRegistry.get(role);
+      if (template?.headsdownConfig) {
+        logger.debug(`Using registry headsdown config for role "${role}"`);
+        const hdc = template.headsdownConfig;
+
+        // Generate a primary work goal based on role description
+        goals.push({
+          id: `${role}_primary_work`,
+          name: `${template.displayName} Primary Work`,
+          conditions: [{ key: 'primary_work_completed', value: true }],
+          priority: 7,
+        });
+
+        // Generate idle task goals from template config
+        if (hdc.idleTasks?.enabled && hdc.idleTasks.tasks.length > 0) {
+          for (const task of hdc.idleTasks.tasks) {
+            goals.push({
+              id: `idle_${task}`,
+              name: `Idle: ${task}`,
+              conditions: [{ key: `${task}_completed`, value: true }],
+              priority: 3,
+            });
+          }
+        }
+
+        return goals;
+      }
+    }
+
+    // Fall back to hardcoded goals for known roles
     switch (role) {
       case 'product-manager':
         goals.push(
@@ -507,6 +553,37 @@ export class HeadsdownService {
     });
 
     return goals;
+  }
+
+  /**
+   * Get headsdown config for a role.
+   * Checks registry template first, falls back to DEFAULT_HEADSDOWN_CONFIGS.
+   */
+  getConfigForRole(role: AgentRole): Partial<HeadsdownConfig> {
+    // Try registry first
+    if (this.roleRegistry) {
+      const template = this.roleRegistry.get(role);
+      if (template?.headsdownConfig) {
+        logger.debug(`Using registry headsdown config for role "${role}"`);
+        return {
+          model: template.headsdownConfig.model ?? template.model ?? 'sonnet',
+          maxTurns: template.headsdownConfig.maxTurns ?? template.maxTurns ?? 100,
+          loop: template.headsdownConfig.loop ?? {
+            enabled: true,
+            checkInterval: 30000,
+            maxConsecutiveErrors: 5,
+            workTimeout: 7200000,
+          },
+          idleTasks: template.headsdownConfig.idleTasks ?? {
+            enabled: false,
+            tasks: [],
+          },
+        } as Partial<HeadsdownConfig>;
+      }
+    }
+
+    // Fall back to static defaults
+    return DEFAULT_HEADSDOWN_CONFIGS[role] ?? {};
   }
 
   /**

@@ -124,6 +124,7 @@ import { AuditService } from './services/audit-service.js';
 import { PRFeedbackService } from './services/pr-feedback-service.js';
 import { WorktreeLifecycleService } from './services/worktree-lifecycle-service.js';
 import { DiscordBotService } from './services/discord-bot-service.js';
+import { RoleRegistryService } from './services/role-registry-service.js';
 // import { ReconciliationService } from './services/reconciliation-service.js'; // TODO: Re-enable when implemented
 // import { GitHubStateChecker } from './services/github-state-checker.js'; // TODO: Re-enable when implemented
 import { ProjectService } from './services/project-service.js';
@@ -334,8 +335,16 @@ const avaGatewayService = getAvaGatewayService(
 );
 const ideationService = new IdeationService(events, settingsService, featureLoader);
 const ralphLoopService = new RalphLoopService(events, autoModeService, settingsService);
+// Initialize Role Registry (shared agent template registry)
+const roleRegistryService = new RoleRegistryService(events);
+
 // Initialize HeadsdownService for autonomous agent management
-const headsdownService = HeadsdownService.getInstance(events, settingsService, featureLoader);
+const headsdownService = HeadsdownService.getInstance(
+  events,
+  settingsService,
+  featureLoader,
+  roleRegistryService
+);
 
 // Initialize PRDService for SPARC PRD management
 const prdService = PRDService.getInstance(events);
