@@ -117,6 +117,10 @@ export class AvaGatewayService {
   private circuitBreaker: CircuitBreaker;
   private backoffDelayMs = 0;
 
+  // Rate limiting for real-time notifications
+  private lastNotificationPost: Map<string, number> = new Map();
+  private readonly NOTIFICATION_RATE_LIMIT_MS = 5 * 60 * 1000; // 5 minutes
+
   constructor(
     featureLoader: FeatureLoader,
     beadsService: BeadsService,
@@ -308,6 +312,9 @@ export class AvaGatewayService {
       case 'pr:ci-failure':
         this.handlePRFailure(data);
         break;
+      case 'notification:created':
+        this.handleNotificationCreated(data);
+        break;
       default:
         break;
     }
@@ -382,6 +389,68 @@ export class AvaGatewayService {
     };
     void this.postToDiscord(alert);
     if (this.projectPath) void this.createBeadsTask(this.projectPath, alert);
+  }
+
+  private handleNotificationCreated(payload: Record<string, unknown>): void {
+    const notificationType = payload.type as string;
+    const title = payload.title as string;
+    const message = payload.message as string;
+
+    // Only handle feature_waiting_approval and feature_error types
+    if (notificationType !== 'feature_waiting_approval' && notificationType !== 'feature_error') {
+      return;
+    }
+
+    // Check rate limiting
+    if (!this.shouldPostNotification(notificationType)) {
+      logger.debug('Rate limit: skipping notification post', { type: notificationType });
+      return;
+    }
+
+    // Determine severity based on notification type
+    const severity: HeartbeatAlert['severity'] =
+      notificationType === 'feature_error' ? 'critical' : 'high';
+
+    const alert: HeartbeatAlert = {
+      severity,
+      title: title || `Notification: ${notificationType}`,
+      description: message || 'No description provided',
+      suggestedAction:
+        notificationType === 'feature_waiting_approval'
+          ? 'Review and approve or reject the feature'
+          : 'Review error logs and take corrective action',
+    };
+
+    void this.postToDiscordWithRateLimit(alert, notificationType);
+  }
+
+  /**
+   * Check if notification should be posted based on rate limiting
+   */
+  private shouldPostNotification(notificationType: string): boolean {
+    const now = Date.now();
+    const lastPost = this.lastNotificationPost.get(notificationType);
+
+    if (!lastPost) {
+      return true;
+    }
+
+    return now - lastPost >= this.NOTIFICATION_RATE_LIMIT_MS;
+  }
+
+  /**
+   * Post to Discord with rate limiting tracking
+   */
+  private async postToDiscordWithRateLimit(
+    alert: HeartbeatAlert,
+    notificationType: string
+  ): Promise<void> {
+    await this.postToDiscord(alert);
+    this.lastNotificationPost.set(notificationType, Date.now());
+    logger.info('Posted notification to Discord with rate limiting', {
+      type: notificationType,
+      severity: alert.severity,
+    });
   }
 
   /**
