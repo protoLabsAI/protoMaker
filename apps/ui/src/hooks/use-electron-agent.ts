@@ -14,6 +14,7 @@ interface UseElectronAgentOptions {
   workingDirectory?: string;
   model?: string;
   thinkingLevel?: string;
+  role?: string;
   onToolUse?: (toolName: string, toolInput: unknown) => void;
 }
 
@@ -71,6 +72,7 @@ export function useElectronAgent({
   workingDirectory,
   model,
   thinkingLevel,
+  role,
   onToolUse,
 }: UseElectronAgentOptions): UseElectronAgentResult {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -141,7 +143,8 @@ export function useElectronAgent({
           workingDirectory,
           imagePaths,
           model,
-          thinkingLevel
+          thinkingLevel,
+          role
         );
 
         if (!result.success) {
@@ -157,7 +160,7 @@ export function useElectronAgent({
         throw err;
       }
     },
-    [sessionId, workingDirectory, model, thinkingLevel, isProcessing]
+    [sessionId, workingDirectory, model, thinkingLevel, role, isProcessing]
   );
 
   // Message queue for queuing messages when agent is busy
@@ -430,7 +433,8 @@ export function useElectronAgent({
           workingDirectory,
           imagePaths,
           model,
-          thinkingLevel
+          thinkingLevel,
+          role
         );
 
         if (!result.success) {
@@ -445,7 +449,7 @@ export function useElectronAgent({
         setIsProcessing(false);
       }
     },
-    [sessionId, workingDirectory, model, thinkingLevel, isProcessing]
+    [sessionId, workingDirectory, model, thinkingLevel, role, isProcessing]
   );
 
   // Stop current execution

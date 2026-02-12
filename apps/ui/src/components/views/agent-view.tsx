@@ -78,6 +78,7 @@ export function AgentView() {
     workingDirectory: currentProject?.path,
     model: modelSelection.model,
     thinkingLevel: modelSelection.thinkingLevel,
+    role: agentConfig.role,
     onToolUse: (toolName) => {
       setCurrentTool(toolName);
       setTimeout(() => setCurrentTool(null), 2000);

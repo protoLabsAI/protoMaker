@@ -12,7 +12,7 @@ const logger = createLogger('Agent');
 export function createSendHandler(agentService: AgentService) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
-      const { sessionId, message, workingDirectory, imagePaths, model, thinkingLevel } =
+      const { sessionId, message, workingDirectory, imagePaths, model, thinkingLevel, role } =
         req.body as {
           sessionId: string;
           message: string;
@@ -20,6 +20,7 @@ export function createSendHandler(agentService: AgentService) {
           imagePaths?: string[];
           model?: string;
           thinkingLevel?: ThinkingLevel;
+          role?: string;
         };
 
       logger.debug('Received request:', {
@@ -29,6 +30,7 @@ export function createSendHandler(agentService: AgentService) {
         imageCount: imagePaths?.length || 0,
         model,
         thinkingLevel,
+        role,
       });
 
       if (!sessionId || !message) {
@@ -51,6 +53,7 @@ export function createSendHandler(agentService: AgentService) {
           imagePaths,
           model,
           thinkingLevel,
+          role,
         })
         .catch((error) => {
           logger.error('Background error in sendMessage():', error);

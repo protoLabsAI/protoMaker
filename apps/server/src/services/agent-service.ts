@@ -21,6 +21,7 @@ import { ProviderFactory } from '../providers/provider-factory.js';
 import { createChatOptions, validateWorkingDirectory } from '../lib/sdk-options.js';
 import { PathNotAllowedError } from '@automaker/platform';
 import type { SettingsService } from './settings-service.js';
+import type { RoleRegistryService } from './role-registry-service.js';
 import {
   getAutoLoadClaudeMdSetting,
   filterClaudeMdFromContext,
@@ -85,13 +86,20 @@ export class AgentService {
   private metadataFile: string;
   private events: EventEmitter;
   private settingsService: SettingsService | null = null;
+  private roleRegistryService: RoleRegistryService | null = null;
   private logger = createLogger('AgentService');
 
-  constructor(dataDir: string, events: EventEmitter, settingsService?: SettingsService) {
+  constructor(
+    dataDir: string,
+    events: EventEmitter,
+    settingsService?: SettingsService,
+    roleRegistryService?: RoleRegistryService
+  ) {
     this.stateDir = path.join(dataDir, 'agent-sessions');
     this.metadataFile = path.join(dataDir, 'sessions-metadata.json');
     this.events = events;
     this.settingsService = settingsService ?? null;
+    this.roleRegistryService = roleRegistryService ?? null;
   }
 
   async initialize(): Promise<void> {
@@ -152,6 +160,7 @@ export class AgentService {
     model,
     thinkingLevel,
     reasoningEffort,
+    role,
   }: {
     sessionId: string;
     message: string;
@@ -160,6 +169,7 @@ export class AgentService {
     model?: string;
     thinkingLevel?: ThinkingLevel;
     reasoningEffort?: ReasoningEffort;
+    role?: string;
   }) {
     const session = this.sessions.get(sessionId);
     if (!session) {
@@ -246,6 +256,35 @@ export class AgentService {
     await this.saveSession(sessionId, session.messages);
 
     try {
+      // Resolve agent template if role is provided
+      let templateSystemPrompt: string | undefined;
+      let templateTools: string[] | undefined;
+      let templateModel: string | undefined;
+
+      if (role && this.roleRegistryService) {
+        const template = this.roleRegistryService.get(role);
+        if (template) {
+          this.logger.info(`Using agent template "${role}"`);
+
+          // Use template's system prompt (will be prepended to base prompt)
+          if (template.systemPrompt) {
+            templateSystemPrompt = template.systemPrompt;
+          }
+
+          // Use template's tools as allowedTools
+          if (template.tools) {
+            templateTools = template.tools;
+          }
+
+          // Use template's model as default (can be overridden by model parameter)
+          if (template.model) {
+            templateModel = template.model;
+          }
+        } else {
+          this.logger.warn(`Agent template "${role}" not found`);
+        }
+      }
+
       // Determine the effective working directory for context loading
       const effectiveWorkDir = workingDirectory || session.workingDirectory;
 
@@ -316,9 +355,14 @@ export class AgentService {
 
       // Build combined system prompt with base prompt and context files
       const baseSystemPrompt = await this.getSystemPrompt();
-      const combinedSystemPrompt = contextFilesPrompt
+      let combinedSystemPrompt = contextFilesPrompt
         ? `${contextFilesPrompt}\n\n${baseSystemPrompt}`
         : baseSystemPrompt;
+
+      // Prepend template system prompt if provided
+      if (templateSystemPrompt) {
+        combinedSystemPrompt = `${templateSystemPrompt}\n\n${combinedSystemPrompt}`;
+      }
 
       // Build SDK options using centralized configuration
       // Use thinking level and reasoning effort from request, or fall back to session's stored values
@@ -327,7 +371,9 @@ export class AgentService {
 
       // When using a provider model, use the resolved Claude model (from mapsToClaudeModel)
       // e.g., "GLM-4.5-Air" -> "claude-haiku-4-5"
-      const modelForSdk = providerResolvedModel || model;
+      // Use template model as default if provided and no model parameter is given
+      const effectiveModel = model || templateModel;
+      const modelForSdk = providerResolvedModel || effectiveModel;
       const sessionModelForSdk = providerResolvedModel ? undefined : session.model;
 
       const sdkOptions = createChatOptions({
@@ -342,9 +388,15 @@ export class AgentService {
       });
 
       // Extract model, maxTurns, and allowedTools from SDK options
-      const effectiveModel = sdkOptions.model!;
+      const effectiveModelFromSdk = sdkOptions.model!;
       const maxTurns = sdkOptions.maxTurns;
       let allowedTools = sdkOptions.allowedTools as string[] | undefined;
+
+      // Use template tools if provided (overrides SDK allowedTools)
+      if (templateTools) {
+        allowedTools = [...templateTools];
+        this.logger.info(`Using template tools: ${templateTools.join(', ')}`);
+      }
 
       // Build merged settingSources array using Set for automatic deduplication
       const sdkSettingSources = (sdkOptions.settingSources ?? []).filter(
@@ -387,16 +439,16 @@ export class AgentService {
       }
 
       // Get provider for this model (with prefix)
-      const provider = ProviderFactory.getProviderForModel(effectiveModel);
+      const provider = ProviderFactory.getProviderForModel(effectiveModelFromSdk);
 
       // Strip provider prefix - providers should receive bare model IDs
-      const bareModel = stripProviderPrefix(effectiveModel);
+      const bareModel = stripProviderPrefix(effectiveModelFromSdk);
 
       // Build options for provider
       const options: ExecuteOptions = {
         prompt: '', // Will be set below based on images
         model: bareModel, // Bare model ID (e.g., "gpt-5.1-codex-max", "composer-1")
-        originalModel: effectiveModel, // Original with prefix for logging (e.g., "codex-gpt-5.1-codex-max")
+        originalModel: effectiveModelFromSdk, // Original with prefix for logging (e.g., "codex-gpt-5.1-codex-max")
         cwd: effectiveWorkDir,
         systemPrompt: sdkOptions.systemPrompt,
         maxTurns: maxTurns,
