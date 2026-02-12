@@ -813,7 +813,11 @@ export interface ElectronAPI {
       message: string,
       workingDirectory?: string,
       imagePaths?: string[],
-      model?: string
+      model?: string,
+      thinkingLevel?: string,
+      role?: string,
+      maxTurns?: number,
+      systemPromptOverride?: string
     ) => Promise<{ success: boolean; error?: string }>;
     getHistory: (sessionId: string) => Promise<{
       success: boolean;
@@ -824,6 +828,16 @@ export interface ElectronAPI {
     stop: (sessionId: string) => Promise<{ success: boolean; error?: string }>;
     clear: (sessionId: string) => Promise<{ success: boolean; error?: string }>;
     onStream: (callback: (data: unknown) => void) => () => void;
+    queueAdd?: (
+      sessionId: string,
+      message: string,
+      imagePaths?: string[],
+      model?: string,
+      thinkingLevel?: string,
+      role?: string,
+      maxTurns?: number,
+      systemPromptOverride?: string
+    ) => Promise<{ success: boolean; error?: string }>;
   };
   sessions?: {
     list: (includeArchived?: boolean) => Promise<{

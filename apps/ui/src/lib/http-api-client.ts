@@ -2042,7 +2042,9 @@ export class HttpApiClient implements ElectronAPI {
       imagePaths?: string[],
       model?: string,
       thinkingLevel?: string,
-      role?: string
+      role?: string,
+      maxTurns?: number,
+      systemPromptOverride?: string
     ): Promise<{ success: boolean; error?: string }> =>
       this.post('/api/agent/send', {
         sessionId,
@@ -2052,6 +2054,8 @@ export class HttpApiClient implements ElectronAPI {
         model,
         thinkingLevel,
         role,
+        maxTurns,
+        systemPromptOverride,
       }),
 
     getHistory: (
@@ -2079,7 +2083,10 @@ export class HttpApiClient implements ElectronAPI {
       message: string,
       imagePaths?: string[],
       model?: string,
-      thinkingLevel?: string
+      thinkingLevel?: string,
+      role?: string,
+      maxTurns?: number,
+      systemPromptOverride?: string
     ): Promise<{
       success: boolean;
       queuedPrompt?: {
@@ -2092,7 +2099,16 @@ export class HttpApiClient implements ElectronAPI {
       };
       error?: string;
     }> =>
-      this.post('/api/agent/queue/add', { sessionId, message, imagePaths, model, thinkingLevel }),
+      this.post('/api/agent/queue/add', {
+        sessionId,
+        message,
+        imagePaths,
+        model,
+        thinkingLevel,
+        role,
+        maxTurns,
+        systemPromptOverride,
+      }),
 
     queueList: (
       sessionId: string

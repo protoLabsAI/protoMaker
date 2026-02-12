@@ -89,7 +89,9 @@ export interface AgentAPI {
     imagePaths?: string[],
     model?: string,
     thinkingLevel?: string,
-    role?: string
+    role?: string,
+    maxTurns?: number,
+    systemPromptOverride?: string
   ) => Promise<{
     success: boolean;
     error?: string;
@@ -108,6 +110,20 @@ export interface AgentAPI {
   }>;
 
   clear: (sessionId: string) => Promise<{
+    success: boolean;
+    error?: string;
+  }>;
+
+  queueAdd: (
+    sessionId: string,
+    message: string,
+    imagePaths?: string[],
+    model?: string,
+    thinkingLevel?: string,
+    role?: string,
+    maxTurns?: number,
+    systemPromptOverride?: string
+  ) => Promise<{
     success: boolean;
     error?: string;
   }>;

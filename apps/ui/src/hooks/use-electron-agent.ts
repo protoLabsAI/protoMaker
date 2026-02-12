@@ -15,6 +15,8 @@ interface UseElectronAgentOptions {
   model?: string;
   thinkingLevel?: string;
   role?: string;
+  maxTurns?: number;
+  systemPromptOverride?: string;
   onToolUse?: (toolName: string, toolInput: unknown) => void;
 }
 
@@ -73,6 +75,8 @@ export function useElectronAgent({
   model,
   thinkingLevel,
   role,
+  maxTurns,
+  systemPromptOverride,
   onToolUse,
 }: UseElectronAgentOptions): UseElectronAgentResult {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -144,7 +148,9 @@ export function useElectronAgent({
           imagePaths,
           model,
           thinkingLevel,
-          role
+          role,
+          maxTurns,
+          systemPromptOverride
         );
 
         if (!result.success) {
@@ -160,7 +166,16 @@ export function useElectronAgent({
         throw err;
       }
     },
-    [sessionId, workingDirectory, model, thinkingLevel, role, isProcessing]
+    [
+      sessionId,
+      workingDirectory,
+      model,
+      thinkingLevel,
+      role,
+      maxTurns,
+      systemPromptOverride,
+      isProcessing,
+    ]
   );
 
   // Message queue for queuing messages when agent is busy
@@ -434,7 +449,9 @@ export function useElectronAgent({
           imagePaths,
           model,
           thinkingLevel,
-          role
+          role,
+          maxTurns,
+          systemPromptOverride
         );
 
         if (!result.success) {
@@ -449,7 +466,16 @@ export function useElectronAgent({
         setIsProcessing(false);
       }
     },
-    [sessionId, workingDirectory, model, thinkingLevel, role, isProcessing]
+    [
+      sessionId,
+      workingDirectory,
+      model,
+      thinkingLevel,
+      role,
+      maxTurns,
+      systemPromptOverride,
+      isProcessing,
+    ]
   );
 
   // Stop current execution
@@ -542,7 +568,10 @@ export function useElectronAgent({
           messageContent,
           imagePaths,
           model,
-          thinkingLevel
+          thinkingLevel,
+          role,
+          maxTurns,
+          systemPromptOverride
         );
 
         if (!result.success) {
@@ -553,7 +582,7 @@ export function useElectronAgent({
         setError(err instanceof Error ? err.message : 'Failed to add to queue');
       }
     },
-    [sessionId, workingDirectory, model, thinkingLevel]
+    [sessionId, workingDirectory, model, thinkingLevel, role, maxTurns, systemPromptOverride]
   );
 
   // Remove a prompt from the server queue
