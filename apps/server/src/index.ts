@@ -533,7 +533,11 @@ const FRANK_COOLDOWN_MS = 10 * 60 * 1000; // 10 minutes
 
 events.subscribe((type, payload) => {
   if (type === 'health:check-completed') {
-    const result = payload as { status: 'healthy' | 'degraded' | 'critical'; issues: Array<{ type: string; severity: string; message: string }>; metrics: Record<string, unknown> };
+    const result = payload as {
+      status: 'healthy' | 'degraded' | 'critical';
+      issues: Array<{ type: string; severity: string; message: string }>;
+      metrics: Record<string, unknown>;
+    };
 
     if (result.status === 'critical') {
       const now = Date.now();
@@ -542,7 +546,9 @@ events.subscribe((type, payload) => {
       // Check cooldown to prevent spawning more than once per 10 minutes
       if (timeSinceLastSpawn < FRANK_COOLDOWN_MS) {
         const remainingMinutes = Math.ceil((FRANK_COOLDOWN_MS - timeSinceLastSpawn) / 60000);
-        logger.info(`[FRANK-TRIAGE] Critical health detected but Frank is on cooldown (${remainingMinutes} minutes remaining)`);
+        logger.info(
+          `[FRANK-TRIAGE] Critical health detected but Frank is on cooldown (${remainingMinutes} minutes remaining)`
+        );
         return;
       }
 
@@ -571,32 +577,31 @@ This is an automated triage request triggered by critical health status.`;
       // Spawn Frank agent asynchronously (don't block the event loop)
       void (async () => {
         try {
-          const frankConfig = agentFactoryService.createFromTemplate(
-            'devops-engineer',
-            REPO_ROOT,
-            {
-              tools: [
-                'Read',
-                'Glob',
-                'Grep',
-                'Bash',
-                'mcp__plugin_automaker_automaker__get_server_logs',
-                'mcp__plugin_automaker_automaker__get_detailed_health',
-                'mcp__plugin_automaker_automaker__health_check',
-                'mcp__plugin_automaker_discord__discord_send',
-              ],
-            }
-          );
+          const frankConfig = agentFactoryService.createFromTemplate('devops-engineer', REPO_ROOT, {
+            tools: [
+              'Read',
+              'Glob',
+              'Grep',
+              'Bash',
+              'mcp__plugin_automaker_automaker__get_server_logs',
+              'mcp__plugin_automaker_automaker__get_detailed_health',
+              'mcp__plugin_automaker_automaker__health_check',
+              'mcp__plugin_automaker_discord__discord_send',
+            ],
+          });
 
           logger.info('[FRANK-TRIAGE] Executing Frank agent with diagnostic prompt');
 
           const result = await dynamicAgentExecutor.execute(frankConfig, {
             prompt,
-            additionalSystemPrompt: 'You are Frank, responding to an automated critical health alert. Focus on diagnosing the issue and reporting findings to the team.',
+            additionalSystemPrompt:
+              'You are Frank, responding to an automated critical health alert. Focus on diagnosing the issue and reporting findings to the team.',
           });
 
           if (result.success) {
-            logger.info(`[FRANK-TRIAGE] Frank completed diagnostic triage in ${result.durationMs}ms`);
+            logger.info(
+              `[FRANK-TRIAGE] Frank completed diagnostic triage in ${result.durationMs}ms`
+            );
           } else {
             logger.error(`[FRANK-TRIAGE] Frank triage failed: ${result.error}`);
           }
