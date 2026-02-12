@@ -527,6 +527,87 @@ void schedulerService
 // Initialize Health Monitor Service event emitter
 healthMonitorService.setEventEmitter(events);
 
+// Frank Auto-Triage: Spawn Frank agent on critical health events
+let lastFrankSpawnTime = 0;
+const FRANK_COOLDOWN_MS = 10 * 60 * 1000; // 10 minutes
+
+events.subscribe((type, payload) => {
+  if (type === 'health:check-completed') {
+    const result = payload as { status: 'healthy' | 'degraded' | 'critical'; issues: Array<{ type: string; severity: string; message: string }>; metrics: Record<string, unknown> };
+
+    if (result.status === 'critical') {
+      const now = Date.now();
+      const timeSinceLastSpawn = now - lastFrankSpawnTime;
+
+      // Check cooldown to prevent spawning more than once per 10 minutes
+      if (timeSinceLastSpawn < FRANK_COOLDOWN_MS) {
+        const remainingMinutes = Math.ceil((FRANK_COOLDOWN_MS - timeSinceLastSpawn) / 60000);
+        logger.info(`[FRANK-TRIAGE] Critical health detected but Frank is on cooldown (${remainingMinutes} minutes remaining)`);
+        return;
+      }
+
+      lastFrankSpawnTime = now;
+
+      // Build diagnostic prompt with issue details
+      const issueDetails = result.issues
+        .map((issue) => `- [${issue.severity.toUpperCase()}] ${issue.type}: ${issue.message}`)
+        .join('\n');
+
+      const prompt = `Server health is critical. Issues detected:
+
+${issueDetails}
+
+Metrics: ${JSON.stringify(result.metrics, null, 2)}
+
+Please:
+1. Read server logs with get_server_logs to diagnose the root cause
+2. Check system health using get_detailed_health and health_check MCP tools
+3. Post your findings and recommended actions to Discord #infra
+
+This is an automated triage request triggered by critical health status.`;
+
+      logger.info('[FRANK-TRIAGE] Spawning Frank agent for critical health triage');
+
+      // Spawn Frank agent asynchronously (don't block the event loop)
+      void (async () => {
+        try {
+          const frankConfig = agentFactoryService.createFromTemplate(
+            'devops-engineer',
+            REPO_ROOT,
+            {
+              tools: [
+                'Read',
+                'Glob',
+                'Grep',
+                'Bash',
+                'mcp__plugin_automaker_automaker__get_server_logs',
+                'mcp__plugin_automaker_automaker__get_detailed_health',
+                'mcp__plugin_automaker_automaker__health_check',
+                'mcp__plugin_automaker_discord__discord_send',
+              ],
+            }
+          );
+
+          logger.info('[FRANK-TRIAGE] Executing Frank agent with diagnostic prompt');
+
+          const result = await dynamicAgentExecutor.execute(frankConfig, {
+            prompt,
+            additionalSystemPrompt: 'You are Frank, responding to an automated critical health alert. Focus on diagnosing the issue and reporting findings to the team.',
+          });
+
+          if (result.success) {
+            logger.info(`[FRANK-TRIAGE] Frank completed diagnostic triage in ${result.durationMs}ms`);
+          } else {
+            logger.error(`[FRANK-TRIAGE] Frank triage failed: ${result.error}`);
+          }
+        } catch (error) {
+          logger.error('[FRANK-TRIAGE] Failed to spawn Frank agent:', error);
+        }
+      })();
+    }
+  }
+});
+
 // Initialize Ava Gateway Service for heartbeat monitoring
 void avaGatewayService.initialize(events, REPO_ROOT).catch((err) => {
   logger.error('Ava Gateway Service initialization failed:', err);
