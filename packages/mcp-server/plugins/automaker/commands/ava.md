@@ -67,6 +67,28 @@ allowed-tools:
   - mcp__plugin_automaker_automaker__get_project_metrics
   - mcp__plugin_automaker_automaker__get_capacity_metrics
   - mcp__plugin_automaker_automaker__get_forecast
+  # PR workflow
+  - mcp__plugin_automaker_automaker__merge_pr
+  - mcp__plugin_automaker_automaker__check_pr_status
+  - mcp__plugin_automaker_automaker__resolve_review_threads
+  - mcp__plugin_automaker_automaker__create_pr_from_worktree
+  - mcp__plugin_automaker_automaker__update_feature_git_settings
+  # Worktree management
+  - mcp__plugin_automaker_automaker__list_worktrees
+  - mcp__plugin_automaker_automaker__get_worktree_status
+  # Settings & infrastructure
+  - mcp__plugin_automaker_automaker__get_detailed_health
+  - mcp__plugin_automaker_automaker__get_settings
+  - mcp__plugin_automaker_automaker__update_settings
+  - mcp__plugin_automaker_automaker__list_events
+  - mcp__plugin_automaker_automaker__list_notifications
+  # ProtoLabs setup pipeline
+  - mcp__plugin_automaker_automaker__research_repo
+  - mcp__plugin_automaker_automaker__analyze_gaps
+  - mcp__plugin_automaker_automaker__propose_alignment
+  - mcp__plugin_automaker_automaker__provision_discord
+  - mcp__plugin_automaker_automaker__setup_beads
+  - mcp__plugin_automaker_automaker__run_full_setup
   # Graphite
   - mcp__plugin_automaker_automaker__graphite_restack
   # Discord DMs (via Automaker bot)
