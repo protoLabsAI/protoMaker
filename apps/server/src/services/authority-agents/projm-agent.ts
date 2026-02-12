@@ -72,7 +72,7 @@ export class ProjMAuthorityAgent {
     // Listen for PM approval events (features moving to 'approved')
     this.events.subscribe((type, payload) => {
       if (type === 'authority:pm-review-approved') {
-        console.log(`[ProjMAgent] ✨ RECEIVED EVENT: authority:pm-review-approved`, payload);
+        logger.info('Received authority:pm-review-approved event', payload);
         const data = payload as {
           projectPath: string;
           featureId: string;
@@ -82,10 +82,7 @@ export class ProjMAuthorityAgent {
 
         // Auto-initialize if not already initialized
         if (!this.state.isInitialized(data.projectPath)) {
-          console.log(`[ProjMAgent] Project NOT initialized, auto-initializing...`);
-          logger.info(
-            `[ProjMAgent] Auto-initializing for event on uninitialized project: ${data.projectPath}`
-          );
+          logger.info(`Auto-initializing for event on uninitialized project: ${data.projectPath}`);
           void (async () => {
             try {
               await this.initialize(data.projectPath);
@@ -181,25 +178,23 @@ export class ProjMAuthorityAgent {
       try {
         const agent = this.state.getAgent(projectPath);
         if (!agent) {
-          console.log(`[ProjMAgent] ❌ FAILED: No agent found for ${projectPath}`);
           logger.error(
             `No agent registered for project ${projectPath}. Cannot process approved idea.`
           );
           return;
         }
 
-        console.log(`[ProjMAgent] ✅ Agent found:`, agent.id);
+        logger.debug(`Agent found for ${projectPath}: ${agent.id}`);
 
         const feature = await this.featureLoader.get(projectPath, featureId);
         if (!feature || feature.workItemState !== 'approved') {
-          console.log(`[ProjMAgent] ❌ Feature not approved or not found:`, {
+          logger.warn('Feature not approved or not found', {
             featureId,
             workItemState: feature?.workItemState,
           });
           return;
         }
 
-        console.log(`[ProjMAgent] Processing approved idea: "${feature.title}"`);
         logger.info(`Creating project for approved idea: "${feature.title}"`);
 
         // Submit proposal to create project

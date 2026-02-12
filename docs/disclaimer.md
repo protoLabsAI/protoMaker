@@ -30,26 +30,6 @@ Before running Automaker, we strongly recommend reviewing the source code yourse
 - **Virtual Machine**: Use a VM (such as VirtualBox, VMware, or Parallels) to create an isolated environment
 - **Cloud Development Environment**: Use a cloud-based development environment that provides isolation
 
-#### Running in Isolated Docker Container
-
-For maximum security, run Automaker in an isolated Docker container that **cannot access your laptop's files**:
-
-```bash
-# 1. Set your API key (bash/Linux/Mac - creates UTF-8 file)
-echo "ANTHROPIC_API_KEY=your-api-key-here" > .env
-
-# On Windows PowerShell, use instead:
-Set-Content -Path .env -Value "ANTHROPIC_API_KEY=your-api-key-here" -Encoding UTF8
-
-# 2. Build and run isolated container
-docker-compose up -d
-
-# 3. Access the UI at http://localhost:3007
-#    API at http://localhost:3008/api/health
-```
-
-The container uses only Docker-managed volumes and has no access to your host filesystem. See [docker-isolation.md](docs/docker-isolation.md) for full documentation.
-
 ### 3. Limit Access
 
 If you must run locally:

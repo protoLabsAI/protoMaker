@@ -360,3 +360,23 @@ docker run --rm \
 ```
 
 See [backup-recovery.md](./backup-recovery.md) for detailed backup procedures.
+
+## Proxmox VM Specifications
+
+### Recommended Specs by Use Case
+
+| Use Case      | Disk      | RAM   | vCPU | Notes                                   |
+| ------------- | --------- | ----- | ---- | --------------------------------------- |
+| **Minimum**   | 25 GB     | 4 GB  | 2    | Evaluation only, expect slowness        |
+| **Baseline**  | 40 GB     | 8 GB  | 4    | Most users, comfortable operation       |
+| **Heavy Use** | 80-120 GB | 16 GB | 6-8  | Multiple concurrent agents, large repos |
+
+### Proxmox-Specific Settings
+
+**Storage:** Use thin provisioning, `virtio-scsi` with discard enabled, enable TRIM in guest OS.
+
+**Memory:** Do NOT overcommit RAM. Disable ballooning (Node.js + Docker perform poorly with it).
+
+**CPU:** Set CPU type to `host`. Enable NUMA only if >= 16 GB RAM.
+
+**Recommended Distro:** Ubuntu 22.04 LTS or Debian 12.

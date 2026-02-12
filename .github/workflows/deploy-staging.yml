@@ -14,15 +14,25 @@ jobs:
     concurrency:
       group: staging-deploy
       cancel-in-progress: true
-    defaults:
-      run:
-        working-directory: /home/josh/dev/ava
 
     steps:
-      - name: Pull latest code
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          clean: true
+
+      - name: Copy production env file
         run: |
-          git fetch origin main
-          git reset --hard origin/main
+          # Copy .env with API keys from the persistent staging config
+          # The checkout doesn't include .env (gitignored), so we copy from
+          # the original install location which has the real credentials
+          ENV_SOURCE="/home/josh/dev/ava/.env"
+          if [ -f "$ENV_SOURCE" ]; then
+            cp "$ENV_SOURCE" .env
+            echo "Copied .env from $ENV_SOURCE"
+          else
+            echo "WARNING: No .env found at $ENV_SOURCE — build may fail"
+          fi
 
       - name: Rebuild and restart staging
         run: |

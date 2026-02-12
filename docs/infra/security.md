@@ -305,6 +305,31 @@ Enable in repository settings:
 - [ ] Set up alerts for failures
 - [ ] Review logs regularly
 
+## Command Injection Audit
+
+Security audit identified command injection vulnerabilities in worktree routes where user-controlled inputs are interpolated into shell commands.
+
+### Affected Patterns
+
+Routes using `execAsync` with template literals instead of `execGitCommand` with array arguments:
+
+- **Merge handler** (`routes/worktree/routes/merge.ts`) — branch names and commit messages interpolated directly
+- **Push handler** (`routes/worktree/routes/push.ts`) — remote names not validated before shell use
+
+### Remediation
+
+1. Replace `execAsync` template literals with `execGitCommand` array calls
+2. Validate all inputs with allowlist patterns
+3. Use `isValidBranchName()` before any git operations
+4. Sanitize commit messages before shell use
+
+### Security Testing
+
+Security tests exist at:
+
+- `apps/server/tests/security/command-injection.test.ts` — integration tests for injection prevention
+- `libs/platform/tests/validation.test.ts` — unit tests for `validateSlugInput`
+
 ## Known Security Considerations
 
 ### Agent Execution

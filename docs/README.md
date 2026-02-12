@@ -79,12 +79,11 @@ Agency setup and onboarding in [`docs/protolabs/`](./protolabs/):
 
 ## Integrations
 
-| Document                                                       | Description                                      |
-| -------------------------------------------------------------- | ------------------------------------------------ |
-| [Claude Plugin](./claude-plugin.md)                            | MCP server, plugin installation, tool reference  |
-| [Discord](./discord.md)                                        | Discord channels, bot integration, event routing |
-| [CodeRabbit Pipeline](./coderabbit-pipeline-linear-project.md) | CodeRabbit review automation pipeline            |
-| [API Key Profiles](./UNIFIED_API_KEY_PROFILES.md)              | Unified API key and provider profile system      |
+| Document                                          | Description                                      |
+| ------------------------------------------------- | ------------------------------------------------ |
+| [Claude Plugin](./claude-plugin.md)               | MCP server, plugin installation, tool reference  |
+| [Discord](./discord.md)                           | Discord channels, bot integration, event routing |
+| [API Key Profiles](./UNIFIED_API_KEY_PROFILES.md) | Unified API key and provider profile system      |
 
 ## Development Guides
 
@@ -92,7 +91,6 @@ Agency setup and onboarding in [`docs/protolabs/`](./protolabs/):
 | --------------------------------------------------- | ------------------------------------------- |
 | [UI Architecture](./dev/ui-architecture.md)         | Frontend structure and patterns             |
 | [Adding Team Members](./dev/adding-team-members.md) | Onboarding new team members                 |
-| [Git Workflow](./checkout-branch-pr.md)             | Branch, commit, PR workflow                 |
 | [Clean Code](./clean-code.md)                       | Code quality standards and patterns         |
 | [Feature Status System](./feature-status-system.md) | 6-status feature lifecycle                  |
 | [Release](./release.md)                             | Release process and Electron builds         |
@@ -128,6 +126,13 @@ Completed work and superseded docs in [`docs/archived/`](./archived/):
 | [SetupLab Audit](./archived/setuplab-audit.md)                              | Audit complete                      |
 | [Backlog Review](./archived/backlog-review.md)                              | Point-in-time triage                |
 | [Self-Learning Proposal](./archived/self-learning-self-healing-proposal.md) | Partially implemented               |
+| [CodeRabbit Pipeline](./archived/coderabbit-pipeline-linear-project.md)     | Superseded by CI/CD workflows       |
+
+## Legal
+
+| Document                      | Description                       |
+| ----------------------------- | --------------------------------- |
+| [Disclaimer](./disclaimer.md) | Security disclaimer and liability |
 
 ## UI Documentation
 

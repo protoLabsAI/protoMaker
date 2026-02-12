@@ -18,16 +18,14 @@ jobs:
 
     steps:
       - name: Checkout code
-        run: |
-          cd /home/josh/dev/ava
-          git fetch origin main --tags
-          git checkout main
-          git pull origin main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
 
       - name: Determine version range
         id: range
         run: |
-          cd /home/josh/dev/ava
           if [ -n "${{ inputs.since_tag }}" ]; then
             SINCE_TAG="${{ inputs.since_tag }}"
           else
@@ -42,14 +40,14 @@ jobs:
 
       - name: Generate changelog
         run: |
-          cd /home/josh/dev/ava
           ./scripts/generate-changelog.sh \
             "${{ steps.range.outputs.since_tag }}" \
             "${{ steps.range.outputs.current_tag }}"
 
       - name: Commit and push
         run: |
-          cd /home/josh/dev/ava
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add CHANGELOG.md
           if git diff --cached --quiet; then
             echo "No changelog changes to commit"
@@ -61,7 +59,6 @@ jobs:
       - name: Update release notes
         if: github.event.release.tag_name != ''
         run: |
-          cd /home/josh/dev/ava
           TAG="${{ steps.range.outputs.current_tag }}"
           if [ -f /tmp/changelog-entry.md ]; then
             EXISTING=$(gh release view "$TAG" --json body --jq '.body' 2>/dev/null || echo "")

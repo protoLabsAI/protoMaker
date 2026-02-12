@@ -97,12 +97,7 @@ export function createSubmitPrdHandler(
 
       // Initialize all authority agents for this project
       // This is CRITICAL - agents must be initialized before emitting events
-      console.log(
-        `[CoSRoutes:SubmitPRD] START - Initializing authority agents for project: ${projectPath}`
-      );
-      logger.info(
-        `[CoSRoutes:SubmitPRD] Initializing authority agents for project: ${projectPath}`
-      );
+      logger.info(`Initializing authority agents for project: ${projectPath}`);
 
       if (agents?.pm) {
         try {
