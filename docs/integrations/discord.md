@@ -92,14 +92,15 @@ Open discussion about AI/ML topics (not project-specific).
 
 Automated content feeds from external sources. These channels are bot-driven, read-only for users, and provide a curated stream of industry knowledge. Users discuss articles by creating threads on individual messages.
 
-| Channel           | Source                        | Bot       | Status |
-| ----------------- | ----------------------------- | --------- | ------ |
-| #feed-ai-research | ArXiv cs.AI papers            | MonitoRSS | Active |
-| #feed-hackernews  | HackerNews best stories       | MonitoRSS | Active |
-| #feed-reddit      | r/LocalLLaMA hot posts        | MonitoRSS | Active |
-| #feed-twitter     | AI researchers on X/Twitter   | TBD       | Setup  |
-| #feed-github      | Repo releases, trending repos | TBD       | Setup  |
-| #feed-youtube     | AI/ML content creators        | TBD       | Setup  |
+| Channel           | Source                            | Bot       | Status |
+| ----------------- | --------------------------------- | --------- | ------ |
+| #feed-ai-research | ArXiv, HuggingFace, lab blogs     | MonitoRSS | Active |
+| #feed-hackernews  | HackerNews best + front page      | MonitoRSS | Active |
+| #feed-reddit      | r/LocalLLaMA, ML, programming     | MonitoRSS | Active |
+| #feed-github      | GitHub trending repos by language | MonitoRSS | Active |
+| #feed-youtube     | AI/ML content creators            | MonitoRSS | Active |
+| #feed-engineering | Node, React, JS weekly            | MonitoRSS | Active |
+| #feed-twitter     | AI researchers on X/Twitter       | TBD       | Setup  |
 
 #### Feed Channel Permissions
 
@@ -114,50 +115,83 @@ Each feed channel should have these permission overrides:
 
 This ensures only bots post to the main channel. Users discuss articles by creating threads on specific messages. Discord auto-archives inactive threads after 24 hours.
 
-#### MonitoRSS Setup (3 channels)
+#### MonitoRSS Setup
 
-[MonitoRSS](https://monitorss.xyz) powers RSS-based feed channels. Dashboard: https://monitorss.xyz/me
+[MonitoRSS](https://monitorss.xyz) powers all RSS-based feed channels (paid plan, 75 feeds). Dashboard: https://monitorss.xyz/me
 
-**Current feeds (free tier: 3 feeds, 50 articles/day each):**
-
-| Feed Title      | RSS URL                                        | Output Channel    |
-| --------------- | ---------------------------------------------- | ----------------- |
-| ArXiv AI Papers | `https://arxiv.org/rss/cs.AI`                  | #feed-ai-research |
-| HN Best Stories | `https://hnrss.org/best`                       | #feed-hackernews  |
-| r/LocalLLaMA    | `https://www.reddit.com/r/LocalLLaMA/hot/.rss` | #feed-reddit      |
-
-**MonitoRSS settings per feed:**
+**Settings per feed:**
 
 - Threads: Don't use (users create threads manually for discussion)
-- Check interval: Default (free tier ~10 min)
+- Check interval: Default (~10 min)
 
-**Upgrade feeds ($5/mo removes limits):** Additional RSS feeds to add when on the paid plan:
+**#feed-ai-research** (6 feeds):
 
-| Feed Title         | RSS URL                                             | Output Channel    |
-| ------------------ | --------------------------------------------------- | ----------------- |
-| ArXiv ML           | `https://arxiv.org/rss/cs.LG`                       | #feed-ai-research |
-| ArXiv NLP          | `https://arxiv.org/rss/cs.CL`                       | #feed-ai-research |
-| HuggingFace Papers | `https://papers.takara.ai/api/feed`                 | #feed-ai-research |
-| HN Front Page      | `https://news.ycombinator.com/rss`                  | #feed-hackernews  |
-| r/MachineLearning  | `https://www.reddit.com/r/MachineLearning/hot/.rss` | #feed-reddit      |
-| r/programming      | `https://www.reddit.com/r/programming/hot/.rss`     | #feed-reddit      |
+| Feed Title      | RSS URL                                |
+| --------------- | -------------------------------------- |
+| ArXiv AI Papers | `https://arxiv.org/rss/cs.AI`          |
+| ArXiv ML        | `https://arxiv.org/rss/cs.LG`          |
+| ArXiv NLP       | `https://arxiv.org/rss/cs.CL`          |
+| HuggingFace     | `https://papers.takara.ai/api/feed`    |
+| OpenAI News     | `https://openai.com/news/rss.xml`      |
+| Google DeepMind | `https://deepmind.google/blog/rss.xml` |
 
-#### Remaining Feed Channels (Setup Needed)
+**#feed-hackernews** (2 feeds):
 
-| Channel       | Recommended Bot                                                                                           | Setup Steps                                                                                                                  |
-| ------------- | --------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| #feed-twitter | [Readybot](https://readybot.io) or [TweetShift](https://tweetshift.com)                                   | Invite bot → Configure accounts to follow (Anthropic, OpenAI, key researchers) → Set output channel                          |
-| #feed-github  | MonitoRSS (paid) or [GitHub Discord integration](https://support.discord.com/hc/en-us/articles/228383668) | Option A: MonitoRSS with GitHub trending RSS. Option B: Server Settings → Integrations → Follow a Channel → add GitHub repos |
-| #feed-youtube | [NotifyMe](https://notifyme.bot)                                                                          | Invite bot → Subscribe to YouTube channels → Set output channel                                                              |
+| Feed Title    | RSS URL                            |
+| ------------- | ---------------------------------- |
+| HN Best       | `https://hnrss.org/best`           |
+| HN Front Page | `https://news.ycombinator.com/rss` |
+
+**#feed-reddit** (3 feeds):
+
+| Feed Title        | RSS URL                                             |
+| ----------------- | --------------------------------------------------- |
+| r/LocalLLaMA      | `https://www.reddit.com/r/LocalLLaMA/hot/.rss`      |
+| r/MachineLearning | `https://www.reddit.com/r/MachineLearning/hot/.rss` |
+| r/programming     | `https://www.reddit.com/r/programming/hot/.rss`     |
+
+**#feed-github** (4 feeds):
+
+| Feed Title | RSS URL                                                               |
+| ---------- | --------------------------------------------------------------------- |
+| Python     | `https://mshibanami.github.io/GitHubTrendingRSS/daily/python.xml`     |
+| TypeScript | `https://mshibanami.github.io/GitHubTrendingRSS/daily/typescript.xml` |
+| Go         | `https://mshibanami.github.io/GitHubTrendingRSS/daily/go.xml`         |
+| Rust       | `https://mshibanami.github.io/GitHubTrendingRSS/daily/rust.xml`       |
+
+**#feed-youtube** (8 feeds):
+
+| Feed Title        | RSS URL                                                                        |
+| ----------------- | ------------------------------------------------------------------------------ |
+| Sam Witteveen     | `https://www.youtube.com/feeds/videos.xml?channel_id=UC55ODQSvARtgSyc8ThfiepQ` |
+| LangChain         | `https://www.youtube.com/feeds/videos.xml?channel_id=UCC-lyoTfSrcJzA1ab3APAgw` |
+| NerdyRodent       | `https://www.youtube.com/feeds/videos.xml?channel_id=UC4-5v-f-xKnbi1yaAuRSi_w` |
+| aiDotEngineer     | `https://www.youtube.com/feeds/videos.xml?channel_id=UCLKPca3kwwd-B59HNr-_lvA` |
+| Yannic Kilcher    | `https://www.youtube.com/feeds/videos.xml?channel_id=UCZHmQk67mSJgfCCTn7xBfew` |
+| Two Minute Papers | `https://www.youtube.com/feeds/videos.xml?channel_id=UCbfYPyITQ-7l4upoX8nvctg` |
+| AI Explained      | `https://www.youtube.com/feeds/videos.xml?channel_id=UCNJ1Ymd5yFuUPtn21xtRbbw` |
+| 3Blue1Brown       | `https://www.youtube.com/feeds/videos.xml?channel_id=UCYO_jab_esuFRV4b17AJtAw` |
+
+**#feed-engineering** (3 feeds):
+
+| Feed Title        | RSS URL                            |
+| ----------------- | ---------------------------------- |
+| Node Weekly       | `https://nodeweekly.com/rss`       |
+| React Status      | `https://react.statuscode.com/rss` |
+| JavaScript Weekly | `https://javascriptweekly.com/rss` |
+
+#### Remaining Feed Channel (Setup Needed)
+
+| Channel       | Recommended Bot                                                         | Setup Steps                                                                                 |
+| ------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| #feed-twitter | [Readybot](https://readybot.io) or [TweetShift](https://tweetshift.com) | Invite bot → Configure accounts to follow (Anthropic, OpenAI, key researchers) → Set output |
 
 #### Bot Summary
 
-| Bot        | Feeds It Powers                 | Dashboard              | Cost                         |
-| ---------- | ------------------------------- | ---------------------- | ---------------------------- |
-| MonitoRSS  | ai-research, hackernews, reddit | https://monitorss.xyz  | Free (3) / $5/mo (unlimited) |
-| Readybot   | twitter                         | https://readybot.io    | Free                         |
-| TweetShift | twitter (alternative)           | https://tweetshift.com | Free                         |
-| NotifyMe   | youtube                         | https://notifyme.bot   | Free                         |
+| Bot       | Feeds It Powers                                               | Dashboard             | Cost |
+| --------- | ------------------------------------------------------------- | --------------------- | ---- |
+| MonitoRSS | ai-research, hackernews, reddit, github, youtube, engineering | https://monitorss.xyz | Paid |
+| TBD       | twitter                                                       | -                     | -    |
 
 ### ARCHIVE
 
