@@ -4404,36 +4404,55 @@ Format your response as a structured markdown document.`;
       // Apply dependency-aware ordering
       const { orderedFeatures, missingDependencies } = resolveDependencies(pendingFeatures);
 
-      // Remove missing dependencies from features and save them
-      // This allows features to proceed when their dependencies have been deleted or don't exist
+      // Remove TRULY missing dependencies (feature ID doesn't exist anywhere on the board).
+      // Dependencies that exist in allFeatures but not in pendingFeatures are NOT missing —
+      // they're just in a different status (in_progress, done, review, etc.).
+      // Previously, this code removed deps on features in non-pending statuses, causing
+      // downstream features to start before their prerequisites completed.
       if (missingDependencies.size > 0) {
+        const allFeatureIds = new Set(allFeatures.map((f) => f.id));
+
         for (const [featureId, missingDepIds] of missingDependencies) {
           const feature = pendingFeatures.find((f) => f.id === featureId);
           if (feature && feature.dependencies) {
-            // Filter out the missing dependency IDs
-            const validDependencies = feature.dependencies.filter(
-              (depId) => !missingDepIds.includes(depId)
-            );
+            // Only remove deps that are TRULY gone (not on the board at all)
+            const trulyMissingDepIds = missingDepIds.filter((depId) => !allFeatureIds.has(depId));
 
-            logger.warn(
-              `[loadPendingFeatures] Feature ${featureId} has missing dependencies: ${missingDepIds.join(', ')}. Removing them automatically.`
-            );
-
-            // Update the feature in memory
-            feature.dependencies = validDependencies.length > 0 ? validDependencies : undefined;
-
-            // Save the updated feature to disk
-            try {
-              await this.featureLoader.update(projectPath, featureId, {
-                dependencies: feature.dependencies,
-              });
-              logger.info(
-                `[loadPendingFeatures] Updated feature ${featureId} - removed missing dependencies`
+            if (trulyMissingDepIds.length > 0) {
+              const validDependencies = feature.dependencies.filter(
+                (depId) => !trulyMissingDepIds.includes(depId)
               );
-            } catch (error) {
-              logger.error(
-                `[loadPendingFeatures] Failed to save feature ${featureId} after removing missing dependencies:`,
-                error
+
+              logger.warn(
+                `[loadPendingFeatures] Feature ${featureId} has truly missing dependencies (deleted from board): ${trulyMissingDepIds.join(', ')}. Removing them.`
+              );
+
+              // Update the feature in memory
+              feature.dependencies = validDependencies.length > 0 ? validDependencies : undefined;
+
+              // Save the updated feature to disk
+              try {
+                await this.featureLoader.update(projectPath, featureId, {
+                  dependencies: feature.dependencies,
+                });
+                logger.info(
+                  `[loadPendingFeatures] Updated feature ${featureId} - removed truly missing dependencies`
+                );
+              } catch (error) {
+                logger.error(
+                  `[loadPendingFeatures] Failed to save feature ${featureId} after removing missing dependencies:`,
+                  error
+                );
+              }
+            } else {
+              // All "missing" deps actually exist on the board in non-pending statuses
+              // This is normal — they're in_progress, done, review, etc.
+              const depStatuses = missingDepIds.map((depId) => {
+                const dep = allFeatures.find((f) => f.id === depId);
+                return `${depId.slice(-12)}(${dep?.status || 'unknown'})`;
+              });
+              logger.debug(
+                `[loadPendingFeatures] Feature ${featureId} has deps in non-pending statuses: ${depStatuses.join(', ')}. Preserving dependencies.`
               );
             }
           }
