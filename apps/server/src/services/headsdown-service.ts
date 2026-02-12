@@ -49,6 +49,8 @@ import { v4 as uuidv4 } from 'uuid';
 import path from 'node:path';
 import { existsSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
+import type { AgentFactoryService } from './agent-factory-service.js';
+import type { DynamicAgentExecutor } from './dynamic-agent-executor.js';
 
 const logger = createLogger('HeadsdownService');
 
@@ -90,6 +92,12 @@ export class HeadsdownService {
 
   /** Optional role registry for dynamic role resolution + desired state */
   private roleRegistry?: RoleRegistryService;
+
+  /** Agent factory for creating agent configurations */
+  private agentFactory?: AgentFactoryService;
+
+  /** Dynamic agent executor for running agents */
+  private executor?: DynamicAgentExecutor;
 
   constructor(
     private events: EventEmitter,
@@ -154,6 +162,16 @@ export class HeadsdownService {
    */
   setDiscordBotService(service: any): void {
     this.discordMonitor.setDiscordBotService(service);
+  }
+
+  /**
+   * Set agent execution dependencies (factory + executor).
+   * Must be called before agents can execute work.
+   */
+  setAgentExecution(factory: AgentFactoryService, executor: DynamicAgentExecutor): void {
+    this.agentFactory = factory;
+    this.executor = executor;
+    logger.info('Agent execution capabilities initialized');
   }
 
   /**
@@ -798,12 +816,42 @@ export class HeadsdownService {
   }
 
   /**
+   * Build prompt for work item based on type
+   */
+  private buildPromptForWorkItem(workItem: WorkItem, agent: AgentInstance): string {
+    switch (workItem.type) {
+      case 'discord_message':
+        return `Respond to Discord message:\n\n${workItem.metadata?.content || workItem.description}`;
+
+      case 'linear_issue':
+        return `Address Linear issue:\n\nTitle: ${workItem.metadata?.title || 'Untitled'}\n\nDescription:\n${workItem.metadata?.description || workItem.description}`;
+
+      case 'github_pr':
+        return `Review GitHub PR #${workItem.metadata?.number || 'unknown'}:\n\nTitle: ${workItem.metadata?.title || 'Untitled'}\n\n${workItem.description}`;
+
+      case 'state_divergence':
+        return `Fix state divergence:\n\n${workItem.description}\n\nExpected: ${workItem.metadata?.expected}\nActual: ${workItem.metadata?.actual}`;
+
+      case 'idle_task':
+        return `Perform maintenance task: ${workItem.metadata?.type || workItem.description}`;
+
+      default:
+        return workItem.description;
+    }
+  }
+
+  /**
    * Claim and execute work item
    */
   private async claimAndExecute(agent: AgentInstance, workItem: WorkItem): Promise<void> {
+    if (!this.agentFactory || !this.executor) {
+      logger.error('Agent execution not initialized — call setAgentExecution() first');
+      return;
+    }
+
     agent.status = 'working';
     agent.currentTask = {
-      type: workItem.type as any, // Will be properly typed when work detection is implemented
+      type: workItem.type as any,
       id: workItem.id,
       startedAt: new Date().toISOString(),
       description: workItem.description,
@@ -815,20 +863,64 @@ export class HeadsdownService {
     });
 
     try {
-      // TODO: Implement work execution
       logger.info(`Agent ${agent.id} executing work: ${workItem.description}`);
 
-      // Update stats
-      agent.stats.totalTurns++;
+      // Ensure agent has a project path
+      if (!agent.projectPath) {
+        throw new Error(`Agent ${agent.id} has no project path configured`);
+      }
 
-      // Reset consecutive errors on successful work execution
-      this.consecutiveErrors.set(agent.id, 0);
+      // Build prompt from work item
+      const prompt = this.buildPromptForWorkItem(workItem, agent);
 
-      // Update last work timestamp
-      this.lastWorkTimestamp.set(agent.id, Date.now());
+      // Create agent config from template
+      const config = this.agentFactory.createFromTemplate(agent.role, agent.projectPath);
+
+      // Execute agent
+      const result = await this.executor.execute(config, { prompt });
+
+      if (result.success) {
+        // Update stats based on work type
+        agent.stats.totalTurns++;
+
+        if (workItem.type === 'github_pr') {
+          agent.stats.prsReviewed++;
+        } else if (workItem.type === 'idle_task') {
+          agent.stats.idleTasksCompleted++;
+        } else if (workItem.type === 'linear_issue') {
+          agent.stats.featuresCompleted++;
+        }
+
+        // Reset consecutive errors on successful work execution
+        this.consecutiveErrors.set(agent.id, 0);
+
+        // Update last work timestamp
+        this.lastWorkTimestamp.set(agent.id, Date.now());
+
+        logger.info(
+          `Agent ${agent.id} completed work: ${workItem.description} (${result.durationMs}ms)`
+        );
+
+        this.events.emit('headsdown:agent:work-completed', {
+          agentId: agent.id,
+          workItem,
+          durationMs: result.durationMs,
+        });
+      } else {
+        logger.error(`Agent ${agent.id} work failed: ${result.error}`);
+        this.events.emit('headsdown:agent:work-failed', {
+          agentId: agent.id,
+          workItem,
+          error: result.error,
+        });
+      }
     } catch (error) {
       logger.error(`Work execution failed for agent ${agent.id}:`, error);
-      throw error;
+      this.events.emit('headsdown:agent:work-failed', {
+        agentId: agent.id,
+        workItem,
+        error: error instanceof Error ? error.message : String(error),
+      });
     } finally {
       agent.status = 'idle';
       agent.currentTask = undefined;
@@ -839,11 +931,46 @@ export class HeadsdownService {
    * Perform idle work
    */
   private async performIdleWork(agent: AgentInstance): Promise<void> {
-    // TODO: Implement idle task execution
-    this.events.emit('headsdown:agent:idle', {
-      agentId: agent.id,
-      reason: 'no_work_available',
-    });
+    // Check if agent has idle tasks configured
+    if (!this.roleRegistry) {
+      this.events.emit('headsdown:agent:idle', {
+        agentId: agent.id,
+        reason: 'no_work_available',
+      });
+      return;
+    }
+
+    const template = this.roleRegistry.get(agent.role);
+    if (
+      !template?.headsdownConfig?.idleTasks?.enabled ||
+      !template.headsdownConfig.idleTasks.tasks.length
+    ) {
+      this.events.emit('headsdown:agent:idle', {
+        agentId: agent.id,
+        reason: 'no_idle_tasks_configured',
+      });
+      return;
+    }
+
+    // Pick first idle task (could be randomized or prioritized)
+    const idleTaskType = template.headsdownConfig.idleTasks.tasks[0];
+
+    // Create work item for idle task
+    const workItem: WorkItem = {
+      id: `idle:${uuidv4()}`,
+      type: 'idle_task',
+      description: `Perform idle task: ${idleTaskType}`,
+      priority: 10, // Low priority
+      source: 'idle',
+      metadata: {
+        type: idleTaskType,
+      },
+    };
+
+    logger.info(`Agent ${agent.id} performing idle work: ${idleTaskType}`);
+
+    // Execute idle task
+    await this.claimAndExecute(agent, workItem);
   }
 
   /**

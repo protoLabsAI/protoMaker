@@ -371,6 +371,9 @@ const headsdownService = HeadsdownService.getInstance(
   roleRegistryService
 );
 
+// Wire up agent execution capabilities for headsdown service
+headsdownService.setAgentExecution(agentFactoryService, dynamicAgentExecutor);
+
 // Initialize PRDService for SPARC PRD management
 const prdService = PRDService.getInstance(events);
 

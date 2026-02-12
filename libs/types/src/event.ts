@@ -102,6 +102,8 @@ export type EventType =
   | 'headsdown:agent:error'
   | 'headsdown:agent:paused'
   | 'headsdown:agent:resumed'
+  | 'headsdown:agent:work-completed'
+  | 'headsdown:agent:work-failed'
   // CodeRabbit review events
   | 'coderabbit:review-received'
   | 'coderabbit:feedback-processed'
