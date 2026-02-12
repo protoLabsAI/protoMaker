@@ -9,7 +9,16 @@
 // Load environment variables FIRST, before any imports that depend on them
 // (auth.ts reads AUTOMAKER_API_KEY at module load time)
 import dotenv from 'dotenv';
+import { fileURLToPath } from 'node:url';
+import { dirname, resolve } from 'node:path';
+
+// Load .env from CWD (works with combined launcher from monorepo root)
 dotenv.config();
+// Also load from monorepo root as fallback (for workspace-based dev scripts
+// where CWD is apps/server/ and the root .env isn't found by default)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+dotenv.config({ path: resolve(__dirname, '../../../.env') });
 
 import { execSync } from 'node:child_process';
 import express from 'express';
