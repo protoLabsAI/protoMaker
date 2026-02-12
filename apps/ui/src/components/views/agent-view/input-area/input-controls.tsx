@@ -3,6 +3,7 @@ import { Send, Paperclip, Square, ListOrdered } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+import { AgentSelector } from '../shared/agent-selector';
 import { AgentModelSelector } from '../shared/agent-model-selector';
 import type { PhaseModelEntry } from '@automaker/types';
 
@@ -17,6 +18,10 @@ interface InputControlsProps {
   modelSelection: PhaseModelEntry;
   /** Callback when model is selected */
   onModelSelect: (entry: PhaseModelEntry) => void;
+  /** Currently selected agent template name (or null for "Custom Model") */
+  selectedAgent: string | null;
+  /** Callback when agent is selected */
+  onAgentSelect: (agentName: string | null, modelId?: string) => void;
   isProcessing: boolean;
   isConnected: boolean;
   hasFiles: boolean;
@@ -40,6 +45,8 @@ export function InputControls({
   onPaste,
   modelSelection,
   onModelSelect,
+  selectedAgent,
+  onAgentSelect,
   isProcessing,
   isConnected,
   hasFiles,
@@ -127,12 +134,17 @@ export function InputControls({
 
         {/* Controls row - responsive layout */}
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Model Selector */}
-          <AgentModelSelector
-            value={modelSelection}
-            onChange={onModelSelect}
-            disabled={!isConnected}
-          />
+          {/* Agent Selector */}
+          <AgentSelector value={selectedAgent} onChange={onAgentSelect} disabled={!isConnected} />
+
+          {/* Model Selector - only shown when Custom Model is selected */}
+          {!selectedAgent && (
+            <AgentModelSelector
+              value={modelSelection}
+              onChange={onModelSelect}
+              disabled={!isConnected}
+            />
+          )}
 
           {/* File Attachment Button */}
           <Button

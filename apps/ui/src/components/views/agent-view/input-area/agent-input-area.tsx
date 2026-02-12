@@ -20,6 +20,10 @@ interface AgentInputAreaProps {
   modelSelection: PhaseModelEntry;
   /** Callback when model is selected */
   onModelSelect: (entry: PhaseModelEntry) => void;
+  /** Currently selected agent template name (or null for "Custom Model") */
+  selectedAgent: string | null;
+  /** Callback when agent is selected */
+  onAgentSelect: (agentName: string | null, modelId?: string) => void;
   isProcessing: boolean;
   isConnected: boolean;
   // File attachments
@@ -52,6 +56,8 @@ export function AgentInputArea({
   onStop,
   modelSelection,
   onModelSelect,
+  selectedAgent,
+  onAgentSelect,
   isProcessing,
   isConnected,
   selectedImages,
@@ -117,6 +123,8 @@ export function AgentInputArea({
         onPaste={onPaste}
         modelSelection={modelSelection}
         onModelSelect={onModelSelect}
+        selectedAgent={selectedAgent}
+        onAgentSelect={onAgentSelect}
         isProcessing={isProcessing}
         isConnected={isConnected}
         hasFiles={hasFiles}

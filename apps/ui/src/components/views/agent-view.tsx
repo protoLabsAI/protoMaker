@@ -44,6 +44,7 @@ export function AgentView() {
   }, []);
 
   const [modelSelection, setModelSelection] = useState<PhaseModelEntry>({ model: 'claude-sonnet' });
+  const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
   // TODO: Wire agentConfig to useElectronAgent so maxTurns and systemPromptOverride take effect
   const [agentConfig, setAgentConfig] = useState<AgentConfig>({
     maxTurns: DEFAULT_MAX_TURNS,
@@ -136,6 +137,14 @@ export function AgentView() {
     if (!confirm('Are you sure you want to clear this conversation?')) return;
     await clearHistory();
   };
+
+  const handleAgentSelect = useCallback((agentName: string | null, modelId?: string) => {
+    setSelectedAgent(agentName);
+    // If an agent is selected and it has a model, auto-set the model
+    if (agentName && modelId) {
+      setModelSelection({ model: modelId });
+    }
+  }, []);
 
   // Auto-focus input when session is selected/changed
   useEffect(() => {
@@ -232,6 +241,8 @@ export function AgentView() {
             onStop={stopExecution}
             modelSelection={modelSelection}
             onModelSelect={setModelSelection}
+            selectedAgent={selectedAgent}
+            onAgentSelect={handleAgentSelect}
             isProcessing={isProcessing}
             isConnected={isConnected}
             selectedImages={fileAttachments.selectedImages}
