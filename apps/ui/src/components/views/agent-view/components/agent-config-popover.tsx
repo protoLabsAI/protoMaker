@@ -61,7 +61,9 @@ function getToolType(tool: string): 'read' | 'write' | 'execute' {
 /**
  * Get badge variant based on tool type
  */
-function getToolBadgeVariant(toolType: 'read' | 'write' | 'execute'): 'info' | 'warning' | 'success' {
+function getToolBadgeVariant(
+  toolType: 'read' | 'write' | 'execute'
+): 'info' | 'warning' | 'success' {
   switch (toolType) {
     case 'read':
       return 'info';
@@ -187,11 +189,7 @@ export function AgentConfigPopover({ config, onConfigChange, disabled }: AgentCo
                   const toolType = getToolType(tool);
                   const variant = getToolBadgeVariant(toolType);
                   return (
-                    <Badge
-                      key={tool}
-                      variant={variant}
-                      className="text-xs px-2 py-0.5"
-                    >
+                    <Badge key={tool} variant={variant} className="text-xs px-2 py-0.5">
                       {tool}
                     </Badge>
                   );
