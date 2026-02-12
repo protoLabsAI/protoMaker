@@ -887,6 +887,7 @@ export interface PhaseModelEntry {
  * - Epic kickoffs: Posted to Discord when an epic is created with planned scope and complexity
  * - Milestone standups: Posted to Discord when a milestone starts with planned scope
  * - Milestone retros: Sent to Discord when all features in a milestone are done
+ * - Epic delivery announcements: Posted when all child features in an epic are complete
  * - Project retrospectives: AI-generated reflections when projects complete
  */
 export interface CeremonySettings {
@@ -900,6 +901,8 @@ export interface CeremonySettings {
   enableStandups?: boolean;
   /** Enable milestone completion announcements (default: true) */
   enableMilestoneUpdates?: boolean;
+  /** Enable epic delivery announcements (default: true) */
+  enableEpicDelivery?: boolean;
   /** Enable project retrospective generation (default: true) */
   enableProjectRetros?: boolean;
   /** Model configuration for generating retrospectives */
@@ -914,6 +917,7 @@ export const DEFAULT_CEREMONY_SETTINGS: CeremonySettings = {
   enableEpicKickoff: true,
   enableStandups: true,
   enableMilestoneUpdates: true,
+  enableEpicDelivery: true,
   enableProjectRetros: true,
 };
 
