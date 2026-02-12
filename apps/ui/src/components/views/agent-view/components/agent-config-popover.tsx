@@ -174,7 +174,9 @@ export function AgentConfigPopover({ config, onConfigChange, disabled }: AgentCo
               disabled={templatesLoading}
             >
               <SelectTrigger id="agent-role" className="w-full text-xs h-8">
-                <SelectValue placeholder={templatesLoading ? 'Loading roles...' : 'Select a role...'} />
+                <SelectValue
+                  placeholder={templatesLoading ? 'Loading roles...' : 'Select a role...'}
+                />
               </SelectTrigger>
               <SelectContent>
                 {(templates || FALLBACK_ROLE_OPTIONS).map((template) => {
@@ -191,7 +193,10 @@ export function AgentConfigPopover({ config, onConfigChange, disabled }: AgentCo
                         {tier !== undefined && (
                           <>
                             {tier === 0 && (
-                              <Lock className="w-3 h-3 text-muted-foreground" aria-label="Built-in role" />
+                              <Lock
+                                className="w-3 h-3 text-muted-foreground"
+                                aria-label="Built-in role"
+                              />
                             )}
                             <Badge
                               variant={tier === 0 ? 'default' : 'secondary'}

@@ -2133,7 +2133,9 @@ export class HttpApiClient implements ElectronAPI {
 
   // Agent Templates API
   agentTemplates = {
-    list: (role?: string): Promise<{
+    list: (
+      role?: string
+    ): Promise<{
       success: boolean;
       templates: Array<{
         name: string;
