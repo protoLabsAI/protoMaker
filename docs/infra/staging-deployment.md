@@ -678,6 +678,67 @@ git pull origin main
 
 Set the `DISCORD_DEPLOY_WEBHOOK` secret in GitHub repo settings to receive deploy notifications in `#deployments`.
 
+## CD Pipeline Troubleshooting
+
+### Path Mismatch (All Steps Fail Immediately)
+
+**Symptoms:**
+
+- Every deploy-staging run fails in <20 seconds
+- Logs show: `cd: /home/josh/dev/automaker: No such file or directory`
+- Discord notifications never arrive
+
+**Cause:** The deploy workflow and all self-hosted runner workflows hardcode the repo path. If the repo directory is renamed or moved, every step fails on `cd`.
+
+**Fix:** Update `defaults.run.working-directory` in `.github/workflows/deploy-staging.yml` to match the actual repo location. Also update `automaker.service` and `docs/infra/systemd.md` if using systemd.
+
+**Prevention:** The workflow uses `defaults.run.working-directory` at the job level so the path is defined once, not repeated per step.
+
+### Docker Build Fails on `build:packages`
+
+**Symptoms:**
+
+- Build gets past `Pull latest code` but fails during `Rebuild and restart staging`
+- Logs show: `error TS5058: The specified path does not exist: 'packages/mcp-server/tsconfig.json'`
+
+**Cause:** The `build:packages` script includes `tsc --project packages/mcp-server/tsconfig.json`, but `packages/` is not copied into the Docker build context (only `libs/` and `apps/` are).
+
+**Fix:** The Dockerfile uses `npm run build:libs` instead of `build:packages`. The `build:libs` script builds only the shared libraries needed inside the container. The `build:packages` script (used on the host) also builds the MCP server.
+
+**Key distinction:**
+
+- `build:libs` — shared libraries only (for Docker builds)
+- `build:packages` — libs + MCP server (for host development)
+
+### Runner Working Directory Missing
+
+**Symptoms:**
+
+- Steps that don't explicitly `cd` fail with: `An error occurred trying to start process '/usr/bin/bash' with working directory '/home/josh/actions-runner/_work/automaker/automaker'`
+- This especially affects `if: always()` steps like Cleanup and Notify Discord
+
+**Cause:** GitHub Actions self-hosted runners create a `_work/{repo}/{repo}` directory as the default working directory. If this directory doesn't exist (e.g., the runner was set up without an initial checkout), steps that don't set their own working directory fail to start.
+
+**Fix:** Set `defaults.run.working-directory` at the job level so all steps run from the correct directory regardless of the runner's default.
+
+### Discord Notifications Silent
+
+**Symptoms:**
+
+- Deploy completes (success or failure) but no message appears in `#deployments`
+- No errors in the Notify Discord step
+
+**Cause:** The notification step checks `if [ -n "${DISCORD_DEPLOY_WEBHOOK:-}" ]` before sending. If the GitHub secret is not set, the condition silently skips.
+
+**Required GitHub secrets** (Settings > Secrets and variables > Actions):
+
+| Secret                   | Purpose                              | Channel      |
+| ------------------------ | ------------------------------------ | ------------ |
+| `DISCORD_DEPLOY_WEBHOOK` | Deploy success/failure notifications | #deployments |
+| `DISCORD_ALERTS_WEBHOOK` | Smoke test failure alerts            | #deployments |
+
+Create webhooks in Discord: Server Settings > Integrations > Webhooks > New Webhook, target the `#deployments` channel (ID: `1469049508909289752`).
+
 ## Next Steps
 
 After staging deployment is stable:
