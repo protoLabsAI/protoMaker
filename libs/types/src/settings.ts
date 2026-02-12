@@ -1360,24 +1360,6 @@ export interface GlobalSettings {
   };
 
   /**
-   * GOAP brain loop always-on configuration.
-   * When enabled, the GOAP loop automatically starts for configured projects on server startup.
-   */
-  goapAlwaysOn?: {
-    /** Whether GOAP always-on is enabled globally */
-    enabled: boolean;
-    /** Per-project GOAP loop configuration */
-    projects: Array<{
-      /** Absolute path to the project directory */
-      projectPath: string;
-      /** Branch name for worktree scoping (null = main worktree) */
-      branchName: string | null;
-      /** Tick interval in milliseconds (optional, default: 30000) */
-      tickIntervalMs?: number;
-    }>;
-  };
-
-  /**
    * Discord integration settings.
    * Configuration for Discord MCP server integration and notifications.
    * @see DiscordSettings
@@ -1666,7 +1648,7 @@ export interface ProjectSettings {
    * - Model selection per role
    * - Turn limits and timeouts
    * - Monitoring sources (Discord channels, Linear projects)
-   * - GOAP planning parameters
+   * - Planning parameters
    */
   agenticSystem?: import('./headsdown.js').HeadsdownConfig[];
 
