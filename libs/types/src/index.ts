@@ -501,41 +501,6 @@ export { ROLE_CAPABILITIES } from './agent-roles.js';
 export type { HeadsdownLoopConfig, HeadsdownConfig, HeadsdownState } from './headsdown.js';
 export { DEFAULT_HEADSDOWN_CONFIGS } from './headsdown.js';
 
-// GOAP (Goal-Oriented Action Planning) types
-export type {
-  GOAPState,
-  GOAPCondition,
-  GOAPAction,
-  GOAPGoal,
-  GOAPRole,
-  GOAPPlan,
-  GOAPPlanResult,
-  GOAPPlannerConfig,
-  GOAPActionDefinition,
-  WorldStateSnapshot,
-  GOAPActionResult,
-  GOAPLoopConfig,
-  GOAPLoopStatus,
-} from './goap.js';
-export {
-  DEFAULT_GOAP_PLANNER_CONFIG,
-  DEFAULT_GOAP_LOOP_CONFIG,
-  EXAMPLE_GOAP_GOALS,
-  EXAMPLE_GOAP_ACTIONS,
-  isConditionSatisfied,
-  areConditionsSatisfied,
-  applyEffects,
-} from './goap.js';
-
-// GOAP A* Planner
-export {
-  planActions,
-  heuristic as goapHeuristic,
-  regressState,
-  hashState as goapHashState,
-  actionContributes,
-} from './goap-planner.js';
-
 // Policy engine types (used by @automaker/policy-engine)
 export type {
   AgentRoleName,

@@ -87,6 +87,8 @@ import { createMCPRoutes } from './routes/mcp/index.js';
 import { MCPTestService } from './services/mcp-test-service.js';
 import { createPipelineRoutes } from './routes/pipeline/index.js';
 import { pipelineService } from './services/pipeline-service.js';
+import { createMetricsRoutes } from './routes/metrics/index.js';
+import { MetricsService } from './services/metrics-service.js';
 import { createIdeationRoutes } from './routes/ideation/index.js';
 import { IdeationService } from './services/ideation-service.js';
 import { getDevServerService } from './services/dev-server-service.js';
@@ -99,10 +101,6 @@ import { createBriefingRoutes } from './routes/briefing/index.js';
 import { getBriefingCursorService } from './services/briefing-cursor-service.js';
 import { createRalphRoutes } from './routes/ralph/index.js';
 import { RalphLoopService } from './services/ralph-loop-service.js';
-import { createGOAPRoutes } from './routes/goap/index.js';
-import { GOAPLoopService } from './services/goap-loop-service.js';
-import { GOAPActionRegistry } from './services/goap-action-registry.js';
-import { registerAllActions } from './services/goap-actions/index.js';
 import { HeadsdownService } from './services/headsdown-service.js';
 import { PRDService } from './services/prd-service.js';
 import { createSkillsRoutes } from './routes/skills/index.js';
@@ -126,7 +124,6 @@ import { AuditService } from './services/audit-service.js';
 import { PRFeedbackService } from './services/pr-feedback-service.js';
 import { WorktreeLifecycleService } from './services/worktree-lifecycle-service.js';
 import { DiscordBotService } from './services/discord-bot-service.js';
-import { WorldStateMonitor } from './services/world-state-monitor.js';
 // import { ReconciliationService } from './services/reconciliation-service.js'; // TODO: Re-enable when implemented
 // import { GitHubStateChecker } from './services/github-state-checker.js'; // TODO: Re-enable when implemented
 import { ProjectService } from './services/project-service.js';
@@ -310,6 +307,7 @@ const events: EventEmitter = createEventEmitter();
 const settingsService = new SettingsService(DATA_DIR);
 const agentService = new AgentService(DATA_DIR, events, settingsService);
 const featureLoader = new FeatureLoader();
+const metricsService = new MetricsService(featureLoader);
 const autoModeService = new AutoModeService(events, settingsService);
 const claudeUsageService = new ClaudeUsageService();
 const codexAppServerService = new CodexAppServerService();
@@ -336,15 +334,6 @@ const avaGatewayService = getAvaGatewayService(
 );
 const ideationService = new IdeationService(events, settingsService, featureLoader);
 const ralphLoopService = new RalphLoopService(events, autoModeService, settingsService);
-const goapActionRegistry = new GOAPActionRegistry();
-registerAllActions(goapActionRegistry, featureLoader, autoModeService);
-const goapLoopService = GOAPLoopService.getInstance(
-  events,
-  featureLoader,
-  autoModeService,
-  goapActionRegistry
-);
-
 // Initialize HeadsdownService for autonomous agent management
 const headsdownService = HeadsdownService.getInstance(events, settingsService, featureLoader);
 
@@ -429,34 +418,6 @@ const worktreeLifecycleService = new WorktreeLifecycleService(events, featureLoa
   }));
 });
 worktreeLifecycleService.initialize();
-
-// Initialize World State Monitor (GOAP-inspired reactive system)
-// Periodically checks world state and triggers corrective actions for drift
-// TODO: Re-enable when ReconciliationService and GitHubStateChecker are implemented
-// const githubStateChecker = new GitHubStateChecker(featureLoader);
-// const reconciliationService = new ReconciliationService(events, featureLoader, autoModeService);
-const worldStateMonitor = new WorldStateMonitor(
-  events,
-  featureLoader,
-  null as any, // reconciliationService placeholder
-  null as any, // githubStateChecker placeholder
-  {
-    enabled: false, // Disabled until services are implemented
-    tickIntervalMs: 30000, // 30 seconds
-    checks: {
-      automaker: true,
-      github: true,
-      git: true,
-    },
-  },
-  REPO_ROOT
-);
-
-// Register the main project for GitHub state checking
-// Additional projects can be registered dynamically via API
-// TODO: Re-enable when GitHubStateChecker is implemented
-// const mainProjectPath = process.cwd();
-// githubStateChecker.registerProject(mainProjectPath);
 
 // Initialize Discord Bot Service for CTO /idea command
 // Only connects if DISCORD_BOT_TOKEN is set in environment
@@ -556,7 +517,6 @@ specGenerationMonitor.startMonitoring();
     const settings = await settingsService.getGlobalSettings();
     const projectPaths = [
       ...(settings.autoModeAlwaysOn?.projects?.map((p) => p.projectPath) ?? []),
-      ...(settings.goapAlwaysOn?.projects?.map((p) => p.projectPath) ?? []),
     ];
     // Deduplicate
     const uniquePaths = [...new Set(projectPaths)];
@@ -600,7 +560,6 @@ specGenerationMonitor.startMonitoring();
     const settings = await settingsService.getGlobalSettings();
     const projectPaths = [
       ...(settings.autoModeAlwaysOn?.projects?.map((p) => p.projectPath) ?? []),
-      ...(settings.goapAlwaysOn?.projects?.map((p) => p.projectPath) ?? []),
     ];
     // Deduplicate
     const uniquePaths = [...new Set(projectPaths)];
@@ -692,58 +651,6 @@ specGenerationMonitor.startMonitoring();
     }
   } catch (err) {
     logger.warn('[AUTO-START] Failed to check auto-mode always-on setting:', err);
-  }
-
-  // Auto-start GOAP brain loop if enabled in settings
-  try {
-    const settings = await settingsService.getGlobalSettings();
-    if (settings.goapAlwaysOn?.enabled && settings.goapAlwaysOn.projects.length > 0) {
-      logger.info(
-        `[AUTO-START] GOAP always-on enabled for ${settings.goapAlwaysOn.projects.length} project(s), starting loops...`
-      );
-
-      for (const projectConfig of settings.goapAlwaysOn.projects) {
-        try {
-          const { projectPath, branchName, tickIntervalMs } = projectConfig;
-          const worktreeDesc = branchName ? `worktree ${branchName}` : 'main worktree';
-
-          logger.info(`[AUTO-START] Starting GOAP loop for ${worktreeDesc} in ${projectPath}...`);
-
-          await goapLoopService.startLoop({
-            projectPath,
-            branchName: branchName ?? null,
-            tickIntervalMs: tickIntervalMs ?? 30000,
-            maxConsecutiveErrors: 5,
-            enabled: true,
-            maxActionHistorySize: 100,
-          });
-
-          logger.info(
-            `[AUTO-START] GOAP loop started successfully for ${worktreeDesc} in ${projectPath}`
-          );
-        } catch (err) {
-          const errorMsg = err instanceof Error ? err.message : String(err);
-          if (errorMsg.includes('already running')) {
-            logger.info(
-              `[AUTO-START] GOAP loop already running for ${projectConfig.projectPath}, skipping`
-            );
-          } else {
-            logger.error(
-              `[AUTO-START] Failed to start GOAP loop for ${projectConfig.projectPath}:`,
-              err
-            );
-          }
-        }
-      }
-    } else if (settings.goapAlwaysOn?.enabled) {
-      logger.info(
-        '[AUTO-START] GOAP always-on enabled but no projects configured, skipping auto-start'
-      );
-    } else {
-      logger.info('[AUTO-START] GOAP always-on disabled, skipping auto-start');
-    }
-  } catch (err) {
-    logger.warn('[AUTO-START] Failed to check GOAP always-on setting:', err);
   }
 
   // Bootstrap Codex model cache in background (don't block server startup)
@@ -841,7 +748,7 @@ app.get(
 );
 app.get(
   '/api/health/deep',
-  createDeepHandler(agentService, featureLoader, autoModeService, REPO_ROOT, worldStateMonitor)
+  createDeepHandler(agentService, featureLoader, autoModeService, REPO_ROOT)
 );
 
 app.use('/api/fs', createFsRoutes(events));
@@ -908,10 +815,10 @@ app.use(
   })
 );
 app.use('/api/pipeline', createPipelineRoutes(pipelineService));
+app.use('/api/metrics', createMetricsRoutes(metricsService));
 app.use('/api/ideation', createIdeationRoutes(events, ideationService, featureLoader));
 app.use('/api/notifications', createNotificationsRoutes(notificationService));
 app.use('/api/ralph', createRalphRoutes(ralphLoopService));
-app.use('/api/goap', createGOAPRoutes(goapLoopService));
 app.use('/api/skills', createSkillsRoutes());
 app.use('/api/event-history', createEventHistoryRoutes(eventHistoryService, settingsService));
 app.use(
@@ -1292,10 +1199,6 @@ const startServer = (port: number, host: string) => {
 ║                                                                     ║
 ╚═════════════════════════════════════════════════════════════════════╝
 `);
-
-    // Start World State Monitor after server is ready
-    worldStateMonitor.start();
-    logger.info('World State Monitor started (30s tick interval)');
   });
 
   server.on('error', (error: NodeJS.ErrnoException) => {
@@ -1387,22 +1290,11 @@ process.on('uncaughtException', (error: Error) => {
     .finally(() => process.exit(1));
 });
 
-// Graceful shutdown with WorldStateMonitor tick timeout
+// Graceful shutdown
 async function gracefulShutdown() {
   logger.info('Shutting down gracefully...');
 
-  // Stop monitor first (clears interval, prevents new ticks)
-  worldStateMonitor.stop();
-
-  // Wait for in-flight tick with 5s timeout
-  const currentTick = worldStateMonitor.getCurrentTick();
-  if (currentTick) {
-    const timeout = new Promise<void>((resolve) => setTimeout(resolve, 5000));
-    await Promise.race([currentTick, timeout]);
-  }
-
   await autoModeService.shutdown();
-  await goapLoopService.stopAllLoops();
   healthMonitorService.stopMonitoring();
   schedulerService.stop();
   terminalService.cleanup();

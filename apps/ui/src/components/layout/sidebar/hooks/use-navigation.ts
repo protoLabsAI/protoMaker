@@ -13,7 +13,7 @@ import {
   Network,
   Bell,
   Settings,
-  Eye,
+  BarChart3,
 } from 'lucide-react';
 import type { NavSection, NavItem } from '../types';
 import type { KeyboardShortcut } from '@/hooks/use-keyboard-shortcuts';
@@ -145,6 +145,11 @@ export function useNavigation({
     // Build project items - Terminal is conditionally included
     const projectItems: NavItem[] = [
       {
+        id: 'analytics',
+        label: 'Dashboard',
+        icon: BarChart3,
+      },
+      {
         id: 'board',
         label: 'Kanban Board',
         icon: LayoutGrid,
@@ -161,11 +166,6 @@ export function useNavigation({
         label: 'Agent Runner',
         icon: Bot,
         shortcut: shortcuts.agent,
-      },
-      {
-        id: 'world-state',
-        label: 'World State',
-        icon: Eye,
       },
     ];
 

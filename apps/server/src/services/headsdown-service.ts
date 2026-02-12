@@ -15,11 +15,19 @@ import type {
   HeadsdownState,
   WorkItem,
   IdleTaskType,
-  GOAPState,
-  GOAPGoal,
 } from '@automaker/types';
 import { createLogger, atomicWriteJson, readJsonWithRecovery } from '@automaker/utils';
-import { EXAMPLE_GOAP_GOALS } from '@automaker/types';
+
+/** Simplified goal type for work evaluation (GOAP removed) */
+interface WorkGoal {
+  id: string;
+  name: string;
+  conditions: Array<{ key: string; value: boolean | number | string }>;
+  priority: number;
+}
+
+/** Simplified world state for work evaluation */
+type WorldState = Record<string, boolean | number | string>;
 import { DiscordMonitor } from './discord-monitor.js';
 import { LinearMonitor } from './linear-monitor.js';
 import { GitHubMonitor } from './github-monitor.js';
@@ -363,7 +371,7 @@ export class HeadsdownService {
   }
 
   /**
-   * Check for available work using GOAP goal evaluation
+   * Check for available work using goal evaluation
    *
    * Evaluates current world state and determines what work is available
    * based on agent role and monitoring configuration.
@@ -398,10 +406,10 @@ export class HeadsdownService {
   }
 
   /**
-   * Build world state for GOAP planning
+   * Build world state for work evaluation
    */
-  private async buildWorldState(agent: AgentInstance): Promise<GOAPState> {
-    const state: GOAPState = {
+  private async buildWorldState(agent: AgentInstance): Promise<WorldState> {
+    const state: WorldState = {
       // Agent state
       agent_role: agent.role,
       agent_idle: agent.status === 'idle',
@@ -434,31 +442,69 @@ export class HeadsdownService {
   /**
    * Get relevant goals for agent role
    */
-  private getGoalsForRole(role: AgentRole): GOAPGoal[] {
-    const goals: GOAPGoal[] = [];
+  private getGoalsForRole(role: AgentRole): WorkGoal[] {
+    const goals: WorkGoal[] = [];
 
     switch (role) {
       case 'product-manager':
-        goals.push(EXAMPLE_GOAP_GOALS.USER_REQUEST_UNDERSTOOD, EXAMPLE_GOAP_GOALS.PRD_APPROVED);
+        goals.push(
+          {
+            id: 'user_request_understood',
+            name: 'User Request Understood',
+            conditions: [{ key: 'user_requirements_gathered', value: true }],
+            priority: 10,
+          },
+          {
+            id: 'prd_approved',
+            name: 'PRD Approved',
+            conditions: [{ key: 'prd_drafted', value: true }],
+            priority: 9,
+          }
+        );
         break;
       case 'engineering-manager':
-        goals.push(EXAMPLE_GOAP_GOALS.FEATURES_ASSIGNED, EXAMPLE_GOAP_GOALS.RELEASE_PUBLISHED);
+        goals.push({
+          id: 'features_assigned',
+          name: 'Features Assigned',
+          conditions: [{ key: 'roles_assigned', value: true }],
+          priority: 8,
+        });
         break;
       case 'frontend-engineer':
       case 'backend-engineer':
       case 'devops-engineer':
-        goals.push(EXAMPLE_GOAP_GOALS.FEATURE_IMPLEMENTED);
+        goals.push({
+          id: 'feature_implemented',
+          name: 'Feature Implemented',
+          conditions: [{ key: 'code_written', value: true }],
+          priority: 7,
+        });
         break;
       case 'qa-engineer':
-        goals.push(EXAMPLE_GOAP_GOALS.PR_QUALITY_VERIFIED);
+        goals.push({
+          id: 'pr_quality_verified',
+          name: 'PR Quality Verified',
+          conditions: [{ key: 'review_posted', value: true }],
+          priority: 6,
+        });
         break;
       case 'docs-engineer':
-        goals.push(EXAMPLE_GOAP_GOALS.DOCS_CURRENT);
+        goals.push({
+          id: 'docs_current',
+          name: 'Documentation Current',
+          conditions: [{ key: 'docs_updated', value: true }],
+          priority: 5,
+        });
         break;
     }
 
     // All agents can work on productivity when idle
-    goals.push(EXAMPLE_GOAP_GOALS.MAXIMIZE_PRODUCTIVITY);
+    goals.push({
+      id: 'maximize_productivity',
+      name: 'Maximize Productivity',
+      conditions: [{ key: 'blocking_prs_reviewed', value: true }],
+      priority: 3,
+    });
 
     return goals;
   }
@@ -468,8 +514,8 @@ export class HeadsdownService {
    */
   private async evaluateGoal(
     agent: AgentInstance,
-    goal: GOAPGoal,
-    worldState: GOAPState
+    goal: WorkGoal,
+    worldState: WorldState
   ): Promise<WorkItem | null> {
     // Check if goal conditions are already satisfied
     const satisfied = goal.conditions.every((condition) => {
@@ -482,7 +528,7 @@ export class HeadsdownService {
     }
 
     // Check if we have work available to progress toward this goal
-    // This is simplified - full GOAP would plan action sequences
+    // This is simplified — checks immediate work opportunities
     // For now, we check for immediate work opportunities
 
     if (goal.id === 'user_request_understood' && worldState.discord_monitoring_active) {

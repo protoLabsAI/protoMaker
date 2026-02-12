@@ -1615,45 +1615,6 @@ const tools: Tool[] = [
     },
   },
 
-  {
-    name: 'start_goap_loop',
-    description:
-      'Start the GOAP (Goal-Oriented Action Planning) autonomous loop for a project. The GOAP loop continuously evaluates world state and executes actions to achieve goals.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        projectPath: {
-          type: 'string',
-          description: 'Absolute path to the project directory',
-        },
-        branchName: {
-          type: ['string', 'null'],
-          description: 'Optional branch/worktree name to run GOAP on',
-        },
-        tickIntervalMs: {
-          type: 'number',
-          description: 'Interval between GOAP ticks in milliseconds (optional)',
-        },
-      },
-      required: ['projectPath'],
-    },
-  },
-  {
-    name: 'get_goap_status',
-    description:
-      'Get the status of the GOAP autonomous loop including current goals, available actions, action history, and active role.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        projectPath: {
-          type: 'string',
-          description: 'Absolute path to the project directory',
-        },
-      },
-      required: ['projectPath'],
-    },
-  },
-
   // ========== Setup Pipeline ==========
   {
     name: 'research_repo',
@@ -2352,18 +2313,6 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       return apiCall('/discord/read-dms', {
         username: args.username,
         limit: args.limit || 10,
-      });
-
-    case 'start_goap_loop':
-      return apiCall('/goap/start', {
-        projectPath: args.projectPath,
-        branchName: args.branchName,
-        tickIntervalMs: args.tickIntervalMs,
-      });
-
-    case 'get_goap_status':
-      return apiCall('/goap/status', {
-        projectPath: args.projectPath,
       });
 
     // Setup Pipeline

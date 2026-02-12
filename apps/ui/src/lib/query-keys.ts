@@ -274,6 +274,18 @@ export const queryKeys = {
     fileDiff: (projectPath: string, filePath: string) =>
       ['git', 'diffs', projectPath, filePath] as const,
   },
+  // ============================================
+  // Metrics
+  // ============================================
+  metrics: {
+    /** Project metrics summary */
+    summary: (projectPath: string) => ['metrics', 'summary', projectPath] as const,
+    /** Capacity metrics */
+    capacity: (projectPath: string) => ['metrics', 'capacity', projectPath] as const,
+    /** Forecast for a complexity level */
+    forecast: (projectPath: string, complexity?: string) =>
+      ['metrics', 'forecast', projectPath, complexity] as const,
+  },
 } as const;
 
 /**

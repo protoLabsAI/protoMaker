@@ -89,3 +89,6 @@ export type { CursorPermissionsData } from './use-cursor-permissions';
 
 // Workspace
 export { useWorkspaceDirectories } from './use-workspace';
+
+// Metrics
+export { useProjectMetrics, useCapacityMetrics, useForecast } from './use-metrics';

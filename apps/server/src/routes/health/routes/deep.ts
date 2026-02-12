@@ -9,7 +9,6 @@ import { getVersion } from '../../../lib/version.js';
 import type { AgentService } from '../../../services/agent-service.js';
 import type { FeatureLoader } from '../../../services/feature-loader.js';
 import type { AutoModeService } from '../../../services/auto-mode-service.js';
-import type { WorldStateMonitor } from '../../../services/world-state-monitor.js';
 
 interface DeepHealthResponse {
   status: 'ok' | 'degraded' | 'unhealthy';
@@ -44,11 +43,6 @@ interface DeepHealthResponse {
       title: string;
     }>;
   };
-  worldState?: {
-    monitored: boolean;
-    lastUpdate?: string;
-    [key: string]: unknown;
-  };
   performance: {
     responseTime: number;
     timedOut: boolean;
@@ -62,8 +56,7 @@ export function createDeepHandler(
   agentService: AgentService,
   featureLoader: FeatureLoader,
   autoModeService: AutoModeService,
-  projectPath: string,
-  worldStateMonitor?: WorldStateMonitor
+  projectPath: string
 ) {
   return async (_req: Request, res: Response): Promise<void> => {
     const startTime = Date.now();
@@ -98,24 +91,6 @@ export function createDeepHandler(
 
       // Get auto-mode full status (Note: getRunningAgents would be better but this is simpler)
       const autoModeStatus = autoModeService.getStatus();
-
-      // Get world state if monitor exists
-      let worldState: DeepHealthResponse['worldState'] | undefined;
-      if (worldStateMonitor) {
-        try {
-          const metrics = worldStateMonitor.getMetrics();
-          worldState = {
-            monitored: true,
-            lastUpdate: new Date(metrics.lastTickTimestamp).toISOString(),
-            ...metrics,
-          };
-        } catch (error) {
-          worldState = {
-            monitored: false,
-            error: error instanceof Error ? error.message : 'Unknown error',
-          };
-        }
-      }
 
       const duration = Date.now() - startTime;
 
@@ -161,7 +136,6 @@ export function createDeepHandler(
             title: features.find((f) => f.id === featureId)?.title || 'Unknown',
           })),
         },
-        worldState,
         performance: {
           responseTime: duration,
           timedOut: false,
