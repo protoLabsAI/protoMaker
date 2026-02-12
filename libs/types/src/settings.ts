@@ -102,6 +102,75 @@ export function getThinkingTokenBudget(level: ThinkingLevel | undefined): number
 /** ModelProvider - AI model provider for credentials and API key management */
 export type ModelProvider = 'claude' | 'cursor' | 'codex' | 'opencode';
 
+/**
+ * DeploymentEnvironment - The runtime environment for this Automaker instance.
+ *
+ * Affects concurrency limits, heap thresholds, agent model defaults, and monitoring behavior.
+ * - 'development': Local dev machine. Conservative limits (2-3 agents, 8GB heap).
+ * - 'staging': LAN/VPN test rig. Higher limits (6-10 agents, 32GB+ heap). Used for load testing.
+ * - 'production': Live deployment. Stable limits with full monitoring and alerting.
+ */
+export type DeploymentEnvironment = 'development' | 'staging' | 'production';
+
+/**
+ * Environment-specific capacity presets.
+ * These serve as defaults — individual settings can override.
+ */
+export const ENVIRONMENT_PRESETS: Record<
+  DeploymentEnvironment,
+  {
+    maxConcurrency: number;
+    defaultModel: 'haiku' | 'sonnet' | 'opus';
+    heapLimitMb: number;
+    agentTimeoutMs: number;
+    enableMetrics: boolean;
+  }
+> = {
+  development: {
+    maxConcurrency: 2,
+    defaultModel: 'sonnet',
+    heapLimitMb: 8192,
+    agentTimeoutMs: 10 * 60 * 1000, // 10 min
+    enableMetrics: false,
+  },
+  staging: {
+    maxConcurrency: 6,
+    defaultModel: 'sonnet',
+    heapLimitMb: 32768,
+    agentTimeoutMs: 20 * 60 * 1000, // 20 min
+    enableMetrics: true,
+  },
+  production: {
+    maxConcurrency: 4,
+    defaultModel: 'sonnet',
+    heapLimitMb: 16384,
+    agentTimeoutMs: 15 * 60 * 1000, // 15 min
+    enableMetrics: true,
+  },
+};
+
+/**
+ * Detect the deployment environment from AUTOMAKER_ENV or NODE_ENV.
+ * Falls back to 'development' if not set or invalid.
+ */
+export function getDeploymentEnvironment(): DeploymentEnvironment {
+  // Guard against browser environments
+  const envValue =
+    typeof process !== 'undefined' && process.env
+      ? process.env.AUTOMAKER_ENV || process.env.NODE_ENV
+      : undefined;
+
+  if (!envValue) return 'development';
+
+  // Normalize common values
+  const normalized = envValue.toLowerCase().trim();
+  if (normalized === 'production' || normalized === 'prod') return 'production';
+  if (normalized === 'staging' || normalized === 'stage') return 'staging';
+  if (normalized === 'development' || normalized === 'dev') return 'development';
+
+  return 'development';
+}
+
 // ============================================================================
 // Claude-Compatible Providers - Configuration for Claude-compatible API endpoints
 // ============================================================================
@@ -1077,6 +1146,14 @@ export interface GlobalSettings {
   /** Version number for schema migration */
   version: number;
 
+  // Deployment Environment
+  /**
+   * Which environment this instance is running in.
+   * Affects concurrency defaults, heap limits, model selection, and monitoring.
+   * Auto-detected from AUTOMAKER_ENV env var, or defaults to 'development'.
+   */
+  environment?: DeploymentEnvironment;
+
   // Migration Tracking
   /** Whether localStorage settings have been migrated to API storage (prevents re-migration) */
   localStorageMigrated?: boolean;
@@ -1823,6 +1900,7 @@ export const DEFAULT_KEYBOARD_SHORTCUTS: KeyboardShortcuts = {
 /** Default global settings used when no settings file exists */
 export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   version: SETTINGS_VERSION,
+  environment: 'development',
   setupComplete: false,
   isFirstRun: true,
   skipClaudeSetup: false,
