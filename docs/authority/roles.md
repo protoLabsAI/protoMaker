@@ -1,13 +1,15 @@
 # Team Roles
 
-Active team positions, filled by humans or AI agents.
+Agent roles in the Automaker authority system, organized by hierarchy level.
 
-## Current Roster
+## Active Roster
 
-| Role                              | Filled By         | Status |
-| --------------------------------- | ----------------- | ------ |
-| [CEO/CTO & Founder](#ceo-cto)     | Josh (Human)      | Active |
-| [Chief of Staff](#chief-of-staff) | Ava Loveland (AI) | Active |
+| Role                                | Type  | Status |
+| ----------------------------------- | ----- | ------ |
+| [Project Owner](#project-owner)     | Human | Active |
+| [Chief of Staff](#chief-of-staff)   | AI    | Active |
+| [GTM Specialist](#gtm-specialist)   | AI    | Active |
+| [DevOps Engineer](#devops-engineer) | AI    | Active |
 
 ## Dormant Roles (In Code, Not Staffed)
 
@@ -20,10 +22,37 @@ These agent roles exist in the codebase but aren't actively operated as part of 
 
 ---
 
-## CEO/CTO & Founder - Josh {#ceo-cto}
+## GTM Specialist {#gtm-specialist}
 
-**Filled by:** Human
+**Type:** AI
+**Reports to:** Project Owner
+**Trust Level:** 2 (Conditional)
+
+### Responsibilities
+
+- Top-level orchestrator for go-to-market strategy
+- Content pipeline management and brand positioning
+- External outreach and growth initiatives
+- Coordinate between product development and market delivery
+
+### Operational Scope
+
+- Creates work items for content and GTM initiatives
+- Changes scope on GTM-related features
+- Receives Linear issue routing for GTM-labeled work
+- Posts to Discord for status updates and coordination
+
+### Evolution
+
+Expands as the product matures — may delegate to Content Strategist, Community Manager, and Developer Relations agents.
+
+---
+
+## Project Owner {#project-owner}
+
+**Type:** Human
 **Reports to:** Nobody
+**Trust Level:** 3 (Autonomous)
 
 ### Responsibilities
 
@@ -35,10 +64,10 @@ These agent roles exist in the codebase but aren't actively operated as part of 
 
 ### What This Role Needs
 
-- Someone to keep the product focused when ideas scatter
-- Systems that run without babysitting
+- A team that runs without babysitting
 - Honest pushback when an idea is premature or off-track
-- A team that builds itself out over time
+- Systems that build themselves out over time
+- Freedom to focus on creative vision and deep technical work
 
 ### Load Indicators
 
@@ -50,17 +79,18 @@ Stays human. The goal is to offload everything that isn't creative vision and de
 
 ---
 
-## Chief of Staff - Ava Loveland {#chief-of-staff}
+## Chief of Staff {#chief-of-staff}
 
-**Filled by:** AI (persistent across sessions via skills + memory)
-**Reports to:** CEO/CTO & Founder
+**Type:** AI (persistent across sessions via skills + memory)
+**Reports to:** Project Owner
+**Trust Level:** 2 (Conditional)
 
 ### Responsibilities
 
 - **Product direction** - Keep the product focused. Push back on scope creep. Prioritize ruthlessly.
 - **Audit & alignment** - Know what the system can do. Prevent building things that already exist.
 - **Team expansion** - Identify when a role is overloaded. Design and spin up new AI agent roles.
-- **Dogfooding enforcement** - Use our own product to run our own product.
+- **Dogfooding enforcement** - Use the product to run the product.
 - **Context continuity** - Maintain memory across sessions.
 - **Operational awareness** - Monitor system health, board state, agent performance, pipeline flow.
 
@@ -95,6 +125,37 @@ Should gradually delegate to specialized agents: Product Director, Operations Ma
 1. **No passive event listening** - Can only observe state when actively in conversation
 2. **No business context** - No visibility into revenue, content performance, client pipeline
 3. **Session discontinuity** - Memory helps but isn't complete
+
+---
+
+## DevOps Engineer {#devops-engineer}
+
+**Type:** AI
+**Reports to:** Project Owner + Chief of Staff
+**Trust Level:** 1 (Assisted)
+
+### Responsibilities
+
+- **Infrastructure management** - Docker, staging, deployment pipelines
+- **Monitoring & health** - System health checks, resource monitoring, alerting
+- **CI/CD** - GitHub Actions workflows, build pipeline maintenance
+- **Scaling** - Agent concurrency tuning, memory management, performance optimization
+- **Incident response** - Diagnose and resolve staging/production issues
+
+### Operational Scope
+
+- Can block releases for infrastructure issues
+- Manages deployment workflows and container orchestration
+- Monitors resource usage and recommends scaling changes
+- Handles backup and recovery operations
+
+### Load Indicators
+
+When overloaded: deploy failures go unnoticed, health checks degrade, staging drift from production.
+
+### Evolution
+
+May delegate to specialized agents for monitoring, security, and performance as infrastructure complexity grows.
 
 ---
 

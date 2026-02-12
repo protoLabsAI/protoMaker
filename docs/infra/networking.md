@@ -4,10 +4,11 @@ This guide covers network configuration, ports, proxying, and WebSocket setup.
 
 ## Ports
 
-| Port | Service | Protocol | Description     |
-| ---- | ------- | -------- | --------------- |
-| 3007 | UI      | HTTP     | Web interface   |
-| 3008 | Server  | HTTP/WS  | API + WebSocket |
+| Port | Service | Protocol | Description         |
+| ---- | ------- | -------- | ------------------- |
+| 3007 | UI      | HTTP     | Web interface       |
+| 3008 | Server  | HTTP/WS  | API + WebSocket     |
+| 3009 | Docs    | HTTP     | VitePress docs site |
 
 ### Port Mapping
 
@@ -21,6 +22,9 @@ services:
   server:
     ports:
       - '3008:3008' # Host:Container
+  docs:
+    ports:
+      - '3009:80' # Host:Container (VitePress)
 ```
 
 ## nginx Configuration
@@ -320,96 +324,6 @@ From inside container, use special hostname:
 docker exec automaker-server nslookup server
 docker exec automaker-server ping server
 ```
-
-## Tailscale VPN
-
-The team uses [Tailscale](https://tailscale.com) as a mesh VPN connecting all development machines and infrastructure.
-
-### Network Topology
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                     Tailscale Mesh                        │
-│                   (WireGuard encrypted)                    │
-│                                                           │
-│  ┌─────────────────┐     ┌──────────────────────────┐   │
-│  │   Proxmox Server │     │      Main Rig             │   │
-│  │   (32GB RAM)     │     │   (128GB RAM, 48GB VRAM)  │   │
-│  │                  │     │                           │   │
-│  │  - Infisical     │     │  - Automaker (dev)        │   │
-│  │    :8080         │     │    :3007 (UI)             │   │
-│  │  - (future svc)  │     │    :3008 (Server)         │   │
-│  └────────┬─────────┘     └─────────────┬─────────────┘   │
-│           │                             │                 │
-│           └──────────┬──────────────────┘                 │
-│                      │                                    │
-│              ┌───────┴────────┐                           │
-│              │  Team Machines  │                           │
-│              │  (developers)   │                           │
-│              └────────────────┘                           │
-└─────────────────────────────────────────────────────────┘
-                       │
-                       │ (optional)
-                       ▼
-              ┌────────────────┐
-              │  Cloudflare    │
-              │  Tunnel        │
-              │  (external     │
-              │   access)      │
-              └────────────────┘
-```
-
-### Service Discovery
-
-With Tailscale MagicDNS enabled, services are accessible by machine name:
-
-| Service       | URL                   | Machine  |
-| ------------- | --------------------- | -------- |
-| Automaker UI  | `http://mainrig:3007` | Main rig |
-| Automaker API | `http://mainrig:3008` | Main rig |
-| Infisical     | `http://proxmox:8080` | Proxmox  |
-
-Actual hostnames depend on your Tailscale machine names. Check with `tailscale status`.
-
-### Access Patterns
-
-**Internal (Tailscale only):**
-
-- All inter-machine traffic is encrypted via WireGuard
-- No port forwarding or firewall rules needed between Tailscale nodes
-- Services can bind to `0.0.0.0` and only be reachable via Tailscale IPs
-
-**External (Cloudflare Tunnels):**
-
-- Use `cloudflared tunnel` for exposing services to the internet
-- Recommended for CI/CD webhooks, external API access
-- Do NOT expose Infisical externally unless required
-
-### Tailscale Configuration
-
-```bash
-# Check status
-tailscale status
-
-# Enable MagicDNS (if not already)
-# Done via Tailscale admin console: https://login.tailscale.com/admin/dns
-
-# Test connectivity
-ping proxmox  # Should resolve to Tailscale IP
-curl http://proxmox:8080  # Should reach Infisical
-```
-
-### Firewall Considerations
-
-Tailscale traffic bypasses local firewalls by default (uses userspace networking). However, for Docker containers to reach Tailscale IPs, ensure:
-
-```bash
-# Allow Docker bridge to reach Tailscale
-sudo iptables -A FORWARD -i docker0 -o tailscale0 -j ACCEPT
-sudo iptables -A FORWARD -i tailscale0 -o docker0 -j ACCEPT
-```
-
-Or use `host.docker.internal` from within containers to reach services on the host's Tailscale IP.
 
 ## Performance Tuning
 

@@ -103,7 +103,7 @@ Covers:
 - Creating new MCP tools
 - Context passing
 
-**Read this if:** You want to control agents programmatically or understand how Ava (Chief of Staff) triggers agents.
+**Read this if:** You want to control agents programmatically or understand how the Chief of Staff agent triggers agents.
 
 #### [Context System Deep Dive](./context-system.md)
 
@@ -204,7 +204,7 @@ Covers:
 **Programmatic API for controlling Automaker**
 
 - 32 tools for features, agents, auto-mode, context, etc.
-- Used by Ava (Chief of Staff) and external integrations
+- Used by the Chief of Staff agent and external integrations
 - **Official Docs:** [MCP Specification](https://spec.modelcontextprotocol.io/)
 
 ## Architecture Layers (Quick Reference)
@@ -297,7 +297,7 @@ Covers:
 **Questions?**
 
 - Check the official docs above
-- Ask in Discord: #ava-josh channel
+- Ask in Discord community channel
 - Or open a discussion on GitHub
 
 ---

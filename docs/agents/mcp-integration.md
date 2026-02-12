@@ -26,7 +26,7 @@ This guide explains how **Model Context Protocol (MCP) tools** interact with Aut
 
 - **Location:** `packages/mcp-server/`
 - **Exposes:** 32 tools for controlling Automaker programmatically
-- **Used By:** Ava (Chief of Staff), other AI agents, external integrations
+- **Used By:** The Chief of Staff agent, other AI agents, external integrations
 
 **Official Docs:** [MCP Specification](https://spec.modelcontextprotocol.io/)
 
@@ -34,7 +34,7 @@ This guide explains how **Model Context Protocol (MCP) tools** interact with Aut
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  Claude Code CLI / Ava Chief of Staff                  │
+│  Claude Code CLI / Chief of Staff Agent                 │
 │  (Invokes MCP tools via claude.ai/code)                │
 └──────────────────────┬──────────────────────────────────┘
                        │ MCP Protocol (stdio/HTTP)
@@ -60,7 +60,7 @@ This guide explains how **Model Context Protocol (MCP) tools** interact with Aut
 ### Example: Starting a Feature Agent via MCP
 
 ```typescript
-// 1. Ava calls MCP tool
+// 1. Chief of Staff calls MCP tool
 await use_mcp_tool({
   server_name: 'automaker',
   tool_name: 'start_agent',
@@ -413,7 +413,7 @@ claude
 
 ```
 ┌──────────────────────────────────────────────────────┐
-│  Ava calls mcp__automaker__start_agent               │
+│  Chief of Staff calls mcp__automaker__start_agent    │
 │  - Passes projectPath and featureId                  │
 └──────────────────┬───────────────────────────────────┘
                    │
@@ -536,7 +536,7 @@ try {
 
 ### 6. Document Tool Purpose
 
-Include clear descriptions in tool definitions so Ava knows when to use them.
+Include clear descriptions in tool definitions so agents know when to use them.
 
 ---
 

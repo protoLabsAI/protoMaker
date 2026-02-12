@@ -1,15 +1,10 @@
 # Discord Communication Guide
 
-This document defines the communication channels and rules for the protoLabs Discord server, which serves as the real-time coordination layer for the Automaker development team.
+This document defines the communication channels and rules for Discord integration with Automaker, which serves as the real-time coordination layer for development teams.
 
-## Server Overview
+## Server Setup
 
-| Property    | Value               |
-| ----------- | ------------------- |
-| Server Name | protoLabs           |
-| Server ID   | 1070606339363049492 |
-| Created     | 2023-02-02          |
-| Boost Tier  | Tier 1              |
+Create a Discord server for your Automaker team. The channel structure below is the recommended layout.
 
 ## Channel Structure
 
@@ -17,94 +12,94 @@ This document defines the communication channels and rules for the protoLabs Dis
 
 Server-level information and onboarding.
 
-| Channel        | ID                  | Purpose                                                    |
-| -------------- | ------------------- | ---------------------------------------------------------- |
-| #rules         | 1469049462046593169 | Server rules and code of conduct. Read-only.               |
-| #announcements | 1469049463967318027 | Major updates, releases, milestones. Read-only for agents. |
-| #introductions | 1469049465078943970 | New member introductions and role assignments.             |
+| Channel        | Purpose                                                    |
+| -------------- | ---------------------------------------------------------- |
+| #rules         | Server rules and code of conduct. Read-only.               |
+| #announcements | Major updates, releases, milestones. Read-only for agents. |
+| #introductions | New member introductions and role assignments.             |
 
 ### TEAM
 
 Day-to-day team communication.
 
-| Channel      | ID                  | Purpose                                                           |
-| ------------ | ------------------- | ----------------------------------------------------------------- |
-| #standups    | 1469049467729608856 | Daily async standups. Post what you did, what's next, blockers.   |
-| #general     | 1469049469504065700 | General team discussion. Default channel for non-specific topics. |
-| #random      | 1469049471378919646 | Off-topic, fun, non-work discussion.                              |
-| #suggestions | 1469049473756954645 | Feature ideas, process improvements, tooling suggestions.         |
+| Channel      | Purpose                                                           |
+| ------------ | ----------------------------------------------------------------- |
+| #standups    | Daily async standups. Post what you did, what's next, blockers.   |
+| #general     | General team discussion. Default channel for non-specific topics. |
+| #random      | Off-topic, fun, non-work discussion.                              |
+| #suggestions | Feature ideas, process improvements, tooling suggestions.         |
 
 ### ENGINEERING
 
 Domain-specific technical discussion. Each channel maps to a team role in the [agent hierarchy](/infra/architecture).
 
-| Channel      | ID                  | Purpose                                               | Team Role  |
-| ------------ | ------------------- | ----------------------------------------------------- | ---------- |
-| #frontend    | 1469049493407141951 | UI/UX, React, CSS, component architecture             | `frontend` |
-| #backend     | 1469049496179572830 | API design, database, server, services                | `backend`  |
-| #ai-ml       | 1469049498729971733 | Agent prompts, model config, AI features, fine-tuning | `ai-ml`    |
-| #devops      | 1469049500487123086 | Docker, CI/CD, deployment, infrastructure             | `devops`   |
-| #code-review | 1469049502550720896 | PR reviews, architecture discussions, code quality    | all teams  |
-| #infra       | 1469109809939742814 | Infrastructure, Tailscale, Infisical, Docker, backups | `devops`   |
+| Channel      | Purpose                                               | Team Role  |
+| ------------ | ----------------------------------------------------- | ---------- |
+| #frontend    | UI/UX, React, CSS, component architecture             | `frontend` |
+| #backend     | API design, database, server, services                | `backend`  |
+| #ai-ml       | Agent prompts, model config, AI features, fine-tuning | `ai-ml`    |
+| #devops      | Docker, CI/CD, deployment, infrastructure             | `devops`   |
+| #code-review | PR reviews, architecture discussions, code quality    | all teams  |
+| #infra       | Infrastructure, networking, Docker, backups           | `devops`   |
 
 ### AUTOMAKER
 
 Automaker system activity and monitoring. Primarily bot/webhook-driven.
 
-| Channel           | ID                  | Purpose                                               |
-| ----------------- | ------------------- | ----------------------------------------------------- |
-| #agent-logs       | 1469049504039702668 | Agent start/stop/complete events, error summaries     |
-| #pr-notifications | 1469049506472661034 | PR created/merged/reviewed notifications from GitHub  |
-| #deployments      | 1469049508909289752 | Deployment status, release notes, environment changes |
-| #bugs-and-issues  | 1469049510599594223 | Bug reports, system issues, incident tracking         |
-| #alerts           | 1469109811915522301 | Health checks, CI failures, monitoring, error alerts  |
-| #approvals        | 1469109813911752967 | Agent HITL requests, trust escalations, merge gates   |
+| Channel           | Purpose                                               |
+| ----------------- | ----------------------------------------------------- |
+| #agent-logs       | Agent start/stop/complete events, error summaries     |
+| #pr-notifications | PR created/merged/reviewed notifications from GitHub  |
+| #deployments      | Deployment status, release notes, environment changes |
+| #bugs-and-issues  | Bug reports, system issues, incident tracking         |
+| #alerts           | Health checks, CI failures, monitoring, error alerts  |
+| #approvals        | Agent HITL requests, trust escalations, merge gates   |
 
 ### PROJECTS
 
 Project coordination and team-specific workspaces. Used for cross-team planning and issue escalation.
 
-| Channel           | ID                  | Purpose                                                    |
-| ----------------- | ------------------- | ---------------------------------------------------------- |
-| #project-planning | 1469049525975908477 | Epic planning, milestone tracking, roadmap discussions     |
-| #project-issues   | 1469049528773775381 | Cross-project issues, blockers, dependency conflicts       |
-| #team-frontend    | 1469049532309311704 | Frontend team workspace - sprint items, questions, updates |
-| #team-backend     | 1469049535203643668 | Backend team workspace - sprint items, questions, updates  |
-| #team-ai-ml       | 1469049536344490110 | AI/ML team workspace - sprint items, questions, updates    |
-| #team-devops      | 1469049537782874205 | DevOps team workspace - sprint items, questions, updates   |
+| Channel           | Purpose                                                    |
+| ----------------- | ---------------------------------------------------------- |
+| #project-planning | Epic planning, milestone tracking, roadmap discussions     |
+| #project-issues   | Cross-project issues, blockers, dependency conflicts       |
+| #team-frontend    | Frontend team workspace - sprint items, questions, updates |
+| #team-backend     | Backend team workspace - sprint items, questions, updates  |
+| #team-ai-ml       | AI/ML team workspace - sprint items, questions, updates    |
+| #team-devops      | DevOps team workspace - sprint items, questions, updates   |
 
 ### RESOURCES
 
 Reference material and learning resources.
 
-| Channel              | ID                  | Purpose                                         |
-| -------------------- | ------------------- | ----------------------------------------------- |
-| #papers-and-research | 1469049539498475640 | Research papers, blog posts, technical writeups |
-| #tools-and-links     | 1469049541146968353 | Useful tools, libraries, bookmarks              |
-| #tutorials           | 1469049542828757083 | Tutorials, guides, how-tos, learning resources  |
+| Channel              | Purpose                                         |
+| -------------------- | ----------------------------------------------- |
+| #papers-and-research | Research papers, blog posts, technical writeups |
+| #tools-and-links     | Useful tools, libraries, bookmarks              |
+| #tutorials           | Tutorials, guides, how-tos, learning resources  |
 
 ### AI DISCUSSION
 
 Open discussion about AI/ML topics (not project-specific).
 
-| Channel             | ID                  | Purpose                                       |
-| ------------------- | ------------------- | --------------------------------------------- |
-| #language-models    | 1469049560927043858 | LLM discussion, benchmarks, model comparisons |
-| #prompt-engineering | 1469049563787563039 | Prompt techniques, templates, best practices  |
-| #ai-news            | 1469049565448503357 | AI industry news, releases, announcements     |
+| Channel             | Purpose                                       |
+| ------------------- | --------------------------------------------- |
+| #language-models    | LLM discussion, benchmarks, model comparisons |
+| #prompt-engineering | Prompt techniques, templates, best practices  |
+| #ai-news            | AI industry news, releases, announcements     |
 
 ### FEEDS
 
 Automated content feeds from external sources. These channels are bot-driven and provide a curated stream of industry knowledge.
 
-| Channel           | ID                  | Source                                              | Bot/Integration     |
-| ----------------- | ------------------- | --------------------------------------------------- | ------------------- |
-| #feed-ai-research | 1469054764833701942 | ArXiv (cs.AI, cs.LG, cs.CL), HuggingFace papers     | MonitoRSS           |
-| #feed-hackernews  | 1469054768675557460 | HackerNews front page and best stories              | MonitoRSS           |
-| #feed-reddit      | 1469054769493442746 | r/MachineLearning, r/LocalLLaMA, r/programming, etc | MonitoRSS           |
-| #feed-twitter     | 1469054770831425548 | AI researchers and companies on X/Twitter           | Readybot/TweetShift |
-| #feed-github      | 1469054773352206459 | Repo releases, trending repos                       | GitHub Webhooks     |
-| #feed-youtube     | 1469054774338125929 | AI/ML content creators                              | NotifyMe Bot        |
+| Channel           | Source                                              | Bot/Integration     |
+| ----------------- | --------------------------------------------------- | ------------------- |
+| #feed-ai-research | ArXiv (cs.AI, cs.LG, cs.CL), HuggingFace papers     | MonitoRSS           |
+| #feed-hackernews  | HackerNews front page and best stories              | MonitoRSS           |
+| #feed-reddit      | r/MachineLearning, r/LocalLLaMA, r/programming, etc | MonitoRSS           |
+| #feed-twitter     | AI researchers and companies on X/Twitter           | Readybot/TweetShift |
+| #feed-github      | Repo releases, trending repos                       | GitHub Webhooks     |
+| #feed-youtube     | AI/ML content creators                              | NotifyMe Bot        |
 
 **RSS Feeds configured:**
 
@@ -240,7 +235,7 @@ The Discord MCP server provides programmatic access to all channels. Available v
 ```bash
 claude mcp add discord -s user -- docker run --rm -i \
   -e "DISCORD_TOKEN=<token>" \
-  -e "DISCORD_GUILD_ID=1070606339363049492" \
+  -e "DISCORD_GUILD_ID=<guild-id>" \
   discord-mcp:amd64
 ```
 

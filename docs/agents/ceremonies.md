@@ -20,7 +20,7 @@ Ceremonies are configured per-project in `.automaker/settings.json`:
 {
   "ceremonySettings": {
     "enabled": true,
-    "discordChannelId": "1469080556720623699",
+    "discordChannelId": "<channel-id>",
     "enableStandups": true,
     "enableMilestoneUpdates": true,
     "enableProjectRetros": true,
@@ -193,7 +193,7 @@ For ceremonies to work:
 
 ### Board Groom Ceremony
 
-Josh requested automated board grooming as a ceremony. This would:
+Planned automated board grooming ceremony. This would:
 
 - Run on a schedule (daily or per-milestone)
 - Identify stale features (in-progress > 24h with no agent)

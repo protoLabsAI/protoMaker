@@ -16,13 +16,20 @@ autonomous dev teams via Linear and Discord).
 │  │   Browser    │      │                                                  │  │
 │  │              │      │  ┌─────────────┐       ┌─────────────────────┐  │  │
 │  │  localhost   │─────▶│  │     UI      │       │       Server        │  │  │
-│  │    :3007     │      │  │   (nginx)   │──────▶│     (Node.js)       │  │  │
-│  │              │      │  │             │       │                     │  │  │
-│  └──────────────┘      │  │  - Static   │  API  │  - Express routes   │  │  │
-│                        │  │    files    │  WS   │  - WebSocket        │  │  │
-│                        │  │  - Proxy    │       │  - Agent runner     │  │  │
+│  │  :3007 (UI)  │      │  │   (nginx)   │──────▶│     (Node.js)       │  │  │
+│  │  :3008 (API) │      │  │             │       │                     │  │  │
+│  │  :3009 (Docs)│      │  │  - Static   │  API  │  - Express routes   │  │  │
+│  │              │      │  │    files    │  WS   │  - WebSocket        │  │  │
+│  └──────────────┘      │  │  - Proxy    │       │  - Agent runner     │  │  │
 │                        │  │             │       │  - Terminal (PTY)   │  │  │
 │                        │  └─────────────┘       └──────────┬──────────┘  │  │
+│                        │                                    │             │  │
+│                        │  ┌─────────────┐                  │             │  │
+│                        │  │    Docs     │                  │             │  │
+│                        │  │  (nginx)    │                  │             │  │
+│                        │  │  VitePress  │                  │             │  │
+│                        │  │  :80→:3009  │                  │             │  │
+│                        │  └─────────────┘                  │             │  │
 │                        │         │                         │             │  │
 │                        │         │                         │             │  │
 │                        │  ┌──────┴─────────────────────────┴──────────┐  │  │
@@ -111,6 +118,26 @@ autonomous dev teams via Linear and Discord).
 │  ├── /home/automaker/.claude  (automaker-claude-config)          │
 │  ├── /home/automaker/.cursor  (automaker-cursor-config)          │
 │  └── /projects                (optional mount)                   │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│                  automaker-docs (nginx:alpine)                   │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  Port 80 (mapped to host:3009)                                   │
+│                                                                  │
+│  VitePress static site built from docs/ directory                │
+│                                                                  │
+│  /usr/share/nginx/html/                                          │
+│  ├── index.html          (landing page)                          │
+│  ├── agents/             (agent documentation)                   │
+│  ├── infra/              (infrastructure docs)                   │
+│  ├── integrations/       (integration guides)                    │
+│  ├── getting-started/    (onboarding)                            │
+│  └── assets/             (static assets)                         │
+│                                                                  │
+│  Auto-deploys on push to main via GitHub Actions                 │
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -392,7 +419,7 @@ Linear Issues (Project Manager)  Cross-team visibility, priority, scheduling
     │
     │ project health, risk flags, milestone rollups
     ▼
-Linear Projects (PM / CTO)      Strategic view, resource allocation
+Linear Projects (PM / Owner)    Strategic view, resource allocation
 ```
 
 **What stays local (Automaker instance):**
@@ -420,13 +447,11 @@ Linear Projects (PM / CTO)      Strategic view, resource allocation
 
 | Role                     | Where It Lives     | Responsibility                            |
 | ------------------------ | ------------------ | ----------------------------------------- |
-| CTO (Human)              | Linear + Discord   | Strategic direction, final approvals      |
+| Project Owner (Human)    | Linear + Discord   | Strategic direction, final approvals      |
 | PM                       | Linear projects    | What to build, why, priorities            |
 | Project Manager          | Linear issues      | When, how, milestone tracking             |
 | EM (Engineering Manager) | Automaker instance | Who does what, capacity, agent assignment |
 | PE (Product Engineer)    | Automaker agent    | Implementation, code, tests, PRs          |
-
-See the [Hierarchical Agent Organization System](https://linear.app/protolabsai) project in Linear (PRO-13 through PRO-34) for the implementation plan.
 
 ### Each Instance is Autonomous
 
@@ -440,43 +465,6 @@ Each Automaker instance:
 
 Instances do NOT communicate directly with each other. All cross-team
 coordination happens through the coordination layer (Linear + Discord).
-
-## Infrastructure Topology
-
-### Hardware Inventory
-
-| Machine  | Role                                  | Specs                | Tailscale Name               |
-| -------- | ------------------------------------- | -------------------- | ---------------------------- |
-| Main Rig | Primary Automaker instance            | 128GB RAM, 48GB VRAM | `mainrig` (adjust to actual) |
-| Proxmox  | Infrastructure + additional instances | 32GB RAM             | `proxmox` (adjust to actual) |
-
-### Service Map
-
-```
-┌────────────────────────────────────────────────────────────────┐
-│                       Tailscale Mesh                            │
-├────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  Main Rig (128GB RAM, 48GB VRAM)                               │
-│  ├── Automaker Instance (primary dev team)                     │
-│  │   ├── Server (:3008)                                        │
-│  │   ├── UI (:3007)                                            │
-│  │   └── MCP Servers (automaker, discord, linear, proxmox)     │
-│  ├── Claude Code CLI                                            │
-│  └── Docker (containers + volumes)                              │
-│                                                                 │
-│  Proxmox Server (32GB RAM)                                     │
-│  ├── Infisical (:8080) — secret management                     │
-│  ├── PostgreSQL (Infisical backend)                             │
-│  ├── Redis (Infisical cache)                                    │
-│  └── Automaker Instance(s) (additional dev teams, optional)    │
-│                                                                 │
-│  External (via Cloudflare Tunnel, if needed)                    │
-│  ├── GitHub Webhooks → Automaker Instances                      │
-│  └── CI/CD → Infisical API                                      │
-│                                                                 │
-└────────────────────────────────────────────────────────────────┘
-```
 
 ### Secret Flow
 
@@ -523,7 +511,7 @@ See [secrets.md](./secrets.md) for detailed Infisical setup.
 │  External APIs (HTTPS):                                          │
 │  ├── Anthropic API (authenticated)                               │
 │  ├── GitHub API (authenticated)                                  │
-│  ├── Proxmox API (authenticated, Tailscale)                      │
+│  ├── Proxmox API (authenticated, VPN recommended)                │
 │  └── npm registry (public)                                       │
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
@@ -541,7 +529,7 @@ The Proxmox MCP server provides Claude Code with direct management of VMs and co
 
 | Variable                 | Description                                        |
 | ------------------------ | -------------------------------------------------- |
-| `PROXMOX_HOST`           | Proxmox IP/hostname (Tailscale IP recommended)     |
+| `PROXMOX_HOST`           | Proxmox IP/hostname (VPN IP recommended)           |
 | `PROXMOX_USER`           | API user (e.g., `root@pam` or dedicated `mcp@pve`) |
 | `PROXMOX_TOKEN_NAME`     | API token ID                                       |
 | `PROXMOX_TOKEN_VALUE`    | API token secret                                   |

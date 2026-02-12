@@ -78,8 +78,8 @@ const myTemplate: AgentTemplate = {
   assignments: {
     discord: {
       dmUsers: [],
-      watchChannels: ['1469080556720623699'],
-      postChannels: ['1469080556720623699'],
+      watchChannels: ['<channel-id>'],
+      postChannels: ['<channel-id>'],
       keywords: ['security', 'vulnerability', 'CVE'],
     },
   },
@@ -122,7 +122,7 @@ registry.unregister('security-reviewer');
 
 **Tier Enforcement:**
 
-- **Tier 0 (protected):** System templates (Ava, PM, ProjM, EM). Cannot be overwritten or unregistered.
+- **Tier 0 (protected):** System templates (Chief of Staff, PM, ProjM, EM). Cannot be overwritten or unregistered.
 - **Tier 1 (managed):** User-created templates. Can be updated or removed.
 
 ### 3. AgentFactoryService
@@ -287,7 +287,7 @@ assignments: {
     teamKey: 'PROTO',
     projectIds: ['proj-123'],
     labelFilter: ['security'],     // Only security-labeled issues
-    assigneeFilter: ['josh-mabry'] // Only issues assigned to Josh
+    assigneeFilter: ['your-username'] // Only issues assigned to you
   }
 }
 ```

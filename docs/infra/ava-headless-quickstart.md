@@ -1,6 +1,6 @@
-# Ava Headless Monitor — Quick Start Guide
+# Headless Monitor — Quick Start Guide
 
-Setup guide for running Ava's autonomous monitoring loop on any environment (local dev, staging, CI).
+Setup guide for running the autonomous monitoring loop on any environment (local dev, staging, CI).
 
 ## Prerequisites
 
@@ -29,28 +29,27 @@ nohup ./scripts/ava-monitor.sh --loop 300 > /dev/null 2>&1 &
 
 ## What Each Pass Does
 
-The `/ava` skill runs these checks in order:
+The monitoring skill runs these checks in order:
 
-1. **Board State** — Moves stuck features (merged PRs → done, no agent → backlog)
+1. **Board State** — Moves stuck features (merged PRs to done, no agent to backlog)
 2. **PR Pipeline** — Enables auto-merge, resolves CodeRabbit threads, fixes format/build failures, updates behind branches
 3. **Running Agents** — Starts auto-mode if features in backlog, stops stuck agents
-4. **Discord Check** — Reads `#ava-josh` for messages from Josh, responds
+4. **Discord Check** — Reads Discord for messages, responds
 5. **Report** — Posts brief status to `#dev` channel
 
 ## Staging Setup
 
-The staging server runs on CI/CD with auto-deploy on push to main. To add Ava monitoring:
+To add monitoring to a staging server:
 
-### 1. Ensure Claude Code is installed on staging
+### 1. Ensure Claude Code is installed
 
 ```bash
-ssh ava  # or ssh user@YOUR_STAGING_IP
 which claude || npm install -g @anthropic-ai/claude-code
 ```
 
 ### 2. Set environment variables
 
-Add to `~/.bashrc` or `~/.zshrc` on staging:
+Add to `~/.bashrc` or `~/.zshrc`:
 
 ```bash
 export AUTOMAKER_API_KEY="<your-key>"
@@ -81,7 +80,7 @@ Create `/etc/systemd/system/ava-monitor.service`:
 
 ```ini
 [Unit]
-Description=Ava Headless Monitor
+Description=Automaker Headless Monitor
 After=network.target
 
 [Service]
@@ -152,7 +151,7 @@ Auto-cleaned to last 100 log files.
 | Parameter     | Default      | Description                                                   |
 | ------------- | ------------ | ------------------------------------------------------------- |
 | Loop interval | 300s (5 min) | Time between passes. Lower = more responsive, higher API cost |
-| Allowed tools | See script   | Controls what Ava can do autonomously                         |
+| Allowed tools | See script   | Controls what the monitor can do autonomously                 |
 | Log retention | 100 files    | Number of log files to keep                                   |
 
 ## Troubleshooting

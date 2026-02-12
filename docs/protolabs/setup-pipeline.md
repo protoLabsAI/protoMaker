@@ -104,6 +104,7 @@ Templates use `{{variable}}` interpolation.
 - Playwright E2E
 - ESLint 9 flat config
 - Pre-commit hooks (Husky + lint-staged)
+- VitePress docs site (`docs/` directory with auto-generated sidebar)
 - Beads task tracker
 - Discord channels
 - CodeRabbit
@@ -119,22 +120,20 @@ Templates use `{{variable}}` interpolation.
 
 ### New Files
 
-| File                                                       | Purpose                               |
-| ---------------------------------------------------------- | ------------------------------------- |
-| `libs/types/src/setup.ts`                                  | All setup pipeline types              |
-| `apps/server/src/services/repo-research-service.ts`        | Heuristic repo scanning               |
-| `apps/server/src/services/gap-analysis-service.ts`         | Gap comparison engine                 |
-| `apps/server/src/services/alignment-proposal-service.ts`   | Gap-to-feature conversion             |
-| `apps/server/src/routes/setup/routes/research.ts`          | Research route handler                |
-| `apps/server/src/routes/setup/routes/gap-analysis.ts`      | Gap analysis route handler            |
-| `apps/server/src/routes/setup/routes/propose.ts`           | Proposal route handler                |
-| `apps/server/src/routes/setup/routes/discord-provision.ts` | Discord provisioning handler          |
-| `apps/server/src/routes/setup/routes/beads.ts`             | Beads init handler                    |
-| `apps/server/src/templates/cicd/**`                        | CI/CD workflow templates              |
-| `apps/server/src/templates/context/**`                     | Context file templates                |
-| `docs/protolabs/philosophy.md`                             | ProtoLabs philosophy and architecture |
-| `docs/protolabs/gold-standard.md`                          | Gold standard reference               |
-| `docs/protolabs/setup-pipeline.md`                         | This file                             |
+| File                                                       | Purpose                      |
+| ---------------------------------------------------------- | ---------------------------- |
+| `libs/types/src/setup.ts`                                  | All setup pipeline types     |
+| `apps/server/src/services/repo-research-service.ts`        | Heuristic repo scanning      |
+| `apps/server/src/services/gap-analysis-service.ts`         | Gap comparison engine        |
+| `apps/server/src/services/alignment-proposal-service.ts`   | Gap-to-feature conversion    |
+| `apps/server/src/routes/setup/routes/research.ts`          | Research route handler       |
+| `apps/server/src/routes/setup/routes/gap-analysis.ts`      | Gap analysis route handler   |
+| `apps/server/src/routes/setup/routes/propose.ts`           | Proposal route handler       |
+| `apps/server/src/routes/setup/routes/discord-provision.ts` | Discord provisioning handler |
+| `apps/server/src/routes/setup/routes/beads.ts`             | Beads init handler           |
+| `apps/server/src/templates/cicd/**`                        | CI/CD workflow templates     |
+| `apps/server/src/templates/context/**`                     | Context file templates       |
+| `docs/protolabs/setup-pipeline.md`                         | This file                    |
 
 ### Modified Files
 

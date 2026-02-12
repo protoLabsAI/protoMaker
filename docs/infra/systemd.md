@@ -16,7 +16,7 @@ Requires=docker.service
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-WorkingDirectory=/home/josh/dev/ava
+WorkingDirectory=/path/to/automaker
 ExecStart=/usr/bin/docker compose up -d
 ExecStop=/usr/bin/docker compose down
 ExecReload=/usr/bin/docker compose restart
@@ -25,8 +25,8 @@ TimeoutStopSec=60
 Restart=on-failure
 RestartSec=10
 
-User=josh
-Group=josh
+User=youruser
+Group=youruser
 
 Environment=COMPOSE_PROJECT_NAME=automaker
 
@@ -121,8 +121,8 @@ RestartSec=10
 - Wait 10 seconds between restart attempts
 
 ```ini
-User=josh
-Group=josh
+User=youruser
+Group=youruser
 ```
 
 - Run as a non-root user (must have Docker access)
@@ -384,8 +384,8 @@ WantedBy=multi-user.target
 Usage:
 
 ```bash
-sudo systemctl start automaker@josh
-sudo systemctl start automaker@alice
+sudo systemctl start automaker@user1
+sudo systemctl start automaker@user2
 ```
 
 ## Comparison: systemd vs Docker

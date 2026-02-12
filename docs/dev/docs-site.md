@@ -85,7 +85,7 @@ The `generateSidebar()` function in `config.mts` reads each directory, extracts 
 - **Dark mode** — System preference detection with manual toggle
 - **Multiple sidebars** — Each section (agents, infra, dev, etc.) has its own sidebar
 - **Edit on GitHub** — Every page links to its source file for quick edits
-- **Archived docs** — `docs/archived/` is excluded from navigation but still accessible via direct URL
+- **Auto-deploy** — Docs deploy automatically via Docker on every push to `main`
 
 ## Deploying
 

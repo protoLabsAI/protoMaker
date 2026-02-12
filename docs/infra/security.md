@@ -120,7 +120,7 @@ chmod 700 /home/automaker/.cursor
 
 ### Centralized Secret Management
 
-The team uses **Infisical** for centralized secret management across all machines on the Tailscale mesh. See [secrets.md](./secrets.md) for the full deployment and integration guide.
+Use **Infisical** for centralized secret management across your infrastructure. See [secrets.md](./secrets.md) for the full deployment and integration guide.
 
 For production Docker deployments, secrets can also be managed via:
 
