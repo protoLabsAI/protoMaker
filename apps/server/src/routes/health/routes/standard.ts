@@ -9,6 +9,7 @@ import { getVersion } from '../../../lib/version.js';
 import type { AgentService } from '../../../services/agent-service.js';
 import type { FeatureLoader } from '../../../services/feature-loader.js';
 import type { AutoModeService } from '../../../services/auto-mode-service.js';
+import type { RoleRegistryService } from '../../../services/role-registry-service.js';
 
 interface StandardHealthResponse {
   status: 'ok' | 'degraded';
@@ -26,12 +27,17 @@ interface StandardHealthResponse {
     enabled: boolean;
     queueLength?: number;
   };
+  registry: {
+    templateCount: number;
+    roles: string[];
+  };
 }
 
 export function createStandardHandler(
   agentService: AgentService,
   featureLoader: FeatureLoader,
   autoModeService: AutoModeService,
+  roleRegistryService: RoleRegistryService,
   projectPath: string
 ) {
   return async (_req: Request, res: Response): Promise<void> => {
@@ -57,6 +63,10 @@ export function createStandardHandler(
       // Get auto-mode status
       const autoModeStatus = autoModeService.getStatus();
 
+      // Get registry status
+      const allTemplates = roleRegistryService.list();
+      const roles = [...new Set(allTemplates.map((t) => t.role))];
+
       const response: StandardHealthResponse = {
         status: 'ok',
         uptime: process.uptime(),
@@ -72,6 +82,10 @@ export function createStandardHandler(
         autoMode: {
           enabled: autoModeStatus.isRunning,
           queueLength: autoModeStatus.runningCount,
+        },
+        registry: {
+          templateCount: allTemplates.length,
+          roles,
         },
       };
 

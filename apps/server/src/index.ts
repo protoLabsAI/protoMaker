@@ -128,6 +128,7 @@ import { RoleRegistryService } from './services/role-registry-service.js';
 import { AgentFactoryService } from './services/agent-factory-service.js';
 import { DynamicAgentExecutor } from './services/dynamic-agent-executor.js';
 import { createAgentManagementRoutes } from './routes/agents/index.js';
+import { registerBuiltInTemplates } from './services/built-in-templates.js';
 // import { ReconciliationService } from './services/reconciliation-service.js'; // TODO: Re-enable when implemented
 // import { GitHubStateChecker } from './services/github-state-checker.js'; // TODO: Re-enable when implemented
 import { ProjectService } from './services/project-service.js';
@@ -340,6 +341,13 @@ const ideationService = new IdeationService(events, settingsService, featureLoad
 const ralphLoopService = new RalphLoopService(events, autoModeService, settingsService);
 // Initialize Role Registry (shared agent template registry)
 const roleRegistryService = new RoleRegistryService(events);
+try {
+  const registeredCount = registerBuiltInTemplates(roleRegistryService);
+  events.emit('authority:registry-ready', { templateCount: roleRegistryService.size });
+  logger.info(`Role registry ready with ${registeredCount} built-in templates`);
+} catch (error) {
+  logger.error('Failed to register built-in templates — registry will be empty:', error);
+}
 
 // Initialize Agent Factory and Dynamic Executor (uses registry for template resolution)
 const agentFactoryService = new AgentFactoryService(roleRegistryService, events);
@@ -760,7 +768,13 @@ app.get('/api/health/detailed', createDetailedHandler());
 app.get('/api/health/quick', createQuickHandler());
 app.get(
   '/api/health/standard',
-  createStandardHandler(agentService, featureLoader, autoModeService, REPO_ROOT)
+  createStandardHandler(
+    agentService,
+    featureLoader,
+    autoModeService,
+    roleRegistryService,
+    REPO_ROOT
+  )
 );
 app.get(
   '/api/health/deep',

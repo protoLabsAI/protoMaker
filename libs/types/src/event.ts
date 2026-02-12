@@ -164,6 +164,7 @@ export type EventType =
   | 'authority:pm-research-completed'
   | 'authority:pm-prd-ready'
   | 'authority:pm-epic-created'
+  | 'authority:registry-ready'
   // Milestone lifecycle events
   | 'milestone:planning-started'
   | 'milestone:planned'
