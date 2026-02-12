@@ -61,6 +61,20 @@ if command -v gh &>/dev/null; then
   PR_COUNT=$(echo "$PR_LIST" | jq 'length' 2>/dev/null || echo 0)
 fi
 
+# Capture Beads state for operational continuity
+BEADS_READY_COUNT=0
+BEADS_URGENT_COUNT=0
+BEADS_READY_LIST="[]"
+if command -v bd &>/dev/null; then
+  READY_OUTPUT=$(bd ready --allow-stale 2>/dev/null || bd --sandbox ready 2>/dev/null || echo "")
+  if [ -n "$READY_OUTPUT" ]; then
+    BEADS_READY_COUNT=$(echo "$READY_OUTPUT" | grep -c '^\d\.\|^[0-9]' 2>/dev/null || echo "0")
+    BEADS_URGENT_COUNT=$(echo "$READY_OUTPUT" | grep -c '\[● P[01]\]' 2>/dev/null || echo "0")
+    # Extract issue IDs and titles for the top 5 ready items
+    BEADS_READY_LIST=$(echo "$READY_OUTPUT" | grep -E '^\d+\.' | head -5 | sed 's/^[0-9]*\. //' || echo "[]")
+  fi
+fi
+
 cat > "$STATE_FILE" <<EOJSON
 {
   "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
@@ -79,8 +93,13 @@ cat > "$STATE_FILE" <<EOJSON
   "prPipeline": {
     "count": $PR_COUNT,
     "prs": $PR_LIST
+  },
+  "beads": {
+    "readyCount": $BEADS_READY_COUNT,
+    "urgentCount": $BEADS_URGENT_COUNT,
+    "topItems": $(echo "$BEADS_READY_LIST" | jq -Rs 'split("\n") | map(select(length > 0))' 2>/dev/null || echo "[]")
   }
 }
 EOJSON
 
-echo "Session state saved before compaction: ${TOTAL} features (${BACKLOG} backlog, ${IN_PROGRESS} active, ${REVIEW} review, ${BLOCKED} blocked)"
+echo "Session state saved before compaction: ${TOTAL} features (${BACKLOG} backlog, ${IN_PROGRESS} active, ${REVIEW} review, ${BLOCKED} blocked), Beads: ${BEADS_READY_COUNT} ready (${BEADS_URGENT_COUNT} urgent)"

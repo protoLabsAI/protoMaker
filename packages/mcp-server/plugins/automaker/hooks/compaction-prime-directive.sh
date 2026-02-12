@@ -57,10 +57,12 @@ while (work_remains) {
 2. **Linear** = strategic layer (vision, goals, initiatives, roadmap)
 3. **Discord** = async team communication (status, alerts, coordination)
 
-### Beads (Ava's Operational Brain)
-- `bd ready` - what's unblocked?
-- `bd create "Title" -p 1` - create priority-1 task
-- `bd update <id> --claim` - claim task
-- `bd close <id>` - mark complete
-- Beads = operations. Automaker board = dev execution. Never mix.
+### Beads (Ava's Operational Brain — Primary Work Queue)
+**FIRST THING on every activation:** `bd ready` to check your work queue.
+- Beads is your persistent memory across sessions. Check it BEFORE anything else.
+- Active tasks have notes with progress breadcrumbs — read them to restore context.
+- `bd ready` → what's unblocked? `bd show <id>` → read notes for context
+- `bd update <id> --claim` → claim task, `bd close <id>` → mark complete
+- Beads = ALL work streams. Automaker board = code features only. Never mix.
+- Before signing off: update active task notes with current state for next session.
 PRIME_DIRECTIVE

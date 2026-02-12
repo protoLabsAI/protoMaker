@@ -50,6 +50,31 @@ if [ "$IN_PROGRESS" -gt 0 ] || [ "$REVIEW" -gt 0 ]; then
   echo "Active work detected — check agents and PRs."
 fi
 
+# Inject Beads state for operational continuity
+if command -v bd &>/dev/null; then
+  echo ""
+  echo "## Beads (Operational Work Queue)"
+
+  # Show claimed/in-progress tasks (what I was working on)
+  CLAIMED=$(bd list --status open --assignee "Ava" 2>/dev/null || bd list --status open 2>/dev/null | grep -i "claimed\|ava" 2>/dev/null || echo "")
+  if [ -n "$CLAIMED" ] && [ "$CLAIMED" != "No issues found" ]; then
+    echo "### Active Tasks (claimed by Ava)"
+    echo "$CLAIMED" | head -5
+  fi
+
+  # Show ready queue summary
+  READY_OUTPUT=$(bd ready --allow-stale 2>/dev/null || bd --sandbox ready 2>/dev/null || echo "")
+  if [ -n "$READY_OUTPUT" ]; then
+    READY_COUNT=$(echo "$READY_OUTPUT" | grep -c '^\d\.\|^[0-9]' 2>/dev/null || echo "0")
+    URGENT_COUNT=$(echo "$READY_OUTPUT" | grep -c '\[● P[01]\]' 2>/dev/null || echo "0")
+    echo "Ready queue: ${READY_COUNT} items (${URGENT_COUNT} urgent P0/P1)"
+    if [ "$URGENT_COUNT" -gt 0 ]; then
+      echo "### Urgent Items"
+      echo "$READY_OUTPUT" | grep '\[● P[01]\]' | head -3
+    fi
+  fi
+fi
+
 # Inject saved state from pre-compact hook if available
 if [ -f "$STATE_FILE" ]; then
   SAVED_TS=$(jq -r '.timestamp // "unknown"' "$STATE_FILE" 2>/dev/null)
