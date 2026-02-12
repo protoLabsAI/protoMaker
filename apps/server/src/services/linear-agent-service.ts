@@ -6,6 +6,7 @@
  */
 
 import { createLogger } from '@automaker/utils';
+import type { SettingsService } from './settings-service.js';
 
 const logger = createLogger('LinearAgentService');
 
@@ -24,7 +25,7 @@ export interface LinearAgentMetadata {
  *
  * This service:
  * - Formats agent responses as markdown
- * - Posts comments to Linear issues via MCP tools
+ * - Posts comments to Linear issues via GraphQL
  * - Handles long responses with summary + detail
  * - Updates agent session status
  */
@@ -34,6 +35,17 @@ export class LinearAgentService {
 
   /** Summary length for truncated responses */
   private readonly SUMMARY_LENGTH = 500;
+
+  private settingsService?: SettingsService;
+  private projectPath?: string;
+
+  /**
+   * Set settings service and project path for accessing OAuth token
+   */
+  setSettingsService(settingsService: SettingsService, projectPath: string): void {
+    this.settingsService = settingsService;
+    this.projectPath = projectPath;
+  }
 
   /**
    * Process agent response and post to Linear issue
@@ -92,15 +104,68 @@ ${response}
   }
 
   /**
-   * Post comment to Linear issue via MCP tool
+   * Post comment to Linear issue via GraphQL mutation
    *
-   * This uses the Linear MCP tool to create a comment.
-   * The MCP tool should be configured in the project settings.
+   * Uses the OAuth token from settings to create a comment.
    */
-  private async postLinearComment(issueId: string, comment: string): Promise<void> {
-    // TODO: Implement actual Linear MCP tool call
-    // This will be implemented when integrated with the Linear MCP server
-    // For now, we just log the action
-    logger.info(`Would post comment to Linear issue ${issueId}: ${comment.substring(0, 100)}...`);
+  private async postLinearComment(issueId: string, body: string): Promise<void> {
+    if (!this.settingsService || !this.projectPath) {
+      throw new Error('LinearAgentService not initialized with settings service');
+    }
+
+    // Get OAuth token from settings
+    const settings = await this.settingsService.getProjectSettings(this.projectPath);
+    const linearAccessToken = settings.integrations?.linear?.agentToken;
+
+    if (!linearAccessToken) {
+      throw new Error('No Linear OAuth token found in settings');
+    }
+
+    // GraphQL mutation to create comment
+    const mutation = `
+      mutation CreateComment($issueId: String!, $body: String!) {
+        commentCreate(input: { issueId: $issueId, body: $body }) {
+          success
+          comment {
+            id
+            body
+          }
+        }
+      }
+    `;
+
+    const variables = {
+      issueId,
+      body,
+    };
+
+    // Call Linear GraphQL API
+    const response = await fetch('https://api.linear.app/graphql', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${linearAccessToken}`,
+      },
+      body: JSON.stringify({ query: mutation, variables }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Linear API error: ${response.status} ${response.statusText}`);
+    }
+
+    const result = (await response.json()) as {
+      data?: { commentCreate?: { success: boolean } };
+      errors?: Array<{ message: string }>;
+    };
+
+    if (result.errors) {
+      throw new Error(`Linear GraphQL error: ${result.errors.map((e) => e.message).join(', ')}`);
+    }
+
+    if (!result.data?.commentCreate?.success) {
+      throw new Error('Failed to create Linear comment');
+    }
+
+    logger.info(`Successfully posted comment to Linear issue ${issueId}`);
   }
 }

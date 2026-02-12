@@ -158,8 +158,13 @@ async function handleSessionCreated(
   });
 
   // Determine agent type based on context
-  // Default routing: delegations go to Ava, mentions are context-dependent
-  const agentType = trigger === 'delegation' ? 'ava' : 'ava';
+  // Check prompt for GTM-related keywords
+  const prompt = data.prompt?.toLowerCase() || '';
+  const gtmKeywords = ['gtm', 'marketing', 'positioning', 'messaging', 'go-to-market', 'launch'];
+  const isGtmRelated = gtmKeywords.some((keyword) => prompt.includes(keyword));
+
+  // Route to GTM agent if prompt contains GTM keywords, otherwise route to Ava
+  const agentType: 'gtm' | 'ava' = isGtmRelated ? 'gtm' : 'ava';
 
   events.emit('linear:agent-session:created', {
     sessionId: data.id,
