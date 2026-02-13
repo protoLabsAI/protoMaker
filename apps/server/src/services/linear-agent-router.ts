@@ -2,6 +2,7 @@
  * Linear Agent Router
  *
  * Listens to Linear agent session events and routes them to appropriate agents.
+ * Uses 3-tier intelligent routing: Linear labels → AI classifier → team mapping.
  * Fetches issue context via GraphQL, builds system prompt from RoleRegistry,
  * calls simpleQuery, and posts response back to Linear.
  *
@@ -9,11 +10,13 @@
  */
 
 import { createLogger } from '@automaker/utils';
+import type { AgentRole } from '@automaker/types';
 import type { EventEmitter } from '../lib/events.js';
 import type { RoleRegistryService } from './role-registry-service.js';
 import type { LinearAgentService } from './linear-agent-service.js';
 import type { SettingsService } from './settings-service.js';
 import { simpleQuery } from '../providers/simple-query-service.js';
+import { classifyFeature } from './feature-classifier.js';
 
 const logger = createLogger('LinearAgentRouter');
 
@@ -24,6 +27,54 @@ interface LinearAgentSessionEvent {
   agentType: 'jon' | 'ava';
   teamId?: string;
   trigger?: string;
+}
+
+/**
+ * Maps Linear label names (lowercase) to agent roles.
+ * Labels on a Linear issue take highest routing priority.
+ */
+const LABEL_TO_ROLE: Record<string, AgentRole> = {
+  frontend: 'frontend-engineer',
+  'frontend-engineer': 'frontend-engineer',
+  ui: 'frontend-engineer',
+  react: 'frontend-engineer',
+  backend: 'backend-engineer',
+  'backend-engineer': 'backend-engineer',
+  api: 'backend-engineer',
+  server: 'backend-engineer',
+  infrastructure: 'devops-engineer',
+  'devops-engineer': 'devops-engineer',
+  devops: 'devops-engineer',
+  'ci/cd': 'devops-engineer',
+  deployment: 'devops-engineer',
+  marketing: 'gtm-specialist',
+  'gtm-specialist': 'gtm-specialist',
+  gtm: 'gtm-specialist',
+  content: 'gtm-specialist',
+};
+
+/**
+ * Maps Linear team names (lowercase) to default agent roles.
+ * Used as tier-3 fallback when labels and AI classifier don't resolve.
+ */
+const DEFAULT_TEAM_ROLE_MAP: Record<string, AgentRole> = {
+  engineering: 'backend-engineer',
+  frontend: 'frontend-engineer',
+  infrastructure: 'devops-engineer',
+  devops: 'devops-engineer',
+  marketing: 'gtm-specialist',
+  growth: 'gtm-specialist',
+};
+
+/**
+ * Routing decision with reasoning for observability
+ */
+export interface RoutingDecision {
+  resolvedAgent: string;
+  tier: 'label' | 'classifier' | 'team-mapping' | 'explicit' | 'default';
+  role?: AgentRole;
+  confidence?: number;
+  reasoning: string;
 }
 
 /**
@@ -100,8 +151,15 @@ export class LinearAgentRouter {
       // Fetch issue context via GraphQL
       const issueContext = await this.fetchIssueContext(issueId);
 
-      // Build system prompt from RoleRegistry
-      const systemPrompt = this.buildSystemPrompt(agentType, issueContext);
+      // Intelligent routing: determine the best agent for this issue
+      const routing = await this.intelligentRoute(agentType, issueContext);
+
+      logger.info(
+        `Routing decision for ${issueIdentifier || issueId}: agent="${routing.resolvedAgent}" tier=${routing.tier} confidence=${routing.confidence ?? 'n/a'} reason="${routing.reasoning}"`
+      );
+
+      // Build system prompt from resolved agent
+      const systemPrompt = this.buildSystemPrompt(routing.resolvedAgent, issueContext);
 
       // Build user prompt from issue
       const userPrompt = this.buildUserPrompt(issueContext);
@@ -151,6 +209,107 @@ export class LinearAgentRouter {
     logger.debug(`Linear agent session updated: ${event.sessionId}`);
     // For now, we only handle session creation
     // Future: handle session updates for multi-turn conversations
+  }
+
+  /**
+   * 3-tier intelligent routing for Linear issues.
+   *
+   * Priority order:
+   *   1. Explicit agent — if the named agent is registered, use it directly
+   *   2. Linear labels — check issue labels for role hints
+   *   3. AI classifier — use Haiku to classify title+description
+   *   4. Team mapping — map Linear team name to default role
+   *   5. Fallback — use the original agentType from the event
+   */
+  async intelligentRoute(agentType: string, issueContext: IssueContext): Promise<RoutingDecision> {
+    // Tier 0: If the explicit agentType resolves to a registered template, use it
+    const explicitTemplate = this.roleRegistry.resolve(agentType);
+    if (explicitTemplate?.systemPrompt) {
+      return {
+        resolvedAgent: agentType,
+        tier: 'explicit',
+        reasoning: `Explicit agent "${agentType}" is registered with a system prompt`,
+      };
+    }
+
+    // Tier 1: Check Linear labels for role hints
+    const labelRole = this.matchLabelToRole(issueContext.labels);
+    if (labelRole) {
+      const agentName = this.resolveAgentForRole(labelRole);
+      return {
+        resolvedAgent: agentName,
+        tier: 'label',
+        role: labelRole,
+        confidence: 1.0,
+        reasoning: `Label matched role "${labelRole}" from labels: [${issueContext.labels.join(', ')}]`,
+      };
+    }
+
+    // Tier 2: AI classifier (Haiku) — analyze title + description
+    try {
+      const classification = await classifyFeature(
+        issueContext.title,
+        issueContext.description,
+        this.projectPath
+      );
+
+      if (classification.confidence >= 0.6) {
+        const agentName = this.resolveAgentForRole(classification.role);
+        return {
+          resolvedAgent: agentName,
+          tier: 'classifier',
+          role: classification.role,
+          confidence: classification.confidence,
+          reasoning: classification.reasoning,
+        };
+      }
+
+      logger.debug(
+        `Classifier returned low confidence (${classification.confidence}) for ${issueContext.identifier}, trying team mapping`
+      );
+    } catch (error) {
+      logger.warn('AI classifier failed, falling back to team mapping:', error);
+    }
+
+    // Tier 3: Team name mapping
+    const teamRole = DEFAULT_TEAM_ROLE_MAP[issueContext.team.toLowerCase()];
+    if (teamRole) {
+      const agentName = this.resolveAgentForRole(teamRole);
+      return {
+        resolvedAgent: agentName,
+        tier: 'team-mapping',
+        role: teamRole,
+        reasoning: `Team "${issueContext.team}" maps to role "${teamRole}"`,
+      };
+    }
+
+    // Fallback: use the original agentType
+    return {
+      resolvedAgent: agentType,
+      tier: 'default',
+      reasoning: `No routing signals found; using original agent type "${agentType}"`,
+    };
+  }
+
+  /**
+   * Match issue labels against the label-to-role map.
+   * Returns the first matching role or undefined.
+   */
+  private matchLabelToRole(labels: string[]): AgentRole | undefined {
+    for (const label of labels) {
+      const role = LABEL_TO_ROLE[label.toLowerCase()];
+      if (role) return role;
+    }
+    return undefined;
+  }
+
+  /**
+   * Find the best registered agent template for a given role.
+   * Returns the template name if found, otherwise the role string itself.
+   */
+  private resolveAgentForRole(role: AgentRole): string {
+    const template = this.roleRegistry.resolve(role);
+    return template ? template.name : role;
   }
 
   /**
