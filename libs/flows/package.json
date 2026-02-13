@@ -1,0 +1,47 @@
+{
+  "name": "@automaker/flows",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "LangGraph state graph examples and patterns for AutoMaker",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "example:basic": "tsx examples/basic-graph.ts",
+    "example:hitl": "tsx examples/hitl-graph.ts",
+    "example:subgraph": "tsx examples/subgraph-pattern.ts"
+  },
+  "keywords": [
+    "automaker",
+    "langgraph",
+    "state-graphs",
+    "flows"
+  ],
+  "author": "AutoMaker Team",
+  "license": "SEE LICENSE IN LICENSE",
+  "engines": {
+    "node": ">=22.0.0 <23.0.0"
+  },
+  "dependencies": {
+    "@automaker/types": "1.0.0",
+    "@automaker/utils": "1.0.0",
+    "@langchain/anthropic": "^0.3.10",
+    "@langchain/core": "^0.3.33",
+    "@langchain/langgraph": "^0.2.26"
+  },
+  "devDependencies": {
+    "@types/node": "22.19.3",
+    "tsx": "^4.7.0",
+    "typescript": "5.9.3",
+    "vitest": "4.0.16"
+  }
+}

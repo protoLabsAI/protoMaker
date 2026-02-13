@@ -1,0 +1,42 @@
+{
+  "name": "@automaker/observability",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Observability and tracing utilities for AutoMaker",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "keywords": [
+    "automaker",
+    "observability",
+    "langfuse",
+    "tracing"
+  ],
+  "author": "AutoMaker Team",
+  "license": "SEE LICENSE IN LICENSE",
+  "engines": {
+    "node": ">=22.0.0 <23.0.0"
+  },
+  "dependencies": {
+    "@automaker/types": "1.0.0",
+    "@automaker/utils": "1.0.0",
+    "langfuse": "^3.32.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "22.19.3",
+    "typescript": "5.9.3",
+    "vitest": "4.0.16"
+  }
+}
