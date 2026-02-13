@@ -6,12 +6,7 @@
  */
 
 import { createLogger } from '../utils';
-import type {
-  RepoResearchResult,
-  GapAnalysisReport,
-  GapItem,
-  ComplianceItem,
-} from '../types';
+import type { RepoResearchResult, GapAnalysisReport, GapItem, ComplianceItem } from '../types';
 
 const logger = createLogger('gap-analysis');
 
