@@ -58,6 +58,8 @@ export interface CreateIssueOptions {
   labelIds?: string[];
   /** Assignee ID */
   assigneeId?: string;
+  /** Parent issue ID (for creating sub-issues) */
+  parentId?: string;
 }
 
 /**
@@ -266,7 +268,8 @@ export class LinearMCPClient {
    * @throws {LinearAPIError} On API errors
    */
   async createIssue(options: CreateIssueOptions): Promise<CreateIssueResult> {
-    const { title, description, teamId, projectId, priority, labelIds, assigneeId } = options;
+    const { title, description, teamId, projectId, priority, labelIds, assigneeId, parentId } =
+      options;
 
     const mutation = `
       mutation CreateIssue(
@@ -277,6 +280,7 @@ export class LinearMCPClient {
         $priority: Int
         $labelIds: [String!]
         $assigneeId: String
+        $parentId: String
       ) {
         issueCreate(
           input: {
@@ -287,6 +291,7 @@ export class LinearMCPClient {
             priority: $priority
             labelIds: $labelIds
             assigneeId: $assigneeId
+            parentId: $parentId
           }
         ) {
           success
@@ -307,6 +312,7 @@ export class LinearMCPClient {
       priority,
       labelIds,
       assigneeId,
+      parentId,
     };
 
     interface CreateIssueResponse {
