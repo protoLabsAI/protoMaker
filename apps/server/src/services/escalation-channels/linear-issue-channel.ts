@@ -228,7 +228,9 @@ export class LinearIssueChannel implements EscalationChannel {
     // Header
     sections.push('# Escalation from Automaker');
     sections.push('');
-    sections.push('**This issue was automatically created by Automaker and requires human review.**');
+    sections.push(
+      '**This issue was automatically created by Automaker and requires human review.**'
+    );
     sections.push('');
 
     // Signal details
