@@ -6,8 +6,9 @@
 #   # Quick setup:
 #   ./scripts/setup-staging.sh
 #
-#   # Or manually:
-#   docker compose -f docker-compose.staging.yml --env-file .env up -d
+#   # Or manually (source .env first, env vars are read from shell):
+#   set -a && source .env && set +a
+#   docker compose -f docker-compose.staging.yml up -d
 #   docker compose -f docker-compose.staging.yml logs -f
 #
 # See docs/infra/staging-deployment.md for full documentation.

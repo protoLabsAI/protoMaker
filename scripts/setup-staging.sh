@@ -166,11 +166,12 @@ build_images() {
     exit 1
   fi
 
-  # Build all images in one command to avoid workspace cleanup race conditions
-  # (self-hosted runner cleans workspaces every 5min, which can delete the build
-  # context between separate docker compose build calls)
+  # Build all images in one command. Env vars are sourced via `set -a` at script
+  # start, so docker compose reads them from the shell environment — no --env-file
+  # needed. This avoids race conditions with the self-hosted runner's workspace
+  # cleanup cron, which can delete the .env file mid-build.
   info "Building all images (server, ui, docs)..."
-  docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" build
+  docker compose -f "$COMPOSE_FILE" build
 
   ok "Images built successfully"
 }
@@ -186,7 +187,7 @@ stop_existing() {
     docker compose -f "$PROJECT_ROOT/docker-compose.yml" down 2>/dev/null || true
 
     # Also try staging compose in case that's what's running
-    docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" down 2>/dev/null || true
+    docker compose -f "$COMPOSE_FILE" down 2>/dev/null || true
 
     # Force-remove if still running
     docker rm -f automaker-server automaker-ui automaker-docs 2>/dev/null || true
@@ -203,7 +204,7 @@ start_services() {
 
   stop_existing
 
-  docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d
+  docker compose -f "$COMPOSE_FILE" up -d
 
   info "Waiting for health check..."
   local retries=0
@@ -231,7 +232,7 @@ start_services() {
 stop_services() {
   info "Stopping services..."
   cd "$PROJECT_ROOT"
-  docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" down
+  docker compose -f "$COMPOSE_FILE" down
   ok "Services stopped"
 }
 
@@ -246,7 +247,7 @@ teardown() {
   fi
 
   cd "$PROJECT_ROOT"
-  docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" down -v
+  docker compose -f "$COMPOSE_FILE" down -v
   ok "Services stopped and volumes removed"
 }
 
@@ -261,7 +262,7 @@ show_status() {
 
   # Container status
   local ps_output
-  ps_output=$(docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" ps 2>/dev/null) || true
+  ps_output=$(docker compose -f "$COMPOSE_FILE" ps 2>/dev/null) || true
   if echo "$ps_output" | grep -q automaker; then
     echo "$ps_output"
   else
