@@ -803,26 +803,9 @@ async function main() {
       throw new Error(`Prompt not found: ${request.params.name}`);
     });
     server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      let metrics = {
-        totalRequests: 0,
-        requestsInLastHour: 0,
-        averageRequestTime: 0,
-        queueLength: 0,
-        lastRequestTime: Date.now(),
-      };
       try {
         const { name, arguments: args } = request.params;
         if (!args) throw new Error('Missing arguments');
-        metrics = linearClient.rateLimiter.getMetrics();
-        const baseResponse = {
-          apiMetrics: {
-            requestsInLastHour: metrics.requestsInLastHour,
-            remainingRequests:
-              linearClient.rateLimiter.requestsPerHour - metrics.requestsInLastHour,
-            averageRequestTime: `${Math.round(metrics.averageRequestTime)}ms`,
-            queueLength: metrics.queueLength,
-          },
-        };
         switch (name) {
           case 'linear_create_issue': {
             const validatedArgs = CreateIssueArgsSchema.parse(args);
@@ -832,7 +815,6 @@ async function main() {
                 {
                   type: 'text',
                   text: `Created issue ${issue.identifier}: ${issue.title}\nURL: ${issue.url}`,
-                  metadata: baseResponse,
                 },
               ],
             };
@@ -845,7 +827,6 @@ async function main() {
                 {
                   type: 'text',
                   text: `Updated issue ${issue.identifier}\nURL: ${issue.url}`,
-                  metadata: baseResponse,
                 },
               ],
             };
@@ -858,7 +839,6 @@ async function main() {
                 {
                   type: 'text',
                   text: `Found ${issues.length} issues:\n${issues.map((issue) => `- ${issue.identifier}: ${issue.title}\n  Priority: ${issue.priority || 'None'}\n  Status: ${issue.status || 'None'}\n  ${issue.url}`).join('\n')}`,
-                  metadata: baseResponse,
                 },
               ],
             };
@@ -871,7 +851,6 @@ async function main() {
                 {
                   type: 'text',
                   text: `Found ${issues.length} issues:\n${issues.map((issue) => `- ${issue.identifier}: ${issue.title}\n  Priority: ${issue.priority || 'None'}\n  Status: ${issue.stateName}\n  ${issue.url}`).join('\n')}`,
-                  metadata: baseResponse,
                 },
               ],
             };
@@ -884,7 +863,6 @@ async function main() {
                 {
                   type: 'text',
                   text: `Added comment to issue ${issue?.identifier}\nURL: ${comment.url}`,
-                  metadata: baseResponse,
                 },
               ],
             };
@@ -894,15 +872,6 @@ async function main() {
         }
       } catch (error) {
         console.error('Error executing tool:', error);
-        const errorResponse = {
-          apiMetrics: {
-            requestsInLastHour: metrics.requestsInLastHour,
-            remainingRequests:
-              linearClient.rateLimiter.requestsPerHour - metrics.requestsInLastHour,
-            averageRequestTime: `${Math.round(metrics.averageRequestTime)}ms`,
-            queueLength: metrics.queueLength,
-          },
-        };
         // If it's a Zod error, format it nicely
         if (error instanceof z.ZodError) {
           const formattedErrors = error.errors
@@ -913,12 +882,9 @@ async function main() {
               {
                 type: 'text',
                 text: `Validation error: ${formattedErrors}`,
-                metadata: {
-                  error: true,
-                  ...errorResponse,
-                },
               },
             ],
+            isError: true,
           };
         }
         // For Linear API errors, try to extract useful information
@@ -929,12 +895,9 @@ async function main() {
               {
                 type: 'text',
                 text: `Linear API error (${status}): ${error.message}`,
-                metadata: {
-                  error: true,
-                  ...errorResponse,
-                },
               },
             ],
+            isError: true,
           };
         }
         // For all other errors
@@ -943,12 +906,9 @@ async function main() {
             {
               type: 'text',
               text: `Error: ${error instanceof Error ? error.message : String(error)}`,
-              metadata: {
-                error: true,
-                ...errorResponse,
-              },
             },
           ],
+          isError: true,
         };
       }
     });
