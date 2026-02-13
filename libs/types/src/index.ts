@@ -630,3 +630,7 @@ export type {
   DesiredStateCondition,
   StateOperator,
 } from './agent-templates.js';
+
+// Escalation router types (signal routing to channels)
+export { EscalationSeverity, EscalationSource } from './escalation.js';
+export type { EscalationSignal, EscalationChannel } from './escalation.js';
