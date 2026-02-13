@@ -101,13 +101,9 @@ export function validateProtolabConfig(data: unknown): {
  */
 export const DiscordChannelConfigSchema = z.object({
   categoryId: z.string().min(1, 'Category ID is required'),
-  channels: z.record(
-    z.string(),
-    z.string().min(1, 'Channel ID cannot be empty')
-  ).refine(
-    (channels) => Object.keys(channels).length > 0,
-    'At least one channel is required'
-  ),
+  channels: z
+    .record(z.string(), z.string().min(1, 'Channel ID cannot be empty'))
+    .refine((channels) => Object.keys(channels).length > 0, 'At least one channel is required'),
 });
 
 /**
@@ -158,10 +154,7 @@ export const ProjectNameSchema = z
   .string()
   .min(1, 'Project name cannot be empty')
   .max(100, 'Project name must be less than 100 characters')
-  .regex(
-    /^[a-z0-9-]+$/,
-    'Project name must contain only lowercase letters, numbers, and hyphens'
-  )
+  .regex(/^[a-z0-9-]+$/, 'Project name must contain only lowercase letters, numbers, and hyphens')
   .refine((name) => !name.startsWith('-') && !name.endsWith('-'), {
     message: 'Project name cannot start or end with a hyphen',
   });
