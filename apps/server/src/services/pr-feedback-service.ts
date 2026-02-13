@@ -345,11 +345,13 @@ export class PRFeedbackService {
             );
 
             try {
-              // Build continuation prompt with PR feedback
-              const continuationPrompt = this.buildFeedbackPrompt(
+              // Build continuation prompt with PR feedback and previous agent output
+              const continuationPrompt = await this.buildFeedbackPrompt(
                 fullFeedback,
                 pr.prNumber,
-                pr.iterationCount
+                pr.iterationCount,
+                featureId,
+                pr.projectPath
               );
 
               // Update feature status to backlog so it's picked up by auto-loop
@@ -454,10 +456,49 @@ export class PRFeedbackService {
    * @param feedback - The formatted PR feedback (human reviews + CodeRabbit comments)
    * @param prNumber - The PR number
    * @param iterationCount - How many times we've iterated on this PR
+   * @param featureId - The feature ID to load previous agent output
+   * @param projectPath - The project path to load previous agent output
    * @returns A continuation prompt for the agent
    */
-  private buildFeedbackPrompt(feedback: string, prNumber: number, iterationCount: number): string {
-    return `## PR Review Feedback - Iteration ${iterationCount}
+  private async buildFeedbackPrompt(
+    feedback: string,
+    prNumber: number,
+    iterationCount: number,
+    featureId: string,
+    projectPath: string
+  ): Promise<string> {
+    // Load previous agent output if available
+    let previousContext = '';
+    try {
+      const agentOutput = await this.featureLoader.getAgentOutput(projectPath, featureId);
+      if (agentOutput) {
+        // Truncate if > 50k chars (keep last 40k to preserve recent context)
+        const MAX_LENGTH = 50_000;
+        const KEEP_LENGTH = 40_000;
+        let truncatedOutput = agentOutput;
+        if (agentOutput.length > MAX_LENGTH) {
+          truncatedOutput = agentOutput.slice(-KEEP_LENGTH);
+          logger.info(
+            `Truncated agent output from ${agentOutput.length} to ${KEEP_LENGTH} chars for ${featureId}`
+          );
+        }
+
+        previousContext = `## Your Previous Work (Iteration ${iterationCount - 1})
+
+Below is the output from your previous work on this feature. Review it to understand what you've already done:
+
+${truncatedOutput}
+
+---
+
+`;
+      }
+    } catch (error) {
+      // First iteration or file doesn't exist - gracefully continue without previous context
+      logger.debug(`No previous agent output found for ${featureId} (likely first iteration)`);
+    }
+
+    return `${previousContext}## PR Review Feedback - Iteration ${iterationCount}
 
 Your pull request #${prNumber} has received review feedback. Please address the following issues:
 
