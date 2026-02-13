@@ -71,3 +71,18 @@ export interface CodeRabbitParseResult {
   review?: CodeRabbitReview;
   error?: string;
 }
+
+/**
+ * Review thread feedback status
+ */
+export type ReviewThreadStatus = 'pending' | 'accepted' | 'denied';
+
+/**
+ * Individual review thread with agent decision tracking
+ */
+export interface ReviewThreadFeedback {
+  threadId: string;
+  status: ReviewThreadStatus;
+  agentReasoning?: string;
+  resolvedAt?: string;
+}

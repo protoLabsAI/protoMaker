@@ -61,6 +61,7 @@ export type {
   DescriptionHistoryEntry,
   StatusTransition,
   ExecutionRecord,
+  RemediationHistoryEntry,
 } from './feature.js';
 export { normalizeFeatureStatus } from './feature.js';
 
@@ -449,6 +450,8 @@ export type {
   FeatureBranchLink,
   FeatureCodeRabbitFeedback,
   CodeRabbitParseResult,
+  ReviewThreadStatus,
+  ReviewThreadFeedback,
 } from './coderabbit.js';
 
 // Webhook types
