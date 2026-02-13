@@ -1,0 +1,9 @@
+{
+  "id": "evt-1771010415671-5ab5e623",
+  "trigger": "feature_created",
+  "severity": "medium",
+  "timestamp": "2026-02-13T19:20:15.671Z",
+  "projectPath": "/Users/kj/dev/automaker/.worktrees/feature-fix-linear-sync-coderabbit-feedback-prs/test/fixtures/projectA",
+  "projectName": "projectA",
+  "featureId": "feature-1771010415532-m4fvy1xqb"
+}

@@ -1,0 +1,37 @@
+{
+  "category": "Uncategorized",
+  "description": "Test feature 1771010219165",
+  "title": "",
+  "images": [],
+  "imagePaths": [],
+  "textFilePaths": [],
+  "skipTests": true,
+  "model": "claude-opus",
+  "thinkingLevel": "none",
+  "reasoningEffort": "none",
+  "branchName": "main",
+  "priority": 2,
+  "planningMode": "skip",
+  "requirePlanApproval": false,
+  "dependencies": [],
+  "workMode": "current",
+  "titleGenerating": "Test feature 1771010219165",
+  "status": "backlog",
+  "id": "feature-1771010222369-7e0h1zums",
+  "descriptionHistory": [
+    {
+      "description": "Test feature 1771010219165",
+      "timestamp": "2026-02-13T19:17:02.396Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-02-13T19:17:02.396Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-02-13T19:17:02.396Z",
+      "reason": "Feature created"
+    }
+  ]
+}

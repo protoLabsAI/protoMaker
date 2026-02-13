@@ -1,0 +1,42 @@
+{
+  "category": "Uncategorized",
+  "description": "Updated feature 1771010952083",
+  "title": "",
+  "images": [],
+  "imagePaths": [],
+  "textFilePaths": [],
+  "skipTests": true,
+  "model": "claude-opus",
+  "thinkingLevel": "none",
+  "reasoningEffort": "none",
+  "branchName": "main",
+  "priority": 2,
+  "planningMode": "skip",
+  "requirePlanApproval": false,
+  "dependencies": [],
+  "workMode": "custom",
+  "titleGenerating": "Original feature 1771010952083",
+  "status": "backlog",
+  "id": "feature-1771010956737-bj965ft41",
+  "descriptionHistory": [
+    {
+      "description": "Original feature 1771010952083",
+      "timestamp": "2026-02-13T19:29:16.770Z",
+      "source": "initial"
+    },
+    {
+      "description": "Updated feature 1771010952083",
+      "timestamp": "2026-02-13T19:29:18.568Z",
+      "source": "edit"
+    }
+  ],
+  "createdAt": "2026-02-13T19:29:16.770Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-02-13T19:29:16.770Z",
+      "reason": "Feature created"
+    }
+  ]
+}
