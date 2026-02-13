@@ -822,7 +822,7 @@ app.use('/api/setup', createSetupRoutes(settingsService));
 // Mount webhooks at root level (unauthenticated - uses signature verification)
 app.use('/webhooks', createWebhooksRoutes(events, settingsService));
 // Linear agent routes (OAuth + webhook)
-app.use('/api/linear', createLinearRoutes(settingsService, events));
+app.use('/api/linear', createLinearRoutes(settingsService, events, featureLoader));
 
 // Apply authentication to all /api/* routes
 app.use('/api', authMiddleware);
