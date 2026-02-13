@@ -20,8 +20,8 @@ STRIPPED=$(echo "$COMMAND" | sed '/<<.*EOF/,/^EOF/d; /<<.*END/,/^END/d')
 STRIPPED=$(echo "$STRIPPED" | sed "s/['\"]//g")
 
 # Guard: cd into worktree paths
-# Match: cd .worktrees/, cd /path/to/.worktrees/, cd ".worktrees/..."
-if echo "$STRIPPED" | grep -qE '(^|\s|&&|\|\||;)\s*cd\s+[^ ]*\.worktrees'; then
+# Anchored to command boundaries (^, &&, ||, ;) to avoid matching inside echo/strings
+if echo "$STRIPPED" | grep -qE '(^[[:space:]]*|&&[[:space:]]*|\|\|[[:space:]]*|;[[:space:]]*)cd[[:space:]]+[^ ]*\.worktrees'; then
   jq -n '{
     hookSpecificOutput: {
       hookEventName: "PreToolUse",
@@ -32,8 +32,8 @@ if echo "$STRIPPED" | grep -qE '(^|\s|&&|\|\||;)\s*cd\s+[^ ]*\.worktrees'; then
   exit 0
 fi
 
-# Guard: dev server management (only match actual commands, not string references)
-if echo "$STRIPPED" | grep -qE '(^|\s|&&|\|\||;)\s*(npm run dev|npx vite|node.*apps/server/src/index)'; then
+# Guard: dev server management (anchored to command boundaries)
+if echo "$STRIPPED" | grep -qE '(^[[:space:]]*|&&[[:space:]]*|\|\|[[:space:]]*|;[[:space:]]*)(npm run dev|npx vite|node.*apps/server/src/index)'; then
   jq -n '{
     hookSpecificOutput: {
       hookEventName: "PreToolUse",
