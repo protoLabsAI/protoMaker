@@ -564,6 +564,28 @@ export class GitWorkflowService {
     // Stage all changes
     await execAsync("git add -A -- ':!.automaker/'", { cwd: workDir, env: execEnv });
 
+    // Auto-format staged files before committing (matches CI prettier behavior)
+    try {
+      const { stdout: stagedFiles } = await execAsync(
+        "git diff --cached --name-only --diff-filter=ACMR -- '*.ts' '*.tsx' '*.js' '*.jsx' '*.json' '*.css' '*.md'",
+        { cwd: workDir, env: execEnv }
+      );
+      const files = stagedFiles.trim().split('\n').filter(Boolean);
+      if (files.length > 0) {
+        await execAsync(`npx prettier --write ${files.map((f) => `"${f}"`).join(' ')}`, {
+          cwd: workDir,
+          env: execEnv,
+        });
+        // Re-stage after formatting
+        await execAsync("git add -A -- ':!.automaker/'", { cwd: workDir, env: execEnv });
+        logger.debug(`Auto-formatted ${files.length} staged files`);
+      }
+    } catch (fmtError) {
+      logger.warn(
+        `Auto-format failed (non-fatal): ${fmtError instanceof Error ? fmtError.message : String(fmtError)}`
+      );
+    }
+
     // Create commit
     await execAsync(`git commit -m "${commitMessage.replace(/"/g, '\\"')}"`, {
       cwd: workDir,
