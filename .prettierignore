@@ -29,6 +29,12 @@ apps/ui/src/routeTree.gen.ts
 # Template files (contain placeholders)
 packages/create-protolab/src/templates/
 
+# Environment files (can't be parsed by prettier)
+.env
+.env.example
+.env.local
+.env.*.local
+
 # Test artifacts
 test-results/
 coverage/
