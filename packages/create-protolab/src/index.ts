@@ -34,9 +34,7 @@ export async function main(): Promise<void> {
         const projectPath = resolve(process.cwd(), path);
 
         // Parse skip phases if provided
-        const skipPhases = options.skip
-          ? options.skip.split(',').map(phase => phase.trim())
-          : [];
+        const skipPhases = options.skip ? options.skip.split(',').map((phase) => phase.trim()) : [];
 
         // Log configuration if not in JSON mode
         if (!options.json) {
