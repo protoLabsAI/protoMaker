@@ -89,12 +89,26 @@ export interface ExecutionRecord {
 export interface RemediationHistoryEntry {
   /** Unique identifier for this remediation attempt */
   id: string;
-  /** ISO 8601 timestamp when remediation started */
-  timestamp: string;
   /** Which iteration this represents (1-indexed) */
   iteration: number;
+  /** Type of remediation cycle: feedback from reviewers or CI check failures */
+  cycleType: 'feedback' | 'ci_failure';
+  /** ISO 8601 timestamp when remediation started */
+  startedAt: string;
+  /** ISO 8601 timestamp when remediation completed */
+  completedAt?: string;
+  /** Number of review threads processed in this cycle */
+  threadCount?: number;
+  /** Number of threads accepted by agent */
+  acceptedCount?: number;
+  /** Number of threads denied by agent */
+  deniedCount?: number;
+  /** CI checks that were fixed in this cycle */
+  ciChecksFixed?: string[];
   /** Model used for this remediation attempt */
-  model?: string;
+  agentModel?: string;
+  /** Total cost in USD for this remediation cycle */
+  costUsd?: number;
   /** Whether the remediation completed successfully */
   success?: boolean;
   /** Error message if remediation failed */

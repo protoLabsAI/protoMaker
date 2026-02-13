@@ -24,7 +24,7 @@ import { codeRabbitParserService } from './coderabbit-parser-service.js';
 
 const execFileAsync = promisify(execFile);
 
-const logger = createLogger('PRFeedbackService');
+const logger = createLogger('PRFeedbackRemediation');
 
 /** How often to poll for PR reviews */
 const POLL_INTERVAL_MS = 60_000; // 1 minute
@@ -261,9 +261,14 @@ export class PRFeedbackService {
 
     const [featureId, pr] = entry;
 
-    logger.info(
-      `[WEBHOOK] PR #${data.prNumber} review detected: ${data.reviewState} by ${data.reviewer || 'unknown'}`
-    );
+    logger.info('Feedback detected via webhook', {
+      featureId,
+      prNumber: data.prNumber,
+      iteration: pr.iterationCount,
+      detectionMethod: 'webhook',
+      reviewState: data.reviewState,
+      reviewer: data.reviewer || 'unknown',
+    });
 
     try {
       // Fetch full review info from GitHub
@@ -424,9 +429,24 @@ export class PRFeedbackService {
             })
             .join('\n');
           coderabbitFeedback = `### CodeRabbit Review (${codeRabbitResult.review.comments.length} items)\n${formattedComments}`;
-          logger.info(
-            `Parsed ${codeRabbitResult.review.comments.length} structured CodeRabbit comments for PR #${pr.prNumber}`
+
+          // Count severity distribution
+          const severityCounts = codeRabbitResult.review.comments.reduce(
+            (acc, c) => {
+              acc[c.severity || 'info'] = (acc[c.severity || 'info'] || 0) + 1;
+              return acc;
+            },
+            {} as Record<string, number>
           );
+
+          logger.info('Triage result: CodeRabbit feedback parsed', {
+            featureId,
+            prNumber: pr.prNumber,
+            iteration: pr.iterationCount,
+            threadCount: codeRabbitResult.review.comments.length,
+            severityDistribution: severityCounts,
+            botReviewer: 'coderabbitai',
+          });
         }
 
         const fullFeedback = [feedbackSummary, coderabbitFeedback].filter(Boolean).join('\n---\n');
@@ -439,9 +459,13 @@ export class PRFeedbackService {
 
         if (pr.iterationCount > MAX_PR_ITERATIONS) {
           // Too many iterations - escalate to CTO
-          logger.warn(
-            `PR #${pr.prNumber} for ${featureId} has ${pr.iterationCount} iterations, escalating`
-          );
+          logger.warn('Iteration budget exhausted, escalating', {
+            featureId,
+            prNumber: pr.prNumber,
+            iteration: pr.iterationCount,
+            maxIterations: MAX_PR_ITERATIONS,
+            status: 'escalated',
+          });
           this.events.emit('authority:awaiting-approval', {
             projectPath: pr.projectPath,
             proposal: {
@@ -484,9 +508,15 @@ export class PRFeedbackService {
 
           // Auto-restart dev agent with feedback if AutoModeService is available
           if (this.autoModeService) {
-            logger.info(
-              `Auto-restarting dev agent for ${featureId} with PR feedback (iteration ${pr.iterationCount})`
-            );
+            logger.info('Starting agent remediation cycle', {
+              featureId,
+              prNumber: pr.prNumber,
+              iteration: pr.iterationCount,
+              cycleType: 'feedback',
+              humanReviewers: reviewInfo.reviews
+                .filter((r) => r.state === 'CHANGES_REQUESTED')
+                .map((r) => r.author),
+            });
 
             try {
               // Build continuation prompt with PR feedback and previous agent output
@@ -523,9 +553,12 @@ export class PRFeedbackService {
                 }
               );
 
-              logger.info(
-                `Dev agent restarted for ${featureId} to address PR #${pr.prNumber} feedback`
-              );
+              logger.info('Agent remediation started successfully', {
+                featureId,
+                prNumber: pr.prNumber,
+                iteration: pr.iterationCount,
+                status: 'remediation_in_progress',
+              });
             } catch (error) {
               logger.error(`Failed to restart dev agent for ${featureId}:`, error);
               // Emit error event but don't block - EM agent will handle reassignment as fallback
@@ -552,9 +585,17 @@ export class PRFeedbackService {
           detectionMethod,
         });
 
-        logger.info(
-          `${detectionLabel} PR #${pr.prNumber}: Changes requested (iteration ${pr.iterationCount})`
-        );
+        logger.info('PR changes requested - feedback cycle started', {
+          featureId,
+          prNumber: pr.prNumber,
+          iteration: pr.iterationCount,
+          detectionMethod,
+          humanReviewerCount: reviewInfo.reviews.filter((r) => r.state === 'CHANGES_REQUESTED')
+            .length,
+          codeRabbitThreadCount: codeRabbitResult.success
+            ? codeRabbitResult.review?.comments.length || 0
+            : 0,
+        });
         break;
       }
 
@@ -573,7 +614,13 @@ export class PRFeedbackService {
           detectionMethod,
         });
 
-        logger.info(`${detectionLabel} PR #${pr.prNumber}: Approved!`);
+        logger.info('PR approved', {
+          featureId,
+          prNumber: pr.prNumber,
+          iteration: pr.iterationCount,
+          detectionMethod,
+          approvers: reviewInfo.reviews.filter((r) => r.state === 'APPROVED').map((r) => r.author),
+        });
 
         // Stop tracking - merge will be handled by auto-merge or webhook
         this.trackedPRs.delete(featureId);
@@ -592,7 +639,12 @@ export class PRFeedbackService {
             iterationCount: pr.iterationCount,
             detectionMethod,
           });
-          logger.info(`${detectionLabel} PR #${pr.prNumber}: Commented`);
+          logger.info('PR commented (no action required)', {
+            featureId,
+            prNumber: pr.prNumber,
+            iteration: pr.iterationCount,
+            detectionMethod,
+          });
         }
         break;
       }
@@ -677,12 +729,37 @@ This is iteration ${iterationCount} of the review cycle. Focus on addressing the
       const threads = await this.fetchReviewThreads(pr);
 
       if (threads.length === 0) {
+        logger.info('Triage result: No review threads found', {
+          featureId: pr.featureId,
+          prNumber: pr.prNumber,
+          iteration: pr.iterationCount,
+          threadCount: 0,
+        });
         return 'No review threads found.';
       }
 
       // Separate bot and human threads
       const botThreads = threads.filter((t) => t.isBot);
       const humanThreads = threads.filter((t) => !t.isBot);
+
+      // Count severity distribution
+      const severityCounts = threads.reduce(
+        (acc, t) => {
+          acc[t.severity] = (acc[t.severity] || 0) + 1;
+          return acc;
+        },
+        {} as Record<string, number>
+      );
+
+      logger.info('Triage result: Review threads fetched', {
+        featureId: pr.featureId,
+        prNumber: pr.prNumber,
+        iteration: pr.iterationCount,
+        threadCount: threads.length,
+        humanThreadCount: humanThreads.length,
+        botThreadCount: botThreads.length,
+        severityDistribution: severityCounts,
+      });
 
       let prompt = '## Review Thread Feedback\n\n';
 
