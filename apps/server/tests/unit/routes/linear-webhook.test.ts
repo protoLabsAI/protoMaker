@@ -307,7 +307,7 @@ describe('Linear Webhook Handler', () => {
       await handler(req, res, vi.fn());
       await new Promise((resolve) => setTimeout(resolve, 10));
 
-      expect(featureLoader.findByLinearIssueId).toHaveBeenCalledWith('issue-456');
+      expect(featureLoader.findByLinearIssueId).toHaveBeenCalledWith(expect.any(String), 'issue-456');
       expect(events.emit).toHaveBeenCalledWith('linear:issue:updated', {
         issueId: 'issue-456',
         featureId: 'feature-123',
@@ -356,7 +356,7 @@ describe('Linear Webhook Handler', () => {
       await handler(req, res, vi.fn());
       await new Promise((resolve) => setTimeout(resolve, 10));
 
-      expect(featureLoader.findByLinearIssueId).toHaveBeenCalledWith('issue-456');
+      expect(featureLoader.findByLinearIssueId).toHaveBeenCalledWith(expect.any(String), 'issue-456');
       expect(events.emit).not.toHaveBeenCalledWith('linear:issue:updated', expect.anything());
     });
 
@@ -386,7 +386,7 @@ describe('Linear Webhook Handler', () => {
       await handler(req, res, vi.fn());
       await new Promise((resolve) => setTimeout(resolve, 10));
 
-      expect(featureLoader.findByLinearIssueId).toHaveBeenCalledWith('issue-456');
+      expect(featureLoader.findByLinearIssueId).toHaveBeenCalledWith(expect.any(String), 'issue-456');
       expect(events.emit).not.toHaveBeenCalled();
     });
 

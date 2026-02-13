@@ -944,7 +944,7 @@ describe('feature-loader.ts', () => {
           })
         );
 
-      const result = await loader.findByLinearIssueId('LIN-456');
+      const result = await loader.findByLinearIssueId('/test/project', 'LIN-456');
 
       expect(result).not.toBeNull();
       expect(result?.id).toBe('feature-2000-def');
@@ -966,20 +966,20 @@ describe('feature-loader.ts', () => {
         })
       );
 
-      const result = await loader.findByLinearIssueId('LIN-999');
+      const result = await loader.findByLinearIssueId('/test/project', 'LIN-999');
 
       expect(result).toBeNull();
     });
 
     it('should return null when Linear issue ID is empty string', async () => {
-      const result = await loader.findByLinearIssueId('');
+      const result = await loader.findByLinearIssueId('/test/project', '');
 
       expect(result).toBeNull();
       expect(fs.readdir).not.toHaveBeenCalled();
     });
 
     it('should return null when Linear issue ID is whitespace', async () => {
-      const result = await loader.findByLinearIssueId('   ');
+      const result = await loader.findByLinearIssueId('/test/project', '   ');
 
       expect(result).toBeNull();
       expect(fs.readdir).not.toHaveBeenCalled();
@@ -1010,7 +1010,7 @@ describe('feature-loader.ts', () => {
           })
         );
 
-      const result = await loader.findByLinearIssueId('LIN-456');
+      const result = await loader.findByLinearIssueId('/test/project', 'LIN-456');
 
       expect(result).not.toBeNull();
       expect(result?.id).toBe('feature-2000-def');
