@@ -516,6 +516,7 @@ describe('recovery-service.ts', () => {
 
       expect(mockEvents.emit).toHaveBeenCalledWith('recovery_escalated', {
         featureId: 'feature-1',
+        projectPath: '/test/project',
         reason: 'Quota exhausted',
         timestamp: expect.any(String),
       });

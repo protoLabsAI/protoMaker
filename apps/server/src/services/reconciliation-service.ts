@@ -338,6 +338,16 @@ export class ReconciliationService {
       logger.warn(
         `Feature ${drift.featureId} has reached max retries (${MAX_RETRIES}), keeping as blocked`
       );
+
+      // Emit permanently-blocked event for issue creation pipeline
+      this.events.emit('feature:permanently-blocked', {
+        projectPath: drift.projectPath,
+        featureId: drift.featureId,
+        retryCount: currentRetryCount,
+        lastError: feature.error,
+        failureCategory: drift.details.failureCategory,
+      });
+
       return 'max-retries-exceeded';
     }
 

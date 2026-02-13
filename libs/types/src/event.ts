@@ -212,7 +212,11 @@ export type EventType =
   | 'ceremony:project-retro'
   | 'ceremony:triggered'
   // Feature lifecycle events
-  | 'feature:status-changed';
+  | 'feature:status-changed'
+  // Issue management events (failure-to-issue pipeline)
+  | 'feature:permanently-blocked'
+  | 'issue:created'
+  | 'issue:triage-completed';
 
 export type EventCallback = (type: EventType, payload: unknown) => void;
 

@@ -160,6 +160,9 @@ import { createLinearRoutes } from './routes/linear/index.js';
 import { LinearAgentService } from './services/linear-agent-service.js';
 import { LinearAgentRouter } from './services/linear-agent-router.js';
 import { MAX_SYSTEM_CONCURRENCY } from '@automaker/types';
+import { TriageService } from './services/triage-service.js';
+import { IssueCreationService } from './services/issue-creation-service.js';
+import { createIssuesRoutes } from './routes/issues/index.js';
 
 const PORT = parseInt(process.env.PORT || '3008', 10);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -498,6 +501,11 @@ agentDiscordRouter.start();
 
 // Wire Discord bot service to headsdown service for message fetching
 headsdownService.setDiscordBotService(discordBotService);
+
+// Initialize Issue Management Pipeline (failure → triage → GitHub issue → Discord)
+const triageService = new TriageService(events);
+const issueCreationService = new IssueCreationService(events, featureLoader, triageService);
+issueCreationService.initialize();
 
 // Initialize Linear Agent Service and Router for Linear agent integration
 const linearAgentService = new LinearAgentService();
@@ -1010,6 +1018,7 @@ app.use(
   createAgentManagementRoutes(roleRegistryService, agentFactoryService, dynamicAgentExecutor)
 );
 app.use('/api/ceremonies', createCeremoniesRoutes(events, featureLoader, projectService));
+app.use('/api/issues', createIssuesRoutes(events));
 
 // Create HTTP server
 const server = createServer(app);
@@ -1479,6 +1488,7 @@ async function gracefulShutdown() {
   schedulerService.stop();
   terminalService.cleanup();
   worktreeLifecycleService.shutdown();
+  issueCreationService.shutdown();
   linearAgentRouter.stop();
   agentDiscordRouter.stop();
 
