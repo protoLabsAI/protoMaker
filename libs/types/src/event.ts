@@ -194,7 +194,10 @@ export type EventType =
   | 'feature:reassigned-for-fixes'
   | 'feature:worktree-cleaned'
   // PR remediation events (automated PR maintenance and thread resolution)
+  | 'pr:feedback-queued' // Fired when feedback arrives while remediation is in progress
   | 'pr:remediation-started' // Fired when PR remediation workflow begins (agent spawned to address feedback)
+  | 'pr:remediation-completed' // Fired when PR remediation workflow completes successfully
+  | 'pr:remediation-failed' // Fired when PR remediation workflow fails
   | 'pr:thread-evaluated' // Fired when a single PR review thread is evaluated for resolution status
   | 'pr:threads-resolved' // Fired when all PR review threads are marked as resolved
   // Worktree recovery events
