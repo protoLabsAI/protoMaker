@@ -7,6 +7,7 @@ import type { ReasoningEffort } from './provider.js';
 import type { FeatureRalphConfig } from './ralph.js';
 import type { AgentRole } from './agent-roles.js';
 import type { WorkItemState } from './authority.js';
+import type { ReviewThreadFeedback } from './coderabbit.js';
 
 /**
  * A single entry in the description history
@@ -79,6 +80,27 @@ export interface ExecutionRecord {
   turnCount?: number;
   /** What triggered this execution (auto-mode, manual, retry) */
   trigger: 'auto' | 'manual' | 'retry';
+}
+
+/**
+ * Records a remediation attempt in response to PR review feedback.
+ * Tracks each iteration with timing and metadata.
+ */
+export interface RemediationHistoryEntry {
+  /** Unique identifier for this remediation attempt */
+  id: string;
+  /** ISO 8601 timestamp when remediation started */
+  timestamp: string;
+  /** Which iteration this represents (1-indexed) */
+  iteration: number;
+  /** Model used for this remediation attempt */
+  model?: string;
+  /** Whether the remediation completed successfully */
+  success?: boolean;
+  /** Error message if remediation failed */
+  error?: string;
+  /** Summary of changes made during this remediation */
+  changesSummary?: string;
 }
 
 export interface Feature {
@@ -262,6 +284,16 @@ export interface Feature {
    * Links feature to Ava's operational task manager.
    */
   beadsTaskId?: string;
+  /**
+   * Per-thread review feedback tracking with agent decisions.
+   * Each thread can be accepted, denied, or pending with reasoning.
+   */
+  threadFeedback?: ReviewThreadFeedback[];
+  /**
+   * History of remediation attempts for PR review feedback.
+   * Tracks iterations with timestamps and metadata.
+   */
+  remediationHistory?: RemediationHistoryEntry[];
   /**
    * Timestamp when the PR was created (ISO 8601).
    * Set by git-workflow-service when auto-creating a PR.
