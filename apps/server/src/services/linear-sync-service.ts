@@ -1139,16 +1139,19 @@ export class LinearSyncService {
 
   /**
    * Handle Linear issue updates (inbound sync from Linear to Automaker)
-   * This method is called when a Linear issue is updated externally
+   * This method is called when a Linear issue is updated externally.
+   * Syncs status, priority, and title changes in a single batched update.
    *
    * @param linearIssueId - The Linear issue ID that was updated
    * @param newStateName - The new Linear workflow state name
    * @param projectPath - The project path (required to find the feature)
+   * @param options - Optional additional fields to sync (title, priority)
    */
   async onLinearIssueUpdated(
     linearIssueId: string,
     newStateName: string,
-    projectPath: string
+    projectPath: string,
+    options?: { title?: string; priority?: number }
   ): Promise<void> {
     try {
       // Find the feature by Linear issue ID
@@ -1182,7 +1185,6 @@ export class LinearSyncService {
 
       // Loop prevention: Skip if last sync was from Automaker (outbound push)
       if (metadata?.syncSource === 'automaker') {
-        // Check if this is a recent sync - if so, this is likely an echo from our own update
         const timeSinceLastSync = Date.now() - (metadata.lastSyncTimestamp || 0);
         if (timeSinceLastSync < DEBOUNCE_WINDOW_MS) {
           logger.debug(
@@ -1192,35 +1194,54 @@ export class LinearSyncService {
         }
       }
 
-      // Check if the Linear state has actually changed
+      // Collect all changes to batch into a single update
+      const featureUpdates: Record<string, any> = {};
+      const changeDescriptions: string[] = [];
+
+      // --- Status sync ---
       const lastLinearState = metadata?.lastLinearState;
-      if (lastLinearState === newStateName) {
-        logger.debug(`Skipping Linear update for ${featureId}: state unchanged (${newStateName})`);
-        return;
+      const stateChanged = lastLinearState !== newStateName;
+
+      if (stateChanged) {
+        const newAutomakerStatus = this.mapLinearStateToAutomaker(newStateName);
+        if (feature.status !== newAutomakerStatus) {
+          featureUpdates.status = newAutomakerStatus;
+          featureUpdates.statusChangeReason = `Synced from Linear (${newStateName})`;
+          changeDescriptions.push(`status: ${feature.status} → ${newAutomakerStatus}`);
+        }
       }
 
-      // Map Linear state to Automaker status
-      const newAutomakerStatus = this.mapLinearStateToAutomaker(newStateName);
+      // --- Title sync ---
+      if (options?.title !== undefined && options.title !== feature.title) {
+        featureUpdates.title = options.title;
+        changeDescriptions.push(`title: "${feature.title}" → "${options.title}"`);
+      }
 
-      // Check if Automaker status would actually change
-      if (feature.status === newAutomakerStatus) {
-        logger.debug(
-          `Skipping Linear update for ${featureId}: Automaker status would remain ${newAutomakerStatus}`
-        );
-        // Update lastLinearState in metadata even though we're not changing status
-        const updatedMetadata: SyncMetadata = {
-          ...metadata,
-          featureId,
-          lastSyncTimestamp: Date.now(),
-          lastSyncStatus: 'success',
-          linearIssueId,
-          syncCount: (metadata?.syncCount || 0) + 1,
-          syncSource: 'linear',
-          syncDirection: 'pull',
-          lastLinearState: newStateName,
-          lastSyncedAt: Date.now(),
-        };
-        this.updateSyncMetadata(updatedMetadata);
+      // --- Priority sync (Linear 0-4 → Automaker 0-4, direct mapping) ---
+      if (options?.priority !== undefined && options.priority !== feature.priority) {
+        featureUpdates.priority = options.priority;
+        changeDescriptions.push(`priority: ${feature.priority ?? 'none'} → ${options.priority}`);
+      }
+
+      // If nothing changed, just update metadata and return
+      if (Object.keys(featureUpdates).length === 0) {
+        if (stateChanged) {
+          // State name changed but mapped to same Automaker status — still record it
+          const updatedMetadata: SyncMetadata = {
+            ...metadata,
+            featureId,
+            lastSyncTimestamp: Date.now(),
+            lastSyncStatus: 'success',
+            linearIssueId,
+            syncCount: (metadata?.syncCount || 0) + 1,
+            syncSource: 'linear',
+            syncDirection: 'pull',
+            lastLinearState: newStateName,
+            lastSyncedAt: Date.now(),
+          };
+          this.updateSyncMetadata(updatedMetadata);
+        }
+        logger.debug(`No field changes needed for feature ${featureId}`);
         return;
       }
 
@@ -1240,11 +1261,8 @@ export class LinearSyncService {
           }
         }
 
-        // Update the feature status in Automaker
-        await this.featureLoader.update(projectPath, featureId, {
-          status: newAutomakerStatus,
-          statusChangeReason: `Synced from Linear (${newStateName})`,
-        });
+        // Batch all field updates into a single call
+        await this.featureLoader.update(projectPath, featureId, featureUpdates);
 
         // Update sync metadata
         const updatedMetadata: SyncMetadata = {
@@ -1267,12 +1285,13 @@ export class LinearSyncService {
             featureId,
             direction: 'pull',
             conflictDetected,
+            changes: changeDescriptions,
             timestamp: new Date().toISOString(),
           });
         }
 
         logger.info(
-          `Successfully synced Linear issue ${linearIssueId} to feature ${featureId}: ${newStateName} → ${newAutomakerStatus}${conflictDetected ? ' (conflict detected)' : ''}`
+          `Synced Linear issue ${linearIssueId} → feature ${featureId}: ${changeDescriptions.join(', ')}${conflictDetected ? ' (conflict detected)' : ''}`
         );
       } finally {
         // Unmark syncing

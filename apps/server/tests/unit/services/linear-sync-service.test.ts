@@ -1455,6 +1455,112 @@ describe('LinearSyncService', () => {
           error: 'Update failed',
         });
       });
+
+      it('should sync title changes from Linear', async () => {
+        const feature = {
+          id: 'test-feature-title',
+          description: 'Test feature',
+          category: 'test',
+          status: 'backlog',
+          title: 'Old Title',
+          linearIssueId: 'LINEAR-T1',
+        };
+
+        vi.mocked(mockFeatureLoader.findByLinearIssueId).mockResolvedValue(feature as any);
+        vi.mocked(mockFeatureLoader.update).mockResolvedValue(feature as any);
+
+        await service.onLinearIssueUpdated('LINEAR-T1', 'Backlog', '/test/path', {
+          title: 'New Title from Linear',
+        });
+
+        expect(mockFeatureLoader.update).toHaveBeenCalledWith(
+          '/test/path',
+          'test-feature-title',
+          expect.objectContaining({
+            title: 'New Title from Linear',
+          })
+        );
+      });
+
+      it('should sync priority changes from Linear (direct 0-4 mapping)', async () => {
+        const feature = {
+          id: 'test-feature-priority',
+          description: 'Test feature',
+          category: 'test',
+          status: 'backlog',
+          priority: 3,
+          linearIssueId: 'LINEAR-P1',
+        };
+
+        vi.mocked(mockFeatureLoader.findByLinearIssueId).mockResolvedValue(feature as any);
+        vi.mocked(mockFeatureLoader.update).mockResolvedValue(feature as any);
+
+        await service.onLinearIssueUpdated('LINEAR-P1', 'Backlog', '/test/path', {
+          priority: 1,
+        });
+
+        expect(mockFeatureLoader.update).toHaveBeenCalledWith(
+          '/test/path',
+          'test-feature-priority',
+          expect.objectContaining({
+            priority: 1,
+          })
+        );
+      });
+
+      it('should batch title, priority, and status changes in single update', async () => {
+        const feature = {
+          id: 'test-feature-batch',
+          description: 'Test feature',
+          category: 'test',
+          status: 'backlog',
+          title: 'Old Title',
+          priority: 4,
+          linearIssueId: 'LINEAR-B1',
+        };
+
+        vi.mocked(mockFeatureLoader.findByLinearIssueId).mockResolvedValue(feature as any);
+        vi.mocked(mockFeatureLoader.update).mockResolvedValue(feature as any);
+
+        await service.onLinearIssueUpdated('LINEAR-B1', 'In Progress', '/test/path', {
+          title: 'Updated Title',
+          priority: 1,
+        });
+
+        // Should be called exactly once with all changes batched
+        expect(mockFeatureLoader.update).toHaveBeenCalledTimes(1);
+        expect(mockFeatureLoader.update).toHaveBeenCalledWith(
+          '/test/path',
+          'test-feature-batch',
+          expect.objectContaining({
+            status: 'in_progress',
+            title: 'Updated Title',
+            priority: 1,
+          })
+        );
+      });
+
+      it('should skip update if title and priority unchanged', async () => {
+        const feature = {
+          id: 'test-feature-nochange',
+          description: 'Test feature',
+          category: 'test',
+          status: 'backlog',
+          title: 'Same Title',
+          priority: 2,
+          linearIssueId: 'LINEAR-NC',
+        };
+
+        vi.mocked(mockFeatureLoader.findByLinearIssueId).mockResolvedValue(feature as any);
+
+        await service.onLinearIssueUpdated('LINEAR-NC', 'Backlog', '/test/path', {
+          title: 'Same Title',
+          priority: 2,
+        });
+
+        // No changes needed, update should not be called
+        expect(mockFeatureLoader.update).not.toHaveBeenCalled();
+      });
     });
   });
 });
