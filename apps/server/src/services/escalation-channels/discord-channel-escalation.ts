@@ -107,9 +107,7 @@ export class DiscordChannelEscalation implements EscalationChannel {
       const channelResult = await this.discordService.findChannel(channelName);
 
       if (!channelResult.success || !channelResult.data) {
-        throw new Error(
-          channelResult.error || `Channel #${channelName} not found`
-        );
+        throw new Error(channelResult.error || `Channel #${channelName} not found`);
       }
 
       // Send message to channel
@@ -119,9 +117,7 @@ export class DiscordChannelEscalation implements EscalationChannel {
       });
 
       if (!sendResult.success) {
-        throw new Error(
-          sendResult.error || 'Failed to send Discord message'
-        );
+        throw new Error(sendResult.error || 'Failed to send Discord message');
       }
 
       logger.info(`Successfully sent escalation to #${channelName}`, {
