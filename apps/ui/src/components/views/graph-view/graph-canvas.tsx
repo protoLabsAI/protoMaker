@@ -462,8 +462,24 @@ function GraphCanvasInner({
   // On direct /graph navigation, React Query hasn't returned features yet,
   // so layoutedNodes is empty. Mounting ReactFlow with empty initial state
   // causes a stale-data race. Wait for real data to arrive.
+  // Keep Add Feature button accessible for empty projects.
   if (layoutedNodes.length === 0) {
-    return <div className={cn('w-full h-full', className)} style={backgroundStyle} />;
+    return (
+      <div className={cn('w-full h-full relative', className)} style={backgroundStyle}>
+        <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
+          {onOpenPlanDialog && (
+            <Button variant="secondary" size="sm" onClick={onOpenPlanDialog} className="gap-1.5">
+              <Wand2 className="w-4 h-4" />
+              Plan
+            </Button>
+          )}
+          <Button variant="default" size="sm" onClick={onAddFeature} className="gap-1.5">
+            <Plus className="w-4 h-4" />
+            Add Feature
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   return (

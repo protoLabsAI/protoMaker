@@ -12,12 +12,30 @@
 
 import { execSync } from 'node:child_process';
 import { createLogger } from '@automaker/utils';
+import type { FailureCategory } from '@automaker/types';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { TriageService, TriageInput, TriageResult } from './triage-service.js';
 import type { Feature } from '@automaker/types';
 
 const logger = createLogger('IssueCreationService');
+
+const FAILURE_CATEGORIES: readonly string[] = [
+  'transient',
+  'rate_limit',
+  'authentication',
+  'quota',
+  'test_failure',
+  'dependency',
+  'tool_error',
+  'merge_conflict',
+  'validation',
+  'unknown',
+];
+
+function isFailureCategory(value: unknown): value is FailureCategory {
+  return typeof value === 'string' && FAILURE_CATEGORIES.includes(value);
+}
 
 /** Discord channel ID for #bugs-and-issues (set via initialize or env) */
 const BUGS_CHANNEL_ID = process.env.DISCORD_BUGS_CHANNEL_ID || '';
@@ -66,7 +84,10 @@ export class IssueCreationService {
   private triageService: TriageService;
   private unsubscribe: (() => void) | null = null;
   private initialized = false;
-  /** Track which features already have issues to avoid duplicates */
+  /**
+   * Track which features already have issues to avoid duplicates within this session.
+   * Persistent fallback: also checks feature.githubIssueNumber after restarts.
+   */
   private issuedFeatures = new Set<string>();
 
   constructor(events: EventEmitter, featureLoader: FeatureLoader, triageService: TriageService) {
@@ -80,6 +101,15 @@ export class IssueCreationService {
    */
   initialize(): void {
     if (this.initialized) return;
+
+    // Verify gh CLI is available before subscribing to events
+    try {
+      execSync('gh --version', { encoding: 'utf-8', timeout: 5000 });
+    } catch {
+      logger.warn('gh CLI not available — issue creation will be disabled');
+      return;
+    }
+
     this.initialized = true;
 
     this.unsubscribe = this.events.subscribe((type, payload) => {
@@ -138,7 +168,7 @@ export class IssueCreationService {
     const triageInput: TriageInput = {
       featureId,
       projectPath,
-      failureCategory: failureCategory as any,
+      failureCategory: isFailureCategory(failureCategory) ? failureCategory : undefined,
       retryCount,
       error: lastError,
     };
