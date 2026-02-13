@@ -11,10 +11,10 @@ describe('registerBuiltInTemplates', () => {
     registry = new RoleRegistryService(events);
   });
 
-  it('registers all 11 built-in templates', () => {
+  it('registers all 12 built-in templates', () => {
     const count = registerBuiltInTemplates(registry);
-    expect(count).toBe(11);
-    expect(registry.size).toBe(11);
+    expect(count).toBe(12);
+    expect(registry.size).toBe(12);
   });
 
   it('registers templates as tier 0 (protected)', () => {
@@ -37,6 +37,7 @@ describe('registerBuiltInTemplates', () => {
     expect(names).toContain('engineering-manager');
     expect(names).toContain('ava');
     expect(names).toContain('jon');
+    expect(names).toContain('sam');
     expect(names).toContain('pr-maintainer');
     expect(names).toContain('board-janitor');
   });
@@ -61,7 +62,7 @@ describe('registerBuiltInTemplates', () => {
 
   it('implementation roles have full capabilities', () => {
     registerBuiltInTemplates(registry);
-    for (const name of ['backend-engineer', 'matt', 'frank']) {
+    for (const name of ['backend-engineer', 'matt', 'sam', 'frank']) {
       const template = registry.get(name);
       expect(template).toBeDefined();
       expect(template!.canUseBash).toBe(true);
@@ -94,8 +95,8 @@ describe('registerBuiltInTemplates', () => {
   it('is idempotent — calling twice does not duplicate', () => {
     registerBuiltInTemplates(registry);
     const count2 = registerBuiltInTemplates(registry);
-    // Second call may succeed (overwrite) or fail, but total should still be 11
-    expect(registry.size).toBe(11);
+    // Second call may succeed (overwrite) or fail, but total should still be 12
+    expect(registry.size).toBe(12);
   });
 
   it('ava has systemPrompt for Discord routing', () => {
@@ -117,6 +118,18 @@ describe('registerBuiltInTemplates', () => {
     expect(matt!.systemPrompt).toContain('Frontend');
     expect(matt!.role).toBe('frontend-engineer');
     expect(matt!.exposure?.discord).toBe(true);
+  });
+
+  it('sam has systemPrompt for AI agent engineering', () => {
+    registerBuiltInTemplates(registry);
+    const sam = registry.get('sam');
+    expect(sam).toBeDefined();
+    expect(sam!.systemPrompt).toBeDefined();
+    expect(sam!.systemPrompt).toContain('Sam');
+    expect(sam!.systemPrompt).toContain('AI Agent Engineer');
+    expect(sam!.role).toBe('backend-engineer');
+    expect(sam!.model).toBe('sonnet');
+    expect(sam!.exposure?.discord).toBe(true);
   });
 
   it('jon has systemPrompt for Discord routing', () => {
