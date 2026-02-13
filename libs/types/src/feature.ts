@@ -305,6 +305,22 @@ export interface Feature {
    */
   remediationHistory?: RemediationHistoryEntry[];
   /**
+   * Total remediation cycle count (feedback + CI failures combined).
+   * Incremented for each feedback cycle OR CI cycle.
+   * Used to enforce MAX_TOTAL_REMEDIATION_CYCLES budget.
+   */
+  remediationCycleCount?: number;
+  /**
+   * Number of CI failure remediation cycles.
+   * Tracks how many times the agent has fixed CI failures.
+   */
+  ciIterationCount?: number;
+  /**
+   * Last check suite ID processed for this feature.
+   * Used to deduplicate CI failure events.
+   */
+  lastCheckSuiteId?: number;
+  /**
    * Timestamp when the PR was created (ISO 8601).
    * Set by git-workflow-service when auto-creating a PR.
    */

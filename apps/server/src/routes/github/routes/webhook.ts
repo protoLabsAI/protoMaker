@@ -17,6 +17,7 @@ import type {
   GitHubPingWebhookPayload,
   WebhookVerificationResult,
 } from '@automaker/types';
+import type { GitHubCheckSuiteWebhookPayload } from '@automaker/types/dist/webhook.js';
 import type { SettingsService } from '../../../services/settings-service.js';
 import type { EventEmitter } from '../../../lib/events.js';
 
@@ -217,6 +218,50 @@ async function handlePullRequestReviewEvent(
 }
 
 /**
+ * Handle GitHub check suite completed event (CI failures)
+ */
+async function handleCheckSuiteEvent(
+  payload: GitHubCheckSuiteWebhookPayload,
+  projectPath: string,
+  events: EventEmitter
+): Promise<void> {
+  const { action, check_suite, repository } = payload;
+
+  logger.info(
+    `Received check_suite event: ${action} on ${repository.full_name} (conclusion: ${check_suite.conclusion})`
+  );
+
+  // Only process completed check suites with failure conclusion
+  if (action !== 'completed' || check_suite.conclusion !== 'failure') {
+    return;
+  }
+
+  // Only process if there are associated PRs
+  if (!check_suite.pull_requests || check_suite.pull_requests.length === 0) {
+    logger.debug(`Check suite ${check_suite.id} has no associated PRs, ignoring`);
+    return;
+  }
+
+  // Emit CI failure event for each associated PR
+  for (const pr of check_suite.pull_requests) {
+    logger.info(
+      `CI failure detected for PR #${pr.number} (check_suite: ${check_suite.id}, sha: ${check_suite.head_sha})`
+    );
+
+    events.emit('pr:ci-failure', {
+      projectPath,
+      prNumber: pr.number,
+      headBranch: pr.head.ref,
+      headSha: check_suite.head_sha,
+      checkSuiteId: check_suite.id,
+      checkSuiteUrl: check_suite.url,
+      repository: repository.full_name,
+      checksUrl: check_suite.check_runs_url,
+    });
+  }
+}
+
+/**
  * Create webhook handler
  *
  * Receives GitHub webhook events, verifies signatures, and processes the payload.
@@ -327,6 +372,14 @@ export function createWebhookHandler(
         case 'pull_request_review':
           await handlePullRequestReviewEvent(
             payload as GitHubPullRequestReviewWebhookPayload,
+            projectPath,
+            events
+          );
+          break;
+
+        case 'check_suite':
+          await handleCheckSuiteEvent(
+            payload as GitHubCheckSuiteWebhookPayload,
             projectPath,
             events
           );

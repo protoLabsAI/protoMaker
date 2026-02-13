@@ -32,6 +32,15 @@ const POLL_INTERVAL_MS = 60_000; // 1 minute
 /** Max iterations before escalating to CTO - prevents infinite feedback loops */
 const MAX_PR_ITERATIONS = 2;
 
+/** Max total remediation cycles (feedback + CI combined) before blocking */
+const MAX_TOTAL_REMEDIATION_CYCLES = 4;
+
+/** How often to poll for CI check status (60s) */
+const CI_POLL_INTERVAL_MS = 60_000;
+
+/** Max time to wait for CI checks to complete (10 minutes) */
+const CI_MAX_WAIT_MS = 10 * 60 * 1000;
+
 interface TrackedPR {
   featureId: string;
   projectPath: string;
@@ -42,6 +51,11 @@ interface TrackedPR {
   reviewState: 'pending' | 'changes_requested' | 'approved' | 'commented';
   iterationCount: number;
   lastProcessedReviewAt?: number; // Track last webhook-based review to dedupe
+  ciMonitoring?: {
+    headSha: string;
+    startedAt: number;
+    lastPolledAt: number;
+  };
 }
 
 interface PRReviewInfo {
@@ -135,6 +149,21 @@ export class PRFeedbackService {
         if (data.action === 'review_submitted') {
           void this.handleWebhookReview(data);
         }
+      }
+
+      // Listen for CI failures from webhook
+      if (type === 'pr:ci-failure') {
+        const data = payload as {
+          projectPath: string;
+          prNumber: number;
+          headBranch: string;
+          headSha: string;
+          checkSuiteId: number;
+          checkSuiteUrl: string | null;
+          repository: string;
+          checksUrl?: string;
+        };
+        void this.handleCIFailure(data);
       }
     });
 
@@ -284,9 +313,13 @@ export class PRFeedbackService {
   }
 
   /**
-   * Poll all tracked PRs for review status.
+   * Poll all tracked PRs for review status and CI status.
    */
   private async pollAllPRs(): Promise<void> {
+    // Poll CI status for PRs with active CI monitoring
+    await this.pollCIStatus();
+
+    // Poll review status for all tracked PRs
     for (const [featureId, pr] of this.trackedPRs) {
       // Don't poll too frequently per PR
       if (Date.now() - pr.lastCheckedAt < POLL_INTERVAL_MS * 0.8) continue;
@@ -431,11 +464,50 @@ export class PRFeedbackService {
 
         const fullFeedback = [feedbackSummary, coderabbitFeedback].filter(Boolean).join('\n---\n');
 
-        // Update feature with feedback info
+        // Load feature to check combined budget
+        const feature = await this.featureLoader.get(pr.projectPath, featureId);
+        const currentTotalCycles = (feature?.remediationCycleCount as number | undefined) || 0;
+        const totalCycles = currentTotalCycles + 1;
+
+        // Update feature with feedback info and increment total cycles
         await this.featureLoader.update(pr.projectPath, featureId, {
           lastReviewFeedback: fullFeedback.slice(0, 2000), // Truncate for storage
           prIterationCount: pr.iterationCount,
+          remediationCycleCount: totalCycles,
         });
+
+        // Check combined budget first
+        if (totalCycles >= MAX_TOTAL_REMEDIATION_CYCLES) {
+          logger.warn(
+            `PR #${pr.prNumber} for ${featureId} exceeded total remediation budget (${totalCycles}/${MAX_TOTAL_REMEDIATION_CYCLES}), blocking`
+          );
+
+          await this.featureLoader.update(pr.projectPath, featureId, {
+            status: 'blocked',
+            workItemState: 'blocked',
+            error: `Exceeded ${MAX_TOTAL_REMEDIATION_CYCLES} total remediation cycles (feedback + CI). Escalated.`,
+          });
+
+          this.events.emit('authority:awaiting-approval', {
+            projectPath: pr.projectPath,
+            proposal: {
+              who: 'pr-feedback-service',
+              what: 'escalate',
+              target: featureId,
+              justification: `PR #${pr.prNumber} exceeded ${MAX_TOTAL_REMEDIATION_CYCLES} total remediation cycles`,
+              risk: 'high',
+            },
+            decision: {
+              verdict: 'require_approval',
+              reason: `Total remediation budget exceeded`,
+            },
+            blockerType: 'remediation_budget_exceeded',
+            featureTitle: `PR #${pr.prNumber}`,
+          });
+
+          this.trackedPRs.delete(featureId);
+          return;
+        }
 
         if (pr.iterationCount > MAX_PR_ITERATIONS) {
           // Too many iterations - escalate to CTO
@@ -894,6 +966,343 @@ After making your decisions, implement the accepted fixes.`;
     const messageMatch = body.match(/^(.+?)(?:\n\n|\*\*)/s);
     const message = (messageMatch?.[1] || body).trim().replace(/^[🐰🔍💡⚠️🚨]\s*/, '');
     return message;
+  }
+
+  /**
+   * Start monitoring CI checks for a PR after agent push.
+   * This initiates polling that will detect CI failures.
+   */
+  startCIMonitoring(featureId: string, headSha: string): void {
+    const pr = this.trackedPRs.get(featureId);
+    if (!pr) {
+      logger.warn(`Cannot start CI monitoring for ${featureId} - PR not tracked`);
+      return;
+    }
+
+    pr.ciMonitoring = {
+      headSha,
+      startedAt: Date.now(),
+      lastPolledAt: 0,
+    };
+
+    logger.info(
+      `Started CI monitoring for PR #${pr.prNumber} (feature ${featureId}, sha: ${headSha.slice(0, 7)})`
+    );
+  }
+
+  /**
+   * Handle CI failure event from webhook.
+   * Deduplicates, checks budget, and restarts agent with CI fix prompt.
+   */
+  private async handleCIFailure(data: {
+    projectPath: string;
+    prNumber: number;
+    headBranch: string;
+    headSha: string;
+    checkSuiteId: number;
+    checkSuiteUrl: string | null;
+    repository: string;
+    checksUrl?: string;
+  }): Promise<void> {
+    // Find the tracked PR by PR number and branch
+    const entry = Array.from(this.trackedPRs.entries()).find(
+      ([_, pr]) => pr.prNumber === data.prNumber && pr.branchName === data.headBranch
+    );
+
+    if (!entry) {
+      logger.debug(
+        `CI failure webhook for PR #${data.prNumber} (branch: ${data.headBranch}), but not tracked`
+      );
+      return;
+    }
+
+    const [featureId, pr] = entry;
+
+    try {
+      // Load feature to check deduplication and budget
+      const feature = await this.featureLoader.get(pr.projectPath, featureId);
+      if (!feature) {
+        logger.warn(`Feature ${featureId} not found, cannot process CI failure`);
+        return;
+      }
+
+      // Deduplicate: skip if we already processed this check suite
+      if (feature.lastCheckSuiteId === data.checkSuiteId) {
+        logger.debug(
+          `Check suite ${data.checkSuiteId} already processed for ${featureId}, skipping`
+        );
+        return;
+      }
+
+      // Stop CI monitoring since we received the webhook
+      pr.ciMonitoring = undefined;
+
+      // Check combined budget
+      const currentTotalCycles = (feature.remediationCycleCount as number | undefined) || 0;
+      if (currentTotalCycles >= MAX_TOTAL_REMEDIATION_CYCLES) {
+        logger.warn(
+          `Feature ${featureId} exceeded total remediation budget (${currentTotalCycles}/${MAX_TOTAL_REMEDIATION_CYCLES}), blocking`
+        );
+
+        await this.featureLoader.update(pr.projectPath, featureId, {
+          status: 'blocked',
+          workItemState: 'blocked',
+          error: `Exceeded ${MAX_TOTAL_REMEDIATION_CYCLES} total remediation cycles (feedback + CI). Escalated.`,
+        });
+
+        this.events.emit('authority:awaiting-approval', {
+          projectPath: pr.projectPath,
+          proposal: {
+            who: 'pr-feedback-service',
+            what: 'escalate',
+            target: featureId,
+            justification: `PR #${pr.prNumber} exceeded ${MAX_TOTAL_REMEDIATION_CYCLES} total remediation cycles (feedback + CI failures)`,
+            risk: 'high',
+          },
+          decision: {
+            verdict: 'require_approval',
+            reason: `Total remediation budget exceeded`,
+          },
+          blockerType: 'remediation_budget_exceeded',
+          featureTitle: `PR #${pr.prNumber}`,
+        });
+
+        this.trackedPRs.delete(featureId);
+        return;
+      }
+
+      const currentCiIterations = (feature.ciIterationCount as number | undefined) || 0;
+      const ciIterationCount = currentCiIterations + 1;
+      const newTotalCycles = currentTotalCycles + 1;
+
+      logger.info(
+        `CI failure for PR #${pr.prNumber} (feature ${featureId}): iteration ${ciIterationCount}, total cycles ${newTotalCycles}/${MAX_TOTAL_REMEDIATION_CYCLES}`
+      );
+
+      // Fetch failed check details
+      const failedChecks = await this.fetchFailedChecks(pr, data.headSha);
+
+      // Build CI fix prompt
+      const continuationPrompt = await this.buildCIFixPrompt(
+        pr.prNumber,
+        ciIterationCount,
+        failedChecks,
+        featureId,
+        pr.projectPath
+      );
+
+      // Update feature with CI iteration metadata
+      await this.featureLoader.update(pr.projectPath, featureId, {
+        status: 'backlog',
+        workItemState: 'in_progress',
+        ciIterationCount,
+        remediationCycleCount: newTotalCycles,
+        lastCheckSuiteId: data.checkSuiteId,
+        error: undefined,
+      });
+
+      // Restart agent with CI fix prompt
+      if (this.autoModeService) {
+        void this.autoModeService.executeFeature(
+          pr.projectPath,
+          featureId,
+          true,
+          true,
+          undefined,
+          {
+            continuationPrompt,
+            retryCount: ciIterationCount,
+            previousErrors: [],
+            recoveryContext: `CI failure on PR #${pr.prNumber} (iteration ${ciIterationCount})`,
+          }
+        );
+
+        logger.info(`Restarted agent for ${featureId} to fix CI failures (iteration ${ciIterationCount})`);
+      } else {
+        logger.warn(`AutoModeService not available, cannot restart agent for CI fix`);
+      }
+    } catch (error) {
+      logger.error(`Failed to handle CI failure for PR #${data.prNumber}:`, error);
+    }
+  }
+
+  /**
+   * Fetch failed check run details from GitHub.
+   */
+  private async fetchFailedChecks(
+    pr: TrackedPR,
+    headSha: string
+  ): Promise<Array<{ name: string; conclusion: string; output: string }>> {
+    try {
+      const { stdout } = await execFileAsync(
+        'gh',
+        ['api', `repos/{owner}/{repo}/commits/${headSha}/check-runs`, '--jq', '.check_runs'],
+        {
+          cwd: pr.projectPath,
+          timeout: 15_000,
+          encoding: 'utf-8',
+        }
+      );
+
+      const checkRuns = JSON.parse(stdout) as Array<{
+        name: string;
+        status: string;
+        conclusion: string;
+        output?: {
+          title?: string;
+          summary?: string;
+          text?: string;
+        };
+      }>;
+
+      return checkRuns
+        .filter((check) => check.conclusion === 'failure')
+        .map((check) => ({
+          name: check.name,
+          conclusion: check.conclusion,
+          output: [check.output?.title, check.output?.summary, check.output?.text]
+            .filter(Boolean)
+            .join('\n')
+            .slice(0, 1000),
+        }));
+    } catch (error) {
+      logger.debug(`Failed to fetch check runs for ${headSha}: ${error}`);
+      return [];
+    }
+  }
+
+  /**
+   * Build continuation prompt for CI failure fix.
+   */
+  private async buildCIFixPrompt(
+    prNumber: number,
+    iteration: number,
+    failedChecks: Array<{ name: string; conclusion: string; output: string }>,
+    featureId: string,
+    projectPath: string
+  ): Promise<string> {
+    let previousContext = '';
+    try {
+      const agentOutput = await this.featureLoader.getAgentOutput(projectPath, featureId);
+      if (agentOutput) {
+        const MAX_LENGTH = 50_000;
+        const KEEP_LENGTH = 40_000;
+        let truncatedOutput = agentOutput;
+        if (agentOutput.length > MAX_LENGTH) {
+          truncatedOutput = agentOutput.slice(-KEEP_LENGTH);
+        }
+
+        previousContext = `## Your Previous Work (CI Fix Iteration ${iteration - 1})
+
+Below is the output from your previous work on this feature:
+
+${truncatedOutput}
+
+---
+
+`;
+      }
+    } catch (error) {
+      logger.debug(`No previous agent output found for ${featureId}`);
+    }
+
+    const checksDetails =
+      failedChecks.length > 0
+        ? failedChecks
+            .map((check) => `### ${check.name}\n**Status:** ${check.conclusion}\n\n${check.output}`)
+            .join('\n\n')
+        : 'Check details not available. Run CI checks locally to debug.';
+
+    return `${previousContext}## CI Failure - Fix Required (Iteration ${iteration})
+
+Your pull request #${prNumber} has CI check failures. Please fix the following issues:
+
+${checksDetails}
+
+**Important Instructions:**
+- Fix only the CI failures mentioned above
+- Run tests locally to verify the fixes work
+- Commit your fixes to the same branch (worktree is already set up)
+- The fixes will be pushed to the existing PR #${prNumber}
+- After fixing, CI will run again automatically
+
+This is CI fix iteration ${iteration}.`;
+  }
+
+  /**
+   * Poll CI status for PRs that are actively monitoring CI.
+   * Called periodically by the main poll loop.
+   */
+  private async pollCIStatus(): Promise<void> {
+    for (const [featureId, pr] of this.trackedPRs) {
+      if (!pr.ciMonitoring) continue;
+
+      const { headSha, startedAt, lastPolledAt } = pr.ciMonitoring;
+
+      // Don't poll too frequently
+      if (Date.now() - lastPolledAt < CI_POLL_INTERVAL_MS * 0.8) continue;
+
+      // Timeout if CI takes too long
+      if (Date.now() - startedAt > CI_MAX_WAIT_MS) {
+        logger.warn(
+          `CI monitoring for PR #${pr.prNumber} timed out after ${CI_MAX_WAIT_MS / 60000} minutes`
+        );
+        pr.ciMonitoring = undefined;
+        continue;
+      }
+
+      try {
+        const { stdout } = await execFileAsync(
+          'gh',
+          ['api', `repos/{owner}/{repo}/commits/${headSha}/check-runs`, '--jq', '.check_runs'],
+          {
+            cwd: pr.projectPath,
+            timeout: 15_000,
+            encoding: 'utf-8',
+          }
+        );
+
+        const checkRuns = JSON.parse(stdout) as Array<{
+          name: string;
+          status: string;
+          conclusion: string | null;
+        }>;
+
+        pr.ciMonitoring.lastPolledAt = Date.now();
+
+        // Check if all checks are completed
+        const allCompleted = checkRuns.every((check) => check.status === 'completed');
+        if (!allCompleted) {
+          logger.debug(`CI checks still running for PR #${pr.prNumber}, continuing to monitor`);
+          continue;
+        }
+
+        // Check if any required checks failed
+        const anyFailed = checkRuns.some((check) => check.conclusion === 'failure');
+        if (anyFailed) {
+          logger.info(`[POLL] CI failure detected for PR #${pr.prNumber}`);
+
+          // Emit CI failure event (will be handled by handleCIFailure)
+          this.events.emit('pr:ci-failure', {
+            projectPath: pr.projectPath,
+            prNumber: pr.prNumber,
+            headBranch: pr.branchName,
+            headSha,
+            checkSuiteId: 0, // Polling doesn't have check suite ID
+            checkSuiteUrl: null,
+            repository: 'unknown',
+            checksUrl: undefined,
+          });
+
+          pr.ciMonitoring = undefined;
+        } else {
+          logger.info(`[POLL] CI checks passed for PR #${pr.prNumber}, stopping monitoring`);
+          pr.ciMonitoring = undefined;
+        }
+      } catch (error) {
+        logger.error(`Failed to poll CI status for PR #${pr.prNumber}:`, error);
+      }
+    }
   }
 
   /**
