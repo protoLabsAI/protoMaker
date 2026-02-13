@@ -13,6 +13,7 @@
  */
 
 import { createLogger } from '@automaker/utils';
+import type { Feature } from '@automaker/types';
 import type { EventEmitter } from '../lib/events.js';
 import type { SettingsService } from './settings-service.js';
 import type { FeatureLoader } from './feature-loader.js';
@@ -1442,10 +1443,10 @@ export class LinearSyncService {
 
     try {
       // Get all features for this project path
-      const features = await this.featureLoader.list(projectPath);
+      const features = await this.featureLoader.getAll(projectPath);
 
       // Filter features that have a linearIssueId (already synced to Linear)
-      const syncedFeatures = features.filter((f) => f.linearIssueId);
+      const syncedFeatures = features.filter((f: Feature) => f.linearIssueId);
 
       if (syncedFeatures.length === 0) {
         logger.debug(`No synced features to add to Linear project for ${projectSlug}`);
