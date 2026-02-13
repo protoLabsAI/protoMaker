@@ -574,7 +574,9 @@ export class LinearSyncService {
       const parentFeature = await this.featureLoader.get(projectPath, feature.epicId);
       if (parentFeature?.linearIssueId) {
         parentId = parentFeature.linearIssueId;
-        logger.debug(`Setting parentId ${parentId} for child feature with epicId ${feature.epicId}`);
+        logger.debug(
+          `Setting parentId ${parentId} for child feature with epicId ${feature.epicId}`
+        );
       }
     }
 
