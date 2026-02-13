@@ -240,7 +240,13 @@ export type EventType =
   | 'crew:check-started'
   | 'crew:check-completed'
   | 'crew:escalation-started'
-  | 'crew:escalation-completed';
+  | 'crew:escalation-completed'
+  // Escalation router events (signal routing to channels)
+  | 'escalation:signal-received'
+  | 'escalation:signal-routed'
+  | 'escalation:signal-sent'
+  | 'escalation:signal-failed'
+  | 'escalation:signal-deduplicated';
 
 export type EventCallback = (type: EventType, payload: unknown) => void;
 
