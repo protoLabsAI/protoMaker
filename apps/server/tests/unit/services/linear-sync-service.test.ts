@@ -9,11 +9,13 @@ import { LinearSyncService } from '../../../src/services/linear-sync-service.js'
 import { createEventEmitter } from '../../../src/lib/events.js';
 import type { EventEmitter } from '../../../src/lib/events.js';
 import type { SettingsService } from '../../../src/services/settings-service.js';
+import type { FeatureLoader } from '../../../src/services/feature-loader.js';
 
 describe('LinearSyncService', () => {
   let service: LinearSyncService;
   let emitter: EventEmitter;
   let mockSettingsService: SettingsService;
+  let mockFeatureLoader: FeatureLoader;
 
   beforeEach(() => {
     service = new LinearSyncService();
@@ -24,6 +26,12 @@ describe('LinearSyncService', () => {
       getProjectSettings: vi.fn(),
       getGlobalSettings: vi.fn(),
     } as unknown as SettingsService;
+
+    // Mock feature loader
+    mockFeatureLoader = {
+      get: vi.fn(),
+      update: vi.fn(),
+    } as unknown as FeatureLoader;
   });
 
   afterEach(() => {
@@ -39,18 +47,18 @@ describe('LinearSyncService', () => {
 
   describe('Initialization', () => {
     it('should initialize with event emitter and settings service', () => {
-      expect(() => service.initialize(emitter, mockSettingsService)).not.toThrow();
+      expect(() => service.initialize(emitter, mockSettingsService, mockFeatureLoader)).not.toThrow();
     });
 
     it('should not be running before start() is called', () => {
-      service.initialize(emitter, mockSettingsService);
+      service.initialize(emitter, mockSettingsService, mockFeatureLoader);
       expect(service.shouldSync('test-feature')).toBe(false);
     });
   });
 
   describe('Lifecycle Methods', () => {
     beforeEach(() => {
-      service.initialize(emitter, mockSettingsService);
+      service.initialize(emitter, mockSettingsService, mockFeatureLoader);
     });
 
     it('should start the service', () => {
@@ -105,7 +113,7 @@ describe('LinearSyncService', () => {
 
   describe('Event Subscriptions', () => {
     beforeEach(() => {
-      service.initialize(emitter, mockSettingsService);
+      service.initialize(emitter, mockSettingsService, mockFeatureLoader);
       service.start();
     });
 
@@ -154,7 +162,7 @@ describe('LinearSyncService', () => {
 
   describe('Loop Prevention Guard', () => {
     beforeEach(() => {
-      service.initialize(emitter, mockSettingsService);
+      service.initialize(emitter, mockSettingsService, mockFeatureLoader);
       service.start();
     });
 
@@ -205,7 +213,7 @@ describe('LinearSyncService', () => {
 
   describe('Debounce Logic', () => {
     beforeEach(() => {
-      service.initialize(emitter, mockSettingsService);
+      service.initialize(emitter, mockSettingsService, mockFeatureLoader);
       service.start();
     });
 
@@ -270,7 +278,7 @@ describe('LinearSyncService', () => {
 
   describe('Sync Metadata Management', () => {
     beforeEach(() => {
-      service.initialize(emitter, mockSettingsService);
+      service.initialize(emitter, mockSettingsService, mockFeatureLoader);
       service.start();
     });
 
@@ -343,7 +351,7 @@ describe('LinearSyncService', () => {
 
   describe('isProjectSyncEnabled', () => {
     beforeEach(() => {
-      service.initialize(emitter, mockSettingsService);
+      service.initialize(emitter, mockSettingsService, mockFeatureLoader);
     });
 
     it('should return true when Linear sync is enabled', async () => {
@@ -441,7 +449,7 @@ describe('LinearSyncService', () => {
 
   describe('shouldSync Combined Guard Logic', () => {
     beforeEach(() => {
-      service.initialize(emitter, mockSettingsService);
+      service.initialize(emitter, mockSettingsService, mockFeatureLoader);
     });
 
     it('should pass all guards when service is running and no conflicts', () => {

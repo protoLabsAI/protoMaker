@@ -15,6 +15,7 @@
 import { createLogger } from '@automaker/utils';
 import type { EventEmitter } from '../lib/events.js';
 import type { SettingsService } from './settings-service.js';
+import type { FeatureLoader } from './feature-loader.js';
 
 const logger = createLogger('LinearSyncService');
 
@@ -28,6 +29,8 @@ export interface SyncMetadata {
   linearIssueId?: string;
   errorMessage?: string;
   syncCount: number;
+  syncSource?: 'automaker' | 'linear';
+  syncDirection?: 'push' | 'pull';
 }
 
 /**
@@ -59,6 +62,7 @@ const DEBOUNCE_WINDOW_MS = 5000;
 export class LinearSyncService {
   private emitter: EventEmitter | null = null;
   private settingsService: SettingsService | null = null;
+  private featureLoader: FeatureLoader | null = null;
   private unsubscribe: (() => void) | null = null;
 
   /**
@@ -82,11 +86,16 @@ export class LinearSyncService {
   private isRunning = false;
 
   /**
-   * Initialize the service with event emitter and settings service
+   * Initialize the service with event emitter, settings service, and feature loader
    */
-  initialize(emitter: EventEmitter, settingsService: SettingsService): void {
+  initialize(
+    emitter: EventEmitter,
+    settingsService: SettingsService,
+    featureLoader: FeatureLoader
+  ): void {
     this.emitter = emitter;
     this.settingsService = settingsService;
+    this.featureLoader = featureLoader;
 
     // Subscribe to feature lifecycle events
     this.unsubscribe = emitter.subscribe((type, payload) => {
@@ -235,14 +244,204 @@ export class LinearSyncService {
   /**
    * Handle feature:created events
    */
-  private handleFeatureCreated(payload: FeatureEventPayload): void {
+  private async handleFeatureCreated(payload: FeatureEventPayload): Promise<void> {
     logger.debug('Received feature:created event', {
       featureId: payload.featureId,
       featureName: payload.featureName,
     });
 
-    // No actual sync logic yet - just structure and guards
-    // Future implementation will check guards and perform sync
+    // Call the async implementation
+    await this.onFeatureCreated(payload);
+  }
+
+  /**
+   * Create Linear issue when a feature is created
+   */
+  private async onFeatureCreated(payload: FeatureEventPayload): Promise<void> {
+    const { featureId, projectPath } = payload;
+
+    // Guard: Check if service is running and sync is enabled
+    if (!this.shouldSync(featureId)) {
+      return;
+    }
+
+    // Check if sync is enabled for this project
+    const syncEnabled = await this.isProjectSyncEnabled(projectPath);
+    if (!syncEnabled) {
+      logger.debug(`Linear sync not enabled for project ${projectPath}`);
+      return;
+    }
+
+    if (!this.featureLoader) {
+      logger.error('FeatureLoader not initialized');
+      return;
+    }
+
+    // Mark as syncing to prevent duplicates
+    this.markSyncing(featureId);
+
+    try {
+      // Get the feature details
+      const feature = await this.featureLoader.get(projectPath, featureId);
+      if (!feature) {
+        logger.error(`Feature ${featureId} not found`);
+        return;
+      }
+
+      // Skip if already synced to Linear
+      if (feature.linearIssueId) {
+        logger.info(`Feature ${featureId} already has Linear issue ${feature.linearIssueId}`);
+        return;
+      }
+
+      // Create Linear issue
+      const issueResult = await this.createLinearIssue(projectPath, feature);
+
+      // Update feature with Linear issue info
+      await this.featureLoader.update(projectPath, featureId, {
+        linearIssueId: issueResult.issueId,
+        linearIssueUrl: issueResult.issueUrl,
+      });
+
+      // Update sync metadata
+      const metadata: SyncMetadata = {
+        featureId,
+        lastSyncTimestamp: Date.now(),
+        lastSyncStatus: 'success',
+        linearIssueId: issueResult.issueId,
+        syncCount: 1,
+        syncSource: 'automaker',
+        syncDirection: 'push',
+      };
+      this.updateSyncMetadata(metadata);
+
+      // Emit completion event
+      if (this.emitter) {
+        this.emitter.emit('linear:sync:completed', {
+          featureId,
+          direction: 'push',
+          conflictDetected: false,
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      logger.info(`Successfully synced feature ${featureId} to Linear issue ${issueResult.issueId}`);
+    } catch (error) {
+      logger.error(`Failed to sync feature ${featureId} to Linear:`, error);
+
+      // Update sync metadata with error
+      const metadata: SyncMetadata = {
+        featureId,
+        lastSyncTimestamp: Date.now(),
+        lastSyncStatus: 'error',
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        syncCount: 0,
+      };
+      this.updateSyncMetadata(metadata);
+
+      // Emit error event
+      if (this.emitter) {
+        this.emitter.emit('linear:sync:error', {
+          featureId,
+          direction: 'push',
+          error: error instanceof Error ? error.message : 'Unknown error',
+          timestamp: new Date().toISOString(),
+        });
+      }
+    } finally {
+      // Unmark syncing
+      this.unmarkSyncing(featureId);
+    }
+  }
+
+  /**
+   * Create a Linear issue via GraphQL API
+   */
+  private async createLinearIssue(
+    projectPath: string,
+    feature: { title?: string; description: string; priority?: 0 | 1 | 2 | 3 | 4 }
+  ): Promise<{ issueId: string; issueUrl: string }> {
+    if (!this.settingsService) {
+      throw new Error('SettingsService not initialized');
+    }
+
+    // Get Linear OAuth token from settings
+    const settings = await this.settingsService.getProjectSettings(projectPath);
+    const linearAccessToken = settings.integrations?.linear?.agentToken;
+    const teamId = settings.integrations?.linear?.teamId;
+
+    if (!linearAccessToken) {
+      throw new Error('No Linear OAuth token found in settings');
+    }
+
+    if (!teamId) {
+      throw new Error('No Linear team ID found in settings');
+    }
+
+    // Map Automaker priority (0-4) to Linear priority (0-4)
+    // 0=none, 1=urgent, 2=high, 3=normal, 4=low
+    const linearPriority = feature.priority ?? 3;
+
+    // Build the issue title and description
+    const title = feature.title || 'Untitled Feature';
+    const description = feature.description || 'No description provided';
+
+    // GraphQL mutation to create issue
+    const mutation = `
+      mutation CreateIssue($teamId: String!, $title: String!, $description: String!, $priority: Int!) {
+        issueCreate(input: { teamId: $teamId, title: $title, description: $description, priority: $priority }) {
+          success
+          issue {
+            id
+            url
+          }
+        }
+      }
+    `;
+
+    const variables = {
+      teamId,
+      title,
+      description,
+      priority: linearPriority,
+    };
+
+    // Call Linear GraphQL API
+    const response = await fetch('https://api.linear.app/graphql', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${linearAccessToken}`,
+      },
+      body: JSON.stringify({ query: mutation, variables }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Linear API error: ${response.status} ${response.statusText}`);
+    }
+
+    const result = (await response.json()) as {
+      data?: {
+        issueCreate?: {
+          success: boolean;
+          issue?: { id: string; url: string };
+        };
+      };
+      errors?: Array<{ message: string }>;
+    };
+
+    if (result.errors) {
+      throw new Error(`Linear GraphQL error: ${result.errors.map((e) => e.message).join(', ')}`);
+    }
+
+    if (!result.data?.issueCreate?.success || !result.data.issueCreate.issue) {
+      throw new Error('Failed to create Linear issue');
+    }
+
+    return {
+      issueId: result.data.issueCreate.issue.id,
+      issueUrl: result.data.issueCreate.issue.url,
+    };
   }
 
   /**
