@@ -58,6 +58,22 @@ interface PRReviewInfo {
   }>;
 }
 
+/**
+ * Structured feedback item from a review thread
+ */
+interface ThreadFeedbackItem {
+  threadId: string;
+  severity: 'critical' | 'warning' | 'suggestion' | 'info';
+  category?: string;
+  message: string;
+  location?: {
+    path: string;
+    line?: number;
+  };
+  suggestedFix?: string;
+  isBot: boolean;
+}
+
 export class PRFeedbackService {
   private readonly events: EventEmitter;
   private readonly featureLoader: FeatureLoader;
@@ -471,6 +487,236 @@ ${feedback}
 - After fixing, verify the changes work correctly
 
 This is iteration ${iterationCount} of the review cycle. Focus on addressing the feedback precisely.`;
+  }
+
+  /**
+   * Build a structured prompt from PR review threads.
+   * Fetches review threads via GraphQL and groups them into human/bot feedback.
+   *
+   * @param pr - The tracked PR
+   * @returns Markdown prompt with numbered feedback items
+   */
+  async buildThreadFeedbackPrompt(pr: TrackedPR): Promise<string> {
+    try {
+      // Fetch review threads via GraphQL
+      const threads = await this.fetchReviewThreads(pr);
+
+      if (threads.length === 0) {
+        return 'No review threads found.';
+      }
+
+      // Separate bot and human threads
+      const botThreads = threads.filter((t) => t.isBot);
+      const humanThreads = threads.filter((t) => !t.isBot);
+
+      let prompt = '## Review Thread Feedback\n\n';
+
+      // Human feedback first (higher priority)
+      if (humanThreads.length > 0) {
+        prompt += '### Human Review Feedback\n\n';
+        humanThreads.forEach((item, idx) => {
+          prompt += this.formatFeedbackItem(idx + 1, item);
+        });
+        prompt += '\n';
+      }
+
+      // Bot feedback second
+      if (botThreads.length > 0) {
+        prompt += '### CodeRabbit Review Feedback\n\n';
+        botThreads.forEach((item, idx) => {
+          prompt += this.formatFeedbackItem(idx + 1, item);
+        });
+        prompt += '\n';
+      }
+
+      prompt += `\n**Instructions:**
+For each item above, respond with either:
+- "Accept #N" to implement the suggested fix
+- "Deny #N" with a brief justification
+
+After making your decisions, implement the accepted fixes.`;
+
+      return prompt;
+    } catch (error) {
+      logger.error(`Failed to build thread feedback prompt for PR #${pr.prNumber}:`, error);
+      return `Error fetching review threads: ${error instanceof Error ? error.message : String(error)}`;
+    }
+  }
+
+  /**
+   * Format a single feedback item as markdown
+   */
+  private formatFeedbackItem(number: number, item: ThreadFeedbackItem): string {
+    const severity = item.severity.toUpperCase();
+    const location = item.location
+      ? `${item.location.path}${item.location.line ? `:${item.location.line}` : ''}`
+      : 'general';
+    const category = item.category ? ` [${item.category}]` : '';
+    const fix = item.suggestedFix ? `\n   **Suggested Fix:** ${item.suggestedFix}` : '';
+
+    return `${number}. **[${severity}]${category}** ${location}
+   ${item.message}${fix}
+   Thread ID: \`${item.threadId}\`
+
+`;
+  }
+
+  /**
+   * Fetch review threads from GitHub using GraphQL
+   */
+  private async fetchReviewThreads(pr: TrackedPR): Promise<ThreadFeedbackItem[]> {
+    try {
+      // Extract owner/repo from git remote
+      const { stdout: remoteOutput } = await execFileAsync('git', ['remote', 'get-url', 'origin'], {
+        cwd: pr.projectPath,
+        timeout: 15_000,
+        encoding: 'utf-8',
+      });
+
+      const remoteUrl = remoteOutput.trim();
+      const match =
+        remoteUrl.match(/github\.com[:/]([^/]+)\/([^/\s]+?)(?:\.git)?$/) ||
+        remoteUrl.match(/^([^/]+)\/([^/\s]+)$/);
+
+      if (!match) {
+        throw new Error(`Could not parse GitHub owner/repo from remote: ${remoteUrl}`);
+      }
+
+      const [, owner, repoName] = match;
+
+      // GraphQL query to fetch review threads with comments
+      const query = `
+        query {
+          repository(owner: "${owner}", name: "${repoName}") {
+            pullRequest(number: ${pr.prNumber}) {
+              reviewThreads(first: 100) {
+                nodes {
+                  id
+                  isResolved
+                  comments(first: 10) {
+                    nodes {
+                      id
+                      body
+                      author {
+                        login
+                      }
+                      path
+                      line
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      `;
+
+      const { stdout } = await execFileAsync(
+        'gh',
+        ['api', 'graphql', '-f', `query=${query.replace(/\n/g, ' ')}`],
+        {
+          cwd: pr.projectPath,
+          timeout: 15_000,
+          encoding: 'utf-8',
+        }
+      );
+
+      const data = JSON.parse(stdout);
+      const threads = data.data?.repository?.pullRequest?.reviewThreads?.nodes || [];
+
+      // Map threads to structured feedback items
+      return threads
+        .filter((thread: { isResolved: boolean }) => !thread.isResolved)
+        .map((thread: {
+          id: string;
+          comments: {
+            nodes: Array<{
+              id: string;
+              body: string;
+              author: { login: string };
+              path?: string;
+              line?: number;
+            }>;
+          };
+        }) => {
+          const firstComment = thread.comments?.nodes?.[0];
+          if (!firstComment) return null;
+
+          const author = firstComment.author.login.toLowerCase();
+          const isBot =
+            author === 'coderabbitai' ||
+            author.includes('coderabbit') ||
+            author.includes('github-actions') ||
+            author.includes('dependabot');
+
+          // Parse severity and category from comment body
+          const { severity, category, suggestion } = this.parseCommentMetadata(firstComment.body);
+
+          return {
+            threadId: thread.id,
+            severity,
+            category,
+            message: this.extractMessage(firstComment.body),
+            location: firstComment.path
+              ? {
+                  path: firstComment.path,
+                  line: firstComment.line,
+                }
+              : undefined,
+            suggestedFix: suggestion,
+            isBot,
+          };
+        })
+        .filter(Boolean) as ThreadFeedbackItem[];
+    } catch (error) {
+      logger.error(`Failed to fetch review threads for PR #${pr.prNumber}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Parse severity, category, and suggestion from comment body
+   */
+  private parseCommentMetadata(body: string): {
+    severity: ThreadFeedbackItem['severity'];
+    category?: string;
+    suggestion?: string;
+  } {
+    // Extract severity
+    const severityMatch = body.match(/\*\*Severity\*\*:\s*(\w+)/i);
+    let severity: ThreadFeedbackItem['severity'] = 'info';
+
+    if (severityMatch) {
+      const sev = severityMatch[1].toLowerCase();
+      if (sev === 'critical' || sev === 'high') severity = 'critical';
+      else if (sev === 'warning' || sev === 'medium') severity = 'warning';
+      else if (sev === 'suggestion' || sev === 'low') severity = 'suggestion';
+    } else {
+      // Infer from emoji
+      if (body.includes('🚨')) severity = 'critical';
+      else if (body.includes('⚠️')) severity = 'warning';
+      else if (body.includes('💡')) severity = 'suggestion';
+    }
+
+    // Extract category
+    const categoryMatch = body.match(/\*\*Category\*\*:\s*([^\n]+)/i);
+    const category = categoryMatch?.[1]?.trim();
+
+    // Extract suggestion
+    const suggestionMatch = body.match(/\*\*Suggestion\*\*:\s*([^\n]+(?:\n(?!\*\*)[^\n]+)*)/i);
+    const suggestion = suggestionMatch?.[1]?.trim();
+
+    return { severity, category, suggestion };
+  }
+
+  /**
+   * Extract the main message from comment body
+   */
+  private extractMessage(body: string): string {
+    // Remove emoji prefix and extract first paragraph or up to first bold header
+    const messageMatch = body.match(/^(.+?)(?:\n\n|\*\*)/s);
+    const message = (messageMatch?.[1] || body).trim().replace(/^[🐰🔍💡⚠️🚨]\s*/, '');
+    return message;
   }
 
   /**
