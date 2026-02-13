@@ -6,7 +6,12 @@ let colors: any;
 try {
   colors = require('picocolors');
 } catch {
-  colors = { cyan: (s: string) => s, yellow: (s: string) => s, red: (s: string) => s, gray: (s: string) => s };
+  colors = {
+    cyan: (s: string) => s,
+    yellow: (s: string) => s,
+    red: (s: string) => s,
+    gray: (s: string) => s,
+  };
 }
 
 // Minimal logger that writes to stderr (CLI convention)
@@ -34,14 +39,17 @@ export function writeJson(path: string, data: any): void {
 }
 
 // Helper: Run command
-export function runCmd(command: string, args: string[]): Promise<{ code: number; stdout: string; stderr: string }> {
+export function runCmd(
+  command: string,
+  args: string[]
+): Promise<{ code: number; stdout: string; stderr: string }> {
   return new Promise((resolve) => {
     const proc = spawn(command, args);
     let stdout = '';
     let stderr = '';
 
-    proc.stdout?.on('data', (data) => stdout += data.toString());
-    proc.stderr?.on('data', (data) => stderr += data.toString());
+    proc.stdout?.on('data', (data) => (stdout += data.toString()));
+    proc.stderr?.on('data', (data) => (stderr += data.toString()));
 
     proc.on('close', (code) => resolve({ code: code || 0, stdout, stderr }));
   });
