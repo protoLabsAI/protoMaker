@@ -178,10 +178,7 @@ describe('LinearSyncService (Integration)', () => {
       settingsService = createMockSettingsService();
 
       // Make fetch fail
-      vi.stubGlobal(
-        'fetch',
-        vi.fn().mockRejectedValue(new Error('Network error'))
-      );
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network error')));
 
       service.initialize(emitter, settingsService, featureLoader);
       service.start();
@@ -597,10 +594,7 @@ describe('LinearSyncService (Integration)', () => {
     });
 
     it('emits linear:sync:error on failed outbound sync', async () => {
-      vi.stubGlobal(
-        'fetch',
-        vi.fn().mockRejectedValue(new Error('Connection refused'))
-      );
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Connection refused')));
 
       featureLoader = createMockFeatureLoader({
         'feature-1': {
