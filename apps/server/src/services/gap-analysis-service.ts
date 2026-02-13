@@ -502,7 +502,7 @@ export function analyzeGaps(
       target: 'CodeRabbit as required CI check',
       effort: 'small',
       featureDescription:
-        'Set up CodeRabbit for AI-powered code review. Create .coderabbit.yaml configuration file. Configure as a required check in branch protection so PRs cannot merge without review.',
+        'Set up CodeRabbit for AI-powered code review. Create .coderabbit.yaml configuration file with strict profile (NOT chill). Configure as a required check in branch protection so PRs cannot merge without review.',
     });
   } else {
     addCompliant({ category: 'ci', title: 'CodeRabbit', detail: 'AI code review configured' });

@@ -107,7 +107,7 @@ Templates use `{{variable}}` interpolation.
 - VitePress docs site (`docs/` directory with auto-generated sidebar)
 - Beads task tracker
 - Discord channels
-- CodeRabbit
+- CodeRabbit (strict profile — never use chill)
 - Umami analytics (privacy-friendly traffic tracking)
 
 ### Optional
