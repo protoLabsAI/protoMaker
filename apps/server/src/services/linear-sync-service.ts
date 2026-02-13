@@ -20,6 +20,33 @@ import type { FeatureLoader } from './feature-loader.js';
 const logger = createLogger('LinearSyncService');
 
 /**
+ * Aggregated sync metrics
+ */
+export interface SyncMetrics {
+  totalOperations: number;
+  successfulOperations: number;
+  failedOperations: number;
+  conflictsDetected: number;
+  pushCount: number;
+  pullCount: number;
+  avgDurationMs: number;
+  lastOperationAt: string | null;
+}
+
+/**
+ * A single sync activity entry for the activity log
+ */
+export interface SyncActivity {
+  timestamp: string;
+  featureId: string;
+  direction: 'push' | 'pull';
+  status: 'success' | 'error';
+  durationMs: number;
+  conflictDetected: boolean;
+  error?: string;
+}
+
+/**
  * Metadata stored for each synced feature
  */
 export interface SyncMetadata {
@@ -95,7 +122,27 @@ export class LinearSyncService {
   /**
    * Flag to track if service is running
    */
-  private isRunning = false;
+  private running = false;
+
+  /**
+   * Metrics counters
+   */
+  private metrics: SyncMetrics = {
+    totalOperations: 0,
+    successfulOperations: 0,
+    failedOperations: 0,
+    conflictsDetected: 0,
+    pushCount: 0,
+    pullCount: 0,
+    avgDurationMs: 0,
+    lastOperationAt: null,
+  };
+
+  /**
+   * Circular buffer for recent activity (last 100 operations)
+   */
+  private activityLog: SyncActivity[] = [];
+  private readonly MAX_ACTIVITY_LOG_SIZE = 100;
 
   /**
    * Initialize the service with event emitter, settings service, and feature loader
@@ -127,12 +174,12 @@ export class LinearSyncService {
    * Start the sync service
    */
   start(): void {
-    if (this.isRunning) {
+    if (this.running) {
       logger.warn('LinearSyncService is already running');
       return;
     }
 
-    this.isRunning = true;
+    this.running = true;
     logger.info('LinearSyncService started');
   }
 
@@ -140,12 +187,12 @@ export class LinearSyncService {
    * Stop the sync service
    */
   stop(): void {
-    if (!this.isRunning) {
+    if (!this.running) {
       logger.warn('LinearSyncService is not running');
       return;
     }
 
-    this.isRunning = false;
+    this.running = false;
 
     // Clear any in-progress syncs
     this.syncingFeatures.clear();
@@ -168,8 +215,91 @@ export class LinearSyncService {
     this.settingsService = null;
     this.lastSyncTimes.clear();
     this.syncState.clear();
+    this.activityLog = [];
+    this.metrics = {
+      totalOperations: 0,
+      successfulOperations: 0,
+      failedOperations: 0,
+      conflictsDetected: 0,
+      pushCount: 0,
+      pullCount: 0,
+      avgDurationMs: 0,
+      lastOperationAt: null,
+    };
 
     logger.info('LinearSyncService destroyed');
+  }
+
+  /**
+   * Check if the sync service is currently running
+   */
+  isRunning(): boolean {
+    return this.running;
+  }
+
+  /**
+   * Get aggregated sync metrics
+   */
+  getMetrics(): SyncMetrics {
+    return { ...this.metrics };
+  }
+
+  /**
+   * Get recent sync activity entries
+   * @param limit Maximum entries to return (default: 20)
+   */
+  getRecentActivity(limit = 20): SyncActivity[] {
+    return this.activityLog.slice(-limit);
+  }
+
+  /**
+   * Record a sync operation result for metrics tracking
+   */
+  private recordOperation(
+    featureId: string,
+    direction: 'push' | 'pull',
+    status: 'success' | 'error',
+    durationMs: number,
+    conflictDetected: boolean,
+    error?: string
+  ): void {
+    // Update counters
+    this.metrics.totalOperations++;
+    if (status === 'success') {
+      this.metrics.successfulOperations++;
+    } else {
+      this.metrics.failedOperations++;
+    }
+    if (conflictDetected) {
+      this.metrics.conflictsDetected++;
+    }
+    if (direction === 'push') {
+      this.metrics.pushCount++;
+    } else {
+      this.metrics.pullCount++;
+    }
+    this.metrics.lastOperationAt = new Date().toISOString();
+
+    // Update rolling average duration (only for successful ops)
+    if (status === 'success' && this.metrics.successfulOperations > 0) {
+      const prevTotal = this.metrics.avgDurationMs * (this.metrics.successfulOperations - 1);
+      this.metrics.avgDurationMs = (prevTotal + durationMs) / this.metrics.successfulOperations;
+    }
+
+    // Add to activity log (circular buffer)
+    const activity: SyncActivity = {
+      timestamp: new Date().toISOString(),
+      featureId,
+      direction,
+      status,
+      durationMs,
+      conflictDetected,
+      ...(error && { error }),
+    };
+    this.activityLog.push(activity);
+    if (this.activityLog.length > this.MAX_ACTIVITY_LOG_SIZE) {
+      this.activityLog.shift();
+    }
   }
 
   /**
@@ -227,7 +357,7 @@ export class LinearSyncService {
    */
   shouldSync(featureId: string): boolean {
     // Guard 1: Service must be running
-    if (!this.isRunning) {
+    if (!this.running) {
       logger.debug(`Sync skipped for ${featureId}: service not running`);
       return false;
     }
@@ -289,6 +419,8 @@ export class LinearSyncService {
       return;
     }
 
+    const startTime = Date.now();
+
     try {
       // Get the feature details
       const feature = await this.featureLoader.get(projectPath, featureId);
@@ -327,6 +459,9 @@ export class LinearSyncService {
       };
       this.updateSyncMetadata(metadata);
 
+      // Record metrics
+      this.recordOperation(featureId, 'push', 'success', Date.now() - startTime, false);
+
       // Emit completion event
       if (this.emitter) {
         this.emitter.emit('linear:sync:completed', {
@@ -343,12 +478,16 @@ export class LinearSyncService {
     } catch (error) {
       logger.error(`Failed to sync feature ${featureId} to Linear:`, error);
 
+      // Record metrics
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      this.recordOperation(featureId, 'push', 'error', Date.now() - startTime, false, errorMsg);
+
       // Update sync metadata with error
       const metadata: SyncMetadata = {
         featureId,
         lastSyncTimestamp: Date.now(),
         lastSyncStatus: 'error',
-        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        errorMessage: errorMsg,
         syncCount: 0,
       };
       this.updateSyncMetadata(metadata);
@@ -358,7 +497,7 @@ export class LinearSyncService {
         this.emitter.emit('linear:sync:error', {
           featureId,
           direction: 'push',
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error: errorMsg,
           timestamp: new Date().toISOString(),
         });
       }
@@ -519,6 +658,8 @@ export class LinearSyncService {
       return;
     }
 
+    const startTime = Date.now();
+
     try {
       // Get the feature details
       const feature = await this.featureLoader.get(projectPath, featureId);
@@ -571,6 +712,9 @@ export class LinearSyncService {
       };
       this.updateSyncMetadata(metadata);
 
+      // Record metrics
+      this.recordOperation(featureId, 'push', 'success', Date.now() - startTime, false);
+
       // Emit completion event
       if (this.emitter) {
         this.emitter.emit('linear:sync:completed', {
@@ -587,12 +731,15 @@ export class LinearSyncService {
     } catch (error) {
       logger.error(`Failed to sync status change for feature ${featureId}:`, error);
 
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      this.recordOperation(featureId, 'push', 'error', Date.now() - startTime, false, errorMsg);
+
       // Update sync metadata with error
       const metadata: SyncMetadata = {
         featureId,
         lastSyncTimestamp: Date.now(),
         lastSyncStatus: 'error',
-        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        errorMessage: errorMsg,
         syncCount: 0,
       };
       this.updateSyncMetadata(metadata);
@@ -602,7 +749,7 @@ export class LinearSyncService {
         this.emitter.emit('linear:sync:error', {
           featureId,
           direction: 'push',
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error: errorMsg,
           timestamp: new Date().toISOString(),
         });
       }
@@ -968,6 +1115,8 @@ export class LinearSyncService {
     // Mark as syncing to prevent duplicates
     this.markSyncing(featureId);
 
+    const startTime = Date.now();
+
     try {
       // Get the feature details
       const feature = await this.featureLoader.get(projectPath, featureId);
@@ -1010,6 +1159,9 @@ export class LinearSyncService {
       };
       this.updateSyncMetadata(metadata);
 
+      // Record metrics
+      this.recordOperation(featureId, 'push', 'success', Date.now() - startTime, false);
+
       // Emit completion event
       if (this.emitter) {
         this.emitter.emit('linear:sync:completed', {
@@ -1026,12 +1178,15 @@ export class LinearSyncService {
     } catch (error) {
       logger.error(`Failed to sync PR merge for feature ${featureId}:`, error);
 
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      this.recordOperation(featureId, 'push', 'error', Date.now() - startTime, false, errorMsg);
+
       // Update sync metadata with error
       const metadata: SyncMetadata = {
         featureId,
         lastSyncTimestamp: Date.now(),
         lastSyncStatus: 'error',
-        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        errorMessage: errorMsg,
         syncCount: 0,
       };
       this.updateSyncMetadata(metadata);
@@ -1041,7 +1196,7 @@ export class LinearSyncService {
         this.emitter.emit('linear:sync:error', {
           featureId,
           direction: 'push',
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error: errorMsg,
           timestamp: new Date().toISOString(),
         });
       }
@@ -1153,6 +1308,9 @@ export class LinearSyncService {
     projectPath: string,
     options?: { title?: string; priority?: number }
   ): Promise<void> {
+    const startTime = Date.now();
+    let featureId = 'unknown';
+
     try {
       // Find the feature by Linear issue ID
       if (!this.featureLoader) {
@@ -1166,7 +1324,7 @@ export class LinearSyncService {
         return;
       }
 
-      const featureId = feature.id;
+      featureId = feature.id;
 
       // Guard: Check if service is running and sync is enabled
       if (!this.shouldSync(featureId)) {
@@ -1279,6 +1437,15 @@ export class LinearSyncService {
         };
         this.updateSyncMetadata(updatedMetadata);
 
+        // Record metrics
+        this.recordOperation(
+          featureId,
+          'pull',
+          'success',
+          Date.now() - startTime,
+          conflictDetected
+        );
+
         // Emit completion event
         if (this.emitter) {
           this.emitter.emit('linear:sync:completed', {
@@ -1300,12 +1467,15 @@ export class LinearSyncService {
     } catch (error) {
       logger.error(`Failed to sync Linear issue ${linearIssueId}:`, error);
 
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      this.recordOperation(featureId, 'pull', 'error', Date.now() - startTime, false, errorMsg);
+
       // Emit error event
       if (this.emitter) {
         this.emitter.emit('linear:sync:error', {
           linearIssueId,
           direction: 'pull',
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error: errorMsg,
           timestamp: new Date().toISOString(),
         });
       }
