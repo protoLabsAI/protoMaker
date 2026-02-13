@@ -1,11 +1,38 @@
 import { randomUUID } from 'node:crypto';
 import { createLogger } from '@automaker/utils';
 import { LangfuseClient } from './client.js';
-import type {
-  ExecuteTrackedPromptOptions,
-  ExecuteTrackedPromptResult,
-  PromptConfig,
-} from './types.js';
+import type { PromptConfig } from './types.js';
+
+/**
+ * Options for executing a tracked prompt via the Langfuse executor
+ */
+interface ExecuteTrackedPromptOptions {
+  version?: number;
+  fallbackPrompt?: string;
+  variables?: Record<string, string>;
+  executor: (prompt: string, context: any) => Promise<string>;
+  traceId?: string;
+  traceName?: string;
+  userId?: string;
+  sessionId?: string;
+  metadata?: Record<string, any>;
+  tags?: string[];
+  model?: string;
+  modelParameters?: Record<string, any>;
+  usage?: { promptTokens?: number; completionTokens?: number; totalTokens?: number };
+}
+
+/**
+ * Result from executing a tracked prompt
+ */
+interface ExecuteTrackedPromptResult {
+  output: string;
+  traceId: string;
+  generationId: string;
+  latencyMs: number;
+  promptConfig?: PromptConfig;
+  error?: Error;
+}
 
 const logger = createLogger('LangfuseExecutor');
 
@@ -51,8 +78,6 @@ export async function executeTrackedPrompt(
         promptConfig = {
           name: promptName,
           version: langfusePrompt.version,
-          content: langfusePrompt.prompt,
-          config: langfusePrompt.config,
         };
       } else {
         // Langfuse failed, use fallback

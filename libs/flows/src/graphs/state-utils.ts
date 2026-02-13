@@ -2,25 +2,20 @@ import { Annotation } from '@langchain/langgraph';
 import { z } from 'zod';
 
 /**
- * Type utility to extract Zod schema type
- */
-export type InferZodType<T extends z.ZodType<any>> = z.infer<T>;
-
-/**
  * Creates a state annotation from a Zod schema with optional reducers
  */
-export function createStateAnnotation<T extends z.ZodRawShape>(
+export function createStateAnnotation<T extends Record<string, z.ZodTypeAny>>(
   schema: z.ZodObject<T>,
   reducers?: Partial<{
-    [K in keyof T]: (left: InferZodType<T[K]>, right: InferZodType<T[K]>) => InferZodType<T[K]>;
+    [K in keyof T]: (left: z.infer<T[K]>, right: z.infer<T[K]>) => z.infer<T[K]>;
   }>
 ) {
-  const schemaShape = schema.shape;
+  const schemaShape = schema.shape as T;
   const annotationSpec: Record<string, any> = {};
 
   for (const key in schemaShape) {
     const fieldSchema = schemaShape[key];
-    const reducer = reducers?.[key];
+    const reducer = reducers?.[key as keyof T];
 
     if (reducer) {
       annotationSpec[key] = {
@@ -38,16 +33,16 @@ export function createStateAnnotation<T extends z.ZodRawShape>(
 /**
  * Validates state against a Zod schema
  */
-export function validateState<T extends z.ZodType<any>>(
+export function validateState<T extends z.ZodTypeAny>(
   schema: T,
   state: unknown
-): { success: true; data: InferZodType<T> } | { success: false; error: z.ZodError } {
+): { success: true; data: z.infer<T> } | { success: false; error: z.ZodError } {
   const result = schema.safeParse(state);
 
   if (result.success) {
     return { success: true, data: result.data };
   } else {
-    return { success: false, error: result.error };
+    return { success: false, error: result.error as z.ZodError };
   }
 }
 
@@ -55,12 +50,12 @@ export function validateState<T extends z.ZodType<any>>(
  * Creates a type-safe state updater function
  */
 export function createStateUpdater<T extends z.ZodObject<any>>(schema: T) {
-  return (state: Partial<InferZodType<T>>): Partial<InferZodType<T>> => {
+  return (state: Partial<z.infer<T>>): Partial<z.infer<T>> => {
     const result = schema.partial().safeParse(state);
     if (!result.success) {
-      throw new Error(`Invalid state update: ${result.error.message}`);
+      throw new Error(`Invalid state update: ${(result.error as z.ZodError).message}`);
     }
-    return result.data;
+    return result.data as Partial<z.infer<T>>;
   };
 }
 
@@ -104,7 +99,7 @@ export function deepMergeState<T extends Record<string, any>>(left: T, right: Pa
 export function isValidStateUpdate<T extends z.ZodObject<any>>(
   schema: T,
   value: unknown
-): value is Partial<InferZodType<T>> {
+): value is Partial<z.infer<T>> {
   const result = schema.partial().safeParse(value);
   return result.success;
 }

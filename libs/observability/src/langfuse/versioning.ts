@@ -49,11 +49,7 @@ export async function getRawPrompt(
 ): Promise<PromptMetadata> {
   const { promptName, version, label } = config;
 
-  const prompt = await client.getPrompt(promptName, version, {
-    label,
-    // Langfuse caches prompts for 60s by default, we'll handle our own caching
-    cacheTtlSeconds: 60,
-  });
+  const prompt = await client.getPrompt(promptName, version);
 
   if (!prompt) {
     throw new Error(

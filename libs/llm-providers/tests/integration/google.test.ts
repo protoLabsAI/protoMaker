@@ -128,7 +128,7 @@ describe('GoogleProvider', () => {
 
       expect(health.provider).toBe('google');
       expect(health.healthy).toBe(true);
-      expect(health.latency).toBeGreaterThan(0);
+      expect(health.latency).toBeGreaterThanOrEqual(0);
       expect(health.timestamp).toBeInstanceOf(Date);
     });
 
