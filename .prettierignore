@@ -26,6 +26,9 @@ pnpm-lock.yaml
 routeTree.gen.ts
 apps/ui/src/routeTree.gen.ts
 
+# Template files (contain placeholders)
+packages/create-protolab/src/templates/
+
 # Test artifacts
 test-results/
 coverage/
