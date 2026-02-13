@@ -164,12 +164,14 @@ export class LinearSyncService {
       const settings = await this.settingsService.getProjectSettings(projectPath);
       const linearConfig = settings.integrations?.linear;
 
-      // Check if Linear integration is configured and sync is enabled
-      return !!(
-        linearConfig?.enabled &&
-        linearConfig.accessToken &&
-        linearConfig.syncEnabled !== false
-      );
+      // Check if Linear integration is configured with OAuth token
+      // At least one sync option should be enabled (default is true if not explicitly set)
+      const hasSyncEnabled =
+        linearConfig?.syncOnFeatureCreate !== false ||
+        linearConfig?.syncOnStatusChange !== false ||
+        linearConfig?.commentOnCompletion !== false;
+
+      return !!(linearConfig?.enabled && linearConfig.agentToken && hasSyncEnabled);
     } catch (error) {
       logger.error(`Failed to check Linear sync settings for ${projectPath}:`, error);
       return false;

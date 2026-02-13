@@ -351,8 +351,8 @@ describe('LinearSyncService', () => {
         integrations: {
           linear: {
             enabled: true,
-            accessToken: 'test-token',
-            syncEnabled: true,
+            agentToken: 'test-token',
+            syncOnFeatureCreate: true,
           },
         },
       } as any);
@@ -361,13 +361,13 @@ describe('LinearSyncService', () => {
       expect(result).toBe(true);
     });
 
-    it('should return true when syncEnabled is not explicitly false', async () => {
+    it('should return true when sync options default to enabled', async () => {
       vi.mocked(mockSettingsService.getProjectSettings).mockResolvedValue({
         integrations: {
           linear: {
             enabled: true,
-            accessToken: 'test-token',
-            // syncEnabled is undefined, should default to true
+            agentToken: 'test-token',
+            // sync options undefined, should default to true
           },
         },
       } as any);
@@ -381,7 +381,7 @@ describe('LinearSyncService', () => {
         integrations: {
           linear: {
             enabled: false,
-            accessToken: 'test-token',
+            agentToken: 'test-token',
           },
         },
       } as any);
@@ -390,12 +390,12 @@ describe('LinearSyncService', () => {
       expect(result).toBe(false);
     });
 
-    it('should return false when access token is missing', async () => {
+    it('should return false when agent token is missing', async () => {
       vi.mocked(mockSettingsService.getProjectSettings).mockResolvedValue({
         integrations: {
           linear: {
             enabled: true,
-            // accessToken is missing
+            // agentToken is missing
           },
         },
       } as any);
@@ -404,13 +404,15 @@ describe('LinearSyncService', () => {
       expect(result).toBe(false);
     });
 
-    it('should return false when syncEnabled is explicitly false', async () => {
+    it('should return false when all sync options are explicitly disabled', async () => {
       vi.mocked(mockSettingsService.getProjectSettings).mockResolvedValue({
         integrations: {
           linear: {
             enabled: true,
-            accessToken: 'test-token',
-            syncEnabled: false,
+            agentToken: 'test-token',
+            syncOnFeatureCreate: false,
+            syncOnStatusChange: false,
+            commentOnCompletion: false,
           },
         },
       } as any);
