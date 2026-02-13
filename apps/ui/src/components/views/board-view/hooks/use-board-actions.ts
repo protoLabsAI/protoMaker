@@ -9,7 +9,7 @@ import {
   useAppStore,
 } from '@/store/app-store';
 import type { ReasoningEffort } from '@automaker/types';
-import { FeatureImagePath as DescriptionImagePath } from '@/components/ui/description-image-dropzone';
+import { FeatureImagePath as DescriptionImagePath } from '@/components/views/board-view/components/description-image-dropzone';
 import { getElectronAPI } from '@/lib/electron';
 import { isConnectionError, handleServerOffline } from '@/lib/http-api-client';
 import { toast } from 'sonner';

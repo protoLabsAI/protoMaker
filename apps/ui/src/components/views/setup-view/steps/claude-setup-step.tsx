@@ -30,7 +30,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { toast } from 'sonner';
 import { StatusBadge, TerminalOutput } from '../components';
 import { useCliStatus, useCliInstallation, useTokenSave } from '../hooks';
-import { AnthropicIcon } from '@/components/ui/provider-icon';
+import { AnthropicIcon } from '@/components/shared/provider-icon';
 
 interface ClaudeSetupStepProps {
   onNext: () => void;

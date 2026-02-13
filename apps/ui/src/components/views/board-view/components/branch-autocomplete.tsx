@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { GitBranch } from 'lucide-react';
-import { Autocomplete, AutocompleteOption } from '@/components/ui/autocomplete';
+import { Autocomplete, AutocompleteOption } from '@/components/shared/autocomplete';
 
 interface BranchAutocompleteProps {
   value: string;

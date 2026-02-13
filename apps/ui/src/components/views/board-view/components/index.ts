@@ -4,6 +4,13 @@ export { SelectionActionBar } from './selection-action-bar';
 export { EmptyStateCard } from './empty-state-card';
 export { ViewToggle, type ViewMode } from './view-toggle';
 
+// Board-specific form components
+export { DescriptionImageDropZone } from './description-image-dropzone';
+export { FeatureImageUpload } from './feature-image-upload';
+export { DependencySelector } from './dependency-selector';
+export { BranchAutocomplete } from './branch-autocomplete';
+export { CategoryAutocomplete } from './category-autocomplete';
+
 // List view components
 export {
   ListHeader,

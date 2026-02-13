@@ -6,7 +6,12 @@ import {
   OPENCODE_MODELS as OPENCODE_MODEL_CONFIGS,
 } from '@automaker/types';
 import { Brain, Zap, Scale, Cpu, Rocket, Sparkles } from 'lucide-react';
-import { AnthropicIcon, CursorIcon, OpenAIIcon, OpenCodeIcon } from '@/components/ui/provider-icon';
+import {
+  AnthropicIcon,
+  CursorIcon,
+  OpenAIIcon,
+  OpenCodeIcon,
+} from '@/components/shared/provider-icon';
 
 export type ModelOption = {
   id: string; // All model IDs use canonical prefixed format (e.g., "claude-sonnet", "cursor-auto")

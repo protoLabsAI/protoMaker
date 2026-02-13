@@ -39,7 +39,7 @@ import type {
   ClaudeAuthStatus,
   CodexAuthStatus,
 } from '@/store/setup-store';
-import { PROVIDER_ICON_COMPONENTS } from '@/components/ui/provider-icon';
+import { PROVIDER_ICON_COMPONENTS } from '@/components/shared/provider-icon';
 
 type VerificationStatus = 'idle' | 'verifying' | 'verified' | 'error';
 

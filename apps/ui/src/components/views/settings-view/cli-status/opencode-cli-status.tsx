@@ -5,7 +5,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { CheckCircle2, AlertCircle, RefreshCw, Bot, Cloud } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { CliStatus } from '../shared/types';
-import { OpenCodeIcon } from '@/components/ui/provider-icon';
+import { OpenCodeIcon } from '@/components/shared/provider-icon';
 
 export interface OpenCodeProviderInfo {
   id: string;

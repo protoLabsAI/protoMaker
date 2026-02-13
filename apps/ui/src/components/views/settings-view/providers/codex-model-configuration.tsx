@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import type { CodexModelId } from '@automaker/types';
-import { OpenAIIcon } from '@/components/ui/provider-icon';
+import { OpenAIIcon } from '@/components/shared/provider-icon';
 
 interface CodexModelConfigurationProps {
   enabledCodexModels: CodexModelId[];

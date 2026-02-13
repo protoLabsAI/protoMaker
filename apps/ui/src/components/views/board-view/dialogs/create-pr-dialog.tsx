@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { BranchAutocomplete } from '@/components/ui/branch-autocomplete';
+import { BranchAutocomplete } from '@/components/views/board-view/components/branch-autocomplete';
 import { GitPullRequest, ExternalLink } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { getElectronAPI } from '@/lib/electron';

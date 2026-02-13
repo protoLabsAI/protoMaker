@@ -21,10 +21,10 @@ import {
   GitFork,
 } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
-import { CountUpTimer } from '@/components/ui/count-up-timer';
+import { CountUpTimer } from '@/components/shared/count-up-timer';
 import { formatModelName, DEFAULT_MODEL } from '@/lib/agent-context-parser';
 import { DeleteConfirmDialog } from '@/components/ui/delete-confirm-dialog';
-import { getProviderIconForModel } from '@/components/ui/provider-icon';
+import { getProviderIconForModel } from '@/components/shared/provider-icon';
 
 interface CardHeaderProps {
   feature: Feature;

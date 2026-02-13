@@ -5,12 +5,12 @@ import { getElectronAPI } from '@/lib/electron';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { HotkeyButton } from '@/components/ui/hotkey-button';
+import { HotkeyButton } from '@/components/shared/hotkey-button';
 import { Card } from '@/components/ui/card';
 import {
   HeaderActionsPanel,
   HeaderActionsPanelTrigger,
-} from '@/components/ui/header-actions-panel';
+} from '@/components/shared/header-actions-panel';
 import {
   FileText,
   Image as ImageIcon,

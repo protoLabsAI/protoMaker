@@ -14,7 +14,7 @@ import { GitMerge, AlertTriangle, Trash2, Wrench } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { getElectronAPI } from '@/lib/electron';
 import { toast } from 'sonner';
-import { BranchAutocomplete } from '@/components/ui/branch-autocomplete';
+import { BranchAutocomplete } from '@/components/views/board-view/components/branch-autocomplete';
 import type { WorktreeInfo, BranchInfo, MergeConflictInfo } from '../worktree-panel/types';
 
 export type { MergeConflictInfo } from '../worktree-panel/types';

@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
-import { XtermLogViewer, type XtermLogViewerRef } from '@/components/ui/xterm-log-viewer';
+import { XtermLogViewer, type XtermLogViewerRef } from '@/components/shared/xterm-log-viewer';
 import { useDevServerLogs } from '../hooks/use-dev-server-logs';
 import type { WorktreeInfo } from '../types';
 

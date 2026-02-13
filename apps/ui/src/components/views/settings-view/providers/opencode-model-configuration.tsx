@@ -34,7 +34,7 @@ import {
   OpenAIIcon,
   GrokIcon,
   getProviderIconForModel,
-} from '@/components/ui/provider-icon';
+} from '@/components/shared/provider-icon';
 import { useEffect, useMemo, useRef, useState, type ComponentType } from 'react';
 
 interface OpencodeModelConfigurationProps {

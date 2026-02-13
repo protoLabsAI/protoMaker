@@ -31,7 +31,12 @@ import {
 import { Spinner } from '@/components/ui/spinner';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { AnthropicIcon, CursorIcon, OpenAIIcon, OpenCodeIcon } from '@/components/ui/provider-icon';
+import {
+  AnthropicIcon,
+  CursorIcon,
+  OpenAIIcon,
+  OpenCodeIcon,
+} from '@/components/shared/provider-icon';
 import { TerminalOutput } from '../components';
 import { useCliInstallation, useTokenSave } from '../hooks';
 

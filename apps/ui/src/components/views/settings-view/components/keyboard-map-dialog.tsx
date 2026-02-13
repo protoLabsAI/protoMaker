@@ -6,7 +6,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { KeyboardMap, ShortcutReferencePanel } from '@/components/ui/keyboard-map';
+import { KeyboardMap, ShortcutReferencePanel } from '@/components/shared/keyboard-map';
 
 interface KeyboardMapDialogProps {
   open: boolean;

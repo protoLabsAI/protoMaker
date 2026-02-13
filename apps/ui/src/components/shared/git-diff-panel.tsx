@@ -13,7 +13,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
-import { Button } from './button';
+import { Button } from '@/components/ui/button';
 import { useWorktreeDiffs, useGitDiffs } from '@/hooks/queries';
 import type { FileStatus } from '@/types/electron';
 

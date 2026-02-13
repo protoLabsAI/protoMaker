@@ -8,7 +8,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { JsonSyntaxEditor } from '@/components/ui/json-syntax-editor';
+import { JsonSyntaxEditor } from '@/components/shared/json-syntax-editor';
 import { apiGet, apiPut } from '@/lib/api-fetch';
 import { toast } from 'sonner';
 import type { GlobalSettings } from '@automaker/types';

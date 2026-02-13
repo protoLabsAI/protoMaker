@@ -10,18 +10,18 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { HotkeyButton } from '@/components/ui/hotkey-button';
+import { HotkeyButton } from '@/components/shared/hotkey-button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { CategoryAutocomplete } from '@/components/ui/category-autocomplete';
-import { DependencySelector } from '@/components/ui/dependency-selector';
+import { CategoryAutocomplete } from '@/components/views/board-view/components/category-autocomplete';
+import { DependencySelector } from '@/components/views/board-view/components/dependency-selector';
 import {
   DescriptionImageDropZone,
   FeatureImagePath as DescriptionImagePath,
   FeatureTextFilePath as DescriptionTextFilePath,
   ImagePreviewMap,
-} from '@/components/ui/description-image-dropzone';
+} from '@/components/views/board-view/components/description-image-dropzone';
 import { Play, Cpu, FolderKanban, Settings2 } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
 import { toast } from 'sonner';

@@ -9,7 +9,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { PathInput } from '@/components/ui/path-input';
+import { PathInput } from '@/components/shared/path-input';
 import { Kbd, KbdGroup } from '@/components/ui/kbd';
 import { getDefaultWorkspaceDirectory, saveLastProjectDirectory } from '@/lib/workspace-config';
 import { useOSDetection } from '@/hooks';

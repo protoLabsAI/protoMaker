@@ -2,7 +2,7 @@ import { Button } from '@/components/ui/button';
 import {
   HeaderActionsPanel,
   HeaderActionsPanelTrigger,
-} from '@/components/ui/header-actions-panel';
+} from '@/components/shared/header-actions-panel';
 import { Save, Sparkles, FileText, AlertCircle, ListPlus, RefreshCcw } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { PHASE_LABELS } from '../constants';

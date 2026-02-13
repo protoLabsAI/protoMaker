@@ -6,7 +6,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { FileText } from 'lucide-react';
-import { GitDiffPanel } from '@/components/ui/git-diff-panel';
+import { GitDiffPanel } from '@/components/shared/git-diff-panel';
 
 interface WorktreeInfo {
   path: string;

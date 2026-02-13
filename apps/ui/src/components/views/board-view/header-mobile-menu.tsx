@@ -4,7 +4,7 @@ import { Slider } from '@/components/ui/slider';
 import {
   HeaderActionsPanel,
   HeaderActionsPanelTrigger,
-} from '@/components/ui/header-actions-panel';
+} from '@/components/shared/header-actions-panel';
 import { Bot, Wand2, GitBranch, Zap, FastForward } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { MobileUsageBar } from './mobile-usage-bar';

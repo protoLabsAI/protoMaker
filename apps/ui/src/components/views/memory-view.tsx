@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/card';
 import {
   HeaderActionsPanel,
   HeaderActionsPanelTrigger,
-} from '@/components/ui/header-actions-panel';
+} from '@/components/shared/header-actions-panel';
 import {
   RefreshCw,
   FileText,

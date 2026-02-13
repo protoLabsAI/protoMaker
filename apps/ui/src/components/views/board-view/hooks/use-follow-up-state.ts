@@ -3,7 +3,7 @@ import { Feature } from '@/store/app-store';
 import {
   FeatureImagePath as DescriptionImagePath,
   ImagePreviewMap,
-} from '@/components/ui/description-image-dropzone';
+} from '@/components/views/board-view/components/description-image-dropzone';
 import type { FollowUpHistoryEntry } from '../dialogs/follow-up-dialog';
 
 /**

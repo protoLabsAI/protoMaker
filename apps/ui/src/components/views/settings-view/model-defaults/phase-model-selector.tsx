@@ -40,7 +40,7 @@ import {
   GlmIcon,
   MiniMaxIcon,
   getProviderIconForModel,
-} from '@/components/ui/provider-icon';
+} from '@/components/shared/provider-icon';
 import { Button } from '@/components/ui/button';
 import {
   Command,

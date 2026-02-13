@@ -1,7 +1,7 @@
 'use client';
 
 import { Label } from '@/components/ui/label';
-import { BranchAutocomplete } from '@/components/ui/branch-autocomplete';
+import { BranchAutocomplete } from '@/components/views/board-view/components/branch-autocomplete';
 import { GitBranch, GitFork, Pencil } from 'lucide-react';
 import { cn } from '@/lib/utils';
 

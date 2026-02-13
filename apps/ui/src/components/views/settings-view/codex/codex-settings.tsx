@@ -2,7 +2,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { FileCode, Globe, ImageIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { OpenAIIcon } from '@/components/ui/provider-icon';
+import { OpenAIIcon } from '@/components/shared/provider-icon';
 
 interface CodexSettingsProps {
   autoLoadCodexAgents: boolean;

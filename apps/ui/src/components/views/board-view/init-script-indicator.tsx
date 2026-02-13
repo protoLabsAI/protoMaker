@@ -3,7 +3,7 @@ import { Terminal, Check, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
 import { useAppStore, type InitScriptState } from '@/store/app-store';
-import { AnsiOutput } from '@/components/ui/ansi-output';
+import { AnsiOutput } from '@/components/shared/ansi-output';
 
 interface InitScriptIndicatorProps {
   projectPath: string;

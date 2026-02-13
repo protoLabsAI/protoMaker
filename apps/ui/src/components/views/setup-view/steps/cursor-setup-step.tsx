@@ -18,7 +18,7 @@ import {
 import { Spinner } from '@/components/ui/spinner';
 import { toast } from 'sonner';
 import { StatusBadge } from '../components';
-import { CursorIcon } from '@/components/ui/provider-icon';
+import { CursorIcon } from '@/components/shared/provider-icon';
 
 const logger = createLogger('CursorSetupStep');
 

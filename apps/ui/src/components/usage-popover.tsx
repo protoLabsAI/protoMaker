@@ -6,7 +6,7 @@ import { RefreshCw, AlertTriangle, CheckCircle, XCircle, Clock, ExternalLink } f
 import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
 import { useSetupStore } from '@/store/setup-store';
-import { AnthropicIcon, OpenAIIcon } from '@/components/ui/provider-icon';
+import { AnthropicIcon, OpenAIIcon } from '@/components/shared/provider-icon';
 import { useClaudeUsage, useCodexUsage } from '@/hooks/queries';
 
 // Error codes for distinguishing failure modes

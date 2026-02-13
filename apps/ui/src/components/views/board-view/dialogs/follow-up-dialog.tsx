@@ -10,12 +10,12 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { HotkeyButton } from '@/components/ui/hotkey-button';
+import { HotkeyButton } from '@/components/shared/hotkey-button';
 import {
   DescriptionImageDropZone,
   FeatureImagePath as DescriptionImagePath,
   ImagePreviewMap,
-} from '@/components/ui/description-image-dropzone';
+} from '@/components/views/board-view/components/description-image-dropzone';
 import { MessageSquare } from 'lucide-react';
 import { Feature } from '@/store/app-store';
 import {

@@ -1,4 +1,4 @@
-import { ImageDropZone } from '@/components/ui/image-drop-zone';
+import { ImageDropZone } from '@/components/shared/image-drop-zone';
 import type { ImageAttachment, TextFileAttachment } from '@/store/app-store';
 import type { PhaseModelEntry } from '@automaker/types';
 import { FilePreview } from './file-preview';

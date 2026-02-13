@@ -19,7 +19,12 @@ import {
   MessageCircle,
   Activity,
 } from 'lucide-react';
-import { AnthropicIcon, CursorIcon, OpenAIIcon, OpenCodeIcon } from '@/components/ui/provider-icon';
+import {
+  AnthropicIcon,
+  CursorIcon,
+  OpenAIIcon,
+  OpenCodeIcon,
+} from '@/components/shared/provider-icon';
 import type { SettingsViewId } from '../hooks/use-settings-view';
 
 export interface NavigationItem {

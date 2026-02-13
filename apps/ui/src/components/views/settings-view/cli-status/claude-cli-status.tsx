@@ -6,7 +6,7 @@ import { CheckCircle2, AlertCircle, RefreshCw, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { CliStatus } from '../shared/types';
 import type { ClaudeAuthStatus } from '@/store/setup-store';
-import { AnthropicIcon } from '@/components/ui/provider-icon';
+import { AnthropicIcon } from '@/components/shared/provider-icon';
 import { getElectronAPI } from '@/lib/electron';
 import { toast } from 'sonner';
 

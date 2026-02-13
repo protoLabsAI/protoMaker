@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 import { Spinner } from '@/components/ui/spinner';
 import { getElectronAPI } from '@/lib/electron';
 import { useAppStore } from '@/store/app-store';
-import { AnthropicIcon, OpenAIIcon } from '@/components/ui/provider-icon';
+import { AnthropicIcon, OpenAIIcon } from '@/components/shared/provider-icon';
 
 interface MobileUsageBarProps {
   showClaudeUsage: boolean;

@@ -4,7 +4,7 @@ import { SkeletonPulse } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
 import { CheckCircle2, AlertCircle, RefreshCw, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { CursorIcon } from '@/components/ui/provider-icon';
+import { CursorIcon } from '@/components/shared/provider-icon';
 import { getElectronAPI } from '@/lib/electron';
 import { toast } from 'sonner';
 

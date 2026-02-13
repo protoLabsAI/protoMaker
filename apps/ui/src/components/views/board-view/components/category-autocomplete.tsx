@@ -1,5 +1,5 @@
 import { Tag } from 'lucide-react';
-import { Autocomplete } from '@/components/ui/autocomplete';
+import { Autocomplete } from '@/components/shared/autocomplete';
 
 interface CategoryAutocompleteProps {
   value: string;

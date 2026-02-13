@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { RefreshCw, AlertCircle } from 'lucide-react';
-import { OpenAIIcon } from '@/components/ui/provider-icon';
+import { OpenAIIcon } from '@/components/shared/provider-icon';
 import { cn } from '@/lib/utils';
 import {
   formatCodexPlanType,

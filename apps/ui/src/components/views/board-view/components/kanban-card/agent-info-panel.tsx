@@ -9,7 +9,7 @@ import { Brain, ListTodo, Sparkles, Expand, CheckCircle2, Circle, Wrench } from 
 import { Spinner } from '@/components/ui/spinner';
 import { getElectronAPI } from '@/lib/electron';
 import { SummaryDialog } from './summary-dialog';
-import { getProviderIconForModel } from '@/components/ui/provider-icon';
+import { getProviderIconForModel } from '@/components/shared/provider-icon';
 import { useFeature, useAgentOutput } from '@/hooks/queries';
 
 /**

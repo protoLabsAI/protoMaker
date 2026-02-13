@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
-import { ShellSyntaxEditor } from '@/components/ui/shell-syntax-editor';
+import { ShellSyntaxEditor } from '@/components/shared/shell-syntax-editor';
 import {
   GitBranch,
   Terminal,
