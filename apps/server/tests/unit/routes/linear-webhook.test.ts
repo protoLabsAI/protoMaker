@@ -11,6 +11,22 @@ import type { EventEmitter } from '@/lib/events.js';
 import type { FeatureLoader } from '@/services/feature-loader.js';
 import { createMockExpressContext } from '../../utils/mocks.js';
 
+// Mock external services before they're imported by the webhook module
+vi.mock('@/services/linear-sync-service.js', () => ({
+  linearSyncService: {
+    onLinearIssueUpdated: vi.fn().mockResolvedValue(undefined),
+  },
+}));
+
+vi.mock('@/services/linear-approval-handler.js', () => ({
+  linearApprovalHandler: {
+    onIssueStateChange: vi.fn().mockResolvedValue(undefined),
+  },
+}));
+
+// eslint-disable-next-line import/first
+import { linearSyncService } from '@/services/linear-sync-service.js';
+
 function createMockSettingsService(): Partial<SettingsService> {
   return {
     get: vi.fn(),
@@ -270,17 +286,7 @@ describe('Linear Webhook Handler', () => {
   });
 
   describe('Issue Events', () => {
-    it('handles Issue update event with feature found', async () => {
-      const mockFeature = {
-        id: 'feature-123',
-        title: 'Old Title',
-        status: 'pending' as const,
-        complexity: 'low' as const,
-        linearIssueId: 'issue-456',
-      };
-
-      vi.mocked(featureLoader.findByLinearIssueId).mockResolvedValue(mockFeature as any);
-
+    it('delegates Issue update to sync service and emits event', async () => {
       const payload = {
         action: 'update',
         type: 'Issue',
@@ -307,41 +313,32 @@ describe('Linear Webhook Handler', () => {
       await handler(req, res, vi.fn());
       await new Promise((resolve) => setTimeout(resolve, 10));
 
-      expect(featureLoader.findByLinearIssueId).toHaveBeenCalledWith(
-        expect.any(String),
-        'issue-456'
+      // Verify delegation to sync service
+      expect(linearSyncService.onLinearIssueUpdated).toHaveBeenCalledWith(
+        'issue-456',
+        'In Progress',
+        expect.any(String), // projectPath (process.cwd())
+        { title: 'New Title', priority: 2 }
       );
+
+      // Verify simplified event emission
       expect(events.emit).toHaveBeenCalledWith('linear:issue:updated', {
         issueId: 'issue-456',
-        featureId: 'feature-123',
-        changes: {
-          title: { from: 'Old Title', to: 'New Title' },
-          status: { from: 'pending', to: 'in_progress' },
-          priority: { from: 'low', to: 'high' },
-        },
+        title: 'New Title',
+        state: 'In Progress',
+        priority: 2,
         updatedAt: '2024-01-02T00:00:00Z',
       });
     });
 
-    it('does not emit event when no changes detected', async () => {
-      const mockFeature = {
-        id: 'feature-123',
-        title: 'Same Title',
-        status: 'pending' as const,
-        complexity: 'medium' as const,
-        linearIssueId: 'issue-456',
-      };
-
-      vi.mocked(featureLoader.findByLinearIssueId).mockResolvedValue(mockFeature as any);
-
+    it('passes state name to sync service for Backlog state', async () => {
       const payload = {
         action: 'update',
         type: 'Issue',
         data: {
           id: 'issue-456',
-          title: 'Same Title',
-          state: { id: 'state-1', name: 'Todo', type: 'backlog' },
-          priority: 3,
+          title: 'Title',
+          state: { id: 'state-1', name: 'Backlog', type: 'backlog' },
           createdAt: '2024-01-01T00:00:00Z',
           updatedAt: '2024-01-02T00:00:00Z',
           url: 'https://linear.app/issue/issue-456',
@@ -359,22 +356,30 @@ describe('Linear Webhook Handler', () => {
       await handler(req, res, vi.fn());
       await new Promise((resolve) => setTimeout(resolve, 10));
 
-      expect(featureLoader.findByLinearIssueId).toHaveBeenCalledWith(
+      expect(linearSyncService.onLinearIssueUpdated).toHaveBeenCalledWith(
+        'issue-456',
+        'Backlog',
         expect.any(String),
-        'issue-456'
+        { title: 'Title', priority: undefined }
       );
-      expect(events.emit).not.toHaveBeenCalledWith('linear:issue:updated', expect.anything());
+
+      expect(events.emit).toHaveBeenCalledWith('linear:issue:updated', {
+        issueId: 'issue-456',
+        title: 'Title',
+        state: 'Backlog',
+        priority: undefined,
+        updatedAt: '2024-01-02T00:00:00Z',
+      });
     });
 
-    it('handles Issue update when feature not found', async () => {
-      vi.mocked(featureLoader.findByLinearIssueId).mockResolvedValue(null);
-
+    it('passes state name to sync service for Done state', async () => {
       const payload = {
         action: 'update',
         type: 'Issue',
         data: {
           id: 'issue-456',
           title: 'Title',
+          state: { id: 'state-1', name: 'Done', type: 'completed' },
           createdAt: '2024-01-01T00:00:00Z',
           updatedAt: '2024-01-02T00:00:00Z',
           url: 'https://linear.app/issue/issue-456',
@@ -392,180 +397,15 @@ describe('Linear Webhook Handler', () => {
       await handler(req, res, vi.fn());
       await new Promise((resolve) => setTimeout(resolve, 10));
 
-      expect(featureLoader.findByLinearIssueId).toHaveBeenCalledWith(
+      expect(linearSyncService.onLinearIssueUpdated).toHaveBeenCalledWith(
+        'issue-456',
+        'Done',
         expect.any(String),
-        'issue-456'
-      );
-      expect(events.emit).not.toHaveBeenCalled();
-    });
-
-    it('maps Linear Backlog state to pending status', async () => {
-      const mockFeature = {
-        id: 'feature-123',
-        title: 'Title',
-        status: 'in_progress' as const,
-        complexity: 'medium' as const,
-        linearIssueId: 'issue-456',
-      };
-
-      vi.mocked(featureLoader.findByLinearIssueId).mockResolvedValue(mockFeature as any);
-
-      const payload = {
-        action: 'update',
-        type: 'Issue',
-        data: {
-          id: 'issue-456',
-          title: 'Title',
-          state: {
-            id: 'state-1',
-            name: 'Backlog',
-            type: 'backlog',
-          },
-          createdAt: '2024-01-01T00:00:00Z',
-          updatedAt: '2024-01-02T00:00:00Z',
-          url: 'https://linear.app/issue/issue-456',
-        },
-      };
-
-      req.body = payload;
-
-      const handler = createWebhookHandler(
-        settingsService as SettingsService,
-        events,
-        featureLoader as FeatureLoader
-      );
-
-      await handler(req, res, vi.fn());
-      await new Promise((resolve) => setTimeout(resolve, 10));
-
-      expect(events.emit).toHaveBeenCalledWith(
-        'linear:issue:updated',
-        expect.objectContaining({
-          changes: expect.objectContaining({
-            status: {
-              from: 'in_progress',
-              to: 'pending',
-            },
-          }),
-        })
+        { title: 'Title', priority: undefined }
       );
     });
 
-    it('maps Linear In Progress state to in_progress status', async () => {
-      const mockFeature = {
-        id: 'feature-123',
-        title: 'Title',
-        status: 'pending' as const,
-        complexity: 'medium' as const,
-        linearIssueId: 'issue-456',
-      };
-
-      vi.mocked(featureLoader.findByLinearIssueId).mockResolvedValue(mockFeature as any);
-
-      const payload = {
-        action: 'update',
-        type: 'Issue',
-        data: {
-          id: 'issue-456',
-          title: 'Title',
-          state: {
-            id: 'state-1',
-            name: 'In Progress',
-            type: 'started',
-          },
-          createdAt: '2024-01-01T00:00:00Z',
-          updatedAt: '2024-01-02T00:00:00Z',
-          url: 'https://linear.app/issue/issue-456',
-        },
-      };
-
-      req.body = payload;
-
-      const handler = createWebhookHandler(
-        settingsService as SettingsService,
-        events,
-        featureLoader as FeatureLoader
-      );
-
-      await handler(req, res, vi.fn());
-      await new Promise((resolve) => setTimeout(resolve, 10));
-
-      expect(events.emit).toHaveBeenCalledWith(
-        'linear:issue:updated',
-        expect.objectContaining({
-          changes: expect.objectContaining({
-            status: {
-              from: 'pending',
-              to: 'in_progress',
-            },
-          }),
-        })
-      );
-    });
-
-    it('maps Linear Done state to completed status', async () => {
-      const mockFeature = {
-        id: 'feature-123',
-        title: 'Title',
-        status: 'in_progress' as const,
-        complexity: 'medium' as const,
-        linearIssueId: 'issue-456',
-      };
-
-      vi.mocked(featureLoader.findByLinearIssueId).mockResolvedValue(mockFeature as any);
-
-      const payload = {
-        action: 'update',
-        type: 'Issue',
-        data: {
-          id: 'issue-456',
-          title: 'Title',
-          state: {
-            id: 'state-1',
-            name: 'Done',
-            type: 'completed',
-          },
-          createdAt: '2024-01-01T00:00:00Z',
-          updatedAt: '2024-01-02T00:00:00Z',
-          url: 'https://linear.app/issue/issue-456',
-        },
-      };
-
-      req.body = payload;
-
-      const handler = createWebhookHandler(
-        settingsService as SettingsService,
-        events,
-        featureLoader as FeatureLoader
-      );
-
-      await handler(req, res, vi.fn());
-      await new Promise((resolve) => setTimeout(resolve, 10));
-
-      expect(events.emit).toHaveBeenCalledWith(
-        'linear:issue:updated',
-        expect.objectContaining({
-          changes: expect.objectContaining({
-            status: {
-              from: 'in_progress',
-              to: 'completed',
-            },
-          }),
-        })
-      );
-    });
-
-    it('maps Linear priority urgent (1) to high complexity', async () => {
-      const mockFeature = {
-        id: 'feature-123',
-        title: 'Title',
-        status: 'pending' as const,
-        complexity: 'medium' as const,
-        linearIssueId: 'issue-456',
-      };
-
-      vi.mocked(featureLoader.findByLinearIssueId).mockResolvedValue(mockFeature as any);
-
+    it('passes priority to sync service', async () => {
       const payload = {
         action: 'update',
         type: 'Issue',
@@ -590,37 +430,29 @@ describe('Linear Webhook Handler', () => {
       await handler(req, res, vi.fn());
       await new Promise((resolve) => setTimeout(resolve, 10));
 
-      expect(events.emit).toHaveBeenCalledWith(
-        'linear:issue:updated',
-        expect.objectContaining({
-          changes: expect.objectContaining({
-            priority: {
-              from: 'medium',
-              to: 'high',
-            },
-          }),
-        })
+      expect(linearSyncService.onLinearIssueUpdated).toHaveBeenCalledWith(
+        'issue-456',
+        'Unknown', // no state provided
+        expect.any(String),
+        { title: 'Title', priority: 1 }
       );
+
+      expect(events.emit).toHaveBeenCalledWith('linear:issue:updated', {
+        issueId: 'issue-456',
+        title: 'Title',
+        state: undefined,
+        priority: 1,
+        updatedAt: '2024-01-02T00:00:00Z',
+      });
     });
 
-    it('maps Linear priority normal (3) to medium complexity', async () => {
-      const mockFeature = {
-        id: 'feature-123',
-        title: 'Title',
-        status: 'pending' as const,
-        complexity: 'high' as const,
-        linearIssueId: 'issue-456',
-      };
-
-      vi.mocked(featureLoader.findByLinearIssueId).mockResolvedValue(mockFeature as any);
-
+    it('handles Issue update when no state is provided', async () => {
       const payload = {
         action: 'update',
         type: 'Issue',
         data: {
           id: 'issue-456',
           title: 'Title',
-          priority: 3, // normal
           createdAt: '2024-01-01T00:00:00Z',
           updatedAt: '2024-01-02T00:00:00Z',
           url: 'https://linear.app/issue/issue-456',
@@ -638,64 +470,11 @@ describe('Linear Webhook Handler', () => {
       await handler(req, res, vi.fn());
       await new Promise((resolve) => setTimeout(resolve, 10));
 
-      expect(events.emit).toHaveBeenCalledWith(
-        'linear:issue:updated',
-        expect.objectContaining({
-          changes: expect.objectContaining({
-            priority: {
-              from: 'high',
-              to: 'medium',
-            },
-          }),
-        })
-      );
-    });
-
-    it('maps Linear priority low (4) to low complexity', async () => {
-      const mockFeature = {
-        id: 'feature-123',
-        title: 'Title',
-        status: 'pending' as const,
-        complexity: 'high' as const,
-        linearIssueId: 'issue-456',
-      };
-
-      vi.mocked(featureLoader.findByLinearIssueId).mockResolvedValue(mockFeature as any);
-
-      const payload = {
-        action: 'update',
-        type: 'Issue',
-        data: {
-          id: 'issue-456',
-          title: 'Title',
-          priority: 4, // low
-          createdAt: '2024-01-01T00:00:00Z',
-          updatedAt: '2024-01-02T00:00:00Z',
-          url: 'https://linear.app/issue/issue-456',
-        },
-      };
-
-      req.body = payload;
-
-      const handler = createWebhookHandler(
-        settingsService as SettingsService,
-        events,
-        featureLoader as FeatureLoader
-      );
-
-      await handler(req, res, vi.fn());
-      await new Promise((resolve) => setTimeout(resolve, 10));
-
-      expect(events.emit).toHaveBeenCalledWith(
-        'linear:issue:updated',
-        expect.objectContaining({
-          changes: expect.objectContaining({
-            priority: {
-              from: 'high',
-              to: 'low',
-            },
-          }),
-        })
+      expect(linearSyncService.onLinearIssueUpdated).toHaveBeenCalledWith(
+        'issue-456',
+        'Unknown',
+        expect.any(String),
+        { title: 'Title', priority: undefined }
       );
     });
   });
@@ -768,7 +547,9 @@ describe('Linear Webhook Handler', () => {
 
   describe('Error Handling', () => {
     it('responds successfully even if event processing fails', async () => {
-      vi.mocked(featureLoader.findByLinearIssueId).mockRejectedValue(new Error('Database error'));
+      vi.mocked(linearSyncService.onLinearIssueUpdated).mockRejectedValueOnce(
+        new Error('Database error')
+      );
 
       const payload = {
         action: 'update',
