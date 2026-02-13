@@ -13,33 +13,45 @@ The system has three layers:
 ## Organization Chart
 
 ```
-GTM Specialist (Trust=2, Top-Level Orchestrator)
- |  Go-to-market strategy, content pipeline, growth
- |
 Project Owner (Trust=3, Autonomous)
  |  Technical architecture, product vision, final authority
  |
- |-- Chief of Staff (Trust=2, Conditional)
+ |-- Chief of Staff (Trust=2, Conditional) — Orchestrator
  |    Operational leader, product direction, team expansion
  |    |
- |    |-- DevOps Engineer (Trust=1, Assisted)
- |    |    Infrastructure, deployment, monitoring, staging
+ |    |-- Crew Loop Members (scheduled, auto-escalate)
+ |    |    |
+ |    |    |-- PR Maintainer (Haiku, every 10 min)
+ |    |    |    Stale PRs, auto-merge, thread resolution
+ |    |    |
+ |    |    |-- Board Janitor (Haiku, every 15 min)
+ |    |    |    Board consistency, orphaned features, dep chains
+ |    |    |
+ |    |    |-- DevOps Engineer (Sonnet, every 10 min)
+ |    |         Infrastructure, deployment, monitoring, staging
  |    |
- |    |-- Product Manager (Trust=1, Assisted)
- |    |    Owns: What & Why
- |    |    Actions: create_work, change_scope
+ |    |-- Interactive Agents (CLI + Discord accessible)
+ |    |    |
+ |    |    |-- Frontend Engineer (Sonnet, Trust=2)
+ |    |    |    UI components, design system, Tailwind, a11y
+ |    |    |
+ |    |    |-- GTM Specialist (Sonnet, Trust=2)
+ |    |         Content pipeline, brand strategy, growth
  |    |
- |    |-- Project Manager (Trust=1, Assisted)
- |    |    Owns: When & How
- |    |    Actions: create_work, assign
+ |    |-- Implementation Agents (auto-mode assigned)
+ |    |    |
+ |    |    |-- Backend Engineer (Sonnet)
+ |    |    |-- QA Engineer (Sonnet)
+ |    |    |-- Documentation Engineer (Haiku)
+ |    |    |-- Product Manager (Sonnet)
+ |    |    |-- Engineering Manager (Sonnet)
  |    |
- |    |-- Engineering Manager (Trust=1, Assisted)
- |    |    Owns: Who & Capacity
- |    |    Actions: assign, block_release
- |    |
- |    |-- Principal Engineer (Trust=1, Assisted)
- |         Owns: Architecture & Quality
- |         Actions: modify_architecture, approve_work, block_release
+ |    |-- Authority Agents (dormant — event-driven)
+ |         |
+ |         |-- PM Agent — idea research pipeline
+ |         |-- ProjM Agent — project decomposition
+ |         |-- EM Agent — work assignment
+ |         |-- Principal Engineer — architecture review
 ```
 
 ## Roles
