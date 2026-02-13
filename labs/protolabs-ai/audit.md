@@ -184,6 +184,7 @@ $ gh api repos/proto-labs-ai/protolabs.ai/rulesets --jq '.[0]'
 | Feature                         | Priority | Effort | Gap ID        |
 | ------------------------------- | -------- | ------ | ------------- |
 | Create Discord project channels | High     | small  | `discord`     |
+| Set up Umami analytics          | High     | small  | `analytics`   |
 | Create MCP server               | Normal   | large  | `mcp-servers` |
 | Add Claude Agent SDK            | Normal   | large  | `agent-sdk`   |
 
@@ -191,10 +192,10 @@ $ gh api repos/proto-labs-ai/protolabs.ai/rulesets --jq '.[0]'
 
 | Size      | Count          |
 | --------- | -------------- |
-| Small     | 4              |
+| Small     | 5              |
 | Medium    | 1              |
 | Large     | 2              |
-| **Total** | **7 features** |
+| **Total** | **8 features** |
 
 ---
 
@@ -211,6 +212,7 @@ Track each alignment feature as it's implemented.
 | 5   | Discord channels    | pending          | —   | —     | —     | —          |
 | 6   | MCP server          | deferred         | —   | —     | —     | —          |
 | 7   | Agent SDK           | deferred         | —   | —     | —     | —          |
+| 8   | Umami analytics     | pending          | —   | —     | —     | —          |
 
 ---
 

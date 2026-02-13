@@ -108,6 +108,7 @@ Templates use `{{variable}}` interpolation.
 - Beads task tracker
 - Discord channels
 - CodeRabbit
+- Umami analytics (privacy-friendly traffic tracking)
 
 ### Optional
 
