@@ -557,6 +557,5 @@ This provides:
 ## Related Documentation
 
 - [Crew Loops](./crew-loops.md) - PR Maintainer crew member
-- [Authority System](./authority-system.md) - Escalation and approval flow
-- [Git Workflow](./git-workflow.md) - PR creation and merging
-- [Feature Status System](../feature-status-system.md) - Status transitions
+- [Authority System](../authority/index.md) - Escalation and approval flow
+- [Feature Status System](./feature-status-system.md) - Status transitions
