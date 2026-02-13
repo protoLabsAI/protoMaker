@@ -161,20 +161,16 @@ build_images() {
   info "Building images..."
   cd "$PROJECT_ROOT"
 
-  # Verify env file exists before each build (guards against workspace race conditions)
   if [ ! -f "$ENV_FILE" ]; then
     err "Missing $ENV_FILE — cannot build"
     exit 1
   fi
 
-  info "Building server image..."
-  docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" build server
-
-  info "Building UI image..."
-  docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" build ui
-
-  info "Building docs image..."
-  docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" build docs
+  # Build all images in one command to avoid workspace cleanup race conditions
+  # (self-hosted runner cleans workspaces every 5min, which can delete the build
+  # context between separate docker compose build calls)
+  info "Building all images (server, ui, docs)..."
+  docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" build
 
   ok "Images built successfully"
 }
