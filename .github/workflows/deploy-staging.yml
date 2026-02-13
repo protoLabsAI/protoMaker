@@ -56,7 +56,7 @@ jobs:
           AUTOMAKER_API_KEY=$(grep -oP 'AUTOMAKER_API_KEY=\K.*' "$ENV_SOURCE" || echo "")
           curl -sf -X POST http://localhost:3008/api/deploy/drain \
             -H "Content-Type: application/json" \
-            -H "Authorization: Bearer $AUTOMAKER_API_KEY" \
+            -H "X-API-Key: $AUTOMAKER_API_KEY" \
             --max-time 180 || echo "Drain skipped (server not running or no agents)"
 
       - name: Rebuild and restart staging

@@ -305,7 +305,7 @@ drain_agents() {
   local response
   response=$(curl -sf -X POST "http://localhost:${api_port}/api/deploy/drain" \
     -H "Content-Type: application/json" \
-    -H "Authorization: Bearer ${api_key}" \
+    -H "X-API-Key: ${api_key}" \
     --max-time 180 2>&1) || {
     warn "Drain failed or server not running — continuing with deploy"
     return 0

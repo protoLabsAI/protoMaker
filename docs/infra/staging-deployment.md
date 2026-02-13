@@ -684,7 +684,7 @@ push to main → drain API → agents finish/stop → build → restart → auto
 # Via curl
 curl -X POST http://localhost:3008/api/deploy/drain \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $AUTOMAKER_API_KEY"
+  -H "X-API-Key: $AUTOMAKER_API_KEY"
 ```
 
 **Auto-resume:** The server automatically restarts auto-mode on startup using `autoModeAlwaysOn` settings. Features stuck in `in_progress` are reset to `backlog`.
