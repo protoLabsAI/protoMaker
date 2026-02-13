@@ -16,6 +16,8 @@ import { createLogger } from '@automaker/utils';
 import type { EventEmitter } from '../lib/events.js';
 import type { SettingsService } from './settings-service.js';
 import type { FeatureLoader } from './feature-loader.js';
+import { LinearMCPClient } from './linear-mcp-client.js';
+import type { ProjectService } from './project-service.js';
 
 const logger = createLogger('LinearSyncService');
 
@@ -79,6 +81,17 @@ interface FeatureEventPayload {
 }
 
 /**
+ * Project scaffolded event payload structure
+ */
+interface ProjectScaffoldedPayload {
+  projectPath: string;
+  projectSlug: string;
+  projectTitle: string;
+  milestoneCount: number;
+  featuresCreated: number;
+}
+
+/**
  * Debounce time window in milliseconds (5 seconds)
  */
 const DEBOUNCE_WINDOW_MS = 5000;
@@ -102,6 +115,7 @@ export class LinearSyncService {
   private emitter: EventEmitter | null = null;
   private settingsService: SettingsService | null = null;
   private featureLoader: FeatureLoader | null = null;
+  private projectService: ProjectService | null = null;
   private unsubscribe: (() => void) | null = null;
 
   /**
@@ -145,18 +159,20 @@ export class LinearSyncService {
   private readonly MAX_ACTIVITY_LOG_SIZE = 100;
 
   /**
-   * Initialize the service with event emitter, settings service, and feature loader
+   * Initialize the service with event emitter, settings service, feature loader, and project service
    */
   initialize(
     emitter: EventEmitter,
     settingsService: SettingsService,
-    featureLoader: FeatureLoader
+    featureLoader: FeatureLoader,
+    projectService?: ProjectService
   ): void {
     this.emitter = emitter;
     this.settingsService = settingsService;
     this.featureLoader = featureLoader;
+    this.projectService = projectService ?? null;
 
-    // Subscribe to feature lifecycle events
+    // Subscribe to feature and project lifecycle events
     this.unsubscribe = emitter.subscribe((type, payload) => {
       if (type === 'feature:created') {
         this.handleFeatureCreated(payload as FeatureEventPayload);
@@ -164,6 +180,8 @@ export class LinearSyncService {
         this.handleFeatureStatusChanged(payload as FeatureEventPayload);
       } else if (type === 'feature:pr-merged') {
         this.handleFeaturePRMerged(payload as FeatureEventPayload);
+      } else if (type === 'project:scaffolded') {
+        this.handleProjectScaffolded(payload as ProjectScaffoldedPayload);
       }
     });
 
@@ -1275,6 +1293,184 @@ export class LinearSyncService {
     }
 
     logger.info(`Added comment to Linear issue ${issueId}`);
+  }
+
+  /**
+   * Handle project:scaffolded events
+   */
+  private async handleProjectScaffolded(payload: ProjectScaffoldedPayload): Promise<void> {
+    logger.debug('Received project:scaffolded event', {
+      projectSlug: payload.projectSlug,
+      projectTitle: payload.projectTitle,
+    });
+
+    await this.onProjectScaffolded(payload);
+  }
+
+  /**
+   * Create a Linear project when an Automaker project is scaffolded,
+   * and add any synced child features to the project.
+   */
+  private async onProjectScaffolded(payload: ProjectScaffoldedPayload): Promise<void> {
+    const { projectPath, projectSlug, projectTitle } = payload;
+
+    if (!this.running) {
+      logger.debug(`Sync skipped for project ${projectSlug}: service not running`);
+      return;
+    }
+
+    // Check if sync is enabled for this project
+    const syncEnabled = await this.isProjectSyncEnabled(projectPath);
+    if (!syncEnabled) {
+      logger.debug(`Linear sync not enabled for project ${projectPath}`);
+      return;
+    }
+
+    if (!this.settingsService || !this.projectService) {
+      logger.debug('SettingsService or ProjectService not initialized, skipping project sync');
+      return;
+    }
+
+    const startTime = Date.now();
+
+    try {
+      // Get project to check if already synced
+      const project = await this.projectService.getProject(projectPath, projectSlug);
+      if (!project) {
+        logger.error(`Project ${projectSlug} not found`);
+        return;
+      }
+
+      // Skip if already synced
+      if (project.linearProjectId) {
+        logger.info(`Project ${projectSlug} already has Linear project ${project.linearProjectId}`);
+        return;
+      }
+
+      // Get Linear settings
+      const settings = await this.settingsService.getProjectSettings(projectPath);
+      const teamId = settings.integrations?.linear?.teamId;
+
+      if (!teamId) {
+        logger.debug(`No Linear team ID configured for project ${projectPath}`);
+        return;
+      }
+
+      // Create Linear project via LinearMCPClient
+      const client = new LinearMCPClient(this.settingsService, projectPath);
+      const result = await client.createProject({
+        name: projectTitle,
+        description: project.goal,
+        teamIds: [teamId],
+      });
+
+      // Store linearProjectId on project metadata
+      await this.projectService.updateProject(projectPath, projectSlug, {
+        linearProjectId: result.projectId,
+        linearProjectUrl: result.url,
+      });
+
+      // Also update the project-level Linear settings with the project ID
+      const currentSettings = await this.settingsService.getProjectSettings(projectPath);
+      if (currentSettings.integrations?.linear) {
+        currentSettings.integrations.linear.projectId = result.projectId;
+        await this.settingsService.updateProjectSettings(projectPath, currentSettings);
+      }
+
+      // Add child features that already have Linear issues to the project
+      await this.addChildFeaturesToProject(projectPath, projectSlug, result.projectId, client);
+
+      // Record metrics
+      this.recordOperation(
+        `project:${projectSlug}`,
+        'push',
+        'success',
+        Date.now() - startTime,
+        false
+      );
+
+      // Emit project sync event
+      if (this.emitter) {
+        this.emitter.emit('linear:project:created', {
+          projectPath,
+          projectSlug,
+          linearProjectId: result.projectId,
+          linearProjectUrl: result.url,
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      logger.info(
+        `Created Linear project for ${projectSlug}: ${result.projectId}`
+      );
+    } catch (error) {
+      logger.error(`Failed to sync project ${projectSlug} to Linear:`, error);
+
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      this.recordOperation(
+        `project:${projectSlug}`,
+        'push',
+        'error',
+        Date.now() - startTime,
+        false,
+        errorMsg
+      );
+
+      if (this.emitter) {
+        this.emitter.emit('linear:sync:error', {
+          projectSlug,
+          direction: 'push',
+          error: errorMsg,
+          timestamp: new Date().toISOString(),
+        });
+      }
+    }
+  }
+
+  /**
+   * Add child features (that have linearIssueId) to a Linear project
+   */
+  private async addChildFeaturesToProject(
+    projectPath: string,
+    projectSlug: string,
+    linearProjectId: string,
+    client: LinearMCPClient
+  ): Promise<void> {
+    if (!this.featureLoader) {
+      return;
+    }
+
+    try {
+      // Get all features for this project path
+      const features = await this.featureLoader.list(projectPath);
+
+      // Filter features that have a linearIssueId (already synced to Linear)
+      const syncedFeatures = features.filter((f) => f.linearIssueId);
+
+      if (syncedFeatures.length === 0) {
+        logger.debug(`No synced features to add to Linear project for ${projectSlug}`);
+        return;
+      }
+
+      let addedCount = 0;
+      for (const feature of syncedFeatures) {
+        try {
+          await client.addIssueToProject(feature.linearIssueId!, linearProjectId);
+          addedCount++;
+        } catch (error) {
+          logger.warn(
+            `Failed to add feature ${feature.id} to Linear project ${linearProjectId}:`,
+            error
+          );
+        }
+      }
+
+      logger.info(
+        `Added ${addedCount}/${syncedFeatures.length} features to Linear project ${linearProjectId}`
+      );
+    } catch (error) {
+      logger.error(`Failed to add child features to Linear project:`, error);
+    }
   }
 
   /**

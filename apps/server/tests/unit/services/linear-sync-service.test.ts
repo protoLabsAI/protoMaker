@@ -1563,4 +1563,156 @@ describe('LinearSyncService', () => {
       });
     });
   });
+
+  describe('Project Sync', () => {
+    let mockProjectService: any;
+
+    beforeEach(() => {
+      mockProjectService = {
+        getProject: vi.fn(),
+        updateProject: vi.fn(),
+        listProjects: vi.fn(),
+      };
+
+      // Configure settings with sync enabled
+      (mockSettingsService.getProjectSettings as any).mockResolvedValue({
+        integrations: {
+          linear: {
+            enabled: true,
+            agentToken: 'test-token',
+            teamId: 'team-123',
+            syncOnFeatureCreate: true,
+            syncOnStatusChange: true,
+            commentOnCompletion: true,
+          },
+        },
+      });
+
+      service.initialize(emitter, mockSettingsService, mockFeatureLoader, mockProjectService);
+      service.start();
+    });
+
+    it('should subscribe to project:scaffolded events', async () => {
+      const emitSpy = vi.fn();
+      const unsubscribe = emitter.subscribe(emitSpy);
+
+      emitter.emit('project:scaffolded', {
+        projectPath: '/test/path',
+        projectSlug: 'test-project',
+        projectTitle: 'Test Project',
+        milestoneCount: 3,
+        featuresCreated: 10,
+      });
+
+      expect(emitSpy).toHaveBeenCalledWith('project:scaffolded', expect.any(Object));
+      unsubscribe();
+    });
+
+    it('should skip project sync when service is not running', async () => {
+      service.stop();
+
+      mockProjectService.getProject.mockResolvedValue({
+        slug: 'test-project',
+        title: 'Test Project',
+        goal: 'Test goal',
+      });
+
+      emitter.emit('project:scaffolded', {
+        projectPath: '/test/path',
+        projectSlug: 'test-project',
+        projectTitle: 'Test Project',
+        milestoneCount: 1,
+        featuresCreated: 3,
+      });
+
+      // Wait for async handler
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(mockProjectService.getProject).not.toHaveBeenCalled();
+    });
+
+    it('should skip project sync when Linear sync is not enabled', async () => {
+      (mockSettingsService.getProjectSettings as any).mockResolvedValue({
+        integrations: {
+          linear: {
+            enabled: false,
+          },
+        },
+      });
+
+      emitter.emit('project:scaffolded', {
+        projectPath: '/test/path',
+        projectSlug: 'test-project',
+        projectTitle: 'Test Project',
+        milestoneCount: 1,
+        featuresCreated: 3,
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(mockProjectService.getProject).not.toHaveBeenCalled();
+    });
+
+    it('should skip project sync when project already has linearProjectId', async () => {
+      mockProjectService.getProject.mockResolvedValue({
+        slug: 'test-project',
+        title: 'Test Project',
+        goal: 'Test goal',
+        linearProjectId: 'already-synced',
+      });
+
+      emitter.emit('project:scaffolded', {
+        projectPath: '/test/path',
+        projectSlug: 'test-project',
+        projectTitle: 'Test Project',
+        milestoneCount: 1,
+        featuresCreated: 3,
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(mockProjectService.updateProject).not.toHaveBeenCalled();
+    });
+
+    it('should skip when projectService is not available', async () => {
+      // Destroy the outer service to avoid dual event handling
+      service.destroy();
+
+      // Initialize a new service without projectService on a fresh emitter
+      const freshEmitter = createEventEmitter();
+      const serviceNoProject = new LinearSyncService();
+      serviceNoProject.initialize(freshEmitter, mockSettingsService, mockFeatureLoader);
+      serviceNoProject.start();
+
+      freshEmitter.emit('project:scaffolded', {
+        projectPath: '/test/path',
+        projectSlug: 'test-project',
+        projectTitle: 'Test Project',
+        milestoneCount: 1,
+        featuresCreated: 3,
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(mockProjectService.getProject).not.toHaveBeenCalled();
+      serviceNoProject.destroy();
+    });
+
+    it('should record error metric on failure', async () => {
+      mockProjectService.getProject.mockRejectedValue(new Error('DB error'));
+
+      emitter.emit('project:scaffolded', {
+        projectPath: '/test/path',
+        projectSlug: 'test-project',
+        projectTitle: 'Test Project',
+        milestoneCount: 1,
+        featuresCreated: 3,
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      const metrics = service.getMetrics();
+      expect(metrics.failedOperations).toBeGreaterThanOrEqual(1);
+    });
+  });
 });

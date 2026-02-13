@@ -131,6 +131,7 @@ export type EventType =
   | 'discord:dm:sent'
   | 'discord:user-message:routed'
   // Linear monitoring events
+  | 'linear:project:created'
   | 'linear:project:updated'
   | 'linear:issue:detected'
   // Linear sync events (bidirectional sync)

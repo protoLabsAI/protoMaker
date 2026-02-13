@@ -89,6 +89,18 @@ export interface AddCommentOptions {
 }
 
 /**
+ * Options for creating a Linear project
+ */
+export interface CreateProjectOptions {
+  /** Project name */
+  name: string;
+  /** Project description (markdown) */
+  description?: string;
+  /** Team IDs to associate with the project */
+  teamIds: string[];
+}
+
+/**
  * Result of creating a Linear issue
  */
 export interface CreateIssueResult {
@@ -97,6 +109,16 @@ export interface CreateIssueResult {
   /** Created issue identifier (e.g., "ENG-123") */
   identifier?: string;
   /** Issue URL */
+  url?: string;
+}
+
+/**
+ * Result of creating a Linear project
+ */
+export interface CreateProjectResult {
+  /** Created project ID */
+  projectId: string;
+  /** Project URL */
   url?: string;
 }
 
@@ -425,6 +447,120 @@ export class LinearMCPClient {
     }
 
     logger.info(`Added comment to Linear issue ${issueId}`);
+
+    return true;
+  }
+
+  /**
+   * Create a new Linear project
+   *
+   * @param options - Project creation options
+   * @returns Created project ID and URL
+   * @throws {LinearAPIError} On API errors
+   */
+  async createProject(options: CreateProjectOptions): Promise<CreateProjectResult> {
+    const { name, description, teamIds } = options;
+
+    const mutation = `
+      mutation CreateProject(
+        $name: String!
+        $description: String
+        $teamIds: [String!]!
+      ) {
+        projectCreate(
+          input: {
+            name: $name
+            description: $description
+            teamIds: $teamIds
+          }
+        ) {
+          success
+          project {
+            id
+            url
+          }
+        }
+      }
+    `;
+
+    const variables = {
+      name,
+      description,
+      teamIds,
+    };
+
+    interface CreateProjectResponse {
+      projectCreate: {
+        success: boolean;
+        project: {
+          id: string;
+          url: string;
+        };
+      };
+    }
+
+    const data = await this.executeGraphQL<CreateProjectResponse>(mutation, variables);
+
+    if (!data.projectCreate.success) {
+      throw new LinearAPIError('Failed to create Linear project');
+    }
+
+    logger.info(`Created Linear project: ${name} (${data.projectCreate.project.id})`);
+
+    return {
+      projectId: data.projectCreate.project.id,
+      url: data.projectCreate.project.url,
+    };
+  }
+
+  /**
+   * Add an issue to a Linear project
+   *
+   * @param issueId - The issue ID to add
+   * @param projectId - The project ID to add the issue to
+   * @returns True if the issue was added successfully
+   * @throws {LinearAPIError} On API errors
+   */
+  async addIssueToProject(issueId: string, projectId: string): Promise<boolean> {
+    const mutation = `
+      mutation AddIssueToProject($issueId: String!, $projectId: String!) {
+        issueUpdate(
+          id: $issueId
+          input: {
+            projectId: $projectId
+          }
+        ) {
+          success
+          issue {
+            id
+            identifier
+          }
+        }
+      }
+    `;
+
+    const variables = {
+      issueId,
+      projectId,
+    };
+
+    interface AddIssueToProjectResponse {
+      issueUpdate: {
+        success: boolean;
+        issue: {
+          id: string;
+          identifier: string;
+        };
+      };
+    }
+
+    const data = await this.executeGraphQL<AddIssueToProjectResponse>(mutation, variables);
+
+    if (!data.issueUpdate.success) {
+      throw new LinearAPIError('Failed to add issue to Linear project');
+    }
+
+    logger.info(`Added issue ${data.issueUpdate.issue.identifier} to project ${projectId}`);
 
     return true;
   }

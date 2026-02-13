@@ -122,6 +122,12 @@ export interface Project {
   /** Review comments */
   reviewComments?: PRDReviewComment[];
 
+  /** Linear project ID (set when synced to Linear) */
+  linearProjectId?: string;
+
+  /** Linear project URL */
+  linearProjectUrl?: string;
+
   /** Creation timestamp */
   createdAt: string;
 
@@ -342,6 +348,12 @@ export interface UpdateProjectInput {
 
   /** Add review comments */
   reviewComments?: PRDReviewComment[];
+
+  /** Linear project ID (set when synced to Linear) */
+  linearProjectId?: string;
+
+  /** Linear project URL */
+  linearProjectUrl?: string;
 }
 
 /**

@@ -440,6 +440,11 @@ auditService.initialize(authorityService);
 const pmAgent = new PMAuthorityAgent(events, authorityService, featureLoader, auditService);
 const projectService = new ProjectService(featureLoader);
 
+// Initialize Linear Sync Service — bidirectional sync between features/projects and Linear
+const { linearSyncService } = await import('./services/linear-sync-service.js');
+linearSyncService.initialize(events, settingsService, featureLoader, projectService);
+linearSyncService.start();
+
 // Initialize Ceremony Service for milestone completion ceremonies
 const { ceremonyService } = await import('./services/ceremony-service.js');
 ceremonyService.initialize(events, settingsService, featureLoader, projectService);
