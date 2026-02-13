@@ -2,29 +2,29 @@
   "name": "@automaker/flows",
   "version": "1.0.0",
   "type": "module",
-  "description": "LangGraph workflow orchestration for AutoMaker",
+  "description": "LangGraph state graph examples and patterns for AutoMaker",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
-    },
-    "./graphs": {
-      "types": "./dist/graphs/index.d.ts",
-      "default": "./dist/graphs/index.js"
     }
   },
   "scripts": {
     "build": "tsc",
     "watch": "tsc --watch",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "example:basic": "tsx examples/basic-graph.ts",
+    "example:hitl": "tsx examples/hitl-graph.ts",
+    "example:subgraph": "tsx examples/subgraph-pattern.ts"
   },
   "keywords": [
     "automaker",
-    "flows",
-    "langgraph"
+    "langgraph",
+    "state-graphs",
+    "flows"
   ],
   "author": "AutoMaker Team",
   "license": "SEE LICENSE IN LICENSE",
@@ -33,10 +33,14 @@
   },
   "dependencies": {
     "@automaker/types": "1.0.0",
-    "@langchain/langgraph": "^0.2.24"
+    "@automaker/utils": "1.0.0",
+    "@langchain/anthropic": "^0.3.10",
+    "@langchain/core": "^0.3.33",
+    "@langchain/langgraph": "^0.2.26"
   },
   "devDependencies": {
     "@types/node": "22.19.3",
+    "tsx": "^4.7.0",
     "typescript": "5.9.3",
     "vitest": "4.0.16"
   }
