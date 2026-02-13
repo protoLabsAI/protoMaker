@@ -1589,6 +1589,10 @@ export interface LinearIntegrationConfig {
   };
   /** Custom label to apply to all synced issues */
   labelName?: string;
+  /** Enable bidirectional sync (default: false) */
+  syncEnabled?: boolean;
+  /** Conflict resolution strategy: 'linear' (Linear wins), 'automaker' (AutoMaker wins), 'manual' (require user input) */
+  conflictResolution?: 'linear' | 'automaker' | 'manual';
 
   // Agent OAuth (actor=app) fields
   /** OAuth access token for agent (actor=app) */

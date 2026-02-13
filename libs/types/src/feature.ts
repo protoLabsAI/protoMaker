@@ -347,6 +347,11 @@ export interface Feature {
    */
   pendingFeedback?: PendingFeedback;
   /**
+   * Linear sync metadata for bidirectional sync with Linear.
+   * Tracks sync state, timestamps, and conflict detection.
+   */
+  linearSyncMetadata?: import('./linear.js').LinearSyncMetadata;
+  /**
    * Timestamp when the PR was created (ISO 8601).
    * Set by git-workflow-service when auto-creating a PR.
    */

@@ -133,6 +133,12 @@ export type EventType =
   // Linear monitoring events
   | 'linear:project:updated'
   | 'linear:issue:detected'
+  // Linear sync events (bidirectional sync)
+  | 'linear:sync:started'
+  | 'linear:sync:completed'
+  | 'linear:sync:error'
+  | 'linear:issue:updated'
+  | 'linear:approval:detected'
   // Linear agent session events (webhook-driven)
   | 'linear:agent-session:created'
   | 'linear:agent-session:updated'

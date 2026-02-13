@@ -578,6 +578,19 @@ export type {
 // Ceremony types (milestone updates and project retrospectives)
 export type { CeremonyType, MilestoneUpdateData, ProjectRetroData } from './ceremony.js';
 
+// Linear sync types (bidirectional sync metadata and payloads)
+export type {
+  LinearSyncMetadata,
+  LinearIssueSnapshot,
+  FeatureSnapshot,
+  LinearIssuePayload,
+  LinearProjectPayload,
+  LinearApprovalPayload,
+  LinearSyncStartedPayload,
+  LinearSyncCompletedPayload,
+  LinearSyncErrorPayload,
+} from './linear.js';
+
 // Setup pipeline types (ProtoLabs agency setup)
 export type {
   RepoResearchResult,
