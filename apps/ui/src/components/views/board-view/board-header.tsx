@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Wand2, GitBranch, ClipboardCheck, Users, Bot, User, DollarSign } from 'lucide-react';
+import { ConflictBadge } from './components/conflict-badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { UsagePopover } from '@/components/usage-popover';
 import { useAppStore } from '@/store/app-store';
@@ -215,6 +216,9 @@ export function BoardHeader({
             </Tooltip>
           </TooltipProvider>
         )}
+
+        {/* Sync Conflict Badge - shows only when conflicts exist */}
+        {isMounted && !isTablet && <ConflictBadge />}
 
         {/* Usage Popover - show if either provider is authenticated, only on desktop */}
         {isMounted && !isTablet && (showClaudeUsage || showCodexUsage) && <UsagePopover />}
