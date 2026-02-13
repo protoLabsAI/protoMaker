@@ -1,0 +1,27 @@
+{
+  "name": "@automaker/create-protolab",
+  "version": "1.0.0",
+  "description": "CLI tool for setting up Protolab projects",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "create-protolab": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "keywords": [
+    "protolab",
+    "automaker",
+    "setup"
+  ],
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.4.0",
+    "vitest": "^4.0.0"
+  }
+}
