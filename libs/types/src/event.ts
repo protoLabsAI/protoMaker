@@ -147,16 +147,13 @@ export type EventType =
   | 'linear:agent-session:created'
   | 'linear:agent-session:updated'
   | 'linear:agent-session:removed'
-<<<<<<< HEAD
   // Linear comment events (webhook-driven)
   | 'linear:comment:created'
   | 'linear:comment:instruction'
   | 'linear:comment:followup'
-=======
   // Linear SLA events (Business plan feature - HITL deepening)
   | 'linear:sla:highRisk'
   | 'linear:sla:breached'
->>>>>>> f1757cad (feat: add Linear SLA webhook events and custom workflow states)
   // GitHub monitoring events
   | 'github:pr:detected'
   // Linear monitor events

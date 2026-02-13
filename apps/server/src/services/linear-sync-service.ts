@@ -1275,7 +1275,10 @@ export class LinearSyncService {
           continue;
         }
 
-        if (result.data?.workflowStateCreate?.success && result.data.workflowStateCreate.workflowState) {
+        if (
+          result.data?.workflowStateCreate?.success &&
+          result.data.workflowStateCreate.workflowState
+        ) {
           const stateId = result.data.workflowStateCreate.workflowState.id;
           customStateIds[existingKey] = stateId;
           logger.info(`Created custom workflow state "${stateConfig.name}": ${stateId}`);
