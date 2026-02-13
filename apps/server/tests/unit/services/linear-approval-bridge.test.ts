@@ -9,17 +9,20 @@ import type { EventEmitter } from '@/lib/events.js';
 import type { FeatureLoader } from '@/services/feature-loader.js';
 
 function createMockEventEmitter(): EventEmitter {
-  const listeners: Record<string, Function[]> = {};
+  const subscribers: Array<(type: string, payload: unknown) => void> = [];
   return {
-    emit: vi.fn((event: string, ...args: any[]) => {
-      (listeners[event] || []).forEach((fn) => fn(...args));
+    emit: vi.fn((type: string, payload: unknown) => {
+      for (const sub of subscribers) {
+        sub(type, payload);
+      }
     }),
-    on: vi.fn((event: string, fn: Function) => {
-      if (!listeners[event]) listeners[event] = [];
-      listeners[event].push(fn);
+    subscribe: vi.fn((callback: (type: string, payload: unknown) => void) => {
+      subscribers.push(callback);
+      return () => {
+        const idx = subscribers.indexOf(callback);
+        if (idx >= 0) subscribers.splice(idx, 1);
+      };
     }),
-    off: vi.fn(),
-    once: vi.fn(),
   } as any;
 }
 
@@ -46,7 +49,7 @@ describe('LinearApprovalBridge', () => {
 
   it('registers event listener on start', () => {
     bridge.start();
-    expect(events.on).toHaveBeenCalledWith('linear:approval:detected', expect.any(Function));
+    expect(events.subscribe).toHaveBeenCalledWith(expect.any(Function));
   });
 
   it('creates epic feature from approval context', async () => {

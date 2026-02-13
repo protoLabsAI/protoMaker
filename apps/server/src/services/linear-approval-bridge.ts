@@ -34,6 +34,7 @@ function mapPriorityToComplexity(
 
 export class LinearApprovalBridge {
   private running = false;
+  private unsubscribe?: () => void;
 
   constructor(
     private events: EventEmitter,
@@ -44,13 +45,15 @@ export class LinearApprovalBridge {
     if (this.running) return;
     this.running = true;
 
-    this.events.on('linear:approval:detected', (context: ApprovalContext) => {
-      this.handleApproval(context).catch((err) => {
-        logger.error('Failed to process approval', {
-          issueId: context.issueId,
-          error: err instanceof Error ? err.message : String(err),
+    this.unsubscribe = this.events.subscribe((type, payload) => {
+      if (type === 'linear:approval:detected') {
+        this.handleApproval(payload as ApprovalContext).catch((err) => {
+          logger.error('Failed to process approval', {
+            issueId: (payload as ApprovalContext).issueId,
+            error: err instanceof Error ? err.message : String(err),
+          });
         });
-      });
+      }
     });
 
     logger.info('LinearApprovalBridge started');
@@ -58,6 +61,7 @@ export class LinearApprovalBridge {
 
   stop(): void {
     this.running = false;
+    this.unsubscribe?.();
     logger.info('LinearApprovalBridge stopped');
   }
 
