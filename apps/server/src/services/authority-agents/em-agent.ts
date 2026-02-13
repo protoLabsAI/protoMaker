@@ -6,9 +6,10 @@
  * - Assesses complexity and assigns appropriate agent roles
  * - Checks capacity (WIP limits)
  * - Triggers auto-mode execution by transitioning: ready → in_progress
- * - Monitors PR feedback and reassigns features for fixes
- * - Manages the full dev lifecycle: assign → work → PR → review → fix → merge
+ * - Handles PR approvals: merges PRs if CI passes and auto-merge is enabled
+ * - Manages the full dev lifecycle: assign → work → PR → review → merge
  *
+ * PR feedback handling is delegated exclusively to PRFeedbackService to avoid race conditions.
  * All actions go through AuthorityService.submitProposal().
  */
 
@@ -37,14 +38,9 @@ const POLL_INTERVAL_MS = 10_000;
 /** Default WIP limit per project */
 const DEFAULT_WIP_LIMIT = 3;
 
-/** Max PR iterations before escalating to CTO - prevents infinite feedback loops */
-const MAX_PR_ITERATIONS = 2;
-
 /** Custom state for EM agent */
 interface EMCustomState {
   pollTimers: Map<string, ReturnType<typeof setInterval>>;
-  /** Features currently being reassigned for PR fixes (prevent double-processing) */
-  reassigning: Set<string>;
 }
 
 export class EMAuthorityAgent {
@@ -55,7 +51,7 @@ export class EMAuthorityAgent {
   private readonly auditService: AuditService;
   private readonly settingsService: SettingsService;
 
-  /** Agent state (agents, initialization, processing tracking, poll timers, reassigning) */
+  /** Agent state (agents, initialization, processing tracking, poll timers) */
   private readonly state: AgentState<EMCustomState>;
 
   constructor(
@@ -74,7 +70,6 @@ export class EMAuthorityAgent {
     this.settingsService = settingsService;
     this.state = createAgentState<EMCustomState>({
       pollTimers: new Map(),
-      reassigning: new Set(),
     });
   }
 
@@ -104,31 +99,11 @@ export class EMAuthorityAgent {
   }
 
   /**
-   * Listen for PR feedback events and handle reassignment.
+   * Listen for PR approval events and handle merge.
+   * PR feedback is handled exclusively by PRFeedbackService to avoid race conditions.
    */
   private listenForPRFeedback(): void {
     this.events.subscribe((type, payload) => {
-      if (type === 'pr:changes-requested') {
-        const data = payload as Record<string, unknown>;
-        const projectPath = data.projectPath as string;
-
-        if (projectPath && !this.state.isInitialized(projectPath)) {
-          logger.info(
-            `[EMAgent] Auto-initializing for PR event on uninitialized project: ${projectPath}`
-          );
-          void (async () => {
-            try {
-              await this.initialize(projectPath);
-              await this.handleChangesRequested(data);
-            } catch (error) {
-              logger.error(`[EMAgent] Auto-initialization failed for ${projectPath}:`, error);
-            }
-          })();
-        } else {
-          void this.handleChangesRequested(data);
-        }
-      }
-
       if (type === 'pr:approved') {
         const data = payload as Record<string, unknown>;
         const projectPath = data.projectPath as string;
@@ -152,95 +127,6 @@ export class EMAuthorityAgent {
     });
   }
 
-  /**
-   * Handle PR changes requested: reassign feature back to dev agent for fixes.
-   */
-  private async handleChangesRequested(data: Record<string, unknown>): Promise<void> {
-    const featureId = data.featureId as string;
-    const projectPath = data.projectPath as string;
-    const feedback = data.feedback as string;
-    const iterationCount = data.iterationCount as number;
-    const prNumber = data.prNumber as number;
-
-    if (!featureId || !projectPath || this.state.custom.reassigning.has(featureId)) return;
-    this.state.custom.reassigning.add(featureId);
-
-    try {
-      const agent = this.state.getAgent(projectPath);
-      if (!agent) return;
-
-      const feature = await this.featureLoader.get(projectPath, featureId);
-      if (!feature) return;
-
-      logger.info(
-        `PR #${prNumber} changes requested for "${feature.title}" (iteration ${iterationCount})`
-      );
-
-      if (iterationCount > MAX_PR_ITERATIONS) {
-        // Escalate to CTO - too many iterations
-        logger.warn(`Feature "${feature.title}" exceeded max PR iterations, escalating`);
-        return; // PR feedback service handles escalation
-      }
-
-      // Submit reassignment proposal through authority
-      const decision = await this.authorityService.submitProposal(
-        {
-          who: agent.id,
-          what: 'assign_work',
-          target: featureId,
-          justification: `Reassigning for PR fixes (iteration ${iterationCount}). Feedback: ${(feedback || '').slice(0, 300)}`,
-          risk: 'low',
-        },
-        projectPath
-      );
-
-      if (decision.verdict === 'deny') {
-        logger.warn(`Reassignment denied for ${featureId}: ${decision.reason}`);
-        return;
-      }
-
-      // Append PR feedback to feature description so the agent knows what to fix
-      const fixInstructions = [
-        feature.description || '',
-        '',
-        `---`,
-        `## PR Review Feedback (Iteration ${iterationCount})`,
-        ``,
-        `The PR (#${prNumber}) received review feedback. Fix the following:`,
-        ``,
-        feedback || 'See PR comments for details.',
-        ``,
-        `**Important:** Only fix the issues mentioned in the review. Do not refactor or change anything else.`,
-      ].join('\n');
-
-      // Update feature: reset to backlog for re-execution, add feedback
-      await this.featureLoader.update(projectPath, featureId, {
-        status: 'backlog',
-        workItemState: 'in_progress',
-        description: fixInstructions,
-        summary: undefined, // Clear old completion summary
-        prIterationCount: iterationCount,
-        lastReviewFeedback: (feedback || '').slice(0, 2000),
-        error: undefined, // Clear previous errors
-      });
-
-      this.events.emit('feature:reassigned-for-fixes', {
-        projectPath,
-        featureId,
-        prNumber,
-        iterationCount,
-        assignedBy: agent.id,
-      });
-
-      logger.info(
-        `Feature "${feature.title}" reassigned for PR fixes (iteration ${iterationCount})`
-      );
-    } catch (error) {
-      logger.error(`Failed to handle PR feedback for ${featureId}:`, error);
-    } finally {
-      this.state.custom.reassigning.delete(featureId);
-    }
-  }
 
   /**
    * Handle PR approval: merge the PR if CI passes and auto-merge is enabled.
