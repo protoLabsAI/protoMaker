@@ -233,50 +233,58 @@ Covers:
 
 ## Current Agent Team
 
-### Authority Agents (Autonomous Team)
+### Interactive Agents (CLI + Discord)
 
-**PM (Product Manager)**
+These agents can be invoked interactively via CLI skills or Discord.
 
-- Researches ideas
-- Generates SPARC PRDs
-- **Trigger:** `idea:injected` event
-- **Model:** Haiku (research), Sonnet (PRD generation)
-- **Location:** `apps/server/src/services/authority-agents/pm-agent.ts`
+| Role              | Model  | Trigger                 | Location                               |
+| ----------------- | ------ | ----------------------- | -------------------------------------- |
+| Chief of Staff    | Opus   | CLI, Discord, crew loop | `services/built-in-templates.ts`       |
+| DevOps Engineer   | Sonnet | CLI, Discord, crew loop | `services/crew-members/frank-check.ts` |
+| Frontend Engineer | Sonnet | CLI, Discord            | `services/built-in-templates.ts`       |
+| GTM Specialist    | Sonnet | CLI, Discord, crew loop | `services/built-in-templates.ts`       |
 
-**ProjM (Project Manager)**
+### Crew Loop Members (Scheduled)
 
-- Decomposes PRDs into milestones/phases
-- Creates board features with dependencies
-- **Trigger:** `prd:approved` event
-- **Model:** Sonnet
-- **Location:** `apps/server/src/services/authority-agents/projm-agent.ts`
+These run lightweight checks on cron schedules and escalate to full agents only when problems are detected. See [Crew Loops](../dev/crew-loops.md) for details.
 
-**EM (Engineering Manager)**
+| Member          | Model  | Schedule | Checks                                                    |
+| --------------- | ------ | -------- | --------------------------------------------------------- |
+| Chief of Staff  | Opus   | 10 min   | Stuck agents, blocked features, auto-mode health          |
+| DevOps Engineer | Sonnet | 10 min   | V8 heap, RSS memory, agent capacity, health monitor       |
+| PR Maintainer   | Haiku  | 10 min   | Stale PRs, auto-merge status, orphaned worktrees          |
+| Board Janitor   | Haiku  | 15 min   | Merged-not-done, orphaned in-progress, stale dependencies |
+| GTM Specialist  | Sonnet | 6 hours  | Recently completed features (disabled by default)         |
 
-- Reviews technical feasibility
-- Suggests refinements
-- **Trigger:** `decomposition:complete` event
-- **Model:** Sonnet
-- **Location:** `apps/server/src/services/authority-agents/em-agent.ts`
+### Implementation Agents (Auto-Mode)
 
-**Status Agent**
+These agents are assigned features dynamically by auto-mode and implement them in isolated worktrees.
 
-- Monitors progress
-- Escalates blockers
-- Reports to Discord
-- **Trigger:** Periodic polling
-- **Location:** `apps/server/src/services/authority-agents/status-agent.ts`
+| Template               | Model  | Purpose                                  |
+| ---------------------- | ------ | ---------------------------------------- |
+| Backend Engineer       | Sonnet | Server-side features, APIs, services     |
+| Frontend Engineer      | Sonnet | UI components, design system, styling    |
+| QA Engineer            | Sonnet | Tests, bug identification, validation    |
+| Documentation Engineer | Haiku  | Docs, READMEs, API guides                |
+| Product Manager        | Sonnet | Requirements, priorities, roadmap        |
+| Engineering Manager    | Sonnet | Code review, capacity, quality standards |
 
-### Feature Execution Agents
-
-**Auto-Mode Agents**
-
-- Implement board features
 - Run in isolated worktrees
 - Create PRs on completion
-- **Trigger:** Auto-mode loop or manual start
-- **Model:** Based on feature complexity (Haiku/Sonnet/Opus)
+- **Trigger:** Auto-mode loop or manual `start_agent`
+- **Model selection:** Based on feature complexity (Haiku → Sonnet → Opus auto-escalation)
 - **Location:** `apps/server/src/services/auto-mode-service.ts`
+
+### Authority Agents (Dormant)
+
+These event-driven agents exist in code but aren't actively staffed yet.
+
+| Agent        | Trigger                  | Purpose                     | Location                                                    |
+| ------------ | ------------------------ | --------------------------- | ----------------------------------------------------------- |
+| PM           | `idea:injected` event    | Research ideas, create PRDs | `apps/server/src/services/authority-agents/pm-agent.ts`     |
+| ProjM        | `prd:approved` event     | Decompose into milestones   | `apps/server/src/services/authority-agents/projm-agent.ts`  |
+| EM           | `decomposition:complete` | Technical feasibility       | `apps/server/src/services/authority-agents/em-agent.ts`     |
+| Status Agent | Periodic polling         | Progress monitoring         | `apps/server/src/services/authority-agents/status-agent.ts` |
 
 ## Official Claude Resources
 

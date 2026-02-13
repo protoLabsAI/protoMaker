@@ -148,6 +148,43 @@ export const frankCrewMember: CrewMemberDefinition = {
       raise('warning');
     }
 
+    // 5. Worktree health: count worktrees, find stale ones
+    try {
+      for (const projectPath of ctx.projectPaths) {
+        const allFeatures = await ctx.featureLoader.getAll(projectPath);
+        const featuresWithWorktrees = allFeatures.filter((f) => f.branchName);
+        const activeFeatureIds = new Set(
+          allFeatures
+            .filter((f) => f.status === 'in_progress' || f.status === 'review')
+            .map((f) => f.id)
+        );
+
+        // Count worktrees associated with features not in active states
+        let staleWorktreeCount = 0;
+        for (const feature of featuresWithWorktrees) {
+          if (!activeFeatureIds.has(feature.id) && feature.status === 'done') {
+            staleWorktreeCount++;
+          }
+        }
+
+        metrics.featuresWithWorktrees =
+          ((metrics.featuresWithWorktrees as number) || 0) + featuresWithWorktrees.length;
+        metrics.staleWorktrees = ((metrics.staleWorktrees as number) || 0) + staleWorktreeCount;
+
+        if (staleWorktreeCount >= 5) {
+          findings.push({
+            type: 'stale-worktrees',
+            message: `${staleWorktreeCount} worktrees in ${projectPath} belong to done features — cleanup recommended`,
+            severity: 'info',
+            context: { staleWorktreeCount, projectPath },
+          });
+          raise('info');
+        }
+      }
+    } catch (error) {
+      logger.warn('Failed to check worktree health:', error);
+    }
+
     const RANK_TO_SEVERITY: Severity[] = ['ok', 'info', 'warning', 'critical'];
     const maxSeverity = RANK_TO_SEVERITY[maxRank] ?? 'ok';
     const needsEscalation = maxRank >= SEVERITY_RANK.critical;

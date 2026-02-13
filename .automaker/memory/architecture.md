@@ -6,8 +6,8 @@ importance: 0.7
 relatedFiles: []
 usageStats:
   loaded: 4
-  referenced: 2
-  successfulFeatures: 2
+  referenced: 3
+  successfulFeatures: 3
 ---
 # architecture
 
@@ -470,3 +470,61 @@ usageStats:
 - **Problem solved:** CeremonyService needed granular control: disable all ceremonies vs. disable only epic ceremonies
 - **Why this works:** Hierarchical settings allow cost-free opt-out at multiple levels. Parent `enabled` flag kills all ceremony logic. Feature-specific flag provides fine-grained control without startup overhead.
 - **Trade-offs:** Extra condition at runtime (+/-) is negligible. Flexibility gained outweighs small cost. Default-true for both prevents silent disablement surprises (+).
+
+### Backward-compatible type re-exports in app-store.ts during gradual slice extraction (2026-02-13)
+- **Context:** 4,268-line monolithic store split into 5 domain slices. 173 files import from app-store; only 7 critical components updated to use new slices directly.
+- **Why:** Allows extraction to proceed without forcing immediate updates across entire codebase. Eliminates cascading import failures that would block feature completion. Enables incremental migration of components as they're modified for other reasons.
+- **Rejected:** Force-update all 173 imports immediately (blocks feature until complete), or extract without re-exports (breaks all downstream code, cascading failures)
+- **Trade-offs:** Short-term: re-exports mask unused imports, minor performance cost from indirection. Long-term: creates debt—components don't know which slice to import from. Mitigation: incremental cleanup optional, not blocking.
+- **Breaking if changed:** If re-exports removed without updating imports, 166 files fail to build. Re-exports ARE the migration bridge—removing prematurely breaks the codebase.
+
+#### [Gotcha] Keyboard shortcut utility functions (parseShortcut, formatShortcut) required relocation from app-store to settings-store (2026-02-13)
+- **Situation:** These utilities were originally in app-store.ts. When extracting settings-store.ts, extracting the state was simple but utilities remained orphaned in the original file. Components importing from app-store for utilities only caused unnecessary coupling.
+- **Root cause:** Utilities should live in the same file as the state that uses them. This prevents circular dependencies and co-locates related logic. Components should import utilities from settings-store, not app-store.
+- **How to avoid:** Easier: utilities and state co-located, clear import path. Harder: required identifying all utility usage and updating imports.
+
+#### [Pattern] Extraction order: largest domain first (terminal-store ~1000 lines), then medium (ai-models, worktree), then small (settings, chat). No persist middleware on any slice. (2026-02-13)
+- **Problem solved:** 5 stores extracted from monolith. No localStorage persistence, settings sync via API (use-settings-sync.ts). All stores use basic Zustand `create()` without persist.
+- **Why this works:** Extracting largest slice first maximizes lines-of-code reduction early, validates extraction pattern, reduces final app-store size faster. No persist middleware because settings are already synced server-side; persisting would create sync conflicts and stale state problems.
+- **Trade-offs:** Benefit: Extracted terminal first validated entire pattern before investing in 4 more slices. Cost: No offline capability, but API sync is source of truth. If persist were added, would need conflict resolution logic.
+
+### Stopped final reduction at 3,414 lines for app-store.ts instead of continuing to <1,000 lines target (2026-02-13)
+- **Context:** Initial goal: reduce app-store from 4,268 to <1,000 lines. Extracted 5 slices (1,000 + 500 + 800 + 600 + 250 = 3,150 lines). Final app-store: 3,414 lines (still ~80% oversized vs 1,000 target).
+- **Why:** Remaining 3,414 lines are tightly coupled: projects, features/kanban, board backgrounds, pipeline config. Further extraction would require architectural refactoring of how projects/features relate to global app state. Cost-benefit unfavorable: complexity introduced > value gained for current codebase.
+- **Rejected:** Continue extracting project-store, features-store, board-store (requires refactoring project/feature initialization, board subscriptions, and app-wide state coherence. High breaking risk, diminishing returns)
+- **Trade-offs:** Benefit: 20% reduction achieved, clear domain slices established, pattern validated. Cost: app-store still large. Remaining work is optional/incremental. Team can improve incrementally without blocking.
+- **Breaking if changed:** If remaining state were forcibly extracted without refactoring initialization order and project-wide state bindings, projects would fail to load and board updates would break. The remaining 3,414 lines represent tight coupling that's OK to preserve until a clearer architectural need emerges.
+
+#### [Gotcha] Component import scope underestimated: 173 files import from app-store, but only 7 critical files actually use extracted functionality directly (2026-02-13)
+- **Situation:** Initial assumption: updating all 173 imports is necessary. Reality: most imports are for re-exported types or unrelated state. Only components actively using extracted state (TerminalPanel, ChatHistory, WorktreePanel, KeyboardMap, etc.) needed updates.
+- **Root cause:** Many imports are for types that didn't move, or for state that remained in app-store. Re-exports satisfy those imports. Forcing updates to 173 files would create churn without benefit.
+- **How to avoid:** Current: 7 updates required, 166 still use re-exports. Benefit: reduced scope, lower risk. Cost: re-exports create mild technical debt (should migrate as components are touched).
+
+### Moved domain-specific components to `components/shared/` or view-specific directories BEFORE updating imports, allowing Git to track moves as renames rather than delete+add operations (2026-02-13)
+- **Context:** Refactoring 23 domain-specific components out of the shadcn/ui-compliant `components/ui/` directory
+- **Why:** Git rename detection requires the file to exist at the new location before the old reference is removed from imports. Doing this in reverse (updating imports first) causes Git to see deletions, losing history and causing merge conflicts in concurrent branches.
+- **Rejected:** Update all imports first, then move files. This causes Git to treat moves as delete+add, losing blame history and making cherry-picks/rebases harder.
+- **Trade-offs:** Must coordinate file moves across 23 files with import updates across 73+ files. Easier to track as renames (good for history) but requires two-phase refactoring (move first, then import-hunt).
+- **Breaking if changed:** Changing the order (imports before moves) breaks Git history tracking and complicates future rebases/cherry-picks into feature branches that reference the old locations.
+
+#### [Gotcha] Two moved components (`hotkey-button.tsx`, `git-diff-panel.tsx`) had relative imports to other UI primitives (`../button`, `../card`). These broke when moved to `components/shared/` because the relative path no longer resolves. (2026-02-13)
+- **Situation:** Automated `sed` replacement of import paths from `@/components/ui/*` didn't catch internal relative imports within component files
+- **Root cause:** The search strategy (`grep -r "from '@/components/ui/"`) only found absolute imports in consuming code, not relative imports within the component files themselves. Components written to live in one directory structure reference siblings via relative paths.
+- **How to avoid:** Relative imports keep interdependencies explicit locally but break during refactoring. Absolute imports are refactor-safe but create circular dependency risks if not carefully managed.
+
+### Organized moved components by usage pattern: shared components (used by 2+ views) to `components/shared/`, view-specific components to `components/views/{view-name}/components/` (2026-02-13)
+- **Context:** 23 domain-specific components were intermingled with true UI primitives in `components/ui/`
+- **Why:** Separates concerns: primitives are reusable, framework-agnostic, theme-aware. Shared domain components are business logic with shared state. View-specific components are tightly coupled to one feature. This hierarchy makes dependencies explicit and prevents accidental coupling.
+- **Rejected:** Flat structure (keep all in one shared directory). Unclear from imports whether a component is view-specific or reusable. Makes it harder to enforce dependency direction (view-specific shouldn't depend on primitives directly).
+- **Trade-offs:** More directory nesting increases friction for import paths but improves discoverability. Clear from import path whether you're using a primitive or domain component. Prevents the original problem (domain logic leaking into the UI primitive library).
+- **Breaking if changed:** If all components stay in `components/ui/`, the shadcn/ui compliance is lost and the directory becomes a dumping ground. Dependencies become implicit, making refactoring and testing harder. Future developers won't know which components are safe to modify.
+
+#### [Gotcha] Barrel exports (index.ts files) in `components/shared/` and `components/views/board-view/components/` were not automatically created during file moves. Imports needed explicit export statements added to new index.ts files. (2026-02-13)
+- **Situation:** Moving components to new directories left those directories without barrel exports, so consumers had to use full file paths instead of cleaner directory imports
+- **Root cause:** File moves (git mv) don't create index.ts files. The export structure is a separate concern from the physical file location. Without explicitly adding exports, consumers get long import paths and lose the organizational abstraction.
+- **How to avoid:** Adding barrel exports requires manual curation (deciding what's public) but enables cleaner consumer imports. Trade-off: a few lines in index.ts for many cleaner imports across 73+ files.
+
+#### [Pattern] Used `find` + `sed` with escaped path separators and context patterns to bulk-replace 73 import statements across the codebase in a single operation per component move (2026-02-13)
+- **Problem solved:** Each of 23 components needed imports updated across 73+ files. Manual find-and-replace would be error-prone and time-consuming.
+- **Why this works:** Automated bulk replacement ensures consistency and catches all references (vs manual search missing some). Using context patterns (e.g., `from '@/components/ui/log-viewer'`) reduces false positives from substring matches.
+- **Trade-offs:** Requires careful regex escaping and testing each sed command, but eliminates human error at scale. One sed per component is fast (~1-2s) vs finding and clicking through 73 replacements in editor.

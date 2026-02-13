@@ -136,7 +136,10 @@ mcp__plugin_automaker_automaker__list_running_agents()
 
 1. **Monitor Progress** - Check agent output periodically
 2. **Review Completed Work** - When agent finishes, review the output
-3. **Handle Failures** - If agent fails, analyze error and decide:
+3. **Post-Flight Delegation** - Delegate mechanical cleanup to specialists:
+   - PR creation, formatting, CodeRabbit → `execute_dynamic_agent` with template `pr-maintainer`
+   - Board state fixes → Board Janitor crew handles automatically every 15min
+4. **Handle Failures** - If agent fails, analyze error and decide:
    - Retry with more context
    - Escalate complexity (haiku → sonnet → opus)
    - Create blocking issue for manual intervention
@@ -154,7 +157,17 @@ Check why:
 
 ## Phase 4: Productive Waiting
 
-When blocked on external factors (PR review, CI build, rate limits), use time productively:
+When blocked on external factors (PR review, CI build, rate limits), use time productively.
+
+### Crew Loop Status Check
+
+Before doing productive work, check if crew members are handling maintenance:
+
+- PR pipeline maintenance → **PR Maintainer** crew runs every 10min (auto-merge, CodeRabbit, format fixes)
+- Board consistency → **Board Janitor** crew runs every 15min (merged-not-done, orphaned features)
+- Server health → **Frank** crew runs every 10min (memory, health monitor)
+
+Only intervene in these areas if the crew member hasn't fired yet and the issue is blocking your current work.
 
 ### Tier 1: Code Quality (5-10 min tasks)
 

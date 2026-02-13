@@ -11,10 +11,10 @@ describe('registerBuiltInTemplates', () => {
     registry = new RoleRegistryService(events);
   });
 
-  it('registers all 9 built-in templates', () => {
+  it('registers all 11 built-in templates', () => {
     const count = registerBuiltInTemplates(registry);
-    expect(count).toBe(9);
-    expect(registry.size).toBe(9);
+    expect(count).toBe(11);
+    expect(registry.size).toBe(11);
   });
 
   it('registers templates as tier 0 (protected)', () => {
@@ -37,6 +37,8 @@ describe('registerBuiltInTemplates', () => {
     expect(names).toContain('engineering-manager');
     expect(names).toContain('ava');
     expect(names).toContain('jon');
+    expect(names).toContain('pr-maintainer');
+    expect(names).toContain('board-janitor');
   });
 
   it('ava uses opus model', () => {
@@ -92,8 +94,8 @@ describe('registerBuiltInTemplates', () => {
   it('is idempotent — calling twice does not duplicate', () => {
     registerBuiltInTemplates(registry);
     const count2 = registerBuiltInTemplates(registry);
-    // Second call may succeed (overwrite) or fail, but total should still be 9
-    expect(registry.size).toBe(9);
+    // Second call may succeed (overwrite) or fail, but total should still be 11
+    expect(registry.size).toBe(11);
   });
 
   it('ava has systemPrompt for Discord routing', () => {
@@ -125,5 +127,33 @@ describe('registerBuiltInTemplates', () => {
     expect(gtm!.systemPrompt).toContain('GTM');
     expect(gtm!.systemPrompt).toContain('protoLabs');
     expect(gtm!.systemPrompt).toContain('Josh Mabry');
+  });
+
+  it('pr-maintainer uses haiku with commit capabilities', () => {
+    registerBuiltInTemplates(registry);
+    const prm = registry.get('pr-maintainer');
+    expect(prm).toBeDefined();
+    expect(prm!.model).toBe('haiku');
+    expect(prm!.maxTurns).toBe(50);
+    expect(prm!.canUseBash).toBe(true);
+    expect(prm!.canModifyFiles).toBe(true);
+    expect(prm!.canCommit).toBe(true);
+    expect(prm!.canCreatePRs).toBe(true);
+    expect(prm!.trustLevel).toBe(2);
+    expect(prm!.systemPrompt).toContain('PR Maintainer');
+  });
+
+  it('board-janitor uses haiku with read-only board access', () => {
+    registerBuiltInTemplates(registry);
+    const bj = registry.get('board-janitor');
+    expect(bj).toBeDefined();
+    expect(bj!.model).toBe('haiku');
+    expect(bj!.maxTurns).toBe(30);
+    expect(bj!.canUseBash).toBe(false);
+    expect(bj!.canModifyFiles).toBe(false);
+    expect(bj!.canCommit).toBe(false);
+    expect(bj!.canCreatePRs).toBe(false);
+    expect(bj!.trustLevel).toBe(1);
+    expect(bj!.systemPrompt).toContain('Board Janitor');
   });
 });

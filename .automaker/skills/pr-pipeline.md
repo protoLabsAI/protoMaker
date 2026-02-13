@@ -73,3 +73,7 @@ Stale `dist/` after types changes causes downstream PRs to fail with wrong type 
 ## Large PRs = Review Bottleneck
 
 Keep PRs under 200 lines. Use Graphite stacking for epic workflows.
+
+## Crew Loop Automation
+
+Routine PR pipeline work (auto-merge enablement, CodeRabbit thread resolution, format fixes, branch rebasing) is handled by the **PR Maintainer** crew member, which runs every 10 minutes. Only intervene manually for complex failures that require strategic judgment (e.g., TypeScript build errors, conflicting merges, architectural review issues).

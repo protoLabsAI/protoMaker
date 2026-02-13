@@ -41,11 +41,13 @@ Re-export from `crew-members/index.ts`.
 
 ## Current Crew Members
 
-| Member | ID      | Schedule                | Default  | Purpose                                                 |
-| ------ | ------- | ----------------------- | -------- | ------------------------------------------------------- |
-| Ava    | `ava`   | `*/10 * * * *` (10 min) | Enabled  | Board health, stuck agents, stale PRs, blocked features |
-| Frank  | `frank` | `*/10 * * * *` (10 min) | Enabled  | Server health, memory, capacity, health monitor         |
-| GTM    | `gtm`   | `0 */6 * * *` (6 hours) | Disabled | Content pipeline (placeholder)                          |
+| Member        | ID              | Schedule                | Default  | Purpose                                                           |
+| ------------- | --------------- | ----------------------- | -------- | ----------------------------------------------------------------- |
+| Ava           | `ava`           | `*/10 * * * *` (10 min) | Enabled  | Stuck agents, blocked features, auto-mode health, capacity        |
+| Frank         | `frank`         | `*/10 * * * *` (10 min) | Enabled  | Server health, memory, capacity, health monitor, worktree health  |
+| GTM           | `gtm`           | `0 */6 * * *` (6 hours) | Disabled | Content pipeline (placeholder)                                    |
+| PR Maintainer | `pr-maintainer` | `*/10 * * * *` (10 min) | Enabled  | Stale PRs, auto-merge, CodeRabbit threads, orphaned worktrees     |
+| Board Janitor | `board-janitor` | `*/15 * * * *` (15 min) | Enabled  | Merged-not-done, orphaned in-progress, broken deps, stale blocked |
 
 ## API Endpoints
 

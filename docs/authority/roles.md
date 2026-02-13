@@ -4,16 +4,37 @@ Agent roles in the Automaker authority system, organized by hierarchy level.
 
 ## Active Roster
 
-| Role                                | Type  | Status |
-| ----------------------------------- | ----- | ------ |
-| [Project Owner](#project-owner)     | Human | Active |
-| [Chief of Staff](#chief-of-staff)   | AI    | Active |
-| [GTM Specialist](#gtm-specialist)   | AI    | Active |
-| [DevOps Engineer](#devops-engineer) | AI    | Active |
+| Role                                    | Type  | Model  | Status |
+| --------------------------------------- | ----- | ------ | ------ |
+| [Project Owner](#project-owner)         | Human | —      | Active |
+| [Chief of Staff](#chief-of-staff)       | AI    | Opus   | Active |
+| [GTM Specialist](#gtm-specialist)       | AI    | Sonnet | Active |
+| [DevOps Engineer](#devops-engineer)     | AI    | Sonnet | Active |
+| [Frontend Engineer](#frontend-engineer) | AI    | Sonnet | Active |
+| [PR Maintainer](#pr-maintainer)         | AI    | Haiku  | Active |
+| [Board Janitor](#board-janitor)         | AI    | Haiku  | Active |
+
+### Crew Loop Members
+
+The Chief of Staff, DevOps Engineer, PR Maintainer, Board Janitor, and GTM Specialist all run as **crew loop members** — lightweight scheduled checks that escalate to full agents only when problems are detected. The Chief of Staff acts as orchestrator. See [Crew Loops](../dev/crew-loops.md) for the full list and schedules.
+
+### Implementation Agents (Auto-Mode)
+
+These agents are assigned features by auto-mode and implement them in isolated worktrees:
+
+| Role                   | Model  | Notes                            |
+| ---------------------- | ------ | -------------------------------- |
+| Backend Engineer       | Sonnet | Server-side features, APIs       |
+| QA Engineer            | Sonnet | Tests, bug identification        |
+| Documentation Engineer | Haiku  | Docs, READMEs, API guides        |
+| Product Manager        | Sonnet | Requirements, priorities         |
+| Engineering Manager    | Sonnet | Code review, capacity, standards |
+
+These don't have named personas — they're assigned dynamically based on feature type and complexity.
 
 ## Dormant Roles (In Code, Not Staffed)
 
-These agent roles exist in the codebase but aren't actively operated as part of the team structure yet:
+These authority agent roles exist in the codebase but aren't actively operated as part of the team structure yet:
 
 - **PM Agent** - Runs idea review pipeline. Could evolve into a staffed Product Director role.
 - **ProjM Agent** - Runs project decomposition. Could evolve into a staffed Program Manager role.
@@ -156,6 +177,91 @@ When overloaded: deploy failures go unnoticed, health checks degrade, staging dr
 ### Evolution
 
 May delegate to specialized agents for monitoring, security, and performance as infrastructure complexity grows.
+
+---
+
+## Frontend Engineer {#frontend-engineer}
+
+**Type:** AI
+**Reports to:** Chief of Staff
+**Trust Level:** 2 (Conditional)
+
+### Responsibilities
+
+- React 19 component architecture (shadcn/ui + CVA pattern)
+- Design system implementation (OKLch tokens, 41 themes, component variants)
+- Tailwind CSS 4 styling consistency
+- Storybook stories and component documentation
+- UI package extraction (`@automaker/ui`)
+- Accessibility compliance
+
+### Operational Scope
+
+- Owns all frontend engineering decisions
+- Can commit and create PRs for UI changes
+- Implements features assigned via auto-mode or direct invocation
+- Accessible via CLI (`/matt`) and Discord
+
+### Evolution
+
+May delegate to specialized agents for accessibility auditing, visual regression testing, and design token generation as the component library grows.
+
+---
+
+## PR Maintainer {#pr-maintainer}
+
+**Type:** AI (Crew Loop)
+**Reports to:** Chief of Staff
+**Trust Level:** 2 (Conditional)
+**Model:** Haiku
+**Schedule:** Every 10 minutes
+
+### Responsibilities
+
+- Monitor PR pipeline health
+- Detect stale PRs in review (>24h)
+- Identify features needing auto-merge or thread resolution (>30min)
+- Find orphaned worktrees (branch exists but no PR)
+
+### Operational Scope
+
+- Check PR status, resolve review threads, enable auto-merge
+- Create PRs from orphaned worktrees
+- Fix formatting issues from inside worktrees
+- Rebase branches that fall behind main
+
+### Escalation
+
+Runs as a lightweight check. Only spawns a full agent when findings reach warning severity. Automated triage — no human intervention needed for routine PR maintenance.
+
+---
+
+## Board Janitor {#board-janitor}
+
+**Type:** AI (Crew Loop)
+**Reports to:** Chief of Staff
+**Trust Level:** 2 (Conditional)
+**Model:** Haiku
+**Schedule:** Every 15 minutes
+
+### Responsibilities
+
+- Monitor board consistency
+- Detect features with merged PRs still in review (should be done)
+- Find orphaned in-progress features (no running agent for >4h)
+- Identify blocked features whose dependencies are all done (stale deps)
+- Catch features in-progress with unsatisfied dependencies
+
+### Operational Scope
+
+- Move features between statuses to fix inconsistencies
+- Reset orphaned features to backlog
+- Unblock features with satisfied dependencies
+- Fix dependency chains
+
+### Escalation
+
+Runs as a lightweight check. Only spawns a full agent when findings reach warning severity. Posts to Discord `#dev` if more than 2 fixes were made in one run.
 
 ---
 

@@ -164,7 +164,13 @@ import { TriageService } from './services/triage-service.js';
 import { IssueCreationService } from './services/issue-creation-service.js';
 import { createIssuesRoutes } from './routes/issues/index.js';
 import { CrewLoopService } from './services/crew-loop-service.js';
-import { avaCrewMember, frankCrewMember, gtmCrewMember } from './services/crew-members/index.js';
+import {
+  avaCrewMember,
+  frankCrewMember,
+  gtmCrewMember,
+  prMaintainerCrewMember,
+  boardJanitorCrewMember,
+} from './services/crew-members/index.js';
 import { createCrewRoutes } from './routes/crew/index.js';
 
 const PORT = parseInt(process.env.PORT || '3008', 10);
@@ -577,6 +583,8 @@ void (async () => {
     await crewLoopService.registerMember(avaCrewMember);
     await crewLoopService.registerMember(frankCrewMember);
     await crewLoopService.registerMember(gtmCrewMember);
+    await crewLoopService.registerMember(prMaintainerCrewMember);
+    await crewLoopService.registerMember(boardJanitorCrewMember);
     await crewLoopService.registerAllWithScheduler();
     logger.info('Crew loop service initialized with all members');
   } catch (err) {

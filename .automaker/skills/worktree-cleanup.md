@@ -69,3 +69,7 @@ Before removing, check for valuable uncommitted work:
 ## CRITICAL: Never `cd` Into Worktrees
 
 Use `git -C <path>` or absolute paths. If you `cd` into a worktree and then remove it, Bash breaks permanently for the session. See `worktree-safety` skill.
+
+## Crew Loop Delegation
+
+Worktree health monitoring is delegated to the **Frank** crew loop, which runs every 10 minutes and detects stale worktrees. Only intervene manually for worktrees with uncommitted critical changes that need human judgment about whether to preserve or discard.

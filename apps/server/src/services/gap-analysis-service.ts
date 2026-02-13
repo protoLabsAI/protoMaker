@@ -240,7 +240,7 @@ export function analyzeGaps(
       target: 'Squash-only merges, required status checks, no bypass, thread resolution required',
       effort: 'small',
       featureDescription:
-        'Configure branch protection for the main branch via GitHub rulesets. Requirements: (1) squash-only merges with linear history, (2) required status checks (build, test, format, audit), (3) required_review_thread_resolution: true, (4) dismiss stale reviews on push, (5) NO bypass actors — nobody can push directly to main, everyone must go through PRs. Use gh CLI rulesets API to apply settings.',
+        'Configure branch protection for the main branch. Require pull requests with squash-only merges, required status checks (build, test, format, audit), required_review_thread_resolution (CodeRabbit threads must be resolved before merge), and dismiss stale reviews. Use gh CLI or rulesets API to apply settings.',
     });
   } else if (research.ci.hasBranchProtection) {
     addCompliant({
@@ -502,7 +502,7 @@ export function analyzeGaps(
       target: 'CodeRabbit as required CI check',
       effort: 'small',
       featureDescription:
-        'Set up CodeRabbit for AI-powered code review. Create .coderabbit.yaml configuration file. Configure as a required check in branch protection so PRs cannot merge without review.',
+        'Set up CodeRabbit for AI-powered code review. Create .coderabbit.yaml configuration file with strict profile (NOT chill). Configure as a required check in branch protection so PRs cannot merge without review.',
     });
   } else {
     addCompliant({ category: 'ci', title: 'CodeRabbit', detail: 'AI code review configured' });

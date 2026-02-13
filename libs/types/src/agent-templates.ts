@@ -19,6 +19,8 @@ const KNOWN_ROLES = [
   'docs-engineer',
   'gtm-specialist',
   'chief-of-staff',
+  'pr-maintainer',
+  'board-janitor',
 ] as const;
 
 /**

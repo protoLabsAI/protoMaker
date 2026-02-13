@@ -95,3 +95,8 @@ usageStats:
 - **Situation:** Verification test initially used `../../types/src/settings.ts` which failed. Correct path from `apps/web/tests/` is `../../../libs/types/src/settings.ts`
 - **Root cause:** Monorepo structure: `apps/` and `libs/` are siblings at same depth. Tests in `apps/web/tests/` must traverse up 3 levels to reach workspace root, then into libs.
 - **How to avoid:** Relative paths are fragile (-) but portable across machines (+). Test setup simplicity achieved at path fragility cost.
+
+#### [Pattern] Created E2E Playwright verification tests that specifically check for import/module errors in browser console and page errors, filtering for error types like 'cannot find', 'failed to resolve', 'unexpected identifier' (2026-02-13)
+- **Problem solved:** Build and format checks alone wouldn't catch runtime import resolution failures caused by refactored import paths
+- **Why this works:** TypeScript build succeeds if path aliases exist in `tsconfig.json`, but runtime failures occur if components reference incorrect paths. Playwright tests the actual browser environment where import errors manifest as console errors before the app fully loads.
+- **Trade-offs:** Playwright tests add execution time (~30s) but catch a class of errors (broken import resolution) that static checks miss. Test files are temporary and cleaned up, so they don't add maintenance burden.

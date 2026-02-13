@@ -68,3 +68,7 @@ Check that feature resets haven't silently cleared dependencies downstream.
 ```bash
 gh pr merge <number> --auto --squash
 ```
+
+## Delegation Note
+
+Post-flight formatting, PR creation, CodeRabbit resolution, and auto-merge enablement should be delegated to the **PR Maintainer** agent via `execute_dynamic_agent` with template `pr-maintainer`. The PR Maintainer crew member also runs every 10 minutes and catches most of these automatically. Only handle post-flight cleanup directly if the PR Maintainer hasn't fired yet and the issue is urgent.

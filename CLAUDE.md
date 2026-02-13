@@ -185,7 +185,7 @@ Use `resolveModelString()` from `@automaker/model-resolver` to convert model ali
 
 ### Crew Loop System
 
-Scheduled health checks and automated escalation for crew members (Ava, Frank, GTM). Lightweight in-process checks run on cron schedules — full agent escalation only when problems are detected.
+Scheduled health checks and automated escalation for crew members. Lightweight in-process checks run on cron schedules — full agent escalation only when problems are detected.
 
 ```
 SchedulerService (cron tick)
@@ -197,11 +197,15 @@ SchedulerService (cron tick)
 
 **Current crew members:**
 
-| Member | Schedule       | Checks                                                               | Escalation           |
-| ------ | -------------- | -------------------------------------------------------------------- | -------------------- |
-| Ava    | `*/10 * * * *` | Board health, stuck agents (>2h), stale PRs (>24h), blocked features | Warning+ findings    |
-| Frank  | `*/10 * * * *` | V8 heap, RSS memory, agent capacity, health monitor                  | Critical issues only |
-| GTM    | `0 */6 * * *`  | Recently completed features (placeholder)                            | Disabled by default  |
+| Member        | Schedule       | Checks                                                                   | Escalation           |
+| ------------- | -------------- | ------------------------------------------------------------------------ | -------------------- |
+| Ava           | `*/10 * * * *` | Stuck agents (>2h), blocked features, auto-mode health, capacity         | Warning+ findings    |
+| Frank         | `*/10 * * * *` | V8 heap, RSS memory, agent capacity, health monitor                      | Critical issues only |
+| PR Maintainer | `*/10 * * * *` | Stale PRs (>24h), review features needing auto-merge, orphaned worktrees | Warning+ findings    |
+| Board Janitor | `*/15 * * * *` | Merged PRs still in review, orphaned in-progress (>4h), stale deps       | Warning+ findings    |
+| GTM           | `0 */6 * * *`  | Recently completed features (placeholder)                                | Disabled by default  |
+
+Ava acts as orchestrator — PR pipeline monitoring is delegated to PR Maintainer, board consistency to Board Janitor. Both run on Haiku for cost efficiency.
 
 **Adding a new crew member** = one file implementing `CrewMemberDefinition` in `apps/server/src/services/crew-members/`, then register with `crewLoopService.registerMember(def)` in `index.ts`. See `docs/dev/crew-loops.md` for full details.
 
