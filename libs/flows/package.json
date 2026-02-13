@@ -1,0 +1,43 @@
+{
+  "name": "@automaker/flows",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "LangGraph workflow orchestration for AutoMaker",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./graphs": {
+      "types": "./dist/graphs/index.d.ts",
+      "default": "./dist/graphs/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "keywords": [
+    "automaker",
+    "flows",
+    "langgraph"
+  ],
+  "author": "AutoMaker Team",
+  "license": "SEE LICENSE IN LICENSE",
+  "engines": {
+    "node": ">=22.0.0 <23.0.0"
+  },
+  "dependencies": {
+    "@automaker/types": "1.0.0",
+    "@langchain/langgraph": "^0.2.24"
+  },
+  "devDependencies": {
+    "@types/node": "22.19.3",
+    "typescript": "5.9.3",
+    "vitest": "4.0.16"
+  }
+}
