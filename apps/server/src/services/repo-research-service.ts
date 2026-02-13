@@ -372,6 +372,7 @@ export async function researchRepo(projectPath: string): Promise<RepoResearchRes
     (await exists(path.join(absolutePath, '.coderabbit.yml')));
 
   // Check branch protection via gh CLI (non-blocking)
+  // Checks both legacy branch protection and modern rulesets
   let hasBranchProtection = false;
   if (provider === 'github' && gitDir) {
     const bpResult = await runCmd(
@@ -380,6 +381,17 @@ export async function researchRepo(projectPath: string): Promise<RepoResearchRes
       absolutePath
     );
     hasBranchProtection = bpResult.length > 0 && !bpResult.includes('Not Found');
+
+    // Fallback: check rulesets (modern GitHub branch protection)
+    if (!hasBranchProtection) {
+      const rulesetsResult = await runCmd(
+        'gh',
+        ['api', 'repos/{owner}/{repo}/rulesets', '--jq', 'length'],
+        absolutePath
+      );
+      const rulesetCount = parseInt(rulesetsResult.trim(), 10);
+      hasBranchProtection = !isNaN(rulesetCount) && rulesetCount > 0;
+    }
   }
 
   const ci: RepoResearchResult['ci'] = {
