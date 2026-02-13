@@ -508,6 +508,27 @@ export function analyzeGaps(
     addCompliant({ category: 'ci', title: 'CodeRabbit', detail: 'AI code review configured' });
   }
 
+  // --- Analytics ---
+  if (!research.automation.hasAnalytics) {
+    addGap({
+      id: 'analytics',
+      category: 'automation',
+      severity: 'recommended',
+      title: 'No privacy-friendly analytics',
+      current: 'No analytics tracking',
+      target: 'Umami analytics (self-hosted or cloud)',
+      effort: 'small',
+      featureDescription:
+        'Set up Umami analytics for privacy-friendly traffic tracking. Create an Analytics component that loads the Umami script via environment variables (NEXT_PUBLIC_UMAMI_URL, NEXT_PUBLIC_UMAMI_WEBSITE_ID). Add to root layout. Register website in Umami dashboard at umami.proto-labs.ai.',
+    });
+  } else {
+    addCompliant({
+      category: 'automation',
+      title: 'Analytics',
+      detail: `${research.automation.analyticsProvider || 'Unknown'} analytics configured`,
+    });
+  }
+
   // ===================== OPTIONAL GAPS =====================
 
   // --- Payload CMS ---

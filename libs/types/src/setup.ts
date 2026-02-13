@@ -94,6 +94,8 @@ export interface RepoResearchResult {
     hasBeads: boolean;
     hasDiscordIntegration: boolean;
     hasProtolabConfig: boolean;
+    hasAnalytics: boolean;
+    analyticsProvider?: 'umami' | 'plausible' | 'google-analytics' | 'other';
   };
 
   python: {

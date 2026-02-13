@@ -59,6 +59,7 @@ const MILESTONE_DEFS: { title: string; gapIds: string[] }[] = [
       'beads',
       'discord',
       'coderabbit',
+      'analytics',
       'mcp-servers',
       'agent-sdk',
       'payload',

@@ -33,7 +33,21 @@ export default defineConfig({
   title: 'protoLabs',
   description: 'AI-Native Development Agency',
 
-  head: [['link', { rel: 'icon', type: 'image/svg+xml', href: '/logo.svg' }]],
+  head: [
+    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/logo.svg' }],
+    ...(process.env.UMAMI_WEBSITE_ID
+      ? [
+          [
+            'script',
+            {
+              defer: '',
+              src: process.env.UMAMI_URL || 'https://umami.proto-labs.ai/script.js',
+              'data-website-id': process.env.UMAMI_WEBSITE_ID,
+            },
+          ] as [string, Record<string, string>],
+        ]
+      : []),
+  ],
 
   // Allow dead links to: files outside docs/
   ignoreDeadLinks: [/^\.\.\//],

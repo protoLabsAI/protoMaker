@@ -412,12 +412,45 @@ export async function researchRepo(projectPath: string): Promise<RepoResearchRes
     hasBeads: await exists(path.join(absolutePath, '.beads')),
     hasDiscordIntegration: false, // Would need to check protolab.config
     hasProtolabConfig: await exists(path.join(absolutePath, 'protolab.config')),
+    hasAnalytics: false,
+    analyticsProvider: undefined,
   };
 
   // Check protolab.config for discord
   if (automation.hasProtolabConfig) {
     const config = await readJson(path.join(absolutePath, 'protolab.config'));
     if (config?.discord) automation.hasDiscordIntegration = true;
+  }
+
+  // Detect analytics provider
+  if (anyPkgHasDep(allPkgs, '@umami/node') || anyPkgHasDep(allPkgs, 'umami')) {
+    automation.hasAnalytics = true;
+    automation.analyticsProvider = 'umami';
+  } else if (anyPkgHasDep(allPkgs, 'plausible-tracker')) {
+    automation.hasAnalytics = true;
+    automation.analyticsProvider = 'plausible';
+  } else if (anyPkgHasDep(allPkgs, '@next/third-parties') || anyPkgHasDep(allPkgs, 'react-ga4')) {
+    automation.hasAnalytics = true;
+    automation.analyticsProvider = 'google-analytics';
+  }
+
+  // Check for Umami via env vars or script references if not found via deps
+  if (!automation.hasAnalytics) {
+    for (const envFile of ['.env', '.env.example', '.env.local']) {
+      const envPath = path.join(absolutePath, envFile);
+      if (await exists(envPath)) {
+        try {
+          const envContent = await fs.readFile(envPath, 'utf-8');
+          if (envContent.includes('UMAMI') || envContent.includes('umami')) {
+            automation.hasAnalytics = true;
+            automation.analyticsProvider = 'umami';
+            break;
+          }
+        } catch {
+          /* ignore */
+        }
+      }
+    }
   }
 
   // ---- Python ----
