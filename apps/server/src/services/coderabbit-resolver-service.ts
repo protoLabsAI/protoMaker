@@ -238,6 +238,112 @@ export class CodeRabbitResolverService {
   }
 
   /**
+   * Post a reply comment on a review thread and then resolve it
+   *
+   * @param threadId - GraphQL node ID of the thread
+   * @param pullRequestId - GraphQL node ID of the pull request
+   * @param body - The comment body to post
+   * @returns Whether the operation succeeded
+   */
+  async replyAndResolveThread(
+    threadId: string,
+    pullRequestId: string,
+    body: string
+  ): Promise<boolean> {
+    try {
+      // First, post the reply comment
+      const addReplyMutation = `
+        mutation {
+          addPullRequestReviewThreadReply(input: {
+            pullRequestReviewThreadId: "${threadId}",
+            body: "${body.replace(/"/g, '\\"').replace(/\n/g, '\\n')}"
+          }) {
+            comment {
+              id
+            }
+          }
+        }
+      `;
+
+      await execAsync(`gh api graphql -f query='${addReplyMutation.replace(/\n/g, ' ')}'`, {
+        env: execEnv,
+      });
+
+      logger.debug(`Posted reply comment on thread ${threadId}`);
+
+      // Then resolve the thread
+      const resolved = await this.resolveThread(threadId);
+      if (resolved) {
+        logger.debug(`Resolved thread ${threadId} after posting reply`);
+      }
+
+      return resolved;
+    } catch (error) {
+      logger.error(`Failed to reply and resolve thread ${threadId}:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Get the PR GraphQL node ID from the PR number
+   *
+   * @param workDir - Working directory containing the repository
+   * @param prNumber - PR number
+   * @param repo - Optional repository in owner/repo format
+   * @returns The GraphQL node ID of the PR
+   */
+  async getPullRequestId(workDir: string, prNumber: number, repo?: string): Promise<string | null> {
+    try {
+      // Extract owner/repo from the repo parameter or from git remote
+      let owner: string;
+      let repoName: string;
+
+      if (repo) {
+        [owner, repoName] = repo.split('/');
+      } else {
+        // Get from git remote
+        const { stdout: remoteOutput } = await execAsync('git remote get-url origin', {
+          cwd: workDir,
+          env: execEnv,
+        });
+
+        const remoteUrl = remoteOutput.trim();
+        const match =
+          remoteUrl.match(/github\.com[:/]([^/]+)\/([^/\s]+?)(?:\.git)?$/) ||
+          remoteUrl.match(/^([^/]+)\/([^/\s]+)$/);
+
+        if (!match) {
+          throw new Error(`Could not parse GitHub owner/repo from remote: ${remoteUrl}`);
+        }
+
+        [, owner, repoName] = match;
+      }
+
+      // Query for PR node ID
+      const query = `
+        query {
+          repository(owner: "${owner}", name: "${repoName}") {
+            pullRequest(number: ${prNumber}) {
+              id
+            }
+          }
+        }
+      `;
+
+      const { stdout } = await execAsync(`gh api graphql -f query='${query.replace(/\n/g, ' ')}'`, {
+        cwd: workDir,
+        env: execEnv,
+      });
+
+      const data = JSON.parse(stdout);
+      return data.data?.repository?.pullRequest?.id || null;
+    } catch (error) {
+      logger.error(`Failed to get PR ID for PR #${prNumber}:`, error);
+      return null;
+    }
+  }
+
+  /**
    * Resolve all bot-created review threads for a PR
    *
    * This method:

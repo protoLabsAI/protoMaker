@@ -19,8 +19,9 @@ import { promisify } from 'util';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { AutoModeService } from './auto-mode-service.js';
-import type { GitHubComment } from '@automaker/types';
+import type { GitHubComment, ReviewThreadFeedback, ReviewThreadStatus } from '@automaker/types';
 import { codeRabbitParserService } from './coderabbit-parser-service.js';
+import { codeRabbitResolverService } from './coderabbit-resolver-service.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -700,9 +701,96 @@ export class PRFeedbackService {
       }
 
       case 'COMMENTED': {
-        // Track comments but don't reassign - might be discussion, not blocking
+        // Analyze if this COMMENTED review contains actionable content
         if (previousState !== 'commented') {
           pr.reviewState = 'commented';
+
+          // Check if the comments are actionable
+          const isActionable = this.isCommentedReviewActionable(reviewInfo);
+
+          if (isActionable) {
+            // Treat as changes requested - trigger remediation
+            logger.info(
+              `${detectionLabel} PR #${pr.prNumber}: COMMENTED review contains actionable feedback`
+            );
+
+            pr.iterationCount++;
+
+            // Extract feedback summary
+            const feedbackSummary = reviewInfo.comments
+              .map((c) => `${c.author}: ${c.body}`)
+              .join('\n---\n');
+
+            // Update feature with feedback info
+            await this.featureLoader.update(pr.projectPath, featureId, {
+              lastReviewFeedback: feedbackSummary.slice(0, 2000),
+              prIterationCount: pr.iterationCount,
+            });
+
+            // Emit changes requested event
+            this.events.emit('pr:changes-requested', {
+              projectPath: pr.projectPath,
+              featureId,
+              prNumber: pr.prNumber,
+              prUrl: pr.prUrl,
+              branchName: pr.branchName,
+              iterationCount: pr.iterationCount,
+              feedback: feedbackSummary,
+              reviewers: reviewInfo.comments.map((c) => c.author),
+            });
+
+            // Auto-restart dev agent with feedback if AutoModeService is available
+            if (this.autoModeService) {
+              logger.info(
+                `Auto-restarting dev agent for ${featureId} with COMMENTED review feedback (iteration ${pr.iterationCount})`
+              );
+
+              try {
+                const continuationPrompt = await this.buildFeedbackPrompt(
+                  feedbackSummary,
+                  pr.prNumber,
+                  pr.iterationCount,
+                  featureId,
+                  pr.projectPath
+                );
+
+                await this.featureLoader.update(pr.projectPath, featureId, {
+                  status: 'backlog',
+                  workItemState: 'in_progress',
+                  prIterationCount: pr.iterationCount,
+                  error: undefined,
+                });
+
+                void this.autoModeService.executeFeature(
+                  pr.projectPath,
+                  featureId,
+                  true,
+                  true,
+                  undefined,
+                  {
+                    continuationPrompt,
+                    retryCount: pr.iterationCount,
+                    previousErrors: [],
+                    recoveryContext: `PR #${pr.prNumber} COMMENTED review feedback (iteration ${pr.iterationCount})`,
+                  }
+                );
+              } catch (error) {
+                logger.error(`Failed to restart dev agent for ${featureId}:`, error);
+                this.events.emit('pr:agent-restart-failed', {
+                  projectPath: pr.projectPath,
+                  featureId,
+                  prNumber: pr.prNumber,
+                  error: String(error),
+                });
+              }
+            }
+          } else {
+            // Non-actionable COMMENTED review - just log and skip
+            logger.info(
+              `${detectionLabel} PR #${pr.prNumber}: COMMENTED review has no actionable content - skipping remediation`
+            );
+          }
+
           this.events.emit('pr:feedback-received', {
             projectPath: pr.projectPath,
             featureId,
@@ -710,6 +798,7 @@ export class PRFeedbackService {
             type: 'commented',
             iterationCount: pr.iterationCount,
             detectionMethod,
+            actionable: isActionable,
           });
           logger.info('PR commented (no action required)', {
             featureId,
@@ -1382,5 +1471,190 @@ This is CI fix iteration ${iteration}.`;
    */
   getTrackedPRs(): TrackedPR[] {
     return Array.from(this.trackedPRs.values());
+  }
+
+  /**
+   * Process thread feedback after agent completes fixes and pushes.
+   * Auto-resolve accepted threads and post denial reasoning on denied threads.
+   *
+   * @param projectPath - Project path
+   * @param featureId - Feature ID
+   * @param prNumber - PR number
+   */
+  async processThreadFeedback(
+    projectPath: string,
+    featureId: string,
+    prNumber: number
+  ): Promise<void> {
+    try {
+      // Load feature to get thread feedback
+      const feature = await this.featureLoader.get(projectPath, featureId);
+      if (!feature || !feature.threadFeedback) {
+        logger.debug(`No thread feedback to process for feature ${featureId}`);
+        return;
+      }
+
+      // Type assertion for threadFeedback
+      const threadFeedback = feature.threadFeedback as ReviewThreadFeedback[];
+      if (threadFeedback.length === 0) {
+        logger.debug(`No thread feedback to process for feature ${featureId}`);
+        return;
+      }
+
+      logger.info(
+        `Processing thread feedback for PR #${prNumber}: ${threadFeedback.length} threads`
+      );
+
+      // Get PR GraphQL ID for replying to threads
+      const prId = await codeRabbitResolverService.getPullRequestId(projectPath, prNumber);
+      if (!prId) {
+        logger.warn(`Could not get PR GraphQL ID for PR #${prNumber}, skipping thread resolution`);
+        return;
+      }
+
+      // Separate accepted and denied threads
+      const acceptedThreads = threadFeedback.filter((t) => t.status === 'accepted');
+      const deniedThreads = threadFeedback.filter((t) => t.status === 'denied');
+
+      let resolvedCount = 0;
+      let deniedCount = 0;
+      const now = new Date().toISOString();
+
+      // Process accepted threads - auto-resolve
+      if (acceptedThreads.length > 0) {
+        logger.info(`Auto-resolving ${acceptedThreads.length} accepted threads`);
+
+        for (const thread of acceptedThreads) {
+          try {
+            const resolved = await codeRabbitResolverService['resolveThread'](thread.threadId);
+            if (resolved) {
+              resolvedCount++;
+              thread.resolvedAt = now;
+              logger.debug(`Resolved accepted thread ${thread.threadId}`);
+            }
+          } catch (error) {
+            logger.warn(`Failed to resolve accepted thread ${thread.threadId}:`, error);
+          }
+        }
+      }
+
+      // Process denied threads - post reasoning and resolve
+      if (deniedThreads.length > 0) {
+        logger.info(`Processing ${deniedThreads.length} denied threads with reasoning`);
+
+        for (const thread of deniedThreads) {
+          try {
+            const reasoning = thread.agentReasoning || 'Evaluated and declined';
+            const commentBody = `Evaluated and declined: ${reasoning}`;
+
+            const success = await codeRabbitResolverService.replyAndResolveThread(
+              thread.threadId,
+              prId,
+              commentBody
+            );
+
+            if (success) {
+              deniedCount++;
+              thread.resolvedAt = now;
+              logger.debug(`Posted denial reasoning and resolved thread ${thread.threadId}`);
+            }
+          } catch (error) {
+            logger.warn(`Failed to process denied thread ${thread.threadId}:`, error);
+          }
+        }
+      }
+
+      // Update feature with resolved timestamps
+      await this.featureLoader.update(projectPath, featureId, {
+        threadFeedback,
+      });
+
+      // Emit event with results
+      this.events.emit('pr:threads-resolved', {
+        projectPath,
+        featureId,
+        prNumber,
+        resolvedCount,
+        deniedCount,
+        totalThreads: threadFeedback.length,
+        acceptedThreadIds: acceptedThreads.map((t) => t.threadId),
+        deniedThreadIds: deniedThreads.map((t) => t.threadId),
+      });
+
+      logger.info(
+        `Thread resolution complete for PR #${prNumber}: ${resolvedCount} accepted, ${deniedCount} denied`
+      );
+    } catch (error) {
+      logger.error(`Failed to process thread feedback for PR #${prNumber}:`, error);
+    }
+  }
+
+  /**
+   * Analyze COMMENTED review for actionable content.
+   * Returns true if the review contains actionable items that require remediation.
+   *
+   * @param reviewInfo - The PR review info
+   * @returns Whether the review contains actionable content
+   */
+  private isCommentedReviewActionable(reviewInfo: PRReviewInfo): boolean {
+    // Check for CodeRabbit comments with severity markers or code suggestions
+    const codeRabbitComments = reviewInfo.comments.filter((c) =>
+      c.author.toLowerCase().includes('coderabbit')
+    );
+
+    if (codeRabbitComments.length > 0) {
+      // Check if any CodeRabbit comments are actionable
+      const actionableCodeRabbit = codeRabbitComments.some((c) => {
+        const body = c.body.toLowerCase();
+        // Walk-through summaries (no line-specific suggestions) - skip
+        if (body.includes('walk-through') || body.includes('summary')) {
+          return false;
+        }
+        // Severity markers or code suggestions - actionable
+        return (
+          body.includes('severity:') ||
+          body.includes('suggestion:') ||
+          body.includes('🚨') ||
+          body.includes('⚠️') ||
+          body.includes('```')
+        );
+      });
+
+      if (actionableCodeRabbit) {
+        logger.info(
+          `COMMENTED review contains actionable CodeRabbit suggestions (severity markers or code suggestions)`
+        );
+        return true;
+      }
+    }
+
+    // Check for human comments with imperative keywords
+    const humanComments = reviewInfo.comments.filter(
+      (c) => !c.author.toLowerCase().includes('coderabbit') && !c.author.toLowerCase().includes('bot')
+    );
+
+    if (humanComments.length > 0) {
+      const actionableHuman = humanComments.some((c) => {
+        const body = c.body.toLowerCase();
+        return (
+          body.includes('should') ||
+          body.includes('must') ||
+          body.includes('needs') ||
+          body.includes('fix') ||
+          body.includes('change') ||
+          body.includes('update') ||
+          body.includes('remove') ||
+          body.includes('add')
+        );
+      });
+
+      if (actionableHuman) {
+        logger.info(`COMMENTED review contains actionable human feedback (imperative keywords)`);
+        return true;
+      }
+    }
+
+    logger.info(`COMMENTED review has no actionable content - skipping remediation`);
+    return false;
   }
 }
