@@ -1157,7 +1157,7 @@ export class LinearSyncService {
         return;
       }
 
-      const feature = await this.featureLoader.findByLinearIssueId(linearIssueId);
+      const feature = await this.featureLoader.findByLinearIssueId(projectPath, linearIssueId);
       if (!feature) {
         logger.warn(`No feature found for Linear issue ${linearIssueId}, skipping sync`);
         return;
