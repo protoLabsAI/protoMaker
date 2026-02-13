@@ -15,6 +15,12 @@ jobs:
       group: staging-deploy
       cancel-in-progress: true
 
+    # Default working directory for all steps — the runner's _work/ dir
+    # gets wiped by cron every 5min, so use /tmp as a safe fallback.
+    defaults:
+      run:
+        working-directory: /tmp
+
     # Use a persistent deploy directory that survives the runner's workspace
     # cleanup cron. The default _work/ directory gets wiped every 5min.
     env:
