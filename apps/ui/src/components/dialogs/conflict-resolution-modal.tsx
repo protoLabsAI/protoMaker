@@ -93,10 +93,7 @@ export function ConflictResolutionModal({ open, onOpenChange }: ConflictResoluti
           )}
 
           {conflicts.map((conflict) => (
-            <div
-              key={conflict.featureId}
-              className="bg-muted/50 space-y-2 rounded-lg border p-3"
-            >
+            <div key={conflict.featureId} className="bg-muted/50 space-y-2 rounded-lg border p-3">
               <div className="flex items-center justify-between">
                 <code className="text-xs">{conflict.featureId.slice(0, 20)}...</code>
                 <Badge variant="warning" size="sm">
