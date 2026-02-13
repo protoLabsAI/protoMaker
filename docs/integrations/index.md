@@ -16,11 +16,14 @@ Discord bot integration for team communication, event routing, and status update
 
 Unified API key and provider profile system. Manage multiple AI providers, switch between API keys, and configure model preferences per project.
 
+### [Linear Sync](./linear-sync)
+
+Bidirectional sync between Linear and Automaker. Approved Linear issues flow into the AI agent pipeline, status changes sync back, and Automaker appears as an agent in Linear workspaces via OAuth.
+
 ## External Tools
 
 Automaker also works with:
 
 - **[GitHub Actions](/infra/ci-cd)** — CI/CD pipelines for testing and deployment
 - **[Graphite](https://graphite.dev)** — Stack-aware PR management for epic workflows
-- **[Linear](https://linear.app)** — Strategic roadmap and initiative tracking
 - **[CodeRabbit](https://coderabbit.ai)** — Automated PR review
