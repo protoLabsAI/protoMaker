@@ -42,6 +42,9 @@ interface FeatureEventPayload {
   projectPath: string;
   status?: string;
   prUrl?: string;
+  prNumber?: number;
+  mergeCommitSha?: string;
+  mergedBy?: string;
   error?: string;
 }
 
@@ -833,14 +836,207 @@ export class LinearSyncService {
   /**
    * Handle feature:pr-merged events
    */
-  private handleFeaturePRMerged(payload: FeatureEventPayload): void {
+  private async handleFeaturePRMerged(payload: FeatureEventPayload): Promise<void> {
     logger.debug('Received feature:pr-merged event', {
       featureId: payload.featureId,
       prUrl: payload.prUrl,
+      prNumber: payload.prNumber,
     });
 
-    // No actual sync logic yet - just structure and guards
-    // Future implementation will check guards and perform sync
+    // Call the async implementation
+    await this.onPRMerged(payload);
+  }
+
+  /**
+   * Add comment to Linear issue when PR is merged and mark issue as Done
+   */
+  private async onPRMerged(payload: FeatureEventPayload): Promise<void> {
+    const { featureId, projectPath, prUrl, prNumber, mergedBy } = payload;
+
+    // Guard: Check if service is running and sync is enabled
+    if (!this.shouldSync(featureId)) {
+      return;
+    }
+
+    // Check if sync is enabled for this project
+    const syncEnabled = await this.isProjectSyncEnabled(projectPath);
+    if (!syncEnabled) {
+      logger.debug(`Linear sync not enabled for project ${projectPath}`);
+      return;
+    }
+
+    // Check if comment on completion is enabled
+    if (!this.settingsService) {
+      logger.error('SettingsService not initialized');
+      return;
+    }
+
+    const settings = await this.settingsService.getProjectSettings(projectPath);
+    if (settings.integrations?.linear?.commentOnCompletion === false) {
+      logger.debug(`Comment on completion disabled for project ${projectPath}`);
+      return;
+    }
+
+    if (!this.featureLoader) {
+      logger.error('FeatureLoader not initialized');
+      return;
+    }
+
+    // Mark as syncing to prevent duplicates
+    this.markSyncing(featureId);
+
+    try {
+      // Get the feature details
+      const feature = await this.featureLoader.get(projectPath, featureId);
+      if (!feature) {
+        logger.error(`Feature ${featureId} not found`);
+        return;
+      }
+
+      // Skip if feature has no Linear issue ID
+      if (!feature.linearIssueId) {
+        logger.debug(`Feature ${featureId} has no Linear issue ID, skipping PR merge sync`);
+        return;
+      }
+
+      // Build the comment markdown
+      const agentName = mergedBy || 'agent';
+      const prLink = prUrl && prNumber ? `[#${prNumber}](${prUrl})` : prUrl || `#${prNumber}`;
+      const timestamp = new Date().toISOString();
+      const commentBody = `✅ PR merged: ${prLink} by ${agentName}. Feature complete.`;
+
+      // Add comment to Linear issue
+      await this.addCommentToIssue(projectPath, feature.linearIssueId, commentBody);
+
+      // Mark issue as Done if not already
+      const currentState = await this.getIssueState(projectPath, feature.linearIssueId);
+      if (currentState !== 'Done') {
+        await this.updateIssueStatus(projectPath, feature.linearIssueId, 'done');
+      }
+
+      // Update sync metadata
+      const existingMetadata = this.getSyncMetadata(featureId);
+      const metadata: SyncMetadata = {
+        featureId,
+        lastSyncTimestamp: Date.now(),
+        lastSyncStatus: 'success',
+        linearIssueId: feature.linearIssueId,
+        syncCount: (existingMetadata?.syncCount || 0) + 1,
+        syncSource: 'automaker',
+        syncDirection: 'push',
+      };
+      this.updateSyncMetadata(metadata);
+
+      // Emit completion event
+      if (this.emitter) {
+        this.emitter.emit('linear:sync:completed', {
+          featureId,
+          direction: 'push',
+          conflictDetected: false,
+          timestamp,
+        });
+      }
+
+      logger.info(
+        `Successfully synced PR merge for feature ${featureId} to Linear issue ${feature.linearIssueId}`
+      );
+    } catch (error) {
+      logger.error(`Failed to sync PR merge for feature ${featureId}:`, error);
+
+      // Update sync metadata with error
+      const metadata: SyncMetadata = {
+        featureId,
+        lastSyncTimestamp: Date.now(),
+        lastSyncStatus: 'error',
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        syncCount: 0,
+      };
+      this.updateSyncMetadata(metadata);
+
+      // Emit error event
+      if (this.emitter) {
+        this.emitter.emit('linear:sync:error', {
+          featureId,
+          direction: 'push',
+          error: error instanceof Error ? error.message : 'Unknown error',
+          timestamp: new Date().toISOString(),
+        });
+      }
+    } finally {
+      // Unmark syncing
+      this.unmarkSyncing(featureId);
+    }
+  }
+
+  /**
+   * Add a comment to a Linear issue
+   */
+  private async addCommentToIssue(
+    projectPath: string,
+    issueId: string,
+    commentBody: string
+  ): Promise<void> {
+    if (!this.settingsService) {
+      throw new Error('SettingsService not initialized');
+    }
+
+    const settings = await this.settingsService.getProjectSettings(projectPath);
+    const linearAccessToken = settings.integrations?.linear?.agentToken;
+
+    if (!linearAccessToken) {
+      throw new Error('No Linear OAuth token found in settings');
+    }
+
+    // GraphQL mutation to add comment
+    const mutation = `
+      mutation AddComment($issueId: String!, $body: String!) {
+        commentCreate(input: { issueId: $issueId, body: $body }) {
+          success
+          comment {
+            id
+            body
+          }
+        }
+      }
+    `;
+
+    const variables = {
+      issueId,
+      body: commentBody,
+    };
+
+    const response = await fetch('https://api.linear.app/graphql', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${linearAccessToken}`,
+      },
+      body: JSON.stringify({ query: mutation, variables }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Linear API error: ${response.status} ${response.statusText}`);
+    }
+
+    const result = (await response.json()) as {
+      data?: {
+        commentCreate?: {
+          success: boolean;
+          comment?: { id: string; body: string };
+        };
+      };
+      errors?: Array<{ message: string }>;
+    };
+
+    if (result.errors) {
+      throw new Error(`Linear GraphQL error: ${result.errors.map((e) => e.message).join(', ')}`);
+    }
+
+    if (!result.data?.commentCreate?.success) {
+      throw new Error('Failed to add comment to Linear issue');
+    }
+
+    logger.info(`Added comment to Linear issue ${issueId}`);
   }
 
   /**
