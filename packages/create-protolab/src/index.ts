@@ -1,7 +1,8 @@
 /**
- * @automaker/create-protolab
+ * create-protolab
  *
- * Package for scaffolding ProtoLab projects.
+ * Scan any repo, compare against the ProtoLabs gold standard,
+ * and scaffold the full automation stack.
  */
 
 export { init } from './phases/init.js';

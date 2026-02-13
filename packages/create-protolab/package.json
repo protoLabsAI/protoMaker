@@ -1,25 +1,44 @@
 {
-  "name": "@automaker/create-protolab",
+  "name": "create-protolab",
   "version": "0.1.0",
+  "description": "Scan any repo, compare against the ProtoLabs gold standard, and scaffold the full automation stack",
   "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "bin": {
+    "create-protolab": "./dist/cli.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     }
   },
+  "files": [
+    "dist",
+    "templates"
+  ],
   "scripts": {
-    "build": "tsc && cp -r src/templates dist/",
+    "build": "tsc --project tsconfig.json && npm run postbuild",
+    "postbuild": "cp -r src/templates dist/ 2>/dev/null || true",
     "dev": "tsc --watch",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run build"
   },
-  "dependencies": {
-    "@automaker/types": "workspace:*"
+  "keywords": [
+    "protolab",
+    "scaffold",
+    "cli",
+    "automation",
+    "ci-cd",
+    "create"
+  ],
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/"
   },
   "devDependencies": {
+    "@types/node": "^22.0.0",
     "typescript": "^5.7.3",
     "vitest": "^4.0.0"
   }
