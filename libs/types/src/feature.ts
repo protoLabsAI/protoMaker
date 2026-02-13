@@ -249,6 +249,15 @@ export interface Feature {
    */
   lastReviewFeedback?: string;
   /**
+   * GitHub issue number (if an issue was auto-created for this feature).
+   * Set by IssueCreationService when a feature exceeds max retries or is escalated.
+   */
+  githubIssueNumber?: number;
+  /**
+   * GitHub issue URL (if an issue was auto-created for this feature).
+   */
+  githubIssueUrl?: string;
+  /**
    * Beads task ID (if linked to a Beads issue)
    * Links feature to Ava's operational task manager.
    */

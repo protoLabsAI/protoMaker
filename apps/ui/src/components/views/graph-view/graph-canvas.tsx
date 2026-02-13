@@ -141,13 +141,11 @@ function GraphCanvasInner({
   const hasInitialLayout = useRef(false);
   const prevNodeIds = useRef<Set<string>>(new Set());
   const prevLayoutVersion = useRef<number>(0);
-  const hasLayoutWithEdges = useRef(false);
 
   // Reset flags when project changes
   useEffect(() => {
     if (projectPath !== lastProjectPath.current) {
       hasRestoredViewport.current = false;
-      hasLayoutWithEdges.current = false;
       hasInitialLayout.current = false;
       prevNodeIds.current = new Set();
       prevLayoutVersion.current = 0;
@@ -289,23 +287,6 @@ function GraphCanvasInner({
       hasRestoredViewport.current = true;
     }
   }, [layoutedNodes, layoutedEdges, layoutVersion, setNodes, setEdges, projectPath, setViewport]);
-
-  // Force layout recalculation on initial mount when edges are available
-  // This fixes timing issues when navigating directly to the graph route
-  useEffect(() => {
-    // Only run once: when we have nodes and edges but haven't done a layout with edges yet
-    if (!hasLayoutWithEdges.current && layoutedNodes.length > 0 && layoutedEdges.length > 0) {
-      hasLayoutWithEdges.current = true;
-      // Small delay to ensure React Flow is mounted and ready
-      const timeoutId = setTimeout(() => {
-        const { nodes: relayoutedNodes, edges: relayoutedEdges } = runLayout('LR');
-        setNodes(relayoutedNodes);
-        setEdges(relayoutedEdges);
-        fitView({ padding: 0.2, duration: 300 });
-      }, 100);
-      return () => clearTimeout(timeoutId);
-    }
-  }, [layoutedNodes.length, layoutedEdges.length, runLayout, setNodes, setEdges, fitView]);
 
   // Save viewport when user pans or zooms
   const handleMoveEnd = useCallback(() => {
@@ -476,6 +457,14 @@ function GraphCanvasInner({
   }, []);
 
   const shouldRenderVisibleOnly = isLargeGraph;
+
+  // Don't mount ReactFlow until dagre layout has computed positions.
+  // On direct /graph navigation, React Query hasn't returned features yet,
+  // so layoutedNodes is empty. Mounting ReactFlow with empty initial state
+  // causes a stale-data race. Wait for real data to arrive.
+  if (layoutedNodes.length === 0) {
+    return <div className={cn('w-full h-full', className)} style={backgroundStyle} />;
+  }
 
   return (
     <div className={cn('w-full h-full', className)} style={backgroundStyle}>

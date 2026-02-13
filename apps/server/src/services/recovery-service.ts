@@ -138,7 +138,7 @@ export class RecoveryService {
         break;
 
       case 'escalate_to_user':
-        result = await this.executeEscalateToUser(featureId, strategy, analysis);
+        result = await this.executeEscalateToUser(featureId, strategy, analysis, projectPath);
         break;
 
       default:
@@ -769,13 +769,15 @@ ${this.generateCategoryGuidance(category, successRate, strategies)}
   private async executeEscalateToUser(
     featureId: string,
     strategy: { type: 'escalate_to_user'; reason: string },
-    _analysis: FailureAnalysis
+    _analysis: FailureAnalysis,
+    projectPath?: string
   ): Promise<RecoveryResult> {
     logger.info(`Escalating to user for feature ${featureId}: ${strategy.reason}`);
 
-    // Emit notification event
+    // Emit notification event (includes projectPath for issue creation pipeline)
     this.events.emit('recovery_escalated', {
       featureId,
+      projectPath,
       reason: strategy.reason,
       timestamp: new Date().toISOString(),
     });
