@@ -74,6 +74,8 @@ interface ReviewThread {
   };
   /** Whether this thread was created by a bot */
   isBot: boolean;
+  /** Severity level parsed from the comment (critical threads should not be auto-resolved) */
+  severity?: 'critical' | 'warning' | 'suggestion' | 'info';
 }
 
 /**
@@ -112,6 +114,28 @@ export class CodeRabbitResolverService {
   private isBotAccount(login: string): boolean {
     const lowerLogin = login.toLowerCase();
     return KNOWN_BOT_ACCOUNTS.some((bot) => lowerLogin.includes(bot.toLowerCase()));
+  }
+
+  /**
+   * Parse severity from comment body
+   * Looks for severity markers like **Severity**: critical or emoji indicators
+   */
+  private parseSeverity(body: string): 'critical' | 'warning' | 'suggestion' | 'info' {
+    // Extract severity from explicit marker
+    const severityMatch = body.match(/\*\*Severity\*\*:\s*(\w+)/i);
+    if (severityMatch) {
+      const sev = severityMatch[1].toLowerCase();
+      if (sev === 'critical' || sev === 'high') return 'critical';
+      if (sev === 'warning' || sev === 'medium') return 'warning';
+      if (sev === 'suggestion' || sev === 'low') return 'suggestion';
+    }
+
+    // Infer from emoji
+    if (body.includes('🚨')) return 'critical';
+    if (body.includes('⚠️')) return 'warning';
+    if (body.includes('💡')) return 'suggestion';
+
+    return 'info';
   }
 
   /**
@@ -167,6 +191,7 @@ export class CodeRabbitResolverService {
                       author {
                         login
                       }
+                      body
                     }
                   }
                 }
@@ -188,16 +213,24 @@ export class CodeRabbitResolverService {
         (thread: {
           id: string;
           isResolved: boolean;
-          comments: { nodes: Array<{ author: { login: string } }> };
+          comments: { nodes: Array<{ author: { login: string }; body?: string }> };
         }) => {
-          const author = thread.comments?.nodes?.[0]?.author;
+          const firstComment = thread.comments?.nodes?.[0];
+          const author = firstComment?.author;
           const isBot = author ? this.isBotAccount(author.login) : false;
+
+          // Parse severity from comment body
+          let severity: 'critical' | 'warning' | 'suggestion' | 'info' = 'info';
+          if (firstComment?.body) {
+            severity = this.parseSeverity(firstComment.body);
+          }
 
           return {
             id: thread.id,
             isResolved: thread.isResolved,
             author,
             isBot,
+            severity,
           };
         }
       );
@@ -395,39 +428,56 @@ export class CodeRabbitResolverService {
       const unresolvedBotThreads = threads.filter((thread) => !thread.isResolved && thread.isBot);
       const humanThreads = threads.filter((thread) => !thread.isBot);
 
-      logger.info(
-        `Found ${unresolvedBotThreads.length} unresolved bot threads and ${humanThreads.length} human threads`
+      // Filter out critical bot threads - they must NOT be auto-resolved
+      const criticalBotThreads = unresolvedBotThreads.filter(
+        (thread) => thread.severity === 'critical'
+      );
+      const resolvableBotThreads = unresolvedBotThreads.filter(
+        (thread) => thread.severity !== 'critical'
       );
 
-      if (unresolvedBotThreads.length === 0) {
+      logger.info(
+        `Found ${unresolvedBotThreads.length} unresolved bot threads ` +
+          `(${criticalBotThreads.length} critical, ${resolvableBotThreads.length} resolvable) ` +
+          `and ${humanThreads.length} human threads`
+      );
+
+      if (criticalBotThreads.length > 0) {
+        logger.warn(
+          `Skipping ${criticalBotThreads.length} critical bot threads that require manual review`
+        );
+      }
+
+      if (resolvableBotThreads.length === 0) {
         return {
           success: true,
           resolvedCount: 0,
-          skippedCount: humanThreads.length,
+          skippedCount: humanThreads.length + criticalBotThreads.length,
           totalThreads,
         };
       }
 
-      // Resolve bot threads
+      // Resolve non-critical bot threads only
       let resolvedCount = 0;
-      for (const thread of unresolvedBotThreads) {
+      for (const thread of resolvableBotThreads) {
         const resolved = await this.resolveThread(thread.id);
         if (resolved) {
           resolvedCount++;
           logger.debug(
-            `Resolved bot thread from ${thread.author?.login || 'unknown'}: ${thread.id}`
+            `Resolved ${thread.severity} bot thread from ${thread.author?.login || 'unknown'}: ${thread.id}`
           );
         }
       }
 
       logger.info(
-        `Resolved ${resolvedCount}/${unresolvedBotThreads.length} bot review threads for PR #${prNumber}`
+        `Resolved ${resolvedCount}/${resolvableBotThreads.length} resolvable bot review threads for PR #${prNumber} ` +
+          `(${criticalBotThreads.length} critical threads skipped)`
       );
 
       return {
         success: true,
         resolvedCount,
-        skippedCount: humanThreads.length,
+        skippedCount: humanThreads.length + criticalBotThreads.length,
         totalThreads,
       };
     } catch (error) {

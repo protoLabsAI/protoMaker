@@ -26,6 +26,7 @@ import type {
   FeedbackThreadDecision,
   PendingFeedback,
 } from '@automaker/types';
+import { EscalationSeverity, EscalationSource } from '@automaker/types';
 import { codeRabbitParserService } from './coderabbit-parser-service.js';
 import { codeRabbitResolverService } from './coderabbit-resolver-service.js';
 
@@ -648,6 +649,9 @@ export class PRFeedbackService {
               // Fetch review threads for structured remediation prompt
               const threads = await this.fetchReviewThreads(pr);
 
+              // Classify threads by severity and emit escalation signals for critical/warning findings
+              this.classifyAndEmitEscalations(threads, pr, featureId);
+
               // Build the remediation prompt with structured evaluation instructions
               const continuationPrompt = await this.buildRemediationPrompt(
                 threads,
@@ -831,6 +835,10 @@ export class PRFeedbackService {
               );
 
               try {
+                // Fetch threads to classify severity and emit escalations
+                const threads = await this.fetchReviewThreads(pr);
+                this.classifyAndEmitEscalations(threads, pr, featureId);
+
                 const continuationPrompt = await this.buildFeedbackPrompt(
                   feedbackSummary,
                   pr.prNumber,
@@ -2055,6 +2063,88 @@ This is CI fix iteration ${iteration}.`;
     } catch (error) {
       logger.error(`Failed to process thread feedback for PR #${prNumber}:`, error);
     }
+  }
+
+  /**
+   * Classify threads by severity and emit EscalationSignal for critical/warning findings.
+   * This routes critical feedback to the EscalationRouter for appropriate handling.
+   *
+   * @param threads - The review threads to classify
+   * @param pr - The tracked PR
+   * @param featureId - The feature ID
+   */
+  private classifyAndEmitEscalations(
+    threads: ThreadFeedbackItem[],
+    pr: TrackedPR,
+    featureId: string
+  ): void {
+    const criticalThreads = threads.filter((t) => t.severity === 'critical');
+    const warningThreads = threads.filter((t) => t.severity === 'warning');
+
+    // Emit escalation signal for critical findings
+    if (criticalThreads.length > 0) {
+      logger.warn(
+        `PR #${pr.prNumber} has ${criticalThreads.length} critical findings, emitting escalation signal`
+      );
+
+      this.events.emit('escalation:signal-received', {
+        source: EscalationSource.pr_feedback,
+        severity: EscalationSeverity.critical,
+        type: 'pr_critical_feedback',
+        context: {
+          featureId,
+          prNumber: pr.prNumber,
+          prUrl: pr.prUrl,
+          projectPath: pr.projectPath,
+          criticalCount: criticalThreads.length,
+          criticalThreads: criticalThreads.map((t) => ({
+            threadId: t.threadId,
+            message: t.message,
+            location: t.location,
+            isBot: t.isBot,
+          })),
+          iterationCount: pr.iterationCount,
+        },
+        deduplicationKey: `pr_critical_${pr.prNumber}_${pr.iterationCount}`,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    // Emit escalation signal for warning findings (lower severity)
+    if (warningThreads.length > 0) {
+      logger.info(
+        `PR #${pr.prNumber} has ${warningThreads.length} warning findings, emitting escalation signal`
+      );
+
+      this.events.emit('escalation:signal-received', {
+        source: EscalationSource.pr_feedback,
+        severity: EscalationSeverity.high,
+        type: 'pr_warning_feedback',
+        context: {
+          featureId,
+          prNumber: pr.prNumber,
+          prUrl: pr.prUrl,
+          projectPath: pr.projectPath,
+          warningCount: warningThreads.length,
+          warningThreads: warningThreads.map((t) => ({
+            threadId: t.threadId,
+            message: t.message,
+            location: t.location,
+            isBot: t.isBot,
+          })),
+          iterationCount: pr.iterationCount,
+        },
+        deduplicationKey: `pr_warning_${pr.prNumber}_${pr.iterationCount}`,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    logger.info(
+      `Severity classification for PR #${pr.prNumber}: ` +
+        `${criticalThreads.length} critical, ${warningThreads.length} warning, ` +
+        `${threads.filter((t) => t.severity === 'suggestion').length} suggestion, ` +
+        `${threads.filter((t) => t.severity === 'info').length} info`
+    );
   }
 
   /**

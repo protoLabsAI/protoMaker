@@ -387,12 +387,43 @@ export class GitWorkflowService {
               `Auto-merging PR #${result.prNumber} with strategy: ${mergeStrategy}, waitForCI: ${waitForCI}`
             );
 
-            // Step 5a: Resolve bot review threads before merge attempt
+            // Step 5a: Check for critical threads and resolve non-critical bot threads before merge
             // This runs after CI passes (checked by mergePR) but before the actual merge
-            // Only resolve threads if waitForCI is true (we're checking CI status)
+            // Only check/resolve threads if waitForCI is true (we're checking CI status)
             if (waitForCI) {
               try {
-                logger.info(`Resolving bot review threads for PR #${result.prNumber}`);
+                logger.info(`Checking review threads for PR #${result.prNumber}`);
+
+                // First check for critical threads that would block merge
+                const hasCriticalThreads = await this.checkForCriticalThreads(
+                  workDir,
+                  result.prNumber
+                );
+
+                if (hasCriticalThreads) {
+                  logger.warn(
+                    `PR #${result.prNumber} has unresolved critical review threads, blocking merge`
+                  );
+                  result.merged = false;
+                  const blockError = 'Merge blocked: unresolved critical review threads exist';
+                  result.error = result.error ? `${result.error}; ${blockError}` : blockError;
+
+                  // Emit event for monitoring
+                  if (events) {
+                    events.emit('pr:merge-blocked-critical-threads', {
+                      featureId,
+                      projectPath,
+                      prNumber: result.prNumber,
+                      prUrl: result.prUrl,
+                    });
+                  }
+
+                  // Don't attempt merge if critical threads exist
+                  return result;
+                }
+
+                // No critical threads - proceed with resolving non-critical bot threads
+                logger.info(`Resolving non-critical bot review threads for PR #${result.prNumber}`);
                 const resolveResult = await codeRabbitResolverService.resolveThreads(
                   workDir,
                   result.prNumber
@@ -411,8 +442,8 @@ export class GitWorkflowService {
               } catch (resolveError) {
                 const resolveErrorMsg =
                   resolveError instanceof Error ? resolveError.message : String(resolveError);
-                logger.warn(`Error resolving bot review threads: ${resolveErrorMsg}`);
-                // Continue with merge attempt even if thread resolution fails
+                logger.warn(`Error checking/resolving review threads: ${resolveErrorMsg}`);
+                // Continue with merge attempt even if thread check/resolution fails
               }
             }
 
@@ -477,6 +508,103 @@ export class GitWorkflowService {
       result.error = errorMsg;
       return result;
     }
+  }
+
+  /**
+   * Check if PR has unresolved critical review threads.
+   * Critical threads must be manually reviewed and block auto-merge.
+   *
+   * @param workDir - Working directory containing the repository
+   * @param prNumber - PR number to check
+   * @returns true if critical threads exist, false otherwise
+   */
+  private async checkForCriticalThreads(workDir: string, prNumber: number): Promise<boolean> {
+    try {
+      // Extract owner/repo from git remote
+      const { stdout: remoteOutput } = await execAsync('git remote get-url origin', {
+        cwd: workDir,
+        env: execEnv,
+      });
+
+      const remoteUrl = remoteOutput.trim();
+      const match =
+        remoteUrl.match(/github\.com[:/]([^/]+)\/([^/\s]+?)(?:\.git)?$/) ||
+        remoteUrl.match(/^([^/]+)\/([^/\s]+)$/);
+
+      if (!match) {
+        logger.warn(`Could not parse GitHub owner/repo from remote: ${remoteUrl}`);
+        return false;
+      }
+
+      const [, owner, repoName] = match;
+
+      // Query review threads using GraphQL
+      const query = `
+        query {
+          repository(owner: "${owner}", name: "${repoName}") {
+            pullRequest(number: ${prNumber}) {
+              reviewThreads(first: 100) {
+                nodes {
+                  id
+                  isResolved
+                  comments(first: 1) {
+                    nodes {
+                      body
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      `;
+
+      const { stdout } = await execAsync(`gh api graphql -f query='${query.replace(/\n/g, ' ')}'`, {
+        cwd: workDir,
+        env: execEnv,
+      });
+
+      const data = JSON.parse(stdout);
+      const threads = data.data?.repository?.pullRequest?.reviewThreads?.nodes || [];
+
+      // Check for unresolved threads with critical severity
+      for (const thread of threads) {
+        if (thread.isResolved) continue;
+
+        const body = thread.comments?.nodes?.[0]?.body || '';
+        const severity = this.parseSeverityFromBody(body);
+
+        if (severity === 'critical') {
+          logger.warn(`Found unresolved critical thread: ${thread.id}`);
+          return true;
+        }
+      }
+
+      return false;
+    } catch (error) {
+      logger.error(`Failed to check for critical threads on PR #${prNumber}:`, error);
+      // On error, don't block merge - assume no critical threads
+      return false;
+    }
+  }
+
+  /**
+   * Parse severity from comment body (same logic as codeRabbitResolverService)
+   */
+  private parseSeverityFromBody(body: string): 'critical' | 'warning' | 'suggestion' | 'info' {
+    const severityMatch = body.match(/\*\*Severity\*\*:\s*(\w+)/i);
+    if (severityMatch) {
+      const sev = severityMatch[1].toLowerCase();
+      if (sev === 'critical' || sev === 'high') return 'critical';
+      if (sev === 'warning' || sev === 'medium') return 'warning';
+      if (sev === 'suggestion' || sev === 'low') return 'suggestion';
+    }
+
+    if (body.includes('🚨')) return 'critical';
+    if (body.includes('⚠️')) return 'warning';
+    if (body.includes('💡')) return 'suggestion';
+
+    return 'info';
   }
 
   /**

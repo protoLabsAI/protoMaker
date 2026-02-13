@@ -210,6 +210,7 @@ export type EventType =
   | 'pr:remediation-failed' // Fired when PR remediation workflow fails
   | 'pr:thread-evaluated' // Fired when a single PR review thread is evaluated for resolution status
   | 'pr:threads-resolved' // Fired when all PR review threads are marked as resolved
+  | 'pr:merge-blocked-critical-threads' // Fired when merge is blocked due to critical review threads
   // Worktree recovery events
   | 'worktree:drift-detected'
   | 'worktree:phantom-pruned'
