@@ -1,0 +1,24 @@
+{
+  "name": "create-protolab",
+  "version": "1.0.0",
+  "description": "CLI tool to scaffold protolab projects",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "create-protolab": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc"
+  },
+  "keywords": [
+    "protolab",
+    "cli",
+    "scaffold"
+  ],
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "picocolors": "^1.0.0",
+    "typescript": "^5.4.0"
+  }
+}
