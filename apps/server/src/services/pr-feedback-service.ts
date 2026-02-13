@@ -1103,21 +1103,16 @@ After making your decisions, implement the accepted fixes.`;
 
       // Restart agent with CI fix prompt
       if (this.autoModeService) {
-        void this.autoModeService.executeFeature(
-          pr.projectPath,
-          featureId,
-          true,
-          true,
-          undefined,
-          {
-            continuationPrompt,
-            retryCount: ciIterationCount,
-            previousErrors: [],
-            recoveryContext: `CI failure on PR #${pr.prNumber} (iteration ${ciIterationCount})`,
-          }
-        );
+        void this.autoModeService.executeFeature(pr.projectPath, featureId, true, true, undefined, {
+          continuationPrompt,
+          retryCount: ciIterationCount,
+          previousErrors: [],
+          recoveryContext: `CI failure on PR #${pr.prNumber} (iteration ${ciIterationCount})`,
+        });
 
-        logger.info(`Restarted agent for ${featureId} to fix CI failures (iteration ${ciIterationCount})`);
+        logger.info(
+          `Restarted agent for ${featureId} to fix CI failures (iteration ${ciIterationCount})`
+        );
       } else {
         logger.warn(`AutoModeService not available, cannot restart agent for CI fix`);
       }
