@@ -12,11 +12,7 @@
  * - Configurable recipient list
  */
 
-import type {
-  EscalationSignal,
-  EscalationChannel,
-  EscalationSeverity,
-} from '@automaker/types';
+import type { EscalationSignal, EscalationChannel, EscalationSeverity } from '@automaker/types';
 import { EscalationSeverity as Severity } from '@automaker/types';
 import { createLogger } from '@automaker/utils';
 import type { DiscordBotService } from '../discord-bot-service.js';
@@ -107,9 +103,7 @@ export class DiscordDMChannel implements EscalationChannel {
    * Only handles emergency and critical severity
    */
   canHandle(signal: EscalationSignal): boolean {
-    return (
-      signal.severity === Severity.emergency || signal.severity === Severity.critical
-    );
+    return signal.severity === Severity.emergency || signal.severity === Severity.critical;
   }
 
   /**
