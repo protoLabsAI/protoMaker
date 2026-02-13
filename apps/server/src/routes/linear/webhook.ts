@@ -24,7 +24,7 @@ const logger = createLogger('linear:webhook');
 
 /** Linear webhook event types we handle */
 type LinearWebhookAction = 'create' | 'update' | 'remove';
-type LinearWebhookType = 'AgentSession' | 'Issue' | 'Project';
+type LinearWebhookType = 'AgentSession' | 'Issue' | 'Project' | 'Comment';
 
 /** Agent session trigger types */
 type AgentSessionTrigger = 'mention' | 'delegation' | 'prompt';
@@ -122,6 +122,27 @@ interface LinearProjectWebhookPayload extends LinearWebhookPayload {
   };
 }
 
+/** Linear Comment webhook payload */
+interface LinearCommentWebhookPayload extends LinearWebhookPayload {
+  type: 'Comment';
+  data: {
+    id: string;
+    /** Comment body (markdown) */
+    body: string;
+    /** The issue this comment is on */
+    issueId?: string;
+    /** The user who created the comment */
+    user?: {
+      id: string;
+      name: string;
+      email?: string;
+    };
+    /** Timestamps */
+    createdAt: string;
+    updatedAt: string;
+  };
+}
+
 /**
  * Verify webhook signature from Linear
  */
@@ -160,7 +181,8 @@ export function createWebhookHandler(
     const payload = req.body as
       | LinearAgentSessionPayload
       | LinearIssueWebhookPayload
-      | LinearProjectWebhookPayload;
+      | LinearProjectWebhookPayload
+      | LinearCommentWebhookPayload;
 
     // Must respond within 5 seconds (Linear requirement)
     // Acknowledge immediately, process async
@@ -181,7 +203,11 @@ export function createWebhookHandler(
 }
 
 async function processWebhookEvent(
-  payload: LinearAgentSessionPayload | LinearIssueWebhookPayload | LinearProjectWebhookPayload,
+  payload:
+    | LinearAgentSessionPayload
+    | LinearIssueWebhookPayload
+    | LinearProjectWebhookPayload
+    | LinearCommentWebhookPayload,
   settingsService: SettingsService,
   events: EventEmitter,
   featureLoader: FeatureLoader
@@ -202,6 +228,9 @@ async function processWebhookEvent(
       break;
     case 'Project':
       await handleProjectEvent(payload as LinearProjectWebhookPayload, action, events);
+      break;
+    case 'Comment':
+      await handleCommentEvent(payload as LinearCommentWebhookPayload, action, events);
       break;
     default:
       logger.debug(`Unhandled event type: ${type}`);
@@ -419,5 +448,56 @@ async function handleSessionUpdated(
     issueId: data.issueId,
     prompt: data.prompt,
     status: data.status,
+  });
+}
+
+/**
+ * Handle Comment webhook events
+ */
+async function handleCommentEvent(
+  payload: LinearCommentWebhookPayload,
+  action: LinearWebhookAction,
+  events: EventEmitter
+): Promise<void> {
+  const { data } = payload;
+
+  switch (action) {
+    case 'create':
+      await handleCommentCreated(data, events);
+      break;
+    case 'update':
+      logger.debug(`Comment updated: ${data.id}`);
+      // Future: handle comment updates if needed
+      break;
+    case 'remove':
+      logger.debug(`Comment removed: ${data.id}`);
+      // Future: handle comment removal if needed
+      break;
+    default:
+      logger.debug(`Unhandled action: ${action}`);
+  }
+}
+
+/**
+ * Handle new comment creation
+ * Routes comment to LinearSyncService for parsing and routing
+ */
+async function handleCommentCreated(
+  data: LinearCommentWebhookPayload['data'],
+  events: EventEmitter
+): Promise<void> {
+  logger.info(`Comment created: ${data.id}`, {
+    issueId: data.issueId,
+    userName: data.user?.name,
+    bodyPreview: data.body?.substring(0, 100),
+  });
+
+  // Emit comment event for LinearSyncService to handle
+  events.emit('linear:comment:created', {
+    commentId: data.id,
+    issueId: data.issueId,
+    body: data.body,
+    user: data.user,
+    createdAt: data.createdAt,
   });
 }

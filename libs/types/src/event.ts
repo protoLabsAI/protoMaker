@@ -147,6 +147,10 @@ export type EventType =
   | 'linear:agent-session:created'
   | 'linear:agent-session:updated'
   | 'linear:agent-session:removed'
+  // Linear comment events (webhook-driven)
+  | 'linear:comment:created'
+  | 'linear:comment:instruction'
+  | 'linear:comment:followup'
   // GitHub monitoring events
   | 'github:pr:detected'
   // Linear monitor events

@@ -480,6 +480,22 @@ linearApprovalHandler.initialize(settingsService, events);
 const approvalBridge = new LinearApprovalBridge(events, featureLoader);
 approvalBridge.start();
 
+// Listen for Linear comment follow-up events and route to agent
+events.subscribe((type, payload) => {
+  if (type === 'linear:comment:followup') {
+    const { featureId, projectPath, commentBody, userName } = payload as any;
+    logger.info(`Routing Linear comment to agent for feature ${featureId}`, {
+      userName,
+    });
+
+    autoModeService
+      .followUpFeature(projectPath, featureId, commentBody, undefined, true)
+      .catch((error) => {
+        logger.error(`Failed to send Linear comment to agent for feature ${featureId}:`, error);
+      });
+  }
+});
+
 // Initialize PR Feedback Service (monitors open PRs for review comments)
 const prFeedbackService = new PRFeedbackService(events, featureLoader);
 // Wire up AutoModeService for automatic agent restart on PR feedback

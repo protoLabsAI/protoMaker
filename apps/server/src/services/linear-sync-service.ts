@@ -93,6 +93,21 @@ interface ProjectScaffoldedPayload {
 }
 
 /**
+ * Comment created event payload structure
+ */
+interface CommentCreatedPayload {
+  commentId: string;
+  issueId?: string;
+  body: string;
+  user?: {
+    id: string;
+    name: string;
+    email?: string;
+  };
+  createdAt: string;
+}
+
+/**
  * Debounce time window in milliseconds (5 seconds)
  */
 const DEBOUNCE_WINDOW_MS = 5000;
@@ -183,6 +198,8 @@ export class LinearSyncService {
         this.handleFeaturePRMerged(payload as FeatureEventPayload);
       } else if (type === 'project:scaffolded') {
         this.handleProjectScaffolded(payload as ProjectScaffoldedPayload);
+      } else if (type === 'linear:comment:created') {
+        this.handleCommentCreated(payload as CommentCreatedPayload);
       }
     });
 
@@ -1546,6 +1563,160 @@ export class LinearSyncService {
    */
   protected unmarkSyncing(featureId: string): void {
     this.syncingFeatures.delete(featureId);
+  }
+
+  /**
+   * Handle comment:created events
+   */
+  private async handleCommentCreated(payload: CommentCreatedPayload): Promise<void> {
+    logger.debug('Received linear:comment:created event', {
+      commentId: payload.commentId,
+      issueId: payload.issueId,
+      userName: payload.user?.name,
+    });
+
+    // Call the async implementation
+    await this.onCommentCreated(payload);
+  }
+
+  /**
+   * Handle Linear comment creation
+   * Parses comment and routes it based on content:
+   * 1. Reply to agent elicitation -> forward to running agent
+   * 2. New instructions -> update feature description
+   * 3. Approval language -> trigger approval bridge
+   *
+   * @param payload - Comment creation payload
+   */
+  private async onCommentCreated(payload: CommentCreatedPayload): Promise<void> {
+    const { commentId, issueId, body, user } = payload;
+
+    if (!issueId) {
+      logger.debug(`Comment ${commentId} has no issueId, skipping`);
+      return;
+    }
+
+    if (!this.running) {
+      logger.debug(`Sync service not running, skipping comment ${commentId}`);
+      return;
+    }
+
+    if (!this.featureLoader) {
+      logger.error('FeatureLoader not initialized');
+      return;
+    }
+
+    try {
+      // Find the feature associated with this Linear issue
+      // We need to search across all projects since we don't have projectPath in the webhook
+      // For now, we'll use process.cwd() as the project path
+      const projectPath = process.cwd();
+      const feature = await this.featureLoader.findByLinearIssueId(projectPath, issueId);
+
+      if (!feature) {
+        logger.debug(`No feature found for Linear issue ${issueId}, skipping comment routing`);
+        return;
+      }
+
+      logger.info(`Processing comment for feature ${feature.id}`, {
+        commentId,
+        issueId,
+        userName: user?.name,
+      });
+
+      // Parse comment to determine routing
+      const commentLower = body.toLowerCase().trim();
+
+      // Check for approval language
+      if (this.isApprovalComment(commentLower)) {
+        logger.info(`Approval comment detected on issue ${issueId}`);
+        // Emit approval event for approval bridge to handle
+        if (this.emitter) {
+          this.emitter.emit('linear:approval:detected', {
+            issueId,
+            title: feature.title,
+            description: feature.description,
+            approvalState: 'Comment Approval',
+            detectedAt: new Date().toISOString(),
+          });
+        }
+        return;
+      }
+
+      // Check for new instructions (contains action words)
+      if (this.isInstructionComment(commentLower)) {
+        logger.info(`Instruction comment detected for feature ${feature.id}`);
+        // Update feature description with new instructions
+        const updatedDescription = `${feature.description}\n\n---\n\n**Additional Instructions from ${user?.name || 'Linear'}:**\n${body}`;
+        await this.featureLoader.update(projectPath, feature.id, {
+          description: updatedDescription,
+        });
+
+        // Emit event for potential signal creation
+        if (this.emitter) {
+          this.emitter.emit('linear:comment:instruction', {
+            featureId: feature.id,
+            issueId,
+            commentBody: body,
+            userName: user?.name,
+          });
+        }
+        return;
+      }
+
+      // Default: treat as agent follow-up reply
+      logger.info(`Treating comment as agent follow-up for feature ${feature.id}`);
+      if (this.emitter) {
+        this.emitter.emit('linear:comment:followup', {
+          featureId: feature.id,
+          projectPath,
+          commentBody: body,
+          userName: user?.name,
+          issueId,
+        });
+      }
+    } catch (error) {
+      logger.error(`Failed to process comment ${commentId}:`, error);
+    }
+  }
+
+  /**
+   * Check if comment contains approval language
+   */
+  private isApprovalComment(commentLower: string): boolean {
+    const approvalKeywords = [
+      'approve',
+      'approved',
+      'looks good',
+      'lgtm',
+      'ship it',
+      'go ahead',
+      'proceed',
+      'green light',
+    ];
+    return approvalKeywords.some((keyword) => commentLower.includes(keyword));
+  }
+
+  /**
+   * Check if comment contains instruction language
+   */
+  private isInstructionComment(commentLower: string): boolean {
+    const instructionKeywords = [
+      'please',
+      'can you',
+      'could you',
+      'make sure',
+      'also',
+      'additionally',
+      'instead',
+      'change',
+      'update',
+      'modify',
+      'add',
+      'remove',
+      'fix',
+    ];
+    return instructionKeywords.some((keyword) => commentLower.includes(keyword));
   }
 
   /**
