@@ -12,6 +12,7 @@ import { CardContentSections } from './card-content-sections';
 import { AgentInfoPanel } from './agent-info-panel';
 import { CardActions } from './card-actions';
 import { EpicProgress } from './epic-progress';
+import { AgentSuggestion } from './agent-suggestion';
 
 function getCardBorderStyle(enabled: boolean, opacity: number): React.CSSProperties {
   if (!enabled) {
@@ -256,6 +257,9 @@ export const KanbanCard = memo(function KanbanCard({
       <CardContent className="px-3 pt-0 pb-0">
         {/* Content Sections */}
         <CardContentSections feature={feature} useWorktrees={useWorktrees} />
+
+        {/* Agent Routing Suggestion */}
+        <AgentSuggestion feature={feature} projectPath={currentProject?.path ?? ''} />
 
         {/* Epic Progress - only shown for epic features */}
         {feature.isEpic && <EpicProgress feature={feature} className="mt-2" />}

@@ -885,7 +885,8 @@ app.use(
     settingsService,
     events,
     authorityService,
-    featureHealthService
+    featureHealthService,
+    roleRegistryService
   )
 );
 app.use('/api/projects', createProjectsRoutes(featureLoader));

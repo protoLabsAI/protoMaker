@@ -256,9 +256,18 @@ describe('LinearApprovalBridge', () => {
 
       await new Promise((resolve) => setTimeout(resolve, 50));
 
-      expect(featureLoader.update).toHaveBeenCalledWith(expect.any(String), 'feature-created-123', {
-        assignedRole: 'frontend-engineer',
-      });
+      expect(featureLoader.update).toHaveBeenCalledWith(
+        expect.any(String),
+        'feature-created-123',
+        expect.objectContaining({
+          assignedRole: 'frontend-engineer',
+          routingSuggestion: expect.objectContaining({
+            role: 'frontend-engineer',
+            confidence: 0.9,
+            autoAssigned: true,
+          }),
+        })
+      );
 
       expect(events.emit).toHaveBeenCalledWith(
         'feature:agent-suggested',
@@ -290,9 +299,18 @@ describe('LinearApprovalBridge', () => {
 
       await new Promise((resolve) => setTimeout(resolve, 50));
 
-      expect(featureLoader.update).toHaveBeenCalledWith(expect.any(String), 'feature-created-123', {
-        assignedRole: 'devops-engineer',
-      });
+      expect(featureLoader.update).toHaveBeenCalledWith(
+        expect.any(String),
+        'feature-created-123',
+        expect.objectContaining({
+          assignedRole: 'devops-engineer',
+          routingSuggestion: expect.objectContaining({
+            role: 'devops-engineer',
+            confidence: 0.7,
+            autoAssigned: false,
+          }),
+        })
+      );
 
       expect(events.emit).toHaveBeenCalledWith(
         'feature:agent-suggested',

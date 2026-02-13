@@ -18,14 +18,17 @@ import { createDeleteHandler } from './routes/delete.js';
 import { createAgentOutputHandler, createRawOutputHandler } from './routes/agent-output.js';
 import { createGenerateTitleHandler } from './routes/generate-title.js';
 import { createHealthHandler } from './routes/health.js';
+import { createAssignAgentHandler } from './routes/assign-agent.js';
 import type { FeatureHealthService } from '../../services/feature-health-service.js';
+import type { RoleRegistryService } from '../../services/role-registry-service.js';
 
 export function createFeaturesRoutes(
   featureLoader: FeatureLoader,
   settingsService?: SettingsService,
   events?: EventEmitter,
   authorityService?: AuthorityService,
-  healthService?: FeatureHealthService
+  healthService?: FeatureHealthService,
+  roleRegistry?: RoleRegistryService
 ): Router {
   const router = Router();
 
@@ -55,6 +58,11 @@ export function createFeaturesRoutes(
   router.post('/agent-output', createAgentOutputHandler(featureLoader));
   router.post('/raw-output', createRawOutputHandler(featureLoader));
   router.post('/generate-title', createGenerateTitleHandler(settingsService));
+  router.post(
+    '/assign-agent',
+    validatePathParams('projectPath'),
+    createAssignAgentHandler(featureLoader, roleRegistry, events)
+  );
 
   if (healthService) {
     router.post('/health', validatePathParams('projectPath'), createHealthHandler(healthService));

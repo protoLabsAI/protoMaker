@@ -82,19 +82,29 @@ export class LinearApprovalBridge {
 
     const HIGH_CONFIDENCE = 0.8;
 
+    const suggestion = {
+      role: classification.role,
+      confidence: classification.confidence,
+      reasoning: classification.reasoning,
+      autoAssigned: classification.confidence >= HIGH_CONFIDENCE,
+      suggestedAt: new Date().toISOString(),
+    };
+
     if (classification.confidence >= HIGH_CONFIDENCE) {
-      // High confidence: assign directly
+      // High confidence: assign directly + save suggestion
       await this.featureLoader.update(projectPath, featureId, {
         assignedRole: classification.role,
+        routingSuggestion: suggestion,
       });
 
       logger.info(
         `Auto-assigned role "${classification.role}" to feature ${featureId} (confidence: ${classification.confidence})`
       );
     } else if (classification.confidence >= 0.6) {
-      // Medium confidence: suggest but don't auto-assign
+      // Medium confidence: suggest but mark as needing review
       await this.featureLoader.update(projectPath, featureId, {
         assignedRole: classification.role,
+        routingSuggestion: suggestion,
       });
 
       logger.info(
@@ -110,11 +120,7 @@ export class LinearApprovalBridge {
     // Emit event for UI visibility
     this.events.emit('feature:agent-suggested', {
       featureId,
-      role: classification.role,
-      confidence: classification.confidence,
-      reasoning: classification.reasoning,
-      autoAssigned: classification.confidence >= HIGH_CONFIDENCE,
-      suggestedAt: new Date().toISOString(),
+      ...suggestion,
     });
   }
 

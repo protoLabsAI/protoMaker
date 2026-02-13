@@ -233,6 +233,17 @@ export interface Feature {
    */
   assignedAgentId?: string;
   /**
+   * AI-generated routing suggestion from the feature classifier.
+   * Shows recommended agent role, confidence score, and reasoning.
+   */
+  routingSuggestion?: {
+    role: AgentRole;
+    confidence: number;
+    reasoning: string;
+    autoAssigned: boolean;
+    suggestedAt: string;
+  };
+  /**
    * Who this feature is assigned to.
    * - If set to a human name (e.g., 'josh'), auto-mode will skip this feature
    * - If set to 'agent' or undefined/null, auto-mode can pick it up
