@@ -1593,6 +1593,8 @@ export interface LinearIntegrationConfig {
   syncEnabled?: boolean;
   /** Conflict resolution strategy: 'linear' (Linear wins), 'automaker' (AutoMaker wins), 'manual' (require user input) */
   conflictResolution?: 'linear' | 'automaker' | 'manual';
+  /** Workflow state names that indicate approval (default: ['Approved', 'Ready for Planning']) */
+  approvalStates?: string[];
 
   // Agent OAuth (actor=app) fields
   /** OAuth access token for agent (actor=app) */

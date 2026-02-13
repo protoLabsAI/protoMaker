@@ -17,6 +17,7 @@ import { createLogger } from '@automaker/utils';
 import type { SettingsService } from '../../services/settings-service.js';
 import type { EventEmitter } from '../../lib/events.js';
 import type { FeatureLoader } from '../../services/feature-loader.js';
+import { linearApprovalHandler } from '../../services/linear-approval-handler.js';
 
 const logger = createLogger('linear:webhook');
 
@@ -352,6 +353,16 @@ async function handleIssueUpdated(
     });
   } else {
     logger.debug(`No relevant changes detected for issue ${data.id}`);
+  }
+
+  // Check for approval state transitions
+  if (data.state?.name) {
+    await linearApprovalHandler.onIssueStateChange(data.id, data.state.name, projectPath, {
+      title: data.title,
+      description: data.description,
+      priority: data.priority,
+      team: data.team,
+    });
   }
 }
 
