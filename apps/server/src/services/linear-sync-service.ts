@@ -531,10 +531,19 @@ export class LinearSyncService {
    */
   private async createLinearIssue(
     projectPath: string,
-    feature: { title?: string; description: string; priority?: 0 | 1 | 2 | 3 | 4 }
+    feature: {
+      title?: string;
+      description: string;
+      priority?: 0 | 1 | 2 | 3 | 4;
+      epicId?: string;
+    }
   ): Promise<{ issueId: string; issueUrl: string }> {
     if (!this.settingsService) {
       throw new Error('SettingsService not initialized');
+    }
+
+    if (!this.featureLoader) {
+      throw new Error('FeatureLoader not initialized');
     }
 
     // Get Linear OAuth token from settings
@@ -558,10 +567,21 @@ export class LinearSyncService {
     const title = feature.title || 'Untitled Feature';
     const description = feature.description || 'No description provided';
 
+    // Check if this feature has a parent epic (milestone epic)
+    // If so, get the parent's linearIssueId to set as parentId
+    let parentId: string | undefined;
+    if (feature.epicId) {
+      const parentFeature = await this.featureLoader.get(projectPath, feature.epicId);
+      if (parentFeature?.linearIssueId) {
+        parentId = parentFeature.linearIssueId;
+        logger.debug(`Setting parentId ${parentId} for child feature with epicId ${feature.epicId}`);
+      }
+    }
+
     // GraphQL mutation to create issue
     const mutation = `
-      mutation CreateIssue($teamId: String!, $title: String!, $description: String!, $priority: Int!) {
-        issueCreate(input: { teamId: $teamId, title: $title, description: $description, priority: $priority }) {
+      mutation CreateIssue($teamId: String!, $title: String!, $description: String!, $priority: Int!, $parentId: String) {
+        issueCreate(input: { teamId: $teamId, title: $title, description: $description, priority: $priority, parentId: $parentId }) {
           success
           issue {
             id
@@ -576,6 +596,7 @@ export class LinearSyncService {
       title,
       description,
       priority: linearPriority,
+      parentId,
     };
 
     // Call Linear GraphQL API with 30s timeout

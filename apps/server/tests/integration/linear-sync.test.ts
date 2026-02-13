@@ -651,4 +651,165 @@ describe('LinearSyncService (Integration)', () => {
       expect(enabled).toBe(false);
     });
   });
+
+  describe('Parent/Child Issue Hierarchy', () => {
+    it('creates child issue with parentId when feature has epicId', async () => {
+      const parentFeature = {
+        id: 'milestone-epic-1',
+        title: 'Milestone Epic',
+        description: 'Epic feature',
+        status: 'backlog',
+        isEpic: true,
+        linearIssueId: 'linear-parent-issue-id',
+      };
+
+      const childFeature = {
+        id: 'phase-feature-1',
+        title: 'Phase Feature',
+        description: 'Child feature',
+        status: 'backlog',
+        epicId: 'milestone-epic-1',
+      };
+
+      featureLoader = createMockFeatureLoader({
+        'milestone-epic-1': parentFeature,
+        'phase-feature-1': childFeature,
+      });
+
+      settingsService = createMockSettingsService();
+      service.initialize(emitter, settingsService, featureLoader);
+      service.start();
+
+      // Mock fetch to verify parentId is passed
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            data: {
+              issueCreate: {
+                success: true,
+                issue: { id: 'linear-child-issue-id', url: 'https://linear.app/issue/child' },
+              },
+            },
+          }),
+      });
+      vi.stubGlobal('fetch', mockFetch);
+
+      // Trigger feature creation for child feature
+      emitter.emit('feature:created', {
+        featureId: 'phase-feature-1',
+        projectPath: '/test/project',
+      });
+
+      await vi.waitFor(() => {
+        expect(mockFetch).toHaveBeenCalled();
+        const fetchCall = mockFetch.mock.calls[0];
+        const body = JSON.parse(fetchCall[1].body);
+
+        // Verify parentId was included in the GraphQL mutation variables
+        expect(body.variables.parentId).toBe('linear-parent-issue-id');
+      });
+    });
+
+    it('creates issue without parentId when feature has no epicId', async () => {
+      const standaloneFeature = {
+        id: 'standalone-1',
+        title: 'Standalone Feature',
+        description: 'No parent',
+        status: 'backlog',
+      };
+
+      featureLoader = createMockFeatureLoader({
+        'standalone-1': standaloneFeature,
+      });
+
+      settingsService = createMockSettingsService();
+      service.initialize(emitter, settingsService, featureLoader);
+      service.start();
+
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            data: {
+              issueCreate: {
+                success: true,
+                issue: { id: 'linear-standalone-id', url: 'https://linear.app/issue/standalone' },
+              },
+            },
+          }),
+      });
+      vi.stubGlobal('fetch', mockFetch);
+
+      emitter.emit('feature:created', {
+        featureId: 'standalone-1',
+        projectPath: '/test/project',
+      });
+
+      await vi.waitFor(() => {
+        expect(mockFetch).toHaveBeenCalled();
+        const fetchCall = mockFetch.mock.calls[0];
+        const body = JSON.parse(fetchCall[1].body);
+
+        // Verify parentId is undefined
+        expect(body.variables.parentId).toBeUndefined();
+      });
+    });
+
+    it('skips parentId when parent feature has no linearIssueId', async () => {
+      const parentFeature = {
+        id: 'milestone-epic-2',
+        title: 'Milestone Epic Without Linear Issue',
+        description: 'Epic without sync',
+        status: 'backlog',
+        isEpic: true,
+        // No linearIssueId
+      };
+
+      const childFeature = {
+        id: 'phase-feature-2',
+        title: 'Phase Feature',
+        description: 'Child feature',
+        status: 'backlog',
+        epicId: 'milestone-epic-2',
+      };
+
+      featureLoader = createMockFeatureLoader({
+        'milestone-epic-2': parentFeature,
+        'phase-feature-2': childFeature,
+      });
+
+      settingsService = createMockSettingsService();
+      service.initialize(emitter, settingsService, featureLoader);
+      service.start();
+
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            data: {
+              issueCreate: {
+                success: true,
+                issue: { id: 'linear-orphan-id', url: 'https://linear.app/issue/orphan' },
+              },
+            },
+          }),
+      });
+      vi.stubGlobal('fetch', mockFetch);
+
+      emitter.emit('feature:created', {
+        featureId: 'phase-feature-2',
+        projectPath: '/test/project',
+      });
+
+      await vi.waitFor(() => {
+        expect(mockFetch).toHaveBeenCalled();
+        const fetchCall = mockFetch.mock.calls[0];
+        const body = JSON.parse(fetchCall[1].body);
+
+        // Verify parentId is undefined when parent has no Linear issue
+        expect(body.variables.parentId).toBeUndefined();
+      });
+    });
+  });
 });
