@@ -19,7 +19,13 @@ import { promisify } from 'util';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { AutoModeService } from './auto-mode-service.js';
-import type { GitHubComment, ReviewThreadFeedback, ReviewThreadStatus } from '@automaker/types';
+import type {
+  GitHubComment,
+  ReviewThreadFeedback,
+  ReviewThreadStatus,
+  FeedbackThreadDecision,
+  PendingFeedback,
+} from '@automaker/types';
 import { codeRabbitParserService } from './coderabbit-parser-service.js';
 import { codeRabbitResolverService } from './coderabbit-resolver-service.js';
 
@@ -99,6 +105,12 @@ export class PRFeedbackService {
   private trackedPRs = new Map<string, TrackedPR>();
   private pollTimer: ReturnType<typeof setInterval> | null = null;
   private initialized = false;
+
+  /** Features currently under remediation - prevents concurrent remediation */
+  private remediatingFeatures = new Set<string>();
+
+  /** Collected evaluation decisions during remediation, keyed by featureId */
+  private collectedDecisions = new Map<string, FeedbackThreadDecision[]>();
 
   constructor(events: EventEmitter, featureLoader: FeatureLoader) {
     this.events = events;
@@ -581,6 +593,41 @@ export class PRFeedbackService {
 
           // Auto-restart dev agent with feedback if AutoModeService is available
           if (this.autoModeService) {
+            // Concurrency guard: check if remediation is already in progress
+            if (this.remediatingFeatures.has(featureId)) {
+              logger.info(
+                `Feature ${featureId} is already under remediation, queueing feedback for later`
+              );
+
+              // Fetch the review threads to queue
+              const threads = await this.fetchReviewThreads(pr);
+
+              // Queue the feedback for processing when current remediation completes
+              await this.featureLoader.update(pr.projectPath, featureId, {
+                pendingFeedback: {
+                  queuedAt: new Date().toISOString(),
+                  iterationCount: pr.iterationCount,
+                  threads: threads.map((t) => ({
+                    threadId: t.threadId,
+                    severity: t.severity,
+                    message: t.message,
+                    location: t.location,
+                    suggestedFix: t.suggestedFix,
+                    isBot: t.isBot,
+                  })),
+                },
+              });
+
+              this.events.emit('pr:feedback-queued', {
+                projectPath: pr.projectPath,
+                featureId,
+                prNumber: pr.prNumber,
+                iterationCount: pr.iterationCount,
+                reason: 'remediation_in_progress',
+              });
+              return; // Don't start another remediation
+            }
+
             logger.info('Starting agent remediation cycle', {
               featureId,
               prNumber: pr.prNumber,
@@ -592,14 +639,32 @@ export class PRFeedbackService {
             });
 
             try {
-              // Build continuation prompt with PR feedback and previous agent output
-              const continuationPrompt = await this.buildFeedbackPrompt(
-                fullFeedback,
+              // Mark feature as remediating to prevent concurrent remediation
+              this.remediatingFeatures.add(featureId);
+
+              // Initialize decision collection for this feature
+              this.collectedDecisions.set(featureId, []);
+
+              // Fetch review threads for structured remediation prompt
+              const threads = await this.fetchReviewThreads(pr);
+
+              // Build the remediation prompt with structured evaluation instructions
+              const continuationPrompt = await this.buildRemediationPrompt(
+                threads,
                 pr.prNumber,
                 pr.iterationCount,
                 featureId,
                 pr.projectPath
               );
+
+              // Emit event for tracking remediation start
+              this.events.emit('pr:remediation-started', {
+                projectPath: pr.projectPath,
+                featureId,
+                prNumber: pr.prNumber,
+                iterationCount: pr.iterationCount,
+                threadCount: threads.length,
+              });
 
               // Update feature status to backlog so it's picked up by auto-loop
               // Keep the PR info so the agent can push to the same branch
@@ -612,7 +677,7 @@ export class PRFeedbackService {
 
               // Restart the agent execution with the feedback as a continuation prompt
               // This will pick up the existing worktree and push new commits to the same PR
-              void this.autoModeService.executeFeature(
+              this.autoModeService.executeFeature(
                 pr.projectPath,
                 featureId,
                 true, // useWorktrees
@@ -624,7 +689,21 @@ export class PRFeedbackService {
                   previousErrors: [], // PR feedback isn't an error, it's requested changes
                   recoveryContext: `PR #${pr.prNumber} review feedback (iteration ${pr.iterationCount})`,
                 }
-              );
+              ).then(async () => {
+                // Remediation complete - process collected decisions
+                await this.processRemediationComplete(pr.projectPath, featureId, pr);
+              }).catch(async (error) => {
+                logger.error(`Remediation failed for ${featureId}:`, error);
+                // Clean up and emit error
+                this.remediatingFeatures.delete(featureId);
+                this.collectedDecisions.delete(featureId);
+                this.events.emit('pr:remediation-failed', {
+                  projectPath: pr.projectPath,
+                  featureId,
+                  prNumber: pr.prNumber,
+                  error: String(error),
+                });
+              });
 
               logger.info('Agent remediation started successfully', {
                 featureId,
@@ -633,7 +712,10 @@ export class PRFeedbackService {
                 status: 'remediation_in_progress',
               });
             } catch (error) {
-              logger.error(`Failed to restart dev agent for ${featureId}:`, error);
+              logger.error(`Failed to start remediation agent for ${featureId}:`, error);
+              // Clean up tracking state
+              this.remediatingFeatures.delete(featureId);
+              this.collectedDecisions.delete(featureId);
               // Emit error event but don't block - EM agent will handle reassignment as fallback
               this.events.emit('pr:agent-restart-failed', {
                 projectPath: pr.projectPath,
@@ -875,6 +957,389 @@ ${feedback}
 - After fixing, verify the changes work correctly
 
 This is iteration ${iterationCount} of the review cycle. Focus on addressing the feedback precisely.`;
+  }
+
+  /**
+   * Build a remediation prompt with per-thread evaluation requirements.
+   * Instructs the agent to evaluate each feedback thread before making changes.
+   *
+   * @param threads - The structured feedback items from review threads
+   * @param prNumber - The PR number
+   * @param iterationCount - How many times we've iterated on this PR
+   * @param featureId - The feature ID to load previous agent output
+   * @param projectPath - The project path to load previous agent output
+   * @returns A continuation prompt for the agent with evaluation instructions
+   */
+  private async buildRemediationPrompt(
+    threads: ThreadFeedbackItem[],
+    prNumber: number,
+    iterationCount: number,
+    featureId: string,
+    projectPath: string
+  ): Promise<string> {
+    // Load previous agent output if available
+    let previousContext = '';
+    try {
+      const agentOutput = await this.featureLoader.getAgentOutput(projectPath, featureId);
+      if (agentOutput) {
+        // Truncate if > 50k chars (keep last 40k to preserve recent context)
+        const MAX_LENGTH = 50_000;
+        const KEEP_LENGTH = 40_000;
+        let truncatedOutput = agentOutput;
+        if (agentOutput.length > MAX_LENGTH) {
+          truncatedOutput = agentOutput.slice(-KEEP_LENGTH);
+          logger.info(
+            `Truncated agent output from ${agentOutput.length} to ${KEEP_LENGTH} chars for ${featureId}`
+          );
+        }
+
+        previousContext = `## Your Previous Work (Iteration ${iterationCount - 1})
+
+Below is the output from your previous work on this feature. Review it to understand what you've already done:
+
+${truncatedOutput}
+
+---
+
+`;
+      }
+    } catch {
+      // First iteration or file doesn't exist - gracefully continue without previous context
+      logger.debug(`No previous agent output found for ${featureId} (likely first iteration)`);
+    }
+
+    // Separate human and bot threads
+    const humanThreads = threads.filter((t) => !t.isBot);
+    const botThreads = threads.filter((t) => t.isBot);
+
+    // Build thread sections
+    let threadSection = '## Review Threads to Evaluate\n\n';
+    threadSection +=
+      '**IMPORTANT**: You MUST evaluate each thread below and output your decision in the exact format shown.\n\n';
+
+    if (humanThreads.length > 0) {
+      threadSection += '### Human Review Feedback (Higher Priority)\n\n';
+      threadSection += 'Human feedback should be given higher weight as it reflects team standards and context.\n\n';
+      for (const thread of humanThreads) {
+        threadSection += this.formatThreadForEvaluation(thread);
+      }
+    }
+
+    if (botThreads.length > 0) {
+      threadSection += '### CodeRabbit/Bot Feedback\n\n';
+      threadSection += 'Bot feedback may be useful but should be critically evaluated. Deny if it contradicts project standards.\n\n';
+      for (const thread of botThreads) {
+        threadSection += this.formatThreadForEvaluation(thread);
+      }
+    }
+
+    // Evaluation criteria and output format
+    const evaluationInstructions = `## Evaluation Instructions
+
+For EACH thread above, you MUST output your decision using this exact XML format:
+
+\`\`\`xml
+<thread_evaluation>
+  <thread_id>THREAD_ID_HERE</thread_id>
+  <decision>accept|deny</decision>
+  <reasoning>Your explanation for why you accept or deny this feedback</reasoning>
+  <planned_fix>If accepted, describe what fix you will implement</planned_fix>
+</thread_evaluation>
+\`\`\`
+
+### Evaluation Criteria
+
+Ask yourself these questions for each thread:
+1. **Correctness**: Does this feedback improve code correctness or fix a real bug?
+2. **Project Alignment**: Is it aligned with project conventions and standards?
+3. **Effort Justified**: Is the implementation effort justified by the improvement?
+4. **Risk Assessment**: Could implementing this introduce regression or new issues?
+
+### When to DENY feedback
+
+You may DENY feedback that:
+- Is purely stylistic preference without substance
+- Contradicts established project standards or patterns
+- Would introduce regression or break existing functionality
+- Requires disproportionate effort for minimal benefit
+- Is already addressed in your previous work
+
+### Process
+
+1. First, output ALL your \`<thread_evaluation>\` blocks
+2. Then, implement the fixes for threads you ACCEPTED
+3. Commit your changes to the same branch
+4. The fixes will be pushed to PR #${prNumber}
+`;
+
+    return `${previousContext}## PR Review Feedback - Iteration ${iterationCount}
+
+Your pull request #${prNumber} has received review feedback that requires your critical evaluation.
+
+${threadSection}
+
+${evaluationInstructions}
+
+This is iteration ${iterationCount} of the review cycle. Be judicious - not all feedback needs to be accepted.`;
+  }
+
+  /**
+   * Format a single thread for evaluation in the remediation prompt
+   */
+  private formatThreadForEvaluation(thread: ThreadFeedbackItem): string {
+    const severity = thread.severity.toUpperCase();
+    const location = thread.location
+      ? `${thread.location.path}${thread.location.line ? `:${thread.location.line}` : ''}`
+      : 'general';
+    const category = thread.category ? ` [${thread.category}]` : '';
+    const fix = thread.suggestedFix ? `\n   **Suggested Fix:** ${thread.suggestedFix}` : '';
+
+    return `**Thread ID:** \`${thread.threadId}\`
+**Severity:** ${severity}${category}
+**Location:** ${location}
+**Feedback:** ${thread.message}${fix}
+
+---
+
+`;
+  }
+
+  /**
+   * Process remediation completion - store decisions and check for pending feedback
+   */
+  private async processRemediationComplete(
+    projectPath: string,
+    featureId: string,
+    pr: TrackedPR
+  ): Promise<void> {
+    try {
+      logger.info(`Processing remediation completion for feature ${featureId}`);
+
+      // Get collected decisions (may be empty if parsing failed)
+      const decisions = this.collectedDecisions.get(featureId) || [];
+
+      // Parse decisions from agent output if we don't have them from tool calls
+      if (decisions.length === 0) {
+        const parsedDecisions = await this.parseDecisionsFromAgentOutput(projectPath, featureId);
+        if (parsedDecisions.length > 0) {
+          decisions.push(...parsedDecisions);
+          logger.info(
+            `Parsed ${parsedDecisions.length} decisions from agent output for ${featureId}`
+          );
+        }
+      }
+
+      // Convert decisions to ReviewThreadFeedback format and store
+      if (decisions.length > 0) {
+        const threadFeedback = decisions.map((d) => ({
+          threadId: d.threadId,
+          status: d.decision === 'accept' ? ('accepted' as const) : ('denied' as const),
+          agentReasoning: d.reasoning,
+          resolvedAt: new Date().toISOString(),
+        }));
+
+        await this.featureLoader.update(projectPath, featureId, {
+          threadFeedback,
+        });
+
+        // Emit events for each thread evaluation
+        for (const decision of decisions) {
+          this.events.emit('pr:thread-evaluated', {
+            projectPath,
+            featureId,
+            prNumber: pr.prNumber,
+            threadId: decision.threadId,
+            decision: decision.decision,
+            reasoning: decision.reasoning,
+            plannedFix: decision.plannedFix,
+          });
+        }
+
+        logger.info(
+          `Stored ${decisions.length} thread decisions for feature ${featureId}: ` +
+            `${decisions.filter((d) => d.decision === 'accept').length} accepted, ` +
+            `${decisions.filter((d) => d.decision === 'deny').length} denied`
+        );
+      }
+
+      // Clean up tracking state
+      this.remediatingFeatures.delete(featureId);
+      this.collectedDecisions.delete(featureId);
+
+      // Emit remediation complete event
+      this.events.emit('pr:remediation-completed', {
+        projectPath,
+        featureId,
+        prNumber: pr.prNumber,
+        iterationCount: pr.iterationCount,
+        decisionsCount: decisions.length,
+        acceptedCount: decisions.filter((d) => d.decision === 'accept').length,
+        deniedCount: decisions.filter((d) => d.decision === 'deny').length,
+      });
+
+      // Check for pending feedback that arrived while we were remediating
+      const feature = await this.featureLoader.get(projectPath, featureId);
+      if (feature?.pendingFeedback) {
+        logger.info(
+          `Feature ${featureId} has pending feedback from iteration ${feature.pendingFeedback.iterationCount}, processing...`
+        );
+
+        // Clear pending feedback before processing to avoid loops
+        await this.featureLoader.update(projectPath, featureId, {
+          pendingFeedback: undefined,
+        });
+
+        // Queue another remediation cycle for the pending feedback
+        // Use a slight delay to allow current cycle to fully complete
+        setTimeout(() => {
+          void this.processPendingFeedback(projectPath, featureId, pr, feature.pendingFeedback!);
+        }, 1000);
+      }
+    } catch (error) {
+      logger.error(`Error processing remediation completion for ${featureId}:`, error);
+      // Clean up tracking state even on error
+      this.remediatingFeatures.delete(featureId);
+      this.collectedDecisions.delete(featureId);
+    }
+  }
+
+  /**
+   * Parse thread evaluation decisions from agent output
+   * Looks for XML-formatted evaluation blocks in the agent output
+   */
+  private async parseDecisionsFromAgentOutput(
+    projectPath: string,
+    featureId: string
+  ): Promise<FeedbackThreadDecision[]> {
+    const decisions: FeedbackThreadDecision[] = [];
+
+    try {
+      const agentOutput = await this.featureLoader.getAgentOutput(projectPath, featureId);
+      if (!agentOutput) {
+        return decisions;
+      }
+
+      // Match all <thread_evaluation> blocks
+      const evalRegex =
+        /<thread_evaluation>\s*<thread_id>([^<]+)<\/thread_id>\s*<decision>(accept|deny)<\/decision>\s*<reasoning>([^<]*)<\/reasoning>(?:\s*<planned_fix>([^<]*)<\/planned_fix>)?\s*<\/thread_evaluation>/gi;
+
+      let match;
+      while ((match = evalRegex.exec(agentOutput)) !== null) {
+        decisions.push({
+          threadId: match[1].trim(),
+          decision: match[2].toLowerCase() as 'accept' | 'deny',
+          reasoning: match[3].trim(),
+          plannedFix: match[4]?.trim(),
+        });
+      }
+    } catch (error) {
+      logger.error(`Failed to parse decisions from agent output for ${featureId}:`, error);
+    }
+
+    return decisions;
+  }
+
+  /**
+   * Process pending feedback that arrived while remediation was in progress
+   */
+  private async processPendingFeedback(
+    projectPath: string,
+    featureId: string,
+    pr: TrackedPR,
+    pendingFeedback: PendingFeedback
+  ): Promise<void> {
+    try {
+      logger.info(
+        `Processing pending feedback for ${featureId} (iteration ${pendingFeedback.iterationCount})`
+      );
+
+      // Check if we can start remediation (not already in progress)
+      if (this.remediatingFeatures.has(featureId)) {
+        logger.warn(
+          `Feature ${featureId} is already under remediation, re-queueing pending feedback`
+        );
+        // Re-queue the feedback
+        await this.featureLoader.update(projectPath, featureId, {
+          pendingFeedback,
+        });
+        return;
+      }
+
+      // Convert pending threads back to ThreadFeedbackItem format
+      const threads: ThreadFeedbackItem[] = pendingFeedback.threads.map((t: PendingFeedback['threads'][number]) => ({
+        threadId: t.threadId,
+        severity: t.severity,
+        message: t.message,
+        location: t.location,
+        suggestedFix: t.suggestedFix,
+        isBot: t.isBot,
+        category: undefined,
+      }));
+
+      // Update PR iteration count
+      pr.iterationCount = pendingFeedback.iterationCount;
+
+      // Start remediation for the pending feedback
+      this.remediatingFeatures.add(featureId);
+      this.collectedDecisions.set(featureId, []);
+
+      const continuationPrompt = await this.buildRemediationPrompt(
+        threads,
+        pr.prNumber,
+        pr.iterationCount,
+        featureId,
+        projectPath
+      );
+
+      this.events.emit('pr:remediation-started', {
+        projectPath,
+        featureId,
+        prNumber: pr.prNumber,
+        iterationCount: pr.iterationCount,
+        threadCount: threads.length,
+        source: 'pending_queue',
+      });
+
+      await this.featureLoader.update(projectPath, featureId, {
+        status: 'backlog',
+        workItemState: 'in_progress',
+        prIterationCount: pr.iterationCount,
+        error: undefined,
+      });
+
+      if (this.autoModeService) {
+        this.autoModeService.executeFeature(
+          projectPath,
+          featureId,
+          true,
+          true,
+          undefined,
+          {
+            continuationPrompt,
+            retryCount: pr.iterationCount,
+            previousErrors: [],
+            recoveryContext: `PR #${pr.prNumber} pending review feedback (iteration ${pr.iterationCount})`,
+          }
+        ).then(async () => {
+          await this.processRemediationComplete(projectPath, featureId, pr);
+        }).catch(async (error) => {
+          logger.error(`Pending feedback remediation failed for ${featureId}:`, error);
+          this.remediatingFeatures.delete(featureId);
+          this.collectedDecisions.delete(featureId);
+          this.events.emit('pr:remediation-failed', {
+            projectPath,
+            featureId,
+            prNumber: pr.prNumber,
+            error: String(error),
+            source: 'pending_queue',
+          });
+        });
+      }
+    } catch (error) {
+      logger.error(`Failed to process pending feedback for ${featureId}:`, error);
+      this.remediatingFeatures.delete(featureId);
+      this.collectedDecisions.delete(featureId);
+    }
   }
 
   /**

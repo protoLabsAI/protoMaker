@@ -7,7 +7,7 @@ import type { ReasoningEffort } from './provider.js';
 import type { FeatureRalphConfig } from './ralph.js';
 import type { AgentRole } from './agent-roles.js';
 import type { WorkItemState } from './authority.js';
-import type { ReviewThreadFeedback } from './coderabbit.js';
+import type { ReviewThreadFeedback, PendingFeedback } from './coderabbit.js';
 
 /**
  * A single entry in the description history
@@ -341,6 +341,11 @@ export interface Feature {
    * Used to deduplicate CI failure events.
    */
   lastCheckSuiteId?: number;
+  /**
+   * Pending feedback that arrived while remediation was in progress.
+   * Queued for processing when current remediation completes.
+   */
+  pendingFeedback?: PendingFeedback;
   /**
    * Timestamp when the PR was created (ISO 8601).
    * Set by git-workflow-service when auto-creating a PR.

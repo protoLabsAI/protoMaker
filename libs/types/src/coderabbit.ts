@@ -86,3 +86,41 @@ export interface ReviewThreadFeedback {
   agentReasoning?: string;
   resolvedAt?: string;
 }
+
+/**
+ * Decision from the evaluate_feedback_thread tool call
+ * Captures the agent's evaluation of a single PR feedback thread
+ */
+export interface FeedbackThreadDecision {
+  /** The review thread ID */
+  threadId: string;
+  /** Whether to accept and fix, or deny with reason */
+  decision: 'accept' | 'deny';
+  /** Why the agent accepts or denies this feedback */
+  reasoning: string;
+  /** If accepted, what fix the agent plans to implement */
+  plannedFix?: string;
+}
+
+/**
+ * Pending feedback that arrived while remediation was in progress
+ * Queued for processing when current remediation completes
+ */
+export interface PendingFeedback {
+  /** When this feedback was queued */
+  queuedAt: string;
+  /** The PR iteration count when this feedback arrived */
+  iterationCount: number;
+  /** The structured feedback items waiting to be processed */
+  threads: Array<{
+    threadId: string;
+    severity: 'critical' | 'warning' | 'suggestion' | 'info';
+    message: string;
+    location?: {
+      path: string;
+      line?: number;
+    };
+    suggestedFix?: string;
+    isBot: boolean;
+  }>;
+}

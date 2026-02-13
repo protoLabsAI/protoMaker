@@ -452,6 +452,8 @@ export type {
   CodeRabbitParseResult,
   ReviewThreadStatus,
   ReviewThreadFeedback,
+  FeedbackThreadDecision,
+  PendingFeedback,
 } from './coderabbit.js';
 
 // Webhook types
