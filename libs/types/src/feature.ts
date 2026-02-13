@@ -103,6 +103,13 @@ export interface RemediationHistoryEntry {
   acceptedCount?: number;
   /** Number of threads denied by agent */
   deniedCount?: number;
+  /** Audit trail of denied threads with severity and reasoning */
+  denialAuditTrail?: Array<{
+    threadId: string;
+    severity: 'critical' | 'warning' | 'suggestion' | 'info';
+    reasoning: string;
+    deniedAt: string;
+  }>;
   /** CI checks that were fixed in this cycle */
   ciChecksFixed?: string[];
   /** Model used for this remediation attempt */

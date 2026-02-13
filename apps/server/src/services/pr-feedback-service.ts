@@ -1068,6 +1068,24 @@ Ask yourself these questions for each thread:
 3. **Effort Justified**: Is the implementation effort justified by the improvement?
 4. **Risk Assessment**: Could implementing this introduce regression or new issues?
 
+### Severity-Specific Guidance
+
+**CRITICAL Threads:**
+- These represent serious issues (security, data loss, major bugs)
+- Give strong weight to accepting these unless there's clear evidence of error
+- Denying critical feedback triggers emergency escalation to humans
+- Only deny if you have high confidence the feedback is incorrect or harmful
+
+**WARNING Threads:**
+- These represent important but non-critical issues
+- Use balanced judgment - accept if beneficial, deny if not aligned with project goals
+- Denying warning feedback triggers high-priority escalation for review
+
+**SUGGESTION Threads:**
+- These are recommendations, not requirements
+- Feel free to deny if they don't align with project patterns or add little value
+- Lower escalation priority for denials
+
 ### When to DENY feedback
 
 You may DENY feedback that:
@@ -1076,6 +1094,7 @@ You may DENY feedback that:
 - Would introduce regression or break existing functionality
 - Requires disproportionate effort for minimal benefit
 - Is already addressed in your previous work
+- **IMPORTANT**: Be extra cautious when denying CRITICAL severity feedback
 
 ### Process
 
@@ -1173,6 +1192,9 @@ This is iteration ${iterationCount} of the review cycle. Be judicious - not all 
             `${decisions.filter((d) => d.decision === 'accept').length} accepted, ` +
             `${decisions.filter((d) => d.decision === 'deny').length} denied`
         );
+
+        // Check for critical/warning denials and emit escalation signals
+        await this.handleDenialEscalations(projectPath, featureId, pr, decisions);
       }
 
       // Clean up tracking state
@@ -1250,6 +1272,141 @@ This is iteration ${iterationCount} of the review cycle. Be judicious - not all 
     }
 
     return decisions;
+  }
+
+  /**
+   * Handle escalations for denied critical/warning threads.
+   * Critical denials: emergency severity (DM + Linear + GitHub issue)
+   * Warning denials: high severity (Discord channel + Beads)
+   */
+  private async handleDenialEscalations(
+    projectPath: string,
+    featureId: string,
+    pr: TrackedPR,
+    decisions: FeedbackThreadDecision[]
+  ): Promise<void> {
+    try {
+      // Fetch the original threads to get severity information
+      const threads = await this.fetchReviewThreads(pr);
+
+      // Map threadId -> severity
+      const threadSeverityMap = new Map<string, ThreadFeedbackItem['severity']>();
+      for (const thread of threads) {
+        threadSeverityMap.set(thread.threadId, thread.severity);
+      }
+
+      // Filter denied threads
+      const deniedDecisions = decisions.filter((d) => d.decision === 'deny');
+
+      // Group denials by severity
+      const criticalDenials = deniedDecisions.filter(
+        (d) => threadSeverityMap.get(d.threadId) === 'critical'
+      );
+      const warningDenials = deniedDecisions.filter(
+        (d) => threadSeverityMap.get(d.threadId) === 'warning'
+      );
+
+      // Load feature for context
+      const feature = await this.featureLoader.get(projectPath, featureId);
+      const featureTitle = feature?.title || `Feature ${featureId}`;
+
+      // Store denial audit trail in remediationHistory
+      if (deniedDecisions.length > 0) {
+        const remediationHistory = (feature?.remediationHistory || []) as import('@automaker/types').RemediationHistoryEntry[];
+        const currentEntry = remediationHistory.find(
+          (entry) => entry.iteration === pr.iterationCount && !entry.completedAt
+        );
+
+        if (currentEntry) {
+          currentEntry.deniedCount = deniedDecisions.length;
+          currentEntry.completedAt = new Date().toISOString();
+
+          // Build detailed denial audit trail
+          currentEntry.denialAuditTrail = deniedDecisions.map((denial) => ({
+            threadId: denial.threadId,
+            severity: threadSeverityMap.get(denial.threadId) || 'info',
+            reasoning: denial.reasoning,
+            deniedAt: new Date().toISOString(),
+          }));
+        }
+
+        await this.featureLoader.update(projectPath, featureId, {
+          remediationHistory,
+        });
+      }
+
+      // Emit emergency escalation for critical denials
+      if (criticalDenials.length > 0) {
+        logger.warn(
+          `Critical feedback denied by agent for PR #${pr.prNumber}: ${criticalDenials.length} critical threads`
+        );
+
+        for (const denial of criticalDenials) {
+          const thread = threads.find((t) => t.threadId === denial.threadId);
+
+          this.events.emit('escalation:signal-received', {
+            source: EscalationSource.pr_feedback,
+            severity: EscalationSeverity.emergency,
+            type: 'critical_feedback_denied',
+            context: {
+              featureId,
+              featureTitle,
+              projectPath,
+              prNumber: pr.prNumber,
+              prUrl: pr.prUrl,
+              threadId: denial.threadId,
+              threadMessage: thread?.message || 'Unknown',
+              threadLocation: thread?.location || null,
+              agentReasoning: denial.reasoning,
+              iterationCount: pr.iterationCount,
+            },
+            deduplicationKey: `critical-denial-${featureId}-${denial.threadId}`,
+            timestamp: new Date().toISOString(),
+          });
+        }
+
+        logger.info(
+          `Emitted ${criticalDenials.length} emergency escalation signals for critical feedback denials`
+        );
+      }
+
+      // Emit high severity escalation for warning denials
+      if (warningDenials.length > 0) {
+        logger.info(
+          `Warning feedback denied by agent for PR #${pr.prNumber}: ${warningDenials.length} warning threads`
+        );
+
+        for (const denial of warningDenials) {
+          const thread = threads.find((t) => t.threadId === denial.threadId);
+
+          this.events.emit('escalation:signal-received', {
+            source: EscalationSource.pr_feedback,
+            severity: EscalationSeverity.high,
+            type: 'warning_feedback_denied',
+            context: {
+              featureId,
+              featureTitle,
+              projectPath,
+              prNumber: pr.prNumber,
+              prUrl: pr.prUrl,
+              threadId: denial.threadId,
+              threadMessage: thread?.message || 'Unknown',
+              threadLocation: thread?.location || null,
+              agentReasoning: denial.reasoning,
+              iterationCount: pr.iterationCount,
+            },
+            deduplicationKey: `warning-denial-${featureId}-${denial.threadId}`,
+            timestamp: new Date().toISOString(),
+          });
+        }
+
+        logger.info(
+          `Emitted ${warningDenials.length} high severity escalation signals for warning feedback denials`
+        );
+      }
+    } catch (error) {
+      logger.error(`Failed to handle denial escalations for feature ${featureId}:`, error);
+    }
   }
 
   /**
