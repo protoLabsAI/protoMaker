@@ -1,0 +1,27 @@
+{
+  "name": "@automaker/create-protolab",
+  "version": "1.0.0",
+  "description": "CLI tool to create and scaffold Protolab projects",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "create-protolab": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "keywords": [
+    "protolab",
+    "cli",
+    "scaffold",
+    "generator"
+  ],
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.4.0"
+  }
+}

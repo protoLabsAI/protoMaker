@@ -1,0 +1,8 @@
+language: en-US
+reviews:
+  profile: strict
+  auto_review:
+    enabled: true
+  request_changes_workflow: false
+chat:
+  auto_reply: true
