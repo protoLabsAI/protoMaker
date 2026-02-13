@@ -2,13 +2,14 @@
  * Linear Agent Routes
  *
  * OAuth flow for registering as a Linear agent (actor=app),
- * webhook handler for AgentSessionEvent, and sync status endpoint.
+ * webhook handler for AgentSessionEvent, sync status, and conflict resolution.
  */
 
 import { Router } from 'express';
 import { createOAuthRoutes } from './oauth.js';
 import { createWebhookHandler } from './webhook.js';
 import { getSyncStatus } from './sync-status.js';
+import { getConflicts, resolveConflict } from './resolve-conflict.js';
 import type { SettingsService } from '../../services/settings-service.js';
 import type { EventEmitter } from '../../lib/events.js';
 import type { FeatureLoader } from '../../services/feature-loader.js';
@@ -28,6 +29,10 @@ export function createLinearRoutes(
 
   // Sync status and metrics
   router.get('/sync-status', getSyncStatus);
+
+  // Conflict resolution
+  router.get('/conflicts', getConflicts);
+  router.post('/resolve-conflict', resolveConflict);
 
   return router;
 }

@@ -367,6 +367,44 @@ export class LinearSyncService {
   }
 
   /**
+   * Get all features with detected conflicts
+   */
+  getConflicts(): SyncMetadata[] {
+    const conflicts: SyncMetadata[] = [];
+    for (const metadata of this.syncState.values()) {
+      if (metadata.conflictDetected) {
+        conflicts.push({ ...metadata });
+      }
+    }
+    return conflicts;
+  }
+
+  /**
+   * Resolve a conflict for a feature
+   *
+   * @param featureId - The feature with the conflict
+   * @param strategy - Resolution strategy: 'accept-linear' keeps Linear state,
+   *   'accept-automaker' keeps Automaker state, 'manual' just clears the flag
+   * @returns true if conflict was found and resolved
+   */
+  resolveConflict(
+    featureId: string,
+    strategy: 'accept-linear' | 'accept-automaker' | 'manual'
+  ): boolean {
+    const metadata = this.syncState.get(featureId);
+    if (!metadata || !metadata.conflictDetected) {
+      return false;
+    }
+
+    metadata.conflictDetected = false;
+    metadata.lastSyncStatus = 'success';
+    this.syncState.set(featureId, metadata);
+
+    logger.info(`Conflict resolved for feature ${featureId} using strategy: ${strategy}`);
+    return true;
+  }
+
+  /**
    * Check if a feature should be synced (passes all guard checks)
    *
    * Guards:

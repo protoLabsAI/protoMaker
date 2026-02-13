@@ -1715,4 +1715,69 @@ describe('LinearSyncService', () => {
       expect(metrics.failedOperations).toBeGreaterThanOrEqual(1);
     });
   });
+
+  describe('Conflict Resolution', () => {
+    beforeEach(() => {
+      service.initialize(emitter, mockSettingsService, mockFeatureLoader);
+      service.start();
+    });
+
+    it('should return empty conflicts when none exist', () => {
+      expect(service.getConflicts()).toEqual([]);
+    });
+
+    it('should return features with conflictDetected flag', () => {
+      service.updateSyncMetadata({
+        featureId: 'feat-1',
+        lastSyncTimestamp: Date.now(),
+        lastSyncStatus: 'success',
+        syncCount: 1,
+        conflictDetected: true,
+      });
+      service.updateSyncMetadata({
+        featureId: 'feat-2',
+        lastSyncTimestamp: Date.now(),
+        lastSyncStatus: 'success',
+        syncCount: 1,
+        conflictDetected: false,
+      });
+
+      const conflicts = service.getConflicts();
+      expect(conflicts).toHaveLength(1);
+      expect(conflicts[0].featureId).toBe('feat-1');
+    });
+
+    it('should resolve a conflict and clear the flag', () => {
+      service.updateSyncMetadata({
+        featureId: 'feat-1',
+        lastSyncTimestamp: Date.now(),
+        lastSyncStatus: 'error',
+        syncCount: 1,
+        conflictDetected: true,
+      });
+
+      const resolved = service.resolveConflict('feat-1', 'accept-linear');
+      expect(resolved).toBe(true);
+
+      const metadata = service.getSyncMetadata('feat-1');
+      expect(metadata?.conflictDetected).toBe(false);
+      expect(metadata?.lastSyncStatus).toBe('success');
+    });
+
+    it('should return false when resolving non-existent conflict', () => {
+      expect(service.resolveConflict('nonexistent', 'manual')).toBe(false);
+    });
+
+    it('should return false when feature has no conflict', () => {
+      service.updateSyncMetadata({
+        featureId: 'feat-1',
+        lastSyncTimestamp: Date.now(),
+        lastSyncStatus: 'success',
+        syncCount: 1,
+        conflictDetected: false,
+      });
+
+      expect(service.resolveConflict('feat-1', 'accept-automaker')).toBe(false);
+    });
+  });
 });
