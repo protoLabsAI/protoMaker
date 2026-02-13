@@ -1,0 +1,56 @@
+{
+  "name": "@automaker/validation",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Runtime validation for external data in AutoMaker",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./schemas": {
+      "types": "./dist/schemas.d.ts",
+      "default": "./dist/schemas.js"
+    },
+    "./api-validator": {
+      "types": "./dist/api-validator.d.ts",
+      "default": "./dist/api-validator.js"
+    },
+    "./template-validator": {
+      "types": "./dist/template-validator.d.ts",
+      "default": "./dist/template-validator.js"
+    },
+    "./filesystem-validator": {
+      "types": "./dist/filesystem-validator.d.ts",
+      "default": "./dist/filesystem-validator.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "keywords": [
+    "automaker",
+    "validation",
+    "zod"
+  ],
+  "author": "AutoMaker Team",
+  "license": "SEE LICENSE IN LICENSE",
+  "engines": {
+    "node": ">=22.0.0 <23.0.0"
+  },
+  "dependencies": {
+    "@automaker/types": "1.0.0",
+    "@automaker/utils": "1.0.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "22.19.3",
+    "typescript": "5.9.3",
+    "vitest": "4.0.16"
+  }
+}
