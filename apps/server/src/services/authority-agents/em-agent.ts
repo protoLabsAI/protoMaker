@@ -127,7 +127,6 @@ export class EMAuthorityAgent {
     });
   }
 
-
   /**
    * Handle PR approval: merge the PR if CI passes and auto-merge is enabled.
    */
