@@ -1,0 +1,49 @@
+#!/bin/bash
+# Guard against dangerous bash patterns that can break Claude Code sessions.
+#
+# Rules enforced:
+# 1. Never cd into .worktrees/ — if the worktree gets deleted, CWD becomes
+#    invalid and posix_spawn fails for ALL subsequent commands (session death).
+# 2. Never manage the dev server — user must control it manually.
+#
+# Uses jq to parse stdin JSON and outputs permissionDecision JSON on stdout.
+
+set -euo pipefail
+
+INPUT=$(cat)
+COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty')
+
+# Strip heredoc content and quoted strings before pattern matching.
+# This prevents false positives from PR bodies, echo statements, etc.
+# Remove heredoc blocks: everything between <<'EOF' (or <<EOF) and EOF
+STRIPPED=$(echo "$COMMAND" | sed '/<<.*EOF/,/^EOF/d; /<<.*END/,/^END/d')
+# Also remove single-quoted and double-quoted strings (simple, not nested)
+STRIPPED=$(echo "$STRIPPED" | sed "s/'[^']*'//g; s/\"[^\"]*\"//g")
+
+# Guard: cd into worktree paths
+# Match: cd .worktrees/, cd /path/to/.worktrees/, cd "path/.worktrees/..."
+if echo "$STRIPPED" | grep -qE '(^|\s|&&|\|\||;)\s*cd\s+[^ ]*\.worktrees'; then
+  jq -n '{
+    hookSpecificOutput: {
+      hookEventName: "PreToolUse",
+      permissionDecision: "deny",
+      permissionDecisionReason: "BLOCKED: Never cd into worktree directories. If the worktree is deleted while it is your CWD, ALL bash commands fail for the rest of the session (kernel posix_spawn ENOENT). Use absolute paths or git -C <path> instead."
+    }
+  }'
+  exit 0
+fi
+
+# Guard: dev server management (only match actual commands, not string references)
+if echo "$STRIPPED" | grep -qE '(^|\s|&&|\|\||;)\s*(npm run dev|npx vite|node.*apps/server/src/index)'; then
+  jq -n '{
+    hookSpecificOutput: {
+      hookEventName: "PreToolUse",
+      permissionDecision: "deny",
+      permissionDecisionReason: "BLOCKED: Never start, stop, or restart the dev server. Ask the user to manage it."
+    }
+  }'
+  exit 0
+fi
+
+# Allow everything else
+exit 0
