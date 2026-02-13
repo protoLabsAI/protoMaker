@@ -494,4 +494,307 @@ describe('LinearSyncService', () => {
       expect(service.shouldSync('feature-2')).toBe(true);
     });
   });
+
+  describe('Status Change Sync', () => {
+    let mockFetch: any;
+
+    beforeEach(() => {
+      service.initialize(emitter, mockSettingsService, mockFeatureLoader);
+      service.start();
+
+      // Mock fetch globally
+      mockFetch = vi.fn();
+      global.fetch = mockFetch;
+
+      // Default mock settings
+      vi.mocked(mockSettingsService.getProjectSettings).mockResolvedValue({
+        integrations: {
+          linear: {
+            enabled: true,
+            agentToken: 'test-token-123',
+            teamId: 'team-123',
+            syncOnStatusChange: true,
+          },
+        },
+      } as any);
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    describe('Status Mapping', () => {
+      it('should map backlog status to Backlog state', () => {
+        const result = (service as any).mapAutomakerStatusToLinear('backlog');
+        expect(result).toBe('Backlog');
+      });
+
+      it('should map in_progress status to In Progress state', () => {
+        const result = (service as any).mapAutomakerStatusToLinear('in_progress');
+        expect(result).toBe('In Progress');
+      });
+
+      it('should map review status to In Review state', () => {
+        const result = (service as any).mapAutomakerStatusToLinear('review');
+        expect(result).toBe('In Review');
+      });
+
+      it('should map done status to Done state', () => {
+        const result = (service as any).mapAutomakerStatusToLinear('done');
+        expect(result).toBe('Done');
+      });
+
+      it('should map blocked status to Blocked state', () => {
+        const result = (service as any).mapAutomakerStatusToLinear('blocked');
+        expect(result).toBe('Blocked');
+      });
+
+      it('should map verified status to Done state', () => {
+        const result = (service as any).mapAutomakerStatusToLinear('verified');
+        expect(result).toBe('Done');
+      });
+
+      it('should default unknown status to Backlog', () => {
+        const result = (service as any).mapAutomakerStatusToLinear('unknown-status');
+        expect(result).toBe('Backlog');
+      });
+    });
+
+    describe('Status Change Handling', () => {
+      it('should skip sync when feature has no linearIssueId', async () => {
+        const feature = {
+          id: 'test-feature-1',
+          description: 'Test feature',
+          category: 'test',
+          status: 'in_progress',
+          // No linearIssueId
+        };
+
+        vi.mocked(mockFeatureLoader.get).mockResolvedValue(feature as any);
+
+        await emitter.emit('feature:status-changed', {
+          featureId: 'test-feature-1',
+          projectPath: '/test/path',
+          status: 'in_progress',
+        });
+
+        // Allow async handlers to complete
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        // Should not have called fetch since no linearIssueId
+        expect(mockFetch).not.toHaveBeenCalled();
+      });
+
+      it('should skip sync when syncOnStatusChange is disabled', async () => {
+        vi.mocked(mockSettingsService.getProjectSettings).mockResolvedValue({
+          integrations: {
+            linear: {
+              enabled: true,
+              agentToken: 'test-token-123',
+              teamId: 'team-123',
+              syncOnStatusChange: false, // Disabled
+            },
+          },
+        } as any);
+
+        const feature = {
+          id: 'test-feature-2',
+          description: 'Test feature',
+          category: 'test',
+          status: 'in_progress',
+          linearIssueId: 'issue-999',
+        };
+
+        vi.mocked(mockFeatureLoader.get).mockResolvedValue(feature as any);
+
+        await emitter.emit('feature:status-changed', {
+          featureId: 'test-feature-2',
+          projectPath: '/test/path',
+          status: 'in_progress',
+        });
+
+        // Allow async handlers to complete
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        // Should not have called fetch since syncOnStatusChange is disabled
+        expect(mockFetch).not.toHaveBeenCalled();
+      });
+
+      it('should update Linear issue status on status change', async () => {
+        const feature = {
+          id: 'test-feature-3',
+          description: 'Test feature',
+          category: 'test',
+          status: 'in_progress',
+          linearIssueId: 'issue-123',
+        };
+
+        vi.mocked(mockFeatureLoader.get).mockResolvedValue(feature as any);
+
+        // Mock workflow states fetch (first call)
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            data: {
+              team: {
+                states: {
+                  nodes: [
+                    { id: 'state-in-progress', name: 'In Progress' },
+                    { id: 'state-backlog', name: 'Backlog' },
+                  ],
+                },
+              },
+            },
+          }),
+        });
+
+        // Mock issue update (second call)
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            data: {
+              issueUpdate: {
+                success: true,
+                issue: { id: 'issue-123', state: { name: 'In Progress' } },
+              },
+            },
+          }),
+        });
+
+        await emitter.emit('feature:status-changed', {
+          featureId: 'test-feature-3',
+          projectPath: '/test/path',
+          status: 'in_progress',
+        });
+
+        // Allow async handlers to complete
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        // Should have called fetch twice (workflow states + issue update)
+        expect(mockFetch).toHaveBeenCalledTimes(2);
+
+        // Verify sync metadata was updated
+        const metadata = service.getSyncMetadata('test-feature-3');
+        expect(metadata).toBeDefined();
+        expect(metadata?.lastSyncStatus).toBe('success');
+        expect(metadata?.linearIssueId).toBe('issue-123');
+        expect(metadata?.syncSource).toBe('automaker');
+        expect(metadata?.syncDirection).toBe('push');
+      });
+
+      it('should update sync metadata on error', async () => {
+        const feature = {
+          id: 'test-feature-4',
+          description: 'Test feature',
+          category: 'test',
+          status: 'in_progress',
+          linearIssueId: 'issue-456',
+        };
+
+        vi.mocked(mockFeatureLoader.get).mockResolvedValue(feature as any);
+
+        // Mock fetch to fail
+        mockFetch.mockRejectedValue(new Error('Linear API error'));
+
+        await emitter.emit('feature:status-changed', {
+          featureId: 'test-feature-4',
+          projectPath: '/test/path',
+          status: 'in_progress',
+        });
+
+        // Allow async handlers to complete
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        const metadata = service.getSyncMetadata('test-feature-4');
+        expect(metadata).toBeDefined();
+        expect(metadata?.lastSyncStatus).toBe('error');
+        expect(metadata?.errorMessage).toContain('Linear API error');
+      });
+
+      it('should handle missing feature gracefully', async () => {
+        vi.mocked(mockFeatureLoader.get).mockResolvedValue(null);
+
+        await emitter.emit('feature:status-changed', {
+          featureId: 'non-existent-feature',
+          projectPath: '/test/path',
+          status: 'in_progress',
+        });
+
+        // Allow async handlers to complete
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        // Should not throw and should not call fetch
+        expect(mockFetch).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('Workflow State Fetching', () => {
+      it('should fetch workflow states from Linear API', async () => {
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            data: {
+              team: {
+                states: {
+                  nodes: [
+                    { id: 'state-1', name: 'Backlog' },
+                    { id: 'state-2', name: 'In Progress' },
+                    { id: 'state-3', name: 'Done' },
+                  ],
+                },
+              },
+            },
+          }),
+        });
+
+        const stateId = await (service as any).getWorkflowStateId(
+          '/test/path',
+          'team-123',
+          'In Progress'
+        );
+
+        expect(stateId).toBe('state-2');
+        expect(mockFetch).toHaveBeenCalledWith(
+          'https://api.linear.app/graphql',
+          expect.objectContaining({
+            method: 'POST',
+            headers: expect.objectContaining({
+              Authorization: 'Bearer test-token-123',
+            }),
+          })
+        );
+      });
+
+      it('should throw error when workflow state not found', async () => {
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            data: {
+              team: {
+                states: {
+                  nodes: [{ id: 'state-1', name: 'Backlog' }],
+                },
+              },
+            },
+          }),
+        });
+
+        await expect(
+          (service as any).getWorkflowStateId('/test/path', 'team-123', 'Non-existent State')
+        ).rejects.toThrow('Workflow state "Non-existent State" not found');
+      });
+
+      it('should throw error when Linear API fails', async () => {
+        mockFetch.mockResolvedValueOnce({
+          ok: false,
+          status: 500,
+          statusText: 'Internal Server Error',
+        });
+
+        await expect(
+          (service as any).getWorkflowStateId('/test/path', 'team-123', 'In Progress')
+        ).rejects.toThrow('Linear API error: 500 Internal Server Error');
+      });
+    });
+  });
 });

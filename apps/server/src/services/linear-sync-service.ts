@@ -449,14 +449,385 @@ export class LinearSyncService {
   /**
    * Handle feature:status-changed events
    */
-  private handleFeatureStatusChanged(payload: FeatureEventPayload): void {
+  private async handleFeatureStatusChanged(payload: FeatureEventPayload): Promise<void> {
     logger.debug('Received feature:status-changed event', {
       featureId: payload.featureId,
       status: payload.status,
     });
 
-    // No actual sync logic yet - just structure and guards
-    // Future implementation will check guards and perform sync
+    // Call the async implementation
+    await this.onFeatureStatusChanged(payload);
+  }
+
+  /**
+   * Sync feature status changes to Linear
+   */
+  private async onFeatureStatusChanged(payload: FeatureEventPayload): Promise<void> {
+    const { featureId, projectPath, status } = payload;
+
+    // Guard: Check if service is running and sync is enabled
+    if (!this.shouldSync(featureId)) {
+      return;
+    }
+
+    // Check if sync is enabled for this project
+    const syncEnabled = await this.isProjectSyncEnabled(projectPath);
+    if (!syncEnabled) {
+      logger.debug(`Linear sync not enabled for project ${projectPath}`);
+      return;
+    }
+
+    // Check if status change sync is enabled
+    if (!this.settingsService) {
+      logger.error('SettingsService not initialized');
+      return;
+    }
+
+    const settings = await this.settingsService.getProjectSettings(projectPath);
+    if (settings.integrations?.linear?.syncOnStatusChange === false) {
+      logger.debug(`Status change sync disabled for project ${projectPath}`);
+      return;
+    }
+
+    if (!this.featureLoader) {
+      logger.error('FeatureLoader not initialized');
+      return;
+    }
+
+    // Mark as syncing to prevent duplicates
+    this.markSyncing(featureId);
+
+    try {
+      // Get the feature details
+      const feature = await this.featureLoader.get(projectPath, featureId);
+      if (!feature) {
+        logger.error(`Feature ${featureId} not found`);
+        return;
+      }
+
+      // Skip if feature has no Linear issue ID
+      if (!feature.linearIssueId) {
+        logger.debug(`Feature ${featureId} has no Linear issue ID, skipping status sync`);
+        return;
+      }
+
+      // Skip if status is unchanged from last sync
+      const lastMetadata = this.getSyncMetadata(featureId);
+      if (lastMetadata?.linearIssueId === feature.linearIssueId) {
+        // Check if status is the same
+        const currentLinearState = await this.getIssueState(projectPath, feature.linearIssueId);
+        const newLinearState = this.mapAutomakerStatusToLinear(
+          status || feature.status || 'backlog'
+        );
+
+        if (currentLinearState === newLinearState) {
+          logger.debug(`Status unchanged for feature ${featureId}, skipping sync`);
+          return;
+        }
+      }
+
+      // Update Linear issue status
+      await this.updateIssueStatus(
+        projectPath,
+        feature.linearIssueId,
+        status || feature.status || 'backlog'
+      );
+
+      // Update sync metadata
+      const existingMetadata = this.getSyncMetadata(featureId);
+      const metadata: SyncMetadata = {
+        featureId,
+        lastSyncTimestamp: Date.now(),
+        lastSyncStatus: 'success',
+        linearIssueId: feature.linearIssueId,
+        syncCount: (existingMetadata?.syncCount || 0) + 1,
+        syncSource: 'automaker',
+        syncDirection: 'push',
+      };
+      this.updateSyncMetadata(metadata);
+
+      // Emit completion event
+      if (this.emitter) {
+        this.emitter.emit('linear:sync:completed', {
+          featureId,
+          direction: 'push',
+          conflictDetected: false,
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      logger.info(
+        `Successfully synced status change for feature ${featureId} to Linear issue ${feature.linearIssueId}`
+      );
+    } catch (error) {
+      logger.error(`Failed to sync status change for feature ${featureId}:`, error);
+
+      // Update sync metadata with error
+      const metadata: SyncMetadata = {
+        featureId,
+        lastSyncTimestamp: Date.now(),
+        lastSyncStatus: 'error',
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        syncCount: 0,
+      };
+      this.updateSyncMetadata(metadata);
+
+      // Emit error event
+      if (this.emitter) {
+        this.emitter.emit('linear:sync:error', {
+          featureId,
+          direction: 'push',
+          error: error instanceof Error ? error.message : 'Unknown error',
+          timestamp: new Date().toISOString(),
+        });
+      }
+    } finally {
+      // Unmark syncing
+      this.unmarkSyncing(featureId);
+    }
+  }
+
+  /**
+   * Map Automaker status to Linear workflow state name
+   */
+  private mapAutomakerStatusToLinear(status: string): string {
+    switch (status) {
+      case 'backlog':
+        return 'Backlog';
+      case 'in_progress':
+        return 'In Progress';
+      case 'review':
+        return 'In Review';
+      case 'done':
+        return 'Done';
+      case 'blocked':
+        return 'Blocked';
+      case 'verified':
+        return 'Done'; // Map verified to Done
+      default:
+        logger.warn(`Unknown Automaker status: ${status}, defaulting to Backlog`);
+        return 'Backlog';
+    }
+  }
+
+  /**
+   * Get current Linear issue state
+   */
+  private async getIssueState(projectPath: string, issueId: string): Promise<string> {
+    if (!this.settingsService) {
+      throw new Error('SettingsService not initialized');
+    }
+
+    const settings = await this.settingsService.getProjectSettings(projectPath);
+    const linearAccessToken = settings.integrations?.linear?.agentToken;
+
+    if (!linearAccessToken) {
+      throw new Error('No Linear OAuth token found in settings');
+    }
+
+    // GraphQL query to get issue state
+    const query = `
+      query GetIssue($id: String!) {
+        issue(id: $id) {
+          id
+          state {
+            name
+          }
+        }
+      }
+    `;
+
+    const variables = {
+      id: issueId,
+    };
+
+    const response = await fetch('https://api.linear.app/graphql', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${linearAccessToken}`,
+      },
+      body: JSON.stringify({ query, variables }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Linear API error: ${response.status} ${response.statusText}`);
+    }
+
+    const result = (await response.json()) as {
+      data?: {
+        issue?: {
+          state?: { name: string };
+        };
+      };
+      errors?: Array<{ message: string }>;
+    };
+
+    if (result.errors) {
+      throw new Error(`Linear GraphQL error: ${result.errors.map((e) => e.message).join(', ')}`);
+    }
+
+    return result.data?.issue?.state?.name || 'Backlog';
+  }
+
+  /**
+   * Update Linear issue status
+   */
+  private async updateIssueStatus(
+    projectPath: string,
+    issueId: string,
+    status: string
+  ): Promise<void> {
+    if (!this.settingsService) {
+      throw new Error('SettingsService not initialized');
+    }
+
+    const settings = await this.settingsService.getProjectSettings(projectPath);
+    const linearAccessToken = settings.integrations?.linear?.agentToken;
+    const teamId = settings.integrations?.linear?.teamId;
+
+    if (!linearAccessToken) {
+      throw new Error('No Linear OAuth token found in settings');
+    }
+
+    if (!teamId) {
+      throw new Error('No Linear team ID found in settings');
+    }
+
+    // Map status to Linear state name
+    const linearStateName = this.mapAutomakerStatusToLinear(status);
+
+    // Get workflow state ID from Linear
+    const stateId = await this.getWorkflowStateId(projectPath, teamId, linearStateName);
+
+    // GraphQL mutation to update issue
+    const mutation = `
+      mutation UpdateIssue($id: String!, $stateId: String!) {
+        issueUpdate(id: $id, input: { stateId: $stateId }) {
+          success
+          issue {
+            id
+            state {
+              name
+            }
+          }
+        }
+      }
+    `;
+
+    const variables = {
+      id: issueId,
+      stateId,
+    };
+
+    const response = await fetch('https://api.linear.app/graphql', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${linearAccessToken}`,
+      },
+      body: JSON.stringify({ query: mutation, variables }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Linear API error: ${response.status} ${response.statusText}`);
+    }
+
+    const result = (await response.json()) as {
+      data?: {
+        issueUpdate?: {
+          success: boolean;
+          issue?: { id: string; state?: { name: string } };
+        };
+      };
+      errors?: Array<{ message: string }>;
+    };
+
+    if (result.errors) {
+      throw new Error(`Linear GraphQL error: ${result.errors.map((e) => e.message).join(', ')}`);
+    }
+
+    if (!result.data?.issueUpdate?.success) {
+      throw new Error('Failed to update Linear issue status');
+    }
+
+    logger.info(`Updated Linear issue ${issueId} to state: ${linearStateName}`);
+  }
+
+  /**
+   * Get workflow state ID from Linear by state name
+   */
+  private async getWorkflowStateId(
+    projectPath: string,
+    teamId: string,
+    stateName: string
+  ): Promise<string> {
+    if (!this.settingsService) {
+      throw new Error('SettingsService not initialized');
+    }
+
+    const settings = await this.settingsService.getProjectSettings(projectPath);
+    const linearAccessToken = settings.integrations?.linear?.agentToken;
+
+    if (!linearAccessToken) {
+      throw new Error('No Linear OAuth token found in settings');
+    }
+
+    // GraphQL query to fetch workflow states
+    const query = `
+      query GetWorkflowStates($teamId: String!) {
+        team(id: $teamId) {
+          id
+          states {
+            nodes {
+              id
+              name
+            }
+          }
+        }
+      }
+    `;
+
+    const variables = {
+      teamId,
+    };
+
+    const response = await fetch('https://api.linear.app/graphql', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${linearAccessToken}`,
+      },
+      body: JSON.stringify({ query, variables }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Linear API error: ${response.status} ${response.statusText}`);
+    }
+
+    const result = (await response.json()) as {
+      data?: {
+        team?: {
+          states?: {
+            nodes: Array<{ id: string; name: string }>;
+          };
+        };
+      };
+      errors?: Array<{ message: string }>;
+    };
+
+    if (result.errors) {
+      throw new Error(`Linear GraphQL error: ${result.errors.map((e) => e.message).join(', ')}`);
+    }
+
+    const states = result.data?.team?.states?.nodes || [];
+    const state = states.find((s) => s.name === stateName);
+
+    if (!state) {
+      throw new Error(`Workflow state "${stateName}" not found in Linear team ${teamId}`);
+    }
+
+    return state.id;
   }
 
   /**
