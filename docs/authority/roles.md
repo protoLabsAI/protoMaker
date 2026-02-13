@@ -16,7 +16,7 @@ Agent roles in the Automaker authority system, organized by hierarchy level.
 
 ### Crew Loop Members
 
-PR Maintainer and Board Janitor run as **crew loop members** — lightweight scheduled checks that escalate to full agents only when problems are detected. They report to the Chief of Staff, who acts as orchestrator. See [Crew Loops](../dev/crew-loops.md) for the scheduling system.
+The Chief of Staff, DevOps Engineer, PR Maintainer, Board Janitor, and GTM Specialist all run as **crew loop members** — lightweight scheduled checks that escalate to full agents only when problems are detected. The Chief of Staff acts as orchestrator. See [Crew Loops](../dev/crew-loops.md) for the full list and schedules.
 
 ### Implementation Agents (Auto-Mode)
 
