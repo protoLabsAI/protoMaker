@@ -37,6 +37,11 @@
   "publishConfig": {
     "registry": "https://registry.npmjs.org/"
   },
+  "dependencies": {
+    "@clack/prompts": "^1.0.1",
+    "picocolors": "^1.1.1",
+    "yaml": "^2.6.1"
+  },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "typescript": "^5.7.3",
