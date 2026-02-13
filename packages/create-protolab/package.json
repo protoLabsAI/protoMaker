@@ -1,0 +1,30 @@
+{
+  "name": "create-protolab",
+  "version": "1.0.0",
+  "description": "CLI tool to initialize ProtoLabs projects with best practices",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "create-protolab": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "keywords": [
+    "protolab",
+    "setup",
+    "cli",
+    "typescript"
+  ],
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@vitest/coverage-v8": "^4.0.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.4.0",
+    "vitest": "^4.0.0"
+  }
+}
