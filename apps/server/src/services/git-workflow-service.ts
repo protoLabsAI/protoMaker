@@ -21,6 +21,7 @@ import { validatePRState } from '@automaker/types';
 import { graphiteService } from './graphite-service.js';
 import { githubMergeService } from './github-merge-service.js';
 import { codeRabbitResolverService } from './coderabbit-resolver-service.js';
+import type { EventEmitter } from '../lib/events.js';
 
 const execAsync = promisify(exec);
 const logger = createLogger('GitWorkflow');
@@ -138,6 +139,7 @@ export class GitWorkflowService {
    * @param workDir - Working directory (worktree path or project path)
    * @param settings - Global settings containing git workflow config
    * @param epicBranchName - Optional epic branch name to use as PR base (for features in epics)
+   * @param events - Optional event emitter for emitting workflow events
    * @returns GitWorkflowResult with details of what was done, or null if no workflow needed
    */
   async runPostCompletionWorkflow(
@@ -146,7 +148,8 @@ export class GitWorkflowService {
     feature: Feature,
     workDir: string,
     settings: GlobalSettings,
-    epicBranchName?: string
+    epicBranchName?: string,
+    events?: EventEmitter
   ): Promise<GitWorkflowResult | null> {
     const gitSettings = this.resolveGitWorkflowSettings(feature, settings);
     const graphiteSettings = settings.graphite ?? DEFAULT_GRAPHITE_SETTINGS;
@@ -427,6 +430,18 @@ export class GitWorkflowService {
               logger.info(
                 `Successfully merged PR #${result.prNumber}${mergeResult.mergeCommitSha ? ` (commit: ${mergeResult.mergeCommitSha})` : ''}`
               );
+
+              // Emit feature:pr-merged event for sync services
+              if (events) {
+                events.emit('feature:pr-merged', {
+                  featureId,
+                  projectPath,
+                  prNumber: result.prNumber,
+                  prUrl: result.prUrl,
+                  mergeCommitSha: result.mergeCommitSha,
+                });
+                logger.debug(`Emitted feature:pr-merged event for feature ${featureId}`);
+              }
             } else {
               result.merged = false;
               logger.warn(`Failed to merge PR #${result.prNumber}: ${mergeResult.error}`);

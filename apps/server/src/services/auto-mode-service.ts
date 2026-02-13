@@ -1906,7 +1906,8 @@ export class AutoModeService {
             feature,
             workDir,
             settings,
-            epicBranchName
+            epicBranchName,
+            this.events
           );
           if (gitWorkflowResult) {
             // Check if git workflow encountered conflicts
@@ -2769,7 +2770,8 @@ Complete the pipeline step instructions above. Review the previous work and appl
             feature,
             workDir,
             settings,
-            epicBranchName
+            epicBranchName,
+            this.events
           );
           if (gitWorkflowResult) {
             // Check if git workflow encountered conflicts
@@ -3108,7 +3110,8 @@ Address the follow-up instructions above. Review the previous work and make the 
             feature,
             workDir,
             settings,
-            epicBranchName
+            epicBranchName,
+            this.events
           );
           if (gitWorkflowResult) {
             // Check if git workflow encountered conflicts
