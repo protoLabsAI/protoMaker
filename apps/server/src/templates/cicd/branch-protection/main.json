@@ -9,6 +9,7 @@
     }
   },
   "rules": [
+    { "type": "required_linear_history" },
     {
       "type": "pull_request",
       "parameters": {
@@ -29,19 +30,7 @@
           { "context": "audit" }
         ]
       }
-    },
-    {
-      "type": "merge_queue",
-      "parameters": {
-        "merge_method": "squash"
-      }
     }
   ],
-  "bypass_actors": [
-    {
-      "actor_id": 1,
-      "actor_type": "RepositoryRole",
-      "bypass_mode": "always"
-    }
-  ]
+  "bypass_actors": []
 }

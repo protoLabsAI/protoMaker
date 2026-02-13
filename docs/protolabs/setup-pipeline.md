@@ -92,7 +92,7 @@ Templates use `{{variable}}` interpolation.
 - TypeScript strict mode + composite configs
 - Testing framework (Vitest)
 - CI pipeline (GitHub Actions with build+test+format+audit)
-- Branch protection (squash-only, required checks)
+- Branch protection (squash-only, required checks, `required_review_thread_resolution: true`, NO bypass actors — everyone must go through PRs)
 - Package manager (pnpm)
 
 ### Recommended (full automation)
