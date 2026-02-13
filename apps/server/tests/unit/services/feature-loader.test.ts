@@ -917,4 +917,103 @@ describe('feature-loader.ts', () => {
       expect(writtenContent).toContain('Feature Without Locations');
     });
   });
+
+  describe('findByLinearIssueId', () => {
+    it('should find feature by Linear issue ID', async () => {
+      vi.mocked(fs.access).mockResolvedValue(undefined);
+      vi.mocked(fs.readdir).mockResolvedValue([
+        { name: 'feature-1', isDirectory: () => true } as any,
+        { name: 'feature-2', isDirectory: () => true } as any,
+      ]);
+
+      vi.mocked(fs.readFile)
+        .mockResolvedValueOnce(
+          JSON.stringify({
+            id: 'feature-1000-abc',
+            title: 'Feature 1',
+            category: 'ui',
+            linearIssueId: 'LIN-123',
+          })
+        )
+        .mockResolvedValueOnce(
+          JSON.stringify({
+            id: 'feature-2000-def',
+            title: 'Feature 2',
+            category: 'api',
+            linearIssueId: 'LIN-456',
+          })
+        );
+
+      const result = await loader.findByLinearIssueId('LIN-456');
+
+      expect(result).not.toBeNull();
+      expect(result?.id).toBe('feature-2000-def');
+      expect(result?.linearIssueId).toBe('LIN-456');
+    });
+
+    it('should return null when Linear issue ID is not found', async () => {
+      vi.mocked(fs.access).mockResolvedValue(undefined);
+      vi.mocked(fs.readdir).mockResolvedValue([
+        { name: 'feature-1', isDirectory: () => true } as any,
+      ]);
+
+      vi.mocked(fs.readFile).mockResolvedValueOnce(
+        JSON.stringify({
+          id: 'feature-1000-abc',
+          title: 'Feature 1',
+          category: 'ui',
+          linearIssueId: 'LIN-123',
+        })
+      );
+
+      const result = await loader.findByLinearIssueId('LIN-999');
+
+      expect(result).toBeNull();
+    });
+
+    it('should return null when Linear issue ID is empty string', async () => {
+      const result = await loader.findByLinearIssueId('');
+
+      expect(result).toBeNull();
+      expect(fs.readdir).not.toHaveBeenCalled();
+    });
+
+    it('should return null when Linear issue ID is whitespace', async () => {
+      const result = await loader.findByLinearIssueId('   ');
+
+      expect(result).toBeNull();
+      expect(fs.readdir).not.toHaveBeenCalled();
+    });
+
+    it('should handle features without linearIssueId field', async () => {
+      vi.mocked(fs.access).mockResolvedValue(undefined);
+      vi.mocked(fs.readdir).mockResolvedValue([
+        { name: 'feature-1', isDirectory: () => true } as any,
+        { name: 'feature-2', isDirectory: () => true } as any,
+      ]);
+
+      vi.mocked(fs.readFile)
+        .mockResolvedValueOnce(
+          JSON.stringify({
+            id: 'feature-1000-abc',
+            title: 'Feature 1',
+            category: 'ui',
+            // No linearIssueId field
+          })
+        )
+        .mockResolvedValueOnce(
+          JSON.stringify({
+            id: 'feature-2000-def',
+            title: 'Feature 2',
+            category: 'api',
+            linearIssueId: 'LIN-456',
+          })
+        );
+
+      const result = await loader.findByLinearIssueId('LIN-456');
+
+      expect(result).not.toBeNull();
+      expect(result?.id).toBe('feature-2000-def');
+    });
+  });
 });

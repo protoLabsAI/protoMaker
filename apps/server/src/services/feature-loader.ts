@@ -332,6 +332,31 @@ export class FeatureLoader {
   }
 
   /**
+   * Find a feature by its Linear issue ID
+   * @param linearIssueId - Linear issue ID to search for
+   * @returns The matching feature or null if not found
+   */
+  async findByLinearIssueId(linearIssueId: string): Promise<Feature | null> {
+    if (!linearIssueId || !linearIssueId.trim()) {
+      return null;
+    }
+
+    // Get all features from all projects
+    // Note: This searches the current working directory's project
+    // In a multi-project setup, we'd need to pass projectPath
+    const projectPath = process.cwd();
+    const features = await this.getAll(projectPath);
+
+    for (const feature of features) {
+      if (feature.linearIssueId === linearIssueId) {
+        return feature;
+      }
+    }
+
+    return null;
+  }
+
+  /**
    * Check if a title already exists on another feature (for duplicate detection)
    * @param projectPath - Path to the project
    * @param title - Title to check
