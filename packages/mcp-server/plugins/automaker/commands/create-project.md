@@ -101,8 +101,16 @@ For each milestone, define phases:
 Each phase should be:
 
 - Completable in ~30-60 minutes by an AI agent
-- Independently testable
+- Independently testable (build + tests must pass)
 - Have clear acceptance criteria
+- Touch distinct files (no two phases modifying the same file unless sequenced)
+
+Phase sizing guide:
+
+- If a phase is < 50 lines of code, merge it with an adjacent phase
+- If a milestone has > 5 phases, consolidate — you've over-decomposed
+- Types/interfaces go in the same phase as the code that uses them
+- Critical-path fixes (race conditions, blockers) are always Phase 1
 
 ### Step 6: Scaffold Project
 

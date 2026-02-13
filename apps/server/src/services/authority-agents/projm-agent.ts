@@ -393,11 +393,20 @@ Each phase should be a concrete, implementable unit of work. Respond with valid 
 }
 
 Guidelines:
-- Each phase should take 1-4 hours of focused work
-- Phases should be ordered by dependency (earlier phases first)
+- Each phase should take 30-60 minutes of focused AI agent work
+- Phases should be ordered by dependency — critical-path blockers FIRST
 - Be specific about what files to modify and what changes to make
-- Include clear acceptance criteria
-- Aim for 2-6 phases per milestone`;
+- Include clear acceptance criteria that are machine-verifiable (build passes, tests pass)
+
+Anti-patterns to AVOID:
+- NEVER create multiple phases that modify the same file — this causes merge conflicts when agents work in parallel
+- NEVER decompose type definitions, interfaces, or config into a separate phase from the code that uses them — combine them into one phase
+- NEVER create phases smaller than ~100 lines of meaningful code changes — merge them with adjacent phases
+- NEVER put critical-path fixes (race conditions, blockers) late in the plan — they must be Phase 1
+- Aim for 3-5 phases per milestone, not 6+. Fewer, larger phases are better than many tiny ones.
+
+File contention rule: Before finalizing, check if any file appears in filesToModify for 2+ phases.
+If so, consolidate those phases or sequence them strictly. Parallel agents on the same file = guaranteed merge conflicts.`;
 
     const prompt = `Project: ${project.title}
 Goal: ${project.goal}

@@ -112,14 +112,19 @@ Post the PRD to the Discord thread for user review and approval.
 
 Once the PRD is approved:
 1. Break down the approach into logical milestones (Foundation, Features, Polish)
-2. Each milestone has phases (implementable units)
+2. Each milestone has 3-5 phases (implementable units)
 3. Each phase specifies:
    - Title and description
-   - Files to modify
-   - Acceptance criteria
+   - Files to modify (no file should appear in multiple phases)
+   - Acceptance criteria (machine-verifiable: build passes, tests pass)
    - Complexity (small/medium/large/architectural)
-4. Create the Linear project using MCP tools
-5. Post the Linear project URL to Discord for final review
+4. Validate before creating:
+   - Critical-path work (deconfliction, blockers) is in the earliest milestone
+   - No two phases modify the same file (merge conflict risk)
+   - No phase is smaller than ~50 lines of real code changes
+   - Total features proportional to actual work (not ceremony)
+5. Create the Linear project using MCP tools
+6. Post the Linear project URL to Discord for final review
 
 ## Available Tools
 

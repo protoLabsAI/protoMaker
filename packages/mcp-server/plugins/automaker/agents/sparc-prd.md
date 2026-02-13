@@ -252,9 +252,11 @@ Produce a complete PRD:
 
 ### Phase Sizing
 
-- **Small**: ~30 minutes, 1-2 files
-- **Medium**: ~1 hour, 3-5 files
-- **Large**: ~2 hours, 5+ files
+- **Small**: ~30 minutes, 1-2 files, ~50-150 lines changed
+- **Medium**: ~1 hour, 2-4 files, ~150-400 lines changed
+- **Large**: ~2 hours, 4-8 files, ~400+ lines changed
+
+A phase with fewer than 50 lines of real code changes should be merged into an adjacent phase.
 
 ### Acceptance Criteria
 
@@ -269,3 +271,34 @@ Each phase should have:
 - Explicit is better than implicit
 - Early phases should have fewer dependencies
 - Avoid circular dependencies
+
+### Decomposition Anti-Patterns (AVOID THESE)
+
+These patterns cause real failures in autonomous execution:
+
+1. **Over-decomposition**: If a milestone has 6+ phases, you've probably sliced too thin.
+   The overhead of branching, PR creation, CI, review, and merge for each feature means
+   tiny features waste more time on ceremony than on code. Aim for 3-5 phases per milestone.
+
+2. **File contention**: If multiple phases modify the same file, agents running in parallel
+   will produce merge conflicts. Either consolidate into one phase, or make them strictly
+   sequential with explicit dependencies.
+
+3. **Wrong critical path**: If Phase 5 fixes a bug that Phase 1-4 all depend on, the plan
+   is backwards. Always identify blockers and deconfliction work FIRST.
+
+4. **Type-only phases**: Don't create a separate phase just for TypeScript types or interfaces.
+   Types are meaningless without the code that uses them. Include types in the phase that
+   implements the corresponding logic.
+
+5. **Redundant phases**: If two phases cover the same conceptual change (e.g., "add webhook type"
+   and "add webhook handler"), they should be one phase. The handler needs the type —
+   splitting them just adds overhead.
+
+### Quality Checklist (verify before finalizing)
+
+- [ ] No file appears in filesToModify for more than one phase (unless strictly sequenced)
+- [ ] Critical-path blockers are in the earliest milestone
+- [ ] No phase has fewer than 50 lines of meaningful code changes
+- [ ] Each phase can be tested independently (build passes, tests pass)
+- [ ] Total phase count is proportional to actual work (~1 phase per 100-400 lines of real code)
