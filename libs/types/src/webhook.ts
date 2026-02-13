@@ -74,7 +74,11 @@ export type GitHubPullRequestReviewAction = 'submitted' | 'edited' | 'dismissed'
 /**
  * GitHubPullRequestReviewState - The state of a pull request review
  */
-export type GitHubPullRequestReviewState = 'approved' | 'changes_requested' | 'commented' | 'dismissed';
+export type GitHubPullRequestReviewState =
+  | 'approved'
+  | 'changes_requested'
+  | 'commented'
+  | 'dismissed';
 
 /**
  * GitHubUser - Simplified GitHub user object
