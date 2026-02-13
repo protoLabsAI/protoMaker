@@ -947,9 +947,7 @@ export class LinearSyncService {
       // Check if the Linear state has actually changed
       const lastLinearState = metadata?.lastLinearState;
       if (lastLinearState === newStateName) {
-        logger.debug(
-          `Skipping Linear update for ${featureId}: state unchanged (${newStateName})`
-        );
+        logger.debug(`Skipping Linear update for ${featureId}: state unchanged (${newStateName})`);
         return;
       }
 
