@@ -249,6 +249,16 @@ export interface Feature {
    */
   lastReviewFeedback?: string;
   /**
+   * Timestamp when PR tracking started (ISO 8601).
+   * Set by PRFeedbackService when a PR is first tracked.
+   */
+  prTrackedSince?: string;
+  /**
+   * Timestamp of the last PR polling check (ISO 8601).
+   * Updated by PRFeedbackService after each GitHub API poll.
+   */
+  prLastPolledAt?: string;
+  /**
    * GitHub issue number (if an issue was auto-created for this feature).
    * Set by IssueCreationService when a feature exceeds max retries or is escalated.
    */

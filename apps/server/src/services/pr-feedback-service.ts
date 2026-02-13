@@ -122,6 +122,51 @@ export class PRFeedbackService {
   }
 
   /**
+   * Restore tracked PRs from features with status=review and prNumber set for a specific project.
+   * This ensures PR tracking survives server restarts.
+   *
+   * @param projectPath - Path to the project to restore PRs for
+   */
+  async restoreTrackedPRsForProject(projectPath: string): Promise<void> {
+    try {
+      const features = await this.featureLoader.getAll(projectPath);
+
+      let restoredCount = 0;
+      for (const feature of features) {
+        // Only restore tracking for features in review with an open PR
+        if (feature.status === 'review' && feature.prNumber && feature.prUrl) {
+          const lastPolledAt =
+            feature.prLastPolledAt && typeof feature.prLastPolledAt === 'string'
+              ? new Date(feature.prLastPolledAt).getTime()
+              : 0;
+
+          this.trackedPRs.set(feature.id, {
+            featureId: feature.id,
+            projectPath,
+            prNumber: feature.prNumber,
+            prUrl: feature.prUrl,
+            branchName: feature.branchName || '',
+            lastCheckedAt: lastPolledAt,
+            reviewState: 'pending',
+            iterationCount: feature.prIterationCount || 0,
+          });
+
+          logger.info(
+            `Restored tracking for PR #${feature.prNumber} (feature ${feature.id}) from persisted state`
+          );
+          restoredCount++;
+        }
+      }
+
+      if (restoredCount > 0) {
+        logger.info(`Restored ${restoredCount} tracked PRs for project ${projectPath}`);
+      }
+    } catch (error) {
+      logger.error(`Failed to restore tracked PRs for project ${projectPath}:`, error);
+    }
+  }
+
+  /**
    * Start tracking a newly created PR.
    */
   private trackPR(data: Record<string, unknown>): void {
@@ -134,6 +179,7 @@ export class PRFeedbackService {
 
     // Check if we're already tracking this feature's PR
     const existing = this.trackedPRs.get(featureId);
+    const now = new Date().toISOString();
 
     this.trackedPRs.set(featureId, {
       featureId,
@@ -146,10 +192,12 @@ export class PRFeedbackService {
       iterationCount: existing?.iterationCount || 0,
     });
 
-    // Save PR info to feature
+    // Save PR info and tracking metadata to feature
     void this.featureLoader.update(projectPath, featureId, {
       prUrl,
       prNumber,
+      prTrackedSince: existing ? undefined : now, // Only set on first track
+      prLastPolledAt: now,
     });
 
     logger.info(`Tracking PR #${prNumber} for feature ${featureId}`);
@@ -165,7 +213,13 @@ export class PRFeedbackService {
 
       try {
         const reviewInfo = await this.fetchPRReviewStatus(pr);
-        pr.lastCheckedAt = Date.now();
+        const now = Date.now();
+        pr.lastCheckedAt = now;
+
+        // Persist poll timestamp to feature.json
+        await this.featureLoader.update(pr.projectPath, featureId, {
+          prLastPolledAt: new Date(now).toISOString(),
+        });
 
         if (!reviewInfo) continue;
 
