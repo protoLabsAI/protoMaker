@@ -11,6 +11,7 @@
  * Supported events:
  * - issues: Issue created, updated, or commented
  * - pull_request: PR opened, updated, merged, or closed
+ * - pull_request_review: PR review submitted
  * - push: Code pushed to repository
  * - check_suite: Check suite activity (completed, requested, rerequested)
  * - check_run: Check run activity (created, completed, rerequested, requested_action)
@@ -19,6 +20,7 @@
 export type GitHubWebhookEvent =
   | 'issues'
   | 'pull_request'
+  | 'pull_request_review'
   | 'push'
   | 'check_suite'
   | 'check_run'
@@ -63,6 +65,20 @@ export type GitHubCheckSuiteAction = 'completed' | 'requested' | 'rerequested';
  * GitHubCheckRunAction - Actions that can occur on check runs
  */
 export type GitHubCheckRunAction = 'created' | 'completed' | 'rerequested' | 'requested_action';
+
+/**
+ * GitHubPullRequestReviewAction - Actions that can occur on pull request reviews
+ */
+export type GitHubPullRequestReviewAction = 'submitted' | 'edited' | 'dismissed';
+
+/**
+ * GitHubPullRequestReviewState - The state of a pull request review
+ */
+export type GitHubPullRequestReviewState =
+  | 'approved'
+  | 'changes_requested'
+  | 'commented'
+  | 'dismissed';
 
 /**
  * GitHubUser - Simplified GitHub user object
@@ -230,6 +246,20 @@ export interface GitHubCheckRun {
 }
 
 /**
+ * GitHubPullRequestReview - Simplified GitHub pull request review object
+ */
+export interface GitHubPullRequestReview {
+  id: number;
+  node_id: string;
+  user: GitHubUser;
+  body: string | null;
+  state: GitHubPullRequestReviewState;
+  html_url: string;
+  pull_request_url: string;
+  submitted_at: string;
+}
+
+/**
  * GitHubIssueWebhookPayload - Webhook payload for issue events
  */
 export interface GitHubIssueWebhookPayload {
@@ -303,11 +333,23 @@ export interface GitHubCheckRunWebhookPayload {
 }
 
 /**
+ * GitHubPullRequestReviewWebhookPayload - Webhook payload for pull request review events
+ */
+export interface GitHubPullRequestReviewWebhookPayload {
+  action: GitHubPullRequestReviewAction;
+  review: GitHubPullRequestReview;
+  pull_request: GitHubPullRequest;
+  repository: GitHubRepository;
+  sender: GitHubUser;
+}
+
+/**
  * GitHubWebhookPayload - Union type of all webhook payloads
  */
 export type GitHubWebhookPayload =
   | GitHubIssueWebhookPayload
   | GitHubPullRequestWebhookPayload
+  | GitHubPullRequestReviewWebhookPayload
   | GitHubPushWebhookPayload
   | GitHubCheckSuiteWebhookPayload
   | GitHubCheckRunWebhookPayload

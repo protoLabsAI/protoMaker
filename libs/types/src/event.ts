@@ -113,6 +113,8 @@ export type EventType =
   | 'webhook:github:issue'
   | 'webhook:github:pull_request'
   | 'webhook:github:push'
+  // PR review events
+  | 'pr:review-submitted'
   // Integration events
   | 'integration:linear'
   | 'integration:discord'

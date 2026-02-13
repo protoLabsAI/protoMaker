@@ -12,6 +12,7 @@ import type {
   GitHubWebhookPayload,
   GitHubIssueWebhookPayload,
   GitHubPullRequestWebhookPayload,
+  GitHubPullRequestReviewWebhookPayload,
   GitHubPushWebhookPayload,
   GitHubPingWebhookPayload,
   WebhookVerificationResult,
@@ -178,6 +179,44 @@ async function handlePushEvent(
 }
 
 /**
+ * Handle GitHub pull request review event
+ */
+async function handlePullRequestReviewEvent(
+  payload: GitHubPullRequestReviewWebhookPayload,
+  projectPath: string,
+  events: EventEmitter
+): Promise<void> {
+  const { action, review, pull_request, repository } = payload;
+
+  logger.info(
+    `Received PR review event: ${action} on ${repository.full_name}#${pull_request.number} - ${review.state}`
+  );
+
+  // Only emit for submitted reviews
+  if (action === 'submitted') {
+    events.emit('pr:review-submitted', {
+      prNumber: pull_request.number,
+      prTitle: pull_request.title,
+      prUrl: pull_request.html_url,
+      repository: repository.full_name,
+      projectPath,
+      reviewId: review.id,
+      reviewState: review.state,
+      reviewBody: review.body,
+      reviewUrl: review.html_url,
+      reviewer: review.user.login,
+      submittedAt: review.submitted_at,
+      headBranch: pull_request.head.ref,
+      baseBranch: pull_request.base.ref,
+    });
+
+    logger.debug(
+      `Emitted pr:review-submitted event for PR #${pull_request.number} (state: ${review.state})`
+    );
+  }
+}
+
+/**
  * Create webhook handler
  *
  * Receives GitHub webhook events, verifies signatures, and processes the payload.
@@ -280,6 +319,14 @@ export function createWebhookHandler(
         case 'pull_request':
           await handlePullRequestEvent(
             payload as GitHubPullRequestWebhookPayload,
+            projectPath,
+            events
+          );
+          break;
+
+        case 'pull_request_review':
+          await handlePullRequestReviewEvent(
+            payload as GitHubPullRequestReviewWebhookPayload,
             projectPath,
             events
           );
