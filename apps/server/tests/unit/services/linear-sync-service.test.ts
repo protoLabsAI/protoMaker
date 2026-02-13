@@ -47,7 +47,9 @@ describe('LinearSyncService', () => {
 
   describe('Initialization', () => {
     it('should initialize with event emitter and settings service', () => {
-      expect(() => service.initialize(emitter, mockSettingsService, mockFeatureLoader)).not.toThrow();
+      expect(() =>
+        service.initialize(emitter, mockSettingsService, mockFeatureLoader)
+      ).not.toThrow();
     });
 
     it('should not be running before start() is called', () => {

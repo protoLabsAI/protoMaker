@@ -325,7 +325,9 @@ export class LinearSyncService {
         });
       }
 
-      logger.info(`Successfully synced feature ${featureId} to Linear issue ${issueResult.issueId}`);
+      logger.info(
+        `Successfully synced feature ${featureId} to Linear issue ${issueResult.issueId}`
+      );
     } catch (error) {
       logger.error(`Failed to sync feature ${featureId} to Linear:`, error);
 
