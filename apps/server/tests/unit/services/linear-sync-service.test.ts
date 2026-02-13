@@ -31,6 +31,7 @@ describe('LinearSyncService', () => {
     mockFeatureLoader = {
       get: vi.fn(),
       update: vi.fn(),
+      findByLinearIssueId: vi.fn(),
     } as unknown as FeatureLoader;
   });
 
@@ -794,6 +795,366 @@ describe('LinearSyncService', () => {
         await expect(
           (service as any).getWorkflowStateId('/test/path', 'team-123', 'In Progress')
         ).rejects.toThrow('Linear API error: 500 Internal Server Error');
+      });
+    });
+  });
+
+  describe('Inbound Sync (Linear → Automaker)', () => {
+    beforeEach(() => {
+      service.initialize(emitter, mockSettingsService, mockFeatureLoader);
+      service.start();
+
+      // Default mock settings
+      vi.mocked(mockSettingsService.getProjectSettings).mockResolvedValue({
+        integrations: {
+          linear: {
+            enabled: true,
+            agentToken: 'test-token-123',
+            teamId: 'team-123',
+          },
+        },
+      } as any);
+    });
+
+    describe('Reverse Status Mapping', () => {
+      it('should map Linear Backlog to automaker backlog', () => {
+        const result = (service as any).mapLinearStateToAutomaker('Backlog');
+        expect(result).toBe('backlog');
+      });
+
+      it('should map Linear Todo to automaker backlog', () => {
+        const result = (service as any).mapLinearStateToAutomaker('Todo');
+        expect(result).toBe('backlog');
+      });
+
+      it('should map Linear In Progress to automaker in_progress', () => {
+        const result = (service as any).mapLinearStateToAutomaker('In Progress');
+        expect(result).toBe('in_progress');
+      });
+
+      it('should map Linear Started to automaker in_progress', () => {
+        const result = (service as any).mapLinearStateToAutomaker('Started');
+        expect(result).toBe('in_progress');
+      });
+
+      it('should map Linear In Review to automaker review', () => {
+        const result = (service as any).mapLinearStateToAutomaker('In Review');
+        expect(result).toBe('review');
+      });
+
+      it('should map Linear Done to automaker done', () => {
+        const result = (service as any).mapLinearStateToAutomaker('Done');
+        expect(result).toBe('done');
+      });
+
+      it('should map Linear Completed to automaker done', () => {
+        const result = (service as any).mapLinearStateToAutomaker('Completed');
+        expect(result).toBe('done');
+      });
+
+      it('should map Linear Blocked to automaker blocked', () => {
+        const result = (service as any).mapLinearStateToAutomaker('Blocked');
+        expect(result).toBe('blocked');
+      });
+
+      it('should be case insensitive', () => {
+        expect((service as any).mapLinearStateToAutomaker('in progress')).toBe('in_progress');
+        expect((service as any).mapLinearStateToAutomaker('IN PROGRESS')).toBe('in_progress');
+      });
+
+      it('should default unknown states to backlog', () => {
+        const result = (service as any).mapLinearStateToAutomaker('Unknown State');
+        expect(result).toBe('backlog');
+      });
+    });
+
+    describe('onLinearIssueUpdated', () => {
+      it('should update feature status when Linear issue is updated', async () => {
+        const feature = {
+          id: 'test-feature-1',
+          description: 'Test feature',
+          category: 'test',
+          status: 'backlog',
+          linearIssueId: 'LINEAR-123',
+        };
+
+        vi.mocked(mockFeatureLoader.findByLinearIssueId).mockResolvedValue(feature as any);
+        vi.mocked(mockFeatureLoader.update).mockResolvedValue(feature as any);
+
+        await service.onLinearIssueUpdated('LINEAR-123', 'In Progress', '/test/path');
+
+        // Verify feature was updated
+        expect(mockFeatureLoader.update).toHaveBeenCalledWith(
+          '/test/path',
+          'test-feature-1',
+          expect.objectContaining({
+            status: 'in_progress',
+            statusChangeReason: 'Synced from Linear (In Progress)',
+          })
+        );
+
+        // Verify sync metadata was updated
+        const metadata = service.getSyncMetadata('test-feature-1');
+        expect(metadata).toBeDefined();
+        expect(metadata?.syncSource).toBe('linear');
+        expect(metadata?.syncDirection).toBe('pull');
+        expect(metadata?.lastLinearState).toBe('In Progress');
+      });
+
+      it('should skip update if feature not found', async () => {
+        vi.mocked(mockFeatureLoader.findByLinearIssueId).mockResolvedValue(null);
+
+        await service.onLinearIssueUpdated('LINEAR-999', 'In Progress', '/test/path');
+
+        expect(mockFeatureLoader.update).not.toHaveBeenCalled();
+      });
+
+      it('should skip update if service not running', async () => {
+        service.stop();
+
+        const feature = {
+          id: 'test-feature-2',
+          description: 'Test feature',
+          category: 'test',
+          status: 'backlog',
+          linearIssueId: 'LINEAR-456',
+        };
+
+        vi.mocked(mockFeatureLoader.findByLinearIssueId).mockResolvedValue(feature as any);
+
+        await service.onLinearIssueUpdated('LINEAR-456', 'In Progress', '/test/path');
+
+        expect(mockFeatureLoader.update).not.toHaveBeenCalled();
+      });
+
+      it('should skip update if sync not enabled for project', async () => {
+        vi.mocked(mockSettingsService.getProjectSettings).mockResolvedValue({
+          integrations: {
+            linear: {
+              enabled: false, // Disabled
+            },
+          },
+        } as any);
+
+        const feature = {
+          id: 'test-feature-3',
+          description: 'Test feature',
+          category: 'test',
+          status: 'backlog',
+          linearIssueId: 'LINEAR-789',
+        };
+
+        vi.mocked(mockFeatureLoader.findByLinearIssueId).mockResolvedValue(feature as any);
+
+        await service.onLinearIssueUpdated('LINEAR-789', 'In Progress', '/test/path');
+
+        expect(mockFeatureLoader.update).not.toHaveBeenCalled();
+      });
+
+      it('should skip update if last sync was from automaker (loop prevention)', async () => {
+        const feature = {
+          id: 'test-feature-4',
+          description: 'Test feature',
+          category: 'test',
+          status: 'backlog',
+          linearIssueId: 'LINEAR-111',
+        };
+
+        vi.mocked(mockFeatureLoader.findByLinearIssueId).mockResolvedValue(feature as any);
+
+        // Set metadata indicating recent sync from automaker
+        service.updateSyncMetadata({
+          featureId: 'test-feature-4',
+          lastSyncTimestamp: Date.now(),
+          lastSyncStatus: 'success',
+          linearIssueId: 'LINEAR-111',
+          syncCount: 1,
+          syncSource: 'automaker', // Last sync was from automaker
+          syncDirection: 'push',
+        });
+
+        await service.onLinearIssueUpdated('LINEAR-111', 'In Progress', '/test/path');
+
+        // Should skip due to loop prevention
+        expect(mockFeatureLoader.update).not.toHaveBeenCalled();
+      });
+
+      it('should update if last automaker sync was beyond debounce window', async () => {
+        const originalDateNow = Date.now;
+        let currentTime = 1000000;
+        Date.now = vi.fn(() => currentTime);
+
+        const feature = {
+          id: 'test-feature-5',
+          description: 'Test feature',
+          category: 'test',
+          status: 'backlog',
+          linearIssueId: 'LINEAR-222',
+        };
+
+        vi.mocked(mockFeatureLoader.findByLinearIssueId).mockResolvedValue(feature as any);
+        vi.mocked(mockFeatureLoader.update).mockResolvedValue(feature as any);
+
+        // Set metadata indicating old sync from automaker
+        service.updateSyncMetadata({
+          featureId: 'test-feature-5',
+          lastSyncTimestamp: currentTime - 10000, // 10 seconds ago
+          lastSyncStatus: 'success',
+          linearIssueId: 'LINEAR-222',
+          syncCount: 1,
+          syncSource: 'automaker',
+          syncDirection: 'push',
+        });
+
+        await service.onLinearIssueUpdated('LINEAR-222', 'In Progress', '/test/path');
+
+        // Should proceed since enough time has passed
+        expect(mockFeatureLoader.update).toHaveBeenCalled();
+
+        Date.now = originalDateNow;
+      });
+
+      it('should skip update if Linear state unchanged', async () => {
+        const feature = {
+          id: 'test-feature-6',
+          description: 'Test feature',
+          category: 'test',
+          status: 'in_progress',
+          linearIssueId: 'LINEAR-333',
+        };
+
+        vi.mocked(mockFeatureLoader.findByLinearIssueId).mockResolvedValue(feature as any);
+
+        // Set metadata with same Linear state
+        service.updateSyncMetadata({
+          featureId: 'test-feature-6',
+          lastSyncTimestamp: Date.now(),
+          lastSyncStatus: 'success',
+          linearIssueId: 'LINEAR-333',
+          syncCount: 1,
+          syncSource: 'linear',
+          syncDirection: 'pull',
+          lastLinearState: 'In Progress', // Same state
+        });
+
+        await service.onLinearIssueUpdated('LINEAR-333', 'In Progress', '/test/path');
+
+        // Should skip since state unchanged
+        expect(mockFeatureLoader.update).not.toHaveBeenCalled();
+      });
+
+      it('should skip update if Automaker status would remain unchanged', async () => {
+        const feature = {
+          id: 'test-feature-7',
+          description: 'Test feature',
+          category: 'test',
+          status: 'in_progress', // Already in_progress
+          linearIssueId: 'LINEAR-444',
+        };
+
+        vi.mocked(mockFeatureLoader.findByLinearIssueId).mockResolvedValue(feature as any);
+
+        await service.onLinearIssueUpdated('LINEAR-444', 'In Progress', '/test/path');
+
+        // Should skip since Automaker status wouldn't change
+        expect(mockFeatureLoader.update).not.toHaveBeenCalled();
+
+        // But should update metadata to track lastLinearState
+        const metadata = service.getSyncMetadata('test-feature-7');
+        expect(metadata?.lastLinearState).toBe('In Progress');
+      });
+
+      it('should detect conflict if syncs from both sources within window', async () => {
+        const originalDateNow = Date.now;
+        let currentTime = 1000000;
+        Date.now = vi.fn(() => currentTime);
+
+        const feature = {
+          id: 'test-feature-8',
+          description: 'Test feature',
+          category: 'test',
+          status: 'backlog',
+          linearIssueId: 'LINEAR-555',
+        };
+
+        vi.mocked(mockFeatureLoader.findByLinearIssueId).mockResolvedValue(feature as any);
+        vi.mocked(mockFeatureLoader.update).mockResolvedValue(feature as any);
+
+        // Set metadata indicating recent sync
+        service.updateSyncMetadata({
+          featureId: 'test-feature-8',
+          lastSyncTimestamp: currentTime - 5000, // 5 seconds ago
+          lastSyncStatus: 'success',
+          linearIssueId: 'LINEAR-555',
+          syncCount: 1,
+          syncSource: 'automaker',
+          syncDirection: 'push',
+          lastSyncedAt: currentTime - 5000,
+        });
+
+        await service.onLinearIssueUpdated('LINEAR-555', 'In Progress', '/test/path');
+
+        // Verify conflict was detected
+        const metadata = service.getSyncMetadata('test-feature-8');
+        expect(metadata?.conflictDetected).toBe(true);
+
+        Date.now = originalDateNow;
+      });
+
+      it('should emit linear:sync:completed event on success', async () => {
+        const emitSpy = vi.fn();
+        emitter.subscribe(emitSpy);
+
+        const feature = {
+          id: 'test-feature-9',
+          description: 'Test feature',
+          category: 'test',
+          status: 'backlog',
+          linearIssueId: 'LINEAR-666',
+        };
+
+        vi.mocked(mockFeatureLoader.findByLinearIssueId).mockResolvedValue(feature as any);
+        vi.mocked(mockFeatureLoader.update).mockResolvedValue(feature as any);
+
+        await service.onLinearIssueUpdated('LINEAR-666', 'In Progress', '/test/path');
+
+        // Find the sync:completed event
+        const syncCompletedCall = emitSpy.mock.calls.find(
+          (call) => call[0] === 'linear:sync:completed'
+        );
+        expect(syncCompletedCall).toBeDefined();
+        expect(syncCompletedCall?.[1]).toMatchObject({
+          featureId: 'test-feature-9',
+          direction: 'pull',
+          conflictDetected: false,
+        });
+      });
+
+      it('should emit linear:sync:error event on failure', async () => {
+        const emitSpy = vi.fn();
+        emitter.subscribe(emitSpy);
+
+        const feature = {
+          id: 'test-feature-10',
+          description: 'Test feature',
+          category: 'test',
+          status: 'backlog',
+          linearIssueId: 'LINEAR-777',
+        };
+
+        vi.mocked(mockFeatureLoader.findByLinearIssueId).mockResolvedValue(feature as any);
+        vi.mocked(mockFeatureLoader.update).mockRejectedValue(new Error('Update failed'));
+
+        await service.onLinearIssueUpdated('LINEAR-777', 'In Progress', '/test/path');
+
+        // Find the sync:error event
+        const syncErrorCall = emitSpy.mock.calls.find((call) => call[0] === 'linear:sync:error');
+        expect(syncErrorCall).toBeDefined();
+        expect(syncErrorCall?.[1]).toMatchObject({
+          linearIssueId: 'LINEAR-777',
+          direction: 'pull',
+          error: 'Update failed',
+        });
       });
     });
   });

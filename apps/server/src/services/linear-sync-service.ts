@@ -31,6 +31,9 @@ export interface SyncMetadata {
   syncCount: number;
   syncSource?: 'automaker' | 'linear';
   syncDirection?: 'push' | 'pull';
+  lastLinearState?: string;
+  lastSyncedAt?: number;
+  conflictDetected?: boolean;
 }
 
 /**
@@ -49,6 +52,12 @@ interface FeatureEventPayload {
  * Debounce time window in milliseconds (5 seconds)
  */
 const DEBOUNCE_WINDOW_MS = 5000;
+
+/**
+ * Conflict detection window in milliseconds (10 seconds)
+ * If syncs from both sources occur within this window, flag as conflict
+ */
+const CONFLICT_DETECTION_WINDOW_MS = 10000;
 
 /**
  * LinearSyncService - Manages syncing features to Linear
@@ -611,6 +620,28 @@ export class LinearSyncService {
   }
 
   /**
+   * Map Linear workflow state to Automaker status (reverse mapping)
+   */
+  private mapLinearStateToAutomaker(stateName: string): string {
+    const normalized = stateName.toLowerCase();
+
+    if (normalized.includes('backlog') || normalized.includes('todo')) {
+      return 'backlog';
+    } else if (normalized.includes('in progress') || normalized.includes('started')) {
+      return 'in_progress';
+    } else if (normalized.includes('in review') || normalized.includes('review')) {
+      return 'review';
+    } else if (normalized.includes('done') || normalized.includes('completed')) {
+      return 'done';
+    } else if (normalized.includes('blocked')) {
+      return 'blocked';
+    } else {
+      logger.warn(`Unknown Linear state: ${stateName}, defaulting to backlog`);
+      return 'backlog';
+    }
+  }
+
+  /**
    * Get current Linear issue state
    */
   private async getIssueState(projectPath: string, issueId: string): Promise<string> {
@@ -856,6 +887,164 @@ export class LinearSyncService {
    */
   protected unmarkSyncing(featureId: string): void {
     this.syncingFeatures.delete(featureId);
+  }
+
+  /**
+   * Handle Linear issue updates (inbound sync from Linear to Automaker)
+   * This method is called when a Linear issue is updated externally
+   *
+   * @param linearIssueId - The Linear issue ID that was updated
+   * @param newStateName - The new Linear workflow state name
+   * @param projectPath - The project path (required to find the feature)
+   */
+  async onLinearIssueUpdated(
+    linearIssueId: string,
+    newStateName: string,
+    projectPath: string
+  ): Promise<void> {
+    try {
+      // Find the feature by Linear issue ID
+      if (!this.featureLoader) {
+        logger.error('FeatureLoader not initialized');
+        return;
+      }
+
+      const feature = await this.featureLoader.findByLinearIssueId(linearIssueId);
+      if (!feature) {
+        logger.warn(`No feature found for Linear issue ${linearIssueId}, skipping sync`);
+        return;
+      }
+
+      const featureId = feature.id;
+
+      // Guard: Check if service is running and sync is enabled
+      if (!this.shouldSync(featureId)) {
+        return;
+      }
+
+      // Check if sync is enabled for this project
+      const syncEnabled = await this.isProjectSyncEnabled(projectPath);
+      if (!syncEnabled) {
+        logger.debug(`Linear sync not enabled for project ${projectPath}`);
+        return;
+      }
+
+      // Get sync metadata to check for loop prevention
+      const metadata = this.getSyncMetadata(featureId);
+
+      // Loop prevention: Skip if last sync was from Automaker (outbound push)
+      if (metadata?.syncSource === 'automaker') {
+        // Check if this is a recent sync - if so, this is likely an echo from our own update
+        const timeSinceLastSync = Date.now() - (metadata.lastSyncTimestamp || 0);
+        if (timeSinceLastSync < DEBOUNCE_WINDOW_MS) {
+          logger.debug(
+            `Skipping Linear update for ${featureId}: last sync was from Automaker ${timeSinceLastSync}ms ago (loop prevention)`
+          );
+          return;
+        }
+      }
+
+      // Check if the Linear state has actually changed
+      const lastLinearState = metadata?.lastLinearState;
+      if (lastLinearState === newStateName) {
+        logger.debug(
+          `Skipping Linear update for ${featureId}: state unchanged (${newStateName})`
+        );
+        return;
+      }
+
+      // Map Linear state to Automaker status
+      const newAutomakerStatus = this.mapLinearStateToAutomaker(newStateName);
+
+      // Check if Automaker status would actually change
+      if (feature.status === newAutomakerStatus) {
+        logger.debug(
+          `Skipping Linear update for ${featureId}: Automaker status would remain ${newAutomakerStatus}`
+        );
+        // Update lastLinearState in metadata even though we're not changing status
+        const updatedMetadata: SyncMetadata = {
+          ...metadata,
+          featureId,
+          lastSyncTimestamp: Date.now(),
+          lastSyncStatus: 'success',
+          linearIssueId,
+          syncCount: (metadata?.syncCount || 0) + 1,
+          syncSource: 'linear',
+          syncDirection: 'pull',
+          lastLinearState: newStateName,
+          lastSyncedAt: Date.now(),
+        };
+        this.updateSyncMetadata(updatedMetadata);
+        return;
+      }
+
+      // Mark as syncing to prevent duplicates
+      this.markSyncing(featureId);
+
+      try {
+        // Detect conflicts: if last sync was very recent from either source
+        let conflictDetected = false;
+        if (metadata?.lastSyncedAt) {
+          const timeSinceLastSync = Date.now() - metadata.lastSyncedAt;
+          if (timeSinceLastSync < CONFLICT_DETECTION_WINDOW_MS) {
+            conflictDetected = true;
+            logger.warn(
+              `Conflict detected for feature ${featureId}: syncs from both sources within ${CONFLICT_DETECTION_WINDOW_MS}ms window`
+            );
+          }
+        }
+
+        // Update the feature status in Automaker
+        await this.featureLoader.update(projectPath, featureId, {
+          status: newAutomakerStatus,
+          statusChangeReason: `Synced from Linear (${newStateName})`,
+        });
+
+        // Update sync metadata
+        const updatedMetadata: SyncMetadata = {
+          featureId,
+          lastSyncTimestamp: Date.now(),
+          lastSyncStatus: 'success',
+          linearIssueId,
+          syncCount: (metadata?.syncCount || 0) + 1,
+          syncSource: 'linear',
+          syncDirection: 'pull',
+          lastLinearState: newStateName,
+          lastSyncedAt: Date.now(),
+          conflictDetected,
+        };
+        this.updateSyncMetadata(updatedMetadata);
+
+        // Emit completion event
+        if (this.emitter) {
+          this.emitter.emit('linear:sync:completed', {
+            featureId,
+            direction: 'pull',
+            conflictDetected,
+            timestamp: new Date().toISOString(),
+          });
+        }
+
+        logger.info(
+          `Successfully synced Linear issue ${linearIssueId} to feature ${featureId}: ${newStateName} → ${newAutomakerStatus}${conflictDetected ? ' (conflict detected)' : ''}`
+        );
+      } finally {
+        // Unmark syncing
+        this.unmarkSyncing(featureId);
+      }
+    } catch (error) {
+      logger.error(`Failed to sync Linear issue ${linearIssueId}:`, error);
+
+      // Emit error event
+      if (this.emitter) {
+        this.emitter.emit('linear:sync:error', {
+          linearIssueId,
+          direction: 'pull',
+          error: error instanceof Error ? error.message : 'Unknown error',
+          timestamp: new Date().toISOString(),
+        });
+      }
+    }
   }
 }
 
