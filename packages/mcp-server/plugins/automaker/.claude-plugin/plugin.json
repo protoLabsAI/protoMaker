@@ -25,8 +25,8 @@
       }
     },
     "linear": {
-      "command": "npx",
-      "args": ["-y", "linear-mcp-server"],
+      "command": "node",
+      "args": ["${AUTOMAKER_ROOT}/packages/mcp-server/vendor/linear-mcp-server.js"],
       "env": {
         "LINEAR_API_KEY": "${LINEAR_API_KEY}"
       }
