@@ -228,9 +228,7 @@ export class GitHubIssueChannel implements EscalationChannel {
     // Header
     sections.push('## Escalation Signal');
     sections.push('');
-    sections.push(
-      `This issue was automatically created by the Automaker escalation system.`
-    );
+    sections.push(`This issue was automatically created by the Automaker escalation system.`);
     sections.push('');
 
     // Signal details
@@ -260,10 +258,7 @@ export class GitHubIssueChannel implements EscalationChannel {
       sections.push(`- **Feature ID**: \`${featureId}\``);
 
       // Try to load feature for additional context
-      const feature = await this.config.featureLoader.get(
-        this.config.projectPath,
-        featureId
-      );
+      const feature = await this.config.featureLoader.get(this.config.projectPath, featureId);
 
       if (feature) {
         if (feature.title) {
@@ -378,11 +373,7 @@ export class GitHubIssueChannel implements EscalationChannel {
   /**
    * Create GitHub issue using gh CLI
    */
-  private async createIssue(
-    title: string,
-    body: string,
-    labels: string[]
-  ): Promise<string> {
+  private async createIssue(title: string, body: string, labels: string[]): Promise<string> {
     const labelArg = labels.join(',');
 
     const cmd = `gh issue create --title ${this.shellEscape(title)} --body ${this.shellEscape(body)} --label ${this.shellEscape(labelArg)}`;
