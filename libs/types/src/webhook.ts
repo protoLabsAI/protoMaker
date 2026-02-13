@@ -11,6 +11,7 @@
  * Supported events:
  * - issues: Issue created, updated, or commented
  * - pull_request: PR opened, updated, merged, or closed
+ * - pull_request_review: PR review submitted, edited, or dismissed
  * - push: Code pushed to repository
  * - check_suite: Check suite activity (completed, requested, rerequested)
  * - check_run: Check run activity (created, completed, rerequested, requested_action)
@@ -19,6 +20,7 @@
 export type GitHubWebhookEvent =
   | 'issues'
   | 'pull_request'
+  | 'pull_request_review'
   | 'push'
   | 'check_suite'
   | 'check_run'
@@ -53,6 +55,11 @@ export type GitHubPullRequestAction =
   | 'labeled'
   | 'unlabeled'
   | 'synchronize';
+
+/**
+ * GitHubPullRequestReviewAction - Actions that can occur on pull request reviews
+ */
+export type GitHubPullRequestReviewAction = 'submitted' | 'edited' | 'dismissed';
 
 /**
  * GitHubCheckSuiteAction - Actions that can occur on check suites
@@ -126,6 +133,19 @@ export interface GitHubPullRequest {
     ref: string;
     sha: string;
   };
+}
+
+/**
+ * GitHubPullRequestReview - Simplified GitHub pull request review object
+ */
+export interface GitHubPullRequestReview {
+  id: number;
+  user: GitHubUser;
+  body?: string;
+  state: 'approved' | 'changes_requested' | 'commented' | 'dismissed';
+  html_url: string;
+  submitted_at?: string;
+  commit_id: string;
 }
 
 /**
@@ -250,6 +270,17 @@ export interface GitHubPullRequestWebhookPayload {
 }
 
 /**
+ * GitHubPullRequestReviewWebhookPayload - Webhook payload for pull request review events
+ */
+export interface GitHubPullRequestReviewWebhookPayload {
+  action: GitHubPullRequestReviewAction;
+  review: GitHubPullRequestReview;
+  pull_request: GitHubPullRequest;
+  repository: GitHubRepository;
+  sender: GitHubUser;
+}
+
+/**
  * GitHubPushWebhookPayload - Webhook payload for push events
  */
 export interface GitHubPushWebhookPayload {
@@ -308,6 +339,7 @@ export interface GitHubCheckRunWebhookPayload {
 export type GitHubWebhookPayload =
   | GitHubIssueWebhookPayload
   | GitHubPullRequestWebhookPayload
+  | GitHubPullRequestReviewWebhookPayload
   | GitHubPushWebhookPayload
   | GitHubCheckSuiteWebhookPayload
   | GitHubCheckRunWebhookPayload
