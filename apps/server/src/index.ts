@@ -21,6 +21,8 @@ const __dirname = dirname(__filename);
 dotenv.config({ path: resolve(__dirname, '../../../.env') });
 
 import { execSync } from 'node:child_process';
+import { access, unlink, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
@@ -739,6 +741,27 @@ specGenerationMonitor.startMonitoring();
     logger.warn('[STARTUP-RECOVERY] Failed to run startup recovery:', err);
   }
 
+  // Crash detection: check for clean shutdown marker
+  const cleanShutdownMarker = join(DATA_DIR, '.clean-shutdown');
+  let wasCleanShutdown = false;
+  try {
+    await access(cleanShutdownMarker);
+    wasCleanShutdown = true;
+    await unlink(cleanShutdownMarker); // Remove it — next crash won't have it
+    logger.info('[AUTO-START] Clean shutdown marker found — previous shutdown was graceful');
+  } catch {
+    // No marker = crash recovery
+  }
+
+  if (!wasCleanShutdown) {
+    const crashDelayMs = process.env.AUTO_MODE_CRASH_DELAY_MS || '30000';
+    logger.warn(
+      `[AUTO-START] Previous shutdown was not clean (crash detected). Using ${crashDelayMs}ms cooldown for auto-mode.`
+    );
+    // Override startup delay with longer crash delay
+    process.env.AUTO_MODE_STARTUP_DELAY_MS = crashDelayMs;
+  }
+
   // Auto-start auto-mode if enabled in settings
   try {
     const settings = await settingsService.getGlobalSettings();
@@ -1394,6 +1417,13 @@ process.on('uncaughtException', (error: Error) => {
 // Graceful shutdown
 async function gracefulShutdown() {
   logger.info('Shutting down gracefully...');
+
+  // Write clean shutdown marker so next startup knows this wasn't a crash
+  try {
+    await writeFile(join(DATA_DIR, '.clean-shutdown'), Date.now().toString());
+  } catch (err) {
+    logger.warn('[SHUTDOWN] Failed to write clean shutdown marker:', err);
+  }
 
   await autoModeService.shutdown();
   healthMonitorService.stopMonitoring();
