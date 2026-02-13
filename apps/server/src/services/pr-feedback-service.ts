@@ -627,46 +627,48 @@ After making your decisions, implement the accepted fixes.`;
       // Map threads to structured feedback items
       return threads
         .filter((thread: { isResolved: boolean }) => !thread.isResolved)
-        .map((thread: {
-          id: string;
-          comments: {
-            nodes: Array<{
-              id: string;
-              body: string;
-              author: { login: string };
-              path?: string;
-              line?: number;
-            }>;
-          };
-        }) => {
-          const firstComment = thread.comments?.nodes?.[0];
-          if (!firstComment) return null;
+        .map(
+          (thread: {
+            id: string;
+            comments: {
+              nodes: Array<{
+                id: string;
+                body: string;
+                author: { login: string };
+                path?: string;
+                line?: number;
+              }>;
+            };
+          }) => {
+            const firstComment = thread.comments?.nodes?.[0];
+            if (!firstComment) return null;
 
-          const author = firstComment.author.login.toLowerCase();
-          const isBot =
-            author === 'coderabbitai' ||
-            author.includes('coderabbit') ||
-            author.includes('github-actions') ||
-            author.includes('dependabot');
+            const author = firstComment.author.login.toLowerCase();
+            const isBot =
+              author === 'coderabbitai' ||
+              author.includes('coderabbit') ||
+              author.includes('github-actions') ||
+              author.includes('dependabot');
 
-          // Parse severity and category from comment body
-          const { severity, category, suggestion } = this.parseCommentMetadata(firstComment.body);
+            // Parse severity and category from comment body
+            const { severity, category, suggestion } = this.parseCommentMetadata(firstComment.body);
 
-          return {
-            threadId: thread.id,
-            severity,
-            category,
-            message: this.extractMessage(firstComment.body),
-            location: firstComment.path
-              ? {
-                  path: firstComment.path,
-                  line: firstComment.line,
-                }
-              : undefined,
-            suggestedFix: suggestion,
-            isBot,
-          };
-        })
+            return {
+              threadId: thread.id,
+              severity,
+              category,
+              message: this.extractMessage(firstComment.body),
+              location: firstComment.path
+                ? {
+                    path: firstComment.path,
+                    line: firstComment.line,
+                  }
+                : undefined,
+              suggestedFix: suggestion,
+              isBot,
+            };
+          }
+        )
         .filter(Boolean) as ThreadFeedbackItem[];
     } catch (error) {
       logger.error(`Failed to fetch review threads for PR #${pr.prNumber}:`, error);
