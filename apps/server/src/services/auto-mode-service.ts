@@ -900,11 +900,43 @@ export class AutoModeService {
     );
     let iterationCount = 0;
 
+    // Configurable startup delay before first agent launch (default 10s, 0 to disable)
+    const startupDelayMs = parseInt(process.env.AUTO_MODE_STARTUP_DELAY_MS || '10000', 10);
+    if (startupDelayMs > 0) {
+      logger.info(
+        `[AutoLoop] Startup cooldown: waiting ${startupDelayMs}ms before first agent launch`
+      );
+      await this.sleep(startupDelayMs, projectState.abortController.signal);
+      if (!projectState.isRunning || projectState.abortController.signal.aborted) {
+        logger.info(`[AutoLoop] Auto-mode stopped during startup cooldown for ${worktreeDesc}`);
+        return;
+      }
+      const heapUsage = this.getHeapUsagePercent();
+      if (heapUsage >= this.HEAP_USAGE_STOP_NEW_AGENTS_THRESHOLD) {
+        logger.warn(
+          `[AutoLoop] Heap at ${Math.round(heapUsage * 100)}% after cooldown, stopping auto-mode for ${worktreeDesc}`
+        );
+        projectState.isRunning = false;
+        return;
+      }
+    }
+
     while (projectState.isRunning && !projectState.abortController.signal.aborted) {
       iterationCount++;
       logger.debug(
         `[AutoLoop] 💓 Heartbeat - Iteration ${iterationCount} for ${worktreeDesc} in ${projectPath}`
       );
+
+      // Early heap check — prevent any work when memory is critical
+      const earlyHeapUsage = this.getHeapUsagePercent();
+      if (earlyHeapUsage >= this.HEAP_USAGE_STOP_NEW_AGENTS_THRESHOLD) {
+        logger.warn(
+          `[AutoLoop] High heap (${Math.round(earlyHeapUsage * 100)}%), deferring iteration for ${worktreeDesc}`
+        );
+        await this.sleep(10000, projectState.abortController.signal);
+        continue;
+      }
+
       try {
         // Count running features for THIS project/worktree only
         const projectRunningCount = await this.getRunningCountForWorktree(projectPath, branchName);
