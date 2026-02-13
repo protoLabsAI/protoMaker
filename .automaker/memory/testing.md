@@ -5,9 +5,9 @@ relevantTo: [testing]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 4
-  referenced: 2
-  successfulFeatures: 2
+  loaded: 11
+  referenced: 7
+  successfulFeatures: 7
 ---
 # testing
 
@@ -96,7 +96,161 @@ usageStats:
 - **Root cause:** Monorepo structure: `apps/` and `libs/` are siblings at same depth. Tests in `apps/web/tests/` must traverse up 3 levels to reach workspace root, then into libs.
 - **How to avoid:** Relative paths are fragile (-) but portable across machines (+). Test setup simplicity achieved at path fragility cost.
 
-#### [Pattern] Created E2E Playwright verification tests that specifically check for import/module errors in browser console and page errors, filtering for error types like 'cannot find', 'failed to resolve', 'unexpected identifier' (2026-02-13)
-- **Problem solved:** Build and format checks alone wouldn't catch runtime import resolution failures caused by refactored import paths
-- **Why this works:** TypeScript build succeeds if path aliases exist in `tsconfig.json`, but runtime failures occur if components reference incorrect paths. Playwright tests the actual browser environment where import errors manifest as console errors before the app fully loads.
-- **Trade-offs:** Playwright tests add execution time (~30s) but catch a class of errors (broken import resolution) that static checks miss. Test files are temporary and cleaned up, so they don't add maintenance burden.
+#### [Gotcha] npm pack --dry-run outputs file list to stderr, not stdout. Test assertions on execSync output must capture both or redirect stderr to stdout with 2>&1 (2026-02-13)
+- **Situation:** Initial test was checking output variable for tarball file list - found nothing because output was empty
+- **Root cause:** npm pack writes the summary/file listing to stderr by design, keeping stdout clean for piping the actual tarball
+- **How to avoid:** Required test adjustment, but matches actual npm pack behavior. stderr redirection is standard practice for capturing full command output
+
+#### [Pattern] Synchronization comment + manual/CI-based verification for multi-location type definitions (2026-02-13)
+- **Problem solved:** Two identical copies of 256-line interface definition that must stay synchronized but have no programmatic link
+- **Why this works:** Sync comment serves as (1) documentation for developers to remember both files exist, (2) anchor point for potential CI check that diffs both files. Pure comment doesn't enforce anything but creates visibility
+- **Trade-offs:** Relies on developer discipline or CI check to catch drift. Comment is lightweight and non-intrusive
+
+#### [Gotcha] runCmd must return Promise<{code, stdout, stderr}> structure even for sync commands (2026-02-13)
+- **Situation:** Creating universal CLI helper that abstracts child process execution
+- **Root cause:** Promises force async/await consistency in calling code (no mixed sync/await); returning structured object (not just stdout) enables exit code checking and error diagnostics
+- **How to avoid:** Always async means slight overhead even for fast commands, but enables timeout/cancellation; structured return requires field access vs string interpolation
+
+#### [Pattern] Used hardcoded test data (mockResearch) with pre-calculated expected results (19 gaps for minimal config, 0 gaps for full compliance) to verify function produces identical output to server version (2026-02-13)
+- **Problem solved:** Need to prove extracted function produces byte-identical results without running full server integration tests
+- **Why this works:** Gap checks are deterministic - same input always produces same output. Hardcoded expectations document what 'correct' behavior looks like and catch regressions immediately if gap checks are modified
+- **Trade-offs:** Test brittleness if gap checks intentionally change (requires test update). Clarity gain: tests document the exact gap count expectations for different project configurations
+
+#### [Gotcha] Playwright file-system tests verified template files exist and contain placeholders by reading from dist/ after build (2026-02-13)
+- **Situation:** Needed to verify postbuild script actually copied files and they contain {{variable}} placeholders
+- **Root cause:** File existence + content checks are the only way to verify postbuild worked. Running tests post-build ensures dist/templates/ is already populated. Tests must run INSIDE the package directory (join(process.cwd(), 'packages/create-protolab')) to resolve paths correctly.
+- **How to avoid:** Easier: Catches real integration failures. Harder: Tests are integration tests (slower, require full build), fragile to path changes
+
+#### [Gotcha] Pure synchronous data transformation function has no UI or integration points, making Playwright tests inapplicable. Unit tests would test the algorithm, not integration (2026-02-13)
+- **Situation:** Feature was extracted as a pure function; initial expectation was to create Playwright test, but the function has no UI surface or side effects to verify through browser automation
+- **Root cause:** Playwright tests DOM/user interactions. This function transforms data structures. Testing it requires input/output assertions on data, not browser events. Unit tests (Jest, Vitest) are the correct tool
+- **How to avoid:** Easier: correct test tool selection. Harder: recognizing that not all code needs E2E testing; pure functions benefit from unit tests instead
+
+#### [Gotcha] Verification tests use Playwright (intended for E2E) instead of Vitest (unit tests) but are actually unit tests (2026-02-13)
+- **Situation:** Temporary verification test was written to validate template system before committing, but was created with Playwright instead of Vitest which is the project's unit test framework
+- **Root cause:** Likely developer convenience - Playwright was fresh in mind or available. Worked fine for the temporary test but added unnecessary dependency
+- **How to avoid:** Pro: Test ran successfully and was deleted after verification. Con: Added 60-100MB Playwright install that wasn't needed for unit testing
+
+#### [Pattern] Inline verification test (verify-cli.test.mjs) as single-file ES module rather than Jest/Vitest integration (2026-02-13)
+- **Problem solved:** Need to verify CLI from shell spawn perspective (exit codes, stdio capture, arg parsing) without npm test infrastructure overhead
+- **Why this works:** Node spawn child process testing requires stdio piping that Jest mocks might hide. Single ES module avoids build/transpile delays during dev. Spawns real CLI process = tests actual binary behavior not test framework behavior
+- **Trade-offs:** Easier: fast iteration, accurate exit code testing, no framework noise. Harder: manual assertion library, no snapshot testing, must clean up after itself
+
+#### [Pattern] Verification script that tests directory structure, file content, and idempotency in sequence before cleanup (2026-02-13)
+- **Problem solved:** Init phase creates critical infrastructure — incorrect structure or content breaks downstream agents and templates
+- **Why this works:** Manual verification script caught TypeScript config issue before PR. The script creates a temp directory, runs init, checks all directories exist, validates file content (checks for key phrases like '# test-project' and 'TypeScript'), runs init again to test idempotency, then cleans up. This catches: missing directories, empty files, wrong template fragments, and idempotency failures.
+- **Trade-offs:** Verification script is one-time use (not in test suite), but it's executable documentation. Found real bugs that automated tests might miss. Trade-off: manual maintenance if init logic changes.
+
+#### [Pattern] Created executable CLI test that validates both JSON structure AND compliant/gap item field requirements using property-level assertions (2026-02-13)
+- **Problem solved:** Gap analysis returns complex nested objects (gaps[], compliant[], summary). Frontend and downstream consumers need guaranteed field presence, not just type correctness
+- **Why this works:** Testing JSON.parse() alone proves output is valid JSON but doesn't catch missing fields—a gap object without 'effort' will parse fine but crash frontends trying to access gap.effort. Property-level assertions (expect(gap).toHaveProperty('effort')) catch schema regressions early
+- **Trade-offs:** Easier: Clear error messages when fields missing ('expected gap to have property effort'). Harder: Test is verbose (6 nested assertions per gap item), must update tests if schema changes
+
+#### [Gotcha] Root vitest config interferes with package-level tests in monorepo. Must create local vitest.config.ts at package level to isolate test environment. (2026-02-13)
+- **Situation:** Tests in packages/create-protolab were inheriting root vitest configuration which had incompatible globals and environment settings, causing test failures.
+- **Root cause:** Monorepo packages need isolated test configs. Root config may include workspace-wide settings (like globals: true) that conflict with individual package requirements. Package-level configs take precedence in vitest.
+- **How to avoid:** Each package now maintains its own vitest.config.ts (slight duplication) but gains isolation. Test runs are faster and more reliable per-package.
+
+#### [Pattern] Tests verify both file creation AND correct variable interpolation per package manager. Each test covers: directory structure, all 4 workflows, package manager placeholder replacement, correct setup action presence/absence. (2026-02-13)
+- **Problem solved:** CI phase has multiple dimensions of correctness: directory structure, file count, content accuracy, and conditional logic (setup actions).
+- **Why this works:** Single-dimension tests miss entire classes of bugs. Testing placeholder replacement catches errors in regex/interpolation logic. Testing conditional setup actions (bun without pnpm/action-setup) catches logic errors in conditions.
+- **Trade-offs:** Multi-dimensional tests are more complex to write but catch more bugs. Adding 4 package manager variations increases test count but provides confidence across all supported scenarios.
+
+### Verification test uses execSync to check TypeScript compilation and Node.js syntax validation rather than runtime execution (2026-02-13)
+- **Context:** Need to validate branch-protection.ts compiles and produces valid JavaScript without actually calling GitHub API
+- **Why:** execSync('node -c') validates syntax without importing/executing; avoids dependency on gh CLI or GitHub auth during test. Tests assertions about file structure and compilation, not behavior
+- **Rejected:** Importing the module directly (would fail if gh CLI missing), mocking GitHub API (too heavy for syntax validation), only checking TS source (misses tsc errors)
+- **Trade-offs:** Doesn't test actual phase execution logic; but that requires gh CLI auth which shouldn't be a test dependency. Syntax validation catches most implementation bugs anyway
+- **Breaking if changed:** If phase adds top-level gh CLI calls (e.g., 'which gh' at import time), node -c validation will fail and hide the real problem
+
+#### [Gotcha] Manual verification required for CLI tools because automated testing of setup/teardown is fragile (2026-02-13)
+- **Situation:** No automated test suite written. Implementation verified through manual test execution.
+- **Root cause:** Setup tools are inherently fragile to automate: they create real files, git repos, and network calls. Playwright designed for web UI, not CLI. Mock-based tests lose coverage of actual file I/O errors. Real setup requires real environment.
+- **How to avoid:** Easier: manual verification catches real-world issues (permission errors, missing git, etc.). Harder: not reproducible in CI/CD (requires real environment setup).
+
+#### [Pattern] Used temporary directory + cleanup pattern for verification test rather than mocking bd CLI or requiring bd to be installed (2026-02-13)
+- **Problem solved:** Function directly executes system commands (bd init, which bd) and modifies filesystem (.beads/ directory). Can't unit test in isolation
+- **Why this works:** Integration testing with real filesystem catches actual failure modes (bd CLI missing, permissions, YAML parsing). Mock-based tests would pass but fail in production. Temporary directory ensures no pollution of actual projects
+- **Trade-offs:** Slower test but higher confidence. Test requires cleanup discipline. Test depends on runtime environment (bd CLI availability)
+
+### Created standalone Node.js verification script instead of Jest/vitest tests. Script was deleted after verification to avoid test infrastructure debt. (2026-02-13)
+- **Context:** New package in early development. Needed to verify core functionality (file generation, idempotence, content integrity) before integration.
+- **Why:** Standalone script allows quick verification without configuring entire test framework. Deletion after verification avoids accumulating test infrastructure for a simple, deterministic function. The function's API is stable so regression risk is low.
+- **Rejected:** Could have added Jest/vitest setup with permanent tests, but for a single-purpose phase with clear requirements, the cost/benefit of test infrastructure doesn't justify it. Could have skipped testing entirely, but verification script caught the __dirname bug early.
+- **Trade-offs:** No permanent test suite means future changes require manual re-verification. But the function is simple enough that the risk is manageable, and the saved build/ci complexity is worth it.
+- **Breaking if changed:** If future developers add similar phases, they should reuse a single verification script pattern rather than creating multiple ad-hoc scripts, otherwise it becomes unmaintainable. The pattern only works for deterministic, simple functions.
+
+#### [Gotcha] Switched from Playwright test runner to simple Node.js verification script due to module import errors in test environment (2026-02-13)
+- **Situation:** Initial approach used Playwright as specified in docs, but faced module resolution issues with @automaker/types and @automaker/utils imports.
+- **Root cause:** Playwright is designed for E2E browser testing. For pure TypeScript library validation, Node.js runtime is simpler and has correct module resolution via tsconfig. Avoids webpack/bundler complexity.
+- **How to avoid:** Lost browser automation capability (not needed here) but gained faster test execution and simpler debugging. Pure logic doesn't benefit from Playwright.
+
+### Create Node.js verification script instead of Playwright test for API module validation (2026-02-13)
+- **Context:** Feature requires verification but is Discord REST API integration (not browser automation), yet test framework defaults to Playwright
+- **Why:** Playwright is for browser automation; testing API modules with it is a category error. Module verification (imports, function signatures, error handling) is better served by direct Node.js script with mock env vars
+- **Rejected:** Force Playwright test (semantic mismatch), skip verification (risk undetected regressions)
+- **Trade-offs:** Easier: direct testing of function behavior without browser overhead. Harder: can't test actual Discord API calls without real credentials/guild
+- **Breaking if changed:** If verification script is deleted, no automated check that module exports are valid; future refactors may silently break imports
+
+#### [Gotcha] Shell echo with complex multiline code strings causes quoting and escaping failures in dynamically generated test files. Using fs.writeFileSync instead eliminates shell injection risk and syntax errors. (2026-02-13)
+- **Situation:** Initial attempt to create test files using execSync with echo command failed due to shell escaping issues when code contained quotes, newlines, and special characters.
+- **Root cause:** Shell commands require careful escaping and have limited string handling. fs.writeFileSync writes raw content directly without interpretation, making it safer for code generation.
+- **How to avoid:** Requires async/await in test functions, but gains reliability and readability. The minor async overhead is negligible vs the stability gain.
+
+#### [Pattern] Integration tests for npm packages must test the complete packaging lifecycle: build → npm pack → extract tarball → npm install in temp directory → import/execute. Each stage is critical to validate. (2026-02-13)
+- **Problem solved:** Simply testing import after build doesn't validate that npm pack includes all necessary files, or that the published package will work when installed elsewhere.
+- **Why this works:** npm pack can silently exclude files due to .npmignore, missing package.json exports fields, or incorrect build output. Only testing the full published package reveals these issues before release.
+- **Trade-offs:** Integration tests are slower (npm install adds 5-15s per test) but catch production issues impossible to find in unit tests.
+
+### Test fixture must mirror real-world repository structure (package.json with type field, src/ directory with .ts files, README) rather than minimal stub. Gap analysis tests validate against fixture expecting realistic structure. (2026-02-13)
+- **Context:** Early fixture was too minimal. Gap analysis tests then validated against a structure that didn't match what users would actually encounter, making tests less useful.
+- **Why:** Gap analysis is designed to audit real repositories and recommend missing best practices. Testing against minimal fixtures doesn't validate that recommendations work for realistic projects.
+- **Rejected:** Minimal fixtures with just package.json - these pass trivially and don't exercise the gap analysis logic that matters most.
+- **Trade-offs:** Fixture setup is more complex, but tests now validate meaningful real-world scenarios. The fixture serves as documentation of expected repository structure.
+- **Breaking if changed:** If fixture structure changes, gap analysis recommendations might break in ways that wouldn't be caught.
+
+#### [Gotcha] npm pack from monorepo requires built dist/ with correct exports. If build:packages hasn't run or dist/ is stale, npm pack includes source files instead of compiled output, causing module import failures in tests. (2026-02-13)
+- **Situation:** Tests sometimes passed and sometimes failed depending on whether dist/ was current. This non-determinism was hard to debug.
+- **Root cause:** npm pack reads package.json exports field and includes whatever files are referenced. If exports point to dist/index.js but dist/ is outdated, npm pack includes source .ts files which can't be imported directly.
+- **How to avoid:** Each test run requires rebuild (5-10s overhead), but guarantees tests reflect actual published package. Alternative is flaky non-deterministic tests.
+
+### Separate temp directory cleanup into afterAll hook (OS-level cleanup) rather than manual cleanup in each test. Prevents stale test directories from accumulating and isolates test pollution. (2026-02-13)
+- **Context:** Manual cleanup in each test could be skipped if test fails, leaving temp directories. Also increases individual test code size.
+- **Why:** Centralized cleanup in afterAll is guaranteed to run exactly once after all tests complete, regardless of pass/fail. It's also the conventional Jest/Vitest pattern.
+- **Rejected:** Per-test cleanup with try/finally - increases boilerplate in each test and makes tests harder to read.
+- **Trade-offs:** Slightly delays test completion but ensures no orphaned temp directories. Makes test code cleaner and side effects more obvious.
+- **Breaking if changed:** If afterAll cleanup is removed, test runs accumulate temp directories in OS temp space, eventually causing disk space issues or subsequent test failures due to path conflicts.
+
+#### [Pattern] Integration tests for dual-format packages (ESM and CJS) require separate test directories with different package.json type fields and require/import syntax. Each format's behavior is unpredictable in cross-format contexts. (2026-02-13)
+- **Problem solved:** Single test directory can't reliably test both formats because Node's module resolution caches decisions based on type field and directory state.
+- **Why this works:** Node.js treats .mjs and .cjs files differently depending on parent directory's package.json type field. Testing both requires isolated contexts to prevent cache pollution.
+- **Trade-offs:** Test code is slightly more verbose (two separate test blocks) but guarantees each format is validated in its correct context.
+
+### Matrix exclusion strategy: explicitly excluded yarn on Windows to reduce CI combinations from 27 to 24 while maintaining coverage (2026-02-13)
+- **Context:** Creating comprehensive cross-platform CI matrix for Node.js package manager compatibility (3 OS × 3 Node versions × 3 package managers = 27 combinations)
+- **Why:** Yarn has known Windows compatibility issues and creates redundant coverage when npm is already tested on Windows. Reduces CI cost/time without meaningful loss of test coverage.
+- **Rejected:** Full Cartesian product (27 combinations) - unnecessarily expensive; single-OS matrix - insufficient cross-platform validation
+- **Trade-offs:** Reduces CI runtime by ~11% but introduces risk if Windows-specific yarn issue surfaces post-publish. Acceptable risk given yarn's declining market share.
+- **Breaking if changed:** If Windows yarn support becomes critical requirement, must regenerate matrix. CI won't catch Windows-yarn edge cases until added back.
+
+#### [Gotcha] Package manager detection via lockfile presence is order-dependent and brittle when multiple lockfiles exist (2026-02-13)
+- **Situation:** Implemented detection as: pnpm-lock.yaml → pnpm, else yarn.lock → yarn, else npm. Fixtures created with single lockfile each to avoid ambiguity.
+- **Root cause:** Simple, deterministic detection without adding npm/pnpm/yarn CLI invocations. Avoids dependency on tool availability during detection phase.
+- **How to avoid:** Fast and simple but fails silently if fixture has multiple lockfiles. Real-world repos sometimes have legacy lockfiles.
+
+#### [Pattern] Conditional CI steps using matrix variables (`if: matrix.package-manager == 'npm'`) to route fixture tests through correct package manager (2026-02-13)
+- **Problem solved:** Need to run same fixture suite but with different install/run commands depending on package manager (npm install vs pnpm install vs yarn install)
+- **Why this works:** Avoids creating separate fixture per package manager or duplicating test logic. Single fixture definition tested by all three managers. GitHub Actions matrix variables enable clean branching.
+- **Trade-offs:** Conditional steps add ~3 extra lines per operation but eliminate fixture duplication. More readable than nested shell conditionals.
+
+### Minimal but complete fixtures: each includes package.json + lockfile + at least one source file, no external dependencies (2026-02-13)
+- **Context:** Balancing fixture realism (must detect real package manager signals) vs CI speed (minimize install time on 24 matrix combinations)
+- **Why:** Lightweight fixtures reduce CI wall-clock time from ~8min to ~3min per combination. Lockfile presence is sufficient to validate detection logic. Adding dependencies adds no test value.
+- **Rejected:** Heavy fixtures with real dependencies - 10x slower; fixture-less testing - misses real-world lockfile signals; mocked lockfiles - doesn't validate actual tool behavior
+- **Trade-offs:** Fixtures don't validate that install actually works with real dependencies, but that's npm/pnpm/yarn's responsibility. Detection + basic file creation is sufficient for this tool's scope.
+- **Breaking if changed:** If tool logic changes to parse lockfile content (e.g., monorepo detection), current minimal fixtures become insufficient and must be expanded.
+
+#### [Pattern] Integration tests validate external behavior (file creation, CLI execution) rather than internal methods, using actual fixture repos as test subjects (2026-02-13)
+- **Problem solved:** Testing package detection and project scaffolding tool that must work across package managers and platforms
+- **Why this works:** External behavior is what end users care about. Mocking package managers is fragile - unit tests would pass but real `npm install` could fail differently. Real fixtures validate actual tool behavior.
+- **Trade-offs:** Slower test execution (spins up real fs operations) but catches real-world failures. Higher fidelity = higher confidence in tool reliability.

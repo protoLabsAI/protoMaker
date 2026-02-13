@@ -379,6 +379,7 @@ interface Feature {
   isEpic?: boolean; // True if this is an epic (container feature)
   epicId?: string; // Parent epic ID (for child features)
   epicColor?: string; // Badge color (hex)
+  isFoundation?: boolean; // Downstream deps wait for merge (not just review)
 }
 ```
 

@@ -5,7 +5,7 @@ relevantTo: [ui]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 0
+  loaded: 1
   referenced: 0
   successfulFeatures: 0
 ---
@@ -69,3 +69,10 @@ usageStats:
 - **Rejected:** Default-collapsed hides the feature from new users. Always-expanded wastes space on dashboards with multiple projects.
 - **Trade-offs:** Expanded state takes more vertical space but improves discoverability. Users familiar with the dashboard can collapse to reclaim space.
 - **Breaking if changed:** If UX research shows users immediately collapse the section, default should flip to closed. Conversely, if users never expand it when closed, the collapsible feature is unnecessary overhead.
+
+### Used @clack/prompts spinner+multi-select for UX instead of simple console.log, with automatic pre-selection of all recommended phases (2026-02-13)
+- **Context:** Gap analysis returns severity levels (critical/recommended/optional) but CLI needed to decide which phases to run without overwhelming users
+- **Why:** @clack/prompts provides visual hierarchy (spinners for processing, color-coded severity, multi-select with defaults). Pre-selecting 'recommended' severity items matches ProtoLabs mental model—user sees what's advised and can customize. Spinner feedback prevents perception of hangs during 'research'
+- **Rejected:** Alternative 1: Automatically run all phases without prompt. Breaks workflows where user wants selective setup. Alternative 2: Single-select radio buttons instead of multi-select. Rejected because users may want mixed critical+optional (skip recommended for speed)
+- **Trade-offs:** Easier: User confidence (visual feedback, sensible defaults). Harder: CLI code complexity (+50 lines for prompt logic), interactive mode blocked for JSON/automation
+- **Breaking if changed:** If default selection is removed (all phases deselected), users hit the prompt with nothing selected and must manually check boxes—UX regression. If spinner is removed during research phase, users assume CLI hung

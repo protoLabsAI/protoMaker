@@ -211,6 +211,14 @@ export function areDependenciesSatisfied(
       // When skipping verification, only block if dependency is currently running or in progress
       return dep.status !== 'running' && dep.status !== 'in_progress';
     }
+
+    // Foundation dependencies require 'done' (merged) — 'review' is NOT sufficient.
+    // This prevents downstream agents from starting on stale worktrees when the
+    // foundation (e.g., package scaffold) hasn't been merged to main yet.
+    if (dep.isFoundation) {
+      return dep.status === 'done' || dep.status === 'completed' || dep.status === 'verified';
+    }
+
     // Default: require 'completed', 'verified', 'done' (PR merged), or 'review' (PR open)
     // 'done' = PR merged, final state
     // 'review' = PR created and under review, work is complete
@@ -239,8 +247,14 @@ export function getBlockingDependencies(feature: Feature, allFeatures: Feature[]
 
   return feature.dependencies.filter((depId: string) => {
     const dep = allFeatures.find((f) => f.id === depId);
+    if (!dep) return true; // Missing dependency is blocking
+
+    // Foundation deps require 'done' (merged) — 'review' is NOT sufficient
+    if (dep.isFoundation) {
+      return dep.status !== 'done' && dep.status !== 'completed' && dep.status !== 'verified';
+    }
+
     return (
-      dep &&
       dep.status !== 'completed' &&
       dep.status !== 'verified' &&
       dep.status !== 'done' &&
@@ -284,8 +298,20 @@ export function getBlockingDependenciesFromMap(
   const blockingDependencies: string[] = [];
   for (const depId of dependencies) {
     const dep = featureMap.get(depId);
+    if (!dep) {
+      blockingDependencies.push(depId);
+      continue;
+    }
+
+    // Foundation deps require 'done' (merged) — 'review' is NOT sufficient
+    if (dep.isFoundation) {
+      if (dep.status !== 'done' && dep.status !== 'completed' && dep.status !== 'verified') {
+        blockingDependencies.push(depId);
+      }
+      continue;
+    }
+
     if (
-      dep &&
       dep.status !== 'completed' &&
       dep.status !== 'verified' &&
       dep.status !== 'done' &&

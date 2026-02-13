@@ -6,8 +6,8 @@ importance: 0.7
 relatedFiles: []
 usageStats:
   loaded: 4
-  referenced: 3
-  successfulFeatures: 3
+  referenced: 2
+  successfulFeatures: 2
 ---
 # architecture
 
@@ -471,60 +471,327 @@ usageStats:
 - **Why this works:** Hierarchical settings allow cost-free opt-out at multiple levels. Parent `enabled` flag kills all ceremony logic. Feature-specific flag provides fine-grained control without startup overhead.
 - **Trade-offs:** Extra condition at runtime (+/-) is negligible. Flexibility gained outweighs small cost. Default-true for both prevents silent disablement surprises (+).
 
-### Backward-compatible type re-exports in app-store.ts during gradual slice extraction (2026-02-13)
-- **Context:** 4,268-line monolithic store split into 5 domain slices. 173 files import from app-store; only 7 critical components updated to use new slices directly.
-- **Why:** Allows extraction to proceed without forcing immediate updates across entire codebase. Eliminates cascading import failures that would block feature completion. Enables incremental migration of components as they're modified for other reasons.
-- **Rejected:** Force-update all 173 imports immediately (blocks feature until complete), or extract without re-exports (breaks all downstream code, cascading failures)
-- **Trade-offs:** Short-term: re-exports mask unused imports, minor performance cost from indirection. Long-term: creates debt—components don't know which slice to import from. Mitigation: incremental cleanup optional, not blocking.
-- **Breaking if changed:** If re-exports removed without updating imports, 166 files fail to build. Re-exports ARE the migration bridge—removing prematurely breaks the codebase.
+### Dual ESM/CJS builds with separate tsconfig files and output directories (dist/ for ESM, dist-cjs/ for CJS) rather than single transpilation target (2026-02-13)
+- **Context:** Package declared as type:module but needs to support both import and require consumers
+- **Why:** ESM-declared packages treat .js files as ES modules. CJS consumers cannot use .js files directly. Separate outputs allow each format to use correct extensions (.js for ESM, .cjs for CJS) without conflicts
+- **Rejected:** Single build with conditional exports - would require either dual extension output from one tsconfig or runtime path resolution, both fragile
+- **Trade-offs:** Doubles build complexity and output size, but enables true dual-format compatibility. npm pack size increases but consumers get correct format
+- **Breaking if changed:** Removing separate tsconfig.cjs.json breaks CJS consumers - they'd try to require .js files from an ESM package, failing silently or with module errors
 
-#### [Gotcha] Keyboard shortcut utility functions (parseShortcut, formatShortcut) required relocation from app-store to settings-store (2026-02-13)
-- **Situation:** These utilities were originally in app-store.ts. When extracting settings-store.ts, extracting the state was simple but utilities remained orphaned in the original file. Components importing from app-store for utilities only caused unnecessary coupling.
-- **Root cause:** Utilities should live in the same file as the state that uses them. This prevents circular dependencies and co-locates related logic. Components should import utilities from settings-store, not app-store.
-- **How to avoid:** Easier: utilities and state co-located, clear import path. Harder: required identifying all utility usage and updating imports.
+#### [Pattern] Postbuild script copies static assets (templates/) to compiled output directory (dist/templates/) rather than treating them as part of source or keeping separate (2026-02-13)
+- **Problem solved:** Templates directory needed in npm package but should not be in git-ignored dist/ during development
+- **Why this works:** Decouples template files from build system. Build is the single source of truth for what's published. Copying during postbuild ensures templates/ is always sync'd with dist/ state
+- **Trade-offs:** Requires postbuild step execution but makes published package size/content deterministic and independent of template changes between builds
 
-#### [Pattern] Extraction order: largest domain first (terminal-store ~1000 lines), then medium (ai-models, worktree), then small (settings, chat). No persist middleware on any slice. (2026-02-13)
-- **Problem solved:** 5 stores extracted from monolith. No localStorage persistence, settings sync via API (use-settings-sync.ts). All stores use basic Zustand `create()` without persist.
-- **Why this works:** Extracting largest slice first maximizes lines-of-code reduction early, validates extraction pattern, reduces final app-store size faster. No persist middleware because settings are already synced server-side; persisting would create sync conflicts and stale state problems.
-- **Trade-offs:** Benefit: Extracted terminal first validated entire pattern before investing in 4 more slices. Cost: No offline capability, but API sync is source of truth. If persist were added, would need conflict resolution logic.
+### .npmignore explicitly excludes src/, tests/, and config files rather than using files field inclusion-list approach (2026-02-13)
+- **Context:** Need to publish only compiled output and templates, not source or test files
+- **Why:** Exclusion is simpler when there are many file types to exclude (src/, tests/, tsconfig files, build scripts, etc). files field requires listing every path to include - fragile and verbose
+- **Rejected:** files field with ['dist', 'dist-cjs', 'templates', 'package.json'] - requires maintenance as new included files added; implicit inclusion of other files if pattern missed
+- **Trade-offs:** .npmignore is declarative and defensive (assumes everything included unless stated). Slightly slower npm pack scanning but much more maintainable
+- **Breaking if changed:** Removing .npmignore allows src/ and test files into published package - increases tarball size and exposes implementation details
 
-### Stopped final reduction at 3,414 lines for app-store.ts instead of continuing to <1,000 lines target (2026-02-13)
-- **Context:** Initial goal: reduce app-store from 4,268 to <1,000 lines. Extracted 5 slices (1,000 + 500 + 800 + 600 + 250 = 3,150 lines). Final app-store: 3,414 lines (still ~80% oversized vs 1,000 target).
-- **Why:** Remaining 3,414 lines are tightly coupled: projects, features/kanban, board backgrounds, pipeline config. Further extraction would require architectural refactoring of how projects/features relate to global app state. Cost-benefit unfavorable: complexity introduced > value gained for current codebase.
-- **Rejected:** Continue extracting project-store, features-store, board-store (requires refactoring project/feature initialization, board subscriptions, and app-wide state coherence. High breaking risk, diminishing returns)
-- **Trade-offs:** Benefit: 20% reduction achieved, clear domain slices established, pattern validated. Cost: app-store still large. Remaining work is optional/incremental. Team can improve incrementally without blocking.
-- **Breaking if changed:** If remaining state were forcibly extracted without refactoring initialization order and project-wide state bindings, projects would fail to load and board updates would break. The remaining 3,414 lines represent tight coupling that's OK to preserve until a clearer architectural need emerges.
+### CLI entry point (src/cli.ts) is separate file from main export (src/index.ts) rather than single-file dual-export (2026-02-13)
+- **Context:** Package exports main function for library use and bin entry point for CLI use
+- **Why:** Separation allows each use case to have appropriate side effects. CLI can initialize readline, parse process.argv, and exit; library main() is pure export. Consumers can tree-shake unused CLI code
+- **Rejected:** Single index.ts with conditional export - mixes concerns, harder to test independently, library consumers would bundle CLI code unnecessarily
+- **Trade-offs:** Requires two entry points but enables better code splitting and clearer intent. bin field points directly to dist/cli.js, avoiding indirection
+- **Breaking if changed:** Merging cli.ts into index.ts couples CLI side effects to library export - consumers importing main would trigger CLI initialization on import
 
-#### [Gotcha] Component import scope underestimated: 173 files import from app-store, but only 7 critical files actually use extracted functionality directly (2026-02-13)
-- **Situation:** Initial assumption: updating all 173 imports is necessary. Reality: most imports are for re-exported types or unrelated state. Only components actively using extracted state (TerminalPanel, ChatHistory, WorktreePanel, KeyboardMap, etc.) needed updates.
-- **Root cause:** Many imports are for types that didn't move, or for state that remained in app-store. Re-exports satisfy those imports. Forcing updates to 173 files would create churn without benefit.
-- **How to avoid:** Current: 7 updates required, 166 still use re-exports. Benefit: reduced scope, lower risk. Cost: re-exports create mild technical debt (should migrate as components are touched).
+#### [Pattern] Conditional exports (require vs import) in package.json pointing to different file extensions (.cjs vs .js) rather than same file for both (2026-02-13)
+- **Problem solved:** Supporting both ESM and CJS consumers requires providing each with correct module format
+- **Why this works:** Node.js module resolution respects conditional exports - allows single package.json to direct each consumer to their expected format without ambiguity or runtime detection
+- **Trade-offs:** Requires maintaining two build outputs but creates zero runtime overhead and works with all bundlers/loaders correctly
 
-### Moved domain-specific components to `components/shared/` or view-specific directories BEFORE updating imports, allowing Git to track moves as renames rather than delete+add operations (2026-02-13)
-- **Context:** Refactoring 23 domain-specific components out of the shadcn/ui-compliant `components/ui/` directory
-- **Why:** Git rename detection requires the file to exist at the new location before the old reference is removed from imports. Doing this in reverse (updating imports first) causes Git to see deletions, losing history and causing merge conflicts in concurrent branches.
-- **Rejected:** Update all imports first, then move files. This causes Git to treat moves as delete+add, losing blame history and making cherry-picks/rebases harder.
-- **Trade-offs:** Must coordinate file moves across 23 files with import updates across 73+ files. Easier to track as renames (good for history) but requires two-phase refactoring (move first, then import-hunt).
-- **Breaking if changed:** Changing the order (imports before moves) breaks Git history tracking and complicates future rebases/cherry-picks into feature branches that reference the old locations.
+### Extracted pure function with zero external dependencies into standalone package rather than keeping it in monorepo service layer (2026-02-13)
+- **Context:** researchRepo() function in repo-research-service.ts needed to be reusable outside the main server, but was tightly coupled to the service structure
+- **Why:** Pure functions with no external deps (only Node.js builtins) are ideal candidates for package extraction. No version management issues, no circular deps, no auth/context passing needed. Enables reuse in create-protolab CLI without dragging server infrastructure
+- **Rejected:** Could have kept it in server and imported from there, but that would require create-protolab to depend on @automaker/server (huge bloat). Could have rewritten logic in create-protolab, but that duplicates 652 lines and creates maintenance burden
+- **Trade-offs:** Extraction adds new package surface but gains true reusability. Upside: create-protolab stays lightweight. Downside: two places to maintain types/utils if not carefully unified
+- **Breaking if changed:** If this function gains dependencies on @automaker/* packages later (auth, caching, logging from shared libs), the package extraction fails - becomes unmaintainable. Must keep this function pure or extraction was wrong
 
-#### [Gotcha] Two moved components (`hotkey-button.tsx`, `git-diff-panel.tsx`) had relative imports to other UI primitives (`../button`, `../card`). These broke when moved to `components/shared/` because the relative path no longer resolves. (2026-02-13)
-- **Situation:** Automated `sed` replacement of import paths from `@/components/ui/*` didn't catch internal relative imports within component files
-- **Root cause:** The search strategy (`grep -r "from '@/components/ui/"`) only found absolute imports in consuming code, not relative imports within the component files themselves. Components written to live in one directory structure reference siblings via relative paths.
-- **How to avoid:** Relative imports keep interdependencies explicit locally but break during refactoring. Absolute imports are refactor-safe but create circular dependency risks if not carefully managed.
+#### [Gotcha] Git command failures (like branch protection checks) initially failed silently; had to enhance runCmd() to log warnings instead of swallowing errors (2026-02-13)
+- **Situation:** Extracted function inherited git error handling from original service - errors were caught but not surfaced, making debugging hard when moving to new package context
+- **Root cause:** Function works fine in service context where git failures are infrequent, but in CLI extraction context where function is called in isolation, silent failures hide real problems. Users need visibility into what git checks failed
+- **How to avoid:** Added logging overhead but gained observability. CLI users can now see why research returned empty git branch, DNS check, etc. Cost: slightly noisier logs if git is misconfigured
 
-### Organized moved components by usage pattern: shared components (used by 2+ views) to `components/shared/`, view-specific components to `components/views/{view-name}/components/` (2026-02-13)
-- **Context:** 23 domain-specific components were intermingled with true UI primitives in `components/ui/`
-- **Why:** Separates concerns: primitives are reusable, framework-agnostic, theme-aware. Shared domain components are business logic with shared state. View-specific components are tightly coupled to one feature. This hierarchy makes dependencies explicit and prevents accidental coupling.
-- **Rejected:** Flat structure (keep all in one shared directory). Unclear from imports whether a component is view-specific or reusable. Makes it harder to enforce dependency direction (view-specific shouldn't depend on primitives directly).
-- **Trade-offs:** More directory nesting increases friction for import paths but improves discoverability. Clear from import path whether you're using a primitive or domain component. Prevents the original problem (domain logic leaking into the UI primitive library).
-- **Breaking if changed:** If all components stay in `components/ui/`, the shadcn/ui compliance is lost and the directory becomes a dumping ground. Dependencies become implicit, making refactoring and testing harder. Future developers won't know which components are safe to modify.
+#### [Pattern] Created local type definitions and utility stubs (types.ts, utils.ts) instead of importing from @automaker/* packages (2026-02-13)
+- **Problem solved:** Original function imported RepoResearchResult from @automaker/types and createLogger from @automaker/utils. Extraction required breaking these external deps
+- **Why this works:** Package must be self-contained to avoid coupling create-protolab to the main monorepo. Copying types.ts (interface only, no logic) is cost-free. createLogger() stub is minimal (~5 lines) - only used for console output. This isolation pattern allows the package to evolve independently and be vendored/published separately
+- **Trade-offs:** Duplication of types is minimal (interface definitions only). Gain: zero runtime deps. Lose: if core types change, must manually sync. Mitigation: types are stable, changes unlikely
 
-#### [Gotcha] Barrel exports (index.ts files) in `components/shared/` and `components/views/board-view/components/` were not automatically created during file moves. Imports needed explicit export statements added to new index.ts files. (2026-02-13)
-- **Situation:** Moving components to new directories left those directories without barrel exports, so consumers had to use full file paths instead of cleaner directory imports
-- **Root cause:** File moves (git mv) don't create index.ts files. The export structure is a separate concern from the physical file location. Without explicitly adding exports, consumers get long import paths and lose the organizational abstraction.
-- **How to avoid:** Adding barrel exports requires manual curation (deciding what's public) but enables cleaner consumer imports. Trade-off: a few lines in index.ts for many cleaner imports across 73+ files.
+### Copy entire type definitions file inline rather than import from @automaker/types package (2026-02-13)
+- **Context:** create-protolab package needs setup pipeline types but cannot import @automaker/types due to runtime context where @automaker/types fails (likely browser environment or circular dependency)
+- **Why:** Type duplication avoids runtime import failures. Package manager workspace resolution fails in certain execution contexts (create-protolab runs standalone during repo research), so local types prevent module resolution errors entirely
+- **Rejected:** Re-exporting types from @automaker/types would be cleaner but creates hard dependency on package manager correctly resolving @automaker/types in all contexts where create-protolab executes
+- **Trade-offs:** Maintenance burden (keep two copies in sync) vs reliability (no import-time failures). Added sync comment + potential CI check to mitigate drift
+- **Breaking if changed:** If types are updated in libs/types/src/setup.ts without updating the copy, create-protolab will use stale interfaces, leading to type mismatches at composition time when features are created
 
-#### [Pattern] Used `find` + `sed` with escaped path separators and context patterns to bulk-replace 73 import statements across the codebase in a single operation per component move (2026-02-13)
-- **Problem solved:** Each of 23 components needed imports updated across 73+ files. Manual find-and-replace would be error-prone and time-consuming.
-- **Why this works:** Automated bulk replacement ensures consistency and catches all references (vs manual search missing some). Using context patterns (e.g., `from '@/components/ui/log-viewer'`) reduces false positives from substring matches.
-- **Trade-offs:** Requires careful regex escaping and testing each sed command, but eliminates human error at scale. One sed per component is fast (~1-2s) vs finding and clicking through 73 replacements in editor.
+#### [Gotcha] Types file must have ZERO external imports including @automaker/* packages to remain standalone (2026-02-13)
+- **Situation:** Initial concern: would importing from @automaker/types break the standalone nature? Yes - any import at module load time fails in certain contexts
+- **Root cause:** create-protolab is invoked in repo research phase before full monorepo build completes, and in contexts where npm workspace resolution is not available or breaks. Even @automaker/types (a workspace package) cannot be reliably imported
+- **How to avoid:** Pure interfaces (no code, no imports) are trivially safe. Any runtime code or imports resurrects the original problem
+
+### Logger writes all levels (info/warn/error/debug) to stderr, not stdout (2026-02-13)
+- **Context:** Building CLI utilities that need logging without interfering with data output
+- **Why:** CLI convention: stdout is for data piping/output, stderr is for logs/diagnostics. Allows users to redirect output while keeping logs visible
+- **Rejected:** Writing all to stdout (would pollute data pipelines) or splitting info to stdout/errors to stderr (inconsistent for CLI consumers)
+- **Trade-offs:** Slightly less intuitive for new developers (expect info on stdout) but correct for production CLI usage and stream redirection
+- **Breaking if changed:** Any code that expects logger output on stdout will fail; stream redirection in consuming CLIs will lose log visibility
+
+#### [Pattern] Optional picocolors with try-catch fallback to identity functions (2026-02-13)
+- **Problem solved:** Wanting colored output without forcing dependency; package must work with zero external deps
+- **Why this works:** Try-catch on optional import (not import-safe) lets picocolors enhance the CLI when available but never fails the app. Fallback identity functions preserve interface consistency
+- **Trade-offs:** Try-catch adds 3 lines but enables graceful degradation; colors appear only if dev installs picocolors, not by default
+
+### Helper functions stay minimal without validation or error wrapping (2026-02-13)
+- **Context:** Creating lightweight utils without adding complexity for create-protolab scaffolding
+- **Why:** Minimal surface area (53 lines) reduces maintenance burden; errors propagate naturally to caller who has context. Scaffolding CLI will add its own validation layer
+- **Rejected:** Adding try-catch to readJson/writeJson (hides errors, makes debugging harder); throwing typed errors (adds complexity); returning Result type (forces unwrapping everywhere)
+- **Trade-offs:** Errors propagate quickly but require caller to handle; no retry logic or detailed error messages; simpler to understand and maintain
+- **Breaking if changed:** Adding validation would change error types; wrapping errors would require refactoring all call sites; Result type would break existing interfaces
+
+### Extracted pure synchronous function with zero external dependencies by creating inline type definitions and minimal logger wrapper instead of importing from monorepo packages (2026-02-13)
+- **Context:** Gap analysis service needed to be extracted from server (which imports @automaker/types, @automaker/utils) into create-protolab package for use as standalone library
+- **Why:** Monorepo package imports would create circular dependencies and tight coupling. Pure function with embedded types ensures create-protolab can be used independently without server build artifacts or external package resolution
+- **Rejected:** Re-exporting from @automaker/types via package.json exports field - would still require server packages to be built and available at runtime
+- **Trade-offs:** Type duplication (GapAnalysisReport, RepoResearchResult copied into new package) eliminates tight coupling. Slightly larger package but complete standalone functionality
+- **Breaking if changed:** If gap check logic in analyzeGaps changes, must update in BOTH locations (server + create-protolab) or create-protolab will drift from server behavior
+
+### Postbuild script (`cp -r templates dist/`) copies template files to dist/ directory rather than building/processing them (2026-02-13)
+- **Context:** Need to distribute static template files (YAML, MD, JSON) in npm package without compilation
+- **Why:** Templates are configuration/documentation files that must be served as-is to consumers. Compilation would corrupt YAML/JSON structure. Postbuild runs AFTER TypeScript compilation, ensuring dist/ exists before copy. This separates compiled code (src → dist via tsc) from static assets (templates → dist via cp).
+- **Rejected:** Alternative: Include templates in src/ and copy via import statements (would require bundler logic). Rejected because: (1) Makes source tree cluttered, (2) Requires loader/plugin in consumer code, (3) Harder to edit templates when mixed with code
+- **Trade-offs:** Easier: Simple copy operation, templates stay in source directory, no build logic needed. Harder: Two separate build steps (tsc + cp), requires explicit 'files' field in package.json to include dist/
+- **Breaking if changed:** If postbuild is removed, npm pack will exclude templates (only dist/src exists in dist/). Consumer apps won't have template files available. Distribution becomes incomplete.
+
+### Created new standalone `packages/create-protolab` package rather than exporting templates from `apps/server` (2026-02-13)
+- **Context:** Templates were originally in apps/server/src/templates/, needed to be distributed via npm
+- **Why:** Monorepo pattern: server is a production application (Electron), create-protolab is a utility library. Separating into packages/ keeps library concerns isolated from app concerns. Allows independent versioning, independent npm distribution, and clear dependency direction (apps depend on packages, not vice versa).
+- **Rejected:** Alternative: Export templates directly from apps/server via npm. Rejected because: (1) Makes server package heavier with unrelated scaffolding code, (2) Couples scaffolding versioning to server releases, (3) Violates monorepo separation (apps shouldn't be published as libraries)
+- **Trade-offs:** Easier: Clean package boundaries, independent distribution, reusable in other projects. Harder: One more package to maintain, requires separate build/test/publish pipeline
+- **Breaking if changed:** If merged back into apps/server, the server package becomes a dual-purpose app+library, conflating concerns. Build process becomes more complex (what's for distribution vs what's app-only?). Consumers importing server for templates would import unnecessary Electron dependencies.
+
+#### [Pattern] Template files use {{variableName}} placeholders for runtime substitution by consumers (2026-02-13)
+- **Problem solved:** Templates must work for different projects with different build commands, branch names, package managers, etc.
+- **Why this works:** Mustache-like placeholder syntax is: (1) Language-agnostic (works in YAML, JSON, Markdown, shell), (2) Easy to regex replace in consumer code, (3) Visually distinct and searchable, (4) Safe (won't collide with actual syntax like ${ENV_VAR} in shell scripts)
+- **Trade-offs:** Easier: Simple text replacement, works across any file type. Harder: Consumers must know which placeholders exist, no type safety on substitution
+
+### Created coderabbit.yaml template (didn't exist in source) rather than omitting it (2026-02-13)
+- **Context:** Feature requirement listed coderabbit.yaml as a template deliverable, but it didn't exist in apps/server/src/templates/
+- **Why:** Feature requirements take precedence over existing source state. Coderabbit.yaml is a standard config file in modern repos (required by branch protection CI checks). Creating a sensible default (review rules + {{mainBranch}} placeholder) aligns with template system goals and prevents feature from being incomplete.
+- **Rejected:** Alternative: Skip coderabbit.yaml since it didn't exist. Rejected because: (1) Breaks acceptance criteria, (2) Future consumers expecting it would have a gap, (3) Easy to create a reasonable default
+- **Trade-offs:** Easier: Feature complete, covers real use case. Harder: Created file without explicit source reference (judgment call on format/content)
+- **Breaking if changed:** If this approach is reverted to 'only copy from source', feature becomes incomplete and feature flag stays unresolved.
+
+### Extract pure algorithmic service (alignment-proposal-service) into a reusable package by removing all logger/side-effect dependencies, making it a stateless synchronous function (2026-02-13)
+- **Context:** Server-based alignment proposal generation needed to be used in create-protolab context, but service had logging and environmental dependencies that prevented reuse
+- **Why:** Logging and side effects create coupling to runtime environment (server context). Removing them makes the function portable across CLI, API, and UI contexts. Pure functions are easier to test, compose, and reason about
+- **Rejected:** Alternative: Keep logging in place and pass a logger interface. Rejected because it adds unnecessary parameter-passing complexity and ties the pure algorithm to logging infrastructure
+- **Trade-offs:** Easier: reusability, testability, composition. Harder: debugging proposal generation requires adding logging at call site, not inside function
+- **Breaking if changed:** If logging is added back inside generateProposal, it loses portability to non-server contexts (e.g., CLI tools, browser). The function becomes coupled to a specific logger implementation
+
+#### [Pattern] Define milestone structure as a static array (MILESTONE_DEFS) external to function logic, allowing the algorithm to iterate/reference without hardcoding milestone rules (2026-02-13)
+- **Problem solved:** Alignment proposal needs to group gaps into Foundation → Quality Gates → Testing → UI → Automation sequence, with specific dependencies and sort orders per milestone
+- **Why this works:** Static definition decouples milestone policy from algorithm. Changes to milestone order, names, or dependencies don't require function rewrite. Algorithm just iterates the array and applies rules consistently
+- **Trade-offs:** Easier: changing milestone strategy (reorder, add new, remove). Harder: understanding flow requires reading both MILESTONE_DEFS and the iteration logic together
+
+#### [Gotcha] Unassigned gaps are silently caught in an 'Other' milestone with no dependencies, allowing parallel execution despite other milestones having dependsOn chains (2026-02-13)
+- **Situation:** Gap analysis may contain items that don't match any MILESTONE_DEFS pattern. Without special handling, these gaps disappear from the proposal
+- **Root cause:** Catch-all prevents data loss. 'Other' milestone with empty dependsOn array signals these features can run independently, which is correct for items that didn't fit established patterns
+- **How to avoid:** Easier: complete proposals with no missing gaps. Harder: 'Other' category masks problems where expected gaps don't match any milestone pattern
+
+### Sort features within each milestone by priority (urgent first) then effort (small first), using a stable sort order independent of input gap order (2026-02-13)
+- **Context:** Gap analysis returns gaps in discovery order, not strategic order. Proposals need to highlight highest-impact / lowest-effort work first
+- **Why:** Deterministic sort ensures consistent proposals and makes sprint planning predictable. Urgent items float to top regardless of where they appeared in analysis. Small efforts batch together for quick wins
+- **Rejected:** Alternative: Preserve input order from gap analysis. Rejected because it hides strategic priority under discovery order noise
+- **Trade-offs:** Easier: sprint planning (take first N items). Harder: tracing why a particular gap ended up in position X requires understanding sort keys
+- **Breaking if changed:** If sort order changes (e.g., effort-first instead of priority-first), sprint decisions change. Downstream automation relying on 'take first N features' will pick different work
+
+### ESM-only package with dual-path resolution (prod dist/ fallback to dev src/) instead of file bundling or template embedding (2026-02-13)
+- **Context:** Template system needs to work in both development (source templates visible) and production (compiled distribution) contexts without duplicating template files or requiring template bundling
+- **Why:** Allows templates to remain as plain text files in src/templates/, automatically copied to dist/ during build via package.json script. Avoids storing templates as strings in compiled code (harder to edit/maintain) and avoids npm package publishing complexity
+- **Rejected:** Alternative 1: Bundle templates into compiled JS as template literals - rejected because templates become immutable and harder to iterate on. Alternative 2: Require templates as separate npm package - rejected as over-engineered for internal use
+- **Trade-offs:** Pro: Templates remain editable as files, clean separation. Con: Requires try-catch fallback logic and build script dependency (cp command)
+- **Breaking if changed:** If build script (tsc && cp -r src/templates dist/) is removed or template directory is deleted, loadTemplate() will fail at runtime in production. Dev paths act as safety net but shouldn't be relied upon for prod
+
+#### [Gotcha] ESM modules require import.meta.url with fileURLToPath() for directory resolution - no __dirname available (2026-02-13)
+- **Situation:** Initial approach assumed __dirname would work in Node.js ESM, but CommonJS globals don't exist in ESM context
+- **Root cause:** ESM spec doesn't provide __dirname/__filename. Must use import.meta.url (contains file:// URL) and convert to filesystem path with fileURLToPath() from 'url' module
+- **How to avoid:** Pro: Correct for ESM spec, future-proof. Con: More boilerplate than CommonJS (requires fileURLToPath import and setup)
+
+#### [Pattern] Package manager command abstraction via getPackageManagerVars() helper returning standardized var object with packageManager, installCommand, runCommand, execCommand (2026-02-13)
+- **Problem solved:** Templates need to reference package manager-specific commands (npm run vs yarn vs pnpm run vs bun) but different PMs have different command syntax
+- **Why this works:** Single source of truth for PM command mappings. Integrates cleanly with interpolateTemplate() - caller just spreads pmVars into the vars object. Decouples PM knowledge from template content
+- **Trade-offs:** Pro: Testable, composable, easy to extend for new PMs. Con: Requires caller to know which PM to pass in (caller must determine from research.monorepo.packageManager)
+
+### Created CLI entry point in separate workspace package (create-protolab) rather than embedding in main server (2026-02-13)
+- **Context:** CLI needs independent versioning, distribution, and lifecycle from the core server
+- **Why:** Workspace isolation allows npm publish of CLI without server dependencies. Consumers can install just the CLI tool globally without pulling in 500MB of server deps. Monorepo structure provides shared type safety via @automaker/types without tight coupling
+- **Rejected:** Embedding CLI in main server package would require publishing entire server + dependencies for CLI-only updates
+- **Trade-offs:** Easier: independent updates, distribution, CI/CD. Harder: coordinating type changes across packages, ensuring types are published
+- **Breaking if changed:** If merged back into server package, CLI consumers would need to install full server, bloating footprint 10-20x
+
+#### [Pattern] Postbuild chmod +x script instead of pre-commit git attributes or manual permissions (2026-02-13)
+- **Problem solved:** Shebang requires executable bit on dist/index.js, but git doesn't preserve permissions across clones by default
+- **Why this works:** postbuild script runs after tsc, guarantees file is executable in all environments (local, CI, npm package). Avoids git config fragility (core.fileMode, safecrlf) and pre-commit hooks complexity
+- **Trade-offs:** Easier: simple one-liner, works everywhere. Harder: invisible to git (permissions not tracked), must remember postbuild is critical
+
+### Exported main() function alongside CLI invocation for potential library reuse vs pure CLI-only (2026-02-13)
+- **Context:** CLI logic may be called programmatically in future (e.g., within server, tests, other tools)
+- **Why:** Separating setup logic from invocation (export function + check for esm.meta.main) allows npm consumers to require/import the function without spawning a subprocess. Monorepo pattern for tools that serve both CLI and API use cases
+- **Rejected:** Pure CLI with no exports couples consumers to subprocess spawn, adds IPC overhead, fails in browser/non-spawn contexts
+- **Trade-offs:** Easier: flexible consumption. Harder: must maintain function API alongside CLI API, breaking changes affect both surfaces
+- **Breaking if changed:** If function signature changes, both CLI usage AND programmatic callers break
+
+### Idempotent file creation with existence checks before writing instead of overwrite-by-default (2026-02-13)
+- **Context:** Init phase needs to run multiple times without corrupting existing user modifications or re-generating content
+- **Why:** ProtoLab projects may be re-initialized after setup (e.g., tech stack changes). Overwriting would lose user edits to CLAUDE.md, coding-rules.md, or protolab.config. Existence checks + skip-if-present pattern allows safe re-runs.
+- **Rejected:** Overwrite-by-default (would corrupt user edits), version-numbered backups (adds complexity, users confused about which file is active)
+- **Trade-offs:** Idempotency prevents accidental data loss but also means init can't repair corrupted context files — requires manual deletion to regenerate. Users must be aware files persist.
+- **Breaking if changed:** If idempotency is removed and overwrite-by-default is used, any user modifications to .automaker/ context files will be silently lost on re-init, breaking user trust in the tool.
+
+#### [Pattern] Stack-aware template composition — multiple small template fragments combined based on tech stack detection results (2026-02-13)
+- **Problem solved:** Different projects need different CLAUDE.md and coding-rules.md content (React projects need different rules than FastAPI projects; monorepos need different guidance than single-app repos)
+- **Why this works:** Reduces template sprawl and keeps rules maintainable. Each tech (TypeScript, React, Python, etc.) has its own rule fragment. Init combines only relevant fragments based on research data, producing focused context files instead of generic boilerplate with irrelevant sections.
+- **Trade-offs:** Composition requires parsing RepoResearchResult to determine which fragments to include — more conditional logic, but context files stay focused. Fragment order matters (TypeScript rules before React-specific rules for clarity).
+
+#### [Gotcha] ESM module resolution requires explicit Node.js built-in imports — `import * as path` and `import { promises as fs }` instead of default/named imports (2026-02-13)
+- **Situation:** Initial implementation used standard CommonJS-style imports which failed silently in ESM context
+- **Root cause:** Node.js built-in modules don't export defaults in ESM. The `path` module is a namespace, not a default export. The `fs.promises` API must be destructured on import, not accessed as `fs.promises` post-import.
+- **How to avoid:** Explicit import syntax is verbose but matches modern Node.js patterns and avoids async/await for module loading. Other developers expect `import * as path` in 2026 codebase.
+
+### Enrich protolab.config with computed fields (techStack, commands, standard.skip) based on research data instead of storing only user-provided values (2026-02-13)
+- **Context:** Config file needs to support CLI/UI runtime decisions without re-running research phase
+- **Why:** Research phase runs once at init time, but protolab.config needs to be a complete source of truth for downstream tooling (e.g., 'which package manager to use' or 'does this project need a Python section'). Commands array is derived from package manager type (npm → npm run, poetry → poetry run), not user input. Standard.skip list is based on what the project already has (e.g., skip Prettier if hasPrettier=true).
+- **Rejected:** Store only raw user input (requires re-running research later), keep config minimal and compute on-the-fly in CLI (violates locality, slow)
+- **Trade-offs:** Config file is larger and couples to RepoResearchResult structure, but it's the complete state needed for the entire ProtoLab pipeline. No need to re-run research for every command.
+- **Breaking if changed:** If tech detection changes in research phase, config fields become stale. Config must be regenerated or validated on load. Version field in config helps track staleness.
+
+#### [Gotcha] TypeScript tsconfig.json base path must point to `../../libs/tsconfig.base.json`, not `../../tsconfig.base.json` (2026-02-13)
+- **Situation:** Initial config used wrong path, breaking TypeScript compilation for the entire package
+- **Root cause:** Workspace structure: packages/create-protolab/ → up 2 levels → libs/tsconfig.base.json (not project root). The root tsconfig.json is a reference file, not the base. Each workspace package extends libs/tsconfig.base.json which has the actual compiler settings.
+- **How to avoid:** Explicit base path is verbose but ensures consistent TypeScript settings across 200+ files in workspace. Mistake is easy to make for new packages.
+
+### Separated CLI concerns into parse → execute → display flow with mock backend functions designed for easy API integration (2026-02-13)
+- **Context:** Building interactive CLI that needed to be testable, maintainable, and ready for real server integration without existing backend
+- **Why:** Mock functions (performResearch, performGapAnalysis, etc.) allow CLI logic to be complete and verifiable before backend exists. Separation means backend integration is a search-replace operation on function bodies, not structural refactoring
+- **Rejected:** Alternative: Build CLI directly calling real API endpoints. Breaks testing and development when server unavailable or API unstable
+- **Trade-offs:** Easier: Testing CLI logic, parallel development with backend team. Harder: Must remember these are mocks before deploying to production
+- **Breaking if changed:** If mock functions are removed without API integration, all CLI features fail silently with empty results
+
+#### [Gotcha] Standalone TypeScript tsconfig.json in package directory is required—cannot inherit from monorepo root when package is used as published npm module (2026-02-13)
+- **Situation:** Initial attempt to run CLI used inherited tsconfig pointing to monorepo paths. When package is published to npm or used in external projects, those paths don't exist
+- **Root cause:** Published npm packages must be self-contained. Inheriting monorepo tsconfig creates implicit dependencies on repo structure. Consumers installing from npm won't have the monorepo root, so compilation fails. Standalone tsconfig ensures 'npm install create-protolab && npx create-protolab' works anywhere
+- **How to avoid:** Easier: Published package works anywhere. Harder: Config duplication (copy relevant parts from monorepo tsconfig), must update both configs if compilation rules change
+
+### Package manager setup in CI workflows uses conditional action selection: pnpm → pnpm/action-setup@v4, bun → oven-sh/setup-bun@v2, yarn/npm → setup-node. Different packages need different setup tools and cannot be unified. (2026-02-13)
+- **Context:** CI phase must support npm, pnpm, yarn, and bun. Each has different GitHub Actions ecosystem and setup requirements.
+- **Why:** Pnpm has monorepo-specific requirements (pnpm/action-setup must run before setup-node). Bun is a separate runtime (cannot use setup-node). Yarn and npm both work with setup-node. Unifying would require bun to use setup-node (wrong runtime) or all to use package-specific actions (unnecessary complexity).
+- **Rejected:** Single setup-node action for all would break pnpm and bun. Using package-specific actions for all (including npm/yarn) adds unnecessary complexity and different action versions.
+- **Trade-offs:** Conditional setup logic is more complex but correct per package manager. Running unnecessary actions (e.g., setup-node for bun) wastes CI minutes but simplifies workflow.
+- **Breaking if changed:** Changing setup action for any package manager breaks that package manager's CI. Pnpm without pnpm/action-setup loses monorepo awareness. Bun without oven-sh/setup-bun has no runtime.
+
+#### [Pattern] Template interpolation uses regex-based {{variable}} replacement at file write time. Templates stored in source with placeholders, replaced during scaffold generation based on detected package manager. (2026-02-13)
+- **Problem solved:** ProtoLab scaffold needs dynamic CI workflows that adapt to project's package manager without duplicating 4 separate workflow files.
+- **Why this works:** Late binding (at scaffold time) allows single template source with runtime-determined values. {{variable}} syntax is readable in templates and unambiguous for regex matching. Matches pattern from existing templates.ts file.
+- **Trade-offs:** Template syntax is simple but requires careful placeholder naming to avoid collisions. Regex replacement is fast but cannot handle nested logic (would need a proper templating engine for complex cases).
+
+### CI phase checks for existing workflow files and skips writing (idempotent). Does not overwrite existing .github/workflows/ files. (2026-02-13)
+- **Context:** Scaffold tool may be run multiple times on same project or user may have manually created workflows. Overwriting would lose manual customizations.
+- **Why:** Idempotency is critical for scaffolding tools. Users expect to run scaffold multiple times safely. Preserving existing files respects user customizations and prevents accidental data loss.
+- **Rejected:** Could overwrite existing files (simpler logic) but breaks user trust and loses customizations. Could fail/error on existing files but adds complexity for users who need to re-run scaffolds.
+- **Trade-offs:** File existence check adds minimal overhead but prevents re-initialization. Users cannot update workflows by re-running scaffold without manual deletion.
+- **Breaking if changed:** Removing idempotency check causes workflows to be overwritten on each scaffold run, potentially losing user customizations.
+
+#### [Pattern] Phase functions return status objects with optional fields (success: boolean, rulesetId?: number, error?: string) rather than throwing errors or returning early (2026-02-13)
+- **Problem solved:** Branch protection phase needs to fail gracefully when gh CLI unavailable, without blocking downstream phases
+- **Why this works:** Allows caller to differentiate between 'feature not available' (success: true, no rulesetId) vs 'feature failed' (success: false, error message). Single status object unifies happy/warning/error paths without exceptions
+- **Trade-offs:** Caller must check status.success AND status.rulesetId separately; simpler error handling means no stack traces unless explicitly logged
+
+#### [Gotcha] Template interpolation uses {{placeholder}} syntax which must match EXACTLY in both template file AND interpolateTemplate() string replacement (2026-02-13)
+- **Situation:** branch-protection/main.json uses {{defaultBranch}} in name and conditions.ref_name.include[0]
+- **Root cause:** Simple string replacement is readable and doesn't require template engine dependency. Placeholder syntax chosen to avoid collision with JSON reserved chars
+- **How to avoid:** Very simple, but if placeholder appears in actual data, it will be accidentally replaced. No validation that all placeholders were replaced
+
+#### [Pattern] Phase auto-detects repository info from git remote origin instead of requiring it as parameter (2026-02-13)
+- **Problem solved:** Branch protection ruleset creation needs owner/repo, but passing these as explicit params creates coupling to git setup
+- **Why this works:** Git remote origin is always available in cloned repos; auto-detection reduces parameter count and makes phase 'just work' in standard flows. Caller doesn't need to know/parse git origin
+- **Trade-offs:** Works automatically in cloned repos; fails silently in bare repos or non-origin-named remotes. Error handling must be very clear about this assumption
+
+### Three-tier error classification (FATAL/RECOVERABLE/WARNING) with explicit recovery paths rather than throwing exceptions (2026-02-13)
+- **Context:** CLI tool needs to guide users toward resolution without crashing. Different error severities require different user actions.
+- **Why:** FATAL errors need rollback+abort. RECOVERABLE errors allow retry/skip/continue decisions. WARNING errors should not block progress. Exception-based approach loses this granularity and forces ugly try-catch chains.
+- **Rejected:** Traditional exception-throwing with catch handlers - loses error context and doesn't guide user toward recovery
+- **Trade-offs:** Easier: user-friendly recovery guidance, no silent failures. Harder: error handling becomes explicit at every call site (not implicit propagation)
+- **Breaking if changed:** If converted to exception-based, recovery suggestions disappear and rollback becomes a finally-block cleanup problem instead of structured operation
+
+#### [Pattern] State file (`.automaker/setup-state.json`) tracking completed phases for resumability rather than idempotency through command re-execution (2026-02-13)
+- **Problem solved:** Setup can be interrupted at any point. Re-running the CLI after interrupt should skip completed phases, not redo them.
+- **Why this works:** Re-running phases is dangerous (e.g., re-creating git repos overwrites history, re-initializing beads may corrupt state). State file allows granular skip logic: phase-by-phase resume without full re-execution.
+- **Trade-offs:** Easier: clear resume path, obvious state tracking. Harder: state file can go stale or be deleted (lost resume context). Mitigation: state file backed up in rollback system.
+
+#### [Gotcha] Rollback registration must happen BEFORE operation execution, not after success (2026-02-13)
+- **Situation:** Implemented rollback system where each unsafe operation registers its undo action. Initial design registered rollback after successful completion.
+- **Root cause:** If operation succeeds but then system crashes before rollback registration, the operation won't be undone. Correct order: register rollback → execute operation → on error, walk rollback stack backwards.
+- **How to avoid:** Easier: rollback logic follows operation logic. Harder: must pre-declare undo action without knowing final outcome (requires careful design of undo operations).
+
+### Graceful degradation for optional tools (gh, gt, bd) - warnings instead of FATAL errors (2026-02-13)
+- **Context:** CLI requires 7+ tools. Some are optional (improve DX but not required). Question: hard requirement or soft requirement?
+- **Why:** Users may have valid monorepos without gh/gt/bd installed. Blocking on missing optional tools prevents legitimate setups. However, certain tools (git, node, npm, jq) are truly required - these are FATAL.
+- **Rejected:** Hard requirement on all tools - would fail for users in monorepos without gh CLI, Graphite, or Beads installed
+- **Trade-offs:** Easier: broader compatibility. Harder: feature discovery becomes implicit (users don't know gh/gt/bd would improve setup). Mitigation: warning messages suggest tool installation.
+- **Breaking if changed:** If optional tools become required (e.g., gh required for team collaboration), CI/CD setups without gh would fail. Conversely, if required tools become optional, setup skips critical validation.
+
+#### [Pattern] Monorepo detection via workspace configuration files (pnpm-workspace.yaml, lerna.json, .yarnrc) rather than heuristic analysis (2026-02-13)
+- **Problem solved:** Different package managers use different workspace formats. CLI needs to detect which one.
+- **Why this works:** File-based detection is reliable (definitive signal) vs heuristics (multiple package.json files could mean monorepo or just nested projects). Fails safely: if no workspace file found, assumes single-repo setup.
+- **Trade-offs:** Easier: deterministic detection. Harder: must know format for each package manager (pnpm, npm, yarn, lerna). Mitigation: list all known formats.
+
+#### [Pattern] Phase-based initialization pattern with status objects returning {success, alreadyInitialized, error} for idempotent operations (2026-02-13)
+- **Problem solved:** Beads initialization needs to be idempotent (safe to call multiple times), handle missing bd CLI gracefully, and integrate into a multi-phase setup workflow
+- **Why this works:** Phase functions are meant to be composable and rerunnable during setup. The status object pattern lets callers distinguish between 'already done', 'just did it', and 'failed' without exceptions for non-error cases (bd CLI missing)
+- **Trade-offs:** Callers must check the full status object rather than just success flag, but this is more informative and enables dry-run/idempotent behavior. Pattern is explicit but slightly verbose
+
+### Set no-daemon: true in .beads/config.yaml AFTER bd init completes, via post-processing YAML file manipulation rather than passing config as arguments to bd init (2026-02-13)
+- **Context:** bd init command doesn't have a CLI flag to set no-daemon mode, but the config must be set before beads is used in production
+- **Why:** bd init generates its own config.yaml with defaults. Only way to override no-daemon is post-processing. Matches Ava's documented requirement that 'no-daemon: true' prevents auto-start issues in server contexts
+- **Rejected:** Could shell escape quotes and pass config via --config flag, but bd doesn't support that pattern. Could also assume user would manually edit config.yaml (error-prone)
+- **Trade-offs:** Adds YAML parsing dependency and extra file I/O, but ensures no-daemon is always set correctly. Makes function fully self-contained for beads setup
+- **Breaking if changed:** If bd changes its config file format or location, the YAML mutation code breaks. Code assumes config.yaml exists after bd init (currently true)
+
+#### [Gotcha] ES modules require explicit __dirname polyfill using fileURLToPath(import.meta.url) + dirname(). This cannot be assumed to exist like in CommonJS. (2026-02-13)
+- **Situation:** Package uses ES modules (type: module in package.json). Template path resolution failed because __dirname was undefined at runtime.
+- **Root cause:** Node.js ES modules don't provide __dirname/filename globals. Must derive from import.meta.url which is only available in ES module scope, not CommonJS.
+- **How to avoid:** Slightly more verbose imports (fileURLToPath, dirname) but guarantees correct path resolution in all ES module contexts. Alternative of assuming __dirname exists creates hard-to-debug runtime failures.
+
+#### [Pattern] Idempotent file generation with existed flag in return object allows caller to distinguish between 'created new' vs 'already present' without checking filesystem separately. (2026-02-13)
+- **Problem solved:** Phase generates .coderabbit.yaml - needed to avoid overwriting user modifications while still satisfying the 'file must exist' requirement.
+- **Why this works:** Idempotence (safe to call multiple times) + information richness (caller knows what happened) prevents data loss and enables better error messages/logging. The existed flag is a 'write intent' signal.
+- **Trade-offs:** Return object adds minimal overhead but significantly improves observability. Prevents the common pattern of 'try to create → catch error → assume exists → move on' which hides real failures.
+
+### Created validation library in libs/ not packages/, following monorepo structure with composite TypeScript builds (2026-02-13)
+- **Context:** Feature description mentioned packages/create-protolab which doesn't exist. Had to verify correct directory structure.
+- **Why:** libs/ is reserved for shared internal libraries with workspace member setup. packages/ is for published/external-facing modules. Validation is internal infrastructure.
+- **Rejected:** Creating in packages/ would require npm publishing setup and external dependency management, overkill for internal validators.
+- **Trade-offs:** libs/ means automatic workspace hoisting and simpler dependency resolution, but requires build:packages step and tsconfig.json composite references.
+- **Breaking if changed:** If moved to packages/, must update all imports from @automaker/validation and adjust build pipeline. Workspace resolution would break in dependent packages.
+
+#### [Pattern] Structured validator result pattern: {success: boolean, data?: T, errors?: ValidationError[]} used across all validators (2026-02-13)
+- **Problem solved:** Multiple validator modules (schemas, api, template, filesystem) needed consistent error handling for downstream code.
+- **Why this works:** Uniform result shape allows try-catch-free error handling. Callers check result.success once, not scattered error checks. Matches Zod's discriminated union pattern.
+- **Trade-offs:** Requires result.success check before accessing data, but eliminates exception handling boilerplate. More explicit about error states.
+
+#### [Gotcha] TypeScript composite references in initial tsconfig caused build errors; simplified to match other libs' configuration without composite flag (2026-02-13)
+- **Situation:** Copied tsconfig pattern from another lib that used composite references, but this interfered with build:packages step.
+- **Root cause:** Composite references are for repo-level build optimization when multiple tsconfig.json files exist. In this monorepo, build:packages handles compilation order. Composite adds unnecessary complexity.
+- **How to avoid:** Non-composite tsconfig is simpler to maintain but requires build:packages to compile all packages in order. Composite could theoretically enable incremental builds but adds configuration complexity.
+
+#### [Gotcha] Worktree file paths can be confused with project directories; created files in ~/Documents instead of .worktrees (2026-02-13)
+- **Situation:** Working in a git worktree for feature development; new files were initially placed in wrong directory hierarchy
+- **Root cause:** File paths are relative during development; easy to lose track of working directory in multi-step workflows
+- **How to avoid:** Easier: catch with file existence checks. Harder: no programmatic detection; requires developer awareness
+
+#### [Gotcha] ES module configuration required `type: "module"` in package.json AND `"module": "esnext"` in tsconfig.json for proper compilation and import resolution (2026-02-13)
+- **Situation:** Converting CommonJS require() patterns to ES import statements for create-protolab package running on Node 18+
+- **Root cause:** Node.js requires explicit `type: "module"` declaration to enable `.js` files as ES modules. TypeScript needs matching `module` config to generate correct import statements in compiled output.
+- **How to avoid:** ES modules enable tree-shaking and are required for modern Node tooling, but adds configuration complexity. Requires Node 14+ (satisfied by test matrix 18/20/22).

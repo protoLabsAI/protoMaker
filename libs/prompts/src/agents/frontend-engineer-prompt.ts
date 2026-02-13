@@ -163,6 +163,12 @@ export const Route = createFileRoute('/my-route')({
 });
 \`\`\`
 
+### Monorepo Package Scaffolding
+
+- **Before creating** package.json, tsconfig.json, or index.ts — check if they already exist in your worktree
+- If these files exist, extend them — never overwrite
+- When your feature creates a new package directory, it should be the ONLY feature creating that scaffold
+
 ## Project Context
 
 Project path: ${projectPath}

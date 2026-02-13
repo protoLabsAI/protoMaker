@@ -17,6 +17,7 @@ function createFeature(
     dependencies?: string[];
     status?: string;
     priority?: number;
+    isFoundation?: boolean;
   } = {}
 ): Feature {
   return {
@@ -26,6 +27,7 @@ function createFeature(
     dependencies: options.dependencies,
     status: options.status || 'pending',
     priority: options.priority,
+    isFoundation: options.isFoundation,
   };
 }
 
@@ -307,6 +309,78 @@ describe('resolver.ts', () => {
 
       expect(areDependenciesSatisfied(feature, allFeatures)).toBe(false);
     });
+
+    describe('isFoundation dependency handling', () => {
+      it('should NOT satisfy when foundation dep is in review', () => {
+        const foundation = createFeature('Scaffold', { status: 'review', isFoundation: true });
+        const feature = createFeature('Phase2', { dependencies: ['Scaffold'] });
+        const allFeatures = [foundation, feature];
+
+        expect(areDependenciesSatisfied(feature, allFeatures)).toBe(false);
+      });
+
+      it('should satisfy when foundation dep is done (merged)', () => {
+        const foundation = createFeature('Scaffold', { status: 'done', isFoundation: true });
+        const feature = createFeature('Phase2', { dependencies: ['Scaffold'] });
+        const allFeatures = [foundation, feature];
+
+        expect(areDependenciesSatisfied(feature, allFeatures)).toBe(true);
+      });
+
+      it('should satisfy when foundation dep is completed', () => {
+        const foundation = createFeature('Scaffold', { status: 'completed', isFoundation: true });
+        const feature = createFeature('Phase2', { dependencies: ['Scaffold'] });
+        const allFeatures = [foundation, feature];
+
+        expect(areDependenciesSatisfied(feature, allFeatures)).toBe(true);
+      });
+
+      it('should satisfy when foundation dep is verified', () => {
+        const foundation = createFeature('Scaffold', { status: 'verified', isFoundation: true });
+        const feature = createFeature('Phase2', { dependencies: ['Scaffold'] });
+        const allFeatures = [foundation, feature];
+
+        expect(areDependenciesSatisfied(feature, allFeatures)).toBe(true);
+      });
+
+      it('should still allow review to satisfy non-foundation deps', () => {
+        const normalDep = createFeature('Config', { status: 'review' });
+        const feature = createFeature('Phase2', { dependencies: ['Config'] });
+        const allFeatures = [normalDep, feature];
+
+        expect(areDependenciesSatisfied(feature, allFeatures)).toBe(true);
+      });
+
+      it('should handle mixed foundation and non-foundation deps', () => {
+        const foundation = createFeature('Scaffold', { status: 'review', isFoundation: true });
+        const normalDep = createFeature('Config', { status: 'review' });
+        const feature = createFeature('Phase3', { dependencies: ['Scaffold', 'Config'] });
+        const allFeatures = [foundation, normalDep, feature];
+
+        // Foundation in review blocks, even though normal dep in review is fine
+        expect(areDependenciesSatisfied(feature, allFeatures)).toBe(false);
+      });
+
+      it('should satisfy mixed deps when foundation is done', () => {
+        const foundation = createFeature('Scaffold', { status: 'done', isFoundation: true });
+        const normalDep = createFeature('Config', { status: 'review' });
+        const feature = createFeature('Phase3', { dependencies: ['Scaffold', 'Config'] });
+        const allFeatures = [foundation, normalDep, feature];
+
+        expect(areDependenciesSatisfied(feature, allFeatures)).toBe(true);
+      });
+
+      it('should NOT block foundation dep when skipVerification is true', () => {
+        const foundation = createFeature('Scaffold', { status: 'review', isFoundation: true });
+        const feature = createFeature('Phase2', { dependencies: ['Scaffold'] });
+        const allFeatures = [foundation, feature];
+
+        // skipVerification bypasses all checks — only blocks running/in_progress
+        expect(areDependenciesSatisfied(feature, allFeatures, { skipVerification: true })).toBe(
+          true
+        );
+      });
+    });
   });
 
   describe('getBlockingDependencies', () => {
@@ -368,6 +442,30 @@ describe('resolver.ts', () => {
       expect(blocking).toContain('Dep1');
       expect(blocking).toContain('Dep3');
       expect(blocking).not.toContain('Dep2');
+    });
+
+    it('should treat foundation dep in review as blocking', () => {
+      const foundation = createFeature('Scaffold', { status: 'review', isFoundation: true });
+      const feature = createFeature('Phase2', { dependencies: ['Scaffold'] });
+      const allFeatures = [foundation, feature];
+
+      expect(getBlockingDependencies(feature, allFeatures)).toEqual(['Scaffold']);
+    });
+
+    it('should not treat foundation dep in done as blocking', () => {
+      const foundation = createFeature('Scaffold', { status: 'done', isFoundation: true });
+      const feature = createFeature('Phase2', { dependencies: ['Scaffold'] });
+      const allFeatures = [foundation, feature];
+
+      expect(getBlockingDependencies(feature, allFeatures)).toEqual([]);
+    });
+
+    it('should not treat non-foundation dep in review as blocking', () => {
+      const normalDep = createFeature('Config', { status: 'review' });
+      const feature = createFeature('Phase2', { dependencies: ['Config'] });
+      const allFeatures = [normalDep, feature];
+
+      expect(getBlockingDependencies(feature, allFeatures)).toEqual([]);
     });
   });
 

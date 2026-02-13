@@ -29,3 +29,10 @@ usageStats:
 - **Rejected:** Posting to Discord and letting Discord's rate limiter reject (simple code, but loses observability and wastes bandwidth); debouncing with setTimeout (introduces timing bugs across distributed event emissions)
 - **Trade-offs:** Trade code predictability for simplicity—we now have local state (lastNotificationPost Map) that must stay in sync with Discord's actual post rate. If Discord's limits change, we need to adjust NOTIFICATION_RATE_LIMIT_MS. Benefit: no wasted network I/O and guaranteed no 429 errors from Discord
 - **Breaking if changed:** If the Map is ever cleared (e.g., service restart), rate limiting resets immediately and a queued burst of notifications posts all at once. If lastNotificationPost Map grows unbounded (new notification types added frequently), memory leak. Mitigation: add a cleanup pass for types not seen in 1 hour
+
+### Used `shell: bash` for all cross-platform script steps instead of platform-specific `sh` or `pwsh` (2026-02-13)
+- **Context:** CI workflow must execute consistent logic on ubuntu-latest, macos-latest, and windows-latest
+- **Why:** bash is available on all three platforms (Git Bash on Windows). Using platform-native shells (sh on unix, pwsh on windows) requires different syntax per-OS, multiplying maintenance burden.
+- **Rejected:** Platform-specific conditionals with different scripts - error-prone; relying on pwsh on Windows - incompatible with ubuntu/macos; using node scripts instead - adds js file overhead
+- **Trade-offs:** bash adds ~50MB to Windows runners (via Git Bash) but eliminates script branching logic. Single source of truth outweighs minor disk cost.
+- **Breaking if changed:** If bash is removed or unavailable on a runner, all scripts fail. Windows-native shells would require complete script rewrite.

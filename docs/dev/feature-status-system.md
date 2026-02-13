@@ -92,6 +92,25 @@ const isEligibleStatus = feature.status === 'backlog';
 
 Features in `review`, `done`, or `verified` are not eligible for auto-execution.
 
+### Foundation Dependencies
+
+Features marked with `isFoundation: true` enforce stricter dependency satisfaction. When a feature depends on a foundation feature, it will **not** start until the foundation reaches `done` (PR merged to main). The default behavior — where `review` status satisfies a dependency — is bypassed for foundation deps.
+
+This prevents the "18-PR cascade problem" where multiple agents scaffold the same package directory because they all branch from `origin/main` before the scaffold PR is merged.
+
+```typescript
+// Foundation dep in 'review' → NOT satisfied (must be 'done')
+// Normal dep in 'review' → satisfied (work is complete, PR under review)
+```
+
+**When is `isFoundation` set automatically?**
+
+- Phase 1 of each milestone in project orchestration gets `isFoundation: true`
+- Can be set manually via MCP `create_feature` / `update_feature` tools
+
+**Statuses that satisfy a foundation dependency:** `done`, `completed`, `verified`
+**Statuses that satisfy a normal dependency:** `done`, `completed`, `verified`, `review`
+
 ## Backwards Compatibility
 
 Legacy statuses are fully supported:

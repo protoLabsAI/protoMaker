@@ -178,7 +178,8 @@ export async function orchestrateProjectFeatures(
         // Generate unique key for this phase
         const phaseKey = `${milestone.slug}:${phase.name}`;
 
-        // Create feature
+        // Create feature — Phase 1 of each milestone is marked as foundation
+        // so downstream phases wait for its PR to merge before starting
         const feature = await featureLoader.create(projectPath, {
           title: phase.title,
           description,
@@ -187,6 +188,7 @@ export async function orchestrateProjectFeatures(
           isEpic: false,
           epicId,
           branchName: `feature/${slugify(milestone.title, 20)}-${slugify(phase.title, 20)}`,
+          isFoundation: phase.number === 1,
         });
 
         result.phaseFeatureMap[phaseKey] = feature.id;

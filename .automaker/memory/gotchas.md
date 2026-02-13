@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 100
-  referenced: 27
-  successfulFeatures: 27
+  loaded: 119
+  referenced: 46
+  successfulFeatures: 46
 ---
 # gotchas
 
@@ -55,3 +55,18 @@ usageStats:
 - **Situation:** PRFeedbackService limits iterations to 2, but EM agent had different limit, causing inconsistent escalation behavior
 - **Root cause:** Two separate services independently track the same business rule. Without synchronization, they make contradictory decisions about when to escalate
 - **How to avoid:** Easier: quick fix (update one number in two places). Harder: creates maintenance burden - anyone changing max iterations must remember both locations, risk of drift over time
+
+#### [Gotcha] CJS files compiled to .js extension are misinterpreted as ESM when package.json declares type:module. Must rename to .cjs extension post-compilation (2026-02-13)
+- **Situation:** Initial build had dist-cjs/index.js - npm would treat it as ESM despite CommonJS compilation
+- **Root cause:** Node.js extension resolution: .js is assumed to match package.json type field. .cjs always forces CommonJS regardless of package type
+- **How to avoid:** Added find+rename postbuild step complexity, but eliminates silent runtime module errors for CJS consumers
+
+#### [Gotcha] Line-count comparison (677 lines identical) is insufficient verification of byte-identical behavior - must also diff function bodies to catch logic drift from imports/whitespace changes (2026-02-13)
+- **Situation:** Initial verification only checked that server version and extracted version had same line count, but didn't verify function logic was truly identical
+- **Root cause:** Import rewriting and formatting during extraction could silently change logic while keeping line count same. Function body comparison (diff on lines 25-677) catches these changes
+- **How to avoid:** Extra verification step (diff) adds confidence but increases verification time
+
+#### [Gotcha] Nested packages directory structure caused import path confusion - created packages/create-protolab/packages/ instead of correctly placing files in packages/create-protolab/src/ (2026-02-13)
+- **Situation:** During initial implementation, file structure was created with incorrect nesting (packages/create-protolab/packages/create-protolab/...) instead of the expected monorepo pattern
+- **Root cause:** Unclear mental model of the monorepo structure. The package name @automaker/create-protolab led to confusion about where files should live vs. where imports come from
+- **How to avoid:** Caught early through verification testing which tried to import and immediately failed, forcing correction. Manual test-first approach prevented committing broken code

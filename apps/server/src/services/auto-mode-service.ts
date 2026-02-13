@@ -4505,6 +4505,12 @@ Format your response as a structured markdown document.`;
                 // When skipVerification is enabled, only block if dependency is actively running
                 return dep.status === 'running' || dep.status === 'in_progress';
               }
+              // Foundation deps require 'done' (merged) — 'review' is NOT sufficient
+              if (dep.isFoundation) {
+                return (
+                  dep.status !== 'done' && dep.status !== 'completed' && dep.status !== 'verified'
+                );
+              }
               // Default: block unless dependency is in a completed state
               return (
                 dep.status !== 'completed' &&
@@ -4513,12 +4519,19 @@ Format your response as a structured markdown document.`;
                 dep.status !== 'review'
               );
             }) || [];
+
+          // Include foundation context in reason for better diagnostics
+          const reason = blockingDeps
+            .map((depId) => {
+              const dep = allFeatures.find((f) => f.id === depId);
+              const suffix = dep?.isFoundation ? ' [foundation - needs merge]' : '';
+              return `${depId}(${dep?.status || 'missing'})${suffix}`;
+            })
+            .join(', ');
+
           blockedFeatures.push({
             feature,
-            reason:
-              blockingDeps.length > 0
-                ? `Blocked by dependencies: ${blockingDeps.join(', ')}`
-                : 'Unknown dependency issue',
+            reason: reason ? `Blocked by dependencies: ${reason}` : 'Unknown dependency issue',
           });
         }
       }

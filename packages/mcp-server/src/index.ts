@@ -261,6 +261,11 @@ const tools: Tool[] = [
           description:
             'Priority level: 0 = No priority, 1 = Urgent, 2 = High, 3 = Normal, 4 = Low. Auto-mode picks higher priority first.',
         },
+        isFoundation: {
+          type: 'boolean',
+          description:
+            'Mark as foundation feature (package scaffold, base types). Downstream features wait for this to be merged before starting.',
+        },
       },
       required: ['projectPath', 'title', 'description'],
     },
@@ -314,6 +319,11 @@ const tools: Tool[] = [
           enum: [0, 1, 2, 3, 4, null],
           description:
             'Priority level: 0 = No priority, 1 = Urgent, 2 = High, 3 = Normal, 4 = Low. Pass null to clear.',
+        },
+        isFoundation: {
+          type: 'boolean',
+          description:
+            'Mark as foundation feature (package scaffold, base types). Downstream features wait for this to be merged before starting.',
         },
       },
       required: ['projectPath', 'featureId'],
@@ -1975,6 +1985,7 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       if (args.assignee !== undefined) featureData.assignee = args.assignee;
       if (args.dueDate !== undefined) featureData.dueDate = args.dueDate;
       if (args.priority !== undefined) featureData.priority = args.priority;
+      if (args.isFoundation !== undefined) featureData.isFoundation = args.isFoundation;
       return apiCall('/features/create', {
         projectPath: args.projectPath,
         feature: featureData,
@@ -1990,6 +2001,7 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       if (args.assignee !== undefined) updates.assignee = args.assignee;
       if (args.dueDate !== undefined) updates.dueDate = args.dueDate;
       if (args.priority !== undefined) updates.priority = args.priority;
+      if (args.isFoundation !== undefined) updates.isFoundation = args.isFoundation;
       return apiCall('/features/update', {
         projectPath: args.projectPath,
         featureId: args.featureId,

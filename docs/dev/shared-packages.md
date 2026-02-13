@@ -162,8 +162,10 @@ const autoModeModel = DEFAULT_MODELS.autoMode; // → sonnet
 **Import for:**
 
 - `resolveDependencies(features)` - Topological sort with priority
-- `areDependenciesSatisfied(feature, allFeatures)` - Check if ready to execute
+- `areDependenciesSatisfied(feature, allFeatures, options?)` - Check if ready to execute
 - `getBlockingDependencies(feature, allFeatures)` - Get incomplete dependencies
+
+**Foundation dependency awareness:** Both `areDependenciesSatisfied()` and `getBlockingDependencies()` check each dependency's `isFoundation` flag. Foundation deps (package scaffolds, base types) require `done` status — `review` is not sufficient. This prevents agents from starting on stale worktrees before scaffold PRs are merged.
 
 **Example:**
 

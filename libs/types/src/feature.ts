@@ -165,6 +165,13 @@ export interface Feature {
    */
   complexity?: 'small' | 'medium' | 'large' | 'architectural';
   /**
+   * Marks this feature as foundational infrastructure (e.g., package scaffold,
+   * directory structure, base types). Features that depend on a foundation feature
+   * will NOT start until the foundation reaches 'done' (PR merged to main).
+   * Without this flag, dependencies are satisfied at 'review' status.
+   */
+  isFoundation?: boolean;
+  /**
    * Number of times this feature has failed and been retried.
    * Used for model escalation - after multiple failures, escalate to opus.
    */

@@ -1351,6 +1351,24 @@ When `createEpics: true`, each milestone becomes an epic feature:
 
 Epics provide visual grouping on the Kanban board and help track milestone progress.
 
+### Foundation Features
+
+Phase 1 of each milestone is automatically marked as `isFoundation: true`. Foundation features create the scaffold (package.json, tsconfig.json, directory structure) that downstream phases depend on. Downstream features will **not** start until the foundation's PR is merged to main — the default `review` status is not sufficient.
+
+This prevents the cascade problem where multiple agents independently scaffold the same directory because they all branch from `origin/main` before the scaffold is merged.
+
+You can also mark features as foundation manually:
+
+```
+mcp__automaker__create_feature({
+  projectPath: "/path/to/project",
+  title: "Create package scaffold",
+  description: "...",
+  isFoundation: true,   // Downstream deps wait for merge
+  complexity: "small"
+})
+```
+
 ## Known Issues & Improvements
 
 ### Recently Fixed

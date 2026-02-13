@@ -5,9 +5,9 @@ relevantTo: [security]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 3
-  referenced: 2
-  successfulFeatures: 2
+  loaded: 7
+  referenced: 5
+  successfulFeatures: 5
 ---
 # security
 
@@ -46,3 +46,61 @@ usageStats:
 - **Rejected:** Alternative: Give Frank full toolkit like manual agents. Rejected because: (1) unreviewed agent shouldn't have write access to critical systems, (2) diagnosis doesn't require branch creation/feature management, (3) establishes security precedent for future auto-spawned agents
 - **Trade-offs:** Gained: blast radius limited if Frank makes errors. Lost: Frank can't auto-remediate (e.g., rollback bad feature, disable agent)
 - **Breaking if changed:** If full toolkit granted: Frank could accidentally delete features, commit breaking changes, or spam Discord during diagnosis loop
+
+#### [Gotcha] Shebang must be LF-only (\n) not CRLF (\r\n) on mixed-OS teams or git autocrlf=true repos (2026-02-13)
+- **Situation:** If file written with CRLF, shebang becomes '#!/usr/bin/env node\r' which doesn't match, and chmod +x doesn't help
+- **Root cause:** OS kernel interprets shebang line literally. \r breaks the magic number detection. Git's autocrlf setting can silently convert on Windows checkout
+- **How to avoid:** Easier: LF default on most systems. Harder: Windows teams need .gitattributes or core.safecrlf=warn setup, hidden failure mode
+
+### Mock API functions return hardcoded gap analysis data instead of reading sensitive project info from disk during demonstration phase (2026-02-13)
+- **Context:** CLI needed realistic output for testing without actually scanning real repositories or exposing secrets from .env files during demo/development
+- **Why:** Hardcoded mock data prevents accidental reads of .env, credentials, or private git history during CLI development. Real implementation will read from files/git safely. Keeps security layer at API boundary (server reads files, CLI receives sanitized JSON)
+- **Rejected:** Alternative: Read actual repository structure during development. Risks exposing secrets if error handling is incomplete. Also creates coupling between CLI and filesystem that breaks in CI/CD
+- **Trade-offs:** Easier: Development safety, portable tests. Harder: Mock data must be maintained, may diverge from real output format
+- **Breaking if changed:** If mock functions are replaced with real fs reads without proper sanitization, CLI could dump env vars, private keys, or git history to stdout in JSON output
+
+#### [Gotcha] YAML template files with placeholder syntax like {{packageManager}} fail Prettier pre-commit validation because placeholders are invalid YAML. Must add template directories to .prettierignore to prevent formatting attempts. (2026-02-13)
+- **Situation:** CI workflow template files contained {{packageManager}} placeholders for runtime interpolation. Pre-commit hook ran Prettier on all files including templates, failing on invalid syntax.
+- **Root cause:** Prettier validates syntax during pre-commit. Template files are not valid YAML/JSON until placeholders are interpolated, so they must be excluded from formatting.
+- **How to avoid:** Adding to .prettierignore prevents syntax validation on templates (minor risk) but enables fast iteration on template syntax. Templates must be manually validated.
+
+#### [Gotcha] Phase logs entire error from GitHub API (via gh cli) to stdout without sanitizing, but GitHub auth tokens are typically in gh CLI cache not in command output (2026-02-13)
+- **Situation:** createBranchProtectionRuleset catches and logs gh CLI stderr, but GitHub error responses may contain sensitive data
+- **Root cause:** gh CLI is already authenticated via ~/.gh-hosts.yml cache, so command output shouldn't contain raw tokens. Logging errors helps with debugging
+- **How to avoid:** Good visibility into failures; risk if GitHub starts returning request bodies or other context in error messages
+
+### Pre-flight write permission check on target path before any setup begins (2026-02-13)
+- **Context:** Setup creates directories, git repos, and modifies files. If permissions denied midway, partial state leaks.
+- **Why:** Fail-fast on permission issues before any side effects. Prevents partial setup on user error (wrong target directory, insufficient permissions).
+- **Rejected:** Just-in-time permission checks (check when needed) - would fail mid-setup, leaving partial state to rollback
+- **Trade-offs:** Easier: clear error upfront, no rollback needed. Harder: requires upfront filesystem access verification.
+- **Breaking if changed:** If permission check removed, setup proceeds and fails partway through. Rollback must clean up leaked state. Cost of re-implementing is high.
+
+### Cross-platform bd CLI detection using which/where rather than hardcoded paths or shell aliases (2026-02-13)
+- **Context:** bd CLI location varies: /usr/local/bin/bd, ~/.cargo/bin/bd (Rust binary), Windows paths differ. Need to know if bd is available before running init
+- **Why:** which/where is the portable standard - respects PATH, handles aliases, works on all POSIX systems and Windows. Matches how shell would resolve the command
+- **Rejected:** Hardcoded /usr/local/bin/bd fails for users with custom installations. Checking process.platform and mapping paths is fragile and incomplete
+- **Trade-offs:** which/where requires shelling out but is reliable. Try-catch on execSync handles 'not found' (exit code 1) gracefully
+- **Breaking if changed:** If which/where behavior changes (unlikely) or if bd is intentionally on PATH but not executable, detection fails. Real-world impact minimal - PATH manipulation is user error
+
+#### [Pattern] Path traversal validation using path.resolve() comparison against project root before any file operations (2026-02-13)
+- **Problem solved:** Filesystem validator needed to prevent ../../../ attacks when processing user-provided paths or template-based file references.
+- **Why this works:** Path traversal is a classic attack vector. Resolving to absolute path and validating it starts with project root catches all escape attempts. Applied BEFORE any fs.readdir/stat calls.
+- **Trade-offs:** Requires stat() call per path (small I/O cost) but prevents catastrophic information disclosure. Worth the overhead.
+
+#### [Pattern] Template variable validation extracts ALL {{variables}} before rendering, validates against source object structure (2026-02-13)
+- **Problem solved:** Templates reference variables like {{discord.categoryId}} that might not exist at render time, causing undefined substitutions and silent failures.
+- **Why this works:** Pre-flight validation catches missing variables before template rendering. Prevents undefined values in rendered output which downstream code might misinterpret.
+- **Trade-offs:** Requires object schema walk to validate nested variables (discord.categoryId), but catches 100% of missing vars. Slightly slower on large templates, much safer.
+
+#### [Pattern] Filesystem validator checks for reserved Windows names (CON, PRN, AUX, etc) and enforces path length limits even on Unix systems (2026-02-13)
+- **Problem solved:** Paths might be persisted to Windows machines or synced across platforms. Runtime path validation should prevent platform-specific issues.
+- **Why this works:** Reserved names cause failures when paths are shared or migrated. Path length limits prevent filesystem errors on FAT32/NTFS. Platform-agnostic validation is defensive.
+- **Trade-offs:** Stricter validation everywhere, but prevents cross-platform sync issues. Some valid Unix paths (CON.txt) rejected, acceptable trade for safety.
+
+### Store Discord channel IDs and webhook ID in plaintext within protolab.config, not encrypted or remote (2026-02-13)
+- **Context:** Persisting Discord channel and webhook metadata after creation for later phase access
+- **Why:** protolab.config is already checked into git (or used as local config); Discord IDs are non-sensitive (guild/channel IDs are public in Discord); webhook IDs can be rotated
+- **Rejected:** Encrypt config (adds complexity), store remotely (requires backend), environment variables (not persistent across CLI invocations)
+- **Trade-offs:** Easier: simple file persistence. Harder: webhook secret leakage risk if config uploaded to public repo
+- **Breaking if changed:** If webhook IDs become sensitive (Discord changes security model), all existing configs are exposed

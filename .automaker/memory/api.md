@@ -5,9 +5,9 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 17
-  referenced: 9
-  successfulFeatures: 9
+  loaded: 22
+  referenced: 13
+  successfulFeatures: 13
 ---
 # api
 
@@ -77,3 +77,73 @@ usageStats:
 - **Rejected:** Returning { data: null, error: result.error } from queryFn. Would duplicate error handling logic.
 - **Trade-offs:** Errors are automatically serialized by React Query. If error needs domain-specific transformation before display, it happens in component not hook.
 - **Breaking if changed:** If error throwing is replaced with return values, error state in components becomes undefined and errors are silently ignored.
+
+### Preserved exact function signature and return type; no wrapper functions or API changes (2026-02-13)
+- **Context:** Could have added convenience methods like researchRepoSync(), added caching layer, added filtering options, or wrapped return in { success, data, error } envelope
+- **Why:** Original function signature is already clean and works. Adding convenience layers now prevents future use cases (someone might need raw sync version). Single Responsibility: researchRepo() does one thing. Callers handle async/await themselves. No feature creep
+- **Rejected:** Adding convenience wrappers felt tempting but unnecessary - async/await is standard JS, caching is caller's concern, filtering can be applied post-research. Envelope pattern adds one layer of indirection with no benefit for this use case
+- **Trade-offs:** Stricter API means less hand-holding for callers, but forces good async practices. Simpler to test, explain, maintain. Harder to add later-stage filtering without changes
+- **Breaking if changed:** If signature changes, all callers break. Staying with original signature means any future convenience features need new functions (researchRepoWithCache, etc.) not modifications to original
+
+#### [Pattern] interpolateTemplate handles missing variables by returning empty string, not throwing (2026-02-13)
+- **Problem solved:** Template rendering in CLI scaffolding where missing vars are common during development
+- **Why this works:** Silent degradation (empty string) prevents cascading CLI failures; throwing would force every template usage to handle errors explicitly
+- **Trade-offs:** Easier to debug later with empty values showing in output vs failing fast; requires test coverage to catch missing variables
+
+### Path argument positional + optional flags (commander style) instead of subcommands or config files (2026-02-13)
+- **Context:** CLI needs flexible invocation: `create-protolab` (current dir), `create-protolab /path`, `create-protolab /path --yes --dry-run`
+- **Why:** Commander's operand pattern matches Unix conventions (curl, git, npm). Positional path stays semantic. Flags are discoverable via --help. No config file parsing delays startup
+- **Rejected:** Subcommand style (create-protolab init /path) adds verb layer unnecessarily. Config file approach requires I/O before execution starts
+- **Trade-offs:** Easier: familiar to Unix users, one command entry point. Harder: --help output must be clear, --skip value parsing requires manual validation
+- **Breaking if changed:** Changing path from positional to flag (--path) breaks existing scripts relying on positional syntax
+
+#### [Pattern] JSON output mode (--json) emits compact object, not streaming newline-delimited JSON (2026-02-13)
+- **Problem solved:** CLI returns single result (success/error/config), not event stream
+- **Why this works:** JSON.stringify(obj) is simpler for single operations. NDJSON pattern used for event streams where each line is independent. Single output means parent process gets complete picture in one parse
+- **Trade-offs:** Easier: simple JSON.parse(stdout). Harder: can't stream large results, must wait for full completion
+
+#### [Gotcha] JSON output mode must be completely non-interactive (no prompts, no spinners, pure stdout) to work in CI/CD pipelines and automation contexts (2026-02-13)
+- **Situation:** Created --json flag to support machine-readable output, but initial implementation accidentally mixed in prompt logic when --json was set
+- **Root cause:** CI/CD pipelines and automation tools expect deterministic stdout they can parse. Any interactive prompt causes `await` to hang indefinitely. Spinners add ANSI codes that break JSON parsing. The flow must be: parse args → execute logic → output JSON → exit
+- **How to avoid:** Easier: Automation, logging, cross-platform CI. Harder: Must duplicate execution paths (interactive vs JSON), test both code paths
+
+#### [Gotcha] Automaker server connectivity check must happen LATE in validation pipeline, not early (2026-02-13)
+- **Situation:** CLI checks Automaker server availability. Initial placement was early (right after environment checks).
+- **Root cause:** Automaker server may not be running yet. Checking early produces false-positive FATAL errors. Checking late (before CI/CD phase) is better: if server down, only that phase fails (RECOVERABLE), user can retry after starting server.
+- **How to avoid:** Easier: fail fast if server down. Harder: server failure is late-stage (already completed earlier phases). Mitigation: graceful degradation in CI/CD phase if server unreachable.
+
+#### [Gotcha] Discord and GitHub API rate limit detection built into validators, not caller. Validators return rate-limit-aware errors with retry hints. (2026-02-13)
+- **Situation:** External APIs return 429 responses during high load. Early attempts caught these in calling code scattered across services.
+- **Root cause:** Rate limits are API behavior, not business logic. Centralizing detection in the validator ensures consistent handling everywhere validators are used. Prevents repeated 429 calls.
+- **How to avoid:** Validators become slightly heavier (detect 429 headers, embed retry-after logic) but callers become much simpler. Trade complexity up for consistency.
+
+### Discord and GitHub validators are separate modules, not unified under single API validator interface (2026-02-13)
+- **Context:** Both APIs return similar error structures (rate limits, validation errors) but have different response schemas for success cases.
+- **Why:** Unified interface would require lowest-common-denominator response type. Separate modules preserve API-specific details (Discord webhook fields vs GitHub rulesets) and future-proof for API-specific features.
+- **Rejected:** Single validateExternalAPI(provider, response) would force each API's responses into generic structure, losing type information.
+- **Trade-offs:** Code duplication in rate-limit detection logic, but each validator knows its API's actual response shape. Callers must import correct validator.
+- **Breaking if changed:** Combining validators later would require defining shared interface and refactoring 427+ lines of validator logic. Worth avoiding until real code reuse appears.
+
+### Use fetch API for Discord REST integration instead of axios/node-fetch library (2026-02-13)
+- **Context:** Implementing Discord phase for create-protolab CLI with API calls to Discord's REST endpoints
+- **Why:** Node.js 18+ has native fetch support; reduces external dependencies for a CLI tool that must be lightweight and portable
+- **Rejected:** axios (heavier) or dedicated discord.js library (runtime dependency bloat for CLI)
+- **Trade-offs:** Easier: fewer deps, smaller bundle. Harder: manual JSON parsing, no built-in retry logic, requires manual type assertions for fetch responses
+- **Breaking if changed:** If target Node version drops below 18, fetch becomes unavailable and implementation fails completely
+
+#### [Gotcha] Discord rate limiting (429) requires retry-after header parsing AND exponential backoff fallback (2026-02-13)
+- **Situation:** Initial implementation only checked for retry-after header; discovered in testing that missing header still causes 429s on rapid requests
+- **Root cause:** Discord's rate limiting is endpoint-specific and bucket-based. retry-after header is not always present on 429 responses, only on some. Exponential backoff (2^attempt) serves as safety net.
+- **How to avoid:** Easier: single retry strategy works in all cases. Harder: more complex backoff logic, slower recovery on missing header
+
+#### [Pattern] Return status objects {success: boolean, error?: string, data?: T} from phase functions instead of throwing (2026-02-13)
+- **Problem solved:** Discord phase needs to gracefully handle missing credentials (skip phase if no bot token) and API failures (rate limits, invalid guild)
+- **Why this works:** CLI workflows need to continue through failed phases (e.g., create project even if Discord setup fails). Throwing exceptions halts the pipeline; status objects allow caller to decide retry/skip/abort logic.
+- **Trade-offs:** Easier: caller controls error handling strategy. Harder: every caller must check success flag (verbose error handling)
+
+### Prompt for guild ID interactively when not provided, rather than making it a required flag (2026-02-13)
+- **Context:** Discord phase accepts --guild-id flag but also prompts user if missing; creates dual-path UX
+- **Why:** Balances CLI flexibility (automation via --guild-id) with usability (interactive discovery for new users who don't know guild ID)
+- **Rejected:** Require --guild-id only (poor UX for new users), prompt every time (breaks automation)
+- **Trade-offs:** Easier: works in both automated and interactive contexts. Harder: two code paths increase testing burden
+- **Breaking if changed:** If interactive prompt is removed, automated deployments break unless flag is explicitly set; if flag is removed, automation breaks
