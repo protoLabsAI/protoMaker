@@ -100,6 +100,8 @@ import { createBacklogPlanRoutes } from './routes/backlog-plan/index.js';
 import { cleanupStaleValidations } from './routes/github/routes/validation-common.js';
 import { createMCPRoutes } from './routes/mcp/index.js';
 import { MCPTestService } from './services/mcp-test-service.js';
+import { createEscalationRoutes } from './routes/escalation.js';
+import { getEscalationRouter } from './services/escalation-router.js';
 import { createPipelineRoutes } from './routes/pipeline/index.js';
 import { pipelineService } from './services/pipeline-service.js';
 import { createMetricsRoutes } from './routes/metrics/index.js';
@@ -357,6 +359,10 @@ const mcpTestService = new MCPTestService(settingsService);
 const featureHealthService = new FeatureHealthService(featureLoader, autoModeService);
 const beadsService = new BeadsService('bd', events);
 const discordService = getDiscordService();
+
+// Initialize Escalation Router
+const escalationRouter = getEscalationRouter();
+escalationRouter.setEventEmitter(events);
 
 // Initialize Health Monitor Service early with autoRemediate enabled
 const healthMonitorService = getHealthMonitorService(featureLoader, {
@@ -969,6 +975,7 @@ app.use('/api/ceremonies', createCeremoniesRoutes(events, featureLoader, project
 app.use('/api/issues', createIssuesRoutes(events));
 app.use('/api/crew', createCrewRoutes(crewLoopService));
 app.use('/api/deploy', createDeployRoutes(autoModeService));
+app.use('/api/escalation', createEscalationRoutes(escalationRouter));
 
 // Create HTTP server
 const server = createServer(app);
