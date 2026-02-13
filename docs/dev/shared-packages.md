@@ -14,7 +14,12 @@ libs/
 ├── platform/           # Platform utilities
 ├── model-resolver/     # Claude model resolution
 ├── dependency-resolver/# Feature dependency resolution
-└── git-utils/          # Git operations
+├── policy-engine/      # Trust-based policy checking
+├── spec-parser/        # XML/markdown spec parsing
+├── git-utils/          # Git operations
+├── flows/              # LangGraph state graph primitives
+├── llm-providers/      # Multi-provider LLM abstraction
+└── observability/      # Langfuse tracing and prompt management
 ```
 
 ## When to Use Each Package
@@ -221,6 +226,68 @@ if (await isGitRepo(projectPath)) {
 - Untracked file diffs
 - Non-git directory support
 
+### @automaker/flows
+
+**Use when:** You need LangGraph state graph primitives, multi-agent coordination, or flow orchestration.
+
+**Import for:**
+
+- `GraphBuilder` - Fluent API for building state graphs
+- `createLinearGraph`, `createLoopGraph`, `createBranchingGraph` - Common graph patterns
+- `createStateAnnotation` - Bridge Zod schemas to LangGraph Annotation.Root
+- `appendReducer`, `fileReducer`, `todoReducer`, `counterReducer` - State reducers
+- `createBinaryRouter`, `createValueRouter`, `createFieldRouter` - Routing utilities
+- `wrapSubgraph` - Subgraph isolation wrapper
+- `createCoordinatorGraph` - Reference coordinator with Send() fan-out
+
+**Example:**
+
+```typescript
+import { GraphBuilder, appendReducer, createBinaryRouter } from '@automaker/flows';
+```
+
+**Full documentation:** [Flows Package](./flows)
+
+### @automaker/llm-providers
+
+**Use when:** You need multi-provider LLM abstraction, provider configuration, or model management.
+
+**Import for:**
+
+- `ProviderFactory` - Singleton factory for provider management
+- `BaseLLMProvider` - Base class for new providers
+- `AnthropicProvider`, `OllamaProvider`, etc. - Provider implementations
+- `validateProviderConfig`, `validateLLMProvidersConfig` - Zod validation
+- `ANTHROPIC_MODELS`, `getModelIdForTier` - Default model configs
+
+**Example:**
+
+```typescript
+import { ProviderFactory, AnthropicProvider } from '@automaker/llm-providers';
+```
+
+**Full documentation:** [LLM Providers Package](./llm-providers-package)
+
+### @automaker/observability
+
+**Use when:** You need Langfuse tracing, prompt versioning, or cost tracking.
+
+**Import for:**
+
+- `LangfuseClient` - Wrapper with graceful fallback
+- `wrapProviderWithTracing` - Transparent async generator tracing
+- `executeTrackedPrompt` - Prompt execution with full tracking
+- `PromptCache`, `createPromptCache` - TTL-based prompt caching
+- `getRawPrompt`, `pinPromptVersion`, `pinPromptLabel` - Prompt versioning
+
+**Example:**
+
+```typescript
+import { LangfuseClient, wrapProviderWithTracing } from '@automaker/observability';
+```
+
+**Full documentation:** [Observability Package](./observability-package)
+
 ## Common Patterns
 
 ### Creating a Feature Executor
@@ -404,6 +471,11 @@ Understanding the dependency chain helps prevent circular dependencies:
 @automaker/platform
 @automaker/model-resolver
 @automaker/dependency-resolver
+@automaker/policy-engine
+@automaker/spec-parser
+@automaker/observability
+@automaker/llm-providers
+@automaker/flows
     ↓
 @automaker/git-utils
     ↓
@@ -457,6 +529,9 @@ import { Feature } from '../../../src/services/feature-loader';
 - Model Resolution → `@automaker/model-resolver`
 - Dependency Ordering → `@automaker/dependency-resolver`
 - Git Operations → `@automaker/git-utils`
+- LangGraph Flows → `@automaker/flows`
+- LLM Providers → `@automaker/llm-providers`
+- Tracing/Observability → `@automaker/observability`
 
 **Never import from:** `lib/*`, `services/feature-loader` (for types), `providers/types`, `routes/common`
 

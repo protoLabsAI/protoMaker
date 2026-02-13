@@ -11,6 +11,7 @@ Agent roles in the Automaker authority system, organized by hierarchy level.
 | [GTM Specialist](#gtm-specialist)       | AI    | Sonnet | Active |
 | [DevOps Engineer](#devops-engineer)     | AI    | Sonnet | Active |
 | [Frontend Engineer](#frontend-engineer) | AI    | Sonnet | Active |
+| [AI Agent Engineer](#ai-agent-engineer) | AI    | Sonnet | Active |
 | [PR Maintainer](#pr-maintainer)         | AI    | Haiku  | Active |
 | [Board Janitor](#board-janitor)         | AI    | Haiku  | Active |
 
@@ -205,6 +206,34 @@ May delegate to specialized agents for monitoring, security, and performance as 
 ### Evolution
 
 May delegate to specialized agents for accessibility auditing, visual regression testing, and design token generation as the component library grows.
+
+---
+
+## AI Agent Engineer {#ai-agent-engineer}
+
+**Type:** AI
+**Reports to:** Chief of Staff
+**Trust Level:** 2 (Conditional)
+
+### Responsibilities
+
+- LangGraph state graph design and multi-agent coordination patterns
+- LLM provider abstraction layer (`@automaker/llm-providers`)
+- Observability pipeline and Langfuse integration (`@automaker/observability`)
+- Flow orchestration primitives (`@automaker/flows`)
+- Prompt versioning, caching, and cost tracking
+- Provider health checks and failover strategies
+
+### Operational Scope
+
+- Owns all agent coordination and flow engineering decisions
+- Can commit and create PRs for flow, provider, and observability changes
+- Implements features assigned via auto-mode or direct invocation
+- Accessible via CLI (`/sam`) and Discord
+
+### Evolution
+
+May delegate to specialized agents for provider benchmarking, prompt optimization, and flow performance profiling as the multi-agent system grows.
 
 ---
 

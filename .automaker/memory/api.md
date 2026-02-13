@@ -5,9 +5,9 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 22
-  referenced: 13
-  successfulFeatures: 13
+  loaded: 40
+  referenced: 22
+  successfulFeatures: 22
 ---
 # api
 
@@ -147,3 +147,61 @@ usageStats:
 - **Rejected:** Require --guild-id only (poor UX for new users), prompt every time (breaks automation)
 - **Trade-offs:** Easier: works in both automated and interactive contexts. Harder: two code paths increase testing burden
 - **Breaking if changed:** If interactive prompt is removed, automated deployments break unless flag is explicitly set; if flag is removed, automation breaks
+
+### getModelForCategory() returns first matching model instead of collection, combined with supportsCategory() to check availability (2026-02-13)
+- **Context:** Provider can support multiple models per category, but most callers want a single model to use
+- **Why:** Single model return is simpler for callers (common case: 'get me the fast model'). Two-part API (check support, then get model) handles edge cases without returning null or throwing.
+- **Rejected:** Return array of models (forces callers to pick); throw if category not found (no way to check first)
+- **Trade-offs:** Easier: 90% of use cases get simple string return. Harder: callers must check supportsCategory() before calling to avoid throwing.
+- **Breaking if changed:** If getModelForCategory() returned arrays, callers couldn't use direct string assignments. If it returned null instead of throwing, silent failures become possible.
+
+#### [Pattern] Variable injection uses regex pattern `{{VARIABLE_NAME}}` with intentional preservation of undefined variables rather than throwing errors (2026-02-13)
+- **Problem solved:** Need to inject dynamic values into prompt templates while debugging missing variables
+- **Why this works:** Preserving unmatched `{{placeholders}}` in output reveals to users which variables were not provided, enabling easier debugging. This is better than silent substitution or throwing errors.
+- **Trade-offs:** Easier: debugging and graceful degradation. Harder: prompts may contain invalid placeholders if not caught in tests
+
+#### [Pattern] Each provider implements graceful credential validation with clear error messages and installation URLs, allowing tests and CLI tools to skip functionality rather than hard-fail (2026-02-13)
+- **Problem solved:** Three providers with different credential requirements: Groq (API key), Ollama (running service), Bedrock (AWS credentials + region)
+- **Why this works:** Prevents hard failures in CI/local dev when optional providers aren't configured. Users can choose to configure only providers they need. Tests use this to skip gracefully
+- **Trade-offs:** Silent failure in some cases requires good observability - documented in README. Tests must explicitly check for 'skipped' status rather than assuming availability
+
+#### [Pattern] Examples use remote branch inspection to understand undocumented provider API before writing docs (2026-02-13)
+- **Problem solved:** Provider implementation was in parallel branches not yet merged; risk of documenting wrong API surface
+- **Why this works:** Ensures examples and documentation match actual implementation rather than assumptions. Prevents shipping docs for nonexistent methods or incorrect signatures.
+- **Trade-offs:** Required exploration of unmerged code. Once merged, documentation becomes source of truth and doesn't need to be re-verified.
+
+### Cache key composition uses tuple of (name, version, label) instead of single string key (2026-02-13)
+- **Context:** Same prompt can have multiple versions and labels (e.g., 'production' vs 'staging' variants)
+- **Why:** Prevents cache collisions where fetching prompt v1 with label 'prod' would overwrite v2 with label 'staging'. Each variant is semantically different and should be cached separately.
+- **Rejected:** Single string key with concatenation (e.g., 'prompt-v1-prod') would work but is harder to invalidate selectively and easier to create accidental collisions
+- **Trade-offs:** Slightly more complex cache key logic but enables precise invalidation via `invalidateByName()` which clears all versions of a prompt
+- **Breaking if changed:** If cache keys were flattened to strings and code relied on pattern matching for invalidation, selective clearing would break
+
+### Version pinning supports both explicit version numbers AND semantic labels (e.g., 'production', 'staging') (2026-02-13)
+- **Context:** Applications need flexibility to either lock to specific versions for consistency or track labeled variants for flexibility
+- **Why:** Labels decouple application code from version numbers - can update 'production' label to point to new version without redeploying app. Numbers provide certainty. Both patterns needed in practice.
+- **Rejected:** Only numbers would require code changes to upgrade; only labels would prevent rollback to specific tested versions
+- **Trade-offs:** More API surface but provides two complementary caching strategies. Cache keys must distinguish between version and label lookups.
+- **Breaking if changed:** If label support were removed, any app using labels for prod/staging separation would need redeployment to change prompt versions
+
+#### [Pattern] Implemented router composition via `combineRoutersAnd()` and `combineRoutersOr()` rather than single monolithic router (2026-02-13)
+- **Problem solved:** Complex routing logic often needs to combine multiple conditions (e.g., check field A AND field B). Single router functions would require nested conditionals.
+- **Why this works:** Composable routers enable reusable routing logic and easier testing of individual conditions. Combinators allow orthogonal composition without explosion of router types.
+- **Trade-offs:** Slightly more verbose for simple cases, but complex routing becomes testable and composable. Enables middleware-like patterns.
+
+#### [Pattern] Provided both `createStateAnnotation()` wrapper AND direct Zod schema patterns to give flexibility for simple vs complex state needs (2026-02-13)
+- **Problem solved:** Some graphs need just simple state, others need validation. Forcing all state through annotation helpers would be overly prescriptive.
+- **Why this works:** The wrapper provides type inference and reducer binding for common case. Zod schemas work directly for users who don't need the helpers. Layered API allows gradual adoption.
+- **Trade-offs:** Two ways to define state means users must learn both patterns, but each pattern fits its use case naturally.
+
+#### [Pattern] SDK methods (createSpan, createScore) accept Options type objects instead of individual parameters (2026-02-13)
+- **Problem solved:** LangfuseClient expands with more optional configuration parameters over time
+- **Why this works:** Options objects provide forward compatibility. New optional fields can be added to CreateSpanOptions without breaking existing code. Individual parameters would require method overloading or deprecated signatures.
+- **Trade-offs:** Slightly more verbose at call site (easier evolution, more configuration flexibility), but clearer intent than positional args
+
+### Exporting all public types from src/index.ts rather than requiring users to import from submodules (2026-02-13)
+- **Context:** Users need LangfuseClient, CreateSpanOptions, CreateScoreOptions, and other types for TypeScript support
+- **Why:** Single import point reduces cognitive load and prevents users from importing from internal implementation details (langfuse/client, langfuse/types). Enables internal refactoring without breaking imports.
+- **Rejected:** Requiring `import { LangfuseClient } from '@automaker/observability/dist/langfuse/client'` exposes internal structure
+- **Trade-offs:** Central barrel export is easier to use (one source of truth), requires explicit re-exports (minor maintenance overhead)
+- **Breaking if changed:** If index.ts stops re-exporting types, any code importing from it breaks. Users must be aware of public API guarantees.

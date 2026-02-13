@@ -5,9 +5,9 @@ relevantTo: [security]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 7
-  referenced: 5
-  successfulFeatures: 5
+  loaded: 13
+  referenced: 8
+  successfulFeatures: 8
 ---
 # security
 
@@ -104,3 +104,20 @@ usageStats:
 - **Rejected:** Encrypt config (adds complexity), store remotely (requires backend), environment variables (not persistent across CLI invocations)
 - **Trade-offs:** Easier: simple file persistence. Harder: webhook secret leakage risk if config uploaded to public repo
 - **Breaking if changed:** If webhook IDs become sensitive (Discord changes security model), all existing configs are exposed
+
+#### [Gotcha] Provider name validation uses exhaustive string literal union (as const) rather than regex or allowlist check (2026-02-13)
+- **Situation:** Config could specify arbitrary provider names that don't exist in factory
+- **Root cause:** TypeScript ensures all provider names in config match exact set of supported providers at compile time. Runtime validation via Zod ensures malformed configs caught immediately. 'as const' enables exhaustive type checking.
+- **How to avoid:** Easier: single source of truth in type. Harder: adding new provider requires updating both type and Zod schema.
+
+### Credentials passed through environment variables (AWS_REGION, GROQ_API_KEY, etc.) rather than config files or constructor parameters (2026-02-13)
+- **Context:** Three providers with different credential types: API keys, AWS credentials, localhost URL
+- **Why:** Environment variable pattern is standard for secrets, never persisted in code/config, easy for CI/CD, works across package boundaries without passing credentials through function signatures
+- **Rejected:** Config files would risk accidental commits. Constructor parameters would leak credentials in logs and error messages. Hardcoding would be explicit security risk
+- **Trade-offs:** Requires environment setup overhead, but keeps code completely credential-free. Harder to debug credential issues locally
+- **Breaking if changed:** If providers switch to config file or parameter-based credentials, deployment scripts must be updated, and risk of secret leakage increases significantly
+
+#### [Gotcha] Examples explicitly avoid handling real API keys in version control but need to document safe patterns for users (2026-02-13)
+- **Situation:** Documentation must show how to handle secrets properly without leaking them
+- **Root cause:** API keys in examples create supply-chain risk. Users who copy examples directly inherit the security practices shown.
+- **How to avoid:** Examples are less 'complete' (missing actual API calls) but safer. Documentation burden shifted to explaining .env patterns clearly.

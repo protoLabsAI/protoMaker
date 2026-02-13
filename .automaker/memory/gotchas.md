@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 119
-  referenced: 46
-  successfulFeatures: 46
+  loaded: 153
+  referenced: 61
+  successfulFeatures: 61
 ---
 # gotchas
 
@@ -70,3 +70,23 @@ usageStats:
 - **Situation:** During initial implementation, file structure was created with incorrect nesting (packages/create-protolab/packages/create-protolab/...) instead of the expected monorepo pattern
 - **Root cause:** Unclear mental model of the monorepo structure. The package name @automaker/create-protolab led to confusion about where files should live vs. where imports come from
 - **How to avoid:** Caught early through verification testing which tried to import and immediately failed, forcing correction. Manual test-first approach prevented committing broken code
+
+#### [Gotcha] BaseProvider.constructor calls this.getName() before subclass constructor sets required instance variables, causing method to access undefined properties (2026-02-13)
+- **Situation:** TracedProvider constructor calls super() which triggers BaseProvider.constructor, which immediately calls this.getName() - but TracedProvider.wrapped hasn't been set yet
+- **Root cause:** JavaScript constructor execution order: super() runs to completion before subclass constructor body executes. Virtual method dispatch calls overridden method during parent construction.
+- **How to avoid:** Defensive null-coalescing (this.wrapped?.getName() || 'traced') is verbose but required. Alternative would be factory pattern to avoid calling constructor logic.
+
+#### [Gotcha] LangGraph's `ConditionalEdgeFunction` type signature requires checking source node name, but state-only routing functions don't have source context (2026-02-13)
+- **Situation:** Initial router implementations assumed state-only routing. LangGraph's edge routing provides both state AND source node metadata.
+- **Root cause:** The source node context enables more sophisticated routing patterns (e.g., 'from A go to B, from C go to D'). State-only routers are simpler but limited.
+- **How to avoid:** Router functions are slightly more complex (must accept and handle optional source param), but enable context-aware routing.
+
+#### [Gotcha] LangGraph's setEntryPoint and addEdge methods require type assertions despite being public API methods (2026-02-13)
+- **Situation:** TypeScript compilation failed with 'Property does not exist' errors on StateGraph instance methods
+- **Root cause:** LangGraph's type definitions use generic overloads that don't properly expose these methods on the StateGraph instance type. The methods exist at runtime but are hidden by TypeScript's type system.
+- **How to avoid:** Type assertions disable type safety at these call sites, but methods are stable LangGraph API. Alternative would be wrapping StateGraph in typed facade class.
+
+#### [Gotcha] Workspace dependency references must use explicit version numbers, not workspace:* protocol in certain contexts (2026-02-13)
+- **Situation:** Initial npm resolution failed when @automaker/flows tried to reference @automaker/types using workspace protocol
+- **Root cause:** LangGraph build/compilation process may not resolve workspace protocol correctly in some monorepo configurations. Explicit version numbers force npm resolution to use published versions or local copies consistently.
+- **How to avoid:** Explicit versions slightly decouple from monorepo's version management - requires manual sync. But gained immediate stability and avoided monorepo-wide configuration changes.

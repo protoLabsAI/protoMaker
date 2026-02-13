@@ -5,9 +5,9 @@ relevantTo: [architecture]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 4
-  referenced: 2
-  successfulFeatures: 2
+  loaded: 9
+  referenced: 5
+  successfulFeatures: 5
 ---
 # architecture
 
@@ -795,3 +795,313 @@ usageStats:
 - **Situation:** Converting CommonJS require() patterns to ES import statements for create-protolab package running on Node 18+
 - **Root cause:** Node.js requires explicit `type: "module"` declaration to enable `.js` files as ES modules. TypeScript needs matching `module` config to generate correct import statements in compiled output.
 - **How to avoid:** ES modules enable tree-shaking and are required for modern Node tooling, but adds configuration complexity. Requires Node 14+ (satisfied by test matrix 18/20/22).
+
+#### [Pattern] Dual exports pattern for packages: main export (.) and server export (./server) to separate client and server-side code (2026-02-13)
+- **Problem solved:** LLM providers package needs to expose different APIs for client-side and server-side consumers
+- **Why this works:** Allows a single package to serve multiple entry points without circular dependencies or code duplication. Enables tree-shaking and selective imports - consumers only bundle what they need
+- **Trade-offs:** Easier: flexible consumption patterns and code organization. Harder: consumers must know which export to use; accidental imports from wrong export possible
+
+### Verification through actual build/test execution rather than just file existence checks (2026-02-13)
+- **Context:** Package scaffolding needs to validate the package integrates correctly with monorepo tooling
+- **Why:** File existence is insufficient - configuration files could have syntax errors, TypeScript could fail to compile, or workspace integration could be broken. Running actual npm commands validates the entire integration chain
+- **Rejected:** JSON schema validation only (wouldn't catch runtime errors); static file checks only (misses configuration issues)
+- **Trade-offs:** Easier: catches real integration problems early. Harder: verification tests take more time to run; requires build toolchain to be functional
+- **Breaking if changed:** Removing the actual build/test verification step means broken configurations could slip through to CI/CD
+
+#### [Pattern] Placeholder index.ts files with no exports in new packages to establish entry points before implementation (2026-02-13)
+- **Problem solved:** Package scaffolding creates the structure before any actual provider code exists
+- **Why this works:** Allows workspace to recognize the package and build tools to validate configuration immediately. Prevents 'empty module' errors during build. Creates the contract for what will be exported
+- **Trade-offs:** Easier: immediate validation and structure clarity. Harder: requires developers to remember these are placeholders; could add unnecessary import cycles if not careful
+
+### Adding package to workspace build:libs script during scaffolding rather than on-demand before first build (2026-02-13)
+- **Context:** Root package.json needs to know about all packages in the monorepo
+- **Why:** Prevents the gotcha of forgetting to register the package with the build system, which leads to silent failures where a package exists but never gets built. Catches configuration errors immediately in next build
+- **Rejected:** Manual registration later (easy to forget; creates inconsistent developer experience); automatic discovery via directory scanning (too magical, hard to debug)
+- **Trade-offs:** Easier: ensures all packages are always built. Harder: requires manual registration step; easy to forget when adding packages manually
+- **Breaking if changed:** Removing from build:libs means the package won't be included in build output even if the code exists, leading to missing exports in consuming applications
+
+### Package build chain ordering: observability placed after policy-engine and before git-utils in build:libs script (2026-02-13)
+- **Context:** Adding new package to monorepo workspace with existing build chain dependencies
+- **Why:** Packages must be built in dependency order - observability only depends on @automaker/types, so it can be placed relatively early. Positioning matters because npm workspace builds can fail if dependencies aren't built first
+- **Rejected:** Arbitrary placement or appending to the end without considering dependency tree
+- **Trade-offs:** Correct ordering prevents build failures and improves build parallelization efficiency, but requires understanding the full dependency graph
+- **Breaking if changed:** Incorrect build order will cause 'module not found' errors at runtime if dependents try to import from packages built after them
+
+#### [Pattern] Multi-level export paths in package.json: both './' and './langfuse' as named exports (2026-02-13)
+- **Problem solved:** Observability package needed to support both core observability utilities and Langfuse-specific integration
+- **Why this works:** This pattern allows consumers to choose between importing core utilities or the specific Langfuse adapter without requiring separate packages or internal path imports that break bundler optimization
+- **Trade-offs:** Requires maintaining explicit export mappings in package.json but enables clean public API and prevents coupling to internal directory structure
+
+### Package structure mirrors existing libs/* packages exactly: tsconfig.json extends base, vitest.config.ts provided, src/ with subdirectories (2026-02-13)
+- **Context:** New observability package needed to follow workspace conventions for consistency
+- **Why:** Consistency enables tooling assumptions (build scripts, IDE configurations, developer expectations). Following established patterns reduces cognitive load and maintenance burden
+- **Rejected:** Simplified structure or deviance from conventions to 'optimize' for early-stage package
+- **Trade-offs:** Slight upfront effort to mirror patterns, but prevents future refactoring and ensures all tooling (linters, formatters, build) works identically
+- **Breaking if changed:** Deviating from established patterns causes build/test tools to behave unpredictably and creates inconsistency that compounds across the codebase
+
+### Singleton ProviderFactory with explicit resetInstance() method for testing instead of dependency injection (2026-02-13)
+- **Context:** Factory needs to be globally accessible but tests require isolation and state reset between test cases
+- **Why:** Global singleton eliminates need to thread factory through entire codebase, while resetInstance() provides clean test isolation without mocking frameworks. DI would require plumbing factory through all constructor chains.
+- **Rejected:** Dependency injection pattern (more testable but requires constructor changes everywhere); implicit singleton (impossible to reset between tests)
+- **Trade-offs:** Easier: global access, less boilerplate. Harder: must remember to reset in tests, creates hidden global state. Tests become dependent on test order if resetInstance() is forgotten.
+- **Breaking if changed:** Removing resetInstance() breaks all tests that need provider state isolation. Removing singleton pattern breaks every code path that assumes global factory access.
+
+#### [Pattern] Separation of provider registration (registerProvider) from configuration initialization (initialize) as distinct operations (2026-02-13)
+- **Problem solved:** Factory needs to validate config structure separately from loading actual provider instances
+- **Why this works:** Config validation happens during initialize() to catch errors early, but provider instances are registered separately. This allows tests to use mock providers without requiring real config or API keys. Also enables runtime provider swapping.
+- **Trade-offs:** Easier: test flexibility, runtime provider swapping. Harder: two-step initialization can be forgotten, state can be invalid if only one step completes.
+
+### Created tier-based model abstraction (fast/smart/creative) mapping to specific Claude models (haiku/sonnet/opus) rather than exposing raw model names (2026-02-13)
+- **Context:** Needed to provide LLM provider abstraction that works across different provider implementations while maintaining flexibility
+- **Why:** Tier system decouples application code from specific model versions. If Claude releases new models, only the default config needs updating, not consumer code. Provides semantic meaning (fast vs smart) that's more stable than version numbers
+- **Rejected:** Direct model name exposure (e.g., 'claude-sonnet-4-5') would couple code to specific versions and force updates across codebase when models change
+- **Trade-offs:** Adds abstraction layer that increases indirection but provides stability. Requires maintaining tier-to-model mapping in config. Enables provider-agnostic code but limits direct model control
+- **Breaking if changed:** Removing tier system would require consumers to know specific model names and manage version updates themselves across the codebase
+
+#### [Pattern] BaseLLMProvider abstract class with getModel(), listAvailableModels(), and healthCheck() as core interface - provider-agnostic contract (2026-02-13)
+- **Problem solved:** Need to support multiple LLM providers (Anthropic, OpenAI, etc.) with pluggable implementations
+- **Why this works:** Abstract base class provides contract that all providers must fulfill, enabling polymorphic usage. Consumers code against interface, not implementation. New providers can be added without changing consumer code
+- **Trade-offs:** Abstract class is more opinionated and harder to evolve without breaking changes, but enables default implementations. Interface is more flexible but requires duplication
+
+### Implemented healthCheck() with dual validation: API key presence AND actual API call validation, returning detailed error context (2026-02-13)
+- **Context:** Need to verify provider is correctly configured and functional before allowing use
+- **Why:** Two-level validation catches configuration errors (missing key) separately from authentication errors (invalid key), providing distinct error messages for debugging. Latency measurement provides performance baseline
+- **Rejected:** Could skip API call and only check key presence, but that misses invalid key errors until runtime. Could skip latency, but baseline performance measurement is useful for diagnostics
+- **Trade-offs:** Additional API call in health check adds latency but provides confidence in provider setup. Real environment benefits; test environments can mock
+- **Breaking if changed:** Removing API call validation would miss invalid credentials until actual inference attempted. Removing latency measurement loses performance diagnostics
+
+### Default configuration stored in separate `default-config.ts` file rather than inline in provider class or environment variables only (2026-02-13)
+- **Context:** Need to manage model-to-tier mappings in a way that's configurable but has sensible defaults
+- **Why:** Separation of concerns - config is independent of provider logic. Single source of truth for defaults. Can be easily overridden by environment or runtime config without modifying code. Enables easy updates when new models release
+- **Rejected:** Inline defaults couple config to implementation. Env-vars-only approach makes defaults invisible and harder to discover
+- **Trade-offs:** Extra file adds minimal complexity but significantly improves maintainability and discoverability. Makes it obvious what models are configured
+- **Breaking if changed:** Moving defaults into code makes updates require code changes and redeploys rather than config-only updates
+
+### Implemented LangfuseClient as a wrapper with graceful degradation when SDK is unavailable, rather than requiring SDK presence upfront (2026-02-13)
+- **Context:** Need to support offline execution and missing Langfuse credentials without crashing
+- **Why:** Allows the observability layer to be optional - the system works with or without Langfuse, and the decision to use it is deferred to runtime (isAvailable() check). This prevents hard dependencies and deployment failures.
+- **Rejected:** Direct Langfuse SDK instantiation at module load time would fail fast if credentials missing, forcing hard dependency on Langfuse being configured
+- **Trade-offs:** Easier: graceful fallback, optional dependency. Harder: need validation logic in client wrapper, caller must check isAvailable() before using features
+- **Breaking if changed:** Removing isAvailable() check would cause crashes when Langfuse unavailable; removing fallback logic would break offline scenarios
+
+#### [Pattern] ExecutionContext passed to executor function includes traceId and generationId for cross-cutting concern propagation without breaking encapsulation (2026-02-13)
+- **Problem solved:** Executor function (caller-provided) needs trace context for custom logging/tracking but shouldn't directly depend on Langfuse
+- **Why this works:** Passing context as object allows executor to use IDs without coupling to Langfuse SDK. IDs are generated by observability layer but used by application code for correlation.
+- **Trade-offs:** Easier: loose coupling, testable. Harder: caller must remember to pass context object, more boilerplate in function signature
+
+### Created self-contained provider abstraction package with local type definitions instead of depending on shared @automaker/types (2026-02-13)
+- **Context:** Needed to implement OpenAI and Google providers with consistent interfaces while maintaining type safety across different provider implementations
+- **Why:** Prevents circular dependencies and gives the provider package autonomy. Shared types across providers would create tight coupling to a central types package that might not evolve at the same pace as provider implementations
+- **Rejected:** Centralize all provider types in @automaker/types - would force all provider packages to depend on a monolithic types package
+- **Trade-offs:** Easier: Independent evolution of provider types; packages self-document their contracts. Harder: Type definitions duplicated across packages if multiple packages need to understand provider contracts
+- **Breaking if changed:** If external code directly imports types from @automaker/types instead of @automaker/llm-providers, it breaks. Consumer code must import from the provider package itself
+
+#### [Pattern] Used abstract BaseProvider class with concrete provider implementations rather than factory functions or strategy objects (2026-02-13)
+- **Problem solved:** Needed consistent interface across OpenAI and Google while supporting health checks, metrics, and model resolution
+- **Why this works:** Class-based inheritance provides clearer semantics for 'is-a' relationships (OpenAIProvider IS-A Provider), enables instanceof checks, and makes adding lifecycle hooks (initialize, shutdown) more natural later
+- **Trade-offs:** Easier: IDE autocomplete, type checking, adding provider-specific methods. Harder: Slightly more verbose than functional approach, inheritance hierarchy must be carefully designed
+
+### Model definitions include both categorical (fast/balanced/quality/reasoning) AND capability-based (vision, streaming, functionCalling) metadata (2026-02-13)
+- **Context:** Needed to support different selection strategies: users might want 'fastest model' OR 'model with vision' OR 'model for reasoning'
+- **Why:** Dual metadata allows flexible provider selection without needing to iterate all models with filters. Categories provide semantic meaning (gpt-4o-mini is fastest), capabilities enable precise matching
+- **Rejected:** Single flat list with filtering would require iterating all models for each selection criteria
+- **Trade-offs:** Easier: Multiple selection strategies at runtime. Harder: Must maintain consistency between categories and capabilities (e.g., ensure reasoning model actually has reasoning capability)
+- **Breaking if changed:** If consuming code relies only on categories and ignores capabilities, it might select models lacking required features (e.g., selecting gpt-4o-mini for vision when o1 in reasoning category lacks vision)
+
+### Model alias system in default config allows multiple names to resolve to same model (e.g., 'gpt-4-latest' → 'gpt-4o') (2026-02-13)
+- **Context:** Need to support deprecated model names, shortened aliases, and version-agnostic references without duplicating model definitions
+- **Why:** Single source of truth for each model definition. Aliases enable backward compatibility and user-friendly shorthand without bloating the model list
+- **Rejected:** Duplicate full model definitions for each alias - would violate DRY and make updates harder
+- **Trade-offs:** Easier: Backward compatible naming, migration paths. Harder: Must resolve aliases before model lookup, adds indirection layer
+- **Breaking if changed:** If code bypasses alias resolution and uses model IDs directly, aliases become invisible. Must validate that all model references go through alias resolution
+
+#### [Gotcha] Provider package has independent tsconfig that might not match root project settings, and successful npm test doesn't guarantee tsc compilation (2026-02-13)
+- **Situation:** Tests passed (36/36) but `tsc --project libs/llm-providers/tsconfig.json` showed errors due to missing node_modules dependencies
+- **Root cause:** Test runners (vitest) use different resolution than tsc compiler; npm install wasn't fully completed due to Python/node-pty issues, so type resolution failed differently
+- **How to avoid:** Easier: Tests run despite missing dependencies. Harder: Can't trust test success as proof of compilation
+
+### Health checks return provider-specific status object with latency and timestamp rather than boolean (2026-02-13)
+- **Context:** Need to track provider health over time and understand response characteristics, not just 'up/down'
+- **Why:** Rich status object enables monitoring patterns: latency trending, timestamp-based cache invalidation, per-provider SLA tracking. Boolean would lose debugging information
+- **Rejected:** Simple boolean would be simpler but useless for real health monitoring
+- **Trade-offs:** Easier: Real health monitoring, debugging. Harder: Callers must handle status objects instead of simple booleans
+- **Breaking if changed:** If code expects health check to return boolean and checks `if (provider.health())`, it breaks when method returns object (truthy regardless of actual status)
+
+### Created unified BaseProvider interface with provider-specific ExecuteOptions instead of using SDK's native options (messages, maxTokens, temperature) (2026-02-13)
+- **Context:** Needed to support heterogeneous providers (Groq API, local Ollama, AWS Bedrock) with different invocation patterns
+- **Why:** Each provider has different execution models - Groq uses REST API with prompt-based requests, Ollama uses local HTTP, Bedrock uses AWS SDK. A thin adapter layer mapping to provider-native formats is simpler than forcing a lowest-common-denominator interface
+- **Rejected:** Standardizing on SDK ExecuteOptions (messages array, maxTokens, temperature) would require transforming data at execution time for each provider, adding unnecessary complexity
+- **Trade-offs:** Added abstraction layer that's easier to extend, but requires provider implementations to handle format conversion themselves. Makes each provider more isolated but adds boilerplate
+- **Breaking if changed:** If providers are changed to use native SDK ExecuteOptions, all three implementations would need to add transformation logic, and the BaseProvider interface contract would need renegotiation
+
+#### [Gotcha] InstallationStatus must include `method` field ('cli', 'sdk', 'api') even in error cases, not just success cases (2026-02-13)
+- **Situation:** Initial implementations returned InstallationStatus with only `installed` and `error` fields. Tests failed when trying to access `method` property
+- **Root cause:** The method field identifies how the provider operates - this is runtime state that's needed even when installation fails, as it determines the code path for execution
+- **How to avoid:** Small consistency cost in error responses, but eliminates conditional checks and type guards in consumer code
+
+### ProviderMessage format uses type/subtype/structured content, not simple prompt strings - aligns with upstream SDK expectations rather than provider-native formats (2026-02-13)
+- **Context:** Each provider has native message formats (Groq: REST JSON, Ollama: HTTP body, Bedrock: AWS SDK objects). SDK expects ProviderMessage with specific structure
+- **Why:** Message format is SDK contract, not provider implementation detail. Using SDK format ensures compatibility with agent runtime and simplifies consumer code that works with multiple providers
+- **Rejected:** Allowing each provider to use native message formats would require transformations at consumption time, adding logic to router/dispatcher code
+- **Trade-offs:** Provider implementations have extra mapping logic, but consumer code is clean and consistent. Provider-specific message formats are encapsulated
+- **Breaking if changed:** If ProviderMessage structure changes in SDK, all three providers need updates. If providers return native formats instead, consumer code becomes provider-aware
+
+#### [Gotcha] ModelDefinition requires both `modelString` (unique identifier) and `description` (user-facing label). Initial implementations only provided one or used inconsistent naming (2026-02-13)
+- **Situation:** Models like 'groq-llama-3.1-70b' need both the full model identifier and a readable description for UI/logging
+- **Root cause:** Separation allows flexible model naming in code while maintaining readable user descriptions. The modelString is the execution key, description is display text
+- **How to avoid:** Small duplication (both fields defined for each model), but clear separation of concerns between code and UI
+
+#### [Pattern] Ollama provider includes getInstalledModels() method to dynamically detect locally-installed models, while Groq and Bedrock use hardcoded model lists (2026-02-13)
+- **Problem solved:** Ollama is local-first and user can install arbitrary models. Groq and Bedrock APIs have fixed model catalogs
+- **Why this works:** Ollama's value is flexibility - hardcoding models would prevent users from leveraging their custom-installed models. Groq/Bedrock model catalogs are API-defined
+- **Trade-offs:** Ollama implementation is more complex (HTTP query to list models) but much more flexible. Groq/Bedrock are simpler but less dynamic
+
+### Examples designed to work WITHOUT API keys by using process.env with optional fallback/mock mode documentation (2026-02-13)
+- **Context:** Need for runnable examples that don't require users to configure credentials upfront
+- **Why:** Lowers barrier to entry - users can explore API surface and learn patterns before investing in key setup. Demonstrates that library has graceful degradation.
+- **Rejected:** Hardcoding dummy keys or requiring mandatory .env.example setup would require additional setup steps and could leak secrets if mishandled
+- **Trade-offs:** Examples show error handling paths more than successful API calls. Users need to add keys themselves for full integration testing.
+- **Breaking if changed:** If examples relied on actual API calls, they would fail in CI/CD or cold environments, making documentation unusable as reference material
+
+### Split documentation into README (entry point), configuration.md (setup guide), and api-reference.md (complete reference) (2026-02-13)
+- **Context:** Need to serve multiple audiences: quick-start users, configuration specialists, and API developers
+- **Why:** README stays concise and focuses on value proposition. Configuration guide consolidates all provider-specific setup in one place. API reference enables IDE-assisted development and reduces context-switching.
+- **Rejected:** Single mega-document would be overwhelming. Per-provider separate docs would be scattered and hard to maintain.
+- **Trade-offs:** More files to maintain but each serves a clear purpose. Some information (like method signatures) appears in multiple places for context completeness.
+- **Breaking if changed:** If merged into single file, discoverability suffers - users won't know configuration options exist until they've read entire API reference
+
+### Health-checks example demonstrates failover and monitoring patterns, not just basic usage (2026-02-13)
+- **Context:** Second example should show advanced patterns for production use, not just hello-world
+- **Why:** Production deployments need reliability patterns. Showing these in examples means developers learn resilience from the start rather than bolting it on later.
+- **Rejected:** Second example as basic CRUD pattern would duplicate basics and not add value for production usage
+- **Trade-offs:** More complex example is harder for beginners but models correct production practices. Beginners still have basic-usage.ts as gentler entry point.
+- **Breaking if changed:** Without health-check patterns in docs, developers write services without monitoring/failover, leading to cascading failures in production
+
+### Implemented separate cache layer on top of Langfuse's built-in 60s caching rather than replacing it (2026-02-13)
+- **Context:** Langfuse client already provides 60s request caching; decision needed on whether to replace or extend
+- **Why:** Layered caching allows longer-term caching (5min default, configurable) for frequently accessed prompts while leveraging Langfuse's fast path for recent requests. Avoids reimplementing HTTP caching logic.
+- **Rejected:** Direct replacement of Langfuse's cache would require understanding their internal caching implementation and managing HTTP response details
+- **Trade-offs:** Simpler integration but slightly more memory overhead from dual caching layers. Better separation of concerns.
+- **Breaking if changed:** If Langfuse removes or disables their internal cache, this system still works but loses the performance benefit of their fast path
+
+#### [Pattern] Parallel prefetching of multiple prompts with aggregated error reporting instead of fail-fast (2026-02-13)
+- **Problem solved:** Need to validate all required prompts exist at startup before allowing service to handle requests
+- **Why this works:** Parallel fetching reduces startup time and aggregated errors show all failures at once, helping operators fix all missing prompts in one deploy rather than discovering them iteratively. Better UX than failing on first error.
+- **Trade-offs:** Slightly more complex error handling but significantly better developer experience during startup failures
+
+#### [Gotcha] TTL-based expiration requires explicit cleanup() call - items aren't automatically removed from cache at expiration time (2026-02-13)
+- **Situation:** Cache stores expiration timestamps but memory isn't freed until cleanup() is called or item is accessed
+- **Root cause:** Lazy expiration is more efficient than background timers. Prevents memory leaks by allowing cleanup to be called periodically (e.g., via cron or event). Accessing expired item triggers removal.
+- **How to avoid:** Slightly more operational logic needed but avoids background threads and keeps hot path fast. Memory eventually frees.
+
+### Delegate tracing implementation to existing middleware (wrapProviderWithTracing) in @automaker/observability rather than implementing tracing logic directly in TracedProvider (2026-02-13)
+- **Context:** TracedProvider needed to wrap LLM providers with tracing, but observability package already contained comprehensive middleware handling token extraction, cost calculation, and Langfuse trace creation
+- **Why:** Avoids duplication, maintains single source of truth for tracing logic, leverages existing tested middleware. TracedProvider becomes a thin adapter layer.
+- **Rejected:** Implementing tracing logic directly in TracedProvider would duplicate middleware logic and create maintenance burden
+- **Trade-offs:** Simple TracedProvider code (easier to maintain) vs potential coupling to observability package's middleware contract
+- **Breaking if changed:** If middleware interface changes (token extraction, cost calculation), TracedProvider adapter must be updated. Removal of middleware breaks tracing entirely.
+
+#### [Pattern] Decorator pattern with configuration object (TracingConfig) passed to wrapper, keeping tracing concerns orthogonal to provider implementation (2026-02-13)
+- **Problem solved:** Multiple providers needed tracing capability without modifying their core logic or creating separate tracing-specific subclasses for each provider type
+- **Why this works:** Decorator pattern allows composing behavior (tracing) with any provider transparently. Config object allows enabling/disabling tracing and passing context without changing provider API.
+- **Trade-offs:** Extra wrapper object overhead vs clean separation of concerns. TracedProvider always wraps, even when tracing disabled - could optimize with conditional wrapping.
+
+### Tracing disabled by default with explicit opt-in via ProviderFactory.configureTracing(), not enabled automatically (2026-02-13)
+- **Context:** Feature adds tracing infrastructure that affects all provider invocations, but not all deployments/configurations need tracing overhead
+- **Why:** Disabled-by-default is safer for production: no performance impact unless explicitly enabled. Requires conscious decision to enable tracing. Reduces risk of accidental telemetry.
+- **Rejected:** Auto-enabled tracing would simplify for users who want it but inflict performance cost on those who don't. Harder to discover that tracing exists.
+- **Trade-offs:** Users must explicitly configure to get tracing (slight friction) vs guaranteed no overhead for non-tracing workloads
+- **Breaking if changed:** If tracing becomes enabled-by-default, all provider invocations will create Langfuse traces and incur potential network/performance cost. Existing code not expecting traces may fail.
+
+### Used strategic `any` types in builder return types while maintaining type safety in user-facing APIs (2026-02-13)
+- **Context:** LangGraph's recursive conditional types exceeded TypeScript's type depth limits during compilation, causing build failures
+- **Why:** LangGraph's internal type system is too complex for direct exposure. A wrapper layer with simplified types provides better DX while internal implementation uses pragmatic `any` to avoid type depth explosions. Tests verify runtime correctness.
+- **Rejected:** Attempting full type safety with LangGraph's native types would require deep type gymnastics or type narrowing that wouldn't improve actual runtime safety. Fully exposing LangGraph types would burden users with complexity.
+- **Trade-offs:** Lost some compile-time type checking on builder return values, but gained: cleaner API surface, faster compilation, better IDE experience. Runtime behavior is verified by 42 unit tests.
+- **Breaking if changed:** If removed, users get better types but build fails. If we tried to fully type LangGraph internals, consumers get worse DX and potential type depth errors in their codebases.
+
+### Implemented deep merge strategy (`deepMergeState`) for complex nested state rather than shallow merge, with optional timestamp tracking (2026-02-13)
+- **Context:** File reducer and todo reducer needed to merge state updates without overwriting sibling properties. Simple object spread would lose data.
+- **Why:** Deep merge enables safe composition of multiple state fields being updated independently. Timestamp support allows tracking when last merge occurred, enabling optimistic conflict resolution.
+- **Rejected:** Shallow merge (spread operator) loses data when multiple fields update simultaneously. Manual per-field merging would be error-prone and not scalable.
+- **Trade-offs:** Deep merge is slightly slower for very large objects, but prevents data loss. Timestamp adds minimal overhead but enables audit trails.
+- **Breaking if changed:** Without deep merge, concurrent updates to different state fields would cause one to overwrite the other. This is especially critical in multi-agent patterns.
+
+### Used Annotation.Root API for state definition instead of plain TypeScript interfaces (2026-02-13)
+- **Context:** LangGraph's StateGraph requires state type definition for proper type inference and validation across the graph
+- **Why:** Modern LangGraph versions moved away from plain interfaces to Annotation API to enable runtime state validation, serialization, and type-safe state updates across distributed checkpoints
+- **Rejected:** Plain TypeScript interface - would compile but lose runtime validation and checkpoint interoperability
+- **Trade-offs:** More boilerplate (Annotation.Root wrapper) but gains type safety at compile time and runtime validation at checkpoint boundaries. State becomes self-documenting.
+- **Breaking if changed:** Removing Annotation would lose checkpoint serialization capability and state validation at node boundaries, breaking resume functionality
+
+#### [Pattern] MemorySaver checkpointer with configurable thread_id for each execution invocation (2026-02-13)
+- **Problem solved:** Need to persist state across node execution and enable resuming from checkpoints in production workflows
+- **Why this works:** Thread isolation (unique thread_id per execution) prevents state collision across concurrent executions and enables checkpoint isolation. MemorySaver trades persistence durability for simplicity in proof-of-concept.
+- **Trade-offs:** MemorySaver is in-process only (survives function lifetime but not process restart). Production would need PostgresSaver or similar. Current approach suitable for stateless function deployments with retry capability.
+
+### Created dedicated @automaker/flows package rather than adding graph to existing packages (2026-02-13)
+- **Context:** Need to manage LangGraph dependency without forcing it on all consumers of core packages
+- **Why:** Monorepo architecture benefits: LangGraph is optional infrastructure (PoC), not core domain. Separate package allows selective adoption. LangGraph version bumps don't affect @automaker/platform stability.
+- **Rejected:** Adding to @automaker/platform - would make LangGraph a transitive dependency for all consumers, increases coupling, makes replacement harder if better framework emerges.
+- **Trade-offs:** Added package management complexity (new tsconfig, vitest config, build script) but isolated dependency risk and allowed independent iteration on flows without coordinating with platform release cycle.
+- **Breaking if changed:** Merging flows back into platform would expose LangGraph dependency to all consumers and make it harder to swap flow engines later. Separation provides architectural optionality.
+
+### MemorySaver checkpointer is REQUIRED for interrupt functionality in LangGraph, not optional (2026-02-13)
+- **Context:** Initial implementation failed with 'No checkpointer set' error when attempting to use interrupts without explicitly configuring state persistence
+- **Why:** LangGraph's interrupt mechanism depends on persisting state between execution pauses. Without a checkpointer, the graph cannot serialize and restore execution context when resuming from an interrupt point
+- **Rejected:** Assuming interrupts work on any compiled graph without checkpointer configuration - this assumption caused test failures
+- **Trade-offs:** Adds MemorySaver dependency and slight overhead for state serialization, but enables critical pause/resume functionality that human-in-the-loop workflows require
+- **Breaking if changed:** Remove checkpointer → interrupts silently fail or throw errors; state cannot be persisted across pause boundaries
+
+#### [Pattern] interruptBefore pattern as semantic interrupt marker - pause BEFORE a node rather than waiting for completion (2026-02-13)
+- **Problem solved:** Human review needs to happen BEFORE the decision node executes, not after, to prevent unintended state transitions
+- **Why this works:** interruptBefore allows the system to halt before executing the human_review node, giving the human the opportunity to inspect and modify state before any review logic executes. This is safer than interrupting after node completion
+- **Trade-offs:** interruptBefore is more explicit about control flow but requires careful node sequencing; interruptAfter is simpler but loses ability to modify state before review
+
+### Conditional edges based on state values enable dynamic routing without requiring separate graph branches or multiple resumable states (2026-02-13)
+- **Context:** Review flow needs to route to either END (approval) or revise (rejection) based on human decision without creating separate graph execution paths
+- **Why:** Conditional routing via state inspection keeps the graph topology flat and simple while still supporting multiple execution paths. The same node (human_review) can branch based on what the human decides
+- **Rejected:** Creating separate conditional nodes or branching earlier - would complicate the graph and require duplicating logic
+- **Trade-offs:** Makes the graph more dynamic but state must be correctly set before the condition is evaluated; condition failures are harder to debug than explicit node branches
+- **Breaking if changed:** Remove conditional edge logic → all paths execute regardless of approval state, defeating the purpose of the review
+
+#### [Pattern] Modular node architecture with separate files for each node type (draft, revise) enables testing and reuse of individual steps (2026-02-13)
+- **Problem solved:** Complex multi-step flow needed clean separation between initial content generation and feedback application
+- **Why this works:** Separate node modules allow testing each transformation independently and enable reuse of nodes in different graphs. Makes the review cycle logic testable in isolation
+- **Trade-offs:** More files to maintain but significantly better testability and composability; nodes can be combined differently in future workflows
+
+#### [Pattern] Fallback-first design for SDK examples - all examples work without external service credentials (2026-02-13)
+- **Problem solved:** Observability examples need to be functional for developers who haven't set up Langfuse accounts yet
+- **Why this works:** Reduces friction in developer onboarding. Developers can learn the API immediately without credential setup delays. Fallback mode is a no-op, making it safe and transparent.
+- **Trade-offs:** Client must implement silent no-op behavior for all methods (easier for DX, requires more implementation complexity in SDK), but enables developers to write real code immediately
+
+### Multiple focused examples (prompt-management.ts and tracing.ts) instead of single monolithic example (2026-02-13)
+- **Context:** Need to demonstrate both prompt lifecycle management and tracing/scoring capabilities
+- **Why:** Separate examples allow developers to focus on specific use cases. Mixing concerns makes examples harder to understand and copy-paste into real code. Each file is independently runnable.
+- **Rejected:** Single large example would be harder to navigate and harder to extract patterns for specific use cases
+- **Trade-offs:** More files to maintain (easier to understand, harder to keep in sync), clearer separation of concerns (easier learning curve)
+- **Breaking if changed:** If examples are merged into one file, developers lose the ability to isolate and understand individual patterns. Copy-paste usability drops significantly.
+
+#### [Gotcha] Observability package needed explicit addition to build:libs script in package.json despite being in workspace (2026-02-13)
+- **Situation:** Package was built individually but wasn't included in the monorepo's standard build pipeline
+- **Root cause:** The build:libs script is a curated list of packages to build in order. Just being in the workspace isn't enough - the orchestration script must explicitly reference it.
+- **How to avoid:** Explicit inclusion requires maintenance (must remember to add new packages, but provides control over build order and dependencies). Auto-discovery would be easier but less flexible.
+
+### Implemented FakeProvider as self-contained without @langchain/core dependency despite initial assumption it would be needed (2026-02-13)
+- **Context:** Feature required test provider with streaming support. Initial approach assumed LangChain FakeChatModel would be required based on feature title.
+- **Why:** Avoided adding external dependency when provider abstraction layer already supports all needed functionality (AsyncGenerator streaming, message formatting, factory registration). Self-contained implementation reduces build complexity and dependency management overhead.
+- **Rejected:** @langchain/core integration - would add unnecessary external dependency for functionality that can be achieved with existing abstractions
+- **Trade-offs:** Slightly more code to write custom message handling (236 lines) but gains independence from LangChain, easier to maintain, no version conflicts with other packages
+- **Breaking if changed:** If provider abstraction changes, self-contained impl fails. If we add @langchain/core later, this code becomes redundant.
+
+#### [Pattern] Factory pattern with explicit provider registration via imports + automatic model string detection for routing (2026-02-13)
+- **Problem solved:** System routes model requests to providers. FakeProvider registers at priority 20, responds to 'fake-*' model strings.
+- **Why this works:** Two-level routing (explicit registration + pattern matching) allows flexibility: explicit registration with priority for named models, pattern matching for wildcards. Provider is opt-in but doesn't require special configuration.
+- **Trade-offs:** Pattern matching adds slight routing overhead (string prefix check) but enables zero-config provider activation. Priority system ensures correct provider selected when multiple match.
+
+### Provider supports both single response and response array with auto-cycling for multi-turn conversations (2026-02-13)
+- **Context:** FakeProvider needed to support both simple test cases (single response) and multi-turn agent flows (multiple sequential responses).
+- **Why:** Cycling through array of responses enables testing multi-turn scenarios without complex state management. Single response shorthand keeps API simple for basic tests.
+- **Rejected:** Only support array - simpler API but less convenient for single-response tests. Only support single - can't test multi-turn flows.
+- **Trade-offs:** Constructor must handle both cases (adds ~20 lines of type handling). Benefit is provider works for both simple unit tests and complex integration scenarios without modification.
+- **Breaking if changed:** If response array cycling is removed, multi-turn test scenarios fail. If single-response shorthand removed, existing tests using that pattern break.

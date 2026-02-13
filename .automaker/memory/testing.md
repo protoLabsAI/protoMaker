@@ -5,9 +5,9 @@ relevantTo: [testing]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 11
-  referenced: 7
-  successfulFeatures: 7
+  loaded: 17
+  referenced: 10
+  successfulFeatures: 10
 ---
 # testing
 
@@ -254,3 +254,110 @@ usageStats:
 - **Problem solved:** Testing package detection and project scaffolding tool that must work across package managers and platforms
 - **Why this works:** External behavior is what end users care about. Mocking package managers is fragile - unit tests would pass but real `npm install` could fail differently. Real fixtures validate actual tool behavior.
 - **Trade-offs:** Slower test execution (spins up real fs operations) but catches real-world failures. Higher fidelity = higher confidence in tool reliability.
+
+#### [Gotcha] Playwright test file included imports from node:child_process and node:fs but test ran successfully in non-Node environment consideration (2026-02-13)
+- **Situation:** Created E2E verification test using Playwright that executes Node.js code to verify file system and run CLI commands
+- **Root cause:** Playwright runs in browser context by default, but this test needed Node.js APIs. The test was structured to work in Playwright's Node.js test runner context, not browser context
+- **How to avoid:** Easier: full verification of integration. Harder: test is tied to Node.js environment, not portable to browser testing
+
+#### [Gotcha] New packages with zero tests still need vitest.config.ts and must pass test:packages script successfully (2026-02-13)
+- **Situation:** Initially expected test failures for unimplemented package, but test suite completed successfully with 0 tests
+- **Root cause:** npm run test:packages runs across all workspace packages regardless of whether they have tests. Missing or misconfigured vitest.config.ts would cause the entire test command to fail
+- **How to avoid:** Requires configuration upfront even for empty packages, but ensures package integrates immediately into CI/CD pipeline with no surprises later
+
+#### [Gotcha] Disabled providers must throw immediately on getProvider() call, not at initialization time (2026-02-13)
+- **Situation:** Test showed that disabled providers can be registered but should fail on retrieval, not registration
+- **Root cause:** Allows factory to contain disabled providers (useful for configuration gradual rollout) but prevents accidental use. Error happens where bug would occur (at usage site) rather than silently failing earlier.
+- **How to avoid:** Easier: deferred validation catches more scenarios. Harder: errors happen at usage time not config load time, harder to debug if disabled provider is called rarely.
+
+#### [Pattern] Mock TestProvider class in unit tests that implements BaseLLMProvider with configurable behavior rather than using partial mocks (2026-02-13)
+- **Problem solved:** Need to test factory with provider-like objects without external dependencies or complex mocking
+- **Why this works:** Full implementation class catches runtime issues that partial mocks miss (e.g., interface mismatches). Easy to vary behavior per test via constructor. Documents what a real provider must implement.
+- **Trade-offs:** Easier: see exactly what provider interface requires, test various implementations. Harder: requires maintaining test provider class as interface evolves.
+
+#### [Gotcha] Vitest module mocking requires mock class definition inside the factory function, not outside. External definition causes mocking to fail silently (2026-02-13)
+- **Situation:** Initial mock implementation defined ChatAnthropic mock class outside the vi.mock() factory, resulting in real ChatAnthropic being instantiated instead of mock
+- **Root cause:** Vitest's module resolution creates a new scope for mocked modules. Mock implementation must be defined within that scope to override the import properly. External definitions exist in a different scope chain
+- **How to avoid:** Code duplication of mock definition versus correct module mocking behavior. Correct approach is less DRY but functionally necessary
+
+#### [Gotcha] Health check latency measurements can be 0ms for mocked/very fast responses. Tests expecting latencyMs > 0 fail unpredictably based on system performance (2026-02-13)
+- **Situation:** Integration tests failed with assertion `expect(result.latencyMs).toBeGreaterThan(0)` in mocked environment
+- **Root cause:** Mock responses execute too fast to accumulate measurable milliseconds. In real API scenarios with network latency, this passes. But in testing with mocks, system resolution can be insufficient. The assertion was overly strict
+- **How to avoid:** Relaxing to `toBeGreaterThanOrEqual(0)` is more realistic but less strict validation. Alternative would be performance-dependent flaky tests
+
+#### [Gotcha] Timing-sensitive tests (latency measurement) need execution margin buffer rather than exact assertions (2026-02-13)
+- **Situation:** Initial latency test with `toBeGreaterThanOrEqual(10)` was flaky because async operations have variable overhead
+- **Root cause:** JavaScript timing is not deterministic - setTimeout(10) can execute in 5-15ms depending on event loop load and system conditions. The test measured elapsed time, not just the setTimeout duration.
+- **How to avoid:** Easier: test reliability. Harder: less precise latency verification, harder to catch subtle timing regressions
+
+### MockLangfuseAPI provides fixture-based implementation rather than mocking SDK directly (2026-02-13)
+- **Context:** Need to test prompt executor behavior without real Langfuse API calls
+- **Why:** Mock implementation allows testing the full integration logic (fetch, variable injection, trace creation) in one test suite while simulating Langfuse responses. This catches integration bugs that SDK mocks would miss.
+- **Rejected:** Using vi.mock() to mock langfuse SDK would isolate execution logic from API response handling, missing realistic contract violations
+- **Trade-offs:** Easier: comprehensive integration testing without external dependency. Harder: mock must stay in sync with real Langfuse API contract
+- **Breaking if changed:** Removing MockLangfuseAPI would require either Langfuse credentials for tests or less realistic mocking
+
+#### [Gotcha] Test latency expectations changed from `toBeGreaterThan(0)` to `toBeGreaterThanOrEqual(0)` during mock implementation (2026-02-13)
+- **Situation:** Integration tests were failing because mocked API responses had zero latency, violating the assumption that any real API call takes time
+- **Root cause:** Mock implementations execute synchronously without network delay, so latency can legitimately be 0ms. Production code must handle this case correctly
+- **How to avoid:** Easier: Accurate testing of edge cases (zero-latency). Harder: Must account for legitimate zero-latency scenarios in production code
+
+#### [Pattern] Created separate mock files for OpenAI and Google API responses with realistic structure validation (2026-02-13)
+- **Problem solved:** Integration tests needed to validate provider behavior without hitting real APIs, while ensuring mock responses match real API schemas
+- **Why this works:** Mock responses that don't match real API structure would give false confidence. Separating mocks by provider makes them easier to update when real APIs change
+- **Trade-offs:** Easier: Catch schema mismatches early, API changes force mock updates. Harder: Mocks must be maintained as APIs evolve
+
+#### [Pattern] Integration tests written to skip when credentials unavailable, using early returns to avoid test failures in incomplete CI environments (2026-02-13)
+- **Problem solved:** Groq tests need API key, Ollama tests need running service, Bedrock tests need AWS credentials - not all available in every environment
+- **Why this works:** Allows monorepo CI to run partial tests (e.g., test what's available) rather than blocking on uninstalled providers. Developers can run full test suite locally with credentials, partial in CI
+- **Trade-offs:** Reduces test coverage visibility (may not catch credential issues until production). Requires discipline to manually test before deploying
+
+#### [Pattern] Comprehensive manual verification script (40 checks) instead of unit tests for documentation (2026-02-13)
+- **Problem solved:** Documentation quality is hard to measure with traditional tests; need to verify content structure and completeness
+- **Why this works:** Automation catches human errors in documentation structure (missing sections, code blocks, type definitions). Verification runs once at build time.
+- **Trade-offs:** Script is throwaway (deleted after verification). Documents verification logic itself in code rather than as living tests.
+
+#### [Gotcha] Vitest mock setup requires class-based mocks for proper constructor behavior with Langfuse client (2026-02-13)
+- **Situation:** Mocking the Langfuse client constructor to avoid actual API calls during tests
+- **Root cause:** Vitest's vi.mock() applies to module exports at a module level. For class constructors, the mock must be applied to the class itself, not instance methods. Improper mocking causes tests to attempt real API calls.
+- **How to avoid:** Requires understanding Vitest's module mocking behavior but ensures true unit tests without side effects
+
+#### [Pattern] Integration tests placed in library (libs/observability) rather than consumer app (apps/server), testing tracing as a reusable component with concrete provider mocks (2026-02-13)
+- **Problem solved:** Tracing feature spans observability package and provider integration. Tests could live in either package or both.
+- **Why this works:** Library owns its contract - tests verify tracing middleware works independently before being consumed. Consumer app tests would test integration but not catch middleware regressions.
+- **Trade-offs:** Existing comprehensive tests in libs/observability mean apps/server doesn't need duplicate tests (simpler) but depends on library test coverage.
+
+#### [Gotcha] Reducer tests must validate undefined/null inputs because state fields may not exist initially, and LangGraph applies reducers even on first-time state initialization (2026-02-13)
+- **Situation:** Initial test suite missed handling `undefined` inputs to reducers. LangGraph calls reducers during state creation, not just updates.
+- **Root cause:** State annotations don't guarantee field presence initially. Reducers must be idempotent and handle missing values gracefully. The `mergeState` pattern relies on undefined-safe operations.
+- **How to avoid:** Slightly more verbose reducer logic to handle edge cases, but ensures graph initialization never fails. Tests explicitly verify this behavior.
+
+#### [Pattern] Integration tests validate full graph execution with state inspection at each node rather than mocking individual nodes (2026-02-13)
+- **Problem solved:** Need to verify state flows correctly through the entire graph and persists via checkpointer
+- **Why this works:** Node-level mocking would test unit behavior but miss state marshaling bugs, edge routing failures, or checkpoint deserialization issues. Full integration tests catch these integration-level failures.
+- **Trade-offs:** Integration tests slower and require more setup, but critical for catching state management bugs that would only manifest at runtime. Worth the cost given this is new framework integration.
+
+#### [Gotcha] State fields modified via updateState() may not persist until processed by a downstream node execution (2026-02-13)
+- **Situation:** Test assumed that updating state directly would persist the change immediately, but the field only became reliably available after the next node processed it
+- **Root cause:** LangGraph's state management treats updateState() as a mutation that gets batched and processed in the node execution cycle. Direct state mutations don't trigger node-level state updates
+- **How to avoid:** Requires tests to account for execution flow boundaries; makes state changes explicit but requires understanding execution model
+
+#### [Pattern] Integration tests for interrupt/resume workflows must verify state at interrupt boundaries, not just final outcomes (2026-02-13)
+- **Problem solved:** Simple end-to-end tests of 'draft → review → approve' don't catch state management bugs during the interrupt/resume cycle
+- **Why this works:** Human-in-the-loop workflows have three critical phases: (1) pause at interrupt, (2) human inspection/modification, (3) resume from same point. Each phase needs verification. Testing only final output misses state corruption between phases
+- **Trade-offs:** Integration tests are slower and more complex but catch real-world integration issues; unit tests faster but miss critical pause/resume behavior
+
+#### [Gotcha] Examples must handle both successful Langfuse responses and fallback behavior identically for correctness (2026-02-13)
+- **Situation:** Examples demonstrate SDK in two modes: with and without credentials/Langfuse
+- **Root cause:** If fallback mode produces different output than real Langfuse mode, developers won't catch integration bugs until production. The API contract must be identical.
+- **How to avoid:** SDK fallback implementation is more complex (returns valid objects with placeholder IDs instead of null), but examples work correctly in both modes without branching logic
+
+#### [Gotcha] Adding a new provider to factory requires updating unrelated test files that assert fixed provider counts (2026-02-13)
+- **Situation:** New FakeProvider was added to ProviderFactory, causing provider-factory.test.ts to fail - tests expected 4 providers, now 5.
+- **Root cause:** Test files contained brittle assertions on provider counts (hardcoded values) rather than dynamic discovery. When adding the 5th provider, these assertions broke.
+- **How to avoid:** Current approach catches when provider count changes (good for tracking). Cost is that every new provider requires test updates. Better long-term: count tests should be separate from name/registration tests.
+
+#### [Pattern] Comprehensive test coverage (19 tests) for new provider covering constructor, execution, detection, and integration scenarios (2026-02-13)
+- **Problem solved:** New provider had to prove it works correctly with abstraction layer and meets all acceptance criteria.
+- **Why this works:** Provider abstraction layer is foundational - bugs here affect all agent flows. Tests verify not just happy path but also config validation, error handling, feature support flags, and multi-turn scenarios.
+- **Trade-offs:** 19 tests take longer to maintain but catch integration issues early. Tests serve as living documentation of provider contract.

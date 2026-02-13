@@ -36,3 +36,8 @@ usageStats:
 - **Rejected:** Platform-specific conditionals with different scripts - error-prone; relying on pwsh on Windows - incompatible with ubuntu/macos; using node scripts instead - adds js file overhead
 - **Trade-offs:** bash adds ~50MB to Windows runners (via Git Bash) but eliminates script branching logic. Single source of truth outweighs minor disk cost.
 - **Breaking if changed:** If bash is removed or unavailable on a runner, all scripts fail. Windows-native shells would require complete script rewrite.
+
+#### [Pattern] LRU eviction strategy with configurable max cache size to prevent unbounded memory growth (2026-02-13)
+- **Problem solved:** Prompt cache could theoretically grow indefinitely if many unique prompts are accessed
+- **Why this works:** LRU naturally evicts least-recently-used items when cache is full, preserving working set of active prompts while bounding memory. Configurable size allows tuning per deployment needs.
+- **Trade-offs:** Requires tracking access order (minimal overhead) but prevents memory issues in production. Trade cache hit rate for reliability.

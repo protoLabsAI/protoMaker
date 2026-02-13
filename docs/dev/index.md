@@ -9,6 +9,12 @@ Guides for contributing to and extending Automaker.
 - **[Shared Packages](./shared-packages)** — Monorepo package architecture and dependency chain
 - **[Feature Status System](./feature-status-system)** — The 6-status feature lifecycle
 
+## AI Agent Infrastructure
+
+- **[Flows](./flows)** — LangGraph state graph primitives, coordinator pattern, Send() fan-out
+- **[LLM Providers](./llm-providers-package)** — Multi-provider abstraction, factory pattern, health checks
+- **[Observability](./observability-package)** — Langfuse tracing, prompt versioning, cost tracking
+
 ## Guides
 
 - **[Adding Team Members](./adding-team-members)** — Onboarding new team members
