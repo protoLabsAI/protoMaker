@@ -85,9 +85,10 @@ export class LinearIssueChannel implements EscalationChannel {
   constructor(
     private settingsService: SettingsService,
     private projectPath: string,
-    private teamConfig?: TeamConfig
+    private teamConfig?: TeamConfig,
+    linearClient?: LinearMCPClient
   ) {
-    this.linearClient = new LinearMCPClient(settingsService, projectPath);
+    this.linearClient = linearClient || new LinearMCPClient(settingsService, projectPath);
     this.cleanupOldIssues(); // Initial cleanup
   }
 
