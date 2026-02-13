@@ -1312,7 +1312,8 @@ This is iteration ${iterationCount} of the review cycle. Be judicious - not all 
 
       // Store denial audit trail in remediationHistory
       if (deniedDecisions.length > 0) {
-        const remediationHistory = (feature?.remediationHistory || []) as import('@automaker/types').RemediationHistoryEntry[];
+        const remediationHistory = (feature?.remediationHistory ||
+          []) as import('@automaker/types').RemediationHistoryEntry[];
         const currentEntry = remediationHistory.find(
           (entry) => entry.iteration === pr.iterationCount && !entry.completedAt
         );
