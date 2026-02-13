@@ -1,0 +1,235 @@
+name: Create Protolab Tests
+
+on:
+  pull_request:
+    branches:
+      - '*'
+    paths:
+      - 'packages/create-protolab/**'
+      - '.github/workflows/create-protolab-test.yml'
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'packages/create-protolab/**'
+      - '.github/workflows/create-protolab-test.yml'
+
+jobs:
+  test:
+    name: Test on ${{ matrix.os }} with Node ${{ matrix.node }} and ${{ matrix.package-manager }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node: ['18.x', '20.x', '22.x']
+        package-manager: [npm, pnpm, yarn]
+        # Reduce combinations by excluding some configurations
+        exclude:
+          # Only test yarn on ubuntu and macos
+          - os: windows-latest
+            package-manager: yarn
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Setup pnpm
+        if: matrix.package-manager == 'pnpm'
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup yarn
+        if: matrix.package-manager == 'yarn'
+        run: npm install -g yarn
+
+      - name: Get npm cache directory
+        id: npm-cache-dir
+        shell: bash
+        run: echo "dir=$(npm config get cache)" >> ${GITHUB_OUTPUT}
+
+      - name: Setup npm cache
+        uses: actions/cache@v4
+        if: matrix.package-manager == 'npm'
+        with:
+          path: ${{ steps.npm-cache-dir.outputs.dir }}
+          key: ${{ runner.os }}-node-${{ matrix.node }}-npm-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-${{ matrix.node }}-npm-
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        if: matrix.package-manager == 'pnpm'
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-node-${{ matrix.node }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-node-${{ matrix.node }}-pnpm-
+
+      - name: Setup yarn cache
+        uses: actions/cache@v4
+        if: matrix.package-manager == 'yarn'
+        with:
+          path: ~/.yarn/cache
+          key: ${{ runner.os }}-node-${{ matrix.node }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-node-${{ matrix.node }}-yarn-
+
+      - name: Install root dependencies
+        run: npm install
+
+      - name: Install create-protolab dependencies
+        working-directory: packages/create-protolab
+        run: npm install
+
+      - name: Build create-protolab
+        working-directory: packages/create-protolab
+        run: npm run build
+
+      - name: Run unit tests
+        working-directory: packages/create-protolab
+        run: npm test
+        env:
+          NODE_ENV: test
+
+      - name: Test npm pack
+        working-directory: packages/create-protolab
+        shell: bash
+        run: |
+          PACK_FILE=$(npm pack)
+          echo "PACK_FILE=$PACK_FILE" >> $GITHUB_ENV
+          echo "Created package: $PACK_FILE"
+
+      - name: Test fixture - Simple Node (npm)
+        if: matrix.package-manager == 'npm'
+        shell: bash
+        working-directory: packages/create-protolab/tests/fixtures/simple-node
+        run: |
+          echo "Testing simple-node fixture with npm"
+          npm install
+          npm test
+
+      - name: Test fixture - Monorepo (pnpm)
+        if: matrix.package-manager == 'pnpm'
+        shell: bash
+        working-directory: packages/create-protolab/tests/fixtures/monorepo-pnpm
+        run: |
+          echo "Testing monorepo-pnpm fixture with pnpm"
+          pnpm install
+          pnpm test
+
+      - name: Test fixture - TypeScript Project (npm)
+        if: matrix.package-manager == 'npm'
+        shell: bash
+        working-directory: packages/create-protolab/tests/fixtures/typescript-project
+        run: |
+          echo "Testing typescript-project fixture with npm"
+          npm install
+          npm test
+
+      - name: Test fixture - Next.js App (npm)
+        if: matrix.package-manager == 'npm'
+        shell: bash
+        working-directory: packages/create-protolab/tests/fixtures/nextjs-app
+        run: |
+          echo "Testing nextjs-app fixture with npm"
+          npm test
+
+      - name: Verify package manager detection
+        working-directory: packages/create-protolab
+        shell: bash
+        run: |
+          node -e "
+          import('./dist/index.js').then(m => {
+            const pm = m.detectPackageManager('./tests/fixtures/simple-node');
+            console.log('Detected package manager for simple-node:', pm);
+            if (pm !== 'npm') throw new Error('Expected npm, got ' + pm);
+
+            const pmPnpm = m.detectPackageManager('./tests/fixtures/monorepo-pnpm');
+            console.log('Detected package manager for monorepo-pnpm:', pmPnpm);
+            if (pmPnpm !== 'pnpm') throw new Error('Expected pnpm, got ' + pmPnpm);
+
+            console.log('✓ Package manager detection working correctly');
+          }).catch(err => {
+            console.error('Error:', err);
+            process.exit(1);
+          });
+          "
+
+      - name: Test npx execution on clean fixture
+        shell: bash
+        run: |
+          mkdir -p test-temp
+          cd test-temp
+
+          # Test creating a new project
+          node ../packages/create-protolab/dist/index.js test-project
+
+          # Verify files were created
+          if [ ! -f test-project/package.json ]; then
+            echo "Error: package.json not created"
+            exit 1
+          fi
+
+          if [ ! -f test-project/README.md ]; then
+            echo "Error: README.md not created"
+            exit 1
+          fi
+
+          if [ ! -f test-project/.gitignore ]; then
+            echo "Error: .gitignore not created"
+            exit 1
+          fi
+
+          echo "✓ All files created correctly"
+
+      - name: Test cross-platform path handling
+        shell: bash
+        run: |
+          cd packages/create-protolab
+          node -e "
+          import('./dist/index.js').then(m => {
+            // Test with different path separators
+            const testPaths = [
+              'tests/fixtures/simple-node',
+              'tests\\\\fixtures\\\\simple-node',
+            ];
+
+            testPaths.forEach(path => {
+              try {
+                const pm = m.detectPackageManager(path.replace(/\\\\\\\\/g, require('path').sep));
+                console.log('Path test passed for:', path);
+              } catch (err) {
+                console.error('Path test failed for:', path, err);
+                process.exit(1);
+              }
+            });
+
+            console.log('✓ Cross-platform path handling working');
+          }).catch(err => {
+            console.error('Error:', err);
+            process.exit(1);
+          });
+          "
+
+  summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: test
+    if: always()
+    steps:
+      - name: Check test results
+        run: |
+          if [ "${{ needs.test.result }}" != "success" ]; then
+            echo "Some tests failed"
+            exit 1
+          fi
+          echo "All tests passed successfully!"

@@ -1,0 +1,9 @@
+{
+  "name": "@monorepo/pkg-a",
+  "version": "1.0.0",
+  "description": "Package A in monorepo",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"No tests\" && exit 0"
+  }
+}

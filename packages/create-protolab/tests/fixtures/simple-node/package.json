@@ -1,0 +1,13 @@
+{
+  "name": "simple-node-fixture",
+  "version": "1.0.0",
+  "description": "Simple Node.js app fixture for testing",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "echo \"No tests\" && exit 0"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

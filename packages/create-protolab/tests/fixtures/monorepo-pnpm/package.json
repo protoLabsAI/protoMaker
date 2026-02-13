@@ -1,0 +1,12 @@
+{
+  "name": "monorepo-pnpm-fixture",
+  "version": "1.0.0",
+  "description": "Monorepo with pnpm fixture for testing",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "test": "echo \"No tests\" && exit 0"
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "name": "create-protolab",
+  "version": "0.1.0",
+  "description": "Scaffolding tool for protolab projects",
+  "type": "module",
+  "bin": {
+    "create-protolab": "./dist/index.js"
+  },
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run build"
+  },
+  "files": [
+    "dist",
+    "templates"
+  ],
+  "keywords": [
+    "scaffold",
+    "create",
+    "protolab",
+    "cli"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^4.0.0"
+  },
+  "dependencies": {}
+}
