@@ -1,0 +1,9 @@
+{
+  "name": "pkg-a",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test": "echo test",
+    "build": "echo build"
+  }
+}

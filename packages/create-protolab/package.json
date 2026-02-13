@@ -20,7 +20,7 @@
   ],
   "scripts": {
     "build": "tsc --project tsconfig.json && npm run postbuild",
-    "postbuild": "cp -r src/templates dist/ 2>/dev/null || true",
+    "postbuild": "cp -r templates dist/",
     "dev": "tsc --watch",
     "test": "vitest run",
     "test:watch": "vitest",

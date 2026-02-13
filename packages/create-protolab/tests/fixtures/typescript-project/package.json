@@ -1,0 +1,11 @@
+{
+  "name": "typescript-project-fixture",
+  "version": "1.0.0",
+  "scripts": {
+    "test": "echo test",
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

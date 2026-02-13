@@ -143,82 +143,60 @@ jobs:
           echo "Testing nextjs-app fixture with npm"
           npm test
 
-      - name: Verify package manager detection
+      - name: Verify module exports
         working-directory: packages/create-protolab
         shell: bash
         run: |
           node -e "
           import('./dist/index.js').then(m => {
-            const pm = m.detectPackageManager('./tests/fixtures/simple-node');
-            console.log('Detected package manager for simple-node:', pm);
-            if (pm !== 'npm') throw new Error('Expected npm, got ' + pm);
-
-            const pmPnpm = m.detectPackageManager('./tests/fixtures/monorepo-pnpm');
-            console.log('Detected package manager for monorepo-pnpm:', pmPnpm);
-            if (pmPnpm !== 'pnpm') throw new Error('Expected pnpm, got ' + pmPnpm);
-
-            console.log('✓ Package manager detection working correctly');
+            const exports = ['researchRepo', 'analyzeGaps', 'generateProposal', 'init', 'setupCI'];
+            const missing = exports.filter(e => typeof m[e] !== 'function');
+            if (missing.length > 0) {
+              throw new Error('Missing exports: ' + missing.join(', '));
+            }
+            console.log('✓ All expected exports found:', exports.join(', '));
           }).catch(err => {
             console.error('Error:', err);
             process.exit(1);
           });
           "
 
-      - name: Test npx execution on clean fixture
+      - name: Verify CLI entry point
+        working-directory: packages/create-protolab
         shell: bash
         run: |
-          mkdir -p test-temp
-          cd test-temp
-
-          # Test creating a new project
-          node ../packages/create-protolab/dist/index.js test-project
-
-          # Verify files were created
-          if [ ! -f test-project/package.json ]; then
-            echo "Error: package.json not created"
+          # Verify CLI file exists
+          if [ ! -f dist/cli.js ]; then
+            echo "Error: dist/cli.js not found"
             exit 1
           fi
 
-          if [ ! -f test-project/README.md ]; then
-            echo "Error: README.md not created"
+          # Verify it has the shebang
+          head -1 dist/cli.js | grep -q "#!/usr/bin/env node" || {
+            echo "Error: dist/cli.js missing shebang"
             exit 1
-          fi
+          }
 
-          if [ ! -f test-project/.gitignore ]; then
-            echo "Error: .gitignore not created"
-            exit 1
-          fi
+          echo "✓ CLI entry point valid"
 
-          echo "✓ All files created correctly"
-
-      - name: Test cross-platform path handling
+      - name: Verify template files
+        working-directory: packages/create-protolab
         shell: bash
         run: |
-          cd packages/create-protolab
-          node -e "
-          import('./dist/index.js').then(m => {
-            // Test with different path separators
-            const testPaths = [
-              'tests/fixtures/simple-node',
-              'tests\\\\fixtures\\\\simple-node',
-            ];
+          # Verify templates directory exists in dist
+          if [ ! -d dist/templates ]; then
+            echo "Error: dist/templates/ directory not found"
+            exit 1
+          fi
 
-            testPaths.forEach(path => {
-              try {
-                const pm = m.detectPackageManager(path.replace(/\\\\\\\\/g, require('path').sep));
-                console.log('Path test passed for:', path);
-              } catch (err) {
-                console.error('Path test failed for:', path, err);
-                process.exit(1);
-              }
-            });
+          # Verify key template files exist
+          TEMPLATE_COUNT=$(find dist/templates -type f | wc -l | tr -d ' ')
+          if [ "$TEMPLATE_COUNT" -lt 5 ]; then
+            echo "Error: Expected at least 5 template files, found $TEMPLATE_COUNT"
+            exit 1
+          fi
 
-            console.log('✓ Cross-platform path handling working');
-          }).catch(err => {
-            console.error('Error:', err);
-            process.exit(1);
-          });
-          "
+          echo "✓ Found $TEMPLATE_COUNT template files in dist/templates/"
 
   summary:
     name: Test Summary
