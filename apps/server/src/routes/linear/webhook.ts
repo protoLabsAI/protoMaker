@@ -18,6 +18,7 @@ import type { SettingsService } from '../../services/settings-service.js';
 import type { EventEmitter } from '../../lib/events.js';
 import type { FeatureLoader } from '../../services/feature-loader.js';
 import { linearApprovalHandler } from '../../services/linear-approval-handler.js';
+import { linearSyncService } from '../../services/linear-sync-service.js';
 
 const logger = createLogger('linear:webhook');
 
@@ -272,7 +273,7 @@ async function handleIssueEvent(
 
 /**
  * Handle Issue update events
- * Finds the corresponding feature and emits linear:issue:updated event
+ * Delegates to LinearSyncService for status, priority, and title sync
  */
 async function handleIssueUpdated(
   data: LinearIssueWebhookPayload['data'],
@@ -285,75 +286,24 @@ async function handleIssueUpdated(
     priority: data.priority,
   });
 
-  // Find the feature by Linear issue ID
-  // Use process.cwd() as the project path since webhooks don't have project context
+  // Delegate to sync service for status, title, and priority sync
+  // The sync service handles loop prevention, conflict detection, and batched updates
+  const stateName = data.state?.name || 'Unknown';
   const projectPath = process.cwd();
-  const feature = await featureLoader.findByLinearIssueId(projectPath, data.id);
 
-  if (!feature) {
-    logger.debug(`No feature found for Linear issue: ${data.id}`);
-    return;
-  }
+  await linearSyncService.onLinearIssueUpdated(data.id, stateName, projectPath, {
+    title: data.title,
+    priority: data.priority,
+  });
 
-  // Track changes for the event payload
-  const changes: Record<string, any> = {};
-
-  // Compare title
-  if (feature.title !== data.title) {
-    changes.title = { from: feature.title, to: data.title };
-  }
-
-  // Map Linear state to Automaker status
-  if (data.state) {
-    const linearState = data.state.name.toLowerCase();
-    let automakerStatus: string | undefined;
-
-    // Map common Linear states to Automaker statuses
-    if (linearState.includes('backlog') || linearState.includes('todo')) {
-      automakerStatus = 'pending';
-    } else if (linearState.includes('progress') || linearState.includes('started')) {
-      automakerStatus = 'in_progress';
-    } else if (linearState.includes('done') || linearState.includes('completed')) {
-      automakerStatus = 'completed';
-    } else if (linearState.includes('cancel')) {
-      automakerStatus = 'cancelled';
-    }
-
-    if (automakerStatus && feature.status !== automakerStatus) {
-      changes.status = { from: feature.status, to: automakerStatus };
-    }
-  }
-
-  // Map Linear priority to Automaker complexity
-  if (data.priority !== undefined) {
-    const priorityMap: Record<number, string> = {
-      0: 'low', // none -> low
-      1: 'high', // urgent -> high
-      2: 'high', // high -> high
-      3: 'medium', // normal -> medium
-      4: 'low', // low -> low
-    };
-    const automakerComplexity = priorityMap[data.priority];
-    if (automakerComplexity && feature.complexity !== automakerComplexity) {
-      changes.priority = { from: feature.complexity, to: automakerComplexity };
-    }
-  }
-
-  // Only emit event if there are changes
-  if (Object.keys(changes).length > 0) {
-    logger.info(`Emitting linear:issue:updated for feature ${feature.id}`, {
-      changes,
-    });
-
-    events.emit('linear:issue:updated', {
-      issueId: data.id,
-      featureId: feature.id,
-      changes,
-      updatedAt: data.updatedAt,
-    });
-  } else {
-    logger.debug(`No relevant changes detected for issue ${data.id}`);
-  }
+  // Also emit event for other listeners (UI, logging, etc.)
+  events.emit('linear:issue:updated', {
+    issueId: data.id,
+    title: data.title,
+    state: data.state?.name,
+    priority: data.priority,
+    updatedAt: data.updatedAt,
+  });
 
   // Check for approval state transitions
   if (data.state?.name) {
