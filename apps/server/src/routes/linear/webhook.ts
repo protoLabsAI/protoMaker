@@ -285,7 +285,9 @@ async function handleIssueUpdated(
   });
 
   // Find the feature by Linear issue ID
-  const feature = await featureLoader.findByLinearIssueId(data.id);
+  // Use process.cwd() as the project path since webhooks don't have project context
+  const projectPath = process.cwd();
+  const feature = await featureLoader.findByLinearIssueId(projectPath, data.id);
 
   if (!feature) {
     logger.debug(`No feature found for Linear issue: ${data.id}`);

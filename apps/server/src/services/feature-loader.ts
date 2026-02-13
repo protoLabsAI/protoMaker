@@ -333,18 +333,15 @@ export class FeatureLoader {
 
   /**
    * Find a feature by its Linear issue ID
+   * @param projectPath - Path to the project
    * @param linearIssueId - Linear issue ID to search for
    * @returns The matching feature or null if not found
    */
-  async findByLinearIssueId(linearIssueId: string): Promise<Feature | null> {
+  async findByLinearIssueId(projectPath: string, linearIssueId: string): Promise<Feature | null> {
     if (!linearIssueId || !linearIssueId.trim()) {
       return null;
     }
 
-    // Get all features from all projects
-    // Note: This searches the current working directory's project
-    // In a multi-project setup, we'd need to pass projectPath
-    const projectPath = process.cwd();
     const features = await this.getAll(projectPath);
 
     for (const feature of features) {

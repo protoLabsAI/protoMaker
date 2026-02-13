@@ -143,6 +143,10 @@ export class LinearMCPClient {
   ): Promise<T> {
     const accessToken = await this.getAccessToken();
 
+    // Create AbortController with 30s timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+
     try {
       const response = await fetch(LINEAR_API_ENDPOINT, {
         method: 'POST',
@@ -151,7 +155,9 @@ export class LinearMCPClient {
           Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify({ query, variables }),
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
 
       // Handle rate limiting
       if (response.status === 429) {
@@ -206,9 +212,16 @@ export class LinearMCPClient {
 
       return result.data;
     } catch (error) {
+      clearTimeout(timeoutId);
+
       // Re-throw LinearAPIError as-is
       if (error instanceof LinearAPIError) {
         throw error;
+      }
+
+      // Handle timeout errors
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new LinearAPIError('Linear API request timed out after 30s');
       }
 
       // Handle network errors

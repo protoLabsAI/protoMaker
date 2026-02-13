@@ -289,9 +289,6 @@ export class LinearSyncService {
       return;
     }
 
-    // Mark as syncing to prevent duplicates
-    this.markSyncing(featureId);
-
     try {
       // Get the feature details
       const feature = await this.featureLoader.get(projectPath, featureId);
@@ -305,6 +302,9 @@ export class LinearSyncService {
         logger.info(`Feature ${featureId} already has Linear issue ${feature.linearIssueId}`);
         return;
       }
+
+      // Mark as syncing to prevent duplicates (after validation checks)
+      this.markSyncing(featureId);
 
       // Create Linear issue
       const issueResult = await this.createLinearIssue(projectPath, feature);
@@ -420,42 +420,55 @@ export class LinearSyncService {
       priority: linearPriority,
     };
 
-    // Call Linear GraphQL API
-    const response = await fetch('https://api.linear.app/graphql', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${linearAccessToken}`,
-      },
-      body: JSON.stringify({ query: mutation, variables }),
-    });
+    // Call Linear GraphQL API with 30s timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
 
-    if (!response.ok) {
-      throw new Error(`Linear API error: ${response.status} ${response.statusText}`);
-    }
+    try {
+      const response = await fetch('https://api.linear.app/graphql', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${linearAccessToken}`,
+        },
+        body: JSON.stringify({ query: mutation, variables }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
 
-    const result = (await response.json()) as {
-      data?: {
-        issueCreate?: {
-          success: boolean;
-          issue?: { id: string; url: string };
+      if (!response.ok) {
+        throw new Error(`Linear API error: ${response.status} ${response.statusText}`);
+      }
+
+      const result = (await response.json()) as {
+        data?: {
+          issueCreate?: {
+            success: boolean;
+            issue?: { id: string; url: string };
+          };
         };
+        errors?: Array<{ message: string }>;
       };
-      errors?: Array<{ message: string }>;
-    };
 
-    if (result.errors) {
-      throw new Error(`Linear GraphQL error: ${result.errors.map((e) => e.message).join(', ')}`);
+      if (result.errors) {
+        throw new Error(`Linear GraphQL error: ${result.errors.map((e) => e.message).join(', ')}`);
+      }
+
+      if (!result.data?.issueCreate?.success || !result.data.issueCreate.issue) {
+        throw new Error('Failed to create Linear issue');
+      }
+
+      return {
+        issueId: result.data.issueCreate.issue.id,
+        issueUrl: result.data.issueCreate.issue.url,
+      };
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('Linear API request timed out after 30s');
+      }
+      throw error;
     }
-
-    if (!result.data?.issueCreate?.success || !result.data.issueCreate.issue) {
-      throw new Error('Failed to create Linear issue');
-    }
-
-    return {
-      issueId: result.data.issueCreate.issue.id,
-      issueUrl: result.data.issueCreate.issue.url,
-    };
   }
 
   /**
@@ -506,9 +519,6 @@ export class LinearSyncService {
       return;
     }
 
-    // Mark as syncing to prevent duplicates
-    this.markSyncing(featureId);
-
     try {
       // Get the feature details
       const feature = await this.featureLoader.get(projectPath, featureId);
@@ -522,6 +532,9 @@ export class LinearSyncService {
         logger.debug(`Feature ${featureId} has no Linear issue ID, skipping status sync`);
         return;
       }
+
+      // Mark as syncing to prevent duplicates (after validation checks)
+      this.markSyncing(featureId);
 
       // Skip if status is unchanged from last sync
       const lastMetadata = this.getSyncMetadata(featureId);
@@ -675,33 +688,46 @@ export class LinearSyncService {
       id: issueId,
     };
 
-    const response = await fetch('https://api.linear.app/graphql', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${linearAccessToken}`,
-      },
-      body: JSON.stringify({ query, variables }),
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
 
-    if (!response.ok) {
-      throw new Error(`Linear API error: ${response.status} ${response.statusText}`);
-    }
+    try {
+      const response = await fetch('https://api.linear.app/graphql', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${linearAccessToken}`,
+        },
+        body: JSON.stringify({ query, variables }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
 
-    const result = (await response.json()) as {
-      data?: {
-        issue?: {
-          state?: { name: string };
+      if (!response.ok) {
+        throw new Error(`Linear API error: ${response.status} ${response.statusText}`);
+      }
+
+      const result = (await response.json()) as {
+        data?: {
+          issue?: {
+            state?: { name: string };
+          };
         };
+        errors?: Array<{ message: string }>;
       };
-      errors?: Array<{ message: string }>;
-    };
 
-    if (result.errors) {
-      throw new Error(`Linear GraphQL error: ${result.errors.map((e) => e.message).join(', ')}`);
+      if (result.errors) {
+        throw new Error(`Linear GraphQL error: ${result.errors.map((e) => e.message).join(', ')}`);
+      }
+
+      return result.data?.issue?.state?.name || 'Backlog';
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('Linear API request timed out after 30s');
+      }
+      throw error;
     }
-
-    return result.data?.issue?.state?.name || 'Backlog';
   }
 
   /**
@@ -754,38 +780,51 @@ export class LinearSyncService {
       stateId,
     };
 
-    const response = await fetch('https://api.linear.app/graphql', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${linearAccessToken}`,
-      },
-      body: JSON.stringify({ query: mutation, variables }),
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
 
-    if (!response.ok) {
-      throw new Error(`Linear API error: ${response.status} ${response.statusText}`);
-    }
+    try {
+      const response = await fetch('https://api.linear.app/graphql', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${linearAccessToken}`,
+        },
+        body: JSON.stringify({ query: mutation, variables }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
 
-    const result = (await response.json()) as {
-      data?: {
-        issueUpdate?: {
-          success: boolean;
-          issue?: { id: string; state?: { name: string } };
+      if (!response.ok) {
+        throw new Error(`Linear API error: ${response.status} ${response.statusText}`);
+      }
+
+      const result = (await response.json()) as {
+        data?: {
+          issueUpdate?: {
+            success: boolean;
+            issue?: { id: string; state?: { name: string } };
+          };
         };
+        errors?: Array<{ message: string }>;
       };
-      errors?: Array<{ message: string }>;
-    };
 
-    if (result.errors) {
-      throw new Error(`Linear GraphQL error: ${result.errors.map((e) => e.message).join(', ')}`);
+      if (result.errors) {
+        throw new Error(`Linear GraphQL error: ${result.errors.map((e) => e.message).join(', ')}`);
+      }
+
+      if (!result.data?.issueUpdate?.success) {
+        throw new Error('Failed to update Linear issue status');
+      }
+
+      logger.info(`Updated Linear issue ${issueId} to state: ${linearStateName}`);
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('Linear API request timed out after 30s');
+      }
+      throw error;
     }
-
-    if (!result.data?.issueUpdate?.success) {
-      throw new Error('Failed to update Linear issue status');
-    }
-
-    logger.info(`Updated Linear issue ${issueId} to state: ${linearStateName}`);
   }
 
   /**
@@ -826,42 +865,55 @@ export class LinearSyncService {
       teamId,
     };
 
-    const response = await fetch('https://api.linear.app/graphql', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${linearAccessToken}`,
-      },
-      body: JSON.stringify({ query, variables }),
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
 
-    if (!response.ok) {
-      throw new Error(`Linear API error: ${response.status} ${response.statusText}`);
-    }
+    try {
+      const response = await fetch('https://api.linear.app/graphql', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${linearAccessToken}`,
+        },
+        body: JSON.stringify({ query, variables }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
 
-    const result = (await response.json()) as {
-      data?: {
-        team?: {
-          states?: {
-            nodes: Array<{ id: string; name: string }>;
+      if (!response.ok) {
+        throw new Error(`Linear API error: ${response.status} ${response.statusText}`);
+      }
+
+      const result = (await response.json()) as {
+        data?: {
+          team?: {
+            states?: {
+              nodes: Array<{ id: string; name: string }>;
+            };
           };
         };
+        errors?: Array<{ message: string }>;
       };
-      errors?: Array<{ message: string }>;
-    };
 
-    if (result.errors) {
-      throw new Error(`Linear GraphQL error: ${result.errors.map((e) => e.message).join(', ')}`);
+      if (result.errors) {
+        throw new Error(`Linear GraphQL error: ${result.errors.map((e) => e.message).join(', ')}`);
+      }
+
+      const states = result.data?.team?.states?.nodes || [];
+      const state = states.find((s) => s.name === stateName);
+
+      if (!state) {
+        throw new Error(`Workflow state "${stateName}" not found in Linear team ${teamId}`);
+      }
+
+      return state.id;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('Linear API request timed out after 30s');
+      }
+      throw error;
     }
-
-    const states = result.data?.team?.states?.nodes || [];
-    const state = states.find((s) => s.name === stateName);
-
-    if (!state) {
-      throw new Error(`Workflow state "${stateName}" not found in Linear team ${teamId}`);
-    }
-
-    return state.id;
   }
 
   /**
