@@ -13,15 +13,14 @@ set -euo pipefail
 INPUT=$(cat)
 COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty')
 
-# Strip heredoc content and quoted strings before pattern matching.
-# This prevents false positives from PR bodies, echo statements, etc.
+# Strip heredoc content to avoid false positives from PR bodies, etc.
 # Remove heredoc blocks: everything between <<'EOF' (or <<EOF) and EOF
 STRIPPED=$(echo "$COMMAND" | sed '/<<.*EOF/,/^EOF/d; /<<.*END/,/^END/d')
-# Also remove single-quoted and double-quoted strings (simple, not nested)
-STRIPPED=$(echo "$STRIPPED" | sed "s/'[^']*'//g; s/\"[^\"]*\"//g")
+# Strip quotes from arguments so "cd '.worktrees/foo'" still matches
+STRIPPED=$(echo "$STRIPPED" | sed "s/['\"]//g")
 
 # Guard: cd into worktree paths
-# Match: cd .worktrees/, cd /path/to/.worktrees/, cd "path/.worktrees/..."
+# Match: cd .worktrees/, cd /path/to/.worktrees/, cd ".worktrees/..."
 if echo "$STRIPPED" | grep -qE '(^|\s|&&|\|\||;)\s*cd\s+[^ ]*\.worktrees'; then
   jq -n '{
     hookSpecificOutput: {
