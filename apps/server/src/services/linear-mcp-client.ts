@@ -197,11 +197,7 @@ export class LinearMCPClient {
             e.message.toLowerCase().includes('authentication') ||
             e.extensions?.code === 'UNAUTHENTICATED'
         );
-        throw new LinearAPIError(
-          `Linear GraphQL error: ${errorMessages}`,
-          undefined,
-          isAuthError
-        );
+        throw new LinearAPIError(`Linear GraphQL error: ${errorMessages}`, undefined, isAuthError);
       }
 
       if (!result.data) {
