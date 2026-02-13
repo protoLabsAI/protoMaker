@@ -221,6 +221,16 @@ sudo systemctl disable automaker
 | `AUTOMAKER_AUTO_LOGIN`   | `false` | Skip login prompt (dev only)      |
 | `AUTOMAKER_HIDE_API_KEY` | `false` | Don't log API key at startup      |
 
+### Integrations
+
+| Variable                | Required | Description                                                                     |
+| ----------------------- | -------- | ------------------------------------------------------------------------------- |
+| `LINEAR_CLIENT_ID`      | No       | Linear OAuth app client ID ([setup guide](/integrations/linear-sync))           |
+| `LINEAR_CLIENT_SECRET`  | No       | Linear OAuth app client secret                                                  |
+| `LINEAR_REDIRECT_URI`   | No       | OAuth callback URL (default: `http://localhost:3008/api/linear/oauth/callback`) |
+| `LINEAR_WEBHOOK_SECRET` | No       | Secret for verifying Linear webhook payloads                                    |
+| `DISCORD_TOKEN`         | No       | Discord bot token for event routing and notifications                           |
+
 ### Frontend Configuration
 
 | Variable             | Default     | Description                       |
