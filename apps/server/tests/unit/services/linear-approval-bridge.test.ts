@@ -8,6 +8,13 @@ import type { ApprovalContext } from '@/services/linear-approval-handler.js';
 import type { EventEmitter } from '@/lib/events.js';
 import type { FeatureLoader } from '@/services/feature-loader.js';
 
+// Mock the feature classifier
+vi.mock('@/services/feature-classifier.js', () => ({
+  classifyFeature: vi.fn(),
+}));
+
+import { classifyFeature } from '@/services/feature-classifier.js';
+
 function createMockEventEmitter(): EventEmitter {
   const subscribers: Array<(type: string, payload: unknown) => void> = [];
   return {
@@ -220,5 +227,160 @@ describe('LinearApprovalBridge', () => {
     expect(createdDescription).toContain('Original description from Linear');
     expect(createdDescription).toContain('Linear issue ENG-789');
     expect(createdDescription).toContain('Backend');
+  });
+
+  describe('agent classification and assignment', () => {
+    const mockClassify = vi.mocked(classifyFeature);
+
+    beforeEach(() => {
+      mockClassify.mockReset();
+    });
+
+    it('auto-assigns role on high confidence (>=0.8)', async () => {
+      mockClassify.mockResolvedValueOnce({
+        role: 'frontend-engineer',
+        confidence: 0.9,
+        reasoning: 'React component work',
+      });
+
+      bridge.start();
+
+      events.emit('linear:approval:detected', {
+        issueId: 'issue-123',
+        title: 'Add dashboard component',
+        description: 'React dashboard',
+        approvalState: 'Approved',
+        priority: 3,
+        detectedAt: '2026-02-13T12:00:00Z',
+      } as ApprovalContext);
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(featureLoader.update).toHaveBeenCalledWith(expect.any(String), 'feature-created-123', {
+        assignedRole: 'frontend-engineer',
+      });
+
+      expect(events.emit).toHaveBeenCalledWith(
+        'feature:agent-suggested',
+        expect.objectContaining({
+          featureId: 'feature-created-123',
+          role: 'frontend-engineer',
+          confidence: 0.9,
+          autoAssigned: true,
+        })
+      );
+    });
+
+    it('suggests role on medium confidence (0.6-0.8)', async () => {
+      mockClassify.mockResolvedValueOnce({
+        role: 'devops-engineer',
+        confidence: 0.7,
+        reasoning: 'Possibly infrastructure related',
+      });
+
+      bridge.start();
+
+      events.emit('linear:approval:detected', {
+        issueId: 'issue-456',
+        title: 'Update deployment config',
+        approvalState: 'Approved',
+        priority: 3,
+        detectedAt: '2026-02-13T12:00:00Z',
+      } as ApprovalContext);
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(featureLoader.update).toHaveBeenCalledWith(expect.any(String), 'feature-created-123', {
+        assignedRole: 'devops-engineer',
+      });
+
+      expect(events.emit).toHaveBeenCalledWith(
+        'feature:agent-suggested',
+        expect.objectContaining({
+          featureId: 'feature-created-123',
+          role: 'devops-engineer',
+          confidence: 0.7,
+          autoAssigned: false,
+        })
+      );
+    });
+
+    it('skips assignment on low confidence (<0.6)', async () => {
+      mockClassify.mockResolvedValueOnce({
+        role: 'backend-engineer',
+        confidence: 0.4,
+        reasoning: 'Unclear scope',
+      });
+
+      bridge.start();
+
+      events.emit('linear:approval:detected', {
+        issueId: 'issue-789',
+        title: 'Misc task',
+        approvalState: 'Approved',
+        priority: 3,
+        detectedAt: '2026-02-13T12:00:00Z',
+      } as ApprovalContext);
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(featureLoader.update).not.toHaveBeenCalled();
+      expect(events.emit).not.toHaveBeenCalledWith('feature:agent-suggested', expect.anything());
+    });
+
+    it('does not block approval flow when classifier fails', async () => {
+      mockClassify.mockRejectedValueOnce(new Error('API timeout'));
+
+      bridge.start();
+
+      events.emit('linear:approval:detected', {
+        issueId: 'issue-err',
+        title: 'Feature with classifier error',
+        approvalState: 'Approved',
+        priority: 3,
+        detectedAt: '2026-02-13T12:00:00Z',
+      } as ApprovalContext);
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Feature creation and ProjM event should still fire
+      expect(featureLoader.create).toHaveBeenCalled();
+      expect(events.emit).toHaveBeenCalledWith(
+        'authority:pm-review-approved',
+        expect.objectContaining({ featureId: 'feature-created-123' })
+      );
+    });
+
+    it('emits feature:agent-suggested with correct payload at boundary (0.8)', async () => {
+      mockClassify.mockResolvedValueOnce({
+        role: 'backend-engineer',
+        confidence: 0.8,
+        reasoning: 'Exactly at threshold',
+      });
+
+      bridge.start();
+
+      events.emit('linear:approval:detected', {
+        issueId: 'issue-boundary',
+        title: 'API endpoint',
+        approvalState: 'Approved',
+        priority: 3,
+        detectedAt: '2026-02-13T12:00:00Z',
+      } as ApprovalContext);
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(events.emit).toHaveBeenCalledWith(
+        'feature:agent-suggested',
+        expect.objectContaining({
+          featureId: 'feature-created-123',
+          role: 'backend-engineer',
+          confidence: 0.8,
+          reasoning: 'Exactly at threshold',
+          autoAssigned: true,
+          suggestedAt: expect.any(String),
+        })
+      );
+    });
   });
 });

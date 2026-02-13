@@ -10,6 +10,7 @@ import { createLogger } from '@automaker/utils';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { ApprovalContext } from './linear-approval-handler.js';
+import { classifyFeature } from './feature-classifier.js';
 
 const logger = createLogger('linear:approval-bridge');
 
@@ -65,6 +66,58 @@ export class LinearApprovalBridge {
     logger.info('LinearApprovalBridge stopped');
   }
 
+  /**
+   * Classify a feature and assign the suggested agent role.
+   * High confidence (>=0.8) → direct assignment.
+   * Medium confidence (0.6-0.8) → suggestion only (Ava reviews).
+   * Low confidence (<0.6) → no assignment.
+   */
+  private async classifyAndAssign(
+    featureId: string,
+    title: string,
+    description: string,
+    projectPath: string
+  ): Promise<void> {
+    const classification = await classifyFeature(title, description, projectPath);
+
+    const HIGH_CONFIDENCE = 0.8;
+
+    if (classification.confidence >= HIGH_CONFIDENCE) {
+      // High confidence: assign directly
+      await this.featureLoader.update(projectPath, featureId, {
+        assignedRole: classification.role,
+      });
+
+      logger.info(
+        `Auto-assigned role "${classification.role}" to feature ${featureId} (confidence: ${classification.confidence})`
+      );
+    } else if (classification.confidence >= 0.6) {
+      // Medium confidence: suggest but don't auto-assign
+      await this.featureLoader.update(projectPath, featureId, {
+        assignedRole: classification.role,
+      });
+
+      logger.info(
+        `Suggested role "${classification.role}" for feature ${featureId} (confidence: ${classification.confidence}, needs review)`
+      );
+    } else {
+      logger.debug(
+        `Low confidence (${classification.confidence}) for feature ${featureId}, no assignment`
+      );
+      return;
+    }
+
+    // Emit event for UI visibility
+    this.events.emit('feature:agent-suggested', {
+      featureId,
+      role: classification.role,
+      confidence: classification.confidence,
+      reasoning: classification.reasoning,
+      autoAssigned: classification.confidence >= HIGH_CONFIDENCE,
+      suggestedAt: new Date().toISOString(),
+    });
+  }
+
   private async handleApproval(context: ApprovalContext): Promise<void> {
     if (!this.running) return;
 
@@ -107,6 +160,11 @@ export class LinearApprovalBridge {
     });
 
     logger.info(`Created epic feature ${feature.id} from approved issue ${issueId}`);
+
+    // Classify the feature to suggest an agent role (non-blocking)
+    this.classifyAndAssign(feature.id, title, epicDescription, projectPath).catch((err) => {
+      logger.warn(`Agent classification failed for feature ${feature.id}:`, err);
+    });
 
     // Emit for ProjM to pick up and decompose
     this.events.emit('authority:pm-review-approved', {
