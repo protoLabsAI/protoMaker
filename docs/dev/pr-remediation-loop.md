@@ -68,18 +68,21 @@ The PR remediation loop automatically handles review feedback on pull requests, 
 The service detects PR review feedback via two mechanisms:
 
 #### Webhook (Immediate)
+
 - GitHub webhook fires on `pull_request_review` submission
 - Payload includes: PR number, reviewer, review state, branch name
 - Triggers immediate processing (no polling delay)
 - Deduplicates with polling to prevent double-processing
 
 #### Polling (Fallback)
+
 - Runs every 60 seconds (configurable via `POLL_INTERVAL_MS`)
 - Checks all tracked PRs via `gh pr view --json reviewDecision,reviews,comments`
 - Skips PRs recently processed via webhook (within 2 minutes)
 - Updates `prLastPolledAt` timestamp in feature.json
 
 **Structured Logging:**
+
 ```typescript
 logger.info('Feedback detected via webhook', {
   featureId,
@@ -104,6 +107,7 @@ Parse and classify review feedback:
   - `info`: ℹ️ FYI (documentation, explanations)
 
 **Structured Logging:**
+
 ```typescript
 logger.info('Triage result: Review threads fetched', {
   featureId,
@@ -126,6 +130,7 @@ logger.info('Triage result: Review threads fetched', {
 The dev agent evaluates each feedback item and decides whether to accept or deny:
 
 **Agent Decision Format:**
+
 ```
 Accept #1 - Security issue must be fixed
 Accept #3 - Performance improvement is valid
@@ -134,6 +139,7 @@ Deny #4 - Style preference, not blocking
 ```
 
 Decisions are tracked in `feature.threadFeedback`:
+
 ```typescript
 {
   threadId: "PR_kwDOAbc123_reviewThread456",
@@ -144,6 +150,7 @@ Decisions are tracked in `feature.threadFeedback`:
 ```
 
 **Structured Logging:**
+
 ```typescript
 logger.info('Agent evaluation summary', {
   featureId,
@@ -161,7 +168,7 @@ Resolve accepted threads via GitHub GraphQL API:
 
 ```graphql
 mutation {
-  resolveReviewThread(input: {threadId: "PR_kwDOAbc123_reviewThread456"}) {
+  resolveReviewThread(input: { threadId: "PR_kwDOAbc123_reviewThread456" }) {
     thread {
       id
       isResolved
@@ -171,6 +178,7 @@ mutation {
 ```
 
 **Structured Logging:**
+
 ```typescript
 logger.info('Thread resolution complete', {
   featureId,
@@ -192,6 +200,7 @@ Monitor CI checks after pushing fixes:
 - Log which checks pass/fail
 
 **Structured Logging:**
+
 ```typescript
 logger.info('CI check monitoring started', {
   featureId,
@@ -221,6 +230,7 @@ Track remediation cycles to prevent infinite loops:
 - Feature marked as `blocked` with error message
 
 **Structured Logging:**
+
 ```typescript
 logger.warn('Iteration budget exhausted, escalating', {
   featureId,
@@ -235,11 +245,11 @@ logger.warn('Iteration budget exhausted, escalating', {
 
 ### Environment Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `POLL_INTERVAL_MS` | `60000` | How often to poll GitHub for PR reviews (ms) |
-| `MAX_PR_ITERATIONS` | `2` | Max review cycles before escalating |
-| `MAX_TOTAL_REMEDIATION_CYCLES` | `5` | Total remediation attempts (feedback + CI) |
+| Variable                       | Default | Description                                  |
+| ------------------------------ | ------- | -------------------------------------------- |
+| `POLL_INTERVAL_MS`             | `60000` | How often to poll GitHub for PR reviews (ms) |
+| `MAX_PR_ITERATIONS`            | `2`     | Max review cycles before escalating          |
+| `MAX_TOTAL_REMEDIATION_CYCLES` | `5`     | Total remediation attempts (feedback + CI)   |
 
 ### Feature-Level Settings
 
@@ -258,21 +268,21 @@ Per-feature overrides in `feature.json`:
 
 ### Events Emitted
 
-| Event | Payload | Description |
-|-------|---------|-------------|
-| `pr:feedback-received` | `{ featureId, prNumber, type, iterationCount, detectionMethod }` | Review feedback detected |
-| `pr:changes-requested` | `{ featureId, prNumber, feedback, reviewers, iterationCount }` | Changes requested by reviewers |
-| `pr:approved` | `{ featureId, prNumber, approvers }` | PR approved |
-| `authority:awaiting-approval` | `{ proposal, featureTitle, blockerType }` | Escalation to CTO |
-| `pr:agent-restart-failed` | `{ featureId, prNumber, error }` | Agent restart failed |
+| Event                         | Payload                                                          | Description                    |
+| ----------------------------- | ---------------------------------------------------------------- | ------------------------------ |
+| `pr:feedback-received`        | `{ featureId, prNumber, type, iterationCount, detectionMethod }` | Review feedback detected       |
+| `pr:changes-requested`        | `{ featureId, prNumber, feedback, reviewers, iterationCount }`   | Changes requested by reviewers |
+| `pr:approved`                 | `{ featureId, prNumber, approvers }`                             | PR approved                    |
+| `authority:awaiting-approval` | `{ proposal, featureTitle, blockerType }`                        | Escalation to CTO              |
+| `pr:agent-restart-failed`     | `{ featureId, prNumber, error }`                                 | Agent restart failed           |
 
 ### Events Subscribed
 
-| Event | Handler | Description |
-|-------|---------|-------------|
-| `auto-mode:event` (type: `auto_mode_git_workflow`) | `trackPR()` | Start tracking newly created PR |
-| `feature:pr-merged` | `trackedPRs.delete()` | Stop tracking merged PR |
-| `webhook:github:pull_request` (action: `review_submitted`) | `handleWebhookReview()` | Process webhook review |
+| Event                                                      | Handler                 | Description                     |
+| ---------------------------------------------------------- | ----------------------- | ------------------------------- |
+| `auto-mode:event` (type: `auto_mode_git_workflow`)         | `trackPR()`             | Start tracking newly created PR |
+| `feature:pr-merged`                                        | `trackedPRs.delete()`   | Stop tracking merged PR         |
+| `webhook:github:pull_request` (action: `review_submitted`) | `handleWebhookReview()` | Process webhook review          |
 
 ## Debugging
 
@@ -295,12 +305,14 @@ cat .automaker/features/{featureId}/feature.json | jq '{
 ### Logs to Look For
 
 **Feedback Detection:**
+
 ```
 [PRFeedbackRemediation] Feedback detected via webhook { featureId, prNumber, iteration, ... }
 [PRFeedbackRemediation] Triage result: Review threads fetched { threadCount, severityDistribution, ... }
 ```
 
 **Agent Remediation:**
+
 ```
 [PRFeedbackRemediation] Starting agent remediation cycle { featureId, prNumber, iteration, ... }
 [PRFeedbackRemediation] Agent evaluation summary { acceptedCount, deniedCount, ... }
@@ -308,12 +320,14 @@ cat .automaker/features/{featureId}/feature.json | jq '{
 ```
 
 **CI Monitoring:**
+
 ```
 [PRFeedbackRemediation] CI check monitoring started { checks, status, ... }
 [PRFeedbackRemediation] CI checks complete { passed, failed, duration, ... }
 ```
 
 **Iteration Budget:**
+
 ```
 [PRFeedbackRemediation] Iteration budget exhausted, escalating { iteration, maxIterations, ... }
 ```
@@ -323,10 +337,12 @@ cat .automaker/features/{featureId}/feature.json | jq '{
 #### Issue: Webhook not triggering
 
 **Symptoms:**
+
 - Feedback only detected via polling (1 minute delay)
 - No "Feedback detected via webhook" logs
 
 **Solutions:**
+
 1. Check GitHub webhook configuration: Settings → Webhooks
 2. Verify webhook URL points to your server: `https://your-domain/webhook/github`
 3. Check webhook secret matches `GITHUB_WEBHOOK_SECRET` env var
@@ -335,11 +351,13 @@ cat .automaker/features/{featureId}/feature.json | jq '{
 #### Issue: Infinite remediation loop
 
 **Symptoms:**
+
 - Feature stuck in `in_progress` status
 - `prIterationCount` keeps increasing
 - No escalation to CTO
 
 **Solutions:**
+
 1. Check `MAX_PR_ITERATIONS` setting (default: 2)
 2. Review feature's `remediationHistory` for repeated failures
 3. Check if agent is incorrectly accepting feedback that introduces new issues
@@ -348,10 +366,12 @@ cat .automaker/features/{featureId}/feature.json | jq '{
 #### Issue: Thread resolution fails
 
 **Symptoms:**
+
 - Threads remain unresolved on GitHub despite agent acceptance
 - "GraphQL error" in thread resolution logs
 
 **Solutions:**
+
 1. Check GitHub API token has `repo` scope
 2. Verify thread IDs are valid (format: `PR_kwDOAbc123_reviewThread456`)
 3. Check if threads were already resolved manually
@@ -360,10 +380,12 @@ cat .automaker/features/{featureId}/feature.json | jq '{
 #### Issue: Agent not restarting after feedback
 
 **Symptoms:**
+
 - Feedback detected but feature remains in `review` status
 - No "Agent remediation started" log
 
 **Solutions:**
+
 1. Verify `AutoModeService` is injected into `PRFeedbackService`
 2. Check if agent capacity is full (max concurrent agents reached)
 3. Review feature status - must be `review` for remediation to trigger
@@ -416,6 +438,7 @@ interface ReviewThreadFeedback {
 ```
 
 This creates an audit trail of:
+
 - What feedback was received
 - What the agent decided
 - Why the agent made that decision
@@ -428,6 +451,7 @@ This creates an audit trail of:
 **Scenario:** Multiple reviewers submit feedback simultaneously
 
 **Behavior:**
+
 - First webhook triggers processing
 - Subsequent webhooks deduplicated within 2 minutes
 - Polling skipped if recently processed via webhook
@@ -438,12 +462,14 @@ This creates an audit trail of:
 **Scenario:** Server restarts during active remediation
 
 **Behavior:**
+
 - Tracked PRs restored from feature.json (`prTrackedSince`, `prLastPolledAt`)
 - In-flight agent executions lost (Claude Agent SDK limitation)
 - Polling resumes on next cycle
 - Feature status preserved in database
 
 **Recovery:**
+
 ```typescript
 // On server startup, for each project:
 await prFeedbackService.restoreTrackedPRsForProject(projectPath);
@@ -454,6 +480,7 @@ await prFeedbackService.restoreTrackedPRsForProject(projectPath);
 **Scenario:** Feature hits `MAX_PR_ITERATIONS`
 
 **Behavior:**
+
 1. Feature marked as `blocked`
 2. `authority:awaiting-approval` event emitted
 3. CTO notified via Discord (if configured)
@@ -461,6 +488,7 @@ await prFeedbackService.restoreTrackedPRsForProject(projectPath);
 5. Feature waits for human approval to continue
 
 **Manual Override:**
+
 ```bash
 # Reset iteration count and unblock
 curl -X POST http://localhost:3008/api/features/update \
@@ -499,6 +527,7 @@ Every remediation cycle appends to `feature.remediationHistory`:
 ```
 
 This provides:
+
 - Complete history of all remediation attempts
 - Per-cycle timing and cost tracking
 - Thread acceptance/denial statistics
