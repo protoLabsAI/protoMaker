@@ -650,9 +650,44 @@ Staging auto-deploys from `main` via a GitHub Actions self-hosted runner.
 2. `.github/workflows/deploy-staging.yml` triggers on the self-hosted runner
 3. Workflow clones/pulls into a **persistent deploy directory** (`/home/josh/staging-deploy/automaker`) — not the runner's `_work/` workspace (which gets cleaned by cron)
 4. `.env` is copied from `/home/josh/dev/ava/.env` (persistent credentials)
-5. `setup-staging.sh --build` builds all Docker images, `--start` restarts containers
-6. Health check verifies deployment, smoke tests run
-7. Discord notification posted to `#deployments`
+5. **Drain step** calls `POST /api/deploy/drain` to gracefully stop auto-mode and wait for running agents to finish (up to 2 minutes, then force-stops)
+6. `setup-staging.sh --build` builds all Docker images, `--start` restarts containers
+7. On startup, auto-mode auto-resumes from `autoModeAlwaysOn` settings and orphaned features are reset to `backlog`
+8. Health check verifies deployment, smoke tests run
+9. Discord notification posted to `#deployments`
+
+### Zero-Downtime Deploy (Agent Drain)
+
+Previous deploys killed running agents by restarting Docker containers immediately. The drain system prevents this:
+
+```
+push to main → drain API → agents finish/stop → build → restart → auto-resume
+```
+
+**Drain endpoint:** `POST /api/deploy/drain`
+
+- Stops auto-mode for all active worktrees (prevents new agents)
+- Polls every 5s for running agents to finish (up to 2 min timeout)
+- Force-stops any agents still running after timeout
+- Returns `{ success, drained, worktreesStopped, agentsForceStopped, elapsedSeconds }`
+
+**Status endpoint:** `GET /api/deploy/status`
+
+- Returns `{ drainInProgress, runningAgents, activeWorktrees }`
+
+**Manual drain:**
+
+```bash
+# Via setup script
+./scripts/setup-staging.sh --drain
+
+# Via curl
+curl -X POST http://localhost:3008/api/deploy/drain \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $AUTOMAKER_API_KEY"
+```
+
+**Auto-resume:** The server automatically restarts auto-mode on startup using `autoModeAlwaysOn` settings. Features stuck in `in_progress` are reset to `backlog`.
 
 ### Setup
 

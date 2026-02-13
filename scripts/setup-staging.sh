@@ -6,6 +6,7 @@
 #   ./scripts/setup-staging.sh              # Full setup (build + start)
 #   ./scripts/setup-staging.sh --build      # Rebuild images only
 #   ./scripts/setup-staging.sh --start      # Start without rebuilding
+#   ./scripts/setup-staging.sh --drain      # Gracefully stop agents before deploy
 #   ./scripts/setup-staging.sh --stop       # Stop services
 #   ./scripts/setup-staging.sh --status     # Show status
 #   ./scripts/setup-staging.sh --teardown   # Stop and remove volumes
@@ -288,6 +289,31 @@ show_status() {
   echo ""
 }
 
+# ─── Drain ────────────────────────────────────────────────────────────────────
+
+drain_agents() {
+  info "Draining running agents before deploy..."
+
+  local api_port="${API_PORT:-3008}"
+  local api_key="${AUTOMAKER_API_KEY:-}"
+
+  if [ -z "$api_key" ]; then
+    warn "AUTOMAKER_API_KEY not set, skipping drain"
+    return 0
+  fi
+
+  local response
+  response=$(curl -sf -X POST "http://localhost:${api_port}/api/deploy/drain" \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer ${api_key}" \
+    --max-time 180 2>&1) || {
+    warn "Drain failed or server not running — continuing with deploy"
+    return 0
+  }
+
+  ok "Drain complete: $response"
+}
+
 # ─── Main ────────────────────────────────────────────────────────────────────
 
 # Source env file if it exists (for port vars)
@@ -311,6 +337,9 @@ case "${1:-}" in
     check_prereqs
     start_services
     ;;
+  --drain)
+    drain_agents
+    ;;
   --stop)
     stop_services
     ;;
@@ -321,11 +350,12 @@ case "${1:-}" in
     teardown
     ;;
   --help|-h)
-    echo "Usage: $0 [--build|--start|--stop|--status|--teardown|--help]"
+    echo "Usage: $0 [--build|--start|--drain|--stop|--status|--teardown|--help]"
     echo ""
     echo "  (no args)   Full setup: check prereqs, build images, start services"
     echo "  --build     Rebuild images only"
     echo "  --start     Start without rebuilding"
+    echo "  --drain     Gracefully stop agents before deploy"
     echo "  --stop      Stop services"
     echo "  --status    Show status"
     echo "  --teardown  Stop and remove all volumes"

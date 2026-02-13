@@ -49,6 +49,16 @@ jobs:
             exit 1
           fi
 
+      - name: Drain running agents
+        run: |
+          # Gracefully stop auto-mode and wait for agents to finish.
+          # Uses the API key from .env (same machine as staging server).
+          AUTOMAKER_API_KEY=$(grep -oP 'AUTOMAKER_API_KEY=\K.*' "$ENV_SOURCE" || echo "")
+          curl -sf -X POST http://localhost:3008/api/deploy/drain \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $AUTOMAKER_API_KEY" \
+            --max-time 180 || echo "Drain skipped (server not running or no agents)"
+
       - name: Rebuild and restart staging
         working-directory: /home/josh/staging-deploy/automaker
         run: |

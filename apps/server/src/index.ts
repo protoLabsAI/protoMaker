@@ -176,6 +176,7 @@ import {
 import { createCrewRoutes } from './routes/crew/index.js';
 import { linearApprovalHandler } from './services/linear-approval-handler.js';
 import { LinearApprovalBridge } from './services/linear-approval-bridge.js';
+import { createDeployRoutes } from './routes/deploy/index.js';
 
 const PORT = parseInt(process.env.PORT || '3008', 10);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -966,6 +967,7 @@ app.use(
 app.use('/api/ceremonies', createCeremoniesRoutes(events, featureLoader, projectService));
 app.use('/api/issues', createIssuesRoutes(events));
 app.use('/api/crew', createCrewRoutes(crewLoopService));
+app.use('/api/deploy', createDeployRoutes(autoModeService));
 
 // Create HTTP server
 const server = createServer(app);
