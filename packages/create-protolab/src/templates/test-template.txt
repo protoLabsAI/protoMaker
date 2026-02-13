@@ -1,0 +1,4 @@
+Project: {{projectName}}
+Package Manager: {{packageManager}}
+Install Command: {{installCommand}}
+Run Command: {{runCommand}}

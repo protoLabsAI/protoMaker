@@ -1,0 +1,32 @@
+{
+  "name": "@automaker/create-protolab",
+  "version": "0.1.0",
+  "description": "Scaffolding tool for creating ProtoLab projects with Automaker",
+  "type": "module",
+  "main": "dist/templates.js",
+  "types": "dist/templates.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/templates.js",
+      "types": "./dist/templates.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc && cp -r src/templates dist/",
+    "dev": "tsc --watch",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "keywords": [
+    "create-protolab",
+    "scaffolding",
+    "template",
+    "automaker"
+  ],
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.4.0",
+    "vitest": "^4.0.0"
+  }
+}
