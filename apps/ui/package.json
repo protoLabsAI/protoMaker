@@ -150,13 +150,9 @@
     "storybook": "^10.2.8",
     "@storybook/react-vite": "^10.2.8",
     "@chromatic-com/storybook": "^5.0.1",
-    "@storybook/addon-vitest": "^10.2.8",
     "@storybook/addon-a11y": "^10.2.8",
     "@storybook/addon-docs": "^10.2.8",
-    "eslint-plugin-storybook": "^10.2.8",
-    "playwright": "^1.58.2",
-    "@vitest/browser-playwright": "4.0.16",
-    "@vitest/coverage-v8": "4.0.16"
+    "eslint-plugin-storybook": "^10.2.8"
   },
   "build": {
     "appId": "com.automaker.app",
