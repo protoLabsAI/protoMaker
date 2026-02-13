@@ -247,7 +247,7 @@ export function getBlockingDependencies(feature: Feature, allFeatures: Feature[]
 
   return feature.dependencies.filter((depId: string) => {
     const dep = allFeatures.find((f) => f.id === depId);
-    if (!dep) return true; // Missing dependency is blocking
+    if (!dep) return false; // Missing dependency is not blocking (not found in feature list)
 
     // Foundation deps require 'done' (merged) — 'review' is NOT sufficient
     if (dep.isFoundation) {
@@ -299,8 +299,7 @@ export function getBlockingDependenciesFromMap(
   for (const depId of dependencies) {
     const dep = featureMap.get(depId);
     if (!dep) {
-      blockingDependencies.push(depId);
-      continue;
+      continue; // Missing dependency is not blocking (not found in feature list)
     }
 
     // Foundation deps require 'done' (merged) — 'review' is NOT sufficient
