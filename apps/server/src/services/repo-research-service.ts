@@ -449,7 +449,12 @@ export async function researchRepo(projectPath: string): Promise<RepoResearchRes
             automation.hasAnalytics = true;
             automation.analyticsProvider = 'plausible';
             break;
-          } else if (envContent.includes('GA_') || envContent.includes('GOOGLE_ANALYTICS')) {
+          } else if (
+            envContent.includes('GA_MEASUREMENT_ID') ||
+            envContent.includes('GA_TRACKING_ID') ||
+            envContent.includes('NEXT_PUBLIC_GA_ID') ||
+            envContent.includes('GOOGLE_ANALYTICS')
+          ) {
             automation.hasAnalytics = true;
             automation.analyticsProvider = 'google-analytics';
             break;
