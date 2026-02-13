@@ -52,9 +52,14 @@ export class ProviderFactory {
   }
 
   /**
-   * Register a provider instance
+   * Register a provider instance. Factory must be initialized first.
    */
   registerProvider(name: ProviderName, provider: BaseLLMProvider): void {
+    if (!this.initialized) {
+      throw new Error(
+        'ProviderFactory not initialized. Call initialize() before registering providers.'
+      );
+    }
     this.providers.set(name, provider);
   }
 

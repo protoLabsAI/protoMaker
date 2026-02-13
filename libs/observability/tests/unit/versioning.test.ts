@@ -64,7 +64,7 @@ describe('versioning', () => {
         compiledPrompt: 'Hello {{name}}',
       });
 
-      expect(mockClient.getPrompt).toHaveBeenCalledWith('greeting', undefined);
+      expect(mockClient.getPrompt).toHaveBeenCalledWith('greeting', undefined, undefined);
     });
 
     it('should fetch a prompt with specific version', async () => {
@@ -83,7 +83,7 @@ describe('versioning', () => {
       const result = await getRawPrompt(mockClient, config);
 
       expect(result.version).toBe(2);
-      expect(mockClient.getPrompt).toHaveBeenCalledWith('greeting', 2);
+      expect(mockClient.getPrompt).toHaveBeenCalledWith('greeting', 2, undefined);
     });
 
     it('should fetch a prompt with label', async () => {
@@ -102,7 +102,9 @@ describe('versioning', () => {
       const result = await getRawPrompt(mockClient, config);
 
       expect(result.label).toBe('production');
-      expect(mockClient.getPrompt).toHaveBeenCalledWith('greeting', undefined);
+      expect(mockClient.getPrompt).toHaveBeenCalledWith('greeting', undefined, {
+        label: 'production',
+      });
     });
 
     it('should throw error if prompt not found', async () => {

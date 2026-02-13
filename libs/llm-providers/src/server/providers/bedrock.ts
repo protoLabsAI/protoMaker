@@ -225,7 +225,9 @@ export class BedrockProvider extends BaseProvider {
 
     const region = this.bedrockConfig.region || process.env.AWS_REGION;
     if (!region) {
-      errors.push('AWS region is required. Set AWS_REGION or provide in config.');
+      warnings.push(
+        'AWS region not configured. Set AWS_REGION or provide in config. Defaulting to us-east-1.'
+      );
     }
 
     const hasCredentials =
@@ -233,7 +235,9 @@ export class BedrockProvider extends BaseProvider {
       (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY);
 
     if (!hasCredentials) {
-      errors.push('AWS credentials are required. Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY.');
+      warnings.push(
+        'No explicit AWS credentials found. AWS SDK will attempt to use instance profile, IAM role, or other default credential providers.'
+      );
     }
 
     return {

@@ -1,6 +1,12 @@
 import { Langfuse } from 'langfuse';
 import { createLogger } from '@automaker/utils';
-import type { LangfuseConfig, CreateTraceOptions, CreateGenerationOptions } from './types.js';
+import type {
+  LangfuseConfig,
+  CreateTraceOptions,
+  CreateGenerationOptions,
+  CreateSpanOptions,
+  CreateScoreOptions,
+} from './types.js';
 
 const logger = createLogger('LangfuseClient');
 
@@ -50,9 +56,13 @@ export class LangfuseClient {
   }
 
   /**
-   * Get a prompt from Langfuse by name and optional version
+   * Get a prompt from Langfuse by name and optional version.
+   * Returns a Langfuse prompt object with `prompt`, `version`, and `config` properties.
    */
-  async getPrompt(name: string, version?: number): Promise<any | null> {
+  async getPrompt(
+    name: string,
+    version?: number
+  ): Promise<{ prompt: string; version: number; config?: Record<string, any> } | null> {
     if (!this.isAvailable()) {
       logger.debug(`Langfuse unavailable, cannot fetch prompt: ${name}`);
       return null;
@@ -125,6 +135,63 @@ export class LangfuseClient {
     } catch (error) {
       logger.error('Failed to create generation in Langfuse', error);
       return null;
+    }
+  }
+
+  /**
+   * Create a span within a trace
+   */
+  createSpan(options: CreateSpanOptions) {
+    if (!this.isAvailable()) {
+      logger.debug('Langfuse unavailable, skipping span creation');
+      return null;
+    }
+
+    try {
+      const trace = this.client!.trace({ id: options.traceId });
+      const span = trace.span({
+        id: options.id,
+        name: options.name,
+        input: options.input,
+        output: options.output,
+        metadata: options.metadata,
+        startTime: options.startTime,
+        endTime: options.endTime,
+      });
+      logger.debug('Created span in Langfuse', {
+        traceId: options.traceId,
+        spanId: options.id,
+      });
+      return span;
+    } catch (error) {
+      logger.error('Failed to create span in Langfuse', error);
+      return null;
+    }
+  }
+
+  /**
+   * Create a score for a trace
+   */
+  createScore(options: CreateScoreOptions) {
+    if (!this.isAvailable()) {
+      logger.debug('Langfuse unavailable, skipping score creation');
+      return;
+    }
+
+    try {
+      // score() is available at runtime via mixin but not in TypeScript declarations
+      (this.client as any).score({
+        traceId: options.traceId,
+        name: options.name,
+        value: options.value,
+        comment: options.comment,
+      });
+      logger.debug('Created score in Langfuse', {
+        traceId: options.traceId,
+        name: options.name,
+      });
+    } catch (error) {
+      logger.error('Failed to create score in Langfuse', error);
     }
   }
 

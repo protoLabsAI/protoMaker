@@ -33,7 +33,7 @@ if echo "$STRIPPED" | grep -qE '(^[[:space:]]*|&&[[:space:]]*|\|\|[[:space:]]*|;
 fi
 
 # Guard: dev server management (anchored to command boundaries)
-if echo "$STRIPPED" | grep -qE '(^[[:space:]]*|&&[[:space:]]*|\|\|[[:space:]]*|;[[:space:]]*)(npm run dev|npx vite|node.*apps/server/src/index)'; then
+if echo "$STRIPPED" | grep -qE '(^[[:space:]]*|&&[[:space:]]*|\|\|[[:space:]]*|;[[:space:]]*)(npm run dev(:|[[:space:]]|$)|npx vite([[:space:]]|$)|node.*apps/server/src/index)'; then
   jq -n '{
     hookSpecificOutput: {
       hookEventName: "PreToolUse",

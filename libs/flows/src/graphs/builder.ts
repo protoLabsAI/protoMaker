@@ -1,14 +1,21 @@
 import { StateGraph, END, START, MemorySaver } from '@langchain/langgraph';
+import type { BaseCheckpointSaver } from '@langchain/langgraph';
 import type { ConditionalEdgeFunction, NodeName } from './routing.js';
+
+/**
+ * Checkpointer interface for graph state persistence.
+ * Compatible with LangGraph's BaseCheckpointSaver.
+ */
+export type Checkpointer = BaseCheckpointSaver;
 
 /**
  * Base graph builder configuration
  */
 export interface GraphBuilderConfig<TState> {
   /**
-   * State annotation for the graph
+   * State annotation for the graph (LangGraph Annotation.Root result)
    */
-  stateAnnotation: any;
+  stateAnnotation: ConstructorParameters<typeof StateGraph<any>>[0];
 
   /**
    * Whether to enable checkpointing (default: false)
@@ -18,20 +25,20 @@ export interface GraphBuilderConfig<TState> {
   /**
    * Custom checkpointer (if not provided, uses MemorySaver)
    */
-  checkpointer?: any;
+  checkpointer?: Checkpointer;
 }
 
 /**
- * Node function type - simplified to work with LangGraph's complex types
+ * Node function type - simplified to work with LangGraph's complex internal types
  */
-export type NodeFunction<TState> = any;
+export type NodeFunction<TState> = (state: TState) => Promise<Partial<TState>> | Partial<TState>;
 
 /**
  * Builder for creating LangGraph state graphs with common patterns
  */
 export class GraphBuilder<TState> {
   private graph: StateGraph<any>;
-  private checkpointer?: any;
+  private checkpointer?: Checkpointer;
 
   constructor(config: GraphBuilderConfig<TState>) {
     this.graph = new StateGraph(config.stateAnnotation) as any;

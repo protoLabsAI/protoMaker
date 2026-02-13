@@ -10,6 +10,27 @@ import { wrapSubgraph } from './utils/subgraph-wrapper.js';
 import { createResearcherGraph, ResearcherState } from './subgraphs/researcher.js';
 import { createAnalyzerGraph, AnalyzerState } from './subgraphs/analyzer.js';
 
+// Lazy-memoized compiled subgraphs to avoid recompilation per invocation
+let compiledResearcherGraph: ReturnType<
+  ReturnType<typeof createResearcherGraph>['compile']
+> | null = null;
+let compiledAnalyzerGraph: ReturnType<ReturnType<typeof createAnalyzerGraph>['compile']> | null =
+  null;
+
+function getCompiledResearcherGraph() {
+  if (!compiledResearcherGraph) {
+    compiledResearcherGraph = createResearcherGraph().compile();
+  }
+  return compiledResearcherGraph;
+}
+
+function getCompiledAnalyzerGraph() {
+  if (!compiledAnalyzerGraph) {
+    compiledAnalyzerGraph = createAnalyzerGraph().compile();
+  }
+  return compiledAnalyzerGraph;
+}
+
 export const CoordinatorState = Annotation.Root({
   task: Annotation<string>,
   researchQueries: Annotation<string[]>,
@@ -85,9 +106,8 @@ async function researchDelegateNode(
 ): Promise<Partial<CoordinatorStateType>> {
   const { query } = state;
 
-  // Create and compile isolated subgraph
-  const researcherGraph = createResearcherGraph();
-  const compiled = researcherGraph.compile();
+  // Use memoized compiled subgraph
+  const compiled = getCompiledResearcherGraph();
 
   type ResearcherInput = typeof ResearcherState.State;
   type ResearcherOutput = typeof ResearcherState.State;
@@ -122,9 +142,8 @@ async function analyzeDelegateNode(
 ): Promise<Partial<CoordinatorStateType>> {
   const { data } = state;
 
-  // Create and compile isolated subgraph
-  const analyzerGraph = createAnalyzerGraph();
-  const compiled = analyzerGraph.compile();
+  // Use memoized compiled subgraph
+  const compiled = getCompiledAnalyzerGraph();
 
   type AnalyzerInput = typeof AnalyzerState.State;
   type AnalyzerOutput = typeof AnalyzerState.State;
@@ -206,21 +225,27 @@ export function createCoordinatorGraph() {
   graph.addNode('sequential_analysis', sequentialAnalysisNode, { ends: ['analyze_delegate'] });
   graph.addNode('aggregation', aggregationNode);
 
+  // LangGraph's TypeScript types require node name literals that match the graph's
+  // generic parameters. Since nodes are registered at runtime via addNode(), we use
+  // an untyped reference for edge-building calls.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const g = graph as any;
+
   // Define flow
-  graph.setEntryPoint('planning' as '__start__');
-  graph.addConditionalEdges('planning' as '__start__', (state) => state.mode, {
-    parallel: 'fan_out' as '__start__',
-    sequential: 'fan_out' as '__start__',
+  g.setEntryPoint('planning');
+  g.addConditionalEdges('planning', (state: CoordinatorStateType) => state.mode, {
+    parallel: 'fan_out',
+    sequential: 'fan_out',
   });
 
   // fan_out returns Send[] which automatically routes to delegate nodes
-  graph.addConditionalEdges('research_delegate' as '__start__', (state) => state.mode, {
-    parallel: 'aggregation' as '__start__',
-    sequential: 'sequential_analysis' as '__start__',
+  g.addConditionalEdges('research_delegate', (state: CoordinatorStateType) => state.mode, {
+    parallel: 'aggregation',
+    sequential: 'sequential_analysis',
   });
 
-  graph.addEdge('analyze_delegate' as '__start__', 'aggregation' as '__start__');
-  graph.setFinishPoint('aggregation' as '__start__');
+  g.addEdge('analyze_delegate', 'aggregation');
+  g.setFinishPoint('aggregation');
 
   return graph;
 }

@@ -17,6 +17,8 @@ export interface TracingConfig {
   defaultTags?: string[];
   /** Default metadata to apply to all traces */
   defaultMetadata?: Record<string, any>;
+  /** Custom pricing per model (per 1M tokens). Key is a substring matched against model name. */
+  pricing?: Record<string, { input: number; output: number }>;
 }
 
 /**
@@ -84,28 +86,25 @@ function extractUsageFromMessages(messages: any[]):
  * Calculate cost based on model and token usage
  * Prices are per 1M tokens (as of 2025-01)
  */
+/** Default Claude pricing (per 1M tokens) */
+const DEFAULT_PRICING: Record<string, { input: number; output: number }> = {
+  'opus-4-6': { input: 15, output: 75 },
+  'claude-opus-4-6': { input: 15, output: 75 },
+  'sonnet-4-5': { input: 3, output: 15 },
+  'claude-sonnet-4-5': { input: 3, output: 15 },
+  'haiku-4-5': { input: 0.8, output: 4 },
+  'claude-haiku-4-5': { input: 0.8, output: 4 },
+};
+
 function calculateCost(
   model: string,
-  usage?: { promptTokens: number; completionTokens: number }
+  usage?: { promptTokens: number; completionTokens: number },
+  customPricing?: Record<string, { input: number; output: number }>
 ): number | undefined {
   if (!usage) return undefined;
 
   const modelLower = model.toLowerCase();
-
-  // Claude 4.5/4.6 pricing (per 1M tokens)
-  const pricing: Record<string, { input: number; output: number }> = {
-    // Opus 4.6
-    'opus-4-6': { input: 15, output: 75 },
-    'claude-opus-4-6': { input: 15, output: 75 },
-
-    // Sonnet 4.5
-    'sonnet-4-5': { input: 3, output: 15 },
-    'claude-sonnet-4-5': { input: 3, output: 15 },
-
-    // Haiku 4.5
-    'haiku-4-5': { input: 0.8, output: 4 },
-    'claude-haiku-4-5': { input: 0.8, output: 4 },
-  };
+  const pricing = { ...DEFAULT_PRICING, ...customPricing };
 
   // Find matching pricing
   let prices: { input: number; output: number } | undefined;
@@ -193,8 +192,8 @@ export async function* wrapProviderWithTracing<T>(
     // Extract usage from collected messages
     const usage = extractUsageFromMessages(messages);
 
-    // Calculate cost
-    const cost = calculateCost(options.model, usage);
+    // Calculate cost (use custom pricing from config if provided)
+    const cost = calculateCost(options.model, usage, config.pricing);
 
     // Prepare generation metadata
     const generationMetadata: Record<string, any> = {

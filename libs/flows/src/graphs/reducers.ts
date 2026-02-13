@@ -145,7 +145,7 @@ export function mapMergeReducer<K, V>(
  * Counter reducer - adds numeric values
  */
 export function counterReducer(left: number | undefined, right: number | undefined): number {
-  return (left || 0) + (right || 0);
+  return (left ?? 0) + (right ?? 0);
 }
 
 /**

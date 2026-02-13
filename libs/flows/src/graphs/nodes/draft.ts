@@ -9,12 +9,13 @@ export interface ReviewState {
   revision?: number;
 }
 
+// TODO: Placeholder for LLM-based draft generation. Currently returns a hardcoded draft.
+// The async signature is required for LangGraph node compatibility.
 export async function draft(state: ReviewState): Promise<Partial<ReviewState>> {
-  // Create initial draft
-  const draftContent = 'This is a draft document that needs review.';
+  const draftContent = state.content || 'This is a draft document that needs review.';
 
   return {
     content: draftContent,
-    revision: 1,
+    revision: (state.revision ?? 0) + 1,
   };
 }

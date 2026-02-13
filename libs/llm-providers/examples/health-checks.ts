@@ -18,9 +18,9 @@ import { ProviderFactory } from '@automaker/llm-providers';
 import type { LLMProvidersConfig, ModelCategory, ProviderName } from '@automaker/llm-providers';
 
 /**
- * Health check result interface
+ * Health check result for examples (extends the base HealthCheckResult from server/base.ts)
  */
-interface HealthCheckResult {
+interface HealthCheckExampleResult {
   provider: string;
   healthy: boolean;
   enabled: boolean;
@@ -80,7 +80,7 @@ const config: LLMProvidersConfig = {
 /**
  * Perform health check on a single provider
  */
-function checkProviderHealth(providerName: ProviderName): HealthCheckResult {
+function checkProviderHealth(providerName: ProviderName): HealthCheckExampleResult {
   const factory = ProviderFactory.getInstance();
   const errors: string[] = [];
 

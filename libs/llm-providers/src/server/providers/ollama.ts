@@ -24,6 +24,10 @@ const logger = createLogger('OllamaProvider');
 export interface OllamaConfig extends ProviderConfig {
   host?: string;
   defaultModel?: string;
+  /** Default temperature for generations (0-1). Default: 0.7 */
+  temperature?: number;
+  /** Default max tokens to predict. Default: 4096 */
+  numPredict?: number;
 }
 
 /**
@@ -54,8 +58,8 @@ export class OllamaProvider extends BaseProvider {
         messages: messages as any,
         stream: true,
         options: {
-          temperature: 0.7,
-          num_predict: 4096,
+          temperature: this.ollamaConfig.temperature ?? 0.7,
+          num_predict: this.ollamaConfig.numPredict ?? 4096,
         },
       });
 

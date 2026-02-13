@@ -127,3 +127,39 @@ export interface CreateGenerationOptions {
   /** End time */
   endTime?: Date;
 }
+
+/**
+ * Options for creating a span
+ */
+export interface CreateSpanOptions {
+  /** Unique span identifier */
+  id?: string;
+  /** Trace ID to attach this span to */
+  traceId: string;
+  /** Name/description of the span */
+  name?: string;
+  /** Input data */
+  input?: any;
+  /** Output data */
+  output?: any;
+  /** Additional metadata */
+  metadata?: Record<string, any>;
+  /** Start time */
+  startTime?: Date;
+  /** End time */
+  endTime?: Date;
+}
+
+/**
+ * Options for creating a score
+ */
+export interface CreateScoreOptions {
+  /** Trace ID to attach this score to */
+  traceId: string;
+  /** Score name (e.g., 'success', 'quality') */
+  name: string;
+  /** Numeric score value */
+  value: number;
+  /** Optional comment */
+  comment?: string;
+}

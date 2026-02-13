@@ -49,7 +49,12 @@ export async function getRawPrompt(
 ): Promise<PromptMetadata> {
   const { promptName, version, label } = config;
 
-  const prompt = await client.getPrompt(promptName, version);
+  // getPrompt accepts (name, version, {label}) at runtime but TS declarations lag behind
+  const prompt = await (client as any).getPrompt(
+    promptName,
+    version,
+    label ? { label } : undefined
+  );
 
   if (!prompt) {
     throw new Error(

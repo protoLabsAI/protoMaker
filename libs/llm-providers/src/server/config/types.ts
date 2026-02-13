@@ -6,7 +6,7 @@ export type ModelCategory = 'fast' | 'smart' | 'reasoning' | 'vision' | 'coding'
 /**
  * Provider name types
  */
-export type ProviderName = 'anthropic' | 'openai' | 'google' | 'ollama';
+export type ProviderName = 'anthropic' | 'openai' | 'google' | 'ollama' | 'groq' | 'bedrock';
 
 /**
  * Base provider configuration
@@ -39,6 +39,8 @@ export interface LLMProvidersConfig {
     openai?: ProviderConfig;
     google?: ProviderConfig;
     ollama?: ProviderConfig;
+    groq?: ProviderConfig;
+    bedrock?: ProviderConfig;
   };
   defaultProvider: ProviderName;
 }

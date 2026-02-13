@@ -61,26 +61,25 @@ describe('GroqProvider', () => {
     expect(provider.supportsFeature('vision')).toBe(false);
   });
 
-  it('should execute query and stream responses', async () => {
-    if (!process.env.GROQ_API_KEY) {
-      console.log('Skipping query test - GROQ_API_KEY not set');
-      return;
-    }
+  it.skipIf(!process.env.GROQ_API_KEY)(
+    'should execute query and stream responses',
+    async () => {
+      const options: ExecuteOptions = {
+        model: 'llama-3.1-8b-instant',
+        prompt: 'Say "test successful" and nothing else.',
+        cwd: process.cwd(),
+      };
 
-    const options: ExecuteOptions = {
-      model: 'llama-3.1-8b-instant',
-      prompt: 'Say "test successful" and nothing else.',
-      cwd: process.cwd(),
-    };
-
-    let foundResult = false;
-    for await (const message of provider.executeQuery(options)) {
-      if (message.type === 'result' && message.result) {
-        foundResult = true;
-        expect(message.result.toLowerCase()).toContain('test');
+      let foundResult = false;
+      for await (const message of provider.executeQuery(options)) {
+        if (message.type === 'result' && message.result) {
+          foundResult = true;
+          expect(message.result.toLowerCase()).toContain('test');
+        }
       }
-    }
 
-    expect(foundResult).toBe(true);
-  }, 30000);
+      expect(foundResult).toBe(true);
+    },
+    30000
+  );
 });

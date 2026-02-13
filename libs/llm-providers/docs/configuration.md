@@ -152,13 +152,13 @@ interface ModelMapping {
   enabled: true,
   models: {
     fast: 'gemini-1.5-flash',
-    smart: 'gemini-1.5-pro',
-    vision: 'gemini-1.5-pro',
+    balanced: 'gemini-1.5-pro',
+    quality: 'gemini-1.5-pro',
   },
 }
 ```
 
-**Supported Categories:** fast, smart, vision
+**Supported Categories:** fast, balanced, quality (maps to GoogleProvider's registered model keys)
 
 **Notes:**
 

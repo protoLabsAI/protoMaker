@@ -21,9 +21,9 @@
 
 import { LangfuseClient } from '../src/langfuse/client.js';
 import type {
-  CreateTraceParams,
-  CreateGenerationParams,
-  CreateSpanParams,
+  CreateTraceOptions,
+  CreateGenerationOptions,
+  CreateSpanOptions,
 } from '../src/langfuse/types.js';
 
 // Initialize Langfuse client

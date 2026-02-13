@@ -14,6 +14,10 @@ import { ANTHROPIC_MODELS, getModelIdForTier } from '../config/default-config.js
  * Anthropic provider implementation using LangChain
  */
 export class AnthropicProvider extends BaseLLMProvider {
+  private cachedHealth: HealthCheckResult | null = null;
+  private cachedHealthTimestamp = 0;
+  private static readonly HEALTH_CACHE_TTL_MS = 60_000; // 1 minute
+
   constructor(config: LLMProviderConfig = {}) {
     super(config);
 
@@ -53,41 +57,58 @@ export class AnthropicProvider extends BaseLLMProvider {
   }
 
   /**
-   * Health check: verify API key is valid by making a test request
+   * Health check: verify API key is valid.
+   * Uses a cached result with TTL to avoid billable model.invoke calls on every probe.
    */
   async healthCheck(): Promise<HealthCheckResult> {
-    const startTime = Date.now();
+    // Return cached result if still valid
+    const now = Date.now();
+    if (
+      this.cachedHealth &&
+      now - this.cachedHealthTimestamp < AnthropicProvider.HEALTH_CACHE_TTL_MS
+    ) {
+      return this.cachedHealth;
+    }
+
+    // Verify API key is present (no API call needed)
+    if (!this.config.apiKey) {
+      const result: HealthCheckResult = {
+        healthy: false,
+        provider: this.getName(),
+        error: 'ANTHROPIC_API_KEY not configured',
+      };
+      this.cachedHealth = result;
+      this.cachedHealthTimestamp = now;
+      return result;
+    }
+
+    const startTime = now;
 
     try {
-      // Verify API key is present
-      if (!this.config.apiKey) {
-        return {
-          healthy: false,
-          provider: this.getName(),
-          error: 'ANTHROPIC_API_KEY not configured',
-        };
-      }
-
       // Make a minimal test request to verify the key works
       const model = this.getModel('fast');
       await model.invoke([{ role: 'user', content: 'ping' }]);
 
       const latencyMs = Date.now() - startTime;
-
-      return {
+      const result: HealthCheckResult = {
         healthy: true,
         provider: this.getName(),
         latencyMs,
       };
+      this.cachedHealth = result;
+      this.cachedHealthTimestamp = Date.now();
+      return result;
     } catch (error) {
       const latencyMs = Date.now() - startTime;
-
-      return {
+      const result: HealthCheckResult = {
         healthy: false,
         provider: this.getName(),
         error: error instanceof Error ? error.message : 'Unknown error',
         latencyMs,
       };
+      this.cachedHealth = result;
+      this.cachedHealthTimestamp = Date.now();
+      return result;
     }
   }
 }

@@ -8,7 +8,14 @@ export const modelCategorySchema = z.enum(['fast', 'smart', 'reasoning', 'vision
 /**
  * Provider name schema
  */
-export const providerNameSchema = z.enum(['anthropic', 'openai', 'google', 'ollama']);
+export const providerNameSchema = z.enum([
+  'anthropic',
+  'openai',
+  'google',
+  'ollama',
+  'groq',
+  'bedrock',
+]);
 
 /**
  * Model mapping schema
@@ -41,6 +48,8 @@ export const llmProvidersConfigSchema = z.object({
     openai: providerConfigSchema.optional(),
     google: providerConfigSchema.optional(),
     ollama: providerConfigSchema.optional(),
+    groq: providerConfigSchema.optional(),
+    bedrock: providerConfigSchema.optional(),
   }),
   defaultProvider: providerNameSchema,
 });
