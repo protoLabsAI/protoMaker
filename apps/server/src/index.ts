@@ -174,6 +174,8 @@ import {
   boardJanitorCrewMember,
 } from './services/crew-members/index.js';
 import { createCrewRoutes } from './routes/crew/index.js';
+import { linearApprovalHandler } from './services/linear-approval-handler.js';
+import { LinearApprovalBridge } from './services/linear-approval-bridge.js';
 
 const PORT = parseInt(process.env.PORT || '3008', 10);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -460,6 +462,11 @@ const statusMonitor = new StatusMonitorAgent(events, authorityService, featureLo
 // Initialize Discord approval routing (listens for authority:awaiting-approval events)
 const discordApprovalRouter = new DiscordApprovalRouter(events);
 discordApprovalRouter.initialize();
+
+// Initialize Linear approval detection + bridge to CoS pipeline
+linearApprovalHandler.initialize(settingsService, events);
+const approvalBridge = new LinearApprovalBridge(events, featureLoader);
+approvalBridge.start();
 
 // Initialize PR Feedback Service (monitors open PRs for review comments)
 const prFeedbackService = new PRFeedbackService(events, featureLoader);
