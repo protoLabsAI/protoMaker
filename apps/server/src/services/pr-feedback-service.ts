@@ -41,6 +41,7 @@ interface TrackedPR {
   lastCheckedAt: number;
   reviewState: 'pending' | 'changes_requested' | 'approved' | 'commented';
   iterationCount: number;
+  lastProcessedReviewAt?: number; // Track last webhook-based review to dedupe
 }
 
 interface PRReviewInfo {
@@ -103,6 +104,22 @@ export class PRFeedbackService {
           this.trackedPRs.delete(featureId);
         }
       }
+
+      // Listen for webhook PR review submissions (immediate detection)
+      if (type === 'webhook:github:pull_request') {
+        const data = payload as {
+          action: string;
+          prNumber: number;
+          branchName: string;
+          reviewState: string;
+          reviewBody?: string;
+          reviewer?: string;
+        };
+
+        if (data.action === 'review_submitted') {
+          void this.handleWebhookReview(data);
+        }
+      }
     });
 
     // Start polling
@@ -110,7 +127,7 @@ export class PRFeedbackService {
       void this.pollAllPRs();
     }, POLL_INTERVAL_MS);
 
-    logger.info('PR Feedback Service initialized');
+    logger.info('PR Feedback Service initialized (webhook + poll)');
   }
 
   stop(): void {
@@ -156,6 +173,53 @@ export class PRFeedbackService {
   }
 
   /**
+   * Handle webhook-based PR review submission (immediate detection).
+   * Finds the tracked PR by prNumber and processes the review immediately.
+   */
+  private async handleWebhookReview(data: {
+    prNumber: number;
+    branchName: string;
+    reviewState: string;
+    reviewBody?: string;
+    reviewer?: string;
+  }): Promise<void> {
+    // Find the tracked PR by PR number and branch name
+    const entry = Array.from(this.trackedPRs.entries()).find(
+      ([_, pr]) => pr.prNumber === data.prNumber && pr.branchName === data.branchName
+    );
+
+    if (!entry) {
+      logger.debug(
+        `Webhook received for PR #${data.prNumber} (branch: ${data.branchName}), but not currently tracked`
+      );
+      return;
+    }
+
+    const [featureId, pr] = entry;
+
+    logger.info(
+      `[WEBHOOK] PR #${data.prNumber} review detected: ${data.reviewState} by ${data.reviewer || 'unknown'}`
+    );
+
+    try {
+      // Fetch full review info from GitHub
+      const reviewInfo = await this.fetchPRReviewStatus(pr);
+      if (!reviewInfo) {
+        logger.warn(`Failed to fetch review info for webhook PR #${data.prNumber}`);
+        return;
+      }
+
+      // Mark that we processed this review via webhook
+      pr.lastProcessedReviewAt = Date.now();
+      pr.lastCheckedAt = Date.now();
+
+      await this.processReviewStatus(featureId, pr, reviewInfo, 'webhook');
+    } catch (error) {
+      logger.error(`Failed to process webhook review for PR #${data.prNumber}:`, error);
+    }
+  }
+
+  /**
    * Poll all tracked PRs for review status.
    */
   private async pollAllPRs(): Promise<void> {
@@ -169,7 +233,15 @@ export class PRFeedbackService {
 
         if (!reviewInfo) continue;
 
-        await this.processReviewStatus(featureId, pr, reviewInfo);
+        // Deduplicate: skip if we just processed this via webhook recently (within 2 minutes)
+        if (pr.lastProcessedReviewAt && Date.now() - pr.lastProcessedReviewAt < 120_000) {
+          logger.debug(
+            `[POLL] Skipping PR #${pr.prNumber} - recently processed via webhook (${Math.round((Date.now() - pr.lastProcessedReviewAt) / 1000)}s ago)`
+          );
+          continue;
+        }
+
+        await this.processReviewStatus(featureId, pr, reviewInfo, 'poll');
       } catch (error) {
         logger.error(`Failed to check PR #${pr.prNumber} for feature ${featureId}:`, error);
       }
@@ -234,9 +306,11 @@ export class PRFeedbackService {
   private async processReviewStatus(
     featureId: string,
     pr: TrackedPR,
-    reviewInfo: PRReviewInfo
+    reviewInfo: PRReviewInfo,
+    detectionMethod: 'webhook' | 'poll' = 'poll'
   ): Promise<void> {
     const previousState = pr.reviewState;
+    const detectionLabel = detectionMethod === 'webhook' ? '[WEBHOOK]' : '[POLL]';
 
     // Map GitHub review decision to our state
     switch (reviewInfo.state) {
@@ -403,9 +477,12 @@ export class PRFeedbackService {
           prNumber: pr.prNumber,
           type: 'changes_requested',
           iterationCount: pr.iterationCount,
+          detectionMethod,
         });
 
-        logger.info(`PR #${pr.prNumber}: Changes requested (iteration ${pr.iterationCount})`);
+        logger.info(
+          `${detectionLabel} PR #${pr.prNumber}: Changes requested (iteration ${pr.iterationCount})`
+        );
         break;
       }
 
@@ -421,9 +498,10 @@ export class PRFeedbackService {
           prUrl: pr.prUrl,
           branchName: pr.branchName,
           approvers: reviewInfo.reviews.filter((r) => r.state === 'APPROVED').map((r) => r.author),
+          detectionMethod,
         });
 
-        logger.info(`PR #${pr.prNumber}: Approved!`);
+        logger.info(`${detectionLabel} PR #${pr.prNumber}: Approved!`);
 
         // Stop tracking - merge will be handled by auto-merge or webhook
         this.trackedPRs.delete(featureId);
@@ -440,7 +518,9 @@ export class PRFeedbackService {
             prNumber: pr.prNumber,
             type: 'commented',
             iterationCount: pr.iterationCount,
+            detectionMethod,
           });
+          logger.info(`${detectionLabel} PR #${pr.prNumber}: Commented`);
         }
         break;
       }
