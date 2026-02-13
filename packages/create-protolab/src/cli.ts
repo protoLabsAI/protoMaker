@@ -79,7 +79,7 @@ function parseArgs(): CLIOptions {
 // Mock functions for demonstration (in real implementation, these would call the server API)
 async function performResearch(projectPath: string): Promise<any> {
   // Simulate research phase
-  await new Promise(resolve => setTimeout(resolve, 2000));
+  await new Promise((resolve) => setTimeout(resolve, 2000));
   return {
     projectPath,
     projectName: projectPath.split('/').pop() || 'unknown',
@@ -93,7 +93,7 @@ async function performResearch(projectPath: string): Promise<any> {
 
 async function performGapAnalysis(researchResult: any): Promise<GapAnalysisReport> {
   // Simulate gap analysis
-  await new Promise(resolve => setTimeout(resolve, 1500));
+  await new Promise((resolve) => setTimeout(resolve, 1500));
   return {
     projectPath: researchResult.projectPath,
     analyzedAt: new Date().toISOString(),
@@ -170,28 +170,41 @@ async function runPhase(phaseName: string, action: () => Promise<any>): Promise<
 }
 
 async function initializeAutomaker(): Promise<string[]> {
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  await new Promise((resolve) => setTimeout(resolve, 1000));
   return ['.automaker/context/spec.md', '.automaker/context/CLAUDE.md', '.automaker/settings.json'];
 }
 
 async function initializeBeads(): Promise<string[]> {
-  await new Promise(resolve => setTimeout(resolve, 800));
+  await new Promise((resolve) => setTimeout(resolve, 800));
   return ['.beads/config.json', '.beads/tasks/.gitkeep'];
 }
 
 async function setupCIPipeline(): Promise<string[]> {
-  await new Promise(resolve => setTimeout(resolve, 1200));
-  return ['.github/workflows/build.yml', '.github/workflows/test.yml', '.github/workflows/format-check.yml'];
+  await new Promise((resolve) => setTimeout(resolve, 1200));
+  return [
+    '.github/workflows/build.yml',
+    '.github/workflows/test.yml',
+    '.github/workflows/format-check.yml',
+  ];
 }
 
 async function createFeatures(gaps: GapItem[]): Promise<number> {
-  await new Promise(resolve => setTimeout(resolve, 1500));
+  await new Promise((resolve) => setTimeout(resolve, 1500));
   return gaps.length;
 }
 
 // Display functions
 function displayGapAnalysis(report: GapAnalysisReport, useColors: boolean) {
-  const c = useColors ? pc : { green: (s: string) => s, yellow: (s: string) => s, red: (s: string) => s, cyan: (s: string) => s, dim: (s: string) => s, bold: (s: string) => s };
+  const c = useColors
+    ? pc
+    : {
+        green: (s: string) => s,
+        yellow: (s: string) => s,
+        red: (s: string) => s,
+        cyan: (s: string) => s,
+        dim: (s: string) => s,
+        bold: (s: string) => s,
+      };
 
   clack.log.info(c.bold('\n📊 Gap Analysis Results\n'));
   clack.log.info(`Overall Score: ${c.cyan(report.overallScore + '%')}`);
@@ -220,9 +233,9 @@ function displayGapAnalysis(report: GapAnalysisReport, useColors: boolean) {
   }
 
   // Display gaps by severity
-  const criticalGaps = report.gaps.filter(g => g.severity === 'critical');
-  const recommendedGaps = report.gaps.filter(g => g.severity === 'recommended');
-  const optionalGaps = report.gaps.filter(g => g.severity === 'optional');
+  const criticalGaps = report.gaps.filter((g) => g.severity === 'critical');
+  const recommendedGaps = report.gaps.filter((g) => g.severity === 'recommended');
+  const optionalGaps = report.gaps.filter((g) => g.severity === 'optional');
 
   if (criticalGaps.length > 0) {
     clack.log.info(c.bold('\n✗ Critical Gaps:'));
@@ -253,7 +266,14 @@ function displayGapAnalysis(report: GapAnalysisReport, useColors: boolean) {
 }
 
 function displaySummary(createdFiles: string[], featuresCreated: number, useColors: boolean) {
-  const c = useColors ? pc : { green: (s: string) => s, cyan: (s: string) => s, dim: (s: string) => s, bold: (s: string) => s };
+  const c = useColors
+    ? pc
+    : {
+        green: (s: string) => s,
+        cyan: (s: string) => s,
+        dim: (s: string) => s,
+        bold: (s: string) => s,
+      };
 
   clack.log.info(c.bold('\n✨ Setup Complete!\n'));
 
@@ -268,7 +288,9 @@ function displaySummary(createdFiles: string[], featuresCreated: number, useColo
 
   clack.log.info(c.bold('\nNext Steps:'));
   clack.log.info(`  1. ${c.dim('Review the generated files and configuration')}`);
-  clack.log.info(`  2. ${c.dim('Run')} ${c.cyan('npm install')} ${c.dim('to install dependencies')}`);
+  clack.log.info(
+    `  2. ${c.dim('Run')} ${c.cyan('npm install')} ${c.dim('to install dependencies')}`
+  );
   clack.log.info(`  3. ${c.dim('Run')} ${c.cyan('npm run dev')} ${c.dim('to start development')}`);
   clack.log.info(`  4. ${c.dim('Check the ProtoMaker board for alignment features')}`);
 }
@@ -306,10 +328,16 @@ async function main() {
       console.log(JSON.stringify(output, null, 2));
       process.exit(0);
     } catch (error) {
-      console.log(JSON.stringify({
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      }, null, 2));
+      console.log(
+        JSON.stringify(
+          {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+          },
+          null,
+          2
+        )
+      );
       process.exit(1);
     }
   }
@@ -322,15 +350,13 @@ async function main() {
 
   try {
     // Phase 1: Research
-    const researchResult = await runPhase(
-      'Analyzing repository structure...',
-      () => performResearch(projectPath)
+    const researchResult = await runPhase('Analyzing repository structure...', () =>
+      performResearch(projectPath)
     );
 
     // Phase 2: Gap Analysis
-    const gapAnalysis = await runPhase(
-      'Running gap analysis...',
-      () => performGapAnalysis(researchResult)
+    const gapAnalysis = await runPhase('Running gap analysis...', () =>
+      performGapAnalysis(researchResult)
     );
 
     // Display gap analysis results
@@ -398,33 +424,23 @@ async function main() {
     let featuresCreated = 0;
 
     if (selectedPhases.includes('automaker')) {
-      const files = await runPhase(
-        'Initializing .automaker/ directory...',
-        initializeAutomaker
-      );
+      const files = await runPhase('Initializing .automaker/ directory...', initializeAutomaker);
       createdFiles.push(...files);
     }
 
     if (selectedPhases.includes('beads')) {
-      const files = await runPhase(
-        'Initializing .beads/ task tracker...',
-        initializeBeads
-      );
+      const files = await runPhase('Initializing .beads/ task tracker...', initializeBeads);
       createdFiles.push(...files);
     }
 
     if (selectedPhases.includes('ci')) {
-      const files = await runPhase(
-        'Setting up CI/CD pipeline...',
-        setupCIPipeline
-      );
+      const files = await runPhase('Setting up CI/CD pipeline...', setupCIPipeline);
       createdFiles.push(...files);
     }
 
     if (selectedPhases.includes('features')) {
-      featuresCreated = await runPhase(
-        'Creating alignment features...',
-        () => createFeatures(gapAnalysis.gaps)
+      featuresCreated = await runPhase('Creating alignment features...', () =>
+        createFeatures(gapAnalysis.gaps)
       );
     }
 
@@ -433,7 +449,9 @@ async function main() {
 
     clack.outro(pc.green('🚀 Ready to build with ProtoLabs!'));
   } catch (error) {
-    clack.log.error(pc.red('Setup failed: ' + (error instanceof Error ? error.message : 'Unknown error')));
+    clack.log.error(
+      pc.red('Setup failed: ' + (error instanceof Error ? error.message : 'Unknown error'))
+    );
     clack.outro(pc.red('Setup failed'));
     process.exit(1);
   }
