@@ -429,7 +429,7 @@ export async function researchRepo(projectPath: string): Promise<RepoResearchRes
   } else if (anyPkgHasDep(allPkgs, 'plausible-tracker')) {
     automation.hasAnalytics = true;
     automation.analyticsProvider = 'plausible';
-  } else if (anyPkgHasDep(allPkgs, '@next/third-parties') || anyPkgHasDep(allPkgs, 'react-ga4')) {
+  } else if (anyPkgHasDep(allPkgs, 'react-ga4')) {
     automation.hasAnalytics = true;
     automation.analyticsProvider = 'google-analytics';
   }
@@ -444,6 +444,14 @@ export async function researchRepo(projectPath: string): Promise<RepoResearchRes
           if (envContent.includes('UMAMI') || envContent.includes('umami')) {
             automation.hasAnalytics = true;
             automation.analyticsProvider = 'umami';
+            break;
+          } else if (envContent.includes('PLAUSIBLE')) {
+            automation.hasAnalytics = true;
+            automation.analyticsProvider = 'plausible';
+            break;
+          } else if (envContent.includes('GA_') || envContent.includes('GOOGLE_ANALYTICS')) {
+            automation.hasAnalytics = true;
+            automation.analyticsProvider = 'google-analytics';
             break;
           }
         } catch {
