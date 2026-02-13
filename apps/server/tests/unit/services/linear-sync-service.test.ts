@@ -796,5 +796,304 @@ describe('LinearSyncService', () => {
         ).rejects.toThrow('Linear API error: 500 Internal Server Error');
       });
     });
+
+    describe('addCommentToIssue', () => {
+      let mockFetch: ReturnType<typeof vi.fn>;
+
+      beforeEach(() => {
+        mockFetch = vi.fn();
+        global.fetch = mockFetch;
+
+        (mockSettingsService.getProjectSettings as ReturnType<typeof vi.fn>).mockResolvedValue({
+          integrations: {
+            linear: {
+              enabled: true,
+              agentToken: 'test-token-123',
+            },
+          },
+        });
+      });
+
+      afterEach(() => {
+        vi.restoreAllMocks();
+      });
+
+      it('should successfully add comment to Linear issue', async () => {
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            data: {
+              commentCreate: {
+                success: true,
+                comment: {
+                  id: 'comment-123',
+                  body: 'Test comment',
+                },
+              },
+            },
+          }),
+        });
+
+        await expect(
+          (service as any).addCommentToIssue('/test/path', 'issue-123', 'Test comment')
+        ).resolves.not.toThrow();
+
+        expect(mockFetch).toHaveBeenCalledWith(
+          'https://api.linear.app/graphql',
+          expect.objectContaining({
+            method: 'POST',
+            headers: expect.objectContaining({
+              Authorization: 'Bearer test-token-123',
+            }),
+            body: expect.stringContaining('commentCreate'),
+          })
+        );
+      });
+
+      it('should throw error when comment creation fails', async () => {
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            data: {
+              commentCreate: {
+                success: false,
+              },
+            },
+          }),
+        });
+
+        await expect(
+          (service as any).addCommentToIssue('/test/path', 'issue-123', 'Test comment')
+        ).rejects.toThrow('Failed to add comment to Linear issue');
+      });
+
+      it('should throw error when Linear API returns GraphQL errors', async () => {
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            errors: [{ message: 'Invalid issue ID' }],
+          }),
+        });
+
+        await expect(
+          (service as any).addCommentToIssue('/test/path', 'issue-123', 'Test comment')
+        ).rejects.toThrow('Linear GraphQL error: Invalid issue ID');
+      });
+    });
+  });
+
+  describe('PR Merge Sync', () => {
+    let mockFetch: ReturnType<typeof vi.fn>;
+
+    beforeEach(() => {
+      service.initialize(emitter, mockSettingsService, mockFeatureLoader);
+      service.start();
+
+      mockFetch = vi.fn();
+      global.fetch = mockFetch;
+
+      (mockSettingsService.getProjectSettings as ReturnType<typeof vi.fn>).mockResolvedValue({
+        integrations: {
+          linear: {
+            enabled: true,
+            agentToken: 'test-token-123',
+            teamId: 'team-123',
+            syncOnFeatureCreate: true,
+            syncOnStatusChange: true,
+            commentOnCompletion: true,
+          },
+        },
+      });
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('should handle PR merge event and add comment to Linear issue', async () => {
+      const featureId = 'test-feature';
+      const projectPath = '/test/path';
+
+      (mockFeatureLoader.get as ReturnType<typeof vi.fn>).mockResolvedValue({
+        featureId,
+        title: 'Test Feature',
+        status: 'review',
+        linearIssueId: 'issue-123',
+      });
+
+      // The order of API calls in onPRMerged is:
+      // 1. addCommentToIssue
+      // 2. getIssueState (within addCommentToIssue gets settings, then actual comment call)
+      // 3. If not Done: getWorkflowStateId
+      // 4. If not Done: updateIssueStatus
+
+      // Mock addCommentToIssue
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: {
+            commentCreate: {
+              success: true,
+              comment: { id: 'comment-123', body: 'Test comment' },
+            },
+          },
+        }),
+      });
+
+      // Mock getIssueState
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: {
+            issue: {
+              state: { name: 'In Review' },
+            },
+          },
+        }),
+      });
+
+      // Mock getWorkflowStateId for 'Done'
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: {
+            team: {
+              states: {
+                nodes: [
+                  { id: 'state-1', name: 'Backlog' },
+                  { id: 'state-2', name: 'Done' },
+                ],
+              },
+            },
+          },
+        }),
+      });
+
+      // Mock updateIssueStatus
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: {
+            issueUpdate: {
+              success: true,
+              issue: { id: 'issue-123', state: { name: 'Done' } },
+            },
+          },
+        }),
+      });
+
+      // Emit PR merged event
+      emitter.emit('feature:pr-merged', {
+        featureId,
+        projectPath,
+        prUrl: 'https://github.com/org/repo/pull/123',
+        prNumber: 123,
+        mergedBy: 'test-agent',
+      });
+
+      // Wait for async processing
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Verify sync metadata was updated
+      const metadata = service.getSyncMetadata(featureId);
+      expect(metadata).toBeDefined();
+      expect(metadata?.lastSyncStatus).toBe('success');
+      expect(metadata?.linearIssueId).toBe('issue-123');
+    });
+
+    it('should skip PR merge sync when commentOnCompletion is disabled', async () => {
+      (mockSettingsService.getProjectSettings as ReturnType<typeof vi.fn>).mockResolvedValue({
+        integrations: {
+          linear: {
+            enabled: true,
+            agentToken: 'test-token-123',
+            commentOnCompletion: false,
+          },
+        },
+      });
+
+      const featureId = 'test-feature';
+
+      emitter.emit('feature:pr-merged', {
+        featureId,
+        projectPath: '/test/path',
+        prUrl: 'https://github.com/org/repo/pull/123',
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Verify no comment was added
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it('should skip PR merge sync when feature has no Linear issue ID', async () => {
+      const featureId = 'test-feature';
+
+      (mockFeatureLoader.get as ReturnType<typeof vi.fn>).mockResolvedValue({
+        featureId,
+        title: 'Test Feature',
+        status: 'review',
+        linearIssueId: undefined, // No Linear issue ID
+      });
+
+      emitter.emit('feature:pr-merged', {
+        featureId,
+        projectPath: '/test/path',
+        prUrl: 'https://github.com/org/repo/pull/123',
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Verify no comment was added
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it('should not update status if issue is already Done', async () => {
+      const featureId = 'test-feature';
+
+      (mockFeatureLoader.get as ReturnType<typeof vi.fn>).mockResolvedValue({
+        featureId,
+        title: 'Test Feature',
+        status: 'done',
+        linearIssueId: 'issue-123',
+      });
+
+      // Mock addCommentToIssue (called first)
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: {
+            commentCreate: {
+              success: true,
+              comment: { id: 'comment-123', body: 'Test comment' },
+            },
+          },
+        }),
+      });
+
+      // Mock getIssueState - already Done (called second)
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: {
+            issue: {
+              state: { name: 'Done' },
+            },
+          },
+        }),
+      });
+
+      emitter.emit('feature:pr-merged', {
+        featureId,
+        projectPath: '/test/path',
+        prUrl: 'https://github.com/org/repo/pull/123',
+        prNumber: 123,
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Should have called addCommentToIssue and getIssueState, but not updateIssueStatus
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
   });
 });
