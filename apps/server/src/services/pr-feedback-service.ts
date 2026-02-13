@@ -1630,7 +1630,8 @@ This is CI fix iteration ${iteration}.`;
 
     // Check for human comments with imperative keywords
     const humanComments = reviewInfo.comments.filter(
-      (c) => !c.author.toLowerCase().includes('coderabbit') && !c.author.toLowerCase().includes('bot')
+      (c) =>
+        !c.author.toLowerCase().includes('coderabbit') && !c.author.toLowerCase().includes('bot')
     );
 
     if (humanComments.length > 0) {
