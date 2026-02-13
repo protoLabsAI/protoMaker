@@ -240,7 +240,7 @@ export function analyzeGaps(
       target: 'Squash-only merges, required status checks',
       effort: 'small',
       featureDescription:
-        'Configure branch protection for the main branch. Require pull requests with squash-only merges, required status checks (build, test, format, audit), and dismiss stale reviews. Use gh CLI to apply settings.',
+        'Configure branch protection for the main branch. Require pull requests with squash-only merges, required status checks (build, test, format, audit), required_review_thread_resolution (CodeRabbit threads must be resolved before merge), and dismiss stale reviews. Use gh CLI or rulesets API to apply settings.',
     });
   } else if (research.ci.hasBranchProtection) {
     addCompliant({
