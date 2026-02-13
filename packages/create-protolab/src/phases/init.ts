@@ -119,7 +119,9 @@ async function generateClaudeMd(research: RepoResearchResult): Promise<string> {
 
   // Base template
   sections.push(`# ${research.projectName}\n`);
-  sections.push('This file provides guidance to Claude Code when working with code in this repository.\n');
+  sections.push(
+    'This file provides guidance to Claude Code when working with code in this repository.\n'
+  );
   sections.push(`## Project Overview\n`);
   sections.push(`${research.projectName} is managed with Automaker ProtoLab.\n`);
 
@@ -132,7 +134,9 @@ async function generateClaudeMd(research: RepoResearchResult): Promise<string> {
     stack.push(research.frontend.framework);
   }
   if (research.frontend.metaFramework && research.frontend.metaFramework !== 'none') {
-    stack.push(`${research.frontend.metaFramework} ${research.frontend.metaFrameworkVersion ?? ''}`);
+    stack.push(
+      `${research.frontend.metaFramework} ${research.frontend.metaFrameworkVersion ?? ''}`
+    );
   }
   if (research.backend.hasExpress) stack.push('Express');
   if (research.backend.hasFastAPI) stack.push('FastAPI');
@@ -150,7 +154,9 @@ async function generateClaudeMd(research: RepoResearchResult): Promise<string> {
   // Monorepo template section
   if (research.monorepo.isMonorepo) {
     sections.push('## Monorepo Structure\n');
-    sections.push(`This is a ${research.monorepo.tool ?? 'workspace'} monorepo using ${research.monorepo.packageManager}.\n`);
+    sections.push(
+      `This is a ${research.monorepo.tool ?? 'workspace'} monorepo using ${research.monorepo.packageManager}.\n`
+    );
 
     if (research.monorepo.packages.length > 0) {
       sections.push('### Workspace Layout\n');
@@ -176,7 +182,9 @@ async function generateClaudeMd(research: RepoResearchResult): Promise<string> {
   // React template section
   if (research.frontend.framework === 'react') {
     sections.push('## React Patterns\n');
-    sections.push(`This project uses React ${research.frontend.reactVersion ?? ''} with ${research.frontend.metaFramework ?? 'Vite'}.\n`);
+    sections.push(
+      `This project uses React ${research.frontend.reactVersion ?? ''} with ${research.frontend.metaFramework ?? 'Vite'}.\n`
+    );
     sections.push('### Component Conventions\n');
     sections.push('- Use functional components with hooks');
     sections.push('- Prefer composition over inheritance');
@@ -200,7 +208,9 @@ async function generateClaudeMd(research: RepoResearchResult): Promise<string> {
   if (research.python.hasPythonServices) {
     sections.push('## Python Services\n');
     for (const service of research.python.services) {
-      sections.push(`- \`${service.path}\` — ${service.name}${service.framework ? ` (${service.framework})` : ''}`);
+      sections.push(
+        `- \`${service.path}\` — ${service.name}${service.framework ? ` (${service.framework})` : ''}`
+      );
     }
     sections.push('');
   }
@@ -239,11 +249,17 @@ async function generateCodingRules(research: RepoResearchResult): Promise<string
     sections.push('## Type Safety\n');
     sections.push('- **strict mode**: Always enabled. Never use `any` without justification.');
     sections.push('- **Explicit return types**: Required for exported functions.');
-    sections.push('- **No non-null assertions**: Avoid `!` operator. Use proper narrowing instead.');
-    sections.push('- **Prefer `unknown` over `any`**: When the type is truly unknown, use `unknown` and narrow.\n');
+    sections.push(
+      '- **No non-null assertions**: Avoid `!` operator. Use proper narrowing instead.'
+    );
+    sections.push(
+      '- **Prefer `unknown` over `any`**: When the type is truly unknown, use `unknown` and narrow.\n'
+    );
 
     sections.push('## Import Conventions\n');
-    sections.push('- Use `type` imports for type-only imports: `import type { Foo } from \'./foo.js\'`');
+    sections.push(
+      "- Use `type` imports for type-only imports: `import type { Foo } from './foo.js'`"
+    );
     sections.push('- Always include `.js` extension in relative imports (ESM)');
     sections.push('- Use workspace package names for cross-package imports\n');
 
@@ -272,14 +288,14 @@ async function generateCodingRules(research: RepoResearchResult): Promise<string
     sections.push('## React Components\n');
     sections.push('- One component per file (except small, tightly coupled helpers)');
     sections.push('- Name file same as component: `MyComponent.tsx`');
-    sections.push('- Export component as default only if it\'s the route page component');
+    sections.push("- Export component as default only if it's the route page component");
     sections.push('- Use named exports for everything else\n');
 
     sections.push('## React Hooks\n');
     sections.push('- Prefix custom hooks with `use`: `useMyHook`');
     sections.push('- Keep hooks focused on a single concern');
     sections.push('- Extract complex logic into custom hooks');
-    sections.push('- Don\'t call hooks conditionally\n');
+    sections.push("- Don't call hooks conditionally\n");
 
     sections.push('## React Performance\n');
     sections.push('- Use `React.memo()` only when profiling shows a bottleneck');
@@ -319,7 +335,12 @@ async function generateCodingRules(research: RepoResearchResult): Promise<string
   }
 
   // Testing rules
-  if (research.testing.hasVitest || research.testing.hasJest || research.testing.hasPlaywright || research.testing.hasPytest) {
+  if (
+    research.testing.hasVitest ||
+    research.testing.hasJest ||
+    research.testing.hasPlaywright ||
+    research.testing.hasPytest
+  ) {
     sections.push('## Testing\n');
     sections.push('- Write tests for all new functionality');
     if (research.testing.hasVitest) sections.push('- Use Vitest for unit and integration tests');
@@ -341,7 +362,9 @@ async function generateCodingRules(research: RepoResearchResult): Promise<string
     const version = research.codeQuality.eslintVersion;
     const isV9 = version && parseInt(version, 10) >= 9;
     sections.push('## Linting\n');
-    sections.push(`- ESLint ${isV9 ? 'v9+ (flat config)' : ''} is configured — fix all lint warnings`);
+    sections.push(
+      `- ESLint ${isV9 ? 'v9+ (flat config)' : ''} is configured — fix all lint warnings`
+    );
     sections.push('- Run `npm run lint` to check\n');
   }
 
@@ -369,10 +392,14 @@ function generateSpecMd(research: RepoResearchResult): string {
     sections.push(`- **Language**: TypeScript ${research.codeQuality.tsVersion ?? ''}`);
   }
   if (research.frontend.framework && research.frontend.framework !== 'none') {
-    sections.push(`- **Frontend**: ${research.frontend.framework} ${research.frontend.reactVersion ?? ''}`);
+    sections.push(
+      `- **Frontend**: ${research.frontend.framework} ${research.frontend.reactVersion ?? ''}`
+    );
   }
   if (research.frontend.metaFramework && research.frontend.metaFramework !== 'none') {
-    sections.push(`- **Meta-framework**: ${research.frontend.metaFramework} ${research.frontend.metaFrameworkVersion ?? ''}`);
+    sections.push(
+      `- **Meta-framework**: ${research.frontend.metaFramework} ${research.frontend.metaFrameworkVersion ?? ''}`
+    );
   }
   if (research.backend.hasExpress) {
     sections.push('- **Backend**: Express.js');
@@ -391,7 +418,9 @@ function generateSpecMd(research: RepoResearchResult): string {
 
   if (research.monorepo.isMonorepo) {
     sections.push('## Monorepo Structure\n');
-    sections.push(`This project uses a monorepo with ${research.monorepo.tool ?? 'workspace'} and ${research.monorepo.packageManager}.\n`);
+    sections.push(
+      `This project uses a monorepo with ${research.monorepo.tool ?? 'workspace'} and ${research.monorepo.packageManager}.\n`
+    );
 
     if (research.monorepo.packages.length > 0) {
       sections.push('**Workspace packages:**\n');
