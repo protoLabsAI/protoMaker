@@ -246,7 +246,8 @@ export type EventType =
   | 'escalation:signal-routed'
   | 'escalation:signal-sent'
   | 'escalation:signal-failed'
-  | 'escalation:signal-deduplicated';
+  | 'escalation:signal-deduplicated'
+  | 'escalation:ui-notification';
 
 export type EventCallback = (type: EventType, payload: unknown) => void;
 
