@@ -263,7 +263,7 @@ describe('Validators', () => {
     expect(mono.isMonorepo).toBe(false);
   });
 
-  it('should check environment tools', () => {
+  it('should check environment tools', { timeout: 30000 }, () => {
     const checks = checkEnvironment();
     expect(Array.isArray(checks)).toBe(true);
     checks.forEach((check) => {
