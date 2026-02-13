@@ -1401,9 +1401,7 @@ export class LinearSyncService {
         });
       }
 
-      logger.info(
-        `Created Linear project for ${projectSlug}: ${result.projectId}`
-      );
+      logger.info(`Created Linear project for ${projectSlug}: ${result.projectId}`);
     } catch (error) {
       logger.error(`Failed to sync project ${projectSlug} to Linear:`, error);
 
