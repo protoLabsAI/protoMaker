@@ -38,9 +38,9 @@ export async function loadTemplate(name: string): Promise<string> {
     } catch (devErr) {
       throw new Error(
         `Failed to load template "${name}". Tried paths:\n` +
-        `  - ${path.join(templatesDir, name)}\n` +
-        `  - ${templatePath}\n` +
-        `Error: ${devErr instanceof Error ? devErr.message : String(devErr)}`
+          `  - ${path.join(templatesDir, name)}\n` +
+          `  - ${templatePath}\n` +
+          `Error: ${devErr instanceof Error ? devErr.message : String(devErr)}`
       );
     }
   }
@@ -61,10 +61,7 @@ export async function loadTemplate(name: string): Promise<string> {
  * // Returns: "Hello Alice, welcome to ProtoLab!"
  * ```
  */
-export function interpolateTemplate(
-  content: string,
-  vars: Record<string, string>
-): string {
+export function interpolateTemplate(content: string, vars: Record<string, string>): string {
   return Object.keys(vars).reduce((result, key) => {
     const pattern = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
     return result.replace(pattern, vars[key]);
