@@ -677,33 +677,36 @@ export class PRFeedbackService {
 
               // Restart the agent execution with the feedback as a continuation prompt
               // This will pick up the existing worktree and push new commits to the same PR
-              this.autoModeService.executeFeature(
-                pr.projectPath,
-                featureId,
-                true, // useWorktrees
-                true, // isAutoMode
-                undefined, // providedWorktreePath (will find existing)
-                {
-                  continuationPrompt,
-                  retryCount: pr.iterationCount,
-                  previousErrors: [], // PR feedback isn't an error, it's requested changes
-                  recoveryContext: `PR #${pr.prNumber} review feedback (iteration ${pr.iterationCount})`,
-                }
-              ).then(async () => {
-                // Remediation complete - process collected decisions
-                await this.processRemediationComplete(pr.projectPath, featureId, pr);
-              }).catch(async (error) => {
-                logger.error(`Remediation failed for ${featureId}:`, error);
-                // Clean up and emit error
-                this.remediatingFeatures.delete(featureId);
-                this.collectedDecisions.delete(featureId);
-                this.events.emit('pr:remediation-failed', {
-                  projectPath: pr.projectPath,
+              this.autoModeService
+                .executeFeature(
+                  pr.projectPath,
                   featureId,
-                  prNumber: pr.prNumber,
-                  error: String(error),
+                  true, // useWorktrees
+                  true, // isAutoMode
+                  undefined, // providedWorktreePath (will find existing)
+                  {
+                    continuationPrompt,
+                    retryCount: pr.iterationCount,
+                    previousErrors: [], // PR feedback isn't an error, it's requested changes
+                    recoveryContext: `PR #${pr.prNumber} review feedback (iteration ${pr.iterationCount})`,
+                  }
+                )
+                .then(async () => {
+                  // Remediation complete - process collected decisions
+                  await this.processRemediationComplete(pr.projectPath, featureId, pr);
+                })
+                .catch(async (error) => {
+                  logger.error(`Remediation failed for ${featureId}:`, error);
+                  // Clean up and emit error
+                  this.remediatingFeatures.delete(featureId);
+                  this.collectedDecisions.delete(featureId);
+                  this.events.emit('pr:remediation-failed', {
+                    projectPath: pr.projectPath,
+                    featureId,
+                    prNumber: pr.prNumber,
+                    error: String(error),
+                  });
                 });
-              });
 
               logger.info('Agent remediation started successfully', {
                 featureId,
@@ -1019,7 +1022,8 @@ ${truncatedOutput}
 
     if (humanThreads.length > 0) {
       threadSection += '### Human Review Feedback (Higher Priority)\n\n';
-      threadSection += 'Human feedback should be given higher weight as it reflects team standards and context.\n\n';
+      threadSection +=
+        'Human feedback should be given higher weight as it reflects team standards and context.\n\n';
       for (const thread of humanThreads) {
         threadSection += this.formatThreadForEvaluation(thread);
       }
@@ -1027,7 +1031,8 @@ ${truncatedOutput}
 
     if (botThreads.length > 0) {
       threadSection += '### CodeRabbit/Bot Feedback\n\n';
-      threadSection += 'Bot feedback may be useful but should be critically evaluated. Deny if it contradicts project standards.\n\n';
+      threadSection +=
+        'Bot feedback may be useful but should be critically evaluated. Deny if it contradicts project standards.\n\n';
       for (const thread of botThreads) {
         threadSection += this.formatThreadForEvaluation(thread);
       }
@@ -1266,15 +1271,17 @@ This is iteration ${iterationCount} of the review cycle. Be judicious - not all 
       }
 
       // Convert pending threads back to ThreadFeedbackItem format
-      const threads: ThreadFeedbackItem[] = pendingFeedback.threads.map((t: PendingFeedback['threads'][number]) => ({
-        threadId: t.threadId,
-        severity: t.severity,
-        message: t.message,
-        location: t.location,
-        suggestedFix: t.suggestedFix,
-        isBot: t.isBot,
-        category: undefined,
-      }));
+      const threads: ThreadFeedbackItem[] = pendingFeedback.threads.map(
+        (t: PendingFeedback['threads'][number]) => ({
+          threadId: t.threadId,
+          severity: t.severity,
+          message: t.message,
+          location: t.location,
+          suggestedFix: t.suggestedFix,
+          isBot: t.isBot,
+          category: undefined,
+        })
+      );
 
       // Update PR iteration count
       pr.iterationCount = pendingFeedback.iterationCount;
@@ -1308,32 +1315,28 @@ This is iteration ${iterationCount} of the review cycle. Be judicious - not all 
       });
 
       if (this.autoModeService) {
-        this.autoModeService.executeFeature(
-          projectPath,
-          featureId,
-          true,
-          true,
-          undefined,
-          {
+        this.autoModeService
+          .executeFeature(projectPath, featureId, true, true, undefined, {
             continuationPrompt,
             retryCount: pr.iterationCount,
             previousErrors: [],
             recoveryContext: `PR #${pr.prNumber} pending review feedback (iteration ${pr.iterationCount})`,
-          }
-        ).then(async () => {
-          await this.processRemediationComplete(projectPath, featureId, pr);
-        }).catch(async (error) => {
-          logger.error(`Pending feedback remediation failed for ${featureId}:`, error);
-          this.remediatingFeatures.delete(featureId);
-          this.collectedDecisions.delete(featureId);
-          this.events.emit('pr:remediation-failed', {
-            projectPath,
-            featureId,
-            prNumber: pr.prNumber,
-            error: String(error),
-            source: 'pending_queue',
+          })
+          .then(async () => {
+            await this.processRemediationComplete(projectPath, featureId, pr);
+          })
+          .catch(async (error) => {
+            logger.error(`Pending feedback remediation failed for ${featureId}:`, error);
+            this.remediatingFeatures.delete(featureId);
+            this.collectedDecisions.delete(featureId);
+            this.events.emit('pr:remediation-failed', {
+              projectPath,
+              featureId,
+              prNumber: pr.prNumber,
+              error: String(error),
+              source: 'pending_queue',
+            });
           });
-        });
       }
     } catch (error) {
       logger.error(`Failed to process pending feedback for ${featureId}:`, error);
