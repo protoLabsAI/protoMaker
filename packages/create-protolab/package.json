@@ -1,0 +1,36 @@
+{
+  "name": "create-protolab",
+  "version": "1.0.0",
+  "description": "CLI tool to initialize ProtoLab projects with comprehensive error handling",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "create-protolab": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "protolab",
+    "cli",
+    "setup",
+    "initialization"
+  ],
+  "author": "Proto Labs AI",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.9.0"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ]
+}
