@@ -1,0 +1,345 @@
+import { randomUUID } from 'node:crypto';
+import { createLogger } from '@automaker/utils';
+import { LangfuseClient } from './client.js';
+import type { CreateGenerationOptions } from './types.js';
+
+const logger = createLogger('LangfuseMiddleware');
+
+/**
+ * Configuration for provider tracing
+ */
+export interface TracingConfig {
+  /** Whether tracing is enabled */
+  enabled: boolean;
+  /** Langfuse client instance */
+  client?: LangfuseClient;
+  /** Default tags to apply to all traces */
+  defaultTags?: string[];
+  /** Default metadata to apply to all traces */
+  defaultMetadata?: Record<string, any>;
+}
+
+/**
+ * Context for a traced invocation
+ */
+export interface TracingContext {
+  traceId: string;
+  generationId: string;
+  startTime: Date;
+  metadata?: Record<string, any>;
+}
+
+/**
+ * Result from a traced invocation
+ */
+export interface TracedInvocationResult<T> {
+  result: T;
+  traceId: string;
+  generationId: string;
+  latencyMs: number;
+}
+
+/**
+ * Extract token usage from provider messages
+ * Supports various message formats from different providers
+ */
+function extractUsageFromMessages(messages: any[]):
+  | {
+      promptTokens: number;
+      completionTokens: number;
+      totalTokens: number;
+    }
+  | undefined {
+  let promptTokens = 0;
+  let completionTokens = 0;
+
+  for (const msg of messages) {
+    // Check for usage in message (Anthropic format)
+    if (msg.usage) {
+      promptTokens += msg.usage.input_tokens || msg.usage.promptTokens || 0;
+      completionTokens += msg.usage.output_tokens || msg.usage.completionTokens || 0;
+    }
+
+    // Check for token_usage (alternative format)
+    if (msg.token_usage) {
+      promptTokens += msg.token_usage.prompt_tokens || 0;
+      completionTokens += msg.token_usage.completion_tokens || 0;
+    }
+  }
+
+  const totalTokens = promptTokens + completionTokens;
+
+  if (totalTokens === 0) {
+    return undefined;
+  }
+
+  return {
+    promptTokens,
+    completionTokens,
+    totalTokens,
+  };
+}
+
+/**
+ * Calculate cost based on model and token usage
+ * Prices are per 1M tokens (as of 2025-01)
+ */
+function calculateCost(
+  model: string,
+  usage?: { promptTokens: number; completionTokens: number }
+): number | undefined {
+  if (!usage) return undefined;
+
+  const modelLower = model.toLowerCase();
+
+  // Claude 4.5/4.6 pricing (per 1M tokens)
+  const pricing: Record<string, { input: number; output: number }> = {
+    // Opus 4.6
+    'opus-4-6': { input: 15, output: 75 },
+    'claude-opus-4-6': { input: 15, output: 75 },
+
+    // Sonnet 4.5
+    'sonnet-4-5': { input: 3, output: 15 },
+    'claude-sonnet-4-5': { input: 3, output: 15 },
+
+    // Haiku 4.5
+    'haiku-4-5': { input: 0.8, output: 4 },
+    'claude-haiku-4-5': { input: 0.8, output: 4 },
+  };
+
+  // Find matching pricing
+  let prices: { input: number; output: number } | undefined;
+
+  for (const [key, value] of Object.entries(pricing)) {
+    if (modelLower.includes(key)) {
+      prices = value;
+      break;
+    }
+  }
+
+  if (!prices) {
+    // Unknown model, can't calculate cost
+    return undefined;
+  }
+
+  // Calculate cost (prices are per 1M tokens)
+  const inputCost = (usage.promptTokens / 1_000_000) * prices.input;
+  const outputCost = (usage.completionTokens / 1_000_000) * prices.output;
+
+  return inputCost + outputCost;
+}
+
+/**
+ * Wrap a provider's invoke method with Langfuse tracing
+ * Returns a new async generator that yields the same messages but tracks them in Langfuse
+ */
+export async function* wrapProviderWithTracing<T>(
+  generator: AsyncGenerator<T>,
+  config: TracingConfig,
+  options: {
+    model: string;
+    traceId?: string;
+    traceName?: string;
+    sessionId?: string;
+    userId?: string;
+    metadata?: Record<string, any>;
+    tags?: string[];
+    input?: any;
+  }
+): AsyncGenerator<T> {
+  // If tracing is disabled or no client, just pass through
+  if (!config.enabled || !config.client || !config.client.isAvailable()) {
+    yield* generator;
+    return;
+  }
+
+  const client = config.client;
+  const traceId = options.traceId ?? randomUUID();
+  const generationId = randomUUID();
+  const startTime = new Date();
+
+  // Create trace
+  client.createTrace({
+    id: traceId,
+    name: options.traceName ?? `model:${options.model}`,
+    userId: options.userId,
+    sessionId: options.sessionId,
+    metadata: {
+      model: options.model,
+      ...config.defaultMetadata,
+      ...options.metadata,
+    },
+    tags: [...(config.defaultTags ?? []), ...(options.tags ?? [])],
+  });
+
+  // Collect all messages for usage tracking
+  const messages: T[] = [];
+  let error: Error | undefined;
+
+  try {
+    // Yield all messages and collect them
+    for await (const message of generator) {
+      messages.push(message);
+      yield message;
+    }
+  } catch (err) {
+    error = err as Error;
+    logger.error('Error in provider invocation', err);
+    throw err;
+  } finally {
+    const endTime = new Date();
+    const latencyMs = endTime.getTime() - startTime.getTime();
+
+    // Extract usage from collected messages
+    const usage = extractUsageFromMessages(messages);
+
+    // Calculate cost
+    const cost = calculateCost(options.model, usage);
+
+    // Prepare generation metadata
+    const generationMetadata: Record<string, any> = {
+      latencyMs,
+      messageCount: messages.length,
+      ...config.defaultMetadata,
+      ...options.metadata,
+    };
+
+    if (cost !== undefined) {
+      generationMetadata.cost = cost;
+      generationMetadata.costCurrency = 'USD';
+    }
+
+    if (error) {
+      generationMetadata.error = error.message;
+      generationMetadata.errorStack = error.stack;
+    }
+
+    // Create generation span
+    const generationOptions: CreateGenerationOptions = {
+      id: generationId,
+      traceId,
+      name: `generation:${options.model}`,
+      model: options.model,
+      input: options.input,
+      output: messages.length > 0 ? messages[messages.length - 1] : undefined,
+      usage: usage
+        ? {
+            promptTokens: usage.promptTokens,
+            completionTokens: usage.completionTokens,
+            totalTokens: usage.totalTokens,
+          }
+        : undefined,
+      metadata: generationMetadata,
+      startTime,
+      endTime,
+    };
+
+    client.createGeneration(generationOptions);
+
+    // Flush events to Langfuse
+    await client.flush();
+
+    logger.debug('Traced invocation completed', {
+      traceId,
+      generationId,
+      latencyMs,
+      usage,
+      cost,
+    });
+  }
+}
+
+/**
+ * Create a tracing context for manual instrumentation
+ */
+export function createTracingContext(
+  client: LangfuseClient,
+  options: {
+    traceName?: string;
+    sessionId?: string;
+    userId?: string;
+    metadata?: Record<string, any>;
+    tags?: string[];
+  } = {}
+): TracingContext {
+  const traceId = randomUUID();
+  const generationId = randomUUID();
+  const startTime = new Date();
+
+  if (client.isAvailable()) {
+    client.createTrace({
+      id: traceId,
+      name: options.traceName ?? 'manual-trace',
+      userId: options.userId,
+      sessionId: options.sessionId,
+      metadata: options.metadata,
+      tags: options.tags,
+    });
+  }
+
+  return {
+    traceId,
+    generationId,
+    startTime,
+    metadata: options.metadata,
+  };
+}
+
+/**
+ * Complete a manual tracing context
+ */
+export async function completeTracingContext(
+  client: LangfuseClient,
+  context: TracingContext,
+  options: {
+    model: string;
+    input?: any;
+    output?: any;
+    usage?: {
+      promptTokens: number;
+      completionTokens: number;
+      totalTokens: number;
+    };
+    error?: Error;
+  }
+): Promise<void> {
+  if (!client.isAvailable()) {
+    return;
+  }
+
+  const endTime = new Date();
+  const latencyMs = endTime.getTime() - context.startTime.getTime();
+
+  // Calculate cost
+  const cost = calculateCost(options.model, options.usage);
+
+  const generationMetadata: Record<string, any> = {
+    latencyMs,
+    ...context.metadata,
+  };
+
+  if (cost !== undefined) {
+    generationMetadata.cost = cost;
+    generationMetadata.costCurrency = 'USD';
+  }
+
+  if (options.error) {
+    generationMetadata.error = options.error.message;
+    generationMetadata.errorStack = options.error.stack;
+  }
+
+  client.createGeneration({
+    id: context.generationId,
+    traceId: context.traceId,
+    name: `generation:${options.model}`,
+    model: options.model,
+    input: options.input,
+    output: options.output,
+    usage: options.usage,
+    metadata: generationMetadata,
+    startTime: context.startTime,
+    endTime,
+  });
+
+  await client.flush();
+}

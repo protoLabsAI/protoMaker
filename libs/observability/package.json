@@ -9,10 +9,6 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
-    },
-    "./langfuse": {
-      "types": "./dist/langfuse/index.d.ts",
-      "default": "./dist/langfuse/index.js"
     }
   },
   "scripts": {
@@ -24,6 +20,7 @@
   "keywords": [
     "automaker",
     "observability",
+    "langfuse",
     "tracing"
   ],
   "author": "AutoMaker Team",
@@ -32,7 +29,10 @@
     "node": ">=22.0.0 <23.0.0"
   },
   "dependencies": {
-    "@automaker/types": "1.0.0"
+    "@automaker/types": "1.0.0",
+    "@automaker/utils": "1.0.0",
+    "langfuse": "^3.32.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/node": "22.19.3",
