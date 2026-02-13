@@ -45,3 +45,6 @@ yarn-error.log*
 
 # TanStack Router generated
 src/routeTree.gen.ts
+
+*storybook.log
+storybook-static

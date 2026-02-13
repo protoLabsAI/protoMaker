@@ -36,7 +36,9 @@
     "test": "playwright test",
     "test:headed": "playwright test --headed",
     "dev:electron:wsl": "cross-env vite",
-    "dev:electron:wsl:gpu": "cross-env MESA_D3D12_DEFAULT_ADAPTER_NAME=NVIDIA vite"
+    "dev:electron:wsl:gpu": "cross-env MESA_D3D12_DEFAULT_ADAPTER_NAME=NVIDIA vite",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
   },
   "dependencies": {
     "@automaker/dependency-resolver": "1.0.0",
@@ -144,7 +146,17 @@
     "typescript": "5.9.3",
     "vite": "7.3.0",
     "vite-plugin-electron": "0.29.0",
-    "vite-plugin-electron-renderer": "0.14.6"
+    "vite-plugin-electron-renderer": "0.14.6",
+    "storybook": "^10.2.8",
+    "@storybook/react-vite": "^10.2.8",
+    "@chromatic-com/storybook": "^5.0.1",
+    "@storybook/addon-vitest": "^10.2.8",
+    "@storybook/addon-a11y": "^10.2.8",
+    "@storybook/addon-docs": "^10.2.8",
+    "eslint-plugin-storybook": "^10.2.8",
+    "playwright": "^1.58.2",
+    "@vitest/browser-playwright": "4.0.16",
+    "@vitest/coverage-v8": "4.0.16"
   },
   "build": {
     "appId": "com.automaker.app",
