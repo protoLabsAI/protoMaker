@@ -211,9 +211,7 @@ async function aggregatorNode(
 
   // Calculate average relevance
   const averageRelevance =
-    sorted.length > 0
-      ? sorted.reduce((sum, f) => sum + f.relevanceScore, 0) / sorted.length
-      : 0;
+    sorted.length > 0 ? sorted.reduce((sum, f) => sum + f.relevanceScore, 0) / sorted.length : 0;
 
   // Create summary
   const summary: ResearchSummary = {
