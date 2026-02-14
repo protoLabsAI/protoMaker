@@ -1,0 +1,271 @@
+{
+  "slug": "antagonistic-review-pipeline",
+  "title": "Antagonistic Review Pipeline",
+  "goal": "Replace blocking HITL gates with autonomous LLM-powered antagonistic review passes. Build a reusable critique-revise loop pattern that scores content against multi-dimension rubrics (G-Eval style chain-of-thought), auto-resolves below a retry threshold, and optionally allows human override. Fix content pipeline output quality issues (HTML entity escaping, duplicate headings, repetitive sections). Document the pattern comprehensively for reuse across the app.",
+  "status": "active",
+  "milestones": [
+    {
+      "number": 1,
+      "slug": "01-foundation-antagonistic-review-primitive",
+      "title": "Foundation: Antagonistic Review Primitive",
+      "description": "Build the core reusable AntagonisticReviewer subgraph and fix XML parser issues",
+      "phases": [
+        {
+          "number": 1,
+          "name": "fix-xml-parser-html-entity-escaping",
+          "title": "Fix XML parser HTML entity escaping",
+          "description": "Add unescape logic to xml-parser.ts to convert &lt; &gt; &amp; &quot; back to literal characters in extracted content. This fixes code blocks in generated content where LLMs output HTML entities instead of raw angle brackets.",
+          "filesToModify": [
+            "libs/flows/src/content/xml-parser.ts"
+          ],
+          "acceptanceCriteria": [
+            "extractTag unescapes HTML entities in returned content",
+            "Code blocks with TypeScript generics like Annotation<string[]> render correctly",
+            "Existing tests still pass",
+            "New test cases for entity escaping added"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1771047049812-rdxe7mses"
+        },
+        {
+          "number": 2,
+          "name": "build-antagonisticreviewer-subgraph",
+          "title": "Build AntagonisticReviewer subgraph",
+          "description": "Create a reusable LangGraph subgraph that implements the critique-revise loop pattern. Takes content + rubric dimensions as input, uses LLM to score each dimension with chain-of-thought reasoning, returns structured scores and verdict (PASS/REVISE/FAIL). Uses XML output format. Max 2 retries. Configurable threshold.",
+          "filesToModify": [
+            "libs/flows/src/content/subgraphs/antagonistic-reviewer.ts",
+            "libs/flows/src/content/prompts/antagonistic-review.md",
+            "libs/flows/src/index.ts"
+          ],
+          "acceptanceCriteria": [
+            "Subgraph accepts content + dimension rubric config",
+            "LLM scores each dimension 1-10 with CoT reasoning via XML tags",
+            "Returns structured ReviewResult with scores, verdict, and feedback",
+            "PASS at >=75%, REVISE at <75%, FAIL after 2 retries",
+            "Smart model for full review, fast model for structural checks",
+            "Langfuse tracing on all LLM calls",
+            "Works as standalone subgraph via wrapSubgraph()"
+          ],
+          "complexity": "large",
+          "featureId": "feature-1771047049813-25td3vjx3"
+        },
+        {
+          "number": 3,
+          "name": "add-deduplication-detection-to-assembly-phase",
+          "title": "Add deduplication detection to assembly phase",
+          "description": "Add a post-assembly validation step that checks for duplicate headings and high content similarity between sections. Flags issues that the antagonistic reviewer should catch.",
+          "filesToModify": [
+            "libs/flows/src/content/nodes/assembler.ts"
+          ],
+          "acceptanceCriteria": [
+            "Detects exact duplicate H2/H3 headings across sections",
+            "Detects high content similarity (>60% keyword overlap) between sections",
+            "Returns structured warnings in assembly output",
+            "Does not block assembly — just flags issues for review phase"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1771047049814-i3horhpyv"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1771047049810-0bzo4m7z0"
+    },
+    {
+      "number": 2,
+      "slug": "02-integration-wire-review-workers-to-llm",
+      "title": "Integration: Wire Review Workers to LLM",
+      "description": "Replace heuristic stub review workers with real LLM-powered reviewers using existing prompts",
+      "phases": [
+        {
+          "number": 1,
+          "name": "wire-technicalreviewer-to-llm-with-technical-reviewer-md-prompt",
+          "title": "Wire TechnicalReviewer to LLM with technical-reviewer.md prompt",
+          "description": "Replace the stub technicalReviewerNode with a real LLM call using the technical-reviewer.md prompt template. Parse XML response into ReviewFinding[] with severity levels.",
+          "filesToModify": [
+            "libs/flows/src/content/nodes/review-workers.ts",
+            "libs/flows/src/content/prompts/technical-reviewer.md"
+          ],
+          "acceptanceCriteria": [
+            "technicalReviewerNode makes real LLM call with technical-reviewer.md prompt",
+            "Response parsed via XML tags into ReviewFinding[]",
+            "Falls back to heuristic checks if LLM call fails",
+            "Langfuse tracing on LLM call"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1771047049816-at0f5w5px"
+        },
+        {
+          "number": 2,
+          "name": "wire-stylereviewer-to-llm-with-style-reviewer-md-antagonistic-scoring",
+          "title": "Wire StyleReviewer to LLM with style-reviewer.md antagonistic scoring",
+          "description": "Replace the stub styleReviewerNode with a real LLM call using the style-reviewer.md prompt with 8-dimension antagonistic scoring rubric. This is the primary quality gate for blog content.",
+          "filesToModify": [
+            "libs/flows/src/content/nodes/review-workers.ts",
+            "libs/flows/src/content/prompts/style-reviewer.md"
+          ],
+          "acceptanceCriteria": [
+            "styleReviewerNode makes real LLM call with full 8-dimension rubric",
+            "Scores returned as structured XML (dimension, score, evidence, suggestion)",
+            "Verdict computed: PASS (>=75%), REVISE (<75%), FAIL (<50%)",
+            "Auto-fail conditions enforced (headline <4, hook <4, scannability <5)",
+            "Falls back to heuristic checks if LLM call fails"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1771047049817-vzg72a34k"
+        },
+        {
+          "number": 3,
+          "name": "wire-factchecker-to-llm-with-fact-checker-md-prompt",
+          "title": "Wire FactChecker to LLM with fact-checker.md prompt",
+          "description": "Replace the stub factCheckerNode with a real LLM call using fact-checker.md prompt. Cross-references content against research findings.",
+          "filesToModify": [
+            "libs/flows/src/content/nodes/review-workers.ts",
+            "libs/flows/src/content/prompts/fact-checker.md"
+          ],
+          "acceptanceCriteria": [
+            "factCheckerNode makes real LLM call with fact-checker.md prompt",
+            "Cross-references content against research findings from state",
+            "Response parsed via XML tags into ReviewFinding[]",
+            "Falls back to heuristic checks if LLM call fails"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1771047049818-evifxfcga"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1771047049815-el7qwiwhe"
+    },
+    {
+      "number": 3,
+      "slug": "03-pipeline-replace-hitl-with-antagonistic-review",
+      "title": "Pipeline: Replace HITL with Antagonistic Review",
+      "description": "Swap out the 3 HITL interrupt gates with antagonistic review passes and update the flow",
+      "phases": [
+        {
+          "number": 1,
+          "name": "replace-hitl-gates-with-antagonistic-review-nodes-in-content-flow",
+          "title": "Replace HITL gates with antagonistic review nodes in content flow",
+          "description": "Modify content-creation-flow.ts to replace the 3 interruptBefore HITL gates with AntagonisticReviewer subgraph calls. Research gate reviews research quality, outline gate reviews outline structure, final gate runs full 8-dimension review on assembled content. Flow runs end-to-end without human intervention by default.",
+          "filesToModify": [
+            "libs/flows/src/content/content-creation-flow.ts",
+            "libs/flows/src/content/content-flow.ts",
+            "libs/flows/src/content/state.ts"
+          ],
+          "acceptanceCriteria": [
+            "Flow compiles and runs without MemorySaver/checkpointer by default",
+            "3 antagonistic review passes replace 3 HITL gates",
+            "Each pass uses appropriate rubric dimensions for its phase",
+            "Content below threshold triggers revision loop (max 2 retries)",
+            "Flow completes end-to-end autonomously",
+            "Optional HITL can be re-enabled via config flag"
+          ],
+          "complexity": "large",
+          "featureId": "feature-1771047049820-lumjtkqv0"
+        },
+        {
+          "number": 2,
+          "name": "update-contentflowservice-and-mcp-tools-for-autonomous-mode",
+          "title": "Update ContentFlowService and MCP tools for autonomous mode",
+          "description": "Update the server-side ContentFlowService and MCP command handlers to support the new autonomous flow. Remove mandatory HITL interaction from create-content and review-content tools. Add new status values for antagonistic review passes.",
+          "filesToModify": [
+            "apps/server/src/services/content-flow-service.ts",
+            "apps/server/src/routes/content/index.ts"
+          ],
+          "acceptanceCriteria": [
+            "create-content runs to completion autonomously by default",
+            "review-content still works for optional human override",
+            "get-content-status shows antagonistic review progress",
+            "New status values: reviewing_research, reviewing_outline, reviewing_content"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1771047049821-ymd1j3t36"
+        },
+        {
+          "number": 3,
+          "name": "end-to-end-test-with-real-models-and-quality-validation",
+          "title": "End-to-end test with real models and quality validation",
+          "description": "Update the test script to run the full autonomous pipeline and validate output quality. Check that HTML entities are unescaped, no duplicate headings, content scores above threshold.",
+          "filesToModify": [
+            "scripts/test-content-flow.ts"
+          ],
+          "acceptanceCriteria": [
+            "Test runs full pipeline end-to-end without HITL",
+            "Validates no HTML entities in code blocks",
+            "Validates no duplicate headings",
+            "Validates antagonistic review scores >= 75%",
+            "Output written to /tmp with quality report"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1771047049822-15zi920n5"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1771047049819-447tddxpg"
+    },
+    {
+      "number": 4,
+      "slug": "04-documentation-antagonistic-review-pattern",
+      "title": "Documentation: Antagonistic Review Pattern",
+      "description": "Document the antagonistic review pattern for reuse across the app",
+      "phases": [
+        {
+          "number": 1,
+          "name": "document-antagonistic-review-pattern-in-docs-dev-antagonistic-review-md",
+          "title": "Document antagonistic review pattern in docs/dev/antagonistic-review.md",
+          "description": "Write comprehensive documentation for the antagonistic review pattern covering: architecture, G-Eval chain-of-thought scoring, Constitutional AI critique-revision loop, configurable dimension rubrics, integration with LangGraph flows, XML output format, Langfuse tracing, and examples. Reference existing similar systems (STORM, CrewAI, LangGraph reflection agents).",
+          "filesToModify": [
+            "docs/dev/antagonistic-review.md"
+          ],
+          "acceptanceCriteria": [
+            "Covers pattern architecture with flow diagrams",
+            "Explains G-Eval chain-of-thought scoring approach",
+            "Shows Constitutional AI critique-revision loop",
+            "Includes configurable rubric dimension examples",
+            "Shows integration code for using in any LangGraph flow",
+            "References external patterns (STORM, CrewAI, reflection agents)",
+            "Follows docs-standard.md conventions",
+            "Under 800 lines"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1771047049823-gfevp1r2z"
+        },
+        {
+          "number": 2,
+          "name": "update-content-pipeline-md-to-reflect-autonomous-mode",
+          "title": "Update content-pipeline.md to reflect autonomous mode",
+          "description": "Update the existing content pipeline docs to reflect the new autonomous flow with antagonistic review instead of HITL gates. Add section on how to enable optional HITL overlay.",
+          "filesToModify": [
+            "docs/dev/content-pipeline.md"
+          ],
+          "acceptanceCriteria": [
+            "Architecture diagram updated to show antagonistic review",
+            "HITL section updated to show it's optional",
+            "New section on antagonistic review scoring dimensions",
+            "Examples updated for autonomous mode"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1771047049825-9336kfo01"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1771047049822-ft4ct7gma"
+    }
+  ],
+  "prd": {
+    "situation": "The content creation pipeline (libs/flows/src/content/) has a working 7-phase flow with 4 Send() parallelism points and 3 HITL interrupt gates. The SectionWriter subgraph generates sections with smart/fast model fallback and XML output parsing. However: (1) HITL gates block the entire flow waiting for human input, (2) review workers are pure heuristic stubs with no LLM calls, (3) output has quality issues (HTML entities in code blocks, duplicate headings, repetitive content), (4) the rich 8-dimension antagonistic scoring rubric in style-reviewer.md is not wired up to code.",
+    "problem": "Three blocking problems: (1) HITL gates prevent autonomous end-to-end execution — every flow run requires human intervention at 3 points, making batch content generation impossible. (2) Review workers are stubs that auto-approve everything — no quality gate catches duplicate headings, repetitive sections, or HTML entity escaping in code blocks. (3) The antagonistic review pattern (Constitutional AI critique-revision, G-Eval scoring, LLM-as-judge) is not captured as a reusable primitive — each new flow would need to reinvent it.",
+    "approach": "Build a reusable AntagonisticReviewer subgraph in @automaker/flows that implements the critique-revise loop pattern. Replace HITL gates with autonomous LLM review passes that score content against configurable dimension rubrics. Use G-Eval style chain-of-thought for consistent scoring. Fix XML parser to unescape HTML entities in code blocks. Add deduplication detection in the assembly phase. Wire existing review prompts (style-reviewer.md, technical-reviewer.md, fact-checker.md) to actual LLM calls in review workers. Document the antagonistic review pattern as a first-class flow primitive in docs.",
+    "results": "Content pipeline runs end-to-end autonomously with quality gates. Generated content scores ≥75% on 8-dimension rubric before proceeding. HTML entity escaping fixed in code blocks. Duplicate headings and repetitive content detected and flagged for regeneration. Reusable AntagonisticReviewer subgraph available for any LangGraph flow. Pattern documented in docs/dev/ for team adoption.",
+    "constraints": [
+      "Must not break existing HITL flow — antagonistic review is the default, HITL becomes optional overlay",
+      "Max 2 retry loops per gate to prevent infinite loops and runaway API costs",
+      "Use existing prompt files (style-reviewer.md, technical-reviewer.md, fact-checker.md) — don't reinvent",
+      "XML output format for all LLM responses (our standard pattern)",
+      "Langfuse tracing on all review LLM calls",
+      "Smart model (Sonnet) for antagonistic review, fast model (Haiku) for quick structural checks",
+      "No new npm dependencies — use existing @langchain/langgraph, @langchain/anthropic, zod"
+    ]
+  },
+  "createdAt": "2026-02-14T05:30:41.603Z",
+  "updatedAt": "2026-02-14T05:30:49.839Z"
+}
