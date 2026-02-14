@@ -18,6 +18,7 @@ const KNOWN_ROLES = [
   'qa-engineer',
   'docs-engineer',
   'gtm-specialist',
+  'content-writer',
   'chief-of-staff',
   'pr-maintainer',
   'board-janitor',
