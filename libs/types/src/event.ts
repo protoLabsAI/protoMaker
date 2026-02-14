@@ -263,8 +263,9 @@ export type EventType =
   | 'escalation:ui-notification'
   // Feedback analytics events (pattern detection and metrics)
   | 'feedback:pattern-detected'
-  // Signal intake events (Ava triage routing)
-  | 'signal:received';
+  // Signal routing events (signal intake and routing)
+  | 'signal:received'
+  | 'signal:routed';
 
 export type EventCallback = (type: EventType, payload: unknown) => void;
 
