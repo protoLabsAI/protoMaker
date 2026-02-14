@@ -262,4 +262,87 @@ export class ProjectService {
       epicIds,
     };
   }
+
+  /**
+   * Archive a project after Linear handoff.
+   * Keeps a slim project.json with mapping data, deletes .md files and milestones/ directory.
+   */
+  async archiveProject(
+    projectPath: string,
+    projectSlug: string
+  ): Promise<{
+    originalSize: number;
+    archivedSize: number;
+    filesRemoved: number;
+  }> {
+    const project = await this.getProject(projectPath, projectSlug);
+    if (!project) {
+      throw new Error(`Project "${projectSlug}" not found`);
+    }
+
+    const jsonPath = getProjectJsonPath(projectPath, projectSlug);
+    const originalJson = JSON.stringify(project, null, 2);
+    const originalSize = Buffer.byteLength(originalJson, 'utf-8');
+
+    // Build slim version keeping only mapping data
+    const slim: Record<string, unknown> = {
+      slug: project.slug,
+      title: project.title,
+      goal: project.goal,
+      status: project.status,
+      linearProjectId: project.linearProjectId,
+      linearProjectUrl: project.linearProjectUrl,
+      createdAt: project.createdAt,
+      updatedAt: project.updatedAt,
+      archivedAt: new Date().toISOString(),
+      milestones: project.milestones.map((m) => ({
+        number: m.number,
+        slug: m.slug,
+        title: m.title,
+        epicId: m.epicId,
+        linearMilestoneId: m.linearMilestoneId,
+        status: m.status,
+        phases: m.phases.map((p) => ({
+          number: p.number,
+          name: p.name,
+          title: p.title,
+          featureId: p.featureId,
+          complexity: p.complexity,
+        })),
+      })),
+    };
+
+    // Write slim project.json
+    const slimJson = JSON.stringify(slim, null, 2);
+    const archivedSize = Buffer.byteLength(slimJson, 'utf-8');
+    await secureFs.writeFile(jsonPath, slimJson);
+
+    // Delete optional .md files
+    let filesRemoved = 0;
+    const projectDir = getProjectDir(projectPath, projectSlug);
+    const filesToDelete = ['project.md', 'prd.md', 'research.md'];
+    for (const filename of filesToDelete) {
+      try {
+        await secureFs.rm(path.join(projectDir, filename));
+        filesRemoved++;
+      } catch {
+        // File doesn't exist, skip
+      }
+    }
+
+    // Delete milestones/ directory recursively
+    const milestonesDir = getMilestonesDir(projectPath, projectSlug);
+    try {
+      await secureFs.rm(milestonesDir, { recursive: true, force: true });
+      filesRemoved++; // Count the directory as one removal
+    } catch {
+      // Directory doesn't exist, skip
+    }
+
+    logger.info(
+      `Archived project ${projectSlug}: ${originalSize}B → ${archivedSize}B, ${filesRemoved} files removed`
+    );
+
+    return { originalSize, archivedSize, filesRemoved };
+  }
 }

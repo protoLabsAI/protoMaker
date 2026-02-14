@@ -16,6 +16,8 @@ allowed-tools:
   - mcp__plugin_automaker_automaker__create_feature
   - mcp__plugin_automaker_automaker__set_feature_dependencies
   - mcp__plugin_automaker_automaker__health_check
+  - mcp__plugin_automaker_automaker__sync_project_to_linear
+  - mcp__plugin_automaker_automaker__archive_project
 model: sonnet
 ---
 
@@ -157,7 +159,28 @@ POST /api/projects/create-features
 }
 ```
 
-### Step 8: Summary
+### Step 8: Linear Handoff
+
+If Linear integration is enabled for this project, sync milestones and archive planning data:
+
+```ts
+// Sync milestones and issues to Linear project
+mcp__plugin_automaker_automaker__sync_project_to_linear({
+  projectPath: '<path>',
+  projectSlug: '<slug>',
+  cleanupPlaceholders: true,
+});
+
+// Archive planning data (Linear is now the project source of truth)
+mcp__plugin_automaker_automaker__archive_project({
+  projectPath: '<path>',
+  projectSlug: '<slug>',
+});
+```
+
+Skip this step if Linear is not configured or the user opts out.
+
+### Step 9: Summary
 
 Present the final summary:
 

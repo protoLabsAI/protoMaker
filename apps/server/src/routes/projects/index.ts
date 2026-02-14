@@ -12,6 +12,8 @@
 
 import { Router } from 'express';
 import { FeatureLoader } from '../../services/feature-loader.js';
+import type { EventEmitter } from '../../lib/events.js';
+import type { ProjectService } from '../../services/project-service.js';
 import { validatePathParams, validateSlugs } from '../../middleware/validate-paths.js';
 import { createListHandler } from './routes/list.js';
 import { createGetHandler } from './routes/get.js';
@@ -19,8 +21,13 @@ import { createCreateHandler } from './routes/create.js';
 import { createUpdateHandler } from './routes/update.js';
 import { createDeleteHandler } from './routes/delete.js';
 import { createCreateFeaturesHandler } from './routes/create-features.js';
+import { createArchiveHandler } from './routes/archive.js';
 
-export function createProjectsRoutes(featureLoader: FeatureLoader): Router {
+export function createProjectsRoutes(
+  featureLoader: FeatureLoader,
+  events: EventEmitter,
+  projectService: ProjectService
+): Router {
   const router = Router();
 
   // List doesn't need slug validation (no slug param)
@@ -55,7 +62,13 @@ export function createProjectsRoutes(featureLoader: FeatureLoader): Router {
     '/create-features',
     validatePathParams('projectPath'),
     validateSlugs('projectSlug'),
-    createCreateFeaturesHandler(featureLoader)
+    createCreateFeaturesHandler(featureLoader, events)
+  );
+  router.post(
+    '/archive',
+    validatePathParams('projectPath'),
+    validateSlugs('projectSlug'),
+    createArchiveHandler(projectService)
   );
 
   return router;

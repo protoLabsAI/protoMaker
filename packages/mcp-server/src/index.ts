@@ -1032,6 +1032,25 @@ const tools: Tool[] = [
     },
   },
   {
+    name: 'archive_project',
+    description:
+      'Archive a project after Linear handoff. Slims project.json to mapping data only (slug, title, linearProjectId, milestone/phase IDs) and deletes .md files and milestones/ directory. Use after sync_project_to_linear to complete the handoff.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        projectSlug: {
+          type: 'string',
+          description: 'The project slug to archive',
+        },
+      },
+      required: ['projectPath', 'projectSlug'],
+    },
+  },
+  {
     name: 'create_project_features',
     description:
       'Create Kanban board features from a project plan. Converts phases to features with optional epic grouping.',
@@ -1498,6 +1517,36 @@ const tools: Tool[] = [
       required: ['worktreePath'],
     },
   },
+  // ========== Linear Sync ==========
+  {
+    name: 'sync_project_to_linear',
+    description:
+      'Sync Automaker project milestones to Linear project milestones. Creates/updates milestones, matches issues to milestones by epic title, assigns issues, and optionally deletes placeholder milestones. Idempotent — safe to re-run.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        projectSlug: {
+          type: 'string',
+          description: 'Project slug (e.g., "copilotkit-langgraph-side-panel")',
+        },
+        linearProjectId: {
+          type: 'string',
+          description: 'Linear project ID (optional, uses project.linearProjectId if not provided)',
+        },
+        cleanupPlaceholders: {
+          type: 'boolean',
+          description:
+            'Delete Linear milestones that do not match any Automaker milestone (default: false)',
+        },
+      },
+      required: ['projectPath', 'projectSlug'],
+    },
+  },
+
   // ========== Worktree Management ==========
   {
     name: 'list_worktrees',
@@ -2570,6 +2619,12 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         projectSlug: args.projectSlug,
       });
 
+    case 'archive_project':
+      return apiCall('/projects/archive', {
+        projectPath: args.projectPath,
+        projectSlug: args.projectSlug,
+      });
+
     case 'create_project_features':
       return apiCall('/projects/create-features', {
         projectPath: args.projectPath,
@@ -3052,6 +3107,15 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         prdTitle: args.prdTitle,
         prdDescription: args.prdDescription,
         config: args.config,
+      });
+
+    // Linear Sync
+    case 'sync_project_to_linear':
+      return apiCall('/linear/sync-project', {
+        projectPath: args.projectPath,
+        projectSlug: args.projectSlug,
+        linearProjectId: args.linearProjectId,
+        cleanupPlaceholders: args.cleanupPlaceholders,
       });
 
     default:

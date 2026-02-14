@@ -92,6 +92,9 @@ export interface Milestone {
 
   /** Epic feature ID after scaffolding (milestone becomes an epic) */
   epicId?: string;
+
+  /** Linear project milestone ID (set when synced to Linear) */
+  linearMilestoneId?: string;
 }
 
 /**
@@ -133,6 +136,9 @@ export interface Project {
 
   /** Last update timestamp */
   updatedAt: string;
+
+  /** Archive timestamp (set when project is archived after Linear handoff) */
+  archivedAt?: string;
 }
 
 /**
@@ -354,6 +360,9 @@ export interface UpdateProjectInput {
 
   /** Linear project URL */
   linearProjectUrl?: string;
+
+  /** Update milestones (e.g., to persist linearMilestoneId) */
+  milestones?: Milestone[];
 }
 
 /**

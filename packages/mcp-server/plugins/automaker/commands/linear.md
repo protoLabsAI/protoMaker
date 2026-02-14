@@ -589,13 +589,13 @@ When creating or assigning issues, use team routing to determine the correct Lin
 
 Sync an entire Automaker project's milestones to Linear project milestones. Creates/updates milestones, matches existing issues to milestones by epic title, assigns issues, and optionally cleans up placeholder milestones. Idempotent — safe to re-run.
 
-```
+```ts
 mcp__plugin_automaker_automaker__sync_project_to_linear({
-  projectPath: "/path/to/project",
-  projectSlug: "my-project",
-  linearProjectId: "<optional-override>",  // Uses project.linearProjectId if omitted
-  cleanupPlaceholders: true                // Delete unmatched Linear milestones
-})
+  projectPath: '/path/to/project',
+  projectSlug: 'my-project',
+  linearProjectId: '<optional-override>', // Uses project.linearProjectId if omitted
+  cleanupPlaceholders: true, // Delete unmatched Linear milestones
+});
 ```
 
 Returns:
@@ -819,10 +819,10 @@ mcp__linear__linear_createIssueRelation({
 
 **Sync project milestones to Linear:**
 
-```
+```ts
 mcp__plugin_automaker_automaker__sync_project_to_linear({
-  projectPath: "/path/to/project",
-  projectSlug: "my-project",
-  cleanupPlaceholders: true
-})
+  projectPath: '/path/to/project',
+  projectSlug: 'my-project',
+  cleanupPlaceholders: true,
+});
 ```
