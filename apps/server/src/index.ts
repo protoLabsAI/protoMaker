@@ -176,6 +176,7 @@ import {
   gtmCrewMember,
   prMaintainerCrewMember,
   boardJanitorCrewMember,
+  systemHealthCrewMember,
 } from './services/crew-members/index.js';
 import { createCrewRoutes } from './routes/crew/index.js';
 import { linearApprovalHandler } from './services/linear-approval-handler.js';
@@ -645,6 +646,7 @@ void (async () => {
     await crewLoopService.registerMember(gtmCrewMember);
     await crewLoopService.registerMember(prMaintainerCrewMember);
     await crewLoopService.registerMember(boardJanitorCrewMember);
+    await crewLoopService.registerMember(systemHealthCrewMember);
     await crewLoopService.registerAllWithScheduler();
     logger.info('Crew loop service initialized with all members');
   } catch (err) {
