@@ -978,6 +978,49 @@ export class IntegrationService {
       timestamp: payload.createdAt,
     });
   }
+
+  /**
+   * Check Discord bot status
+   */
+  async checkDiscordBotStatus(): Promise<boolean> {
+    try {
+      // Check if Discord bot is connected
+      // This is a placeholder - actual implementation would check Discord client status
+      return false;
+    } catch (error) {
+      logger.error('Failed to check Discord bot status:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Check Linear OAuth status
+   */
+  async checkLinearOAuthStatus(): Promise<boolean> {
+    try {
+      // Check if Linear OAuth token is valid
+      // This is a placeholder - actual implementation would validate OAuth token
+      return false;
+    } catch (error) {
+      logger.error('Failed to check Linear OAuth status:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Check GitHub auth status via gh CLI
+   */
+  async checkGitHubAuthStatus(): Promise<boolean> {
+    try {
+      const { execSync } = await import('child_process');
+      // Check if gh CLI is authenticated
+      execSync('gh auth status', { stdio: 'pipe' });
+      return true;
+    } catch (error) {
+      logger.debug('GitHub CLI not authenticated:', error);
+      return false;
+    }
+  }
 }
 
 // Singleton instance

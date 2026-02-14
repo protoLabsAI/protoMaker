@@ -131,6 +131,7 @@ import { createWebhooksRoutes } from './routes/webhooks/index.js';
 import { createSchedulerRoutes } from './routes/scheduler/index.js';
 import { integrationService } from './services/integration-service.js';
 import { createIntegrationRoutes } from './routes/integrations/index.js';
+import { createDashboardRoutes } from './routes/dashboard.js';
 import { AuthorityService } from './services/authority-service.js';
 import { createAuthorityRoutes } from './routes/authority/index.js';
 import { createCosRoutes } from './routes/cos/index.js';
@@ -967,6 +968,7 @@ app.use('/api/backlog-plan', createBacklogPlanRoutes(events, settingsService));
 app.use('/api/beads', createBeadsRoutes(beadsService));
 app.use('/api/mcp', createMCPRoutes(mcpTestService));
 app.use('/api/integrations', authMiddleware, createIntegrationRoutes(settingsService));
+app.use('/api/system', authMiddleware, createDashboardRoutes(autoModeService, crewService));
 app.use(
   '/api/authority',
   authMiddleware,

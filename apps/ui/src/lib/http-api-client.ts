@@ -2811,6 +2811,17 @@ export class HttpApiClient implements ElectronAPI {
       this.post('/api/metrics/ledger/cycle-time-distribution', { projectPath, ...opts }),
     backfill: (projectPath: string) => this.post('/api/metrics/ledger/backfill', { projectPath }),
   };
+
+  // Integrations API
+  integrations = {
+    status: (projectPath: string) => this.post('/api/integrations/status', { projectPath }),
+  };
+
+  // System API
+  system = {
+    healthDashboard: (projectPath?: string) =>
+      this.post('/api/system/health-dashboard', { projectPath }),
+  };
 }
 
 // Singleton instance

@@ -154,3 +154,72 @@ export function useCycleTimeDistribution(
     refetchOnWindowFocus: false,
   });
 }
+
+const INTEGRATION_STALE_TIME = 30 * 1000; // 30 seconds
+const SYSTEM_HEALTH_STALE_TIME = 15 * 1000; // 15 seconds
+const ACTIVITY_FEED_STALE_TIME = 10 * 1000; // 10 seconds
+
+/**
+ * Fetch integration status for Discord, Linear, and GitHub
+ */
+export function useIntegrationStatus(projectPath: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.integrations.status(projectPath ?? ''),
+    queryFn: async () => {
+      if (!projectPath) throw new Error('No project path');
+      const api = getHttpApiClient();
+      return api.integrations.status(projectPath);
+    },
+    enabled: !!projectPath,
+    staleTime: INTEGRATION_STALE_TIME,
+    refetchInterval: INTEGRATION_STALE_TIME,
+    refetchOnWindowFocus: false,
+    retry: 2,
+  });
+}
+
+/**
+ * Fetch system health including memory, CPU, heap, agent count, auto-mode status
+ */
+export function useSystemHealth(projectPath?: string) {
+  return useQuery({
+    queryKey: queryKeys.system.healthDashboard(projectPath),
+    queryFn: async () => {
+      const api = getHttpApiClient();
+      return api.system.healthDashboard(projectPath);
+    },
+    staleTime: SYSTEM_HEALTH_STALE_TIME,
+    refetchInterval: SYSTEM_HEALTH_STALE_TIME,
+    refetchOnWindowFocus: false,
+    retry: 2,
+  });
+}
+
+/**
+ * Fetch recent activity feed events from the event stream
+ * Note: This hook aggregates events from the WebSocket connection
+ */
+export function useActivityFeed(projectPath?: string, limit: number = 50) {
+  return useQuery({
+    queryKey: queryKeys.activity.feed(projectPath, limit),
+    queryFn: async () => {
+      const api = getHttpApiClient();
+      // Subscribe to events and aggregate them
+      const events: any[] = [];
+
+      // Get event history from the API client's event buffer
+      // The HTTP API client maintains a buffer of recent events via WebSocket
+      const eventHistory = api.getRecentEvents ? api.getRecentEvents(limit) : [];
+
+      return {
+        success: true,
+        events: eventHistory.slice(0, limit),
+        timestamp: new Date().toISOString(),
+      };
+    },
+    staleTime: ACTIVITY_FEED_STALE_TIME,
+    refetchInterval: ACTIVITY_FEED_STALE_TIME,
+    refetchOnWindowFocus: false,
+    retry: 1,
+  });
+}

@@ -146,5 +146,52 @@ export function createIntegrationRoutes(settingsService: SettingsService): Route
     }
   });
 
+  /**
+   * POST /api/integrations/status
+   * Get aggregated status for Discord, Linear, and GitHub integrations
+   */
+  router.post('/status', async (req: Request, res: Response) => {
+    try {
+      const { projectPath } = req.body;
+
+      if (!projectPath) {
+        res.status(400).json({ error: 'projectPath is required' });
+        return;
+      }
+
+      const projectSettings = await settingsService.getProjectSettings(projectPath);
+      const integrations = projectSettings.integrations || {};
+
+      // Check Discord bot status
+      const discordConnected = integrations.discord?.enabled ?? false;
+      const discordBotOnline = await integrationService.checkDiscordBotStatus();
+
+      // Check Linear OAuth status
+      const linearConnected = integrations.linear?.enabled ?? false;
+      const linearOAuthValid = await integrationService.checkLinearOAuthStatus();
+
+      // Check GitHub auth status (check if gh CLI is authenticated)
+      const githubAuthenticated = await integrationService.checkGitHubAuthStatus();
+
+      res.json({
+        success: true,
+        discord: {
+          connected: discordConnected,
+          botOnline: discordBotOnline,
+        },
+        linear: {
+          connected: linearConnected,
+          oauthValid: linearOAuthValid,
+        },
+        github: {
+          authenticated: githubAuthenticated,
+        },
+      });
+    } catch (error) {
+      logger.error('Failed to get integration status:', error);
+      res.status(500).json({ error: 'Failed to get integration status' });
+    }
+  });
+
   return router;
 }

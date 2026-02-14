@@ -321,6 +321,32 @@ export const queryKeys = {
     /** All registered agent templates */
     all: (role?: string) => ['agentTemplates', role] as const,
   },
+
+  // ============================================
+  // Integrations
+  // ============================================
+  integrations: {
+    /** Integration status for Discord, Linear, GitHub */
+    status: (projectPath: string) => ['integrations', 'status', projectPath] as const,
+  },
+
+  // ============================================
+  // System Health
+  // ============================================
+  system: {
+    /** System health dashboard */
+    healthDashboard: (projectPath?: string) =>
+      ['system', 'health-dashboard', projectPath] as const,
+  },
+
+  // ============================================
+  // Activity Feed
+  // ============================================
+  activity: {
+    /** Recent activity feed events */
+    feed: (projectPath?: string, limit?: number) =>
+      ['activity', 'feed', projectPath, limit] as const,
+  },
 } as const;
 
 /**
