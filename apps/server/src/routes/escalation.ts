@@ -73,5 +73,51 @@ export function createEscalationRoutes(escalationRouter: EscalationRouter): Rout
     }
   });
 
+  /**
+   * POST /api/escalation/acknowledge
+   *
+   * Acknowledge an escalation signal
+   *
+   * Body:
+   * - signalId: Signal ID to acknowledge
+   * - acknowledgedBy: Who is acknowledging this signal
+   * - notes: Optional notes about the acknowledgment
+   */
+  router.post('/acknowledge', (req: Request, res: Response) => {
+    try {
+      const { signalId, acknowledgedBy, notes } = req.body;
+
+      if (!signalId || typeof signalId !== 'string') {
+        res.status(400).json({ error: 'signalId is required and must be a string' });
+        return;
+      }
+
+      if (!acknowledgedBy || typeof acknowledgedBy !== 'string') {
+        res.status(400).json({ error: 'acknowledgedBy is required and must be a string' });
+        return;
+      }
+
+      // For now, we'll log the acknowledgment
+      // In the future, this could update the log entry or emit an event
+      logger.info(
+        `Signal ${signalId} acknowledged by ${acknowledgedBy}${notes ? `: ${notes}` : ''}`
+      );
+
+      res.json({
+        success: true,
+        signalId,
+        acknowledgedBy,
+        acknowledgedAt: new Date().toISOString(),
+        notes,
+      });
+    } catch (error) {
+      logger.error('Error acknowledging escalation:', error);
+      res.status(500).json({
+        error: 'Failed to acknowledge escalation',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  });
+
   return router;
 }
