@@ -9,7 +9,6 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import { createLogger } from '@automaker/utils';
 import { getAutomakerDir } from '@automaker/platform';
-import { MemorySaver } from '@langchain/langgraph';
 import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { ChatAnthropic } from '@langchain/anthropic';
 import { createContentCreationFlow } from '@automaker/flows';
@@ -68,11 +67,9 @@ export interface HITLReview {
  * Service for managing content creation flows
  */
 export class ContentFlowService {
-  private checkpointer: MemorySaver;
   private activeRuns: Map<string, ContentFlowStatus>;
 
   constructor() {
-    this.checkpointer = new MemorySaver();
     this.activeRuns = new Map();
   }
 
@@ -135,7 +132,7 @@ export class ContentFlowService {
     this.activeRuns.set(runId, status);
 
     // Create and compile flow
-    const flow = createContentCreationFlow({ checkpointer: this.checkpointer });
+    const flow = createContentCreationFlow();
 
     // Start flow execution asynchronously
     this.executeFlow(runId, projectPath, flow, config).catch((error) => {
@@ -238,7 +235,7 @@ export class ContentFlowService {
 
     // Create flow
     const { smartModel, fastModel } = this.createModels();
-    const flow = createContentCreationFlow({ checkpointer: this.checkpointer });
+    const flow = createContentCreationFlow();
 
     // Prepare resume state based on gate
     const resumeState: any = {};
