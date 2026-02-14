@@ -7,7 +7,12 @@
  */
 
 import { createLogger } from '@automaker/utils';
-import { OutlineSchema, type Outline, type ContentConfig, type ResearchSummary } from '@automaker/types';
+import {
+  OutlineSchema,
+  type Outline,
+  type ContentConfig,
+  type ResearchSummary,
+} from '@automaker/types';
 import { getOutlinePlannerPrompt } from '@automaker/prompts';
 import { wrapProviderWithTracing } from '@automaker/observability';
 import type { ContentState } from '../content-flow.js';
@@ -60,18 +65,22 @@ export async function outlinePlannerNode(state: ContentState): Promise<Partial<C
     });
 
     // Wrap with Langfuse tracing
-    const tracedGenerator = wrapProviderWithTracing(generator, state.tracingConfig || { enabled: false }, {
-      model: state.model || 'claude-sonnet-4-5-20250929',
-      traceName: 'outline-planner',
-      sessionId: state.sessionId,
-      metadata: {
-        topic: researchSummary.topic,
-        contentType: contentConfig.type,
-        targetLength: contentConfig.length,
-      },
-      tags: ['content-generation', 'outline-planning'],
-      input: { researchSummary, contentConfig },
-    });
+    const tracedGenerator = wrapProviderWithTracing(
+      generator,
+      state.tracingConfig || { enabled: false },
+      {
+        model: state.model || 'claude-sonnet-4-5-20250929',
+        traceName: 'outline-planner',
+        sessionId: state.sessionId,
+        metadata: {
+          topic: researchSummary.topic,
+          contentType: contentConfig.type,
+          targetLength: contentConfig.length,
+        },
+        tags: ['content-generation', 'outline-planning'],
+        input: { researchSummary, contentConfig },
+      }
+    );
 
     // Collect response
     let responseText = '';
@@ -101,7 +110,9 @@ export async function outlinePlannerNode(state: ContentState): Promise<Partial<C
     };
   } catch (error) {
     logger.error('[outline-planner] Failed to generate outline:', error);
-    throw new Error(`Outline planning failed: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(
+      `Outline planning failed: ${error instanceof Error ? error.message : String(error)}`
+    );
   }
 }
 
