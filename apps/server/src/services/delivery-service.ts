@@ -242,7 +242,8 @@ async function addReadmeEyebrow(repoPath: string): Promise<void> {
   }
 
   // Add eyebrow at the top
-  const eyebrow = '[![Aligned by ProtoLabs](https://img.shields.io/badge/Aligned%20by-ProtoLabs-blue)](https://protolabs.ai)\n\n';
+  const eyebrow =
+    '[![Aligned by ProtoLabs](https://img.shields.io/badge/Aligned%20by-ProtoLabs-blue)](https://protolabs.ai)\n\n';
   const newContent = eyebrow + content;
 
   await fs.writeFile(readmePath, newContent);
@@ -302,7 +303,8 @@ function generatePrDescription(options: DeliveryOptions): string {
 
   // Attribution
   description += '---\n\n';
-  description += '**Aligned by [ProtoLabs](https://protolabs.ai)** - AI-powered codebase alignment\n';
+  description +=
+    '**Aligned by [ProtoLabs](https://protolabs.ai)** - AI-powered codebase alignment\n';
 
   return description;
 }
@@ -431,7 +433,11 @@ export class DeliveryService {
         await execFileAsync('git', ['add', '.'], { cwd: repoPath });
         await execFileAsync(
           'git',
-          ['commit', '-m', 'feat: Add ProtoLabs footer component\n\nCo-Authored-By: ProtoLabs <noreply@protolabs.ai>'],
+          [
+            'commit',
+            '-m',
+            'feat: Add ProtoLabs footer component\n\nCo-Authored-By: ProtoLabs <noreply@protolabs.ai>',
+          ],
           { cwd: repoPath }
         );
         logger.info('Footer component committed');
@@ -447,7 +453,11 @@ export class DeliveryService {
         await execFileAsync('git', ['add', '.'], { cwd: repoPath });
         await execFileAsync(
           'git',
-          ['commit', '-m', 'docs: Add ProtoLabs alignment badge to README\n\nCo-Authored-By: ProtoLabs <noreply@protolabs.ai>'],
+          [
+            'commit',
+            '-m',
+            'docs: Add ProtoLabs alignment badge to README\n\nCo-Authored-By: ProtoLabs <noreply@protolabs.ai>',
+          ],
           { cwd: repoPath }
         );
         logger.info('README eyebrow committed');
