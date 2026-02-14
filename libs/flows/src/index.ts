@@ -155,6 +155,14 @@ export {
   type ContentStyleConfig,
 } from './content/subgraphs/section-writer.js';
 
+// Antagonistic review flow (graph-based)
+export {
+  AntagonisticReviewStateAnnotation,
+  AntagonisticReviewStateSchema,
+  type AntagonisticReviewState,
+  type AntagonisticReviewStateType,
+} from './antagonistic-review/index.js';
+
 // XML tag extraction utilities for LLM output parsing
 export {
   extractTag,
