@@ -189,19 +189,9 @@ async function researchDelegateNode(
 
   // Mock research findings (in real implementation, would use tools/LLM)
   const findings: ResearchFindings = {
-    facts: [
-      `Fact 1 about ${query}`,
-      `Fact 2 about ${query}`,
-      `Fact 3 about ${query}`,
-    ],
-    examples: [
-      `Example 1 for ${query}`,
-      `Example 2 for ${query}`,
-    ],
-    references: [
-      `Reference 1 for ${query}`,
-      `Reference 2 for ${query}`,
-    ],
+    facts: [`Fact 1 about ${query}`, `Fact 2 about ${query}`, `Fact 3 about ${query}`],
+    examples: [`Example 1 for ${query}`, `Example 2 for ${query}`],
+    references: [`Reference 1 for ${query}`, `Reference 2 for ${query}`],
   };
 
   const result: ResearchResult = {
@@ -367,11 +357,14 @@ async function generationDelegateNode(
   logger.info(`Generating section: ${sectionSpec.title}`);
 
   // Find relevant research for this section
-  const relevantResearch = researchResults.length > 0 ? researchResults[0].findings : {
-    facts: [],
-    examples: [],
-    references: [],
-  };
+  const relevantResearch =
+    researchResults.length > 0
+      ? researchResults[0].findings
+      : {
+          facts: [],
+          examples: [],
+          references: [],
+        };
 
   // Prepare style config
   const styleConfig: ContentStyleConfig = {
@@ -724,6 +717,10 @@ export function createContentCreationFlow(config?: { checkpointer?: MemorySaver 
   const checkpointer = config?.checkpointer || new MemorySaver();
   return graph.compile({
     checkpointer,
-    interruptBefore: ['research_hitl' as '__start__', 'outline_hitl' as '__start__', 'final_review_hitl' as '__start__'],
+    interruptBefore: [
+      'research_hitl' as '__start__',
+      'outline_hitl' as '__start__',
+      'final_review_hitl' as '__start__',
+    ],
   });
 }
