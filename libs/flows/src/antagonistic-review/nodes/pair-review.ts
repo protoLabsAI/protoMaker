@@ -14,7 +14,6 @@ import { Annotation } from '@langchain/langgraph';
 import { type PairReviewResult, type SPARCPrd } from '@automaker/types';
 import { GraphBuilder } from '../../graphs/builder.js';
 import { wrapSubgraph } from '../../graphs/utils/subgraph-wrapper.js';
-import { appendReducer } from '../../graphs/reducers.js';
 
 /**
  * Configuration for a reviewer in the pair
