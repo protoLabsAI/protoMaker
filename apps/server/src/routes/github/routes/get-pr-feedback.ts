@@ -40,8 +40,7 @@ interface GetPRFeedbackResponse {
 export function createGetPRFeedbackHandler() {
   return async (req: Request, res: Response): Promise<void> => {
     try {
-      const { projectPath, prNumber, includeInlineThreads } =
-        req.body as GetPRFeedbackRequest;
+      const { projectPath, prNumber, includeInlineThreads } = req.body as GetPRFeedbackRequest;
 
       if (!projectPath) {
         res.status(400).json({ success: false, error: 'projectPath is required' });
@@ -195,8 +194,7 @@ export function createGetPRFeedbackHandler() {
         });
 
         const reviewThreadsData = JSON.parse(reviewThreadsOutput);
-        const threads =
-          reviewThreadsData.data?.repository?.pullRequest?.reviewThreads?.nodes || [];
+        const threads = reviewThreadsData.data?.repository?.pullRequest?.reviewThreads?.nodes || [];
 
         inlineThreads = threads.flatMap((thread: any) => {
           if (thread.isResolved) return [];

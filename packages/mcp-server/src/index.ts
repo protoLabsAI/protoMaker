@@ -2579,9 +2579,13 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       return apiCall('/escalation/status', {}, 'GET');
 
     case 'get_escalation_log':
-      return apiCall('/escalation/log', {
-        limit: args.limit ?? 100,
-      }, 'GET');
+      return apiCall(
+        '/escalation/log',
+        {
+          limit: args.limit ?? 100,
+        },
+        'GET'
+      );
 
     case 'acknowledge_escalation':
       return apiCall('/escalation/acknowledge', {

@@ -67,7 +67,9 @@ export function createResolvePRThreadsHandler(events: EventEmitter) {
         return;
       }
 
-      logger.info(`Resolving CodeRabbit threads for PR #${prNumber} (min severity: ${minSeverity})`);
+      logger.info(
+        `Resolving CodeRabbit threads for PR #${prNumber} (min severity: ${minSeverity})`
+      );
 
       // Step 1: Get PR info including branch name and URL
       const repoQualifier = `${remoteStatus.owner}/${remoteStatus.repo}`;

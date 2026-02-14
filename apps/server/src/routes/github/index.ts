@@ -72,11 +72,7 @@ export function createGitHubRoutes(
     validatePathParams('projectPath'),
     createProcessCodeRabbitFeedbackHandler(events)
   );
-  router.post(
-    '/get-pr-feedback',
-    validatePathParams('projectPath'),
-    createGetPRFeedbackHandler()
-  );
+  router.post('/get-pr-feedback', validatePathParams('projectPath'), createGetPRFeedbackHandler());
   router.post(
     '/resolve-pr-threads',
     validatePathParams('projectPath'),
