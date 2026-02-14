@@ -1095,6 +1095,119 @@ export class SettingsService {
     return this.dataDir;
   }
 
+  // ============================================================================
+  // Trust Boundary Evaluation
+  // ============================================================================
+
+  /**
+   * Evaluate PRD metadata against trust boundary configuration
+   *
+   * Returns 'autoApprove' if the PRD meets auto-approval criteria (conservative),
+   * or 'requireReview' if it requires human review.
+   *
+   * Conservative defaults: when in doubt, require review.
+   *
+   * @param metadata - PRD metadata (category, complexity, estimatedCost)
+   * @param config - Trust boundary configuration (optional, uses defaults if not provided)
+   * @returns 'autoApprove' or 'requireReview'
+   */
+  evaluateTrustBoundary(
+    metadata: {
+      category?: string;
+      complexity?: string;
+      estimatedCost?: number;
+    },
+    config?: import('../types/settings.js').TrustBoundaryConfig
+  ): 'autoApprove' | 'requireReview' {
+    // Use default config if not provided
+    const { DEFAULT_TRUST_BOUNDARY_CONFIG } = require('../types/settings.js');
+    const trustConfig = config || DEFAULT_TRUST_BOUNDARY_CONFIG;
+
+    // If trust boundary is disabled, auto-approve everything
+    if (!trustConfig.enabled) {
+      logger.debug('Trust boundary disabled, auto-approving PRD');
+      return 'autoApprove';
+    }
+
+    // Conservative approach: if metadata is missing, require review
+    if (!metadata.category || !metadata.complexity) {
+      logger.debug('Missing PRD metadata (category or complexity), requiring review');
+      return 'requireReview';
+    }
+
+    // Check requireReview rules first (OR logic - any match triggers review)
+    const requireReviewRules = trustConfig.requireReview;
+
+    // Check if category requires review
+    if (
+      requireReviewRules.categories &&
+      requireReviewRules.categories.includes(metadata.category as import('../types/settings.js').PRDCategory)
+    ) {
+      logger.debug(`PRD category '${metadata.category}' requires review`);
+      return 'requireReview';
+    }
+
+    // Check if complexity requires review
+    if (requireReviewRules.minComplexity) {
+      const complexityOrder = ['small', 'medium', 'large', 'architectural'];
+      const prdComplexityIndex = complexityOrder.indexOf(metadata.complexity);
+      const minComplexityIndex = complexityOrder.indexOf(requireReviewRules.minComplexity);
+
+      if (prdComplexityIndex >= minComplexityIndex) {
+        logger.debug(`PRD complexity '${metadata.complexity}' meets minimum for review`);
+        return 'requireReview';
+      }
+    }
+
+    // Check if estimated cost requires review
+    if (
+      requireReviewRules.minEstimatedCost !== undefined &&
+      metadata.estimatedCost !== undefined &&
+      metadata.estimatedCost >= requireReviewRules.minEstimatedCost
+    ) {
+      logger.debug(`PRD estimated cost $${metadata.estimatedCost} requires review`);
+      return 'requireReview';
+    }
+
+    // Check autoApprove rules (AND logic - all conditions must match)
+    const autoApproveRules = trustConfig.autoApprove;
+
+    // Check if category is eligible for auto-approval
+    if (
+      autoApproveRules.categories &&
+      !autoApproveRules.categories.includes(metadata.category as import('../types/settings.js').PRDCategory)
+    ) {
+      logger.debug(`PRD category '${metadata.category}' not eligible for auto-approval`);
+      return 'requireReview';
+    }
+
+    // Check if complexity is within auto-approval threshold
+    if (autoApproveRules.maxComplexity) {
+      const complexityOrder = ['small', 'medium', 'large', 'architectural'];
+      const prdComplexityIndex = complexityOrder.indexOf(metadata.complexity);
+      const maxComplexityIndex = complexityOrder.indexOf(autoApproveRules.maxComplexity);
+
+      if (prdComplexityIndex > maxComplexityIndex) {
+        logger.debug(`PRD complexity '${metadata.complexity}' exceeds max for auto-approval`);
+        return 'requireReview';
+      }
+    }
+
+    // Check if estimated cost is within auto-approval threshold
+    if (
+      autoApproveRules.maxEstimatedCost !== undefined &&
+      metadata.estimatedCost !== undefined &&
+      metadata.estimatedCost > autoApproveRules.maxEstimatedCost
+    ) {
+      logger.debug(`PRD estimated cost $${metadata.estimatedCost} exceeds max for auto-approval`);
+      return 'requireReview';
+    }
+
+    // All auto-approval conditions met
+    logger.debug(`PRD meets auto-approval criteria: ${metadata.category}/${metadata.complexity}`);
+    return 'autoApprove';
+  }
+
   /**
    * Get the legacy Electron userData directory path
    *

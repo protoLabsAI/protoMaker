@@ -1479,6 +1479,13 @@ export interface GlobalSettings {
    * @see CrewLoopSettings
    */
   crewLoops?: CrewLoopSettings;
+
+  /**
+   * Trust boundary configuration for PRD approval gates.
+   * Determines whether PRDs can be auto-approved or require human review.
+   * @see TrustBoundaryConfig
+   */
+  trustBoundary?: TrustBoundaryConfig;
 }
 
 /**
@@ -2066,6 +2073,90 @@ export const DEFAULT_DISCORD_INTEGRATION: DiscordIntegrationConfig = {
   userRouting: {
     chukz: { agentType: 'ava', enabled: true },
     abdelly: { agentType: 'jon', enabled: true },
+  },
+};
+
+// ============================================================================
+// Trust Boundary Settings - PRD Approval Gate Configuration
+// ============================================================================
+
+/**
+ * PRD Category - Type/purpose of a PRD
+ */
+export type PRDCategory = 'ops' | 'improvement' | 'bug' | 'feature' | 'idea' | 'architectural';
+
+/**
+ * PRD Complexity - Estimated scope and risk of a PRD
+ */
+export type PRDComplexity = 'small' | 'medium' | 'large' | 'architectural';
+
+/**
+ * AutoApproveRule - Criteria for automatically approving a PRD without review
+ *
+ * Conservative defaults: only small ops/bug PRDs auto-approve.
+ * All conditions must match (AND logic) for auto-approval.
+ */
+export interface AutoApproveRule {
+  /** Maximum complexity level that can be auto-approved (default: 'small') */
+  maxComplexity?: PRDComplexity;
+  /** Categories that are eligible for auto-approval (default: ['ops', 'improvement', 'bug']) */
+  categories?: PRDCategory[];
+  /** Maximum estimated cost in dollars (default: undefined = no limit) */
+  maxEstimatedCost?: number;
+}
+
+/**
+ * RequireReviewRule - Criteria for requiring human review before proceeding
+ *
+ * Any condition that matches (OR logic) triggers review requirement.
+ */
+export interface RequireReviewRule {
+  /** Categories that always require review (default: ['idea', 'architectural']) */
+  categories?: PRDCategory[];
+  /** Minimum complexity level that requires review (default: 'large') */
+  minComplexity?: PRDComplexity;
+  /** Minimum estimated cost that requires review in dollars (default: undefined = no limit) */
+  minEstimatedCost?: number;
+}
+
+/**
+ * TrustBoundaryConfig - Trust boundary configuration for PRD approval gates
+ *
+ * Determines whether a PRD can be auto-approved or requires human review.
+ * Conservative defaults: when in doubt, require review.
+ */
+export interface TrustBoundaryConfig {
+  /** Whether trust boundary evaluation is enabled (default: true) */
+  enabled: boolean;
+  /** Auto-approval rules (all conditions must match) */
+  autoApprove: AutoApproveRule;
+  /** Review requirement rules (any condition triggers review) */
+  requireReview: RequireReviewRule;
+}
+
+/**
+ * Default trust boundary configuration - conservative defaults
+ *
+ * Only auto-approves:
+ * - Small complexity
+ * - ops/improvement/bug categories
+ * - No cost limit
+ *
+ * Always requires review:
+ * - idea/architectural categories
+ * - large or architectural complexity
+ */
+export const DEFAULT_TRUST_BOUNDARY_CONFIG: TrustBoundaryConfig = {
+  enabled: true,
+  autoApprove: {
+    maxComplexity: 'small',
+    categories: ['ops', 'improvement', 'bug'],
+    maxEstimatedCost: undefined,
+  },
+  requireReview: {
+    categories: ['idea', 'architectural'],
+    minComplexity: 'large',
+    minEstimatedCost: undefined,
   },
 };
 
