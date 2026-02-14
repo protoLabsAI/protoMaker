@@ -142,3 +142,19 @@ export {
   type ResearchFindings,
   type ContentStyleConfig,
 } from './content/subgraphs/section-writer.js';
+
+// XML tag extraction utilities for LLM output parsing
+export {
+  extractTag,
+  extractRequiredTag,
+  extractOptionalTag,
+  extractAllTags,
+  extractTaggedJSON,
+  extractRequiredInt,
+  extractClampedInt,
+  extractOptionalInt,
+  extractBoolean,
+  isXML,
+  extractRequiredEnum,
+  extractOptionalEnum,
+} from './content/xml-parser.js';

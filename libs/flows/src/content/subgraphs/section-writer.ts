@@ -14,6 +14,7 @@ import { z } from 'zod';
 import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { createLogger } from '@automaker/utils';
 import { LangfuseClient } from '@automaker/observability';
+import { extractTag, extractAllTags, extractRequiredTag } from '../xml-parser.js';
 
 const logger = createLogger('SectionWriter');
 
@@ -163,12 +164,12 @@ async function generateNode(
 
     const generationEndTime = new Date();
 
-    // Parse JSON response
+    // Parse XML-tagged response into ContentSection
     let parsedSection: ContentSection;
     try {
-      parsedSection = JSON.parse(content);
+      parsedSection = parseSectionXML(content, sectionSpec.id);
     } catch (parseError) {
-      throw new Error(`Failed to parse JSON response: ${parseError}`);
+      throw new Error(`Failed to parse XML response: ${parseError}`);
     }
 
     // Update trace with successful generation
@@ -398,14 +399,64 @@ ${findings.examples.map((e, i) => `${i + 1}. ${e}`).join('\n')}
 **References:**
 ${findings.references.map((r, i) => `${i + 1}. ${r}`).join('\n')}
 
-Return the section as JSON matching this schema:
-{
-  "id": "${spec.id}",
-  "title": "string",
-  "content": "string (markdown)",
-  "codeExamples": [{ "language": "string", "code": "string", "explanation": "string?" }] (optional),
-  "references": ["string"] (optional)
-}`;
+Return the section using these XML tags. Output ONLY XML, no markdown fences or explanation.
+
+<section>
+  <id>${spec.id}</id>
+  <title>Section title</title>
+  <content>Full section content in markdown</content>
+  <code_examples>
+    <example>
+      <language>typescript</language>
+      <code>// your code here</code>
+      <explanation>What this code does</explanation>
+    </example>
+  </code_examples>
+  <references>
+    <reference>Reference text</reference>
+  </references>
+</section>
+
+Include <code_examples> only if code examples are appropriate. Include <references> only if relevant.`;
+}
+
+/**
+ * Parse XML-tagged LLM output into a ContentSection.
+ * Falls back to JSON parsing if XML tags not detected.
+ */
+function parseSectionXML(output: string, fallbackId: string): ContentSection {
+  const sectionBlock = extractTag(output, 'section') ?? output;
+
+  const id = extractTag(sectionBlock, 'id') ?? fallbackId;
+  const title = extractRequiredTag(sectionBlock, 'title');
+  const content = extractRequiredTag(sectionBlock, 'content');
+
+  // Parse optional code examples
+  const examplesBlock = extractTag(sectionBlock, 'code_examples');
+  let codeExamples: z.infer<typeof CodeExampleSchema>[] | undefined;
+  if (examplesBlock) {
+    const exampleBlocks = extractAllTags(examplesBlock, 'example');
+    codeExamples = exampleBlocks.map((block) => ({
+      language: extractRequiredTag(block, 'language'),
+      code: extractRequiredTag(block, 'code'),
+      explanation: extractTag(block, 'explanation'),
+    }));
+  }
+
+  // Parse optional references
+  const refsBlock = extractTag(sectionBlock, 'references');
+  const references = refsBlock ? extractAllTags(refsBlock, 'reference') : undefined;
+
+  const section: ContentSection = {
+    id,
+    title,
+    content,
+    ...(codeExamples && codeExamples.length > 0 ? { codeExamples } : {}),
+    ...(references && references.length > 0 ? { references } : {}),
+  };
+
+  // Validate with Zod
+  return ContentSectionSchema.parse(section);
 }
 
 /**
