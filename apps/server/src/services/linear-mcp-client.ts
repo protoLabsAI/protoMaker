@@ -217,10 +217,7 @@ export class LinearMCPClient {
    * @returns GraphQL response data
    * @throws {LinearAPIError} On API errors, token expiry, or rate limiting
    */
-  async executeGraphQL<T = unknown>(
-    query: string,
-    variables: Record<string, unknown>
-  ): Promise<T> {
+  async executeGraphQL<T = unknown>(query: string, variables: Record<string, unknown>): Promise<T> {
     const accessToken = await this.getAccessToken();
 
     // Create AbortController with 30s timeout

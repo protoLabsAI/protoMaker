@@ -93,7 +93,8 @@ export class LinearProjectUpdateService {
       }));
 
     // Calculate completion percentage
-    const completionPercentage = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+    const completionPercentage =
+      totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
     return {
       completedCount,

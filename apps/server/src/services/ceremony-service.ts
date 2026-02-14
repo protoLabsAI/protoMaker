@@ -324,10 +324,7 @@ export class CeremonyService {
         // Post to Linear project update if enabled
         if (ceremonySettings.enableLinearProjectUpdates && this.settingsService) {
           try {
-            const linearService = new LinearProjectUpdateService(
-              this.settingsService,
-              projectPath
-            );
+            const linearService = new LinearProjectUpdateService(this.settingsService, projectPath);
             if (await linearService.isEnabled()) {
               await linearService.createMilestoneCompletion(content, hasBlockers);
               logger.info(`Posted milestone completion to Linear project for ${projectTitle}`);
