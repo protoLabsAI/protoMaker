@@ -180,3 +180,24 @@ export {
   extractRequiredEnum,
   extractOptionalEnum,
 } from './content/xml-parser.js';
+
+// Project management flows
+export {
+  createStatusReportFlow,
+  executeStatusReport,
+  type StatusReportFlowConfig,
+  ProjectStatusStateAnnotation,
+  ProjectStatusStateSchema,
+  type ProjectStatusState,
+  type ProjectStatusStateType,
+  type BoardMetrics,
+  type PRMetrics,
+  type DependencyMetrics,
+  type AgentMetrics,
+  type HealthStatus,
+  type ProgressAnalysis,
+  type RiskFactor,
+  type MilestoneSummary,
+  type StatusReport,
+  type MetricsCollector,
+} from './project-management/index.js';
