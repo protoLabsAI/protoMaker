@@ -30,6 +30,9 @@ COPY libs/dependency-resolver/package*.json ./libs/dependency-resolver/
 COPY libs/git-utils/package*.json ./libs/git-utils/
 COPY libs/spec-parser/package*.json ./libs/spec-parser/
 COPY libs/policy-engine/package*.json ./libs/policy-engine/
+COPY libs/flows/package*.json ./libs/flows/
+COPY libs/llm-providers/package*.json ./libs/llm-providers/
+COPY libs/observability/package*.json ./libs/observability/
 
 # Copy scripts (needed by npm workspace)
 COPY scripts ./scripts

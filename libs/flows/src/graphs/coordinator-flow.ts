@@ -36,11 +36,11 @@ export const CoordinatorState = Annotation.Root({
   researchQueries: Annotation<string[]>,
   analysisData: Annotation<string[]>,
   researchResults: Annotation<string[]>({
-    reducer: (left, right) => [...left, ...right],
+    reducer: (left: string[], right: string[]) => [...left, ...right],
     default: () => [],
   }),
   analysisResults: Annotation<string[]>({
-    reducer: (left, right) => [...left, ...right],
+    reducer: (left: string[], right: string[]) => [...left, ...right],
     default: () => [],
   }),
   finalReport: Annotation<string | undefined>,
@@ -196,10 +196,10 @@ async function aggregationNode(
 === Final Report for: ${task} ===
 
 Research Results (${researchResults.length}):
-${researchResults.map((r, i) => `\n${i + 1}. ${r}`).join('')}
+${researchResults.map((r: string, i: number) => `\n${i + 1}. ${r}`).join('')}
 
 Analysis Results (${analysisResults.length}):
-${analysisResults.map((r, i) => `\n${i + 1}. ${r}`).join('')}
+${analysisResults.map((r: string, i: number) => `\n${i + 1}. ${r}`).join('')}
 
 === End Report ===
 `.trim();
