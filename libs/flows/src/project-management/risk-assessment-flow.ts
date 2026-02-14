@@ -177,9 +177,7 @@ export const RiskAssessmentStateAnnotation = Annotation.Root({
  * Node: Check for blockers
  * Identifies stuck features, dependency blockers, and external blockers
  */
-async function checkBlockers(
-  state: RiskAssessmentState
-): Promise<Partial<RiskAssessmentState>> {
+async function checkBlockers(state: RiskAssessmentState): Promise<Partial<RiskAssessmentState>> {
   const now = new Date();
   const blockers: BlockerFinding[] = [];
 
@@ -238,9 +236,7 @@ async function checkBlockers(
  * Node: Analyze velocity
  * Calculates completion trends and capacity utilization
  */
-async function analyzeVelocity(
-  state: RiskAssessmentState
-): Promise<Partial<RiskAssessmentState>> {
+async function analyzeVelocity(state: RiskAssessmentState): Promise<Partial<RiskAssessmentState>> {
   const now = new Date();
   const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
@@ -280,9 +276,7 @@ async function analyzeVelocity(
  * Node: Assess risks
  * Consolidates blockers and velocity into risk categories
  */
-async function assessRisks(
-  state: RiskAssessmentState
-): Promise<Partial<RiskAssessmentState>> {
+async function assessRisks(state: RiskAssessmentState): Promise<Partial<RiskAssessmentState>> {
   const risks: RiskCategory[] = [];
 
   // Capacity risk
@@ -293,9 +287,7 @@ async function assessRisks(
         category: 'capacity',
         severity: 'high',
         description: 'Capacity is near maximum, may cause bottlenecks',
-        affectedFeatures: state.features
-          .filter((f) => f.status === 'in_progress')
-          .map((f) => f.id),
+        affectedFeatures: state.features.filter((f) => f.status === 'in_progress').map((f) => f.id),
       });
     } else if (utilization < 30) {
       risks.push({
@@ -335,9 +327,7 @@ async function assessRisks(
  * Node: Generate recommendations
  * Produces actionable recommendations based on risks
  */
-async function recommend(
-  state: RiskAssessmentState
-): Promise<Partial<RiskAssessmentState>> {
+async function recommend(state: RiskAssessmentState): Promise<Partial<RiskAssessmentState>> {
   const recommendations: Recommendation[] = [];
 
   // Recommendations for critical blockers

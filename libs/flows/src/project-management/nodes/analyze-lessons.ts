@@ -65,8 +65,7 @@ export async function analyzeLessons(
       // Quality lesson
       lessonsLearned.push({
         category: 'quality',
-        insight:
-          'Antagonistic review pattern ensures high-quality outputs before finalization',
+        insight: 'Antagonistic review pattern ensures high-quality outputs before finalization',
         impact: 'positive',
         actionItems: ['Apply review pattern to all summarization flows'],
       });

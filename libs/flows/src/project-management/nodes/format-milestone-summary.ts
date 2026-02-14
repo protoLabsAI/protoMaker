@@ -18,13 +18,8 @@ export async function formatMilestoneSummary(
   state: MilestoneSummaryState
 ): Promise<Partial<MilestoneSummaryState>> {
   try {
-    const {
-      milestoneName,
-      draftSummary,
-      achievements,
-      lessonsLearned,
-      nextMilestonePreview,
-    } = state;
+    const { milestoneName, draftSummary, achievements, lessonsLearned, nextMilestonePreview } =
+      state;
 
     if (!draftSummary) {
       return {

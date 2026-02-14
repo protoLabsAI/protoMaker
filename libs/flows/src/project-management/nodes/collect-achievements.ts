@@ -56,14 +56,9 @@ let _collector: AchievementCollector = mockAchievementCollector;
 export function createCollectAchievementsNode(
   collector: AchievementCollector
 ): (state: MilestoneSummaryState) => Promise<Partial<MilestoneSummaryState>> {
-  return async (
-    state: MilestoneSummaryState
-  ): Promise<Partial<MilestoneSummaryState>> => {
+  return async (state: MilestoneSummaryState): Promise<Partial<MilestoneSummaryState>> => {
     try {
-      const achievements = await collector.getAchievements(
-        state.projectPath,
-        state.milestoneName
-      );
+      const achievements = await collector.getAchievements(state.projectPath, state.milestoneName);
 
       return { achievements };
     } catch (err) {

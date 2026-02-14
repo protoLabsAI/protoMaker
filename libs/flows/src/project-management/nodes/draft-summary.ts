@@ -24,8 +24,7 @@ export async function draftSummary(
   state: MilestoneSummaryState
 ): Promise<Partial<MilestoneSummaryState>> {
   try {
-    const { milestoneName, achievements, lessonsLearned, revisionCount, reviewFeedback } =
-      state;
+    const { milestoneName, achievements, lessonsLearned, revisionCount, reviewFeedback } = state;
 
     // If we have review feedback, incorporate it into the revision
     const revisionNote =
