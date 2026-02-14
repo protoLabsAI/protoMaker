@@ -14,7 +14,7 @@ import {
   orchestrateProjectFeatures,
   loadProject,
 } from '../../../services/project-orchestration-service.js';
-import { createEventEmitter } from '../../../lib/events.js';
+import type { EventEmitter } from '../../../lib/events.js';
 import { getErrorMessage, logError } from '../common.js';
 
 interface CreateFeaturesRequest {
@@ -25,11 +25,8 @@ interface CreateFeaturesRequest {
   initialStatus?: 'backlog' | 'in-progress';
 }
 
-export function createCreateFeaturesHandler(featureLoader: FeatureLoader) {
+export function createCreateFeaturesHandler(featureLoader: FeatureLoader, events: EventEmitter) {
   return async (req: Request, res: Response): Promise<void> => {
-    // Create event emitter for progress tracking
-    const events = createEventEmitter();
-
     try {
       const {
         projectPath,

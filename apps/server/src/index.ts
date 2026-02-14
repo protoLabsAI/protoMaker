@@ -945,7 +945,6 @@ app.use(
     roleRegistryService
   )
 );
-app.use('/api/projects', createProjectsRoutes(featureLoader));
 app.use('/api/auto-mode', createAutoModeRoutes(autoModeService));
 app.use('/api/enhance-prompt', createEnhancePromptRoutes(settingsService));
 app.use(
@@ -1009,7 +1008,7 @@ app.use(
   authMiddleware,
   createBriefingRoutes(eventHistoryService, briefingCursorService)
 );
-app.use('/api/projects', createProjectsRoutes(featureLoader));
+app.use('/api/projects', createProjectsRoutes(featureLoader, events, projectService));
 app.use('/api/scheduler', createSchedulerRoutes(schedulerService));
 app.use('/api/ava', createAvaRoutes(avaGatewayService));
 app.use('/api/discord', createDiscordRoutes(discordBotService));

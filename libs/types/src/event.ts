@@ -136,6 +136,7 @@ export type EventType =
   | 'linear:project:created'
   | 'linear:project:updated'
   | 'linear:project:status-updated'
+  | 'linear:project:milestones-synced'
   | 'linear:issue:detected'
   // Linear sync events (bidirectional sync)
   | 'linear:sync:started'

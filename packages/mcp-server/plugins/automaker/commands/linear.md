@@ -61,6 +61,8 @@ allowed-tools:
   - mcp__plugin_automaker_automaker__list_features
   - mcp__plugin_automaker_automaker__get_feature
   - mcp__plugin_automaker_automaker__get_board_summary
+  # Automaker → Linear Sync
+  - mcp__plugin_automaker_automaker__sync_project_to_linear
 ---
 
 # Linear Project Manager
@@ -583,6 +585,35 @@ When creating or assigning issues, use team routing to determine the correct Lin
 
 ## Syncing with Automaker
 
+### Sync Project Milestones to Linear
+
+Sync an entire Automaker project's milestones to Linear project milestones. Creates/updates milestones, matches existing issues to milestones by epic title, assigns issues, and optionally cleans up placeholder milestones. Idempotent — safe to re-run.
+
+```ts
+mcp__plugin_automaker_automaker__sync_project_to_linear({
+  projectPath: '/path/to/project',
+  projectSlug: 'my-project',
+  linearProjectId: '<optional-override>', // Uses project.linearProjectId if omitted
+  cleanupPlaceholders: true, // Delete unmatched Linear milestones
+});
+```
+
+Returns:
+
+```json
+{
+  "success": true,
+  "linearProjectId": "...",
+  "milestones": [
+    { "name": "M1: Foundation", "linearMilestoneId": "...", "action": "created" },
+    { "name": "M2: UI Components", "linearMilestoneId": "...", "action": "existing" }
+  ],
+  "issuesAssigned": 37,
+  "deletedPlaceholders": ["A", "B"],
+  "errors": []
+}
+```
+
 When Automaker features map to Linear issues:
 
 ### Create Linear Issue from Automaker Feature
@@ -784,4 +815,14 @@ mcp__linear__linear_createIssueRelation({
   relatedIssueId: "<blocked>",
   type: "blocks"
 })
+```
+
+**Sync project milestones to Linear:**
+
+```ts
+mcp__plugin_automaker_automaker__sync_project_to_linear({
+  projectPath: '/path/to/project',
+  projectSlug: 'my-project',
+  cleanupPlaceholders: true,
+});
 ```

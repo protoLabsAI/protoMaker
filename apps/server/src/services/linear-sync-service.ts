@@ -2010,6 +2010,42 @@ export class LinearSyncService {
         await this.settingsService.updateProjectSettings(projectPath, currentSettings);
       }
 
+      // Create milestones for each project milestone
+      if (project.milestones && project.milestones.length > 0) {
+        let milestonesCreated = 0;
+        for (let i = 0; i < project.milestones.length; i++) {
+          const milestone = project.milestones[i];
+          if (milestone.linearMilestoneId) {
+            logger.debug(`Milestone ${milestone.title} already has Linear ID, skipping`);
+            continue;
+          }
+          try {
+            const milestoneResult = await client.createProjectMilestone({
+              projectId: result.projectId,
+              name: `M${milestone.number}: ${milestone.title}`,
+              description: milestone.description,
+              sortOrder: i,
+            });
+            milestone.linearMilestoneId = milestoneResult.id;
+            milestonesCreated++;
+            logger.debug(`Created Linear milestone for ${milestone.title}: ${milestoneResult.id}`);
+          } catch (milestoneError) {
+            logger.error(
+              `Failed to create Linear milestone for ${milestone.title}:`,
+              milestoneError
+            );
+          }
+        }
+
+        // Persist milestone IDs back to project.json
+        if (milestonesCreated > 0) {
+          await this.projectService.updateProject(projectPath, projectSlug, {
+            milestones: project.milestones,
+          });
+          logger.info(`Created ${milestonesCreated} Linear milestones for project ${projectSlug}`);
+        }
+      }
+
       // Add child features that already have Linear issues to the project
       await this.addChildFeaturesToProject(projectPath, projectSlug, result.projectId, client);
 
@@ -3068,6 +3104,314 @@ ${prdContent}
         });
       }
     }
+  }
+
+  /**
+   * Sync an Automaker project's milestones to Linear project milestones.
+   *
+   * Creates/updates Linear project milestones from Automaker milestones,
+   * matches project issues to milestones by epic title, and assigns
+   * issues to their correct milestones.
+   *
+   * @param projectPath - The project path
+   * @param projectSlug - The project slug
+   * @param options - Sync options
+   * @returns Summary of sync results
+   */
+  async syncProjectToLinear(
+    projectPath: string,
+    projectSlug: string,
+    options?: {
+      linearProjectId?: string;
+      cleanupPlaceholders?: boolean;
+    }
+  ): Promise<{
+    success: boolean;
+    linearProjectId: string;
+    milestones: Array<{
+      name: string;
+      linearMilestoneId: string;
+      action: 'created' | 'updated' | 'existing';
+    }>;
+    issuesAssigned: number;
+    deletedPlaceholders: string[];
+    errors: string[];
+  }> {
+    const startTime = Date.now();
+    const errors: string[] = [];
+
+    // Guard checks
+    if (!this.projectService || !this.settingsService) {
+      throw new Error('ProjectService or SettingsService not initialized');
+    }
+
+    // Load project
+    const project = await this.projectService.getProject(projectPath, projectSlug);
+    if (!project) {
+      throw new Error(`Project ${projectSlug} not found`);
+    }
+
+    if (!project.milestones || project.milestones.length === 0) {
+      throw new Error(`Project ${projectSlug} has no milestones`);
+    }
+
+    // Determine Linear project ID
+    const linearProjectId = options?.linearProjectId || project.linearProjectId;
+    if (!linearProjectId) {
+      throw new Error(`No Linear project ID. Pass linearProjectId or set it on the project first.`);
+    }
+
+    // Create Linear client
+    const client = new LinearMCPClient(this.settingsService, projectPath);
+
+    logger.info(
+      `Starting project milestone sync for ${projectSlug} → Linear project ${linearProjectId}`
+    );
+
+    // Step 1: List existing Linear milestones
+    const existingMilestones = await client.listProjectMilestones(linearProjectId);
+    const milestoneByName = new Map(existingMilestones.map((m) => [m.name, m]));
+    const milestoneById = new Map(existingMilestones.map((m) => [m.id, m]));
+
+    logger.info(`Found ${existingMilestones.length} existing Linear milestones`);
+
+    // Step 2: Create/update milestones
+    const milestoneResults: Array<{
+      name: string;
+      linearMilestoneId: string;
+      action: 'created' | 'updated' | 'existing';
+    }> = [];
+    const matchedLinearMilestoneIds = new Set<string>();
+
+    for (const milestone of project.milestones) {
+      const milestoneName = `M${milestone.number}: ${milestone.title}`;
+
+      try {
+        // Try to match by existing linearMilestoneId first (idempotency)
+        if (milestone.linearMilestoneId && milestoneById.has(milestone.linearMilestoneId)) {
+          const existing = milestoneById.get(milestone.linearMilestoneId)!;
+          matchedLinearMilestoneIds.add(existing.id);
+
+          // Update name if it changed
+          if (existing.name !== milestoneName) {
+            await client.updateProjectMilestone(existing.id, {
+              name: milestoneName,
+              description: milestone.description,
+              sortOrder: milestone.number,
+            });
+            milestoneResults.push({
+              name: milestoneName,
+              linearMilestoneId: existing.id,
+              action: 'updated',
+            });
+          } else {
+            milestoneResults.push({
+              name: milestoneName,
+              linearMilestoneId: existing.id,
+              action: 'existing',
+            });
+          }
+          continue;
+        }
+
+        // Try to match by name
+        if (milestoneByName.has(milestoneName)) {
+          const existing = milestoneByName.get(milestoneName)!;
+          matchedLinearMilestoneIds.add(existing.id);
+          milestone.linearMilestoneId = existing.id;
+
+          milestoneResults.push({
+            name: milestoneName,
+            linearMilestoneId: existing.id,
+            action: 'existing',
+          });
+          continue;
+        }
+
+        // Create new milestone
+        const created = await client.createProjectMilestone({
+          projectId: linearProjectId,
+          name: milestoneName,
+          description: milestone.description,
+          sortOrder: milestone.number,
+        });
+
+        milestone.linearMilestoneId = created.id;
+        matchedLinearMilestoneIds.add(created.id);
+
+        milestoneResults.push({
+          name: milestoneName,
+          linearMilestoneId: created.id,
+          action: 'created',
+        });
+      } catch (error) {
+        const msg = `Failed to sync milestone ${milestoneName}: ${error instanceof Error ? error.message : String(error)}`;
+        errors.push(msg);
+        logger.error(msg);
+      }
+    }
+
+    // Step 3: Cleanup placeholders if requested
+    const deletedPlaceholders: string[] = [];
+    if (options?.cleanupPlaceholders) {
+      for (const existing of existingMilestones) {
+        if (!matchedLinearMilestoneIds.has(existing.id)) {
+          try {
+            await client.deleteProjectMilestone(existing.id);
+            deletedPlaceholders.push(existing.name);
+            logger.info(`Deleted placeholder milestone: ${existing.name}`);
+          } catch (error) {
+            const msg = `Failed to delete placeholder ${existing.name}: ${error instanceof Error ? error.message : String(error)}`;
+            errors.push(msg);
+            logger.error(msg);
+          }
+        }
+      }
+    }
+
+    // Step 4: Get all project issues and assign to milestones
+    let issuesAssigned = 0;
+
+    try {
+      const issues = await client.getProjectIssues(linearProjectId);
+      logger.info(`Found ${issues.length} issues in Linear project`);
+
+      // Build a map: milestone title keywords → linearMilestoneId
+      // Match epic (parent) issues to milestones by title similarity
+      const parentIssues = issues.filter((i) => !i.parent && i.children.length > 0);
+
+      // Build mapping from milestone to Linear milestone ID
+      const milestoneTitleToId = new Map<string, string>();
+      for (const milestone of project.milestones) {
+        if (milestone.linearMilestoneId) {
+          milestoneTitleToId.set(milestone.title.toLowerCase(), milestone.linearMilestoneId);
+        }
+      }
+
+      // Match parent issues to milestones by fuzzy title matching
+      const parentToMilestone = new Map<string, string>();
+
+      for (const parentIssue of parentIssues) {
+        const parentTitle = parentIssue.title.toLowerCase();
+
+        // Try exact substring match first
+        let bestMatch: string | undefined;
+        let bestMatchLen = 0;
+
+        for (const [milestoneTitle, milestoneId] of milestoneTitleToId) {
+          // Check if milestone title words appear in the issue title
+          const titleWords = milestoneTitle.split(/\s+/);
+          const matchingWords = titleWords.filter(
+            (word) => word.length > 2 && parentTitle.includes(word)
+          );
+
+          if (matchingWords.length > bestMatchLen) {
+            bestMatchLen = matchingWords.length;
+            bestMatch = milestoneId;
+          }
+        }
+
+        if (bestMatch && bestMatchLen >= 2) {
+          parentToMilestone.set(parentIssue.id, bestMatch);
+          logger.info(
+            `Matched epic "${parentIssue.title}" → milestone (${bestMatchLen} word matches)`
+          );
+        }
+      }
+
+      // Assign issues to milestones
+      for (const issue of issues) {
+        // Determine which milestone this issue belongs to
+        let targetMilestoneId: string | undefined;
+
+        // If it's a parent issue with a match, use that
+        if (parentToMilestone.has(issue.id)) {
+          targetMilestoneId = parentToMilestone.get(issue.id);
+        }
+        // If it has a parent, inherit the parent's milestone
+        else if (issue.parent && parentToMilestone.has(issue.parent.id)) {
+          targetMilestoneId = parentToMilestone.get(issue.parent.id);
+        }
+
+        if (!targetMilestoneId) {
+          continue;
+        }
+
+        // Skip if already assigned to the correct milestone
+        if (issue.projectMilestone?.id === targetMilestoneId) {
+          continue;
+        }
+
+        try {
+          await client.assignIssueToMilestone(issue.id, targetMilestoneId);
+          issuesAssigned++;
+        } catch (error) {
+          const msg = `Failed to assign ${issue.identifier} to milestone: ${error instanceof Error ? error.message : String(error)}`;
+          errors.push(msg);
+          logger.error(msg);
+        }
+      }
+    } catch (error) {
+      const msg = `Failed to fetch/assign project issues: ${error instanceof Error ? error.message : String(error)}`;
+      errors.push(msg);
+      logger.error(msg);
+    }
+
+    // Step 5: Persist updated milestones back to project.json
+    try {
+      await this.projectService.updateProject(projectPath, projectSlug, {
+        milestones: project.milestones,
+        linearProjectId,
+      });
+      logger.info(`Persisted linearMilestoneId values to project.json`);
+    } catch (error) {
+      const msg = `Failed to persist milestone IDs: ${error instanceof Error ? error.message : String(error)}`;
+      errors.push(msg);
+      logger.error(msg);
+    }
+
+    // Record metrics
+    this.recordOperation(
+      `project:${projectSlug}`,
+      'push',
+      errors.length === 0 ? 'success' : 'error',
+      Date.now() - startTime,
+      false,
+      errors.length > 0 ? errors[0] : undefined
+    );
+
+    // Emit event
+    if (this.emitter) {
+      this.emitter.emit('linear:project:milestones-synced', {
+        projectPath,
+        projectSlug,
+        linearProjectId,
+        milestonesCreated: milestoneResults.filter((m) => m.action === 'created').length,
+        milestonesUpdated: milestoneResults.filter((m) => m.action === 'updated').length,
+        issuesAssigned,
+        deletedPlaceholders: deletedPlaceholders.length,
+        errors: errors.length,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    logger.info(
+      `Project milestone sync complete for ${projectSlug}: ` +
+        `${milestoneResults.filter((m) => m.action === 'created').length} created, ` +
+        `${milestoneResults.filter((m) => m.action === 'updated').length} updated, ` +
+        `${issuesAssigned} issues assigned, ` +
+        `${deletedPlaceholders.length} placeholders deleted, ` +
+        `${errors.length} errors`
+    );
+
+    return {
+      success: errors.length === 0,
+      linearProjectId,
+      milestones: milestoneResults,
+      issuesAssigned,
+      deletedPlaceholders,
+      errors,
+    };
   }
 }
 
