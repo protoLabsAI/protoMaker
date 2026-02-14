@@ -909,6 +909,8 @@ export interface CeremonySettings {
   enableContentBriefs?: boolean;
   /** Discord channel ID for content briefs (separate from ceremony channel) */
   contentBriefChannelId?: string;
+  /** Enable Linear project updates for daily standups and milestone completions (default: false) */
+  enableLinearProjectUpdates?: boolean;
   /** Model configuration for generating retrospectives */
   retroModel?: PhaseModelEntry;
 }
@@ -1612,6 +1614,8 @@ export interface LinearIntegrationConfig {
   syncOnStatusChange?: boolean;
   /** Add Linear comment when agent completes feature (default: true) */
   commentOnCompletion?: boolean;
+  /** Enable Linear project updates for ceremony events (default: false) */
+  enableProjectUpdates?: boolean;
   /** Priority mapping: ProtoMaker complexity -> Linear priority (0=none, 1=urgent, 2=high, 3=normal, 4=low) */
   priorityMapping?: {
     small?: number;
