@@ -201,3 +201,17 @@ export {
   type StatusReport,
   type MetricsCollector,
 } from './project-management/index.js';
+
+// Risk assessment flow (project management)
+export {
+  createRiskAssessmentGraph,
+  riskAssessmentGraph,
+  RiskAssessmentStateAnnotation,
+  type RiskAssessmentState,
+  type FeatureSummary,
+  type BlockerFinding,
+  type VelocityMetrics,
+  type RiskCategory,
+  type Recommendation,
+  type AntagonisticReview,
+} from './project-management/risk-assessment-flow.js';
