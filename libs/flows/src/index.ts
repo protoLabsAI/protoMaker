@@ -92,3 +92,19 @@ export {
   routeAfterOutlinePlanning,
   routeAfterApproval,
 } from './content/nodes/outline-planner.js';
+
+// Content generation nodes
+export {
+  generationDispatchNode,
+  generationCollectorNode,
+  extractResearchForSection,
+  validateOutline,
+  createFailureReport,
+} from './content/nodes/generation-dispatch.js';
+export type {
+  SectionSpec,
+  ResearchSubset,
+  GeneratedSection,
+  Outline,
+  GenerationState,
+} from './content/nodes/generation-dispatch.js';
