@@ -680,7 +680,9 @@ export class LinearMCPClient {
 
     // Look for "awaitingInput" state (case insensitive)
     const awaitingInputState = data.team.states.nodes.find(
-      (state) => state.name.toLowerCase() === 'awaitinginput' || state.name.toLowerCase() === 'awaiting input'
+      (state) =>
+        state.name.toLowerCase() === 'awaitinginput' ||
+        state.name.toLowerCase() === 'awaiting input'
     );
 
     if (!awaitingInputState) {
