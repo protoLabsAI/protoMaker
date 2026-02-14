@@ -231,7 +231,9 @@ export async function codebaseResearchWorker(
       });
     }
 
-    console.log(`[${workerName}] Successfully analyzed codebase, found ${findings.length} findings`);
+    console.log(
+      `[${workerName}] Successfully analyzed codebase, found ${findings.length} findings`
+    );
 
     return { findings };
   } catch (error) {
