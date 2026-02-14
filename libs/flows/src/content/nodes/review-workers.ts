@@ -7,6 +7,13 @@
  * 3. FactChecker - verifies claims against research findings
  */
 
+import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
+import { createLogger } from '@automaker/utils';
+import { LangfuseClient } from '@automaker/observability';
+import { compilePrompt } from '../prompt-loader.js';
+
+const logger = createLogger('review-workers');
+
 /**
  * Review finding severity levels
  */
@@ -31,46 +38,85 @@ export interface ReviewWorkerState {
   content: string;
   researchFindings?: string; // For fact checking
   findings: ReviewFinding[];
+  model?: BaseChatModel; // LangChain chat model for LLM-powered review
+  langfuseClient?: LangfuseClient; // Optional Langfuse tracing
+  traceId?: string; // Trace ID for Langfuse
 }
 
 /**
- * TechnicalReviewer node
- * Checks code examples compile, API references are accurate, technical claims are supported
+ * Parse XML findings from LLM response
  */
-export async function technicalReviewerNode(
-  state: ReviewWorkerState
-): Promise<Partial<ReviewWorkerState>> {
-  const { content } = state;
+function parseXmlFindings(xmlText: string, reviewer: string): ReviewFinding[] {
   const findings: ReviewFinding[] = [];
+  const timestamp = new Date().toISOString();
 
-  // Simulate technical review checks
-  // In real implementation, this would:
-  // - Extract code blocks and validate syntax
-  // - Check API references against documentation
-  // - Verify technical claims
+  // Extract all <finding> blocks
+  const findingRegex = /<finding>([\s\S]*?)<\/finding>/g;
+  let match;
 
-  // Example checks
+  while ((match = findingRegex.exec(xmlText)) !== null) {
+    const findingContent = match[1];
+
+    // Extract severity
+    const severityMatch = findingContent.match(/<severity>(error|warning|info)<\/severity>/);
+    const severity = (severityMatch?.[1] as ReviewSeverity) || 'info';
+
+    // Extract message
+    const messageMatch = findingContent.match(/<message>([\s\S]*?)<\/message>/);
+    const message = messageMatch?.[1]?.trim() || 'No message provided';
+
+    // Extract optional location
+    const locationMatch = findingContent.match(/<location>([\s\S]*?)<\/location>/);
+    const location = locationMatch?.[1]?.trim();
+
+    // Extract optional suggestion
+    const suggestionMatch = findingContent.match(/<suggestion>([\s\S]*?)<\/suggestion>/);
+    const suggestion = suggestionMatch?.[1]?.trim();
+
+    findings.push({
+      reviewer,
+      severity,
+      message,
+      location,
+      suggestion,
+      timestamp,
+    });
+  }
+
+  return findings;
+}
+
+/**
+ * Fallback heuristic checks when LLM call fails
+ */
+function runHeuristicChecks(content: string): ReviewFinding[] {
+  const findings: ReviewFinding[] = [];
+  const timestamp = new Date().toISOString();
+
+  logger.info('Running fallback heuristic checks...');
+
+  // Check for code examples
   if (content.includes('```') && content.includes('function')) {
-    // Mock: Check if code examples are present
     findings.push({
       reviewer: 'TechnicalReviewer',
       severity: 'info',
       message: 'Code examples found and reviewed',
-      timestamp: new Date().toISOString(),
+      timestamp,
     });
   }
 
+  // Check for API references without URLs
   if (content.toLowerCase().includes('api') && !content.includes('http')) {
     findings.push({
       reviewer: 'TechnicalReviewer',
       severity: 'warning',
       message: 'API references found but no URLs provided',
       suggestion: 'Include full API endpoint URLs for clarity',
-      timestamp: new Date().toISOString(),
+      timestamp,
     });
   }
 
-  // Check for technical claims without examples
+  // Check for performance claims without benchmarks
   if (
     content.match(/\b(performance|speed|faster|optimized)\b/i) &&
     !content.includes('benchmark')
@@ -80,8 +126,129 @@ export async function technicalReviewerNode(
       severity: 'warning',
       message: 'Performance claims should be backed by benchmarks or data',
       suggestion: 'Add benchmark results or comparative data',
-      timestamp: new Date().toISOString(),
+      timestamp,
     });
+  }
+
+  return findings;
+}
+
+/**
+ * TechnicalReviewer node
+ * Checks code examples compile, API references are accurate, technical claims are supported.
+ * Uses LLM via compilePrompt + BaseChatModel with heuristic fallback.
+ */
+export async function technicalReviewerNode(
+  state: ReviewWorkerState
+): Promise<Partial<ReviewWorkerState>> {
+  const { content, model, langfuseClient, traceId } = state;
+  let findings: ReviewFinding[] = [];
+
+  // If no model available, fall back to heuristics
+  if (!model) {
+    logger.warn('No LLM model available, using heuristic checks only');
+    findings = runHeuristicChecks(content);
+    return { findings };
+  }
+
+  try {
+    logger.info('Starting LLM-based technical review...');
+
+    // Build the prompt using compilePrompt (loads from prompts/technical-reviewer.md)
+    const compiled = await compilePrompt({
+      name: 'technical-reviewer',
+      variables: {
+        content,
+        technical_domain: 'Software Development',
+        target_audience: 'Technical practitioners and developers',
+        focus_areas: [
+          'Code accuracy and correctness',
+          'Technical clarity',
+          'Best practices compliance',
+          'Working examples verification',
+        ].join('\n- '),
+        requirements: [
+          'All code examples must be syntactically correct',
+          'Technical claims must be verifiable',
+          'Examples should follow current best practices',
+        ].join('\n- '),
+      },
+      langfuseClient,
+    });
+
+    // Create Langfuse generation trace if available
+    const generationStartTime = new Date();
+    let generationId: string | undefined;
+
+    if (langfuseClient?.isAvailable() && traceId) {
+      generationId = `gen-tech-review-${Date.now()}`;
+      langfuseClient.createGeneration({
+        traceId,
+        id: generationId,
+        name: 'technical-review',
+        model: 'technical-reviewer-model',
+        input: compiled.prompt,
+        metadata: {
+          contentLength: content.length,
+          reviewType: 'technical',
+          promptSource: compiled.source,
+        },
+        startTime: generationStartTime,
+      });
+    }
+
+    // Invoke model directly (follows section-writer pattern)
+    const response = await model.invoke([{ role: 'user', content: compiled.prompt }]);
+
+    // Extract content from response
+    let responseText = '';
+    if (typeof response.content === 'string') {
+      responseText = response.content;
+    } else if (Array.isArray(response.content)) {
+      responseText = response.content
+        .map((c: unknown) => {
+          if (typeof c === 'string') return c;
+          if (c && typeof c === 'object' && 'text' in c) return (c as { text: string }).text;
+          return '';
+        })
+        .join('');
+    }
+
+    // Update Langfuse trace
+    if (langfuseClient?.isAvailable() && traceId && generationId) {
+      langfuseClient.createGeneration({
+        traceId,
+        id: generationId,
+        name: 'technical-review',
+        model: 'technical-reviewer-model',
+        input: compiled.prompt,
+        output: responseText,
+        metadata: {
+          contentLength: content.length,
+          reviewType: 'technical',
+          success: true,
+        },
+        startTime: generationStartTime,
+        endTime: new Date(),
+      });
+      await langfuseClient.flush();
+    }
+
+    logger.debug('LLM response received, parsing XML...');
+
+    // Parse XML findings from LLM response
+    findings = parseXmlFindings(responseText, 'TechnicalReviewer');
+
+    logger.info(`Review complete, found ${findings.length} finding(s)`);
+
+    // If no findings were parsed, fall back to heuristics
+    if (findings.length === 0) {
+      logger.warn('No findings parsed from LLM response, using heuristics');
+      findings = runHeuristicChecks(content);
+    }
+  } catch (error) {
+    logger.error('LLM review failed, falling back to heuristics:', error);
+    findings = runHeuristicChecks(content);
   }
 
   return { findings };
@@ -96,12 +263,6 @@ export async function styleReviewerNode(
 ): Promise<Partial<ReviewWorkerState>> {
   const { content } = state;
   const findings: ReviewFinding[] = [];
-
-  // Simulate style review checks
-  // In real implementation, this would:
-  // - Check reading level
-  // - Verify tone consistency
-  // - Validate audience appropriateness
 
   // Check for overly long sentences
   const sentences = content.split(/[.!?]+/).filter((s) => s.trim().length > 0);
@@ -170,12 +331,6 @@ export async function factCheckerNode(
 ): Promise<Partial<ReviewWorkerState>> {
   const { content, researchFindings } = state;
   const findings: ReviewFinding[] = [];
-
-  // Simulate fact checking
-  // In real implementation, this would:
-  // - Extract factual claims
-  // - Cross-reference with research data
-  // - Verify citations and sources
 
   // Check for unsupported claims
   const claimIndicators = [
