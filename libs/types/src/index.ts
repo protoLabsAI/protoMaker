@@ -65,6 +65,21 @@ export type {
 } from './feature.js';
 export { normalizeFeatureStatus } from './feature.js';
 
+// Feature store interface (pluggable storage abstraction)
+export type { FeatureStore } from './feature-store.js';
+
+// Event bus interface (pluggable event transport abstraction)
+export type { EventBus, EventSubscription } from './event-bus.js';
+
+// Hivemind types (multi-instance mesh coordination)
+export type {
+  InstanceCapacity,
+  HivemindDomain,
+  InstanceIdentity,
+  HivemindPeer,
+  HivemindConfig,
+} from './hivemind.js';
+
 // Project orchestration types
 export type {
   PhaseComplexity,

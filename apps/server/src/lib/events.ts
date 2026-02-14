@@ -1,8 +1,12 @@
 /**
  * Event emitter for streaming events to WebSocket clients
+ *
+ * Implements the EventBus interface for pluggable event transport.
+ * Current implementation is in-memory (Set<Callback>). Future implementations
+ * (NATS, Redis) can be swapped in for hivemind distribution.
  */
 
-import type { EventType, EventCallback } from '@automaker/types';
+import type { EventType, EventCallback, EventBus, EventSubscription } from '@automaker/types';
 import { createLogger } from '@automaker/utils';
 
 const logger = createLogger('Events');
@@ -10,15 +14,19 @@ const logger = createLogger('Events');
 // Re-export event types from shared package
 export type { EventType, EventCallback };
 
-export interface EventEmitter {
+// EventEmitter extends EventBus, keeping backward compatibility.
+// subscribe() returns a function (legacy cleanup pattern) that also has .unsubscribe()
+export type UnsubscribeFn = (() => void) & EventSubscription;
+
+export interface EventEmitter extends EventBus {
   emit: (type: EventType, payload: unknown) => void;
-  subscribe: (callback: EventCallback) => () => void;
+  subscribe: (callback: EventCallback) => UnsubscribeFn;
 }
 
 export function createEventEmitter(): EventEmitter {
   const subscribers = new Set<EventCallback>();
 
-  return {
+  const bus: EventEmitter = {
     emit(type: EventType, payload: unknown) {
       for (const callback of subscribers) {
         try {
@@ -31,9 +39,21 @@ export function createEventEmitter(): EventEmitter {
 
     subscribe(callback: EventCallback) {
       subscribers.add(callback);
-      return () => {
+      // Return cleanup function (legacy pattern, still works)
+      const unsub = () => {
         subscribers.delete(callback);
       };
+      // Attach EventSubscription interface for new consumers
+      (unsub as any).unsubscribe = unsub;
+      return unsub as (() => void) & EventSubscription;
+    },
+
+    broadcast(type: EventType, payload?: unknown) {
+      // In single-instance mode, broadcast === emit.
+      // In hivemind mode, this will also publish to the mesh.
+      bus.emit(type, payload);
     },
   };
+
+  return bus;
 }

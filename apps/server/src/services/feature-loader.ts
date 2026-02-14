@@ -8,6 +8,7 @@ import type {
   Feature,
   DescriptionHistoryEntry,
   FeatureStatus,
+  FeatureStore,
   StatusTransition,
 } from '@automaker/types';
 import { normalizeFeatureStatus } from '@automaker/types';
@@ -36,7 +37,7 @@ const logger = createLogger('FeatureLoader');
 // Re-export Feature type for convenience
 export type { Feature };
 
-export class FeatureLoader {
+export class FeatureLoader implements FeatureStore {
   /**
    * Normalize feature status to canonical values
    * Defensive: ensures all features use the 6-status system
@@ -728,5 +729,32 @@ export class FeatureLoader {
       logger.error(`Failed to sync feature ${feature.id} to app_spec.txt:`, error);
       throw error;
     }
+  }
+
+  /**
+   * Atomically claim a feature for an instance.
+   * Returns true if successfully claimed (was unclaimed or claimed by same instance).
+   * Returns false if already claimed by a different instance.
+   */
+  async claim(projectPath: string, featureId: string, instanceId: string): Promise<boolean> {
+    const feature = await this.get(projectPath, featureId);
+    if (!feature) return false;
+
+    if (feature.claimedBy && feature.claimedBy !== instanceId) {
+      return false;
+    }
+
+    await this.update(projectPath, featureId, { claimedBy: instanceId });
+    return true;
+  }
+
+  /**
+   * Release a claimed feature back to the pool.
+   */
+  async release(projectPath: string, featureId: string): Promise<void> {
+    const feature = await this.get(projectPath, featureId);
+    if (!feature) return;
+
+    await this.update(projectPath, featureId, { claimedBy: undefined });
   }
 }
