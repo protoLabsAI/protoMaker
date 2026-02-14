@@ -1,15 +1,19 @@
 /**
- * Test script for the Content Creation Flow
+ * Test script for the Content Creation Flow with Antagonistic Review
  *
- * Runs the full pipeline with Anthropic models in straight-through mode
- * (no HITL interrupts — auto-approved). The SectionWriter subgraph makes
- * real LLM calls to generate content sections.
+ * Runs the full autonomous pipeline with Anthropic models in straight-through mode
+ * (no HITL interrupts — auto-approved). The pipeline includes:
+ * - Research and content generation
+ * - Antagonistic review for quality validation
+ * - Output validation (HTML entities, duplicate headings, review scores)
  *
  * Usage: npx tsx scripts/test-content-flow.ts
  *
- * NOTE: MemorySaver can't serialize ChatAnthropic instances stored in state.
- * For HITL support, models must be passed via closure/config, not state.
- * This test uses a no-checkpoint compile to run straight through.
+ * Validates:
+ * - No HTML entities in code blocks
+ * - No duplicate headings
+ * - Antagonistic review scores >= 75%
+ * - Output written to /tmp with quality report
  */
 
 import 'dotenv/config';
@@ -62,6 +66,15 @@ interface ReviewFeedback {
   sectionId: string;
   approved: boolean;
   feedback?: string;
+  score?: number;
+}
+
+interface QualityReport {
+  htmlEntityViolations: string[];
+  duplicateHeadings: string[];
+  reviewScores: { section: string; score: number }[];
+  averageReviewScore: number;
+  passed: boolean;
 }
 
 interface OutputResult {
@@ -92,6 +105,7 @@ const TestFlowState = Annotation.Root({
     reducer: (left, right) => [...left, ...right],
     default: () => [],
   }),
+  qualityReport: Annotation<QualityReport | undefined>,
   outputs: Annotation<OutputResult[]>({
     reducer: (left, right) => [...left, ...right],
     default: () => [],
@@ -289,10 +303,132 @@ async function reviewDelegate(
   state: TestFlowStateType & { section: ContentSection }
 ): Promise<Partial<TestFlowStateType>> {
   const { section } = state;
-  console.log(`  [review] ${section.title}: approved`);
+
+  // Simulate antagonistic review with scoring
+  // In production, this would use the AntagonisticReviewService
+  const score = calculateContentQualityScore(section);
+  const approved = score >= 75;
+
+  console.log(
+    `  [review] ${section.title}: score=${score}% ${approved ? 'APPROVED' : 'NEEDS_WORK'}`
+  );
+
   return {
-    reviewFeedback: [{ sectionId: section.id, approved: true }],
+    reviewFeedback: [{ sectionId: section.id, approved, score }],
   };
+}
+
+/**
+ * Calculate content quality score based on antagonistic review criteria
+ * Returns a score from 0-100
+ */
+function calculateContentQualityScore(section: ContentSection): number {
+  let score = 100;
+  const content = section.content || '';
+
+  // Check for HTML entities in code blocks (critical issue)
+  const codeBlocks = content.match(/```[\s\S]*?```/g) || [];
+  const hasHtmlEntities = codeBlocks.some((block) => /&[a-z]+;|&#\d+;/i.test(block));
+  if (hasHtmlEntities) {
+    score -= 30; // Major deduction for HTML entities
+  }
+
+  // Check for very short content (quality concern)
+  if (content.length < 100) {
+    score -= 20;
+  }
+
+  // Check for missing code examples when expected
+  if (section.codeExamples && section.codeExamples.length === 0) {
+    score -= 15;
+  }
+
+  // Add bonus for good structure
+  const hasHeadings = /^#{1,6}\s+/m.test(content);
+  if (hasHeadings) {
+    score += 5;
+  }
+
+  // Add bonus for examples
+  if (section.codeExamples && section.codeExamples.length > 0) {
+    score += 10;
+  }
+
+  return Math.max(0, Math.min(100, score));
+}
+
+async function validateQuality(state: TestFlowStateType): Promise<Partial<TestFlowStateType>> {
+  const { assembledContent, reviewFeedback } = state;
+  console.log(`  [validate] Checking content quality`);
+
+  if (!assembledContent) {
+    return {
+      qualityReport: {
+        htmlEntityViolations: [],
+        duplicateHeadings: [],
+        reviewScores: [],
+        averageReviewScore: 0,
+        passed: false,
+      },
+    };
+  }
+
+  // Check for HTML entities in code blocks
+  const htmlEntityViolations: string[] = [];
+  const codeBlockRegex = /```[\s\S]*?```/g;
+  const codeBlocks = assembledContent.match(codeBlockRegex) || [];
+
+  codeBlocks.forEach((block, index) => {
+    const htmlEntityMatch = block.match(/&[a-z]+;|&#\d+;/gi);
+    if (htmlEntityMatch) {
+      htmlEntityViolations.push(
+        `Code block ${index + 1}: Found HTML entities: ${htmlEntityMatch.join(', ')}`
+      );
+    }
+  });
+
+  // Check for duplicate headings
+  const duplicateHeadings: string[] = [];
+  const headingRegex = /^#{1,6}\s+(.+)$/gm;
+  const headings: string[] = [];
+  let match;
+
+  while ((match = headingRegex.exec(assembledContent)) !== null) {
+    const heading = match[1].trim();
+    if (headings.includes(heading)) {
+      duplicateHeadings.push(heading);
+    }
+    headings.push(heading);
+  }
+
+  // Extract review scores
+  const reviewScores = reviewFeedback
+    .filter((r) => r.score !== undefined)
+    .map((r) => ({ section: r.sectionId, score: r.score || 0 }));
+
+  const averageReviewScore =
+    reviewScores.length > 0
+      ? reviewScores.reduce((sum, r) => sum + r.score, 0) / reviewScores.length
+      : 0;
+
+  // Check if quality standards are met
+  const passed =
+    htmlEntityViolations.length === 0 && duplicateHeadings.length === 0 && averageReviewScore >= 75;
+
+  const report: QualityReport = {
+    htmlEntityViolations,
+    duplicateHeadings,
+    reviewScores,
+    averageReviewScore,
+    passed,
+  };
+
+  console.log(`  [validate] Average score: ${averageReviewScore.toFixed(1)}%`);
+  console.log(`  [validate] HTML entity violations: ${htmlEntityViolations.length}`);
+  console.log(`  [validate] Duplicate headings: ${duplicateHeadings.length}`);
+  console.log(`  [validate] Overall: ${passed ? 'PASSED' : 'FAILED'}`);
+
+  return { qualityReport: report };
 }
 
 async function fanOutOutput(state: TestFlowStateType) {
@@ -346,6 +482,7 @@ function buildTestFlow() {
   graph.addNode('assemble', assemble);
   graph.addNode('fan_out_review', fanOutReview, { ends: ['review_delegate'] });
   graph.addNode('review_delegate', reviewDelegate);
+  graph.addNode('validate_quality', validateQuality);
   graph.addNode('fan_out_output', fanOutOutput, { ends: ['output_delegate'] });
   graph.addNode('output_delegate', outputDelegate);
   graph.addNode('complete', complete);
@@ -353,14 +490,15 @@ function buildTestFlow() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const g = graph as any;
 
-  // Wire the flow (no HITL interrupts — straight through)
+  // Wire the flow (no HITL interrupts — straight through with quality validation)
   g.setEntryPoint('generate_queries');
   g.addEdge('generate_queries', 'fan_out_research');
   g.addEdge('research_delegate', 'generate_outline');
   g.addEdge('generate_outline', 'fan_out_generation');
   g.addEdge('generation_delegate', 'assemble');
   g.addEdge('assemble', 'fan_out_review');
-  g.addEdge('review_delegate', 'fan_out_output');
+  g.addEdge('review_delegate', 'validate_quality');
+  g.addEdge('validate_quality', 'fan_out_output');
   g.addEdge('output_delegate', 'complete');
   g.setFinishPoint('complete');
 
@@ -390,10 +528,11 @@ async function main() {
     maxTokens: 2048,
   });
 
-  console.log('=== Content Creation Flow Test ===');
+  console.log('=== Content Creation Flow Test with Antagonistic Review ===');
   console.log('Smart model: claude-sonnet-4-5-20250929');
   console.log('Fast model:  claude-haiku-4-5-20251001');
   console.log('Mode: straight-through (no HITL interrupts)');
+  console.log('Quality checks: HTML entities, duplicate headings, review scores >= 75%');
   console.log('');
 
   const flow = buildTestFlow();
@@ -417,6 +556,7 @@ async function main() {
       assembledContent: undefined,
       reviewFeedback: [],
       outputs: [],
+      qualityReport: undefined,
       error: undefined,
     });
 
@@ -446,7 +586,31 @@ async function main() {
       if (result.assembledContent.length > 800) console.log('...(truncated)');
     }
 
-    // Write full output
+    // Display quality report
+    if (result.qualityReport) {
+      const report = result.qualityReport;
+      console.log('');
+      console.log('=== Quality Report ===');
+      console.log(`Average Review Score: ${report.averageReviewScore.toFixed(1)}%`);
+      console.log(`HTML Entity Violations: ${report.htmlEntityViolations.length}`);
+      if (report.htmlEntityViolations.length > 0) {
+        report.htmlEntityViolations.forEach((v) => console.log(`  - ${v}`));
+      }
+      console.log(`Duplicate Headings: ${report.duplicateHeadings.length}`);
+      if (report.duplicateHeadings.length > 0) {
+        report.duplicateHeadings.forEach((h) => console.log(`  - ${h}`));
+      }
+      console.log('');
+      console.log('Review Scores by Section:');
+      report.reviewScores.forEach((s) => {
+        const status = s.score >= 75 ? '✓' : '✗';
+        console.log(`  ${status} ${s.section}: ${s.score}%`);
+      });
+      console.log('');
+      console.log(`Overall Quality Check: ${report.passed ? '✓ PASSED' : '✗ FAILED'}`);
+    }
+
+    // Write full output and quality report
     if (result.outputs?.length > 0) {
       const { writeFileSync } = await import('fs');
       const mdOutput = result.outputs.find((o: OutputResult) => o.format === 'markdown');
@@ -454,7 +618,20 @@ async function main() {
         const outputPath = '/tmp/content-flow-output.md';
         writeFileSync(outputPath, mdOutput.content);
         console.log(`\nFull output: ${outputPath} (${mdOutput.content.length} chars)`);
+
+        // Write quality report
+        if (result.qualityReport) {
+          const reportPath = '/tmp/content-flow-quality-report.json';
+          writeFileSync(reportPath, JSON.stringify(result.qualityReport, null, 2));
+          console.log(`Quality report: ${reportPath}`);
+        }
       }
+    }
+
+    // Exit with error code if quality check failed
+    if (result.qualityReport && !result.qualityReport.passed) {
+      console.error('\n❌ Quality check failed. See report above for details.');
+      process.exit(1);
     }
   } catch (error) {
     const totalTime = ((Date.now() - startTime) / 1000).toFixed(1);
