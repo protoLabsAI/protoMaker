@@ -1547,6 +1547,151 @@ const tools: Tool[] = [
     },
   },
 
+  // ========== Project Lifecycle (Linear as Source of Truth) ==========
+  {
+    name: 'initiate_project',
+    description:
+      'Start a new project lifecycle. Checks for duplicate Linear projects, creates a new Linear project with the idea description, and creates a local project cache. Returns duplicates if found (caller should confirm before proceeding).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        title: {
+          type: 'string',
+          description: 'Project title',
+        },
+        ideaDescription: {
+          type: 'string',
+          description: 'Idea description (markdown). Stored as Linear project description.',
+        },
+      },
+      required: ['projectPath', 'title', 'ideaDescription'],
+    },
+  },
+  {
+    name: 'generate_project_prd',
+    description:
+      'Check if a PRD exists for a project. If not, suggests generating one via the /plan-project skill or create_project tool. Returns existing PRD if available.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        projectSlug: {
+          type: 'string',
+          description: 'Project slug',
+        },
+        additionalContext: {
+          type: 'string',
+          description: 'Additional context for PRD generation (optional)',
+        },
+      },
+      required: ['projectPath', 'projectSlug'],
+    },
+  },
+  {
+    name: 'approve_project_prd',
+    description:
+      'Approve the PRD and create board features from project milestones. Syncs milestones to Linear. Call after the project has a PRD and milestones defined.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        projectSlug: {
+          type: 'string',
+          description: 'Project slug',
+        },
+        createEpics: {
+          type: 'boolean',
+          description: 'Create epic features for milestones (default: true)',
+        },
+        setupDependencies: {
+          type: 'boolean',
+          description: 'Set up dependencies between features (default: true)',
+        },
+      },
+      required: ['projectPath', 'projectSlug'],
+    },
+  },
+  {
+    name: 'launch_project',
+    description:
+      'Launch a project: sets Linear project status to "started" and starts auto-mode. Requires features to exist in backlog (call approve_project_prd first).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        projectSlug: {
+          type: 'string',
+          description: 'Project slug',
+        },
+        maxConcurrency: {
+          type: 'number',
+          description: 'Max concurrent agents (optional, uses system default)',
+        },
+      },
+      required: ['projectPath', 'projectSlug'],
+    },
+  },
+  {
+    name: 'get_lifecycle_status',
+    description:
+      'Get the current lifecycle phase and next actions for a project. Reads both Linear state and local board state to determine where the project is in the pipeline.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        projectSlug: {
+          type: 'string',
+          description: 'Project slug',
+        },
+      },
+      required: ['projectPath', 'projectSlug'],
+    },
+  },
+  {
+    name: 'collect_related_issues',
+    description:
+      'Move existing Linear issues into a project. Useful for gathering related work that was created before the project.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        projectSlug: {
+          type: 'string',
+          description: 'Project slug',
+        },
+        linearProjectId: {
+          type: 'string',
+          description: 'Linear project ID to add issues to',
+        },
+        issueIds: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Array of Linear issue IDs to add to the project',
+        },
+      },
+      required: ['projectPath', 'projectSlug', 'linearProjectId', 'issueIds'],
+    },
+  },
+
   // ========== Worktree Management ==========
   {
     name: 'list_worktrees',
@@ -3116,6 +3261,50 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         projectSlug: args.projectSlug,
         linearProjectId: args.linearProjectId,
         cleanupPlaceholders: args.cleanupPlaceholders,
+      });
+
+    // Project Lifecycle
+    case 'initiate_project':
+      return apiCall('/projects/lifecycle/initiate', {
+        projectPath: args.projectPath,
+        title: args.title,
+        ideaDescription: args.ideaDescription,
+      });
+
+    case 'generate_project_prd':
+      return apiCall('/projects/lifecycle/generate-prd', {
+        projectPath: args.projectPath,
+        projectSlug: args.projectSlug,
+        additionalContext: args.additionalContext,
+      });
+
+    case 'approve_project_prd':
+      return apiCall('/projects/lifecycle/approve-prd', {
+        projectPath: args.projectPath,
+        projectSlug: args.projectSlug,
+        createEpics: args.createEpics ?? true,
+        setupDependencies: args.setupDependencies ?? true,
+      });
+
+    case 'launch_project':
+      return apiCall('/projects/lifecycle/launch', {
+        projectPath: args.projectPath,
+        projectSlug: args.projectSlug,
+        maxConcurrency: args.maxConcurrency,
+      });
+
+    case 'get_lifecycle_status':
+      return apiCall('/projects/lifecycle/status', {
+        projectPath: args.projectPath,
+        projectSlug: args.projectSlug,
+      });
+
+    case 'collect_related_issues':
+      return apiCall('/projects/lifecycle/collect-related', {
+        projectPath: args.projectPath,
+        projectSlug: args.projectSlug,
+        linearProjectId: args.linearProjectId,
+        issueIds: args.issueIds,
       });
 
     default:

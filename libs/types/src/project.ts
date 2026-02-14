@@ -386,6 +386,88 @@ export interface CreateFeaturesResult {
 }
 
 /**
+ * Lifecycle phase for Linear-as-source-of-truth workflow.
+ * Maps to Linear project status + labels.
+ */
+export type ProjectLifecyclePhase =
+  | 'idea' // planned + "idea" label — user expanding the idea
+  | 'idea-approved' // planned + "idea-approved" label — PRD being generated/reviewed
+  | 'prd-approved' // planned + "prd-approved" label — milestones created, ready to launch
+  | 'started' // Linear status = started — auto-mode running
+  | 'completed' // Linear status = completed — all features done
+  | 'canceled'; // Linear status = canceled
+
+/**
+ * Result from lifecycle initiate operation
+ */
+export interface LifecycleInitiateResult {
+  linearProjectId: string;
+  linearProjectUrl: string;
+  duplicates: Array<{ id: string; name: string; url: string }>;
+  localSlug: string;
+  hasDuplicates: boolean;
+}
+
+/**
+ * Result from lifecycle PRD generation
+ */
+export interface LifecyclePrdResult {
+  prd: SPARCPrd;
+  reviewVerdict: 'approve' | 'revise' | 'block';
+  reviewSummary: string;
+  priorityScore: number;
+  suggestedTiming: 'now' | 'next' | 'later' | 'never';
+  linearUpdateUrl?: string;
+}
+
+/**
+ * Result from lifecycle PRD approval
+ */
+export interface LifecycleApproveResult {
+  featuresCreated: number;
+  epicsCreated: number;
+  linearMilestones: Array<{ id: string; name: string }>;
+  boardUrl?: string;
+}
+
+/**
+ * Result from lifecycle launch
+ */
+export interface LifecycleLaunchResult {
+  autoModeStarted: boolean;
+  featuresInBacklog: number;
+  linearProjectUrl: string;
+}
+
+/**
+ * Lifecycle status response
+ */
+export interface LifecycleStatus {
+  phase: ProjectLifecyclePhase | 'unknown';
+  linearStatus?: string;
+  linearLabels?: string[];
+  nextActions: string[];
+  linearUrl?: string;
+  boardSummary?: {
+    backlog: number;
+    inProgress: number;
+    review: number;
+    done: number;
+  };
+  hasPrd: boolean;
+  hasMilestones: boolean;
+  hasFeatures: boolean;
+}
+
+/**
+ * Result from collecting related issues
+ */
+export interface LifecycleCollectResult {
+  issuesCollected: number;
+  issuesAssigned: number;
+}
+
+/**
  * Discord channel mapping for a project
  * Stores the association between a project and its Discord channels
  */

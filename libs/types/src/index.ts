@@ -82,6 +82,13 @@ export type {
   CreateProjectInput,
   UpdateProjectInput,
   CreateFeaturesResult,
+  ProjectLifecyclePhase,
+  LifecycleInitiateResult,
+  LifecyclePrdResult,
+  LifecycleApproveResult,
+  LifecycleLaunchResult,
+  LifecycleStatus,
+  LifecycleCollectResult,
 } from './project.js';
 
 // Session types

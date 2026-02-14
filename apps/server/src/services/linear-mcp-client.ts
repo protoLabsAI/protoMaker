@@ -1283,4 +1283,62 @@ export class LinearMCPClient {
       children: issue.children.nodes,
     }));
   }
+
+  /**
+   * Search for Linear projects by name
+   */
+  async searchProjects(
+    query: string
+  ): Promise<Array<{ id: string; name: string; url: string; state: string }>> {
+    const gql = `
+      query SearchProjects($query: String!) {
+        projects(filter: { name: { containsIgnoreCase: $query } }, first: 10) {
+          nodes {
+            id
+            name
+            url
+            state
+          }
+        }
+      }
+    `;
+
+    interface SearchProjectsResponse {
+      projects: {
+        nodes: Array<{ id: string; name: string; url: string; state: string }>;
+      };
+    }
+
+    const data = await this.executeGraphQL<SearchProjectsResponse>(gql, { query });
+    return data.projects.nodes;
+  }
+
+  /**
+   * Search for Linear issues by text query
+   */
+  async searchIssuesText(
+    query: string
+  ): Promise<Array<{ id: string; identifier: string; title: string; url: string }>> {
+    const gql = `
+      query SearchIssues($query: String!) {
+        issueSearch(query: $query, first: 20) {
+          nodes {
+            id
+            identifier
+            title
+            url
+          }
+        }
+      }
+    `;
+
+    interface SearchIssuesResponse {
+      issueSearch: {
+        nodes: Array<{ id: string; identifier: string; title: string; url: string }>;
+      };
+    }
+
+    const data = await this.executeGraphQL<SearchIssuesResponse>(gql, { query });
+    return data.issueSearch.nodes;
+  }
 }

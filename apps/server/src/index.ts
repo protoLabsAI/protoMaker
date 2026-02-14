@@ -469,6 +469,16 @@ auditService.initialize(authorityService);
 const pmAgent = new PMAuthorityAgent(events, authorityService, featureLoader, auditService);
 const projectService = new ProjectService(featureLoader);
 
+// Initialize Project Lifecycle Service (Linear as source of truth)
+const { ProjectLifecycleService } = await import('./services/project-lifecycle-service.js');
+const projectLifecycleService = new ProjectLifecycleService(
+  settingsService,
+  projectService,
+  featureLoader,
+  autoModeService,
+  events
+);
+
 // Initialize Linear Sync Service — bidirectional sync between features/projects and Linear
 const { linearSyncService } = await import('./services/linear-sync-service.js');
 linearSyncService.initialize(events, settingsService, featureLoader, projectService);
@@ -1008,7 +1018,10 @@ app.use(
   authMiddleware,
   createBriefingRoutes(eventHistoryService, briefingCursorService)
 );
-app.use('/api/projects', createProjectsRoutes(featureLoader, events, projectService));
+app.use(
+  '/api/projects',
+  createProjectsRoutes(featureLoader, events, projectService, projectLifecycleService)
+);
 app.use('/api/scheduler', createSchedulerRoutes(schedulerService));
 app.use('/api/ava', createAvaRoutes(avaGatewayService));
 app.use('/api/discord', createDiscordRoutes(discordBotService));

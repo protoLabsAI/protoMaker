@@ -22,11 +22,14 @@ import { createUpdateHandler } from './routes/update.js';
 import { createDeleteHandler } from './routes/delete.js';
 import { createCreateFeaturesHandler } from './routes/create-features.js';
 import { createArchiveHandler } from './routes/archive.js';
+import { createLifecycleRoutes } from './lifecycle/index.js';
+import type { ProjectLifecycleService } from '../../services/project-lifecycle-service.js';
 
 export function createProjectsRoutes(
   featureLoader: FeatureLoader,
   events: EventEmitter,
-  projectService: ProjectService
+  projectService: ProjectService,
+  lifecycleService?: ProjectLifecycleService
 ): Router {
   const router = Router();
 
@@ -70,6 +73,11 @@ export function createProjectsRoutes(
     validateSlugs('projectSlug'),
     createArchiveHandler(projectService)
   );
+
+  // Mount lifecycle routes if service is available
+  if (lifecycleService) {
+    router.use('/lifecycle', createLifecycleRoutes(lifecycleService, projectService));
+  }
 
   return router;
 }

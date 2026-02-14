@@ -280,7 +280,14 @@ export type EventType =
   | 'github:pr:approved'
   | 'github:pr:changes-requested'
   // GitHub state drift events (PR to Linear sync bridge)
-  | 'github-state-drift';
+  | 'github-state-drift'
+  // Project lifecycle events (Linear as source of truth)
+  | 'project:lifecycle:initiated'
+  | 'project:lifecycle:prd-generated'
+  | 'project:lifecycle:prd-approved'
+  | 'project:lifecycle:launched'
+  | 'project:lifecycle:completed'
+  | 'project:lifecycle:phase-changed';
 
 export type EventCallback = (type: EventType, payload: unknown) => void;
 

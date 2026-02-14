@@ -465,6 +465,16 @@ async function handleProjectUpdated(
     state: data.state,
     updatedAt: data.updatedAt,
   });
+
+  // Emit lifecycle phase change events based on Linear project state
+  if (data.state === 'started' || data.state === 'completed' || data.state === 'canceled') {
+    events.emit('project:lifecycle:phase-changed', {
+      linearProjectId: data.id,
+      name: data.name,
+      phase: data.state,
+      updatedAt: data.updatedAt,
+    });
+  }
 }
 
 /**
