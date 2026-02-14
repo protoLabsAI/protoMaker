@@ -11,6 +11,7 @@ import type { BaseChatModel } from '@langchain/core/language_models/chat_models'
 import { createLogger } from '@automaker/utils';
 import { LangfuseClient } from '@automaker/observability';
 import { compilePrompt } from '../prompt-loader.js';
+import { extractAllTags, extractTag, extractRequiredEnum } from '../xml-parser.js';
 
 const logger = createLogger('review-workers');
 
@@ -268,6 +269,132 @@ function runStyleHeuristicChecks(content: string): ReviewFinding[] {
       suggestion: 'Use formal language for professional documentation',
       timestamp,
     });
+  }
+
+  return findings;
+}
+
+/**
+ * Fallback heuristic checks when LLM call fails (FactChecker)
+ */
+function runFactHeuristicChecks(content: string, researchFindings?: string): ReviewFinding[] {
+  const findings: ReviewFinding[] = [];
+  const timestamp = new Date().toISOString();
+
+  logger.info('Running fallback fact-check heuristic checks...');
+
+  // Check for unsupported claims
+  const claimIndicators = [
+    'research shows',
+    'studies indicate',
+    'data suggests',
+    'according to',
+    'proven',
+  ];
+  const hasClaims = claimIndicators.some((indicator) => content.toLowerCase().includes(indicator));
+
+  if (hasClaims && !content.includes('[') && !content.includes('http')) {
+    findings.push({
+      reviewer: 'FactChecker',
+      severity: 'error',
+      message: 'Claims found without citations or references',
+      suggestion: 'Add citations or reference links for factual claims',
+      timestamp,
+    });
+  }
+
+  // Check if research findings are available for cross-reference
+  if (researchFindings) {
+    findings.push({
+      reviewer: 'FactChecker',
+      severity: 'info',
+      message: 'Cross-referenced content against research findings',
+      timestamp,
+    });
+
+    // Check for consistency with research
+    const researchKeywords = researchFindings.toLowerCase().split(/\s+/);
+    const contentKeywords = content.toLowerCase().split(/\s+/);
+    const overlap = researchKeywords.filter((kw) => contentKeywords.includes(kw));
+
+    if (overlap.length < 10) {
+      findings.push({
+        reviewer: 'FactChecker',
+        severity: 'warning',
+        message: 'Limited overlap with research findings',
+        suggestion: 'Ensure content aligns with research data',
+        timestamp,
+      });
+    }
+  } else {
+    findings.push({
+      reviewer: 'FactChecker',
+      severity: 'info',
+      message: 'No research findings provided for cross-reference',
+      timestamp,
+    });
+  }
+
+  // Check for numerical claims without sources
+  const numericalClaims = content.match(/\b\d+(\.\d+)?%?\b/g);
+  if (numericalClaims && numericalClaims.length > 3) {
+    const hasSources = content.includes('source:') || content.includes('Source:');
+    if (!hasSources) {
+      findings.push({
+        reviewer: 'FactChecker',
+        severity: 'warning',
+        message: 'Multiple numerical claims found without clear sources',
+        suggestion: 'Provide sources for statistical data',
+        timestamp,
+      });
+    }
+  }
+
+  return findings;
+}
+
+/**
+ * Parse findings from XML using xml-parser utilities
+ */
+function parseFactFindings(xmlOutput: string): ReviewFinding[] {
+  const findings: ReviewFinding[] = [];
+  const timestamp = new Date().toISOString();
+
+  try {
+    const findingBlocks = extractAllTags(xmlOutput, 'finding');
+
+    for (const block of findingBlocks) {
+      try {
+        const severity = extractRequiredEnum(block, 'severity', ['error', 'warning', 'info']);
+        const message = extractTag(block, 'message');
+        const location = extractTag(block, 'location');
+        const suggestion = extractTag(block, 'suggestion');
+
+        if (!message) {
+          logger.warn('Skipping FactChecker finding with missing message');
+          continue;
+        }
+
+        findings.push({
+          reviewer: 'FactChecker',
+          severity,
+          message,
+          location,
+          suggestion,
+          timestamp,
+        });
+      } catch (error) {
+        logger.warn(
+          'Failed to parse individual FactChecker finding:',
+          error instanceof Error ? error.message : String(error)
+        );
+      }
+    }
+  } catch (error) {
+    logger.warn(
+      'Failed to parse FactChecker findings XML:',
+      error instanceof Error ? error.message : String(error)
+    );
   }
 
   return findings;
@@ -554,79 +681,111 @@ export async function styleReviewerNode(
 
 /**
  * FactChecker node
- * Cross-references claims against research findings
+ * Cross-references claims against research findings using LLM with xml-parser utilities
  */
 export async function factCheckerNode(
   state: ReviewWorkerState
 ): Promise<Partial<ReviewWorkerState>> {
-  const { content, researchFindings } = state;
-  const findings: ReviewFinding[] = [];
+  const { content, researchFindings, model, langfuseClient, traceId } = state;
+  let findings: ReviewFinding[] = [];
 
-  // Check for unsupported claims
-  const claimIndicators = [
-    'research shows',
-    'studies indicate',
-    'data suggests',
-    'according to',
-    'proven',
-  ];
-  const hasClaims = claimIndicators.some((indicator) => content.toLowerCase().includes(indicator));
-
-  if (hasClaims && !content.includes('[') && !content.includes('http')) {
-    findings.push({
-      reviewer: 'FactChecker',
-      severity: 'error',
-      message: 'Claims found without citations or references',
-      suggestion: 'Add citations or reference links for factual claims',
-      timestamp: new Date().toISOString(),
-    });
+  // If no model available, fall back to heuristics
+  if (!model) {
+    logger.warn('No LLM model available for FactChecker, using heuristic checks only');
+    findings = runFactHeuristicChecks(content, researchFindings);
+    return { findings };
   }
 
-  // Check if research findings are available for cross-reference
-  if (researchFindings) {
-    findings.push({
-      reviewer: 'FactChecker',
-      severity: 'info',
-      message: 'Cross-referenced content against research findings',
-      timestamp: new Date().toISOString(),
+  try {
+    logger.info('Starting LLM-based fact checking...');
+
+    // Build the prompt using compilePrompt (loads from prompts/fact-checker.md)
+    const compiled = await compilePrompt({
+      name: 'fact-checker',
+      variables: {
+        content,
+        domain: 'technical documentation',
+        standards: 'high accuracy, proper citations, verified claims',
+        sources: researchFindings || 'No research findings provided',
+        critical_claims: 'All factual and statistical claims',
+      },
+      langfuseClient,
     });
 
-    // Check for consistency with research
-    const researchKeywords = researchFindings.toLowerCase().split(/\s+/);
-    const contentKeywords = content.toLowerCase().split(/\s+/);
-    const overlap = researchKeywords.filter((kw) => contentKeywords.includes(kw));
+    // Create Langfuse generation trace if available
+    const generationStartTime = new Date();
+    let generationId: string | undefined;
 
-    if (overlap.length < 10) {
-      findings.push({
-        reviewer: 'FactChecker',
-        severity: 'warning',
-        message: 'Limited overlap with research findings',
-        suggestion: 'Ensure content aligns with research data',
-        timestamp: new Date().toISOString(),
+    if (langfuseClient?.isAvailable() && traceId) {
+      generationId = `gen-fact-check-${Date.now()}`;
+      langfuseClient.createGeneration({
+        traceId,
+        id: generationId,
+        name: 'fact-check',
+        model: 'fact-checker-model',
+        input: compiled.prompt,
+        metadata: {
+          contentLength: content.length,
+          reviewType: 'fact-check',
+          hasResearchFindings: !!researchFindings,
+          promptSource: compiled.source,
+        },
+        startTime: generationStartTime,
       });
     }
-  } else {
-    findings.push({
-      reviewer: 'FactChecker',
-      severity: 'info',
-      message: 'No research findings provided for cross-reference',
-      timestamp: new Date().toISOString(),
-    });
-  }
 
-  // Check for numerical claims without sources
-  const numericalClaims = content.match(/\b\d+(\.\d+)?%?\b/g);
-  if (numericalClaims && numericalClaims.length > 3) {
-    const hasSources = content.includes('source:') || content.includes('Source:');
-    if (!hasSources) {
-      findings.push({
-        reviewer: 'FactChecker',
-        severity: 'warning',
-        message: 'Multiple numerical claims found without clear sources',
-        suggestion: 'Provide sources for statistical data',
-        timestamp: new Date().toISOString(),
-      });
+    // Invoke model directly (follows section-writer pattern)
+    const response = await model.invoke([{ role: 'user', content: compiled.prompt }]);
+
+    // Extract content from response
+    let responseText = '';
+    if (typeof response.content === 'string') {
+      responseText = response.content;
+    } else if (Array.isArray(response.content)) {
+      responseText = response.content
+        .map((c: unknown) => {
+          if (typeof c === 'string') return c;
+          if (c && typeof c === 'object' && 'text' in c) return (c as { text: string }).text;
+          return '';
+        })
+        .join('');
     }
+
+    // Update Langfuse trace
+    if (langfuseClient?.isAvailable() && traceId && generationId) {
+      langfuseClient.createGeneration({
+        traceId,
+        id: generationId,
+        name: 'fact-check',
+        model: 'fact-checker-model',
+        input: compiled.prompt,
+        output: responseText,
+        metadata: {
+          contentLength: content.length,
+          reviewType: 'fact-check',
+          success: true,
+        },
+        startTime: generationStartTime,
+        endTime: new Date(),
+      });
+      await langfuseClient.flush();
+    }
+
+    logger.debug('LLM response received, parsing XML findings...');
+
+    // Parse XML findings using xml-parser utilities
+    findings = parseFactFindings(responseText);
+
+    logger.info(`Fact check complete, found ${findings.length} finding(s)`);
+
+    // If no findings were parsed, fall back to heuristics
+    if (findings.length === 0) {
+      logger.warn('No findings parsed from LLM response, using heuristics');
+      findings = runFactHeuristicChecks(content, researchFindings);
+    }
+  } catch (error) {
+    logger.error('LLM fact checking failed, falling back to heuristics:', error);
+    findings = runFactHeuristicChecks(content, researchFindings);
   }
 
   return { findings };
