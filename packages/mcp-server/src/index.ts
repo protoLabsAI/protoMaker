@@ -2432,7 +2432,8 @@ const tools: Tool[] = [
       properties: {
         reportPath: {
           type: 'string',
-          description: 'Absolute path to the report HTML file (e.g., {projectPath}/protoLabs.report.html)',
+          description:
+            'Absolute path to the report HTML file (e.g., {projectPath}/protoLabs.report.html)',
         },
       },
       required: ['reportPath'],
