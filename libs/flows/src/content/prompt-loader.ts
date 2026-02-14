@@ -20,7 +20,8 @@ export type PromptName =
   | 'technical-reviewer'
   | 'style-reviewer'
   | 'fact-checker'
-  | 'assembler';
+  | 'assembler'
+  | 'antagonistic-review';
 
 /**
  * Variables for prompt interpolation

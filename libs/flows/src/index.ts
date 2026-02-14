@@ -124,6 +124,19 @@ export {
   type ReviewWorkerState,
 } from './content/nodes/review-workers.js';
 
+// Antagonistic review primitive
+export {
+  createAntagonisticReviewerGraph,
+  executeAntagonisticReviewer,
+  AntagonisticReviewerState,
+  type AntagonisticReviewerStateType,
+  type RubricDimension,
+  type ReviewRubric,
+  type DimensionScore,
+  type ReviewVerdict,
+  type ReviewResult,
+} from './content/subgraphs/antagonistic-reviewer.js';
+
 // Content creation flow
 export {
   createContentCreationFlow,
