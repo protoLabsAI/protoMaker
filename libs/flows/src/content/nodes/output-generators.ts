@@ -79,9 +79,7 @@ export interface OutputState {
 /**
  * MarkdownOutputNode - Generates final markdown with frontmatter
  */
-export async function markdownOutputNode(
-  state: OutputState
-): Promise<Partial<OutputState>> {
+export async function markdownOutputNode(state: OutputState): Promise<Partial<OutputState>> {
   const { content, title, author } = state;
 
   // Generate frontmatter
@@ -304,7 +302,8 @@ function extractQAPairs(content: string): QAPair[] {
   const pairs: QAPair[] = [];
 
   // Match Q&A patterns: "Q:", "Question:", "A:", "Answer:"
-  const qaPattern = /(?:Q(?:uestion)?[:.]?\s*)(.*?)\s*(?:A(?:nswer)?[:.]?\s*)(.*?)(?=(?:Q(?:uestion)?[:.]|\n\n|$))/gis;
+  const qaPattern =
+    /(?:Q(?:uestion)?[:.]?\s*)(.*?)\s*(?:A(?:nswer)?[:.]?\s*)(.*?)(?=(?:Q(?:uestion)?[:.]|\n\n|$))/gis;
 
   let match;
   while ((match = qaPattern.exec(content)) !== null) {
@@ -343,7 +342,8 @@ function extractInstructions(content: string): Instruction[] {
   const instructions: Instruction[] = [];
 
   // Match imperative headings followed by steps/explanation
-  const imperativePattern = /^#+\s+((?:How to|Create|Build|Setup|Configure|Install|Deploy|Update|Add|Remove).+?)\s*\n+(.+?)(?=\n#+|\n\n\n|\Z)/gms;
+  const imperativePattern =
+    /^#+\s+((?:How to|Create|Build|Setup|Configure|Install|Deploy|Update|Add|Remove).+?)\s*\n+(.+?)(?=\n#+|\n\n\n|\Z)/gms;
 
   let match;
   while ((match = imperativePattern.exec(content)) !== null) {
