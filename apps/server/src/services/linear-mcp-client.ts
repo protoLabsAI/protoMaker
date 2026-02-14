@@ -705,19 +705,6 @@ export class LinearMCPClient {
   }
 
   /**
-<<<<<<< HEAD
-   * Create an issue relation (blocks relation)
-   *
-   * @param issueId - The issue ID that is blocked
-   * @param relatedIssueId - The issue ID that blocks it
-   * @returns True if relation was created successfully
-   * @throws {LinearAPIError} On API errors
-   */
-  async createIssueRelation(issueId: string, relatedIssueId: string): Promise<boolean> {
-    const mutation = `
-      mutation CreateIssueRelation($issueId: String!, $relatedIssueId: String!, $type: IssueRelationType!) {
-        issueRelationCreate(input: { issueId: $issueId, relatedIssueId: $relatedIssueId, type: $type }) {
-=======
    * Create an issue relation
    *
    * @param options - Issue relation options
@@ -740,7 +727,6 @@ export class LinearMCPClient {
             type: $type
           }
         ) {
->>>>>>> b6dc55af (feat(linear): add sync-dependencies endpoint for backfilling issue relations)
           success
           issueRelation {
             id
@@ -753,11 +739,7 @@ export class LinearMCPClient {
     const variables = {
       issueId,
       relatedIssueId,
-<<<<<<< HEAD
-      type: 'blocks',
-=======
       type,
->>>>>>> b6dc55af (feat(linear): add sync-dependencies endpoint for backfilling issue relations)
     };
 
     interface CreateIssueRelationResponse {
@@ -773,24 +755,15 @@ export class LinearMCPClient {
     const data = await this.executeGraphQL<CreateIssueRelationResponse>(mutation, variables);
 
     if (!data.issueRelationCreate.success) {
-<<<<<<< HEAD
-      throw new LinearAPIError('Failed to create Linear issue relation');
-    }
-
-    logger.info(
-      `Created issue relation: ${issueId} blocked by ${relatedIssueId} (relation ID: ${data.issueRelationCreate.issueRelation.id})`
-=======
       throw new LinearAPIError('Failed to create issue relation');
     }
 
     logger.info(
       `Created issue relation: ${type} (${issueId} -> ${relatedIssueId}), id: ${data.issueRelationCreate.issueRelation.id}`
->>>>>>> b6dc55af (feat(linear): add sync-dependencies endpoint for backfilling issue relations)
     );
 
     return true;
   }
-<<<<<<< HEAD
 
   /**
    * Get existing issue relations for an issue
@@ -841,6 +814,4 @@ export class LinearMCPClient {
       type: relation.type,
     }));
   }
-=======
->>>>>>> b6dc55af (feat(linear): add sync-dependencies endpoint for backfilling issue relations)
 }
