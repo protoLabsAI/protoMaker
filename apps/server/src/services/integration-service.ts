@@ -178,6 +178,42 @@ export class IntegrationService {
             type
           );
           break;
+        case 'discord:message:detected':
+          this.handleDiscordMessage(
+            payload as {
+              channelId: string;
+              channelName?: string;
+              userId: string;
+              username: string;
+              content: string;
+              timestamp: string;
+            }
+          );
+          break;
+        case 'linear:issue:detected':
+          this.handleLinearIssue(
+            payload as {
+              issueId: string;
+              title: string;
+              description?: string;
+              state?: { name: string };
+              createdAt: string;
+            }
+          );
+          break;
+        case 'webhook:github:issue':
+          this.handleGitHubIssue(
+            payload as {
+              action: string;
+              issueNumber: number;
+              title: string;
+              body: string;
+              author: string;
+              createdAt: string;
+              repository: string;
+            }
+          );
+          break;
       }
     });
 
@@ -796,6 +832,150 @@ export class IntegrationService {
       webhookToken: integrations.discord.webhookToken,
       action: 'send_message',
       content: message,
+    });
+  }
+
+  // ============================================================================
+  // Signal Intake - Simplified keyword detection for Ava triage
+  // ============================================================================
+
+  /**
+   * Keywords that indicate a message is a signal (idea or request)
+   */
+  private readonly SIGNAL_KEYWORDS = [
+    'we need',
+    'let us build',
+    'lets build',
+    "let's build",
+    'feature request',
+    'idea:',
+    'what if',
+    'could we',
+    'can we build',
+    'we should',
+    'it would be cool',
+    'request:',
+    'proposal:',
+  ];
+
+  /**
+   * Detect if a message contains signal keywords
+   */
+  private detectSignal(content: string): boolean {
+    const lowerContent = content.toLowerCase();
+    return this.SIGNAL_KEYWORDS.some((keyword) => lowerContent.includes(keyword));
+  }
+
+  /**
+   * Handle Discord message events and detect signals
+   */
+  private async handleDiscordMessage(payload: {
+    channelId: string;
+    channelName?: string;
+    userId: string;
+    username: string;
+    content: string;
+    timestamp: string;
+  }): Promise<void> {
+    // Simple keyword detection - not a classification engine
+    if (!this.detectSignal(payload.content)) {
+      // Casual conversation, let it pass through
+      return;
+    }
+
+    // Signal detected - route to Ava triage
+    logger.info(`Signal detected in Discord message from ${payload.username}`, {
+      channelId: payload.channelId,
+      channelName: payload.channelName,
+      contentPreview: payload.content.slice(0, 100),
+    });
+
+    if (!this.emitter) return;
+
+    this.emitter.emit('signal:received', {
+      source: 'discord',
+      content: payload.content,
+      author: {
+        id: payload.userId,
+        name: payload.username,
+      },
+      channelContext: {
+        channelId: payload.channelId,
+        channelName: payload.channelName,
+      },
+      timestamp: payload.timestamp,
+    });
+  }
+
+  /**
+   * Handle Linear issue creation events and detect signals
+   */
+  private async handleLinearIssue(payload: {
+    issueId: string;
+    title: string;
+    description?: string;
+    state?: { name: string };
+    createdAt: string;
+  }): Promise<void> {
+    // All new Linear issues are treated as signals
+    logger.info(`Signal detected from Linear issue: ${payload.title}`, {
+      issueId: payload.issueId,
+    });
+
+    if (!this.emitter) return;
+
+    this.emitter.emit('signal:received', {
+      source: 'linear',
+      content: `${payload.title}\n\n${payload.description || ''}`,
+      author: {
+        id: payload.issueId,
+        name: 'Linear Issue',
+      },
+      channelContext: {
+        issueId: payload.issueId,
+        state: payload.state?.name,
+      },
+      timestamp: payload.createdAt,
+    });
+  }
+
+  /**
+   * Handle GitHub issue creation events and detect signals
+   */
+  private async handleGitHubIssue(payload: {
+    action: string;
+    issueNumber: number;
+    title: string;
+    body: string;
+    author: string;
+    createdAt: string;
+    repository: string;
+  }): Promise<void> {
+    // Only handle newly opened issues
+    if (payload.action !== 'opened') {
+      return;
+    }
+
+    // All new GitHub issues are treated as signals
+    logger.info(`Signal detected from GitHub issue #${payload.issueNumber}: ${payload.title}`, {
+      repository: payload.repository,
+      author: payload.author,
+    });
+
+    if (!this.emitter) return;
+
+    this.emitter.emit('signal:received', {
+      source: 'github',
+      content: `${payload.title}\n\n${payload.body}`,
+      author: {
+        id: payload.author,
+        name: payload.author,
+      },
+      channelContext: {
+        issueNumber: payload.issueNumber,
+        repository: payload.repository,
+      },
+      timestamp: payload.createdAt,
     });
   }
 }

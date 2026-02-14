@@ -34,6 +34,23 @@ interface GitHubPullRequestPayload {
   };
 }
 
+interface GitHubIssuePayload {
+  action: string;
+  issue: {
+    number: number;
+    title: string;
+    body: string | null;
+    state: string;
+    created_at: string;
+    user: {
+      login: string;
+    };
+  };
+  repository: {
+    full_name: string;
+  };
+}
+
 /**
  * Verify GitHub webhook signature
  */
@@ -122,9 +139,38 @@ export function createGitHubWebhookHandler(events: EventEmitter, settingsService
 
       // Check event type
       const eventType = req.headers['x-github-event'] as string | undefined;
-      if (eventType !== 'pull_request' && eventType !== 'pull_request_review') {
+      if (
+        eventType !== 'pull_request' &&
+        eventType !== 'pull_request_review' &&
+        eventType !== 'issues'
+      ) {
         logger.debug(`Ignoring event: ${eventType}`);
         res.json({ success: true, message: 'Event type not handled' });
+        return;
+      }
+
+      // Handle issues events (created)
+      if (eventType === 'issues') {
+        const issuePayload = req.body as GitHubIssuePayload;
+
+        if (issuePayload.action === 'opened') {
+          logger.info(
+            `GitHub issue #${issuePayload.issue.number} created: ${issuePayload.issue.title}`
+          );
+
+          // Emit issue detected event for signal intake
+          events.emit('webhook:github:issue', {
+            action: 'opened',
+            issueNumber: issuePayload.issue.number,
+            title: issuePayload.issue.title,
+            body: issuePayload.issue.body || '',
+            author: issuePayload.issue.user.login,
+            createdAt: issuePayload.issue.created_at,
+            repository: issuePayload.repository.full_name,
+          });
+        }
+
+        res.json({ success: true, message: 'Issue event processed' });
         return;
       }
 

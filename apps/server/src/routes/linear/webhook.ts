@@ -293,7 +293,14 @@ async function handleIssueEvent(
         title: data.title,
         state: data.state?.name,
       });
-      // Future: handle issue creation if needed
+      // Emit issue detected event for signal intake
+      events.emit('linear:issue:detected', {
+        issueId: data.id,
+        title: data.title,
+        description: data.description,
+        state: data.state,
+        createdAt: data.createdAt,
+      });
       break;
     case 'update':
       await handleIssueUpdated(data, events, featureLoader);
