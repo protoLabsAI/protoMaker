@@ -13,8 +13,43 @@ import { getAutomakerDir } from '@automaker/platform';
 import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { ChatAnthropic } from '@langchain/anthropic';
 import { createContentCreationFlow } from '@automaker/flows';
+import type { EventEmitter } from '../lib/events.js';
 
 const logger = createLogger('ContentFlowService');
+
+/**
+ * Maps LangGraph node names to reviewing_* status values.
+ * When the flow enters a review node, the service status reflects it.
+ */
+const NODE_STATUS_MAP: Record<string, ContentFlowStatus['status']> = {
+  research_review: 'reviewing_research',
+  outline_review: 'reviewing_outline',
+  final_content_review: 'reviewing_content',
+};
+
+/**
+ * Maps LangGraph node names to approximate progress percentages
+ */
+const NODE_PROGRESS_MAP: Record<string, number> = {
+  generate_queries: 5,
+  fan_out_research: 10,
+  research_delegate: 15,
+  research_review: 20,
+  research_hitl: 22,
+  generate_outline: 25,
+  outline_review: 35,
+  outline_hitl: 40,
+  fan_out_generation: 45,
+  generation_delegate: 55,
+  assemble: 65,
+  fan_out_review: 70,
+  review_delegate: 75,
+  final_content_review: 80,
+  final_review_hitl: 85,
+  fan_out_output: 90,
+  output_delegate: 95,
+  complete: 100,
+};
 
 /**
  * Content creation config type (mirrors ContentConfig from content-creation-flow)
@@ -83,9 +118,35 @@ export interface HITLReview {
  */
 export class ContentFlowService {
   private activeRuns: Map<string, ContentFlowStatus>;
+  private events: EventEmitter | null = null;
 
   constructor() {
     this.activeRuns = new Map();
+  }
+
+  /**
+   * Set event emitter for WebSocket status updates
+   */
+  setEventEmitter(emitter: EventEmitter): void {
+    this.events = emitter;
+  }
+
+  /**
+   * Emit a content flow status event over WebSocket
+   */
+  private emitStatus(status: ContentFlowStatus): void {
+    if (this.events) {
+      this.events.emit('feature:progress', {
+        type: 'content-flow',
+        runId: status.runId,
+        status: status.status,
+        progress: status.progress,
+        currentNode: status.currentNode,
+        reviewScores: status.reviewScores,
+        hitlGatesPending: status.hitlGatesPending,
+        error: status.error,
+      });
+    }
   }
 
   /**
@@ -155,12 +216,14 @@ export class ContentFlowService {
 
     const flow = createContentCreationFlow();
 
-    this.executeFlow(runId, projectPath, flow, config).catch((error) => {
+    this.executeFlow(runId, projectPath, flow, config).catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : String(error);
       logger.error(`Flow ${runId} failed:`, error);
       const failedStatus = this.activeRuns.get(runId);
       if (failedStatus) {
         failedStatus.status = 'failed';
-        failedStatus.error = error.message;
+        failedStatus.error = message;
+        this.emitStatus(failedStatus);
       }
     });
 
@@ -168,10 +231,53 @@ export class ContentFlowService {
   }
 
   /**
-   * Execute the flow asynchronously.
+   * Extract review scores from a flow state object
+   */
+  private extractReviewScores(state: Record<string, unknown>): ContentFlowStatus['reviewScores'] {
+    const reviewScores: ContentFlowStatus['reviewScores'] = {};
+
+    const researchReview = state.researchReview as
+      | { percentage: number; passed: boolean; verdict: string }
+      | undefined;
+    if (researchReview) {
+      reviewScores.research = {
+        percentage: researchReview.percentage,
+        passed: researchReview.passed,
+        verdict: researchReview.verdict,
+      };
+    }
+
+    const outlineReview = state.outlineReview as
+      | { percentage: number; passed: boolean; verdict: string }
+      | undefined;
+    if (outlineReview) {
+      reviewScores.outline = {
+        percentage: outlineReview.percentage,
+        passed: outlineReview.passed,
+        verdict: outlineReview.verdict,
+      };
+    }
+
+    const finalContentReview = state.finalContentReview as
+      | { percentage: number; passed: boolean; verdict: string }
+      | undefined;
+    if (finalContentReview) {
+      reviewScores.content = {
+        percentage: finalContentReview.percentage,
+        passed: finalContentReview.passed,
+        verdict: finalContentReview.verdict,
+      };
+    }
+
+    return reviewScores;
+  }
+
+  /**
+   * Execute the flow asynchronously using streaming for node-level status tracking.
    *
-   * In autonomous mode (default), the flow runs straight through with
+   * In autonomous mode (default), the flow streams through all nodes with
    * antagonistic review nodes handling quality gates automatically.
+   * Status updates are emitted as each node completes.
    *
    * In HITL mode (enableHITL=true), the flow compiles with interruptBefore
    * and pauses at each HITL gate for human input.
@@ -179,7 +285,7 @@ export class ContentFlowService {
   private async executeFlow(
     runId: string,
     projectPath: string,
-    flow: any,
+    flow: ReturnType<typeof createContentCreationFlow>,
     config: ContentCreationConfig
   ): Promise<void> {
     const status = this.activeRuns.get(runId);
@@ -188,36 +294,39 @@ export class ContentFlowService {
     try {
       const threadConfig = { configurable: { thread_id: runId } };
 
-      // Update status to show we're in the research phase
-      status.currentNode = 'generate_queries';
-      status.progress = 5;
+      // Stream the flow to get per-node updates
+      let lastState: Record<string, unknown> = {};
+      const stream = await flow.stream({ config }, threadConfig);
 
-      const result = await flow.invoke({ config }, threadConfig);
+      for await (const update of stream) {
+        // Each update is { nodeName: nodeOutput }
+        const nodeName = Object.keys(update)[0];
+        if (!nodeName) continue;
 
-      logger.info(`Flow ${runId} completed with keys:`, Object.keys(result));
+        lastState = { ...lastState, ...update[nodeName] };
 
-      // Extract review scores from final state
-      const reviewScores: ContentFlowStatus['reviewScores'] = {};
-      if (result.researchReview) {
-        reviewScores.research = {
-          percentage: result.researchReview.percentage,
-          passed: result.researchReview.passed,
-          verdict: result.researchReview.verdict,
-        };
-      }
-      if (result.outlineReview) {
-        reviewScores.outline = {
-          percentage: result.outlineReview.percentage,
-          passed: result.outlineReview.passed,
-          verdict: result.outlineReview.verdict,
-        };
-      }
-      if (result.finalContentReview) {
-        reviewScores.content = {
-          percentage: result.finalContentReview.percentage,
-          passed: result.finalContentReview.passed,
-          verdict: result.finalContentReview.verdict,
-        };
+        // Update status based on the node that just completed
+        const reviewingStatus = NODE_STATUS_MAP[nodeName];
+        if (reviewingStatus) {
+          status.status = reviewingStatus;
+        } else if (status.status !== 'interrupted') {
+          status.status = 'running';
+        }
+
+        // Update progress
+        const progress = NODE_PROGRESS_MAP[nodeName];
+        if (progress !== undefined) {
+          status.progress = progress;
+        }
+
+        status.currentNode = nodeName;
+
+        // Incrementally update review scores as they become available
+        status.reviewScores = this.extractReviewScores(lastState);
+
+        this.emitStatus(status);
+
+        logger.debug(`Flow ${runId} completed node: ${nodeName} (${status.progress}%)`);
       }
 
       // Check if we hit an interrupt (only possible when enableHITL=true)
@@ -226,7 +335,6 @@ export class ContentFlowService {
         const nextNode = interruptInfo.next[0];
         status.status = 'interrupted';
         status.currentNode = nextNode;
-        status.reviewScores = reviewScores;
 
         if (nextNode === 'research_hitl') {
           status.hitlGatesPending = ['research_hitl'];
@@ -240,19 +348,24 @@ export class ContentFlowService {
         }
 
         logger.info(`Flow ${runId} interrupted at ${nextNode}`);
+        this.emitStatus(status);
       } else {
         // Flow completed (autonomous or after all HITL gates passed)
         status.status = 'completed';
         status.progress = 100;
         status.completedAt = Date.now();
-        status.reviewScores = reviewScores;
 
-        await this.saveOutputs(runId, projectPath, result);
+        await this.saveOutputs(runId, projectPath, lastState);
+        this.emitStatus(status);
+
+        logger.info(`Flow ${runId} completed with review scores:`, status.reviewScores);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
       logger.error(`Flow ${runId} execution error:`, error);
       status.status = 'failed';
-      status.error = error.message;
+      status.error = message;
+      this.emitStatus(status);
     }
   }
 
@@ -310,13 +423,37 @@ export class ContentFlowService {
 
     status.status = 'running';
     status.hitlGatesPending = [];
+    this.emitStatus(status);
 
     const threadConfig = { configurable: { thread_id: runId } };
 
     try {
-      const result = await flow.invoke(resumeState, threadConfig);
+      // Stream the resumed flow to track node transitions
+      let lastState: Record<string, unknown> = {};
+      const stream = await flow.stream(resumeState, threadConfig);
 
-      logger.info(`Flow ${runId} resumed with keys:`, Object.keys(result));
+      for await (const update of stream) {
+        const nodeName = Object.keys(update)[0];
+        if (!nodeName) continue;
+
+        lastState = { ...lastState, ...update[nodeName] };
+
+        const reviewingStatus = NODE_STATUS_MAP[nodeName];
+        if (reviewingStatus) {
+          status.status = reviewingStatus;
+        } else if (status.status !== 'interrupted') {
+          status.status = 'running';
+        }
+
+        const progress = NODE_PROGRESS_MAP[nodeName];
+        if (progress !== undefined) {
+          status.progress = progress;
+        }
+
+        status.currentNode = nodeName;
+        status.reviewScores = this.extractReviewScores(lastState);
+        this.emitStatus(status);
+      }
 
       // Check if we hit another interrupt or completed
       const interruptInfo = await flow.getState(threadConfig);
@@ -335,19 +472,24 @@ export class ContentFlowService {
           status.hitlGatesPending = ['final_review_hitl'];
           status.progress = 80;
         }
+
+        this.emitStatus(status);
       } else {
         status.status = 'completed';
         status.progress = 100;
         status.completedAt = Date.now();
 
-        await this.saveOutputs(runId, projectPath, result);
+        await this.saveOutputs(runId, projectPath, lastState);
+        this.emitStatus(status);
       }
 
       return { success: true, status };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
       logger.error(`Flow ${runId} resume error:`, error);
       status.status = 'failed';
-      status.error = error.message;
+      status.error = message;
+      this.emitStatus(status);
       return { success: false, status };
     }
   }
@@ -355,14 +497,21 @@ export class ContentFlowService {
   /**
    * Save flow outputs to disk
    */
-  private async saveOutputs(runId: string, projectPath: string, finalState: any): Promise<void> {
+  private async saveOutputs(
+    runId: string,
+    projectPath: string,
+    finalState: Record<string, unknown>
+  ): Promise<void> {
     const automakerDir = getAutomakerDir(projectPath);
     const contentDir = path.join(automakerDir, 'content', runId);
 
     await fs.mkdir(contentDir, { recursive: true });
 
-    if (finalState.outputs && finalState.outputs.length > 0) {
-      for (const output of finalState.outputs) {
+    const outputs = finalState.outputs as
+      | Array<{ success: boolean; format: string; content: string }>
+      | undefined;
+    if (outputs && outputs.length > 0) {
+      for (const output of outputs) {
         if (output.success) {
           const ext = output.format === 'markdown' ? 'md' : output.format;
           const filename = `content.${ext}`;
@@ -376,10 +525,11 @@ export class ContentFlowService {
 
     // Save metadata including review scores
     const status = this.activeRuns.get(runId);
+    const flowConfig = finalState.config as { topic?: string; format?: string } | undefined;
     const metadata = {
       runId,
-      topic: finalState.config?.topic || 'Unknown',
-      format: finalState.config?.format || 'unknown',
+      topic: flowConfig?.topic || 'Unknown',
+      format: flowConfig?.format || 'unknown',
       status: 'completed',
       outputPath: contentDir,
       reviewScores: status?.reviewScores,
@@ -487,9 +637,10 @@ ${content}`;
 
       logger.info(`Exported content to ${outputPath}`);
       return { success: true, filePath: outputPath };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
       logger.error(`Export failed for ${runId}:`, error);
-      return { success: false, error: error.message };
+      return { success: false, error: message };
     }
   }
 }
