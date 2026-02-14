@@ -55,13 +55,15 @@ export function SystemTab({ projectPath }: SystemTabProps) {
     : 0;
 
   // Crew loop flows - map crew status to flow format
-  const crewFlows =
-    health?.crew?.members?.map((member: any) => ({
-      name: member.name || member.role,
-      status: member.status === 'active' ? 'active' : member.status === 'error' ? 'error' : 'idle',
-      lastRun: member.lastRun,
-      avgLatencyMs: member.avgLatencyMs,
-    })) ?? [];
+  // crew.members is a Record<string, MemberStatus>, not an array
+  const crewFlows = health?.crew?.members
+    ? Object.values(health.crew.members).map((member: any) => ({
+        name: member.displayName || member.id,
+        status: member.running ? 'active' : member.enabled ? 'idle' : 'error',
+        lastRun: member.lastCheck,
+        avgLatencyMs: undefined,
+      }))
+    : [];
 
   // Add auto-mode status as a flow
   if (health?.autoMode) {

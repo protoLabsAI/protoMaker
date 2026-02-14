@@ -46,7 +46,7 @@ export function MetricsSection({ projectPath }: MetricsSectionProps) {
       }
 
       // Invalidate on agent lifecycle events
-      if (type === 'agent:started' || type === 'agent:stopped') {
+      if (type === 'feature:started' || type === 'feature:stopped') {
         queryClient.invalidateQueries({ queryKey: queryKeys.metrics.capacity(projectPath) });
         queryClient.invalidateQueries({ queryKey: queryKeys.runningAgents.all() });
       }

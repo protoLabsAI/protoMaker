@@ -26,7 +26,6 @@ export type EventType =
   | 'feature:retry'
   | 'feature:recovery'
   | 'feature:pr-merged'
-  | 'agent:timeout'
   | 'project:analysis-started'
   | 'project:analysis-progress'
   | 'project:analysis-completed'
@@ -426,3 +425,76 @@ export interface GitHubPRChangesRequestedPayload {
   /** Timestamp of the event */
   timestamp: string;
 }
+
+/**
+ * Maps specific EventType values to their payload types.
+ * Events without an explicit entry default to Record<string, unknown>.
+ */
+export interface EventPayloadMap {
+  // PR remediation events
+  'pr:remediation-started': PRRemediationStartedPayload;
+  'pr:thread-evaluated': PRThreadEvaluatedPayload;
+  'pr:threads-resolved': PRThreadsResolvedPayload;
+
+  // GitHub PR state events
+  'github:pr:review-submitted': GitHubPRReviewSubmittedPayload;
+  'github:pr:checks-updated': GitHubPRChecksUpdatedPayload;
+  'github:pr:approved': GitHubPRApprovedPayload;
+  'github:pr:changes-requested': GitHubPRChangesRequestedPayload;
+
+  // Feature lifecycle
+  'feature:started': { featureId: string; featureTitle?: string; projectPath?: string };
+  'feature:completed': { featureId: string; featureTitle?: string; projectPath?: string };
+  'feature:stopped': { featureId: string; featureTitle?: string; projectPath?: string };
+  'feature:error': {
+    featureId: string;
+    featureTitle?: string;
+    error?: string;
+    projectPath?: string;
+  };
+  'feature:retry': {
+    featureId: string;
+    featureTitle?: string;
+    attempt?: number;
+    projectPath?: string;
+  };
+  'feature:committed': { featureId: string; featureTitle?: string; projectPath?: string };
+  'feature:pr-merged': {
+    featureId: string;
+    featureTitle?: string;
+    prNumber?: number;
+    projectPath?: string;
+  };
+  'feature:status-changed': {
+    featureId: string;
+    oldStatus?: string;
+    newStatus?: string;
+    projectPath?: string;
+  };
+
+  // Auto-mode events
+  'auto-mode:started': { projectPath?: string };
+  'auto-mode:stopped': { projectPath?: string; reason?: string };
+  'auto-mode:idle': { projectPath?: string };
+
+  // Health events
+  'health:issue-detected': { message?: string; severity?: string };
+  'health:issue-remediated': { message?: string };
+
+  // Milestone/project lifecycle
+  'milestone:completed': { milestone?: string; projectPath?: string };
+  'project:completed': { project?: string; projectPath?: string };
+}
+
+/**
+ * Get the payload type for a specific event. Falls back to Record<string, unknown>
+ * for events without explicit payload types.
+ */
+export type EventPayload<T extends EventType> = T extends keyof EventPayloadMap
+  ? EventPayloadMap[T]
+  : Record<string, unknown>;
+
+/**
+ * Typed callback for a specific event type.
+ */
+export type TypedEventCallback<T extends EventType> = (payload: EventPayload<T>) => void;

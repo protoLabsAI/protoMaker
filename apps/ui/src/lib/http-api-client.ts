@@ -831,6 +831,12 @@ export class HttpApiClient implements ElectronAPI {
             logger.info('Dispatching to', callbacks.size, 'callbacks');
             callbacks.forEach((cb) => cb(data.payload));
           }
+
+          // Dispatch to wildcard subscribers (subscribeToEvents)
+          const wildcardCallbacks = this.eventCallbacks.get('__all__' as EventType);
+          if (wildcardCallbacks) {
+            wildcardCallbacks.forEach((cb) => cb(data));
+          }
         } catch (error) {
           logger.error('Failed to parse WebSocket message:', error);
         }
@@ -873,6 +879,29 @@ export class HttpApiClient implements ElectronAPI {
       if (callbacks) {
         callbacks.delete(callback);
       }
+    };
+  }
+
+  /**
+   * Subscribe to ALL WebSocket events with a single callback.
+   * The callback receives (type, payload) for every event.
+   */
+  public subscribeToEvents(callback: (type: EventType, payload: unknown) => void): () => void {
+    const WILDCARD = '__all__' as EventType;
+    if (!this.eventCallbacks.has(WILDCARD)) {
+      this.eventCallbacks.set(WILDCARD, new Set());
+    }
+    const wrappedCb = (data: unknown) => {
+      const msg = data as { type: EventType; payload: unknown };
+      callback(msg.type, msg.payload);
+    };
+    this.eventCallbacks.get(WILDCARD)!.add(wrappedCb);
+
+    // Ensure WebSocket is connected
+    this.connectWebSocket();
+
+    return () => {
+      this.eventCallbacks.get(WILDCARD)?.delete(wrappedCb);
     };
   }
 

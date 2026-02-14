@@ -615,6 +615,31 @@ export class SettingsService {
       delete sanitizedUpdates.theme;
     }
 
+    // ID-based merge for projects array — prevents UI syncs from overwriting
+    // server-added projects (e.g., via MCP setup_lab)
+    if (Array.isArray(sanitizedUpdates.projects) && Array.isArray(current.projects)) {
+      const incomingById = new Map(
+        (sanitizedUpdates.projects as ProjectRef[]).map((p) => [p.id, p])
+      );
+      const currentById = new Map(current.projects.map((p) => [p.id, p]));
+
+      // Preserve current items missing from incoming (unless explicitly trashed)
+      const trashedIds = new Set(
+        (
+          (sanitizedUpdates.trashedProjects as TrashedProjectRef[] | undefined) ??
+          current.trashedProjects ??
+          []
+        ).map((t) => t.id)
+      );
+      for (const [id, project] of currentById) {
+        if (!incomingById.has(id) && !trashedIds.has(id)) {
+          incomingById.set(id, project);
+        }
+      }
+
+      sanitizedUpdates.projects = Array.from(incomingById.values());
+    }
+
     const updated: GlobalSettings = {
       ...current,
       ...sanitizedUpdates,
