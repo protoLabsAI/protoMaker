@@ -69,9 +69,7 @@ export interface ConsolidateState {
  * @param state - Node state containing PRD and all reviews
  * @returns Partial state with consolidated review
  */
-export async function consolidateNode(
-  state: ConsolidateState
-): Promise<Partial<ConsolidateState>> {
+export async function consolidateNode(state: ConsolidateState): Promise<Partial<ConsolidateState>> {
   const { prd, avaReview, jonReview, pairReviews = [], smartModel, fastModel } = state;
   const nodeName = 'ConsolidateNode';
 
@@ -98,9 +96,7 @@ ${review.sections
   .map(
     (section) =>
       `  - ${section.area}: ${section.assessment}${
-        section.concerns.length > 0
-          ? `\n    Concerns: ${section.concerns.join('; ')}`
-          : ''
+        section.concerns.length > 0 ? `\n    Concerns: ${section.concerns.join('; ')}` : ''
       }${
         section.recommendations && section.recommendations.length > 0
           ? `\n    Recommendations: ${section.recommendations.join('; ')}`
@@ -187,10 +183,7 @@ Be thorough, fair, and prioritize both customer value (Jon's focus) and executio
  * @returns Validated ConsolidatedReview
  * @throws Error if parsing or validation fails
  */
-function parseAndValidateConsolidation(
-  output: string,
-  nodeName: string
-): ConsolidatedReview {
+function parseAndValidateConsolidation(output: string, nodeName: string): ConsolidatedReview {
   try {
     // Extract JSON from potential markdown code blocks
     let jsonStr = output.trim();
@@ -212,6 +205,8 @@ function parseAndValidateConsolidation(
       const issues = error.issues.map((e: any) => `${e.path.join('.')}: ${e.message}`).join(', ');
       throw new Error(`[${nodeName}] Invalid consolidation format: ${issues}`);
     }
-    throw new Error(`[${nodeName}] Failed to parse JSON: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(
+      `[${nodeName}] Failed to parse JSON: ${error instanceof Error ? error.message : String(error)}`
+    );
   }
 }

@@ -118,7 +118,10 @@ describe('jon-review node', () => {
             {
               area: 'ROI',
               assessment: 'Positive ROI but uncertain timeline',
-              concerns: ['Development cost may exceed budget', 'Revenue impact depends on adoption rate'],
+              concerns: [
+                'Development cost may exceed budget',
+                'Revenue impact depends on adoption rate',
+              ],
               recommendations: ['Set clear success metrics', 'Plan phased rollout'],
             },
             {
@@ -164,13 +167,25 @@ describe('jon-review node', () => {
             {
               area: 'Customer Impact',
               assessment: 'Unclear target audience and value proposition',
-              concerns: ['No user research cited', 'Vague problem definition', 'No success criteria'],
-              recommendations: ['Conduct user interviews', 'Define specific use cases', 'Set measurable goals'],
+              concerns: [
+                'No user research cited',
+                'Vague problem definition',
+                'No success criteria',
+              ],
+              recommendations: [
+                'Conduct user interviews',
+                'Define specific use cases',
+                'Set measurable goals',
+              ],
             },
             {
               area: 'ROI',
               assessment: 'Cannot assess ROI without clear metrics',
-              concerns: ['No cost analysis', 'No revenue projections', 'No comparison to alternatives'],
+              concerns: [
+                'No cost analysis',
+                'No revenue projections',
+                'No comparison to alternatives',
+              ],
               recommendations: ['Create detailed cost/benefit analysis', 'Project revenue impact'],
             },
             {
@@ -186,7 +201,8 @@ describe('jon-review node', () => {
               recommendations: ['Justify timing', 'Compare to other initiatives'],
             },
           ],
-          comments: 'PRD needs significant revision. Clarify business value, target audience, and success metrics before proceeding.',
+          comments:
+            'PRD needs significant revision. Clarify business value, target audience, and success metrics before proceeding.',
           timestamp: '2024-01-01T00:00:00.000Z',
         }),
       ]);
@@ -212,12 +228,19 @@ describe('jon-review node', () => {
             {
               area: 'Customer Impact',
               assessment: 'Minimal customer value',
-              concerns: ['Solves edge case for <1% of users', 'Customer feedback indicates low interest'],
+              concerns: [
+                'Solves edge case for <1% of users',
+                'Customer feedback indicates low interest',
+              ],
             },
             {
               area: 'ROI',
               assessment: 'Negative ROI',
-              concerns: ['High development cost', 'No revenue opportunity', 'Ongoing maintenance burden'],
+              concerns: [
+                'High development cost',
+                'No revenue opportunity',
+                'Ongoing maintenance burden',
+              ],
             },
             {
               area: 'Market Positioning',
@@ -227,10 +250,15 @@ describe('jon-review node', () => {
             {
               area: 'Priority',
               assessment: 'Wrong priority for business goals',
-              concerns: ['Misaligned with company strategy', 'Opportunity cost too high', 'Better alternatives exist'],
+              concerns: [
+                'Misaligned with company strategy',
+                'Opportunity cost too high',
+                'Better alternatives exist',
+              ],
             },
           ],
-          comments: 'Cannot recommend this PRD. Poor business case, minimal customer value, and wrong strategic priority.',
+          comments:
+            'Cannot recommend this PRD. Poor business case, minimal customer value, and wrong strategic priority.',
           timestamp: '2024-01-01T00:00:00.000Z',
         }),
       ]);
@@ -313,7 +341,7 @@ describe('jon-review node', () => {
               area: 'ROI',
               assessment: 'Good ROI if execution risks are managed',
               concerns: ['Ava flagged timeline and technical risks that could impact cost'],
-              recommendations: ['Factor in Ava\'s recommended buffer when calculating ROI'],
+              recommendations: ["Factor in Ava's recommended buffer when calculating ROI"],
             },
             {
               area: 'Market Positioning',
@@ -323,10 +351,11 @@ describe('jon-review node', () => {
             {
               area: 'Priority',
               assessment: 'High priority with execution caveats',
-              concerns: ['Success depends on managing Ava\'s identified risks'],
+              concerns: ["Success depends on managing Ava's identified risks"],
             },
           ],
-          comments: 'Strong business case. Proceed but budget for Ava\'s recommended timeline buffer.',
+          comments:
+            "Strong business case. Proceed but budget for Ava's recommended timeline buffer.",
           timestamp: '2024-01-01T00:00:00.000Z',
         }),
       ]);
@@ -341,7 +370,7 @@ describe('jon-review node', () => {
 
       expect(result.jonReview).toBeDefined();
       expect(result.jonReview?.verdict).toBe('approve-with-concerns');
-      
+
       // Jon should reference Ava's concerns in his ROI assessment
       const roiSection = result.jonReview?.sections.find((s) => s.area === 'ROI');
       expect(roiSection?.concerns.some((c) => c.toLowerCase().includes('ava'))).toBe(true);

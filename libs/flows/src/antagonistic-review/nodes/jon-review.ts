@@ -17,10 +17,7 @@
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { z } from 'zod';
 import { executeWithFallback } from './classify-topic.js';
-import {
-  ReviewerPerspectiveSchema,
-  type ReviewerPerspective,
-} from './ava-review.js';
+import { ReviewerPerspectiveSchema, type ReviewerPerspective } from './ava-review.js';
 
 /**
  * State interface for jon-review node
@@ -39,9 +36,7 @@ export interface JonReviewState {
  * @param state - Node state containing PRD, Ava's review, and models
  * @returns Partial state with Jon's review perspective
  */
-export async function jonReviewNode(
-  state: JonReviewState
-): Promise<Partial<JonReviewState>> {
+export async function jonReviewNode(state: JonReviewState): Promise<Partial<JonReviewState>> {
   const { prd, avaReview, smartModel, fastModel } = state;
   const nodeName = 'JonReviewNode';
 
@@ -56,9 +51,7 @@ ${avaReview.sections
   .map(
     (section) =>
       `- ${section.area}: ${section.assessment}${
-        section.concerns.length > 0
-          ? `\n  Concerns: ${section.concerns.join(', ')}`
-          : ''
+        section.concerns.length > 0 ? `\n  Concerns: ${section.concerns.join(', ')}` : ''
       }`
   )
   .join('\n')}
@@ -167,6 +160,8 @@ function parseAndValidateReview(output: string, nodeName: string): ReviewerPersp
       const issues = error.issues.map((e: any) => `${e.path.join('.')}: ${e.message}`).join(', ');
       throw new Error(`[${nodeName}] Invalid review format: ${issues}`);
     }
-    throw new Error(`[${nodeName}] Failed to parse JSON: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(
+      `[${nodeName}] Failed to parse JSON: ${error instanceof Error ? error.message : String(error)}`
+    );
   }
 }

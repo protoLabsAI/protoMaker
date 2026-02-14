@@ -107,7 +107,8 @@ describe('consolidate node', () => {
               'Clear execution path and business value',
             ],
             disagreement: [],
-            resolution: 'Full consensus to proceed. Both operational and business perspectives aligned.',
+            resolution:
+              'Full consensus to proceed. Both operational and business perspectives aligned.',
           },
           finalPRD: 'Add loading spinner to submit button',
           summary: 'Approved by both Ava and Jon. Ready to proceed with implementation.',
@@ -176,7 +177,8 @@ describe('consolidate node', () => {
             resolution: 'Minor concerns do not warrant blocking. Proceed with monitoring plan.',
           },
           finalPRD: 'Add loading spinner to submit button',
-          summary: 'Approved with minor operational concerns. Monitor sprint velocity as recommended by Ava.',
+          summary:
+            'Approved with minor operational concerns. Monitor sprint velocity as recommended by Ava.',
           timestamp: '2024-01-01T00:00:00.000Z',
         }),
       ]);
@@ -241,10 +243,13 @@ describe('consolidate node', () => {
               'Ava: serious capacity and risk concerns',
               'Jon: wants to proceed due to market timing',
             ],
-            resolution: 'PRD needs modification to address Ava\'s operational concerns while preserving Jon\'s business objectives. Reduce scope or adjust timeline.',
+            resolution:
+              "PRD needs modification to address Ava's operational concerns while preserving Jon's business objectives. Reduce scope or adjust timeline.",
           },
-          finalPRD: 'MODIFIED: Launch real-time collaborative editing - PHASE 1 (reduced scope)\n\nAddress capacity by reducing initial scope to basic editing only. Full feature set deferred to Q2. Rollback plan documented in deployment guide.',
-          summary: 'Modified PRD to address capacity and risk concerns while maintaining business value. Phased approach reduces operational burden.',
+          finalPRD:
+            'MODIFIED: Launch real-time collaborative editing - PHASE 1 (reduced scope)\n\nAddress capacity by reducing initial scope to basic editing only. Full feature set deferred to Q2. Rollback plan documented in deployment guide.',
+          summary:
+            'Modified PRD to address capacity and risk concerns while maintaining business value. Phased approach reduces operational burden.',
           timestamp: '2024-01-01T00:00:00.000Z',
         }),
       ]);
@@ -304,9 +309,11 @@ describe('consolidate node', () => {
               'Ava: technical risk mitigation needed',
               'Jon: business metrics unclear',
             ],
-            resolution: 'While both approve conceptually, the combined concerns warrant PRD updates to de-risk and clarify expectations.',
+            resolution:
+              'While both approve conceptually, the combined concerns warrant PRD updates to de-risk and clarify expectations.',
           },
-          finalPRD: 'MODIFIED: Integrate payment gateway\n\nUpdates:\n- Add circuit breaker pattern (Ava)\n- Define success metrics: 95% uptime, <2s latency (Jon)\n- Cost projection: $50K dev + $10K/mo operational',
+          finalPRD:
+            'MODIFIED: Integrate payment gateway\n\nUpdates:\n- Add circuit breaker pattern (Ava)\n- Define success metrics: 95% uptime, <2s latency (Jon)\n- Cost projection: $50K dev + $10K/mo operational',
           summary: 'PRD updated to address both operational risk and business metrics concerns.',
           timestamp: '2024-01-01T00:00:00.000Z',
         }),
@@ -375,10 +382,12 @@ describe('consolidate node', () => {
               'Jon: business case insufficient',
             ],
             disagreement: [],
-            resolution: 'Clear consensus to reject. Both operational and business perspectives align that this PRD should not proceed.',
+            resolution:
+              'Clear consensus to reject. Both operational and business perspectives align that this PRD should not proceed.',
           },
           finalPRD: 'Build internal tool for rarely-used workflow',
-          summary: 'Rejected by both reviewers. Operationally infeasible and poor business case. Recommend exploring alternative solutions.',
+          summary:
+            'Rejected by both reviewers. Operationally infeasible and poor business case. Recommend exploring alternative solutions.',
           timestamp: '2024-01-01T00:00:00.000Z',
         }),
       ]);
@@ -441,10 +450,12 @@ describe('consolidate node', () => {
               'Jon identifies fundamental business issues',
               'Strategic misalignment and no customer value',
             ],
-            resolution: 'Jon\'s rejection based on fundamental business concerns overrides Ava\'s operational approval. Cannot proceed with strategically misaligned initiative.',
+            resolution:
+              "Jon's rejection based on fundamental business concerns overrides Ava's operational approval. Cannot proceed with strategically misaligned initiative.",
           },
           finalPRD: 'Feature X',
-          summary: 'Rejected due to fundamental business concerns. Even though technically feasible, strategic misalignment and lack of customer value make this a non-starter.',
+          summary:
+            'Rejected due to fundamental business concerns. Even though technically feasible, strategic misalignment and lack of customer value make this a non-starter.',
           timestamp: '2024-01-01T00:00:00.000Z',
         }),
       ]);
@@ -513,17 +524,15 @@ describe('consolidate node', () => {
         JSON.stringify({
           verdict: 'MODIFY',
           consensusAnalysis: {
-            agreement: [
-              'All approve the initiative',
-              'Ava and Jon have no concerns',
-            ],
-            disagreement: [
-              'Security Team raises PII handling concerns',
-            ],
-            resolution: 'While Ava and Jon approve, Security Team\'s concerns about PII handling must be addressed. Modify PRD to include security requirements.',
+            agreement: ['All approve the initiative', 'Ava and Jon have no concerns'],
+            disagreement: ['Security Team raises PII handling concerns'],
+            resolution:
+              "While Ava and Jon approve, Security Team's concerns about PII handling must be addressed. Modify PRD to include security requirements.",
           },
-          finalPRD: 'MODIFIED: User profile feature\n\nAdded security section:\n- Encrypt PII at rest\n- Document data retention policy\n- Security review before launch',
-          summary: 'PRD modified to address security concerns while maintaining business and operational approval.',
+          finalPRD:
+            'MODIFIED: User profile feature\n\nAdded security section:\n- Encrypt PII at rest\n- Document data retention policy\n- Security review before launch',
+          summary:
+            'PRD modified to address security concerns while maintaining business and operational approval.',
           timestamp: '2024-01-01T00:00:00.000Z',
         }),
       ]);
@@ -582,10 +591,7 @@ describe('consolidate node', () => {
         JSON.stringify({
           verdict: 'PROCEED',
           consensusAnalysis: {
-            agreement: [
-              'All four reviewers approve',
-              'No concerns from any perspective',
-            ],
+            agreement: ['All four reviewers approve', 'No concerns from any perspective'],
             disagreement: [],
             resolution: 'Full consensus across all reviewers. Ready to proceed.',
           },
