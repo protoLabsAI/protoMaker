@@ -13,7 +13,11 @@ import { createLogger } from '@automaker/utils';
 import { writeFile, readFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import type { EventEmitter } from '../lib/events.js';
-import type { FeedbackAnalyticsService, FilePattern, CategoryPattern } from './feedback-analytics-service.js';
+import type {
+  FeedbackAnalyticsService,
+  FilePattern,
+  CategoryPattern,
+} from './feedback-analytics-service.js';
 
 const logger = createLogger('FeedbackPatternDetector');
 
@@ -76,7 +80,9 @@ export class FeedbackPatternDetector {
   /**
    * Detect patterns from analytics service
    */
-  async detectPatterns(analyticsService: FeedbackAnalyticsService): Promise<PatternDetectionResult> {
+  async detectPatterns(
+    analyticsService: FeedbackAnalyticsService
+  ): Promise<PatternDetectionResult> {
     logger.info('Running pattern detection...');
 
     const newEscalations: DetectedPattern[] = [];
@@ -123,7 +129,9 @@ export class FeedbackPatternDetector {
       await this.emitEscalation(pattern);
     }
 
-    logger.info(`Pattern detection complete: ${this.detectedPatterns.size} total patterns, ${newEscalations.length} new escalations`);
+    logger.info(
+      `Pattern detection complete: ${this.detectedPatterns.size} total patterns, ${newEscalations.length} new escalations`
+    );
 
     return {
       patterns: Array.from(this.detectedPatterns.values()),
@@ -134,7 +142,10 @@ export class FeedbackPatternDetector {
   /**
    * Record a file pattern (same file flagged 3+ times)
    */
-  private async recordFilePattern(file: string, pattern: FilePattern): Promise<DetectedPattern | null> {
+  private async recordFilePattern(
+    file: string,
+    pattern: FilePattern
+  ): Promise<DetectedPattern | null> {
     const key = `file:${file}`;
     const existing = this.detectedPatterns.get(key);
 
@@ -168,7 +179,10 @@ export class FeedbackPatternDetector {
   /**
    * Record a category pattern (same category appearing 3+ times)
    */
-  private async recordCategoryPattern(category: string, pattern: CategoryPattern): Promise<DetectedPattern | null> {
+  private async recordCategoryPattern(
+    category: string,
+    pattern: CategoryPattern
+  ): Promise<DetectedPattern | null> {
     const key = `category:${category}`;
     const existing = this.detectedPatterns.get(key);
 
@@ -194,7 +208,9 @@ export class FeedbackPatternDetector {
     };
 
     this.detectedPatterns.set(key, detected);
-    logger.info(`New category pattern detected: ${category} (${pattern.totalOccurrences} occurrences)`);
+    logger.info(
+      `New category pattern detected: ${category} (${pattern.totalOccurrences} occurrences)`
+    );
 
     return detected;
   }

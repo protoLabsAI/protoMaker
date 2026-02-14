@@ -167,7 +167,9 @@ export class FeedbackAnalyticsService {
     // Persist to disk
     await this.saveAnalytics(analytics);
 
-    logger.info(`Metrics aggregated: ${threads.length} threads, denial rate ${(metrics.denialRate * 100).toFixed(1)}%`);
+    logger.info(
+      `Metrics aggregated: ${threads.length} threads, denial rate ${(metrics.denialRate * 100).toFixed(1)}%`
+    );
 
     return analytics;
   }
@@ -309,9 +311,8 @@ export class FeedbackAnalyticsService {
 
     const totalPRs = all.length;
     const totalThreads = all.reduce((sum, a) => sum + a.metrics.totalThreads, 0);
-    const avgDenialRate = all.length > 0
-      ? all.reduce((sum, a) => sum + a.metrics.denialRate, 0) / all.length
-      : 0;
+    const avgDenialRate =
+      all.length > 0 ? all.reduce((sum, a) => sum + a.metrics.denialRate, 0) / all.length : 0;
 
     // Aggregate file patterns
     const topFiles = Array.from(this.filePatterns.values())
