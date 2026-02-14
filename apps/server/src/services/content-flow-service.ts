@@ -111,6 +111,7 @@ export interface HITLReview {
   gate: 'research_hitl' | 'outline_hitl' | 'final_review_hitl';
   decision: 'approve' | 'revise' | 'reject';
   feedback?: string;
+  editedContent?: string;
 }
 
 /**
@@ -216,7 +217,7 @@ export class ContentFlowService {
 
     this.activeRuns.set(runId, status);
 
-    const flow = createContentCreationFlow();
+    const flow = createContentCreationFlow({ enableHITL: config.enableHITL });
 
     this.executeFlow(runId, projectPath, flow, config).catch((error: unknown) => {
       const message = error instanceof Error ? error.message : String(error);
@@ -402,7 +403,7 @@ export class ContentFlowService {
 
     logger.info(`Resuming flow ${runId} at gate ${review.gate} with decision: ${review.decision}`);
 
-    const flow = createContentCreationFlow();
+    const flow = createContentCreationFlow({ enableHITL: true });
 
     const resumeState: Record<string, unknown> = {};
 
@@ -421,6 +422,11 @@ export class ContentFlowService {
       if (review.feedback) {
         resumeState.finalReviewFeedback = review.feedback;
       }
+    }
+
+    // Pass user-edited content through to the HITL node for merging
+    if (review.editedContent) {
+      resumeState.userEditedContent = review.editedContent;
     }
 
     status.status = 'running';

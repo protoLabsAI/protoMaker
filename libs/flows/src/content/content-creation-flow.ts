@@ -146,6 +146,9 @@ export const ContentCreationState = Annotation.Root({
 
   // Error handling
   error: Annotation<string | undefined>,
+
+  // User-edited content from HITL resume
+  userEditedContent: Annotation<string | undefined>,
 });
 
 export type ContentCreationStateType = typeof ContentCreationState.State;
@@ -319,16 +322,20 @@ ${r.findings.references.map((ref) => `- ${ref}`).join('\n')}
 
 /**
  * HITL interrupt #1 - optional human review of research (only if enableHITL=true)
+ *
+ * When the graph resumes after interrupt, the state will contain
+ * researchApproved and optionally researchFeedback, set by the caller.
+ * This node is a passthrough — routing logic happens in routeAfterResearchReview.
  */
 async function researchHitlNode(
   state: ContentCreationStateType
 ): Promise<Partial<ContentCreationStateType>> {
-  const { researchReview } = state;
+  const { researchReview, researchApproved } = state;
 
-  logger.info(`Research HITL: Review score ${researchReview?.percentage.toFixed(1)}%`);
+  logger.info(
+    `Research HITL: Review score ${researchReview?.percentage.toFixed(1)}%, approved=${researchApproved}`
+  );
 
-  // This node will interrupt and wait for user input
-  // User provides: researchApproved, researchFeedback
   return {};
 }
 
@@ -491,17 +498,34 @@ ${s.description}
 
 /**
  * HITL interrupt #2 - optional human review of outline (only if enableHITL=true)
+ *
+ * On resume, state contains outlineApproved and optionally outlineFeedback.
+ * If userEditedContent is set, the outline is replaced with the user's edits.
  */
 async function outlineHitlNode(
   state: ContentCreationStateType
 ): Promise<Partial<ContentCreationStateType>> {
-  const { outlineReview } = state;
+  const { outlineReview, outlineApproved, userEditedContent } = state;
 
-  logger.info(`Outline HITL: Review score ${outlineReview?.percentage.toFixed(1)}%`);
+  logger.info(
+    `Outline HITL: Review score ${outlineReview?.percentage.toFixed(1)}%, approved=${outlineApproved}`
+  );
 
-  // This node will interrupt and wait for user input
-  // User provides: outlineApproved, outlineFeedback
-  return {};
+  // If user provided edited content, attempt to parse it as an updated outline
+  if (userEditedContent && outlineApproved) {
+    try {
+      const edited = JSON.parse(userEditedContent) as Outline;
+      logger.info(
+        `Outline HITL: Using user-edited outline with ${edited.sections.length} sections`
+      );
+      return { outline: edited, userEditedContent: undefined };
+    } catch {
+      // Not valid JSON — treat as feedback text, keep existing outline
+      logger.info('Outline HITL: User edit is not valid outline JSON, treating as feedback');
+    }
+  }
+
+  return { userEditedContent: undefined };
 }
 
 /**
@@ -789,17 +813,26 @@ async function finalContentReviewNode(
 
 /**
  * HITL interrupt #3 - optional human review of final content (only if enableHITL=true)
+ *
+ * On resume, state contains reviewApproved and optionally finalReviewFeedback.
+ * If userEditedContent is set and approved, the assembled content is replaced.
  */
 async function finalReviewHitlNode(
   state: ContentCreationStateType
 ): Promise<Partial<ContentCreationStateType>> {
-  const { finalReview } = state;
+  const { finalReview, reviewApproved, userEditedContent } = state;
 
-  logger.info(`Final content HITL: Review score ${finalReview?.percentage.toFixed(1)}%`);
+  logger.info(
+    `Final content HITL: Review score ${finalReview?.percentage.toFixed(1)}%, approved=${reviewApproved}`
+  );
 
-  // This node will interrupt and wait for user input
-  // User provides: reviewApproved, finalReviewFeedback
-  return {};
+  // If user provided edited content, replace the assembled content
+  if (userEditedContent && reviewApproved) {
+    logger.info(`Final HITL: Using user-edited content (${userEditedContent.length} chars)`);
+    return { assembledContent: userEditedContent, userEditedContent: undefined };
+  }
+
+  return { userEditedContent: undefined };
 }
 
 /**
@@ -935,9 +968,18 @@ async function completeNode(
 // ============================================================================
 
 /**
+ * Options for creating the content creation flow
+ */
+export interface ContentCreationFlowOptions {
+  /** Enable HITL interrupt gates. When true, the graph pauses at review nodes. */
+  enableHITL?: boolean;
+}
+
+/**
  * Creates the Content Creation Flow graph
  */
-export function createContentCreationFlow() {
+export function createContentCreationFlow(options?: ContentCreationFlowOptions) {
+  const { enableHITL = false } = options ?? {};
   const graph = new StateGraph(ContentCreationState);
 
   // Phase 1: Research (parallel)
@@ -1033,7 +1075,15 @@ export function createContentCreationFlow() {
   g.addEdge('output_delegate', 'complete');
   g.setFinishPoint('complete');
 
-  // Compile without checkpointer or interrupts - runs end-to-end by default
-  // HITL nodes are in the flow but won't interrupt unless explicitly configured
+  // When HITL is enabled, compile with interruptBefore on HITL gate nodes
+  // so the graph pauses and waits for user input via resolve()
+  if (enableHITL) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (graph as any).compile({
+      interruptBefore: ['research_hitl', 'outline_hitl', 'final_review_hitl'],
+    });
+  }
+
+  // Default: compile without interrupts — runs end-to-end autonomously
   return graph.compile();
 }
