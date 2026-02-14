@@ -1,5 +1,5 @@
 /**
- * Built-in agent templates for the 9 known roles.
+ * Built-in agent templates registered at server startup.
  *
  * Registered at server startup as tier 0 (protected) templates.
  * These cannot be overwritten or unregistered via the API.
