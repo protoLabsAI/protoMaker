@@ -11,6 +11,7 @@ import { createWebhookHandler } from './webhook.js';
 import { getSyncStatus } from './sync-status.js';
 import { getConflicts, resolveConflict } from './resolve-conflict.js';
 import { createSyncDependenciesHandler } from './sync-dependencies.js';
+import { createSyncProjectHandler } from './sync-project.js';
 import type { SettingsService } from '../../services/settings-service.js';
 import type { EventEmitter } from '../../lib/events.js';
 import type { FeatureLoader } from '../../services/feature-loader.js';
@@ -37,6 +38,9 @@ export function createLinearRoutes(
 
   // Dependency sync - one-time backfill
   router.post('/sync-dependencies', createSyncDependenciesHandler(settingsService, featureLoader));
+
+  // Project milestone sync to Linear
+  router.post('/sync-project', createSyncProjectHandler());
 
   return router;
 }

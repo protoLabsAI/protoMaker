@@ -127,6 +127,46 @@ export interface CreateIssueRelationOptions {
 }
 
 /**
+ * Options for creating a Linear project milestone
+ */
+export interface CreateProjectMilestoneOptions {
+  /** Project ID to create milestone in */
+  projectId: string;
+  /** Milestone name */
+  name: string;
+  /** Milestone description (optional) */
+  description?: string;
+  /** Target date (ISO string, optional) */
+  targetDate?: string;
+  /** Sort order (optional) */
+  sortOrder?: number;
+}
+
+/**
+ * Options for updating a Linear project milestone
+ */
+export interface UpdateProjectMilestoneOptions {
+  /** New name (optional) */
+  name?: string;
+  /** New description (optional) */
+  description?: string;
+  /** New target date (optional) */
+  targetDate?: string;
+  /** New sort order (optional) */
+  sortOrder?: number;
+}
+
+/**
+ * Result of a project milestone operation
+ */
+export interface ProjectMilestoneResult {
+  /** Milestone ID */
+  id: string;
+  /** Milestone name */
+  name: string;
+}
+
+/**
  * Options for updating a Linear project
  */
 export interface UpdateProjectOptions {
@@ -908,5 +948,339 @@ export class LinearMCPClient {
     logger.info(`Updated Linear project: ${data.projectUpdate.project.name}`);
 
     return true;
+  }
+
+  /**
+   * List milestones for a Linear project
+   *
+   * @param projectId - The project ID
+   * @returns Array of milestones with id and name
+   * @throws {LinearAPIError} On API errors
+   */
+  async listProjectMilestones(
+    projectId: string
+  ): Promise<Array<{ id: string; name: string; description?: string; sortOrder: number }>> {
+    const query = `
+      query ListProjectMilestones($projectId: String!) {
+        project(id: $projectId) {
+          projectMilestones {
+            nodes {
+              id
+              name
+              description
+              sortOrder
+            }
+          }
+        }
+      }
+    `;
+
+    interface ListMilestonesResponse {
+      project: {
+        projectMilestones: {
+          nodes: Array<{
+            id: string;
+            name: string;
+            description?: string;
+            sortOrder: number;
+          }>;
+        };
+      };
+    }
+
+    const data = await this.executeGraphQL<ListMilestonesResponse>(query, { projectId });
+
+    return data.project.projectMilestones.nodes;
+  }
+
+  /**
+   * Create a milestone in a Linear project
+   *
+   * @param options - Milestone creation options
+   * @returns Created milestone ID and name
+   * @throws {LinearAPIError} On API errors
+   */
+  async createProjectMilestone(
+    options: CreateProjectMilestoneOptions
+  ): Promise<ProjectMilestoneResult> {
+    const { projectId, name, description, targetDate, sortOrder } = options;
+
+    const mutation = `
+      mutation CreateProjectMilestone(
+        $projectId: String!
+        $name: String!
+        $description: String
+        $targetDate: TimelessDate
+        $sortOrder: Float
+      ) {
+        projectMilestoneCreate(
+          input: {
+            projectId: $projectId
+            name: $name
+            description: $description
+            targetDate: $targetDate
+            sortOrder: $sortOrder
+          }
+        ) {
+          success
+          projectMilestone {
+            id
+            name
+          }
+        }
+      }
+    `;
+
+    interface CreateMilestoneResponse {
+      projectMilestoneCreate: {
+        success: boolean;
+        projectMilestone: {
+          id: string;
+          name: string;
+        };
+      };
+    }
+
+    const data = await this.executeGraphQL<CreateMilestoneResponse>(mutation, {
+      projectId,
+      name,
+      description,
+      targetDate,
+      sortOrder,
+    });
+
+    if (!data.projectMilestoneCreate.success) {
+      throw new LinearAPIError('Failed to create project milestone');
+    }
+
+    logger.info(
+      `Created project milestone: ${name} (${data.projectMilestoneCreate.projectMilestone.id})`
+    );
+
+    return data.projectMilestoneCreate.projectMilestone;
+  }
+
+  /**
+   * Update an existing project milestone
+   *
+   * @param milestoneId - The milestone ID to update
+   * @param options - Update options
+   * @returns True if update succeeded
+   * @throws {LinearAPIError} On API errors
+   */
+  async updateProjectMilestone(
+    milestoneId: string,
+    options: UpdateProjectMilestoneOptions
+  ): Promise<boolean> {
+    const { name, description, targetDate, sortOrder } = options;
+
+    const mutation = `
+      mutation UpdateProjectMilestone(
+        $milestoneId: String!
+        $name: String
+        $description: String
+        $targetDate: TimelessDate
+        $sortOrder: Float
+      ) {
+        projectMilestoneUpdate(
+          id: $milestoneId
+          input: {
+            name: $name
+            description: $description
+            targetDate: $targetDate
+            sortOrder: $sortOrder
+          }
+        ) {
+          success
+          projectMilestone {
+            id
+            name
+          }
+        }
+      }
+    `;
+
+    interface UpdateMilestoneResponse {
+      projectMilestoneUpdate: {
+        success: boolean;
+        projectMilestone: {
+          id: string;
+          name: string;
+        };
+      };
+    }
+
+    const data = await this.executeGraphQL<UpdateMilestoneResponse>(mutation, {
+      milestoneId,
+      name,
+      description,
+      targetDate,
+      sortOrder,
+    });
+
+    if (!data.projectMilestoneUpdate.success) {
+      throw new LinearAPIError('Failed to update project milestone');
+    }
+
+    logger.info(`Updated project milestone: ${data.projectMilestoneUpdate.projectMilestone.name}`);
+
+    return true;
+  }
+
+  /**
+   * Delete a project milestone
+   *
+   * @param milestoneId - The milestone ID to delete
+   * @returns True if deletion succeeded
+   * @throws {LinearAPIError} On API errors
+   */
+  async deleteProjectMilestone(milestoneId: string): Promise<boolean> {
+    const mutation = `
+      mutation DeleteProjectMilestone($milestoneId: String!) {
+        projectMilestoneDelete(id: $milestoneId) {
+          success
+        }
+      }
+    `;
+
+    interface DeleteMilestoneResponse {
+      projectMilestoneDelete: {
+        success: boolean;
+      };
+    }
+
+    const data = await this.executeGraphQL<DeleteMilestoneResponse>(mutation, { milestoneId });
+
+    if (!data.projectMilestoneDelete.success) {
+      throw new LinearAPIError('Failed to delete project milestone');
+    }
+
+    logger.info(`Deleted project milestone: ${milestoneId}`);
+
+    return true;
+  }
+
+  /**
+   * Assign an issue to a project milestone
+   *
+   * @param issueId - The issue ID to assign
+   * @param projectMilestoneId - The project milestone ID
+   * @returns True if assignment succeeded
+   * @throws {LinearAPIError} On API errors
+   */
+  async assignIssueToMilestone(issueId: string, projectMilestoneId: string): Promise<boolean> {
+    const mutation = `
+      mutation AssignIssueToMilestone($issueId: String!, $projectMilestoneId: String!) {
+        issueUpdate(
+          id: $issueId
+          input: {
+            projectMilestoneId: $projectMilestoneId
+          }
+        ) {
+          success
+          issue {
+            id
+            identifier
+          }
+        }
+      }
+    `;
+
+    interface AssignMilestoneResponse {
+      issueUpdate: {
+        success: boolean;
+        issue: {
+          id: string;
+          identifier: string;
+        };
+      };
+    }
+
+    const data = await this.executeGraphQL<AssignMilestoneResponse>(mutation, {
+      issueId,
+      projectMilestoneId,
+    });
+
+    if (!data.issueUpdate.success) {
+      throw new LinearAPIError('Failed to assign issue to milestone');
+    }
+
+    logger.info(
+      `Assigned issue ${data.issueUpdate.issue.identifier} to milestone ${projectMilestoneId}`
+    );
+
+    return true;
+  }
+
+  /**
+   * Get all issues in a Linear project with their parent/children info
+   *
+   * @param projectId - The project ID
+   * @returns Array of issues with id, identifier, title, parent info, and children
+   * @throws {LinearAPIError} On API errors
+   */
+  async getProjectIssues(projectId: string): Promise<
+    Array<{
+      id: string;
+      identifier: string;
+      title: string;
+      parent?: { id: string; identifier: string; title: string };
+      children: Array<{ id: string; identifier: string; title: string }>;
+      projectMilestone?: { id: string; name: string };
+    }>
+  > {
+    const query = `
+      query GetProjectIssues($projectId: String!) {
+        project(id: $projectId) {
+          issues {
+            nodes {
+              id
+              identifier
+              title
+              parent {
+                id
+                identifier
+                title
+              }
+              children {
+                nodes {
+                  id
+                  identifier
+                  title
+                }
+              }
+              projectMilestone {
+                id
+                name
+              }
+            }
+          }
+        }
+      }
+    `;
+
+    interface GetProjectIssuesResponse {
+      project: {
+        issues: {
+          nodes: Array<{
+            id: string;
+            identifier: string;
+            title: string;
+            parent?: { id: string; identifier: string; title: string };
+            children: {
+              nodes: Array<{ id: string; identifier: string; title: string }>;
+            };
+            projectMilestone?: { id: string; name: string };
+          }>;
+        };
+      };
+    }
+
+    const data = await this.executeGraphQL<GetProjectIssuesResponse>(query, { projectId });
+
+    return data.project.issues.nodes.map((issue) => ({
+      ...issue,
+      children: issue.children.nodes,
+    }));
   }
 }
