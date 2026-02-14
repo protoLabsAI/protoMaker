@@ -8,13 +8,13 @@
  * - Handle duplicate detection and refresh
  */
 
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { createLogger } from '@automaker/utils';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 const logger = createLogger('LabsService');
 
 export interface CloneOptions {
@@ -78,7 +78,7 @@ function isValidGitUrl(url: string): boolean {
  */
 async function getDefaultBranch(repoPath: string): Promise<string | undefined> {
   try {
-    const { stdout } = await execAsync('git symbolic-ref refs/remotes/origin/HEAD', {
+    const { stdout } = await execFileAsync('git', ['symbolic-ref', 'refs/remotes/origin/HEAD'], {
       cwd: repoPath,
     });
     // Output format: refs/remotes/origin/main
@@ -95,7 +95,7 @@ async function getDefaultBranch(repoPath: string): Promise<string | undefined> {
  */
 async function getCurrentBranch(repoPath: string): Promise<string | undefined> {
   try {
-    const { stdout } = await execAsync('git branch --show-current', {
+    const { stdout } = await execFileAsync('git', ['branch', '--show-current'], {
       cwd: repoPath,
     });
     return stdout.trim();
@@ -122,7 +122,9 @@ export class LabsService {
       logger.info('Labs directory ensured', { labsDir });
     } catch (error) {
       logger.error('Failed to create labs directory', { labsDir, error });
-      throw new Error(`Failed to create labs directory: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Failed to create labs directory: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -153,10 +155,10 @@ export class LabsService {
 
     try {
       // Fetch latest changes
-      await execAsync('git fetch --all', { cwd: repoPath });
+      await execFileAsync('git', ['fetch', '--all'], { cwd: repoPath });
 
       // Pull with rebase
-      await execAsync('git pull --rebase', { cwd: repoPath });
+      await execFileAsync('git', ['pull', '--rebase'], { cwd: repoPath });
 
       logger.info('Repository refreshed successfully', { repoPath });
     } catch (error) {
@@ -230,13 +232,12 @@ export class LabsService {
     logger.info('Cloning repository', { gitUrl, repoPath, shallow });
 
     try {
-      const cloneArgs = shallow ? '--depth 1' : '';
-      const cloneCommand = `git clone ${cloneArgs} ${gitUrl} ${repoName}`;
+      const cloneArgs = ['clone', ...(shallow ? ['--depth', '1'] : []), gitUrl, repoName];
 
-      await execAsync(cloneCommand, { cwd: labsDir });
+      await execFileAsync('git', cloneArgs, { cwd: labsDir });
 
       // Get branch information
-      const branch = await getCurrentBranch(repoPath) || await getDefaultBranch(repoPath);
+      const branch = (await getCurrentBranch(repoPath)) || (await getDefaultBranch(repoPath));
 
       logger.info('Repository cloned successfully', { repoPath, branch });
 
@@ -251,7 +252,10 @@ export class LabsService {
       logger.error('Failed to clone repository', { gitUrl, error: errorMessage });
 
       // Check for common error types
-      if (errorMessage.includes('Authentication failed') || errorMessage.includes('Permission denied')) {
+      if (
+        errorMessage.includes('Authentication failed') ||
+        errorMessage.includes('Permission denied')
+      ) {
         return {
           success: false,
           error: 'Authentication failed. Check your git credentials and repository access.',
@@ -330,7 +334,9 @@ export class LabsService {
       return { repos };
     } catch (error) {
       logger.error('Failed to list repositories', { labsDir, error });
-      throw new Error(`Failed to list repositories: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Failed to list repositories: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -355,7 +361,9 @@ export class LabsService {
       return true;
     } catch (error) {
       logger.error('Failed to delete repository', { repoPath, error });
-      throw new Error(`Failed to delete repository: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Failed to delete repository: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 }
