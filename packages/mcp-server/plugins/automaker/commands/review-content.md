@@ -1,12 +1,14 @@
 ---
 name: review-content
-description: Submit HITL review decision at content flow interrupt gates
+description: Submit HITL review decision at content flow interrupt gates (only when enableHITL=true)
 argument-hint: runId, gate, and decision
 ---
 
 # Review Content
 
 Submit a Human-in-the-Loop (HITL) review decision to resume an interrupted content flow.
+
+**Note:** This tool only works when the flow was started with `enableHITL: true`. In autonomous mode (default), the flow runs end-to-end with antagonistic review gates handling quality checks automatically.
 
 ## Usage
 
@@ -27,15 +29,6 @@ mcp__plugin_automaker_automaker__review_content({
   decision: 'revise',
   feedback: 'Add more details about error handling and edge cases',
 });
-
-// Reject and stop the flow
-mcp__plugin_automaker_automaker__review_content({
-  projectPath: '/path/to/project',
-  runId: 'content-1234567890-abc123',
-  gate: 'final_review_hitl',
-  decision: 'reject',
-  feedback: 'Content does not meet quality standards',
-});
 ```
 
 ## Parameters
@@ -52,45 +45,17 @@ mcp__plugin_automaker_automaker__review_content({
   - `reject` - Stop the flow
 - **feedback** (optional): Feedback message for revision or rejection
 
-## Returns
+## Prerequisites
 
-Returns an object with:
+The flow must be:
 
-- **success**: Whether the review was submitted successfully
-- **status**: Updated flow status object
+1. Started with `enableHITL: true` in the contentConfig
+2. Currently in `interrupted` status at one of the HITL gates
 
-## Example Response
-
-```json
-{
-  "success": true,
-  "status": {
-    "runId": "content-1234567890-abc123",
-    "status": "running",
-    "currentNode": "generate_outline",
-    "progress": 45,
-    "hitlGatesPending": [],
-    "createdAt": 1234567890000
-  }
-}
-```
-
-## HITL Gates
-
-### 1. research_hitl (20% progress)
-
-Review parallel research findings before outline generation. Approve to proceed or revise to regenerate research with new queries.
-
-### 2. outline_hitl (40% progress)
-
-Review the generated content outline. Approve to start content generation or revise to regenerate the outline.
-
-### 3. final_review_hitl (80% progress)
-
-Final review of assembled content before output generation. Approve to generate outputs or revise to regenerate sections.
+If the flow was started in autonomous mode (default), this tool will return an error since the flow runs without interrupts.
 
 ## Decision Outcomes
 
 - **approve**: Flow continues to the next phase
-- **revise**: Current phase repeats with feedback incorporated
+- **revise**: Current phase repeats with feedback incorporated (up to maxRetries)
 - **reject**: Flow stops and status changes to 'failed'

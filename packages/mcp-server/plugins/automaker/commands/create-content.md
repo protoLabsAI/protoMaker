@@ -8,9 +8,12 @@ argument-hint: topic and configuration
 
 Trigger a content creation flow to generate blog posts, technical documentation, or training data.
 
+By default, the flow runs **autonomously** with antagonistic review gates that automatically assess quality at each phase. No human intervention required.
+
 ## Usage
 
 ```typescript
+// Autonomous mode (default) - runs end-to-end
 mcp__plugin_automaker_automaker__create_content({
   projectPath: '/path/to/project',
   topic: 'Introduction to LangGraph',
@@ -19,6 +22,17 @@ mcp__plugin_automaker_automaker__create_content({
     tone: 'conversational', // technical | conversational | formal
     audience: 'intermediate', // beginner | intermediate | expert
     outputFormats: ['markdown', 'html'], // markdown | html | pdf
+  },
+});
+
+// HITL mode - pauses at review gates for human approval
+mcp__plugin_automaker_automaker__create_content({
+  projectPath: '/path/to/project',
+  topic: 'Introduction to LangGraph',
+  contentConfig: {
+    format: 'guide',
+    enableHITL: true, // Pauses at review gates
+    maxRetries: 3, // Max revision attempts per phase
   },
 });
 ```
@@ -32,6 +46,8 @@ mcp__plugin_automaker_automaker__create_content({
   - **tone**: Writing tone (technical, conversational, formal) - default: 'conversational'
   - **audience**: Target audience level (beginner, intermediate, expert) - default: 'intermediate'
   - **outputFormats**: Array of output formats (markdown, html, pdf) - default: ['markdown']
+  - **enableHITL**: Enable human-in-the-loop interrupt gates (default: false)
+  - **maxRetries**: Max revision attempts per antagonistic review phase (default: 2)
 
 ## Returns
 
@@ -39,32 +55,22 @@ Returns an object with:
 
 - **runId**: Unique identifier for this flow execution
 - **status**: Initial status object containing:
-  - **status**: Current status ('running', 'interrupted', 'completed', 'failed')
+  - **status**: Current status ('running', 'reviewing_research', 'reviewing_outline', 'reviewing_content', 'interrupted', 'completed', 'failed')
   - **progress**: Progress percentage (0-100)
-  - **hitlGatesPending**: Array of HITL gates waiting for review
+  - **reviewScores**: Antagonistic review scores per phase (research, outline, content)
+  - **hitlGatesPending**: Array of HITL gates waiting for review (only when enableHITL=true)
   - **createdAt**: Timestamp when flow was created
 
-## Example Response
+## Autonomous Mode (Default)
 
-```json
-{
-  "runId": "content-1234567890-abc123",
-  "status": {
-    "runId": "content-1234567890-abc123",
-    "status": "running",
-    "progress": 0,
-    "hitlGatesPending": [],
-    "createdAt": 1234567890000
-  }
-}
-```
+The flow uses 3 antagonistic review gates that automatically assess quality:
 
-## HITL Interrupts
+1. **Research Review** (~20% progress): Scores research findings on Completeness, Source Quality, Relevance, Depth
+2. **Outline Review** (~40% progress): Scores outline on Structure, Flow, Coverage, Clarity
+3. **Content Review** (~80% progress): Scores final content on 8 dimensions including Headline Strength, Readability, Value Density
 
-The content creation flow has 3 HITL (Human-in-the-Loop) interrupts:
+Each review gate produces a PASS/REVISE/FAIL verdict. Failed reviews trigger automatic revision (up to `maxRetries` attempts). The flow runs to completion without human intervention.
 
-1. **research_hitl**: Review research findings before proceeding
-2. **outline_hitl**: Approve content outline before generation
-3. **final_review_hitl**: Final review before output generation
+## HITL Mode (enableHITL=true)
 
-When the flow reaches an interrupt, you'll need to use `review-content` to provide approval or feedback.
+When HITL is enabled, the flow pauses at each review gate. Use `review-content` to provide approval or feedback. The antagonistic review still runs, but the flow waits for human confirmation.
