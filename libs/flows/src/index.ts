@@ -84,3 +84,11 @@ export type {
   ErrorEntry,
   GenerationMetadata,
 } from './content/state.js';
+
+// Outline planner
+export {
+  outlinePlannerNode,
+  outlineApprovalNode,
+  routeAfterOutlinePlanning,
+  routeAfterApproval,
+} from './content/nodes/outline-planner.js';
