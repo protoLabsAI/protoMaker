@@ -216,13 +216,8 @@ export class SignalRouterService {
     // Create Bead task
     const beadResult = await this.beadsService.createTask(this.projectPath, {
       title: signal.title,
-      description: signal.description,
-      tags: ['improvement', signal.source],
-      metadata: {
-        signalId: signal.id,
-        source: signal.source,
-        ...signal.metadata,
-      },
+      description: `${signal.description}\n\nSource: ${signal.source} | Signal ID: ${signal.id}`,
+      labels: ['improvement', signal.source],
     });
 
     if (!beadResult.success) {
