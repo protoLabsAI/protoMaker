@@ -23,7 +23,8 @@
       "@automaker/dependency-resolver": ["../../libs/dependency-resolver/dist/index.d.ts"],
       "@automaker/policy-engine": ["../../libs/policy-engine/dist/index.d.ts"],
       "@automaker/spec-parser": ["../../libs/spec-parser/dist/index.d.ts"],
-      "@automaker/git-utils": ["../../libs/git-utils/dist/index.d.ts"]
+      "@automaker/git-utils": ["../../libs/git-utils/dist/index.d.ts"],
+      "@automaker/flows": ["../../libs/flows/dist/index.d.ts"]
     }
   },
   "include": ["src/**/*"],

@@ -97,6 +97,7 @@ import { CodexModelCacheService } from './services/codex-model-cache-service.js'
 import { createGitHubRoutes } from './routes/github/index.js';
 import { createContextRoutes } from './routes/context/index.js';
 import { createContentRoutes } from './routes/content/index.js';
+import { createFlowsRoutes } from './routes/flows/index.js';
 import { createBacklogPlanRoutes } from './routes/backlog-plan/index.js';
 import { cleanupStaleValidations } from './routes/github/routes/validation-common.js';
 import { createMCPRoutes } from './routes/mcp/index.js';
@@ -182,7 +183,6 @@ import { LinearApprovalBridge } from './services/linear-approval-bridge.js';
 import { createDeployRoutes } from './routes/deploy/index.js';
 import { createAnalyticsRoutes } from './routes/analytics.js';
 import { AntagonisticReviewService } from './services/antagonistic-review-service.js';
-import { createFlowsRoutes } from './routes/flows/index.js';
 
 const PORT = parseInt(process.env.PORT || '3008', 10);
 const HOST = process.env.HOST || '0.0.0.0';
