@@ -2403,7 +2403,7 @@ const tools: Tool[] = [
   {
     name: 'generate_report',
     description:
-      'Generate a self-contained HTML report from gap analysis and research results. Saves to {projectPath}/protoLabs.report.html',
+      'Generate a self-contained HTML report from gap analysis and research results. Saves to {projectPath}/protoLabs.report.html and automatically opens in browser.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -2421,6 +2421,21 @@ const tools: Tool[] = [
         },
       },
       required: ['projectPath', 'research', 'report'],
+    },
+  },
+  {
+    name: 'open_report',
+    description:
+      'Open an existing ProtoLabs HTML report in the default browser. Use this to view previously generated reports.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        reportPath: {
+          type: 'string',
+          description: 'Absolute path to the report HTML file (e.g., {projectPath}/protoLabs.report.html)',
+        },
+      },
+      required: ['reportPath'],
     },
   },
 
@@ -3365,6 +3380,11 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         projectPath: args.projectPath,
         research: args.research,
         report: args.report,
+      });
+
+    case 'open_report':
+      return apiCall('/setup/open-report', {
+        reportPath: args.reportPath,
       });
 
     // Labs Management

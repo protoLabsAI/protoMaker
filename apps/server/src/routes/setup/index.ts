@@ -49,6 +49,7 @@ import { createLinearProvisionHandler } from './routes/linear-provision.js';
 import { createBeadsSetupHandler } from './routes/beads.js';
 import { createCloneHandler } from './routes/clone.js';
 import { createReportHandler } from './routes/report.js';
+import { createOpenReportHandler } from './routes/open-report.js';
 import type { SettingsService } from '../../services/settings-service.js';
 
 export function createSetupRoutes(settingsService: SettingsService): Router {
@@ -106,6 +107,7 @@ export function createSetupRoutes(settingsService: SettingsService): Router {
   router.post('/gap-analysis', createGapAnalysisHandler());
   router.post('/propose', createProposeHandler());
   router.post('/report', createReportHandler());
+  router.post('/open-report', createOpenReportHandler());
   router.post('/discord-provision', createDiscordProvisionHandler());
   router.post('/linear-provision', createLinearProvisionHandler());
   router.post('/beads', createBeadsSetupHandler());
