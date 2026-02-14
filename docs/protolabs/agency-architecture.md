@@ -244,6 +244,19 @@ Ava is the hub. All strategic decisions flow through her. Agents communicate via
 ### Scaling Strategy
 
 - **Vertical**: Staging hardware handles more concurrent agents
-- **Horizontal**: Multiple Automaker instances per project (future)
+- **Horizontal**: Multiple Automaker instances via [Hivemind](../architecture/instance-state.md#hivemind-multi-instance-mesh) — domain-scoped mesh where each instance owns a slice of the codebase
 - **Efficiency**: Model routing (Haiku for mechanical work, Opus only for architectural decisions)
 - **Automation**: Every manual step today becomes automated tomorrow — this is the self-improvement loop
+
+### Instance State Model
+
+Automaker follows a **fresh state per instance** design. Operational state (board, task queue, project plans) is instance-local and ephemeral. Knowledge (agent memory, context files, skills, project spec) is shared via git.
+
+This split is foundational for multi-instance scaling:
+
+- **No distributed consensus** needed for operational state
+- **Domain isolation** — each instance works on its assigned slice
+- **Crash resilience** — code lives in git; a dead instance loses nothing permanent
+- **setupLab onboarding** — new instances build context from research, not inherited state
+
+See [Instance State Architecture](../architecture/instance-state.md) for the full design.

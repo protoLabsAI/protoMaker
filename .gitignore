@@ -35,12 +35,14 @@ docs/.vitepress/cache/
 .automaker/ledger/
 .automaker/recovery/
 
-# Track project plans, context files, skills, memory, settings, and spec
-!.automaker/projects/
+# Instance-specific — each machine starts fresh
+.automaker/projects/
+.automaker/settings.json
+
+# Track shared knowledge (agent learning, skills, context, spec)
 !.automaker/context/
 !.automaker/skills/
 !.automaker/memory/
-!.automaker/settings.json
 !.automaker/spec.md
 
 .worktrees/
@@ -126,16 +128,8 @@ packages/mcp-server/plugins/automaker/.env
 # Plugin metadata files
 **/.orphaned_at
 
-# Beads runtime artifacts (tracked by .beads/.gitignore when present)
-.beads/*.db
-.beads/*.db-*
-.beads/daemon.*
-.beads/.jsonl.lock
-.beads/.local_version
-.beads/last-touched
-.beads/bd.sock
-.beads/sync-state.json
-.beads/sem/
+# Beads — instance-specific operational state, fresh per machine
+.beads/
 
 # Embedded git repos (should be submodules if needed)
 examples/mythxengine

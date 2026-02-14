@@ -223,3 +223,27 @@ flowchart LR
 | Agent cost per feature              | $1.15-1.70 (Sonnet)   |
 | Escalation rate                     | ~15% (format fixes)   |
 | Auto-merge success rate             | >95% after format fix |
+
+## Instance State & Onboarding
+
+All flows above operate within a single Automaker instance. Each instance starts with a **clean operational slate** — no inherited board, no stale task queue.
+
+### What's Shared vs Instance-Local
+
+| Layer              | Examples                                               | Scope          |
+| ------------------ | ------------------------------------------------------ | -------------- |
+| **Shared (git)**   | `.automaker/context/`, `memory/`, `skills/`, `spec.md` | All instances  |
+| **Instance-local** | `.automaker/features/`, `projects/`, `.beads/`         | Single machine |
+
+Knowledge compounds across all instances via git. Operations are ephemeral by design — when a new VM spins up, it runs setupLab to build context from research rather than inheriting another machine's state.
+
+### Why This Matters for Flows
+
+- **Planning flow** (ProjM decomposition) creates project plans in `.automaker/projects/` — instance-local, not committed to git
+- **Execution flow** (auto-mode) manages board state in `.automaker/features/` — instance-local
+- **Learning flow** (agent memory) writes to `.automaker/memory/` — git-tracked, shared across instances
+- **Onboarding flow** (setupLab) scans a repo, analyzes gaps, and initializes `.automaker/` — builds understanding from scratch
+
+This architecture is the foundation for [Hivemind](instance-state.md#hivemind-multi-instance-mesh), where multiple instances form a domain-scoped mesh, each owning a slice of the codebase.
+
+See [Instance State Architecture](instance-state.md) for the full design.
