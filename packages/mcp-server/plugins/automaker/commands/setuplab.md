@@ -1,7 +1,7 @@
 ---
 name: setuplab
-description: Point at any repo — scan it, measure the gap against our gold standard, initialize automation, and propose alignment work. The entry point for onboarding projects to ProtoLabs.
-argument-hint: <project path (relative or absolute)>
+description: Point at any repo — scan it, measure the gap against our gold standard, initialize automation, and propose alignment work. The entry point for onboarding projects to ProtoLabs. Accepts either a git URL or a local path.
+argument-hint: <git URL or project path>
 allowed-tools:
   - AskUserQuestion
   - Bash
@@ -17,6 +17,8 @@ allowed-tools:
   - mcp__plugin_automaker_automaker__provision_discord
   - mcp__plugin_automaker_automaker__setup_beads
   - mcp__plugin_automaker_automaker__run_full_setup
+  - mcp__plugin_automaker_automaker__clone_repo
+  - mcp__plugin_automaker_automaker__generate_report
   - mcp__plugin_automaker_automaker__create_feature
   - mcp__plugin_automaker_automaker__set_feature_dependencies
   - mcp__plugin_automaker_automaker__create_context_file
@@ -64,10 +66,15 @@ Execute these phases in order, presenting results to the user between phases.
    If down, tell the user: "Automaker server is not running. Start it with `npm run dev` in the automaker directory."
 
 2. Resolve the project path from the user's argument:
-   - If provided, resolve to absolute path
+   - **If argument is a git URL** (starts with `https://`, `git@`, or ends with `.git`):
+     - Use `mcp__plugin_automaker_automaker__clone_repo({ gitUrl })` to clone to `./labs/{repo-name}/`
+     - The tool returns `{ success: true, path: "/absolute/path/to/labs/repo-name", message: "..." }`
+     - Use the returned path for subsequent phases
+     - Present to user: "Cloned {gitUrl} to {path}"
+   - **If argument is a local path**:
+     - Resolve to absolute path (handle `~` expansion and relative paths)
+     - Validate the path exists and is a directory
    - If not provided, ask the user
-   - Handle `~` expansion and relative paths
-   - Validate the path exists and is a directory
 
 ### Phase 2: Repository Research
 
@@ -97,13 +104,21 @@ mcp__plugin_automaker_automaker__research_repo({ projectPath })
 - **Automation:** {hasAutomaker ? ".automaker" : "No .automaker"} | {hasBeads ? ".beads" : "No .beads"}
 ```
 
-### Phase 3: Gap Analysis
+### Phase 3: Gap Analysis & Report Generation
 
 Compare against our standard:
 
 ```
 mcp__plugin_automaker_automaker__analyze_gaps({ projectPath, research })
 ```
+
+Then generate an HTML report and auto-open it:
+
+```
+mcp__plugin_automaker_automaker__generate_report({ projectPath, research, report })
+```
+
+This will create an HTML report at `{projectPath}/.automaker/gap-report.html` and automatically open it in the default browser.
 
 **Present the gap report:**
 
@@ -139,20 +154,26 @@ mcp__plugin_automaker_automaker__analyze_gaps({ projectPath, research })
 - {title}: {detail}
 ```
 
-### Phase 4: Ask to Proceed
+### Phase 4: Interactive Scope Selection
+
+Present the user with alignment scope options:
 
 ```
 AskUserQuestion:
-  header: "Proceed"
-  question: "Ready to initialize automation and create alignment features?"
+  header: "Alignment"
+  question: "How would you like to proceed with alignment?"
   options:
-    - label: "Full setup"
-      description: "Initialize .automaker, set up Beads, create board features"
-    - label: "Init only"
-      description: "Just initialize .automaker and context files, skip board features"
-    - label: "Review first"
-      description: "Let me review the gap report before proceeding"
+    - label: "Full alignment"
+      description: "Initialize .automaker, set up Beads, create all alignment features"
+    - label: "Critical only"
+      description: "Initialize automation and create features for critical gaps only"
+    - label: "Report only"
+      description: "Just view the HTML report, don't initialize automation yet"
 ```
+
+- **Full alignment**: Proceed with Phases 5-6, create all alignment features
+- **Critical only**: Proceed with Phases 5-6, but only create features for critical gaps when calling propose_alignment
+- **Report only**: Stop here, user can review the HTML report and run `/setuplab` again later
 
 ### Phase 5: Initialize
 
@@ -255,12 +276,15 @@ If approved, create features on the board:
 ## Setup Complete
 
 **Project:** {projectName}
+{if cloned:}**Cloned to:** {projectPath}
 **Alignment Score:** {overallScore}%
 
 ### What was done:
 
+{if cloned:}- Cloned repository from {gitUrl}
 - Scanned repository structure and tech stack
 - Analyzed {gaps.length} gaps against ProtoLabs standard
+- Generated HTML gap report (opened in browser)
 - Initialized .automaker/ with tailored context files
   {if beads initialized:}- Initialized .beads/ task tracker
   {if discord provisioned:}- Created Discord channels
@@ -268,10 +292,11 @@ If approved, create features on the board:
 
 ### Next Steps:
 
-1. Review the board: `/board`
-2. Start agents on alignment work: `/auto-mode start {projectPath}`
-3. Monitor progress: `/board`
-4. Customize context: `/context`
+1. Review the gap report in your browser
+2. Review the board: `/board`
+3. Start agents on alignment work: `/auto-mode start {projectPath}`
+4. Monitor progress: `/board`
+5. Customize context: `/context`
 ```
 
 ## Important Notes

@@ -2192,13 +2192,14 @@ const tools: Tool[] = [
   {
     name: 'run_full_setup',
     description:
-      'Run the complete setup pipeline: research repo, analyze gaps, initialize .automaker, and generate proposal. This is a convenience wrapper that chains research_repo → analyze_gaps → setup_lab → propose_alignment.',
+      'Run the complete setup pipeline: clone (if git URL), research repo, analyze gaps, generate HTML report, initialize .automaker, and generate proposal. This is a convenience wrapper that chains clone_repo (if URL) → research_repo → analyze_gaps → generate_report → setup_lab → propose_alignment.',
     inputSchema: {
       type: 'object',
       properties: {
         projectPath: {
           type: 'string',
-          description: 'Absolute path to the project directory',
+          description:
+            'Git repository URL (https://, git@, or ending with .git) or absolute path to local project directory. If a URL is provided, the repo will be cloned to ./labs/{repo-name}/ first.',
         },
         skipChecks: {
           type: 'array',
@@ -3233,9 +3234,42 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       });
 
     case 'run_full_setup': {
-      // Chain: research → gap analysis → setup lab → propose
+      // Step 1: Detect if projectPath is a git URL and clone if needed
+      let projectPath = args.projectPath as string;
+      let wasCloned = false;
+      let originalGitUrl: string | undefined;
+
+      const isGitUrl = (path: string): boolean => {
+        return (
+          path.startsWith('https://') ||
+          path.startsWith('git@') ||
+          path.startsWith('git://') ||
+          path.endsWith('.git')
+        );
+      };
+
+      if (isGitUrl(projectPath)) {
+        originalGitUrl = projectPath;
+        const cloneResult = (await apiCall('/setup/clone', {
+          gitUrl: projectPath,
+          shallow: true,
+        })) as { success?: boolean; path?: string; message?: string };
+
+        if (!cloneResult.success || !cloneResult.path) {
+          return {
+            success: false,
+            error: 'Failed to clone repository',
+            cloneResult,
+          };
+        }
+
+        projectPath = cloneResult.path;
+        wasCloned = true;
+      }
+
+      // Chain: research → gap analysis → generate report → setup lab → propose
       const researchResult = (await apiCall('/setup/research', {
-        projectPath: args.projectPath,
+        projectPath,
       })) as { success?: boolean; research?: Record<string, unknown> };
 
       if (!researchResult.success || !researchResult.research) {
@@ -3243,7 +3277,7 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       }
 
       const gapResult = (await apiCall('/setup/gap-analysis', {
-        projectPath: args.projectPath,
+        projectPath,
         research: researchResult.research,
         skipChecks: args.skipChecks,
       })) as { success?: boolean; report?: Record<string, unknown> };
@@ -3257,23 +3291,34 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         };
       }
 
+      // Generate HTML report
+      const reportResult = (await apiCall('/setup/report', {
+        projectPath,
+        research: researchResult.research,
+        report: gapResult.report,
+      })) as { success?: boolean; reportPath?: string };
+
       // Initialize .automaker (pass research for smart context generation)
       const setupResult = await apiCall('/setup/project', {
-        projectPath: args.projectPath,
+        projectPath,
         research: researchResult.research,
       });
 
       // Generate proposal
       const proposalResult = (await apiCall('/setup/propose', {
-        projectPath: args.projectPath,
+        projectPath,
         gapAnalysis: gapResult.report,
         autoCreate: args.autoCreate ?? false,
       })) as { success?: boolean; proposal?: Record<string, unknown> };
 
       return {
         success: true,
+        wasCloned,
+        originalGitUrl,
+        projectPath,
         research: researchResult.research,
         gapAnalysis: gapResult.report,
+        reportPath: reportResult.reportPath,
         setup: setupResult,
         proposal: proposalResult.proposal,
       };
