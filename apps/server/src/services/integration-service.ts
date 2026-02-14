@@ -163,6 +163,21 @@ export class IntegrationService {
             }
           );
           break;
+        case 'authority:pm-review-approved':
+        case 'authority:pm-review-changes-requested':
+          this.handleReviewCompleted(
+            payload as {
+              projectPath: string;
+              featureId: string;
+              agentId?: string;
+              complexity?: string;
+              milestones?: Array<{ title: string; description: string }>;
+              reviewNotes?: string;
+              verdict?: 'approved' | 'changes_requested';
+            },
+            type
+          );
+          break;
       }
     });
 
@@ -594,6 +609,133 @@ export class IntegrationService {
         content: `📝 CoS PRD submitted: **${title}** — entering pipeline for decomposition`,
       });
     }
+  }
+
+  /**
+   * Handle authority:pm-review-approved and authority:pm-review-changes-requested events
+   * This is the "Antagonistic Review Pipeline" - posts review summary to Discord and Linear
+   */
+  private async handleReviewCompleted(
+    payload: {
+      projectPath: string;
+      featureId: string;
+      agentId?: string;
+      complexity?: string;
+      milestones?: Array<{ title: string; description: string }>;
+      reviewNotes?: string;
+      verdict?: 'approved' | 'changes_requested';
+    },
+    eventType: string
+  ): Promise<void> {
+    const { projectPath, featureId, reviewNotes } = payload;
+
+    const integrations = await this.getProjectIntegrations(projectPath);
+    if (!integrations) return;
+
+    const feature = await this.loadFeature(projectPath, featureId);
+    if (!feature) return;
+
+    // Determine verdict from event type if not explicitly provided
+    const verdict =
+      payload.verdict ||
+      (eventType === 'authority:pm-review-approved' ? 'approved' : 'changes_requested');
+
+    // Build review summary for Discord
+    const reviewSummary = this.buildReviewSummary(feature, verdict, reviewNotes);
+
+    // Discord: Post review summary within 1 minute (immediate)
+    if (integrations.discord?.enabled) {
+      await this.emitDiscordEvent({
+        projectPath,
+        featureId,
+        feature,
+        serverId: integrations.discord.serverId,
+        channelId: integrations.discord.channelId,
+        webhookId: integrations.discord.webhookId,
+        webhookToken: integrations.discord.webhookToken,
+        action: 'send_message',
+        content: reviewSummary,
+      });
+
+      // Flag unresolved blocks for Josh if changes requested
+      if (verdict === 'changes_requested' && integrations.discord.mentionOnError) {
+        const blockMessage = `${integrations.discord.mentionOnError} 🚨 **Review Blocked** — Feature "${feature.title}" requires changes before proceeding.\n\nReview notes: ${reviewNotes || 'See above'}`;
+        await this.emitDiscordEvent({
+          projectPath,
+          featureId,
+          feature,
+          serverId: integrations.discord.serverId,
+          channelId: integrations.discord.channelId,
+          webhookId: integrations.discord.webhookId,
+          webhookToken: integrations.discord.webhookToken,
+          action: 'send_message',
+          content: blockMessage,
+        });
+      }
+    }
+
+    // Linear: Create issue with PRD content + review verdict
+    if (integrations.linear?.enabled) {
+      await this.emitLinearEvent({
+        projectPath,
+        featureId,
+        feature,
+        teamId: integrations.linear.teamId,
+        projectId: integrations.linear.projectId,
+        priority: this.mapComplexityToPriority(feature.complexity, integrations.linear),
+        labelName: integrations.linear.labelName,
+        action: 'create',
+      });
+    }
+  }
+
+  /**
+   * Build review summary message for Discord
+   */
+  private buildReviewSummary(
+    feature: Feature,
+    verdict: 'approved' | 'changes_requested',
+    reviewNotes?: string
+  ): string {
+    const lines: string[] = [];
+
+    // Header with verdict emoji
+    const emoji = verdict === 'approved' ? '✅' : '⚠️';
+    const verdictText = verdict === 'approved' ? 'APPROVED' : 'CHANGES REQUESTED';
+    lines.push(`${emoji} **Review ${verdictText}**: ${feature.title}`);
+    lines.push('');
+
+    // PRD content summary
+    if (feature.description) {
+      const descPreview =
+        feature.description.length > 200
+          ? feature.description.slice(0, 200) + '...'
+          : feature.description;
+      lines.push(`**PRD Summary:** ${descPreview}`);
+      lines.push('');
+    }
+
+    // Complexity
+    if (feature.complexity) {
+      lines.push(`**Complexity:** ${feature.complexity}`);
+    }
+
+    // Review notes/verdict details
+    if (reviewNotes) {
+      lines.push('');
+      lines.push(`**Review Notes:**`);
+      lines.push(reviewNotes);
+    }
+
+    // Next steps
+    lines.push('');
+    if (verdict === 'approved') {
+      lines.push(`**Next Steps:** ProjM will decompose into milestones and features`);
+    } else {
+      lines.push(`**Next Steps:** Address review feedback and resubmit`);
+    }
+
+    return lines.join('\n');
   }
 
   // ============================================================================

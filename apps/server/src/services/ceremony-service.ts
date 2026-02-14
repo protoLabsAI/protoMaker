@@ -115,6 +115,24 @@ export class CeremonyService {
         }
       } else if (type === 'project:completed') {
         this.handleProjectCompleted(payload as ProjectCompletedPayload);
+      } else if (type === 'authority:pm-review-approved') {
+        this.handleReviewCompleted(
+          payload as {
+            projectPath: string;
+            featureId: string;
+            reviewNotes?: string;
+          },
+          'approved'
+        );
+      } else if (type === 'authority:pm-review-changes-requested') {
+        this.handleReviewCompleted(
+          payload as {
+            projectPath: string;
+            featureId: string;
+            reviewNotes?: string;
+          },
+          'changes_requested'
+        );
       }
     });
 
@@ -826,6 +844,117 @@ ${dataSummary}`;
     }
 
     return chunks;
+  }
+
+  /**
+   * Handle review completed events — generate content brief for GTM
+   * This creates a blog outline from the review process for marketing purposes
+   */
+  private async handleReviewCompleted(
+    payload: {
+      projectPath: string;
+      featureId: string;
+      reviewNotes?: string;
+    },
+    verdict: 'approved' | 'changes_requested'
+  ): Promise<void> {
+    const { projectPath, featureId, reviewNotes } = payload;
+
+    // Check if ceremonies are enabled
+    const ceremonySettings = await this.getCeremonySettings(projectPath);
+    if (!ceremonySettings?.enabled) {
+      logger.debug('Ceremonies disabled, skipping content brief generation');
+      return;
+    }
+
+    try {
+      // Load the feature to get PRD content
+      const feature = await this.featureLoader!.get(projectPath, featureId);
+      if (!feature) {
+        logger.warn(`Feature ${featureId} not found for content brief`);
+        return;
+      }
+
+      // Generate content brief using LLM
+      const contentBrief = await this.generateContentBrief(
+        projectPath,
+        feature,
+        verdict,
+        reviewNotes
+      );
+
+      // Post to Discord
+      const messages = this.splitMessage(contentBrief, 2000);
+      for (const message of messages) {
+        await this.emitDiscordEvent(
+          projectPath,
+          ceremonySettings.discordChannelId,
+          message,
+          `Content Brief: ${feature.title}`
+        );
+      }
+
+      logger.info(`Posted content brief for feature "${feature.title}"`);
+    } catch (error) {
+      logger.error('Failed to generate content brief:', error);
+    }
+  }
+
+  /**
+   * Generate content brief (blog outline) from review process
+   * Uses LLM to create GTM-ready content outline based on PRD and review
+   */
+  private async generateContentBrief(
+    projectPath: string,
+    feature: Feature,
+    verdict: 'approved' | 'changes_requested',
+    reviewNotes?: string
+  ): Promise<string> {
+    const model = 'sonnet'; // Use Sonnet for content generation
+
+    // Build the prompt for content brief generation
+    const prompt = `You are a content strategist creating a blog outline for a Go-To-Market campaign.
+
+Based on this PRD and review process, create a compelling blog post outline that:
+1. Explains the problem being solved
+2. Highlights the solution's key benefits
+3. Describes the technical approach at a high level
+4. Provides a clear call-to-action
+
+**Feature Title:** ${feature.title}
+
+**PRD Description:**
+${feature.description || 'No description provided'}
+
+**Complexity:** ${feature.complexity || 'Not specified'}
+
+**Review Verdict:** ${verdict === 'approved' ? 'APPROVED' : 'CHANGES REQUESTED'}
+
+${reviewNotes ? `**Review Notes:**\n${reviewNotes}` : ''}
+
+Generate a structured blog outline with:
+- Catchy title
+- Hook/opening paragraph
+- 3-5 main sections with bullet points
+- Conclusion with CTA
+
+Keep it engaging, benefits-focused, and suitable for a technical audience.`;
+
+    logger.info(`Generating content brief for "${feature.title}" using model: ${model}`);
+
+    const result = await simpleQuery({
+      prompt,
+      model,
+      cwd: projectPath,
+      maxTurns: 1,
+      allowedTools: [],
+    });
+
+    const outline = result.text;
+
+    // Format the output with header
+    const verdictEmoji = verdict === 'approved' ? '✅' : '⚠️';
+    return `${verdictEmoji} **Content Brief Generated**: ${feature.title}\n\n${outline}`;
   }
 
   /**
