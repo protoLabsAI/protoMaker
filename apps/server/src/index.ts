@@ -455,7 +455,7 @@ linearSyncService.start();
 
 // Initialize Ceremony Service for milestone completion ceremonies
 const { ceremonyService } = await import('./services/ceremony-service.js');
-ceremonyService.initialize(events, settingsService, featureLoader, projectService);
+ceremonyService.initialize(events, settingsService, featureLoader, projectService, metricsService);
 
 // Initialize Completion Detector Service — cascades feature done → epic → milestone → project
 const completionDetectorService = new CompletionDetectorService();

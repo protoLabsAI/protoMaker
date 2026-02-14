@@ -66,19 +66,33 @@ export function createMetricsRoutes(metricsService: MetricsService): Router {
         };
         const multiplier = multipliers[complexity] ?? 1.0;
 
-        // Estimate cost per feature from historical data
-        const avgCostPerFeature =
-          metrics.completedFeatures > 0 ? metrics.totalCostUsd / metrics.completedFeatures : 0;
-
         res.json({
           success: true,
           complexity,
           estimatedDurationMs: Math.round(metrics.avgCycleTimeMs * multiplier),
           estimatedAgentTimeMs: Math.round(metrics.avgAgentTimeMs * multiplier),
-          estimatedCostUsd: Number((avgCostPerFeature * multiplier).toFixed(4)),
+          estimatedCostUsd: Number((metrics.costPerFeature * multiplier).toFixed(4)),
           basedOnFeatures: metrics.completedFeatures,
           multiplier,
         });
+      } catch (err) {
+        res.status(500).json({ success: false, error: (err as Error).message });
+      }
+    }
+  );
+
+  /**
+   * POST /impact-report - Generate Project Impact Report with historical comparison
+   * Returns markdown report with cost, time, quality metrics and comparison to historical averages
+   */
+  router.post(
+    '/impact-report',
+    validatePathParams('projectPath'),
+    async (req: Request, res: Response) => {
+      try {
+        const { projectPath, historicalBaseline } = req.body;
+        const report = await metricsService.generateImpactReport(projectPath, historicalBaseline);
+        res.json({ success: true, report });
       } catch (err) {
         res.status(500).json({ success: false, error: (err as Error).message });
       }

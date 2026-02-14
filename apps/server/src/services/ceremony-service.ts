@@ -12,6 +12,7 @@ import type { EventEmitter } from '../lib/events.js';
 import type { SettingsService } from './settings-service.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { ProjectService } from './project-service.js';
+import type { MetricsService } from './metrics-service.js';
 import type { Feature, CeremonySettings } from '@automaker/types';
 import { simpleQuery } from '../providers/simple-query-service.js';
 
@@ -81,6 +82,7 @@ export class CeremonyService {
   private settingsService: SettingsService | null = null;
   private featureLoader: FeatureLoader | null = null;
   private projectService: ProjectService | null = null;
+  private metricsService: MetricsService | null = null;
   private unsubscribe: (() => void) | null = null;
 
   /**
@@ -90,12 +92,14 @@ export class CeremonyService {
     emitter: EventEmitter,
     settingsService: SettingsService,
     featureLoader: FeatureLoader,
-    projectService: ProjectService
+    projectService: ProjectService,
+    metricsService: MetricsService
   ): void {
     this.emitter = emitter;
     this.settingsService = settingsService;
     this.featureLoader = featureLoader;
     this.projectService = projectService;
+    this.metricsService = metricsService;
 
     // Subscribe to epic, milestone, and project lifecycle events
     this.unsubscribe = emitter.subscribe((type, payload) => {
@@ -151,6 +155,7 @@ export class CeremonyService {
     this.settingsService = null;
     this.featureLoader = null;
     this.projectService = null;
+    this.metricsService = null;
   }
 
   /**
@@ -402,8 +407,22 @@ ${dataSummary}`;
       });
       const retrospective = result.text;
 
-      // Format the retrospective with header
-      const formattedRetro = `🎉 **${projectTitle}** — Project Complete!\n\n${retrospective}`;
+      // Generate Project Impact Report
+      let impactReport = '';
+      if (this.metricsService) {
+        try {
+          impactReport = await this.metricsService.generateImpactReport(projectPath);
+        } catch (error) {
+          logger.error('Failed to generate impact report:', error);
+        }
+      }
+
+      // Format the retrospective with header and impact report
+      let formattedRetro = `🎉 **${projectTitle}** — Project Complete!\n\n${retrospective}`;
+
+      if (impactReport) {
+        formattedRetro += `\n\n---\n\n${impactReport}`;
+      }
 
       // Split into chunks if needed (Discord limit: 2000 chars)
       const messages = this.splitMessage(formattedRetro, 2000);
@@ -418,7 +437,7 @@ ${dataSummary}`;
         );
       }
 
-      logger.info(`Posted project retrospective for ${projectTitle}`);
+      logger.info(`Posted project retrospective with impact report for ${projectTitle}`);
     } catch (error) {
       logger.error('Failed to generate project retrospective:', error);
     }
