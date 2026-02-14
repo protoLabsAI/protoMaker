@@ -124,6 +124,8 @@ export type EventType =
   // PRD events (Product Requirements Documents)
   | 'prd:created'
   | 'prd:status:updated'
+  | 'prd:review:started'
+  | 'prd:review:completed'
   // Discord monitoring events
   | 'discord:message:detected'
   // Discord DM events
