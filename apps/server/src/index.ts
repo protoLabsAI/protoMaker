@@ -183,7 +183,6 @@ import { LinearApprovalBridge } from './services/linear-approval-bridge.js';
 import { createDeployRoutes } from './routes/deploy/index.js';
 import { createAnalyticsRoutes } from './routes/analytics.js';
 import { AntagonisticReviewService } from './services/antagonistic-review-service.js';
-import { createFlowsRoutes } from './routes/flows/index.js';
 
 const PORT = parseInt(process.env.PORT || '3008', 10);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -961,7 +960,6 @@ app.use('/api/codex', createCodexRoutes(codexUsageService, codexModelCacheServic
 app.use('/api/github', createGitHubRoutes(events, settingsService));
 app.use('/api/context', createContextRoutes(settingsService));
 app.use('/api/content', createContentRoutes());
-app.use('/api/flows', createFlowsRoutes());
 app.use('/api/backlog-plan', createBacklogPlanRoutes(events, settingsService));
 app.use('/api/beads', createBeadsRoutes(beadsService));
 app.use('/api/mcp', createMCPRoutes(mcpTestService));
@@ -1018,7 +1016,7 @@ app.use('/api/crew', createCrewRoutes(crewLoopService));
 app.use('/api/deploy', createDeployRoutes(autoModeService));
 app.use('/api/escalation', createEscalationRoutes(escalationRouter));
 app.use('/api/analytics', createAnalyticsRoutes(events));
-app.use('/api/flows', createFlowsRoutes(antagonisticReviewService));
+app.use('/api/flows', createFlowsRoutes());
 
 // Create HTTP server
 const server = createServer(app);
