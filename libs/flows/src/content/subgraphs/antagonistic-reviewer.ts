@@ -70,19 +70,9 @@ const PASS_THRESHOLD = 75; // Must score 75% or higher to pass
 /**
  * Review dimensions by mode
  */
-const RESEARCH_DIMENSIONS = [
-  'Completeness',
-  'Source Quality',
-  'Relevance',
-  'Depth',
-];
+const RESEARCH_DIMENSIONS = ['Completeness', 'Source Quality', 'Relevance', 'Depth'];
 
-const OUTLINE_DIMENSIONS = [
-  'Structure',
-  'Flow',
-  'Coverage',
-  'Clarity',
-];
+const OUTLINE_DIMENSIONS = ['Structure', 'Flow', 'Coverage', 'Clarity'];
 
 const FULL_DIMENSIONS = [
   'Headline Strength',
@@ -131,9 +121,8 @@ async function reviewNode(
       { role: 'user', content: 'Please review the content according to the rubric.' },
     ]);
 
-    const reviewOutput = typeof response.content === 'string'
-      ? response.content
-      : JSON.stringify(response.content);
+    const reviewOutput =
+      typeof response.content === 'string' ? response.content : JSON.stringify(response.content);
 
     // Parse review output
     const dimensionScores = parseDimensionScores(reviewOutput, dimensions);
