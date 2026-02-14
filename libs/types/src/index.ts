@@ -634,3 +634,14 @@ export type {
 // Escalation router types (signal routing to channels)
 export { EscalationSeverity, EscalationSource } from './escalation.js';
 export type { EscalationSignal, EscalationChannel } from './escalation.js';
+
+// Antagonistic Review Pipeline types
+export type {
+  ReviewVerdict,
+  SectionReview,
+  ReviewerPerspective,
+  AntagonisticReviewResult,
+  ReviewState,
+  ContentBrief,
+  DeliverableType,
+} from './review.js';
