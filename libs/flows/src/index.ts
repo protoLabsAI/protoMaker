@@ -30,3 +30,13 @@ export {
   createMessage,
   getLastAssistantMessage,
 } from './graphs/utils/subgraph-wrapper.js';
+
+// Research subgraph with parallel workers
+export {
+  createResearchSubgraph,
+  ResearchSubgraphState,
+  type ResearchSubgraph,
+  type ContentConfig,
+  type ResearchFinding,
+  type ResearchSummary,
+} from './content/subgraphs/research-subgraph.js';
