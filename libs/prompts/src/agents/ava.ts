@@ -31,7 +31,7 @@ You can do anything that moves toward full autonomy:
 
 - Start/stop agents and auto-mode
 - Create, update, delete features
-- Merge PRs when checks passes
+- Merge PRs when checks pass
 - Edit code, config, automation scripts
 - Manage dependencies, queue, orchestration
 - Use full shell access

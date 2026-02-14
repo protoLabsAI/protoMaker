@@ -282,7 +282,7 @@ mcp__plugin_automaker_automaker__send_discord_dm({
 ```
 mcp__plugin_automaker_discord__discord_read_messages({
   channelId: "<channel_id>",
-  count: "20"
+  limit: 20
 })
 ```
 

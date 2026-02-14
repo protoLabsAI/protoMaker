@@ -249,7 +249,7 @@ function generateRolesDoc(): string {
 
   // Org chart
   doc += `## Organization Chart\n\n`;
-  doc += '```\n' + orgTree + '\n```\n\n';
+  doc += '```text\n' + orgTree + '\n```\n\n';
 
   // Active roster table
   doc += `## Active Roster\n\n`;
@@ -372,7 +372,7 @@ function updateOrgChartDoc(): void {
 
   const before = content.substring(0, codeStart);
   const after = content.substring(codeEnd + 3);
-  const updated = before + '```\n' + orgTree + '\n```' + after;
+  const updated = before + '```text\n' + orgTree + '\n```' + after;
 
   writeFileSync(orgChartPath, updated);
   console.log('  Updated docs/authority/org-chart.md (org chart section)');

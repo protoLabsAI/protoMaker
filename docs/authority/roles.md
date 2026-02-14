@@ -6,7 +6,7 @@
 
 ## Organization Chart
 
-```
+```text
 Josh Mabry (CEO, Human)
 ├── Ava Loveland, Opus, Trust=3 — Engineering
 │   ├── Matt, Sonnet, Trust=2
