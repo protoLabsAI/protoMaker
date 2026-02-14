@@ -58,6 +58,7 @@ function sourceToLabel(source: EscalationSource): string {
     sla_breach: 'source:sla-breach',
     board_anomaly: 'source:board-anomaly',
     human_mention: 'source:human-mention',
+    agent_needs_input: 'source:agent-needs-input',
   };
   return labelMap[source];
 }
