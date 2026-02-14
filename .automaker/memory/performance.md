@@ -5,9 +5,9 @@ relevantTo: [performance]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 1
-  referenced: 0
-  successfulFeatures: 0
+  loaded: 2
+  referenced: 1
+  successfulFeatures: 1
 ---
 # performance
 
@@ -41,3 +41,10 @@ usageStats:
 - **Problem solved:** Prompt cache could theoretically grow indefinitely if many unique prompts are accessed
 - **Why this works:** LRU naturally evicts least-recently-used items when cache is full, preserving working set of active prompts while bounding memory. Configurable size allows tuning per deployment needs.
 - **Trade-offs:** Requires tracking access order (minimal overhead) but prevents memory issues in production. Trade cache hit rate for reliability.
+
+### Prompt reduction from 263 to 100 lines improves token efficiency without sacrificing coverage (2026-02-14)
+- **Context:** Switching to XML format allowed aggressive simplification of fact-checker.md template
+- **Why:** Less verbose prompt reduces token cost per LLM call (~60% reduction). XML structure forces clarity - rambling explanations compressed to required fields only.
+- **Rejected:** Keeping verbose markdown format - higher token cost accumulates across thousands of fact-checks. Detailed instructions don't improve output quality if structure is clear.
+- **Trade-offs:** Simpler prompt reduces cost but requires clearer field definitions. More constraints but better predictability.
+- **Breaking if changed:** If prompts get expanded back to verbose format without monitoring, token costs could increase 2-3x across production fact-checking workloads

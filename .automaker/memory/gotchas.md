@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 153
-  referenced: 61
-  successfulFeatures: 61
+  loaded: 171
+  referenced: 72
+  successfulFeatures: 72
 ---
 # gotchas
 
@@ -90,3 +90,8 @@ usageStats:
 - **Situation:** Initial npm resolution failed when @automaker/flows tried to reference @automaker/types using workspace protocol
 - **Root cause:** LangGraph build/compilation process may not resolve workspace protocol correctly in some monorepo configurations. Explicit version numbers force npm resolution to use published versions or local copies consistently.
 - **How to avoid:** Explicit versions slightly decouple from monorepo's version management - requires manual sync. But gained immediate stability and avoided monorepo-wide configuration changes.
+
+#### [Gotcha] Documentation length limit (800 lines) forced pruning of verbose examples without losing critical implementation details (2026-02-14)
+- **Situation:** Initial draft with full 3-example section was 950+ lines; needed to fit acceptance criteria while maintaining completeness
+- **Root cause:** Docs need examples for clarity but also need to be maintainable; verbose examples with extensive comments become stale as code evolves. Concise examples with cross-references to actual source is more maintainable
+- **How to avoid:** Easier: docs stay synchronized with codebase. Harder: readers need to flip between doc and source code for full understanding

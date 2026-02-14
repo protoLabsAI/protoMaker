@@ -5,9 +5,9 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 40
-  referenced: 22
-  successfulFeatures: 22
+  loaded: 41
+  referenced: 23
+  successfulFeatures: 23
 ---
 # api
 
@@ -205,3 +205,35 @@ usageStats:
 - **Rejected:** Requiring `import { LangfuseClient } from '@automaker/observability/dist/langfuse/client'` exposes internal structure
 - **Trade-offs:** Central barrel export is easier to use (one source of truth), requires explicit re-exports (minor maintenance overhead)
 - **Breaking if changed:** If index.ts stops re-exporting types, any code importing from it breaks. Users must be aware of public API guarantees.
+
+#### [Gotcha] LangGraph stream() returns async generator that TypeScript couldn't properly type; switched to invoke() + getState() pattern for HITL interrupt detection (2026-02-14)
+- **Situation:** Attempted to iterate over stream() output to detect when flow reached interrupt gates, but type inference failed for async iteration
+- **Root cause:** invoke() returns the final state synchronously and getState() explicitly retrieves current state with interrupt info. More explicit control flow for detecting and handling HITL gates
+- **How to avoid:** Easier: Type safety and explicit state access. Harder: Can't consume partial results during execution, must wait for completion or interrupt
+
+#### [Pattern] Export formats (markdown, frontmatter-md, jsonl, hf-dataset) configured as separate output pipeline stages rather than conditional transforms at end (2026-02-14)
+- **Problem solved:** Need to support 4 different serialization formats for same content across different use cases (docs, training data, HuggingFace)
+- **Why this works:** Pipeline stages keep format logic decoupled and composable. Each format knows how to serialize its own data without conditional branching
+- **Trade-offs:** Easier: Add formats without touching core logic. Harder: Need format handlers to be discoverable/registered, adds abstraction layer
+
+#### [Gotcha] Verification script checks for exact phrase matching (case-sensitive) for 'key concepts' like '7-phase', 'antagonistic review', 'bucket brigade' but these appear in documentation with variations in capitalization (2026-02-14)
+- **Situation:** Verification warnings appeared for concepts that were actually present but with different casing (e.g., 'Bucket brigade' vs 'bucket brigade')
+- **Root cause:** Root cause is documentation using proper noun capitalization (standard English) while verification assumed lowercase. This reveals that 'key concepts' are domain terms that deserve consistent naming
+- **How to avoid:** Strict verification caught something valuable - the need to standardize how domain terms are capitalized throughout documentation. The warnings forced explicit checking rather than silent acceptance
+
+#### [Gotcha] compilePrompt() from prompt-loader returns a CompiledPrompt object with metadata (.prompt property contains actual string), not a raw string. Must access .prompt property to get template text. (2026-02-14)
+- **Situation:** Initial implementation passed CompiledPrompt object directly to LLM, which expected string template.
+- **Root cause:** The prompt loader design preserves metadata about prompts (source, compilation details) for debugging and tracing. This enables better observability at the cost of an extra property access.
+- **How to avoid:** Extra property access needed, but enables prompt versioning, source tracking, and better error messages when prompts fail.
+
+### Switched from markdown report format to structured XML output in fact-checker.md prompt (2026-02-14)
+- **Context:** LLM responses must be parsed programmatically. Needed machine-readable format for finding extraction.
+- **Why:** XML tags are unambiguous delimiters that survive whitespace variations and LLM formatting quirks. Easier to parse reliably with `extractAllTags()` than markdown. Reduced token cost from ~263 to ~100 lines.
+- **Rejected:** Keeping markdown format - would require fragile string matching or regex for extraction. JSON output - adds escaping complexity and LLM tends to mangle nested quotes.
+- **Trade-offs:** XML is more verbose in prompt but more reliable in parsing. Structured format better than freeform text but less human-readable.
+- **Breaking if changed:** If parser expects markdown format and prompt returns XML, all findings fail to extract silently (parsing returns empty array)
+
+#### [Gotcha] XML parser requires careful enum validation - `extractRequiredEnum()` vs optional `extractTag()` distinction (2026-02-14)
+- **Situation:** Parsing severity field from XML. Needed to distinguish between required vs optional findings fields.
+- **Root cause:** Missing severity should be error (finding is malformed), but missing suggestion is acceptable (finding still valid). Type safety catches invalid severity values.
+- **How to avoid:** Stricter validation catches malformed LLM output but requires explicit error handling for each required field.

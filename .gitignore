@@ -31,6 +31,10 @@ docs/.vitepress/cache/
 # Feature data is runtime-managed by the server — never git-track
 .automaker/features/
 
+# Runtime data — never git-track
+.automaker/ledger/
+.automaker/recovery/
+
 # Track project plans, context files, skills, memory, settings, and spec
 !.automaker/projects/
 !.automaker/context/

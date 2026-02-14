@@ -5,9 +5,9 @@ relevantTo: [architecture]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 9
-  referenced: 5
-  successfulFeatures: 5
+  loaded: 13
+  referenced: 8
+  successfulFeatures: 8
 ---
 # architecture
 
@@ -1105,3 +1105,166 @@ usageStats:
 - **Rejected:** Only support array - simpler API but less convenient for single-response tests. Only support single - can't test multi-turn flows.
 - **Trade-offs:** Constructor must handle both cases (adds ~20 lines of type handling). Benefit is provider works for both simple unit tests and complex integration scenarios without modification.
 - **Breaking if changed:** If response array cycling is removed, multi-turn test scenarios fail. If single-response shorthand removed, existing tests using that pattern break.
+
+### Defined ContentCreationConfig type locally in service file instead of importing from flows package (2026-02-14)
+- **Context:** ContentConfig interface existed in flows package but wasn't exported; attempted to re-export as ContentCreationFlowConfig but service couldn't access it across workspace boundaries
+- **Why:** Type re-exports across workspace package boundaries require proper package.json exports configuration. Defining locally avoids circular dependency risks and packaging configuration complexity
+- **Rejected:** Importing from @automaker/flows - would require modifying package exports and handling potential circular dependencies when service imports from flows which may import types
+- **Trade-offs:** Easier: Avoids packaging configuration. Harder: Type duplication between service and flow definition - future changes require updating both locations
+- **Breaking if changed:** If ContentConfig interface changes in the flow, the service won't automatically update and will silently accept outdated config shapes
+
+#### [Pattern] MCP tools implemented as markdown documentation files in commands/ directory with tool definitions and handlers in central index.ts (2026-02-14)
+- **Problem solved:** Need to expose 5 content flow operations via MCP protocol alongside existing server REST APIs
+- **Why this works:** Centralizes tool schema definitions and request routing (switch statement on tool names). Markdown docs serve dual purpose as documentation and source of truth for tool capabilities. Separates concerns: docs define interface, index.ts handles registration and dispatch
+- **Trade-offs:** Easier: Single source of truth for tools, clear overview of all capabilities. Harder: index.ts becomes large as more tools added, requires framework to understand this pattern
+
+### HITL gates implemented as interrupt points that pause flow execution, requiring explicit resume with review decision state (2026-02-14)
+- **Context:** Content creation needs human review at research (20%), outline (40%), and final review (80%) stages before proceeding
+- **Why:** LangGraph's interruptBefore() mechanism provides clean pause/resume semantics with full state persistence via checkpointer. Review decision becomes part of state graph instead of separate callback
+- **Rejected:** Callback-based review where human feedback doesn't update graph state - creates race conditions and makes resumption unreliable
+- **Trade-offs:** Easier: State consistency, clean resumption, full audit trail in checkpointer. Harder: Client must explicitly resume with decision, adds round-trip latency
+- **Breaking if changed:** If checkpointer is removed, no resumption capability and flow state is lost on interrupt. If interruptBefore removed, gates become no-ops and flow proceeds without human input
+
+#### [Gotcha] Workspace imports must use published package names (@automaker/*) not relative paths to source files (2026-02-14)
+- **Situation:** Attempted to import flow creation function and types from source files in flows library using relative paths, resulting in type resolution failures
+- **Root cause:** Monorepo tooling (likely turborepo/nx) compiles workspace packages and expects consumers to import from published exports defined in package.json#exports, not from source directories directly
+- **How to avoid:** Easier: Guarantees consumers always use built package. Harder: Can't directly debug source, requires build step between code changes and testing
+
+### Structured documentation around explicit 9-section framework (Architecture Overview, Content Types, Config Reference, Blog Strategy, A/B Testing, Examples, Prompts, Tracing, Testing) rather than narrative prose (2026-02-14)
+- **Context:** Content creation pipeline is complex with many decision points (which content type, what config, how to trace), and developers need different information for different tasks (implementation vs configuration vs debugging)
+- **Why:** Section-based organization allows developers to navigate to their specific need without reading entire guide. The explicit sections become checklist items for completeness. Discovered concepts like '8-dimension antagonistic review scoring' need dedicated real estate to explain properly
+- **Rejected:** Single narrative flow would be easier to write but creates discovery problem - developer implementing new content type wouldn't naturally find the ContentConfig Reference section nested in prose
+- **Trade-offs:** Requires more upfront structure/planning but makes documentation vastly more navigable. Slight redundancy between sections (e.g., BlogPost appears in both Content Types and Usage Examples) improves standalone readability of each section
+- **Breaking if changed:** If sections were removed or reordered, developers would lose the mental model of 'which section answers my question type' and would need to search/skim entire document
+
+### Leveraged VitePress auto-sidebar generation (`generateSidebar()`) rather than manually configuring documentation file in nav config (2026-02-14)
+- **Context:** Documentation files in `docs/dev/` directory need to appear in sidebar navigation automatically as new files are added
+- **Why:** Auto-discovery pattern removes the need for documentation PRs to also update configuration, reducing merge conflicts and cognitive load. New developers adding docs won't forget to register the file in nav config
+- **Rejected:** Manual config entry would require changing `.vitepress/config.mts` for each documentation addition, creating friction and easy-to-miss step
+- **Trade-offs:** Auto-generation requires following file naming conventions (kebab-case) and directory structure strictly. One misnamed file silently doesn't appear in nav
+- **Breaking if changed:** If auto-generation is removed and config must be maintained manually, documentation maintenance becomes distributed responsibility between multiple files, increasing entropy
+
+### Tier 0 templates are immutable system-level constructs that cannot be overwritten or unregistered via API, creating a protected namespace for core agent types (2026-02-14)
+- **Context:** Cindi was registered as tier 0 (protected) despite being a specialized agent, not a foundational system agent
+- **Why:** Protects core agent infrastructure from accidental modification or user-driven registry pollution. Tier 0 agents represent canonical implementations that should remain stable across deployments
+- **Rejected:** Making Cindi tier 1+ (user-modifiable) - would allow registry pollution and inconsistent behavior across instances
+- **Trade-offs:** Prevents customization at the cost of ensuring consistency. Trade-off favors stability and predictability for system agents over flexibility
+- **Breaking if changed:** Removing tier-based protection would require redesigning the role registry's override/extend mechanism and could introduce conflicting template definitions
+
+#### [Pattern] Agent templates require role registration in KNOWN_ROLES before template definition can be validated, enforcing type safety through compile-time constraints (2026-02-14)
+- **Problem solved:** The 'content-writer' role had to be added to KNOWN_ROLES in types package before being usable in the template definition
+- **Why this works:** Creates a single source of truth for valid role identifiers and ensures TypeScript type checking catches invalid role references at compile time, not runtime
+- **Trade-offs:** Requires two-step registration (types first, then implementation) but prevents entire categories of type errors and enables IDE autocomplete
+
+### System prompts are philosophy-first rather than instruction-first, establishing principles (antagonistic review, SEO-awareness) over procedural steps (2026-02-14)
+- **Context:** Cindi's system prompt emphasizes 'Content Writing Specialist' identity and review methodology rather than listing exact tasks
+- **Why:** Allows the LLM to derive specific tasks from core principles, making behavior composable with different content pipeline flows without rewriting prompts. Supports goal-oriented reasoning rather than rigid procedures
+- **Rejected:** Task-list prompts (Write X, then review Y, then export Z) - would be tightly coupled to one pipeline flow and require new prompts for each use case
+- **Trade-offs:** Requires more sophisticated prompt engineering upfront but enables flexible composition. LLM has to derive tasks from principles rather than following explicit steps
+- **Breaking if changed:** Removing principle-based framing would require separate prompts for each content pipeline flow, creating maintenance overhead
+
+#### [Pattern] Agent template ordering in built-in registry is semantically organized (content-related roles grouped together) rather than alphabetical, making the codebase more maintainable for developers (2026-02-14)
+- **Problem solved:** Cindi (content-writer) was placed before Jon (gtm-specialist) despite alphabetical ordering, grouping content-focused roles
+- **Why this works:** Developers scanning the template list can understand agent families at a glance. Semantic grouping creates discoverable patterns that reduce cognitive load when adding related agents
+- **Trade-offs:** Slight lookup penalty (linear search still O(n)) but significantly better readability and onboarding experience. Most lookups use get() with caching anyway
+
+### Applied HTML entity unescaping at the extraction layer rather than at consumption points (2026-02-14)
+- **Context:** LLM outputs contain HTML entities (&lt;, &gt;, &amp;, etc.) in code blocks instead of raw characters. Parser functions extract these entities verbatim.
+- **Why:** Centralizing normalization at extraction time (single point) prevents duplicate unescaping logic across all callers. Helper functions like extractRequiredTag and extractOptionalTag automatically inherit the fix through function composition.
+- **Rejected:** Alternative: Unescape at each consumption point (caller responsibility). This would require changes in multiple files and risk inconsistent handling.
+- **Trade-offs:** Easier: single fix point, automatic propagation to all extraction variants. Harder: consuming code loses visibility that normalization happened; potential issue if future code needs raw entities.
+- **Breaking if changed:** If removed, code blocks with angle brackets fail parsing (e.g., TypeScript generics become corrupted: 'Map&lt;string, number&gt;' instead of 'Map<string, number>').
+
+#### [Pattern] Delegating to unescapeHtmlEntities() helper function rather than inline regex replacement (2026-02-14)
+- **Problem solved:** Multiple HTML entities need conversion (&lt; &gt; &amp; &quot; &#39;) across multiple extraction functions.
+- **Why this works:** Encapsulation allows single-point maintenance of entity mapping. If new entities appear in LLM outputs, only one function updates. Testability: function can be tested independently.
+- **Trade-offs:** Easier: centralized entity definitions, single test suite for unescaping. Harder: extra function call overhead (negligible), indirection requires reading two functions to understand behavior.
+
+#### [Gotcha] LangGraph Annotation.Root does not support default value syntax like `Annotation<number>({ default: () => 0 })`. Defaults must be provided at node invocation time via initial state in executeAntagonisticReviewer(). (2026-02-14)
+- **Situation:** Attempted to set default values on Annotation fields during type definition, which compiled but failed at runtime.
+- **Root cause:** LangGraph's Annotation API is designed for explicit state management - defaults are a runtime concern, not a type definition concern. This prevents implicit state mutations and makes data flow explicit.
+- **How to avoid:** More verbose invocation code but clearer state initialization semantics. Caller must always provide initial values, preventing silent bugs from missing state.
+
+### Designed subgraph with dual execution modes: standalone via executeAntagonisticReviewer() and composable via wrapSubgraph() for embedding in larger flows. (2026-02-14)
+- **Context:** Needed a primitive that could be reused both independently and as part of multi-step workflows.
+- **Why:** Subgraphs in LangGraph are composable units, but direct instantiation has different calling conventions than wrapped versions. Providing both patterns maximizes reusability without forcing callers into one pattern.
+- **Rejected:** Single execution function only, or requiring wrapper code in every usage
+- **Trade-offs:** Slightly more code complexity in the module, but eliminates boilerplate for common use cases. executeAntagonisticReviewer() handles the mechanical setup that wrapSubgraph() would force on every caller.
+- **Breaking if changed:** Removing executeAntagonisticReviewer() would require all callers to use wrapSubgraph() and manage state/invoke mechanics manually.
+
+### Implemented weighted scoring formula that converts 1-10 dimension scores to 0-100 overall score: `((score - 1) / 9) * 100`. Scores are clamped to 1-10 range before calculation. (2026-02-14)
+- **Context:** Needed to aggregate multiple dimension scores into single 0-100 overall score with respect for configured weights.
+- **Why:** 1-10 scale is natural for human-intuitive scoring, but 0-100 scale is standard for overall percentages. The formula (score-1)/9 properly maps [1,10] to [0,100]. Clamping prevents out-of-range values from skewing results.
+- **Rejected:** Simple average without weighting, or direct conversion without clamping
+- **Trade-offs:** Adds math complexity but enables per-dimension weight tuning and handles edge cases gracefully. Prevents single bad score from dominating overall result when properly weighted.
+- **Breaking if changed:** Changing the formula (e.g., to (score/10)*100) would shift score distribution and likely break threshold logic (75% cutoff) that depends on calibration.
+
+#### [Pattern] Used XML output format with specific tag structure for LLM parsing (dimension reasoning in `<reasoning>` tags, scores as `<score>` attributes) combined with custom extractors (extractClampedInt, extractRequiredEnum). (2026-02-14)
+- **Problem solved:** Needed reliable extraction of structured data from LLM outputs without requiring JSON mode (which may not be available in all models).
+- **Why this works:** XML is more robust for partial/malformed responses than JSON (XML parsers can recover from some corruption). Custom extractors provide validation and type coercion in one step. Existing xml-parser.ts utilities reduce implementation burden.
+- **Trade-offs:** XML is more verbose than JSON and requires custom extraction logic, but the clamping and type coercion in extractors is safer than post-hoc validation. Reduces likelihood of type mismatches reaching application logic.
+
+### Implemented retry loop with configurable maxRetries (default 2) and revision tracking. Verdict is FAIL only after exhausting retries, not on first REVISE. (2026-02-14)
+- **Context:** Wanted multi-turn revision capability for content that initially doesn't meet passing threshold.
+- **Why:** Single-pass critique doesn't match real review workflows where content can be revised. Configurable retries allow callers to control cost/quality tradeoff. Default of 2 provides one revision attempt without excessive iterations.
+- **Rejected:** Single-pass verdict with just PASS/FAIL, or unlimited revisions
+- **Trade-offs:** Adds loop complexity and LLM call costs, but aligns with human review patterns. Retry limit prevents infinite loops on difficult-to-satisfy content.
+- **Breaking if changed:** Removing retry logic would require upstream systems to handle multi-turn revision themselves, losing the critique-improve pattern entirely.
+
+### Separated 'smart model' (full detailed reviews) and 'fast model' (structural checks) with different model assignments: sonnet for smart, haiku for fast. (2026-02-14)
+- **Context:** Needed to balance review quality and cost, and allow tuning of expensive vs cheap LLM calls.
+- **Why:** Haiku is significantly cheaper for routine checks, sonnet provides better reasoning for complex evaluations. Allowing configurable model selection enables per-use-case cost optimization without code changes.
+- **Rejected:** Single model for all calls, or no model configuration
+- **Trade-offs:** Adds configuration complexity but dramatically reduces costs for high-volume use. Two-model pattern requires explicit selection logic in the prompt/invoke code.
+- **Breaking if changed:** Removing model configurability would lock callers into one cost/quality point, preventing optimization for their specific use case.
+
+#### [Pattern] Model fallback chain (smartModel → fastModel) for graceful degradation in LLM-dependent nodes (2026-02-14)
+- **Problem solved:** factCheckerNode needs to make LLM calls but must work even if models unavailable or fail
+- **Why this works:** Prevents pipeline failure when API unavailable. Fast model provides degraded but working service. This pattern scales to supporting offline/batch processing.
+- **Trade-offs:** Slightly more complex state management vs robust production reliability. False negatives (missing some checks) better than false positives (blocking valid content)
+
+### Heuristic fallback function maintains original stub logic as escape hatch when LLM fails (2026-02-14)
+- **Context:** LLM calls can fail, timeout, or hit rate limits in production. Need baseline fact-checking that always works.
+- **Why:** Heuristics are deterministic, fast, and never fail. Rule-based checks (missing citations, unsourced numbers) work without external dependencies. Keeps system functional during LLM outages.
+- **Rejected:** Removing heuristics entirely - would create hard dependency on LLM availability. Relying only on LLM - no protection against API failures.
+- **Trade-offs:** Heuristics less sophisticated than LLM but provide 80/20 coverage. More code to maintain but critical for resilience.
+- **Breaking if changed:** Removing heuristic fallback creates silent quality degradation - missing checks become invisible to users since no error is raised
+
+#### [Pattern] Cross-referencing state.researchFindings in fact-checker provides continuity between review nodes (2026-02-14)
+- **Problem solved:** factCheckerNode receives researchFindings from prior research-worker node. Needs context about what's already been verified.
+- **Why this works:** Avoids duplicate fact-checking work and allows checker to focus on claims not already covered. State threading creates natural pipeline dependency without explicit coordination.
+- **Trade-offs:** Requires state flow coordination but enables smarter, focused checking. More implicit dependencies in pipeline.
+
+#### [Pattern] Reviewer field hardcoding ('FactChecker') creates audit trail of which node produced finding (2026-02-14)
+- **Problem solved:** ReviewFinding objects need attribution. Different nodes (researcher, fact-checker, etc.) produce findings.
+- **Why this works:** Hardcoding reviewer name prevents accidental misattribution and makes debug logs clear. Audit trail is important for user trust and debugging.
+- **Trade-offs:** Simple hardcoding vs flexibility. Less flexible but clearer, less error-prone.
+
+#### [Pattern] Quality metrics calculated per-section (section: score pairs) rather than document-level only (2026-02-14)
+- **Problem solved:** Need insight into which parts of generated content are problematic vs which are good
+- **Why this works:** Section-level scores enable targeted debugging and prompt optimization. If only document average exists and it's 65%, you don't know if 3 sections are 30% and 1 is 95% (fixable) or all 4 are 65% (pervasive issue). Section scores guide which parts need regeneration.
+- **Trade-offs:** Gained: Granular debugging, targeted regenration, understanding of quality distribution. Lost: More data to track, more complexity in visualization.
+
+### Documentation uses auto-generated sidebar via VitePress config instead of manual sidebar entries (2026-02-14)
+- **Context:** Adding new documentation file to docs/dev/ directory needed to appear in sidebar navigation
+- **Why:** VitePress config uses generateSidebar() function that auto-discovers .md files, extracts H1 titles, and sorts alphabetically. Eliminates manual sidebar maintenance and keeps navigation DRY
+- **Rejected:** Manual sidebar entry in config file - would require config changes for every new doc
+- **Trade-offs:** Easier: add doc → appears automatically. Harder: sidebar order is alphabetical only, can't customize order without refactoring generateSidebar logic
+- **Breaking if changed:** Removing the auto-generation would require manually updating sidebar config for every documentation file, creating maintenance burden
+
+#### [Pattern] Documenting external pattern references (STORM, CrewAI, Constitutional AI) establishes conceptual foundation rather than reinventing terminology (2026-02-14)
+- **Problem solved:** Antagonistic review pattern combines multiple established techniques; need to explain how they interact
+- **Why this works:** Readers familiar with these patterns immediately understand the antagonistic review approach; avoids explaining Constitutional AI from first principles. Creates conceptual bridges to existing knowledge
+- **Trade-offs:** Easier: dense information transfer for experienced readers. Harder: less accessible for readers unfamiliar with referenced patterns
+
+### Shifted content pipeline from HITL gates at 3 checkpoints to autonomous operation with antagonistic review as primary quality control (2026-02-14)
+- **Context:** Original design required human approval at multiple gates; new design runs fully autonomous by default with automatic scoring
+- **Why:** Enables high-volume content generation without human bottlenecks while maintaining quality through automated antagonistic review (8-dimension scoring). HITL becomes optional overlay for high-stakes content only
+- **Rejected:** Keeping mandatory HITL gates would limit throughput; purely autonomous without review risks quality degradation
+- **Trade-offs:** Gained: scalability, throughput; Lost: guaranteed human oversight by default; Mitigation: aggressive antagonistic review criteria and optional HITL for critical content
+- **Breaking if changed:** Systems depending on human approval gates at specific pipeline stages would break; must be refactored to use optional checkpointer/interruptBefore pattern
+
+#### [Pattern] HITL overlay implemented via optional MemorySaver checkpointer with interruptBefore=['final_review'] pattern, allowing state resumption after human intervention (2026-02-14)
+- **Problem solved:** Need to support both autonomous mode and optional human-in-loop without complex mode switching
+- **Why this works:** LangGraph's checkpointer + interruptBefore provides clean state management without requiring separate code paths; threadId enables resumption from exact interrupt point
+- **Trade-offs:** Gained: clean separation of concerns, optional feature; Lost: requires explicit checkpointer setup, adds state management complexity
