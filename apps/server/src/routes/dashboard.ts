@@ -5,13 +5,13 @@
 import { Router, Request, Response } from 'express';
 import { createLogger } from '@automaker/utils';
 import type { AutoModeService } from '../services/auto-mode-service.js';
-import type { CrewService } from '../services/crew-service.js';
+import type { CrewLoopService } from '../services/crew-loop-service.js';
 
 const logger = createLogger('DashboardRoutes');
 
 export function createDashboardRoutes(
   autoModeService: AutoModeService,
-  crewService: CrewService
+  crewLoopService: CrewLoopService
 ): Router {
   const router = Router();
 
@@ -21,32 +21,20 @@ export function createDashboardRoutes(
    */
   router.post('/health-dashboard', async (req: Request, res: Response) => {
     try {
-      const { projectPath } = req.body;
-
       // Get memory and CPU metrics
       const memoryUsage = process.memoryUsage();
       const cpuUsage = process.cpuUsage();
 
-      // Get auto-mode status
-      let autoModeStatus = null;
-      if (projectPath) {
-        try {
-          autoModeStatus = await autoModeService.getStatus(projectPath);
-        } catch (error) {
-          logger.warn('Failed to get auto-mode status:', error);
-        }
-      }
+      // Get auto-mode status (no arguments)
+      const autoModeStatus = autoModeService.getStatus();
 
       // Get crew status
       let crewStatus = null;
       try {
-        crewStatus = await crewService.getStatus();
+        crewStatus = crewLoopService.getStatus();
       } catch (error) {
         logger.warn('Failed to get crew status:', error);
       }
-
-      // Count active agents from auto-mode
-      const agentCount = autoModeStatus?.activeFeatures?.length ?? 0;
 
       res.json({
         success: true,
@@ -66,20 +54,15 @@ export function createDashboardRoutes(
           percentage: (memoryUsage.heapUsed / memoryUsage.heapTotal) * 100,
         },
         agents: {
-          count: agentCount,
-          active: autoModeStatus?.activeFeatures ?? [],
+          count: autoModeStatus.runningCount,
+          active: autoModeStatus.runningFeatures,
         },
         autoMode: {
-          running: autoModeStatus?.running ?? false,
-          capacity: autoModeStatus?.capacity,
-          projectPath: autoModeStatus?.projectPath,
+          isRunning: autoModeStatus.isRunning,
+          runningCount: autoModeStatus.runningCount,
+          runningFeatures: autoModeStatus.runningFeatures,
         },
-        crew: {
-          enabled: crewStatus?.enabled ?? false,
-          running: crewStatus?.running ?? false,
-          lastRun: crewStatus?.lastRun,
-          nextRun: crewStatus?.nextRun,
-        },
+        crew: crewStatus,
         uptime: process.uptime(),
         timestamp: new Date().toISOString(),
       });
