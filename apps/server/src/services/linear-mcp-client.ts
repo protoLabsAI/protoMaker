@@ -203,7 +203,7 @@ export class LinearMCPClient {
    * @returns GraphQL response data
    * @throws {LinearAPIError} On API errors, token expiry, or rate limiting
    */
-  private async executeGraphQL<T = unknown>(
+  async executeGraphQL<T = unknown>(
     query: string,
     variables: Record<string, unknown>
   ): Promise<T> {
