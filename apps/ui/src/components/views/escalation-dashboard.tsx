@@ -164,7 +164,9 @@ const EscalationFeed = memo(function EscalationFeed() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2 mb-1">
                         <p className="font-medium flex-1">{event.message}</p>
-                        <Badge className={cn('text-[10px] px-1.5 py-0.5', getSeverityClasses(severity))}>
+                        <Badge
+                          className={cn('text-[10px] px-1.5 py-0.5', getSeverityClasses(severity))}
+                        >
                           {severity}
                         </Badge>
                       </div>
@@ -299,7 +301,9 @@ const ChannelStatus = memo(function ChannelStatus() {
       <CardContent>
         <div className="space-y-2">
           {channels.length === 0 ? (
-            <p className="text-xs text-muted-foreground text-center py-4">No channel activity yet</p>
+            <p className="text-xs text-muted-foreground text-center py-4">
+              No channel activity yet
+            </p>
           ) : (
             channels.map(([channel, stats]) => (
               <div
@@ -393,10 +397,7 @@ const AcknowledgedPendingCounts = memo(function AcknowledgedPendingCounts() {
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span>Progress</span>
             <span>
-              {counts.total > 0
-                ? Math.round((counts.acknowledged / counts.total) * 100)
-                : 0}
-              %
+              {counts.total > 0 ? Math.round((counts.acknowledged / counts.total) * 100) : 0}%
             </span>
           </div>
           <div className="h-2 bg-muted/30 rounded-full overflow-hidden">

@@ -90,9 +90,22 @@ function formatAuthorityMessage(type: EventType, payload: any): string {
  * Determine severity from event type
  */
 function getEventSeverity(type: EventType): AuthorityEvent['severity'] {
-  if (type.includes('error') || type.includes('rejected') || type.includes('failed') || type.includes('blocked')) return 'error';
-  if (type.includes('changes-requested') || type.includes('feedback') || type.includes('queued') || type.includes('pending')) return 'warning';
-  if (type.includes('approved') || type.includes('completed') || type.includes('resolved')) return 'success';
+  if (
+    type.includes('error') ||
+    type.includes('rejected') ||
+    type.includes('failed') ||
+    type.includes('blocked')
+  )
+    return 'error';
+  if (
+    type.includes('changes-requested') ||
+    type.includes('feedback') ||
+    type.includes('queued') ||
+    type.includes('pending')
+  )
+    return 'warning';
+  if (type.includes('approved') || type.includes('completed') || type.includes('resolved'))
+    return 'success';
   return 'info';
 }
 
