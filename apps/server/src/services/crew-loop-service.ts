@@ -164,6 +164,13 @@ export class CrewLoopService {
    * Call this once after all members are registered.
    */
   async registerAllWithScheduler(): Promise<void> {
+    // Skip crew loops in development — they clog logs and spawn unnecessary agents
+    if (process.env.NODE_ENV !== 'production') {
+      logger.info('Crew loops disabled in development mode (NODE_ENV !== production)');
+      this.systemEnabled = false;
+      return;
+    }
+
     const settings = await this.loadSettings();
     if (settings && !settings.enabled) {
       this.systemEnabled = false;

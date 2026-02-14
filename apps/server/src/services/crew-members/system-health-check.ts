@@ -25,6 +25,7 @@ import type {
 } from '../crew-loop-service.js';
 
 const logger = createLogger('CrewMember:SystemHealth');
+const PLATFORM = process.platform; // 'darwin' | 'linux' | 'win32'
 
 // Thresholds
 const RAM_WARNING_PERCENT = 85;
@@ -75,34 +76,67 @@ export const systemHealthCrewMember: CrewMemberDefinition = {
     }
 
     // 1. System RAM
+    // macOS: os.freemem() is misleading — compressed/cached pages counted as "used"
+    // gives false 99% usage alerts. Use memory_pressure CLI for accurate readings.
     try {
       const totalBytes = os.totalmem();
-      const freeBytes = os.freemem();
-      const usedBytes = totalBytes - freeBytes;
-      const usedPercent = Math.round((usedBytes / totalBytes) * 100);
       const totalGB = (totalBytes / 1024 / 1024 / 1024).toFixed(1);
-      const usedGB = (usedBytes / 1024 / 1024 / 1024).toFixed(1);
-      const freeGB = (freeBytes / 1024 / 1024 / 1024).toFixed(1);
+      let usedPercent: number;
+      let usedGB: string;
+      let freeGB: string;
+      let ramSource: string;
+
+      if (PLATFORM === 'darwin') {
+        // macOS: use memory_pressure for accurate readings
+        const mpOutput = safeExec('/usr/bin/memory_pressure');
+        const match = mpOutput.match(/free percentage:\s*(\d+)/);
+        if (match) {
+          const freePercent = parseInt(match[1], 10);
+          usedPercent = 100 - freePercent;
+          const freeBytes = (totalBytes * freePercent) / 100;
+          const usedBytes = totalBytes - freeBytes;
+          usedGB = (usedBytes / 1024 / 1024 / 1024).toFixed(1);
+          freeGB = (freeBytes / 1024 / 1024 / 1024).toFixed(1);
+          ramSource = 'memory_pressure';
+        } else {
+          // Fallback to os.freemem() if memory_pressure unavailable
+          const freeBytes = os.freemem();
+          const usedBytes = totalBytes - freeBytes;
+          usedPercent = Math.round((usedBytes / totalBytes) * 100);
+          usedGB = (usedBytes / 1024 / 1024 / 1024).toFixed(1);
+          freeGB = (freeBytes / 1024 / 1024 / 1024).toFixed(1);
+          ramSource = 'os.freemem (fallback)';
+        }
+      } else {
+        // Linux/Windows: os.freemem() is accurate
+        const freeBytes = os.freemem();
+        const usedBytes = totalBytes - freeBytes;
+        usedPercent = Math.round((usedBytes / totalBytes) * 100);
+        usedGB = (usedBytes / 1024 / 1024 / 1024).toFixed(1);
+        freeGB = (freeBytes / 1024 / 1024 / 1024).toFixed(1);
+        ramSource = 'os.freemem';
+      }
 
       metrics.ramTotalGB = totalGB;
       metrics.ramUsedGB = usedGB;
       metrics.ramFreeGB = freeGB;
       metrics.ramUsedPercent = usedPercent;
+      metrics.ramSource = ramSource;
 
       if (usedPercent >= RAM_CRITICAL_PERCENT) {
         findings.push({
           type: 'ram-critical',
-          message: `System RAM critical: ${usedGB}GB / ${totalGB}GB (${usedPercent}% used, ${freeGB}GB free)`,
+          message: `System RAM critical: ${usedGB}GB / ${totalGB}GB (${usedPercent}% used, ${freeGB}GB free) [${ramSource}]`,
           severity: 'critical',
-          context: { usedGB, totalGB, freeGB, usedPercent },
+          context: { usedGB, totalGB, freeGB, usedPercent, ramSource },
         });
         raise('critical');
       } else if (usedPercent >= RAM_WARNING_PERCENT) {
         findings.push({
           type: 'ram-warning',
-          message: `System RAM elevated: ${usedGB}GB / ${totalGB}GB (${usedPercent}% used, ${freeGB}GB free)`,
+          message: `System RAM elevated: ${usedGB}GB / ${totalGB}GB (${usedPercent}% used, ${freeGB}GB free) [${ramSource}]`,
           severity: 'warning',
-          context: { usedGB, totalGB, freeGB, usedPercent },
+          context: { usedGB, totalGB, freeGB, usedPercent, ramSource },
         });
         raise('warning');
       }
@@ -110,59 +144,82 @@ export const systemHealthCrewMember: CrewMemberDefinition = {
       logger.warn('Failed to check system RAM:', error);
     }
 
-    // 2. Swap usage
+    // 2. Swap usage (platform-specific)
     try {
-      const swapOutput = safeExec('swapon --show --bytes --noheadings');
-      if (swapOutput) {
-        let totalSwap = 0;
-        let usedSwap = 0;
-        for (const line of swapOutput.split('\n')) {
-          const parts = line.trim().split(/\s+/);
-          // Format: NAME TYPE SIZE USED PRIO
-          if (parts.length >= 4) {
-            totalSwap += parseInt(parts[2], 10) || 0;
-            usedSwap += parseInt(parts[3], 10) || 0;
+      let totalSwap = 0;
+      let usedSwap = 0;
+
+      if (PLATFORM === 'linux') {
+        const swapOutput = safeExec('swapon --show --bytes --noheadings');
+        if (swapOutput) {
+          for (const line of swapOutput.split('\n')) {
+            const parts = line.trim().split(/\s+/);
+            // Format: NAME TYPE SIZE USED PRIO
+            if (parts.length >= 4) {
+              totalSwap += parseInt(parts[2], 10) || 0;
+              usedSwap += parseInt(parts[3], 10) || 0;
+            }
           }
         }
-        if (totalSwap > 0) {
-          const swapPercent = Math.round((usedSwap / totalSwap) * 100);
-          const totalSwapGB = (totalSwap / 1024 / 1024 / 1024).toFixed(1);
-          const usedSwapGB = (usedSwap / 1024 / 1024 / 1024).toFixed(1);
-
-          metrics.swapTotalGB = totalSwapGB;
-          metrics.swapUsedGB = usedSwapGB;
-          metrics.swapUsedPercent = swapPercent;
-
-          if (swapPercent >= SWAP_CRITICAL_PERCENT) {
-            findings.push({
-              type: 'swap-critical',
-              message: `Swap exhausted: ${usedSwapGB}GB / ${totalSwapGB}GB (${swapPercent}% used)`,
-              severity: 'critical',
-              context: { usedSwapGB, totalSwapGB, swapPercent },
-            });
-            raise('critical');
-          } else if (swapPercent >= SWAP_WARNING_PERCENT) {
-            findings.push({
-              type: 'swap-warning',
-              message: `Swap elevated: ${usedSwapGB}GB / ${totalSwapGB}GB (${swapPercent}% used)`,
-              severity: 'warning',
-              context: { usedSwapGB, totalSwapGB, swapPercent },
-            });
-            raise('warning');
-          }
-        } else {
-          metrics.swapTotalGB = '0';
-          metrics.swapUsedGB = '0';
-          metrics.swapUsedPercent = 0;
+      } else if (PLATFORM === 'darwin') {
+        // macOS: sysctl vm.swapusage → "vm.swapusage: total = 2048.00M  used = 512.00M  free = 1536.00M"
+        const swapOutput = safeExec('sysctl vm.swapusage');
+        if (swapOutput) {
+          const totalMatch = swapOutput.match(/total\s*=\s*([\d.]+)M/);
+          const usedMatch = swapOutput.match(/used\s*=\s*([\d.]+)M/);
+          if (totalMatch) totalSwap = parseFloat(totalMatch[1]) * 1024 * 1024; // MB → bytes
+          if (usedMatch) usedSwap = parseFloat(usedMatch[1]) * 1024 * 1024;
         }
+      }
+      // Windows: skip swap check (pagefile semantics differ)
+
+      if (totalSwap > 0) {
+        const swapPercent = Math.round((usedSwap / totalSwap) * 100);
+        const totalSwapGB = (totalSwap / 1024 / 1024 / 1024).toFixed(1);
+        const usedSwapGB = (usedSwap / 1024 / 1024 / 1024).toFixed(1);
+
+        metrics.swapTotalGB = totalSwapGB;
+        metrics.swapUsedGB = usedSwapGB;
+        metrics.swapUsedPercent = swapPercent;
+
+        if (swapPercent >= SWAP_CRITICAL_PERCENT) {
+          findings.push({
+            type: 'swap-critical',
+            message: `Swap exhausted: ${usedSwapGB}GB / ${totalSwapGB}GB (${swapPercent}% used)`,
+            severity: 'critical',
+            context: { usedSwapGB, totalSwapGB, swapPercent },
+          });
+          raise('critical');
+        } else if (swapPercent >= SWAP_WARNING_PERCENT) {
+          findings.push({
+            type: 'swap-warning',
+            message: `Swap elevated: ${usedSwapGB}GB / ${totalSwapGB}GB (${swapPercent}% used)`,
+            severity: 'warning',
+            context: { usedSwapGB, totalSwapGB, swapPercent },
+          });
+          raise('warning');
+        }
+      } else {
+        metrics.swapTotalGB = '0';
+        metrics.swapUsedGB = '0';
+        metrics.swapUsedPercent = 0;
       }
     } catch (error) {
       logger.warn('Failed to check swap:', error);
     }
 
-    // 3. Disk space (root partition)
+    // 3. Disk space (root partition, platform-specific df flags)
     try {
-      const dfOutput = safeExec('df --output=pcent / | tail -1');
+      let dfOutput: string;
+      if (PLATFORM === 'linux') {
+        dfOutput = safeExec('df --output=pcent / | tail -1');
+      } else if (PLATFORM === 'darwin') {
+        // macOS df doesn't support --output; use POSIX mode
+        dfOutput = safeExec("df -P / | awk 'NR==2 {print $5}'");
+      } else {
+        dfOutput = ''; // Windows: skip
+      }
+
       if (dfOutput) {
         const diskPercent = parseInt(dfOutput.replace('%', '').trim(), 10);
         if (!isNaN(diskPercent)) {
@@ -295,9 +352,19 @@ export const systemHealthCrewMember: CrewMemberDefinition = {
       // No nvidia-smi — skip silently
     }
 
-    // 7. Large processes (RSS > 1GB) and process count
+    // 7. Large processes (RSS > 1GB) and process count (platform-specific ps flags)
     try {
-      const psOutput = safeExec('ps aux --sort=-%mem');
+      let psCmd: string;
+      if (PLATFORM === 'linux') {
+        psCmd = 'ps aux --sort=-%mem';
+      } else if (PLATFORM === 'darwin') {
+        // macOS ps doesn't support --sort; -m sorts by memory
+        psCmd = 'ps aux -m';
+      } else {
+        psCmd = ''; // Windows: skip process enumeration
+      }
+
+      const psOutput = psCmd ? safeExec(psCmd) : '';
       if (psOutput) {
         const lines = psOutput.split('\n');
         // First line is header, rest are processes
