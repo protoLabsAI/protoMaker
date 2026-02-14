@@ -285,6 +285,33 @@ export const queryKeys = {
     /** Forecast for a complexity level */
     forecast: (projectPath: string, complexity?: string) =>
       ['metrics', 'forecast', projectPath, complexity] as const,
+    /** Ledger aggregate metrics */
+    ledgerAggregate: (projectPath: string, startDate?: string, endDate?: string) =>
+      ['metrics', 'ledger', 'aggregate', projectPath, startDate, endDate] as const,
+    /** Time series data */
+    timeSeries: (
+      projectPath: string,
+      metric: string,
+      groupBy: string,
+      startDate?: string,
+      endDate?: string
+    ) =>
+      [
+        'metrics',
+        'ledger',
+        'timeSeries',
+        projectPath,
+        metric,
+        groupBy,
+        startDate,
+        endDate,
+      ] as const,
+    /** Model distribution */
+    modelDistribution: (projectPath: string, startDate?: string, endDate?: string) =>
+      ['metrics', 'ledger', 'modelDistribution', projectPath, startDate, endDate] as const,
+    /** Cycle time distribution */
+    cycleTimeDistribution: (projectPath: string, startDate?: string, endDate?: string) =>
+      ['metrics', 'ledger', 'cycleTimeDistribution', projectPath, startDate, endDate] as const,
   },
 
   // ============================================

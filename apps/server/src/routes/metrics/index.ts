@@ -5,10 +5,20 @@
 import { Router } from 'express';
 import type { Request, Response } from 'express';
 import type { MetricsService } from '../../services/metrics-service.js';
+import type { LedgerService } from '../../services/ledger-service.js';
 import { validatePathParams } from '../../middleware/validate-paths.js';
+import { createLedgerRoutes } from './ledger.js';
 
-export function createMetricsRoutes(metricsService: MetricsService): Router {
+export function createMetricsRoutes(
+  metricsService: MetricsService,
+  ledgerService?: LedgerService
+): Router {
   const router = Router();
+
+  // Mount ledger sub-routes at /api/metrics/ledger/*
+  if (ledgerService) {
+    router.use('/ledger', createLedgerRoutes(ledgerService));
+  }
 
   /**
    * POST /summary - Project-level aggregated metrics

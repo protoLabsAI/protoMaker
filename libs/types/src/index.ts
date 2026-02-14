@@ -657,3 +657,16 @@ export type {
 // Content generation types
 export { SectionSchema, OutlineSchema } from './content.js';
 export type { ContentType, ContentConfig, Section, Outline, ResearchSummary } from './content.js';
+
+// Metrics ledger types (persistent append-only analytics)
+export type {
+  MetricsLedgerRecord,
+  LedgerExecution,
+  LedgerQueryOptions,
+  TimeSeriesPoint,
+  TimeSeriesData,
+  LedgerAggregateMetrics,
+  CycleTimeBucket,
+  TimeSeriesMetric,
+  TimeGroupBy,
+} from './metrics.js';

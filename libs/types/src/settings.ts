@@ -1491,6 +1491,18 @@ export interface GlobalSettings {
    * @see TrustBoundaryConfig
    */
   trustBoundary?: TrustBoundaryConfig;
+
+  /**
+   * Feature archival settings.
+   * Automatically removes completed features from the board after a retention period.
+   * Metrics are preserved in the ledger before archival.
+   */
+  archival?: {
+    /** Whether automatic archival is enabled (default: true) */
+    enabled: boolean;
+    /** Hours to retain done/verified features before archival (default: 2) */
+    retentionHours: number;
+  };
 }
 
 /**

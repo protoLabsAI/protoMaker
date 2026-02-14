@@ -47,6 +47,7 @@ import {
 } from '@/components/ui/dialog';
 import { EventFeed } from './dashboard-view/event-feed';
 import { ProjectHealthCard } from './dashboard-view/project-health-card';
+import { MetricsSection } from './dashboard-view/metrics/metrics-section';
 
 const logger = createLogger('DashboardView');
 
@@ -974,6 +975,9 @@ export function DashboardView() {
 
                       {/* Event Feed */}
                       <EventFeed projectPath={currentProject.path} />
+
+                      {/* Metrics Dashboard */}
+                      <MetricsSection projectPath={currentProject.path} />
                     </div>
                   )}
                 </div>

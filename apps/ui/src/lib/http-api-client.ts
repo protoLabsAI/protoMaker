@@ -46,6 +46,49 @@ const logger = createLogger('HttpClient');
 
 const NO_STORE_CACHE_MODE: RequestCache = 'no-store';
 
+// Ledger API response types
+export interface LedgerAggregateResponse {
+  success: boolean;
+  totalFeatures: number;
+  totalCostUsd: number;
+  avgCostPerFeature: number;
+  avgCycleTimeMs: number;
+  avgAgentTimeMs: number;
+  avgPrReviewTimeMs: number;
+  successRate: number;
+  escalationRate: number;
+  throughputPerDay: number;
+  costByModel: Record<string, number>;
+  modelDistribution: Record<string, number>;
+  tokenUsage: { totalInputTokens: number; totalOutputTokens: number; totalTokens: number };
+  totalPRsMerged: number;
+  prsPerDay: number;
+  prsPerHour: number;
+  totalCommits: number;
+  commitsPerDay: number;
+  commitsPerHour: number;
+  periodStart?: string;
+  periodEnd?: string;
+}
+
+export interface TimeSeriesResponse {
+  success: boolean;
+  metric: string;
+  groupBy: string;
+  points: Array<{ date: string; value: number }>;
+  total: number;
+}
+
+export interface ModelDistributionResponse {
+  success: boolean;
+  distribution: Record<string, number>;
+}
+
+export interface CycleTimeDistributionResponse {
+  success: boolean;
+  buckets: Array<{ label: string; minMs: number; maxMs: number; count: number }>;
+}
+
 // Cached server URL (set during initialization in Electron mode)
 let cachedServerUrl: string | null = null;
 
@@ -2743,6 +2786,30 @@ export class HttpApiClient implements ElectronAPI {
       this.post('/api/metrics/capacity', { projectPath, maxConcurrency }),
     forecast: (projectPath: string, complexity?: string) =>
       this.post('/api/metrics/forecast', { projectPath, complexity }),
+    // Ledger API (persistent time-series analytics)
+    ledgerAggregate: (
+      projectPath: string,
+      opts?: { startDate?: string; endDate?: string; projectSlug?: string; epicId?: string }
+    ): Promise<LedgerAggregateResponse> =>
+      this.post('/api/metrics/ledger/aggregate', { projectPath, ...opts }),
+    timeSeries: (
+      projectPath: string,
+      metric: string,
+      groupBy: string,
+      opts?: { startDate?: string; endDate?: string }
+    ): Promise<TimeSeriesResponse> =>
+      this.post('/api/metrics/ledger/time-series', { projectPath, metric, groupBy, ...opts }),
+    modelDistribution: (
+      projectPath: string,
+      opts?: { startDate?: string; endDate?: string }
+    ): Promise<ModelDistributionResponse> =>
+      this.post('/api/metrics/ledger/model-distribution', { projectPath, ...opts }),
+    cycleTimeDistribution: (
+      projectPath: string,
+      opts?: { startDate?: string; endDate?: string }
+    ): Promise<CycleTimeDistributionResponse> =>
+      this.post('/api/metrics/ledger/cycle-time-distribution', { projectPath, ...opts }),
+    backfill: (projectPath: string) => this.post('/api/metrics/ledger/backfill', { projectPath }),
   };
 }
 
