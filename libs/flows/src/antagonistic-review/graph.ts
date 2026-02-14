@@ -202,7 +202,9 @@ export function createAntagonisticReviewGraph(enableCheckpointing = true) {
 
   // Add nodes that return Command (Send pattern) directly via StateGraph
   const stateGraph = builder.getGraph();
-  (stateGraph as any).addNode('fan_out_pairs', fanOutPairs, { ends: ['pair_review', 'aggregate_pairs'] });
+  (stateGraph as any).addNode('fan_out_pairs', fanOutPairs, {
+    ends: ['pair_review', 'aggregate_pairs'],
+  });
 
   // pair_review node - invokes the pair review subgraph with pairConfig from Send()
   (stateGraph as any).addNode('pair_review', async (state: any) => {

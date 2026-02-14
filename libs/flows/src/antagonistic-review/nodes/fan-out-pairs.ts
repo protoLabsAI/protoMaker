@@ -23,9 +23,7 @@ import { ALL_PAIRS, MATT_CINDI_PAIR } from '../pairs.js';
  * @param state - Current antagonistic review state
  * @returns Command with Send[] for parallel dispatch, or empty goto for skip
  */
-export async function fanOutPairs(
-  state: AntagonisticReviewState
-): Promise<Command> {
+export async function fanOutPairs(state: AntagonisticReviewState): Promise<Command> {
   const depth = state.distillationDepth ?? DistillationDepth.Surface;
 
   console.log(`[FanOutPairs] Distillation depth: ${depth}`);
@@ -38,21 +36,15 @@ export async function fanOutPairs(
 
   // depth=1 (standard): Activate most relevant pair (Matt+Cindi for performance)
   if (depth === DistillationDepth.Standard) {
-    console.log(
-      `[FanOutPairs] Depth=1, activating single pair: ${MATT_CINDI_PAIR.section}`
-    );
+    console.log(`[FanOutPairs] Depth=1, activating single pair: ${MATT_CINDI_PAIR.section}`);
     return new Command({
       goto: [new Send('pair_review', { pairConfig: MATT_CINDI_PAIR })],
     });
   }
 
   // depth=2 (deep): Activate all three pairs in parallel
-  console.log(
-    `[FanOutPairs] Depth=2, activating all ${ALL_PAIRS.length} pairs in parallel`
-  );
-  const sends = ALL_PAIRS.map(
-    (pairConfig) => new Send('pair_review', { pairConfig })
-  );
+  console.log(`[FanOutPairs] Depth=2, activating all ${ALL_PAIRS.length} pairs in parallel`);
+  const sends = ALL_PAIRS.map((pairConfig) => new Send('pair_review', { pairConfig }));
 
   return new Command({ goto: sends });
 }

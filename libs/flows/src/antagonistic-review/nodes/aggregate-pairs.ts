@@ -38,9 +38,7 @@ export async function aggregatePairs(
   // Validation: ensure all collected reviews have required fields
   for (const review of pairReviews) {
     if (!review.section || !review.consolidatedComments) {
-      console.warn(
-        `[AggregatePairs] Warning: Incomplete review for section ${review.section}`
-      );
+      console.warn(`[AggregatePairs] Warning: Incomplete review for section ${review.section}`);
     }
   }
 
