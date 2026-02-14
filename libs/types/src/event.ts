@@ -255,7 +255,9 @@ export type EventType =
   | 'escalation:signal-sent'
   | 'escalation:signal-failed'
   | 'escalation:signal-deduplicated'
-  | 'escalation:ui-notification';
+  | 'escalation:ui-notification'
+  // Feedback analytics events (pattern detection and metrics)
+  | 'feedback:pattern-detected';
 
 export type EventCallback = (type: EventType, payload: unknown) => void;
 
