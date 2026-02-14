@@ -282,6 +282,7 @@ If approved, create features on the board:
 ### What was done:
 
 {if cloned:}- Cloned repository from {gitUrl}
+
 - Scanned repository structure and tech stack
 - Analyzed {gaps.length} gaps against ProtoLabs standard
 - Generated HTML gap report (opened in browser)
