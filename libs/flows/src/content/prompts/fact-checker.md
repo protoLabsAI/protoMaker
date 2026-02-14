@@ -35,6 +35,7 @@ Provide your fact-check report in the following structure:
 # Fact-Check Report
 
 ## Executive Summary
+
 **Overall Accuracy:** [High/Medium/Low]
 
 **Claims Checked:** [Number]
@@ -42,6 +43,7 @@ Provide your fact-check report in the following structure:
 **Issues Found:** [Number of inaccuracies/concerns]
 
 **Verification Status:**
+
 - ✅ Verified: [Number] ([Percentage]%)
 - ⚠️ Partially Verified: [Number] ([Percentage]%)
 - ❌ Inaccurate: [Number] ([Percentage]%)
@@ -52,6 +54,7 @@ Provide your fact-check report in the following structure:
 ## Critical Inaccuracies (Must Fix)
 
 ### Inaccuracy 1
+
 - **Location**: [Section and line reference]
 - **Claim**: "[Exact quote]"
 - **Status**: ❌ False / ⚠️ Misleading / ⏰ Outdated
@@ -61,11 +64,13 @@ Provide your fact-check report in the following structure:
 - **Source**: [Authoritative source for correction]
 
 ### Inaccuracy 2
+
 ...
 
 ## Concerns & Warnings
 
 ### Concern 1
+
 - **Location**: [Section and line reference]
 - **Claim**: "[Exact quote]"
 - **Status**: ⚠️ Partially accurate / ❓ Cannot verify / 🎯 Missing context
@@ -77,8 +82,8 @@ Provide your fact-check report in the following structure:
 
 ### Category: [e.g., Statistics, Technical Specs, Historical Facts]
 
-| Claim | Status | Source | Notes |
-|-------|--------|--------|-------|
+| Claim     | Status      | Source   | Notes                |
+| --------- | ----------- | -------- | -------------------- |
 | "[Quote]" | ✅ Verified | [Source] | [Any relevant notes] |
 | "[Quote]" | ✅ Verified | [Source] | [Any relevant notes] |
 
@@ -86,22 +91,26 @@ Provide your fact-check report in the following structure:
 
 ### Cited Sources
 
-| Source | Type | Authority | Currency | Assessment |
-|--------|------|-----------|----------|------------|
-| [Source 1] | [Academic/News/Industry/etc.] | [High/Medium/Low] | [Date] | ✅ Reliable / ⚠️ Questionable / ❌ Unreliable |
+| Source     | Type                          | Authority         | Currency | Assessment                                    |
+| ---------- | ----------------------------- | ----------------- | -------- | --------------------------------------------- |
+| [Source 1] | [Academic/News/Industry/etc.] | [High/Medium/Low] | [Date]   | ✅ Reliable / ⚠️ Questionable / ❌ Unreliable |
 
 **Issues with Sources:**
+
 - [Source X]: [Why it's problematic and suggested alternative]
 
 **Missing Citations:**
+
 - [Claim needing citation]: [Suggested reliable source]
 
 ## Data & Statistics Review
 
 ### Accurate Data
+
 - Line X: [Statistic] - ✅ Verified against [source]
 
 ### Questionable Data
+
 - Line Y: [Statistic] - ⚠️ [Issue description]
   - **Original Source**: [If found]
   - **Date**: [When data was current]
@@ -109,17 +118,20 @@ Provide your fact-check report in the following structure:
   - **Recommendation**: [Update/add context/cite source]
 
 ### Missing Data Sources
+
 - Line Z: [Statistic] - ❓ No source provided
   - **Recommendation**: [Cite source or remove]
 
 ## Technical Accuracy
 
 ### API/Library Versions
-| Technology | Stated Version | Current Version | Status |
-|------------|----------------|-----------------|--------|
-| [Tech 1] | [Version] | [Current] | ✅ Current / ⚠️ Outdated / ❌ Incorrect |
+
+| Technology | Stated Version | Current Version | Status                                  |
+| ---------- | -------------- | --------------- | --------------------------------------- |
+| [Tech 1]   | [Version]      | [Current]       | ✅ Current / ⚠️ Outdated / ❌ Incorrect |
 
 ### Technical Specifications
+
 - **Claim**: [Quote]
   - **Status**: [Verified/Incorrect]
   - **Source**: [Official documentation link]
@@ -128,11 +140,13 @@ Provide your fact-check report in the following structure:
 ## Historical & Contextual Accuracy
 
 ### Timeline & Dates
+
 - Line X: [Date claim] - ✅ Accurate / ❌ Incorrect
   - **Correction**: [If needed]
   - **Source**: [Reference]
 
 ### Attribution
+
 - Line Y: [Quote or idea attributed to someone]
   - **Status**: ✅ Correctly attributed / ❌ Misattributed / ❓ Cannot verify
   - **Notes**: [Context or correction]
@@ -140,10 +154,12 @@ Provide your fact-check report in the following structure:
 ## Logical Consistency
 
 ### Internal Contradictions
+
 - [Claim 1 on line X] contradicts [Claim 2 on line Y]
   - **Resolution**: [Which is correct or how to reconcile]
 
 ### Unsupported Conclusions
+
 - Line Z: [Conclusion] doesn't follow from [Evidence]
   - **Issue**: [Why the logic doesn't hold]
   - **Recommendation**: [Either strengthen evidence or modify conclusion]
@@ -151,11 +167,13 @@ Provide your fact-check report in the following structure:
 ## Context & Framing Issues
 
 ### Missing Context
+
 - Line X: [Claim] is true but misleading without context
   - **Missing Context**: [What should be added]
   - **Impact**: [Why context matters]
 
 ### Cherry-Picking
+
 - [Claim] presents only partial picture
   - **Missing Perspectives**: [What else should be included]
   - **Recommendation**: [How to present more balanced view]
@@ -163,35 +181,43 @@ Provide your fact-check report in the following structure:
 ## Recommendations
 
 ### High Priority (Must Address)
+
 1. [Critical issue requiring immediate correction]
 2. [Critical issue requiring immediate correction]
 
 ### Medium Priority (Should Address)
+
 1. [Important improvement for accuracy]
 2. [Important improvement for accuracy]
 
 ### Low Priority (Nice to Have)
+
 1. [Minor enhancement to strengthen credibility]
 2. [Minor enhancement to strengthen credibility]
 
 ## Additional Resources
 
 **For Future Verification:**
+
 - [Authoritative source 1]: [URL or reference]
 - [Authoritative source 2]: [URL or reference]
 
 **Suggested Expert Reviewers:**
+
 - [Domain expert who could review specific sections]
 
 ## Verification Methodology
 
 **Sources Consulted:**
+
 - [List of databases, references, and resources used]
 
 **Verification Standards:**
+
 - [Description of standards applied]
 
 **Limitations:**
+
 - [Any limitations in verification process]
 
 **Date of Fact-Check:** [Date]
@@ -202,6 +228,7 @@ Provide your fact-check report in the following structure:
 ## Fact-Checking Standards
 
 ### Source Hierarchy (Most to Least Authoritative)
+
 1. **Primary Sources**: Original research, official documentation, direct data
 2. **Peer-Reviewed**: Academic journals, vetted publications
 3. **Authoritative**: Government agencies, established institutions
@@ -210,6 +237,7 @@ Provide your fact-check report in the following structure:
 6. **Questionable**: Blogs, social media, uncited sources
 
 ### Verification Requirements
+
 - **Statistics**: Must cite original source, include date, check currency
 - **Technical Claims**: Must reference official documentation
 - **Historical Facts**: Must cite authoritative historical sources
@@ -217,6 +245,7 @@ Provide your fact-check report in the following structure:
 - **Legal/Medical**: Requires expert review or authoritative source
 
 ### Red Flags
+
 - Claims without sources
 - Outdated information presented as current
 - Statistics without context

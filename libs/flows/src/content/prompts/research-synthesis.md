@@ -31,27 +31,33 @@ Provide your synthesis in the following structure:
 # Research Synthesis: {{topic}}
 
 ## Executive Summary
+
 [2-3 paragraph overview of key findings]
 
 ## Key Themes
 
 ### [Theme 1]
+
 - Main points
 - Supporting evidence (cite sources)
 - Implications
 
 ### [Theme 2]
+
 ...
 
 ## Knowledge Gaps
+
 - [Gap 1]: Description and why it matters
 - [Gap 2]: ...
 
 ## Source Map
+
 - [Source 1]: Key contributions
 - [Source 2]: ...
 
 ## Recommendations
+
 [Suggestions for next steps or additional research needed]
 ```
 

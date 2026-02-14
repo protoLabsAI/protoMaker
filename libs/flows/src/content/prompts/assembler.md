@@ -37,12 +37,12 @@ Provide your assembled document in the following structure:
 
 ```markdown
 ---
-title: {{title}}
-date: {{date}}
-author: {{author}}
-version: {{version}}
-status: {{status}}
-tags: {{tags}}
+title: { { title } }
+date: { { date } }
+author: { { author } }
+version: { { version } }
+status: { { status } }
+tags: { { tags } }
 ---
 
 # {{title}}
@@ -60,6 +60,7 @@ tags: {{tags}}
 [High-level overview of the document - 2-3 paragraphs]
 
 **Key Points:**
+
 - [Point 1]
 - [Point 2]
 - [Point 3]
@@ -75,6 +76,7 @@ tags: {{tags}}
 [Summary and wrap-up]
 
 **Key Takeaways:**
+
 - [Takeaway 1]
 - [Takeaway 2]
 - [Takeaway 3]
@@ -84,9 +86,11 @@ tags: {{tags}}
 ## Appendices
 
 ### Appendix A: [Title]
+
 [Supporting material]
 
 ### Appendix B: [Title]
+
 [Supporting material]
 
 ---
@@ -109,8 +113,8 @@ tags: {{tags}}
 
 ## Document History
 
-| Version | Date | Changes | Author |
-|---------|------|---------|--------|
+| Version     | Date     | Changes       | Author     |
+| ----------- | -------- | ------------- | ---------- |
 | {{version}} | {{date}} | [Description] | {{author}} |
 
 ---
@@ -125,16 +129,19 @@ tags: {{tags}}
 ### Integration
 
 **Section Ordering:**
+
 - Follow the approved outline structure
 - Ensure logical progression of ideas
 - Maintain narrative flow
 
 **Transitions:**
+
 - Add bridging sentences between sections
 - Reference previous sections where appropriate
 - Preview upcoming content when helpful
 
 **Consistency:**
+
 - Uniform terminology throughout
 - Consistent formatting of similar elements
 - Unified voice and tone
@@ -142,6 +149,7 @@ tags: {{tags}}
 ### Front Matter
 
 **Required Elements:**
+
 - Title and subtitle
 - Publication date
 - Author(s)/Contributor(s)
@@ -149,6 +157,7 @@ tags: {{tags}}
 - Document status (draft/review/final)
 
 **Optional Elements:**
+
 - Abstract or executive summary
 - Keywords/tags
 - Target audience
@@ -159,12 +168,14 @@ tags: {{tags}}
 ### Table of Contents
 
 **Structure:**
+
 - Hierarchical heading structure
 - Accurate page/section references
 - Clear, descriptive titles
 - Appropriate depth (usually 2-3 levels)
 
 **Format Options:**
+
 - Auto-generated (for markdown)
 - Manually curated (for narrative flow)
 - Annotated (with brief descriptions)
@@ -172,16 +183,19 @@ tags: {{tags}}
 ### Supplementary Materials
 
 **Glossary:**
+
 - All technical terms defined
 - Alphabetically ordered
 - Cross-referenced in main text
 
 **References:**
+
 - All sources cited in document
 - Consistent citation format
 - Hyperlinked where possible
 
 **Appendices:**
+
 - Code samples too long for main text
 - Detailed technical specifications
 - Supplementary data or tables
@@ -190,28 +204,33 @@ tags: {{tags}}
 ### Formatting
 
 **Headings:**
+
 - Consistent hierarchy (H1, H2, H3)
 - Descriptive and scannable
 - Properly nested
 
 **Lists:**
+
 - Parallel structure in list items
 - Appropriate list type (ordered/unordered)
 - Consistent punctuation
 
 **Code Blocks:**
+
 - Syntax highlighting
 - Language specification
 - Line numbers if helpful
 - Comments for clarity
 
 **Tables:**
+
 - Headers clearly labeled
 - Data properly aligned
 - Readable width
 - Caption if needed
 
 **Images & Diagrams:**
+
 - Descriptive alt text
 - Appropriate captions
 - Referenced in text
@@ -220,6 +239,7 @@ tags: {{tags}}
 ### Quality Assurance
 
 **Pre-Publication Checklist:**
+
 - [ ] All sections integrated in correct order
 - [ ] All review feedback addressed
 - [ ] Transitions between sections are smooth
@@ -245,21 +265,25 @@ Document all revisions applied during assembly:
 ### Revisions Applied
 
 **Technical Review Feedback:**
+
 - Section 2.3: Updated API version from 1.0 to 2.0
 - Section 4.1: Added error handling example
 - Section 5: Corrected performance benchmarks
 
 **Style Review Feedback:**
+
 - Throughout: Changed "utilize" to "use"
 - Section 3: Split long paragraphs
 - Section 6: Strengthened conclusion
 
 **Fact-Check Feedback:**
+
 - Section 2: Updated statistics (2024 data)
 - Section 4: Added citation for performance claim
 - Section 7: Corrected historical timeline
 
 **Author Revisions:**
+
 - Added new subsection 3.2 on security considerations
 - Expanded examples in section 5
 - Updated references
@@ -268,24 +292,28 @@ Document all revisions applied during assembly:
 ## Output Variants
 
 ### For Web Publication
+
 - Markdown with front matter
 - Relative links for navigation
 - Optimized images
 - SEO-friendly structure
 
 ### For PDF
+
 - Page breaks at logical points
 - Headers and footers
 - Page numbers
 - Print-friendly formatting
 
 ### For API Documentation
+
 - OpenAPI/Swagger format
 - Interactive examples
 - Code samples in multiple languages
 - Version indicators
 
 ### For GitHub
+
 - README-style formatting
 - Badges and shields
 - Contributing guidelines
