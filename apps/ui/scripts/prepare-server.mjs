@@ -102,7 +102,7 @@ writeFileSync(join(BUNDLE_DIR, 'package.json'), JSON.stringify(bundlePkg, null, 
 
 // Step 6: Install production dependencies
 console.log('📥 Installing server production dependencies...');
-execSync('npm install --omit=dev', {
+execSync('npm install --omit=dev --legacy-peer-deps', {
   cwd: BUNDLE_DIR,
   stdio: 'inherit',
   env: {

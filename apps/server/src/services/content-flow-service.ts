@@ -153,15 +153,17 @@ export class ContentFlowService {
    * Create models from config
    */
   private createModels(): { smartModel: BaseChatModel; fastModel: BaseChatModel } {
+    // Cast needed: ChatAnthropic's type doesn't perfectly align with BaseChatModel
+    // due to LangChain version mismatch on the 'profile' property, but works at runtime
     const smartModel = new ChatAnthropic({
       model: 'claude-sonnet-4-5-20250929',
       temperature: 0.7,
-    });
+    }) as unknown as BaseChatModel;
 
     const fastModel = new ChatAnthropic({
       model: 'claude-haiku-4-5-20251001',
       temperature: 0.5,
-    });
+    }) as unknown as BaseChatModel;
 
     return { smartModel, fastModel };
   }
@@ -296,7 +298,7 @@ export class ContentFlowService {
 
       // Stream the flow to get per-node updates
       let lastState: Record<string, unknown> = {};
-      const stream = await flow.stream({ config }, threadConfig);
+      const stream = await flow.stream({ config: config as never }, threadConfig);
 
       for await (const update of stream) {
         // Each update is { nodeName: nodeOutput }

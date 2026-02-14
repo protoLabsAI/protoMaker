@@ -78,7 +78,6 @@ export const TEST_IDS = {
   navBoard: 'nav-board',
   navSpec: 'nav-spec',
   navContext: 'nav-context',
-  navAgent: 'nav-agent',
   settingsButton: 'settings-button',
   openProjectButton: 'open-project-button',
 
@@ -86,7 +85,6 @@ export const TEST_IDS = {
   boardView: 'board-view',
   specView: 'spec-view',
   contextView: 'context-view',
-  agentView: 'agent-view',
   settingsView: 'settings-view',
   welcomeView: 'welcome-view',
   dashboardView: 'dashboard-view',

@@ -3,12 +3,10 @@ import type { NavigateOptions } from '@tanstack/react-router';
 import {
   FileText,
   LayoutGrid,
-  Bot,
   BookOpen,
   Terminal,
   CircleDot,
   GitPullRequest,
-  Lightbulb,
   Brain,
   Network,
   Bell,
@@ -105,12 +103,6 @@ export function useNavigation({
   const navSections: NavSection[] = useMemo(() => {
     const allToolsItems: NavItem[] = [
       {
-        id: 'ideation',
-        label: 'Ideation',
-        icon: Lightbulb,
-        shortcut: shortcuts.ideation,
-      },
-      {
         id: 'spec',
         label: 'Spec Editor',
         icon: FileText,
@@ -160,12 +152,6 @@ export function useNavigation({
         label: 'Graph View',
         icon: Network,
         shortcut: shortcuts.graph,
-      },
-      {
-        id: 'agent',
-        label: 'Agent Runner',
-        icon: Bot,
-        shortcut: shortcuts.agent,
       },
     ];
 

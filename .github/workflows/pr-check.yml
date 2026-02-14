@@ -24,3 +24,5 @@ jobs:
 
       - name: Run build:electron (dir only - faster CI)
         run: npm run build:electron:dir
+        env:
+          NODE_OPTIONS: '--max-old-space-size=4096'

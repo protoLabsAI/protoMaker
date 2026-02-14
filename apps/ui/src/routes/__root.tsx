@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback, useDeferredValue, useRef } from 'reac
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { createLogger } from '@automaker/utils/logger';
+import { CopilotKitProvider, CopilotSidebarWrapper } from '@/components/copilotkit/provider';
 import { Sidebar } from '@/components/layout/sidebar';
 import { ProjectSwitcher } from '@/components/layout/project-switcher';
 import {
@@ -178,7 +179,6 @@ function RootLayoutContent() {
   const { setupComplete, codexCliStatus } = useSetupStore();
   const navigate = useNavigate();
   const [isMounted, setIsMounted] = useState(false);
-  const [streamerPanelOpen, setStreamerPanelOpen] = useState(false);
   const authChecked = useAuthStore((s) => s.authChecked);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const settingsLoaded = useAuthStore((s) => s.settingsLoaded);
@@ -216,44 +216,6 @@ function RootLayoutContent() {
   // Always start from pending on a fresh page load so the user sees the prompt
   // each time the app is launched/refreshed (unless running in a container).
   const [sandboxStatus, setSandboxStatus] = useState<SandboxStatus>('pending');
-
-  // Hidden streamer panel - opens with "\" key
-  const handleStreamerPanelShortcut = useCallback((event: KeyboardEvent) => {
-    const activeElement = document.activeElement;
-    if (activeElement) {
-      const tagName = activeElement.tagName.toLowerCase();
-      if (tagName === 'input' || tagName === 'textarea' || tagName === 'select') {
-        return;
-      }
-      if (activeElement.getAttribute('contenteditable') === 'true') {
-        return;
-      }
-      const role = activeElement.getAttribute('role');
-      if (role === 'textbox' || role === 'searchbox' || role === 'combobox') {
-        return;
-      }
-      // Don't intercept when focused inside a terminal
-      if (activeElement.closest('.xterm') || activeElement.closest('[data-terminal-container]')) {
-        return;
-      }
-    }
-
-    if (event.ctrlKey || event.altKey || event.metaKey) {
-      return;
-    }
-
-    if (event.key === '\\') {
-      event.preventDefault();
-      setStreamerPanelOpen((prev) => !prev);
-    }
-  }, []);
-
-  useEffect(() => {
-    window.addEventListener('keydown', handleStreamerPanelShortcut);
-    return () => {
-      window.removeEventListener('keydown', handleStreamerPanelShortcut);
-    };
-  }, [handleStreamerPanelShortcut]);
 
   const effectiveTheme = getEffectiveTheme();
   // Defer the theme value to keep UI responsive during rapid hover changes
@@ -871,19 +833,11 @@ function RootLayoutContent() {
         )}
         {showProjectSwitcher && <ProjectSwitcher />}
         <Sidebar />
-        <div
-          className="flex-1 flex flex-col overflow-hidden transition-all duration-300"
-          style={{ marginRight: streamerPanelOpen ? '250px' : '0' }}
-        >
-          <Outlet />
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <CopilotSidebarWrapper>
+            <Outlet />
+          </CopilotSidebarWrapper>
         </div>
-
-        {/* Hidden streamer panel - opens with "\" key, pushes content */}
-        <div
-          className={`fixed top-0 right-0 h-full w-[250px] bg-background border-l border-border transition-transform duration-300 ${
-            streamerPanelOpen ? 'translate-x-0' : 'translate-x-full'
-          }`}
-        />
         <Toaster richColors position="bottom-right" />
       </main>
       <SandboxRiskDialog
@@ -901,9 +855,11 @@ function RootLayout() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <FileBrowserProvider>
-        <RootLayoutContent />
-      </FileBrowserProvider>
+      <CopilotKitProvider>
+        <FileBrowserProvider>
+          <RootLayoutContent />
+        </FileBrowserProvider>
+      </CopilotKitProvider>
       {SHOW_QUERY_DEVTOOLS && !isCompact ? (
         <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-left" />
       ) : null}
