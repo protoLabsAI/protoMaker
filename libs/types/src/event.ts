@@ -272,11 +272,16 @@ export type EventType =
   // Feature archival events (board cleanup)
   | 'feature:archived'
   | 'archival:cycle-completed'
+<<<<<<< HEAD
   // GitHub PR state change events (emitted by GitHubStateChecker)
   | 'github:pr:review-submitted'
   | 'github:pr:checks-updated'
   | 'github:pr:approved'
   | 'github:pr:changes-requested';
+=======
+  // GitHub state drift events (PR to Linear sync bridge)
+  | 'github-state-drift';
+>>>>>>> 1faf3baa (feat(crew): add pr-state-sync crew member for GitHub to Linear bridge)
 
 export type EventCallback = (type: EventType, payload: unknown) => void;
 
