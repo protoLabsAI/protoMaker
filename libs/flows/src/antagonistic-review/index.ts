@@ -34,3 +34,16 @@ export {
   type ReviewSection,
   type ReviewerPerspective,
 } from './nodes/ava-review.js';
+
+export { jonReviewNode, type JonReviewState } from './nodes/jon-review.js';
+
+export {
+  consolidateNode,
+  FinalVerdictSchema,
+  ConsensusAnalysisSchema,
+  ConsolidatedReviewSchema,
+  type ConsolidateState,
+  type FinalVerdict,
+  type ConsensusAnalysis,
+  type ConsolidatedReview,
+} from './nodes/consolidate.js';
