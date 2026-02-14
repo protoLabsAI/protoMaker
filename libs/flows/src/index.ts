@@ -124,16 +124,12 @@ export {
   type ReviewWorkerState,
 } from './content/nodes/review-workers.js';
 
-// Antagonistic review primitive
+// Antagonistic review subgraph
 export {
   createAntagonisticReviewerGraph,
-  executeAntagonisticReviewer,
   AntagonisticReviewerState,
   type AntagonisticReviewerStateType,
-  type RubricDimension,
-  type ReviewRubric,
   type DimensionScore,
-  type ReviewVerdict,
   type ReviewResult,
 } from './content/subgraphs/antagonistic-reviewer.js';
 

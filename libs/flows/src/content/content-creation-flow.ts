@@ -2,16 +2,18 @@
  * Content Creation Flow
  *
  * Multi-format output pipeline with 7 phases:
- * Research(parallel) → HITL → Outline → HITL → Generation(parallel) → Assembly → Review(parallel) → HITL → Output(parallel)
+ * Research(parallel) → AntagonisticReview → Outline → AntagonisticReview → Generation(parallel) → Assembly → AntagonisticReview → Output(parallel)
  *
  * Features:
- * - 3 HITL interrupts for human oversight
+ * - 3 antagonistic review gates with automatic quality checks
+ * - Revision loops with max 2 retries per phase
  * - Send() for parallel research, generation, review, and output phases
- * - MemorySaver checkpointer for resume after interrupts
+ * - Runs end-to-end without human intervention by default
+ * - Optional HITL can be re-enabled via config flag
  * - Configurable via ContentConfig
  */
 
-import { StateGraph, Annotation, Send, Command, MemorySaver } from '@langchain/langgraph';
+import { StateGraph, Annotation, Send, Command } from '@langchain/langgraph';
 import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { createLogger } from '@automaker/utils';
 import { LangfuseClient } from '@automaker/observability';
@@ -24,6 +26,11 @@ import {
   type ContentSection,
   SectionWriterState,
 } from './subgraphs/section-writer.js';
+import {
+  createAntagonisticReviewerGraph,
+  type ReviewResult,
+  AntagonisticReviewerState,
+} from './subgraphs/antagonistic-reviewer.js';
 
 const logger = createLogger('ContentCreationFlow');
 
@@ -39,6 +46,8 @@ export interface ContentConfig {
   smartModel: BaseChatModel;
   fastModel: BaseChatModel;
   langfuseClient?: LangfuseClient;
+  enableHITL?: boolean; // Optional flag to re-enable human-in-the-loop gates (default: false)
+  maxRetries?: number; // Maximum retries per phase (default: 2)
 }
 
 /**
@@ -95,11 +104,15 @@ export const ContentCreationState = Annotation.Root({
     reducer: (left, right) => [...left, ...right],
     default: () => [],
   }),
+  researchReview: Annotation<ReviewResult | undefined>,
+  researchRetryCount: Annotation<number>,
   researchApproved: Annotation<boolean>,
   researchFeedback: Annotation<string | undefined>,
 
   // Phase 2: Outline
   outline: Annotation<Outline | undefined>,
+  outlineReview: Annotation<ReviewResult | undefined>,
+  outlineRetryCount: Annotation<number>,
   outlineApproved: Annotation<boolean>,
   outlineFeedback: Annotation<string | undefined>,
 
@@ -117,6 +130,8 @@ export const ContentCreationState = Annotation.Root({
     reducer: (left, right) => [...left, ...right],
     default: () => [],
   }),
+  finalReview: Annotation<ReviewResult | undefined>,
+  finalRetryCount: Annotation<number>,
   reviewApproved: Annotation<boolean>,
   finalReviewFeedback: Annotation<string | undefined>,
 
@@ -158,6 +173,50 @@ async function generateQueriesNode(
 
   return {
     researchQueries,
+  };
+}
+
+/**
+ * Increment research retry counter
+ */
+async function incrementResearchRetryNode(
+  state: ContentCreationStateType
+): Promise<Partial<ContentCreationStateType>> {
+  const currentCount = state.researchRetryCount || 0;
+  const newCount = currentCount + 1;
+  logger.info(`Incrementing research retry count to ${newCount}`);
+  return {
+    researchRetryCount: newCount,
+    researchResults: [], // Clear previous results for fresh retry
+  };
+}
+
+/**
+ * Increment outline retry counter
+ */
+async function incrementOutlineRetryNode(
+  state: ContentCreationStateType
+): Promise<Partial<ContentCreationStateType>> {
+  const currentCount = state.outlineRetryCount || 0;
+  const newCount = currentCount + 1;
+  logger.info(`Incrementing outline retry count to ${newCount}`);
+  return {
+    outlineRetryCount: newCount,
+  };
+}
+
+/**
+ * Increment final content retry counter
+ */
+async function incrementFinalRetryNode(
+  state: ContentCreationStateType
+): Promise<Partial<ContentCreationStateType>> {
+  const currentCount = state.finalRetryCount || 0;
+  const newCount = currentCount + 1;
+  logger.info(`Incrementing final content retry count to ${newCount}`);
+  return {
+    finalRetryCount: newCount,
+    sections: [], // Clear previous sections for fresh retry
   };
 }
 
@@ -205,14 +264,68 @@ async function researchDelegateNode(
 }
 
 /**
- * HITL interrupt #1 - wait for research approval
+ * Antagonistic review #1 - research quality review
+ */
+async function researchReviewNode(
+  state: ContentCreationStateType
+): Promise<Partial<ContentCreationStateType>> {
+  const { researchResults, config } = state;
+
+  logger.info(`Reviewing research quality: ${researchResults.length} results`);
+
+  // Format research results for review
+  const researchContent = researchResults
+    .map(
+      (r) => `
+## Query: ${r.query}
+
+### Facts
+${r.findings.facts.map((f) => `- ${f}`).join('\n')}
+
+### Examples
+${r.findings.examples.map((e) => `- ${e}`).join('\n')}
+
+### References
+${r.findings.references.map((ref) => `- ${ref}`).join('\n')}
+`
+    )
+    .join('\n\n');
+
+  // Use antagonistic reviewer subgraph
+  const reviewGraph = createAntagonisticReviewerGraph();
+
+  type ReviewInput = typeof AntagonisticReviewerState.State;
+  type ReviewOutput = typeof AntagonisticReviewerState.State;
+
+  const wrappedReviewer = wrapSubgraph<ContentCreationStateType, ReviewInput, ReviewOutput>(
+    reviewGraph,
+    (flowState) => ({
+      mode: 'research' as const,
+      content: researchContent,
+      researchFindings: undefined,
+      smartModel: flowState.config.smartModel,
+      result: undefined,
+      error: undefined,
+    }),
+    (subState) => ({
+      researchReview: subState.result,
+    })
+  );
+
+  const result = await wrappedReviewer(state);
+
+  return result;
+}
+
+/**
+ * HITL interrupt #1 - optional human review of research (only if enableHITL=true)
  */
 async function researchHitlNode(
   state: ContentCreationStateType
 ): Promise<Partial<ContentCreationStateType>> {
-  const { researchResults } = state;
+  const { researchReview } = state;
 
-  logger.info(`Research HITL: ${researchResults.length} results ready for review`);
+  logger.info(`Research HITL: Review score ${researchReview?.percentage.toFixed(1)}%`);
 
   // This node will interrupt and wait for user input
   // User provides: researchApproved, researchFeedback
@@ -220,23 +333,53 @@ async function researchHitlNode(
 }
 
 /**
- * Route after research HITL
+ * Route after research review
  */
-function routeAfterResearchHitl(state: ContentCreationStateType): string {
-  const { researchApproved, researchFeedback } = state;
+function routeAfterResearchReview(state: ContentCreationStateType): string {
+  const { config, researchReview, researchApproved, researchFeedback } = state;
+  const researchRetryCount = state.researchRetryCount || 0;
+  const maxRetries = config.maxRetries ?? 2;
 
-  if (researchApproved) {
-    logger.info('Research approved, proceeding to outline');
+  // If HITL is enabled, check manual approval first
+  if (config.enableHITL) {
+    if (researchApproved) {
+      logger.info('Research manually approved, proceeding to outline');
+      return 'approved';
+    }
+
+    if (researchFeedback) {
+      if (researchRetryCount >= maxRetries) {
+        logger.warn('Research max retries reached, failing');
+        return 'failed';
+      }
+      logger.info('Research needs manual revision, restarting research phase');
+      return 'revise';
+    }
+  }
+
+  // Automatic review check
+  if (!researchReview) {
+    logger.error('No research review result available');
+    return 'failed';
+  }
+
+  if (researchReview.passed) {
+    logger.info(`Research passed automatic review (${researchReview.percentage.toFixed(1)}%)`);
     return 'approved';
   }
 
-  if (researchFeedback) {
-    logger.info('Research needs revision, restarting research phase');
-    return 'revise';
+  // Failed review - check retry count
+  if (researchRetryCount >= maxRetries) {
+    logger.warn(
+      `Research failed review and max retries reached (${researchRetryCount}/${maxRetries})`
+    );
+    return 'failed';
   }
 
-  // Default to approved if no feedback provided
-  return 'approved';
+  logger.info(
+    `Research failed review (${researchReview.percentage.toFixed(1)}%), retry ${researchRetryCount + 1}/${maxRetries}`
+  );
+  return 'revise';
 }
 
 // ============================================================================
@@ -287,14 +430,74 @@ async function generateOutlineNode(
 }
 
 /**
- * HITL interrupt #2 - wait for outline approval
+ * Antagonistic review #2 - outline structure review
+ */
+async function outlineReviewNode(
+  state: ContentCreationStateType
+): Promise<Partial<ContentCreationStateType>> {
+  const { outline, config } = state;
+
+  if (!outline) {
+    return {
+      error: 'No outline available for review',
+    };
+  }
+
+  logger.info(`Reviewing outline structure: "${outline.title}"`);
+
+  // Format outline for review
+  const outlineContent = `
+# ${outline.title}
+
+${outline.sections
+  .map(
+    (s) => `
+## ${s.title}
+
+${s.description}
+
+- Include code examples: ${s.includeCodeExamples ? 'Yes' : 'No'}
+- Target length: ${s.targetLength} words
+`
+  )
+  .join('\n')}
+`;
+
+  // Use antagonistic reviewer subgraph
+  const reviewGraph = createAntagonisticReviewerGraph();
+
+  type ReviewInput = typeof AntagonisticReviewerState.State;
+  type ReviewOutput = typeof AntagonisticReviewerState.State;
+
+  const wrappedReviewer = wrapSubgraph<ContentCreationStateType, ReviewInput, ReviewOutput>(
+    reviewGraph,
+    (flowState) => ({
+      mode: 'outline' as const,
+      content: outlineContent,
+      researchFindings: undefined,
+      smartModel: flowState.config.smartModel,
+      result: undefined,
+      error: undefined,
+    }),
+    (subState) => ({
+      outlineReview: subState.result,
+    })
+  );
+
+  const result = await wrappedReviewer(state);
+
+  return result;
+}
+
+/**
+ * HITL interrupt #2 - optional human review of outline (only if enableHITL=true)
  */
 async function outlineHitlNode(
   state: ContentCreationStateType
 ): Promise<Partial<ContentCreationStateType>> {
-  const { outline } = state;
+  const { outlineReview } = state;
 
-  logger.info(`Outline HITL: "${outline?.title}" with ${outline?.sections.length} sections`);
+  logger.info(`Outline HITL: Review score ${outlineReview?.percentage.toFixed(1)}%`);
 
   // This node will interrupt and wait for user input
   // User provides: outlineApproved, outlineFeedback
@@ -302,23 +505,53 @@ async function outlineHitlNode(
 }
 
 /**
- * Route after outline HITL
+ * Route after outline review
  */
-function routeAfterOutlineHitl(state: ContentCreationStateType): string {
-  const { outlineApproved, outlineFeedback } = state;
+function routeAfterOutlineReview(state: ContentCreationStateType): string {
+  const { config, outlineReview, outlineApproved, outlineFeedback } = state;
+  const outlineRetryCount = state.outlineRetryCount || 0;
+  const maxRetries = config.maxRetries ?? 2;
 
-  if (outlineApproved) {
-    logger.info('Outline approved, proceeding to generation');
+  // If HITL is enabled, check manual approval first
+  if (config.enableHITL) {
+    if (outlineApproved) {
+      logger.info('Outline manually approved, proceeding to generation');
+      return 'approved';
+    }
+
+    if (outlineFeedback) {
+      if (outlineRetryCount >= maxRetries) {
+        logger.warn('Outline max retries reached, failing');
+        return 'failed';
+      }
+      logger.info('Outline needs manual revision, regenerating');
+      return 'revise';
+    }
+  }
+
+  // Automatic review check
+  if (!outlineReview) {
+    logger.error('No outline review result available');
+    return 'failed';
+  }
+
+  if (outlineReview.passed) {
+    logger.info(`Outline passed automatic review (${outlineReview.percentage.toFixed(1)}%)`);
     return 'approved';
   }
 
-  if (outlineFeedback) {
-    logger.info('Outline needs revision, regenerating');
-    return 'revise';
+  // Failed review - check retry count
+  if (outlineRetryCount >= maxRetries) {
+    logger.warn(
+      `Outline failed review and max retries reached (${outlineRetryCount}/${maxRetries})`
+    );
+    return 'failed';
   }
 
-  // Default to approved if no feedback provided
-  return 'approved';
+  logger.info(
+    `Outline failed review (${outlineReview.percentage.toFixed(1)}%), retry ${outlineRetryCount + 1}/${maxRetries}`
+  );
+  return 'revise';
 }
 
 // ============================================================================
@@ -513,14 +746,56 @@ async function reviewDelegateNode(
 }
 
 /**
- * HITL interrupt #3 - wait for final review approval
+ * Antagonistic review #3 - full content review (8 dimensions)
+ */
+async function finalContentReviewNode(
+  state: ContentCreationStateType
+): Promise<Partial<ContentCreationStateType>> {
+  const { assembledContent, config } = state;
+
+  if (!assembledContent) {
+    return {
+      error: 'No assembled content available for review',
+    };
+  }
+
+  logger.info(`Reviewing final content (8-dimension review)`);
+
+  // Use antagonistic reviewer subgraph
+  const reviewGraph = createAntagonisticReviewerGraph();
+
+  type ReviewInput = typeof AntagonisticReviewerState.State;
+  type ReviewOutput = typeof AntagonisticReviewerState.State;
+
+  const wrappedReviewer = wrapSubgraph<ContentCreationStateType, ReviewInput, ReviewOutput>(
+    reviewGraph,
+    (flowState) => ({
+      mode: 'full' as const,
+      content: assembledContent,
+      researchFindings: undefined,
+      smartModel: flowState.config.smartModel,
+      result: undefined,
+      error: undefined,
+    }),
+    (subState) => ({
+      finalReview: subState.result,
+    })
+  );
+
+  const result = await wrappedReviewer(state);
+
+  return result;
+}
+
+/**
+ * HITL interrupt #3 - optional human review of final content (only if enableHITL=true)
  */
 async function finalReviewHitlNode(
   state: ContentCreationStateType
 ): Promise<Partial<ContentCreationStateType>> {
-  const { reviewFeedback, assembledContent } = state;
+  const { finalReview } = state;
 
-  logger.info(`Final review HITL: ${reviewFeedback.length} section reviews complete`);
+  logger.info(`Final content HITL: Review score ${finalReview?.percentage.toFixed(1)}%`);
 
   // This node will interrupt and wait for user input
   // User provides: reviewApproved, finalReviewFeedback
@@ -528,23 +803,53 @@ async function finalReviewHitlNode(
 }
 
 /**
- * Route after final review HITL
+ * Route after final content review
  */
-function routeAfterFinalReviewHitl(state: ContentCreationStateType): string {
-  const { reviewApproved, finalReviewFeedback } = state;
+function routeAfterFinalReview(state: ContentCreationStateType): string {
+  const { config, finalReview, reviewApproved, finalReviewFeedback } = state;
+  const finalRetryCount = state.finalRetryCount || 0;
+  const maxRetries = config.maxRetries ?? 2;
 
-  if (reviewApproved) {
-    logger.info('Final review approved, proceeding to output');
+  // If HITL is enabled, check manual approval first
+  if (config.enableHITL) {
+    if (reviewApproved) {
+      logger.info('Final content manually approved, proceeding to output');
+      return 'approved';
+    }
+
+    if (finalReviewFeedback) {
+      if (finalRetryCount >= maxRetries) {
+        logger.warn('Final content max retries reached, failing');
+        return 'failed';
+      }
+      logger.info('Final content needs manual revision, restarting generation');
+      return 'revise';
+    }
+  }
+
+  // Automatic review check
+  if (!finalReview) {
+    logger.error('No final review result available');
+    return 'failed';
+  }
+
+  if (finalReview.passed) {
+    logger.info(`Final content passed automatic review (${finalReview.percentage.toFixed(1)}%)`);
     return 'approved';
   }
 
-  if (finalReviewFeedback) {
-    logger.info('Content needs revision, restarting generation');
-    return 'revise';
+  // Failed review - check retry count
+  if (finalRetryCount >= maxRetries) {
+    logger.warn(
+      `Final content failed review and max retries reached (${finalRetryCount}/${maxRetries})`
+    );
+    return 'failed';
   }
 
-  // Default to approved if no feedback provided
-  return 'approved';
+  logger.info(
+    `Final content failed review (${finalReview.percentage.toFixed(1)}%), retry ${finalRetryCount + 1}/${maxRetries}`
+  );
+  return 'revise';
 }
 
 // ============================================================================
@@ -632,7 +937,7 @@ async function completeNode(
 /**
  * Creates the Content Creation Flow graph
  */
-export function createContentCreationFlow(config?: { checkpointer?: MemorySaver }) {
+export function createContentCreationFlow() {
   const graph = new StateGraph(ContentCreationState);
 
   // Phase 1: Research (parallel)
@@ -641,11 +946,15 @@ export function createContentCreationFlow(config?: { checkpointer?: MemorySaver 
     ends: ['research_delegate'],
   });
   graph.addNode('research_delegate', researchDelegateNode);
+  graph.addNode('research_review', researchReviewNode);
   graph.addNode('research_hitl', researchHitlNode);
+  graph.addNode('increment_research_retry', incrementResearchRetryNode);
 
   // Phase 2: Outline
   graph.addNode('generate_outline', generateOutlineNode);
+  graph.addNode('outline_review', outlineReviewNode);
   graph.addNode('outline_hitl', outlineHitlNode);
+  graph.addNode('increment_outline_retry', incrementOutlineRetryNode);
 
   // Phase 3: Generation (parallel)
   graph.addNode('fan_out_generation', fanOutGenerationNode, {
@@ -661,7 +970,9 @@ export function createContentCreationFlow(config?: { checkpointer?: MemorySaver 
     ends: ['review_delegate'],
   });
   graph.addNode('review_delegate', reviewDelegateNode);
+  graph.addNode('final_content_review', finalContentReviewNode);
   graph.addNode('final_review_hitl', finalReviewHitlNode);
+  graph.addNode('increment_final_retry', incrementFinalRetryNode);
 
   // Phase 6: Output (parallel)
   graph.addNode('fan_out_output', fanOutOutputNode, {
@@ -681,20 +992,26 @@ export function createContentCreationFlow(config?: { checkpointer?: MemorySaver 
   // Define flow
   g.setEntryPoint('generate_queries');
 
-  // Phase 1: Research
+  // Phase 1: Research with antagonistic review
   g.addEdge('generate_queries', 'fan_out_research');
-  g.addEdge('research_delegate', 'research_hitl');
-  g.addConditionalEdges('research_hitl', routeAfterResearchHitl, {
+  g.addEdge('research_delegate', 'research_review');
+  g.addEdge('research_review', 'research_hitl'); // HITL optional, only if enableHITL=true
+  g.addConditionalEdges('research_hitl', routeAfterResearchReview, {
     approved: 'generate_outline',
-    revise: 'generate_queries',
+    revise: 'increment_research_retry',
+    failed: 'complete',
   });
+  g.addEdge('increment_research_retry', 'generate_queries');
 
-  // Phase 2: Outline
-  g.addEdge('generate_outline', 'outline_hitl');
-  g.addConditionalEdges('outline_hitl', routeAfterOutlineHitl, {
+  // Phase 2: Outline with antagonistic review
+  g.addEdge('generate_outline', 'outline_review');
+  g.addEdge('outline_review', 'outline_hitl'); // HITL optional, only if enableHITL=true
+  g.addConditionalEdges('outline_hitl', routeAfterOutlineReview, {
     approved: 'fan_out_generation',
-    revise: 'generate_outline',
+    revise: 'increment_outline_retry',
+    failed: 'complete',
   });
+  g.addEdge('increment_outline_retry', 'generate_outline');
 
   // Phase 3: Generation
   g.addEdge('generation_delegate', 'assemble');
@@ -702,25 +1019,21 @@ export function createContentCreationFlow(config?: { checkpointer?: MemorySaver 
   // Phase 4: Assembly
   g.addEdge('assemble', 'fan_out_review');
 
-  // Phase 5: Review
-  g.addEdge('review_delegate', 'final_review_hitl');
-  g.addConditionalEdges('final_review_hitl', routeAfterFinalReviewHitl, {
+  // Phase 5: Review with antagonistic review
+  g.addEdge('review_delegate', 'final_content_review');
+  g.addEdge('final_content_review', 'final_review_hitl'); // HITL optional, only if enableHITL=true
+  g.addConditionalEdges('final_review_hitl', routeAfterFinalReview, {
     approved: 'fan_out_output',
-    revise: 'fan_out_generation',
+    revise: 'increment_final_retry',
+    failed: 'complete',
   });
+  g.addEdge('increment_final_retry', 'fan_out_generation');
 
   // Phase 6: Output
   g.addEdge('output_delegate', 'complete');
   g.setFinishPoint('complete');
 
-  // Compile with MemorySaver checkpointer for HITL resume support
-  const checkpointer = config?.checkpointer || new MemorySaver();
-  return graph.compile({
-    checkpointer,
-    interruptBefore: [
-      'research_hitl' as '__start__',
-      'outline_hitl' as '__start__',
-      'final_review_hitl' as '__start__',
-    ],
-  });
+  // Compile without checkpointer or interrupts - runs end-to-end by default
+  // HITL nodes are in the flow but won't interrupt unless explicitly configured
+  return graph.compile();
 }
