@@ -2467,6 +2467,45 @@ const tools: Tool[] = [
       required: ['gitUrl'],
     },
   },
+  {
+    name: 'deliver_alignment',
+    description:
+      'Deliver alignment work back to client repository via fork+PR. Forks the client repo to proto-labs-ai org, creates an aligned-by-protolabs branch with branding (footer component + README badge), and opens a PR with alignment details.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        clientRepoUrl: {
+          type: 'string',
+          description: 'Client repository URL (e.g., https://github.com/owner/repo)',
+        },
+        scoreBefore: {
+          type: 'number',
+          description: 'Alignment score before alignment work (optional)',
+        },
+        scoreAfter: {
+          type: 'number',
+          description: 'Alignment score after alignment work (optional)',
+        },
+        gapsSummary: {
+          type: 'string',
+          description: 'Summary of gaps identified during analysis (optional)',
+        },
+        changesMade: {
+          type: 'array',
+          items: {
+            type: 'string',
+          },
+          description: 'List of changes made during alignment (optional)',
+        },
+        alignmentPerformed: {
+          type: 'boolean',
+          description: 'Whether alignment work was performed (vs just branding)',
+          default: false,
+        },
+      },
+      required: ['clientRepoUrl'],
+    },
+  },
 ];
 
 // Tool implementations
@@ -3439,6 +3478,16 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         gitUrl: args.gitUrl,
         directoryName: args.directoryName,
         shallow: args.shallow ?? true,
+      });
+
+    case 'deliver_alignment':
+      return apiCall('/setup/deliver', {
+        clientRepoUrl: args.clientRepoUrl,
+        scoreBefore: args.scoreBefore,
+        scoreAfter: args.scoreAfter,
+        gapsSummary: args.gapsSummary,
+        changesMade: args.changesMade,
+        alignmentPerformed: args.alignmentPerformed ?? false,
       });
 
     default:
