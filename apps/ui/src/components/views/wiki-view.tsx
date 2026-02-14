@@ -406,8 +406,8 @@ export function WikiView() {
                 desc: 'Kanban board with drag-and-drop cards',
               },
               {
-                file: 'views/agent-view.tsx',
-                desc: 'AI chat interface for conversational development',
+                file: 'copilotkit/',
+                desc: 'CopilotKit sidebar chat with AI assistant',
               },
               {
                 file: 'views/spec-view/',

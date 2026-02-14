@@ -64,9 +64,6 @@ export {
   useGetValidationStatus,
 } from './use-github-mutations';
 
-// Ideation mutations
-export { useGenerateIdeationSuggestions } from './use-ideation-mutations';
-
 // Spec mutations
 export {
   useCreateSpec,

@@ -98,28 +98,6 @@ export async function navigateToSpec(page: Page): Promise<void> {
 }
 
 /**
- * Navigate to the agent view
- * Note: Navigates directly to /agent since index route shows WelcomeView
- */
-export async function navigateToAgent(page: Page): Promise<void> {
-  // Authenticate before navigating
-  await authenticateForTests(page);
-
-  // Navigate directly to /agent route
-  await page.goto('/agent');
-  await page.waitForLoadState('load');
-
-  // Wait for splash screen to disappear (safety net)
-  await waitForSplashScreenToDisappear(page, 3000);
-
-  // Handle login redirect if needed
-  await handleLoginScreenIfPresent(page);
-
-  // Wait for the agent view to be visible
-  await waitForElement(page, 'agent-view', { timeout: 10000 });
-}
-
-/**
  * Navigate to the settings view
  * Note: Navigates directly to /settings since index route shows WelcomeView
  */

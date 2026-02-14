@@ -61,7 +61,6 @@ import {
   createStandardHandler,
   createDeepHandler,
 } from './routes/health/index.js';
-import { createAgentRoutes } from './routes/agent/index.js';
 import { createSessionsRoutes } from './routes/sessions/index.js';
 import { createFeaturesRoutes } from './routes/features/index.js';
 import { createProjectsRoutes } from './routes/projects/index.js';
@@ -108,8 +107,6 @@ import { createPipelineRoutes } from './routes/pipeline/index.js';
 import { pipelineService } from './services/pipeline-service.js';
 import { createMetricsRoutes } from './routes/metrics/index.js';
 import { MetricsService } from './services/metrics-service.js';
-import { createIdeationRoutes } from './routes/ideation/index.js';
-import { IdeationService } from './services/ideation-service.js';
 import { getDevServerService } from './services/dev-server-service.js';
 import { eventHookService } from './services/event-hook-service.js';
 import { createNotificationsRoutes } from './routes/notifications/index.js';
@@ -186,6 +183,9 @@ import { LinearApprovalBridge } from './services/linear-approval-bridge.js';
 import { createDeployRoutes } from './routes/deploy/index.js';
 import { createAnalyticsRoutes } from './routes/analytics.js';
 import { AntagonisticReviewService } from './services/antagonistic-review-service.js';
+import { createCopilotKitEndpoint } from './routes/copilotkit/index.js';
+import { createCopilotKitThreadRoutes } from './routes/copilotkit/threads.js';
+import { CopilotKitThreadService } from './services/copilotkit-thread-service.js';
 
 const PORT = parseInt(process.env.PORT || '3008', 10);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -392,7 +392,6 @@ const avaGatewayService = getAvaGatewayService(
   settingsService,
   healthMonitorService
 );
-const ideationService = new IdeationService(events, settingsService, featureLoader);
 const ralphLoopService = new RalphLoopService(events, autoModeService, settingsService);
 // Initialize Role Registry (shared agent template registry)
 const roleRegistryService = new RoleRegistryService(events);
@@ -942,7 +941,6 @@ app.get(
 );
 
 app.use('/api/fs', createFsRoutes(events));
-app.use('/api/agent', createAgentRoutes(agentService, events));
 app.use('/api/sessions', createSessionsRoutes(agentService));
 app.use(
   '/api/features',
@@ -1008,7 +1006,6 @@ app.use(
 );
 app.use('/api/pipeline', createPipelineRoutes(pipelineService));
 app.use('/api/metrics', createMetricsRoutes(metricsService, ledgerService));
-app.use('/api/ideation', createIdeationRoutes(events, ideationService, featureLoader));
 app.use('/api/notifications', createNotificationsRoutes(notificationService));
 app.use('/api/ralph', createRalphRoutes(ralphLoopService));
 app.use('/api/skills', createSkillsRoutes());
@@ -1036,6 +1033,9 @@ app.use('/api/deploy', createDeployRoutes(autoModeService));
 app.use('/api/escalation', createEscalationRoutes(escalationRouter));
 app.use('/api/analytics', createAnalyticsRoutes(events));
 app.use('/api/flows', createFlowsRoutes(antagonisticReviewService));
+app.use('/api/copilotkit', createCopilotKitEndpoint({ featureLoader, autoModeService }));
+const copilotKitThreadService = new CopilotKitThreadService(DATA_DIR);
+app.use('/api/copilotkit/threads', createCopilotKitThreadRoutes(copilotKitThreadService));
 
 // Create HTTP server
 const server = createServer(app);
