@@ -298,8 +298,110 @@ export class CeremonyService {
       logger.info(
         `Posted milestone ceremony for ${projectTitle} - Milestone ${milestoneNumber}: ${milestoneTitle}`
       );
+
+      // Load milestone features for content brief
+      const project = await this.projectService!.getProject(projectPath, projectSlug);
+      const milestone = project?.milestones.find((m) => m.number === milestoneNumber);
+      if (milestone) {
+        const milestoneFeatures = await this.getMilestoneFeatures(projectPath, milestone.slug);
+        await this.generateAndPostMilestoneContentBrief(
+          projectPath,
+          projectSlug,
+          projectTitle,
+          milestoneTitle,
+          milestoneNumber,
+          milestoneFeatures,
+          ceremonySettings
+        );
+      }
     } catch (error) {
       logger.error('Failed to generate milestone ceremony:', error);
+    }
+  }
+
+  /**
+   * Generate and post a content brief to the GTM channel when a milestone completes.
+   * Uses LLM to create a structured content brief that Jon/GTM can pick up.
+   */
+  private async generateAndPostMilestoneContentBrief(
+    projectPath: string,
+    projectSlug: string,
+    projectTitle: string,
+    milestoneTitle: string,
+    milestoneNumber: number,
+    features: Feature[],
+    ceremonySettings: CeremonySettings
+  ): Promise<void> {
+    if (!ceremonySettings.enableContentBriefs) {
+      logger.debug('Content briefs disabled, skipping');
+      return;
+    }
+
+    const channelId = ceremonySettings.contentBriefChannelId;
+    if (!channelId) {
+      logger.debug('No contentBriefChannelId configured, skipping content brief');
+      return;
+    }
+
+    try {
+      const shipped = features.filter((f) => f.status === 'done' && f.prUrl);
+      const totalCost = features.reduce((sum, f) => sum + (f.costUsd || 0), 0);
+
+      // Build feature summary for the prompt
+      const featureSummary = shipped
+        .map((f) => `- ${f.title}: ${f.description?.slice(0, 200) || 'No description'}`)
+        .join('\n');
+
+      const prompt = `You are a content strategist creating a content brief for a Go-To-Market team.
+
+A development milestone just completed. Create a structured content brief that a GTM specialist can use to produce blog posts, tweets, or case study material.
+
+**Project:** ${projectTitle}
+**Milestone ${milestoneNumber}:** ${milestoneTitle}
+**Features Shipped:** ${shipped.length}
+**Total Cost:** $${totalCost.toFixed(2)}
+
+**Features:**
+${featureSummary || 'No features with descriptions'}
+
+Generate a content brief with:
+1. **Headline**: A compelling one-liner for this milestone
+2. **Key Message**: The main takeaway in 2-3 sentences
+3. **Audience**: Who cares about this and why
+4. **Content Angles**: 3-4 possible content pieces (blog post, tweet thread, case study section, etc.) with a one-line description of each
+5. **Technical Highlights**: 2-3 notable technical achievements to emphasize
+6. **Suggested Visuals**: What diagrams, screenshots, or graphics would strengthen the content
+
+Keep it concise, actionable, and focused on what makes this milestone interesting to an external audience.`;
+
+      const model = ceremonySettings.retroModel?.model || 'sonnet';
+      logger.info(`Generating content brief for milestone ${milestoneNumber}: ${milestoneTitle}`);
+
+      const result = await simpleQuery({
+        prompt,
+        model,
+        cwd: projectPath,
+        maxTurns: 1,
+        allowedTools: [],
+      });
+
+      const brief = result.text;
+      const formatted = `📝 **Content Brief** — ${projectTitle} / Milestone ${milestoneNumber}: ${milestoneTitle}\n\n${brief}`;
+
+      // Post to the dedicated content-briefs channel
+      const messages = this.splitMessage(formatted, 2000);
+      for (const message of messages) {
+        await this.emitDiscordEvent(
+          projectPath,
+          channelId,
+          message,
+          `Content Brief: ${milestoneTitle}`
+        );
+      }
+
+      logger.info(`Posted content brief to GTM channel for milestone: ${milestoneTitle}`);
+    } catch (error) {
+      logger.error('Failed to generate milestone content brief:', error);
     }
   }
 

@@ -905,6 +905,10 @@ export interface CeremonySettings {
   enableEpicDelivery?: boolean;
   /** Enable project retrospective generation (default: true) */
   enableProjectRetros?: boolean;
+  /** Enable content brief generation on milestone completion (default: true) */
+  enableContentBriefs?: boolean;
+  /** Discord channel ID for content briefs (separate from ceremony channel) */
+  contentBriefChannelId?: string;
   /** Model configuration for generating retrospectives */
   retroModel?: PhaseModelEntry;
 }
@@ -919,6 +923,7 @@ export const DEFAULT_CEREMONY_SETTINGS: CeremonySettings = {
   enableMilestoneUpdates: true,
   enableEpicDelivery: true,
   enableProjectRetros: true,
+  enableContentBriefs: true,
 };
 
 /**
