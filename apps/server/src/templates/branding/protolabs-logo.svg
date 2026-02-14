@@ -1,0 +1,13 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- ProtoLabs Logo - Scalable from 16px to 512px -->
+  <!-- Monochrome version suitable for light and dark backgrounds -->
+
+  <!-- Outer circle -->
+  <circle cx="256" cy="256" r="240" stroke="currentColor" stroke-width="16" fill="none"/>
+
+  <!-- Lightning bolt representing speed and innovation -->
+  <path d="M280 96L160 256H256L232 416L352 256H256L280 96Z" fill="currentColor"/>
+
+  <!-- Inner accent circle -->
+  <circle cx="256" cy="256" r="80" stroke="currentColor" stroke-width="12" fill="none" opacity="0.3"/>
+</svg>
