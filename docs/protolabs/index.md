@@ -12,5 +12,6 @@ ProtoLabs is Automaker's project onboarding and alignment system. It scans any r
 
 ## Guides
 
+- [Brand Identity](./brand.md) — Brand bible: naming, voice, team, content strategy, revenue model
 - [Setup Pipeline](./setup-pipeline.md) — Technical reference for the 5-phase `/setuplab` pipeline
 - [CI/CD Setup](./ci-cd-setup.md) — GitHub Actions and branch protection setup
