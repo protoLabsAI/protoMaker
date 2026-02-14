@@ -16,7 +16,7 @@
 
 # protoLabs Studio
 
-_made by automaker_
+_made with [automaker](https://github.com/AutoMaker-Org/automaker)_
 
 **From solo agents to swarm intelligence. Build software at team scale with AI.**
 
