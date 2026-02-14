@@ -6,6 +6,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Automaker is an autonomous AI development studio built as an npm workspace monorepo. It provides a Kanban-based workflow where AI agents (powered by Claude Agent SDK) implement features in isolated git worktrees.
 
+## Brand Identity
+
+The product is publicly branded as **protoLabs Studio** (domain: **protoLabs.studio**). The codebase uses "Automaker" internally (`@automaker/*` packages, `.automaker/` directory) — this is intentional and should NOT be renamed in code.
+
+- **protoLabs** = the AI-native development agency (always camelCase)
+- **protoMaker** = the AI development studio product
+- **Automaker** = internal codename only, never in external-facing content
+
+See `docs/protolabs/brand.md` for the full brand bible including voice, team, naming conventions, and content strategy.
+
 ## Important Guidelines
 
 - **Dev Server Management**: NEVER start, stop, restart, or otherwise manage the dev server yourself. Always ask the user to manage it, or you will break it.
