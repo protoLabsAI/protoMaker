@@ -47,7 +47,9 @@ export function generateReport(options: ReportOptions): string {
     );
   }
   if (research.codeQuality.hasTypeScript) {
-    techStack.push(`TypeScript${research.codeQuality.tsVersion ? ` ${research.codeQuality.tsVersion}` : ''}`);
+    techStack.push(
+      `TypeScript${research.codeQuality.tsVersion ? ` ${research.codeQuality.tsVersion}` : ''}`
+    );
   }
   if (research.monorepo.packageManager) {
     techStack.push(research.monorepo.packageManager);
@@ -56,7 +58,9 @@ export function generateReport(options: ReportOptions): string {
     techStack.push(research.monorepo.tool);
   }
   if (research.testing.hasVitest) {
-    techStack.push(`Vitest${research.testing.vitestVersion ? ` ${research.testing.vitestVersion}` : ''}`);
+    techStack.push(
+      `Vitest${research.testing.vitestVersion ? ` ${research.testing.vitestVersion}` : ''}`
+    );
   }
   if (research.testing.hasPlaywright) {
     techStack.push(
@@ -166,7 +170,9 @@ export function generateReport(options: ReportOptions): string {
     <section class="bg-white rounded-lg shadow-md p-6 mb-8">
       <h2 class="text-2xl font-bold mb-4">Gap Analysis</h2>
 
-      ${criticalGaps.length > 0 ? `
+      ${
+        criticalGaps.length > 0
+          ? `
       <!-- Critical Gaps -->
       <div class="mb-6">
         <h3 class="text-xl font-semibold text-red-600 mb-3 flex items-center gap-2">
@@ -174,7 +180,9 @@ export function generateReport(options: ReportOptions): string {
           Critical Gaps
         </h3>
         <div class="space-y-3">
-          ${criticalGaps.map((gap) => `
+          ${criticalGaps
+            .map(
+              (gap) => `
           <div class="border-l-4 border-red-500 bg-red-50 p-4 rounded">
             <div class="font-semibold text-red-900">${gap.title}</div>
             <div class="text-sm text-gray-700 mt-1">
@@ -188,12 +196,18 @@ export function generateReport(options: ReportOptions): string {
               <span class="ml-2 text-gray-500">${gap.category}</span>
             </div>
           </div>
-          `).join('\n          ')}
+          `
+            )
+            .join('\n          ')}
         </div>
       </div>
-      ` : ''}
+      `
+          : ''
+      }
 
-      ${recommendedGaps.length > 0 ? `
+      ${
+        recommendedGaps.length > 0
+          ? `
       <!-- Recommended Gaps -->
       <div class="mb-6">
         <h3 class="text-xl font-semibold text-amber-600 mb-3 flex items-center gap-2">
@@ -201,7 +215,9 @@ export function generateReport(options: ReportOptions): string {
           Recommended Improvements
         </h3>
         <div class="space-y-3">
-          ${recommendedGaps.map((gap) => `
+          ${recommendedGaps
+            .map(
+              (gap) => `
           <div class="border-l-4 border-amber-500 bg-amber-50 p-4 rounded">
             <div class="font-semibold text-amber-900">${gap.title}</div>
             <div class="text-sm text-gray-700 mt-1">
@@ -215,12 +231,18 @@ export function generateReport(options: ReportOptions): string {
               <span class="ml-2 text-gray-500">${gap.category}</span>
             </div>
           </div>
-          `).join('\n          ')}
+          `
+            )
+            .join('\n          ')}
         </div>
       </div>
-      ` : ''}
+      `
+          : ''
+      }
 
-      ${optionalGaps.length > 0 ? `
+      ${
+        optionalGaps.length > 0
+          ? `
       <!-- Optional Gaps -->
       <div class="mb-6">
         <h3 class="text-xl font-semibold text-blue-600 mb-3 flex items-center gap-2">
@@ -228,7 +250,9 @@ export function generateReport(options: ReportOptions): string {
           Optional Enhancements
         </h3>
         <div class="space-y-3">
-          ${optionalGaps.map((gap) => `
+          ${optionalGaps
+            .map(
+              (gap) => `
           <div class="border-l-4 border-blue-500 bg-blue-50 p-4 rounded">
             <div class="font-semibold text-blue-900">${gap.title}</div>
             <div class="text-sm text-gray-700 mt-1">
@@ -242,26 +266,38 @@ export function generateReport(options: ReportOptions): string {
               <span class="ml-2 text-gray-500">${gap.category}</span>
             </div>
           </div>
-          `).join('\n          ')}
+          `
+            )
+            .join('\n          ')}
         </div>
       </div>
-      ` : ''}
+      `
+          : ''
+      }
 
-      ${report.gaps.length === 0 ? `
+      ${
+        report.gaps.length === 0
+          ? `
       <div class="text-center py-8 text-gray-500">
         <div class="text-6xl mb-4">🎉</div>
         <div class="text-xl font-semibold">No gaps detected!</div>
         <div class="text-sm">Your project is fully aligned with ProtoLabs standards.</div>
       </div>
-      ` : ''}
+      `
+          : ''
+      }
     </section>
 
     <!-- Compliance Checklist -->
     <section class="bg-white rounded-lg shadow-md p-6 mb-8">
       <h2 class="text-2xl font-bold mb-4">Compliance Checklist</h2>
-      ${report.compliant.length > 0 ? `
+      ${
+        report.compliant.length > 0
+          ? `
       <div class="space-y-2">
-        ${report.compliant.map((item) => `
+        ${report.compliant
+          .map(
+            (item) => `
         <div class="flex items-start gap-3 p-3 bg-green-50 rounded">
           <svg class="w-6 h-6 text-green-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
@@ -272,13 +308,17 @@ export function generateReport(options: ReportOptions): string {
             <div class="text-xs text-gray-500 mt-1">${item.category}</div>
           </div>
         </div>
-        `).join('\n        ')}
+        `
+          )
+          .join('\n        ')}
       </div>
-      ` : `
+      `
+          : `
       <div class="text-center py-8 text-gray-500">
         <div class="text-sm">No compliant items detected yet.</div>
       </div>
-      `}
+      `
+      }
     </section>
   </main>
 
