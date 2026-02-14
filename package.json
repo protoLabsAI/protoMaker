@@ -54,6 +54,7 @@
     "test:unit:watch": "vitest",
     "test:all": "vitest run",
     "lint:lockfile": "node scripts/lint-lockfile.mjs",
+    "generate:org-docs": "tsx scripts/generate-org-docs.ts",
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs",
