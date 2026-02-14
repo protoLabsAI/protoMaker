@@ -49,3 +49,26 @@ export type {
   CompilePromptOptions,
   CompiledPrompt,
 } from './content/prompt-loader.js';
+
+// Content output types
+export {
+  BlogPostSchema,
+  TechDocSchema,
+  TrainingExampleSchema,
+  HFDatasetRowSchema,
+  ContentTypeSchema,
+} from './content/types.js';
+export type {
+  BlogPost,
+  BlogPostFrontmatter,
+  TechDoc,
+  TrainingExample,
+  HFDatasetRow,
+  ContentType,
+  SEOMetadata,
+  ContentSection,
+  CodeExample,
+  APIReference,
+  ChatMessage,
+  TrainingMetadata,
+} from './content/types.js';
