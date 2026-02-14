@@ -66,9 +66,21 @@ export type {
   HFDatasetRow,
   ContentType,
   SEOMetadata,
-  ContentSection,
+  ContentSection as ContentSectionType,
   CodeExample,
   APIReference,
   ChatMessage,
   TrainingMetadata,
 } from './content/types.js';
+
+// Content creation pipeline state
+export { ContentStateAnnotation } from './content/state.js';
+export type {
+  ContentState,
+  ContentStateType,
+  ContentSection,
+  ReviewFeedback,
+  HITLDecision,
+  ErrorEntry,
+  GenerationMetadata,
+} from './content/state.js';
