@@ -262,10 +262,7 @@ async function validateNode(
 
     logger.info(`Section validation passed: ${section.title}`);
 
-    const newMessages = [
-      ...messages,
-      { role: 'assistant', content: 'Section validation passed' },
-    ];
+    const newMessages = [...messages, { role: 'assistant', content: 'Section validation passed' }];
 
     return {
       validationError: undefined,
@@ -314,9 +311,7 @@ function routeAfterValidation(state: SectionWriterStateType): string {
 /**
  * Retry node - increment retry count
  */
-async function retryNode(
-  state: SectionWriterStateType
-): Promise<Partial<SectionWriterStateType>> {
+async function retryNode(state: SectionWriterStateType): Promise<Partial<SectionWriterStateType>> {
   return {
     retryCount: state.retryCount + 1,
   };
