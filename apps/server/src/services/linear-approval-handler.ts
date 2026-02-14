@@ -81,7 +81,9 @@ export class LinearApprovalHandler {
 
     try {
       const settings = await this.settingsService.getProjectSettings(projectPath);
-      return settings?.integrations?.linear?.changesRequestedStates || DEFAULT_CHANGES_REQUESTED_STATES;
+      return (
+        settings?.integrations?.linear?.changesRequestedStates || DEFAULT_CHANGES_REQUESTED_STATES
+      );
     } catch {
       return DEFAULT_CHANGES_REQUESTED_STATES;
     }
