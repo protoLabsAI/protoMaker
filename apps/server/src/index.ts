@@ -472,6 +472,10 @@ const { linearSyncService } = await import('./services/linear-sync-service.js');
 linearSyncService.initialize(events, settingsService, featureLoader, projectService);
 linearSyncService.start();
 
+// Initialize GitHub→Linear Bridge — posts PR status comments to Linear issues
+const { githubLinearBridgeService } = await import('./services/github-linear-bridge-service.js');
+githubLinearBridgeService.initialize(events, featureLoader, settingsService);
+
 // Initialize Ceremony Service for milestone completion ceremonies
 const { ceremonyService } = await import('./services/ceremony-service.js');
 ceremonyService.initialize(events, settingsService, featureLoader, projectService, metricsService);
