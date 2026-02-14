@@ -1161,6 +1161,246 @@ export class LinearSyncService {
   }
 
   /**
+   * Create custom workflow states for HITL (Human-In-The-Loop) deepening
+   * Creates "Needs Human Review", "Escalated", and "Agent Denied" states
+   * Stores state IDs in project config for routing
+   *
+   * Note: This requires Business plan for custom workflow states.
+   * Gracefully degrades if the feature is not available.
+   *
+   * @param projectPath - The project path
+   * @param teamId - The Linear team ID
+   * @returns Object with created state IDs, or empty object if creation fails
+   */
+  async createCustomWorkflowStates(
+    projectPath: string,
+    teamId: string
+  ): Promise<{ needsHumanReview?: string; escalated?: string; agentDenied?: string }> {
+    if (!this.settingsService) {
+      logger.warn('SettingsService not initialized, cannot create custom workflow states');
+      return {};
+    }
+
+    const settings = await this.settingsService.getProjectSettings(projectPath);
+    const linearAccessToken = settings.integrations?.linear?.agentToken;
+
+    if (!linearAccessToken) {
+      logger.warn('No Linear OAuth token found, cannot create custom workflow states');
+      return {};
+    }
+
+    // Check if custom states already exist
+    const existingStates = await this.getCustomWorkflowStates(projectPath, teamId);
+    if (existingStates.needsHumanReview && existingStates.escalated && existingStates.agentDenied) {
+      logger.info('Custom workflow states already exist, skipping creation');
+      return existingStates;
+    }
+
+    const customStateIds: { needsHumanReview?: string; escalated?: string; agentDenied?: string } =
+      {};
+
+    // Define custom states to create
+    const statesToCreate = [
+      { name: 'Needs Human Review', type: 'started', color: '#f2c94c', key: 'needsHumanReview' },
+      { name: 'Escalated', type: 'started', color: '#f2994a', key: 'escalated' },
+      { name: 'Agent Denied', type: 'canceled', color: '#eb5757', key: 'agentDenied' },
+    ] as const;
+
+    // Try to create each state
+    for (const stateConfig of statesToCreate) {
+      // Skip if already exists
+      const existingKey = stateConfig.key as keyof typeof existingStates;
+      if (existingStates[existingKey]) {
+        customStateIds[existingKey] = existingStates[existingKey];
+        continue;
+      }
+
+      try {
+        const mutation = `
+          mutation CreateWorkflowState($teamId: String!, $name: String!, $type: String!, $color: String!) {
+            workflowStateCreate(input: { teamId: $teamId, name: $name, type: $type, color: $color }) {
+              success
+              workflowState {
+                id
+                name
+                type
+                color
+              }
+            }
+          }
+        `;
+
+        const variables = {
+          teamId,
+          name: stateConfig.name,
+          type: stateConfig.type,
+          color: stateConfig.color,
+        };
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+        const response = await fetch('https://api.linear.app/graphql', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${linearAccessToken}`,
+          },
+          body: JSON.stringify({ query: mutation, variables }),
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          logger.warn(
+            `Failed to create workflow state "${stateConfig.name}": ${response.status} ${response.statusText}`
+          );
+          continue;
+        }
+
+        const result = (await response.json()) as {
+          data?: {
+            workflowStateCreate?: {
+              success: boolean;
+              workflowState?: { id: string; name: string };
+            };
+          };
+          errors?: Array<{ message: string }>;
+        };
+
+        if (result.errors) {
+          logger.warn(
+            `Failed to create workflow state "${stateConfig.name}": ${result.errors.map((e) => e.message).join(', ')}`
+          );
+          continue;
+        }
+
+        if (result.data?.workflowStateCreate?.success && result.data.workflowStateCreate.workflowState) {
+          const stateId = result.data.workflowStateCreate.workflowState.id;
+          customStateIds[existingKey] = stateId;
+          logger.info(`Created custom workflow state "${stateConfig.name}": ${stateId}`);
+        }
+      } catch (error) {
+        // Graceful degradation: log warning but continue
+        logger.warn(
+          `Failed to create workflow state "${stateConfig.name}": ${error instanceof Error ? error.message : 'Unknown error'}`
+        );
+      }
+    }
+
+    // Store state IDs in project config
+    if (Object.keys(customStateIds).length > 0) {
+      try {
+        const currentSettings = await this.settingsService.getProjectSettings(projectPath);
+        if (currentSettings.integrations?.linear) {
+          currentSettings.integrations.linear.customStateIds = {
+            ...currentSettings.integrations.linear.customStateIds,
+            ...customStateIds,
+          };
+          await this.settingsService.updateProjectSettings(projectPath, currentSettings);
+          logger.info('Stored custom workflow state IDs in project config');
+        }
+      } catch (error) {
+        logger.error(
+          `Failed to store custom state IDs in config: ${error instanceof Error ? error.message : 'Unknown error'}`
+        );
+      }
+    }
+
+    return customStateIds;
+  }
+
+  /**
+   * Get existing custom workflow states from Linear team
+   * Returns state IDs for "Needs Human Review", "Escalated", and "Agent Denied"
+   *
+   * @param projectPath - The project path
+   * @param teamId - The Linear team ID
+   * @returns Object with existing state IDs
+   */
+  private async getCustomWorkflowStates(
+    projectPath: string,
+    teamId: string
+  ): Promise<{ needsHumanReview?: string; escalated?: string; agentDenied?: string }> {
+    if (!this.settingsService) {
+      return {};
+    }
+
+    const settings = await this.settingsService.getProjectSettings(projectPath);
+    const linearAccessToken = settings.integrations?.linear?.agentToken;
+
+    if (!linearAccessToken) {
+      return {};
+    }
+
+    try {
+      const query = `
+        query GetWorkflowStates($teamId: String!) {
+          team(id: $teamId) {
+            id
+            states {
+              nodes {
+                id
+                name
+              }
+            }
+          }
+        }
+      `;
+
+      const variables = { teamId };
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+      const response = await fetch('https://api.linear.app/graphql', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${linearAccessToken}`,
+        },
+        body: JSON.stringify({ query, variables }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        return {};
+      }
+
+      const result = (await response.json()) as {
+        data?: {
+          team?: {
+            states?: {
+              nodes: Array<{ id: string; name: string }>;
+            };
+          };
+        };
+      };
+
+      const states = result.data?.team?.states?.nodes || [];
+      const customStates: { needsHumanReview?: string; escalated?: string; agentDenied?: string } =
+        {};
+
+      for (const state of states) {
+        if (state.name === 'Needs Human Review') {
+          customStates.needsHumanReview = state.id;
+        } else if (state.name === 'Escalated') {
+          customStates.escalated = state.id;
+        } else if (state.name === 'Agent Denied') {
+          customStates.agentDenied = state.id;
+        }
+      }
+
+      return customStates;
+    } catch (error) {
+      logger.warn(
+        `Failed to fetch existing custom workflow states: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+      return {};
+    }
+  }
+
+  /**
    * Handle feature:pr-merged events
    */
   private async handleFeaturePRMerged(payload: FeatureEventPayload): Promise<void> {
