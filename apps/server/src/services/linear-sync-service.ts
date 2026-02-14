@@ -521,6 +521,9 @@ export class LinearSyncService {
         linearIssueUrl: issueResult.issueUrl,
       });
 
+      // Sync dependencies as issue relations
+      await this.syncDependencies(projectPath, feature, issueResult.issueId);
+
       // Update sync metadata
       const metadata: SyncMetadata = {
         featureId,
@@ -1947,6 +1950,9 @@ export class LinearSyncService {
       // Add child features that already have Linear issues to the project
       await this.addChildFeaturesToProject(projectPath, projectSlug, result.projectId, client);
 
+      // Sync dependencies for all features in this project
+      await this.syncProjectDependencies(projectPath, projectSlug);
+
       // Record metrics
       this.recordOperation(
         `project:${projectSlug}`,
@@ -2035,6 +2041,137 @@ export class LinearSyncService {
       );
     } catch (error) {
       logger.error(`Failed to add child features to Linear project:`, error);
+    }
+  }
+
+  /**
+   * Sync feature dependencies as Linear issue relations
+   * Creates "blocks" relations for each dependency
+   *
+   * @param projectPath - The project path
+   * @param feature - The feature with dependencies
+   * @param issueId - The Linear issue ID for this feature
+   */
+  private async syncDependencies(
+    projectPath: string,
+    feature: Feature,
+    issueId: string
+  ): Promise<void> {
+    if (!feature.dependencies || feature.dependencies.length === 0) {
+      logger.debug(`Feature ${feature.id} has no dependencies to sync`);
+      return;
+    }
+
+    if (!this.settingsService || !this.featureLoader) {
+      logger.warn('SettingsService or FeatureLoader not initialized, skipping dependency sync');
+      return;
+    }
+
+    try {
+      const client = new LinearMCPClient(this.settingsService, projectPath);
+
+      // Get existing relations to avoid duplicates
+      const existingRelations = await client.getIssueRelations(issueId);
+      const existingRelatedIds = new Set(existingRelations.map((r) => r.id));
+
+      let createdCount = 0;
+      let skippedCount = 0;
+
+      for (const dependencyId of feature.dependencies) {
+        try {
+          // Get the dependency feature to find its Linear issue ID
+          const dependencyFeature = await this.featureLoader.get(projectPath, dependencyId);
+
+          if (!dependencyFeature) {
+            logger.warn(
+              `Dependency feature ${dependencyId} not found, skipping relation creation`
+            );
+            continue;
+          }
+
+          if (!dependencyFeature.linearIssueId) {
+            logger.debug(
+              `Dependency feature ${dependencyId} has no Linear issue ID yet, skipping relation`
+            );
+            continue;
+          }
+
+          // Check if relation already exists
+          if (existingRelatedIds.has(dependencyFeature.linearIssueId)) {
+            logger.debug(
+              `Relation already exists: ${issueId} → ${dependencyFeature.linearIssueId}, skipping`
+            );
+            skippedCount++;
+            continue;
+          }
+
+          // Create the relation: issueId is blocked by dependencyFeature.linearIssueId
+          await client.createIssueRelation(issueId, dependencyFeature.linearIssueId);
+          createdCount++;
+        } catch (error) {
+          logger.warn(
+            `Failed to create issue relation for dependency ${dependencyId}:`,
+            error instanceof Error ? error.message : 'Unknown error'
+          );
+        }
+      }
+
+      logger.info(
+        `Synced dependencies for feature ${feature.id}: ${createdCount} created, ${skippedCount} skipped (duplicates)`
+      );
+    } catch (error) {
+      logger.error(
+        `Failed to sync dependencies for feature ${feature.id}:`,
+        error instanceof Error ? error.message : 'Unknown error'
+      );
+    }
+  }
+
+  /**
+   * Sync dependencies for all features in a project
+   * Called after project scaffolding to create all issue relations
+   *
+   * @param projectPath - The project path
+   * @param projectSlug - The project slug
+   */
+  private async syncProjectDependencies(
+    projectPath: string,
+    projectSlug: string
+  ): Promise<void> {
+    if (!this.featureLoader) {
+      logger.warn('FeatureLoader not initialized, skipping project dependency sync');
+      return;
+    }
+
+    try {
+      // Get all features for this project
+      const features = await this.featureLoader.getAll(projectPath);
+
+      // Filter features that have Linear issues and dependencies
+      const featuresWithDeps = features.filter(
+        (f: Feature) =>
+          f.linearIssueId && f.dependencies && f.dependencies.length > 0 && f.projectSlug === projectSlug
+      );
+
+      if (featuresWithDeps.length === 0) {
+        logger.debug(`No features with dependencies to sync for project ${projectSlug}`);
+        return;
+      }
+
+      logger.info(
+        `Syncing dependencies for ${featuresWithDeps.length} features in project ${projectSlug}`
+      );
+
+      for (const feature of featuresWithDeps) {
+        await this.syncDependencies(projectPath, feature, feature.linearIssueId!);
+      }
+
+      logger.info(`Completed dependency sync for project ${projectSlug}`);
+    } catch (error) {
+      logger.error(
+        `Failed to sync project dependencies for ${projectSlug}:`,
+        error instanceof Error ? error.message : 'Unknown error'
+      );
     }
   }
 

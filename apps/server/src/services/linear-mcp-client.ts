@@ -691,4 +691,104 @@ export class LinearMCPClient {
 
     return awaitingInputState.id;
   }
+
+  /**
+   * Create an issue relation (blocks relation)
+   *
+   * @param issueId - The issue ID that is blocked
+   * @param relatedIssueId - The issue ID that blocks it
+   * @returns True if relation was created successfully
+   * @throws {LinearAPIError} On API errors
+   */
+  async createIssueRelation(issueId: string, relatedIssueId: string): Promise<boolean> {
+    const mutation = `
+      mutation CreateIssueRelation($issueId: String!, $relatedIssueId: String!, $type: IssueRelationType!) {
+        issueRelationCreate(input: { issueId: $issueId, relatedIssueId: $relatedIssueId, type: $type }) {
+          success
+          issueRelation {
+            id
+            type
+          }
+        }
+      }
+    `;
+
+    const variables = {
+      issueId,
+      relatedIssueId,
+      type: 'blocks',
+    };
+
+    interface CreateIssueRelationResponse {
+      issueRelationCreate: {
+        success: boolean;
+        issueRelation: {
+          id: string;
+          type: string;
+        };
+      };
+    }
+
+    const data = await this.executeGraphQL<CreateIssueRelationResponse>(mutation, variables);
+
+    if (!data.issueRelationCreate.success) {
+      throw new LinearAPIError('Failed to create Linear issue relation');
+    }
+
+    logger.info(
+      `Created issue relation: ${issueId} blocked by ${relatedIssueId} (relation ID: ${data.issueRelationCreate.issueRelation.id})`
+    );
+
+    return true;
+  }
+
+  /**
+   * Get existing issue relations for an issue
+   *
+   * @param issueId - The issue ID to get relations for
+   * @returns Array of related issue IDs
+   * @throws {LinearAPIError} On API errors
+   */
+  async getIssueRelations(issueId: string): Promise<Array<{ id: string; type: string }>> {
+    const query = `
+      query GetIssueRelations($issueId: String!) {
+        issue(id: $issueId) {
+          id
+          relations {
+            nodes {
+              id
+              type
+              relatedIssue {
+                id
+              }
+            }
+          }
+        }
+      }
+    `;
+
+    const variables = { issueId };
+
+    interface GetIssueRelationsResponse {
+      issue: {
+        id: string;
+        relations: {
+          nodes: Array<{
+            id: string;
+            type: string;
+            relatedIssue: {
+              id: string;
+            };
+          }>;
+        };
+      };
+    }
+
+    const data = await this.executeGraphQL<GetIssueRelationsResponse>(query, variables);
+
+    return data.issue.relations.nodes.map((relation) => ({
+      id: relation.relatedIssue.id,
+      type: relation.type,
+    }));
+  }
 }
