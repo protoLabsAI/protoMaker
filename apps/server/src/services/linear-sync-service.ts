@@ -620,7 +620,9 @@ export class LinearSyncService {
             sections.push(prd.constraints || 'N/A');
           }
         } catch (error) {
-          logger.debug(`Could not fetch project PRD: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          logger.debug(
+            `Could not fetch project PRD: ${error instanceof Error ? error.message : 'Unknown error'}`
+          );
         }
       }
     }
@@ -641,7 +643,9 @@ export class LinearSyncService {
           }
         }
       } catch (error) {
-        logger.debug(`Could not fetch milestone context: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        logger.debug(
+          `Could not fetch milestone context: ${error instanceof Error ? error.message : 'Unknown error'}`
+        );
       }
     }
 
@@ -659,7 +663,9 @@ export class LinearSyncService {
           });
         }
       } catch (error) {
-        logger.debug(`Could not fetch acceptance criteria: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        logger.debug(
+          `Could not fetch acceptance criteria: ${error instanceof Error ? error.message : 'Unknown error'}`
+        );
       }
     }
 
@@ -678,21 +684,37 @@ export class LinearSyncService {
           if (avaComments.length > 0) {
             sections.push('\n### Ava (Operational Review)');
             avaComments.forEach((comment) => {
-              const emoji = comment.type === 'approval' ? '✅' : comment.type === 'change-requested' ? '⚠️' : '💡';
-              sections.push(`${emoji} **${comment.type}** ${comment.section ? `(${comment.section})` : ''}: ${comment.content}`);
+              const emoji =
+                comment.type === 'approval'
+                  ? '✅'
+                  : comment.type === 'change-requested'
+                    ? '⚠️'
+                    : '💡';
+              sections.push(
+                `${emoji} **${comment.type}** ${comment.section ? `(${comment.section})` : ''}: ${comment.content}`
+              );
             });
           }
 
           if (jonComments.length > 0) {
             sections.push('\n### Jon (Market Review)');
             jonComments.forEach((comment) => {
-              const emoji = comment.type === 'approval' ? '✅' : comment.type === 'change-requested' ? '⚠️' : '💡';
-              sections.push(`${emoji} **${comment.type}** ${comment.section ? `(${comment.section})` : ''}: ${comment.content}`);
+              const emoji =
+                comment.type === 'approval'
+                  ? '✅'
+                  : comment.type === 'change-requested'
+                    ? '⚠️'
+                    : '💡';
+              sections.push(
+                `${emoji} **${comment.type}** ${comment.section ? `(${comment.section})` : ''}: ${comment.content}`
+              );
             });
           }
         }
       } catch (error) {
-        logger.debug(`Could not fetch review verdicts: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        logger.debug(
+          `Could not fetch review verdicts: ${error instanceof Error ? error.message : 'Unknown error'}`
+        );
       }
     }
 
@@ -703,8 +725,10 @@ export class LinearSyncService {
 
       if (feature.executionHistory && feature.executionHistory.length > 0) {
         sections.push(`**Executions:** ${feature.executionHistory.length}`);
-        const totalTokens =
-          feature.executionHistory.reduce((sum, exec) => sum + (exec.inputTokens || 0) + (exec.outputTokens || 0), 0);
+        const totalTokens = feature.executionHistory.reduce(
+          (sum, exec) => sum + (exec.inputTokens || 0) + (exec.outputTokens || 0),
+          0
+        );
         sections.push(`**Total Tokens:** ${totalTokens.toLocaleString()}`);
       }
     }
