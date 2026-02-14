@@ -371,7 +371,7 @@ export class LinearSyncService {
       if (!hasToken) {
         logger.warn(
           `Linear sync enabled for ${projectPath} but no API token configured. ` +
-            'Set agentToken (OAuth), apiKey (settings), or LINEAR_API_KEY (env var).'
+            'Set agentToken (OAuth), apiKey (settings), or LINEAR_API_KEY/LINEAR_API_TOKEN (env var).'
         );
         return false;
       }
@@ -387,6 +387,42 @@ export class LinearSyncService {
       logger.error(`Failed to check Linear sync settings for ${projectPath}:`, error);
       return false;
     }
+  }
+
+  /**
+   * Resolve a Linear API token from project settings or environment.
+   *
+   * Priority: OAuth agentToken > settings apiKey > LINEAR_API_KEY env > LINEAR_API_TOKEN env
+   *
+   * @throws Error if no token source is available
+   */
+  private async resolveLinearToken(projectPath: string): Promise<string> {
+    if (!this.settingsService) {
+      throw new Error('SettingsService not initialized');
+    }
+
+    const settings = await this.settingsService.getProjectSettings(projectPath);
+    const linearConfig = settings.integrations?.linear;
+
+    // Priority 1: OAuth agent token
+    if (linearConfig?.agentToken) {
+      return linearConfig.agentToken;
+    }
+
+    // Priority 2: Personal API key from settings
+    if (linearConfig?.apiKey) {
+      return linearConfig.apiKey;
+    }
+
+    // Priority 3: Environment variable fallback
+    const envToken = process.env.LINEAR_API_KEY || process.env.LINEAR_API_TOKEN;
+    if (envToken) {
+      return envToken;
+    }
+
+    throw new Error(
+      'No Linear API token configured. Set agentToken (OAuth), apiKey (settings), or LINEAR_API_KEY/LINEAR_API_TOKEN (env var).'
+    );
   }
 
   /**
@@ -780,12 +816,8 @@ export class LinearSyncService {
 
     // Get Linear OAuth token from settings
     const settings = await this.settingsService.getProjectSettings(projectPath);
-    const linearAccessToken = settings.integrations?.linear?.agentToken;
+    const linearAccessToken = await this.resolveLinearToken(projectPath);
     const teamId = settings.integrations?.linear?.teamId;
-
-    if (!linearAccessToken) {
-      throw new Error('No Linear OAuth token found in settings');
-    }
 
     if (!teamId) {
       throw new Error('No Linear team ID found in settings');
@@ -898,11 +930,7 @@ export class LinearSyncService {
     }
 
     const settings = await this.settingsService.getProjectSettings(projectPath);
-    const linearAccessToken = settings.integrations?.linear?.agentToken;
-
-    if (!linearAccessToken) {
-      throw new Error('No Linear OAuth token found in settings');
-    }
+    const linearAccessToken = await this.resolveLinearToken(projectPath);
 
     // Format the description with enhanced formatting
     const description = await this.formatIssueDescription(projectPath, feature);
@@ -1179,11 +1207,7 @@ export class LinearSyncService {
     }
 
     const settings = await this.settingsService.getProjectSettings(projectPath);
-    const linearAccessToken = settings.integrations?.linear?.agentToken;
-
-    if (!linearAccessToken) {
-      throw new Error('No Linear OAuth token found in settings');
-    }
+    const linearAccessToken = await this.resolveLinearToken(projectPath);
 
     // GraphQL query to get issue state
     const query = `
@@ -1256,12 +1280,8 @@ export class LinearSyncService {
     }
 
     const settings = await this.settingsService.getProjectSettings(projectPath);
-    const linearAccessToken = settings.integrations?.linear?.agentToken;
+    const linearAccessToken = await this.resolveLinearToken(projectPath);
     const teamId = settings.integrations?.linear?.teamId;
-
-    if (!linearAccessToken) {
-      throw new Error('No Linear OAuth token found in settings');
-    }
 
     if (!teamId) {
       throw new Error('No Linear team ID found in settings');
@@ -1353,11 +1373,7 @@ export class LinearSyncService {
     }
 
     const settings = await this.settingsService.getProjectSettings(projectPath);
-    const linearAccessToken = settings.integrations?.linear?.agentToken;
-
-    if (!linearAccessToken) {
-      throw new Error('No Linear OAuth token found in settings');
-    }
+    const linearAccessToken = await this.resolveLinearToken(projectPath);
 
     // GraphQL query to fetch workflow states
     const query = `
@@ -1451,10 +1467,11 @@ export class LinearSyncService {
     }
 
     const settings = await this.settingsService.getProjectSettings(projectPath);
-    const linearAccessToken = settings.integrations?.linear?.agentToken;
-
-    if (!linearAccessToken) {
-      logger.warn('No Linear OAuth token found, cannot create custom workflow states');
+    let linearAccessToken: string;
+    try {
+      linearAccessToken = await this.resolveLinearToken(projectPath);
+    } catch {
+      logger.warn('No Linear API token configured, cannot create custom workflow states');
       return {};
     }
 
@@ -1599,9 +1616,10 @@ export class LinearSyncService {
     }
 
     const settings = await this.settingsService.getProjectSettings(projectPath);
-    const linearAccessToken = settings.integrations?.linear?.agentToken;
-
-    if (!linearAccessToken) {
+    let linearAccessToken: string;
+    try {
+      linearAccessToken = await this.resolveLinearToken(projectPath);
+    } catch {
       return {};
     }
 
@@ -1828,11 +1846,7 @@ export class LinearSyncService {
     }
 
     const settings = await this.settingsService.getProjectSettings(projectPath);
-    const linearAccessToken = settings.integrations?.linear?.agentToken;
-
-    if (!linearAccessToken) {
-      throw new Error('No Linear OAuth token found in settings');
-    }
+    const linearAccessToken = await this.resolveLinearToken(projectPath);
 
     // GraphQL mutation to add comment
     const mutation = `
@@ -2253,12 +2267,8 @@ export class LinearSyncService {
 
     // Get Linear OAuth token from settings
     const settings = await this.settingsService.getProjectSettings(projectPath);
-    const linearAccessToken = settings.integrations?.linear?.agentToken;
+    const linearAccessToken = await this.resolveLinearToken(projectPath);
     const teamId = settings.integrations?.linear?.teamId;
-
-    if (!linearAccessToken) {
-      throw new Error('No Linear OAuth token found in settings');
-    }
 
     if (!teamId) {
       throw new Error('No Linear team ID found in settings');
