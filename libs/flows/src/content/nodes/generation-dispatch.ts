@@ -67,9 +67,7 @@ export interface GenerationState {
  * @param state - Current generation state with outline and research
  * @returns Command with Send[] for each section
  */
-export async function generationDispatchNode(
-  state: GenerationState
-): Promise<Command> {
+export async function generationDispatchNode(state: GenerationState): Promise<Command> {
   const { outline, research } = state;
   const sends: Send[] = [];
 
@@ -116,18 +114,14 @@ export async function generationCollectorNode(
   const receivedCount = sections.length;
 
   if (receivedCount !== expectedCount) {
-    console.warn(
-      `Section count mismatch: expected ${expectedCount}, received ${receivedCount}`
-    );
+    console.warn(`Section count mismatch: expected ${expectedCount}, received ${receivedCount}`);
   }
 
   // Sort sections by outline position
   const orderedSections = [...sections].sort((a, b) => a.position - b.position);
 
   // Identify failed sections
-  const failedSections = orderedSections
-    .filter((s) => !s.success)
-    .map((s) => s.sectionId);
+  const failedSections = orderedSections.filter((s) => !s.success).map((s) => s.sectionId);
 
   // Identify missing sections (expected but not received)
   const receivedIds = new Set(orderedSections.map((s) => s.sectionId));
@@ -138,8 +132,7 @@ export async function generationCollectorNode(
   const allFailedSections = [...failedSections, ...missingSections];
 
   // Determine if generation is complete
-  const isComplete =
-    receivedCount === expectedCount && allFailedSections.length === 0;
+  const isComplete = receivedCount === expectedCount && allFailedSections.length === 0;
 
   // Log results
   if (isComplete) {
@@ -147,9 +140,7 @@ export async function generationCollectorNode(
       `✓ Generation complete: ${receivedCount}/${expectedCount} sections generated successfully`
     );
   } else {
-    console.warn(
-      `⚠ Partial failure: ${receivedCount}/${expectedCount} sections received`
-    );
+    console.warn(`⚠ Partial failure: ${receivedCount}/${expectedCount} sections received`);
     if (failedSections.length > 0) {
       console.warn(`  Failed sections: ${failedSections.join(', ')}`);
     }
