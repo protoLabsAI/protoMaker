@@ -33,6 +33,12 @@ export type {
   // Legacy profile types (deprecated)
   ClaudeApiProfile,
   ClaudeApiProfileTemplate,
+  // Trust boundary types
+  TrustBoundaryConfig,
+  PRDCategory,
+  PRDComplexity,
+  AutoApproveRule,
+  RequireReviewRule,
 } from '@automaker/types';
 
 export {
@@ -41,6 +47,7 @@ export {
   DEFAULT_CREDENTIALS,
   DEFAULT_PROJECT_SETTINGS,
   DEFAULT_PHASE_MODELS,
+  DEFAULT_TRUST_BOUNDARY_CONFIG,
   SETTINGS_VERSION,
   CREDENTIALS_VERSION,
   PROJECT_SETTINGS_VERSION,
