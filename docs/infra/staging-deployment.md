@@ -537,7 +537,7 @@ The staging compose file has `name: automaker-staging`. If you run `docker compo
 
 **Container name conflict:**
 
-```
+```text
 Error: container name "/automaker-server" is already in use
 ```
 
