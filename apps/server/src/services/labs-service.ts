@@ -74,6 +74,14 @@ function isValidGitUrl(url: string): boolean {
 }
 
 /**
+ * Redact embedded credentials from git URLs for safe logging
+ * e.g., https://user:token@github.com/repo → https://***@github.com/repo
+ */
+function redactGitUrl(url: string): string {
+  return url.replace(/:\/\/[^@]+@/, '://***@');
+}
+
+/**
  * Get the default branch name for a repository
  */
 async function getDefaultBranch(repoPath: string): Promise<string | undefined> {
@@ -193,6 +201,14 @@ export class LabsService {
       };
     }
 
+    // Block path traversal in directory name
+    if (repoName.includes('..') || repoName.includes('/') || repoName.includes('\\')) {
+      return {
+        success: false,
+        error: 'Invalid directory name: must not contain path separators or traversal sequences',
+      };
+    }
+
     // Ensure labs directory exists
     try {
       await this.ensureLabsDir(labsDir);
@@ -229,7 +245,7 @@ export class LabsService {
     }
 
     // Clone the repository
-    logger.info('Cloning repository', { gitUrl, repoPath, shallow });
+    logger.info('Cloning repository', { gitUrl: redactGitUrl(gitUrl), repoPath, shallow });
 
     try {
       const cloneArgs = ['clone', ...(shallow ? ['--depth', '1'] : []), gitUrl, repoName];
@@ -249,7 +265,10 @@ export class LabsService {
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      logger.error('Failed to clone repository', { gitUrl, error: errorMessage });
+      logger.error('Failed to clone repository', {
+        gitUrl: redactGitUrl(gitUrl),
+        error: errorMessage,
+      });
 
       // Check for common error types
       if (

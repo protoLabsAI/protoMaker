@@ -35,7 +35,11 @@ export function createCloneHandler(): RequestHandler<unknown, CloneResponse, Clo
         return;
       }
 
-      logger.info('Clone request received', { gitUrl, directoryName, shallow });
+      logger.info('Clone request received', {
+        gitUrl: gitUrl.replace(/:\/\/[^@]+@/, '://***@'),
+        directoryName,
+        shallow,
+      });
 
       const result = await labsService.cloneRepo({
         gitUrl,
