@@ -62,9 +62,7 @@ export interface AvaReviewState {
  * @param state - Node state containing PRD and models
  * @returns Partial state with Ava's review perspective
  */
-export async function avaReviewNode(
-  state: AvaReviewState
-): Promise<Partial<AvaReviewState>> {
+export async function avaReviewNode(state: AvaReviewState): Promise<Partial<AvaReviewState>> {
   const { prd, smartModel, fastModel } = state;
   const nodeName = 'AvaReviewNode';
 
@@ -164,6 +162,8 @@ function parseAndValidateReview(output: string, nodeName: string): ReviewerPersp
       const issues = error.issues.map((e: any) => `${e.path.join('.')}: ${e.message}`).join(', ');
       throw new Error(`[${nodeName}] Invalid review format: ${issues}`);
     }
-    throw new Error(`[${nodeName}] Failed to parse JSON: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(
+      `[${nodeName}] Failed to parse JSON: ${error instanceof Error ? error.message : String(error)}`
+    );
   }
 }

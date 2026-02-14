@@ -194,6 +194,8 @@ function parseAndValidateClassification(output: string, nodeName: string): Class
       const issues = error.issues.map((e: any) => `${e.path.join('.')}: ${e.message}`).join(', ');
       throw new Error(`[${nodeName}] Invalid classification format: ${issues}`);
     }
-    throw new Error(`[${nodeName}] Failed to parse JSON: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(
+      `[${nodeName}] Failed to parse JSON: ${error instanceof Error ? error.message : String(error)}`
+    );
   }
 }

@@ -184,7 +184,8 @@ describe('ava-review node', () => {
               recommendations: ['Upgrade to scalable database solution first'],
             },
           ],
-          comments: 'PRD needs revision before we can commit resources. Address capacity, requirements clarity, and infrastructure concerns.',
+          comments:
+            'PRD needs revision before we can commit resources. Address capacity, requirements clarity, and infrastructure concerns.',
           timestamp: '2024-01-01T00:00:00.000Z',
         }),
       ]);
@@ -210,7 +211,10 @@ describe('ava-review node', () => {
             {
               area: 'Capacity',
               assessment: 'No available capacity',
-              concerns: ['Would require 3 full-time engineers for 6 months', 'No engineers available'],
+              concerns: [
+                'Would require 3 full-time engineers for 6 months',
+                'No engineers available',
+              ],
             },
             {
               area: 'Risk',
@@ -232,7 +236,8 @@ describe('ava-review node', () => {
               concerns: ['Required technology does not exist', 'Physics constraints'],
             },
           ],
-          comments: 'Cannot recommend proceeding with this PRD. Fundamental issues with capacity, risk, and feasibility.',
+          comments:
+            'Cannot recommend proceeding with this PRD. Fundamental issues with capacity, risk, and feasibility.',
           timestamp: '2024-01-01T00:00:00.000Z',
         }),
       ]);
