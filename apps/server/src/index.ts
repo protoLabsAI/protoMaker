@@ -1033,9 +1033,13 @@ app.use('/api/deploy', createDeployRoutes(autoModeService));
 app.use('/api/escalation', createEscalationRoutes(escalationRouter));
 app.use('/api/analytics', createAnalyticsRoutes(events));
 app.use('/api/flows', createFlowsRoutes(antagonisticReviewService));
-app.use('/api/copilotkit', createCopilotKitEndpoint({ featureLoader, autoModeService }));
-const copilotKitThreadService = new CopilotKitThreadService(DATA_DIR);
-app.use('/api/copilotkit/threads', createCopilotKitThreadRoutes(copilotKitThreadService));
+if (process.env.ANTHROPIC_API_KEY) {
+  app.use('/api/copilotkit', createCopilotKitEndpoint({ featureLoader, autoModeService }));
+  const copilotKitThreadService = new CopilotKitThreadService(DATA_DIR);
+  app.use('/api/copilotkit/threads', createCopilotKitThreadRoutes(copilotKitThreadService));
+} else {
+  logger.warn('CopilotKit routes disabled — ANTHROPIC_API_KEY not set');
+}
 
 // Create HTTP server
 const server = createServer(app);

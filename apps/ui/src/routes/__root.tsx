@@ -3,12 +3,7 @@ import { useEffect, useState, useCallback, useDeferredValue, useRef } from 'reac
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { createLogger } from '@automaker/utils/logger';
-import { CopilotKit } from '@copilotkit/react-core';
-import { CopilotSidebar } from '@copilotkit/react-ui';
-import '@copilotkit/react-ui/styles.css';
-import { getCopilotKitThemeStyles } from '@/components/copilotkit/theme-bridge';
-import { useCopilotKitContext } from '@/hooks/use-copilotkit-context';
-import { useCopilotKitSuggestions } from '@/hooks/use-copilotkit-suggestions';
+import { CopilotKitProvider, CopilotSidebarWrapper } from '@/components/copilotkit/provider';
 import { Sidebar } from '@/components/layout/sidebar';
 import { ProjectSwitcher } from '@/components/layout/project-switcher';
 import {
@@ -191,10 +186,6 @@ function RootLayoutContent() {
 
   // Load project settings when switching projects
   useProjectSettingsLoader();
-
-  // Inject project context into CopilotKit sidebar
-  useCopilotKitContext();
-  useCopilotKitSuggestions();
 
   // Check if we're in compact mode (< 1240px) to hide project switcher
   const isCompact = useIsCompact();
@@ -842,18 +833,10 @@ function RootLayoutContent() {
         )}
         {showProjectSwitcher && <ProjectSwitcher />}
         <Sidebar />
-        <div className="flex-1 flex flex-col overflow-hidden" style={getCopilotKitThemeStyles()}>
-          <CopilotSidebar
-            defaultOpen={false}
-            clickOutsideToClose={false}
-            shortcut="\\"
-            labels={{
-              title: 'Ava',
-              initial: 'How can I help with your project?',
-            }}
-          >
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <CopilotSidebarWrapper>
             <Outlet />
-          </CopilotSidebar>
+          </CopilotSidebarWrapper>
         </div>
         <Toaster richColors position="bottom-right" />
       </main>
@@ -872,11 +855,11 @@ function RootLayout() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <CopilotKit runtimeUrl="/api/copilotkit">
+      <CopilotKitProvider>
         <FileBrowserProvider>
           <RootLayoutContent />
         </FileBrowserProvider>
-      </CopilotKit>
+      </CopilotKitProvider>
       {SHOW_QUERY_DEVTOOLS && !isCompact ? (
         <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-left" />
       ) : null}

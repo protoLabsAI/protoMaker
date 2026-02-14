@@ -144,12 +144,12 @@ test.describe('MCP Server Endpoint Routing', () => {
     }
   });
 
-  test('verify old /agent/start endpoint requires sessionId (proving MCP was using wrong endpoint)', async ({
+  test('verify old /agent/start endpoint is removed (agent runner was replaced by CopilotKit)', async ({
     page,
   }) => {
     await authenticateForTests(page);
 
-    // Call the OLD endpoint that the MCP was incorrectly using
+    // The old /agent/* routes have been removed — CopilotKit sidebar replaces the agent runner
     const response = await page.request.post(`${API_BASE_URL}/api/agent/start`, {
       data: {
         projectPath: projectPath,
@@ -157,10 +157,7 @@ test.describe('MCP Server Endpoint Routing', () => {
       },
     });
 
-    const data = await response.json();
-
-    // This endpoint SHOULD require sessionId (proving the bug)
-    expect(response.status()).toBe(400);
-    expect(data.error).toBe('sessionId is required');
+    // Should return 404 since the route no longer exists
+    expect(response.status()).toBe(404);
   });
 });
