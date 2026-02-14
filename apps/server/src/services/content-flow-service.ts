@@ -2,7 +2,8 @@
  * Content Flow Service
  *
  * Manages content creation flow execution via LangGraph.
- * Handles HITL interrupts, status tracking, and output management.
+ * Runs autonomously with antagonistic review gates by default.
+ * Optional HITL mode can be enabled via enableHITL config flag.
  */
 
 import path from 'node:path';
@@ -16,7 +17,7 @@ import { createContentCreationFlow } from '@automaker/flows';
 const logger = createLogger('ContentFlowService');
 
 /**
- * Content creation config type (from content-creation-flow)
+ * Content creation config type (mirrors ContentConfig from content-creation-flow)
  */
 interface ContentCreationConfig {
   topic: string;
@@ -26,6 +27,8 @@ interface ContentCreationConfig {
   outputFormats: Array<'markdown' | 'html' | 'pdf'>;
   smartModel: BaseChatModel;
   fastModel: BaseChatModel;
+  enableHITL?: boolean;
+  maxRetries?: number;
 }
 
 /**
@@ -33,10 +36,22 @@ interface ContentCreationConfig {
  */
 export interface ContentFlowStatus {
   runId: string;
-  status: 'running' | 'interrupted' | 'completed' | 'failed';
+  status:
+    | 'running'
+    | 'reviewing_research'
+    | 'reviewing_outline'
+    | 'reviewing_content'
+    | 'interrupted'
+    | 'completed'
+    | 'failed';
   currentNode?: string;
   progress: number; // 0-100
-  hitlGatesPending: string[]; // e.g., ['research_hitl', 'outline_hitl']
+  reviewScores?: {
+    research?: { percentage: number; passed: boolean; verdict: string };
+    outline?: { percentage: number; passed: boolean; verdict: string };
+    content?: { percentage: number; passed: boolean; verdict: string };
+  };
+  hitlGatesPending: string[]; // Only populated when enableHITL=true
   error?: string;
   createdAt: number;
   completedAt?: number;
@@ -55,7 +70,7 @@ export interface ContentMetadata {
 }
 
 /**
- * HITL review decision
+ * HITL review decision (only used when enableHITL=true)
  */
 export interface HITLReview {
   gate: 'research_hitl' | 'outline_hitl' | 'final_review_hitl';
@@ -91,7 +106,10 @@ export class ContentFlowService {
   }
 
   /**
-   * Start a content creation flow
+   * Start a content creation flow.
+   *
+   * By default, runs end-to-end autonomously with antagonistic review gates.
+   * Set enableHITL=true to enable human-in-the-loop interrupt gates.
    */
   async startFlow(
     projectPath: string,
@@ -101,15 +119,18 @@ export class ContentFlowService {
       tone?: 'technical' | 'conversational' | 'formal';
       audience?: 'beginner' | 'intermediate' | 'expert';
       outputFormats?: Array<'markdown' | 'html' | 'pdf'>;
+      enableHITL?: boolean;
+      maxRetries?: number;
     }
   ): Promise<{ runId: string; status: ContentFlowStatus }> {
     const runId = `content-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-    logger.info(`Starting content flow ${runId} for topic: ${topic}`);
+    logger.info(
+      `Starting content flow ${runId} for topic: ${topic} (autonomous=${!contentConfig?.enableHITL})`
+    );
 
     const { smartModel, fastModel } = this.createModels();
 
-    // Prepare full config
     const config: ContentCreationConfig = {
       topic,
       format: contentConfig?.format || 'guide',
@@ -118,9 +139,10 @@ export class ContentFlowService {
       outputFormats: contentConfig?.outputFormats || ['markdown'],
       smartModel,
       fastModel,
+      enableHITL: contentConfig?.enableHITL || false,
+      maxRetries: contentConfig?.maxRetries ?? 2,
     };
 
-    // Initialize status
     const status: ContentFlowStatus = {
       runId,
       status: 'running',
@@ -131,10 +153,8 @@ export class ContentFlowService {
 
     this.activeRuns.set(runId, status);
 
-    // Create and compile flow
     const flow = createContentCreationFlow();
 
-    // Start flow execution asynchronously
     this.executeFlow(runId, projectPath, flow, config).catch((error) => {
       logger.error(`Flow ${runId} failed:`, error);
       const failedStatus = this.activeRuns.get(runId);
@@ -148,7 +168,13 @@ export class ContentFlowService {
   }
 
   /**
-   * Execute the flow asynchronously
+   * Execute the flow asynchronously.
+   *
+   * In autonomous mode (default), the flow runs straight through with
+   * antagonistic review nodes handling quality gates automatically.
+   *
+   * In HITL mode (enableHITL=true), the flow compiles with interruptBefore
+   * and pauses at each HITL gate for human input.
    */
   private async executeFlow(
     runId: string,
@@ -160,43 +186,67 @@ export class ContentFlowService {
     if (!status) return;
 
     try {
-      const threadId = runId;
-      const threadConfig = { configurable: { thread_id: threadId } };
+      const threadConfig = { configurable: { thread_id: runId } };
 
-      // Invoke the flow (will run until first interrupt or completion)
+      // Update status to show we're in the research phase
+      status.currentNode = 'generate_queries';
+      status.progress = 5;
+
       const result = await flow.invoke({ config }, threadConfig);
 
-      logger.info(`Flow ${runId} result:`, Object.keys(result));
+      logger.info(`Flow ${runId} completed with keys:`, Object.keys(result));
 
-      // Check if we hit an interrupt
+      // Extract review scores from final state
+      const reviewScores: ContentFlowStatus['reviewScores'] = {};
+      if (result.researchReview) {
+        reviewScores.research = {
+          percentage: result.researchReview.percentage,
+          passed: result.researchReview.passed,
+          verdict: result.researchReview.verdict,
+        };
+      }
+      if (result.outlineReview) {
+        reviewScores.outline = {
+          percentage: result.outlineReview.percentage,
+          passed: result.outlineReview.passed,
+          verdict: result.outlineReview.verdict,
+        };
+      }
+      if (result.finalContentReview) {
+        reviewScores.content = {
+          percentage: result.finalContentReview.percentage,
+          passed: result.finalContentReview.passed,
+          verdict: result.finalContentReview.verdict,
+        };
+      }
+
+      // Check if we hit an interrupt (only possible when enableHITL=true)
       const interruptInfo = await flow.getState(threadConfig);
       if (interruptInfo.next && interruptInfo.next.length > 0) {
-        // Flow is interrupted
         const nextNode = interruptInfo.next[0];
+        status.status = 'interrupted';
+        status.currentNode = nextNode;
+        status.reviewScores = reviewScores;
+
         if (nextNode === 'research_hitl') {
-          status.status = 'interrupted';
-          status.currentNode = 'research_hitl';
           status.hitlGatesPending = ['research_hitl'];
           status.progress = 20;
         } else if (nextNode === 'outline_hitl') {
-          status.status = 'interrupted';
-          status.currentNode = 'outline_hitl';
           status.hitlGatesPending = ['outline_hitl'];
           status.progress = 40;
         } else if (nextNode === 'final_review_hitl') {
-          status.status = 'interrupted';
-          status.currentNode = 'final_review_hitl';
           status.hitlGatesPending = ['final_review_hitl'];
           status.progress = 80;
         }
-        logger.info(`Flow ${runId} interrupted at ${status.currentNode}`);
+
+        logger.info(`Flow ${runId} interrupted at ${nextNode}`);
       } else {
-        // Flow completed
+        // Flow completed (autonomous or after all HITL gates passed)
         status.status = 'completed';
         status.progress = 100;
         status.completedAt = Date.now();
+        status.reviewScores = reviewScores;
 
-        // Save outputs
         await this.saveOutputs(runId, projectPath, result);
       }
     } catch (error: any) {
@@ -214,7 +264,11 @@ export class ContentFlowService {
   }
 
   /**
-   * Resume a flow with HITL review
+   * Resume a flow with HITL review.
+   *
+   * Only works when the flow was started with enableHITL=true and is
+   * currently in 'interrupted' status. In autonomous mode, the flow
+   * runs end-to-end without interrupts.
    */
   async resumeFlow(
     projectPath: string,
@@ -233,12 +287,9 @@ export class ContentFlowService {
 
     logger.info(`Resuming flow ${runId} at gate ${review.gate} with decision: ${review.decision}`);
 
-    // Create flow
-    const { smartModel, fastModel } = this.createModels();
     const flow = createContentCreationFlow();
 
-    // Prepare resume state based on gate
-    const resumeState: any = {};
+    const resumeState: Record<string, unknown> = {};
 
     if (review.gate === 'research_hitl') {
       resumeState.researchApproved = review.decision === 'approve';
@@ -257,48 +308,38 @@ export class ContentFlowService {
       }
     }
 
-    // Update status
     status.status = 'running';
     status.hitlGatesPending = [];
 
-    // Resume execution
-    const threadId = runId;
-    const threadConfig = { configurable: { thread_id: threadId } };
+    const threadConfig = { configurable: { thread_id: runId } };
 
     try {
-      // Resume from the interrupt point by invoking with new state
       const result = await flow.invoke(resumeState, threadConfig);
 
-      logger.info(`Flow ${runId} resumed:`, Object.keys(result));
+      logger.info(`Flow ${runId} resumed with keys:`, Object.keys(result));
 
       // Check if we hit another interrupt or completed
       const interruptInfo = await flow.getState(threadConfig);
       if (interruptInfo.next && interruptInfo.next.length > 0) {
-        // Flow hit another interrupt
         const nextNode = interruptInfo.next[0];
+        status.status = 'interrupted';
+        status.currentNode = nextNode;
+
         if (nextNode === 'research_hitl') {
-          status.status = 'interrupted';
-          status.currentNode = 'research_hitl';
           status.hitlGatesPending = ['research_hitl'];
           status.progress = 20;
         } else if (nextNode === 'outline_hitl') {
-          status.status = 'interrupted';
-          status.currentNode = 'outline_hitl';
           status.hitlGatesPending = ['outline_hitl'];
           status.progress = 40;
         } else if (nextNode === 'final_review_hitl') {
-          status.status = 'interrupted';
-          status.currentNode = 'final_review_hitl';
           status.hitlGatesPending = ['final_review_hitl'];
           status.progress = 80;
         }
       } else {
-        // Flow completed
         status.status = 'completed';
         status.progress = 100;
         status.completedAt = Date.now();
 
-        // Save outputs
         await this.saveOutputs(runId, projectPath, result);
       }
 
@@ -320,7 +361,6 @@ export class ContentFlowService {
 
     await fs.mkdir(contentDir, { recursive: true });
 
-    // Save outputs
     if (finalState.outputs && finalState.outputs.length > 0) {
       for (const output of finalState.outputs) {
         if (output.success) {
@@ -334,14 +374,16 @@ export class ContentFlowService {
       }
     }
 
-    // Save metadata
+    // Save metadata including review scores
+    const status = this.activeRuns.get(runId);
     const metadata = {
       runId,
       topic: finalState.config?.topic || 'Unknown',
       format: finalState.config?.format || 'unknown',
       status: 'completed',
       outputPath: contentDir,
-      createdAt: this.activeRuns.get(runId)?.createdAt || Date.now(),
+      reviewScores: status?.reviewScores,
+      createdAt: status?.createdAt || Date.now(),
       completedAt: Date.now(),
     };
 
@@ -371,21 +413,18 @@ export class ContentFlowService {
           const data = await fs.readFile(metadataPath, 'utf-8');
           const meta = JSON.parse(data) as ContentMetadata;
 
-          // Apply filters
           if (filters?.status && meta.status !== filters.status) {
             continue;
           }
 
           metadata.push(meta);
-        } catch (error) {
-          // Skip if no metadata file
+        } catch {
           logger.warn(`No metadata for ${entry}`);
         }
       }
 
       return metadata.sort((a, b) => b.createdAt - a.createdAt);
-    } catch (error) {
-      // No content directory yet
+    } catch {
       return [];
     }
   }
@@ -402,7 +441,6 @@ export class ContentFlowService {
     const contentDir = path.join(automakerDir, 'content', runId);
 
     try {
-      // Read existing content
       const markdownPath = path.join(contentDir, 'content.md');
       const content = await fs.readFile(markdownPath, 'utf-8');
 
@@ -411,12 +449,10 @@ export class ContentFlowService {
 
       switch (format) {
         case 'markdown':
-          // Already in markdown format
           outputPath = markdownPath;
           break;
 
         case 'frontmatter-md':
-          // Add YAML frontmatter
           outputPath = path.join(contentDir, 'content-frontmatter.md');
           outputContent = `---
 title: Generated Content
@@ -428,14 +464,12 @@ ${content}`;
           break;
 
         case 'jsonl':
-          // Convert to JSONL (one JSON object per line)
           outputPath = path.join(contentDir, 'content.jsonl');
           outputContent = JSON.stringify({ content, createdAt: Date.now() }) + '\n';
           await fs.writeFile(outputPath, outputContent, 'utf-8');
           break;
 
         case 'hf-dataset':
-          // Convert to HuggingFace dataset format
           outputPath = path.join(contentDir, 'dataset.json');
           const datasetEntry = {
             text: content,

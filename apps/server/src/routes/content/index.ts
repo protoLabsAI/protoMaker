@@ -2,8 +2,8 @@
  * Content routes - HTTP API for content creation pipeline
  *
  * Provides endpoints for managing content creation flows including:
- * - Flow execution (create, status, resume)
- * - HITL review submission
+ * - Flow execution (create, status) — runs autonomously by default
+ * - HITL review submission (only when enableHITL=true)
  * - Content listing and export
  */
 
@@ -92,7 +92,9 @@ export function createContentRoutes(): Router {
 
   /**
    * POST /api/content/review
-   * Submit HITL review at interrupt gates
+   * Submit HITL review at interrupt gates.
+   * Only works when the flow was started with enableHITL=true.
+   * In autonomous mode (default), the flow runs end-to-end with antagonistic review.
    */
   router.post('/review', async (req: Request, res: Response) => {
     try {
