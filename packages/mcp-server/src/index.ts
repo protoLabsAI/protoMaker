@@ -2399,6 +2399,31 @@ const tools: Tool[] = [
     },
   },
 
+  // ========== ProtoLabs Setup Pipeline ==========
+  {
+    name: 'generate_report',
+    description:
+      'Generate a self-contained HTML report from gap analysis and research results. Saves to {projectPath}/protoLabs.report.html',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        research: {
+          type: 'object',
+          description: 'RepoResearchResult object from repo research phase',
+        },
+        report: {
+          type: 'object',
+          description: 'GapAnalysisReport object from gap analysis phase',
+        },
+      },
+      required: ['projectPath', 'research', 'report'],
+    },
+  },
+
   // ========== Labs Management ==========
   {
     name: 'clone_repo',
@@ -3332,6 +3357,14 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         projectSlug: args.projectSlug,
         linearProjectId: args.linearProjectId,
         issueIds: args.issueIds,
+      });
+
+    // ProtoLabs Setup Pipeline
+    case 'generate_report':
+      return apiCall('/setup/report', {
+        projectPath: args.projectPath,
+        research: args.research,
+        report: args.report,
       });
 
     // Labs Management
