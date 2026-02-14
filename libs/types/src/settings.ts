@@ -1503,6 +1503,14 @@ export interface GlobalSettings {
     /** Hours to retain done/verified features before archival (default: 2) */
     retentionHours: number;
   };
+
+  /**
+   * Use LangGraph-based flows for antagonistic reviews instead of legacy DynamicAgentExecutor.
+   * When enabled, PRD reviews use the new graph-based flow with Langfuse tracing.
+   * Set to false to rollback to the old implementation.
+   * @default true
+   */
+  useGraphFlows?: boolean;
 }
 
 /**

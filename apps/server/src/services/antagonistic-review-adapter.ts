@@ -10,6 +10,8 @@ import { createLogger } from '@automaker/utils';
 import { ChatAnthropic } from '@langchain/anthropic';
 import { createAntagonisticReviewGraph } from '@automaker/flows';
 import type { SPARCPrd } from '@automaker/types';
+import { LangfuseClient } from '@automaker/observability';
+import { v4 as uuidv4 } from 'uuid';
 
 const logger = createLogger('AntagonisticReviewAdapter');
 
@@ -36,6 +38,8 @@ export interface ConsolidatedReview {
   resolution: string;
   finalPRD?: SPARCPrd;
   totalDurationMs: number;
+  totalCost?: number;
+  traceId?: string;
   error?: string;
 }
 
@@ -54,6 +58,7 @@ export interface ReviewRequest {
 export interface AdapterConfig {
   smartModel?: string;
   enableHITL?: boolean;
+  langfuseClient?: LangfuseClient;
 }
 
 /**
@@ -61,12 +66,15 @@ export interface AdapterConfig {
  */
 export class AntagonisticReviewAdapter {
   private config: AdapterConfig;
+  private langfuse: LangfuseClient | null;
 
   constructor(config: AdapterConfig = {}) {
     this.config = {
       smartModel: config.smartModel || 'claude-3-5-sonnet-20241022',
       enableHITL: config.enableHITL || false,
+      langfuseClient: config.langfuseClient,
     };
+    this.langfuse = config.langfuseClient || null;
   }
 
   /**
@@ -79,7 +87,30 @@ export class AntagonisticReviewAdapter {
 
     logger.info(`Starting flow-based antagonistic review for PRD: ${prdId}`);
 
+    // Create Langfuse trace for this review flow
+    const traceId = uuidv4();
+    const trace = this.langfuse?.createTrace({
+      id: traceId,
+      name: 'antagonistic-review',
+      metadata: {
+        prdId,
+        projectPath,
+        enableHITL: this.config.enableHITL,
+      },
+      tags: ['antagonistic-review', 'prd-review'],
+    });
+
     try {
+      // Create span for graph execution
+      const graphSpanId = uuidv4();
+      const graphSpan = this.langfuse?.createSpan({
+        id: graphSpanId,
+        traceId,
+        name: 'graph-execution',
+        input: { prd, hitlRequired: this.config.enableHITL },
+        startTime: new Date(),
+      });
+
       // Create the flow graph (checkpointing enabled by default)
       const graph = createAntagonisticReviewGraph(true);
 
@@ -90,6 +121,19 @@ export class AntagonisticReviewAdapter {
       });
 
       const totalDurationMs = Date.now() - startTime;
+
+      // Update graph span with output
+      if (graphSpan) {
+        this.langfuse?.createSpan({
+          id: graphSpanId,
+          traceId,
+          name: 'graph-execution',
+          input: { prd, hitlRequired: this.config.enableHITL },
+          output: { success: !result.error, hasConsolidatedReview: !!result.consolidatedReview },
+          startTime: new Date(startTime),
+          endTime: new Date(),
+        });
+      }
 
       // Transform flow result to legacy interface
       if (result.error) {
@@ -102,6 +146,52 @@ export class AntagonisticReviewAdapter {
       const resolution = result.consolidatedReview?.synthesizedReview || '';
       const finalPRD = this.extractFinalPRD(resolution, prd);
 
+      // Create spans for individual review nodes (retroactive tracking)
+      if (result.avaReview) {
+        this.langfuse?.createSpan({
+          id: uuidv4(),
+          traceId,
+          name: 'ava-review',
+          input: { prd },
+          output: result.avaReview,
+          metadata: { reviewer: 'ava', verdict: result.avaReview.verdict },
+          startTime: new Date(startTime),
+          endTime: new Date(startTime + totalDurationMs / 3), // Estimate
+        });
+      }
+
+      if (result.jonReview) {
+        this.langfuse?.createSpan({
+          id: uuidv4(),
+          traceId,
+          name: 'jon-review',
+          input: { prd },
+          output: result.jonReview,
+          metadata: { reviewer: 'jon', verdict: result.jonReview.verdict },
+          startTime: new Date(startTime + totalDurationMs / 3), // Estimate
+          endTime: new Date(startTime + (2 * totalDurationMs) / 3), // Estimate
+        });
+      }
+
+      if (result.consolidatedReview) {
+        this.langfuse?.createSpan({
+          id: uuidv4(),
+          traceId,
+          name: 'consolidate',
+          input: { avaReview: result.avaReview, jonReview: result.jonReview },
+          output: result.consolidatedReview,
+          metadata: { verdict: result.consolidatedReview.verdict },
+          startTime: new Date(startTime + (2 * totalDurationMs) / 3), // Estimate
+          endTime: new Date(),
+        });
+      }
+
+      // Calculate total cost (placeholder - will be populated by LLM callback tracking)
+      const totalCost = 0; // TODO: Track actual costs from LLM calls
+
+      // Flush Langfuse events
+      await this.langfuse?.flush();
+
       logger.info(
         `Flow-based antagonistic review completed in ${totalDurationMs}ms for PRD ${prdId}`
       );
@@ -113,12 +203,28 @@ export class AntagonisticReviewAdapter {
         resolution,
         finalPRD,
         totalDurationMs,
+        totalCost,
+        traceId,
       };
     } catch (error) {
       const totalDurationMs = Date.now() - startTime;
       const errorMessage = error instanceof Error ? error.message : String(error);
 
       logger.error(`Flow-based antagonistic review failed for PRD ${prdId}: ${errorMessage}`);
+
+      // Log error to Langfuse
+      this.langfuse?.createSpan({
+        id: uuidv4(),
+        traceId,
+        name: 'error',
+        input: { prd, prdId },
+        output: { error: errorMessage },
+        metadata: { errorType: error instanceof Error ? error.constructor.name : 'Unknown' },
+        startTime: new Date(startTime),
+        endTime: new Date(),
+      });
+
+      await this.langfuse?.flush();
 
       return {
         success: false,
@@ -138,6 +244,8 @@ export class AntagonisticReviewAdapter {
         },
         resolution: '',
         totalDurationMs,
+        totalCost: 0,
+        traceId,
         error: errorMessage,
       };
     }
