@@ -97,6 +97,7 @@ import { CodexModelCacheService } from './services/codex-model-cache-service.js'
 import { createGitHubRoutes } from './routes/github/index.js';
 import { createContextRoutes } from './routes/context/index.js';
 import { createContentRoutes } from './routes/content/index.js';
+import { createFlowsRoutes } from './routes/flows/index.js';
 import { createBacklogPlanRoutes } from './routes/backlog-plan/index.js';
 import { cleanupStaleValidations } from './routes/github/routes/validation-common.js';
 import { createMCPRoutes } from './routes/mcp/index.js';
@@ -960,6 +961,7 @@ app.use('/api/codex', createCodexRoutes(codexUsageService, codexModelCacheServic
 app.use('/api/github', createGitHubRoutes(events, settingsService));
 app.use('/api/context', createContextRoutes(settingsService));
 app.use('/api/content', createContentRoutes());
+app.use('/api/flows', createFlowsRoutes());
 app.use('/api/backlog-plan', createBacklogPlanRoutes(events, settingsService));
 app.use('/api/beads', createBeadsRoutes(beadsService));
 app.use('/api/mcp', createMCPRoutes(mcpTestService));

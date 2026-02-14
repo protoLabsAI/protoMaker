@@ -2166,6 +2166,44 @@ const tools: Tool[] = [
       required: ['projectPath', 'runId', 'format'],
     },
   },
+  {
+    name: 'execute_antagonistic_review',
+    description:
+      'Execute antagonistic review flow for a PRD. Runs Ava (operational) and Jon (strategic) reviews, then consolidates into final PRD.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        prdTitle: {
+          type: 'string',
+          description: 'Title of the PRD being reviewed',
+        },
+        prdDescription: {
+          type: 'string',
+          description:
+            'Full PRD content in SPARC format (Situation, Problem, Approach, Results, Constraints)',
+        },
+        config: {
+          type: 'object',
+          description: 'Optional configuration',
+          properties: {
+            smartModel: {
+              type: 'string',
+              description: 'Model to use for review (default: claude-3-5-sonnet-20241022)',
+            },
+            enableHITL: {
+              type: 'boolean',
+              description: 'Enable human-in-the-loop review (default: false)',
+            },
+          },
+        },
+      },
+      required: ['projectPath', 'prdTitle', 'prdDescription'],
+    },
+  },
 ];
 
 // Tool implementations
@@ -3006,6 +3044,14 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         projectPath: args.projectPath,
         runId: args.runId,
         format: args.format,
+      });
+
+    case 'execute_antagonistic_review':
+      return apiCall('/flows/antagonistic-review', {
+        projectPath: args.projectPath,
+        prdTitle: args.prdTitle,
+        prdDescription: args.prdDescription,
+        config: args.config,
       });
 
     default:

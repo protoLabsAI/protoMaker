@@ -161,6 +161,8 @@ export {
   AntagonisticReviewStateSchema,
   type AntagonisticReviewState,
   type AntagonisticReviewStateType,
+  createAntagonisticReviewGraph,
+  antagonisticReviewGraph,
 } from './antagonistic-review/index.js';
 
 // XML tag extraction utilities for LLM output parsing
