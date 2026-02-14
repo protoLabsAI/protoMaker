@@ -466,3 +466,18 @@ usageStats:
 - **Situation:** Documentation showed single approval threshold but test cases revealed complex scoring logic with hook/clarity/value/engagement/SEO/credibility/CTA/completion dimensions
 - **Root cause:** 8-dimension scoring provides granular quality assessment; auto-approve only when average exceeds threshold to catch borderline content for regeneration
 - **How to avoid:** Gained: better content quality through multi-dimensional assessment; Lost: simpler test assertions, more complex scoring logic to maintain
+
+#### [Gotcha] Cannot directly test service with actual imports due to dependency chains - need file-based structural verification instead (2026-02-14)
+- **Situation:** Tried to import LinearProjectUpdateService and LinearMCPClient in Playwright test, caused build/import errors
+- **Root cause:** Circular dependencies or missing dependencies in test environment. Playwright tests run in different context than Node. Unit test framework (Vitest/Jest) would be better
+- **How to avoid:** File-based verification catches structural issues (methods exist, right exports) but can't catch logic errors. Requires separate unit test suite later
+
+#### [Pattern] Status mapping test verifies exact order/completeness of all statuses, not just coverage (2026-02-14)
+- **Problem solved:** Need to ensure no status values are forgotten in the mapping switch statement
+- **Why this works:** Testing that Object.keys(statusMappings) equals exact array catches additions/removals at test time. A status missed in mapping silently defaults to 'planned' without test failure
+- **Trade-offs:** Test is more brittle—changes to status list require test updates. But brittleness is intentional—forces deliberate decisions when adding statuses
+
+#### [Pattern] Verify LangGraph flows with standalone Node.js scripts before running E2E tests - catches compilation and execution errors faster (2026-02-14)
+- **Problem solved:** E2E Playwright test failed due to unrelated ESM module issues in flows package. Standalone verification script identified actual flow issues in minutes.
+- **Why this works:** Playwright tests have setup overhead and dependency complications. A simple Node.js script that imports and executes the flow cuts through noise. Tests the happy path before complexity of test harness.
+- **Trade-offs:** Standalone script only tests happy path, doesn't validate browser/UI integration. But catches real problems much faster. Use both approaches.

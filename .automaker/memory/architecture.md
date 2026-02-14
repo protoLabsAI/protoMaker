@@ -1268,3 +1268,179 @@ usageStats:
 - **Problem solved:** Need to support both autonomous mode and optional human-in-loop without complex mode switching
 - **Why this works:** LangGraph's checkpointer + interruptBefore provides clean state management without requiring separate code paths; threadId enables resumption from exact interrupt point
 - **Trade-offs:** Gained: clean separation of concerns, optional feature; Lost: requires explicit checkpointer setup, adds state management complexity
+
+### Two-phase dependency sync: individual feature sync on creation + batch project sync on scaffolding (2026-02-14)
+- **Context:** Need to sync feature dependencies to Linear issue relations, but dependencies may reference features not yet synced
+- **Why:** Individual sync handles dependencies discovered incrementally; batch sync during scaffolding catches all project dependencies in one operation to avoid incomplete relation graphs
+- **Rejected:** Single sync point (either on feature creation only or scaffolding only) - would miss dependencies if features are created after scaffolding or skip individual feature dependency creation
+- **Trade-offs:** More complex event handling but more robust coverage; trades simplicity for completeness
+- **Breaking if changed:** Removing either sync point leaves dependency graphs incomplete - individual features won't sync inline dependencies, project scaffolding won't catch batch updates
+
+#### [Pattern] Filtering at load time (feature features that have linearIssueId AND dependencies AND match projectSlug) before iteration (2026-02-14)
+- **Problem solved:** Batch dependency sync during project scaffolding needs to only process relevant features
+- **Why this works:** Reduces unnecessary iterations and sync attempts; clearly documents preconditions for successful relation creation; avoids null-pointer like issues
+- **Trade-offs:** More declarative but requires loading all features into memory first; scales with project size
+
+#### [Pattern] Non-fatal error handling for dependency sync allows graceful degradation where relation sync failures don't block other field syncs (status, title, priority) (2026-02-14)
+- **Problem solved:** When syncing Linear issue updates to Automaker, multiple fields need to be synced. If relation fetching fails, the entire sync could fail.
+- **Why this works:** Dependency relations are a secondary concern compared to critical fields like status. Wrapping in try-catch with warning log preserves atomicity of core field updates while allowing partial failures.
+- **Trade-offs:** Easier: Robust handling of API transients. Harder: Silently incomplete syncs if relation fetch fails (mitigated by warning logs).
+
+#### [Pattern] Batching dependency updates with other field updates (status, title, priority) into a single featureLoader.update call (2026-02-14)
+- **Problem solved:** The onLinearIssueUpdated method syncs multiple independent fields from Linear to Automaker.
+- **Why this works:** Single batched update reduces database transactions, ensures atomic consistency, and leverages existing debouncing/sync guards that operate at the update level rather than per-field.
+- **Trade-offs:** Easier: Consistent state, leverages existing infrastructure. Harder: More complex changeDescriptions tracking, but already established pattern.
+
+### Made LinearMCPClient.executeGraphQL public instead of keeping it private (2026-02-14)
+- **Context:** LinearProjectUpdateService needs to execute custom GraphQL queries beyond what predefined mutations provide
+- **Why:** GraphQL API flexibility - different services may need different queries/mutations. Making executeGraphQL public enables composition without duplicating GraphQL execution logic across multiple service classes
+- **Rejected:** Alternative: Create specific public methods on LinearMCPClient for each query type (projectUpdateCreate, etc). This would be less flexible and create coupling between MCP client and specific use cases
+- **Trade-offs:** More flexible API surface (easier to add new features) vs potentially exposing internal GraphQL details. Mitigation: still wrapping calls in service layer
+- **Breaking if changed:** If executeGraphQL is made private again, LinearProjectUpdateService can't function - it relies on this to post updates
+
+#### [Pattern] Service aggregates features by filtering on milestone rather than querying Linear API directly for filtered features (2026-02-14)
+- **Problem solved:** Need to get progress metrics for a specific milestone (done/in_progress/review/blocked counts)
+- **Why this works:** Feature source of truth is FeatureLoader (which owns project structure), not Linear. Linear only has updates. Filtering locally vs requesting from Linear avoids API coupling and handles case where milestone info lives in project definition
+- **Trade-offs:** Simpler, more testable (can mock FeatureLoader) vs requires FeatureLoader to already have loaded features (doesn't scale if thousands of features - would need pagination)
+
+### Health status is computed automatically (offTrack/atRisk/onTrack) based on blockers and completion percentage, not passed in as parameter (2026-02-14)
+- **Context:** Need to send health indicator with project update to Linear
+- **Why:** Single source of truth for health calculation - service owns the logic of what constitutes each status. Prevents client code from calculating wrong status. Rules: blockers present = offTrack, no blockers + <50% complete + no active work = atRisk, else onTrack
+- **Rejected:** Accept health status as parameter - creates risk of incorrect health values from caller, duplicates business logic
+- **Trade-offs:** Service is opinionated about health rules (harder to customize) vs guaranteed correctness. If rules need to change, only service needs update
+- **Breaking if changed:** If health calculation is moved outside service or made configurable, client code must replicate these exact thresholds or health statuses become inconsistent across system
+
+#### [Pattern] Service formats status as markdown before posting to Linear (formatStatusUpdate private method) (2026-02-14)
+- **Problem solved:** Linear projectUpdateCreate mutation accepts body as string, needs human-readable format
+- **Why this works:** Separates presentation logic from business logic. Markdown is portable across Linear and other systems. Private method means caller never sees raw structure - always gets consistent formatting
+- **Trade-offs:** Easier to read in Linear UI vs harder to parse programmatically. Markdown is one-way (can't extract counts back out without parsing)
+
+### In-memory Map-based state cache per feature in GitHubStateChecker rather than persistent storage (2026-02-14)
+- **Context:** Need to detect PR state changes and emit events only on actual transitions, avoiding duplicate event emission
+- **Why:** State is reconstructed on service startup from GitHub API, so persistence is redundant. In-memory cache is sufficient since state polling happens continuously. Reduces complexity and storage overhead.
+- **Rejected:** Persistent cache (database/file) would add unnecessary I/O and complexity given that state is polled fresh from GitHub regularly
+- **Trade-offs:** Simpler implementation and lower latency vs. lost state tracking across service restarts (acceptable since polling reconstructs state)
+- **Breaking if changed:** If state cache is removed, duplicate events will be emitted on every state check, breaking downstream logic that assumes single-emission-per-change
+
+### Optional EventEmitter parameter in GitHubStateChecker constructor - service works with or without it (2026-02-14)
+- **Context:** Need to add event emission to existing service without breaking existing usage or making EventEmitter a hard requirement
+- **Why:** Enables backward compatibility. Services that don't care about events continue to work. New consumers can pass EventEmitter to enable event-driven workflows. Makes the service more flexible and testable.
+- **Rejected:** Requiring EventEmitter would break existing code and force event emission everywhere, even where not needed
+- **Trade-offs:** Optional parameter adds slight complexity (null-checks at emit sites) but enables gradual adoption and easier testing
+- **Breaking if changed:** If EventEmitter becomes required, all existing instantiations fail
+
+### Event-driven crew member architecture: emit events for downstream services to consume rather than direct escalation (2026-02-14)
+- **Context:** PR state sync crew member needed to communicate drift detection to the GitHub-to-Linear bridge without tight coupling
+- **Why:** Allows the bridge service to subscribe and react independently, enabling flexible composition and loose coupling. The crew member becomes a pure detector/emitter rather than orchestrator
+- **Rejected:** Direct method calls on bridge service or synchronous state updates would create circular dependencies and tight coupling between crew members
+- **Trade-offs:** Easier to test crew member in isolation; harder to guarantee immediate sync if bridge is down; requires event infrastructure and careful event ordering
+- **Breaking if changed:** Removing event emission would require bridge to poll crew state or implement alternative notification mechanism
+
+#### [Pattern] Helper function pattern: define severity mappers and converters as functions outside CrewMemberDefinition, not as methods (2026-02-14)
+- **Problem solved:** mapDriftSeverity() needed to transform drift severity ('low'|'medium'|'high'|'critical') to crew check severity ('ok'|'info'|'warning'|'critical')
+- **Why this works:** Keeps utility logic separated from lifecycle concerns, easier to unit test, follows functional composition pattern seen in codebase
+- **Trade-offs:** More files/functions to track but clearer separation of concerns; easier to reuse mappers if needed elsewhere
+
+#### [Pattern] Drift severity has 4 levels (low/medium/high/critical) mapping to crew check severity with critical as top severity (2026-02-14)
+- **Problem solved:** PR state drift detection needs to communicate urgency to crew member health system with ability to escalate critical issues
+- **Why this works:** Four-level system matches common severity models; 'critical' maps to 'critical' check severity to flag urgent drifts that may need manual intervention
+- **Trade-offs:** More granular severity makes it harder to miss critical issues but requires explicit handling of 'critical' case in all mappers
+
+### Crew member runs on 5-minute schedule (*/5 * * * *) for state drift detection, never escalates directly (2026-02-14)
+- **Context:** Need to balance responsiveness to GitHub state changes against resource usage; bridge service is responsible for escalation
+- **Why:** 5 minutes is responsive enough for most use cases (PRs are typically reviewed/merged over hours); event-driven approach means immediate detection once crew runs; bridge decides escalation based on business logic
+- **Rejected:** More frequent intervals (1-2 min) would use more resources; longer intervals (30+ min) could miss time-sensitive state changes
+- **Trade-offs:** Up to 5 minutes latency but lower resource cost; no direct escalation means bridge must listen for events and decide action
+- **Breaking if changed:** Removing the schedule would stop drift detection entirely; changing interval affects how quickly state sync can react to GitHub changes
+
+#### [Pattern] Linear GraphQL mutations for creating issue relations use a nested mutation pattern (issueRelationCreate) that requires both source and target issue IDs plus a relation type enum (2026-02-14)
+- **Problem solved:** Implementing sync of feature dependencies to Linear issue relations
+- **Why this works:** Linear's GraphQL API abstracts relation directionality through enum types (blocks, blocked, duplicate, related) rather than separate mutations. This design allows bidirectional relationships while maintaining a single mutation endpoint
+- **Trade-offs:** Simpler API surface but requires consumer to understand relation semantics - 'blocks' means source blocks target, so ordering of IDs matters
+
+#### [Gotcha] Feature dependencies are stored by feature ID, but Linear sync requires linearIssueId - missing mapping causes silent skipping of valid relationships (2026-02-14)
+- **Situation:** When syncing dependencies from Automaker to Linear, features without linearIssueId populated are skipped without clear visibility
+- **Root cause:** There's no transitive lookup: we can't fetch the Linear issue ID from the feature ID dynamically during sync. Both feature and dependency must already have linearIssueId set from a prior sync operation
+- **How to avoid:** Fast, simple sync logic vs silent data loss when dependencies haven't been synced yet. Requires careful ordering of operations
+
+#### [Pattern] Route handler uses dependency injection pattern - settingsService and featureLoader passed as parameters to handler factory function rather than imported directly (2026-02-14)
+- **Problem solved:** Creating POST /api/linear/sync-dependencies handler that needs to access feature data and Linear configuration
+- **Why this works:** Dependency injection enables unit testing without mocking require(), allows different service implementations, and makes data flow explicit. Handler factory pattern (createSyncDependenciesHandler) follows existing Linear route patterns in codebase
+- **Trade-offs:** More boilerplate (factory function wrapper) vs testability and flexibility. Consistent with codebase patterns so minimal cognitive overhead
+
+#### [Gotcha] Linear routes are mounted before auth middleware, so sync-dependencies endpoint is publicly accessible without authentication (2026-02-14)
+- **Situation:** POST endpoint can be called without credentials - potential security concern if endpoint is later called from untrusted sources
+- **Root cause:** Routes mounted before auth middleware enable webhook/OAuth flows that need public access. This is intentional for Linear integration patterns
+- **How to avoid:** Public webhook support vs endpoint security. Currently mitigated by requiring valid projectPath parameter, but not cryptographically secure
+
+### Dual-mode milestone progress calculation: async method checking actual feature statuses vs sync fallback using milestone status (2026-02-14)
+- **Context:** Need to sync accurate project progress to Linear while handling cases where feature loader may not be available
+- **Why:** Feature-based calculation is more accurate (reflects true work completion) but requires async I/O. Fallback ensures sync codepaths don't break if feature loader unavailable or in error states
+- **Rejected:** Single method approach would either force async everywhere (performance/architectural complexity) or lose accuracy in edge cases
+- **Trade-offs:** Dual methods add code but enable graceful degradation. Async method used when available, sync fallback for backwards compatibility and simple scenarios
+- **Breaking if changed:** Removing fallback mode would break sync update paths and simple status-only updates. Removing async mode loses accuracy for complex milestone structures
+
+### Status mapping groups multiple Automaker states into fewer Linear states (3 Automaker statuses → 'started' state) (2026-02-14)
+- **Context:** Automaker has 7 granular project statuses but Linear only has 3 project status values (planned/started/completed)
+- **Why:** Lossy mapping is intentional—Linear's simpler model suffices for project-level tracking. Grouping 'approved', 'scaffolded', 'active' as 'started' reflects that they all represent in-progress work
+- **Rejected:** Custom field approach would require Linear workspace config changes. Separate sync table would duplicate data and create consistency issues
+- **Trade-offs:** Linear visibility loses Automaker's fine-grained status detail, but reduces sync complexity and keeps Linear clean. Real detail stays in Automaker
+- **Breaking if changed:** Changing mappings (e.g., moving 'approved' to 'planned') changes reported project status in Linear dashboards and reports. Clients relying on status for filtering would be affected
+
+#### [Gotcha] Progress calculation uses completed phases count, not completed features—phases are cheaper to track but can become stale (2026-02-14)
+- **Situation:** Initial implementation counted features, but shifted to counting phases within milestones
+- **Root cause:** Phases are structural metadata that rarely change. Features can be added/removed later, making feature-count-based progress unstable. Phases represent planned scope
+- **How to avoid:** Phase-based progress is stable but requires phases to be properly structured upfront. If phases added retroactively, progress calculations ignore them until next sync
+
+#### [Pattern] Event-driven sync trigger: 'project:status-changed' event detected and processed asynchronously without blocking the status update (2026-02-14)
+- **Problem solved:** Project status updates in Automaker need to be reflected in Linear, but the update itself shouldn't wait for Linear's GraphQL response
+- **Why this works:** Decouples Automaker state from Linear state. If Linear sync fails, Automaker status update already completed. Allows independent scaling—Linear service can queue/retry without affecting Automaker
+- **Trade-offs:** Eventual consistency: brief window where Automaker and Linear disagree. Adds event infrastructure overhead. Enables cleaner separation of concerns
+
+#### [Pattern] Dual-layer feature flag configuration - ceremony settings control WHEN updates fire, while Linear settings control WHETHER the feature is available at all (2026-02-14)
+- **Problem solved:** CeremonyService needed to conditionally post to Linear project updates based on both ceremony event types and integration enablement
+- **Why this works:** Separates concerns: ceremony settings manage ceremony workflow preferences (standups, milestones, etc.), while Linear settings manage platform integration availability. This prevents Linear config from leaking into ceremony logic
+- **Trade-offs:** Requires checking two separate config locations for feature activation, but provides clear separation of responsibility and allows independent feature toggle control
+
+### Health status automatically derived from blocker presence rather than explicit parameter (2026-02-14)
+- **Context:** LinearProjectUpdateService needed to set health status for project updates, but ceremony data includes blocker information
+- **Why:** Reduces API surface and prevents callers from making inconsistent decisions about health status. Single source of truth from data. Aligns with domain logic that blockers = degraded health
+- **Rejected:** Could pass health status as explicit parameter, but then caller must compute this and stays in sync with blocker data
+- **Trade-offs:** Less flexibility for callers to override health status, but more correctness and consistency. Service becomes opinionated about health semantics
+- **Breaking if changed:** If health status logic changes (e.g., some blockers don't matter), service must be updated and all callers automatically benefit
+
+#### [Pattern] Service accepts pre-composed markdown content rather than building it internally (2026-02-14)
+- **Problem solved:** LinearProjectUpdateService needs to post ceremony data to Linear, but content formatting is ceremony-specific
+- **Why this works:** Keeps service focused on Linear API mechanics and keeps formatting logic in domain layer (CeremonyService). Avoids service needing to understand ceremony semantics
+- **Trade-offs:** Caller has more responsibility for content composition, but service remains reusable and domain-agnostic
+
+### Conditional integration hooks based on ceremony event types rather than generic listener pattern (2026-02-14)
+- **Context:** CeremonyService fires multiple event types (kickoff, standup, milestone completion, etc.) but only some should post to Linear
+- **Why:** Explicit conditionals are clearer about which events integrate with Linear. Avoids event bus complexity and makes behavior obvious when reading code. Ceremony controls what fires
+- **Rejected:** Event listener pattern would require separate listener registration, less clear which events trigger Linear updates
+- **Trade-offs:** Ceremony service knowledge slightly increases, but integration behavior is explicit and maintainable. No runtime discovery of integration hooks
+- **Breaking if changed:** If this moves to event pattern, the integration becomes implicit and harder to trace through code
+
+#### [Pattern] Type-first design for LangGraph state management - define comprehensive ProjectStatusState with Annotation.Root() before implementing flow nodes (2026-02-14)
+- **Problem solved:** Initial implementation created conflicting types that didn't align with a broader type system. Had to rewrite flow to use existing state types.
+- **Why this works:** LangGraph's type safety depends on correct StateAnnotation usage. Defining types first ensures all nodes operate on same state schema. Prevents runtime state mismatches and enables proper reducer logic.
+- **Trade-offs:** Upfront type design takes longer but eliminates mid-implementation refactoring. Makes the codebase more predictable for team expansion.
+
+### Separate each LangGraph node into its own file rather than bundling in main flow file (2026-02-14)
+- **Context:** Linter auto-refactored the monolithic flow file into modular node files. Initially seemed like over-engineering, but improved maintainability significantly.
+- **Why:** Each node has distinct responsibility (gather metrics, analyze, assess risk, generate, review, format). Separate files make it easier to locate, test, and replace individual nodes. Follows Unix philosophy - single responsibility.
+- **Rejected:** Keeping all nodes in status-report-flow.ts - simpler initially but creates 400+ line file that's hard to navigate and test in isolation
+- **Trade-offs:** More files to manage but much clearer dependency graph. Easier to add new nodes (just create new file and register in flow). Harder to see overall flow at a glance.
+- **Breaking if changed:** Node files must be imported in correct order. If a node file depends on another, circular imports can occur. Must use interface contracts between nodes.
+
+### Use dependency injection pattern for MetricsCollector interface - implementations injected via config, not hardcoded in nodes (2026-02-14)
+- **Context:** gather-metrics node needs to pull real data from FeatureLoader, Git, and AgentService, but those aren't available in all contexts
+- **Why:** Metrics collection touches external systems. DI lets you provide mock collectors for testing, real collectors for production. Nodes remain pure - they don't know where data comes from. Enables testing without full system setup.
+- **Rejected:** Direct imports of FeatureLoader, Git services - couples nodes to infrastructure and breaks testing in isolation
+- **Trade-offs:** Requires more setup code to inject implementations. But decouples nodes from infrastructure completely. Makes unit testing trivial.
+- **Breaking if changed:** If MetricsCollector interface changes, all implementations must update. Missing implementations at injection time causes runtime failures silently (flows execute with empty metrics).
+
+#### [Pattern] Use conditional edges with routing logic instead of multiple sequential nodes for quality gates and approval workflows (2026-02-14)
+- **Problem solved:** review-quality node checks if report meets quality standards. Could have been implemented as always-execute node that sets a flag, but conditional edges are cleaner.
+- **Why this works:** Conditional edges make the graph structure match the decision logic. Approval path and revision path are explicit in the graph, not hidden in node logic. Graph visualization shows the real flow.
+- **Trade-offs:** Requires registering conditional_edges instead of linear node chains. But produces clearer state graphs and easier reasoning about paths.

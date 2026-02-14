@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 171
-  referenced: 72
-  successfulFeatures: 72
+  loaded: 181
+  referenced: 81
+  successfulFeatures: 81
 ---
 # gotchas
 
@@ -95,3 +95,28 @@ usageStats:
 - **Situation:** Initial draft with full 3-example section was 950+ lines; needed to fit acceptance criteria while maintaining completeness
 - **Root cause:** Docs need examples for clarity but also need to be maintainable; verbose examples with extensive comments become stale as code evolves. Concise examples with cross-references to actual source is more maintainable
 - **How to avoid:** Easier: docs stay synchronized with codebase. Harder: readers need to flip between doc and source code for full understanding
+
+#### [Gotcha] Skipping relations for dependency features without linearIssueId yet, relying on eventual consistency (2026-02-14)
+- **Situation:** When syncing feature dependencies, dependent features may not have been synced to Linear yet, so no issueId exists
+- **Root cause:** Rather than fail the entire operation or queue retries, gracefully skip and log - the relation will be created when that feature is eventually synced and its dependencies are re-evaluated
+- **How to avoid:** Simpler immediate implementation but relies on idempotent eventual consistency; relations may appear out of order temporally but will eventually be complete
+
+#### [Gotcha] Linear relations API structure nests related issue ID under relatedIssue.id, not directly in the relation object (2026-02-14)
+- **Situation:** When fetching relations from Linear GraphQL, the response structure has relations.nodes[].relatedIssue?.id, requiring safe navigation.
+- **Root cause:** Linear's schema separates the relation metadata (type, id) from the related entity reference, likely for schema normalization.
+- **How to avoid:** Safer: Optional chaining prevents crashes. Harder: Less obvious that relatedIssue could be missing.
+
+#### [Gotcha] Feature type uses error?: string field, not errorMessage (2026-02-14)
+- **Situation:** Initial implementation tried to access f.errorMessage for blocked features, caused TypeScript compilation failure
+- **Root cause:** Feature interface design choice - 'error' is the semantic field name for error messages in blocked state
+- **How to avoid:** Correct field name ensures consistency with Feature type contract, but requires knowing the interface definition
+
+#### [Gotcha] Timeout handling in Linear API calls needs explicit configuration rather than relying on defaults (2026-02-14)
+- **Situation:** GraphQL mutations to Linear could hang or timeout, affecting ceremony execution
+- **Root cause:** Linear API has specific performance characteristics and network conditions may vary. Explicit timeout prevents ceremonies from stalling indefinitely waiting for Linear responses
+- **How to avoid:** Adds operational tuning parameter, but prevents blocking ceremonies on slow Linear API
+
+#### [Gotcha] LangGraph conditional edges with quality gates create implicit loops - must set max_iterations to prevent infinite review cycles (2026-02-14)
+- **Situation:** Implemented review-quality node with approve/revise routing. Without max_iterations, a single revision request could loop indefinitely.
+- **Root cause:** The quality gate uses `conditional_edges` to route back to generateReport if revision needed. Without iteration limits, this becomes unbounded. The state graph doesn't automatically prevent looping.
+- **How to avoid:** Adding max_iterations limits review quality (can't endlessly refine). But prevents hang/timeout. Need to balance thoroughness vs practicality.
