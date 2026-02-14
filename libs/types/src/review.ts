@@ -68,11 +68,11 @@ export interface AntagonisticReviewResult {
  * Tracks the current phase of the antagonistic review process
  */
 export type ReviewState =
-  | 'draft'           // Milestone deliverable being prepared
-  | 'ava_review'      // Ava conducting her review
-  | 'jon_review'      // Jon conducting his review
-  | 'resolution'      // Resolving disagreements between perspectives
-  | 'consolidated';   // Final verdict reached, review complete
+  | 'draft' // Milestone deliverable being prepared
+  | 'ava_review' // Ava conducting her review
+  | 'jon_review' // Jon conducting his review
+  | 'resolution' // Resolving disagreements between perspectives
+  | 'consolidated'; // Final verdict reached, review complete
 
 /**
  * Content brief for milestone delivery
@@ -95,9 +95,9 @@ export interface ContentBrief {
  * Types of deliverables expected in a milestone
  */
 export type DeliverableType =
-  | 'code'            // Implementation artifacts
-  | 'tests'           // Test suites and coverage
-  | 'documentation'   // Technical documentation
-  | 'architecture'    // Architecture diagrams and decisions
-  | 'demo'            // Demo or showcase materials
-  | 'migration';      // Migration guides or scripts
+  | 'code' // Implementation artifacts
+  | 'tests' // Test suites and coverage
+  | 'documentation' // Technical documentation
+  | 'architecture' // Architecture diagrams and decisions
+  | 'demo' // Demo or showcase materials
+  | 'migration'; // Migration guides or scripts
