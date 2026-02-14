@@ -15,3 +15,10 @@ usageStats:
 - **Problem solved:** Review duration is a simple calculation (merge_time - creation_time) that could be computed on-demand during queries
 - **Why this works:** Write-time computation enables efficient filtering/sorting on the board UI without requiring post-processing. Stores a snapshot of the metric at the moment of merge, creating immutable audit trail. Query-time computation would require fetching two timestamp fields + JavaScript arithmetic on every read.
 - **Trade-offs:** Adds storage (~8 bytes per merged feature) and write-time processing, but eliminates compute on every read. Favors read-heavy metrics workload (board queries, analytics aggregations)
+
+### Event type union in libs/types must be extended to include new event types (github-state-drift) (2026-02-14)
+- **Context:** New event type needed to be discoverable and type-safe across all services
+- **Why:** Centralized EventType union provides compile-time type safety and makes all event types discoverable in one location for documentation
+- **Rejected:** Could have hardcoded string literals in each service but loses type safety and makes refactoring dangerous
+- **Trade-offs:** Requires updating shared type library (more coordination) but enables type-safe event subscriptions everywhere
+- **Breaking if changed:** Services subscribing to 'github-state-drift' events will have type errors if event type not in union; type checking would prevent misnamed events

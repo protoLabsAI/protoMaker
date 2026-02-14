@@ -1,0 +1,269 @@
+{
+  "slug": "linear-deep-integration",
+  "title": "Linear Deep Integration",
+  "goal": "Tri-directional status sync between GitHub PRs, Automaker features, and Linear issues with automated project management content generation",
+  "status": "active",
+  "milestones": [
+    {
+      "number": 1,
+      "slug": "01-github-to-linear-status-bridge",
+      "title": "GitHub to Linear Status Bridge",
+      "description": "Make GitHub PR state visible in Linear as comments and status updates",
+      "phases": [
+        {
+          "number": 1,
+          "name": "github-pr-event-emitter",
+          "title": "GitHub PR event emitter",
+          "description": "Enhance GitHubStateChecker to emit typed events on PR state changes. Track last-known PR state per feature to avoid duplicates. Events: github:pr:review-submitted, github:pr:checks-updated, github:pr:approved, github:pr:changes-requested",
+          "filesToModify": [
+            "apps/server/src/services/github-state-checker.ts",
+            "libs/types/src/events.ts"
+          ],
+          "acceptanceCriteria": [
+            "GitHubStateChecker emits events on state changes",
+            "Last-known state tracked per feature to prevent duplicate events",
+            "Events include PR number, branch, review state, CI status"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1771065846831-ekpw1otqd"
+        },
+        {
+          "number": 2,
+          "name": "github-to-linear-bridge-service",
+          "title": "GitHub to Linear bridge service",
+          "description": "New GitHubLinearBridgeService that subscribes to GitHub PR events and pushes comments/updates to Linear issues. On changes-requested: add comment with reviewer+feedback. On checks-failed: comment with failed checks. On approved: comment noting approval.",
+          "filesToModify": [
+            "apps/server/src/services/github-linear-bridge-service.ts",
+            "apps/server/src/index.ts"
+          ],
+          "acceptanceCriteria": [
+            "Service subscribes to github:pr:* events",
+            "Posts formatted comments to corresponding Linear issues",
+            "Includes reviewer name, check names, and actionable details",
+            "Graceful skip when feature has no linearIssueId"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1771065846831-xzsqautd2"
+        },
+        {
+          "number": 3,
+          "name": "pr-state-sync-crew-member",
+          "title": "PR state sync crew member",
+          "description": "New crew member pr-state-sync that runs GitHubStateChecker periodically (every 5 min). Emits events that trigger the bridge.",
+          "filesToModify": [
+            "apps/server/src/services/crew-members/pr-state-sync-check.ts",
+            "apps/server/src/services/crew-members/index.ts",
+            "apps/server/src/index.ts"
+          ],
+          "acceptanceCriteria": [
+            "Crew member runs on 5-min schedule",
+            "Triggers GitHubStateChecker for all registered projects",
+            "Emits events on state changes detected"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1771065846832-z3ab2gymw"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1771065846829-mvguyxse1"
+    },
+    {
+      "number": 2,
+      "slug": "02-issue-relations-and-dependency-sync",
+      "title": "Issue Relations and Dependency Sync",
+      "description": "Sync Automaker feature dependencies to Linear issue relations",
+      "phases": [
+        {
+          "number": 1,
+          "name": "outbound-dependency-to-relation-sync",
+          "title": "Outbound dependency to relation sync",
+          "description": "When features have dependencies set, create Linear blocks relations via GraphQL. New method in LinearMCPClient: createIssueRelation(). Hook into set_feature_dependencies and project:scaffolded events.",
+          "filesToModify": [
+            "apps/server/src/services/linear-mcp-client.ts",
+            "apps/server/src/services/linear-sync-service.ts"
+          ],
+          "acceptanceCriteria": [
+            "LinearMCPClient.createIssueRelation() works",
+            "Dependencies synced on feature creation",
+            "Duplicate relations detected and skipped"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1771065846834-jhkhln2bn"
+        },
+        {
+          "number": 2,
+          "name": "inbound-relation-to-dependency-sync",
+          "title": "Inbound relation to dependency sync",
+          "description": "When Linear issue relations change via webhook, update Automaker feature dependencies. Poll issueRelations on issue update webhook.",
+          "filesToModify": [
+            "apps/server/src/services/linear-sync-service.ts",
+            "apps/server/src/routes/linear/webhook.ts"
+          ],
+          "acceptanceCriteria": [
+            "Issue update webhook checks for relation changes",
+            "New relations mapped to Automaker dependencies",
+            "Loop prevention for bidirectional sync"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1771065846834-ldi8mrzq7"
+        },
+        {
+          "number": 3,
+          "name": "backfill-copilotkit-dependencies",
+          "title": "Backfill CopilotKit dependencies",
+          "description": "One-time endpoint to sync existing Automaker feature dependencies to Linear issue relations for a project.",
+          "filesToModify": [
+            "apps/server/src/routes/linear/sync-dependencies.ts",
+            "apps/server/src/routes/linear/index.ts"
+          ],
+          "acceptanceCriteria": [
+            "POST /api/linear/sync-dependencies endpoint works",
+            "Creates blocks relations in Linear",
+            "Reports summary: created, skipped, errors"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1771065846835-wwy3v5mqk"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1771065846833-28qrmq1el"
+    },
+    {
+      "number": 3,
+      "slug": "03-project-status-and-ceremonies",
+      "title": "Project Status and Ceremonies",
+      "description": "Automated project updates in Linear with milestone progress tracking",
+      "phases": [
+        {
+          "number": 1,
+          "name": "project-update-service",
+          "title": "Project update service",
+          "description": "New LinearProjectUpdateService that generates and posts status updates to Linear projects. Collects features done/total, PR status, blockers, milestone progress.",
+          "filesToModify": [
+            "apps/server/src/services/linear-project-update-service.ts",
+            "apps/server/src/services/linear-mcp-client.ts",
+            "apps/server/src/index.ts"
+          ],
+          "acceptanceCriteria": [
+            "Service generates status update from board state",
+            "Posts to Linear via projectUpdateCreate mutation",
+            "Includes milestone progress and blockers"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1771065846836-r5j2n9sfz"
+        },
+        {
+          "number": 2,
+          "name": "linear-project-sync-enhancement",
+          "title": "Linear project sync enhancement",
+          "description": "Sync project lifecycle: Automaker project status to Linear project status. Track milestone completion percentage.",
+          "filesToModify": [
+            "apps/server/src/services/linear-sync-service.ts",
+            "apps/server/src/services/linear-mcp-client.ts"
+          ],
+          "acceptanceCriteria": [
+            "Project status changes reflected in Linear",
+            "Milestone progress tracked as percentage",
+            "Project completion updates Linear to completed"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1771065846837-zj432lync"
+        },
+        {
+          "number": 3,
+          "name": "ceremony-integration",
+          "title": "Ceremony integration",
+          "description": "Connect CeremonyService to LinearProjectUpdateService. Daily standup creates project update. Milestone completion posts summary.",
+          "filesToModify": [
+            "apps/server/src/services/ceremony-service.ts",
+            "apps/server/src/services/linear-project-update-service.ts"
+          ],
+          "acceptanceCriteria": [
+            "Daily standup generates Linear project update",
+            "Milestone completion posts summary to Linear",
+            "Ceremony settings control which updates fire"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1771065846837-f5y1w47wg"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1771065846836-z5ze12e6q"
+    },
+    {
+      "number": 4,
+      "slug": "04-langgraph-project-management-flows",
+      "title": "LangGraph Project Management Flows",
+      "description": "LangGraph-powered content generation for project management using antagonistic review",
+      "phases": [
+        {
+          "number": 1,
+          "name": "project-status-report-flow",
+          "title": "Project status report flow",
+          "description": "LangGraph state graph for generating project status reports. Nodes: gatherMetrics, analyzeProgress, generateReport, antagonisticReview, format.",
+          "filesToModify": [
+            "libs/flows/src/project-management/status-report-flow.ts",
+            "libs/flows/src/project-management/types.ts",
+            "libs/flows/src/project-management/index.ts"
+          ],
+          "acceptanceCriteria": [
+            "State graph compiles and runs",
+            "Takes project metrics, outputs formatted report",
+            "Uses antagonistic review for quality"
+          ],
+          "complexity": "large",
+          "featureId": "feature-1771065846839-tlnmm1m6c"
+        },
+        {
+          "number": 2,
+          "name": "milestone-summary-flow",
+          "title": "Milestone summary flow",
+          "description": "LangGraph flow for generating milestone completion summaries. Nodes: collectAchievements, analyzeLessons, draftSummary, antagonisticReview, format.",
+          "filesToModify": [
+            "libs/flows/src/project-management/milestone-summary-flow.ts"
+          ],
+          "acceptanceCriteria": [
+            "Generates compelling milestone summary",
+            "Includes lessons learned and next milestone preview",
+            "Integrates with LinearProjectUpdateService"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1771065846839-3ly8r26gg"
+        },
+        {
+          "number": 3,
+          "name": "risk-assessment-flow",
+          "title": "Risk assessment flow",
+          "description": "LangGraph flow for identifying project risks. Nodes: checkBlockers, analyzeVelocity, assessRisks, recommend, antagonisticReview.",
+          "filesToModify": [
+            "libs/flows/src/project-management/risk-assessment-flow.ts"
+          ],
+          "acceptanceCriteria": [
+            "Identifies stuck features and velocity trends",
+            "Produces actionable risk recommendations",
+            "Can be scheduled weekly or triggered on-demand"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1771065846840-sqdz77wu6"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1771065846838-7q4r2v8sj"
+    }
+  ],
+  "prd": {
+    "situation": "Automaker has bidirectional Linear sync (feature-issue) with webhook handling and OAuth. CopilotKit project has 39 issues in Linear. GitHub PR state is invisible in Linear.",
+    "problem": "User wants to see full work lifecycle across GitHub, Automaker, and Linear from Linear. Currently, Linear issues show In Review/Done but nothing in between.",
+    "approach": "Event-driven tri-directional sync: GitHub PR events to Automaker events to Linear updates. Issue relation sync for dependencies. Automated project status updates via LangGraph flows.",
+    "results": "From Linear, see exact PR state per issue. See dependency graph. Get automated project status reports.",
+    "constraints": [
+      "No GitHub webhooks - use gh CLI polling",
+      "Linear API rate limit: 1400 req/hr",
+      "Follow existing LangGraph patterns",
+      "No breaking changes",
+      "Keep LangGraph flows cost-efficient"
+    ]
+  },
+  "createdAt": "2026-02-14T10:43:58.140Z",
+  "updatedAt": "2026-02-14T10:44:06.850Z"
+}

@@ -48,3 +48,10 @@ usageStats:
 - **Rejected:** Keeping verbose markdown format - higher token cost accumulates across thousands of fact-checks. Detailed instructions don't improve output quality if structure is clear.
 - **Trade-offs:** Simpler prompt reduces cost but requires clearer field definitions. More constraints but better predictability.
 - **Breaking if changed:** If prompts get expanded back to verbose format without monitoring, token costs could increase 2-3x across production fact-checking workloads
+
+### 30-second timeout for Linear API requests with AbortController, leveraging native fetch cancellation (2026-02-14)
+- **Context:** The fetchIssueRelations method makes network requests to Linear's GraphQL API which could hang.
+- **Why:** Prevents webhook handlers from blocking indefinitely on slow/unavailable Linear API. 30s is reasonable for a GraphQL query. AbortController is the standard mechanism and integrates cleanly with catch logic.
+- **Rejected:** No timeout would risk blocking webhook handlers. Promise.race with setTimeout would require manual cleanup.
+- **Trade-offs:** Easier: Native API, clean error handling. Harder: Must manually clear timeout in success path (existing code does this).
+- **Breaking if changed:** If timeout is removed, slow Linear API responses could block webhook processing for other issues.

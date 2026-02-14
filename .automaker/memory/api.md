@@ -5,9 +5,9 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 41
-  referenced: 23
-  successfulFeatures: 23
+  loaded: 42
+  referenced: 24
+  successfulFeatures: 24
 ---
 # api
 
@@ -237,3 +237,53 @@ usageStats:
 - **Situation:** Parsing severity field from XML. Needed to distinguish between required vs optional findings fields.
 - **Root cause:** Missing severity should be error (finding is malformed), but missing suggestion is acceptable (finding still valid). Type safety catches invalid severity values.
 - **How to avoid:** Stricter validation catches malformed LLM output but requires explicit error handling for each required field.
+
+### Duplicate detection via existingRelatedIds lookup before calling createIssueRelation (2026-02-14)
+- **Context:** Relations may be created multiple times if sync operations are retried or re-run
+- **Why:** Prevents API errors from duplicate creation attempts; Linear API may reject duplicate relations or require checking existence first
+- **Rejected:** Try/catch on API error - relies on API error messages; no pre-check - assumes idempotency of API
+- **Trade-offs:** Extra getIssueRelations() call adds API overhead but prevents failed creation attempts and incorrect duplicate counts
+- **Breaking if changed:** Removing duplicate detection will cause API failures on retries and confuse metrics about what was actually created vs attempted
+
+### Filtering Linear relations by specific types ('blocks', 'blocked', 'relatedTo') rather than syncing all relation types (2026-02-14)
+- **Context:** Linear's relations API returns many relation types, but only dependency-semantic ones should map to Automaker dependencies.
+- **Why:** Automaker features use 'dependencies' as a directed list, while Linear relations include semantic types like 'duplicates', 'relates', etc. Filtering ensures semantic correctness - only blocking/blocked/related relations represent actual dependencies.
+- **Rejected:** Syncing all relation types would pollute dependencies with non-dependency relations, making dependency tracking meaningless.
+- **Trade-offs:** Easier: Clean semantic mapping. Harder: Requires knowledge of which Linear relation types map to dependencies (requires domain knowledge).
+- **Breaking if changed:** If filtering is removed or expanded to include unrelated types like 'duplicates', the dependencies list loses meaning and becomes cluttered.
+
+#### [Gotcha] ReviewState type includes 'NONE' sentinel value, but GitHub API payload contains actual state (APPROVED, CHANGES_REQUESTED, COMMENTED). Mixing these causes type errors. (2026-02-14)
+- **Situation:** Initial implementation compared currentReviewState (ReviewState | 'NONE') directly in payload, but payload interface expects only valid GitHub states
+- **Root cause:** Need type-safe comparison while also representing 'no review' state, but GitHub API responses don't include 'NONE'. Must use type guard on latestReview existence.
+- **How to avoid:** Using latestReview directly in payload is simpler than conditional type narrowing but requires null-safety check first
+
+#### [Pattern] Only emit events when state actually changes (detected via cache comparison), with cache population on first check without emission (2026-02-14)
+- **Problem solved:** PR checks polling could trigger events on every cycle even if nothing changed, flooding downstream systems
+- **Why this works:** Prevents duplicate event storms and ensures each event represents a real transition. First check populates cache as baseline so subsequent changes are detectable.
+- **Trade-offs:** Requires maintaining state cache but prevents wasted processing in event listeners
+
+#### [Gotcha] EventEmitter API uses emit(type, payload) signature, not emitEvent({type, data}) wrapper pattern (2026-02-14)
+- **Situation:** Initial implementation used ctx.events.emitEvent({type, data}) pattern which failed at runtime despite type checking
+- **Root cause:** The actual EventEmitter API is simpler and the wrapper pattern was incorrectly assumed from context
+- **How to avoid:** Direct emit() is simpler but loses the explicit event structure wrapping. Had to learn actual API by searching codebase
+
+### POST /api/linear/sync-dependencies returns detailed per-relationship status (created/skipped/error) rather than just aggregate counts (2026-02-14)
+- **Context:** Endpoint needed to communicate why some dependencies weren't synced
+- **Why:** Detailed status array enables debugging of sync failures - user can see exactly which dependencies were skipped and why (missing linearIssueId, dependency not in project, etc). This is crucial for troubleshooting partial sync failures
+- **Rejected:** Simpler alternative: return only summary counts {total, created, skipped, errors} but this loses visibility into which specific relationships failed
+- **Trade-offs:** Larger response payload vs much better debuggability. Payload size negligible unless syncing thousands of relations
+- **Breaking if changed:** If detailed array is removed, consumers lose ability to identify why specific dependencies weren't synced and can't implement retry logic
+
+### Progress converted from 0-100 percentage to Linear's 0-1 decimal scale at the API boundary, not in business logic (2026-02-14)
+- **Context:** Automaker stores progress as percentage (0-100), Linear GraphQL API expects decimal (0.0-1.0)
+- **Why:** Keeps business logic scale-agnostic. Conversion at API boundary is 'external format adaptation', making it clear this is a Linear API quirk not core domain logic. Easier to test internally
+- **Rejected:** Converting in core calculation would mix API concerns into business logic. Harder to reuse calculation for other outputs
+- **Trade-offs:** One more place to check/maintain the conversion formula. Clearer intent—anyone modifying LinearMCPClient immediately sees the scale difference
+- **Breaking if changed:** Moving conversion elsewhere would require updating all progress callers. If forgotten, sends 75 to Linear expecting 0.75—progress suddenly appears as 7500%
+
+### Export both createStatusReportFlow() and executeStatusReport() from the main module - flow factory + convenience executor (2026-02-14)
+- **Context:** Consumers might want just the flow object (for advanced customization) or the simple execution path (for quick reports)
+- **Why:** Two common use cases: (1) Get flow object to customize nodes/edges before execution, (2) Just execute with minimal setup. Exporting both serves both audiences without forcing unnecessary abstraction.
+- **Rejected:** Only exporting the flow - forces users to write boilerplate execution code. Only exporting executor - prevents customization.
+- **Trade-offs:** Adds two exports instead of one. But eliminates duplicated initialization code across callers.
+- **Breaking if changed:** If the underlying StateGraph changes, both exports might need updates. The executor hides state graph details, so it must be kept in sync with flow structure.

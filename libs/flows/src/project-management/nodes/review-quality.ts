@@ -23,7 +23,10 @@ const MAX_REVISIONS = 2;
 export async function reviewQuality(
   state: ProjectStatusState
 ): Promise<Partial<ProjectStatusState>> {
-  if (state.error || !state.statusReport) return {};
+  if (state.error || !state.statusReport) {
+    // Auto-approve on error to avoid infinite revision loop
+    return { reviewVerdict: 'approve' };
+  }
 
   const report = state.statusReport;
   const issues: string[] = [];
