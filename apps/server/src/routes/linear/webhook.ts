@@ -316,7 +316,7 @@ async function handleIssueEvent(
 
 /**
  * Handle Issue update events
- * Delegates to LinearSyncService for status, priority, and title sync
+ * Delegates to LinearSyncService for status, priority, title, and relation sync
  */
 async function handleIssueUpdated(
   data: LinearIssueWebhookPayload['data'],
@@ -330,7 +330,7 @@ async function handleIssueUpdated(
     slaStatus: data.sla?.status,
   });
 
-  // Delegate to sync service for status, title, and priority sync
+  // Delegate to sync service for status, title, priority, and relation sync
   // The sync service handles loop prevention, conflict detection, and batched updates
   const stateName = data.state?.name || 'Unknown';
   const projectPath = process.cwd();

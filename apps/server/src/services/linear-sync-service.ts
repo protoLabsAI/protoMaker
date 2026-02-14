@@ -2476,9 +2476,107 @@ ${prdContent}
   }
 
   /**
+   * Fetch issue relations from Linear GraphQL API
+   * Returns an array of related issue IDs (blocks, blocked-by, relates-to, duplicates)
+   *
+   * @param linearIssueId - The Linear issue ID to fetch relations for
+   * @param projectPath - The project path for settings
+   * @returns Array of related Linear issue IDs
+   */
+  private async fetchIssueRelations(linearIssueId: string, projectPath: string): Promise<string[]> {
+    if (!this.settingsService) {
+      throw new Error('SettingsService not initialized');
+    }
+
+    const settings = await this.settingsService.getProjectSettings(projectPath);
+    const linearAccessToken = settings.integrations?.linear?.agentToken;
+
+    if (!linearAccessToken) {
+      throw new Error('No Linear OAuth token found in settings');
+    }
+
+    // GraphQL query to fetch issue relations
+    const query = `
+      query GetIssueRelations($id: String!) {
+        issue(id: $id) {
+          id
+          relations {
+            nodes {
+              id
+              type
+              relatedIssue {
+                id
+              }
+            }
+          }
+        }
+      }
+    `;
+
+    const variables = {
+      id: linearIssueId,
+    };
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+    try {
+      const response = await fetch('https://api.linear.app/graphql', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${linearAccessToken}`,
+        },
+        body: JSON.stringify({ query, variables }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`Linear API error: ${response.status} ${response.statusText}`);
+      }
+
+      const result = (await response.json()) as {
+        data?: {
+          issue?: {
+            relations?: {
+              nodes: Array<{
+                id: string;
+                type: string;
+                relatedIssue?: { id: string };
+              }>;
+            };
+          };
+        };
+        errors?: Array<{ message: string }>;
+      };
+
+      if (result.errors) {
+        throw new Error(`Linear GraphQL error: ${result.errors.map((e) => e.message).join(', ')}`);
+      }
+
+      const relations = result.data?.issue?.relations?.nodes || [];
+
+      // Extract related issue IDs
+      // Filter for dependency relations: 'blocks', 'blocked', 'relatedTo'
+      const relatedIssueIds = relations
+        .filter((rel) => rel.relatedIssue && ['blocks', 'blocked', 'relatedTo'].includes(rel.type))
+        .map((rel) => rel.relatedIssue!.id);
+
+      return relatedIssueIds;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('Linear API request timed out after 30s');
+      }
+      throw error;
+    }
+  }
+
+  /**
    * Handle Linear issue updates (inbound sync from Linear to Automaker)
    * This method is called when a Linear issue is updated externally.
-   * Syncs status, priority, and title changes in a single batched update.
+   * Syncs status, priority, title, and dependency changes in a single batched update.
    *
    * @param linearIssueId - The Linear issue ID that was updated
    * @param newStateName - The new Linear workflow state name
@@ -2562,6 +2660,43 @@ ${prdContent}
       if (options?.priority !== undefined && options.priority !== feature.priority) {
         featureUpdates.priority = options.priority;
         changeDescriptions.push(`priority: ${feature.priority ?? 'none'} → ${options.priority}`);
+      }
+
+      // --- Dependency sync (Linear issue relations → Automaker dependencies) ---
+      try {
+        // Fetch current issue relations from Linear
+        const relatedLinearIssueIds = await this.fetchIssueRelations(linearIssueId, projectPath);
+
+        // Map Linear issue IDs to Automaker feature IDs
+        const newDependencyIds: string[] = [];
+        for (const relatedIssueId of relatedLinearIssueIds) {
+          const relatedFeature = await this.featureLoader.findByLinearIssueId(
+            projectPath,
+            relatedIssueId
+          );
+          if (relatedFeature) {
+            newDependencyIds.push(relatedFeature.id);
+          }
+        }
+
+        // Compare with current dependencies
+        const currentDeps = feature.dependencies || [];
+        const depsChanged =
+          newDependencyIds.length !== currentDeps.length ||
+          !newDependencyIds.every((id) => currentDeps.includes(id));
+
+        if (depsChanged) {
+          featureUpdates.dependencies = newDependencyIds;
+          changeDescriptions.push(
+            `dependencies: [${currentDeps.join(', ')}] → [${newDependencyIds.join(', ')}]`
+          );
+        }
+      } catch (error) {
+        // Non-fatal: log warning and continue with other syncs
+        logger.warn(
+          `Failed to sync dependencies for feature ${featureId}:`,
+          error instanceof Error ? error.message : 'Unknown error'
+        );
       }
 
       // If nothing changed, just update metadata and return
