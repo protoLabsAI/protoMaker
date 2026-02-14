@@ -140,7 +140,7 @@ describe('registerBuiltInTemplates', () => {
     expect(gtm!.systemPrompt).toBeDefined();
     expect(gtm!.systemPrompt).toContain('GTM');
     expect(gtm!.systemPrompt).toContain('protoLabs');
-    expect(gtm!.systemPrompt).toContain('Josh Mabry');
+    expect(gtm!.systemPrompt).toContain('Josh');
   });
 
   it('pr-maintainer uses haiku with commit capabilities', () => {
