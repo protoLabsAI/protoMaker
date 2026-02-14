@@ -1,26 +1,26 @@
 # Content Creation Pipeline
 
-Comprehensive guide to the content generation pipeline at `libs/flows/src/content/`. This pipeline transforms research into multi-format content (blog posts, technical docs, training examples, HuggingFace datasets) using a 7-phase flow with human oversight gates, parallel processing, and Langfuse tracing.
+Comprehensive guide to the content generation pipeline at `libs/flows/src/content/`. This pipeline transforms research into multi-format content (blog posts, technical docs, training examples, HuggingFace datasets) using a 7-phase flow with **autonomous antagonistic review**, parallel processing, and Langfuse tracing.
 
 ## Architecture Overview
 
-The content creation flow follows a **7-phase pipeline** with 3 HITL (Human-in-the-Loop) interrupt gates:
+The content creation flow follows a **7-phase autonomous pipeline** with antagonistic review for quality control:
 
 ```
-Research(parallel) → HITL → Outline → HITL → Generation(parallel) → Assembly → Review(parallel) → HITL → Output(parallel)
+Research(parallel) → Outline → Generation(parallel) → Assembly → Antagonistic Review(parallel) → Output(parallel) → Complete
 ```
 
 ### Phase Breakdown
 
-| Phase         | Parallelism | HITL Gate        | Purpose                                                         |
-| ------------- | ----------- | ---------------- | --------------------------------------------------------------- |
-| 1. Research   | ✓ Send()    | ✓ After research | Generate research queries, fan out to parallel research workers |
-| 2. Outline    | -           | ✓ After outline  | Generate content outline from research findings                 |
-| 3. Generation | ✓ Send()    | -                | Fan out to parallel SectionWriter subgraphs                     |
-| 4. Assembly   | -           | -                | Combine sections into cohesive document                         |
-| 5. Review     | ✓ Send()    | ✓ After review   | Fan out to parallel section reviewers                           |
-| 6. Output     | ✓ Send()    | -                | Generate multiple output formats (markdown, html, pdf)          |
-| 7. Complete   | -           | -                | Finalize metadata and close trace                               |
+| Phase                  | Parallelism | Review Gate           | Purpose                                                         |
+| ---------------------- | ----------- | --------------------- | --------------------------------------------------------------- |
+| 1. Research            | ✓ Send()    | -                     | Generate research queries, fan out to parallel research workers |
+| 2. Outline             | -           | -                     | Generate content outline from research findings                 |
+| 3. Generation          | ✓ Send()    | -                     | Fan out to parallel SectionWriter subgraphs                     |
+| 4. Assembly            | -           | -                     | Combine sections into cohesive document                         |
+| 5. Antagonistic Review | ✓ Send()    | ✓ Quality score check | Fan out to parallel section reviewers with 8-dimension scoring  |
+| 6. Output              | ✓ Send()    | -                     | Generate multiple output formats (markdown, html, pdf)          |
+| 7. Complete            | -           | -                     | Finalize metadata and close trace                               |
 
 ### Send() Parallelism Points
 
@@ -37,7 +37,7 @@ for (const section of outline.sections) {
   sends.push(new Send('generation_delegate', { ...state, sectionSpec: section }));
 }
 
-// Phase 5: Review - multiple section reviews in parallel
+// Phase 5: Antagonistic Review - multiple section reviews in parallel
 for (const section of sections) {
   sends.push(new Send('review_delegate', { ...state, section }));
 }
@@ -48,17 +48,50 @@ for (const format of config.outputFormats) {
 }
 ```
 
-### HITL Interrupt Gates
+### Autonomous Antagonistic Review
 
-Three interrupt points allow human review and revision:
+The pipeline runs fully autonomously with quality control via **antagonistic review**. The reviewer critically evaluates content across 8 dimensions (see [Antagonistic Review Scoring](#antagonistic-review-scoring)) and automatically approves or rejects based on scoring thresholds:
 
 ```typescript
-graph.compile({
+// Automatic approval based on scores
+if (averageScore >= 7.0) {
+  return { approved: true, feedback: reviewScores };
+} else {
+  return { approved: false, feedback: reviewScores, revisionRequired: true };
+}
+```
+
+**Autonomous flow by default:**
+
+```typescript
+const flow = createContentCreationFlow(); // No checkpointer = autonomous mode
+
+const result = await flow.invoke({
+  config: {
+    topic: 'LangGraph Production Guide',
+    format: 'guide',
+    // ... other config
+  },
+});
+
+// Flow runs to completion without human intervention
+console.log('Generated content:', result.outputs);
+```
+
+### Optional HITL Overlay
+
+While the pipeline runs autonomously by default, you can **optionally** enable HITL (Human-in-the-Loop) interrupt gates for manual review and revision:
+
+```typescript
+import { MemorySaver } from '@langchain/langgraph';
+
+// Enable HITL mode with checkpointer
+const flow = createContentCreationFlow({
   checkpointer: new MemorySaver(),
   interruptBefore: [
-    'research_hitl', // Approve/revise research findings
-    'outline_hitl', // Approve/revise content outline
-    'final_review_hitl', // Approve/revise assembled content
+    'research_review', // Optional: Approve/revise research findings
+    'outline_review', // Optional: Approve/revise content outline
+    'final_review', // Optional: Approve/revise assembled content
   ],
 });
 ```
@@ -67,14 +100,27 @@ graph.compile({
 
 ```typescript
 // User updates state with approval decision
-await graph.updateState(threadId, {
+await flow.updateState(threadId, {
   researchApproved: true,
-  researchFeedback: undefined,
+  researchFeedback: 'Add more examples about parallel execution',
 });
 
 // Resume from interrupt
-await graph.invoke(null, { threadId });
+await flow.invoke(null, { threadId });
 ```
+
+**When to use HITL overlay:**
+
+- **High-stakes content**: Legal docs, medical content, financial advice
+- **Brand-sensitive content**: Marketing materials requiring brand approval
+- **Custom expertise**: Domain-specific content needing expert validation
+- **Experimentation**: Testing new prompts or models with human oversight
+
+**Autonomous mode is recommended for:**
+
+- **High-volume content**: Blog posts, documentation, training examples
+- **Lower-risk content**: Tutorials, guides, reference documentation
+- **Iteration speed**: Rapid content generation and A/B testing
 
 ## Content Types
 
@@ -376,7 +422,9 @@ The pipeline implements a **comprehensive blog optimization strategy** based on 
 
 ### Antagonistic Review Scoring
 
-The review phase uses an **8-dimension scoring system** to evaluate content quality:
+The review phase uses an **8-dimension scoring system** to evaluate content quality autonomously. The reviewer acts as an intentionally critical adversary, looking for weaknesses rather than confirming quality. This ensures only high-quality content passes the quality gate.
+
+**8 Scoring Dimensions:**
 
 ```typescript
 interface ReviewScores {
@@ -391,14 +439,57 @@ interface ReviewScores {
 }
 ```
 
-**Scoring thresholds:**
+**Dimension Breakdown:**
 
-- **9-10**: Exceptional, publish-ready
-- **7-8**: Good, minor revisions
-- **5-6**: Needs improvement, major revisions
-- **0-4**: Fails quality bar, regenerate
+| Dimension       | What It Evaluates                                         | Pass Criteria (7+)                                                  |
+| --------------- | --------------------------------------------------------- | ------------------------------------------------------------------- |
+| **Hook**        | First 100 words grab attention and promise value          | Clear problem statement, hooks reader, sets expectations            |
+| **Clarity**     | Content is easy to understand and well-structured         | No jargon overload, logical flow, clear explanations                |
+| **Value**       | Provides actionable insights, not just theory             | Concrete examples, code snippets, practical takeaways               |
+| **Engagement**  | Optimized for F-pattern scanning with visual hierarchy    | Subheadings every 200-300 words, bold key phrases, bullet lists     |
+| **SEO**         | Keywords integrated naturally, meta optimized             | Primary keyword in H1/first 100 words, natural keyword distribution |
+| **Credibility** | Authority signals and citations present                   | External links to trusted sources, data/stats cited                 |
+| **CTA**         | Call-to-action is clear, compelling, and well-placed      | Contextual CTAs, clear value proposition, urgency if appropriate    |
+| **Completion**  | Fully addresses user intent and answers implied questions | No gaps, common objections addressed, next steps clear              |
 
-**Antagonistic review principle:** The reviewer is intentionally critical and looks for weaknesses. This ensures only high-quality content passes the gate.
+**Scoring Thresholds:**
+
+- **9-10**: Exceptional, publish-ready — content exceeds quality bar
+- **7-8**: Good, approved — content meets quality bar with minor room for improvement
+- **5-6**: Needs improvement — content requires major revisions, regenerate with feedback
+- **0-4**: Fails quality bar — content is fundamentally flawed, regenerate from scratch
+
+**Automatic Approval Logic:**
+
+```typescript
+const averageScore = Object.values(reviewScores).reduce((a, b) => a + b) / 8;
+
+if (averageScore >= 7.0) {
+  // Automatically approve and continue to output phase
+  return new Command({
+    update: { approved: true, reviewScores },
+    goto: 'output_phase',
+  });
+} else {
+  // Automatically reject and regenerate with feedback
+  return new Command({
+    update: { approved: false, reviewScores, revisionRequired: true },
+    goto: 'generation_phase', // Regenerate with review feedback
+  });
+}
+```
+
+**Antagonistic Review Principle:**
+
+The reviewer is instructed to:
+
+- **Assume content is mediocre until proven excellent**
+- **Look for weaknesses** rather than strengths
+- **Score strictly** — a 7/10 means genuinely good, not "acceptable"
+- **Provide specific feedback** for low scores (e.g., "Hook lacks concrete problem statement")
+- **Reject borderline content** — when in doubt, regenerate
+
+This adversarial approach ensures only content that can defend itself against criticism makes it to publication.
 
 ### Headline Formulas
 
@@ -585,12 +676,13 @@ Navigate to the experiment in Langfuse dashboard:
 
 ## Usage Examples
 
-### 1. Quick Marketing Post (Short, Fast)
+### 1. Autonomous Marketing Post (Short, Fast)
 
 ```typescript
 import { createContentCreationFlow } from '@automaker/flows';
 import { FakeChatModel } from '@langchain/core/utils/testing';
 
+// No checkpointer = autonomous mode
 const flow = createContentCreationFlow();
 
 const result = await flow.invoke({
@@ -607,18 +699,15 @@ const result = await flow.invoke({
   },
 });
 
-// Skip HITL interrupts for automated generation
-await flow.updateState(result.threadId, { researchApproved: true });
-await flow.updateState(result.threadId, { outlineApproved: true });
-await flow.updateState(result.threadId, { reviewApproved: true });
-
-const finalState = await flow.invoke(null, { threadId: result.threadId });
-console.log(finalState.outputs); // markdown + html
+// Flow runs to completion autonomously
+console.log('Generated outputs:', result.outputs); // markdown + html
+console.log('Review scores:', result.reviewScores); // Antagonistic review scores
 ```
 
-### 2. Long-Form Evergreen Guide (Comprehensive, SEO-Optimized)
+### 2. Autonomous Long-Form Evergreen Guide (Comprehensive, SEO-Optimized)
 
 ```typescript
+// Autonomous mode with Langfuse tracing
 const flow = createContentCreationFlow();
 
 const result = await flow.invoke({
@@ -648,13 +737,57 @@ const result = await flow.invoke({
   },
 });
 
-// Human review at each HITL gate
-// (Flow will interrupt automatically)
+// Flow completes autonomously with antagonistic review
+console.log('Content approved:', result.approved);
+console.log('Review scores:', result.reviewScores);
+console.log('Trace URL:', `https://cloud.langfuse.com/trace/${result.traceId}`);
 ```
 
-### 3. Tutorial with Code Examples
+### 2b. HITL Overlay Mode (Optional Human Review)
 
 ```typescript
+import { MemorySaver } from '@langchain/langgraph';
+
+// Enable HITL mode with checkpointer
+const flow = createContentCreationFlow({
+  checkpointer: new MemorySaver(),
+  interruptBefore: ['final_review'], // Only interrupt before final review
+});
+
+const result = await flow.invoke({
+  config: {
+    topic: 'Complete Guide to Production LangGraph Flows',
+    format: 'guide',
+    tone: 'technical',
+    audience: 'expert',
+    outputFormats: ['markdown', 'pdf'],
+    length: 'long-form',
+    blogTemplate: 'evergreen-guide',
+    smartModel: opusModel,
+    fastModel: haikuModel,
+    langfuseClient,
+  },
+});
+
+// Flow pauses at final_review interrupt
+const state = await flow.getState(result.threadId);
+console.log('Review scores:', state.reviewScores);
+console.log('Content:', state.assembledContent);
+
+// Human approves or provides feedback
+await flow.updateState(result.threadId, {
+  reviewApproved: true,
+  reviewFeedback: 'Excellent, publish as-is',
+});
+
+// Resume to completion
+const final = await flow.invoke(null, { threadId: result.threadId });
+```
+
+### 3. Autonomous Tutorial with Code Examples
+
+```typescript
+// Fully autonomous tutorial generation
 const flow = createContentCreationFlow();
 
 const result = await flow.invoke({
@@ -672,21 +805,15 @@ const result = await flow.invoke({
   },
 });
 
-// Review outline and approve
-const state = await flow.getState(result.threadId);
-console.log('Outline:', state.outline);
-
-await flow.updateState(result.threadId, {
-  outlineApproved: true,
-  outlineFeedback: 'Add a troubleshooting section at the end',
-});
-
-const final = await flow.invoke(null, { threadId: result.threadId });
+// Autonomous completion with antagonistic review
+console.log('Tutorial generated:', result.outputs[0]);
+console.log('Quality approved:', result.approved);
 ```
 
-### 4. Affiliate Product Review
+### 4. Autonomous Affiliate Product Review
 
 ```typescript
+// High-volume autonomous content generation
 const flow = createContentCreationFlow();
 
 const result = await flow.invoke({
@@ -718,6 +845,11 @@ const result = await flow.invoke({
     },
   },
 });
+
+// Autonomous review ensures quality without human intervention
+console.log('Review scores:', result.reviewScores);
+console.log('SEO score:', result.reviewScores.seo); // Should be 7+ for approval
+console.log('CTA score:', result.reviewScores.cta); // Should be 7+ for approval
 ```
 
 ## Prompt Templates
@@ -726,16 +858,16 @@ All prompts are managed via Langfuse for versioning and A/B testing.
 
 ### Prompt Template List
 
-| Template                   | Purpose                                | Variables                                                    | Model Tier |
-| -------------------------- | -------------------------------------- | ------------------------------------------------------------ | ---------- |
-| `research-query-generator` | Generate research queries from topic   | `{topic}`, `{format}`, `{audience}`                          | Fast       |
-| `research-worker`          | Execute single research query          | `{query}`, `{context}`                                       | Smart      |
-| `outline-generator`        | Generate content outline from research | `{topic}`, `{research}`, `{format}`, `{tone}`, `{audience}`  | Smart      |
-| `section-writer`           | Generate single content section        | `{section}`, `{research}`, `{style}`, `{tone}`, `{audience}` | Smart      |
-| `section-reviewer`         | Review section quality                 | `{section}`, `{criteria}`                                    | Fast       |
-| `antagonistic-reviewer`    | Critical 8-dimension review            | `{content}`, `{seoConfig}`, `{ctaConfig}`                    | Smart      |
-| `output-formatter-html`    | Convert markdown to HTML               | `{markdown}`                                                 | Fast       |
-| `output-formatter-pdf`     | Convert markdown to PDF-ready format   | `{markdown}`                                                 | Fast       |
+| Template                   | Purpose                                                      | Variables                                                    | Model Tier |
+| -------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ | ---------- |
+| `research-query-generator` | Generate research queries from topic                         | `{topic}`, `{format}`, `{audience}`                          | Fast       |
+| `research-worker`          | Execute single research query                                | `{query}`, `{context}`                                       | Smart      |
+| `outline-generator`        | Generate content outline from research                       | `{topic}`, `{research}`, `{format}`, `{tone}`, `{audience}`  | Smart      |
+| `section-writer`           | Generate single content section                              | `{section}`, `{research}`, `{style}`, `{tone}`, `{audience}` | Smart      |
+| `section-reviewer`         | Review section quality (technical)                           | `{section}`, `{criteria}`                                    | Fast       |
+| `antagonistic-reviewer`    | Critical 8-dimension autonomous review (auto-approve/reject) | `{content}`, `{seoConfig}`, `{ctaConfig}`, `{reviewScores}`  | Smart      |
+| `output-formatter-html`    | Convert markdown to HTML                                     | `{markdown}`                                                 | Fast       |
+| `output-formatter-pdf`     | Convert markdown to PDF-ready format                         | `{markdown}`                                                 | Fast       |
 
 ### Customizing Prompts
 
@@ -890,16 +1022,16 @@ Each generation includes rich metadata:
 
 ## Testing
 
-The pipeline is designed for easy testing with `FakeChatModel` and mock data.
+The pipeline is designed for easy testing with `FakeChatModel` and mock data. Autonomous mode simplifies testing by removing HITL interrupt gates.
 
-### Testing with FakeChatModel
+### Testing Autonomous Mode
 
 ```typescript
 import { FakeChatModel } from '@langchain/core/utils/testing';
 import { createContentCreationFlow } from '@automaker/flows';
 
-describe('Content Creation Flow', () => {
-  it('should generate content end-to-end', async () => {
+describe('Content Creation Flow - Autonomous Mode', () => {
+  it('should generate content end-to-end autonomously', async () => {
     // Mock models with predefined responses
     const smartModel = new FakeChatModel({
       responses: [
@@ -911,8 +1043,8 @@ describe('Content Creation Flow', () => {
         // Section writer responses
         '<section><title>Intro</title><content>Introduction content</content></section>',
         '<section><title>Main</title><content>Main content</content></section>',
-        // Antagonistic reviewer response
-        '<review><scores><hook>8</hook><clarity>9</clarity>...</scores></review>',
+        // Antagonistic reviewer response (auto-approves with 7+ scores)
+        '<review><scores><hook>8</hook><clarity>9</clarity><value>8</value><engagement>7</engagement><seo>8</seo><credibility>7</credibility><cta>8</cta><completion>9</completion></scores></review>',
       ],
     });
 
@@ -928,6 +1060,7 @@ describe('Content Creation Flow', () => {
       ],
     });
 
+    // No checkpointer = autonomous mode
     const flow = createContentCreationFlow();
 
     const result = await flow.invoke({
@@ -942,16 +1075,88 @@ describe('Content Creation Flow', () => {
       },
     });
 
-    // Auto-approve all HITL gates
-    await flow.updateState(result.threadId, { researchApproved: true });
-    await flow.updateState(result.threadId, { outlineApproved: true });
-    await flow.updateState(result.threadId, { reviewApproved: true });
+    // No manual approvals needed - runs to completion
+    expect(result.approved).toBe(true);
+    expect(result.outputs).toHaveLength(2);
+    expect(result.outputs[0].format).toBe('markdown');
+    expect(result.outputs[1].format).toBe('html');
+    expect(result.reviewScores.hook).toBeGreaterThanOrEqual(7);
+  });
+
+  it('should regenerate on low review scores', async () => {
+    const smartModel = new FakeChatModel({
+      responses: [
+        // ... research and outline responses
+        // First generation attempt (low quality)
+        '<section><title>Poor</title><content>Low quality content</content></section>',
+        // Antagonistic reviewer rejects (scores below 7)
+        '<review><scores><hook>4</hook><clarity>5</clarity><value>3</value><engagement>5</engagement><seo>4</seo><credibility>5</credibility><cta>4</cta><completion>5</completion></scores></review>',
+        // Second generation attempt (high quality)
+        '<section><title>Good</title><content>High quality content</content></section>',
+        // Antagonistic reviewer approves (scores 7+)
+        '<review><scores><hook>8</hook><clarity>9</clarity><value>8</value><engagement>7</engagement><seo>8</seo><credibility>7</credibility><cta>8</cta><completion>9</completion></scores></review>',
+      ],
+    });
+
+    const flow = createContentCreationFlow();
+
+    const result = await flow.invoke({
+      config: {
+        topic: 'Test Topic',
+        format: 'tutorial',
+        tone: 'technical',
+        audience: 'beginner',
+        outputFormats: ['markdown'],
+        smartModel,
+        fastModel: new FakeChatModel({ responses: ['...'] }),
+      },
+    });
+
+    // Should regenerate and eventually approve
+    expect(result.approved).toBe(true);
+    expect(result.regenerationCount).toBe(1); // One regeneration cycle
+  });
+});
+```
+
+### Testing HITL Overlay Mode
+
+```typescript
+import { MemorySaver } from '@langchain/langgraph';
+
+describe('Content Creation Flow - HITL Mode', () => {
+  it('should interrupt for human review', async () => {
+    // Enable HITL with checkpointer
+    const flow = createContentCreationFlow({
+      checkpointer: new MemorySaver(),
+      interruptBefore: ['final_review'],
+    });
+
+    const result = await flow.invoke({
+      config: {
+        topic: 'Test Topic',
+        format: 'tutorial',
+        tone: 'technical',
+        audience: 'beginner',
+        outputFormats: ['markdown'],
+        smartModel: new FakeChatModel({ responses: ['...'] }),
+        fastModel: new FakeChatModel({ responses: ['...'] }),
+      },
+    });
+
+    // Flow should interrupt at final_review
+    const state = await flow.getState(result.threadId);
+    expect(state.interrupted).toBe(true);
+    expect(state.reviewScores).toBeDefined();
+
+    // Human approves
+    await flow.updateState(result.threadId, {
+      reviewApproved: true,
+      reviewFeedback: 'Looks good',
+    });
 
     const finalState = await flow.invoke(null, { threadId: result.threadId });
-
-    expect(finalState.outputs).toHaveLength(2);
-    expect(finalState.outputs[0].format).toBe('markdown');
-    expect(finalState.outputs[1].format).toBe('html');
+    expect(finalState.outputs).toHaveLength(1);
   });
 });
 ```
