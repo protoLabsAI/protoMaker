@@ -15,6 +15,9 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage"
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "keywords": [
     "mcp",
     "automaker",

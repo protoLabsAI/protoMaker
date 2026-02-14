@@ -36,13 +36,13 @@ features:
 
 ## Quick Links
 
-| Service  | URL                                                                         | Description                       |
-| -------- | --------------------------------------------------------------------------- | --------------------------------- |
-| GitHub   | [proto-labs-ai/automaker](https://github.com/proto-labs-ai/automaker)       | Source code, issues, PRs          |
-| Linear   | [protolabsai](https://linear.app/protolabsai)                               | Strategic roadmap and initiatives |
-| Graphite | [proto-labs-ai](https://app.graphite.dev/github/pr/proto-labs-ai/automaker) | Stacked PR dashboard              |
-| Discord  | [Agentic Jumpstart](https://discord.gg/jjem7aEDKU)                          | Community and team chat           |
+| Service  | URL                                                                                 | Description                       |
+| -------- | ----------------------------------------------------------------------------------- | --------------------------------- |
+| GitHub   | [proto-labs-ai/protolabs-studio](https://github.com/proto-labs-ai/protolabs-studio) | Source code, issues, PRs          |
+| Linear   | [protolabsai](https://linear.app/protolabsai)                                       | Strategic roadmap and initiatives |
+| Graphite | [proto-labs-ai](https://app.graphite.dev/github/pr/proto-labs-ai/protolabs-studio)  | Stacked PR dashboard              |
+| Discord  | [Agentic Jumpstart](https://discord.gg/jjem7aEDKU)                                  | Community and team chat           |
 
 ---
 
-<small>Built with <a href="https://github.com/proto-labs-ai/automaker">Automaker</a> — the open-source autonomous AI development studio that powers protoLabs.</small>
+<small>Built with <a href="https://github.com/proto-labs-ai/protolabs-studio">Automaker</a> — the open-source autonomous AI development studio that powers protoLabs.</small>
