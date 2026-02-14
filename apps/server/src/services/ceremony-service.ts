@@ -16,6 +16,8 @@ import type { MetricsService } from './metrics-service.js';
 import type { Feature, CeremonySettings } from '@automaker/types';
 import { simpleQuery } from '../providers/simple-query-service.js';
 import { BeadsService } from './beads-service.js';
+import { secureFs } from '@automaker/platform';
+import path from 'path';
 
 const logger = createLogger('CeremonyService');
 
@@ -429,6 +431,13 @@ ${dataSummary}`;
         } catch (error) {
           logger.error('Failed to generate impact report:', error);
         }
+      }
+
+      // Generate reflection loop - synthesize agent memory into project-level learning summary
+      try {
+        await this.generateReflectionLoop(projectPath, projectTitle, model);
+      } catch (error) {
+        logger.error('Failed to generate reflection loop summary:', error);
       }
 
       // Format the retrospective with header and impact report
@@ -991,6 +1000,149 @@ Keep it engaging, benefits-focused, and suitable for a technical audience.`;
     // Format the output with header
     const verdictEmoji = verdict === 'approved' ? '✅' : '⚠️';
     return `${verdictEmoji} **Content Brief Generated**: ${feature.title}\n\n${outline}`;
+  }
+
+  /**
+   * Generate reflection loop - synthesize agent memory into project-level learning summary
+   * Collects all .automaker/memory/*.md entries, synthesizes into 1-page summary, stores in project directory
+   */
+  private async generateReflectionLoop(
+    projectPath: string,
+    projectTitle: string,
+    model: string
+  ): Promise<void> {
+    logger.info(`Generating reflection loop for project: ${projectTitle}`);
+
+    // Collect all memory files
+    const memoryDir = path.join(projectPath, '.automaker', 'memory');
+    let memoryFiles: string[] = [];
+
+    try {
+      const entries = await secureFs.readdir(memoryDir, { withFileTypes: true });
+      memoryFiles = entries
+        .filter((entry) => entry.isFile() && entry.name.endsWith('.md'))
+        .map((entry) => entry.name);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        logger.info('No memory directory found, skipping reflection loop');
+        return;
+      }
+      throw error;
+    }
+
+    if (memoryFiles.length === 0) {
+      logger.info('No memory files found, skipping reflection loop');
+      return;
+    }
+
+    // Read all memory file contents
+    const memoryEntries = await this.collectMemoryEntries(memoryDir, memoryFiles);
+
+    // Synthesize into project-level learning summary
+    const learningSummary = await this.synthesizeLearningSummary(
+      projectTitle,
+      memoryEntries,
+      model
+    );
+
+    // Store summary in project directory
+    await this.storeLearningSummary(projectPath, projectTitle, learningSummary);
+
+    logger.info(`Reflection loop complete for ${projectTitle}`);
+  }
+
+  /**
+   * Collect and parse memory entries from all memory files
+   */
+  private async collectMemoryEntries(
+    memoryDir: string,
+    memoryFiles: string[]
+  ): Promise<Array<{ filename: string; content: string }>> {
+    const entries: Array<{ filename: string; content: string }> = [];
+
+    for (const filename of memoryFiles) {
+      try {
+        const filePath = path.join(memoryDir, filename);
+        const rawContent = await secureFs.readFile(filePath, 'utf-8');
+        const content = typeof rawContent === 'string' ? rawContent : rawContent.toString('utf-8');
+        entries.push({ filename, content });
+      } catch (error) {
+        logger.warn(`Failed to read memory file ${filename}:`, error);
+      }
+    }
+
+    return entries;
+  }
+
+  /**
+   * Synthesize memory entries into a project-level learning summary using LLM
+   */
+  private async synthesizeLearningSummary(
+    projectTitle: string,
+    memoryEntries: Array<{ filename: string; content: string }>,
+    model: string
+  ): Promise<string> {
+    // Build memory content for LLM
+    const memoryContent = memoryEntries
+      .map((entry) => `## Memory File: ${entry.filename}\n\n${entry.content}`)
+      .join('\n\n---\n\n');
+
+    const prompt = `You are synthesizing project-level learning from agent memory files created during project implementation.
+
+**Project:** ${projectTitle}
+
+**Task:** Analyze the memory files below and create a concise 1-page learning summary covering:
+
+1. **Key Patterns Discovered**: Reusable architectural patterns, implementation approaches, or technical solutions that worked well
+2. **Critical Gotchas**: Important pitfalls, edge cases, or mistakes to avoid in future similar work
+3. **Organizational Knowledge**: Cross-cutting insights that apply beyond this specific project
+4. **Recommended Practices**: Concrete recommendations for future projects based on what was learned
+
+Focus on insights that will help future projects. Extract patterns, not implementation details. Keep it actionable and concise (1 page max).
+
+**Memory Files:**
+
+${memoryContent}`;
+
+    logger.info(`Synthesizing learning summary for ${projectTitle} using model: ${model}`);
+
+    const result = await simpleQuery({
+      prompt,
+      model,
+      cwd: path.dirname(memoryEntries[0]?.filename || '.'),
+      maxTurns: 1,
+      allowedTools: [],
+    });
+
+    return result.text;
+  }
+
+  /**
+   * Store learning summary in project directory
+   */
+  private async storeLearningSummary(
+    projectPath: string,
+    projectTitle: string,
+    summary: string
+  ): Promise<void> {
+    const summaryPath = path.join(projectPath, 'PROJECT_LEARNINGS.md');
+
+    const formattedSummary = `# Project Learning Summary: ${projectTitle}
+
+**Generated:** ${new Date().toISOString()}
+
+---
+
+${summary}
+
+---
+
+*This summary was automatically generated from agent memory files during project completion.*
+*It synthesizes key patterns, gotchas, and organizational knowledge for future reference.*
+`;
+
+    await secureFs.writeFile(summaryPath, formattedSummary);
+    logger.info(`Stored learning summary at: ${summaryPath}`);
   }
 
   /**
