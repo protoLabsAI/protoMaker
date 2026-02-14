@@ -87,7 +87,80 @@ function parseXmlFindings(xmlText: string, reviewer: string): ReviewFinding[] {
 }
 
 /**
- * Fallback heuristic checks when LLM call fails
+ * Parse 8-dimension scoring rubric from LLM response
+ */
+interface DimensionScore {
+  dimension: string;
+  score: number;
+  evidence: string;
+  suggestion: string;
+}
+
+interface ScoringResult {
+  dimensions: DimensionScore[];
+  totalScore: number;
+  maxScore: number;
+  percentage: number;
+  verdict: 'PASS' | 'REVISE' | 'FAIL';
+  autoFailReasons: string[];
+}
+
+function parseScoring(responseText: string): ScoringResult {
+  const dimensions: DimensionScore[] = [];
+  const autoFailReasons: string[] = [];
+
+  // Extract dimension scores using regex
+  const dimensionRegex =
+    /<dimension>\s*<name>(.*?)<\/name>\s*<score>(\d+)<\/score>\s*<evidence>([\s\S]*?)<\/evidence>\s*<suggestion>([\s\S]*?)<\/suggestion>\s*<\/dimension>/g;
+  let match;
+
+  while ((match = dimensionRegex.exec(responseText)) !== null) {
+    const dimension = match[1].trim();
+    const score = parseInt(match[2], 10);
+    const evidence = match[3].trim();
+    const suggestion = match[4].trim();
+
+    dimensions.push({ dimension, score, evidence, suggestion });
+
+    // Check auto-fail conditions
+    if (dimension.toLowerCase().includes('headline') && score < 4) {
+      autoFailReasons.push(`Headline score ${score}/10 is below threshold (must be ≥4)`);
+    }
+    if (dimension.toLowerCase().includes('hook') && score < 4) {
+      autoFailReasons.push(`Hook score ${score}/10 is below threshold (must be ≥4)`);
+    }
+    if (dimension.toLowerCase().includes('scannability') && score < 5) {
+      autoFailReasons.push(`Scannability score ${score}/10 is below threshold (must be ≥5)`);
+    }
+  }
+
+  // Calculate total score and percentage
+  const totalScore = dimensions.reduce((sum, d) => sum + d.score, 0);
+  const maxScore = dimensions.length * 10;
+  const percentage = maxScore > 0 ? (totalScore / maxScore) * 100 : 0;
+
+  // Determine verdict based on percentage and auto-fail conditions
+  let verdict: 'PASS' | 'REVISE' | 'FAIL';
+  if (autoFailReasons.length > 0 || percentage < 50) {
+    verdict = 'FAIL';
+  } else if (percentage < 75) {
+    verdict = 'REVISE';
+  } else {
+    verdict = 'PASS';
+  }
+
+  return {
+    dimensions,
+    totalScore,
+    maxScore,
+    percentage,
+    verdict,
+    autoFailReasons,
+  };
+}
+
+/**
+ * Fallback heuristic checks when LLM call fails (TechnicalReviewer)
  */
 function runHeuristicChecks(content: string): ReviewFinding[] {
   const findings: ReviewFinding[] = [];
@@ -126,6 +199,73 @@ function runHeuristicChecks(content: string): ReviewFinding[] {
       severity: 'warning',
       message: 'Performance claims should be backed by benchmarks or data',
       suggestion: 'Add benchmark results or comparative data',
+      timestamp,
+    });
+  }
+
+  return findings;
+}
+
+/**
+ * Fallback heuristic checks when LLM call fails (StyleReviewer)
+ */
+function runStyleHeuristicChecks(content: string): ReviewFinding[] {
+  const findings: ReviewFinding[] = [];
+  const timestamp = new Date().toISOString();
+
+  logger.info('Running fallback style heuristic checks...');
+
+  // Check for overly long sentences
+  const sentences = content.split(/[.!?]+/).filter((s) => s.trim().length > 0);
+  const longSentences = sentences.filter((s) => s.split(' ').length > 30);
+
+  if (longSentences.length > 0) {
+    findings.push({
+      reviewer: 'StyleReviewer',
+      severity: 'warning',
+      message: `Found ${longSentences.length} sentence(s) longer than 30 words`,
+      suggestion: 'Break up long sentences for better readability',
+      timestamp,
+    });
+  }
+
+  // Check for passive voice indicators
+  const passiveIndicators = ['is being', 'was being', 'has been', 'had been', 'will be'];
+  const hasPassiveVoice = passiveIndicators.some((indicator) =>
+    content.toLowerCase().includes(indicator)
+  );
+
+  if (hasPassiveVoice) {
+    findings.push({
+      reviewer: 'StyleReviewer',
+      severity: 'info',
+      message: 'Passive voice detected in content',
+      suggestion: 'Consider using active voice for clearer, more direct writing',
+      timestamp,
+    });
+  }
+
+  // Check for consistent heading structure
+  const headings = content.match(/^#{1,6}\s+.+$/gm) || [];
+  if (headings.length > 0) {
+    findings.push({
+      reviewer: 'StyleReviewer',
+      severity: 'info',
+      message: `Document structure includes ${headings.length} heading(s)`,
+      timestamp,
+    });
+  }
+
+  // Check tone appropriateness
+  const informalWords = ['gonna', 'wanna', 'kinda', 'sorta', 'yeah', 'nah'];
+  const hasInformalLanguage = informalWords.some((word) => content.toLowerCase().includes(word));
+
+  if (hasInformalLanguage) {
+    findings.push({
+      reviewer: 'StyleReviewer',
+      severity: 'warning',
+      message: 'Informal language detected',
+      suggestion: 'Use formal language for professional documentation',
       timestamp,
     });
   }
@@ -256,67 +396,157 @@ export async function technicalReviewerNode(
 
 /**
  * StyleReviewer node
- * Checks tone consistency, readability, and audience appropriateness
+ * Checks tone consistency, readability, and audience appropriateness using 8-dimension antagonistic scoring
  */
 export async function styleReviewerNode(
   state: ReviewWorkerState
 ): Promise<Partial<ReviewWorkerState>> {
-  const { content } = state;
-  const findings: ReviewFinding[] = [];
+  const { content, model, langfuseClient, traceId } = state;
+  let findings: ReviewFinding[] = [];
 
-  // Check for overly long sentences
-  const sentences = content.split(/[.!?]+/).filter((s) => s.trim().length > 0);
-  const longSentences = sentences.filter((s) => s.split(' ').length > 30);
-
-  if (longSentences.length > 0) {
-    findings.push({
-      reviewer: 'StyleReviewer',
-      severity: 'warning',
-      message: `Found ${longSentences.length} sentence(s) longer than 30 words`,
-      suggestion: 'Break up long sentences for better readability',
-      timestamp: new Date().toISOString(),
-    });
+  // If no model available, fall back to heuristics
+  if (!model) {
+    logger.warn('No LLM model available for StyleReviewer, using heuristic checks only');
+    findings = runStyleHeuristicChecks(content);
+    return { findings };
   }
 
-  // Check for passive voice indicators
-  const passiveIndicators = ['is being', 'was being', 'has been', 'had been', 'will be'];
-  const hasPassiveVoice = passiveIndicators.some((indicator) =>
-    content.toLowerCase().includes(indicator)
-  );
+  try {
+    logger.info('Starting LLM-based style review with 8-dimension scoring...');
 
-  if (hasPassiveVoice) {
+    // Build the prompt using compilePrompt (loads from prompts/style-reviewer.md)
+    const compiled = await compilePrompt({
+      name: 'style-reviewer',
+      variables: {
+        content,
+        content_type: 'blog-post',
+        blog_template: 'tutorial',
+        revenue_goal: 'medium',
+        target_length: content.split(/\s+/).length,
+        seo_keywords: 'N/A',
+        internal_links: 'N/A',
+      },
+      langfuseClient,
+    });
+
+    // Create Langfuse generation trace if available
+    const generationStartTime = new Date();
+    let generationId: string | undefined;
+
+    if (langfuseClient?.isAvailable() && traceId) {
+      generationId = `gen-style-review-${Date.now()}`;
+      langfuseClient.createGeneration({
+        traceId,
+        id: generationId,
+        name: 'style-review',
+        model: 'style-reviewer-model',
+        input: compiled.prompt,
+        metadata: {
+          contentLength: content.length,
+          reviewType: 'style',
+          promptSource: compiled.source,
+        },
+        startTime: generationStartTime,
+      });
+    }
+
+    // Invoke model directly (follows section-writer pattern)
+    const response = await model.invoke([{ role: 'user', content: compiled.prompt }]);
+
+    // Extract content from response
+    let responseText = '';
+    if (typeof response.content === 'string') {
+      responseText = response.content;
+    } else if (Array.isArray(response.content)) {
+      responseText = response.content
+        .map((c: unknown) => {
+          if (typeof c === 'string') return c;
+          if (c && typeof c === 'object' && 'text' in c) return (c as { text: string }).text;
+          return '';
+        })
+        .join('');
+    }
+
+    // Update Langfuse trace
+    if (langfuseClient?.isAvailable() && traceId && generationId) {
+      langfuseClient.createGeneration({
+        traceId,
+        id: generationId,
+        name: 'style-review',
+        model: 'style-reviewer-model',
+        input: compiled.prompt,
+        output: responseText,
+        metadata: {
+          contentLength: content.length,
+          reviewType: 'style',
+          success: true,
+        },
+        startTime: generationStartTime,
+        endTime: new Date(),
+      });
+      await langfuseClient.flush();
+    }
+
+    logger.debug('LLM response received, parsing scoring rubric...');
+
+    // Parse 8-dimension scoring from response
+    const scoringResult = parseScoring(responseText);
+
+    logger.info(
+      `Style review complete: ${scoringResult.verdict} (${scoringResult.percentage.toFixed(1)}%, ${scoringResult.totalScore}/${scoringResult.maxScore})`
+    );
+
+    // Convert scoring dimensions to findings
+    findings = scoringResult.dimensions.map((dim) => {
+      let severity: ReviewSeverity = 'info';
+      if (dim.score < 5) {
+        severity = 'error';
+      } else if (dim.score < 7) {
+        severity = 'warning';
+      }
+
+      return {
+        reviewer: 'StyleReviewer',
+        severity,
+        message: `${dim.dimension}: ${dim.score}/10 - ${dim.evidence}`,
+        suggestion: dim.suggestion,
+        timestamp: new Date().toISOString(),
+      };
+    });
+
+    // Add verdict as a finding
+    const verdictMessage = `Overall verdict: ${scoringResult.verdict} (${scoringResult.percentage.toFixed(1)}%, ${scoringResult.totalScore}/${scoringResult.maxScore})`;
     findings.push({
       reviewer: 'StyleReviewer',
-      severity: 'info',
-      message: 'Passive voice detected in content',
-      suggestion: 'Consider using active voice for clearer, more direct writing',
+      severity:
+        scoringResult.verdict === 'FAIL'
+          ? 'error'
+          : scoringResult.verdict === 'REVISE'
+            ? 'warning'
+            : 'info',
+      message: verdictMessage,
       timestamp: new Date().toISOString(),
     });
-  }
 
-  // Check for consistent heading structure
-  const headings = content.match(/^#{1,6}\s+.+$/gm) || [];
-  if (headings.length > 0) {
-    findings.push({
-      reviewer: 'StyleReviewer',
-      severity: 'info',
-      message: `Document structure includes ${headings.length} heading(s)`,
-      timestamp: new Date().toISOString(),
-    });
-  }
+    // Add auto-fail reasons if present
+    if (scoringResult.autoFailReasons.length > 0) {
+      findings.push({
+        reviewer: 'StyleReviewer',
+        severity: 'error',
+        message: `Auto-fail conditions triggered: ${scoringResult.autoFailReasons.join('; ')}`,
+        suggestion: 'Address critical dimensions before proceeding',
+        timestamp: new Date().toISOString(),
+      });
+    }
 
-  // Check tone appropriateness
-  const informalWords = ['gonna', 'wanna', 'kinda', 'sorta', 'yeah', 'nah'];
-  const hasInformalLanguage = informalWords.some((word) => content.toLowerCase().includes(word));
-
-  if (hasInformalLanguage) {
-    findings.push({
-      reviewer: 'StyleReviewer',
-      severity: 'warning',
-      message: 'Informal language detected',
-      suggestion: 'Use formal language for professional documentation',
-      timestamp: new Date().toISOString(),
-    });
+    // If no dimensions were parsed, fall back to heuristics
+    if (scoringResult.dimensions.length === 0) {
+      logger.warn('No scoring dimensions parsed from LLM response, using heuristics');
+      findings = runStyleHeuristicChecks(content);
+    }
+  } catch (error) {
+    logger.error('Error during LLM-based style review, falling back to heuristics', error);
+    findings = runStyleHeuristicChecks(content);
   }
 
   return { findings };
