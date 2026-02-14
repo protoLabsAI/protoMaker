@@ -271,7 +271,14 @@ export type EventType =
   | 'ledger:backfill-completed'
   // Feature archival events (board cleanup)
   | 'feature:archived'
-  | 'archival:cycle-completed';
+  | 'archival:cycle-completed'
+  // GitHub PR state change events (emitted by GitHubStateChecker)
+  | 'github:pr:review-submitted'
+  | 'github:pr:checks-updated'
+  | 'github:pr:approved'
+  | 'github:pr:changes-requested'
+  // GitHub state drift events (PR to Linear sync bridge)
+  | 'github-state-drift';
 
 export type EventCallback = (type: EventType, payload: unknown) => void;
 
@@ -335,5 +342,85 @@ export interface PRThreadsResolvedPayload {
   /** Whether PR is now ready for approval */
   readyForReview: boolean;
   /** Timestamp when all threads were resolved */
+  timestamp: string;
+}
+
+/**
+ * GitHub PR State Change Event Payloads
+ * Emitted by GitHubStateChecker when PR state changes are detected
+ */
+
+/**
+ * github:pr:review-submitted - Fired when a new review is submitted on a PR
+ */
+export interface GitHubPRReviewSubmittedPayload {
+  /** Project path */
+  projectPath: string;
+  /** Feature ID associated with the PR */
+  featureId: string;
+  /** PR number in GitHub */
+  prNumber: number;
+  /** Branch name */
+  branchName: string;
+  /** Review state (APPROVED, CHANGES_REQUESTED, COMMENTED) */
+  reviewState: 'APPROVED' | 'CHANGES_REQUESTED' | 'COMMENTED';
+  /** Timestamp of the event */
+  timestamp: string;
+}
+
+/**
+ * github:pr:checks-updated - Fired when CI checks status changes
+ */
+export interface GitHubPRChecksUpdatedPayload {
+  /** Project path */
+  projectPath: string;
+  /** Feature ID associated with the PR */
+  featureId: string;
+  /** PR number in GitHub */
+  prNumber: number;
+  /** Branch name */
+  branchName: string;
+  /** CI status (success, failure, pending, error) */
+  ciStatus: 'success' | 'failure' | 'pending' | 'error';
+  /** Failed checks if any */
+  failedChecks?: Array<{
+    name: string;
+    conclusion: string;
+  }>;
+  /** Timestamp of the event */
+  timestamp: string;
+}
+
+/**
+ * github:pr:approved - Fired when a PR receives approval
+ */
+export interface GitHubPRApprovedPayload {
+  /** Project path */
+  projectPath: string;
+  /** Feature ID associated with the PR */
+  featureId: string;
+  /** PR number in GitHub */
+  prNumber: number;
+  /** Branch name */
+  branchName: string;
+  /** Number of approvals */
+  approvalCount: number;
+  /** Timestamp of the event */
+  timestamp: string;
+}
+
+/**
+ * github:pr:changes-requested - Fired when changes are requested on a PR
+ */
+export interface GitHubPRChangesRequestedPayload {
+  /** Project path */
+  projectPath: string;
+  /** Feature ID associated with the PR */
+  featureId: string;
+  /** PR number in GitHub */
+  prNumber: number;
+  /** Branch name */
+  branchName: string;
+  /** Timestamp of the event */
   timestamp: string;
 }

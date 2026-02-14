@@ -135,6 +135,10 @@ export type {
   PRRemediationStartedPayload,
   PRThreadEvaluatedPayload,
   PRThreadsResolvedPayload,
+  GitHubPRReviewSubmittedPayload,
+  GitHubPRChecksUpdatedPayload,
+  GitHubPRApprovedPayload,
+  GitHubPRChangesRequestedPayload,
 } from './event.js';
 
 // Spec types
