@@ -8,6 +8,7 @@
  *   - Features in in_progress with unsatisfied deps
  *
  * Escalates when: any findings at warning level
+ * Emits escalation signals through EscalationRouter for anomaly tracking
  */
 
 import type {
@@ -15,6 +16,7 @@ import type {
   CrewCheckContext,
   CrewCheckResult,
 } from '../crew-loop-service.js';
+import { EscalationSource, EscalationSeverity } from '@automaker/types';
 
 const ORPHANED_IN_PROGRESS_THRESHOLD_MS = 4 * 60 * 60 * 1000; // 4 hours
 
@@ -90,6 +92,22 @@ export const boardJanitorCrewMember: CrewMemberDefinition = {
                   },
                 });
                 raise('warning');
+
+                // Emit escalation signal for orphaned in-progress anomaly
+                ctx.events.emit('escalation:signal-received', {
+                  source: EscalationSource.board_anomaly,
+                  severity: EscalationSeverity.medium,
+                  type: 'orphaned_in_progress',
+                  context: {
+                    featureId: feature.id,
+                    featureTitle: feature.title,
+                    hoursInProgress,
+                    projectPath,
+                    startedAt,
+                  },
+                  deduplicationKey: `orphaned_in_progress_${feature.id}`,
+                  timestamp: new Date().toISOString(),
+                });
               }
             }
           }
@@ -118,6 +136,22 @@ export const boardJanitorCrewMember: CrewMemberDefinition = {
                 },
               });
               raise('warning');
+
+              // Emit escalation signal for broken dependency chain
+              ctx.events.emit('escalation:signal-received', {
+                source: EscalationSource.board_anomaly,
+                severity: EscalationSeverity.medium,
+                type: 'stale_dependencies',
+                context: {
+                  featureId: feature.id,
+                  featureTitle: feature.title,
+                  dependencies: feature.dependencies,
+                  doneDependencies: doneDeps,
+                  projectPath,
+                },
+                deduplicationKey: `stale_deps_${feature.id}`,
+                timestamp: new Date().toISOString(),
+              });
             }
           }
         }
@@ -141,6 +175,22 @@ export const boardJanitorCrewMember: CrewMemberDefinition = {
                 },
               });
               raise('warning');
+
+              // Emit escalation signal for broken dependency chain (in-progress with unmet deps)
+              ctx.events.emit('escalation:signal-received', {
+                source: EscalationSource.board_anomaly,
+                severity: EscalationSeverity.high,
+                type: 'unsatisfied_dependencies',
+                context: {
+                  featureId: feature.id,
+                  featureTitle: feature.title,
+                  dependencies: feature.dependencies,
+                  unsatisfiedDependencies: unsatisfiedDeps,
+                  projectPath,
+                },
+                deduplicationKey: `unsatisfied_deps_${feature.id}`,
+                timestamp: new Date().toISOString(),
+              });
             }
           }
         }
