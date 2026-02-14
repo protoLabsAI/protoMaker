@@ -36,6 +36,7 @@ mcp__plugin_automaker_automaker__create_content({
 ## Returns
 
 Returns an object with:
+
 - **runId**: Unique identifier for this flow execution
 - **status**: Initial status object containing:
   - **status**: Current status ('running', 'interrupted', 'completed', 'failed')

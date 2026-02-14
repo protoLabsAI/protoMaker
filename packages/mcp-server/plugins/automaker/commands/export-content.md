@@ -53,6 +53,7 @@ mcp__plugin_automaker_automaker__export_content({
 ## Returns
 
 Returns an object with:
+
 - **success**: Whether the export succeeded
 - **filePath**: Path to the exported file (if successful)
 - **error**: Error message (if failed)
@@ -69,16 +70,21 @@ Returns an object with:
 ## Export Formats
 
 ### markdown
+
 Plain markdown file, identical to the generated content:
+
 ```markdown
 # Title
 
 ## Section 1
+
 Content...
 ```
 
 ### frontmatter-md
+
 Markdown with YAML frontmatter header:
+
 ```markdown
 ---
 title: Generated Content
@@ -88,17 +94,22 @@ date: 2024-01-15T10:30:00Z
 # Title
 
 ## Section 1
+
 Content...
 ```
 
 ### jsonl
+
 JSON Lines format (one JSON object per line):
+
 ```json
-{"content":"# Title\n\n## Section 1\nContent...","createdAt":1234567890000}
+{ "content": "# Title\n\n## Section 1\nContent...", "createdAt": 1234567890000 }
 ```
 
 ### hf-dataset
+
 HuggingFace dataset JSON format:
+
 ```json
 {
   "text": "# Title\n\n## Section 1\nContent...",

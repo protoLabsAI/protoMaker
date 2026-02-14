@@ -34,6 +34,7 @@ mcp__plugin_automaker_automaker__list_content({
 ## Returns
 
 Returns an object with:
+
 - **content**: Array of content metadata objects, each containing:
   - **runId**: Unique identifier for the flow run
   - **topic**: Content topic
@@ -70,6 +71,7 @@ Returns an object with:
 ## Content Storage
 
 Generated content is stored in `.automaker/content/{runId}/` with:
+
 - `content.md` - Markdown output
 - `content.html` - HTML output (if requested)
 - `content.pdf` - PDF output (if requested)

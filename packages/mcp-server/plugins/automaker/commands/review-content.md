@@ -55,6 +55,7 @@ mcp__plugin_automaker_automaker__review_content({
 ## Returns
 
 Returns an object with:
+
 - **success**: Whether the review was submitted successfully
 - **status**: Updated flow status object
 
@@ -77,12 +78,15 @@ Returns an object with:
 ## HITL Gates
 
 ### 1. research_hitl (20% progress)
+
 Review parallel research findings before outline generation. Approve to proceed or revise to regenerate research with new queries.
 
 ### 2. outline_hitl (40% progress)
+
 Review the generated content outline. Approve to start content generation or revise to regenerate the outline.
 
 ### 3. final_review_hitl (80% progress)
+
 Final review of assembled content before output generation. Approve to generate outputs or revise to regenerate sections.
 
 ## Decision Outcomes

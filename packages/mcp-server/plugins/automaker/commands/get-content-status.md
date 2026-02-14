@@ -23,6 +23,7 @@ mcp__plugin_automaker_automaker__get_content_status({
 ## Returns
 
 Returns a status object with:
+
 - **runId**: The flow run identifier
 - **status**: Current status ('running', 'interrupted', 'completed', 'failed')
 - **currentNode**: Current graph node being executed (if interrupted)
