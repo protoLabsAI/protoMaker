@@ -12,15 +12,15 @@ Research(parallel) → HITL → Outline → HITL → Generation(parallel) → As
 
 ### Phase Breakdown
 
-| Phase | Parallelism | HITL Gate | Purpose |
-|-------|-------------|-----------|---------|
-| 1. Research | ✓ Send() | ✓ After research | Generate research queries, fan out to parallel research workers |
-| 2. Outline | - | ✓ After outline | Generate content outline from research findings |
-| 3. Generation | ✓ Send() | - | Fan out to parallel SectionWriter subgraphs |
-| 4. Assembly | - | - | Combine sections into cohesive document |
-| 5. Review | ✓ Send() | ✓ After review | Fan out to parallel section reviewers |
-| 6. Output | ✓ Send() | - | Generate multiple output formats (markdown, html, pdf) |
-| 7. Complete | - | - | Finalize metadata and close trace |
+| Phase         | Parallelism | HITL Gate        | Purpose                                                         |
+| ------------- | ----------- | ---------------- | --------------------------------------------------------------- |
+| 1. Research   | ✓ Send()    | ✓ After research | Generate research queries, fan out to parallel research workers |
+| 2. Outline    | -           | ✓ After outline  | Generate content outline from research findings                 |
+| 3. Generation | ✓ Send()    | -                | Fan out to parallel SectionWriter subgraphs                     |
+| 4. Assembly   | -           | -                | Combine sections into cohesive document                         |
+| 5. Review     | ✓ Send()    | ✓ After review   | Fan out to parallel section reviewers                           |
+| 6. Output     | ✓ Send()    | -                | Generate multiple output formats (markdown, html, pdf)          |
+| 7. Complete   | -           | -                | Finalize metadata and close trace                               |
 
 ### Send() Parallelism Points
 
@@ -56,9 +56,9 @@ Three interrupt points allow human review and revision:
 graph.compile({
   checkpointer: new MemorySaver(),
   interruptBefore: [
-    'research_hitl',       // Approve/revise research findings
-    'outline_hitl',        // Approve/revise content outline
-    'final_review_hitl',   // Approve/revise assembled content
+    'research_hitl', // Approve/revise research findings
+    'outline_hitl', // Approve/revise content outline
+    'final_review_hitl', // Approve/revise assembled content
   ],
 });
 ```
@@ -170,13 +170,14 @@ const techDoc: TechDoc = {
 
 Input/output pairs for fine-tuning models.
 
-```typescript
+````typescript
 import { TrainingExampleSchema, type TrainingExample } from '@automaker/types';
 
 const example: TrainingExample = {
   type: 'training-example',
   input: 'How do I create a LangGraph flow with parallel execution?',
-  output: 'Use Send() to fan out to multiple parallel nodes:\n\n```typescript\nconst sends = sections.map(s => new Send("worker", { ...state, section: s }));\nreturn new Command({ goto: sends });\n```',
+  output:
+    'Use Send() to fan out to multiple parallel nodes:\n\n```typescript\nconst sends = sections.map(s => new Send("worker", { ...state, section: s }));\nreturn new Command({ goto: sends });\n```',
   metadata: {
     source: 'generated',
     quality: 0.95,
@@ -187,13 +188,13 @@ const example: TrainingExample = {
   },
   tags: ['langgraph', 'parallel', 'send'],
 };
-```
+````
 
 ### HFDatasetRow
 
 HuggingFace dataset format with chat messages.
 
-```typescript
+````typescript
 import { HFDatasetRowSchema, type HFDatasetRow } from '@automaker/types';
 
 const row: HFDatasetRow = {
@@ -209,7 +210,8 @@ const row: HFDatasetRow = {
     },
     {
       role: 'assistant',
-      content: 'Use the interruptBefore option when compiling:\n\n```typescript\ngraph.compile({ checkpointer, interruptBefore: ["review_node"] });\n```',
+      content:
+        'Use the interruptBefore option when compiling:\n\n```typescript\ngraph.compile({ checkpointer, interruptBefore: ["review_node"] });\n```',
     },
   ],
   metadata: {
@@ -219,7 +221,7 @@ const row: HFDatasetRow = {
     domain: 'langgraph',
   },
 };
-```
+````
 
 ## ContentConfig Reference
 
@@ -228,15 +230,15 @@ The `ContentConfig` interface controls flow behavior and output formatting:
 ```typescript
 export interface ContentConfig {
   // Core config
-  topic: string;                // Content topic/subject
+  topic: string; // Content topic/subject
   format: 'tutorial' | 'reference' | 'guide'; // Content format
   tone: 'technical' | 'conversational' | 'formal'; // Writing tone
   audience: 'beginner' | 'intermediate' | 'expert'; // Target audience
   outputFormats: Array<'markdown' | 'html' | 'pdf'>; // Output formats
 
   // Models
-  smartModel: BaseChatModel;    // Smart model (Opus/Sonnet)
-  fastModel: BaseChatModel;     // Fast model (Haiku)
+  smartModel: BaseChatModel; // Smart model (Opus/Sonnet)
+  fastModel: BaseChatModel; // Fast model (Haiku)
 
   // Tracing
   langfuseClient?: LangfuseClient; // Optional Langfuse tracing
@@ -245,9 +247,9 @@ export interface ContentConfig {
   length?: 'short' | 'standard' | 'long-form'; // Word count target
   blogTemplate?: 'evergreen-guide' | 'tutorial' | 'affiliate-review' | 'list-post'; // Blog template
   revenueGoal?: 'informational' | 'transactional' | 'affiliate'; // Monetization strategy
-  ctaConfig?: CTAConfig;        // Call-to-action strategy
-  seoConfig?: SEOConfig;        // SEO optimization config
-  abTestConfig?: ABTestConfig;  // A/B testing config
+  ctaConfig?: CTAConfig; // Call-to-action strategy
+  seoConfig?: SEOConfig; // SEO optimization config
+  abTestConfig?: ABTestConfig; // A/B testing config
 }
 ```
 
@@ -255,38 +257,39 @@ export interface ContentConfig {
 
 Word count recommendations by length:
 
-| Length | Word Count | Use Case |
-|--------|------------|----------|
-| `short` | 500-800 | Quick updates, announcements, list posts |
-| `standard` | 1200-1800 | Tutorials, how-to guides, product reviews |
+| Length      | Word Count | Use Case                                       |
+| ----------- | ---------- | ---------------------------------------------- |
+| `short`     | 500-800    | Quick updates, announcements, list posts       |
+| `standard`  | 1200-1800  | Tutorials, how-to guides, product reviews      |
 | `long-form` | 2500-4000+ | Comprehensive guides, pillar content, research |
 
 ### Blog Templates
 
 Available templates with use cases:
 
-| Template | Description | Example |
-|----------|-------------|---------|
-| `evergreen-guide` | Timeless, comprehensive resource | "Complete Guide to TypeScript Decorators" |
-| `tutorial` | Step-by-step walkthrough | "Building a RAG Pipeline in 10 Minutes" |
-| `affiliate-review` | Product comparison with CTAs | "Best LLM Providers for Production: 2026 Review" |
-| `list-post` | Numbered/bulleted listicle | "7 LangGraph Patterns Every Developer Should Know" |
+| Template           | Description                      | Example                                            |
+| ------------------ | -------------------------------- | -------------------------------------------------- |
+| `evergreen-guide`  | Timeless, comprehensive resource | "Complete Guide to TypeScript Decorators"          |
+| `tutorial`         | Step-by-step walkthrough         | "Building a RAG Pipeline in 10 Minutes"            |
+| `affiliate-review` | Product comparison with CTAs     | "Best LLM Providers for Production: 2026 Review"   |
+| `list-post`        | Numbered/bulleted listicle       | "7 LangGraph Patterns Every Developer Should Know" |
 
 ### SEO Configuration
 
 ```typescript
 export interface SEOConfig {
-  primaryKeyword: string;       // Target keyword
+  primaryKeyword: string; // Target keyword
   secondaryKeywords?: string[]; // Supporting keywords
-  targetSerpPosition?: number;  // SERP goal (default: top 10)
+  targetSerpPosition?: number; // SERP goal (default: top 10)
   internalLinks?: {
     anchor: string;
     url: string;
-    context: string;            // Where to insert
+    context: string; // Where to insert
   }[];
-  externalAuthority?: {         // High-authority sources to link
+  externalAuthority?: {
+    // High-authority sources to link
     domain: string;
-    minRelevanceScore: number;  // 0-1
+    minRelevanceScore: number; // 0-1
   }[];
 }
 ```
@@ -320,10 +323,11 @@ const seoConfig: SEOConfig = {
 export interface CTAConfig {
   type: 'subscribe' | 'download' | 'purchase' | 'contact';
   placement: 'inline' | 'end' | 'both';
-  message: string;              // CTA copy
-  buttonText: string;           // Button label
-  urgency?: boolean;            // Add urgency language
-  personalization?: {           // Personalize by audience
+  message: string; // CTA copy
+  buttonText: string; // Button label
+  urgency?: boolean; // Add urgency language
+  personalization?: {
+    // Personalize by audience
     beginner?: string;
     intermediate?: string;
     expert?: string;
@@ -351,14 +355,16 @@ const ctaConfig: CTAConfig = {
 
 ```typescript
 export interface ABTestConfig {
-  variantId: string;            // Unique variant identifier
-  experimentName: string;       // Experiment name (groups variants)
-  promptVersions?: {            // Prompt variants
-    outline?: string;           // Langfuse prompt name
+  variantId: string; // Unique variant identifier
+  experimentName: string; // Experiment name (groups variants)
+  promptVersions?: {
+    // Prompt variants
+    outline?: string; // Langfuse prompt name
     generation?: string;
     review?: string;
   };
-  trackingMetadata: {           // Custom tracking data
+  trackingMetadata: {
+    // Custom tracking data
     [key: string]: unknown;
   };
 }
@@ -374,14 +380,14 @@ The review phase uses an **8-dimension scoring system** to evaluate content qual
 
 ```typescript
 interface ReviewScores {
-  hook: number;          // 0-10: Hook strength (first 100 words)
-  clarity: number;       // 0-10: Readability and comprehension
-  value: number;         // 0-10: Actionable insights density
-  engagement: number;    // 0-10: Scanability and visual hierarchy
-  seo: number;          // 0-10: Keyword integration and optimization
-  credibility: number;   // 0-10: Authority signals and citations
-  cta: number;          // 0-10: CTA effectiveness and placement
-  completion: number;    // 0-10: Satisfies user intent fully
+  hook: number; // 0-10: Hook strength (first 100 words)
+  clarity: number; // 0-10: Readability and comprehension
+  value: number; // 0-10: Actionable insights density
+  engagement: number; // 0-10: Scanability and visual hierarchy
+  seo: number; // 0-10: Keyword integration and optimization
+  credibility: number; // 0-10: Authority signals and citations
+  cta: number; // 0-10: CTA effectiveness and placement
+  completion: number; // 0-10: Satisfies user intent fully
 }
 ```
 
@@ -398,19 +404,20 @@ interface ReviewScores {
 
 The outline generator selects from proven headline templates:
 
-| Formula | Template | Example |
-|---------|----------|---------|
-| How-To | "How to [Achieve Outcome] in [Timeframe]" | "How to Build RAG Pipelines in 30 Minutes" |
-| Ultimate Guide | "The Complete Guide to [Topic]" | "The Complete Guide to LangGraph State Management" |
-| Numbered List | "[Number] [Adjective] Ways to [Outcome]" | "7 Proven Ways to Optimize LLM Costs" |
-| Vs Comparison | "[Option A] vs [Option B]: Which Should You Choose?" | "Sonnet vs Opus: Which Model for Production?" |
-| Secret/Insider | "The [Number] Secrets of [Outcome]" | "The 3 Secrets of 10x Developer Productivity" |
+| Formula        | Template                                             | Example                                            |
+| -------------- | ---------------------------------------------------- | -------------------------------------------------- |
+| How-To         | "How to [Achieve Outcome] in [Timeframe]"            | "How to Build RAG Pipelines in 30 Minutes"         |
+| Ultimate Guide | "The Complete Guide to [Topic]"                      | "The Complete Guide to LangGraph State Management" |
+| Numbered List  | "[Number] [Adjective] Ways to [Outcome]"             | "7 Proven Ways to Optimize LLM Costs"              |
+| Vs Comparison  | "[Option A] vs [Option B]: Which Should You Choose?" | "Sonnet vs Opus: Which Model for Production?"      |
+| Secret/Insider | "The [Number] Secrets of [Outcome]"                  | "The 3 Secrets of 10x Developer Productivity"      |
 
 ### Hook Patterns
 
 The first 100 words (the "hook") follow proven patterns:
 
 1. **Problem-Agitate-Solution (PAS)**
+
    ```
    [Problem]: You're spending hours debugging LangGraph flows.
    [Agitate]: Every state update feels like a mystery, and error messages are cryptic.
@@ -418,12 +425,14 @@ The first 100 words (the "hook") follow proven patterns:
    ```
 
 2. **Story Opening**
+
    ```
    Last week, our production LangGraph flow went down at 3am. The error? "State reducer conflict."
    After 6 hours of debugging, I discovered a single line that changed everything...
    ```
 
 3. **Surprising Statistic**
+
    ```
    87% of LangGraph developers make this one mistake in their first flow.
    I know because I analyzed 500+ production flows. Here's what I found...
@@ -462,14 +471,14 @@ Key insight called out in **bold**      ← Medium attention
 
 **Bucket brigades** are transition phrases that pull readers to the next section:
 
-| Position | Bucket Brigade |
-|----------|----------------|
-| End of intro | "Here's what you need to know:" |
-| Before code example | "Let me show you exactly how:" |
-| After explanation | "But there's a catch:" |
-| Before list | "This breaks down into 3 parts:" |
-| Section transition | "Now here's where it gets interesting:" |
-| Before CTA | "Ready to put this into practice?" |
+| Position            | Bucket Brigade                          |
+| ------------------- | --------------------------------------- |
+| End of intro        | "Here's what you need to know:"         |
+| Before code example | "Let me show you exactly how:"          |
+| After explanation   | "But there's a catch:"                  |
+| Before list         | "This breaks down into 3 parts:"        |
+| Section transition  | "Now here's where it gets interesting:" |
+| Before CTA          | "Ready to put this into practice?"      |
 
 **Effect:** Reduces bounce rate by creating "open loops" that demand closure.
 
@@ -561,6 +570,7 @@ const [resultA, resultB] = await Promise.all([
 4. **Analyze results in Langfuse:**
 
 Navigate to the experiment in Langfuse dashboard:
+
 - Compare cost/latency between variants
 - Review generated outputs side-by-side
 - Track downstream metrics (engagement, conversions)
@@ -716,16 +726,16 @@ All prompts are managed via Langfuse for versioning and A/B testing.
 
 ### Prompt Template List
 
-| Template | Purpose | Variables | Model Tier |
-|----------|---------|-----------|------------|
-| `research-query-generator` | Generate research queries from topic | `{topic}`, `{format}`, `{audience}` | Fast |
-| `research-worker` | Execute single research query | `{query}`, `{context}` | Smart |
-| `outline-generator` | Generate content outline from research | `{topic}`, `{research}`, `{format}`, `{tone}`, `{audience}` | Smart |
-| `section-writer` | Generate single content section | `{section}`, `{research}`, `{style}`, `{tone}`, `{audience}` | Smart |
-| `section-reviewer` | Review section quality | `{section}`, `{criteria}` | Fast |
-| `antagonistic-reviewer` | Critical 8-dimension review | `{content}`, `{seoConfig}`, `{ctaConfig}` | Smart |
-| `output-formatter-html` | Convert markdown to HTML | `{markdown}` | Fast |
-| `output-formatter-pdf` | Convert markdown to PDF-ready format | `{markdown}` | Fast |
+| Template                   | Purpose                                | Variables                                                    | Model Tier |
+| -------------------------- | -------------------------------------- | ------------------------------------------------------------ | ---------- |
+| `research-query-generator` | Generate research queries from topic   | `{topic}`, `{format}`, `{audience}`                          | Fast       |
+| `research-worker`          | Execute single research query          | `{query}`, `{context}`                                       | Smart      |
+| `outline-generator`        | Generate content outline from research | `{topic}`, `{research}`, `{format}`, `{tone}`, `{audience}`  | Smart      |
+| `section-writer`           | Generate single content section        | `{section}`, `{research}`, `{style}`, `{tone}`, `{audience}` | Smart      |
+| `section-reviewer`         | Review section quality                 | `{section}`, `{criteria}`                                    | Fast       |
+| `antagonistic-reviewer`    | Critical 8-dimension review            | `{content}`, `{seoConfig}`, `{ctaConfig}`                    | Smart      |
+| `output-formatter-html`    | Convert markdown to HTML               | `{markdown}`                                                 | Fast       |
+| `output-formatter-pdf`     | Convert markdown to PDF-ready format   | `{markdown}`                                                 | Fast       |
 
 ### Customizing Prompts
 
@@ -961,10 +971,7 @@ const mockResearch: ResearchFindings = {
     'graph.compile({ checkpointer: new MemorySaver() })',
     'new Send("worker_node", { ...state, item })',
   ],
-  references: [
-    'https://langchain.com/langgraph',
-    'https://docs.langchain.com/state-graphs',
-  ],
+  references: ['https://langchain.com/langgraph', 'https://docs.langchain.com/state-graphs'],
 };
 ```
 
