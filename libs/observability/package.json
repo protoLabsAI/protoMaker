@@ -23,6 +23,9 @@
     "langfuse",
     "tracing"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "author": "AutoMaker Team",
   "license": "SEE LICENSE IN LICENSE",
   "engines": {
