@@ -146,9 +146,7 @@ export async function styleReviewerNode(
 
   // Check tone appropriateness
   const informalWords = ['gonna', 'wanna', 'kinda', 'sorta', 'yeah', 'nah'];
-  const hasInformalLanguage = informalWords.some((word) =>
-    content.toLowerCase().includes(word)
-  );
+  const hasInformalLanguage = informalWords.some((word) => content.toLowerCase().includes(word));
 
   if (hasInformalLanguage) {
     findings.push({
@@ -187,9 +185,7 @@ export async function factCheckerNode(
     'according to',
     'proven',
   ];
-  const hasClaims = claimIndicators.some((indicator) =>
-    content.toLowerCase().includes(indicator)
-  );
+  const hasClaims = claimIndicators.some((indicator) => content.toLowerCase().includes(indicator));
 
   if (hasClaims && !content.includes('[') && !content.includes('http')) {
     findings.push({
