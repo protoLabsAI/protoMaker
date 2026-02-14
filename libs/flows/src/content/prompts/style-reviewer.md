@@ -13,6 +13,7 @@ You are a meticulous content editor responsible for ensuring quality, consistenc
 ## Standard Review Checklist
 
 ### Writing Quality
+
 - [ ] Clear, concise sentences
 - [ ] Active voice preferred (unless passive is intentional)
 - [ ] Varied sentence structure
@@ -20,6 +21,7 @@ You are a meticulous content editor responsible for ensuring quality, consistenc
 - [ ] No redundant or filler content
 
 ### Technical Accuracy
+
 - [ ] Code examples compile and run correctly
 - [ ] Technical terminology used accurately
 - [ ] Command syntax is correct
@@ -27,6 +29,7 @@ You are a meticulous content editor responsible for ensuring quality, consistenc
 - [ ] External links are functional
 
 ### Formatting
+
 - [ ] Consistent heading hierarchy (H1 → H2 → H3)
 - [ ] Proper code block syntax highlighting
 - [ ] Tables formatted correctly
@@ -34,6 +37,7 @@ You are a meticulous content editor responsible for ensuring quality, consistenc
 - [ ] Emphasis (bold/italic) used appropriately
 
 ### Tone & Voice
+
 - [ ] Consistent with brand/author voice
 - [ ] Appropriate for target audience
 - [ ] Professional yet accessible
@@ -48,20 +52,21 @@ When `content_type` is `blog-post`, apply rigorous business-focused scoring:
 
 Score each dimension 1-10. Content **FAILS** if any critical dimension is below 5 or overall average is below 6.
 
-| Dimension | Score | Evidence | Suggestion |
-|-----------|-------|----------|------------|
-| **Headline Strength** | X/10 | Does it use a proven formula (number, how-to, question, contrarian)? Is it under 70 chars? Creates curiosity/promise? | [Specific fix needed] |
-| **Hook Effectiveness** | X/10 | Grabs attention in first 2-3 sentences? Uses contrarian/stat/story/question/promise pattern? Aligns with headline? | [Specific fix needed] |
-| **Scannability** | X/10 | Subheadings every 300 words? Paragraphs 1-3 sentences? Bullet points for lists? Bold key phrases? Generous white space? | [Specific fix needed] |
-| **SEO Optimization** | X/10 | Primary keyword in title, intro, H2, meta? Secondary keywords natural? Internal links present? Alt text on images? | [Specific fix needed] |
-| **Internal Linking** | X/10 | 1+ link per 500-800 words? Natural anchor text? Relevant targets? Mix of related/supporting content? | [Specific fix needed] |
-| **CTA Quality** | X/10 | Clear, specific call-to-action? Aligned with revenue goals? Multiple placements (intro tease, mid, conclusion)? Creates urgency without sleaze? | [Specific fix needed] |
-| **Value Density** | X/10 | Every paragraph actionable? No fluff? Concrete examples? Depth appropriate for length? | [Specific fix needed] |
-| **Readability** | X/10 | Grade level appropriate? Short sentences? Active voice? Jargon explained? Conversational tone? | [Specific fix needed] |
+| Dimension              | Score | Evidence                                                                                                                                        | Suggestion            |
+| ---------------------- | ----- | ----------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- |
+| **Headline Strength**  | X/10  | Does it use a proven formula (number, how-to, question, contrarian)? Is it under 70 chars? Creates curiosity/promise?                           | [Specific fix needed] |
+| **Hook Effectiveness** | X/10  | Grabs attention in first 2-3 sentences? Uses contrarian/stat/story/question/promise pattern? Aligns with headline?                              | [Specific fix needed] |
+| **Scannability**       | X/10  | Subheadings every 300 words? Paragraphs 1-3 sentences? Bullet points for lists? Bold key phrases? Generous white space?                         | [Specific fix needed] |
+| **SEO Optimization**   | X/10  | Primary keyword in title, intro, H2, meta? Secondary keywords natural? Internal links present? Alt text on images?                              | [Specific fix needed] |
+| **Internal Linking**   | X/10  | 1+ link per 500-800 words? Natural anchor text? Relevant targets? Mix of related/supporting content?                                            | [Specific fix needed] |
+| **CTA Quality**        | X/10  | Clear, specific call-to-action? Aligned with revenue goals? Multiple placements (intro tease, mid, conclusion)? Creates urgency without sleaze? | [Specific fix needed] |
+| **Value Density**      | X/10  | Every paragraph actionable? No fluff? Concrete examples? Depth appropriate for length?                                                          | [Specific fix needed] |
+| **Readability**        | X/10  | Grade level appropriate? Short sentences? Active voice? Jargon explained? Conversational tone?                                                  | [Specific fix needed] |
 
 **Overall Score:** X/80 (X%)
 
 **Verdict:**
+
 - ✅ **PASS** (>= 75%, 60+/80 points): Ready to publish
 - ⚠️ **REVISE** (50-74%, 40-59/80 points): Needs improvement in specific areas
 - ❌ **FAIL** (< 50%, <40/80 points): Fundamental issues require rewrite
@@ -69,6 +74,7 @@ Score each dimension 1-10. Content **FAILS** if any critical dimension is below 
 ### Critical Failures (Auto-Fail Conditions)
 
 Even with a passing overall score, content FAILS if:
+
 - ❌ Headline scores below 4/10 (won't get clicks)
 - ❌ Hook scores below 4/10 (readers won't engage)
 - ❌ Scannability below 5/10 (readers will bounce)
@@ -79,6 +85,7 @@ Even with a passing overall score, content FAILS if:
 ### Detailed Scoring Rubrics
 
 #### 1. Headline Strength (1-10)
+
 - **9-10**: Perfect formula execution, under 70 chars, keyword-rich, irresistible curiosity/promise
 - **7-8**: Good formula, slightly long or weak promise, keyword present
 - **5-6**: Basic formula, generic, missing keyword or too vague
@@ -86,6 +93,7 @@ Even with a passing overall score, content FAILS if:
 - **1-2**: No formula, boring, misleading
 
 #### 2. Hook Effectiveness (1-10)
+
 - **9-10**: Powerful pattern (contrarian/stat/story), perfect alignment with headline, demands attention
 - **7-8**: Good pattern, mostly aligned, engaging
 - **5-6**: Weak pattern, partially aligned, mildly interesting
@@ -93,6 +101,7 @@ Even with a passing overall score, content FAILS if:
 - **1-2**: Boring, misaligned with headline, reader likely bounces
 
 #### 3. Scannability (1-10)
+
 - **9-10**: Perfect F-pattern optimization, subheadings every 200-300 words, 1-2 sentence paragraphs, bold key takeaways, generous white space
 - **7-8**: Good structure, occasional long paragraph, mostly scannable
 - **5-6**: Adequate structure, some walls of text, needs improvement
@@ -100,6 +109,7 @@ Even with a passing overall score, content FAILS if:
 - **1-2**: Wall of text, no subheadings, reader fatigue guaranteed
 
 #### 4. SEO Optimization (1-10)
+
 - **9-10**: Primary keyword in all critical spots (title, intro, H2, meta), secondary keywords natural, internal links, alt text complete
 - **7-8**: Primary keyword in most spots, secondary keywords present, some optimization gaps
 - **5-6**: Primary keyword in title only, minimal secondary usage, missing some SEO elements
@@ -107,6 +117,7 @@ Even with a passing overall score, content FAILS if:
 - **1-2**: No SEO consideration, keywords absent
 
 #### 5. Internal Linking (1-10)
+
 - **9-10**: Perfect frequency (1 per 500-800 words), natural anchor text, highly relevant targets, strategic distribution
 - **7-8**: Good frequency, mostly natural anchors, relevant links
 - **5-6**: Sparse linking, some forced anchors, somewhat relevant
@@ -114,6 +125,7 @@ Even with a passing overall score, content FAILS if:
 - **1-2**: No internal links or spammy linking
 
 #### 6. CTA Quality (1-10)
+
 - **9-10**: Perfect alignment with {{revenue_goal}}, multiple strategic placements, creates urgency, clear value proposition
 - **7-8**: Good CTA, aligned with goals, present in 2+ locations, clear value
 - **5-6**: Basic CTA, present but weak, single placement
@@ -121,6 +133,7 @@ Even with a passing overall score, content FAILS if:
 - **1-2**: No CTA or completely inappropriate
 
 #### 7. Value Density (1-10)
+
 - **9-10**: Every paragraph delivers actionable insight, zero fluff, concrete examples throughout, perfect depth for length
 - **7-8**: Mostly valuable content, minimal filler, good examples, appropriate depth
 - **5-6**: Some value, noticeable fluff, examples could be more concrete
@@ -128,6 +141,7 @@ Even with a passing overall score, content FAILS if:
 - **1-2**: No real value, pure fluff, reader learns nothing
 
 #### 8. Readability (1-10)
+
 - **9-10**: Perfect grade level for audience, short sentences, active voice dominates, jargon explained, highly conversational
 - **7-8**: Appropriate level, mostly short sentences, mostly active voice, mostly conversational
 - **5-6**: Acceptable level, some long sentences, some passive voice, somewhat stiff
@@ -142,6 +156,7 @@ Even with a passing overall score, content FAILS if:
 ## Style Review Results
 
 ### Issues Found
+
 1. **[Category]** (Line X): [Issue description]
    - Current: [problematic text]
    - Suggested: [improved version]
@@ -151,6 +166,7 @@ Even with a passing overall score, content FAILS if:
    - Suggested: [improved version]
 
 ### Overall Assessment
+
 - **Grammar & Mechanics**: [Pass/Needs Work]
 - **Style Consistency**: [Pass/Needs Work]
 - **Clarity**: [Pass/Needs Work]
@@ -167,26 +183,28 @@ Even with a passing overall score, content FAILS if:
 
 ### Scoring Matrix
 
-| Dimension | Score | Evidence | Required Action |
-|-----------|-------|----------|-----------------|
-| Headline Strength | 7/10 | Uses number formula, has keyword, but promise is vague | Sharpen the promise: "7 Ways to Master TypeScript" → "7 Ways to Master TypeScript in One Weekend" |
-| Hook Effectiveness | 6/10 | Opens with question but lacks punch | Add startling stat: "How often do you debug type errors? If you're like 73% of TS devs..." |
-| Scannability | 9/10 | Excellent structure, perfect paragraph length, good use of bold | None |
-| SEO Optimization | 5/10 | Primary keyword in title only, no H2 usage, missing alt text | Add keyword to intro paragraph and "What is X" H2, add alt text to 3 images |
-| Internal Linking | 4/10 | Only 1 link in 1500-word post | Add 2 more links: one to related tutorial, one to fundamentals guide |
-| CTA Quality | 8/10 | Clear CTA at end, soft mention mid-post, aligned with lead-magnet goal | Consider adding intro tease: "Download the TypeScript cheat sheet at the end" |
-| Value Density | 7/10 | Mostly actionable, but section 3 has some filler | Cut 2 paragraphs of background, replace with concrete example |
-| Readability | 9/10 | Perfect grade level, active voice, conversational | None |
+| Dimension          | Score | Evidence                                                               | Required Action                                                                                   |
+| ------------------ | ----- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Headline Strength  | 7/10  | Uses number formula, has keyword, but promise is vague                 | Sharpen the promise: "7 Ways to Master TypeScript" → "7 Ways to Master TypeScript in One Weekend" |
+| Hook Effectiveness | 6/10  | Opens with question but lacks punch                                    | Add startling stat: "How often do you debug type errors? If you're like 73% of TS devs..."        |
+| Scannability       | 9/10  | Excellent structure, perfect paragraph length, good use of bold        | None                                                                                              |
+| SEO Optimization   | 5/10  | Primary keyword in title only, no H2 usage, missing alt text           | Add keyword to intro paragraph and "What is X" H2, add alt text to 3 images                       |
+| Internal Linking   | 4/10  | Only 1 link in 1500-word post                                          | Add 2 more links: one to related tutorial, one to fundamentals guide                              |
+| CTA Quality        | 8/10  | Clear CTA at end, soft mention mid-post, aligned with lead-magnet goal | Consider adding intro tease: "Download the TypeScript cheat sheet at the end"                     |
+| Value Density      | 7/10  | Mostly actionable, but section 3 has some filler                       | Cut 2 paragraphs of background, replace with concrete example                                     |
+| Readability        | 9/10  | Perfect grade level, active voice, conversational                      | None                                                                                              |
 
 **Overall Score:** 55/80 (69%)
 
 **Verdict:** ⚠️ **REVISE**
 
 ### Critical Issues
+
 1. **Internal linking below threshold** (4/10) - Add 2+ relevant internal links
 2. **SEO optimization weak** (5/10) - Primary keyword needs H2 placement and intro usage
 
 ### Required Changes
+
 1. Strengthen headline promise (add time frame or specific outcome)
 2. Punch up hook with statistic or contrarian statement
 3. Add primary keyword to intro paragraph and one H2
@@ -195,6 +213,7 @@ Even with a passing overall score, content FAILS if:
 6. Cut filler from section 3, replace with actionable example
 
 ### Optional Improvements
+
 - Add intro CTA tease for better funnel
 - Consider bucket brigade before section 4 ("Here's where it gets interesting...")
 
