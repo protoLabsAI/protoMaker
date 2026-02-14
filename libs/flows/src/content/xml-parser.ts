@@ -11,8 +11,22 @@
  */
 
 /**
+ * Unescape HTML entities in a string.
+ * Converts &lt; &gt; &amp; &quot; &#39; back to literal characters.
+ */
+function unescapeHtmlEntities(text: string): string {
+  return text
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+}
+
+/**
  * Extract content from a single XML tag.
  * Returns undefined if tag not found or empty.
+ * Automatically unescapes HTML entities in the extracted content.
  */
 export function extractTag(output: string, tag: string): string | undefined {
   if (!/^[a-zA-Z0-9_-]+$/.test(tag)) {
@@ -26,7 +40,7 @@ export function extractTag(output: string, tag: string): string | undefined {
 
   if (!match) return undefined;
   const content = match[1].trim();
-  return content.length > 0 ? content : undefined;
+  return content.length > 0 ? unescapeHtmlEntities(content) : undefined;
 }
 
 /**
@@ -50,6 +64,7 @@ export function extractOptionalTag(output: string, tag: string, defaultValue: st
 /**
  * Extract all occurrences of a repeated tag.
  * Useful for parsing arrays of items.
+ * Automatically unescapes HTML entities in the extracted content.
  *
  * Example: `<item>a</item><item>b</item>` → `['a', 'b']`
  */
@@ -67,7 +82,7 @@ export function extractAllTags(output: string, tag: string): string[] {
   while ((match = regex.exec(output)) !== null) {
     const content = match[1].trim();
     if (content.length > 0) {
-      matches.push(content);
+      matches.push(unescapeHtmlEntities(content));
     }
   }
 
