@@ -1016,7 +1016,7 @@ app.use('/api/crew', createCrewRoutes(crewLoopService));
 app.use('/api/deploy', createDeployRoutes(autoModeService));
 app.use('/api/escalation', createEscalationRoutes(escalationRouter));
 app.use('/api/analytics', createAnalyticsRoutes(events));
-app.use('/api/flows', createFlowsRoutes());
+app.use('/api/flows', createFlowsRoutes(antagonisticReviewService));
 
 // Create HTTP server
 const server = createServer(app);
