@@ -1605,6 +1605,17 @@ export interface LinearIntegrationConfig {
   tokenExpiresAt?: string;
   /** Granted OAuth scopes */
   scopes?: string[];
+
+  // Custom workflow state IDs (for HITL deepening)
+  /** Custom workflow state IDs for human-in-the-loop escalation */
+  customStateIds?: {
+    /** "Needs Human Review" state ID */
+    needsHumanReview?: string;
+    /** "Escalated" state ID */
+    escalated?: string;
+    /** "Agent Denied" state ID */
+    agentDenied?: string;
+  };
 }
 
 /**

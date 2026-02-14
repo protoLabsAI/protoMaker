@@ -92,6 +92,13 @@ interface LinearIssueWebhookPayload extends LinearWebhookPayload {
       id: string;
       name: string;
     };
+    /** SLA information (Business plan feature) */
+    sla?: {
+      /** SLA status: 'active', 'highRisk', 'breached' */
+      status?: 'active' | 'highRisk' | 'breached';
+      /** When SLA breach is expected */
+      breachesAt?: string;
+    };
     /** Timestamps */
     createdAt: string;
     updatedAt: string;
@@ -313,6 +320,7 @@ async function handleIssueUpdated(
     title: data.title,
     state: data.state?.name,
     priority: data.priority,
+    slaStatus: data.sla?.status,
   });
 
   // Delegate to sync service for status, title, and priority sync
@@ -342,6 +350,62 @@ async function handleIssueUpdated(
       priority: data.priority,
       team: data.team,
     });
+  }
+
+  // Handle SLA events (Business plan feature - graceful degradation)
+  if (data.sla?.status) {
+    await handleSLAEvent(data, events);
+  }
+}
+
+/**
+ * Handle SLA webhook events (Business plan feature)
+ * Emits escalation signals based on SLA status
+ */
+async function handleSLAEvent(
+  data: LinearIssueWebhookPayload['data'],
+  events: EventEmitter
+): Promise<void> {
+  const slaStatus = data.sla?.status;
+
+  if (!slaStatus) {
+    return;
+  }
+
+  logger.info(`SLA event for issue ${data.id}: ${slaStatus}`, {
+    breachesAt: data.sla?.breachesAt,
+    title: data.title,
+  });
+
+  switch (slaStatus) {
+    case 'highRisk':
+      // Emit elevated escalation signal
+      events.emit('linear:sla:highRisk', {
+        issueId: data.id,
+        title: data.title,
+        url: data.url,
+        breachesAt: data.sla?.breachesAt,
+        severity: 'elevated',
+        timestamp: new Date().toISOString(),
+      });
+      logger.warn(`SLA high risk for issue ${data.id}: ${data.title}`);
+      break;
+
+    case 'breached':
+      // Emit emergency escalation signal for DM
+      events.emit('linear:sla:breached', {
+        issueId: data.id,
+        title: data.title,
+        url: data.url,
+        severity: 'emergency',
+        timestamp: new Date().toISOString(),
+      });
+      logger.error(`SLA BREACHED for issue ${data.id}: ${data.title}`);
+      break;
+
+    default:
+      // 'active' or unknown status - no action needed
+      break;
   }
 }
 
