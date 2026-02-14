@@ -115,6 +115,20 @@ export interface CreateProjectOptions {
 }
 
 /**
+ * Options for updating a Linear project
+ */
+export interface UpdateProjectOptions {
+  /** New project name (optional) */
+  name?: string;
+  /** New project description (optional) */
+  description?: string;
+  /** New project status (optional) */
+  status?: string;
+  /** New project progress percentage (optional, 0-100) */
+  progress?: number;
+}
+
+/**
  * Result of creating a Linear issue
  */
 export interface CreateIssueResult {
@@ -690,5 +704,71 @@ export class LinearMCPClient {
     }
 
     return awaitingInputState.id;
+  }
+
+  /**
+   * Update an existing Linear project
+   *
+   * @param projectId - The project ID to update
+   * @param options - Update options
+   * @returns True if update succeeded
+   * @throws {LinearAPIError} On API errors
+   */
+  async updateProject(projectId: string, options: UpdateProjectOptions): Promise<boolean> {
+    const { name, description, status, progress } = options;
+
+    const mutation = `
+      mutation UpdateProject(
+        $projectId: String!
+        $name: String
+        $description: String
+        $state: String
+        $progress: Float
+      ) {
+        projectUpdate(
+          id: $projectId
+          input: {
+            name: $name
+            description: $description
+            state: $state
+            progress: $progress
+          }
+        ) {
+          success
+          project {
+            id
+            name
+          }
+        }
+      }
+    `;
+
+    const variables = {
+      projectId,
+      name,
+      description,
+      state: status,
+      progress: progress !== undefined ? progress / 100 : undefined, // Convert percentage to 0-1
+    };
+
+    interface UpdateProjectResponse {
+      projectUpdate: {
+        success: boolean;
+        project: {
+          id: string;
+          name: string;
+        };
+      };
+    }
+
+    const data = await this.executeGraphQL<UpdateProjectResponse>(mutation, variables);
+
+    if (!data.projectUpdate.success) {
+      throw new LinearAPIError('Failed to update Linear project');
+    }
+
+    logger.info(`Updated Linear project: ${data.projectUpdate.project.name}`);
+
+    return true;
   }
 }
