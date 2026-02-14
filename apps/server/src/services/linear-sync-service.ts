@@ -2083,9 +2083,7 @@ export class LinearSyncService {
           const dependencyFeature = await this.featureLoader.get(projectPath, dependencyId);
 
           if (!dependencyFeature) {
-            logger.warn(
-              `Dependency feature ${dependencyId} not found, skipping relation creation`
-            );
+            logger.warn(`Dependency feature ${dependencyId} not found, skipping relation creation`);
             continue;
           }
 
@@ -2106,7 +2104,11 @@ export class LinearSyncService {
           }
 
           // Create the relation: issueId is blocked by dependencyFeature.linearIssueId
-          await client.createIssueRelation(issueId, dependencyFeature.linearIssueId);
+          await client.createIssueRelation({
+            issueId,
+            relatedIssueId: dependencyFeature.linearIssueId,
+            type: 'blocks',
+          });
           createdCount++;
         } catch (error) {
           logger.warn(
@@ -2134,10 +2136,7 @@ export class LinearSyncService {
    * @param projectPath - The project path
    * @param projectSlug - The project slug
    */
-  private async syncProjectDependencies(
-    projectPath: string,
-    projectSlug: string
-  ): Promise<void> {
+  private async syncProjectDependencies(projectPath: string, projectSlug: string): Promise<void> {
     if (!this.featureLoader) {
       logger.warn('FeatureLoader not initialized, skipping project dependency sync');
       return;
@@ -2150,7 +2149,10 @@ export class LinearSyncService {
       // Filter features that have Linear issues and dependencies
       const featuresWithDeps = features.filter(
         (f: Feature) =>
-          f.linearIssueId && f.dependencies && f.dependencies.length > 0 && f.projectSlug === projectSlug
+          f.linearIssueId &&
+          f.dependencies &&
+          f.dependencies.length > 0 &&
+          f.projectSlug === projectSlug
       );
 
       if (featuresWithDeps.length === 0) {
