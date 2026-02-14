@@ -26,7 +26,9 @@ export function AnalyticsView() {
     queryClient.invalidateQueries({ queryKey: queryKeys.metrics.capacity(projectPath) });
     queryClient.invalidateQueries({ queryKey: queryKeys.metrics.timeSeries(projectPath) });
     queryClient.invalidateQueries({ queryKey: queryKeys.metrics.modelDistribution(projectPath) });
-    queryClient.invalidateQueries({ queryKey: queryKeys.metrics.cycleTimeDistribution(projectPath) });
+    queryClient.invalidateQueries({
+      queryKey: queryKeys.metrics.cycleTimeDistribution(projectPath),
+    });
     queryClient.invalidateQueries({ queryKey: queryKeys.runningAgents.all() });
   }, [projectPath, queryClient]);
 
