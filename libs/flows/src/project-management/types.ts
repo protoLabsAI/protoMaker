@@ -238,3 +238,131 @@ export const ProjectStatusStateAnnotation = Annotation.Root({
 });
 
 export type ProjectStatusStateType = typeof ProjectStatusStateAnnotation.State;
+
+// ─── Milestone Summary Types ───────────────────────────────────────────────
+
+export interface Achievement {
+  featureId: string;
+  title: string;
+  description: string;
+  prNumber?: number;
+  mergedAt: string;
+  costUsd?: number;
+  linesChanged?: { added: number; deleted: number };
+}
+
+export interface LessonLearned {
+  category: 'technical' | 'process' | 'collaboration' | 'quality';
+  insight: string;
+  impact: 'positive' | 'negative' | 'neutral';
+  actionItems?: string[];
+}
+
+export interface NextMilestonePreview {
+  milestoneName: string;
+  description: string;
+  keyFeatures: string[];
+  estimatedDuration?: string;
+  dependencies?: string[];
+}
+
+export interface MilestoneReport {
+  milestoneName: string;
+  completedAt: string;
+  totalFeatures: number;
+  totalCostUsd: number;
+  achievements: Achievement[];
+  lessonsLearned: LessonLearned[];
+  nextMilestone?: NextMilestonePreview;
+  summary: string;
+}
+
+// ─── Milestone Summary State ───────────────────────────────────────────────
+
+export const MilestoneSummaryStateSchema = z.object({
+  projectPath: z.string(),
+  milestoneName: z.string(),
+
+  achievements: z.array(z.custom<Achievement>()).default([]),
+  lessonsLearned: z.array(z.custom<LessonLearned>()).default([]),
+  nextMilestonePreview: z.custom<NextMilestonePreview>().optional(),
+
+  draftSummary: z.string().optional(),
+
+  reviewVerdict: z.enum(['approve', 'revise']).optional(),
+  reviewFeedback: z.string().optional(),
+  revisionCount: z.number().default(0),
+
+  milestoneReport: z.custom<MilestoneReport>().optional(),
+  formattedReport: z.string().optional(),
+  error: z.string().optional(),
+});
+
+export interface MilestoneSummaryState {
+  /** Input: path to the project */
+  projectPath: string;
+
+  /** Input: milestone name to summarize */
+  milestoneName: string;
+
+  /** Collected achievements from completed features */
+  achievements: Achievement[];
+
+  /** Lessons learned during milestone execution */
+  lessonsLearned: LessonLearned[];
+
+  /** Preview of next milestone (if available) */
+  nextMilestonePreview?: NextMilestonePreview;
+
+  /** Draft summary text */
+  draftSummary?: string;
+
+  /** Quality review verdict */
+  reviewVerdict?: 'approve' | 'revise';
+
+  /** Review feedback for revision */
+  reviewFeedback?: string;
+
+  /** Number of revision iterations */
+  revisionCount: number;
+
+  /** Generated milestone report */
+  milestoneReport?: MilestoneReport;
+
+  /** Final formatted output (markdown) */
+  formattedReport?: string;
+
+  /** Error message if flow fails */
+  error?: string;
+}
+
+export const MilestoneSummaryStateAnnotation = Annotation.Root({
+  projectPath: Annotation<string>,
+  milestoneName: Annotation<string>,
+
+  achievements: Annotation<Achievement[]>({
+    reducer: appendReducer,
+    default: () => [],
+  }),
+
+  lessonsLearned: Annotation<LessonLearned[]>({
+    reducer: appendReducer,
+    default: () => [],
+  }),
+
+  nextMilestonePreview: Annotation<NextMilestonePreview | undefined>,
+  draftSummary: Annotation<string | undefined>,
+
+  reviewVerdict: Annotation<'approve' | 'revise' | undefined>,
+  reviewFeedback: Annotation<string | undefined>,
+  revisionCount: Annotation<number>({
+    reducer: (left, right) => right ?? left ?? 0,
+    default: () => 0,
+  }),
+
+  milestoneReport: Annotation<MilestoneReport | undefined>,
+  formattedReport: Annotation<string | undefined>,
+  error: Annotation<string | undefined>,
+});
+
+export type MilestoneSummaryStateType = typeof MilestoneSummaryStateAnnotation.State;
