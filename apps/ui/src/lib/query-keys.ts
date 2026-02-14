@@ -335,8 +335,7 @@ export const queryKeys = {
   // ============================================
   system: {
     /** System health dashboard */
-    healthDashboard: (projectPath?: string) =>
-      ['system', 'health-dashboard', projectPath] as const,
+    healthDashboard: (projectPath?: string) => ['system', 'health-dashboard', projectPath] as const,
   },
 
   // ============================================
