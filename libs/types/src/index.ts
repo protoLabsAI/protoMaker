@@ -224,6 +224,12 @@ export type {
   // Crew loop types
   CrewMemberConfig,
   CrewLoopSettings,
+  // Trust boundary types
+  PRDCategory,
+  PRDComplexity,
+  AutoApproveRule,
+  RequireReviewRule,
+  TrustBoundaryConfig,
   // Claude-compatible provider types (new)
   ApiKeySource,
   ClaudeCompatibleProviderType,
@@ -261,6 +267,8 @@ export {
   DEFAULT_CEREMONY_SETTINGS,
   // Crew loop defaults
   DEFAULT_CREW_LOOP_SETTINGS,
+  // Trust boundary defaults
+  DEFAULT_TRUST_BOUNDARY_CONFIG,
   // Integration config defaults
   DEFAULT_LINEAR_INTEGRATION,
   DEFAULT_DISCORD_INTEGRATION,

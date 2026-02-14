@@ -34,12 +34,15 @@ import type {
   ClaudeApiProfile,
   ClaudeCompatibleProvider,
   ProviderModel,
+  TrustBoundaryConfig,
+  PRDCategory,
 } from '../types/settings.js';
 import {
   DEFAULT_GLOBAL_SETTINGS,
   DEFAULT_CREDENTIALS,
   DEFAULT_PROJECT_SETTINGS,
   DEFAULT_PHASE_MODELS,
+  DEFAULT_TRUST_BOUNDARY_CONFIG,
   SETTINGS_VERSION,
   CREDENTIALS_VERSION,
   PROJECT_SETTINGS_VERSION,
@@ -1117,10 +1120,9 @@ export class SettingsService {
       complexity?: string;
       estimatedCost?: number;
     },
-    config?: import('../types/settings.js').TrustBoundaryConfig
+    config?: TrustBoundaryConfig
   ): 'autoApprove' | 'requireReview' {
     // Use default config if not provided
-    const { DEFAULT_TRUST_BOUNDARY_CONFIG } = require('../types/settings.js');
     const trustConfig = config || DEFAULT_TRUST_BOUNDARY_CONFIG;
 
     // If trust boundary is disabled, auto-approve everything
@@ -1141,7 +1143,7 @@ export class SettingsService {
     // Check if category requires review
     if (
       requireReviewRules.categories &&
-      requireReviewRules.categories.includes(metadata.category as import('../types/settings.js').PRDCategory)
+      requireReviewRules.categories.includes(metadata.category as PRDCategory)
     ) {
       logger.debug(`PRD category '${metadata.category}' requires review`);
       return 'requireReview';
@@ -1175,7 +1177,7 @@ export class SettingsService {
     // Check if category is eligible for auto-approval
     if (
       autoApproveRules.categories &&
-      !autoApproveRules.categories.includes(metadata.category as import('../types/settings.js').PRDCategory)
+      !autoApproveRules.categories.includes(metadata.category as PRDCategory)
     ) {
       logger.debug(`PRD category '${metadata.category}' not eligible for auto-approval`);
       return 'requireReview';
