@@ -241,6 +241,8 @@ export type EventType =
   | 'ceremony:milestone-update'
   | 'ceremony:project-retro'
   | 'ceremony:triggered'
+  // Retro improvement events (reflection loop: REFLECT → REPEAT)
+  | 'retro:improvements:created'
   // Feature lifecycle events
   | 'feature:status-changed'
   // Issue management events (failure-to-issue pipeline)
