@@ -224,7 +224,10 @@ export class GitHubStateChecker {
           if (!pr) continue;
 
           // Get CI status for open PRs
-          const ciStatus = pr.state === 'open' ? await this.getCIStatus(projectPath, pr.number) : { state: 'pending' as const };
+          const ciStatus =
+            pr.state === 'open'
+              ? await this.getCIStatus(projectPath, pr.number)
+              : { state: 'pending' as const };
 
           // Check and emit state change events
           this.checkAndEmitStateChanges(projectPath, feature.id, pr, ciStatus);
