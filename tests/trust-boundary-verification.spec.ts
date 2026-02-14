@@ -80,10 +80,7 @@ describe('Trust Boundary Evaluation', () => {
     });
 
     it('should require review when metadata is missing', () => {
-      const result = settingsService.evaluateTrustBoundary(
-        {},
-        DEFAULT_TRUST_BOUNDARY_CONFIG
-      );
+      const result = settingsService.evaluateTrustBoundary({}, DEFAULT_TRUST_BOUNDARY_CONFIG);
       expect(result).toBe('requireReview');
     });
   });
