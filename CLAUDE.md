@@ -206,6 +206,7 @@ SchedulerService (cron tick)
 | Frank         | `*/10 * * * *` | V8 heap, RSS memory, agent capacity, health monitor                      | Critical issues only |
 | PR Maintainer | `*/10 * * * *` | Stale PRs (>24h), review features needing auto-merge, orphaned worktrees | Warning+ findings    |
 | Board Janitor | `*/15 * * * *` | Merged PRs still in review, orphaned in-progress (>4h), stale deps       | Warning+ findings    |
+| System Health | `*/10 * * * *` | System RAM, swap, disk, CPU load, temperature, GPU/VRAM, zombie procs    | Warning+ findings    |
 | GTM           | `0 */6 * * *`  | Recently completed features (placeholder)                                | Disabled by default  |
 
 Ava acts as orchestrator — PR pipeline monitoring is delegated to PR Maintainer, board consistency to Board Janitor. Both run on Haiku for cost efficiency.

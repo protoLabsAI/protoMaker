@@ -7,3 +7,4 @@ export { frankCrewMember } from './frank-check.js';
 export { gtmCrewMember } from './gtm-check.js';
 export { prMaintainerCrewMember } from './pr-maintainer-check.js';
 export { boardJanitorCrewMember } from './board-janitor-check.js';
+export { systemHealthCrewMember } from './system-health-check.js';
