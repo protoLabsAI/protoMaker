@@ -408,7 +408,8 @@ const dynamicAgentExecutor = new DynamicAgentExecutor(events);
 // Initialize Antagonistic Review Service for Ava + Jon PRD reviews
 const antagonisticReviewService = AntagonisticReviewService.getInstance(
   agentFactoryService,
-  events
+  events,
+  settingsService
 );
 
 // Initialize HeadsdownService for autonomous agent management

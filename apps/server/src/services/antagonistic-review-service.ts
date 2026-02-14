@@ -14,6 +14,9 @@ import type { EventEmitter } from '../lib/events.js';
 import type { AgentFactoryService } from './agent-factory-service.js';
 import { DynamicAgentExecutor } from './dynamic-agent-executor.js';
 import type { SPARCPrd } from '@automaker/types';
+import { AntagonisticReviewAdapter } from './antagonistic-review-adapter.js';
+import { LangfuseClient } from '@automaker/observability';
+import type { SettingsService } from './settings-service.js';
 
 const logger = createLogger('AntagonisticReview');
 
@@ -59,11 +62,62 @@ export class AntagonisticReviewService {
   private agentFactory: AgentFactoryService;
   private executor: DynamicAgentExecutor;
   private events: EventEmitter;
+  private settingsService: SettingsService;
+  private adapter: AntagonisticReviewAdapter | null = null;
+  private initPromise: Promise<void> | null = null;
 
-  constructor(agentFactory: AgentFactoryService, events: EventEmitter) {
+  constructor(
+    agentFactory: AgentFactoryService,
+    events: EventEmitter,
+    settingsService: SettingsService
+  ) {
     this.agentFactory = agentFactory;
     this.events = events;
+    this.settingsService = settingsService;
     this.executor = new DynamicAgentExecutor(events);
+  }
+
+  /**
+   * Ensure Langfuse is initialized before use (lazy, once)
+   */
+  private ensureInitialized(): Promise<void> {
+    if (!this.initPromise) {
+      this.initPromise = this.initializeLangfuse();
+    }
+    return this.initPromise;
+  }
+
+  /**
+   * Initialize Langfuse client and adapter
+   */
+  private async initializeLangfuse(): Promise<void> {
+    try {
+      // Check if Langfuse credentials are configured
+      const langfusePublicKey = process.env.LANGFUSE_PUBLIC_KEY;
+      const langfuseSecretKey = process.env.LANGFUSE_SECRET_KEY;
+      const langfuseBaseUrl = process.env.LANGFUSE_BASE_URL;
+
+      if (langfusePublicKey && langfuseSecretKey) {
+        const langfuseClient = new LangfuseClient({
+          publicKey: langfusePublicKey,
+          secretKey: langfuseSecretKey,
+          baseUrl: langfuseBaseUrl,
+          enabled: true,
+        });
+
+        this.adapter = new AntagonisticReviewAdapter({
+          smartModel: 'claude-3-5-sonnet-20241022',
+          enableHITL: false,
+          langfuseClient,
+        });
+
+        logger.info('Langfuse tracing initialized for antagonistic reviews');
+      } else {
+        logger.info('Langfuse credentials not found, tracing disabled');
+      }
+    } catch (error) {
+      logger.error('Failed to initialize Langfuse:', error);
+    }
   }
 
   /**
@@ -71,10 +125,15 @@ export class AntagonisticReviewService {
    */
   static getInstance(
     agentFactory: AgentFactoryService,
-    events: EventEmitter
+    events: EventEmitter,
+    settingsService: SettingsService
   ): AntagonisticReviewService {
     if (!AntagonisticReviewService.instance) {
-      AntagonisticReviewService.instance = new AntagonisticReviewService(agentFactory, events);
+      AntagonisticReviewService.instance = new AntagonisticReviewService(
+        agentFactory,
+        events,
+        settingsService
+      );
     }
     return AntagonisticReviewService.instance;
   }
@@ -83,6 +142,9 @@ export class AntagonisticReviewService {
    * Execute the full antagonistic review pipeline
    */
   async executeReview(request: ReviewRequest): Promise<ConsolidatedReview> {
+    // Ensure Langfuse is initialized before checking adapter availability
+    await this.ensureInitialized();
+
     const startTime = Date.now();
     const { prd, prdId, projectPath } = request;
 
@@ -94,6 +156,33 @@ export class AntagonisticReviewService {
       projectPath,
       timestamp: new Date().toISOString(),
     });
+
+    // Check if useGraphFlows feature flag is enabled
+    const settings = await this.settingsService.getGlobalSettings();
+    const useGraphFlows = settings.useGraphFlows ?? true; // Default to true
+
+    // If feature flag is enabled and adapter is available, use the new flow
+    if (useGraphFlows && this.adapter) {
+      logger.info('Using LangGraph flow for antagonistic review');
+      const result = await this.adapter.executeReview(request);
+
+      // Emit review completed event for backward compatibility
+      this.events.emit('prd:review:completed', {
+        prdId,
+        projectPath,
+        totalDurationMs: result.totalDurationMs,
+        totalCost: result.totalCost,
+        traceId: result.traceId,
+        success: result.success,
+        error: result.error,
+        timestamp: new Date().toISOString(),
+      });
+
+      return result;
+    }
+
+    // Otherwise, fall back to legacy DynamicAgentExecutor implementation
+    logger.info('Using legacy DynamicAgentExecutor for antagonistic review');
 
     try {
       // Create abort controller for timeout
