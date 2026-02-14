@@ -12,6 +12,7 @@ import type {
   LifecycleStatus,
   LifecycleCollectResult,
   ProjectLifecyclePhase,
+  Milestone,
 } from '@automaker/types';
 import { createLogger, slugify } from '@automaker/utils';
 import type { SettingsService } from './settings-service.js';
@@ -61,7 +62,6 @@ export class ProjectLifecycleService {
 
     // Search for duplicates
     const existingProjects = await client.searchProjects(title);
-    const relatedIssues = await client.searchIssuesText(title);
 
     const duplicates = existingProjects.map((p) => ({
       id: p.id,
@@ -70,6 +70,13 @@ export class ProjectLifecycleService {
     }));
 
     if (duplicates.length > 0) {
+      this.events.emit('project:lifecycle:initiated', {
+        projectPath,
+        title,
+        hasDuplicates: true,
+        duplicateCount: duplicates.length,
+      });
+
       return {
         linearProjectId: '',
         linearProjectUrl: '',
@@ -109,6 +116,7 @@ export class ProjectLifecycleService {
       slug: localSlug,
       linearProjectId: result.projectId,
       title,
+      hasDuplicates: false,
     });
 
     logger.info(`Initiated project: ${title} → Linear ${result.projectId}`);
@@ -160,7 +168,10 @@ export class ProjectLifecycleService {
     const linearMilestones: Array<{ id: string; name: string }> = [];
     if (project.linearProjectId) {
       const client = this.getLinearClient(projectPath);
-      for (const milestone of project.milestones) {
+      const updatedMilestones: Milestone[] = [...project.milestones];
+
+      for (let i = 0; i < project.milestones.length; i++) {
+        const milestone = project.milestones[i];
         try {
           const msResult = await client.createProjectMilestone({
             projectId: project.linearProjectId,
@@ -169,21 +180,30 @@ export class ProjectLifecycleService {
             sortOrder: milestone.number,
           });
           linearMilestones.push({ id: msResult.id, name: msResult.name });
+          // Persist the Linear milestone ID back
+          updatedMilestones[i] = { ...milestone, linearMilestoneId: msResult.id };
         } catch (error) {
           logger.warn(`Failed to create Linear milestone: ${milestone.title}`, error);
         }
       }
-    }
 
-    // Update project status
-    await this.projectService.updateProject(projectPath, projectSlug, {
-      status: 'active',
-    });
+      // Persist milestone IDs to project.json
+      await this.projectService.updateProject(projectPath, projectSlug, {
+        status: 'active',
+        milestones: updatedMilestones,
+      });
+    } else {
+      // Update project status without milestone changes
+      await this.projectService.updateProject(projectPath, projectSlug, {
+        status: 'active',
+      });
+    }
 
     this.events.emit('project:lifecycle:prd-approved', {
       projectPath,
       slug: projectSlug,
       featuresCreated: result.featuresCreated,
+      epicsCreated: Object.keys(result.milestoneEpicMap).length,
     });
 
     logger.info(
@@ -257,18 +277,26 @@ export class ProjectLifecycleService {
   async getStatus(projectPath: string, projectSlug: string): Promise<LifecycleStatus> {
     const project = await this.projectService.getProject(projectPath, projectSlug);
 
-    // Determine board state
+    // Determine board state (count all statuses including blocked/verified)
     const features = await this.featureLoader.getAll(projectPath);
     const boardSummary = {
       backlog: features.filter((f) => f.status === 'backlog').length,
       inProgress: features.filter((f) => f.status === 'in_progress').length,
       review: features.filter((f) => f.status === 'review').length,
-      done: features.filter((f) => f.status === 'done').length,
+      done: features.filter((f) => f.status === 'done' || f.status === 'verified').length,
     };
+    const blockedCount = features.filter((f) => f.status === 'blocked').length;
 
     const hasFeatures = features.length > 0;
     const hasPrd = !!project?.prd;
     const hasMilestones = (project?.milestones?.length ?? 0) > 0;
+    const allDone =
+      hasFeatures &&
+      boardSummary.backlog === 0 &&
+      boardSummary.inProgress === 0 &&
+      boardSummary.review === 0 &&
+      blockedCount === 0 &&
+      boardSummary.done > 0;
 
     // Determine phase
     let phase: ProjectLifecyclePhase | 'unknown' = 'unknown';
@@ -277,7 +305,7 @@ export class ProjectLifecycleService {
     if (!project) {
       phase = 'unknown';
       nextActions.push('initiate_project');
-    } else if (project.status === 'completed') {
+    } else if (project.status === 'completed' || allDone) {
       phase = 'completed';
     } else if (hasFeatures && boardSummary.backlog > 0) {
       phase = 'prd-approved';
@@ -296,17 +324,6 @@ export class ProjectLifecycleService {
     } else {
       phase = 'idea';
       nextActions.push('initiate_project');
-    }
-
-    // If all features are done, mark completed
-    if (
-      hasFeatures &&
-      boardSummary.backlog === 0 &&
-      boardSummary.inProgress === 0 &&
-      boardSummary.review === 0 &&
-      boardSummary.done > 0
-    ) {
-      phase = 'completed';
     }
 
     return {
@@ -342,6 +359,14 @@ export class ProjectLifecycleService {
         logger.warn(`Failed to add issue ${issueId} to project:`, error);
       }
     }
+
+    this.events.emit('project:lifecycle:phase-changed', {
+      projectPath,
+      slug: projectSlug,
+      linearProjectId,
+      issuesCollected: collected,
+      action: 'collect-related',
+    });
 
     return {
       issuesCollected: collected,
