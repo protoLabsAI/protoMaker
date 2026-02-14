@@ -14,6 +14,13 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import type { FeatureLoader } from './feature-loader.js';
 import type { Drift } from './reconciliation-service.js';
+import type { EventEmitter } from '../lib/events.js';
+import type {
+  GitHubPRReviewSubmittedPayload,
+  GitHubPRChecksUpdatedPayload,
+  GitHubPRApprovedPayload,
+  GitHubPRChangesRequestedPayload,
+} from '@automaker/types';
 
 const logger = createLogger('GitHubStateChecker');
 const execAsync = promisify(exec);
@@ -40,9 +47,36 @@ interface CIStatus {
   }>;
 }
 
+/**
+ * Review state type that includes NONE for when no reviews exist
+ */
+type ReviewState = 'APPROVED' | 'CHANGES_REQUESTED' | 'COMMENTED' | 'NONE';
+
+/**
+ * Tracks the last known state of a PR to detect changes
+ */
+interface PRState {
+  /** PR number */
+  prNumber: number;
+  /** Last known review state */
+  reviewState?: ReviewState;
+  /** Last known CI status */
+  ciStatus?: 'success' | 'failure' | 'pending' | 'error';
+  /** Number of approvals */
+  approvalCount: number;
+  /** Whether changes were requested */
+  hasChangesRequested: boolean;
+  /** Last check timestamp */
+  lastChecked: string;
+}
+
 export class GitHubStateChecker {
+  /** Map of featureId -> PRState to track last known state */
+  private prStateCache: Map<string, PRState> = new Map();
+
   constructor(
     private featureLoader: FeatureLoader,
+    private eventEmitter?: EventEmitter,
     private knownProjects: Map<string, string> = new Map()
   ) {}
 
@@ -72,6 +106,103 @@ export class GitHubStateChecker {
   }
 
   /**
+   * Check and emit events for PR state changes
+   */
+  private checkAndEmitStateChanges(
+    projectPath: string,
+    featureId: string,
+    pr: GitHubPR,
+    ciStatus: CIStatus
+  ): void {
+    if (!this.eventEmitter) return;
+
+    const lastState = this.prStateCache.get(featureId);
+    const now = new Date().toISOString();
+
+    // Determine current review state
+    const hasApproval = pr.reviews.some((r) => r.state === 'APPROVED');
+    const hasChangesRequested = pr.reviews.some((r) => r.state === 'CHANGES_REQUESTED');
+    const latestReview = pr.reviews[pr.reviews.length - 1];
+    const currentReviewState: ReviewState = latestReview?.state || 'NONE';
+    const approvalCount = pr.reviews.filter((r) => r.state === 'APPROVED').length;
+
+    // Create current state snapshot
+    const currentState: PRState = {
+      prNumber: pr.number,
+      reviewState: currentReviewState,
+      ciStatus: ciStatus.state,
+      approvalCount,
+      hasChangesRequested,
+      lastChecked: now,
+    };
+
+    // If no last state, this is the first check - store and don't emit
+    if (!lastState) {
+      this.prStateCache.set(featureId, currentState);
+      return;
+    }
+
+    // Detect review submission (review state changed)
+    if (lastState.reviewState !== currentReviewState && latestReview) {
+      const payload: GitHubPRReviewSubmittedPayload = {
+        projectPath,
+        featureId,
+        prNumber: pr.number,
+        branchName: pr.head.ref,
+        reviewState: latestReview.state,
+        timestamp: now,
+      };
+      this.eventEmitter.emit('github:pr:review-submitted', payload);
+      logger.info(`Review submitted on PR #${pr.number}: ${latestReview.state}`);
+    }
+
+    // Detect CI status change
+    if (lastState.ciStatus !== ciStatus.state) {
+      const payload: GitHubPRChecksUpdatedPayload = {
+        projectPath,
+        featureId,
+        prNumber: pr.number,
+        branchName: pr.head.ref,
+        ciStatus: ciStatus.state,
+        failedChecks: ciStatus.failedChecks,
+        timestamp: now,
+      };
+      this.eventEmitter.emit('github:pr:checks-updated', payload);
+      logger.info(`CI checks updated on PR #${pr.number}: ${ciStatus.state}`);
+    }
+
+    // Detect approval (approval count increased)
+    if (hasApproval && approvalCount > lastState.approvalCount) {
+      const payload: GitHubPRApprovedPayload = {
+        projectPath,
+        featureId,
+        prNumber: pr.number,
+        branchName: pr.head.ref,
+        approvalCount,
+        timestamp: now,
+      };
+      this.eventEmitter.emit('github:pr:approved', payload);
+      logger.info(`PR #${pr.number} approved (${approvalCount} approvals)`);
+    }
+
+    // Detect changes requested (newly requested)
+    if (hasChangesRequested && !lastState.hasChangesRequested) {
+      const payload: GitHubPRChangesRequestedPayload = {
+        projectPath,
+        featureId,
+        prNumber: pr.number,
+        branchName: pr.head.ref,
+        timestamp: now,
+      };
+      this.eventEmitter.emit('github:pr:changes-requested', payload);
+      logger.info(`Changes requested on PR #${pr.number}`);
+    }
+
+    // Update cache with current state
+    this.prStateCache.set(featureId, currentState);
+  }
+
+  /**
    * Check a single project for GitHub state drifts
    */
   async checkProject(projectPath: string): Promise<Drift[]> {
@@ -92,6 +223,12 @@ export class GitHubStateChecker {
           const pr = await this.findPRForBranch(projectPath, feature.branchName);
           if (!pr) continue;
 
+          // Get CI status for open PRs
+          const ciStatus = pr.state === 'open' ? await this.getCIStatus(projectPath, pr.number) : { state: 'pending' as const };
+
+          // Check and emit state change events
+          this.checkAndEmitStateChanges(projectPath, feature.id, pr, ciStatus);
+
           // Check if merged
           if (pr.merged && feature.status === 'review') {
             drifts.push({
@@ -107,10 +244,8 @@ export class GitHubStateChecker {
             });
           }
 
-          // Check CI status for open PRs
+          // Check for drifts on open PRs
           if (pr.state === 'open') {
-            const ciStatus = await this.getCIStatus(projectPath, pr.number);
-
             if (ciStatus.state === 'failure') {
               drifts.push({
                 type: 'pr-ci-failure',
