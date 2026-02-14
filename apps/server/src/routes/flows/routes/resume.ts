@@ -31,7 +31,8 @@ export function createResumeHandler(reviewService: AntagonisticReviewService) {
       // For now, return a placeholder response indicating the feature is not yet implemented
       res.status(501).json({
         success: false,
-        error: 'Resume functionality is not yet implemented. HITL interrupts are not currently supported.',
+        error:
+          'Resume functionality is not yet implemented. HITL interrupts are not currently supported.',
       });
     } catch (error) {
       logError(error, 'Resume antagonistic review flow failed');
