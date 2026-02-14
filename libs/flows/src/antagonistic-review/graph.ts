@@ -157,10 +157,12 @@ async function humanReview(
  * @returns Compiled LangGraph runnable
  */
 export function createAntagonisticReviewGraph(enableCheckpointing = true) {
+  const checkpointer = enableCheckpointing ? new MemorySaver() : undefined;
+
   const builder = new GraphBuilder<AntagonisticReviewState>({
     stateAnnotation: AntagonisticReviewStateAnnotation,
     enableCheckpointing,
-    checkpointer: enableCheckpointing ? new MemorySaver() : undefined,
+    checkpointer,
   });
 
   // Add all nodes
@@ -209,7 +211,7 @@ export function createAntagonisticReviewGraph(enableCheckpointing = true) {
   // Compile with interruptBefore to pause at human_review for HITL
   const graph = builder.getGraph();
   return graph.compile({
-    checkpointer: enableCheckpointing ? new MemorySaver() : undefined,
+    checkpointer,
     interruptBefore: ['human_review'] as any,
   });
 }
