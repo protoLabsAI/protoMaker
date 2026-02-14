@@ -22,4 +22,4 @@ jobs:
           cache: 'pnpm'
 
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec prettier --check .
+      - run: pnpm exec prettier --ignore-path .prettierignore --check .

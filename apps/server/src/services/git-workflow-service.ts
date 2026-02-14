@@ -700,10 +700,13 @@ export class GitWorkflowService {
       );
       const files = stagedFiles.trim().split('\n').filter(Boolean);
       if (files.length > 0) {
-        await execAsync(`npx prettier --write ${files.map((f) => `"${f}"`).join(' ')}`, {
-          cwd: workDir,
-          env: execEnv,
-        });
+        await execAsync(
+          `npx prettier --ignore-path .prettierignore --write ${files.map((f) => `"${f}"`).join(' ')}`,
+          {
+            cwd: workDir,
+            env: execEnv,
+          }
+        );
         // Re-stage after formatting
         await execAsync("git add -A -- ':!.automaker/'", { cwd: workDir, env: execEnv });
         logger.debug(`Auto-formatted ${files.length} staged files`);

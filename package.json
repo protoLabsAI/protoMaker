@@ -55,8 +55,8 @@
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
+    "format": "prettier --ignore-path .prettierignore --write .",
+    "format:check": "prettier --ignore-path .prettierignore --check .",
     "rebuild": "rm -rf node_modules apps/*/node_modules libs/*/node_modules && npm install",
     "prepare": "husky && npm run build:packages",
     "plugin:reload": "claude plugin uninstall automaker && claude plugin install automaker",
@@ -67,7 +67,7 @@
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,mts,cts,json,css,md,html,yml,yaml}": [
-      "prettier --write"
+      "prettier --ignore-path .prettierignore --write"
     ]
   },
   "dependencies": {
