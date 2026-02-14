@@ -24,6 +24,20 @@ libs/flows/src/
 │   │   └── analyzer.ts         # Analyzer subgraph
 │   └── utils/
 │       └── subgraph-wrapper.ts # Subgraph isolation utility
+├── content/
+│   ├── content-creation-flow.ts    # Main 6-phase content pipeline
+│   ├── state.ts                    # ContentStateAnnotation
+│   ├── types.ts                    # Zod schemas: BlogPost, TechDoc, etc.
+│   ├── prompt-loader.ts            # Handlebars prompt compilation
+│   ├── prompts/                    # .md prompt templates
+│   ├── nodes/
+│   │   ├── outline-planner.ts      # Outline generation + HITL
+│   │   ├── generation-dispatch.ts  # Section generation fan-out
+│   │   └── review-workers.ts       # Technical/style/fact reviewers
+│   └── subgraphs/
+│       ├── research-subgraph.ts    # Parallel research workers
+│       ├── section-writer.ts       # Isolated per-section generation
+│       └── review-subgraph.ts      # Parallel review pipeline
 └── index.ts
 ```
 
@@ -272,6 +286,112 @@ Human-in-the-loop pattern: draft → review → revise (loop until approved). Us
 ### Coordinator Flow (`createCoordinatorGraph`)
 
 Full coordinator pattern with Send()-based fan-out to researcher and analyzer subgraphs. Supports parallel and sequential execution modes.
+
+## Content Creation Flow
+
+The content creation pipeline is the primary production flow in `@automaker/flows`. It generates blog posts, technical documentation, training data, and HuggingFace dataset rows through a 6-phase pipeline with parallel processing and human-in-the-loop gates.
+
+### Architecture
+
+```mermaid
+graph TD
+    START([START]) --> generate_queries[Generate Research Queries]
+
+    %% Phase 1: Research
+    generate_queries --> fan_out_research[Fan Out Research]
+    fan_out_research -->|Send| research_delegate_1[Research Worker 1]
+    fan_out_research -->|Send| research_delegate_2[Research Worker 2]
+    fan_out_research -->|Send| research_delegate_n[Research Worker N]
+    research_delegate_1 --> research_hitl{HITL: Research Review}
+    research_delegate_2 --> research_hitl
+    research_delegate_n --> research_hitl
+
+    %% Phase 2: Outline
+    research_hitl -->|approved| generate_outline[Generate Outline]
+    research_hitl -->|revise| generate_queries
+    generate_outline --> outline_hitl{HITL: Outline Approval}
+
+    %% Phase 3: Section Generation
+    outline_hitl -->|approved| fan_out_generation[Fan Out Sections]
+    outline_hitl -->|revise| generate_outline
+    fan_out_generation -->|Send| gen_delegate_1[SectionWriter 1]
+    fan_out_generation -->|Send| gen_delegate_2[SectionWriter 2]
+    fan_out_generation -->|Send| gen_delegate_n[SectionWriter N]
+
+    %% Phase 4: Assembly
+    gen_delegate_1 --> assemble[Assemble Document]
+    gen_delegate_2 --> assemble
+    gen_delegate_n --> assemble
+
+    %% Phase 5: Review
+    assemble --> fan_out_review[Fan Out Reviews]
+    fan_out_review -->|Send| review_tech[Technical Reviewer]
+    fan_out_review -->|Send| review_style[Style Reviewer]
+    fan_out_review -->|Send| review_fact[Fact Checker]
+    review_tech --> final_review_hitl{HITL: Final Review}
+    review_style --> final_review_hitl
+    review_fact --> final_review_hitl
+
+    %% Phase 6: Output
+    final_review_hitl -->|approved| fan_out_output[Fan Out Output]
+    final_review_hitl -->|revise| fan_out_generation
+    fan_out_output -->|Send| output_blog[Blog Formatter]
+    fan_out_output -->|Send| output_doc[Doc Formatter]
+    fan_out_output -->|Send| output_training[Training Data]
+    fan_out_output -->|Send| output_hf[HF Dataset Row]
+    output_blog --> complete[Complete]
+    output_doc --> complete
+    output_training --> complete
+    output_hf --> complete
+    complete --> END([END])
+```
+
+### Phases
+
+| Phase         | Nodes                                                         | Parallelism              | HITL Gate        |
+| ------------- | ------------------------------------------------------------- | ------------------------ | ---------------- |
+| 1. Research   | `generate_queries` → `fan_out_research` → `research_delegate` | Send() per query         | Research review  |
+| 2. Outline    | `generate_outline`                                            | Sequential               | Outline approval |
+| 3. Generation | `fan_out_generation` → `generation_delegate` (SectionWriter)  | Send() per section       | None             |
+| 4. Assembly   | `assemble`                                                    | Sequential               | None             |
+| 5. Review     | `fan_out_review` → `review_delegate`                          | Send() per reviewer type | Final review     |
+| 6. Output     | `fan_out_output` → `output_delegate`                          | Send() per format        | None             |
+
+### Key Design Decisions
+
+- **SectionWriter is a subgraph** — Each section generates in its own isolated StateGraph via `wrapSubgraph()`, preventing message pollution between sections.
+- **3 HITL gates using `interrupt()`** — Research review, outline approval, and final review. Uses `MemorySaver` checkpointer to persist state across interruptions.
+- **Reducers on all parallel fields** — `researchResults`, `sections`, `reviewFeedback`, and `outputs` all use `appendReducer` for safe concurrent merging.
+- **Antagonistic 8-dimension review** — Technical accuracy, style/voice, fact-checking scored independently by separate workers.
+- **Blog strategy extensions** — ContentConfig supports A/B testing, revenue goal routing, SEO config, CTA placement, and 8 blog template types.
+
+### Usage
+
+```typescript
+import { createContentCreationFlow } from '@automaker/flows';
+
+const flow = createContentCreationFlow();
+const compiled = flow.compile();
+
+const result = await compiled.invoke({
+  config: {
+    topic: 'Building LangGraph Flows',
+    contentType: 'blog_post',
+    targetAudience: 'AI engineers',
+    length: 'long',
+    blogTemplate: 'tutorial',
+  },
+});
+
+// result.outputs contains formatted content for each output type
+```
+
+### Output Types (Zod-validated)
+
+- `BlogPost` — Full blog with frontmatter, SEO metadata, sections, code examples
+- `TechDoc` — Technical documentation with API references
+- `TrainingExample` — LLM fine-tuning data (system/user/assistant messages)
+- `HFDatasetRow` — HuggingFace dataset format with metadata
 
 ## Known Gotchas
 
