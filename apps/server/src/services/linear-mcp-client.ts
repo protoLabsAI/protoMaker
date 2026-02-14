@@ -269,7 +269,7 @@ export class LinearMCPClient {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`,
+          Authorization: accessToken.startsWith('lin_api_') ? accessToken : `Bearer ${accessToken}`,
         },
         body: JSON.stringify({ query, variables }),
         signal: controller.signal,

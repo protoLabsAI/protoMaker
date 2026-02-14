@@ -328,15 +328,15 @@ docker exec automaker-server-staging ps aux --sort=-%mem | head -20
 ```bash
 # Running agents
 curl http://localhost:3008/api/agents/running \
-  -H "Authorization: Bearer $AUTOMAKER_API_KEY"
+  -H "X-API-Key: $AUTOMAKER_API_KEY"
 
 # Board summary
 curl http://localhost:3008/api/board/summary?projectPath=/projects/myproject \
-  -H "Authorization: Bearer $AUTOMAKER_API_KEY"
+  -H "X-API-Key: $AUTOMAKER_API_KEY"
 
 # Auto-mode status
 curl http://localhost:3008/api/auto-mode/status?projectPath=/projects/myproject \
-  -H "Authorization: Bearer $AUTOMAKER_API_KEY"
+  -H "X-API-Key: $AUTOMAKER_API_KEY"
 ```
 
 ### Health Checks
@@ -498,6 +498,86 @@ docker exec automaker-server-staging iostat -x 5
    ```bash
    docker exec automaker-server-staging du -sh /data/*
    ```
+
+## Environment Variable Troubleshooting
+
+### Adding a New Env Var to Staging
+
+To permanently add a new environment variable:
+
+1. **Add to `.env`** at `/home/josh/staging-deploy/automaker/.env`
+2. **Add to `docker-compose.staging.yml`** in the `server.environment` section with the pattern `- VAR_NAME=${VAR_NAME:-}`
+3. **Recreate the container** — env vars are only read at container creation, not on restart:
+
+```bash
+cd /home/josh/staging-deploy/automaker
+docker stop automaker-server && docker rm automaker-server
+docker compose -p automaker-staging -f docker-compose.staging.yml up -d server --no-deps
+```
+
+### Verifying Env Vars in Container
+
+```bash
+# Check if a specific variable is set
+docker exec automaker-server env | grep VAR_NAME
+
+# List all env vars
+docker exec automaker-server env | sort
+```
+
+### Common Issues
+
+**Env var not appearing after restart:**
+
+Docker compose only reads env vars at container _creation_ time. A `docker restart` or `docker compose restart` does NOT re-read `.env`. You must stop, remove, and recreate the container (see above).
+
+**Compose project name mismatch:**
+
+The staging compose file has `name: automaker-staging`. If you run `docker compose` from a different directory context, it may use the directory name as project name instead, creating orphaned containers. Always use `-p automaker-staging` when running docker compose commands manually.
+
+**Container name conflict:**
+
+```
+Error: container name "/automaker-server" is already in use
+```
+
+An old container from a different compose context still exists. Fix:
+
+```bash
+docker stop automaker-server && docker rm automaker-server
+```
+
+### Linear API Key (`LINEAR_API_KEY`)
+
+Linear's API requires different `Authorization` header formats depending on the token type:
+
+- **API keys** (start with `lin_api_`): Pass directly — `Authorization: lin_api_...`
+- **OAuth tokens**: Use Bearer prefix — `Authorization: Bearer <token>`
+
+The `LinearMCPClient.executeGraphQL()` method detects the token type automatically. If you see `400 Bad Request` errors from Linear, verify:
+
+1. The env var is set: `docker exec automaker-server env | grep LINEAR`
+2. The token format is correct (should start with `lin_api_`)
+3. The token is valid (test directly):
+
+```bash
+curl -s https://api.linear.app/graphql \
+  -H "Content-Type: application/json" \
+  -H "Authorization: $LINEAR_API_KEY" \
+  -d '{"query":"{ viewer { id name } }"}' | python3 -m json.tool
+```
+
+### Automaker API Key (`AUTOMAKER_API_KEY`)
+
+Automaker uses `X-API-Key` header (NOT `Authorization: Bearer`):
+
+```bash
+# Correct
+curl http://localhost:3008/api/health -H "X-API-Key: $AUTOMAKER_API_KEY"
+
+# Wrong — will return 401
+curl http://localhost:3008/api/health -H "Authorization: Bearer $AUTOMAKER_API_KEY"
+```
 
 ## Backup & Recovery
 
