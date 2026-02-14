@@ -41,6 +41,7 @@ Provide your fact-check findings in XML tags. Each finding should be wrapped in 
 ```
 
 **Severity Levels:**
+
 - `error` - Critical inaccuracies that must be fixed (false claims, incorrect data, misleading information)
 - `warning` - Issues that should be addressed (missing citations, outdated info, missing context)
 - `info` - Informational notes (verified claims, suggestions for improvement)
