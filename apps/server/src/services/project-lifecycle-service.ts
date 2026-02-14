@@ -164,36 +164,41 @@ export class ProjectLifecycleService {
       this.events
     );
 
-    // Sync milestones to Linear if project has a Linear ID
+    // Sync milestones to Linear if project has a Linear ID (best-effort)
     const linearMilestones: Array<{ id: string; name: string }> = [];
     if (project.linearProjectId) {
-      const client = this.getLinearClient(projectPath);
-      const updatedMilestones: Milestone[] = [...project.milestones];
+      try {
+        const client = this.getLinearClient(projectPath);
+        const updatedMilestones: Milestone[] = [...project.milestones];
 
-      for (let i = 0; i < project.milestones.length; i++) {
-        const milestone = project.milestones[i];
-        try {
-          const msResult = await client.createProjectMilestone({
-            projectId: project.linearProjectId,
-            name: milestone.title,
-            description: milestone.description,
-            sortOrder: milestone.number,
-          });
-          linearMilestones.push({ id: msResult.id, name: msResult.name });
-          // Persist the Linear milestone ID back
-          updatedMilestones[i] = { ...milestone, linearMilestoneId: msResult.id };
-        } catch (error) {
-          logger.warn(`Failed to create Linear milestone: ${milestone.title}`, error);
+        for (let i = 0; i < project.milestones.length; i++) {
+          const milestone = project.milestones[i];
+          try {
+            const msResult = await client.createProjectMilestone({
+              projectId: project.linearProjectId,
+              name: milestone.title,
+              description: milestone.description,
+              sortOrder: milestone.number,
+            });
+            linearMilestones.push({ id: msResult.id, name: msResult.name });
+            updatedMilestones[i] = { ...milestone, linearMilestoneId: msResult.id };
+          } catch (error) {
+            logger.warn(`Failed to create Linear milestone: ${milestone.title}`, error);
+          }
         }
-      }
 
-      // Persist milestone IDs to project.json
-      await this.projectService.updateProject(projectPath, projectSlug, {
-        status: 'active',
-        milestones: updatedMilestones,
-      });
+        // Persist milestone IDs to project.json
+        await this.projectService.updateProject(projectPath, projectSlug, {
+          status: 'active',
+          milestones: updatedMilestones,
+        });
+      } catch (error) {
+        logger.warn('Failed to sync milestones to Linear:', error);
+        await this.projectService.updateProject(projectPath, projectSlug, {
+          status: 'active',
+        });
+      }
     } else {
-      // Update project status without milestone changes
       await this.projectService.updateProject(projectPath, projectSlug, {
         status: 'active',
       });
@@ -238,10 +243,14 @@ export class ProjectLifecycleService {
       throw new Error('No features in backlog. Approve the PRD first to create features.');
     }
 
-    // Update Linear project status to started
+    // Update Linear project status to started (best-effort)
     if (project.linearProjectId) {
-      const client = this.getLinearClient(projectPath);
-      await client.updateProject(project.linearProjectId, { status: 'started' });
+      try {
+        const client = this.getLinearClient(projectPath);
+        await client.updateProject(project.linearProjectId, { status: 'started' });
+      } catch (error) {
+        logger.warn('Failed to update Linear project status:', error);
+      }
     }
 
     // Start auto-mode
