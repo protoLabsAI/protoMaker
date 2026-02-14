@@ -65,6 +65,21 @@ jobs:
             -H "X-API-Key: $AUTOMAKER_API_KEY" \
             --max-time 180 || echo "Drain skipped (server not running or no agents)"
 
+      - name: Tag rollback images
+        working-directory: /home/josh/staging-deploy/automaker
+        run: |
+          # Save current working images so we can restore on failure.
+          # If no images exist yet (first deploy), this is a no-op.
+          for svc in server ui docs; do
+            img=$(docker compose -f docker-compose.staging.yml images -q "$svc" 2>/dev/null || true)
+            if [ -n "$img" ]; then
+              docker tag "$img" "automaker-staging-${svc}:rollback"
+              echo "Tagged ${svc} image ${img} as rollback"
+            else
+              echo "No existing ${svc} image to tag (first deploy?)"
+            fi
+          done
+
       - name: Rebuild and restart staging
         working-directory: /home/josh/staging-deploy/automaker
         run: |
@@ -72,6 +87,7 @@ jobs:
           ./scripts/setup-staging.sh --start
 
       - name: Verify deployment
+        id: verify
         working-directory: /home/josh/staging-deploy/automaker
         run: |
           # Check server health
@@ -108,6 +124,7 @@ jobs:
           fi
 
       - name: Smoke tests
+        id: smoke
         working-directory: /home/josh/staging-deploy/automaker
         run: |
           # Source API key from .env (same machine as staging server)
@@ -116,9 +133,63 @@ jobs:
         env:
           DISCORD_ALERTS_WEBHOOK: ${{ secrets.DISCORD_ALERTS_WEBHOOK }}
 
-      - name: Cleanup build artifacts
+      - name: Rollback on failure
+        if: failure() && (steps.verify.outcome == 'failure' || steps.smoke.outcome == 'failure')
+        working-directory: /home/josh/staging-deploy/automaker
+        run: |
+          echo "Deploy verification failed — rolling back to previous images"
+
+          # Check if rollback images exist
+          has_rollback=false
+          for svc in server ui docs; do
+            if docker image inspect "automaker-staging-${svc}:rollback" &>/dev/null; then
+              has_rollback=true
+              break
+            fi
+          done
+
+          if [ "$has_rollback" = "false" ]; then
+            echo "No rollback images available (first deploy?) — cannot rollback"
+            exit 1
+          fi
+
+          # Stop broken containers
+          docker compose -f docker-compose.staging.yml down 2>/dev/null || true
+
+          # Retag rollback images as latest for each service
+          for svc in server ui docs; do
+            if docker image inspect "automaker-staging-${svc}:rollback" &>/dev/null; then
+              docker tag "automaker-staging-${svc}:rollback" "automaker-staging-${svc}:latest"
+              echo "Restored ${svc} from rollback"
+            fi
+          done
+
+          # Restart with rolled-back images
+          docker compose -f docker-compose.staging.yml up -d
+
+          # Verify rollback health
+          retries=0
+          while [ $retries -lt 15 ]; do
+            if curl -sf http://localhost:3008/api/health > /dev/null; then
+              echo "Rollback successful — server is healthy"
+              break
+            fi
+            retries=$((retries + 1))
+            sleep 2
+          done
+          if [ $retries -eq 15 ]; then
+            echo "CRITICAL: Rollback also failed. Manual intervention required."
+            docker compose -f docker-compose.staging.yml logs --tail=50 server
+          fi
+
+      - name: Cleanup
         if: always()
-        run: docker image prune -f 2>/dev/null || true
+        run: |
+          # Remove rollback tags (keep images for layer cache)
+          for svc in server ui docs; do
+            docker rmi "automaker-staging-${svc}:rollback" 2>/dev/null || true
+          done
+          docker image prune -f 2>/dev/null || true
 
       - name: Notify Discord
         if: always()
@@ -133,7 +204,7 @@ jobs:
           if [ "$STATUS" = "success" ]; then
             MSG="Staging deployed: \`${COMMIT}\` (v${VERSION}) - all healthy (${DOCS_STATUS})"
           else
-            MSG="Staging deploy failed: \`${COMMIT}\` - check GitHub Actions"
+            MSG="Staging deploy FAILED: \`${COMMIT}\` - rolled back to previous version. Check GitHub Actions."
           fi
 
           # Post to #deployments channel via webhook if configured

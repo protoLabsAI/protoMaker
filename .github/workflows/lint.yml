@@ -1,0 +1,26 @@
+name: Lint
+
+on:
+  pull_request:
+    branches:
+      - '*'
+  push:
+    branches:
+      - main
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup project
+        uses: ./.github/actions/setup-project
+
+      - name: Lint UI
+        run: npm run lint:ui
+
+      - name: Lint Server (import safety)
+        run: npm run lint:server
