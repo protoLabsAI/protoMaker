@@ -1513,6 +1513,21 @@ export interface GlobalSettings {
    * @default true
    */
   useGraphFlows?: boolean;
+
+  // Hivemind Configuration
+  /**
+   * Unique identifier for this Automaker instance in a hivemind mesh.
+   * Defaults to os.hostname() at runtime if not set.
+   */
+  instanceId?: string;
+
+  /**
+   * Hivemind mesh configuration for multi-instance coordination.
+   * When enabled, this instance can discover peers, route features by domain,
+   * and participate in distributed feature processing.
+   * @see HivemindConfig
+   */
+  hivemind?: import('./hivemind.js').HivemindConfig;
 }
 
 /**

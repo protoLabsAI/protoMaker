@@ -396,6 +396,13 @@ export interface Feature {
    * Each transition records the from/to status, timestamp, and optional reason.
    */
   statusHistory?: StatusTransition[];
+
+  // Hivemind fields
+  /** Domain this feature belongs to (e.g. "frontend", "server") for mesh routing */
+  domain?: string;
+  /** Instance ID that has claimed this feature for execution */
+  claimedBy?: string;
+
   [key: string]: unknown; // Keep catch-all for extensibility
 }
 
