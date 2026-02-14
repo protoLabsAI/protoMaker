@@ -48,8 +48,27 @@ export {
   type ConsolidatedReview,
 } from './nodes/consolidate.js';
 
-export { checkConsensus } from './nodes/check-consensus.js';
-export { resolution } from './nodes/resolution.js';
-export { checkHitl } from './nodes/check-hitl.js';
+// TODO: These exports will be enabled when the respective features are implemented
+// export { checkConsensus } from './nodes/check-consensus.js';
+// export { resolution } from './nodes/resolution.js';
+// export { checkHitl } from './nodes/check-hitl.js';
+// export { createAntagonisticReviewGraph, antagonisticReviewGraph } from './graph.js';
 
-export { createAntagonisticReviewGraph, antagonisticReviewGraph } from './graph.js';
+export {
+  createPairReviewSubgraph,
+  createPairReviewNode,
+  runPairReview,
+  PairReviewStateAnnotation,
+  type PairReviewState,
+  type PairConfig,
+  type ReviewerConfig,
+} from './nodes/pair-review.js';
+
+export {
+  FRANK_CHRIS_PAIR,
+  MATT_CINDI_PAIR,
+  SAM_JAKE_PAIR,
+  ALL_PAIRS,
+  getPairBySection,
+  getAllSections,
+} from './pairs.js';
