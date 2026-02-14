@@ -1,0 +1,13 @@
+# CodeRabbit configuration
+# https://docs.coderabbit.ai/configuration
+reviews:
+  # Don't review operational data files — they generate noise threads
+  # that block PR merges via required_review_thread_resolution
+  path_filters:
+    - '!.beads/**'
+    - '!.automaker/memory/**'
+    - '!.automaker/projects/**'
+    - '!data/**'
+  auto_review:
+    enabled: true
+    drafts: false

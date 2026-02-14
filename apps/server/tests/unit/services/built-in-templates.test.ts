@@ -11,10 +11,11 @@ describe('registerBuiltInTemplates', () => {
     registry = new RoleRegistryService(events);
   });
 
-  it('registers all 12 built-in templates', () => {
+  it('registers all built-in templates', () => {
     const count = registerBuiltInTemplates(registry);
-    expect(count).toBe(12);
-    expect(registry.size).toBe(12);
+    // Use dynamic count — adding a team member shouldn't break tests
+    expect(count).toBeGreaterThanOrEqual(12);
+    expect(registry.size).toBe(count);
   });
 
   it('registers templates as tier 0 (protected)', () => {
@@ -93,10 +94,10 @@ describe('registerBuiltInTemplates', () => {
   });
 
   it('is idempotent — calling twice does not duplicate', () => {
+    const count1 = registerBuiltInTemplates(registry);
     registerBuiltInTemplates(registry);
-    const count2 = registerBuiltInTemplates(registry);
-    // Second call may succeed (overwrite) or fail, but total should still be 12
-    expect(registry.size).toBe(12);
+    // Second call may succeed (overwrite) or fail, but total should stay the same
+    expect(registry.size).toBe(count1);
   });
 
   it('ava has systemPrompt for Discord routing', () => {

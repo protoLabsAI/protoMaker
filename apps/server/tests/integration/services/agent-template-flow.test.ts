@@ -52,11 +52,11 @@ describe('Agent Template Flow (integration)', () => {
       expect(config.trustLevel).toBe(3);
     });
 
-    it('creates config for all 12 built-in templates without errors', () => {
-      registerBuiltInTemplates(registry);
+    it('creates config for all built-in templates without errors', () => {
+      const count = registerBuiltInTemplates(registry);
       const templates = registry.list();
 
-      expect(templates).toHaveLength(12);
+      expect(templates).toHaveLength(count);
 
       for (const template of templates) {
         const config = factory.createFromTemplate(template.name, '/test/project');
@@ -162,7 +162,7 @@ describe('Agent Template Flow (integration)', () => {
 
   describe('mixed built-in and custom', () => {
     it('built-in and custom templates coexist', () => {
-      registerBuiltInTemplates(registry);
+      const builtInCount = registerBuiltInTemplates(registry);
 
       const custom: AgentTemplate = {
         name: 'data-analyst',
@@ -177,8 +177,8 @@ describe('Agent Template Flow (integration)', () => {
 
       registry.register(custom);
 
-      // Total should be 13 (12 built-in + 1 custom)
-      expect(registry.size).toBe(13);
+      // Total should be built-in + 1 custom
+      expect(registry.size).toBe(builtInCount + 1);
 
       // Both resolve correctly
       const builtIn = factory.createFromTemplate('backend-engineer', '/test/project');
