@@ -153,7 +153,7 @@ function numberCodeExamples(content: string): string {
 async function checkCoherence(
   sections: DocumentSection[],
   langfuseClient?: LangfuseClient,
-  prompt?: string,
+  prompt?: string
 ): Promise<string> {
   // Create a trace if Langfuse is available
   const traceId = langfuseClient
@@ -165,9 +165,7 @@ async function checkCoherence(
 
   try {
     // Prepare sections text for coherence checking
-    const sectionsText = sections
-      .map((s) => `## ${s.title}\n\n${s.content}`)
-      .join('\n\n---\n\n');
+    const sectionsText = sections.map((s) => `## ${s.title}\n\n${s.content}`).join('\n\n---\n\n');
 
     // TODO: Call LLM provider for coherence checking
     // For now, return the merged sections as-is
@@ -210,7 +208,7 @@ function mergeSections(sections: DocumentSection[]): string {
 export async function assembler(
   state: AssemblerState,
   langfuseClient?: LangfuseClient,
-  coherencePrompt?: string,
+  coherencePrompt?: string
 ): Promise<Partial<AssemblerState>> {
   // Create a trace if Langfuse is available
   const traceId = langfuseClient
