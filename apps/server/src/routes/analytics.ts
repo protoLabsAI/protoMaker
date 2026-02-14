@@ -2,11 +2,12 @@
  * Analytics API Routes
  *
  * Exposes feedback analytics and pattern detection data:
- * - GET /api/analytics/:projectPath - Get summary statistics
- * - GET /api/analytics/:projectPath/pr/:prNumber - Get metrics for specific PR
- * - GET /api/analytics/:projectPath/feature/:featureId - Get metrics for specific feature
- * - GET /api/analytics/:projectPath/patterns - Get detected patterns
- * - POST /api/analytics/:projectPath/detect - Run pattern detection
+ * - POST /api/analytics/summary - Get summary statistics
+ * - POST /api/analytics/pr - Get metrics for specific PR
+ * - POST /api/analytics/feature - Get metrics for specific feature
+ * - POST /api/analytics/patterns - Get detected patterns
+ * - POST /api/analytics/detect - Run pattern detection
+ * - POST /api/analytics/all - Get all analytics
  */
 
 import { Router } from 'express';
@@ -21,15 +22,45 @@ export function createAnalyticsRoutes(events: EventEmitter): Router {
   const router = Router();
 
   /**
-   * GET /api/analytics/:projectPath
+   * POST /api/analytics/summary
    * Get summary statistics for a project
    */
-  router.get('/:projectPath(*)/all', async (req, res) => {
+  router.post('/summary', async (req, res) => {
     try {
-      const projectPath = req.params['projectPath(*)'];
+      const { projectPath } = req.body as { projectPath: string };
 
       if (!projectPath) {
-        res.status(400).json({ error: 'Project path is required' });
+        res.status(400).json({ error: 'projectPath is required' });
+        return;
+      }
+
+      const analyticsService = new FeedbackAnalyticsService(projectPath);
+      const stats = await analyticsService.getSummaryStats();
+
+      res.json({
+        success: true,
+        projectPath,
+        stats,
+      });
+    } catch (error) {
+      logger.error('Failed to get analytics summary:', error);
+      res.status(500).json({
+        error: 'Failed to get analytics summary',
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+  });
+
+  /**
+   * POST /api/analytics/all
+   * Get all analytics for a project
+   */
+  router.post('/all', async (req, res) => {
+    try {
+      const { projectPath } = req.body as { projectPath: string };
+
+      if (!projectPath) {
+        res.status(400).json({ error: 'projectPath is required' });
         return;
       }
 
@@ -51,18 +82,24 @@ export function createAnalyticsRoutes(events: EventEmitter): Router {
     }
   });
 
-  router.get('/:projectPath(*)/pr/:prNumber', async (req, res) => {
+  /**
+   * POST /api/analytics/pr
+   * Get analytics for a specific PR
+   */
+  router.post('/pr', async (req, res) => {
     try {
-      const projectPath = req.params['projectPath(*)'];
-      const prNumber = parseInt(req.params.prNumber, 10);
+      const { projectPath, prNumber } = req.body as {
+        projectPath: string;
+        prNumber: number;
+      };
 
       if (!projectPath) {
-        res.status(400).json({ error: 'Project path is required' });
+        res.status(400).json({ error: 'projectPath is required' });
         return;
       }
 
-      if (isNaN(prNumber)) {
-        res.status(400).json({ error: 'Invalid PR number' });
+      if (!prNumber || isNaN(prNumber)) {
+        res.status(400).json({ error: 'Valid prNumber is required' });
         return;
       }
 
@@ -84,18 +121,24 @@ export function createAnalyticsRoutes(events: EventEmitter): Router {
     }
   });
 
-  router.get('/:projectPath(*)/feature/:featureId', async (req, res) => {
+  /**
+   * POST /api/analytics/feature
+   * Get analytics for a specific feature
+   */
+  router.post('/feature', async (req, res) => {
     try {
-      const projectPath = req.params['projectPath(*)'];
-      const featureId = req.params.featureId;
+      const { projectPath, featureId } = req.body as {
+        projectPath: string;
+        featureId: string;
+      };
 
       if (!projectPath) {
-        res.status(400).json({ error: 'Project path is required' });
+        res.status(400).json({ error: 'projectPath is required' });
         return;
       }
 
       if (!featureId) {
-        res.status(400).json({ error: 'Feature ID is required' });
+        res.status(400).json({ error: 'featureId is required' });
         return;
       }
 
@@ -117,12 +160,16 @@ export function createAnalyticsRoutes(events: EventEmitter): Router {
     }
   });
 
-  router.get('/:projectPath(*)/patterns', async (req, res) => {
+  /**
+   * POST /api/analytics/patterns
+   * Get detected patterns for a project
+   */
+  router.post('/patterns', async (req, res) => {
     try {
-      const projectPath = req.params['projectPath(*)'];
+      const { projectPath } = req.body as { projectPath: string };
 
       if (!projectPath) {
-        res.status(400).json({ error: 'Project path is required' });
+        res.status(400).json({ error: 'projectPath is required' });
         return;
       }
 
@@ -145,12 +192,16 @@ export function createAnalyticsRoutes(events: EventEmitter): Router {
     }
   });
 
-  router.post('/:projectPath(*)/detect', async (req, res) => {
+  /**
+   * POST /api/analytics/detect
+   * Run pattern detection for a project
+   */
+  router.post('/detect', async (req, res) => {
     try {
-      const projectPath = req.params['projectPath(*)'];
+      const { projectPath } = req.body as { projectPath: string };
 
       if (!projectPath) {
-        res.status(400).json({ error: 'Project path is required' });
+        res.status(400).json({ error: 'projectPath is required' });
         return;
       }
 
@@ -172,32 +223,6 @@ export function createAnalyticsRoutes(events: EventEmitter): Router {
       logger.error('Failed to detect patterns:', error);
       res.status(500).json({
         error: 'Failed to detect patterns',
-        message: error instanceof Error ? error.message : String(error),
-      });
-    }
-  });
-
-  router.get('/:projectPath(*)', async (req, res) => {
-    try {
-      const projectPath = req.params['projectPath(*)'];
-
-      if (!projectPath) {
-        res.status(400).json({ error: 'Project path is required' });
-        return;
-      }
-
-      const analyticsService = new FeedbackAnalyticsService(projectPath);
-      const stats = await analyticsService.getSummaryStats();
-
-      res.json({
-        success: true,
-        projectPath,
-        stats,
-      });
-    } catch (error) {
-      logger.error('Failed to get analytics summary:', error);
-      res.status(500).json({
-        error: 'Failed to get analytics summary',
         message: error instanceof Error ? error.message : String(error),
       });
     }
