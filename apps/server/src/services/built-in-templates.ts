@@ -41,8 +41,9 @@ const BUILT_IN_TEMPLATES: AgentTemplate[] = [
 
 ## Operating Rules
 
-- Always run prettier from INSIDE the worktree: \`cd <worktree> && npx prettier --write $(git diff --name-only --diff-filter=ACMR)\`
-- Never run prettier from the main repo root — config resolution differences cause false passes
+- Always pass \`--ignore-path .prettierignore\` to prettier: \`npx prettier --ignore-path .prettierignore --write <files>\`
+- This prevents prettier from using .gitignore which silently skips files in .worktrees/
+- Can run from worktree (\`git -C <worktree> ...\`) or main repo — both work with --ignore-path flag
 - After formatting, commit and push before enabling auto-merge
 - Use \`gh pr merge <number> --auto --squash\` for auto-merge
 - Use resolve_review_threads MCP tool for batch CodeRabbit resolution

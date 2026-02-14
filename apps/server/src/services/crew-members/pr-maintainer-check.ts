@@ -311,7 +311,7 @@ Please:
 1. For critical-threads: use \`resolve_review_threads\` to address unresolved critical-severity feedback
 2. For stale PRs: check PR status with \`check_pr_status\`, resolve threads with \`resolve_review_threads\`, enable auto-merge
 3. For orphaned worktrees: check for uncommitted work, create PR with \`create_pr_from_worktree\` if needed
-4. For format failures: fix from inside the worktree (\`cd <worktree> && npx prettier --write $(git diff --name-only --diff-filter=ACMR)\`)
+4. For format failures: run \`npx prettier --ignore-path .prettierignore --write <files>\` (the --ignore-path flag is critical — without it, prettier silently skips .worktrees/ files via .gitignore)
 5. For branches behind main: rebase and force-push
 
 This is an automated triage request triggered by the crew loop system.`;
