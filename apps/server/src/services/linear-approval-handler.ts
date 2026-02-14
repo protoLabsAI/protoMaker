@@ -15,6 +15,7 @@ import type { SettingsService } from './settings-service.js';
 const logger = createLogger('linear:approval');
 
 const DEFAULT_APPROVAL_STATES = ['Approved', 'Ready for Planning'];
+const DEFAULT_CHANGES_REQUESTED_STATES = ['Changes Requested'];
 
 export interface ApprovalContext {
   /** Linear issue ID */
@@ -71,11 +72,35 @@ export class LinearApprovalHandler {
   }
 
   /**
+   * Get configured "Changes Requested" states from project settings
+   */
+  private async getChangesRequestedStates(projectPath: string): Promise<string[]> {
+    if (!this.settingsService) {
+      return DEFAULT_CHANGES_REQUESTED_STATES;
+    }
+
+    try {
+      const settings = await this.settingsService.getProjectSettings(projectPath);
+      return settings?.integrations?.linear?.changesRequestedStates || DEFAULT_CHANGES_REQUESTED_STATES;
+    } catch {
+      return DEFAULT_CHANGES_REQUESTED_STATES;
+    }
+  }
+
+  /**
    * Check if a Linear workflow state name indicates approval
    */
   async isApprovalState(stateName: string, projectPath: string): Promise<boolean> {
     const approvalStates = await this.getApprovalStates(projectPath);
     return approvalStates.some((s) => s.toLowerCase() === stateName.toLowerCase());
+  }
+
+  /**
+   * Check if a Linear workflow state name indicates changes requested
+   */
+  async isChangesRequestedState(stateName: string, projectPath: string): Promise<boolean> {
+    const changesRequestedStates = await this.getChangesRequestedStates(projectPath);
+    return changesRequestedStates.some((s) => s.toLowerCase() === stateName.toLowerCase());
   }
 
   /**
@@ -102,28 +127,56 @@ export class LinearApprovalHandler {
   ): Promise<void> {
     if (!this.running) return;
 
+    // Check for approval state
     const isApproval = await this.isApprovalState(stateName, projectPath);
-    if (!isApproval) return;
+    if (isApproval) {
+      const approvalContext: ApprovalContext = {
+        issueId,
+        identifier: issueContext?.identifier,
+        title: issueContext?.title || 'Unknown',
+        description: issueContext?.description,
+        approvalState: stateName,
+        priority: issueContext?.priority,
+        team: issueContext?.team,
+        labels: issueContext?.labels,
+        detectedAt: new Date().toISOString(),
+      };
 
-    const approvalContext: ApprovalContext = {
-      issueId,
-      identifier: issueContext?.identifier,
-      title: issueContext?.title || 'Unknown',
-      description: issueContext?.description,
-      approvalState: stateName,
-      priority: issueContext?.priority,
-      team: issueContext?.team,
-      labels: issueContext?.labels,
-      detectedAt: new Date().toISOString(),
-    };
+      logger.info(`Approval detected for issue ${issueId}: state "${stateName}"`, {
+        identifier: approvalContext.identifier,
+        title: approvalContext.title,
+      });
 
-    logger.info(`Approval detected for issue ${issueId}: state "${stateName}"`, {
-      identifier: approvalContext.identifier,
-      title: approvalContext.title,
-    });
+      if (this.emitter) {
+        this.emitter.emit('linear:approval:detected', approvalContext);
+      }
+      return;
+    }
 
-    if (this.emitter) {
-      this.emitter.emit('linear:approval:detected', approvalContext);
+    // Check for changes requested state
+    const isChangesRequested = await this.isChangesRequestedState(stateName, projectPath);
+    if (isChangesRequested) {
+      const changesRequestedContext: ApprovalContext = {
+        issueId,
+        identifier: issueContext?.identifier,
+        title: issueContext?.title || 'Unknown',
+        description: issueContext?.description,
+        approvalState: stateName,
+        priority: issueContext?.priority,
+        team: issueContext?.team,
+        labels: issueContext?.labels,
+        detectedAt: new Date().toISOString(),
+      };
+
+      logger.info(`Changes requested detected for issue ${issueId}: state "${stateName}"`, {
+        identifier: changesRequestedContext.identifier,
+        title: changesRequestedContext.title,
+      });
+
+      if (this.emitter) {
+        this.emitter.emit('linear:changes-requested:detected', changesRequestedContext);
+      }
+      return;
     }
   }
 }

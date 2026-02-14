@@ -1595,6 +1595,8 @@ export interface LinearIntegrationConfig {
   conflictResolution?: 'linear' | 'automaker' | 'manual';
   /** Workflow state names that indicate approval (default: ['Approved', 'Ready for Planning']) */
   approvalStates?: string[];
+  /** Workflow state names that indicate changes requested (default: ['Changes Requested']) */
+  changesRequestedStates?: string[];
 
   // Agent OAuth (actor=app) fields
   /** OAuth access token for agent (actor=app) */

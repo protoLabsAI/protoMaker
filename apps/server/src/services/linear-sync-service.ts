@@ -1963,6 +1963,137 @@ export class LinearSyncService {
   }
 
   /**
+   * Create a Linear issue for PRD review
+   * Called when a PRD needs human review before proceeding to planning
+   *
+   * @param projectPath - The project path
+   * @param prdContent - The PRD markdown content
+   * @param reviewSummary - Summary of what needs to be reviewed
+   * @param recommendedAction - Recommended next steps
+   * @returns Object with created issue ID and URL
+   */
+  async createPRDReviewIssue(
+    projectPath: string,
+    prdContent: string,
+    reviewSummary: string,
+    recommendedAction: string
+  ): Promise<{ issueId: string; issueUrl: string }> {
+    if (!this.settingsService) {
+      throw new Error('SettingsService not initialized');
+    }
+
+    // Get Linear OAuth token from settings
+    const settings = await this.settingsService.getProjectSettings(projectPath);
+    const linearAccessToken = settings.integrations?.linear?.agentToken;
+    const teamId = settings.integrations?.linear?.teamId;
+
+    if (!linearAccessToken) {
+      throw new Error('No Linear OAuth token found in settings');
+    }
+
+    if (!teamId) {
+      throw new Error('No Linear team ID found in settings');
+    }
+
+    // Build issue title and description
+    const title = '🔍 PRD Review Required';
+    const description = `## Review Summary
+${reviewSummary}
+
+## Recommended Action
+${recommendedAction}
+
+---
+
+## PRD Content
+
+${prdContent}
+
+---
+
+**Instructions:**
+- Review the PRD content above
+- If approved: Change status to **Approved** to trigger planning stage
+- If changes needed: Change status to **Changes Requested** to return to PRD revision`;
+
+    // Get the "In Review" state ID
+    const stateId = await this.getWorkflowStateId(projectPath, teamId, 'In Review');
+
+    // GraphQL mutation to create issue
+    const mutation = `
+      mutation CreateIssue($teamId: String!, $title: String!, $description: String!, $stateId: String!, $priority: Int!) {
+        issueCreate(input: { teamId: $teamId, title: $title, description: $description, stateId: $stateId, priority: $priority }) {
+          success
+          issue {
+            id
+            url
+          }
+        }
+      }
+    `;
+
+    const variables = {
+      teamId,
+      title,
+      description,
+      stateId,
+      priority: 2, // High priority for reviews
+    };
+
+    // Call Linear GraphQL API with 30s timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+    try {
+      const response = await fetch('https://api.linear.app/graphql', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${linearAccessToken}`,
+        },
+        body: JSON.stringify({ query: mutation, variables }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`Linear API error: ${response.status} ${response.statusText}`);
+      }
+
+      const result = (await response.json()) as {
+        data?: {
+          issueCreate?: {
+            success: boolean;
+            issue?: { id: string; url: string };
+          };
+        };
+        errors?: Array<{ message: string }>;
+      };
+
+      if (result.errors) {
+        throw new Error(`Linear GraphQL error: ${result.errors.map((e) => e.message).join(', ')}`);
+      }
+
+      if (!result.data?.issueCreate?.success || !result.data.issueCreate.issue) {
+        throw new Error('Failed to create Linear PRD review issue');
+      }
+
+      logger.info(`Created PRD review issue in Linear: ${result.data.issueCreate.issue.id}`);
+
+      return {
+        issueId: result.data.issueCreate.issue.id,
+        issueUrl: result.data.issueCreate.issue.url,
+      };
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('Linear API request timed out after 30s');
+      }
+      throw error;
+    }
+  }
+
+  /**
    * Handle Linear issue updates (inbound sync from Linear to Automaker)
    * This method is called when a Linear issue is updated externally.
    * Syncs status, priority, and title changes in a single batched update.

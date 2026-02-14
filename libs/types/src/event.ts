@@ -141,6 +141,7 @@ export type EventType =
   | 'linear:issue:updated'
   | 'linear:approval:detected'
   | 'linear:approval:bridged'
+  | 'linear:changes-requested:detected'
   | 'feature:agent-suggested'
   | 'feature:agent-assigned'
   // Linear agent session events (webhook-driven)
