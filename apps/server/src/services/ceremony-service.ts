@@ -1120,14 +1120,21 @@ Return ONLY the JSON array, no other text.`;
             description: improvement.description,
             priority: improvement.priority,
             issueType: 'task',
-            labels: improvement.category ? ['retro-improvement', improvement.category] : ['retro-improvement'],
+            labels: improvement.category
+              ? ['retro-improvement', improvement.category]
+              : ['retro-improvement'],
           });
 
           if (beadsResult.success && beadsResult.data) {
             createdBeadsItems.push(beadsResult.data.id);
-            logger.info(`Created Beads task ${beadsResult.data.id} for operational improvement: ${improvement.title}`);
+            logger.info(
+              `Created Beads task ${beadsResult.data.id} for operational improvement: ${improvement.title}`
+            );
           } else {
-            logger.error(`Failed to create Beads task for ${improvement.title}:`, beadsResult.error);
+            logger.error(
+              `Failed to create Beads task for ${improvement.title}:`,
+              beadsResult.error
+            );
           }
         } else if (improvement.type === 'code') {
           // Create Automaker feature for code improvements
@@ -1141,7 +1148,9 @@ Return ONLY the JSON array, no other text.`;
           });
 
           createdFeatureIds.push(feature.id);
-          logger.info(`Created Automaker feature ${feature.id} for code improvement: ${improvement.title}`);
+          logger.info(
+            `Created Automaker feature ${feature.id} for code improvement: ${improvement.title}`
+          );
         }
       }
 
