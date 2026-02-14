@@ -43,8 +43,38 @@ function formatAuthorityMessage(type: EventType, payload: any): string {
       return `Changes requested on PR #${payload.prNumber || '?'}`;
     case 'pr:approved':
       return `PR #${payload.prNumber || '?'} approved`;
+    case 'pr:feedback-queued':
+      return `PR feedback queued for #${payload.prNumber || '?'}`;
+    case 'pr:remediation-started':
+      return `PR remediation started for #${payload.prNumber || '?'} (${payload.threadCount || 0} threads)`;
+    case 'pr:remediation-completed':
+      return `PR remediation completed for #${payload.prNumber || '?'}`;
+    case 'pr:remediation-failed':
+      return `PR remediation failed for #${payload.prNumber || '?'}`;
+    case 'pr:thread-evaluated':
+      return `PR thread ${payload.canResolve ? 'resolved' : 'pending'} on #${payload.prNumber || '?'}`;
+    case 'pr:threads-resolved':
+      return `All ${payload.resolvedCount || 0} threads resolved on PR #${payload.prNumber || '?'}`;
+    case 'pr:merge-blocked-critical-threads':
+      return `PR #${payload.prNumber || '?'} merge blocked by critical threads`;
+    case 'pr:ci-failure':
+      return `CI failed on PR #${payload.prNumber || '?'}`;
+    case 'pr:agent-restart-failed':
+      return `Agent restart failed for PR #${payload.prNumber || '?'}`;
     case 'feature:reassigned-for-fixes':
       return `Feature reassigned for PR fixes`;
+    case 'escalation:signal-received':
+      return `Escalation ${payload.severity || 'unknown'} from ${payload.source || 'unknown'}`;
+    case 'escalation:signal-routed':
+      return `Escalation routed to ${payload.channel || 'unknown'}`;
+    case 'escalation:signal-sent':
+      return `Escalation sent via ${payload.channel || 'unknown'}`;
+    case 'escalation:signal-failed':
+      return `Escalation failed: ${payload.error || 'unknown'}`;
+    case 'escalation:signal-deduplicated':
+      return `Escalation deduplicated: ${payload.deduplicationKey || 'unknown'}`;
+    case 'escalation:ui-notification':
+      return `UI notification: ${payload.message || 'unknown'}`;
     case 'authority:proposal-submitted':
       return `Agent submitted proposal: ${payload.action || 'Unknown'}`;
     case 'authority:approved':
@@ -60,9 +90,9 @@ function formatAuthorityMessage(type: EventType, payload: any): string {
  * Determine severity from event type
  */
 function getEventSeverity(type: EventType): AuthorityEvent['severity'] {
-  if (type.includes('error') || type.includes('rejected')) return 'error';
-  if (type.includes('changes-requested') || type.includes('feedback')) return 'warning';
-  if (type.includes('approved') || type.includes('completed')) return 'success';
+  if (type.includes('error') || type.includes('rejected') || type.includes('failed') || type.includes('blocked')) return 'error';
+  if (type.includes('changes-requested') || type.includes('feedback') || type.includes('queued') || type.includes('pending')) return 'warning';
+  if (type.includes('approved') || type.includes('completed') || type.includes('resolved')) return 'success';
   return 'info';
 }
 
@@ -97,7 +127,7 @@ export function useAuthorityEvents(maxEvents: number = 50) {
     const api = getHttpApiClient();
     setIsConnected(true);
 
-    // Subscribe to all authority-related events
+    // Subscribe to all authority-related events, PR events, and escalation events
     const authorityEventTypes: EventType[] = [
       'authority:proposal-submitted',
       'authority:approved',
@@ -115,10 +145,27 @@ export function useAuthorityEvents(maxEvents: number = 50) {
       'authority:pm-prd-ready',
       'authority:pm-epic-created',
       'cos:prd-submitted',
+      // All PR events (12 total)
       'pr:feedback-received',
       'pr:changes-requested',
       'pr:approved',
+      'pr:feedback-queued',
+      'pr:remediation-started',
+      'pr:remediation-completed',
+      'pr:remediation-failed',
+      'pr:thread-evaluated',
+      'pr:threads-resolved',
+      'pr:merge-blocked-critical-threads',
+      'pr:ci-failure',
+      'pr:agent-restart-failed',
       'feature:reassigned-for-fixes',
+      // Escalation events
+      'escalation:signal-received',
+      'escalation:signal-routed',
+      'escalation:signal-sent',
+      'escalation:signal-failed',
+      'escalation:signal-deduplicated',
+      'escalation:ui-notification',
     ];
 
     // Subscribe to each event type
