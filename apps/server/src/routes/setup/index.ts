@@ -47,6 +47,7 @@ import { createProposeHandler } from './routes/propose.js';
 import { createDiscordProvisionHandler } from './routes/discord-provision.js';
 import { createLinearProvisionHandler } from './routes/linear-provision.js';
 import { createBeadsSetupHandler } from './routes/beads.js';
+import { createCloneHandler } from './routes/clone.js';
 import type { SettingsService } from '../../services/settings-service.js';
 
 export function createSetupRoutes(settingsService: SettingsService): Router {
@@ -106,6 +107,9 @@ export function createSetupRoutes(settingsService: SettingsService): Router {
   router.post('/discord-provision', createDiscordProvisionHandler());
   router.post('/linear-provision', createLinearProvisionHandler());
   router.post('/beads', createBeadsSetupHandler());
+
+  // Labs management routes
+  router.post('/clone', createCloneHandler());
 
   return router;
 }

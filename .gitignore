@@ -142,5 +142,8 @@ examples/mythxengine
 # Ephemeral test directories
 test/*-test-*/
 
+# Labs directory - cloned repositories for testing/development
+labs/*
+
 # Test fixture runtime artifacts
 test/fixtures/**/.automaker/categories.json

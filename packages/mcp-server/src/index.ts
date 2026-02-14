@@ -2398,6 +2398,33 @@ const tools: Tool[] = [
       required: ['projectPath', 'prdTitle', 'prdDescription'],
     },
   },
+
+  // ========== Labs Management ==========
+  {
+    name: 'clone_repo',
+    description:
+      'Clone a git repository to the ./labs directory. Supports shallow clones for speed. If repository already exists, it will be refreshed with git pull --rebase.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        gitUrl: {
+          type: 'string',
+          description: 'Git repository URL (https://, git@, or git://)',
+        },
+        directoryName: {
+          type: 'string',
+          description:
+            'Optional directory name for the cloned repository (defaults to repository name extracted from URL)',
+        },
+        shallow: {
+          type: 'boolean',
+          default: true,
+          description: 'Perform shallow clone (--depth 1) for speed (default: true)',
+        },
+      },
+      required: ['gitUrl'],
+    },
+  },
 ];
 
 // Tool implementations
@@ -3305,6 +3332,14 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         projectSlug: args.projectSlug,
         linearProjectId: args.linearProjectId,
         issueIds: args.issueIds,
+      });
+
+    // Labs Management
+    case 'clone_repo':
+      return apiCall('/setup/clone', {
+        gitUrl: args.gitUrl,
+        directoryName: args.directoryName,
+        shallow: args.shallow ?? true,
       });
 
     default:
