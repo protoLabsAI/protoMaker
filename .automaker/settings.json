@@ -20,5 +20,21 @@
     "enableStandups": true,
     "enableMilestoneUpdates": true,
     "enableProjectRetros": true
+  },
+  "integrations": {
+    "linear": {
+      "enabled": true,
+      "teamId": "185e7caa-2855-4c67-a347-2011016bdddf",
+      "syncOnFeatureCreate": true,
+      "syncOnStatusChange": true,
+      "commentOnCompletion": true,
+      "labelName": "automaker",
+      "priorityMapping": {
+        "small": 4,
+        "medium": 3,
+        "large": 2,
+        "architectural": 1
+      }
+    }
   }
 }

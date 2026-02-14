@@ -419,7 +419,13 @@ describe('linear-mcp-client.ts', () => {
       }
     });
 
-    it('should handle missing token in settings', async () => {
+    it('should handle missing token in settings when no env fallback', async () => {
+      // Clear env vars so fallback doesn't trigger
+      const savedKey = process.env.LINEAR_API_KEY;
+      const savedToken = process.env.LINEAR_API_TOKEN;
+      delete process.env.LINEAR_API_KEY;
+      delete process.env.LINEAR_API_TOKEN;
+
       mockSettingsService.getProjectSettings = vi.fn().mockResolvedValue({
         integrations: {},
       } as ProjectSettings);
@@ -432,12 +438,22 @@ describe('linear-mcp-client.ts', () => {
         expect.fail('Should have thrown error');
       } catch (error) {
         expect(error).toBeInstanceOf(LinearAPIError);
-        expect((error as LinearAPIError).message).toContain('No Linear OAuth token found');
+        expect((error as LinearAPIError).message).toContain('No Linear API token configured');
         expect((error as LinearAPIError).isTokenExpired).toBe(true);
       }
+
+      // Restore env vars
+      if (savedKey) process.env.LINEAR_API_KEY = savedKey;
+      if (savedToken) process.env.LINEAR_API_TOKEN = savedToken;
     });
 
-    it('should handle missing integrations in settings', async () => {
+    it('should handle missing integrations in settings when no env fallback', async () => {
+      // Clear env vars so fallback doesn't trigger
+      const savedKey = process.env.LINEAR_API_KEY;
+      const savedToken = process.env.LINEAR_API_TOKEN;
+      delete process.env.LINEAR_API_KEY;
+      delete process.env.LINEAR_API_TOKEN;
+
       mockSettingsService.getProjectSettings = vi.fn().mockResolvedValue({
         integrations: {
           linear: {},
@@ -453,6 +469,51 @@ describe('linear-mcp-client.ts', () => {
       } catch (error) {
         expect(error).toBeInstanceOf(LinearAPIError);
         expect((error as LinearAPIError).isTokenExpired).toBe(true);
+      }
+
+      // Restore env vars
+      if (savedKey) process.env.LINEAR_API_KEY = savedKey;
+      if (savedToken) process.env.LINEAR_API_TOKEN = savedToken;
+    });
+
+    it('should use LINEAR_API_TOKEN env var as fallback', async () => {
+      const savedToken = process.env.LINEAR_API_TOKEN;
+      process.env.LINEAR_API_TOKEN = 'env-fallback-token';
+
+      mockSettingsService.getProjectSettings = vi.fn().mockResolvedValue({
+        integrations: { linear: {} },
+      } as ProjectSettings);
+
+      // Should succeed using env var token (mock the fetch response)
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: new Headers(),
+        json: async () => ({
+          data: {
+            issueCreate: {
+              success: true,
+              issue: {
+                id: 'issue-1',
+                identifier: 'TEST-1',
+                url: 'https://linear.app/test/issue/TEST-1',
+              },
+            },
+          },
+        }),
+      } as Response);
+
+      const result = await client.createIssue({
+        title: 'Test Issue',
+        teamId: 'team-123',
+      });
+      expect(result.issueId).toBe('issue-1');
+
+      // Restore
+      if (savedToken) {
+        process.env.LINEAR_API_TOKEN = savedToken;
+      } else {
+        delete process.env.LINEAR_API_TOKEN;
       }
     });
   });

@@ -150,19 +150,37 @@ export class LinearMCPClient {
   ) {}
 
   /**
-   * Get OAuth access token from project settings
+   * Get Linear API token from project settings or environment.
+   *
+   * Priority: OAuth agentToken > settings apiKey > LINEAR_API_KEY env var
    *
    * @throws {LinearAPIError} If no token is configured
    */
   private async getAccessToken(): Promise<string> {
     const settings = await this.settingsService.getProjectSettings(this.projectPath);
-    const linearAccessToken = settings.integrations?.linear?.agentToken;
+    const linearConfig = settings.integrations?.linear;
 
-    if (!linearAccessToken) {
-      throw new LinearAPIError('No Linear OAuth token found in project settings', undefined, true);
+    // Priority 1: OAuth agent token (full delegated permissions)
+    if (linearConfig?.agentToken) {
+      return linearConfig.agentToken;
     }
 
-    return linearAccessToken;
+    // Priority 2: Personal API key from project settings
+    if (linearConfig?.apiKey) {
+      return linearConfig.apiKey;
+    }
+
+    // Priority 3: Personal API key from environment variable (check both common names)
+    const envToken = process.env.LINEAR_API_KEY || process.env.LINEAR_API_TOKEN;
+    if (envToken) {
+      return envToken;
+    }
+
+    throw new LinearAPIError(
+      'No Linear API token configured. Set up OAuth, add apiKey to project settings, or set LINEAR_API_KEY env var.',
+      undefined,
+      true
+    );
   }
 
   /**

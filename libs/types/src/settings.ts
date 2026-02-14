@@ -1630,6 +1630,10 @@ export interface LinearIntegrationConfig {
   /** Workflow state names that indicate changes requested (default: ['Changes Requested']) */
   changesRequestedStates?: string[];
 
+  // API key fallback (personal API token, no OAuth required)
+  /** Personal Linear API key (fallback when OAuth is not configured) */
+  apiKey?: string;
+
   // Agent OAuth (actor=app) fields
   /** OAuth access token for agent (actor=app) */
   agentToken?: string;

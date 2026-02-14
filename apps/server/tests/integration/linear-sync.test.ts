@@ -642,13 +642,23 @@ describe('LinearSyncService (Integration)', () => {
       expect(enabled).toBe(false);
     });
 
-    it('returns false when no OAuth token configured', async () => {
+    it('returns false when no token source is available', async () => {
+      // Clear env vars that could provide a token fallback
+      const savedKey = process.env.LINEAR_API_KEY;
+      const savedToken = process.env.LINEAR_API_TOKEN;
+      delete process.env.LINEAR_API_KEY;
+      delete process.env.LINEAR_API_TOKEN;
+
       settingsService = createMockSettingsService({ agentToken: '' });
       featureLoader = createMockFeatureLoader();
       service.initialize(emitter, settingsService, featureLoader);
 
       const enabled = await service.isProjectSyncEnabled('/test/project');
       expect(enabled).toBe(false);
+
+      // Restore env vars
+      if (savedKey) process.env.LINEAR_API_KEY = savedKey;
+      if (savedToken) process.env.LINEAR_API_TOKEN = savedToken;
     });
   });
 

@@ -339,7 +339,12 @@ export class LinearSyncService {
   }
 
   /**
-   * Check if Linear sync is enabled for a project
+   * Check if Linear sync is enabled for a project.
+   *
+   * Sync is enabled when:
+   * 1. Settings have `integrations.linear.enabled: true` AND a token source exists
+   *    (agentToken, apiKey, or LINEAR_API_KEY env var)
+   * 2. At least one sync option is not explicitly disabled
    */
   async isProjectSyncEnabled(projectPath: string): Promise<boolean> {
     if (!this.settingsService) {
@@ -351,14 +356,33 @@ export class LinearSyncService {
       const settings = await this.settingsService.getProjectSettings(projectPath);
       const linearConfig = settings.integrations?.linear;
 
-      // Check if Linear integration is configured with OAuth token
+      if (!linearConfig?.enabled) {
+        return false;
+      }
+
+      // Check for any available token source
+      const hasToken = !!(
+        linearConfig.agentToken ||
+        linearConfig.apiKey ||
+        process.env.LINEAR_API_KEY ||
+        process.env.LINEAR_API_TOKEN
+      );
+
+      if (!hasToken) {
+        logger.warn(
+          `Linear sync enabled for ${projectPath} but no API token configured. ` +
+            'Set agentToken (OAuth), apiKey (settings), or LINEAR_API_KEY (env var).'
+        );
+        return false;
+      }
+
       // At least one sync option should be enabled (default is true if not explicitly set)
       const hasSyncEnabled =
-        linearConfig?.syncOnFeatureCreate !== false ||
-        linearConfig?.syncOnStatusChange !== false ||
-        linearConfig?.commentOnCompletion !== false;
+        linearConfig.syncOnFeatureCreate !== false ||
+        linearConfig.syncOnStatusChange !== false ||
+        linearConfig.commentOnCompletion !== false;
 
-      return !!(linearConfig?.enabled && linearConfig.agentToken && hasSyncEnabled);
+      return hasSyncEnabled;
     } catch (error) {
       logger.error(`Failed to check Linear sync settings for ${projectPath}:`, error);
       return false;

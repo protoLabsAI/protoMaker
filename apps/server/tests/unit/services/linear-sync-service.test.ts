@@ -401,18 +401,52 @@ describe('LinearSyncService', () => {
       expect(result).toBe(false);
     });
 
-    it('should return false when agent token is missing', async () => {
+    it('should return false when no token source is available', async () => {
+      // Clear env vars that could provide a token
+      const savedKey = process.env.LINEAR_API_KEY;
+      const savedToken = process.env.LINEAR_API_TOKEN;
+      delete process.env.LINEAR_API_KEY;
+      delete process.env.LINEAR_API_TOKEN;
+
       vi.mocked(mockSettingsService.getProjectSettings).mockResolvedValue({
         integrations: {
           linear: {
             enabled: true,
-            // agentToken is missing
+            // No agentToken, no apiKey, no env vars
           },
         },
       } as any);
 
       const result = await service.isProjectSyncEnabled('/test/path');
       expect(result).toBe(false);
+
+      // Restore env vars
+      if (savedKey) process.env.LINEAR_API_KEY = savedKey;
+      if (savedToken) process.env.LINEAR_API_TOKEN = savedToken;
+    });
+
+    it('should return true when env var provides token (no agentToken)', async () => {
+      const savedToken = process.env.LINEAR_API_TOKEN;
+      process.env.LINEAR_API_TOKEN = 'env-test-token';
+
+      vi.mocked(mockSettingsService.getProjectSettings).mockResolvedValue({
+        integrations: {
+          linear: {
+            enabled: true,
+            // No agentToken, but env var is set
+          },
+        },
+      } as any);
+
+      const result = await service.isProjectSyncEnabled('/test/path');
+      expect(result).toBe(true);
+
+      // Restore
+      if (savedToken) {
+        process.env.LINEAR_API_TOKEN = savedToken;
+      } else {
+        delete process.env.LINEAR_API_TOKEN;
+      }
     });
 
     it('should return false when all sync options are explicitly disabled', async () => {
