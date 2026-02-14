@@ -653,3 +653,7 @@ export type {
   ContentBrief,
   DeliverableType,
 } from './review.js';
+
+// Content generation types
+export { SectionSchema, OutlineSchema } from './content.js';
+export type { ContentType, ContentConfig, Section, Outline, ResearchSummary } from './content.js';
