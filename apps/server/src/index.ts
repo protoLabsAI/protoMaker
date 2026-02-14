@@ -352,6 +352,14 @@ const settingsService = new SettingsService(DATA_DIR);
 const agentService = new AgentService(DATA_DIR, events, settingsService);
 const featureLoader = new FeatureLoader();
 const metricsService = new MetricsService(featureLoader);
+
+// Metrics Ledger & Archival
+import { LedgerService } from './services/ledger-service.js';
+import { ArchivalService } from './services/archival-service.js';
+const ledgerService = new LedgerService(featureLoader, events);
+ledgerService.initialize();
+const archivalService = new ArchivalService(featureLoader, ledgerService, settingsService, events);
+archivalService.start();
 const autoModeService = new AutoModeService(events, settingsService);
 const claudeUsageService = new ClaudeUsageService();
 const codexAppServerService = new CodexAppServerService();
@@ -975,7 +983,7 @@ app.use(
   })
 );
 app.use('/api/pipeline', createPipelineRoutes(pipelineService));
-app.use('/api/metrics', createMetricsRoutes(metricsService));
+app.use('/api/metrics', createMetricsRoutes(metricsService, ledgerService));
 app.use('/api/ideation', createIdeationRoutes(events, ideationService, featureLoader));
 app.use('/api/notifications', createNotificationsRoutes(notificationService));
 app.use('/api/ralph', createRalphRoutes(ralphLoopService));

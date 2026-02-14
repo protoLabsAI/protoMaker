@@ -265,7 +265,13 @@ export type EventType =
   | 'feedback:pattern-detected'
   // Signal routing events (signal intake and routing)
   | 'signal:received'
-  | 'signal:routed';
+  | 'signal:routed'
+  // Metrics ledger events (persistent analytics)
+  | 'ledger:record-written'
+  | 'ledger:backfill-completed'
+  // Feature archival events (board cleanup)
+  | 'feature:archived'
+  | 'archival:cycle-completed';
 
 export type EventCallback = (type: EventType, payload: unknown) => void;
 

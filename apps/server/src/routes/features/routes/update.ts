@@ -166,8 +166,13 @@ export function createUpdateHandler(
       }
 
       // Emit feature:status-changed so CompletionDetectorService can cascade
-      // epic → milestone → project completion checks
-      if (newStatus && previousStatus !== newStatus && newStatus === 'done' && events) {
+      // epic → milestone → project completion checks, and LedgerService can record metrics
+      if (
+        newStatus &&
+        previousStatus !== newStatus &&
+        (newStatus === 'done' || newStatus === 'verified') &&
+        events
+      ) {
         events.emit('feature:status-changed', {
           projectPath: req.body.projectPath,
           featureId: req.body.featureId,
