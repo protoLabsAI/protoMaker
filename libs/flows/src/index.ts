@@ -138,6 +138,7 @@ export {
   createContentCreationFlow,
   ContentCreationState,
   type ContentCreationStateType,
+  type ContentCreationFlowOptions,
   type ContentConfig as ContentCreationConfig,
   type Outline as ContentOutline,
   type ResearchResult,
