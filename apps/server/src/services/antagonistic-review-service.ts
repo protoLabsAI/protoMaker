@@ -69,7 +69,10 @@ export class AntagonisticReviewService {
   /**
    * Get singleton instance
    */
-  static getInstance(agentFactory: AgentFactoryService, events: EventEmitter): AntagonisticReviewService {
+  static getInstance(
+    agentFactory: AgentFactoryService,
+    events: EventEmitter
+  ): AntagonisticReviewService {
     if (!AntagonisticReviewService.instance) {
       AntagonisticReviewService.instance = new AntagonisticReviewService(agentFactory, events);
     }
@@ -166,8 +169,20 @@ export class AntagonisticReviewService {
 
       return {
         success: false,
-        avaReview: { success: false, reviewer: 'ava', verdict: '', durationMs: 0, error: errorMessage },
-        jonReview: { success: false, reviewer: 'jon', verdict: '', durationMs: 0, error: errorMessage },
+        avaReview: {
+          success: false,
+          reviewer: 'ava',
+          verdict: '',
+          durationMs: 0,
+          error: errorMessage,
+        },
+        jonReview: {
+          success: false,
+          reviewer: 'jon',
+          verdict: '',
+          durationMs: 0,
+          error: errorMessage,
+        },
         resolution: '',
         totalDurationMs,
         error: errorMessage,
