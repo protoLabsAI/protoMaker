@@ -183,9 +183,8 @@ import { LinearApprovalBridge } from './services/linear-approval-bridge.js';
 import { createDeployRoutes } from './routes/deploy/index.js';
 import { createAnalyticsRoutes } from './routes/analytics.js';
 import { AntagonisticReviewService } from './services/antagonistic-review-service.js';
-import { createCopilotKitEndpoint } from './routes/copilotkit/index.js';
-import { createCopilotKitThreadRoutes } from './routes/copilotkit/threads.js';
-import { CopilotKitThreadService } from './services/copilotkit-thread-service.js';
+// CopilotKit imports are dynamic — @copilotkit/runtime may not be installed (e.g. Docker)
+// See conditional registration below at /api/copilotkit routes
 
 const PORT = parseInt(process.env.PORT || '3008', 10);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -1034,9 +1033,19 @@ app.use('/api/escalation', createEscalationRoutes(escalationRouter));
 app.use('/api/analytics', createAnalyticsRoutes(events));
 app.use('/api/flows', createFlowsRoutes(antagonisticReviewService));
 if (process.env.ANTHROPIC_API_KEY) {
-  app.use('/api/copilotkit', createCopilotKitEndpoint({ featureLoader, autoModeService }));
-  const copilotKitThreadService = new CopilotKitThreadService(DATA_DIR);
-  app.use('/api/copilotkit/threads', createCopilotKitThreadRoutes(copilotKitThreadService));
+  try {
+    const { createCopilotKitEndpoint } = await import('./routes/copilotkit/index.js');
+    const { createCopilotKitThreadRoutes } = await import('./routes/copilotkit/threads.js');
+    const { CopilotKitThreadService } = await import('./services/copilotkit-thread-service.js');
+    app.use('/api/copilotkit', createCopilotKitEndpoint({ featureLoader, autoModeService }));
+    const copilotKitThreadService = new CopilotKitThreadService(DATA_DIR);
+    app.use('/api/copilotkit/threads', createCopilotKitThreadRoutes(copilotKitThreadService));
+  } catch (err) {
+    logger.warn(
+      'CopilotKit routes disabled — @copilotkit/runtime not installed:',
+      (err as Error).message
+    );
+  }
 } else {
   logger.warn('CopilotKit routes disabled — ANTHROPIC_API_KEY not set');
 }
