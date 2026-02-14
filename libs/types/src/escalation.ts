@@ -41,6 +41,8 @@ export enum EscalationSource {
   board_anomaly = 'board_anomaly',
   /** Human explicitly mentioned in a comment */
   human_mention = 'human_mention',
+  /** Agent needs human input (elicitation) */
+  agent_needs_input = 'agent_needs_input',
 }
 
 /**

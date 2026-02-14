@@ -91,6 +91,18 @@ export interface AddCommentOptions {
 }
 
 /**
+ * Options for creating an Agent Session
+ */
+export interface CreateAgentSessionOptions {
+  /** Issue ID to create session for */
+  issueId: string;
+  /** Activity type (e.g., "Elicitation") */
+  activityType: string;
+  /** The prompt/question for the human */
+  prompt: string;
+}
+
+/**
  * Options for creating a Linear project
  */
 export interface CreateProjectOptions {
@@ -569,5 +581,112 @@ export class LinearMCPClient {
     logger.info(`Added issue ${data.issueUpdate.issue.identifier} to project ${projectId}`);
 
     return true;
+  }
+
+  /**
+   * Create an Agent Session for elicitation (human input request)
+   *
+   * @param options - Agent session creation options
+   * @returns The created session ID
+   * @throws {LinearAPIError} On API errors
+   */
+  async createAgentSession(options: CreateAgentSessionOptions): Promise<string> {
+    const { issueId, activityType, prompt } = options;
+
+    const mutation = `
+      mutation CreateAgentSession(
+        $issueId: String!
+        $activityType: String!
+        $prompt: String!
+      ) {
+        agentSessionCreate(
+          input: {
+            issueId: $issueId
+            activityType: $activityType
+            prompt: $prompt
+          }
+        ) {
+          success
+          agentSession {
+            id
+          }
+        }
+      }
+    `;
+
+    const variables = {
+      issueId,
+      activityType,
+      prompt,
+    };
+
+    interface CreateAgentSessionResponse {
+      agentSessionCreate: {
+        success: boolean;
+        agentSession: {
+          id: string;
+        };
+      };
+    }
+
+    const data = await this.executeGraphQL<CreateAgentSessionResponse>(mutation, variables);
+
+    if (!data.agentSessionCreate.success) {
+      throw new LinearAPIError('Failed to create Agent Session in Linear');
+    }
+
+    logger.info(`Created Agent Session for issue ${issueId} with activity type ${activityType}`);
+
+    return data.agentSessionCreate.agentSession.id;
+  }
+
+  /**
+   * Get the "awaitingInput" state ID for a team
+   *
+   * @param teamId - The team ID to get the state for
+   * @returns The state ID for "awaitingInput"
+   * @throws {LinearAPIError} On API errors or if state not found
+   */
+  async getAwaitingInputStateId(teamId: string): Promise<string> {
+    const query = `
+      query GetAwaitingInputState($teamId: String!) {
+        team(id: $teamId) {
+          states {
+            nodes {
+              id
+              name
+              type
+            }
+          }
+        }
+      }
+    `;
+
+    const variables = { teamId };
+
+    interface GetAwaitingInputStateResponse {
+      team: {
+        states: {
+          nodes: Array<{
+            id: string;
+            name: string;
+            type: string;
+          }>;
+        };
+      };
+    }
+
+    const data = await this.executeGraphQL<GetAwaitingInputStateResponse>(query, variables);
+
+    // Look for "awaitingInput" state (case insensitive)
+    const awaitingInputState = data.team.states.nodes.find(
+      (state) => state.name.toLowerCase() === 'awaitinginput' || state.name.toLowerCase() === 'awaiting input'
+    );
+
+    if (!awaitingInputState) {
+      throw new LinearAPIError(`Could not find "awaitingInput" state for team ${teamId}`);
+    }
+
+    return awaitingInputState.id;
   }
 }

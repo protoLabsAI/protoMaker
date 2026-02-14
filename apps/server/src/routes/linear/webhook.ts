@@ -481,6 +481,7 @@ async function handleCommentEvent(
 /**
  * Handle new comment creation
  * Routes comment to LinearSyncService for parsing and routing
+ * Also detects human responses to agent elicitation sessions
  */
 async function handleCommentCreated(
   data: LinearCommentWebhookPayload['data'],
@@ -500,4 +501,24 @@ async function handleCommentCreated(
     user: data.user,
     createdAt: data.createdAt,
   });
+
+  // Check if this is a human response to an agent elicitation
+  // Emit escalation signal for the escalation router
+  if (data.issueId && data.user) {
+    events.emit('escalation:signal-received', {
+      source: 'agent_needs_input',
+      severity: 'medium',
+      type: 'human_response_to_elicitation',
+      context: {
+        issueId: data.issueId,
+        commentId: data.id,
+        userName: data.user.name,
+        userEmail: data.user.email,
+        body: data.body,
+        createdAt: data.createdAt,
+      },
+      deduplicationKey: `elicitation-response:${data.issueId}:${data.id}`,
+      timestamp: data.createdAt,
+    });
+  }
 }
