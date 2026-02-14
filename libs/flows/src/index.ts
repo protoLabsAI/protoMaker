@@ -129,7 +129,10 @@ export {
   createContentCreationFlow,
   ContentCreationState,
   type ContentCreationStateType,
+  type ContentConfig as ContentCreationConfig,
+  type Outline as ContentOutline,
   type ResearchResult,
+  type ReviewFeedback as ContentReviewFeedback,
   type OutputResult,
 } from './content/content-creation-flow.js';
 
