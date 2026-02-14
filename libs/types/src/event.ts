@@ -121,6 +121,7 @@ export type EventType =
   // Project orchestration events
   | 'project:scaffolded'
   | 'project:deleted'
+  | 'project:status-changed'
   // PRD events (Product Requirements Documents)
   | 'prd:created'
   | 'prd:status:updated'
@@ -135,6 +136,7 @@ export type EventType =
   // Linear monitoring events
   | 'linear:project:created'
   | 'linear:project:updated'
+  | 'linear:project:status-updated'
   | 'linear:issue:detected'
   // Linear sync events (bidirectional sync)
   | 'linear:sync:started'

@@ -93,6 +93,16 @@ interface ProjectScaffoldedPayload {
 }
 
 /**
+ * Project status changed event payload structure
+ */
+interface ProjectStatusChangedPayload {
+  projectPath: string;
+  projectSlug: string;
+  status: string;
+  previousStatus?: string;
+}
+
+/**
  * Comment created event payload structure
  */
 interface CommentCreatedPayload {
@@ -198,6 +208,8 @@ export class LinearSyncService {
         this.handleFeaturePRMerged(payload as FeatureEventPayload);
       } else if (type === 'project:scaffolded') {
         this.handleProjectScaffolded(payload as ProjectScaffoldedPayload);
+      } else if (type === 'project:status-changed') {
+        this.handleProjectStatusChanged(payload as ProjectStatusChangedPayload);
       } else if (type === 'linear:comment:created') {
         this.handleCommentCreated(payload as CommentCreatedPayload);
       }
@@ -1916,6 +1928,19 @@ export class LinearSyncService {
   }
 
   /**
+   * Handle project:status-changed events
+   */
+  private async handleProjectStatusChanged(payload: ProjectStatusChangedPayload): Promise<void> {
+    logger.debug('Received project:status-changed event', {
+      projectSlug: payload.projectSlug,
+      status: payload.status,
+      previousStatus: payload.previousStatus,
+    });
+
+    await this.syncProjectStatusToLinear(payload.projectPath, payload.projectSlug, payload.status);
+  }
+
+  /**
    * Create a Linear project when an Automaker project is scaffolded,
    * and add any synced child features to the project.
    */
@@ -1990,6 +2015,9 @@ export class LinearSyncService {
 
       // Sync dependencies for all features in this project
       await this.syncProjectDependencies(projectPath, projectSlug);
+
+      // Sync initial project status to Linear
+      await this.syncProjectStatusToLinear(projectPath, projectSlug, project.status);
 
       // Record metrics
       this.recordOperation(
@@ -2212,6 +2240,212 @@ export class LinearSyncService {
         `Failed to sync project dependencies for ${projectSlug}:`,
         error instanceof Error ? error.message : 'Unknown error'
       );
+    }
+  }
+
+  /**
+   * Sync Automaker project status and milestone progress to Linear project
+   *
+   * @param projectPath - The project path
+   * @param projectSlug - The project slug
+   * @param projectStatus - The new project status
+   */
+  async syncProjectStatusToLinear(
+    projectPath: string,
+    projectSlug: string,
+    projectStatus: string
+  ): Promise<void> {
+    if (!this.running) {
+      logger.debug(`Sync skipped for project ${projectSlug}: service not running`);
+      return;
+    }
+
+    if (!this.projectService || !this.settingsService) {
+      logger.debug('ProjectService or SettingsService not initialized');
+      return;
+    }
+
+    const startTime = Date.now();
+
+    try {
+      // Get project to find linearProjectId
+      const project = await this.projectService.getProject(projectPath, projectSlug);
+      if (!project) {
+        logger.error(`Project ${projectSlug} not found`);
+        return;
+      }
+
+      if (!project.linearProjectId) {
+        logger.debug(`Project ${projectSlug} has no Linear project ID, skipping status sync`);
+        return;
+      }
+
+      // Check if sync is enabled for this project
+      const syncEnabled = await this.isProjectSyncEnabled(projectPath);
+      if (!syncEnabled) {
+        logger.debug(`Linear sync not enabled for project ${projectPath}`);
+        return;
+      }
+
+      // Calculate milestone completion percentage
+      const completionPercentage = await this.calculateMilestoneProgress(project);
+
+      // Map Automaker project status to Linear project status
+      const linearStatus = this.mapProjectStatusToLinear(projectStatus);
+
+      // Update Linear project via MCP client
+      const client = new LinearMCPClient(this.settingsService, projectPath);
+      await client.updateProject(project.linearProjectId, {
+        status: linearStatus,
+        progress: completionPercentage,
+      });
+
+      // Record metrics
+      this.recordOperation(
+        `project:${projectSlug}`,
+        'push',
+        'success',
+        Date.now() - startTime,
+        false
+      );
+
+      // Emit project status sync event
+      if (this.emitter) {
+        this.emitter.emit('linear:project:status-updated', {
+          projectPath,
+          projectSlug,
+          linearProjectId: project.linearProjectId,
+          status: projectStatus,
+          linearStatus,
+          progress: completionPercentage,
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      logger.info(
+        `Synced project status for ${projectSlug} to Linear: ${linearStatus} (${completionPercentage}%)`
+      );
+    } catch (error) {
+      logger.error(`Failed to sync project status for ${projectSlug}:`, error);
+
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      this.recordOperation(
+        `project:${projectSlug}`,
+        'push',
+        'error',
+        Date.now() - startTime,
+        false,
+        errorMsg
+      );
+
+      if (this.emitter) {
+        this.emitter.emit('linear:sync:error', {
+          projectSlug,
+          direction: 'push',
+          error: errorMsg,
+          timestamp: new Date().toISOString(),
+        });
+      }
+    }
+  }
+
+  /**
+   * Calculate milestone completion percentage based on phase completion
+   *
+   * @param project - The project to calculate progress for
+   * @returns Completion percentage (0-100)
+   */
+  private async calculateMilestoneProgress(project: any): Promise<number> {
+    if (!project.milestones || project.milestones.length === 0) {
+      return 0;
+    }
+
+    if (!this.featureLoader) {
+      // Fallback to milestone status if feature loader not available
+      return this.calculateMilestoneProgressFromStatus(project);
+    }
+
+    let totalPhases = 0;
+    let completedPhases = 0;
+
+    for (const milestone of project.milestones) {
+      if (milestone.phases && milestone.phases.length > 0) {
+        totalPhases += milestone.phases.length;
+
+        // Count phases with completed features
+        for (const phase of milestone.phases) {
+          if (phase.featureId) {
+            try {
+              // Get the feature to check its actual status
+              const feature = await this.featureLoader.get(
+                process.cwd(), // Use current working directory as project path
+                phase.featureId
+              );
+
+              if (feature && (feature.status === 'done' || feature.status === 'verified')) {
+                completedPhases++;
+              }
+            } catch (error) {
+              logger.debug(`Failed to get feature ${phase.featureId} for progress calculation`);
+            }
+          }
+        }
+      }
+    }
+
+    if (totalPhases === 0) {
+      return 0;
+    }
+
+    return Math.round((completedPhases / totalPhases) * 100);
+  }
+
+  /**
+   * Calculate milestone completion based on milestone status (fallback)
+   *
+   * @param project - The project to calculate progress for
+   * @returns Completion percentage (0-100)
+   */
+  private calculateMilestoneProgressFromStatus(project: any): number {
+    if (!project.milestones || project.milestones.length === 0) {
+      return 0;
+    }
+
+    let totalMilestones = project.milestones.length;
+    let completedMilestones = 0;
+
+    for (const milestone of project.milestones) {
+      if (milestone.status === 'completed') {
+        completedMilestones++;
+      }
+    }
+
+    return Math.round((completedMilestones / totalMilestones) * 100);
+  }
+
+  /**
+   * Map Automaker project status to Linear project status
+   *
+   * @param status - Automaker project status
+   * @returns Linear project status
+   */
+  private mapProjectStatusToLinear(status: string): string {
+    switch (status) {
+      case 'researching':
+      case 'drafting':
+        return 'planned';
+      case 'reviewing':
+        return 'planned';
+      case 'approved':
+      case 'scaffolded':
+        return 'started';
+      case 'active':
+        return 'started';
+      case 'completed':
+        return 'completed';
+      default:
+        logger.warn(`Unknown project status: ${status}, defaulting to planned`);
+        return 'planned';
     }
   }
 
