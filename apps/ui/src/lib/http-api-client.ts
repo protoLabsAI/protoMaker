@@ -835,7 +835,9 @@ export class HttpApiClient implements ElectronAPI {
           // Dispatch to wildcard subscribers (subscribeToEvents)
           const wildcardCallbacks = this.eventCallbacks.get('__all__' as EventType);
           if (wildcardCallbacks) {
-            wildcardCallbacks.forEach((cb) => cb(data));
+            wildcardCallbacks.forEach((cb) => {
+              cb(data);
+            });
           }
         } catch (error) {
           logger.error('Failed to parse WebSocket message:', error);

@@ -57,12 +57,20 @@ export function SystemTab({ projectPath }: SystemTabProps) {
   // Crew loop flows - map crew status to flow format
   // crew.members is a Record<string, MemberStatus>, not an array
   const crewFlows = health?.crew?.members
-    ? Object.values(health.crew.members).map((member: any) => ({
-        name: member.displayName || member.id,
-        status: member.running ? 'active' : member.enabled ? 'idle' : 'error',
-        lastRun: member.lastCheck,
-        avgLatencyMs: undefined,
-      }))
+    ? Object.values(health.crew.members).map(
+        (member: {
+          id: string;
+          displayName?: string;
+          running?: boolean;
+          enabled?: boolean;
+          lastCheck?: string;
+        }) => ({
+          name: member.displayName || member.id,
+          status: member.running ? 'active' : member.enabled ? 'idle' : 'error',
+          lastRun: member.lastCheck,
+          avgLatencyMs: undefined,
+        })
+      )
     : [];
 
   // Add auto-mode status as a flow
