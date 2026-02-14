@@ -108,3 +108,18 @@ export type {
   Outline,
   GenerationState,
 } from './content/nodes/generation-dispatch.js';
+
+// Content review system with parallel workers
+export {
+  createReviewSubgraph,
+  ReviewState as ContentReviewState,
+} from './content/subgraphs/review-subgraph.js';
+export { getReviewStats, hasBlockingIssues } from './content/subgraphs/review-subgraph.js';
+export {
+  technicalReviewerNode,
+  styleReviewerNode,
+  factCheckerNode,
+  type ReviewFinding,
+  type ReviewSeverity,
+  type ReviewWorkerState,
+} from './content/nodes/review-workers.js';
