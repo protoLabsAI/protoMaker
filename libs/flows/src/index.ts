@@ -123,6 +123,3 @@ export {
   type ReviewSeverity,
   type ReviewWorkerState,
 } from './content/nodes/review-workers.js';
-
-// Content creation module
-export * from './content/index.js';
