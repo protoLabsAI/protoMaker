@@ -101,3 +101,42 @@ export type DeliverableType =
   | 'architecture' // Architecture diagrams and decisions
   | 'demo' // Demo or showcase materials
   | 'migration'; // Migration guides or scripts
+
+/**
+ * Depth of PRD distillation - determines review thoroughness
+ */
+export enum DistillationDepth {
+  Surface = 'surface', // Quick scan
+  Standard = 'standard', // Normal depth
+  Deep = 'deep', // Thorough analysis
+}
+
+/**
+ * Result from a pair review (Ava + Jon discussion)
+ */
+export interface PairReviewResult {
+  /** Section being reviewed */
+  section: string;
+  /** Were the reviewers able to reach consensus? */
+  consensus: boolean;
+  /** Agreed-upon verdict if consensus reached */
+  agreedVerdict?: ReviewVerdict;
+  /** Combined/resolved comments */
+  consolidatedComments: string;
+  /** ISO 8601 timestamp when pair review completed */
+  completedAt: string;
+}
+
+/**
+ * Configuration for the antagonistic review flow
+ */
+export interface FlowReviewConfig {
+  /** Complexity level of the topic being reviewed */
+  topicComplexity?: 'simple' | 'moderate' | 'complex';
+  /** How deep to analyze the PRD */
+  distillationDepth?: DistillationDepth;
+  /** Whether to require human-in-the-loop for final approval */
+  requireHITL?: boolean;
+  /** Timeout for each review phase in milliseconds */
+  reviewTimeout?: number;
+}

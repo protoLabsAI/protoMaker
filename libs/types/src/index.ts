@@ -652,7 +652,10 @@ export type {
   ReviewState,
   ContentBrief,
   DeliverableType,
+  PairReviewResult,
+  FlowReviewConfig,
 } from './review.js';
+export { DistillationDepth } from './review.js';
 
 // Content generation types
 export { SectionSchema, OutlineSchema } from './content.js';
