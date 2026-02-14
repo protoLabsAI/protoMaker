@@ -40,3 +40,16 @@ export {
   type ResearchFinding,
   type ResearchSummary,
 } from './content/subgraphs/research-subgraph.js';
+
+// Content pipeline prompt templates
+export {
+  compilePrompt,
+  loadPromptTemplate,
+  getAvailablePrompts,
+} from './content/prompt-loader.js';
+export type {
+  PromptName,
+  PromptVariables,
+  CompilePromptOptions,
+  CompiledPrompt,
+} from './content/prompt-loader.js';
