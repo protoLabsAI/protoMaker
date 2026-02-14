@@ -582,16 +582,145 @@ export class LinearSyncService {
   }
 
   /**
+   * Format issue description with enhanced formatting for Linear
+   * Includes SPARC PRD sections, antagonistic review verdicts, milestone context,
+   * acceptance criteria, and estimated cost
+   */
+  private async formatIssueDescription(projectPath: string, feature: Feature): Promise<string> {
+    const sections: string[] = [];
+
+    // Basic description
+    sections.push(feature.description || 'No description provided');
+
+    // Add PRD metadata if available (SPARC sections)
+    if (feature.prdMetadata) {
+      sections.push('\n---\n## 📋 PRD Context');
+
+      // Get the project to access SPARC PRD
+      if (this.projectService && feature.projectSlug) {
+        try {
+          const project = await this.projectService.getProject(projectPath, feature.projectSlug);
+          if (project?.prd) {
+            const { prd } = project;
+
+            // Format SPARC sections
+            sections.push('\n### Situation');
+            sections.push(prd.situation || 'N/A');
+
+            sections.push('\n### Problem');
+            sections.push(prd.problem || 'N/A');
+
+            sections.push('\n### Approach');
+            sections.push(prd.approach || 'N/A');
+
+            sections.push('\n### Results');
+            sections.push(prd.results || 'N/A');
+
+            sections.push('\n### Constraints');
+            sections.push(prd.constraints || 'N/A');
+          }
+        } catch (error) {
+          logger.debug(`Could not fetch project PRD: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+      }
+    }
+
+    // Add milestone context if available
+    if (feature.milestoneSlug && this.projectService && feature.projectSlug) {
+      try {
+        const project = await this.projectService.getProject(projectPath, feature.projectSlug);
+        const milestone = project?.milestones?.find((m) => m.slug === feature.milestoneSlug);
+        if (milestone) {
+          sections.push('\n---\n## 🎯 Milestone Context');
+          sections.push(`**Milestone:** ${milestone.title}`);
+          sections.push(`**Description:** ${milestone.description}`);
+          sections.push(`**Status:** ${milestone.status}`);
+
+          if (milestone.dependencies && milestone.dependencies.length > 0) {
+            sections.push(`**Dependencies:** ${milestone.dependencies.join(', ')}`);
+          }
+        }
+      } catch (error) {
+        logger.debug(`Could not fetch milestone context: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    }
+
+    // Add acceptance criteria as checklist if available
+    if (this.projectService && feature.projectSlug && feature.milestoneSlug) {
+      try {
+        const project = await this.projectService.getProject(projectPath, feature.projectSlug);
+        const milestone = project?.milestones?.find((m) => m.slug === feature.milestoneSlug);
+        const phase = milestone?.phases?.find((p) => p.featureId === feature.id);
+
+        if (phase?.acceptanceCriteria && phase.acceptanceCriteria.length > 0) {
+          sections.push('\n---\n## ✅ Acceptance Criteria');
+          phase.acceptanceCriteria.forEach((criterion) => {
+            sections.push(`- [ ] ${criterion}`);
+          });
+        }
+      } catch (error) {
+        logger.debug(`Could not fetch acceptance criteria: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    }
+
+    // Add antagonistic review verdicts if available
+    if (this.projectService && feature.projectSlug) {
+      try {
+        const project = await this.projectService.getProject(projectPath, feature.projectSlug);
+        // Check if project has review comments
+        if (project?.reviewComments && project.reviewComments.length > 0) {
+          sections.push('\n---\n## 🔍 Review Verdicts');
+
+          // Group by reviewer
+          const avaComments = project.reviewComments.filter((c) => c.author === 'ava');
+          const jonComments = project.reviewComments.filter((c) => c.author === 'jon');
+
+          if (avaComments.length > 0) {
+            sections.push('\n### Ava (Operational Review)');
+            avaComments.forEach((comment) => {
+              const emoji = comment.type === 'approval' ? '✅' : comment.type === 'change-requested' ? '⚠️' : '💡';
+              sections.push(`${emoji} **${comment.type}** ${comment.section ? `(${comment.section})` : ''}: ${comment.content}`);
+            });
+          }
+
+          if (jonComments.length > 0) {
+            sections.push('\n### Jon (Market Review)');
+            jonComments.forEach((comment) => {
+              const emoji = comment.type === 'approval' ? '✅' : comment.type === 'change-requested' ? '⚠️' : '💡';
+              sections.push(`${emoji} **${comment.type}** ${comment.section ? `(${comment.section})` : ''}: ${comment.content}`);
+            });
+          }
+        }
+      } catch (error) {
+        logger.debug(`Could not fetch review verdicts: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    }
+
+    // Add estimated cost if available
+    if (feature.costUsd !== undefined && feature.costUsd > 0) {
+      sections.push('\n---\n## 💰 Estimated Cost');
+      sections.push(`**Total Cost:** $${feature.costUsd.toFixed(4)} USD`);
+
+      if (feature.executionHistory && feature.executionHistory.length > 0) {
+        sections.push(`**Executions:** ${feature.executionHistory.length}`);
+        const totalTokens =
+          feature.executionHistory.reduce((sum, exec) => sum + (exec.inputTokens || 0) + (exec.outputTokens || 0), 0);
+        sections.push(`**Total Tokens:** ${totalTokens.toLocaleString()}`);
+      }
+    }
+
+    // Add metadata footer
+    sections.push('\n---\n_Synced from Automaker_');
+
+    return sections.join('\n');
+  }
+
+  /**
    * Create a Linear issue via GraphQL API
    */
   private async createLinearIssue(
     projectPath: string,
-    feature: {
-      title?: string;
-      description: string;
-      priority?: 0 | 1 | 2 | 3 | 4;
-      epicId?: string;
-    }
+    feature: Feature
   ): Promise<{ issueId: string; issueUrl: string }> {
     if (!this.settingsService) {
       throw new Error('SettingsService not initialized');
@@ -618,9 +747,9 @@ export class LinearSyncService {
     // 0=none, 1=urgent, 2=high, 3=normal, 4=low
     const linearPriority = feature.priority ?? 3;
 
-    // Build the issue title and description
+    // Build the issue title and description with enhanced formatting
     const title = feature.title || 'Untitled Feature';
-    const description = feature.description || 'No description provided';
+    const description = await this.formatIssueDescription(projectPath, feature);
 
     // Check if this feature has a parent epic (milestone epic)
     // If so, get the parent's linearIssueId to set as parentId
@@ -698,6 +827,98 @@ export class LinearSyncService {
         issueId: result.data.issueCreate.issue.id,
         issueUrl: result.data.issueCreate.issue.url,
       };
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('Linear API request timed out after 30s');
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Update a Linear issue via GraphQL API
+   * Used to sync feature updates back to Linear with enhanced formatting
+   */
+  private async updateLinearIssue(
+    projectPath: string,
+    issueId: string,
+    feature: Feature
+  ): Promise<void> {
+    if (!this.settingsService) {
+      throw new Error('SettingsService not initialized');
+    }
+
+    const settings = await this.settingsService.getProjectSettings(projectPath);
+    const linearAccessToken = settings.integrations?.linear?.agentToken;
+
+    if (!linearAccessToken) {
+      throw new Error('No Linear OAuth token found in settings');
+    }
+
+    // Format the description with enhanced formatting
+    const description = await this.formatIssueDescription(projectPath, feature);
+    const title = feature.title || 'Untitled Feature';
+    const priority = feature.priority ?? 3;
+
+    // GraphQL mutation to update issue
+    const mutation = `
+      mutation UpdateIssue($id: String!, $title: String, $description: String, $priority: Int) {
+        issueUpdate(id: $id, input: { title: $title, description: $description, priority: $priority }) {
+          success
+          issue {
+            id
+            url
+          }
+        }
+      }
+    `;
+
+    const variables = {
+      id: issueId,
+      title,
+      description,
+      priority,
+    };
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+    try {
+      const response = await fetch('https://api.linear.app/graphql', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${linearAccessToken}`,
+        },
+        body: JSON.stringify({ query: mutation, variables }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`Linear API error: ${response.status} ${response.statusText}`);
+      }
+
+      const result = (await response.json()) as {
+        data?: {
+          issueUpdate?: {
+            success: boolean;
+            issue?: { id: string; url: string };
+          };
+        };
+        errors?: Array<{ message: string }>;
+      };
+
+      if (result.errors) {
+        throw new Error(`Linear GraphQL error: ${result.errors.map((e) => e.message).join(', ')}`);
+      }
+
+      if (!result.data?.issueUpdate?.success) {
+        throw new Error('Failed to update Linear issue');
+      }
+
+      logger.info(`Updated Linear issue ${issueId} with enhanced formatting`);
     } catch (error) {
       clearTimeout(timeoutId);
       if (error instanceof Error && error.name === 'AbortError') {
