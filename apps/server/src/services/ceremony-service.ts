@@ -15,6 +15,7 @@ import type { ProjectService } from './project-service.js';
 import type { MetricsService } from './metrics-service.js';
 import type { Feature, CeremonySettings } from '@automaker/types';
 import { simpleQuery } from '../providers/simple-query-service.js';
+import { BeadsService } from './beads-service.js';
 
 const logger = createLogger('CeremonyService');
 
@@ -68,6 +69,17 @@ interface ProjectCompletedPayload {
 }
 
 /**
+ * Improvement item from retro analysis
+ */
+interface ImprovementItem {
+  title: string;
+  description: string;
+  type: 'operational' | 'code';
+  priority: number;
+  category?: string;
+}
+
+/**
  * Ceremony Service
  *
  * Generates rich milestone completion announcements with:
@@ -83,6 +95,7 @@ export class CeremonyService {
   private featureLoader: FeatureLoader | null = null;
   private projectService: ProjectService | null = null;
   private metricsService: MetricsService | null = null;
+  private beadsService: BeadsService | null = null;
   private unsubscribe: (() => void) | null = null;
 
   /**
@@ -100,6 +113,7 @@ export class CeremonyService {
     this.featureLoader = featureLoader;
     this.projectService = projectService;
     this.metricsService = metricsService;
+    this.beadsService = new BeadsService('bd', emitter);
 
     // Subscribe to epic, milestone, and project lifecycle events
     this.unsubscribe = emitter.subscribe((type, payload) => {
@@ -438,6 +452,9 @@ ${dataSummary}`;
       }
 
       logger.info(`Posted project retrospective with impact report for ${projectTitle}`);
+
+      // Extract and create improvement items (closes the REFLECT → REPEAT loop)
+      await this.createImprovementItems(projectPath, projectTitle, retrospective, dataSummary);
     } catch (error) {
       logger.error('Failed to generate project retrospective:', error);
     }
@@ -1015,6 +1032,145 @@ Keep it engaging, benefits-focused, and suitable for a technical audience.`;
       action: 'send_message',
       content,
     });
+  }
+
+  /**
+   * Extract improvement items from retrospective and create Beads/Automaker items
+   * Closes the REFLECT → REPEAT loop
+   */
+  private async createImprovementItems(
+    projectPath: string,
+    projectTitle: string,
+    retrospective: string,
+    dataSummary: string
+  ): Promise<void> {
+    try {
+      logger.info(`Extracting improvement items from retrospective for ${projectTitle}`);
+
+      // Use lightweight query to extract 1-3 actionable improvement tickets
+      const extractionPrompt = `Based on this project retrospective, extract 1-3 concrete, actionable improvement items.
+
+For each improvement item, provide:
+1. **Title**: Brief, clear title (max 60 chars)
+2. **Description**: Detailed description of the improvement (2-4 sentences)
+3. **Type**: Either "operational" (process/workflow improvements) or "code" (technical/codebase improvements)
+4. **Priority**: 1-3 (1=high, 2=medium, 3=low)
+5. **Category**: Optional category tag (e.g., "testing", "ci/cd", "documentation", "architecture")
+
+Focus on improvements that are:
+- Specific and actionable (not vague suggestions)
+- Based on actual issues encountered in the project
+- High-impact and worth implementing
+
+Return the improvements as a JSON array of objects with fields: title, description, type, priority, category.
+
+Retrospective:
+${retrospective}
+
+Project Data:
+${dataSummary}
+
+Return ONLY the JSON array, no other text.`;
+
+      const result = await simpleQuery({
+        prompt: extractionPrompt,
+        model: 'haiku', // Use lightweight model for extraction
+        cwd: projectPath,
+        maxTurns: 1,
+        allowedTools: [],
+      });
+
+      // Parse the JSON response
+      let improvements: ImprovementItem[] = [];
+      try {
+        // Extract JSON from response (handle markdown code blocks)
+        const jsonMatch = result.text.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+          improvements = JSON.parse(jsonMatch[0]) as ImprovementItem[];
+        } else {
+          // Try parsing the entire response as JSON
+          improvements = JSON.parse(result.text) as ImprovementItem[];
+        }
+      } catch (parseError) {
+        logger.error('Failed to parse improvement items JSON:', parseError);
+        logger.debug('Raw LLM response:', result.text);
+        return;
+      }
+
+      // Validate improvements
+      if (!Array.isArray(improvements) || improvements.length === 0) {
+        logger.info('No improvement items extracted from retrospective');
+        return;
+      }
+
+      // Limit to 3 items
+      improvements = improvements.slice(0, 3);
+
+      logger.info(`Extracted ${improvements.length} improvement items`);
+
+      const createdBeadsItems: string[] = [];
+      const createdFeatureIds: string[] = [];
+
+      // Create Beads items and Automaker features
+      for (const improvement of improvements) {
+        if (improvement.type === 'operational') {
+          // Create Beads task for operational improvements
+          const beadsResult = await this.beadsService!.createTask(projectPath, {
+            title: improvement.title,
+            description: improvement.description,
+            priority: improvement.priority,
+            issueType: 'task',
+            labels: improvement.category
+              ? ['retro-improvement', improvement.category]
+              : ['retro-improvement'],
+          });
+
+          if (beadsResult.success && beadsResult.data) {
+            createdBeadsItems.push(beadsResult.data.id);
+            logger.info(
+              `Created Beads task ${beadsResult.data.id} for operational improvement: ${improvement.title}`
+            );
+          } else {
+            logger.error(
+              `Failed to create Beads task for ${improvement.title}:`,
+              beadsResult.error
+            );
+          }
+        } else if (improvement.type === 'code') {
+          // Create Automaker feature for code improvements
+          const feature = await this.featureLoader!.create(projectPath, {
+            title: improvement.title,
+            description: improvement.description,
+            category: improvement.category || 'improvement',
+            status: 'backlog',
+            priority: improvement.priority as 1 | 2 | 3,
+            complexity: 'medium',
+          });
+
+          createdFeatureIds.push(feature.id);
+          logger.info(
+            `Created Automaker feature ${feature.id} for code improvement: ${improvement.title}`
+          );
+        }
+      }
+
+      // Emit event for tracking
+      if (this.emitter && (createdBeadsItems.length > 0 || createdFeatureIds.length > 0)) {
+        this.emitter.emit('retro:improvements:created', {
+          projectPath,
+          projectTitle,
+          beadsItems: createdBeadsItems,
+          featureIds: createdFeatureIds,
+          totalImprovements: improvements.length,
+        });
+
+        logger.info(
+          `Emitted retro:improvements:created event: ${createdBeadsItems.length} Beads items, ${createdFeatureIds.length} features`
+        );
+      }
+    } catch (error) {
+      logger.error('Failed to create improvement items:', error);
+    }
   }
 }
 
