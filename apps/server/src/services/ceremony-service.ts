@@ -16,6 +16,7 @@ import type { MetricsService } from './metrics-service.js';
 import type { Feature, CeremonySettings } from '@automaker/types';
 import { simpleQuery } from '../providers/simple-query-service.js';
 import { BeadsService } from './beads-service.js';
+import { LinearProjectUpdateService } from './linear-project-update-service.js';
 import { secureFs } from '@automaker/platform';
 import path from 'path';
 
@@ -98,6 +99,7 @@ export class CeremonyService {
   private projectService: ProjectService | null = null;
   private metricsService: MetricsService | null = null;
   private beadsService: BeadsService | null = null;
+  private linearProjectUpdateService: LinearProjectUpdateService | null = null;
   private unsubscribe: (() => void) | null = null;
 
   /**
@@ -116,6 +118,7 @@ export class CeremonyService {
     this.projectService = projectService;
     this.metricsService = metricsService;
     this.beadsService = new BeadsService('bd', emitter);
+    // LinearProjectUpdateService will be initialized per-project as needed
 
     // Subscribe to epic, milestone, and project lifecycle events
     this.unsubscribe = emitter.subscribe((type, payload) => {
@@ -253,6 +256,19 @@ export class CeremonyService {
         );
       }
 
+      // Post to Linear project update if enabled
+      if (ceremonySettings.enableLinearProjectUpdates && this.settingsService) {
+        try {
+          const linearService = new LinearProjectUpdateService(this.settingsService, projectPath);
+          if (await linearService.isEnabled()) {
+            await linearService.createDailyStandup(content);
+            logger.info(`Posted milestone standup to Linear project for ${projectTitle}`);
+          }
+        } catch (error) {
+          logger.error('Failed to post standup to Linear project:', error);
+        }
+      }
+
       logger.info(
         `Posted milestone standup for ${projectTitle} - Milestone ${milestoneNumber}: ${milestoneTitle}`
       );
@@ -297,15 +313,31 @@ export class CeremonyService {
         );
       }
 
-      logger.info(
-        `Posted milestone ceremony for ${projectTitle} - Milestone ${milestoneNumber}: ${milestoneTitle}`
-      );
-
-      // Load milestone features for content brief
+      // Load milestone features to check for blockers
       const project = await this.projectService!.getProject(projectPath, projectSlug);
       const milestone = project?.milestones.find((m) => m.number === milestoneNumber);
+      let hasBlockers = false;
       if (milestone) {
         const milestoneFeatures = await this.getMilestoneFeatures(projectPath, milestone.slug);
+        hasBlockers = milestoneFeatures.some((f) => f.error || f.status === 'blocked');
+
+        // Post to Linear project update if enabled
+        if (ceremonySettings.enableLinearProjectUpdates && this.settingsService) {
+          try {
+            const linearService = new LinearProjectUpdateService(
+              this.settingsService,
+              projectPath
+            );
+            if (await linearService.isEnabled()) {
+              await linearService.createMilestoneCompletion(content, hasBlockers);
+              logger.info(`Posted milestone completion to Linear project for ${projectTitle}`);
+            }
+          } catch (error) {
+            logger.error('Failed to post milestone completion to Linear project:', error);
+          }
+        }
+
+        // Generate and post content brief
         await this.generateAndPostMilestoneContentBrief(
           projectPath,
           projectSlug,
@@ -316,6 +348,10 @@ export class CeremonyService {
           ceremonySettings
         );
       }
+
+      logger.info(
+        `Posted milestone ceremony for ${projectTitle} - Milestone ${milestoneNumber}: ${milestoneTitle}`
+      );
     } catch (error) {
       logger.error('Failed to generate milestone ceremony:', error);
     }
