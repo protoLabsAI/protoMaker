@@ -457,6 +457,10 @@ linearSyncService.start();
 const { ceremonyService } = await import('./services/ceremony-service.js');
 ceremonyService.initialize(events, settingsService, featureLoader, projectService, metricsService);
 
+// Initialize Changelog Service for generating changelogs on milestone/project completion
+const { changelogService } = await import('./services/changelog-service.js');
+changelogService.initialize(events, settingsService, featureLoader, projectService);
+
 // Initialize Completion Detector Service — cascades feature done → epic → milestone → project
 const completionDetectorService = new CompletionDetectorService();
 completionDetectorService.initialize(events, featureLoader, projectService);
