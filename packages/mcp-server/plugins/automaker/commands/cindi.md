@@ -115,16 +115,16 @@ ContentState {
 
 ### Blog Templates (8 Strategies)
 
-| Template          | Use Case                          | Strengths                     | SEO Focus           |
-| ----------------- | --------------------------------- | ----------------------------- | ------------------- |
-| Research-Backed   | Authority building, data-driven   | Citations, stats, credibility | Long-tail keywords  |
-| Tutorial          | Step-by-step guides               | Practical, actionable         | How-to queries      |
-| Listicle          | Quick reads, engagement           | Scannable, shareable          | Numbered headlines  |
-| Case Study        | Proof of concept, social proof    | Real results, specifics       | Brand + solution    |
-| How-To            | Problem-solving                   | Direct, instructional         | Problem keywords    |
-| Opinion           | Thought leadership, hot takes     | Personality, engagement       | Controversial terms |
-| Story-Driven      | Narrative, emotional connection   | Memorable, relatable          | Journey keywords    |
-| Comparison        | Buyer's journey, decision support | Analytical, comprehensive     | Versus keywords     |
+| Template        | Use Case                          | Strengths                     | SEO Focus           |
+| --------------- | --------------------------------- | ----------------------------- | ------------------- |
+| Research-Backed | Authority building, data-driven   | Citations, stats, credibility | Long-tail keywords  |
+| Tutorial        | Step-by-step guides               | Practical, actionable         | How-to queries      |
+| Listicle        | Quick reads, engagement           | Scannable, shareable          | Numbered headlines  |
+| Case Study      | Proof of concept, social proof    | Real results, specifics       | Brand + solution    |
+| How-To          | Problem-solving                   | Direct, instructional         | Problem keywords    |
+| Opinion         | Thought leadership, hot takes     | Personality, engagement       | Controversial terms |
+| Story-Driven    | Narrative, emotional connection   | Memorable, relatable          | Journey keywords    |
+| Comparison      | Buyer's journey, decision support | Analytical, comprehensive     | Versus keywords     |
 
 **Choose based on goals:**
 
@@ -183,11 +183,11 @@ Every piece is scored across 6 dimensions (1-10 scale):
 
 ```markdown
 ---
-title: "Post Title"
-description: "Meta description"
-date: "2025-01-15"
-author: "protoLabs"
-tags: ["tag1", "tag2"]
+title: 'Post Title'
+description: 'Meta description'
+date: '2025-01-15'
+author: 'protoLabs'
+tags: ['tag1', 'tag2']
 ---
 
 # Post Title
@@ -198,7 +198,14 @@ Content here...
 **JSONL (for training datasets):**
 
 ```jsonl
-{"instruction": "How do I...", "response": "To accomplish this...", "metadata": {"template": "tutorial", "topic": "..."}}
+{
+  "instruction": "How do I...",
+  "response": "To accomplish this...",
+  "metadata": {
+    "template": "tutorial",
+    "topic": "..."
+  }
+}
 ```
 
 **Frontmatter (for CMS):**
