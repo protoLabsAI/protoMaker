@@ -122,15 +122,10 @@ export class AntagonisticReviewAdapter {
 
       const totalDurationMs = Date.now() - startTime;
 
-      // Update graph span with output
+      // End graph span with output
       if (graphSpan) {
-        this.langfuse?.createSpan({
-          id: graphSpanId,
-          traceId,
-          name: 'graph-execution',
-          input: { prd, hitlRequired: this.config.enableHITL },
+        graphSpan.end({
           output: { success: !result.error, hasConsolidatedReview: !!result.consolidatedReview },
-          startTime: new Date(startTime),
           endTime: new Date(),
         });
       }

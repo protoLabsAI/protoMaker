@@ -64,6 +64,7 @@ export class AntagonisticReviewService {
   private events: EventEmitter;
   private settingsService: SettingsService;
   private adapter: AntagonisticReviewAdapter | null = null;
+  private initPromise: Promise<void> | null = null;
 
   constructor(
     agentFactory: AgentFactoryService,
@@ -74,9 +75,16 @@ export class AntagonisticReviewService {
     this.events = events;
     this.settingsService = settingsService;
     this.executor = new DynamicAgentExecutor(events);
+  }
 
-    // Initialize Langfuse client if credentials are available
-    this.initializeLangfuse();
+  /**
+   * Ensure Langfuse is initialized before use (lazy, once)
+   */
+  private ensureInitialized(): Promise<void> {
+    if (!this.initPromise) {
+      this.initPromise = this.initializeLangfuse();
+    }
+    return this.initPromise;
   }
 
   /**
@@ -84,8 +92,6 @@ export class AntagonisticReviewService {
    */
   private async initializeLangfuse(): Promise<void> {
     try {
-      const credentials = await this.settingsService.getCredentials();
-
       // Check if Langfuse credentials are configured
       const langfusePublicKey = process.env.LANGFUSE_PUBLIC_KEY;
       const langfuseSecretKey = process.env.LANGFUSE_SECRET_KEY;
@@ -136,6 +142,9 @@ export class AntagonisticReviewService {
    * Execute the full antagonistic review pipeline
    */
   async executeReview(request: ReviewRequest): Promise<ConsolidatedReview> {
+    // Ensure Langfuse is initialized before checking adapter availability
+    await this.ensureInitialized();
+
     const startTime = Date.now();
     const { prd, prdId, projectPath } = request;
 
