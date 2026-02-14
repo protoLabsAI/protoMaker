@@ -2,7 +2,7 @@
  * Antagonistic Review Flow
  *
  * Dual-perspective review system for milestone deliverables.
- * Exports state definitions and types for the antagonistic review pipeline.
+ * Exports state definitions, types, and review nodes for the antagonistic review pipeline.
  */
 
 export {
@@ -11,3 +11,26 @@ export {
   type AntagonisticReviewState,
   type AntagonisticReviewStateType,
 } from './state.js';
+
+export {
+  classifyTopicNode,
+  executeWithFallback,
+  ComplexitySchema,
+  DistillationDepthSchema,
+  ClassificationResultSchema,
+  type ClassifyTopicState,
+  type Complexity,
+  type DistillationDepth,
+  type ClassificationResult,
+} from './nodes/classify-topic.js';
+
+export {
+  avaReviewNode,
+  ReviewVerdictSchema,
+  ReviewSectionSchema,
+  ReviewerPerspectiveSchema,
+  type AvaReviewState,
+  type ReviewVerdict,
+  type ReviewSection,
+  type ReviewerPerspective,
+} from './nodes/ava-review.js';
