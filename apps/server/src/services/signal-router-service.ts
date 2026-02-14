@@ -56,18 +56,21 @@ export class SignalRouterService {
   private beadsService: BeadsService;
   private prdService: PRDService;
   private discordService: DiscordService;
+  private projectPath: string;
   private enabled: boolean = false;
 
   constructor(
     events: EventEmitter,
     beadsService: BeadsService,
     prdService: PRDService,
-    discordService: DiscordService
+    discordService: DiscordService,
+    projectPath: string
   ) {
     this.events = events;
     this.beadsService = beadsService;
     this.prdService = prdService;
     this.discordService = discordService;
+    this.projectPath = projectPath;
   }
 
   /**
@@ -211,7 +214,7 @@ export class SignalRouterService {
     logger.info(`Creating Bead for improvement: ${signal.title}`);
 
     // Create Bead task
-    const beadResult = await this.beadsService.createTask({
+    const beadResult = await this.beadsService.createTask(this.projectPath, {
       title: signal.title,
       description: signal.description,
       tags: ['improvement', signal.source],
@@ -252,11 +255,7 @@ export class SignalRouterService {
     // Post to Discord (assuming a questions channel exists)
     const discordResult = await this.discordService.sendMessage({
       channelId: process.env.DISCORD_QUESTIONS_CHANNEL_ID || '',
-      content: `**Question from ${signal.source}**\n\n**${signal.title}**\n\n${signal.description}`,
-      metadata: {
-        signalId: signal.id,
-        source: signal.source,
-      },
+      message: `**Question from ${signal.source}**\n\n**${signal.title}**\n\n${signal.description}`,
     });
 
     if (!discordResult.success) {
