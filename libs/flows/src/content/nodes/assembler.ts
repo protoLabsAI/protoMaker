@@ -37,6 +37,17 @@ export interface DocumentMetadata {
 }
 
 /**
+ * Validation warning for duplicate content or headings
+ */
+export interface ValidationWarning {
+  type: 'duplicate-heading' | 'high-similarity';
+  severity: 'warning';
+  message: string;
+  sections: string[]; // Section IDs or titles involved
+  details?: Record<string, unknown>;
+}
+
+/**
  * Assembler state
  */
 export interface AssemblerState {
@@ -47,6 +58,7 @@ export interface AssemblerState {
   tableOfContents?: string;
   coherenceChecked?: boolean;
   crossReferencesResolved?: boolean;
+  validationWarnings?: ValidationWarning[];
 }
 
 /**
@@ -203,6 +215,141 @@ function mergeSections(sections: DocumentSection[]): string {
 }
 
 /**
+ * Extracts H2/H3 headings from markdown content
+ */
+function extractHeadings(content: string): string[] {
+  const headingRegex = /^#{2,3}\s+(.+)$/gm;
+  const headings: string[] = [];
+  let match;
+  while ((match = headingRegex.exec(content)) !== null) {
+    headings.push(match[1].trim());
+  }
+  return headings;
+}
+
+/**
+ * Extracts significant keywords from text (words 4+ chars, lowercased, no stop words)
+ */
+function extractKeywords(text: string): Set<string> {
+  const stopWords = new Set([
+    'this',
+    'that',
+    'with',
+    'from',
+    'have',
+    'been',
+    'will',
+    'would',
+    'could',
+    'should',
+    'about',
+    'which',
+    'their',
+    'there',
+    'these',
+    'those',
+    'then',
+    'than',
+    'when',
+    'what',
+    'where',
+    'they',
+    'your',
+    'into',
+    'each',
+    'make',
+    'like',
+    'just',
+    'over',
+    'such',
+    'also',
+    'more',
+    'some',
+    'very',
+    'after',
+    'before',
+    'between',
+    'under',
+    'other',
+  ]);
+
+  return new Set(
+    text
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .split(/\s+/)
+      .filter((w) => w.length >= 4 && !stopWords.has(w))
+  );
+}
+
+/**
+ * Calculates Jaccard similarity between two keyword sets (0-1)
+ */
+function keywordSimilarity(a: Set<string>, b: Set<string>): number {
+  if (a.size === 0 && b.size === 0) return 0;
+  const intersection = new Set([...a].filter((x) => b.has(x)));
+  const union = new Set([...a, ...b]);
+  return union.size > 0 ? intersection.size / union.size : 0;
+}
+
+/**
+ * Detects duplicate headings and high content similarity between sections.
+ * Returns structured warnings without blocking assembly.
+ */
+export function detectDuplicates(sections: DocumentSection[]): ValidationWarning[] {
+  const warnings: ValidationWarning[] = [];
+
+  // Check for duplicate H2/H3 headings across all sections
+  const headingMap = new Map<string, string[]>();
+  for (const section of sections) {
+    const allHeadings = [section.title, ...extractHeadings(section.content)];
+    for (const heading of allHeadings) {
+      const normalized = heading.toLowerCase().trim();
+      const existing = headingMap.get(normalized) || [];
+      existing.push(section.title);
+      headingMap.set(normalized, existing);
+    }
+  }
+
+  for (const [heading, sectionTitles] of headingMap.entries()) {
+    if (sectionTitles.length > 1) {
+      const unique = [...new Set(sectionTitles)];
+      if (unique.length > 1 || sectionTitles.length > 1) {
+        warnings.push({
+          type: 'duplicate-heading',
+          severity: 'warning',
+          message: `Duplicate heading "${heading}" found in sections: ${sectionTitles.join(', ')}`,
+          sections: sectionTitles,
+          details: { heading },
+        });
+      }
+    }
+  }
+
+  // Check for high content similarity between section pairs
+  const SIMILARITY_THRESHOLD = 0.6;
+  for (let i = 0; i < sections.length; i++) {
+    const keywordsA = extractKeywords(sections[i].content);
+    for (let j = i + 1; j < sections.length; j++) {
+      const keywordsB = extractKeywords(sections[j].content);
+      const similarity = keywordSimilarity(keywordsA, keywordsB);
+
+      if (similarity > SIMILARITY_THRESHOLD) {
+        warnings.push({
+          type: 'high-similarity',
+          severity: 'warning',
+          message: `High content similarity (${(similarity * 100).toFixed(0)}%) between "${sections[i].title}" and "${sections[j].title}"`,
+          sections: [sections[i].title, sections[j].title],
+          details: { similarity: Math.round(similarity * 100) },
+        });
+      }
+    }
+  }
+
+  return warnings;
+}
+
+/**
  * Assembler node - main entry point
  */
 export async function assembler(
@@ -262,6 +409,15 @@ export async function assembler(
       coherenceChecked = true;
     }
 
+    // Step 7: Run deduplication detection (non-blocking)
+    const validationWarnings = detectDuplicates(state.sections);
+    if (validationWarnings.length > 0) {
+      console.log(`[assembler] Found ${validationWarnings.length} validation warning(s):`);
+      for (const w of validationWarnings) {
+        console.log(`  [${w.type}] ${w.message}`);
+      }
+    }
+
     console.log('[assembler] Assembly complete');
 
     // Flush trace if available
@@ -274,6 +430,7 @@ export async function assembler(
       tableOfContents,
       coherenceChecked,
       crossReferencesResolved: true,
+      validationWarnings: validationWarnings.length > 0 ? validationWarnings : undefined,
     };
   } catch (error) {
     console.error('[assembler] Error during assembly:', error);
