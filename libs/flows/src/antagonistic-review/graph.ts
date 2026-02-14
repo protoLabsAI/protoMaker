@@ -1,11 +1,17 @@
 /**
  * Antagonistic Review Graph
  *
- * Dual-perspective PRD review workflow using LangGraph.
+ * Dual-perspective PRD review workflow using LangGraph with distillation depth routing.
  *
  * Flow:
- * START -> classify_topic -> ava_review -> jon_review -> check_consensus ->
+ * START -> classify_topic -> fan_out_pairs -> [pair_review (parallel)] ->
+ * aggregate_pairs -> ava_review -> jon_review -> check_consensus ->
  * [consolidate | resolution -> consolidate] -> check_hitl -> [interrupt | done]
+ *
+ * Distillation depth routing (after classify_topic):
+ * - depth=0 (surface): Skip pair reviews entirely
+ * - depth=1 (standard): Activate most relevant pair via Send()
+ * - depth=2 (deep): Activate all 3 pairs via Send() in parallel
  *
  * Conditional routing:
  * - check_consensus: if both approve, skip resolution
@@ -25,6 +31,9 @@ import type { ReviewerPerspective } from '@automaker/types';
 import { checkConsensus } from './nodes/check-consensus.js';
 import { resolution } from './nodes/resolution.js';
 import { checkHitl } from './nodes/check-hitl.js';
+import { fanOutPairs } from './nodes/fan-out-pairs.js';
+import { aggregatePairs } from './nodes/aggregate-pairs.js';
+import { createPairReviewNode } from './nodes/pair-review.js';
 
 /**
  * Mock classify topic node - heuristic classification based on PRD length
@@ -100,14 +109,27 @@ async function jonReviewMock(
 }
 
 /**
- * Mock consolidate node - merges reviews and sets HITL requirement
+ * Mock consolidate node - merges reviews (including pair reviews) and sets HITL requirement
  *
  * Will be replaced by consolidateNode with LLM model injection in a future feature.
  */
 async function consolidateMock(
   state: AntagonisticReviewState
 ): Promise<Partial<AntagonisticReviewState>> {
+  const { pairReviews } = state;
   const hitlRequired = !state.consensus || state.finalVerdict !== 'approve';
+
+  // Log pair reviews if present
+  if (pairReviews.length > 0) {
+    console.log(`[ConsolidateMock] Incorporating ${pairReviews.length} pair review(s):`);
+    for (const review of pairReviews) {
+      console.log(
+        `  - ${review.section}: consensus=${review.consensus}, verdict=${review.agreedVerdict}`
+      );
+    }
+  } else {
+    console.log('[ConsolidateMock] No pair reviews to incorporate');
+  }
 
   return {
     consolidatedPrd: {
@@ -168,6 +190,7 @@ export function createAntagonisticReviewGraph(enableCheckpointing = true) {
   // Add all nodes
   builder
     .addNode('classify_topic', classifyTopicMock)
+    .addNode('aggregate_pairs', aggregatePairs)
     .addNode('ava_review', avaReviewMock)
     .addNode('jon_review', jonReviewMock)
     .addNode('check_consensus', checkConsensus)
@@ -177,10 +200,29 @@ export function createAntagonisticReviewGraph(enableCheckpointing = true) {
     .addNode('human_review', humanReview)
     .addNode('done', async () => ({}));
 
-  // Wire the linear flow: classify -> ava -> jon -> check_consensus
+  // Add nodes that return Command (Send pattern) directly via StateGraph
+  const stateGraph = builder.getGraph();
+  (stateGraph as any).addNode('fan_out_pairs', fanOutPairs, { ends: ['pair_review', 'aggregate_pairs'] });
+
+  // pair_review node - invokes the pair review subgraph with pairConfig from Send()
+  (stateGraph as any).addNode('pair_review', async (state: any) => {
+    if (!state.pairConfig) {
+      throw new Error('[PairReview] pairConfig not provided via Send()');
+    }
+
+    // Create and invoke the pair review node with the provided config
+    const pairReviewFn = createPairReviewNode(state.pairConfig);
+    return await pairReviewFn(state);
+  });
+
+  // Wire the flow: classify -> fan_out_pairs -> [pair_review] -> aggregate -> ava -> jon -> check_consensus
   builder
     .setEntryPoint('classify_topic')
-    .addEdge('classify_topic', 'ava_review')
+    .addEdge('classify_topic', 'fan_out_pairs')
+    // fan_out_pairs uses Command with Send() for dynamic routing to pair_review
+    // pair_review automatically routes back to aggregate_pairs (via Send() pattern)
+    .addEdge('pair_review', 'aggregate_pairs')
+    .addEdge('aggregate_pairs', 'ava_review')
     .addEdge('ava_review', 'jon_review')
     .addEdge('jon_review', 'check_consensus');
 
