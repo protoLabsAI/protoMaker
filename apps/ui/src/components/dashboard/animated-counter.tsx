@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { motion, useSpring, useTransform } from 'motion/react';
 
 interface AnimatedCounterProps {
@@ -85,6 +85,7 @@ export function Sparkline({
   height = 32,
   className = '',
 }: SparklineProps) {
+  const gradientId = useId();
   const svgRef = useRef<SVGSVGElement>(null);
   const [width, setWidth] = useState(120);
 
@@ -112,12 +113,12 @@ export function Sparkline({
   return (
     <svg ref={svgRef} width="100%" height={height} className={className}>
       <defs>
-        <linearGradient id={`spark-fill-${color}`} x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id={`spark-fill-${gradientId}`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={color} stopOpacity={0.3} />
           <stop offset="100%" stopColor={color} stopOpacity={0} />
         </linearGradient>
       </defs>
-      <path d={areaD} fill={`url(#spark-fill-${color})`} />
+      <path d={areaD} fill={`url(#spark-fill-${gradientId})`} />
       <path d={pathD} fill="none" stroke={color} strokeWidth={1.5} strokeLinecap="round" />
     </svg>
   );

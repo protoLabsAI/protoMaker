@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { motion } from 'motion/react';
 import { GlowCard } from './glow-card';
 import { cn } from '@/lib/utils';
@@ -19,6 +20,7 @@ export function Gauge({
   thresholds = { warn: 70, critical: 90 },
   size = 100,
 }: GaugeProps) {
+  const filterId = useId();
   const percent = Math.min((value / max) * 100, 100);
   const radius = (size - 12) / 2;
   const circumference = Math.PI * radius; // half circle
@@ -31,7 +33,7 @@ export function Gauge({
     <div className="flex flex-col items-center">
       <svg width={size} height={size / 2 + 10} viewBox={`0 0 ${size} ${size / 2 + 10}`}>
         <defs>
-          <filter id={`gauge-glow-${label}`}>
+          <filter id={filterId}>
             <feDropShadow dx="0" dy="0" stdDeviation="3" floodColor={color} floodOpacity="0.6" />
           </filter>
         </defs>
@@ -54,12 +56,12 @@ export function Gauge({
           initial={{ strokeDashoffset: circumference }}
           animate={{ strokeDashoffset: offset }}
           transition={{ duration: 1.5, ease: 'easeOut' }}
-          filter={`url(#gauge-glow-${label})`}
+          filter={`url(#${filterId})`}
         />
       </svg>
       <div className="text-center -mt-2">
         <span className="text-lg font-bold" style={{ color }}>
-          {Math.round(percent)}
+          {unit === '%' ? Math.round(percent) : value}
           {unit}
         </span>
         <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-0.5">{label}</p>

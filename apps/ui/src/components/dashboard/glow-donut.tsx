@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { motion } from 'motion/react';
 import { GlowCard } from './glow-card';
@@ -25,6 +26,7 @@ export function GlowDonut({
   height = 200,
   formatValue = (v) => v.toLocaleString(),
 }: GlowDonutProps) {
+  const filterId = useId();
   const total = data.reduce((sum, d) => sum + d.value, 0);
 
   return (
@@ -41,7 +43,7 @@ export function GlowDonut({
           <PieChart>
             <defs>
               {data.map((entry, i) => (
-                <filter key={i} id={`donut-glow-${i}`}>
+                <filter key={i} id={`donut-glow-${filterId}-${i}`}>
                   <feDropShadow
                     dx="0"
                     dy="0"
@@ -65,7 +67,7 @@ export function GlowDonut({
               animationBegin={200}
             >
               {data.map((entry, i) => (
-                <Cell key={i} fill={entry.color} filter={`url(#donut-glow-${i})`} />
+                <Cell key={i} fill={entry.color} filter={`url(#donut-glow-${filterId}-${i})`} />
               ))}
             </Pie>
             <Tooltip

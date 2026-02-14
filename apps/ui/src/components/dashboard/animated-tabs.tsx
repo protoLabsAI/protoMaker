@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -17,6 +17,7 @@ interface AnimatedTabsProps {
 }
 
 export function AnimatedTabs({ tabs, activeTab, onTabChange, children }: AnimatedTabsProps) {
+  const layoutId = useId();
   return (
     <div>
       {/* Tab bar */}
@@ -36,7 +37,7 @@ export function AnimatedTabs({ tabs, activeTab, onTabChange, children }: Animate
             >
               {isActive && (
                 <motion.div
-                  layoutId="activeTabBg"
+                  layoutId={`activeTabBg-${layoutId}`}
                   className="absolute inset-0 bg-background/80 rounded-md border border-white/10 shadow-sm"
                   style={{ zIndex: 0 }}
                   transition={{ type: 'spring', stiffness: 400, damping: 30 }}

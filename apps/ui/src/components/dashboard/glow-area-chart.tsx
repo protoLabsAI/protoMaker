@@ -7,6 +7,7 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from 'recharts';
+import { useId } from 'react';
 import { motion } from 'motion/react';
 import { GlowCard } from './glow-card';
 
@@ -35,8 +36,10 @@ export function GlowAreaChart({
   formatValue,
   subtitle,
 }: GlowAreaChartProps) {
-  const gradientId = `glow-area-${dataKey}`;
-  const secondaryGradientId = `glow-area-${secondaryDataKey}`;
+  const id = useId();
+  const gradientId = `glow-area-${id}-${dataKey}`;
+  const secondaryGradientId = `glow-area-${id}-${secondaryDataKey}`;
+  const glowFilterId = `glow-filter-${id}`;
 
   return (
     <GlowCard orb="bottom-left" orbColor={color} className="p-5">
@@ -65,7 +68,7 @@ export function GlowAreaChart({
                   <stop offset="95%" stopColor={secondaryColor} stopOpacity={0} />
                 </linearGradient>
               )}
-              <filter id="glow-filter">
+              <filter id={glowFilterId}>
                 <feGaussianBlur stdDeviation="2" result="blur" />
                 <feMerge>
                   <feMergeNode in="blur" />
@@ -101,7 +104,7 @@ export function GlowAreaChart({
                 fontSize: '12px',
                 backdropFilter: 'blur(8px)',
               }}
-              formatter={(v: number) => [formatValue ? formatValue(v) : v, dataKey]}
+              formatter={(v: number, name: string) => [formatValue ? formatValue(v) : v, name]}
             />
             <Area
               type="monotone"
@@ -109,7 +112,7 @@ export function GlowAreaChart({
               stroke={color}
               strokeWidth={2}
               fill={`url(#${gradientId})`}
-              filter="url(#glow-filter)"
+              filter={`url(#${glowFilterId})`}
               animationDuration={1500}
               animationEasing="ease-out"
             />

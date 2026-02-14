@@ -28,7 +28,8 @@ export function ActivityTicker({
   title = 'Activity Feed',
   maxItems = 8,
 }: ActivityTickerProps) {
-  const displayItems = items.slice(0, maxItems);
+  const safeMaxItems = Math.max(0, maxItems);
+  const displayItems = items.slice(0, safeMaxItems);
 
   return (
     <GlowCard orb="none" className="p-5">

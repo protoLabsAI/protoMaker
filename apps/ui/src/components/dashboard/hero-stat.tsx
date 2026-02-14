@@ -41,7 +41,14 @@ export function HeroStat({
             {label}
           </p>
         </div>
-        <div className="rounded-lg p-2" style={{ backgroundColor: `${color}15` }}>
+        <div
+          className="rounded-lg p-2"
+          style={{
+            backgroundColor: color.startsWith('hsl')
+              ? `color-mix(in srgb, ${color} 8%, transparent)`
+              : `${color}15`,
+          }}
+        >
           <Icon className="h-4 w-4" style={{ color }} />
         </div>
       </div>
