@@ -145,7 +145,9 @@ export function createContentRoutes(): Router {
 
       const validFormats = ['markdown', 'hf-dataset', 'jsonl', 'frontmatter-md'];
       if (!validFormats.includes(format)) {
-        res.status(400).json({ error: `Invalid format. Must be one of: ${validFormats.join(', ')}` });
+        res
+          .status(400)
+          .json({ error: `Invalid format. Must be one of: ${validFormats.join(', ')}` });
         return;
       }
 
