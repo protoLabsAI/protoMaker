@@ -181,6 +181,8 @@ import { linearApprovalHandler } from './services/linear-approval-handler.js';
 import { LinearApprovalBridge } from './services/linear-approval-bridge.js';
 import { createDeployRoutes } from './routes/deploy/index.js';
 import { createAnalyticsRoutes } from './routes/analytics.js';
+import { AntagonisticReviewService } from './services/antagonistic-review-service.js';
+import { createFlowsRoutes } from './routes/flows/index.js';
 
 const PORT = parseInt(process.env.PORT || '3008', 10);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -402,6 +404,12 @@ try {
 // Initialize Agent Factory and Dynamic Executor (uses registry for template resolution)
 const agentFactoryService = new AgentFactoryService(roleRegistryService, events);
 const dynamicAgentExecutor = new DynamicAgentExecutor(events);
+
+// Initialize Antagonistic Review Service for Ava + Jon PRD reviews
+const antagonisticReviewService = AntagonisticReviewService.getInstance(
+  agentFactoryService,
+  events
+);
 
 // Initialize HeadsdownService for autonomous agent management
 const headsdownService = HeadsdownService.getInstance(
@@ -1008,6 +1016,7 @@ app.use('/api/crew', createCrewRoutes(crewLoopService));
 app.use('/api/deploy', createDeployRoutes(autoModeService));
 app.use('/api/escalation', createEscalationRoutes(escalationRouter));
 app.use('/api/analytics', createAnalyticsRoutes(events));
+app.use('/api/flows', createFlowsRoutes(antagonisticReviewService));
 
 // Create HTTP server
 const server = createServer(app);
