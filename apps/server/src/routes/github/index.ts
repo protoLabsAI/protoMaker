@@ -18,6 +18,8 @@ import {
   createMarkViewedHandler,
 } from './routes/validation-endpoints.js';
 import { createProcessCodeRabbitFeedbackHandler } from './routes/process-coderabbit-feedback.js';
+import { createGetPRFeedbackHandler } from './routes/get-pr-feedback.js';
+import { createResolvePRThreadsHandler } from './routes/resolve-pr-threads.js';
 import { createWebhookHandler } from './routes/webhook.js';
 import { createMergePRHandler } from './routes/merge-pr.js';
 import { createCheckPRStatusHandler } from './routes/check-pr-status.js';
@@ -69,6 +71,16 @@ export function createGitHubRoutes(
     '/process-coderabbit-feedback',
     validatePathParams('projectPath'),
     createProcessCodeRabbitFeedbackHandler(events)
+  );
+  router.post(
+    '/get-pr-feedback',
+    validatePathParams('projectPath'),
+    createGetPRFeedbackHandler()
+  );
+  router.post(
+    '/resolve-pr-threads',
+    validatePathParams('projectPath'),
+    createResolvePRThreadsHandler(events)
   );
 
   // PR merge operations

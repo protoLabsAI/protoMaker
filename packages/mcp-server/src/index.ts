@@ -91,8 +91,17 @@ async function apiCall(
     },
   };
 
-  // Only include body for POST requests
-  if (method === 'POST') {
+  // Build URL with query params for GET requests, body for POST
+  let url = `${API_URL}/api${endpoint}`;
+  if (method === 'GET' && Object.keys(body).length > 0) {
+    const params = new URLSearchParams();
+    Object.entries(body).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        params.append(key, String(value));
+      }
+    });
+    url += `?${params.toString()}`;
+  } else if (method === 'POST') {
     options.body = JSON.stringify(body);
   }
 
@@ -100,7 +109,7 @@ async function apiCall(
 
   for (let attempt = 0; attempt <= RETRY_CONFIG.maxRetries; attempt++) {
     try {
-      const response = await fetch(`${API_URL}/api${endpoint}`, options);
+      const response = await fetch(url, options);
 
       if (!response.ok) {
         const text = await response.text();
@@ -1285,9 +1294,9 @@ const tools: Tool[] = [
     },
   },
   {
-    name: 'resolve_review_threads',
+    name: 'get_pr_feedback',
     description:
-      'Process and resolve CodeRabbit review threads for a PR. Fetches CodeRabbit comments, parses them, and links them to the associated feature for auto-remediation.',
+      'Fetch CodeRabbit review feedback for a PR, including both issue-level and inline review threads with severity. Returns parsed feedback without resolving threads.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1297,10 +1306,86 @@ const tools: Tool[] = [
         },
         prNumber: {
           type: 'number',
-          description: 'PR number to process CodeRabbit feedback for',
+          description: 'PR number to fetch CodeRabbit feedback for',
+        },
+        includeInlineThreads: {
+          type: 'boolean',
+          description: 'Whether to include inline review threads (default: false)',
         },
       },
       required: ['projectPath', 'prNumber'],
+    },
+  },
+  {
+    name: 'resolve_pr_threads',
+    description:
+      'Resolve CodeRabbit review threads for a PR. Respects severity gates - only resolves threads that meet severity thresholds. Must call get_pr_feedback first.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        prNumber: {
+          type: 'number',
+          description: 'PR number to resolve threads for',
+        },
+        minSeverity: {
+          type: 'string',
+          description:
+            'Minimum severity to resolve (low, medium, high). Default: low (resolves all)',
+          enum: ['low', 'medium', 'high'],
+        },
+      },
+      required: ['projectPath', 'prNumber'],
+    },
+  },
+
+  // ========== Escalation ==========
+  {
+    name: 'get_escalation_status',
+    description:
+      'Get status of the escalation router including registered channels, rate limits, and recent activity',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+    },
+  },
+  {
+    name: 'get_escalation_log',
+    description: 'Get signal audit log from the escalation router',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        limit: {
+          type: 'number',
+          description: 'Number of log entries to return (default: 100)',
+        },
+      },
+    },
+  },
+  {
+    name: 'acknowledge_escalation',
+    description:
+      'Acknowledge an escalation signal. Use this to mark that you have seen and handled an escalation.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        signalId: {
+          type: 'string',
+          description: 'Signal ID to acknowledge',
+        },
+        acknowledgedBy: {
+          type: 'string',
+          description: 'Who is acknowledging this signal (e.g., "Claude Agent", user name)',
+        },
+        notes: {
+          type: 'string',
+          description: 'Optional notes about the acknowledgment',
+        },
+      },
+      required: ['signalId', 'acknowledgedBy'],
     },
   },
 
@@ -2475,10 +2560,34 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         prNumber: args.prNumber,
       });
 
-    case 'resolve_review_threads':
-      return apiCall('/github/process-coderabbit-feedback', {
+    case 'get_pr_feedback':
+      return apiCall('/github/get-pr-feedback', {
         projectPath: args.projectPath,
         prNumber: args.prNumber,
+        includeInlineThreads: args.includeInlineThreads ?? false,
+      });
+
+    case 'resolve_pr_threads':
+      return apiCall('/github/resolve-pr-threads', {
+        projectPath: args.projectPath,
+        prNumber: args.prNumber,
+        minSeverity: args.minSeverity ?? 'low',
+      });
+
+    // Escalation
+    case 'get_escalation_status':
+      return apiCall('/escalation/status', {}, 'GET');
+
+    case 'get_escalation_log':
+      return apiCall('/escalation/log', {
+        limit: args.limit ?? 100,
+      }, 'GET');
+
+    case 'acknowledge_escalation':
+      return apiCall('/escalation/acknowledge', {
+        signalId: args.signalId,
+        acknowledgedBy: args.acknowledgedBy,
+        notes: args.notes,
       });
 
     // Ceremonies
