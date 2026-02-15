@@ -133,9 +133,10 @@ function InterruptRouter({
         />
       );
 
-    default:
+    default: {
       // Exhaustiveness check
       const _exhaustive: never = payload;
-      return null;
+      return _exhaustive;
+    }
   }
 }
