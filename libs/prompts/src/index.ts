@@ -134,6 +134,7 @@ export {
   CONTEXT7_GUIDE,
   WORKTREE_SAFETY,
   PORT_PROTECTION,
+  PROCESS_GUARD,
   MONOREPO_STANDARDS,
   getEngineeringBase,
   getContentBase,

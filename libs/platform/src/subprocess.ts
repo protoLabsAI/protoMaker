@@ -4,6 +4,23 @@
 
 import { spawn, type ChildProcess } from 'child_process';
 import readline from 'readline';
+import treeKill from 'tree-kill';
+
+/**
+ * Kill a process and all its descendants.
+ * Falls back to childProcess.kill() if PID is unavailable.
+ */
+function killProcessTree(childProcess: ChildProcess, signal: string): void {
+  try {
+    if (childProcess.pid) {
+      treeKill(childProcess.pid, signal);
+    } else {
+      childProcess.kill(signal as NodeJS.Signals);
+    }
+  } catch {
+    // Process may already be dead — ignore
+  }
+}
 
 export interface SubprocessOptions {
   command: string;
@@ -86,7 +103,7 @@ export async function* spawnJSONLProcess(options: SubprocessOptions): AsyncGener
       const elapsed = Date.now() - lastOutputTime;
       if (elapsed >= timeout) {
         console.error(`[SubprocessManager] Process timeout: no output for ${timeout}ms`);
-        childProcess.kill('SIGTERM');
+        killProcessTree(childProcess, 'SIGTERM');
       }
     }, timeout);
   };
@@ -97,11 +114,11 @@ export async function* spawnJSONLProcess(options: SubprocessOptions): AsyncGener
   let abortHandler: (() => void) | null = null;
   if (abortController) {
     abortHandler = () => {
-      console.log('[SubprocessManager] Abort signal received, killing process');
+      console.log('[SubprocessManager] Abort signal received, killing process tree');
       if (timeoutHandle) {
         clearTimeout(timeoutHandle);
       }
-      childProcess.kill('SIGTERM');
+      killProcessTree(childProcess, 'SIGTERM');
     };
     // Check if already aborted, if so call handler immediately
     if (abortController.signal.aborted) {
@@ -244,7 +261,7 @@ export async function spawnProcess(options: SubprocessOptions): Promise<Subproce
     if (abortController) {
       abortHandler = () => {
         cleanupAbortListener();
-        childProcess.kill('SIGTERM');
+        killProcessTree(childProcess, 'SIGTERM');
         reject(new Error('Process aborted'));
       };
       abortController.signal.addEventListener('abort', abortHandler);

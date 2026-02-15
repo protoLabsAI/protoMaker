@@ -99,6 +99,25 @@ export const PORT_PROTECTION = `## Port Protection
 The dev server is managed by the user. Starting, stopping, or restarting it yourself will break the development environment.`;
 
 // ---------------------------------------------------------------------------
+// Process management guard
+// ---------------------------------------------------------------------------
+
+export const PROCESS_GUARD = `## Process Management
+
+**NEVER start long-running or background processes** such as:
+- \`npm run dev\`, \`npm start\`, or any dev server
+- \`npx storybook dev\` or \`storybook build --watch\`
+- \`npm run watch\` or any file watcher
+- Processes with \`&\` (backgrounding)
+
+These processes outlive your session and become orphans that consume resources.
+
+**If your task requires a running server or Storybook**: assume it's already running.
+Use \`curl\` to check endpoints, don't start servers yourself.
+
+**Allowed**: Short-lived commands that exit on their own (build, test, lint, format, type-check).`;
+
+// ---------------------------------------------------------------------------
 // Monorepo standards
 // ---------------------------------------------------------------------------
 
@@ -139,6 +158,7 @@ export function getEngineeringBase(): string {
     CONTEXT7_GUIDE,
     WORKTREE_SAFETY,
     PORT_PROTECTION,
+    PROCESS_GUARD,
     MONOREPO_STANDARDS,
   ].join('\n\n');
 }
