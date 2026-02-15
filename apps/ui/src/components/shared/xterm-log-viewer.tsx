@@ -84,7 +84,11 @@ export const XtermLogViewer = forwardRef<XtermLogViewerRef, XtermLogViewerProps>
     }, []);
 
     const resolvedTheme =
-      effectiveTheme === 'system' ? (systemIsDark ? 'dark' : 'light') : effectiveTheme;
+      effectiveTheme === 'system'
+        ? systemIsDark
+          ? 'studio-dark'
+          : 'studio-light'
+        : effectiveTheme;
 
     // Update autoScroll ref when prop changes
     useEffect(() => {

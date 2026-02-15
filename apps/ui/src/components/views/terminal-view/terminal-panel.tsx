@@ -236,7 +236,7 @@ export function TerminalPanel({
 
   // Resolve "system" theme to actual light/dark
   const resolvedTheme =
-    effectiveTheme === 'system' ? (systemIsDark ? 'dark' : 'light') : effectiveTheme;
+    effectiveTheme === 'system' ? (systemIsDark ? 'studio-dark' : 'studio-light') : effectiveTheme;
 
   // Use refs for callbacks and values to avoid effect re-runs
   const onFocusRef = useRef(onFocus);

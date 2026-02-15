@@ -76,48 +76,14 @@ export type ViewMode =
 export type ThemeMode =
   // Special modes
   | 'system'
-  // Dark themes
-  | 'dark'
-  | 'retro'
-  | 'dracula'
+  // Curated themes
+  | 'studio-dark'
+  | 'studio-light'
+  // Community presets
   | 'nord'
-  | 'monokai'
-  | 'tokyonight'
-  | 'solarized'
-  | 'gruvbox'
   | 'catppuccin'
-  | 'onedark'
-  | 'synthwave'
-  | 'red'
-  | 'sunset'
-  | 'gray'
-  | 'forest'
-  | 'ocean'
-  | 'ember'
-  | 'ayu-dark'
-  | 'ayu-mirage'
-  | 'matcha'
-  // Light themes
-  | 'light'
-  | 'cream'
-  | 'solarizedlight'
-  | 'github'
-  | 'paper'
-  | 'rose'
-  | 'mint'
-  | 'lavender'
-  | 'sand'
-  | 'sky'
-  | 'peach'
-  | 'snow'
-  | 'sepia'
-  | 'gruvboxlight'
-  | 'nordlight'
-  | 'blossom'
-  | 'ayu-light'
-  | 'onelight'
-  | 'bluloco'
-  | 'feather';
+  | 'dracula'
+  | 'monokai';
 
 // LocalStorage keys for persistence (fallback when server settings aren't available)
 export const THEME_STORAGE_KEY = 'automaker:theme';
@@ -1438,7 +1404,7 @@ const initialState: AppState = {
   sidebarOpen: true,
   mobileSidebarHidden: false, // Sidebar visible by default on mobile
   lastSelectedSessionByProject: {},
-  theme: getStoredTheme() || 'dark', // Use localStorage theme as initial value, fallback to 'dark'
+  theme: getStoredTheme() || 'studio-dark', // Use localStorage theme as initial value, fallback to 'studio-dark'
   fontFamilySans: getStoredFontSans(), // Use localStorage font as initial value (null = use default Geist Sans)
   fontFamilyMono: getStoredFontMono(), // Use localStorage font as initial value (null = use default Geist Mono)
   features: [],

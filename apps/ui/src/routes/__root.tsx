@@ -32,7 +32,7 @@ import {
 } from '@/hooks/use-settings-migration';
 import { queryClient } from '@/lib/query-client';
 import { Toaster } from 'sonner';
-import { ThemeOption, themeOptions } from '@/config/theme-options';
+import { type ThemeOption, themeOptions } from '@/config/theme-options';
 import { SandboxRiskDialog } from '@/components/dialogs/sandbox-risk-dialog';
 import { SandboxRejectionScreen } from '@/components/dialogs/sandbox-rejection-screen';
 import { LoadingState } from '@/components/ui/loading-state';
@@ -69,15 +69,11 @@ function applyStoredTheme(): void {
     root.classList.remove(...themeClasses);
 
     // Apply the stored theme
-    if (storedTheme === 'dark') {
-      root.classList.add('dark');
-    } else if (storedTheme === 'system') {
+    if (storedTheme === 'system') {
       const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      root.classList.add(isDark ? 'dark' : 'light');
-    } else if (storedTheme !== 'light') {
-      root.classList.add(storedTheme);
+      root.classList.add(isDark ? 'studio-dark' : 'studio-light');
     } else {
-      root.classList.add('light');
+      root.classList.add(storedTheme);
     }
   }
 }
@@ -707,15 +703,13 @@ function RootLayoutContent() {
       .filter((theme) => theme !== ('system' as ThemeOption['value']));
     root.classList.remove(...themeClasses);
 
-    if (deferredTheme === 'dark') {
-      root.classList.add('dark');
-    } else if (deferredTheme === 'system') {
+    if (deferredTheme === 'system') {
       const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      root.classList.add(isDark ? 'dark' : 'light');
-    } else if (deferredTheme && deferredTheme !== 'light') {
+      root.classList.add(isDark ? 'studio-dark' : 'studio-light');
+    } else if (deferredTheme) {
       root.classList.add(deferredTheme);
     } else {
-      root.classList.add('light');
+      root.classList.add('studio-dark');
     }
   }, [deferredTheme]);
 
