@@ -1,7 +1,7 @@
 {
   "name": "automaker",
   "description": "Automaker - AI Development Studio. Manage Kanban boards, AI agents, and feature orchestration.",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "author": {
     "name": "Proto Labs AI"
   },
@@ -29,6 +29,13 @@
       "args": ["${AUTOMAKER_ROOT}/packages/mcp-server/vendor/linear-mcp-server.js"],
       "env": {
         "LINEAR_API_KEY": "${LINEAR_API_KEY}"
+      }
+    },
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"],
+      "env": {
+        "CONTEXT7_API_KEY": "${CONTEXT7_API_KEY}"
       }
     }
   }

@@ -138,8 +138,27 @@ function formatContextFileEntry(file: ContextFileInfo): string {
 }
 
 /**
+ * Get built-in MCP servers that all agents should have access to.
+ * These are always available without requiring manual configuration in settings.
+ * User-configured servers with the same name will take precedence.
+ */
+function getDefaultMCPServers(): Record<string, McpServerConfig> {
+  return {
+    context7: {
+      type: 'stdio',
+      command: 'npx',
+      args: ['-y', '@upstash/context7-mcp'],
+      env: process.env.CONTEXT7_API_KEY
+        ? { CONTEXT7_API_KEY: process.env.CONTEXT7_API_KEY }
+        : undefined,
+    },
+  };
+}
+
+/**
  * Get enabled MCP servers from global settings, converted to SDK format.
- * Returns an empty object if settings service is not available or no servers are configured.
+ * Includes built-in default servers (like Context7) merged with user-configured ones.
+ * User settings take precedence over defaults on name conflicts.
  *
  * @param settingsService - Optional settings service instance
  * @param logPrefix - Prefix for log messages (e.g., '[AgentService]')
@@ -149,8 +168,10 @@ export async function getMCPServersFromSettings(
   settingsService?: SettingsService | null,
   logPrefix = '[SettingsHelper]'
 ): Promise<Record<string, McpServerConfig>> {
+  const defaults = getDefaultMCPServers();
+
   if (!settingsService) {
-    return {};
+    return defaults;
   }
 
   try {
@@ -161,7 +182,7 @@ export async function getMCPServersFromSettings(
     const enabledServers = mcpServers.filter((s) => s.enabled !== false);
 
     if (enabledServers.length === 0) {
-      return {};
+      return defaults;
     }
 
     // Convert settings format to SDK format (keyed by name)
@@ -174,10 +195,11 @@ export async function getMCPServersFromSettings(
       `${logPrefix} Loaded ${enabledServers.length} MCP server(s): ${enabledServers.map((s) => s.name).join(', ')}`
     );
 
-    return sdkServers;
+    // Merge: defaults first, user settings override on conflict
+    return { ...defaults, ...sdkServers };
   } catch (error) {
     logger.error(`${logPrefix} Failed to load MCP servers setting:`, error);
-    return {};
+    return defaults;
   }
 }
 
