@@ -21,6 +21,7 @@ import { useHumanInTheLoop } from '@copilotkitnext/react';
 import { z } from 'zod';
 import { GenericApprovalDialog } from './generic-dialog';
 import { EntityWizard } from './entity-wizard';
+import { PhaseApprovalDialog } from './phase-approval';
 
 /**
  * Registers all HITL interrupt handlers with CopilotKit.
@@ -99,17 +100,36 @@ export function useLangGraphInterrupt() {
         type: z.literal('phase-approval'),
         phaseTitle: z.string(),
         phaseDescription: z.string(),
+        phaseType: z.string().optional(),
+        completedTasks: z.array(z.string()).optional(),
+        customFields: z
+          .array(
+            z.object({
+              name: z.string(),
+              label: z.string(),
+              type: z.enum(['text', 'textarea', 'number', 'checkbox']),
+              required: z.boolean().optional(),
+              placeholder: z.string().optional(),
+              defaultValue: z.union([z.string(), z.number(), z.boolean()]).optional(),
+            })
+          )
+          .optional(),
       }),
       render: ({ args, respond }) => {
         if (!respond) {
           return <div className="p-4 text-sm text-muted-foreground">Loading phase approval...</div>;
         }
         return (
-          <GenericApprovalDialog
+          <PhaseApprovalDialog
             open={true}
-            title={args.phaseTitle}
-            message={args.phaseDescription}
-            onResolve={(approved) => respond({ approved })}
+            phaseDetails={{
+              phaseName: args.phaseTitle,
+              phaseType: args.phaseType,
+              description: args.phaseDescription,
+              completedTasks: args.completedTasks,
+              customFields: args.customFields,
+            }}
+            onResolve={(approved, data) => respond({ approved, ...data })}
           />
         );
       },
