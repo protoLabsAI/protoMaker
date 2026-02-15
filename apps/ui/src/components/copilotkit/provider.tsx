@@ -40,8 +40,10 @@ export function CopilotKitProvider({ children }: { children: ReactNode }) {
       signal: controller.signal,
     })
       .then((res) => {
-        // 2xx or 4xx means the route exists (CopilotKit returns 405 for HEAD)
-        setAvailable(res.status !== 404);
+        // Only enable if the route actually exists and responds.
+        // 401 = auth middleware caught it but route may not be registered (disabled).
+        // 404 = route not found. Both mean CopilotKit is unavailable.
+        setAvailable(res.ok || res.status === 405);
       })
       .catch(() => {
         setAvailable(false);

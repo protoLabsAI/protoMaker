@@ -155,6 +155,10 @@ COPY --from=server-builder /app/apps/server/package*.json ./apps/server/
 # Copy node_modules (includes symlinks to libs)
 COPY --from=server-builder /app/node_modules ./node_modules
 
+# Copy server-local node_modules (packages not hoisted to root due to workspace conflicts)
+# e.g. @copilotkit/runtime lives here because the UI has a conflicting transitive version
+COPY --from=server-builder /app/apps/server/node_modules ./apps/server/node_modules
+
 # Create data and projects directories
 RUN mkdir -p /data /projects && chown automaker:automaker /data /projects
 
