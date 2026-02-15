@@ -130,6 +130,7 @@ export {
 
 // Secure file system (validates paths before I/O operations)
 export * as secureFs from './secure-fs.js';
+export type { WriteFileOptions, WriteFileSyncOptions, ThrottleConfig } from './secure-fs.js';
 
 // Node.js executable finder (cross-platform)
 export {

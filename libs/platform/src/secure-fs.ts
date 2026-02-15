@@ -19,7 +19,7 @@ import { validatePath } from './security.js';
 /**
  * Configuration for file operation throttling
  */
-interface ThrottleConfig {
+export interface ThrottleConfig {
   /** Maximum concurrent file operations (default: 100) */
   maxConcurrency: number;
   /** Maximum retry attempts for ENFILE/EMFILE errors (default: 3) */

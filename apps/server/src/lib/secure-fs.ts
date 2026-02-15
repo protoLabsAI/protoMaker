@@ -5,6 +5,9 @@
 
 import { secureFs } from '@automaker/platform';
 
+// Re-export types explicitly
+export type { WriteFileOptions, WriteFileSyncOptions, ThrottleConfig } from '@automaker/platform';
+
 export const {
   // Async methods
   access,

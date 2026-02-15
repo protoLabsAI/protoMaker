@@ -6,14 +6,21 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts",
-    "./server": "./src/server/index.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./server": {
+      "types": "./dist/server/index.d.ts",
+      "default": "./dist/server/index.js"
+    }
   },
   "scripts": {
-    "build": "tsc",
-    "watch": "tsc --watch",
+    "build": "tsup",
+    "watch": "tsup --watch",
     "test": "vitest run",
-    "test:watch": "vitest watch"
+    "test:watch": "vitest watch",
+    "build:check": "tsc --noEmit"
   },
   "keywords": [
     "automaker",
@@ -37,17 +44,18 @@
   "dependencies": {
     "@automaker/types": "1.0.0",
     "@automaker/utils": "1.0.0",
+    "@aws-sdk/client-bedrock-runtime": "^3.0.0",
+    "@google/generative-ai": "^0.21.0",
     "@langchain/anthropic": "^0.3.14",
     "@langchain/core": "^0.3.33",
-    "@google/generative-ai": "^0.21.0",
-    "openai": "^4.77.0",
-    "zod": "^4.3.6",
     "groq-sdk": "^0.5.0",
     "ollama": "^0.5.0",
-    "@aws-sdk/client-bedrock-runtime": "^3.0.0"
+    "openai": "^4.77.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/node": "22.19.3",
+    "tsup": "^8.5.1",
     "typescript": "5.9.3",
     "vitest": "4.0.16"
   }

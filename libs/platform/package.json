@@ -6,8 +6,9 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc",
-    "watch": "tsc --watch",
+    "build": "tsup",
+    "build:check": "tsc --noEmit",
+    "watch": "tsup --watch",
     "test": "vitest run",
     "test:watch": "vitest"
   },
@@ -29,6 +30,7 @@
   },
   "devDependencies": {
     "@types/node": "22.19.3",
+    "tsup": "^8.5.1",
     "typescript": "5.9.3",
     "vitest": "4.0.16"
   }

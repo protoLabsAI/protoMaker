@@ -12,13 +12,14 @@
     }
   },
   "scripts": {
-    "build": "tsc",
-    "watch": "tsc --watch",
+    "build": "tsup",
+    "watch": "tsup --watch",
     "test": "vitest run",
     "test:watch": "vitest",
     "example:basic": "tsx examples/basic-graph.ts",
     "example:hitl": "tsx examples/hitl-graph.ts",
-    "example:subgraph": "tsx examples/subgraph-pattern.ts"
+    "example:subgraph": "tsx examples/subgraph-pattern.ts",
+    "build:check": "tsc --noEmit"
   },
   "keywords": [
     "automaker",
@@ -43,6 +44,7 @@
   },
   "devDependencies": {
     "@types/node": "22.19.3",
+    "tsup": "^8.5.1",
     "tsx": "^4.7.0",
     "typescript": "5.9.3",
     "vitest": "4.0.16"
