@@ -92,16 +92,16 @@
   --color-status-blocked: var(--status-blocked);
   --color-status-done: var(--status-done);
 
-  /* Border radius */
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  /* Border radius — Linear-inspired: tight, geometric */
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
+  --radius-xl: calc(var(--radius) + 6px);
 }
 
 :root {
   /* Default to Studio Light */
-  --radius: 0.5rem;
+  --radius: 0.375rem;
   --perf-contain-intrinsic-size: 500px;
 
   /* Surfaces */
@@ -568,7 +568,7 @@
 
   .animated-border-wrapper {
     position: relative;
-    border-radius: 0.75rem;
+    border-radius: var(--radius-lg);
     padding: 2px;
     background: linear-gradient(
       135deg,
@@ -588,7 +588,7 @@
   }
 
   .animated-border-wrapper > * {
-    border-radius: calc(0.75rem - 2px);
+    border-radius: calc(var(--radius-lg) - 2px);
   }
 }
 
@@ -723,7 +723,7 @@
   --xy-background-color: transparent;
   --xy-node-background-color: var(--card);
   --xy-node-border-color: var(--border);
-  --xy-node-border-radius: 0.75rem;
+  --xy-node-border-radius: var(--radius-lg);
   --xy-edge-stroke-default: var(--border);
   --xy-edge-stroke-selected: var(--brand-500);
   --xy-minimap-background-color: var(--popover);
@@ -736,7 +736,7 @@
 .graph-canvas .react-flow__minimap {
   background-color: var(--popover) !important;
   border: 1px solid var(--border) !important;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-md);
 }
 
 .graph-canvas .react-flow__minimap-mask {
