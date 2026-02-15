@@ -33,3 +33,7 @@ export { createGeneratePRDNode, type PRDGenerator } from './nodes/generate-prd.j
 export { createPlanMilestonesNode, type MilestonePlanner } from './nodes/plan-milestones.js';
 export { createIssueCreationNode, type IssueCreator } from './nodes/create-issues.js';
 export { createHitlRouter, createHitlProcessorNode } from './nodes/hitl-checkpoint.js';
+export {
+  createLinearIssueCreator,
+  type LinearIssueCreatorDeps,
+} from './nodes/linear-issue-creator.js';

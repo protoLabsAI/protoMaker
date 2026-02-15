@@ -13,6 +13,8 @@ import { createLogger } from '@automaker/utils';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { ProjectService } from './project-service.js';
+import type { SettingsService } from './settings-service.js';
+import { LinearMCPClient } from './linear-mcp-client.js';
 import type { Feature, Milestone } from '@automaker/types';
 
 const logger = createLogger('CompletionDetector');
@@ -38,6 +40,7 @@ export class CompletionDetectorService {
   private emitter: EventEmitter | null = null;
   private featureLoader: FeatureLoader | null = null;
   private projectService: ProjectService | null = null;
+  private settingsService: SettingsService | null = null;
   private unsubscribe: (() => void) | null = null;
 
   /** Dedup guard: track milestones/projects we've already emitted completion for */
@@ -47,11 +50,13 @@ export class CompletionDetectorService {
   initialize(
     emitter: EventEmitter,
     featureLoader: FeatureLoader,
-    projectService: ProjectService
+    projectService: ProjectService,
+    settingsService?: SettingsService
   ): void {
     this.emitter = emitter;
     this.featureLoader = featureLoader;
     this.projectService = projectService;
+    this.settingsService = settingsService || null;
 
     this.unsubscribe = emitter.subscribe((type, payload) => {
       // Auto-mode completion (agent finished successfully)
@@ -82,6 +87,7 @@ export class CompletionDetectorService {
     this.emitter = null;
     this.featureLoader = null;
     this.projectService = null;
+    this.settingsService = null;
     this.emittedMilestones.clear();
     this.emittedProjects.clear();
   }
@@ -216,6 +222,17 @@ export class CompletionDetectorService {
     await this.projectService!.updateProject(projectPath, projectSlug, {
       status: 'completed',
     });
+
+    // Update Linear project status to completed (best-effort)
+    if (project.linearProjectId && this.settingsService) {
+      try {
+        const client = new LinearMCPClient(this.settingsService, projectPath);
+        await client.updateProject(project.linearProjectId, { status: 'completed' });
+        logger.info(`Updated Linear project "${project.title}" to completed`);
+      } catch (error) {
+        logger.error('Failed to update Linear project status (non-blocking):', error);
+      }
+    }
 
     // Aggregate project-wide stats
     const allFeatures = await this.featureLoader!.getAll(projectPath);

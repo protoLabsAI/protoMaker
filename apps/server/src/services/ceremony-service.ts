@@ -7,7 +7,12 @@
  * Replaces the simple one-liner in IntegrationService with rich, formatted content.
  */
 
-import { createLogger } from '@automaker/utils';
+import {
+  createLogger,
+  appendLearning,
+  type LearningEntry,
+  type MemoryFsModule,
+} from '@automaker/utils';
 import type { EventEmitter } from '../lib/events.js';
 import type { SettingsService } from './settings-service.js';
 import type { FeatureLoader } from './feature-loader.js';
@@ -19,6 +24,7 @@ import { BeadsService } from './beads-service.js';
 import { LinearProjectUpdateService } from './linear-project-update-service.js';
 import { secureFs } from '@automaker/platform';
 import path from 'path';
+import fs from 'fs/promises';
 
 const logger = createLogger('CeremonyService');
 
@@ -1183,6 +1189,12 @@ Keep it engaging, benefits-focused, and suitable for a technical audience.`;
     // Store summary in project directory
     await this.storeLearningSummary(projectPath, projectTitle, learningSummary);
 
+    // Persist structured learnings to .automaker/memory/ for future agents
+    await this.persistToAgentMemory(projectPath, projectTitle, learningSummary);
+
+    // Post completion update to Linear project if configured
+    await this.postCompletionToLinear(projectPath, projectTitle);
+
     logger.info(`Reflection loop complete for ${projectTitle}`);
   }
 
@@ -1278,6 +1290,145 @@ ${summary}
 
     await secureFs.writeFile(summaryPath, formattedSummary);
     logger.info(`Stored learning summary at: ${summaryPath}`);
+  }
+
+  /**
+   * Persist structured learnings to .automaker/memory/ so future agents can learn from them.
+   * Parses the LLM-generated summary into sections and writes each as a LearningEntry.
+   */
+  private async persistToAgentMemory(
+    projectPath: string,
+    projectTitle: string,
+    summary: string
+  ): Promise<void> {
+    const fsModule: MemoryFsModule = {
+      access: (p) => fs.access(p),
+      readdir: (p) => fs.readdir(p),
+      readFile: (p, enc) => fs.readFile(p, enc),
+      writeFile: (p, c) => fs.writeFile(p, c),
+      mkdir: (p, opts) => fs.mkdir(p, opts),
+      appendFile: (p, c) => fs.appendFile(p, c),
+    };
+
+    // Parse the summary into structured learnings by section headings
+    const sections: Array<{ heading: string; content: string }> = [];
+    const lines = summary.split('\n');
+    let currentHeading = '';
+    let currentContent: string[] = [];
+
+    for (const line of lines) {
+      const headingMatch = line.match(/^#{1,3}\s+(.+)/);
+      if (headingMatch) {
+        if (currentHeading && currentContent.length > 0) {
+          sections.push({ heading: currentHeading, content: currentContent.join('\n').trim() });
+        }
+        currentHeading = headingMatch[1].replace(/\*+/g, '').trim();
+        currentContent = [];
+      } else {
+        currentContent.push(line);
+      }
+    }
+    if (currentHeading && currentContent.length > 0) {
+      sections.push({ heading: currentHeading, content: currentContent.join('\n').trim() });
+    }
+
+    // Map section headings to learning types
+    const headingToType: Record<string, LearningEntry['type']> = {
+      patterns: 'pattern',
+      'key patterns': 'pattern',
+      'key patterns discovered': 'pattern',
+      gotchas: 'gotcha',
+      'critical gotchas': 'gotcha',
+      practices: 'pattern',
+      'recommended practices': 'pattern',
+      knowledge: 'learning',
+      'organizational knowledge': 'learning',
+      'lessons learned': 'learning',
+    };
+
+    const headingToCategory: Record<string, string> = {
+      patterns: 'project-patterns',
+      'key patterns': 'project-patterns',
+      'key patterns discovered': 'project-patterns',
+      gotchas: 'gotchas',
+      'critical gotchas': 'gotchas',
+      practices: 'best-practices',
+      'recommended practices': 'best-practices',
+      knowledge: 'organizational-knowledge',
+      'organizational knowledge': 'organizational-knowledge',
+      'lessons learned': 'lessons-learned',
+    };
+
+    let persisted = 0;
+    for (const section of sections) {
+      if (!section.content) continue;
+
+      const lowerHeading = section.heading.toLowerCase();
+      const entryType = headingToType[lowerHeading] || 'learning';
+      const category = headingToCategory[lowerHeading] || 'project-learnings';
+
+      const learning: LearningEntry = {
+        category,
+        type: entryType,
+        content: section.content,
+        context: `From project completion: ${projectTitle}`,
+      };
+
+      try {
+        await appendLearning(projectPath, learning, fsModule);
+        persisted++;
+      } catch (error) {
+        logger.warn(`Failed to persist learning for "${section.heading}":`, error);
+      }
+    }
+
+    logger.info(`Persisted ${persisted} learning entries to agent memory for "${projectTitle}"`);
+  }
+
+  /**
+   * Post a "Project Complete" update to Linear with health='complete'.
+   * Best-effort — failures are logged but don't block the ceremony.
+   */
+  private async postCompletionToLinear(projectPath: string, projectTitle: string): Promise<void> {
+    if (!this.settingsService) return;
+
+    try {
+      const linearService = new LinearProjectUpdateService(this.settingsService, projectPath);
+      if (!(await linearService.isEnabled())) return;
+
+      await linearService.createProjectUpdate({
+        projectId: await this.getLinearProjectId(projectPath),
+        body: `## Project Complete: ${projectTitle}\n\nAll milestones delivered. Learning summary generated and persisted to agent memory.`,
+        health: 'complete',
+      });
+
+      logger.info(`Posted completion update to Linear for "${projectTitle}"`);
+    } catch (error) {
+      logger.error('Failed to post completion to Linear (non-blocking):', error);
+    }
+  }
+
+  /**
+   * Look up the Linear project ID from local project config
+   */
+  private async getLinearProjectId(projectPath: string): Promise<string> {
+    const projectsDir = path.join(projectPath, '.automaker', 'projects');
+    try {
+      const slugs = await secureFs.readdir(projectsDir);
+      for (const slug of slugs) {
+        const projectJsonPath = path.join(projectsDir, String(slug), 'project.json');
+        try {
+          const raw = await secureFs.readFile(projectJsonPath, 'utf-8');
+          const data = JSON.parse(typeof raw === 'string' ? raw : raw.toString('utf-8'));
+          if (data.linearProjectId) return data.linearProjectId;
+        } catch {
+          // Skip malformed project files
+        }
+      }
+    } catch {
+      // No projects dir
+    }
+    throw new Error('No Linear project ID found for this project');
   }
 
   /**

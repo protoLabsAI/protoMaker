@@ -477,6 +477,18 @@ const projectLifecycleService = new ProjectLifecycleService(
   events
 );
 
+// Initialize Project Update Approval Service (detects approval signals in Linear project updates)
+const { ProjectUpdateApprovalService } =
+  await import('./services/project-update-approval-service.js');
+const projectUpdateApprovalService = new ProjectUpdateApprovalService(
+  events,
+  projectLifecycleService,
+  projectService,
+  settingsService,
+  REPO_ROOT
+);
+projectUpdateApprovalService.start();
+
 // Initialize Linear Sync Service — bidirectional sync between features/projects and Linear
 const { linearSyncService } = await import('./services/linear-sync-service.js');
 linearSyncService.initialize(events, settingsService, featureLoader, projectService);
@@ -492,7 +504,7 @@ changelogService.initialize(events, settingsService, featureLoader, projectServi
 
 // Initialize Completion Detector Service — cascades feature done → epic → milestone → project
 const completionDetectorService = new CompletionDetectorService();
-completionDetectorService.initialize(events, featureLoader, projectService);
+completionDetectorService.initialize(events, featureLoader, projectService, settingsService);
 
 const projmAgent = new ProjMAuthorityAgent(events, authorityService, featureLoader, projectService);
 const emAgent = new EMAuthorityAgent(
@@ -601,7 +613,13 @@ linearAgentRouter.start();
 
 // Initialize Project Planning Service — LangGraph flow for Linear-native project planning
 const { ProjectPlanningService } = await import('./services/project-planning-service.js');
-const projectPlanningService = new ProjectPlanningService(events, linearAgentService, REPO_ROOT);
+const projectPlanningService = new ProjectPlanningService(
+  events,
+  linearAgentService,
+  REPO_ROOT,
+  undefined,
+  settingsService
+);
 projectPlanningService.start();
 
 // Initialize Graphite sync scheduler (now registered as maintenance:graphite-sync task)

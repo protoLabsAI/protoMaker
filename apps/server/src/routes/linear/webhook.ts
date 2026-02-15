@@ -25,7 +25,7 @@ const logger = createLogger('linear:webhook');
 
 /** Linear webhook event types we handle */
 type LinearWebhookAction = 'create' | 'update' | 'remove';
-type LinearWebhookType = 'AgentSession' | 'Issue' | 'Project' | 'Comment';
+type LinearWebhookType = 'AgentSession' | 'Issue' | 'Project' | 'ProjectUpdate' | 'Comment';
 
 /** Agent session trigger types */
 type AgentSessionTrigger = 'mention' | 'delegation' | 'prompt';
@@ -157,6 +157,32 @@ interface LinearCommentWebhookPayload extends LinearWebhookPayload {
   };
 }
 
+/** Linear ProjectUpdate webhook payload */
+interface LinearProjectUpdateWebhookPayload extends LinearWebhookPayload {
+  type: 'ProjectUpdate';
+  data: {
+    id: string;
+    /** Update body (markdown) */
+    body: string;
+    /** Health status */
+    health?: 'onTrack' | 'atRisk' | 'offTrack';
+    /** The project this update belongs to */
+    projectId: string;
+    /** The user who created the update */
+    userId?: string;
+    user?: {
+      id: string;
+      name: string;
+      email?: string;
+    };
+    /** Timestamps */
+    createdAt: string;
+    updatedAt: string;
+    /** Update URL */
+    url?: string;
+  };
+}
+
 /**
  * Verify webhook signature from Linear
  */
@@ -196,6 +222,7 @@ export function createWebhookHandler(
       | LinearAgentSessionPayload
       | LinearIssueWebhookPayload
       | LinearProjectWebhookPayload
+      | LinearProjectUpdateWebhookPayload
       | LinearCommentWebhookPayload;
 
     // Must respond within 5 seconds (Linear requirement)
@@ -221,6 +248,7 @@ async function processWebhookEvent(
     | LinearAgentSessionPayload
     | LinearIssueWebhookPayload
     | LinearProjectWebhookPayload
+    | LinearProjectUpdateWebhookPayload
     | LinearCommentWebhookPayload,
   settingsService: SettingsService,
   events: EventEmitter,
@@ -242,6 +270,9 @@ async function processWebhookEvent(
       break;
     case 'Project':
       await handleProjectEvent(payload as LinearProjectWebhookPayload, action, events);
+      break;
+    case 'ProjectUpdate':
+      await handleProjectUpdateEvent(payload as LinearProjectUpdateWebhookPayload, action, events);
       break;
     case 'Comment':
       await handleCommentEvent(payload as LinearCommentWebhookPayload, action, events);
@@ -570,6 +601,60 @@ async function handleSessionUpdated(
       issueId: data.issueId,
       status: data.status,
     });
+  }
+}
+
+/**
+ * Handle ProjectUpdate webhook events
+ * These fire when someone posts a project update in Linear (status reports, approvals, etc.)
+ */
+async function handleProjectUpdateEvent(
+  payload: LinearProjectUpdateWebhookPayload,
+  action: LinearWebhookAction,
+  events: EventEmitter
+): Promise<void> {
+  const { data } = payload;
+
+  switch (action) {
+    case 'create':
+      logger.info(`ProjectUpdate created: ${data.id}`, {
+        projectId: data.projectId,
+        health: data.health,
+        userName: data.user?.name,
+        bodyPreview: data.body?.substring(0, 100),
+      });
+      events.emit('linear:project-update:created', {
+        updateId: data.id,
+        projectId: data.projectId,
+        body: data.body,
+        health: data.health,
+        user: data.user,
+        userId: data.userId,
+        url: data.url,
+        createdAt: data.createdAt,
+      });
+      break;
+    case 'update':
+      logger.info(`ProjectUpdate updated: ${data.id}`, {
+        projectId: data.projectId,
+        health: data.health,
+      });
+      events.emit('linear:project-update:updated', {
+        updateId: data.id,
+        projectId: data.projectId,
+        body: data.body,
+        health: data.health,
+        user: data.user,
+        userId: data.userId,
+        url: data.url,
+        updatedAt: data.updatedAt,
+      });
+      break;
+    case 'remove':
+      logger.debug(`ProjectUpdate removed: ${data.id}`);
+      break;
+    default:
+      logger.debug(`Unhandled action: ${action}`);
   }
 }
 

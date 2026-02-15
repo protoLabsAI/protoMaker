@@ -15,6 +15,7 @@
 import { createLogger } from '@automaker/utils';
 import {
   createProjectPlanningFlow,
+  createLinearIssueCreator,
   type ProjectPlanningFlowConfig,
   type ProjectPlanningState,
   type HITLResponse,
@@ -23,6 +24,8 @@ import {
 } from '@automaker/flows';
 import type { EventEmitter } from '../lib/events.js';
 import type { LinearAgentService } from './linear-agent-service.js';
+import type { SettingsService } from './settings-service.js';
+import { LinearMCPClient } from './linear-mcp-client.js';
 import { LinearSurface } from './surfaces/linear-surface.js';
 
 const logger = createLogger('ProjectPlanningService');
@@ -103,6 +106,7 @@ interface ActivePlanning {
 export class ProjectPlanningService {
   private events: EventEmitter;
   private agentService: LinearAgentService;
+  private settingsService?: SettingsService;
   private surface: LinearSurface;
   private projectPath: string;
   private flowConfig: ProjectPlanningFlowConfig;
@@ -119,13 +123,27 @@ export class ProjectPlanningService {
     events: EventEmitter,
     agentService: LinearAgentService,
     projectPath: string,
-    flowConfig?: ProjectPlanningFlowConfig
+    flowConfig?: ProjectPlanningFlowConfig,
+    settingsService?: SettingsService
   ) {
     this.events = events;
     this.agentService = agentService;
+    this.settingsService = settingsService;
     this.surface = new LinearSurface(agentService);
     this.projectPath = projectPath;
-    this.flowConfig = flowConfig || {};
+
+    // If settingsService is provided, inject a real Linear issue creator
+    if (settingsService && !flowConfig?.issueCreator) {
+      const client = new LinearMCPClient(settingsService, projectPath);
+      const issueCreator = createLinearIssueCreator({
+        createIssue: (opts) => client.createIssue(opts),
+        createProjectMilestone: (opts) => client.createProjectMilestone(opts),
+        assignIssueToMilestone: (a, b) => client.assignIssueToMilestone(a, b),
+      });
+      this.flowConfig = { ...flowConfig, issueCreator };
+    } else {
+      this.flowConfig = flowConfig || {};
+    }
   }
 
   start(): void {

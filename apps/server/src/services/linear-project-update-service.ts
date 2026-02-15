@@ -51,19 +51,35 @@ export class LinearProjectUpdateService {
   ) {}
 
   /**
-   * Get OAuth access token from project settings
+   * Get Linear API token from project settings or environment.
+   *
+   * Priority: apiKey from settings > LINEAR_API_KEY env var
    *
    * @throws {Error} If no token is configured
    */
   private async getAccessToken(): Promise<string> {
     const settings = await this.settingsService.getProjectSettings(this.projectPath);
-    const linearAccessToken = settings.integrations?.linear?.agentToken;
+    const linearConfig = settings.integrations?.linear;
 
-    if (!linearAccessToken) {
-      throw new Error('No Linear OAuth token found in project settings');
+    // Priority 1: API key from project settings
+    if (linearConfig?.apiKey) {
+      return linearConfig.apiKey;
     }
 
-    return linearAccessToken;
+    // Priority 2: OAuth agent token (legacy path)
+    if (linearConfig?.agentToken) {
+      return linearConfig.agentToken;
+    }
+
+    // Priority 3: Environment variable
+    const envToken = process.env.LINEAR_API_KEY || process.env.LINEAR_API_TOKEN;
+    if (envToken) {
+      return envToken;
+    }
+
+    throw new Error(
+      'No Linear API token configured. Set apiKey in project settings or LINEAR_API_KEY env var.'
+    );
   }
 
   /**
@@ -90,12 +106,17 @@ export class LinearProjectUpdateService {
       const settings = await this.settingsService.getProjectSettings(this.projectPath);
       const linearConfig = settings.integrations?.linear;
 
-      return !!(
-        linearConfig?.enabled &&
-        linearConfig.agentToken &&
-        linearConfig.projectId &&
-        linearConfig.enableProjectUpdates !== false
-      );
+      if (!linearConfig?.enabled || !linearConfig.projectId) return false;
+      if (linearConfig.enableProjectUpdates === false) return false;
+
+      // Check for any valid token source
+      const hasToken =
+        !!linearConfig.apiKey ||
+        !!linearConfig.agentToken ||
+        !!process.env.LINEAR_API_KEY ||
+        !!process.env.LINEAR_API_TOKEN;
+
+      return hasToken;
     } catch (error) {
       logger.error('Failed to check Linear project update settings:', error);
       return false;
@@ -142,7 +163,7 @@ export class LinearProjectUpdateService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`,
+          Authorization: accessToken.startsWith('lin_api_') ? accessToken : `Bearer ${accessToken}`,
         },
         body: JSON.stringify({ query: mutation, variables }),
         signal: controller.signal,

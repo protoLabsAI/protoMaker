@@ -1712,6 +1712,98 @@ export class LinearMCPClient {
   }
 
   /**
+   * Get a project update by ID
+   *
+   * @param updateId - The project update ID
+   * @returns Project update details
+   * @throws {LinearAPIError} On API errors
+   */
+  async getProjectUpdate(updateId: string): Promise<{
+    id: string;
+    body: string;
+    health: string;
+    url: string;
+    project: { id: string; name: string };
+    user: { id: string; name: string };
+    createdAt: string;
+  }> {
+    const query = `
+      query GetProjectUpdate($id: String!) {
+        projectUpdate(id: $id) {
+          id
+          body
+          health
+          url
+          project {
+            id
+            name
+          }
+          user {
+            id
+            name
+          }
+          createdAt
+        }
+      }
+    `;
+
+    interface GetProjectUpdateResponse {
+      projectUpdate: {
+        id: string;
+        body: string;
+        health: string;
+        url: string;
+        project: { id: string; name: string };
+        user: { id: string; name: string };
+        createdAt: string;
+      };
+    }
+
+    const data = await this.executeGraphQL<GetProjectUpdateResponse>(query, { id: updateId });
+    return data.projectUpdate;
+  }
+
+  /**
+   * Add a comment to a project update
+   *
+   * @param projectUpdateId - The project update ID to comment on
+   * @param body - Comment body (markdown)
+   * @returns True if comment was added successfully
+   * @throws {LinearAPIError} On API errors
+   */
+  async addProjectUpdateComment(projectUpdateId: string, body: string): Promise<boolean> {
+    const mutation = `
+      mutation CreateProjectUpdateComment($projectUpdateId: String!, $body: String!) {
+        commentCreate(input: { projectUpdateId: $projectUpdateId, body: $body }) {
+          success
+          comment {
+            id
+          }
+        }
+      }
+    `;
+
+    interface CreateCommentResponse {
+      commentCreate: {
+        success: boolean;
+        comment: { id: string };
+      };
+    }
+
+    const data = await this.executeGraphQL<CreateCommentResponse>(mutation, {
+      projectUpdateId,
+      body,
+    });
+
+    if (!data.commentCreate.success) {
+      throw new LinearAPIError('Failed to create comment on project update');
+    }
+
+    logger.info(`Added comment to project update ${projectUpdateId}`);
+    return true;
+  }
+
+  /**
    * Search for Linear projects by name
    */
   async searchProjects(

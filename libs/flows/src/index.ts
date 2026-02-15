@@ -247,4 +247,6 @@ export {
   type IssueCreator,
   createHitlRouter,
   createHitlProcessorNode,
+  createLinearIssueCreator,
+  type LinearIssueCreatorDeps,
 } from './project-planning/index.js';

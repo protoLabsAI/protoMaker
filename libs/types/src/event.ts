@@ -159,6 +159,10 @@ export type EventType =
   | 'linear:comment:created'
   | 'linear:comment:instruction'
   | 'linear:comment:followup'
+  // Linear project update events (webhook-driven)
+  | 'linear:project-update:created'
+  | 'linear:project-update:updated'
+  | 'linear:project-update:approved'
   // Linear SLA events (Business plan feature - HITL deepening)
   | 'linear:sla:highRisk'
   | 'linear:sla:breached'
