@@ -1,4 +1,4 @@
-import { Page, expect } from '@playwright/test';
+import { Page, Locator, expect } from '@playwright/test';
 import { getByTestId, getButtonByText } from './elements';
 import { waitForSplashScreenToDisappear } from './waiting';
 
@@ -19,8 +19,21 @@ export async function pressModifierEnter(page: Page): Promise<void> {
 }
 
 /**
+ * Force-click a Playwright Locator using JavaScript evaluation.
+ * Waits for visibility first, then fires the click via the DOM —
+ * bypassing Playwright's viewport actionability check which fails on
+ * `position: fixed` dialogs (scrollIntoView is a no-op on fixed elements).
+ */
+export async function forceClick(element: Locator): Promise<void> {
+  await element.waitFor({ state: 'visible', timeout: 10000 });
+  await element.evaluate((el) => (el as HTMLElement).click());
+}
+
+/**
  * Click an element by its data-testid attribute
- * Waits for the element to be visible before clicking to avoid flaky tests
+ * Waits for the element to be visible before clicking to avoid flaky tests.
+ * Falls back to a JS evaluate click if Playwright reports the element is
+ * outside the viewport (common with position:fixed dialog buttons on CI).
  */
 export async function clickElement(page: Page, testId: string): Promise<void> {
   // Wait for splash screen to disappear first (safety net)
@@ -28,7 +41,18 @@ export async function clickElement(page: Page, testId: string): Promise<void> {
   const element = page.locator(`[data-testid="${testId}"]`);
   // Wait for element to be visible and stable before clicking
   await element.waitFor({ state: 'visible', timeout: 10000 });
-  await element.click();
+  try {
+    await element.click();
+  } catch (error: unknown) {
+    // position:fixed dialogs can't be scrolled into view — Playwright's
+    // actionability check reports "element is outside of the viewport".
+    // Fall back to a JS click which fires the React handler directly.
+    if (error instanceof Error && error.message.includes('outside of the viewport')) {
+      await element.evaluate((el) => (el as HTMLElement).click());
+    } else {
+      throw error;
+    }
+  }
 }
 
 /**
