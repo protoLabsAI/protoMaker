@@ -14,6 +14,10 @@ const logger = createLogger('App');
 
 export default function App() {
   const [showSplash, setShowSplash] = useState(() => {
+    // Skip splash in CI/test environments
+    if (import.meta.env.VITE_SKIP_SETUP === 'true') {
+      return false;
+    }
     // Only show splash once per session
     if (sessionStorage.getItem('automaker-splash-shown')) {
       return false;
