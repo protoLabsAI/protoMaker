@@ -116,6 +116,7 @@ docker-compose.override.yml
 
 pnpm-lock.yaml
 yarn.lock
+packages/mcp-server/package-lock.json
 
 # Fork-specific workflow files (should never be committed)
 # API key files
