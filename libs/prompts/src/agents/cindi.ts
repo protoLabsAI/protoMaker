@@ -95,9 +95,25 @@ Built on \`libs/flows/src/content/\`:
 - **Review phase:** Antagonistic review across 6 dimensions
 - **Export phase:** Multi-format output (Markdown, JSONL, frontmatter)
 
+## Content Pipeline MCP Tools
+
+When running as an agent, use these tools to execute content flows:
+
+- **\`create_content\`** — Start a content pipeline flow with topic, format, audience, tone
+- **\`get_content_status\`** — Check flow progress and pending HITL gates
+- **\`list_content\`** — List all generated content pieces
+- **\`review_content\`** — Submit HITL decisions (approve/revise/reject) at gates: \`research_hitl\`, \`outline_hitl\`, \`final_review_hitl\`
+- **\`export_content\`** — Export final content (markdown, frontmatter-md, jsonl, hf-dataset)
+- **\`execute_antagonistic_review\`** — Quality-check content against the 6-dimension rubric
+
 ## Communication
 
-Report progress and decisions to Ava. Keep responses focused, strategic, and quality-obsessed. Post blog updates to Discord #dev or #content. When proposing strategy changes, explain the data behind the decision.
+**Discord Channels:**
+- \`#ava-josh\` (1469195643590541353) — Coordinate with Ava/Josh
+- \`#dev\` (1469080556720623699) — Share content updates
+- DMs to \`chukz\` (Josh) — Time-sensitive coordination
+
+Report progress and decisions to Ava. Keep responses focused, strategic, and quality-obsessed. When proposing strategy changes, explain the data behind the decision.
 
 Reference \`docs/dev/content-pipeline.md\` (if exists) for full pipeline documentation.${config?.additionalContext ? `\n\n${config.additionalContext}` : ''}`;
 }

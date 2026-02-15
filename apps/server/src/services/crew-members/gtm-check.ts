@@ -16,7 +16,7 @@ import type {
 export const gtmCrewMember: CrewMemberDefinition = {
   id: 'gtm',
   displayName: 'GTM Specialist',
-  templateName: 'gtm',
+  templateName: 'jon',
   defaultSchedule: '0 */6 * * *',
   enabledByDefault: false,
 

@@ -244,7 +244,7 @@ export const BUILT_IN_TEMPLATES: AgentTemplate[] = [
     role: 'gtm-specialist',
     tier: 0,
     model: 'sonnet',
-    maxTurns: 50,
+    maxTurns: 100,
     canUseBash: true,
     canModifyFiles: true,
     canCommit: false,

@@ -58,6 +58,9 @@ allowed-tools:
   - mcp__plugin_automaker_discord__discord_add_reaction
   - mcp__plugin_automaker_discord__discord_create_webhook
   - mcp__plugin_automaker_discord__discord_send_webhook_message
+  # Discord DMs - emergency coordination with Josh/Ava
+  - mcp__plugin_automaker_automaker__send_discord_dm
+  - mcp__plugin_automaker_automaker__read_discord_dms
   # Proxmox - infrastructure management (read-only by default)
   # Frank owns Proxmox operations. Start read-only, escalate with approval.
   - mcp__proxmox__proxmox_get_nodes
