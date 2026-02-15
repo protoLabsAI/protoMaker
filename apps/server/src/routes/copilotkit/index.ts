@@ -178,9 +178,12 @@ export function createCopilotKitEndpoint(deps: CopilotKitDependencies) {
 
   logger.info(`CopilotKit runtime initialized with Ava agent (${tools.length} tools)`);
 
+  // endpoint '/' because Express strips the mount prefix (/api/copilotkit)
+  // before passing req.url to the handler — Hono basePath must match the
+  // stripped path, not the original URL.
   return copilotRuntimeNodeExpressEndpoint({
     runtime,
-    endpoint: '/api/copilotkit',
+    endpoint: '/',
     serviceAdapter: new EmptyAdapter(),
   });
 }

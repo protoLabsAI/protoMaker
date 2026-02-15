@@ -36,16 +36,15 @@ export function CopilotKitProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch('/api/copilotkit', {
-      method: 'HEAD',
+    fetch('/api/copilotkit/info', {
       signal: controller.signal,
       credentials: 'include',
       headers: getAuthHeaders(),
     })
       .then((res) => {
-        // 2xx or 405 = route exists and CopilotKit is available.
-        // 401 = auth failed or route not registered. 404 = route not found.
-        setAvailable(res.ok || res.status === 405);
+        // 2xx = CopilotKit route exists and responds with agent info.
+        // 404 = route not registered (CopilotKit disabled).
+        setAvailable(res.ok);
       })
       .catch(() => {
         setAvailable(false);
