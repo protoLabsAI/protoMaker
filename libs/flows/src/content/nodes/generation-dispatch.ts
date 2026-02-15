@@ -6,6 +6,8 @@
  */
 
 import { Send, Command } from '@langchain/langgraph';
+import type { RunnableConfig } from '@langchain/core/runnables';
+import { copilotkitEmitState, emitHeartbeat } from '../copilotkit-utils.js';
 
 /**
  * Section specification for generation
@@ -56,6 +58,7 @@ export interface GenerationState {
   sections: GeneratedSection[]; // Accumulated via appendReducer
   failedSections?: string[]; // Section IDs that failed
   isComplete?: boolean;
+  config?: RunnableConfig;
 }
 
 /**
@@ -68,8 +71,16 @@ export interface GenerationState {
  * @returns Command with Send[] for each section
  */
 export async function generationDispatchNode(state: GenerationState): Promise<Command> {
-  const { outline, research } = state;
+  const { outline, research, config } = state;
   const sends: Send[] = [];
+
+  // Emit state to CopilotKit
+  if (config) {
+    await copilotkitEmitState(config, {
+      currentActivity: 'Dispatching parallel section generation',
+      progress: 0,
+    });
+  }
 
   // Create a Send for each section in the outline
   for (const section of outline.sections) {
@@ -91,6 +102,11 @@ export async function generationDispatchNode(state: GenerationState): Promise<Co
     );
   }
 
+  // Emit heartbeat
+  if (config) {
+    await emitHeartbeat(config, `Dispatched ${sends.length} sections for generation`);
+  }
+
   // Return Command with goto Send array for parallel dispatch
   return new Command({ goto: sends });
 }
@@ -107,7 +123,15 @@ export async function generationDispatchNode(state: GenerationState): Promise<Co
 export async function generationCollectorNode(
   state: GenerationState
 ): Promise<Partial<GenerationState>> {
-  const { outline, sections } = state;
+  const { outline, sections, config } = state;
+
+  // Emit state to CopilotKit
+  if (config) {
+    await copilotkitEmitState(config, {
+      currentActivity: 'Collecting generated sections',
+      progress: 50,
+    });
+  }
 
   // Validate section count
   const expectedCount = outline.totalSections;
@@ -147,6 +171,16 @@ export async function generationCollectorNode(
     if (missingSections.length > 0) {
       console.warn(`  Missing sections: ${missingSections.join(', ')}`);
     }
+  }
+
+  // Emit completion state
+  if (config) {
+    await copilotkitEmitState(config, {
+      currentActivity: isComplete
+        ? 'Section generation complete'
+        : 'Section generation partially complete',
+      progress: 100,
+    });
   }
 
   return {

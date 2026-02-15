@@ -16,6 +16,7 @@ import {
 import { getOutlinePlannerPrompt } from '@automaker/prompts';
 import { wrapProviderWithTracing } from '@automaker/observability';
 import type { ContentState } from '../content-flow.js';
+import { copilotkitEmitState, emitHeartbeat } from '../copilotkit-utils.js';
 
 const logger = createLogger('outline-planner');
 
@@ -25,7 +26,15 @@ const logger = createLogger('outline-planner');
 export async function outlinePlannerNode(state: ContentState): Promise<Partial<ContentState>> {
   logger.info('[outline-planner] Generating content outline...');
 
-  const { researchSummary, contentConfig, provider } = state;
+  const { researchSummary, contentConfig, provider, config } = state;
+
+  // Emit state to CopilotKit
+  if (config) {
+    await copilotkitEmitState(config, {
+      currentActivity: 'Generating content outline',
+      progress: 0,
+    });
+  }
 
   if (!researchSummary) {
     throw new Error('No research summary available for outline planning');
@@ -47,6 +56,11 @@ export async function outlinePlannerNode(state: ContentState): Promise<Partial<C
     });
 
     logger.debug('[outline-planner] Invoking LLM with tracing...');
+
+    // Emit heartbeat for long-running operation
+    if (config) {
+      await emitHeartbeat(config, 'Invoking LLM for outline generation');
+    }
 
     // Create traced LLM invocation
     const messages = [
@@ -102,6 +116,14 @@ export async function outlinePlannerNode(state: ContentState): Promise<Partial<C
     logger.info(`  Title: ${outline.title}`);
     logger.info(`  Sections: ${outline.sections.length}`);
     logger.info(`  Total words: ${outline.totalWordCount}`);
+
+    // Emit completion state
+    if (config) {
+      await copilotkitEmitState(config, {
+        currentActivity: 'Outline generation complete',
+        progress: 100,
+      });
+    }
 
     return {
       outline,

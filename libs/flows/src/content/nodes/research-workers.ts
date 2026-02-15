@@ -12,6 +12,8 @@
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import type { BaseMessage } from '@langchain/core/messages';
 import { AIMessage } from '@langchain/core/messages';
+import type { RunnableConfig } from '@langchain/core/runnables';
+import { copilotkitEmitState, emitHeartbeat } from '../copilotkit-utils.js';
 
 /**
  * Structured research finding
@@ -45,6 +47,7 @@ export interface ResearchWorkerState {
   errors: ErrorFinding[];
   smartModel?: BaseChatModel;
   fastModel?: BaseChatModel;
+  config?: RunnableConfig;
 }
 
 /**
@@ -102,13 +105,26 @@ async function executeWithFallback<T>(
 export async function webResearchWorker(
   state: ResearchWorkerState
 ): Promise<Partial<ResearchWorkerState>> {
-  const { topic, query, smartModel, fastModel } = state;
+  const { topic, query, smartModel, fastModel, config } = state;
   const workerName = 'WebResearchWorker';
 
   console.log(`[${workerName}] Starting web research for topic: "${topic}"`);
 
+  // Emit state to CopilotKit
+  if (config) {
+    await copilotkitEmitState(config, {
+      currentActivity: `Researching web sources for: ${topic}`,
+      progress: 0,
+    });
+  }
+
   try {
     const searchQuery = query || topic;
+
+    // Emit heartbeat for long-running operation
+    if (config) {
+      await emitHeartbeat(config, `Executing web search for: ${searchQuery}`);
+    }
 
     // Execute with model fallback
     const result = await executeWithFallback(
@@ -157,6 +173,14 @@ export async function webResearchWorker(
 
     console.log(`[${workerName}] Successfully gathered ${findings.length} findings`);
 
+    // Emit completion state
+    if (config) {
+      await copilotkitEmitState(config, {
+        currentActivity: `Completed web research for: ${topic}`,
+        progress: 100,
+      });
+    }
+
     return { findings };
   } catch (error) {
     console.error(`[${workerName}] Failed:`, error);
@@ -181,12 +205,24 @@ export async function webResearchWorker(
 export async function codebaseResearchWorker(
   state: ResearchWorkerState
 ): Promise<Partial<ResearchWorkerState>> {
-  const { topic, smartModel, fastModel } = state;
+  const { topic, smartModel, fastModel, config } = state;
   const workerName = 'CodebaseResearchWorker';
 
   console.log(`[${workerName}] Starting codebase analysis for topic: "${topic}"`);
 
+  // Emit state to CopilotKit
+  if (config) {
+    await copilotkitEmitState(config, {
+      currentActivity: `Analyzing codebase for: ${topic}`,
+      progress: 0,
+    });
+  }
+
   try {
+    // Emit heartbeat for long-running operation
+    if (config) {
+      await emitHeartbeat(config, `Analyzing code patterns for: ${topic}`);
+    }
     // Execute with model fallback
     const result = await executeWithFallback(
       { primary: smartModel, fallback: fastModel },
@@ -235,6 +271,14 @@ export async function codebaseResearchWorker(
       `[${workerName}] Successfully analyzed codebase, found ${findings.length} findings`
     );
 
+    // Emit completion state
+    if (config) {
+      await copilotkitEmitState(config, {
+        currentActivity: `Completed codebase analysis for: ${topic}`,
+        progress: 100,
+      });
+    }
+
     return { findings };
   } catch (error) {
     console.error(`[${workerName}] Failed:`, error);
@@ -259,12 +303,24 @@ export async function codebaseResearchWorker(
 export async function existingContentWorker(
   state: ResearchWorkerState
 ): Promise<Partial<ResearchWorkerState>> {
-  const { topic, smartModel, fastModel } = state;
+  const { topic, smartModel, fastModel, config } = state;
   const workerName = 'ExistingContentWorker';
 
   console.log(`[${workerName}] Starting existing content check for topic: "${topic}"`);
 
+  // Emit state to CopilotKit
+  if (config) {
+    await copilotkitEmitState(config, {
+      currentActivity: `Checking existing content for: ${topic}`,
+      progress: 0,
+    });
+  }
+
   try {
+    // Emit heartbeat for long-running operation
+    if (config) {
+      await emitHeartbeat(config, `Searching for related content: ${topic}`);
+    }
     // Execute with model fallback
     const result = await executeWithFallback(
       { primary: smartModel, fallback: fastModel },
@@ -312,6 +368,14 @@ export async function existingContentWorker(
     console.log(
       `[${workerName}] Successfully checked existing content, found ${findings.length} findings`
     );
+
+    // Emit completion state
+    if (config) {
+      await copilotkitEmitState(config, {
+        currentActivity: `Completed existing content check for: ${topic}`,
+        progress: 100,
+      });
+    }
 
     return { findings };
   } catch (error) {

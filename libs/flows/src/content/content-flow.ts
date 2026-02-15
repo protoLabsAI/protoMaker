@@ -7,6 +7,7 @@
 import { Annotation } from '@langchain/langgraph';
 import type { Outline, ContentConfig, ResearchSummary } from '@automaker/types';
 import type { TracingConfig } from '@automaker/observability';
+import type { RunnableConfig } from '@langchain/core/runnables';
 import { CopilotKitStateAnnotation } from './state.js';
 
 /**
@@ -59,6 +60,8 @@ export interface ContentState {
   tracingConfig?: TracingConfig;
   /** Whether flow is completed */
   completed?: boolean;
+  /** LangGraph RunnableConfig for CopilotKit integration */
+  config?: RunnableConfig;
 }
 
 /**
@@ -82,4 +85,5 @@ export const ContentStateAnnotation = Annotation.Root({
   model: Annotation<string>,
   tracingConfig: Annotation<TracingConfig>,
   completed: Annotation<boolean>,
+  config: Annotation<RunnableConfig>,
 });
