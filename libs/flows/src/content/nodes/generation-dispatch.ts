@@ -176,7 +176,9 @@ export async function generationCollectorNode(
   // Emit completion state
   if (config) {
     await copilotkitEmitState(config, {
-      currentActivity: isComplete ? 'Section generation complete' : 'Section generation partially complete',
+      currentActivity: isComplete
+        ? 'Section generation complete'
+        : 'Section generation partially complete',
       progress: 100,
     });
   }
