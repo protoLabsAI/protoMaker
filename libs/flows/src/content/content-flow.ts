@@ -31,6 +31,10 @@ export interface ContentState {
   userId?: string;
   /** CopilotKit thread metadata */
   threadMetadata?: Record<string, unknown>;
+  /** Current activity description streamed to CopilotKit sidebar */
+  currentActivity?: string;
+  /** Progress indicator (0-1) streamed to CopilotKit sidebar */
+  progress?: number;
   /** Research summary input */
   researchSummary?: ResearchSummary;
   /** Content configuration (type, audience, tone, length) */

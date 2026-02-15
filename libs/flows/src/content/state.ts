@@ -26,6 +26,12 @@ export const CopilotKitStateAnnotation = {
 
   /** Thread metadata for CopilotKit thread management */
   threadMetadata: Annotation<Record<string, unknown> | undefined>,
+
+  /** Current activity description streamed to CopilotKit sidebar */
+  currentActivity: Annotation<string | undefined>,
+
+  /** Progress indicator (0-1) streamed to CopilotKit sidebar */
+  progress: Annotation<number | undefined>,
 };
 
 /**
@@ -115,6 +121,8 @@ export interface ContentState {
   sessionId?: string;
   userId?: string;
   threadMetadata?: Record<string, unknown>;
+  currentActivity?: string;
+  progress?: number;
 
   // Research results - parallel collection
   researchFindings: ResearchFinding[];
