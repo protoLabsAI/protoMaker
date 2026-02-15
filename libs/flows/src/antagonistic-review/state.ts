@@ -83,6 +83,14 @@ export interface AntagonisticReviewState {
 
   /** Feedback from human reviewer if HITL was triggered */
   hitlFeedback?: string;
+
+  /** Smart LLM model for review nodes (injected by adapter) */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  smartModel?: any;
+
+  /** Fast LLM model for fallback (injected by adapter) */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  fastModel?: any;
 }
 
 /**
@@ -118,6 +126,12 @@ export const AntagonisticReviewStateAnnotation = Annotation.Root({
   // HITL integration (replace semantics)
   hitlRequired: Annotation<boolean | undefined>,
   hitlFeedback: Annotation<string | undefined>,
+
+  // LLM models (injected by adapter, replace semantics)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  smartModel: Annotation<any>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  fastModel: Annotation<any>,
 });
 
 /**

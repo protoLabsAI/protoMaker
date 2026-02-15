@@ -249,4 +249,10 @@ export {
   createHitlProcessorNode,
   createLinearIssueCreator,
   type LinearIssueCreatorDeps,
+  // LLM-powered executor implementations
+  createLLMResearchExecutor,
+  createLLMPlanningDocGenerator,
+  createLLMDeepResearchExecutor,
+  createLLMPRDGenerator,
+  createLLMMilestonePlanner,
 } from './project-planning/index.js';

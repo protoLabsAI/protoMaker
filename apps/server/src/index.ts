@@ -619,11 +619,13 @@ linearAgentRouter.start();
 
 // Initialize Project Planning Service — LangGraph flow for Linear-native project planning
 const { ProjectPlanningService } = await import('./services/project-planning-service.js');
+const { createLLMProjectPlanningConfig } = await import('./services/project-planning-executors.js');
+const planningFlowConfig = createLLMProjectPlanningConfig();
 const projectPlanningService = new ProjectPlanningService(
   events,
   linearAgentService,
   REPO_ROOT,
-  undefined,
+  planningFlowConfig,
   settingsService
 );
 projectPlanningService.start();
@@ -1061,7 +1063,7 @@ app.use('/api/deploy', createDeployRoutes(autoModeService));
 app.use('/api/escalation', createEscalationRoutes(escalationRouter));
 app.use('/api/analytics', createAnalyticsRoutes(events));
 app.use('/api/langfuse', createLangfuseRoutes());
-app.use('/api/flows', createFlowsRoutes(antagonisticReviewService));
+app.use('/api/flows', createFlowsRoutes(antagonisticReviewService, projectPlanningService));
 if (process.env.ANTHROPIC_API_KEY) {
   try {
     const { createCopilotKitEndpoint } = await import('./routes/copilotkit/index.js');

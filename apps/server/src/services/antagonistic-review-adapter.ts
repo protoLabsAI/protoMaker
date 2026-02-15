@@ -70,7 +70,7 @@ export class AntagonisticReviewAdapter {
 
   constructor(config: AdapterConfig = {}) {
     this.config = {
-      smartModel: config.smartModel || 'claude-3-5-sonnet-20241022',
+      smartModel: config.smartModel || 'claude-sonnet-4-5-20250929',
       enableHITL: config.enableHITL || false,
       langfuseClient: config.langfuseClient,
     };
@@ -114,10 +114,19 @@ export class AntagonisticReviewAdapter {
       // Create the flow graph (checkpointing enabled by default)
       const graph = createAntagonisticReviewGraph(true);
 
-      // Execute the flow with PRD state
+      // Create LLM models for the review nodes
+      const smartModel = new ChatAnthropic({
+        model: this.config.smartModel || 'claude-sonnet-4-5-20250929',
+        temperature: 0.7,
+        maxTokens: 8192,
+      });
+
+      // Execute the flow with PRD state + injected models
       const result = await graph.invoke({
         prd,
         hitlRequired: this.config.enableHITL,
+        smartModel,
+        fastModel: undefined,
       });
 
       const totalDurationMs = Date.now() - startTime;
@@ -135,11 +144,11 @@ export class AntagonisticReviewAdapter {
         throw new Error(result.error);
       }
 
-      // Extract review results from the consolidated review
+      // Extract review results from the graph state
       const avaReview = this.extractAvaReview(result);
       const jonReview = this.extractJonReview(result);
-      const resolution = result.consolidatedReview?.synthesizedReview || '';
-      const finalPRD = this.extractFinalPRD(resolution, prd);
+      const resolution = result.finalVerdict || result.consolidatedReview?.synthesizedReview || '';
+      const finalPRD = result.consolidatedPrd || this.extractFinalPRD(resolution, prd);
 
       // Create spans for individual review nodes (retroactive tracking)
       if (result.avaReview) {
@@ -271,6 +280,8 @@ ${prd.constraints || 'None specified'}
 
   /**
    * Extract Ava's review from flow result
+   * Handles both @automaker/types ReviewerPerspective (overallVerdict, sections, generalComments)
+   * and node-local ReviewerPerspective (verdict, sections, comments)
    */
   private extractAvaReview(result: any): ReviewResult {
     const avaReview = result.avaReview;
@@ -285,18 +296,29 @@ ${prd.constraints || 'None specified'}
       };
     }
 
+    // Extract concerns from sections (handles both section formats)
+    const concerns: string[] = [];
+    const recommendations: string[] = [];
+    for (const section of avaReview.sections || []) {
+      if (section.issues) concerns.push(...section.issues);
+      if (section.concerns) concerns.push(...section.concerns);
+      if (section.suggestions) recommendations.push(...section.suggestions);
+      if (section.recommendations) recommendations.push(...section.recommendations);
+    }
+
     return {
       success: true,
       reviewer: 'ava',
-      verdict: avaReview.verdict || avaReview.review || '',
-      concerns: avaReview.concerns || [],
-      recommendations: avaReview.recommendations || [],
-      durationMs: 0, // Flow doesn't track individual timings
+      verdict: avaReview.overallVerdict || avaReview.verdict || '',
+      concerns,
+      recommendations,
+      durationMs: 0,
     };
   }
 
   /**
    * Extract Jon's review from flow result
+   * Handles both @automaker/types ReviewerPerspective and node-local format
    */
   private extractJonReview(result: any): ReviewResult {
     const jonReview = result.jonReview;
@@ -311,13 +333,22 @@ ${prd.constraints || 'None specified'}
       };
     }
 
+    const concerns: string[] = [];
+    const recommendations: string[] = [];
+    for (const section of jonReview.sections || []) {
+      if (section.issues) concerns.push(...section.issues);
+      if (section.concerns) concerns.push(...section.concerns);
+      if (section.suggestions) recommendations.push(...section.suggestions);
+      if (section.recommendations) recommendations.push(...section.recommendations);
+    }
+
     return {
       success: true,
       reviewer: 'jon',
-      verdict: jonReview.verdict || jonReview.review || '',
-      concerns: jonReview.concerns || [],
-      recommendations: jonReview.recommendations || [],
-      durationMs: 0, // Flow doesn't track individual timings
+      verdict: jonReview.overallVerdict || jonReview.verdict || '',
+      concerns,
+      recommendations,
+      durationMs: 0,
     };
   }
 

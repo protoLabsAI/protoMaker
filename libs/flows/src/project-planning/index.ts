@@ -37,3 +37,12 @@ export {
   createLinearIssueCreator,
   type LinearIssueCreatorDeps,
 } from './nodes/linear-issue-creator.js';
+
+// LLM-powered executor implementations (for production use)
+export {
+  createLLMResearchExecutor,
+  createLLMPlanningDocGenerator,
+  createLLMDeepResearchExecutor,
+  createLLMPRDGenerator,
+  createLLMMilestonePlanner,
+} from './executors/llm-executors.js';

@@ -17,15 +17,21 @@
  * - check_consensus: if both approve, skip resolution
  * - check_hitl: if hitlRequired=true, trigger interrupt for HITL
  *
- * Currently uses deterministic mock implementations for all LLM nodes.
- * Future features will wire in real LLM-powered classifyTopicNode, avaReviewNode,
- * jonReviewNode, and consolidateNode with model injection.
+ * LLM nodes (classify, ava, jon, consolidate) use real LLM-powered implementations
+ * with model fallback (smart → fast). Models are injected via state by the adapter.
+ * When no models are provided, falls back to deterministic mock behavior.
  */
 
 import { MemorySaver } from '@langchain/langgraph';
 import { GraphBuilder } from '../graphs/builder.js';
 import { AntagonisticReviewStateAnnotation, type AntagonisticReviewState } from './state.js';
-import type { ReviewerPerspective } from '@automaker/types';
+import { DistillationDepth, type ReviewerPerspective, type SPARCPrd } from '@automaker/types';
+
+// Import real LLM-powered nodes
+import { classifyTopicNode } from './nodes/classify-topic.js';
+import { avaReviewNode } from './nodes/ava-review.js';
+import { jonReviewNode } from './nodes/jon-review.js';
+import { consolidateNode } from './nodes/consolidate.js';
 
 // Import decision/routing nodes (compatible with AntagonisticReviewState)
 import { checkConsensus } from './nodes/check-consensus.js';
@@ -35,110 +41,330 @@ import { fanOutPairs } from './nodes/fan-out-pairs.js';
 import { aggregatePairs } from './nodes/aggregate-pairs.js';
 import { createPairReviewNode } from './nodes/pair-review.js';
 
-/**
- * Mock classify topic node - heuristic classification based on PRD length
- *
- * Will be replaced by classifyTopicNode with LLM model injection in a future feature.
- */
-async function classifyTopicMock(
-  state: AntagonisticReviewState
-): Promise<Partial<AntagonisticReviewState>> {
-  const situationLength = state.prd.situation?.length ?? 0;
-  let topicComplexity: 'simple' | 'moderate' | 'complex';
+// ─── Type Bridge Helpers ───────────────────────────────────────────────────
+// The real LLM nodes use their own local types (prd: string, node-local
+// ReviewerPerspective). The graph state uses @automaker/types (prd: SPARCPrd,
+// types ReviewerPerspective). These helpers bridge the gap.
 
-  if (situationLength < 30) {
-    topicComplexity = 'simple';
-  } else if (situationLength < 100) {
-    topicComplexity = 'moderate';
-  } else {
-    topicComplexity = 'complex';
+/**
+ * Serialize SPARCPrd object to markdown string for LLM nodes
+ */
+function serializePrd(prd: SPARCPrd): string {
+  return `## Situation
+${prd.situation}
+
+## Problem
+${prd.problem}
+
+## Approach
+${prd.approach}
+
+## Results
+${prd.results}
+
+## Constraints
+${prd.constraints || 'None specified'}`;
+}
+
+/**
+ * Map node-local verdict to @automaker/types ReviewVerdict
+ */
+function mapVerdictToReviewVerdict(verdict: string): 'approve' | 'concern' | 'block' {
+  switch (verdict) {
+    case 'approve':
+      return 'approve';
+    case 'approve-with-concerns':
+      return 'concern';
+    case 'revise':
+      return 'concern';
+    case 'reject':
+      return 'block';
+    default:
+      return 'concern';
+  }
+}
+
+/**
+ * Map node-local ReviewerPerspective to @automaker/types ReviewerPerspective
+ */
+function mapNodeReviewToGraphReview(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  nodeReview: any,
+  reviewerName: 'ava' | 'jon'
+): ReviewerPerspective {
+  return {
+    reviewer: reviewerName,
+    overallVerdict: mapVerdictToReviewVerdict(nodeReview.verdict),
+    sections: (nodeReview.sections || []).map(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (s: any) => ({
+        section: s.area || s.section || 'general',
+        verdict: s.concerns && s.concerns.length > 0 ? ('concern' as const) : ('approve' as const),
+        comments: s.assessment || s.comments || '',
+        issues: s.concerns,
+        suggestions: s.recommendations,
+      })
+    ),
+    generalComments: nodeReview.comments,
+    completedAt: nodeReview.timestamp || new Date().toISOString(),
+  };
+}
+
+/**
+ * Map @automaker/types ReviewerPerspective to node-local format for LLM context
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapGraphReviewToNodeReview(graphReview: ReviewerPerspective): any {
+  const verdictMap: Record<string, string> = {
+    approve: 'approve',
+    concern: 'approve-with-concerns',
+    block: 'reject',
+  };
+
+  return {
+    reviewer: graphReview.reviewer === 'ava' ? 'Ava' : 'Jon',
+    verdict: verdictMap[graphReview.overallVerdict] || graphReview.overallVerdict,
+    sections: graphReview.sections.map((s) => ({
+      area: s.section,
+      assessment: s.comments,
+      concerns: s.issues || [],
+      recommendations: s.suggestions || [],
+    })),
+    comments: graphReview.generalComments || '',
+    timestamp: graphReview.completedAt,
+  };
+}
+
+/**
+ * Parse a markdown SPARC PRD string back to SPARCPrd object
+ */
+function parsePrdString(prdText: string, fallback: SPARCPrd): SPARCPrd {
+  const situationMatch = prdText.match(/## Situation\s+([\s\S]*?)(?=## |$)/);
+  const problemMatch = prdText.match(/## Problem\s+([\s\S]*?)(?=## |$)/);
+  const approachMatch = prdText.match(/## Approach\s+([\s\S]*?)(?=## |$)/);
+  const resultsMatch = prdText.match(/## Results\s+([\s\S]*?)(?=## |$)/);
+  const constraintsMatch = prdText.match(/## Constraints\s+([\s\S]*?)(?=## |$)/);
+
+  if (situationMatch || problemMatch) {
+    return {
+      situation: situationMatch?.[1]?.trim() || fallback.situation,
+      problem: problemMatch?.[1]?.trim() || fallback.problem,
+      approach: approachMatch?.[1]?.trim() || fallback.approach,
+      results: resultsMatch?.[1]?.trim() || fallback.results,
+      constraints: constraintsMatch?.[1]?.trim() || fallback.constraints,
+      generatedAt: new Date().toISOString(),
+    };
   }
 
-  return { topicComplexity };
+  return { ...fallback, generatedAt: new Date().toISOString() };
 }
 
-/**
- * Mock Ava review node - operational/pragmatic perspective
- *
- * Returns a deterministic approve verdict.
- * Will be replaced by avaReviewNode with LLM model injection in a future feature.
- */
-async function avaReviewMock(
-  state: AntagonisticReviewState
-): Promise<Partial<AntagonisticReviewState>> {
-  const avaReview: ReviewerPerspective = {
-    reviewer: 'ava',
-    overallVerdict: 'approve',
-    sections: [
-      {
-        section: 'feasibility',
-        verdict: 'approve',
-        comments: 'Implementation is feasible with current resources.',
-      },
-    ],
-    generalComments: 'Approved from operational perspective.',
-    completedAt: new Date().toISOString(),
-  };
-  return { avaReview };
-}
+// ─── LLM Node Adapters ────────────────────────────────────────────────────
+// Each adapter wraps a real LLM node, handling type conversion between
+// graph state (SPARCPrd, @automaker/types) and node state (string, local types).
+// When no models are injected, falls back to deterministic mock behavior.
 
 /**
- * Mock Jon review node - market/business perspective
- *
- * Returns a deterministic concern verdict to create antagonistic tension.
- * Will be replaced by jonReviewNode with LLM model injection in a future feature.
+ * Classify topic adapter — wraps classifyTopicNode with type bridging.
+ * Falls back to heuristic classification when no LLM models available.
  */
-async function jonReviewMock(
+async function classifyTopicAdapter(
   state: AntagonisticReviewState
 ): Promise<Partial<AntagonisticReviewState>> {
-  const jonReview: ReviewerPerspective = {
-    reviewer: 'jon',
-    overallVerdict: 'concern',
-    sections: [
-      {
-        section: 'market-positioning',
-        verdict: 'concern',
-        comments: 'Market positioning needs strengthening.',
-        issues: ['Competitive analysis incomplete'],
-      },
-    ],
-    generalComments: 'Concerns about market fit and business case.',
-    completedAt: new Date().toISOString(),
-  };
-  return { jonReview };
-}
-
-/**
- * Mock consolidate node - merges reviews (including pair reviews) and sets HITL requirement
- *
- * Will be replaced by consolidateNode with LLM model injection in a future feature.
- */
-async function consolidateMock(
-  state: AntagonisticReviewState
-): Promise<Partial<AntagonisticReviewState>> {
-  const { pairReviews } = state;
-  const hitlRequired = !state.consensus || state.finalVerdict !== 'approve';
-
-  // Log pair reviews if present
-  if (pairReviews.length > 0) {
-    console.log(`[ConsolidateMock] Incorporating ${pairReviews.length} pair review(s):`);
-    for (const review of pairReviews) {
-      console.log(
-        `  - ${review.section}: consensus=${review.consensus}, verdict=${review.agreedVerdict}`
-      );
+  // Fallback: heuristic classification when no models available
+  if (!state.smartModel && !state.fastModel) {
+    const situationLength = state.prd.situation?.length ?? 0;
+    let topicComplexity: 'simple' | 'moderate' | 'complex';
+    if (situationLength < 30) {
+      topicComplexity = 'simple';
+    } else if (situationLength < 100) {
+      topicComplexity = 'moderate';
+    } else {
+      topicComplexity = 'complex';
     }
-  } else {
-    console.log('[ConsolidateMock] No pair reviews to incorporate');
+    return { topicComplexity };
+  }
+
+  const prdString = serializePrd(state.prd);
+  const result = await classifyTopicNode({
+    prd: prdString,
+    smartModel: state.smartModel,
+    fastModel: state.fastModel,
+  });
+
+  if (!result.classification) {
+    throw new Error('Classification failed: no result returned');
+  }
+
+  // Map complexity → topicComplexity
+  const complexityMap: Record<string, 'simple' | 'moderate' | 'complex'> = {
+    small: 'simple',
+    medium: 'moderate',
+    large: 'complex',
+    architectural: 'complex',
+  };
+
+  // Map depth number → DistillationDepth enum
+  const depthMap: Record<number, DistillationDepth> = {
+    0: DistillationDepth.Surface,
+    1: DistillationDepth.Standard,
+    2: DistillationDepth.Deep,
+  };
+
+  return {
+    topicComplexity: complexityMap[result.classification.complexity] || 'moderate',
+    distillationDepth:
+      depthMap[result.classification.distillationDepth] ?? DistillationDepth.Standard,
+  };
+}
+
+/**
+ * Ava review adapter — wraps avaReviewNode with type bridging.
+ * Falls back to deterministic approve when no LLM models available.
+ */
+async function avaReviewAdapter(
+  state: AntagonisticReviewState
+): Promise<Partial<AntagonisticReviewState>> {
+  // Fallback: deterministic review when no models available
+  if (!state.smartModel && !state.fastModel) {
+    const avaReview: ReviewerPerspective = {
+      reviewer: 'ava',
+      overallVerdict: 'approve',
+      sections: [
+        {
+          section: 'feasibility',
+          verdict: 'approve',
+          comments: 'Implementation is feasible with current resources.',
+        },
+      ],
+      generalComments: 'Approved from operational perspective.',
+      completedAt: new Date().toISOString(),
+    };
+    return { avaReview };
+  }
+
+  const prdString = serializePrd(state.prd);
+  const result = await avaReviewNode({
+    prd: prdString,
+    smartModel: state.smartModel,
+    fastModel: state.fastModel,
+  });
+
+  if (!result.avaReview) {
+    throw new Error('Ava review failed: no result returned');
   }
 
   return {
-    consolidatedPrd: {
-      ...state.prd,
-      generatedAt: new Date().toISOString(),
-    },
-    hitlRequired,
+    avaReview: mapNodeReviewToGraphReview(result.avaReview, 'ava'),
   };
 }
+
+/**
+ * Jon review adapter — wraps jonReviewNode with type bridging.
+ * Passes Ava's review as context (mapped to node-local format).
+ * Falls back to deterministic concern when no LLM models available.
+ */
+async function jonReviewAdapter(
+  state: AntagonisticReviewState
+): Promise<Partial<AntagonisticReviewState>> {
+  // Fallback: deterministic review when no models available
+  if (!state.smartModel && !state.fastModel) {
+    const jonReview: ReviewerPerspective = {
+      reviewer: 'jon',
+      overallVerdict: 'concern',
+      sections: [
+        {
+          section: 'market-positioning',
+          verdict: 'concern',
+          comments: 'Market positioning needs strengthening.',
+          issues: ['Competitive analysis incomplete'],
+        },
+      ],
+      generalComments: 'Concerns about market fit and business case.',
+      completedAt: new Date().toISOString(),
+    };
+    return { jonReview };
+  }
+
+  const prdString = serializePrd(state.prd);
+
+  // Map avaReview to node-local format for Jon's context
+  const nodeAvaReview = state.avaReview ? mapGraphReviewToNodeReview(state.avaReview) : undefined;
+
+  const result = await jonReviewNode({
+    prd: prdString,
+    avaReview: nodeAvaReview,
+    smartModel: state.smartModel,
+    fastModel: state.fastModel,
+  });
+
+  if (!result.jonReview) {
+    throw new Error('Jon review failed: no result returned');
+  }
+
+  return {
+    jonReview: mapNodeReviewToGraphReview(result.jonReview, 'jon'),
+  };
+}
+
+/**
+ * Consolidate adapter — wraps consolidateNode with type bridging.
+ * Maps PROCEED/MODIFY/REJECT → approve/concern/block and parses finalPRD string → SPARCPrd.
+ * Falls back to deterministic consolidation when no LLM models available.
+ */
+async function consolidateAdapter(
+  state: AntagonisticReviewState
+): Promise<Partial<AntagonisticReviewState>> {
+  // Fallback: deterministic consolidation when no models available
+  if (!state.smartModel && !state.fastModel) {
+    const hitlRequired = !state.consensus || state.finalVerdict !== 'approve';
+    return {
+      consolidatedPrd: { ...state.prd, generatedAt: new Date().toISOString() },
+      hitlRequired,
+    };
+  }
+
+  const prdString = serializePrd(state.prd);
+
+  // Map reviews to node-local format
+  const nodeAvaReview = state.avaReview ? mapGraphReviewToNodeReview(state.avaReview) : undefined;
+  const nodeJonReview = state.jonReview ? mapGraphReviewToNodeReview(state.jonReview) : undefined;
+
+  const result = await consolidateNode({
+    prd: prdString,
+    avaReview: nodeAvaReview,
+    jonReview: nodeJonReview,
+    // pairReviews omitted — graph PairReviewResult format is incompatible with node ReviewerPerspective
+    smartModel: state.smartModel,
+    fastModel: state.fastModel,
+  });
+
+  if (!result.consolidatedReview) {
+    throw new Error('Consolidation failed: no result returned');
+  }
+
+  // Map verdict: PROCEED/MODIFY/REJECT → approve/concern/block
+  const verdictMap: Record<string, 'approve' | 'concern' | 'block'> = {
+    PROCEED: 'approve',
+    MODIFY: 'concern',
+    REJECT: 'block',
+  };
+
+  const finalVerdict = verdictMap[result.consolidatedReview.verdict] || 'concern';
+  const hitlRequired = finalVerdict !== 'approve' || !!state.hitlRequired;
+
+  // Parse finalPRD string back to SPARCPrd
+  let consolidatedPrd: SPARCPrd;
+  try {
+    consolidatedPrd = parsePrdString(result.consolidatedReview.finalPRD, state.prd);
+  } catch {
+    consolidatedPrd = { ...state.prd, generatedAt: new Date().toISOString() };
+  }
+
+  return { consolidatedPrd, finalVerdict, hitlRequired };
+}
+
+// ─── Routing Functions ─────────────────────────────────────────────────────
 
 /**
  * Routing function for check_consensus node.
@@ -172,6 +398,8 @@ async function humanReview(
   return {};
 }
 
+// ─── Graph Builder ─────────────────────────────────────────────────────────
+
 /**
  * Creates the antagonistic review graph
  *
@@ -187,26 +415,28 @@ export function createAntagonisticReviewGraph(enableCheckpointing = true) {
     checkpointer,
   });
 
-  // Add all nodes
+  // Add all nodes — LLM adapters for classify/ava/jon/consolidate
   builder
-    .addNode('classify_topic', classifyTopicMock)
+    .addNode('classify_topic', classifyTopicAdapter)
     .addNode('aggregate_pairs', aggregatePairs)
-    .addNode('ava_review', avaReviewMock)
-    .addNode('jon_review', jonReviewMock)
+    .addNode('ava_review', avaReviewAdapter)
+    .addNode('jon_review', jonReviewAdapter)
     .addNode('check_consensus', checkConsensus)
     .addNode('resolution', resolution)
-    .addNode('consolidate', consolidateMock)
+    .addNode('consolidate', consolidateAdapter)
     .addNode('check_hitl', checkHitl)
     .addNode('human_review', humanReview)
     .addNode('done', async () => ({}));
 
   // Add nodes that return Command (Send pattern) directly via StateGraph
   const stateGraph = builder.getGraph();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (stateGraph as any).addNode('fan_out_pairs', fanOutPairs, {
     ends: ['pair_review', 'aggregate_pairs'],
   });
 
   // pair_review node - invokes the pair review subgraph with pairConfig from Send()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (stateGraph as any).addNode('pair_review', async (state: any) => {
     if (!state.pairConfig) {
       throw new Error('[PairReview] pairConfig not provided via Send()');
@@ -256,6 +486,7 @@ export function createAntagonisticReviewGraph(enableCheckpointing = true) {
   const graph = builder.getGraph();
   return graph.compile({
     checkpointer,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     interruptBefore: ['human_review'] as any,
   });
 }

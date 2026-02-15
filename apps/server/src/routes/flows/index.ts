@@ -3,7 +3,7 @@
  *
  * Provides endpoints for:
  * - Antagonistic review flow (Ava + Jon PRD review)
- * - Future flows (e.g., multi-agent workflows, approval chains)
+ * - Project planning flow (research → PRD → milestones → issues)
  *
  * All endpoints use handler factories that receive required services.
  * Mounted at /api/flows in the main server.
@@ -12,23 +12,31 @@
 import { Router } from 'express';
 import { validatePathParams } from '../../middleware/validate-paths.js';
 import type { AntagonisticReviewService } from '../../services/antagonistic-review-service.js';
+import type { ProjectPlanningService } from '../../services/project-planning-service.js';
 import { createExecuteHandler } from './routes/execute.js';
 import { createResumeHandler } from './routes/resume.js';
+import {
+  createPlanningExecuteHandler,
+  createPlanningStatusHandler,
+} from './routes/project-planning.js';
 
 /**
  * Create flows router with all endpoints
  *
- * Registers handlers for all flow-related HTTP endpoints.
- * Each handler is created with the provided service instances.
- *
  * Endpoints:
- * - POST /antagonistic-review/execute - Execute the full Ava + Jon PRD review flow
- * - POST /antagonistic-review/resume - Resume flow after HITL interrupt
+ * - POST /antagonistic-review/execute - Execute Ava + Jon PRD review flow
+ * - POST /antagonistic-review/resume - Resume review flow after HITL
+ * - POST /project-planning/execute - Start project planning flow
+ * - GET  /project-planning/status/:sessionId - Get planning session status
  *
- * @param reviewService - Instance of AntagonisticReviewService for orchestrating reviews
+ * @param reviewService - AntagonisticReviewService for PRD reviews
+ * @param planningService - ProjectPlanningService for project planning (optional)
  * @returns Express Router configured with all flow endpoints
  */
-export function createFlowsRoutes(reviewService: AntagonisticReviewService): Router {
+export function createFlowsRoutes(
+  reviewService: AntagonisticReviewService,
+  planningService?: ProjectPlanningService
+): Router {
   const router = Router();
 
   // Antagonistic review flow
@@ -39,6 +47,17 @@ export function createFlowsRoutes(reviewService: AntagonisticReviewService): Rou
   );
 
   router.post('/antagonistic-review/resume', createResumeHandler(reviewService));
+
+  // Project planning flow
+  if (planningService) {
+    router.post(
+      '/project-planning/execute',
+      validatePathParams('projectPath'),
+      createPlanningExecuteHandler(planningService)
+    );
+
+    router.get('/project-planning/status/:sessionId', createPlanningStatusHandler(planningService));
+  }
 
   return router;
 }
