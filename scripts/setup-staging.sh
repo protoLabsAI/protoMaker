@@ -207,7 +207,7 @@ start_services() {
   # Ensure named volumes exist (external: true in compose won't auto-create them)
   for vol in automaker-data automaker-claude-config automaker-cursor-config \
              automaker-opencode-data automaker-opencode-config automaker-opencode-cache; do
-    docker volume create "$vol" 2>/dev/null || true
+    docker volume create "$vol" >/dev/null
   done
 
   docker compose -f "$COMPOSE_FILE" up -d
@@ -254,6 +254,13 @@ teardown() {
 
   cd "$PROJECT_ROOT"
   docker compose -f "$COMPOSE_FILE" down -v
+
+  # External volumes are not removed by compose down -v, so remove them explicitly
+  for vol in automaker-data automaker-claude-config automaker-cursor-config \
+             automaker-opencode-data automaker-opencode-config automaker-opencode-cache; do
+    docker volume rm "$vol" >/dev/null 2>&1 || true
+  done
+
   ok "Services stopped and volumes removed"
 }
 
