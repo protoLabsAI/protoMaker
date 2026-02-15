@@ -19,6 +19,7 @@ import { getCopilotKitThemeStyles } from './theme-bridge';
 import { getAuthHeaders } from '@/lib/api-fetch';
 import { useAuthStore } from '@/store/auth-store';
 import { AgentStateDisplay } from './agent-state-display';
+import { ErrorDisplay } from './error-display';
 import { WorkflowSelector } from './workflow-selector';
 import { useAppStore } from '@/store/app-store';
 import { ModelSelector, getStoredModel, storeModel, type ModelTier } from './model-selector';
@@ -228,6 +229,7 @@ function SidebarControls() {
         }}
       />
       <AgentStateDisplay />
+      <ErrorDisplay />
     </div>
   );
 }
