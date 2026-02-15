@@ -153,10 +153,22 @@ export async function fillAddFeatureDialog(
 }
 
 /**
- * Confirm the add feature dialog
+ * Confirm the add feature dialog.
+ * Uses JS evaluate click fallback to handle position:fixed dialogs on CI
+ * where Playwright's viewport actionability check fails.
  */
 export async function confirmAddFeature(page: Page): Promise<void> {
-  await page.click('[data-testid="confirm-add-feature"]');
+  const button = page.locator('[data-testid="confirm-add-feature"]');
+  await button.waitFor({ state: 'visible', timeout: 10000 });
+  try {
+    await button.click();
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message.includes('outside of the viewport')) {
+      await button.evaluate((el) => (el as HTMLElement).click());
+    } else {
+      throw error;
+    }
+  }
   // Wait for dialog to close
   await page.waitForFunction(() => !document.querySelector('[data-testid="add-feature-dialog"]'), {
     timeout: 5000,

@@ -64,7 +64,19 @@ test.describe('Project Creation', () => {
     await page.locator('[data-testid="project-name-input"]').fill(projectName);
     await expect(page.getByText('Will be created at:')).toBeVisible({ timeout: 5000 });
 
-    await page.locator('[data-testid="confirm-create-project"]').click();
+    // Use JS click fallback to handle position:fixed dialog on CI where
+    // Playwright reports "element is outside of the viewport"
+    const confirmButton = page.locator('[data-testid="confirm-create-project"]');
+    await confirmButton.waitFor({ state: 'visible', timeout: 10000 });
+    try {
+      await confirmButton.click();
+    } catch (error: unknown) {
+      if (error instanceof Error && error.message.includes('outside of the viewport')) {
+        await confirmButton.evaluate((el) => (el as HTMLElement).click());
+      } else {
+        throw error;
+      }
+    }
 
     await expect(page.locator('[data-testid="board-view"]')).toBeVisible({ timeout: 15000 });
 
