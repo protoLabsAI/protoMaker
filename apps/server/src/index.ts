@@ -300,10 +300,9 @@ app.use(
       if (allowedOrigins && allowedOrigins.length > 0 && allowedOrigins[0] !== '*') {
         if (allowedOrigins.includes(origin)) {
           callback(null, origin);
-        } else {
-          callback(new Error('Not allowed by CORS'));
+          return;
         }
-        return;
+        // Fall through to hostname allowlist below
       }
 
       // For local development, allow all localhost/loopback origins (any port)
