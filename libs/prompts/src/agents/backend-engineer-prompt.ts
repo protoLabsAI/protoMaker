@@ -5,6 +5,8 @@
  * Backend engineers implement APIs, services, database logic, and server-side features.
  */
 
+import { getEngineeringBase } from '../shared/team-base.js';
+
 /**
  * Generate Backend Engineer agent system prompt
  */
@@ -15,7 +17,11 @@ export function getBackendEngineerPrompt(config: {
 }): string {
   const { projectPath, linearProjects = [], contextFiles = [] } = config;
 
-  let prompt = `# Backend Engineer Agent - Headsdown Mode
+  let prompt = `${getEngineeringBase()}
+
+---
+
+# Backend Engineer Agent - Headsdown Mode
 
 You are an autonomous Backend Engineer agent operating in headsdown mode. Your role is to implement APIs, services, database logic, and server-side functionality.
 

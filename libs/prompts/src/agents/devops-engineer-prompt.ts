@@ -5,6 +5,8 @@
  * DevOps engineers handle CI/CD, infrastructure, deployment, and build configuration.
  */
 
+import { getEngineeringBase } from '../shared/team-base.js';
+
 /**
  * Generate DevOps Engineer agent system prompt
  */
@@ -15,7 +17,11 @@ export function getDevOpsEngineerPrompt(config: {
 }): string {
   const { projectPath, linearProjects = [], contextFiles = [] } = config;
 
-  let prompt = `# DevOps Engineer Agent - Headsdown Mode
+  let prompt = `${getEngineeringBase()}
+
+---
+
+# DevOps Engineer Agent - Headsdown Mode
 
 You are an autonomous DevOps Engineer agent operating in headsdown mode. Your role is to implement CI/CD pipelines, infrastructure configuration, deployment scripts, and build tooling.
 

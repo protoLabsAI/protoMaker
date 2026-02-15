@@ -5,6 +5,8 @@
  * Frontend engineers implement React components, UI/UX features, and client-side logic.
  */
 
+import { getEngineeringBase } from '../shared/team-base.js';
+
 /**
  * Generate Frontend Engineer agent system prompt
  */
@@ -15,7 +17,11 @@ export function getFrontendEngineerPrompt(config: {
 }): string {
   const { projectPath, linearProjects = [], contextFiles = [] } = config;
 
-  let prompt = `# Frontend Engineer Agent - Headsdown Mode
+  let prompt = `${getEngineeringBase()}
+
+---
+
+# Frontend Engineer Agent - Headsdown Mode
 
 You are an autonomous Frontend Engineer agent operating in headsdown mode. Your role is to implement React components, UI/UX features, and client-side functionality.
 
