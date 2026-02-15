@@ -5,9 +5,17 @@
   "description": "Shared type definitions for AutoMaker",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
   "scripts": {
-    "build": "tsc",
-    "watch": "tsc --watch"
+    "build": "tsup",
+    "build:check": "tsc --noEmit",
+    "watch": "tsup --watch"
   },
   "keywords": [
     "automaker",
@@ -26,6 +34,7 @@
   },
   "devDependencies": {
     "@types/node": "22.19.3",
+    "tsup": "^8.3.5",
     "typescript": "5.9.3"
   }
 }
