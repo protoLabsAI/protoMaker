@@ -26,22 +26,21 @@ const CopilotAvailableContext = createContext(false);
 
 /**
  * Injects project context into CopilotKit using useAgentContext.
- * This provides agents with current project path, spec, and feature list.
+ * Provides agents with current project path and feature list.
  */
 function ProjectContextInjector() {
   const currentProject = useAppStore((s) => s.currentProject);
   const features = useAppStore((s) => s.features);
-  const spec = useAppStore((s) => s.spec);
 
   // Inject current project path
   useAgentContext({
-    description: 'Current project path',
+    description: 'Current project path — the absolute filesystem path to the active project',
     value: currentProject?.path || null,
   });
 
   // Inject feature list summary
   useAgentContext({
-    description: 'Feature list summary',
+    description: 'Feature list — all features on the board with their current status',
     value:
       features.length > 0
         ? features.map((f) => ({
@@ -49,15 +48,8 @@ function ProjectContextInjector() {
             title: f.title,
             status: f.status,
             complexity: f.complexity,
-            milestone: f.milestone,
           }))
         : null,
-  });
-
-  // Inject project spec when available
-  useAgentContext({
-    description: 'Project specification',
-    value: spec || null,
   });
 
   return null;
