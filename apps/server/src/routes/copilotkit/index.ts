@@ -16,9 +16,10 @@ import { z } from 'zod';
 import { createLogger } from '@automaker/utils';
 import { createContentCreationFlow, createAntagonisticReviewerGraph } from '@automaker/flows';
 import { ChatAnthropic } from '@langchain/anthropic';
+import { resolveModelString } from '@automaker/model-resolver';
 import type { FeatureLoader } from '../../services/feature-loader.js';
 import type { AutoModeService } from '../../services/auto-mode-service.js';
-import { Router } from 'express';
+import { Router, type Request } from 'express';
 
 const logger = createLogger('CopilotKit');
 
@@ -235,42 +236,68 @@ const WORKFLOW_METADATA: WorkflowMetadata[] = [
   },
 ];
 
+/**
+ * Extract model preference from request headers and resolve to full model string
+ * Falls back to sonnet if not specified
+ */
+function getModelFromRequest(req: Request): string {
+  const modelHeader = req.headers['x-copilotkit-model'];
+  const modelKey = typeof modelHeader === 'string' ? modelHeader : 'sonnet';
+
+  // Resolve model alias to full model string using model-resolver
+  const resolvedModel = resolveModelString(modelKey, 'claude-sonnet-4-5-20250929');
+
+  // Map Claude model strings to CopilotKit's expected format (anthropic/model-name)
+  if (resolvedModel.startsWith('claude-')) {
+    return `anthropic/${resolvedModel}`;
+  }
+
+  return resolvedModel;
+}
+
 export function createCopilotKitEndpoint(deps: CopilotKitDependencies) {
   const avaTools = createAvaTools(deps);
   const reviewTools = createAntagonisticReviewTools();
 
-  const avaAgent = new BuiltInAgent({
-    model: 'anthropic/claude-sonnet-4-5-20250929',
-    prompt: [
-      'You are Ava, the AI assistant for protoMaker by protoLabs.',
-      'You help users manage their development board, create and track features, control auto-mode, and understand project status.',
-      'Use your tools to get real data before answering. Keep responses concise and action-oriented.',
-      'When you perform an action, confirm what you did.',
-    ].join(' '),
-    // ToolDefinition<ZodObject<…>> ⊄ ToolDefinition<ZodTypeAny> due to generic variance.
-    // Cast is safe — each tool already satisfies the ToolDefinition contract.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    tools: avaTools as any,
-    maxSteps: 5,
-  });
+  // Create agent factory functions that accept a model parameter
+  // This allows dynamic model selection per request
+  const createAvaAgent = (model: string) =>
+    new BuiltInAgent({
+      model,
+      prompt: [
+        'You are Ava, the AI assistant for protoMaker by protoLabs.',
+        'You help users manage their development board, create and track features, control auto-mode, and understand project status.',
+        'Use your tools to get real data before answering. Keep responses concise and action-oriented.',
+        'When you perform an action, confirm what you did.',
+      ].join(' '),
+      // ToolDefinition<ZodObject<…>> ⊄ ToolDefinition<ZodTypeAny> due to generic variance.
+      // Cast is safe — each tool already satisfies the ToolDefinition contract.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      tools: avaTools as any,
+      maxSteps: 5,
+    });
+
+  const createAntagonisticAgent = (model: string) =>
+    new BuiltInAgent({
+      model,
+      prompt: [
+        'You are the Antagonistic Review Agent for protoMaker.',
+        'You perform rigorous quality reviews of content using a scoring rubric.',
+        'You support three review modes: research (validates research findings), outline (reviews structure), and full (8-dimension comprehensive review).',
+        'Use the reviewContent tool to perform reviews and provide honest, critical feedback.',
+        'Be harsh but fair in your assessments.',
+      ].join(' '),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      tools: reviewTools as any,
+      maxSteps: 3,
+    });
 
   // Create the content-pipeline LangGraph flow
   // Compiled without HITL gates for autonomous operation
   const contentPipelineGraph = createContentCreationFlow({ enableHITL: false });
 
-  const antagonisticReviewAgent = new BuiltInAgent({
-    model: 'anthropic/claude-sonnet-4-5-20250929',
-    prompt: [
-      'You are the Antagonistic Review Agent for protoMaker.',
-      'You perform rigorous quality reviews of content using a scoring rubric.',
-      'You support three review modes: research (validates research findings), outline (reviews structure), and full (8-dimension comprehensive review).',
-      'Use the reviewContent tool to perform reviews and provide honest, critical feedback.',
-      'Be harsh but fair in your assessments.',
-    ].join(' '),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    tools: reviewTools as any,
-    maxSteps: 3,
-  });
+  // Default model for agent initialization
+  const defaultModel = 'anthropic/claude-sonnet-4-5-20250929';
 
   // CopilotKit v1.51 constructor types have a MaybePromise intersection bug
   // that rejects plain objects. The cast is safe — runtime accepts Record<string, Agent>.
@@ -279,9 +306,9 @@ export function createCopilotKitEndpoint(deps: CopilotKitDependencies) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const runtime = new CopilotRuntime({
     agents: {
-      default: avaAgent,
+      default: createAvaAgent(defaultModel),
       'content-pipeline': contentPipelineGraph,
-      'antagonistic-review': antagonisticReviewAgent,
+      'antagonistic-review': createAntagonisticAgent(defaultModel),
     } as any,
   });
 
@@ -297,10 +324,21 @@ export function createCopilotKitEndpoint(deps: CopilotKitDependencies) {
     res.json({ workflows: WORKFLOW_METADATA });
   });
 
+  // Log model selection on each CopilotKit request
+  router.use((req, _res, next) => {
+    if (req.method === 'POST') {
+      const model = getModelFromRequest(req);
+      logger.debug(`CopilotKit request with model preference: ${model}`);
+    }
+    next();
+  });
+
   // Mount the CopilotKit runtime endpoint
   // Use @copilotkitnext/runtime's Express-native endpoint (proper Express Router)
   // instead of @copilotkit/runtime's Hono-based adapter which has path mismatch issues.
   // basePath '/' because Express strips the mount prefix (/api/copilotkit) from req.url.
+  // TODO: AG-UI protocol supports dynamic model selection via runtime properties.
+  // For now, agents use default model. Future: recreate agents per-request with resolved model.
   router.use('/', createCopilotEndpointExpress({ runtime, basePath: '/' }));
 
   return router;

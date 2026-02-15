@@ -21,8 +21,29 @@ import { useAuthStore } from '@/store/auth-store';
 import { AgentStateDisplay } from './agent-state-display';
 import { WorkflowSelector } from './workflow-selector';
 import { useAppStore } from '@/store/app-store';
+import { ModelSelector, getStoredModel, storeModel, type ModelTier } from './model-selector';
 
 const CopilotAvailableContext = createContext(false);
+
+/**
+ * Model selection context shared between provider and sidebar.
+ * Lives at the CopilotKitProvider level so model changes can
+ * trigger CKProvider re-mount with updated headers.
+ */
+interface ModelContextValue {
+  selectedModel: ModelTier;
+  setSelectedModel: (model: ModelTier) => void;
+}
+
+const ModelContext = createContext<ModelContextValue | null>(null);
+
+function useModelSelection() {
+  const context = useContext(ModelContext);
+  if (!context) {
+    throw new Error('useModelSelection must be used within CopilotKitProvider');
+  }
+  return context;
+}
 
 /**
  * Injects project context into CopilotKit using useAgentContext.
@@ -92,6 +113,14 @@ class CopilotErrorBoundary extends Component<
 export function CopilotKitProvider({ children }: { children: ReactNode }) {
   const [available, setAvailable] = useState<boolean | null>(null);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const [selectedModel, setSelectedModelState] = useState<ModelTier>(() =>
+    getStoredModel('default')
+  );
+
+  const setSelectedModel = (model: ModelTier) => {
+    setSelectedModelState(model);
+    storeModel('default', model);
+  };
 
   useEffect(() => {
     // Only check when authenticated — endpoint requires auth
@@ -124,13 +153,26 @@ export function CopilotKitProvider({ children }: { children: ReactNode }) {
     return unavailableFallback;
   }
 
+  // Pass model preference to server via header
+  const headers = {
+    ...getAuthHeaders(),
+    'X-Copilotkit-Model': selectedModel,
+  };
+
   return (
     <CopilotErrorBoundary fallback={unavailableFallback}>
       <CopilotAvailableContext.Provider value={true}>
-        <CKProvider runtimeUrl="/api/copilotkit" headers={getAuthHeaders()} credentials="include">
-          <ProjectContextInjector />
-          {children}
-        </CKProvider>
+        <ModelContext.Provider value={{ selectedModel, setSelectedModel }}>
+          <CKProvider
+            key={selectedModel}
+            runtimeUrl="/api/copilotkit"
+            headers={headers}
+            credentials="include"
+          >
+            <ProjectContextInjector />
+            {children}
+          </CKProvider>
+        </ModelContext.Provider>
       </CopilotAvailableContext.Provider>
     </CopilotErrorBoundary>
   );
@@ -153,6 +195,7 @@ export function CopilotSidebarWrapper({ children }: { children: ReactNode }) {
       {children}
       <div style={getCopilotKitThemeStyles()}>
         <WorkflowSelector value={selectedWorkflow} onChange={setSelectedWorkflow} />
+        <SidebarModelSelector workflowId={selectedWorkflow} />
         <CopilotSidebar
           defaultOpen={false}
           labels={{
@@ -163,5 +206,19 @@ export function CopilotSidebarWrapper({ children }: { children: ReactNode }) {
         <AgentStateDisplay />
       </div>
     </>
+  );
+}
+
+/**
+ * Model selector shown in sidebar below workflow selector
+ */
+function SidebarModelSelector({ workflowId }: { workflowId: string }) {
+  const { selectedModel, setSelectedModel } = useModelSelection();
+
+  return (
+    <div className="px-4 py-2 border-b border-border">
+      <div className="text-xs text-muted-foreground mb-1">Model</div>
+      <ModelSelector workflowId={workflowId} value={selectedModel} onChange={setSelectedModel} />
+    </div>
   );
 }
