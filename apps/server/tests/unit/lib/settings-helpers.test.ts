@@ -19,36 +19,48 @@ vi.mock('@automaker/utils', async () => {
 
 describe('settings-helpers.ts', () => {
   describe('getMCPServersFromSettings', () => {
+    // Default MCP servers always included (Context7)
+    const DEFAULT_SERVERS = {
+      context7: {
+        type: 'stdio',
+        command: 'npx',
+        args: ['-y', '@upstash/context7-mcp'],
+        env: process.env.CONTEXT7_API_KEY
+          ? { CONTEXT7_API_KEY: process.env.CONTEXT7_API_KEY }
+          : undefined,
+      },
+    };
+
     beforeEach(() => {
       vi.clearAllMocks();
     });
 
-    it('should return empty object when settingsService is null', async () => {
+    it('should return defaults when settingsService is null', async () => {
       const result = await getMCPServersFromSettings(null);
-      expect(result).toEqual({});
+      expect(result).toEqual(DEFAULT_SERVERS);
     });
 
-    it('should return empty object when settingsService is undefined', async () => {
+    it('should return defaults when settingsService is undefined', async () => {
       const result = await getMCPServersFromSettings(undefined);
-      expect(result).toEqual({});
+      expect(result).toEqual(DEFAULT_SERVERS);
     });
 
-    it('should return empty object when no MCP servers configured', async () => {
+    it('should return defaults when no MCP servers configured', async () => {
       const mockSettingsService = {
         getGlobalSettings: vi.fn().mockResolvedValue({ mcpServers: [] }),
       } as unknown as SettingsService;
 
       const result = await getMCPServersFromSettings(mockSettingsService);
-      expect(result).toEqual({});
+      expect(result).toEqual(DEFAULT_SERVERS);
     });
 
-    it('should return empty object when mcpServers is undefined', async () => {
+    it('should return defaults when mcpServers is undefined', async () => {
       const mockSettingsService = {
         getGlobalSettings: vi.fn().mockResolvedValue({}),
       } as unknown as SettingsService;
 
       const result = await getMCPServersFromSettings(mockSettingsService);
-      expect(result).toEqual({});
+      expect(result).toEqual(DEFAULT_SERVERS);
     });
 
     it('should convert enabled stdio server to SDK format', async () => {
@@ -70,6 +82,7 @@ describe('settings-helpers.ts', () => {
 
       const result = await getMCPServersFromSettings(mockSettingsService);
       expect(result).toEqual({
+        ...DEFAULT_SERVERS,
         'test-server': {
           type: 'stdio',
           command: 'node',
@@ -97,6 +110,7 @@ describe('settings-helpers.ts', () => {
 
       const result = await getMCPServersFromSettings(mockSettingsService);
       expect(result).toEqual({
+        ...DEFAULT_SERVERS,
         'sse-server': {
           type: 'sse',
           url: 'http://localhost:3000/sse',
@@ -123,6 +137,7 @@ describe('settings-helpers.ts', () => {
 
       const result = await getMCPServersFromSettings(mockSettingsService);
       expect(result).toEqual({
+        ...DEFAULT_SERVERS,
         'http-server': {
           type: 'http',
           url: 'http://localhost:3000/api',
@@ -154,9 +169,10 @@ describe('settings-helpers.ts', () => {
       } as unknown as SettingsService;
 
       const result = await getMCPServersFromSettings(mockSettingsService);
-      expect(Object.keys(result)).toHaveLength(1);
+      // 1 enabled user server + defaults (context7)
       expect(result['enabled-server']).toBeDefined();
       expect(result['disabled-server']).toBeUndefined();
+      expect(result['context7']).toBeDefined();
     });
 
     it('should treat servers without enabled field as enabled', async () => {
@@ -189,22 +205,23 @@ describe('settings-helpers.ts', () => {
       } as unknown as SettingsService;
 
       const result = await getMCPServersFromSettings(mockSettingsService);
-      expect(Object.keys(result)).toHaveLength(2);
+      // 2 user servers + defaults (context7)
       expect(result['server1']).toBeDefined();
       expect(result['server2']).toBeDefined();
+      expect(result['context7']).toBeDefined();
     });
 
-    it('should return empty object and log error on exception', async () => {
+    it('should return defaults and log error on exception', async () => {
       const mockSettingsService = {
         getGlobalSettings: vi.fn().mockRejectedValue(new Error('Settings error')),
       } as unknown as SettingsService;
 
       const result = await getMCPServersFromSettings(mockSettingsService, '[Test]');
-      expect(result).toEqual({});
+      expect(result).toEqual(DEFAULT_SERVERS);
       // Logger will be called with error, but we don't need to assert it
     });
 
-    it('should throw error for SSE server without URL', async () => {
+    it('should return defaults for SSE server without URL', async () => {
       const mockSettingsService = {
         getGlobalSettings: vi.fn().mockResolvedValue({
           mcpServers: [
@@ -219,12 +236,12 @@ describe('settings-helpers.ts', () => {
         }),
       } as unknown as SettingsService;
 
-      // The error is caught and logged, returns empty
+      // The error is caught and logged, returns defaults
       const result = await getMCPServersFromSettings(mockSettingsService);
-      expect(result).toEqual({});
+      expect(result).toEqual(DEFAULT_SERVERS);
     });
 
-    it('should throw error for HTTP server without URL', async () => {
+    it('should return defaults for HTTP server without URL', async () => {
       const mockSettingsService = {
         getGlobalSettings: vi.fn().mockResolvedValue({
           mcpServers: [
@@ -240,10 +257,10 @@ describe('settings-helpers.ts', () => {
       } as unknown as SettingsService;
 
       const result = await getMCPServersFromSettings(mockSettingsService);
-      expect(result).toEqual({});
+      expect(result).toEqual(DEFAULT_SERVERS);
     });
 
-    it('should throw error for stdio server without command', async () => {
+    it('should return defaults for stdio server without command', async () => {
       const mockSettingsService = {
         getGlobalSettings: vi.fn().mockResolvedValue({
           mcpServers: [
@@ -259,7 +276,7 @@ describe('settings-helpers.ts', () => {
       } as unknown as SettingsService;
 
       const result = await getMCPServersFromSettings(mockSettingsService);
-      expect(result).toEqual({});
+      expect(result).toEqual(DEFAULT_SERVERS);
     });
 
     it('should default to stdio type when type is not specified', async () => {
@@ -278,6 +295,7 @@ describe('settings-helpers.ts', () => {
       } as unknown as SettingsService;
 
       const result = await getMCPServersFromSettings(mockSettingsService);
+      expect(result['context7']).toBeDefined();
       expect(result['no-type']).toEqual({
         type: 'stdio',
         command: 'node',
