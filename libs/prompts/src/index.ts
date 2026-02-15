@@ -162,6 +162,7 @@ export { getLinearSpecialistPrompt } from './agents/linear-specialist.js';
 export { getPrMaintainerPrompt } from './agents/pr-maintainer.js';
 export { getBoardJanitorPrompt } from './agents/board-janitor.js';
 export { getFrankPrompt } from './agents/frank.js';
+export { getKaiPrompt } from './agents/kai.js';
 
 // Content generation prompts
 export { getOutlinePlannerPrompt } from './content/outline-planner.js';
