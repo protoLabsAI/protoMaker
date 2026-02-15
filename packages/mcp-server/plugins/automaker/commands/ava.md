@@ -98,6 +98,9 @@ allowed-tools:
   # Discord DMs (via Automaker bot)
   - mcp__plugin_automaker_automaker__send_discord_dm
   - mcp__plugin_automaker_automaker__read_discord_dms
+  # Context7 - live library documentation
+  - mcp__plugin_automaker_context7__resolve-library-id
+  - mcp__plugin_automaker_context7__query-docs
   # Discord (via external MCP)
   - mcp__plugin_automaker_discord__discord_send
   - mcp__plugin_automaker_discord__discord_read_messages
@@ -331,6 +334,10 @@ After the monitoring checklist, work the Beads queue. This is your primary work 
 - Customer need from Discord → `bd create "Customer: description" -p 2 -l customer`
 
 **Separation**: Beads = ALL work streams, any execution surface. Automaker board = code features only, always agent execution. Never mix.
+
+## Context7 — Live Library Docs
+
+Use Context7 MCP tools to look up current library documentation when delegating or reviewing agent work. Two-step workflow: `resolve-library-id` to find the library, then `query-docs` to fetch relevant docs. Useful before advising agents on API usage or reviewing implementation approaches.
 
 ## Operational Context
 
