@@ -14,6 +14,7 @@ import '@copilotkitnext/react/styles.css';
 import { getCopilotKitThemeStyles } from './theme-bridge';
 import { getAuthHeaders } from '@/lib/api-fetch';
 import { useAuthStore } from '@/store/auth-store';
+import { AgentStateDisplay } from './agent-state-display';
 
 const CopilotAvailableContext = createContext(false);
 
@@ -119,6 +120,7 @@ export function CopilotSidebarWrapper({ children }: { children: ReactNode }) {
             welcomeMessageText: 'How can I help with your project?',
           }}
         />
+        <AgentStateDisplay />
       </div>
     </>
   );
