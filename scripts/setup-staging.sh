@@ -180,21 +180,20 @@ build_images() {
 # ─── Stop existing ───────────────────────────────────────────────────────────
 
 stop_existing() {
-  # Stop any existing automaker containers regardless of which compose started them
-  if docker ps -q --filter "name=automaker-server" --filter "name=automaker-ui" --filter "name=automaker-docs" | grep -q .; then
-    info "Stopping existing Automaker containers..."
+  info "Stopping existing Automaker containers..."
 
-    # Try the base compose first (handles the override pattern)
-    docker compose -f "$PROJECT_ROOT/docker-compose.yml" down 2>/dev/null || true
+  # Use the staging compose file to cleanly stop and remove containers + networks.
+  # This is the only compose file used in staging — never mix with docker-compose.yml.
+  docker compose -f "$COMPOSE_FILE" down 2>/dev/null || true
 
-    # Also try staging compose in case that's what's running
-    docker compose -f "$COMPOSE_FILE" down 2>/dev/null || true
+  # Force-remove if compose down didn't clean up (e.g. containers from a different project)
+  for name in automaker-server automaker-ui automaker-docs; do
+    if docker ps -aq --filter "name=^${name}$" | grep -q .; then
+      docker rm -f "$name" 2>/dev/null || true
+    fi
+  done
 
-    # Force-remove if still running
-    docker rm -f automaker-server automaker-ui automaker-docs 2>/dev/null || true
-
-    ok "Existing containers stopped"
-  fi
+  ok "Existing containers stopped"
 }
 
 # ─── Start ───────────────────────────────────────────────────────────────────
@@ -204,6 +203,12 @@ start_services() {
   cd "$PROJECT_ROOT"
 
   stop_existing
+
+  # Ensure named volumes exist (external: true in compose won't auto-create them)
+  for vol in automaker-data automaker-claude-config automaker-cursor-config \
+             automaker-opencode-data automaker-opencode-config automaker-opencode-cache; do
+    docker volume create "$vol" 2>/dev/null || true
+  done
 
   docker compose -f "$COMPOSE_FILE" up -d
 

@@ -156,13 +156,19 @@ services:
 volumes:
   automaker-data:
     name: automaker-data
+    external: true
   automaker-claude-config:
     name: automaker-claude-config
+    external: true
   automaker-cursor-config:
     name: automaker-cursor-config
+    external: true
   automaker-opencode-data:
     name: automaker-opencode-data
+    external: true
   automaker-opencode-config:
     name: automaker-opencode-config
+    external: true
   automaker-opencode-cache:
     name: automaker-opencode-cache
+    external: true
