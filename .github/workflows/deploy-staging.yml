@@ -135,6 +135,7 @@ jobs:
           DISCORD_ALERTS_WEBHOOK: ${{ secrets.DISCORD_ALERTS_WEBHOOK }}
 
       - name: Rollback on failure
+        id: rollback
         if: failure() && (steps.rebuild.outcome == 'failure' || steps.verify.outcome == 'failure' || steps.smoke.outcome == 'failure')
         working-directory: /home/josh/staging-deploy/automaker
         run: |
@@ -203,10 +204,22 @@ jobs:
 
           DOCS_STATUS=$(curl -sf http://localhost:3009/ > /dev/null 2>&1 && echo "docs ok" || echo "docs down")
 
+          ROLLBACK_OUTCOME="${{ steps.rollback.outcome }}"
+
           if [ "$STATUS" = "success" ]; then
             MSG="Staging deployed: \`${COMMIT}\` (v${VERSION}) - all healthy (${DOCS_STATUS})"
           else
-            MSG="Staging deploy FAILED: \`${COMMIT}\` - rolled back to previous version. Check GitHub Actions."
+            case "$ROLLBACK_OUTCOME" in
+              success)
+                MSG="Staging deploy FAILED: \`${COMMIT}\` - rolled back to previous version. Check GitHub Actions."
+                ;;
+              failure)
+                MSG="Staging deploy FAILED: \`${COMMIT}\` - rollback FAILED. Manual intervention required."
+                ;;
+              *)
+                MSG="Staging deploy FAILED: \`${COMMIT}\` - no rollback performed. Check GitHub Actions."
+                ;;
+            esac
           fi
 
           # Post to #deployments channel via webhook if configured
