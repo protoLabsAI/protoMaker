@@ -10,6 +10,7 @@ export * from './graphs/state-utils.js';
 export * from './graphs/reducers.js';
 export * from './graphs/routing.js';
 export * from './graphs/builder.js';
+export * from './graphs/interrupt-loop.js';
 
 // Research flow
 export { createResearchFlow } from './graphs/research-flow.js';
