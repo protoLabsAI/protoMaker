@@ -16,7 +16,7 @@ import {
   clickAddFeature,
   fillAddFeatureDialog,
   confirmAddFeature,
-  clickElement,
+  forceClick,
   authenticateForTests,
   handleLoginScreenIfPresent,
 } from '../utils';
@@ -60,7 +60,9 @@ test.describe('Edit Feature', () => {
     cleanupTempDir(TEST_TEMP_DIR);
   });
 
-  test('should edit an existing feature description', async ({ page }) => {
+  // This test creates a feature AND edits it — double the work of other tests.
+  // CI shared runners need more than the default 30s for the full flow.
+  test('should edit an existing feature description', { timeout: 60_000 }, async ({ page }) => {
     const originalDescription = `Original feature ${Date.now()}`;
     const updatedDescription = `Updated feature ${Date.now()}`;
 
@@ -126,8 +128,10 @@ test.describe('Edit Feature', () => {
     await expect(descriptionInput).toBeVisible({ timeout: 5000 });
     await descriptionInput.fill(updatedDescription);
 
-    // Save changes
-    await clickElement(page, 'confirm-edit-feature');
+    // Save changes — use forceClick to bypass Playwright's viewport check
+    // on position:fixed dialogs (avoids wasting actionTimeout on the try/catch path)
+    const confirmButton = page.locator('[data-testid="confirm-edit-feature"]');
+    await forceClick(confirmButton);
 
     // Wait for dialog to close
     await page.waitForFunction(
