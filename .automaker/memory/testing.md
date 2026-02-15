@@ -5,9 +5,9 @@ relevantTo: [testing]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 22
-  referenced: 14
-  successfulFeatures: 14
+  loaded: 23
+  referenced: 15
+  successfulFeatures: 15
 ---
 # testing
 
@@ -481,3 +481,30 @@ usageStats:
 - **Problem solved:** E2E Playwright test failed due to unrelated ESM module issues in flows package. Standalone verification script identified actual flow issues in minutes.
 - **Why this works:** Playwright tests have setup overhead and dependency complications. A simple Node.js script that imports and executes the flow cuts through noise. Tests the happy path before complexity of test harness.
 - **Trade-offs:** Standalone script only tests happy path, doesn't validate browser/UI integration. But catches real problems much faster. Use both approaches.
+
+### Verification test was structure-only, not integration test - verified schema in code rather than testing live endpoint response (2026-02-15)
+- **Context:** Could write Playwright test to authenticate, call endpoint, verify full response. Instead, created test that verifies endpoint exists (401 check) and structure is correct in code.
+- **Why:** Live integration test would require auth setup, environment config, potentially fragile. Structure test ensures types are correct and catches refactoring errors. 401 check confirms router is registered without needing full auth flow.
+- **Rejected:** Could skip testing entirely - endpoint is simple passthrough. Could require full auth integration test, but adds setup overhead. Could use unit test mocking, but same verification value as structure test.
+- **Trade-offs:** Easier: fast, no auth setup, catches structure drift. Harder: doesn't verify actual response shape at runtime, doesn't catch auth bypass.
+- **Breaking if changed:** If schema is removed/changed without updating code test, test fails (catches drift). If endpoint auth is accidentally removed, test passes but endpoint becomes public (test didn't catch it). If endpoint returns unexpected shape at runtime, test doesn't catch it.
+
+#### [Gotcha] Playwright config with reuseExistingServer: false will spawn new server instance even if one is already running. Don't use Playwright for integration tests of already-running dev servers. Use direct build verification + component structure checks instead. (2026-02-15)
+- **Situation:** Dev server was already running (port 3007). Playwright attempted to spawn another instance, created port conflict and test hang.
+- **Root cause:** Playwright's reuseExistingServer: false is aggressive. Running tests against running dev servers requires either: (1) explicit reuseExistingServer: true, or (2) skip Playwright entirely and verify at build/import level.
+- **How to avoid:** Build verification is faster, doesn't depend on running server, but catches fewer runtime errors. Tradeoff acceptable for feature verification (structure is deterministic at build time).
+
+#### [Gotcha] Substring-based test matching fails when function boundaries span multiple lines. The pattern 'indexOf(functionName)' to 'indexOf(nextFunctionName)' captures wrong slice when definitions wrap. (2026-02-15)
+- **Situation:** Verification test tried to extract function bodies using substring() with indexOf() for start/end, but function signatures and closing braces span multiple lines causing off-by-one slices
+- **Root cause:** Direct string matching for multi-line code structures requires exact context. indexOf() finds the first character match, not the logical block boundary.
+- **How to avoid:** Switched to direct string containment checks ('expect(source).toContain(exactString)') which is less precise (doesn't verify placement in function) but more reliable
+
+#### [Gotcha] Per codebase instructions, did NOT write Playwright tests despite it being obvious practice. Verified component syntax/structure via static analysis instead. (2026-02-15)
+- **Situation:** Instruction explicitly stated 'DO NOT write Playwright tests'. Instinct was to write tests but instruction took precedence.
+- **Root cause:** Codebase has specific testing guidance: components verified through static analysis first (syntax check, bracket matching, import presence). Full Playwright tests likely written separately in established test suite. Respecting project guidance prevents test duplication and maintains test architecture consistency.
+- **How to avoid:** Static analysis verification is faster (no test framework setup) but less comprehensive than runtime tests. Trade-off accepted because codebase architecture isolates testing responsibility elsewhere (likely centralised test suite).
+
+#### [Gotcha] Playwright test verification test file must be deleted after verification to avoid contaminating test suite with temporary checks (2026-02-15)
+- **Situation:** Created error-display-verification.spec.ts to validate implementation but instructions require cleanup
+- **Root cause:** Temporary verification tests can become stale, mislead future developers, and clutter the test suite; one-off validation should not persist in version control
+- **How to avoid:** Deleting test means no permanent verification record (harder to debug if feature regresses) but keeps test suite focused on production behavior
