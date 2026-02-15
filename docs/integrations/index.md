@@ -16,9 +16,9 @@ Discord bot integration for team communication, event routing, and status update
 
 Unified API key and provider profile system. Manage multiple AI providers, switch between API keys, and configure model preferences per project.
 
-### [Linear Sync](./linear-sync)
+### [Linear](./linear-sync)
 
-Bidirectional sync between Linear and protoMaker. Approved Linear issues flow into the AI agent pipeline, status changes sync back, and protoMaker appears as an agent in Linear workspaces via OAuth.
+Full Linear integration with three modes: @mention the agent on any issue for context-aware AI analysis, create Linear projects to trigger automated planning with HITL checkpoints, and bidirectional status/issue sync. Supports intelligent agent routing, priority-based model selection, and multi-turn conversations.
 
 ## External Tools
 
