@@ -2,8 +2,10 @@
  * CopilotKit routes - Express endpoint for CopilotKit runtime
  *
  * Provides the /api/copilotkit endpoint that the CopilotKit React provider connects to.
- * Registers a BuiltInAgent (Ava) with board-operation tools so the AG-UI protocol
- * can find the "default" agent on /api/copilotkit/info.
+ * Registers two agents via the AG-UI protocol:
+ * - "default" (Ava): BuiltInAgent with board-operation tools
+ * - "content-pipeline": LangGraph flow for content creation
+ * Both agents are discoverable via /api/copilotkit/info.
  */
 
 import { CopilotRuntime } from '@copilotkitnext/runtime';
@@ -11,6 +13,7 @@ import { createCopilotEndpointExpress } from '@copilotkitnext/runtime/express';
 import { BuiltInAgent, defineTool } from '@copilotkitnext/agent';
 import { z } from 'zod';
 import { createLogger } from '@automaker/utils';
+import { createContentCreationFlow } from '@automaker/flows';
 import type { FeatureLoader } from '../../services/feature-loader.js';
 import type { AutoModeService } from '../../services/auto-mode-service.js';
 
@@ -168,12 +171,25 @@ export function createCopilotKitEndpoint(deps: CopilotKitDependencies) {
     maxSteps: 5,
   });
 
+  // Create the content-pipeline LangGraph flow
+  // Compiled without HITL gates for autonomous operation
+  const contentPipelineGraph = createContentCreationFlow({ enableHITL: false });
+
   // CopilotKit v1.51 constructor types have a MaybePromise intersection bug
   // that rejects plain objects. The cast is safe — runtime accepts Record<string, Agent>.
+  // Register both Ava (BuiltInAgent) and content-pipeline (LangGraph) agents.
+  // The AG-UI runtime handles LangGraph state streaming automatically.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const runtime = new CopilotRuntime({ agents: { default: avaAgent } as any });
+  const runtime = new CopilotRuntime({
+    agents: {
+      default: avaAgent,
+      'content-pipeline': contentPipelineGraph,
+    } as any,
+  });
 
-  logger.info(`CopilotKit runtime initialized with Ava agent (${tools.length} tools)`);
+  logger.info(
+    `CopilotKit runtime initialized with 2 agents: Ava (${tools.length} tools), content-pipeline (LangGraph)`
+  );
 
   // Use @copilotkitnext/runtime's Express-native endpoint (proper Express Router)
   // instead of @copilotkit/runtime's Hono-based adapter which has path mismatch issues.
