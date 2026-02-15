@@ -6,7 +6,11 @@
  * can find the "default" agent on /api/copilotkit/info.
  */
 
-import { CopilotRuntime, copilotRuntimeNodeExpressEndpoint } from '@copilotkit/runtime';
+import {
+  CopilotRuntime,
+  copilotRuntimeNodeExpressEndpoint,
+  EmptyAdapter,
+} from '@copilotkit/runtime';
 import { BuiltInAgent, defineTool } from '@copilotkitnext/agent';
 import { z } from 'zod';
 import { createLogger } from '@automaker/utils';
@@ -177,5 +181,6 @@ export function createCopilotKitEndpoint(deps: CopilotKitDependencies) {
   return copilotRuntimeNodeExpressEndpoint({
     runtime,
     endpoint: '/api/copilotkit',
+    serviceAdapter: new EmptyAdapter(),
   });
 }
