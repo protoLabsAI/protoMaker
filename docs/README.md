@@ -76,21 +76,36 @@ DevOps documentation in [`docs/infra/`](./infra/):
 
 ## Development
 
-| Document                                                | Description                               |
-| ------------------------------------------------------- | ----------------------------------------- |
-| [Frontend Philosophy](./dev/frontend-philosophy.md)     | Gold standard frontend decisions          |
-| [UI Architecture](./dev/ui-architecture.md)             | Frontend structure and patterns           |
-| [Shared Packages](./dev/shared-packages.md)             | Monorepo package architecture             |
-| [Feature Status System](./dev/feature-status-system.md) | 6-status feature lifecycle                |
-| [Adding Team Members](./dev/adding-team-members.md)     | Onboarding new team members               |
-| [Clean Code](./dev/clean-code.md)                       | Code quality standards and patterns       |
-| [Folder Pattern](./dev/folder-pattern.md)               | Directory structure conventions           |
-| [Add Cursor Model](./dev/add-new-cursor-model.md)       | Adding new Cursor model support           |
-| [Release](./dev/release.md)                             | Release process and Electron builds       |
-| [Terminal](./dev/terminal.md)                           | Terminal feature documentation            |
-| [Docs Site](./dev/docs-site.md)                         | VitePress docs site setup and deployment  |
-| [Docs Site Decision](./dev/docs-site-decision.md)       | ADR: Why VitePress was chosen             |
-| [Docs Standard](./dev/docs-standard.md)                 | IA rules, content guidelines, maintenance |
+| Document                                                  | Description                                          |
+| --------------------------------------------------------- | ---------------------------------------------------- |
+| [Overview](./dev/index.md)                                | Development guide overview                           |
+| [Design Philosophy](./dev/design-philosophy.md)           | UI design direction (Linear, Vercel, shadcn/ui)      |
+| [Frontend Philosophy](./dev/frontend-philosophy.md)       | Gold standard frontend decisions                     |
+| [UI Architecture](./dev/ui-architecture.md)               | Frontend structure and patterns                      |
+| [Shared Packages](./dev/shared-packages.md)               | Monorepo package architecture                        |
+| [Flows Package](./dev/flows.md)                           | LangGraph state graph primitives and patterns        |
+| [LLM Providers Package](./dev/llm-providers-package.md)   | Multi-provider LLM abstraction layer                 |
+| [Observability Package](./dev/observability-package.md)   | Langfuse tracing, prompt management, cost tracking   |
+| [Content Pipeline](./dev/content-pipeline.md)             | Content generation pipeline (blog, docs, training)   |
+| [Antagonistic Review](./dev/antagonistic-review.md)       | Multi-perspective review with G-Eval scoring         |
+| [CopilotKit Integration](./dev/copilotkit-integration.md) | AI chat sidebar and HITL approval flows              |
+| [Crew Loops](./dev/crew-loops.md)                         | Scheduled crew member health checks                  |
+| [PR Remediation Loop](./dev/pr-remediation-loop.md)       | Autonomous PR review feedback handling               |
+| [Project Lifecycle](./dev/project-lifecycle.md)           | Linear-native project state machine                  |
+| [Hivemind Interfaces](./dev/hivemind-interfaces.md)       | Service abstractions for multi-instance architecture |
+| [Issue Management](./dev/issue-management.md)             | Automated failure-to-issue pipeline                  |
+| [Feature Status System](./dev/feature-status-system.md)   | 6-status feature lifecycle                           |
+| [Testing Patterns](./dev/testing-patterns.md)             | Test patterns and anti-patterns                      |
+| [Gotchas](./dev/gotchas.md)                               | Common pitfalls and operational hazards              |
+| [Adding Team Members](./dev/adding-team-members.md)       | Onboarding new team members                          |
+| [Clean Code](./dev/clean-code.md)                         | Code quality standards and patterns                  |
+| [Folder Pattern](./dev/folder-pattern.md)                 | Directory structure conventions                      |
+| [Add Cursor Model](./dev/add-new-cursor-model.md)         | Adding new Cursor model support                      |
+| [Release](./dev/release.md)                               | Release process and Electron builds                  |
+| [Terminal](./dev/terminal.md)                             | Terminal feature documentation                       |
+| [Docs Site](./dev/docs-site.md)                           | VitePress docs site setup and deployment             |
+| [Docs Site Decision](./dev/docs-site-decision.md)         | ADR: Why VitePress was chosen                        |
+| [Docs Standard](./dev/docs-standard.md)                   | IA rules, content guidelines, maintenance            |
 
 ## ProtoLabs
 
