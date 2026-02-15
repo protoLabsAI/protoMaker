@@ -1,6 +1,6 @@
 # Context System Deep Dive
 
-This guide provides a comprehensive overview of Automaker's context loading system - how project-specific rules, conventions, and learnings flow into agent prompts.
+This guide provides a comprehensive overview of protoMaker's context loading system - how project-specific rules, conventions, and learnings flow into agent prompts.
 
 ## Table of Contents
 

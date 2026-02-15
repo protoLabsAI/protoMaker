@@ -1,6 +1,6 @@
 # Secret Management
 
-This guide covers how to set up centralized secret management for Automaker deployments, including integration with MCP servers, Docker, and CLI tools.
+This guide covers how to set up centralized secret management for protoMaker deployments, including integration with MCP servers, Docker, and CLI tools.
 
 ## Problem
 
@@ -204,7 +204,7 @@ docker compose --env-file .env up -d
 Add to `~/.bashrc` or `~/.zshrc` for ambient secret access:
 
 ```bash
-# Load Automaker secrets into shell
+# Load protoMaker secrets into shell
 alias automaker-env='eval $(infisical export --env=dev --format=shell --projectId=<id>)'
 ```
 
@@ -269,8 +269,8 @@ If your team uses 1Password Teams/Business (~$8/user/month):
 
 ```bash
 # Template file (.env.tpl)
-ANTHROPIC_API_KEY=op://Automaker/Anthropic/api-key
-DISCORD_TOKEN=op://Automaker/Discord Bot/token
+ANTHROPIC_API_KEY=op://protoMaker/Anthropic/api-key
+DISCORD_TOKEN=op://protoMaker/Discord Bot/token
 
 # Inject
 op run --env-file=.env.tpl -- node mcp-server/dist/index.js

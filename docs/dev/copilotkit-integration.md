@@ -1,6 +1,6 @@
 # CopilotKit Integration
 
-How the CopilotKit sidebar provides AI chat, LangGraph workflows, and HITL approval flows in the Automaker UI.
+How the CopilotKit sidebar provides AI chat, LangGraph workflows, and HITL approval flows in the protoMaker UI.
 
 ## Architecture
 
@@ -77,7 +77,7 @@ The route is guarded behind `process.env.ANTHROPIC_API_KEY`. When the key is not
 
 ### Server Actions
 
-Server actions let the chat assistant interact with the Automaker board:
+Server actions let the chat assistant interact with the protoMaker board:
 
 | Action            | Description                                  |
 | ----------------- | -------------------------------------------- |
@@ -106,11 +106,11 @@ This ensures the app works in CI and environments without an API key.
 
 ### Sidebar
 
-`CopilotSidebarWrapper` renders the CopilotKit sidebar on the right side. The left sidebar is Automaker's navigation. Configuration:
+`CopilotSidebarWrapper` renders the CopilotKit sidebar on the right side. The left sidebar is protoMaker's navigation. Configuration:
 
 - `defaultOpen={false}` — starts collapsed
 - `shortcut="\\"` — toggle with backslash key
-- Theme mapped from Automaker CSS variables via `getCopilotKitThemeStyles()`
+- Theme mapped from protoMaker CSS variables via `getCopilotKitThemeStyles()`
 
 ### Context Injection
 
@@ -186,7 +186,7 @@ If `editedContent` is provided:
 
 ## Theming
 
-CopilotKit CSS variables are mapped from Automaker's theme in `theme-bridge.tsx`:
+CopilotKit CSS variables are mapped from protoMaker's theme in `theme-bridge.tsx`:
 
 ```typescript
 {
@@ -200,7 +200,7 @@ CopilotKit CSS variables are mapped from Automaker's theme in `theme-bridge.tsx`
 }
 ```
 
-This ensures the sidebar matches all Automaker themes (dark, light, custom).
+This ensures the sidebar matches all protoMaker themes (dark, light, custom).
 
 ## Model Selection
 

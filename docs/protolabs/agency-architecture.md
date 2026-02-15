@@ -47,12 +47,12 @@ graph TB
         MILESTONES --> LINEAR_POST["Post to Linear<br/>Project + Issues"]
         LINEAR_POST --> HITL_CHECK{HITL<br/>Scope Review?}
         HITL_CHECK -->|adjust| MILESTONES
-        HITL_CHECK -->|proceed| BOARD_CREATE["Create Features<br/>on Automaker Board"]
+        HITL_CHECK -->|proceed| BOARD_CREATE["Create Features<br/>on protoMaker Board"]
     end
 
     subgraph SYNC["6. SYSTEM OF RECORD"]
         LINEAR_SOT["Linear<br/>(Source of Truth)"]
-        AUTOMAKER_BOARD["Automaker Board<br/>(Execution)"]
+        AUTOMAKER_BOARD["protoMaker Board<br/>(Execution)"]
         GITHUB_REPO["GitHub<br/>(Code + PRs)"]
         LINEAR_SOT <-->|Bidirectional Sync| AUTOMAKER_BOARD
         AUTOMAKER_BOARD <-->|Branches + PRs| GITHUB_REPO
@@ -169,7 +169,7 @@ Approval gate (Josh or preApproved)
   ↓
 ProjM: deep research → milestones → phases
   ↓
-Linear project + Automaker board features
+Linear project + protoMaker board features
   ↓
 Auto-mode picks features in dependency order
   ↓
@@ -244,13 +244,13 @@ Ava is the hub. All strategic decisions flow through her. Agents communicate via
 ### Scaling Strategy
 
 - **Vertical**: Staging hardware handles more concurrent agents
-- **Horizontal**: Multiple Automaker instances via [Hivemind](../architecture/instance-state.md#hivemind-multi-instance-mesh) — domain-scoped mesh where each instance owns a slice of the codebase
+- **Horizontal**: Multiple protoMaker instances via [Hivemind](../architecture/instance-state.md#hivemind-multi-instance-mesh) — domain-scoped mesh where each instance owns a slice of the codebase
 - **Efficiency**: Model routing (Haiku for mechanical work, Opus only for architectural decisions)
 - **Automation**: Every manual step today becomes automated tomorrow — this is the self-improvement loop
 
 ### Instance State Model
 
-Automaker follows a **fresh state per instance** design. Operational state (board, task queue, project plans) is instance-local and ephemeral. Knowledge (agent memory, context files, skills, project spec) is shared via git.
+protoMaker follows a **fresh state per instance** design. Operational state (board, task queue, project plans) is instance-local and ephemeral. Knowledge (agent memory, context files, skills, project spec) is shared via git.
 
 This split is foundational for multi-instance scaling:
 

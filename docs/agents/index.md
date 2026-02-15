@@ -1,10 +1,10 @@
 # Agent System Documentation
 
-Welcome to Automaker's agent system documentation. This guide helps contributors understand how agents work, how to create new agents, and how the system coordinates autonomous AI teammates.
+protoMaker's agent system. Specialized AI agents claim features, work in isolated worktrees, and ship PRs — autonomously.
 
 ## Quick Start
 
-**New to Automaker's agents?** Start here:
+**New to protoMaker's agents?** Start here:
 
 1. Read [Architecture Overview](./architecture.md) for the big picture
 2. Read [Context System](./context-system.md) to understand how agents get project knowledge
@@ -26,7 +26,7 @@ Covers:
 - Agent types (Interactive, Feature Execution, Authority)
 - Context system overview
 
-**Read this if:** You're new to Automaker or want to understand how agents work.
+**Read this if:** You're new to protoMaker or want to understand how agents work.
 
 ### Agent Development
 
@@ -97,7 +97,7 @@ Covers:
 Covers:
 
 - What is MCP?
-- Automaker's MCP architecture
+- protoMaker's MCP architecture
 - MCP → Agent execution flow
 - Available MCP tools (32 tools documented)
 - Creating new MCP tools
@@ -201,7 +201,7 @@ Covers:
 
 ### MCP Tools
 
-**Programmatic API for controlling Automaker**
+**Programmatic API for controlling protoMaker**
 
 - 32 tools for features, agents, auto-mode, context, etc.
 - Used by the Chief of Staff agent and external integrations

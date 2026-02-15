@@ -1,6 +1,6 @@
 # Backup & Recovery
 
-This guide covers backup and recovery procedures for Automaker data.
+This guide covers backup and recovery procedures for protoMaker data.
 
 ## What to Back Up
 
@@ -283,7 +283,7 @@ tar tzf automaker-full-20260205.tar.gz > /dev/null && echo "OK" || echo "CORRUPT
 
 1. Set up new server
 2. Install Docker and Docker Compose
-3. Clone Automaker repository
+3. Clone protoMaker repository
 4. Transfer backup file from offsite storage
 5. Restore volumes (see "Restore to New Installation")
 6. Update environment variables (`.env`)

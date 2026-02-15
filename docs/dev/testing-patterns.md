@@ -1,6 +1,6 @@
 # Testing Patterns
 
-Patterns and anti-patterns for writing tests in the Automaker codebase.
+Patterns and anti-patterns for writing tests in the protoMaker codebase.
 
 ## Event-Driven Testing
 

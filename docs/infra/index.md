@@ -1,6 +1,6 @@
 # Infrastructure Documentation
 
-This directory contains comprehensive documentation for Automaker's infrastructure, deployment, and DevOps processes.
+Deploy protoMaker. Docker, systemd, staging — pick what fits your stack.
 
 ## Quick Links
 
@@ -22,7 +22,7 @@ This directory contains comprehensive documentation for Automaker's infrastructu
 
 ## Infrastructure Overview
 
-Automaker uses a containerized architecture with two main services:
+protoMaker uses a containerized architecture with two main services:
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -74,8 +74,8 @@ docker compose up -d
 ### 4. Production (systemd)
 
 ```bash
-sudo systemctl enable automaker
-sudo systemctl start automaker
+sudo systemctl enable protomaker
+sudo systemctl start protomaker
 ```
 
 ## Key Files
@@ -118,7 +118,7 @@ sudo systemctl start automaker
 
 | File                 | Purpose                     |
 | -------------------- | --------------------------- |
-| `automaker.service`  | systemd unit file           |
+| `protomaker.service` | systemd unit file           |
 | `apps/ui/nginx.conf` | Reverse proxy configuration |
 
 ## Ports
@@ -134,7 +134,7 @@ See [deployment.md](./deployment.md) for a complete list of environment variable
 
 ## Using the /devops Skill
 
-Automaker includes a `/devops` skill for managing infrastructure from Claude Code:
+protoMaker includes a `/devops` skill for managing infrastructure from Claude Code:
 
 ```
 /devops           # Show container status

@@ -1,6 +1,6 @@
 # Issue Management & Triage
 
-Automaker includes an automated failure-to-issue pipeline that creates GitHub issues when features fail permanently, triages them by priority, and notifies the team via Discord.
+protoMaker includes an automated failure-to-issue pipeline that creates GitHub issues when features fail permanently, triages them by priority, and notifies the team via Discord.
 
 ## Architecture
 
@@ -116,6 +116,6 @@ interface Feature {
 
 Not yet implemented:
 
-- GitHub `issues.opened` webhook -> create Automaker feature
-- Linear issue create -> create Automaker feature
+- GitHub `issues.opened` webhook -> create protoMaker feature
+- Linear issue create -> create protoMaker feature
 - Feature status changes -> update linked issues

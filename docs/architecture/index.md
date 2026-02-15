@@ -1,6 +1,6 @@
 # Architecture
 
-System architecture documentation for Automaker's autonomous development pipeline.
+System architecture documentation for protoMaker's autonomous development pipeline.
 
 ## Pages
 

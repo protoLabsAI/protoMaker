@@ -1,6 +1,6 @@
 # UI Component Architecture
 
-This document maps Automaker's UI component structure for developers working on the frontend. All UI code lives in `apps/ui/src/`.
+This document maps protoMaker's UI component structure for developers working on the frontend. All UI code lives in `apps/ui/src/`.
 
 ## Table of Contents
 
@@ -290,7 +290,7 @@ Idea management and prompt organization.
 
 ## Store Architecture
 
-Automaker uses [Zustand](https://zustand-demo.pmnd.rs/) for state management with localStorage persistence.
+protoMaker uses [Zustand](https://zustand-demo.pmnd.rs/) for state management with localStorage persistence.
 
 ### App Store (`store/app-store.ts`)
 
@@ -419,7 +419,7 @@ useEffect(() => {
 
 ## Routing
 
-Automaker uses [TanStack Router](https://tanstack.com/router) with file-based routing.
+protoMaker uses [TanStack Router](https://tanstack.com/router) with file-based routing.
 
 ### Route Structure
 

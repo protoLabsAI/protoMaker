@@ -521,7 +521,7 @@ Create reusable actions:
 
 ---
 
-## Integration with Automaker
+## Integration with protoMaker
 
 ### Feature Development
 
@@ -573,7 +573,7 @@ npm run setup-ci -- /path/to/project
 
 ## Reference
 
-- **Automaker Workflows**: `.github/workflows/` in automaker repo
+- **protoMaker Workflows**: `.github/workflows/` in automaker repo
 - **Branch Protection**: `scripts/infra/rulesets/main.json`
 - **GitHub Actions Docs**: https://docs.github.com/actions
 - **GitHub Rulesets API**: https://docs.github.com/rest/repos/rules

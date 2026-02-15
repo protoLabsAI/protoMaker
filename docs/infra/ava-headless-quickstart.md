@@ -5,13 +5,13 @@ Setup guide for running the autonomous monitoring loop on any environment (local
 ## Prerequisites
 
 1. **Claude Code CLI** installed and authenticated
-2. **Automaker plugin** installed: `claude plugin install automaker`
+2. **protoMaker plugin** installed: `claude plugin install automaker`
 3. **Environment variables** available in shell:
-   - `AUTOMAKER_API_KEY` — authenticates MCP plugin to Automaker server
+   - `AUTOMAKER_API_KEY` — authenticates MCP plugin to protoMaker server
    - `DISCORD_BOT_TOKEN` — Discord bot auth (for status updates)
    - `ANTHROPIC_API_KEY` — Claude API key (or CLI auth)
 
-4. **Automaker dev server** running on `localhost:3008`
+4. **protoMaker dev server** running on `localhost:3008`
 5. **GitHub CLI** (`gh`) authenticated with repo access
 
 ## Quick Start
@@ -57,7 +57,7 @@ export ANTHROPIC_API_KEY="<your-key>"
 export DISCORD_BOT_TOKEN="<your-token>"
 ```
 
-### 3. Install the Automaker plugin
+### 3. Install the protoMaker plugin
 
 ```bash
 cd /path/to/automaker
@@ -80,7 +80,7 @@ Create `/etc/systemd/system/ava-monitor.service`:
 
 ```ini
 [Unit]
-Description=Automaker Headless Monitor
+Description=protoMaker Headless Monitor
 After=network.target
 
 [Service]
@@ -114,7 +114,7 @@ sudo journalctl -u ava-monitor -f  # Watch logs
 
 **Option C: Docker sidecar**
 
-If Automaker runs in Docker, add to `docker-compose.yml`:
+If protoMaker runs in Docker, add to `docker-compose.yml`:
 
 ```yaml
 ava-monitor:
@@ -171,7 +171,7 @@ Auto-cleaned to last 100 log files.
 
 **"Connection refused to localhost:3008"**
 
-- Automaker server not running. Start it first.
+- protoMaker server not running. Start it first.
 
 **Pass runs but takes no action**
 

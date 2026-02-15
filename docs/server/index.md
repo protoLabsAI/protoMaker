@@ -1,6 +1,6 @@
 # Server Reference
 
-Technical reference for the Automaker backend (`apps/server/`).
+Technical reference for the protoMaker backend (`apps/server/`).
 
 ## Architecture
 
