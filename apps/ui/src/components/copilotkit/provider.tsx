@@ -59,7 +59,7 @@ export function CopilotKitProvider({ children }: { children: ReactNode }) {
 
   return (
     <CopilotAvailableContext.Provider value={true}>
-      <CopilotKit runtimeUrl="/api/copilotkit">
+      <CopilotKit runtimeUrl="/api/copilotkit" agent="default">
         <CopilotKitHooks>{children}</CopilotKitHooks>
       </CopilotKit>
     </CopilotAvailableContext.Provider>

@@ -2,15 +2,13 @@
  * CopilotKit routes - Express endpoint for CopilotKit runtime
  *
  * Provides the /api/copilotkit endpoint that the CopilotKit React provider connects to.
- * Uses AnthropicAdapter with the existing ANTHROPIC_API_KEY.
- * Registers server-side actions for board operations.
+ * Registers a BuiltInAgent (Ava) with board-operation tools so the AG-UI protocol
+ * can find the "default" agent on /api/copilotkit/info.
  */
 
-import {
-  CopilotRuntime,
-  AnthropicAdapter,
-  copilotRuntimeNodeExpressEndpoint,
-} from '@copilotkit/runtime';
+import { CopilotRuntime, copilotRuntimeNodeExpressEndpoint } from '@copilotkit/runtime';
+import { BuiltInAgent, defineTool } from '@copilotkitnext/agent';
+import { z } from 'zod';
 import { createLogger } from '@automaker/utils';
 import type { FeatureLoader } from '../../services/feature-loader.js';
 import type { AutoModeService } from '../../services/auto-mode-service.js';
@@ -22,29 +20,23 @@ interface CopilotKitDependencies {
   autoModeService: AutoModeService;
 }
 
-function createServerActions(deps: CopilotKitDependencies) {
+function createAvaTools(deps: CopilotKitDependencies) {
   const { featureLoader, autoModeService } = deps;
 
   return [
-    {
+    defineTool({
       name: 'listFeatures',
       description: 'List all features on the board, optionally filtered by status',
-      parameters: [
-        {
-          name: 'projectPath',
-          type: 'string' as const,
-          description: 'Path to the project',
-          required: true,
-        },
-        {
-          name: 'status',
-          type: 'string' as const,
-          description:
-            'Filter by status: backlog, in_progress, review, blocked, done, verified. Leave empty for all.',
-          required: false,
-        },
-      ],
-      handler: async (args: Record<string, any>) => {
+      parameters: z.object({
+        projectPath: z.string().describe('Path to the project'),
+        status: z
+          .string()
+          .optional()
+          .describe(
+            'Filter by status: backlog, in_progress, review, blocked, done, verified. Leave empty for all.'
+          ),
+      }),
+      execute: async (args) => {
         const features = await featureLoader.getAll(args.projectPath);
         const filtered = args.status ? features.filter((f) => f.status === args.status) : features;
         return filtered.map((f) => ({
@@ -58,37 +50,23 @@ function createServerActions(deps: CopilotKitDependencies) {
           prUrl: f.prUrl,
         }));
       },
-    },
-    {
+    }),
+
+    defineTool({
       name: 'createFeature',
       description: 'Create a new feature on the board',
-      parameters: [
-        {
-          name: 'projectPath',
-          type: 'string' as const,
-          description: 'Path to the project',
-          required: true,
-        },
-        {
-          name: 'title',
-          type: 'string' as const,
-          description: 'Feature title',
-          required: true,
-        },
-        {
-          name: 'description',
-          type: 'string' as const,
-          description: 'Feature description with requirements and acceptance criteria',
-          required: true,
-        },
-        {
-          name: 'complexity',
-          type: 'string' as const,
-          description: 'Feature complexity: small, medium, large, or architectural',
-          required: false,
-        },
-      ],
-      handler: async (args: Record<string, any>) => {
+      parameters: z.object({
+        projectPath: z.string().describe('Path to the project'),
+        title: z.string().describe('Feature title'),
+        description: z
+          .string()
+          .describe('Feature description with requirements and acceptance criteria'),
+        complexity: z
+          .enum(['small', 'medium', 'large', 'architectural'])
+          .optional()
+          .describe('Feature complexity'),
+      }),
+      execute: async (args) => {
         const feature = await featureLoader.create(args.projectPath, {
           title: args.title,
           description: args.description,
@@ -97,49 +75,33 @@ function createServerActions(deps: CopilotKitDependencies) {
         });
         return { id: feature.id, title: feature.title, status: feature.status };
       },
-    },
-    {
+    }),
+
+    defineTool({
       name: 'moveFeature',
       description: 'Move a feature to a new status',
-      parameters: [
-        {
-          name: 'projectPath',
-          type: 'string' as const,
-          description: 'Path to the project',
-          required: true,
-        },
-        {
-          name: 'featureId',
-          type: 'string' as const,
-          description: 'ID of the feature to move',
-          required: true,
-        },
-        {
-          name: 'status',
-          type: 'string' as const,
-          description: 'New status: backlog, in_progress, review, blocked, done',
-          required: true,
-        },
-      ],
-      handler: async (args: Record<string, any>) => {
+      parameters: z.object({
+        projectPath: z.string().describe('Path to the project'),
+        featureId: z.string().describe('ID of the feature to move'),
+        status: z
+          .enum(['backlog', 'in_progress', 'review', 'blocked', 'done'])
+          .describe('New status'),
+      }),
+      execute: async (args) => {
         const updated = await featureLoader.update(args.projectPath, args.featureId, {
           status: args.status,
         });
         return { id: updated.id, title: updated.title, status: updated.status };
       },
-    },
-    {
+    }),
+
+    defineTool({
       name: 'getBoardSummary',
       description: 'Get a summary of the board state including feature counts by status',
-      parameters: [
-        {
-          name: 'projectPath',
-          type: 'string' as const,
-          description: 'Path to the project',
-          required: true,
-        },
-      ],
-      handler: async (args: Record<string, any>) => {
+      parameters: z.object({
+        projectPath: z.string().describe('Path to the project'),
+      }),
+      execute: async (args) => {
         const features = await featureLoader.getAll(args.projectPath);
         const counts: Record<string, number> = {};
         for (const f of features) {
@@ -156,61 +118,64 @@ function createServerActions(deps: CopilotKitDependencies) {
           autoModeRunning: projectStatus.isAutoLoopRunning,
         };
       },
-    },
-    {
+    }),
+
+    defineTool({
       name: 'startAutoMode',
       description: 'Start auto-mode for autonomous feature processing',
-      parameters: [
-        {
-          name: 'projectPath',
-          type: 'string' as const,
-          description: 'Path to the project',
-          required: true,
-        },
-      ],
-      handler: async (args: Record<string, any>) => {
+      parameters: z.object({
+        projectPath: z.string().describe('Path to the project'),
+      }),
+      execute: async (args) => {
         const maxConcurrency = await autoModeService.startAutoLoopForProject(
           args.projectPath,
           null
         );
         return { started: true, maxConcurrency };
       },
-    },
-    {
+    }),
+
+    defineTool({
       name: 'stopAutoMode',
       description: 'Stop auto-mode for a project',
-      parameters: [
-        {
-          name: 'projectPath',
-          type: 'string' as const,
-          description: 'Path to the project',
-          required: true,
-        },
-      ],
-      handler: async (args: Record<string, any>) => {
+      parameters: z.object({
+        projectPath: z.string().describe('Path to the project'),
+      }),
+      execute: async (args) => {
         await autoModeService.stopAutoLoopForProject(args.projectPath);
         return { stopped: true };
       },
-    },
+    }),
   ];
 }
 
 export function createCopilotKitEndpoint(deps: CopilotKitDependencies) {
-  const actions = createServerActions(deps);
+  const tools = createAvaTools(deps);
 
-  const runtime = new CopilotRuntime({
-    actions,
+  const avaAgent = new BuiltInAgent({
+    model: 'anthropic/claude-sonnet-4.5',
+    prompt: [
+      'You are Ava, the AI assistant for protoLabs Studio.',
+      'You help users manage their development board, create and track features, control auto-mode, and understand project status.',
+      'Use your tools to get real data before answering. Keep responses concise and action-oriented.',
+      'When you perform an action, confirm what you did.',
+    ].join(' '),
+    // ToolDefinition<ZodObject<…>> ⊄ ToolDefinition<ZodTypeAny> due to generic variance.
+    // Cast is safe — each tool already satisfies the ToolDefinition contract.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    tools: tools as any,
+    maxSteps: 5,
   });
 
-  const serviceAdapter = new AnthropicAdapter({
-    model: 'claude-sonnet-4-5-20250929',
-  });
+  // CopilotKit v1.51 constructor types have a MaybePromise intersection bug
+  // that rejects plain objects. The cast is safe — runtime accepts Record<string, Agent>.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const runtime = new CopilotRuntime({ agents: { default: avaAgent } as any });
 
-  logger.info(`CopilotKit runtime initialized with ${actions.length} server actions`);
+  logger.info(`CopilotKit runtime initialized with Ava agent (${tools.length} tools)`);
 
   return copilotRuntimeNodeExpressEndpoint({
     runtime,
-    serviceAdapter,
     endpoint: '/api/copilotkit',
   });
 }
