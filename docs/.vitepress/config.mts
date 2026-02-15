@@ -62,15 +62,12 @@ export default defineConfig({
     nav: [
       { text: 'Home', link: '/' },
       { text: 'Get Started', link: '/getting-started/' },
-      { text: 'Agents', link: '/agents/' },
-      { text: 'Infra', link: '/infra/' },
+      { text: 'Guides', link: '/agents/' },
+      { text: 'Self-Hosting', link: '/infra/' },
       {
         text: 'More',
         items: [
-          { text: 'Integrations', link: '/integrations/' },
-          { text: 'Server', link: '/server/' },
-          { text: 'Authority', link: '/authority/' },
-          { text: 'Development', link: '/dev/' },
+          { text: 'Reference', link: '/dev/' },
           { text: 'ProtoLabs', link: '/protolabs/' },
         ],
       },
@@ -88,11 +85,13 @@ export default defineConfig({
           text: 'Agent System',
           items: generateSidebar('agents', '/agents'),
         },
-      ],
-      '/infra/': [
         {
-          text: 'Infrastructure',
-          items: generateSidebar('infra', '/infra'),
+          text: 'Integrations',
+          items: generateSidebar('integrations', '/integrations'),
+        },
+        {
+          text: 'Authority',
+          items: generateSidebar('authority', '/authority'),
         },
       ],
       '/integrations/': [
@@ -101,22 +100,32 @@ export default defineConfig({
           items: generateSidebar('integrations', '/integrations'),
         },
       ],
-      '/server/': [
-        {
-          text: 'Server Reference',
-          items: generateSidebar('server', '/server'),
-        },
-      ],
       '/authority/': [
         {
           text: 'Authority System',
           items: generateSidebar('authority', '/authority'),
         },
       ],
+      '/infra/': [
+        {
+          text: 'Infrastructure',
+          items: generateSidebar('infra', '/infra'),
+        },
+      ],
       '/dev/': [
         {
           text: 'Development',
           items: generateSidebar('dev', '/dev'),
+        },
+        {
+          text: 'Server Reference',
+          items: generateSidebar('server', '/server'),
+        },
+      ],
+      '/server/': [
+        {
+          text: 'Server Reference',
+          items: generateSidebar('server', '/server'),
         },
       ],
       '/protolabs/': [
@@ -127,17 +136,17 @@ export default defineConfig({
       ],
     },
 
-    socialLinks: [{ icon: 'github', link: 'https://github.com/proto-labs-ai/automaker' }],
+    socialLinks: [{ icon: 'github', link: 'https://github.com/proto-labs-ai/protolabs-studio' }],
 
     editLink: {
-      pattern: 'https://github.com/proto-labs-ai/automaker/edit/main/docs/:path',
+      pattern: 'https://github.com/proto-labs-ai/protolabs-studio/edit/main/docs/:path',
       text: 'Edit this page on GitHub',
     },
 
     footer: {
       message:
-        'Powered by <a href="https://github.com/proto-labs-ai/automaker">Automaker</a> — Built with VitePress',
-      copyright: 'protoLabs AI',
+        'Built by <a href="https://protolabs.studio">protoLabs</a> — Source available on GitHub',
+      copyright: '© 2024-2026 protoLabs AI',
     },
   },
 });

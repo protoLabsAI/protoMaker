@@ -1,6 +1,6 @@
 # Documentation Site
 
-Automaker uses [VitePress](https://vitepress.dev) to generate a documentation site from the `docs/` directory.
+protoMaker uses [VitePress](https://vitepress.dev) to generate a documentation site from the `docs/` directory.
 
 ## Quick Start
 

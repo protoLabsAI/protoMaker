@@ -2,7 +2,7 @@
 
 ## Situation
 
-Automaker has a strong execution engine: auto-mode processes features through dependency-ordered agent implementation, PR pipelines merge code with CI checks and CodeRabbit review, and Linear sync keeps the strategic layer informed. Over 40 sessions and 400+ PRs, we've proven the execution loop works.
+protoMaker has a strong execution engine: auto-mode processes features through dependency-ordered agent implementation, PR pipelines merge code with CI checks and CodeRabbit review, and Linear sync keeps the strategic layer informed. Over 40 sessions and 400+ PRs, we've proven the execution loop works.
 
 But the system has critical gaps at the **boundaries** — intake and reflection. Ideas arrive ad-hoc through Discord/Linear/GitHub with no automated triage. PRDs are created by one agent without cross-functional challenge. Ceremonies post to Discord but don't close the loop by creating improvement tickets. There's no mechanism for the system to recognize its own friction points and auto-generate the work to fix them.
 
@@ -48,7 +48,7 @@ Build a unified signal router that classifies incoming signals and routes them t
   - Auto-create a SPARC PRD draft using signal content as seed
   - Route to antagonistic review pipeline (Milestone 2)
 - When classified as `bug`:
-  - Fast-track: create Automaker feature directly, skip PRD
+  - Fast-track: create protoMaker feature directly, skip PRD
 - When classified as `improvement` or `ops`:
   - Create Bead for operational tracking
   - If complexity > small, trigger PRD pipeline
@@ -152,14 +152,14 @@ Build the cross-functional PRD review where Ava and Jon challenge each other.
 
 **Phase 4.3: Auto-Sync Projects to Linear**
 
-- When `create_project` is called on Automaker board:
+- When `create_project` is called on protoMaker board:
   - Auto-create corresponding Linear project
   - Attach PRD as Linear document
   - Create milestone sub-issues
-- When project status changes in Automaker:
+- When project status changes in protoMaker:
   - Sync to Linear project status
 - Files to modify: Integration service, project service
-- Acceptance criteria: `create_project` MCP call creates both Automaker project and Linear project
+- Acceptance criteria: `create_project` MCP call creates both protoMaker project and Linear project
 
 ### Milestone 5: Reflection Loop (High)
 
@@ -169,7 +169,7 @@ Build the cross-functional PRD review where Ava and Jon challenge each other.
   - After generating retro content, analyze it for actionable improvements
   - Use lightweight Claude query: "Given this retro, list 1-3 specific improvement tickets"
   - Auto-create Beads items for each improvement
-  - If improvement is code-related, also create Automaker feature
+  - If improvement is code-related, also create protoMaker feature
 - Emit `retro:improvements:created` event
 - Files to modify: `apps/server/src/services/ceremony-service.ts`
 - Acceptance criteria: Milestone retro generates 1-3 Beads improvement items
@@ -218,7 +218,7 @@ Build the cross-functional PRD review where Ava and Jon challenge each other.
 
 **Phase 6.2: Dashboard & Observability**
 
-- Add ProtoLabs pipeline view to Automaker UI:
+- Add ProtoLabs pipeline view to protoMaker UI:
   - Current signals being triaged
   - PRDs in review
   - Projects in execution

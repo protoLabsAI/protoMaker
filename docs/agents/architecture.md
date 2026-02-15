@@ -1,6 +1,6 @@
 # Agent Architecture Overview
 
-This document provides a high-level overview of Automaker's agent system architecture, execution model, and key concepts for contributors.
+This document provides a high-level overview of protoMaker's agent system architecture, execution model, and key concepts for contributors.
 
 ## Table of Contents
 
@@ -13,24 +13,24 @@ This document provides a high-level overview of Automaker's agent system archite
 
 ## Core Concepts
 
-Automaker's agent system is built on three key concepts from Claude's agent ecosystem:
+protoMaker's agent system is built on three key concepts from Claude's agent ecosystem:
 
 ### Skills
 
 **What:** Reusable CLI commands that invoke specific modes or workflows
-**Automaker Examples:** `/ava` (Chief of Staff), `/board` (Kanban management), `/headsdown` (autonomous work mode)
+**protoMaker Examples:** `/ava` (Chief of Staff), `/board` (Kanban management), `/headsdown` (autonomous work mode)
 **Claude Docs:** [Skills explained](https://claude.com/blog/skills-explained)
 
 ### Subagents
 
 **What:** Independent Claude instances with custom prompts, tool restrictions, and isolated contexts
-**Automaker Examples:** Task tool agents (explore, plan, deepdive, deepcode), feature execution agents
+**protoMaker Examples:** Task tool agents (explore, plan, deepdive, deepcode), feature execution agents
 **Claude Docs:** [Create custom subagents](https://code.claude.com/docs/en/sub-agents)
 
 ### Agent Teams
 
 **What:** Multiple independent agents that coordinate autonomously via shared task lists
-**Automaker Examples:** Authority agents (PM, ProjM, EM) working together on idea → PRD → decomposition → execution pipeline
+**protoMaker Examples:** Authority agents (PM, ProjM, EM) working together on idea → PRD → decomposition → execution pipeline
 **Claude Docs:** [Agent Teams](https://code.claude.com/docs/en/agent-teams)
 
 ## Architecture Layers
@@ -76,7 +76,7 @@ Automaker's agent system is built on three key concepts from Claude's agent ecos
 
 ### All Agents Use Native Claude SDK
 
-**Every agent in Automaker** (whether triggered by UI, CLI, or MCP) executes via the native Claude Agent SDK with full capabilities:
+**Every agent in protoMaker** (whether triggered by UI, CLI, or MCP) executes via the native Claude Agent SDK with full capabilities:
 
 - ✅ **Cost tracking** - Every agent execution tracks `total_cost_usd`
 - ✅ **File checkpointing** - Safe rollback on errors without git operations

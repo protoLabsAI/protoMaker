@@ -1,6 +1,6 @@
 # Getting Started
 
-Automaker is an autonomous AI development studio. It provides a Kanban-based workflow where AI agents implement features in isolated git worktrees — plan, delegate, build, review, and ship, all automated.
+protoMaker is an AI development studio. You describe features. AI agents build them in isolated git branches and create PRs. You review and merge.
 
 ## How It Works
 
@@ -47,4 +47,4 @@ Every feature runs in an isolated [git worktree](https://git-scm.com/docs/git-wo
 - **[Installation (Fedora/RHEL)](./installation-fedora)** — Install the desktop app on Linux
 - **[Deployment Options](/infra/deployment)** — Docker, systemd, and staging setups
 - **[Agent System](/agents/)** — Deep dive into how agents work
-- **[MCP Plugin](/integrations/claude-plugin)** — Control Automaker from Claude Code CLI
+- **[MCP Plugin](/integrations/claude-plugin)** — Control protoMaker from Claude Code CLI

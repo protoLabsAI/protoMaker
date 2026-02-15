@@ -1,12 +1,12 @@
 # Integrations
 
-Automaker integrates with external tools and services to extend its capabilities.
+Connect protoMaker to your workflow. Discord, Linear, GitHub, Claude Code CLI.
 
 ## Available Integrations
 
 ### [Claude Code Plugin](./claude-plugin)
 
-Control Automaker from the Claude Code CLI via MCP tools. Create features, start agents, manage the board, and orchestrate projects — all from your terminal.
+Control protoMaker from the Claude Code CLI via MCP tools. Create features, start agents, manage the board, and orchestrate projects — all from your terminal.
 
 ### [Discord](./discord)
 
@@ -18,11 +18,11 @@ Unified API key and provider profile system. Manage multiple AI providers, switc
 
 ### [Linear Sync](./linear-sync)
 
-Bidirectional sync between Linear and Automaker. Approved Linear issues flow into the AI agent pipeline, status changes sync back, and Automaker appears as an agent in Linear workspaces via OAuth.
+Bidirectional sync between Linear and protoMaker. Approved Linear issues flow into the AI agent pipeline, status changes sync back, and protoMaker appears as an agent in Linear workspaces via OAuth.
 
 ## External Tools
 
-Automaker also works with:
+protoMaker also works with:
 
 - **[GitHub Actions](/infra/ci-cd)** — CI/CD pipelines for testing and deployment
 - **[Graphite](https://graphite.dev)** — Stack-aware PR management for epic workflows

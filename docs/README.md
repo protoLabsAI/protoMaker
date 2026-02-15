@@ -12,7 +12,7 @@
 
 | Document                                                               | Description                      |
 | ---------------------------------------------------------------------- | -------------------------------- |
-| [Overview](./getting-started/index.md)                                 | What is Automaker, key concepts  |
+| [Overview](./getting-started/index.md)                                 | What is protoMaker, key concepts  |
 | [Installation (Fedora/RHEL)](./getting-started/installation-fedora.md) | Install the desktop app on Linux |
 
 ## Agent System

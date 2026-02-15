@@ -1,6 +1,6 @@
 # Monitoring & Observability
 
-This guide covers health checks, logging, and observability for Automaker.
+This guide covers health checks, logging, and observability for protoMaker.
 
 ## Health Checks
 

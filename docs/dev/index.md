@@ -1,6 +1,6 @@
 # Development
 
-Guides for contributing to and extending Automaker.
+Extend protoMaker. Architecture, packages, code standards, and how to contribute.
 
 ## Architecture
 

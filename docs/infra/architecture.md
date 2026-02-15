@@ -1,7 +1,7 @@
 # System Architecture
 
 This document covers both the single-instance architecture (what runs on one machine)
-and the multi-instance topology (how multiple Automaker instances coordinate as
+and the multi-instance topology (how multiple protoMaker instances coordinate as
 autonomous dev teams via Linear and Discord).
 
 ## High-Level Architecture
@@ -361,7 +361,7 @@ Browser                 nginx (UI)              Express (Server)
 
 ## Multi-Instance Topology
 
-Automaker is designed to run as multiple independent instances, each acting as an
+protoMaker is designed to run as multiple independent instances, each acting as an
 autonomous development team. Coordination happens through Linear (project management)
 and Discord (communication), not through direct instance-to-instance communication.
 
@@ -388,7 +388,7 @@ and Discord (communication), not through direct instance-to-instance communicati
 │              │         Execution Layer             │                       │
 │              ▼                                    ▼                       │
 │  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐       │
-│  │  Automaker        │  │  Automaker        │  │  Automaker        │       │
+│  │  protoMaker        │  │  protoMaker        │  │  protoMaker        │       │
 │  │  Instance A       │  │  Instance B       │  │  Instance N       │       │
 │  │  (Team Alpha)     │  │  (Team Beta)      │  │  (Team ...)       │       │
 │  │                   │  │                   │  │                   │       │
@@ -411,7 +411,7 @@ AI Agent (PE)                    Does the work, produces code + output
     │
     │ completion status, errors, PR links
     ▼
-Automaker Board (Team Lead)      Local Kanban tracks features, manages agents
+protoMaker Board (Team Lead)      Local Kanban tracks features, manages agents
     │
     │ milestone progress, blockers, key decisions
     ▼
@@ -422,7 +422,7 @@ Linear Issues (Project Manager)  Cross-team visibility, priority, scheduling
 Linear Projects (PM / Owner)    Strategic view, resource allocation
 ```
 
-**What stays local (Automaker instance):**
+**What stays local (protoMaker instance):**
 
 - Agent conversation logs and raw output
 - Individual feature status transitions
@@ -450,12 +450,12 @@ Linear Projects (PM / Owner)    Strategic view, resource allocation
 | Project Owner (Human)    | Linear + Discord   | Strategic direction, final approvals      |
 | PM                       | Linear projects    | What to build, why, priorities            |
 | Project Manager          | Linear issues      | When, how, milestone tracking             |
-| EM (Engineering Manager) | Automaker instance | Who does what, capacity, agent assignment |
-| PE (Product Engineer)    | Automaker agent    | Implementation, code, tests, PRs          |
+| EM (Engineering Manager) | protoMaker instance | Who does what, capacity, agent assignment |
+| PE (Product Engineer)    | protoMaker agent    | Implementation, code, tests, PRs          |
 
 ### Each Instance is Autonomous
 
-Each Automaker instance:
+Each protoMaker instance:
 
 - Has its own Kanban board with features and backlog
 - Runs its own AI agents in isolated git worktrees

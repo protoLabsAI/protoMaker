@@ -15,12 +15,12 @@ The `/setuplab` command is the entry point for onboarding any repository to Prot
              │            │            │
     ┌────────▼──────┐ ┌──▼───────┐ ┌──▼──────────┐
     │ MCP Server    │ │ Discord  │ │ Existing    │
-    │ (6 new tools) │ │ MCP      │ │ Automaker   │
+    │ (6 new tools) │ │ MCP      │ │ protoMaker   │
     │               │ │ Plugin   │ │ MCP Tools   │
     └────────┬──────┘ └──────────┘ └─────────────┘
              │
     ┌────────▼──────────────────────────────────┐
-    │              Automaker Server              │
+    │              protoMaker Server              │
     │                                            │
     │  POST /api/setup/research     → Phase 1   │
     │  POST /api/setup/gap-analysis → Phase 2   │

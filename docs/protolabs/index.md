@@ -1,6 +1,6 @@
 # ProtoLabs
 
-ProtoLabs is Automaker's project onboarding and alignment system. It scans any repository, compares it against a defined quality standard, and proposes features to bring the project up to spec — all automated through the `/setuplab` command.
+protoLabs methodology. Scan any repo, analyze gaps, propose alignment, and execute — all automated.
 
 ## How It Works
 

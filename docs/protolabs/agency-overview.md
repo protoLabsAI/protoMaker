@@ -50,7 +50,7 @@ ProtoLabs operates across three systems that each own a distinct layer:
 - Clients see progress here
 - The "exec team" view
 
-### Automaker Board — Tactical Layer
+### protoMaker Board — Tactical Layer
 
 - Features, agents, branches, PRs, task execution
 - Where code actually gets written
@@ -64,7 +64,7 @@ ProtoLabs operates across three systems that each own a distinct layer:
 - Josh ↔ Ava primary channel
 - The "office" view
 
-**Rule: Never mix the layers.** Linear doesn't track individual PRs. Automaker doesn't own roadmap vision. Discord doesn't store state.
+**Rule: Never mix the layers.** Linear doesn't track individual PRs. protoMaker doesn't own roadmap vision. Discord doesn't store state.
 
 ## The Flow
 
@@ -156,5 +156,5 @@ The system is both the product and the factory that makes the product. Every pro
 - **Not a copilot** — it's a team. Multiple specialized agents with defined roles and communication protocols.
 - **Not one-shot** — it's a loop. Continuous improvement feeds learning back into planning.
 - **Not just code** — it's organizational. Planning, review, execution, reflection, knowledge management.
-- **Not a black box** — it's observable. Linear for strategy, Automaker board for tactics, Discord for communication. Full audit trail.
+- **Not a black box** — it's observable. Linear for strategy, protoMaker board for tactics, Discord for communication. Full audit trail.
 - **Not static** — it's self-improving. The system upgrades itself through the same pipeline it uses for customer work.

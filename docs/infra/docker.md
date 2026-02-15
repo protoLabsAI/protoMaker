@@ -1,6 +1,6 @@
 # Docker Architecture
 
-Automaker uses a multi-stage Dockerfile to build both server and UI images from a single file.
+protoMaker uses a multi-stage Dockerfile to build both server and UI images from a single file.
 
 ## Files
 

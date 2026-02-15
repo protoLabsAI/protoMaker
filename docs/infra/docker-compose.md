@@ -1,6 +1,6 @@
 # Docker Compose Configuration
 
-Automaker provides multiple Docker Compose configurations for different use cases.
+protoMaker provides multiple Docker Compose configurations for different use cases.
 
 ## Compose Files
 
@@ -14,7 +14,7 @@ Automaker provides multiple Docker Compose configurations for different use case
 
 ## Production Configuration
 
-`docker-compose.yml` runs Automaker in complete isolation:
+`docker-compose.yml` runs protoMaker in complete isolation:
 
 ```yaml
 services:
@@ -213,7 +213,7 @@ services:
 
 | Variable            | Description                                                    |
 | ------------------- | -------------------------------------------------------------- |
-| `AUTOMAKER_API_KEY` | API key for Automaker authentication (auto-generated if blank) |
+| `AUTOMAKER_API_KEY` | API key for protoMaker authentication (auto-generated if blank) |
 | `CURSOR_AUTH_TOKEN` | Cursor CLI OAuth token                                         |
 | `GH_TOKEN`          | GitHub CLI token for git operations                            |
 
