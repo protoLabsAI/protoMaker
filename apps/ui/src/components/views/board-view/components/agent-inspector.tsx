@@ -108,7 +108,8 @@ export const AgentInspector = memo(function AgentInspector({
   const [activeTab, setActiveTab] = useState<'activity' | 'files' | 'state'>('activity');
 
   // Only show for in_progress features or features with agent output
-  const shouldShow = feature.status === 'in_progress' || feature.status === 'review' || feature.status === 'done';
+  const shouldShow =
+    feature.status === 'in_progress' || feature.status === 'review' || feature.status === 'done';
 
   // Determine if we should poll for updates
   const shouldPoll = isCurrentAutoTask || feature.status === 'in_progress';
