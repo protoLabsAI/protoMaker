@@ -55,3 +55,10 @@ usageStats:
 - **Rejected:** No timeout would risk blocking webhook handlers. Promise.race with setTimeout would require manual cleanup.
 - **Trade-offs:** Easier: Native API, clean error handling. Harder: Must manually clear timeout in success path (existing code does this).
 - **Breaking if changed:** If timeout is removed, slow Linear API responses could block webhook processing for other issues.
+
+### Lazy-load TipTap editor via React.lazy() with Suspense boundary to defer ~200KB bundle until modal is opened (2026-02-15)
+- **Context:** TipTap is a large library (~200KB) that's only needed when user opens PRDEditorModal. Including it in main bundle would impact initial page load for all users.
+- **Why:** Monorepo UI has many features competing for bundle space. Code-splitting HITL approval flow avoids shipping unused TipTap code to users who never trigger interrupts. The modal is opened on-demand during HITL approval, making lazy loading the optimal trade-off.
+- **Rejected:** Direct import of TipTap at top-level: simpler code but forces all users to download 200KB unused in happy path. Dynamic import without Suspense: requires manual loading state management.
+- **Trade-offs:** Lazy loading adds slight UX delay (~500ms-1s) when modal first opens while TipTap bundle loads, but saves 200KB on initial pageload for 95%+ of users. Suspense boundary provides fallback UI (spinner) during load.
+- **Breaking if changed:** Removing lazy loading restores immediate modal rendering but bloats main bundle by 200KB. Removing Suspense boundary causes render error if chunk fails to load. Moving TipTap import to top level defeats lazy load benefit and increases initial JS payload.

@@ -2,6 +2,20 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Planning & Approach
+
+- When creating plans, start with the minimal viable scope. Do NOT propose multi-phase plans unless explicitly asked. Default to the smallest, lowest-risk approach first.
+- Do not exit plan mode or transition away from planning until the user explicitly confirms the plan is complete and approved. Wait for user signal before proceeding to implementation.
+
+## Git Workflow
+
+- Never push directly to main. Always create a feature branch and open a PR, even for small changes. Assume branch protection is enabled on all repositories.
+- Before committing, run `git status` and verify that only intended files are staged. Watch for accidentally staged deletions from previously merged PRs.
+
+## Session Continuation
+
+- When continuing a previous session or autonomous loop, always check MCP server connectivity and board status FIRST before attempting any agent launches or API calls.
+
 ## Project Overview
 
 Automaker is an autonomous AI development studio built as an npm workspace monorepo. It provides a Kanban-based workflow where AI agents (powered by Claude Agent SDK) implement features in isolated git worktrees.

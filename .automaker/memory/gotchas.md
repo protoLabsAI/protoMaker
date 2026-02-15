@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 181
-  referenced: 81
-  successfulFeatures: 81
+  loaded: 195
+  referenced: 91
+  successfulFeatures: 91
 ---
 # gotchas
 
@@ -120,3 +120,18 @@ usageStats:
 - **Situation:** Implemented review-quality node with approve/revise routing. Without max_iterations, a single revision request could loop indefinitely.
 - **Root cause:** The quality gate uses `conditional_edges` to route back to generateReport if revision needed. Without iteration limits, this becomes unbounded. The state graph doesn't automatically prevent looping.
 - **How to avoid:** Adding max_iterations limits review quality (can't endlessly refine). But prevents hang/timeout. Need to balance thoroughness vs practicality.
+
+#### [Gotcha] TipTap packages installed at monorepo root node_modules (v2.27.2 latest) rather than workspace-scoped, following npm workspace hoisting rules. (2026-02-15)
+- **Situation:** Attempted to install TipTap but packages didn't appear in node_modules/@tiptap initially. Later discovered they were installed in root (../..) not in apps/ui/node_modules.
+- **Root cause:** npm workspaces use symlink hoisting: dependencies listed in workspace package.json are resolved from workspace root node_modules, not individual workspace. This is by design to avoid duplication across workspaces.
+- **How to avoid:** Root hoisting means one copy of TipTap shared across entire monorepo (good: saves disk/memory). Risk: if two workspaces need different TipTap versions, hoisting forces a choice (usually latest wins). Debugging requires understanding ../.../node_modules path navigation.
+
+#### [Gotcha] File path confusion: created files in nested apps/ui/apps/ui/src structure before realizing working directory was already apps/ui. (2026-02-15)
+- **Situation:** Mistakenly copied files to wrong location, then corrected course by checking pwd and file listing.
+- **Root cause:** Initial uncertainty about Bash context (pwd). Assumed needs to create full path structure.
+- **How to avoid:** Extra file copy operation, but caught and fixed during implementation rather than in review.
+
+#### [Gotcha] Error state structure assumed to have message, stack, type, timestamp properties based on JavaScript error patterns, but actual CopilotKit error structure may vary (2026-02-15)
+- **Situation:** CopilotKit agent state stores errors with unknown shape; component accesses error properties without knowing definitive structure
+- **Root cause:** No TypeScript interface definition available for CopilotKit error objects; reasonable inference from standard error patterns
+- **How to avoid:** Defensive null checks and optional chaining prevent crashes but silently hide error details if structure differs from assumption

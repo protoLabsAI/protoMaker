@@ -1444,3 +1444,117 @@ usageStats:
 - **Problem solved:** review-quality node checks if report meets quality standards. Could have been implemented as always-execute node that sets a flag, but conditional edges are cleaner.
 - **Why this works:** Conditional edges make the graph structure match the decision logic. Approval path and revision path are explicit in the graph, not hidden in node logic. Graph visualization shows the real flow.
 - **Trade-offs:** Requires registering conditional_edges instead of linear node chains. But produces clearer state graphs and easier reasoning about paths.
+
+### Workflow metadata exposed as static HTTP endpoint instead of extracted from runtime agent registry (2026-02-15)
+- **Context:** CopilotKit runtime has registered agents (Ava, content-pipeline, antagonistic-review). Could either extract metadata from runtime dynamically or define statically in HTTP response.
+- **Why:** Static definitions provide predictable API contract, enable versioning independently of agent registration, and don't require exposing internal runtime structure. Simpler initial implementation.
+- **Rejected:** Dynamic extraction from runtime.agents would require introspection API, coupling HTTP contract to runtime impl details, risk of agents being registered/unregistered changing API responses mid-session.
+- **Trade-offs:** Easier: stable API, clear schema. Harder: metadata sync required when agents change, requires manual update in two places.
+- **Breaking if changed:** If metadata endpoint is removed, frontend components relying on `/api/copilotkit/workflows` fail silently (loading state persists). If schema changes (add/remove field), frontend selector breaks unless it handles gracefully.
+
+#### [Pattern] useAgentContext must be called inside CopilotKitProvider component tree. Calling it outside provider causes undefined behavior. Create intermediate wrapper component (ProjectContextInjector) that lives inside provider and calls the hook. (2026-02-15)
+- **Problem solved:** CopilotKit hooks have provider dependency similar to React Context. App provider structure needed adjustment to place hook consumer inside correct scope.
+- **Why this works:** Hook-provider coupling is enforced by CopilotKit's internal state management. Intermediate component pattern avoids restructuring entire provider tree while satisfying hook constraints.
+- **Trade-offs:** Adds small wrapper component but keeps provider logic clean and decoupled. Alternative (monolithic provider) would couple unrelated concerns.
+
+### Conditionally inject context values (only if data exists) rather than always injecting null/undefined. Prevents noisy context, reduces cognitive load on agents. (2026-02-15)
+- **Context:** App store may not have loaded currentProject, features, or spec yet during initial render. Injecting null/undefined for unavailable data clutters agent context.
+- **Why:** Agents should only see relevant, available data. Injecting undefined forces them to handle null checks they don't need. Conditional injection keeps context clean and focused.
+- **Rejected:** Always injecting all values (including null) would work but create noise. Agents must then write defensive code to check for undefined on every use.
+- **Trade-offs:** Cleaner agent context, less defensive coding needed. Cost is conditional checks in ProjectContextInjector (minimal).
+- **Breaking if changed:** If agents assume context values always exist, missing values will cause errors. Agents should always check value existence before using (defensive pattern).
+
+#### [Pattern] HITL (Human-In-The-Loop) interrupt gates use dual-trigger pattern: config flag AND content condition. Interrupts only fire when enableHITL=true AND criticalIssues.length > 0. (2026-02-15)
+- **Problem solved:** Implementing HITL approval gates in content pipeline that should respect both user configuration and actual content review findings
+- **Why this works:** Prevents spurious interrupts on clean reviews (enableHITL alone) and prevents interrupts when disabled (criticalIssues alone). Both conditions must align for human review to trigger.
+- **Trade-offs:** Slightly more complex conditional logic, but catches edge cases where config disagrees with content quality
+
+#### [Pattern] HITL phases (research/outline/final) are explicitly named in interrupt payload type, not inferred from node name. Payload includes 'phase: research|outline|final' as discrete value. (2026-02-15)
+- **Problem solved:** Three different HITL gates in a pipeline all use similar interrupt mechanics but need to be distinguished in downstream processing
+- **Why this works:** Explicit phase field makes payload self-describing and eliminates need for downstream code to parse node names or maintain phase ordering. CopilotKit runtime and UI can instantly know which stage failed without inference.
+- **Trade-offs:** Slightly more verbose payload, but decouples phase semantics from implementation details (node names). Phase is semantic; node name is implementation.
+
+### Interrupt calls are placed INSIDE HITL node functions (after review logic), not at graph compilation level. Uses LangGraph's interruptBefore=[nodeNames] for pause points, but interrupt(payload) for data injection. (2026-02-15)
+- **Context:** Distinguishing between where execution pauses (graph structure) vs. where human context is injected (node logic)
+- **Why:** interruptBefore is a graph-level directive that marks nodes as interrupt candidates; interrupt() is called inside the node when the condition is met. This allows selective interrupts within a node (only on critical issues) rather than pausing unconditionally.
+- **Rejected:** Could pause all HITL nodes unconditionally via interruptBefore and let downstream decide to interrupt, but that wastes resources pausing clean reviews
+- **Trade-offs:** Requires condition logic in node code (not declarative at graph level), but enables smart filtering and only passes data when actually needed
+- **Breaking if changed:** If interrupt() is removed and only interruptBefore is used, system pauses on clean reviews (empty/null reviewResult), forcing UI to handle 'no-op' interrupts
+
+### ModelProvider context created as intermediate provider that depends on WorkflowProvider context, requiring specific nesting order in provider tree (2026-02-15)
+- **Context:** Model selection needs to read from WorkflowProvider (selectedAgent) and provide model state to CopilotKitInnerProvider, but CKProvider was already nested inside WorkflowProvider
+- **Why:** Allows ModelProvider to hook into WorkflowProvider's selectedAgent via useWorkflowSelection(). Alternative of flattening providers would require prop drilling or context merging, losing composition benefits
+- **Rejected:** Could have merged ModelProvider logic into CopilotKitInnerProvider directly, but this violates separation of concerns and makes state management less reusable
+- **Trade-offs:** Provider nesting depth increased by one level (slight performance cost from extra context consumer) but gained isolated, reusable model selection logic that other components can independently consume
+- **Breaking if changed:** Provider nesting order is now critical - ModelProvider MUST be inside WorkflowProvider. Reversing order breaks useWorkflowSelection() call in ModelProvider
+
+#### [Pattern] Setter function pattern for persistence: setSelectedModel(model, workflowId) both updates state AND persists to localStorage in single call (2026-02-15)
+- **Problem solved:** Model selection needs to update UI state and persist preference without requiring separate effect hooks or manual save calls from consumers
+- **Why this works:** Encapsulates state and persistence logic together, preventing accidental state-only updates that forget to persist. Single source of truth for how model changes are handled. Consumer code (SidebarControls) doesn't need to know about localStorage
+- **Trade-offs:** Setter must take both model AND workflowId parameter (more complex signature) but prevents silent bugs where model changes but doesn't persist across page reloads. Forces explicit intent on every change
+
+#### [Pattern] Factory function pattern for creating agents with model injection: agentFactories.get(selectedModel)(agentConfig) returns model-specific agent instance (2026-02-15)
+- **Problem solved:** Need to support dynamic model selection without hardcoding model strings in agent implementations or creating separate agent classes per model
+- **Why this works:** Factory pattern decouples model selection (runtime/UI) from agent instantiation (server logic). Allows swapping model implementation without changing agent code. Scales to future models without proliferating agent variants
+- **Trade-offs:** Factory registry pattern requires registration step for each model, but gained flexibility and avoided class explosion. Makes model behavior testable via mock factories
+
+#### [Pattern] Component structure follows existing CopilotKit UI patterns (Dialog composition, state reset on props change, Tailwind styling consistent with shadcn/ui) (2026-02-15)
+- **Problem solved:** Codebase has established patterns in copilotkit/agent-state-display.tsx and other CopilotKit-related components. New HITL component must integrate cohesively.
+- **Why this works:** Consistency reduces cognitive load for future maintainers. Uses already-proven patterns from codebase (Dialog wrapper, useEffect cleanup for state, Tailwind + shadcn/ui). Reduces chance of unexpected behavior from ad-hoc patterns.
+- **Trade-offs:** Following established patterns means some constraints (must use Dialog, Tailwind classes, specific file locations). Upside: immediate familiarity for Josh/team, easier to find/modify, integrates with existing design system.
+
+### Created separate TipTapEditor component instead of inline TipTap setup inside PRDEditorModal (2026-02-15)
+- **Context:** TipTap editor setup is complex: extension configuration, event handlers, content state management. Could have written it inline inside modal.
+- **Why:** Separation of concerns: TipTapEditor encapsulates all TipTap-specific logic (useEditor hook, extension setup, toolbar rendering). PRDEditorModal focuses on modal UX (approve/reject, content display). Makes both components testable/reusable independently.
+- **Rejected:** Inline TipTap in PRDEditorModal: simpler initially but mixes concerns. If future features need TipTap elsewhere (inline editing in grid, comment threads), code duplication or tight coupling. Harder to unit test TipTap behavior without modal context.
+- **Trade-offs:** Component split adds one extra file and prop drilling (editorRef, onContentChange callbacks). Benefit: TipTapEditor can be reused in other contexts, easier to test TipTap features in isolation, PRDEditorModal stays focused on modal/approval logic.
+- **Breaking if changed:** Merging TipTapEditor back into PRDEditorModal removes reusability and mixes concerns, making future TipTap usage elsewhere require code duplication or refactoring.
+
+#### [Gotcha] Hook returns JSX (InterruptRouter component) directly. This violates traditional hook naming conventions where hooks return values, not UI. (2026-02-15)
+- **Situation:** useLangGraphInterrupt both manages interrupt state AND renders UI. Standard React pattern would return state + handlers, separate component would render.
+- **Root cause:** Encapsulation: hook owns complete interrupt lifecycle (detect, route, resume). Returning JSX keeps related logic together. Caller just imports hook and renders result.
+- **How to avoid:** Gains: Single import, cleaner provider code. Loses: Violates hook naming convention (naming suggests it returns state, not UI). Hook harder to test in isolation.
+
+#### [Pattern] Discriminated union routing pattern for payload.type determines which UI component renders. Type system enforces exhaustive checking. (2026-02-15)
+- **Problem solved:** Four different interrupt types need different handling logic and UI. Need to ensure new types added in future are handled.
+- **Why this works:** Discriminated unions with switch statements allow TypeScript to prove exhaustiveness at compile time. If new interrupt type added to union, compiler errors until all cases handled.
+- **Trade-offs:** Gains: Type safety, prevents silent failures on new interrupt types. Loses: Must update union type + switch case + test coverage when adding new types.
+
+#### [Pattern] Graceful fallback in interrupt resume: attempt to parse userEditedContent as structured JSON (ResearchResult[], Outline) first, then fall back to treating it as feedback text if parsing fails (2026-02-15)
+- **Problem solved:** researchHitlNode needs to handle both structured edits (researcher modified results array) and unstructured feedback (text comments). Can't assume the frontend always sends valid JSON.
+- **Why this works:** Prevents graph interruption on invalid JSON from user edits. Gives users freedom to edit content freely without strict serialization requirements. Maintains robustness when frontend passes unexpected data types.
+- **Trade-offs:** Easier: flexible user edits, resilient resume. Harder: ambiguity between 'valid JSON that happens to be feedback' vs 'actual structured data'. Added logging becomes critical for debugging.
+
+### Clear userEditedContent from state after processing in each HITL node to prevent stale edited data from affecting subsequent resume cycles (2026-02-15)
+- **Context:** When graph resumes multiple times (e.g., research approved but then outline rejected and re-edited), old userEditedContent from previous resume could contaminate later phases.
+- **Why:** State hygiene. If userEditedContent persists after being consumed, a second interrupt/resume cycle would reapply old edits from a previous phase. Each phase only cares about edits relevant to that phase.
+- **Rejected:** Keep userEditedContent throughout graph execution to allow downstream nodes to inspect edit history. Would require careful ordering and phase-checking to avoid cross-phase contamination.
+- **Trade-offs:** Easier: clear semantics, no stale data bugs. Harder: can't retrospectively audit what edits were made in earlier phases once they're cleared.
+- **Breaking if changed:** If any downstream node (beyond the HITL gate) tries to access userEditedContent for audit/logging, it will be empty. Must capture/log edits before clearing, or store them in a separate audit field.
+
+#### [Pattern] Consistent HITL gate pattern across three phases (research, outline, final review): each gate uses the same interrupt/resume flow, parses phase-specific edited content from userEditedContent, and applies it to state before continuing (2026-02-15)
+- **Problem solved:** Rather than unique interrupt logic per phase, all three gates follow the same schema: check approval flag, parse edited content, update state, clear field, continue.
+- **Why this works:** Predictability and maintainability. Future developers see 'HITL gate pattern' and know exactly how resume works in any phase. Reduces cognitive load and bug surface. Makes it easy to add a fourth gate.
+- **Trade-offs:** Easier: consistent code, clear mental model. Harder: the pattern is opinionated and constrains how future gates can work. If a future phase needs async validation on resume, the pattern may not fit.
+
+### ErrorDisplay placed in SidebarControls below AgentStateDisplay, reusing existing sidebar integration pattern (2026-02-15)
+- **Context:** Error display needs to be visible in UI; must integrate without requiring new UI structure or layout changes
+- **Why:** Reusing sidebar pattern follows established convention in codebase; AgentStateDisplay already proven to work in that location. Reduces layout refactoring
+- **Rejected:** Placing error display in modal or toast would require new integration points; inline in main content area would obscure workflow visualization
+- **Trade-offs:** Error display shares sidebar real estate with other controls (spacing constraints) but integrates seamlessly without new structure
+- **Breaking if changed:** Moving to different location requires updating provider.tsx imports/placement and potentially breaking layout assumptions if error info becomes critical for navigation
+
+#### [Pattern] CopilotKit interrupt routing via useAgent hook with OnStateChanged subscription pattern (2026-02-15)
+- **Problem solved:** Need to receive LangGraph interrupts from agent execution and route them to appropriate UI components
+- **Why this works:** useAgent hook provides reactive state updates when agent execution encounters interrupts. OnStateChanged subscription mode efficiently listens for interrupt events without polling. Separating router from specific dialog implementations allows multiple interrupt types to coexist.
+- **Trade-offs:** Router pattern adds one component layer but enables extensibility. Alternative of direct callbacks would be simpler for one interrupt type but brittles as types multiply.
+
+#### [Pattern] Dialog components follow controlled component pattern (open prop + onResolve callback) rather than imperative show/hide methods (2026-02-15)
+- **Problem solved:** EntityWizard and InterruptRouter both use Dialog with controlled visibility
+- **Why this works:** React best practice: declarative state management makes interrupt lifecycle predictable. Component renders when interrupt exists, closes when resolved. Callback-based resolution ensures parent can handle completion.
+- **Trade-offs:** Controlled pattern requires parent to manage open state, but prevents dialog from getting orphaned. Parent can add loading spinners, error handling, retry logic.
+
+#### [Gotcha] InterruptRouter requires placement in component tree where CopilotKit context exists. Cannot work in arbitrary location. (2026-02-15)
+- **Situation:** Implementation creates router component but integration point is not specified
+- **Root cause:** useAgent hook depends on CopilotKit provider being ancestor. Router only receives interrupts if within that tree.
+- **How to avoid:** Context dependency ensures proper lifecycle management but restricts placement flexibility.

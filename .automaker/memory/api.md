@@ -5,9 +5,9 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 42
-  referenced: 24
-  successfulFeatures: 24
+  loaded: 46
+  referenced: 27
+  successfulFeatures: 27
 ---
 # api
 
@@ -287,3 +287,52 @@ usageStats:
 - **Rejected:** Only exporting the flow - forces users to write boilerplate execution code. Only exporting executor - prevents customization.
 - **Trade-offs:** Adds two exports instead of one. But eliminates duplicated initialization code across callers.
 - **Breaking if changed:** If the underlying StateGraph changes, both exports might need updates. The executor hides state graph details, so it must be kept in sync with flow structure.
+
+#### [Pattern] New endpoint added via Express Router composition instead of single exported route handler (2026-02-15)
+- **Problem solved:** Existing pattern was `createCopilotKitEndpoint()` returning single router/endpoint. Now need both `/workflows` metadata endpoint AND the existing CopilotKit runtime endpoint from same logical module.
+- **Why this works:** Express Router allows multiple endpoint handlers under same prefix. Avoids duplicating auth middleware or creating separate route files. Maintains cohesion - all copilotkit routes in one module.
+- **Trade-offs:** Easier: single logical mount point, shared auth. Harder: callers must understand router composition pattern, not immediately obvious that `createCopilotKitEndpoint()` now returns composite router.
+
+#### [Gotcha] Workflow metadata uses hardcoded `supportedModels: ['haiku', 'sonnet', 'opus']` for all workflows - no per-workflow model filtering (2026-02-15)
+- **Situation:** Future workflows may only support specific models (e.g., content-pipeline might require opus). Currently all three workflows list identical models.
+- **Root cause:** Simplest initial implementation - all agents are Claude, all support same models. No visibility into model requirements yet.
+- **How to avoid:** Easier: predictable, static. Harder: frontend cannot warn user when selecting workflow+model combo that won't work.
+
+#### [Gotcha] CopilotKit exports useAgentContext hook, not useCopilotReadable. Feature specs may reference older/incorrect hook names. Always verify against actual package exports. (2026-02-15)
+- **Situation:** Feature description mentioned useCopilotReadable but @copilotkitnext/react package only exports useAgentContext for context injection.
+- **Root cause:** CopilotKit API evolved. Documentation/specs can lag behind actual implementation. Direct source inspection prevents wasted implementation time.
+- **How to avoid:** Takes extra 5min to verify exports, saves hours of debugging non-existent APIs.
+
+### Interrupt payload includes both structured review data (reviewResult with dimensions/scores/verdicts) AND rendered content for display, rather than just one or the other (2026-02-15)
+- **Context:** HITL nodes need to communicate review findings to CopilotKit AG-UI while also showing the actual content being reviewed
+- **Why:** Human reviewers need both the analytic review breakdown (why it was flagged) AND the actual content (what to approve/reject). CopilotKit sidebar displays the full payload; redundancy is feature, not waste.
+- **Rejected:** Including only reviewResult (no content) would force sidebar to request content separately; including only content (no review) would hide the reasoning for the interrupt
+- **Trade-offs:** Larger payload per interrupt, but eliminates round-trip to fetch context and provides complete decision context to human
+- **Breaking if changed:** If content is removed from payload, human loses critical context for approval decision; if reviewResult is removed, human sees content but not why it was flagged
+
+### Model passed via X-Copilotkit-Model HTTP header rather than as CopilotKit AG-UI runtime property (2026-02-15)
+- **Context:** CopilotKit SDK doesn't expose a clean TypeScript API for per-request model override via runtime properties, despite AG-UI protocol supporting it in theory
+- **Why:** Headers are simpler to implement, require no modifications to CopilotKit SDK, and can be read server-side immediately. Avoids dependency on CopilotKit SDK improvements
+- **Rejected:** Alternative was to implement model override via AG-UI protocol properties once CopilotKit TypeScript API matures, but this blocks feature implementation on external SDK changes
+- **Trade-offs:** Header approach is pragmatic short-term solution but creates technical debt. Server must parse headers instead of receiving strongly-typed model config. Future AG-UI API improvements could obsolete this pattern
+- **Breaking if changed:** Server-side getModelFromRequest() relies on header presence. If header is omitted, code falls back to defaults silently. Should add validation to catch missing model headers in requests
+
+#### [Gotcha] @copilotkitnext/react does not expose UseAgentUpdate.OnInterrupt. Interrupt data flows through agent state mutations (state.interrupt, state.waitingForInput) instead. (2026-02-15)
+- **Situation:** Attempted to subscribe to interrupt events directly via CopilotKit's documented interrupt API. API does not exist in the current version.
+- **Root cause:** CopilotKit AG-UI protocol uses state-driven communication rather than event-driven for interrupts. Monitoring state changes is the only available surface.
+- **How to avoid:** State-based polling is less explicit than event-driven, requires watching for state mutations rather than subscribing to named events. More brittle if internal state shape changes.
+
+#### [Gotcha] Resume implementation uses agent.sendMessage() with type-casted any, exact AG-UI protocol for resuming from interrupts is undocumented. (2026-02-15)
+- **Situation:** CopilotKit/LangGraph interrupt resume mechanism not exposed in public API docs. Implemented placeholder that may not match actual protocol.
+- **Root cause:** Best guess based on available APIs. sendMessage() is known to exist and accepts messages. Typed as any to allow runtime protocol adaptation.
+- **How to avoid:** Gains: Feature doesn't silently fail to resume. Loses: May send wrong message format to agent, requiring debugging against real LangGraph flow.
+
+#### [Gotcha] LangGraph interrupt/resume with CopilotKit: when resolve() is called from frontend with updated state, the graph automatically resumes at the exact node where it interrupted. State updates are merged, not replaced. (2026-02-15)
+- **Situation:** Initial assumption was that graph would skip the HITL node and resume downstream. Actually, the HITL node runs again with the new state, allowing it to validate/process edits before continuing.
+- **Root cause:** LangGraph by design re-enters the interrupted node with merged state. This is a feature: it gives the HITL node a chance to validate and apply edits before the flow continues. The alternative (skip HITL node) would bypass crucial validation.
+- **How to avoid:** Easier: validation/edit handling happens in the same HITL node code. Harder: must account for the HITL node running twice (once to interrupt, once to resume with edits).
+
+#### [Gotcha] CopilotKit AG-UI interrupt protocol expects resolve() callback to receive decision payload, not boolean confirmation (2026-02-15)
+- **Situation:** Initial assumption was interrupt resolution = approve/reject boolean. Actual protocol requires passing decision object back to graph.
+- **Root cause:** Agent needs to process decisions (merge targets, corrections, specific entity IDs). Simple boolean loses this context.
+- **How to avoid:** Richer payload enables complex workflows but requires careful serialization. Type safety becomes critical.
