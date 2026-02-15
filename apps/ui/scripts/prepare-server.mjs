@@ -27,6 +27,11 @@ const LOCAL_PACKAGES = [
   '@automaker/platform',
   '@automaker/model-resolver',
   '@automaker/dependency-resolver',
+  '@automaker/policy-engine',
+  '@automaker/spec-parser',
+  '@automaker/flows',
+  '@automaker/llm-providers',
+  '@automaker/observability',
   '@automaker/git-utils',
 ];
 
