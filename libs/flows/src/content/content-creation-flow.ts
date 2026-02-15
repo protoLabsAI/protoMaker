@@ -325,12 +325,13 @@ ${r.findings.references.map((ref) => `- ${ref}`).join('\n')}
  *
  * When the graph resumes after interrupt, the state will contain
  * researchApproved and optionally researchFeedback, set by the caller.
+ * If userEditedContent is set, the research findings are updated with user edits.
  * This node triggers an interrupt when critical issues are found.
  */
 async function researchHitlNode(
   state: ContentCreationStateType
 ): Promise<Partial<ContentCreationStateType>> {
-  const { researchReview, researchApproved, researchResults, config } = state;
+  const { researchReview, researchApproved, userEditedContent, researchResults, config } = state;
 
   logger.info(
     `Research HITL: Review score ${researchReview?.percentage.toFixed(1)}%, approved=${researchApproved}`
@@ -365,7 +366,19 @@ ${r.findings.references.map((ref) => `- ${ref}`).join('\n')}
     });
   }
 
-  return {};
+  // If user provided edited content, attempt to parse it as updated research results
+  if (userEditedContent && researchApproved) {
+    try {
+      const edited = JSON.parse(userEditedContent) as ResearchResult[];
+      logger.info(`Research HITL: Using user-edited research with ${edited.length} results`);
+      return { researchResults: edited, userEditedContent: undefined };
+    } catch {
+      // Not valid JSON — treat as feedback text, keep existing research
+      logger.info('Research HITL: User edit is not valid research JSON, treating as feedback');
+    }
+  }
+
+  return { userEditedContent: undefined };
 }
 
 /**
