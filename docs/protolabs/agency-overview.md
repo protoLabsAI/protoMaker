@@ -143,11 +143,13 @@ The reflection loop is what makes this a **learning system**, not just an execut
 
 ## The Revenue Model
 
-1. **Content/Social Media**: Every project we run generates content about how autonomous AI development works
-2. **Consulting (setupLab)**: We teach other organizations to set up their own proto labs using our gold standard
-3. **Template Repos**: Standardized project scaffolding that embodies our patterns
+No SaaS, no subscriptions, no obligations. Indie maker, not startup.
 
-The system is both the product and the factory that makes the product.
+1. **Free tool**: protoMaker is source-available. Builds community trust and distribution.
+2. **$49 lifetime Pro**: Written tutorials, agent templates, prompt library, methodology guide. One-time payment, lifetime access.
+3. **Consulting (setupLab)**: Help organizations set up their own proto labs. Organic inbound from community trust, not outbound sales.
+
+The system is both the product and the factory that makes the product. Every project generates content and proves the methodology.
 
 ## What Makes This Different
 

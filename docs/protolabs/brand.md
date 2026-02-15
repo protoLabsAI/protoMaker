@@ -12,8 +12,9 @@ This is the living brand bible for protoLabs. All agents, content, and external 
 | **proto-labs-ai**     | GitHub organization                   | `github.com/proto-labs-ai`                                                                       |
 | **Automaker**         | Internal codename / upstream origin   | Used in code (`@automaker/*` packages, `.automaker/` directory). NOT used in external marketing. |
 | **create-protolab**   | npx CLI tool                          | Scaffolds new projects with protoLabs methodology                                                |
-| **rabbit-hole**       | AI-powered TTRPG                      | Built with protoMaker. Proof of concept product.                                                 |
-| **proto-ux**          | UX automation toolkit                 | Proof of concept product.                                                                        |
+| **MythXEngine**       | AI-powered TTRPG engine               | Built with protoMaker. Portfolio proof of methodology.                                           |
+| **SVGVal**            | SVG validation toolkit                | Built with protoMaker. Portfolio proof of methodology.                                           |
+| **rabbit-hole**       | AI-powered TTRPG (legacy name)        | Now MythXEngine. Built with protoMaker.                                                          |
 | **Agentic Jumpstart** | Community Discord / educational brand | Community-facing, not the agency brand                                                           |
 
 ### Naming Rules
@@ -70,11 +71,9 @@ This is the living brand bible for protoLabs. All agents, content, and external 
 
 ### Platforms (Priority Order)
 
-1. **Twitter/X** — Daily. 40% show work, 30% insights, 20% threads, 10% engagement
-2. **Twitch** — 2-3x/week. Live building sessions, architecture discussions
-3. **YouTube** — VODs from Twitch streams, edited tutorials
-4. **Instagram** — Visual brand moments, studio aesthetics
-5. **TikTok** — Short clips from streams, hot takes
+1. **Twitter/X** — Primary. Show the work, insights, threads, engagement.
+2. **Twitch** — Live building sessions when it makes sense. Not a fixed schedule.
+3. **YouTube** — VODs from Twitch streams, edited tutorials.
 
 ### Content Pillars
 
@@ -85,17 +84,19 @@ This is the living brand bible for protoLabs. All agents, content, and external 
 
 ### Core Principle
 
-"One effort, many surfaces." Every work session generates content that flows to all channels.
+"One effort, many surfaces." Content generation is automated — Cindi writes, Jon strategizes, schedulers distribute. Josh's role is to engage with people, not produce content manually.
 
 ### Pipeline
 
-Work -> Capture -> Source Content -> Repurpose -> All Channels Fed
+Work -> AI generates content -> Schedule across platforms -> Josh engages with responses
 
 ## Revenue Model
 
-1. **Open source** — protoMaker is source-available (Automaker License). Builds community trust and distribution.
-2. **Paid content** — Methodology, tutorials, tips & tricks behind paywalls. The tool is free; the knowledge of how to orchestrate it is the product.
-3. **Consulting** — setupLab offering. Help companies set up their own proto labs. Template repos and guided onboarding.
+**Philosophy: No SaaS, no subscriptions, no obligations.** Build cool things, share how, let people pay once for the knowledge. Indie maker, not startup.
+
+1. **Free tool** — protoMaker is source-available. Builds community trust and distribution.
+2. **$49 lifetime Pro** — Written tutorials, agent templates, prompt library, methodology guide. One-time payment, lifetime access. No recurring obligations on either side.
+3. **Consulting** — setupLab offering. Happens organically when people see the work and want help. Not outbound sales — inbound from community trust.
 
 ## Operating Principles
 
@@ -107,10 +108,11 @@ Work -> Capture -> Source Content -> Repurpose -> All Channels Fed
 
 ## License
 
-The Automaker License is source-available, NOT open source by OSI standards. Users can:
+Source-available under the Automaker License (FSL-style). NOT open source by OSI standards. Users can:
 
 - Use the tool internally
 - Build products USING the tool
+- View and learn from the source code
 
 Users cannot:
 
@@ -118,4 +120,4 @@ Users cannot:
 - Host it as SaaS for others
 - Extract and resell prompts or instructional content
 
-This will be revisited when the product is ready for full open source release.
+License decision pending: evaluating Functional Source License (FSL) which auto-converts to Apache 2.0 after 2 years. See PRO-128 and PRO-159 in Linear.
