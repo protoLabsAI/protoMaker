@@ -171,7 +171,7 @@ build_images() {
   # start, so docker compose reads them from the shell environment — no --env-file
   # needed. This avoids race conditions with the self-hosted runner's workspace
   # cleanup cron, which can delete the .env file mid-build.
-  info "Building all images (server, ui, docs)..."
+  info "Building all images (server, ui, docs, storybook)..."
   docker compose -f "$COMPOSE_FILE" build
 
   ok "Images built successfully"
@@ -187,7 +187,7 @@ stop_existing() {
   docker compose -f "$COMPOSE_FILE" down 2>/dev/null || true
 
   # Force-remove if compose down didn't clean up (e.g. containers from a different project)
-  for name in automaker-server automaker-ui automaker-docs; do
+  for name in automaker-server automaker-ui automaker-docs automaker-storybook; do
     if docker ps -aq --filter "name=^${name}$" | grep -q .; then
       docker rm -f "$name" 2>/dev/null || true
     fi
@@ -297,6 +297,8 @@ show_status() {
   echo -e "  UI:     ${GREEN}http://localhost:${ui_port}${NC}"
   echo -e "  API:    ${GREEN}http://localhost:${api_port}${NC}"
   echo -e "  Docs:   ${GREEN}http://localhost:${docs_port}${NC}"
+  local storybook_port="${STORYBOOK_PORT:-6666}"
+  echo -e "  Storybook: ${GREEN}http://localhost:${storybook_port}${NC}"
   echo -e "  Health: ${GREEN}http://localhost:${api_port}/api/health${NC}"
   echo ""
 }

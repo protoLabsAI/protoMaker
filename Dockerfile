@@ -29,7 +29,6 @@ COPY libs/model-resolver/package*.json ./libs/model-resolver/
 COPY libs/dependency-resolver/package*.json ./libs/dependency-resolver/
 COPY libs/git-utils/package*.json ./libs/git-utils/
 COPY libs/spec-parser/package*.json ./libs/spec-parser/
-COPY libs/policy-engine/package*.json ./libs/policy-engine/
 COPY libs/flows/package*.json ./libs/flows/
 COPY libs/llm-providers/package*.json ./libs/llm-providers/
 COPY libs/observability/package*.json ./libs/observability/
@@ -223,6 +222,59 @@ LABEL automaker.git.commit.sha="${GIT_COMMIT_SHA}"
 COPY --from=docs-builder /app/docs/.vitepress/dist /usr/share/nginx/html
 
 # Simple nginx config for static site
+RUN printf 'server {\n\
+    listen 80;\n\
+    server_name localhost;\n\
+    root /usr/share/nginx/html;\n\
+    index index.html;\n\
+\n\
+    location / {\n\
+        try_files $uri $uri/ $uri.html /index.html;\n\
+    }\n\
+\n\
+    # Cache static assets\n\
+    location ~* \\.(js|css|png|jpg|jpeg|gif|ico|svg|woff2?)$ {\n\
+        expires 7d;\n\
+        add_header Cache-Control "public, immutable";\n\
+    }\n\
+}\n' > /etc/nginx/conf.d/default.conf
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]
+
+# =============================================================================
+# STORYBOOK BUILD STAGE
+# =============================================================================
+FROM base AS storybook-builder
+
+# Copy all workspace package.json files so npm ci can validate the full lockfile
+COPY apps/ui/package*.json ./apps/ui/
+COPY apps/server/package.json ./apps/server/
+
+# Install dependencies (--ignore-scripts to skip husky/prepare)
+RUN npm ci --ignore-scripts
+
+# Copy all source files
+COPY libs ./libs
+COPY apps/ui ./apps/ui
+
+# Build packages in dependency order, then build Storybook static site
+RUN npm run build:libs \
+    && npx storybook build --config-dir apps/ui/.storybook --output-dir apps/ui/storybook-static
+
+# =============================================================================
+# STORYBOOK PRODUCTION STAGE
+# =============================================================================
+FROM nginx:alpine AS storybook
+
+ARG GIT_COMMIT_SHA=unknown
+LABEL automaker.git.commit.sha="${GIT_COMMIT_SHA}"
+
+# Copy built Storybook site
+COPY --from=storybook-builder /app/apps/ui/storybook-static /usr/share/nginx/html
+
+# Reuse docs nginx pattern (try_files + asset caching)
 RUN printf 'server {\n\
     listen 80;\n\
     server_name localhost;\n\

@@ -70,7 +70,7 @@ jobs:
         run: |
           # Save current working images so we can restore on failure.
           # If no images exist yet (first deploy), this is a no-op.
-          for svc in server ui docs; do
+          for svc in server ui docs storybook; do
             img=$(docker compose -f docker-compose.staging.yml images -q "$svc" 2>/dev/null || true)
             if [ -n "$img" ]; then
               docker tag "$img" "automaker-staging-${svc}:rollback"
@@ -124,6 +124,22 @@ jobs:
             # Non-fatal — docs failure shouldn't block the deploy
           fi
 
+          # Check storybook health
+          retries=0
+          while [ $retries -lt 10 ]; do
+            if curl -sf http://localhost:${STORYBOOK_PORT:-6666}/ > /dev/null; then
+              echo "Storybook is healthy"
+              break
+            fi
+            retries=$((retries + 1))
+            sleep 2
+          done
+          if [ $retries -eq 10 ]; then
+            echo "Storybook health check failed after 20s"
+            docker compose -f docker-compose.staging.yml logs --tail=20 storybook
+            # Non-fatal — storybook failure shouldn't block the deploy
+          fi
+
       - name: Smoke tests
         id: smoke
         working-directory: /home/josh/staging-deploy/automaker
@@ -143,7 +159,7 @@ jobs:
 
           # Check if rollback images exist
           has_rollback=false
-          for svc in server ui docs; do
+          for svc in server ui docs storybook; do
             if docker image inspect "automaker-staging-${svc}:rollback" &>/dev/null; then
               has_rollback=true
               break
@@ -159,7 +175,7 @@ jobs:
           docker compose -f docker-compose.staging.yml down 2>/dev/null || true
 
           # Retag rollback images as latest for each service
-          for svc in server ui docs; do
+          for svc in server ui docs storybook; do
             if docker image inspect "automaker-staging-${svc}:rollback" &>/dev/null; then
               docker tag "automaker-staging-${svc}:rollback" "automaker-staging-${svc}:latest"
               echo "Restored ${svc} from rollback"
@@ -189,7 +205,7 @@ jobs:
         if: always()
         run: |
           # Remove rollback tags (keep images for layer cache)
-          for svc in server ui docs; do
+          for svc in server ui docs storybook; do
             docker rmi "automaker-staging-${svc}:rollback" 2>/dev/null || true
           done
           docker image prune -f 2>/dev/null || true
@@ -203,11 +219,12 @@ jobs:
           STATUS="${{ job.status }}"
 
           DOCS_STATUS=$(curl -sf http://localhost:3009/ > /dev/null 2>&1 && echo "docs ok" || echo "docs down")
+          SB_STATUS=$(curl -sf http://localhost:${STORYBOOK_PORT:-6666}/ > /dev/null 2>&1 && echo "storybook ok" || echo "storybook down")
 
           ROLLBACK_OUTCOME="${{ steps.rollback.outcome }}"
 
           if [ "$STATUS" = "success" ]; then
-            MSG="Staging deployed: \`${COMMIT}\` (v${VERSION}) - all healthy (${DOCS_STATUS})"
+            MSG="Staging deployed: \`${COMMIT}\` (v${VERSION}) - all healthy (${DOCS_STATUS}, ${SB_STATUS})"
           else
             case "$ROLLBACK_OUTCOME" in
               success)
