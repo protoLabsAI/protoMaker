@@ -174,16 +174,20 @@ jobs:
           # Stop broken containers
           docker compose -f docker-compose.staging.yml down 2>/dev/null || true
 
-          # Retag rollback images as latest for each service
+          # Retag rollback images as latest and collect which services to start
+          ROLLBACK_SERVICES=""
           for svc in server ui docs storybook; do
             if docker image inspect "automaker-staging-${svc}:rollback" &>/dev/null; then
               docker tag "automaker-staging-${svc}:rollback" "automaker-staging-${svc}:latest"
+              ROLLBACK_SERVICES="$ROLLBACK_SERVICES $svc"
               echo "Restored ${svc} from rollback"
+            else
+              echo "No rollback image for ${svc} — skipping"
             fi
           done
 
-          # Restart with rolled-back images
-          docker compose -f docker-compose.staging.yml up -d
+          # Restart only services that have rollback images
+          docker compose -f docker-compose.staging.yml up -d $ROLLBACK_SERVICES
 
           # Verify rollback health
           retries=0
