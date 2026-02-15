@@ -78,12 +78,13 @@ function ProjectContextInjector() {
 }
 
 /**
- * Handles LangGraph interrupts and renders appropriate approval UI.
+ * Registers HITL interrupt handlers with CopilotKit.
  * Must be rendered inside CopilotKitProvider context.
+ * The hook registers tools — rendering is handled by CopilotKit's tool call system.
  */
 function InterruptHandler() {
-  const interruptUI = useLangGraphInterrupt();
-  return <>{interruptUI}</>;
+  useLangGraphInterrupt();
+  return null;
 }
 
 /**

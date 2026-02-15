@@ -1,142 +1,138 @@
 /**
- * LangGraph Interrupt Handler Hook
+ * LangGraph Interrupt Handler
  *
- * Handles CopilotKit interrupt events from LangGraph flows and routes them
- * to the appropriate UI component based on the interrupt payload type.
+ * Registers CopilotKit human-in-the-loop tools that handle interrupt events
+ * from LangGraph flows. Each interrupt type gets a dedicated HITL tool.
  *
- * When a LangGraph flow calls `interrupt(payload)`, this hook:
- * 1. Detects the interrupt via the AG-UI protocol
- * 2. Routes to the appropriate UI based on payload.type discriminant
- * 3. Provides a resume function to continue the graph with user's response
+ * When a LangGraph flow calls `interrupt(payload)`, the AG-UI protocol
+ * routes it to the matching HITL tool's render component. The user
+ * responds via the dialog, and `respond()` resumes the graph.
  *
  * Usage:
  * ```tsx
- * function MyComponent() {
- *   const interruptUI = useLangGraphInterrupt();
- *   return <>{interruptUI}</>;
+ * function InterruptHandler() {
+ *   useLangGraphInterrupt();
+ *   return null;
  * }
  * ```
  */
 
-import { useState, useEffect } from 'react';
-import { useAgent, UseAgentUpdate } from '@copilotkitnext/react';
-import type { InterruptPayload } from '@automaker/types';
+import { useHumanInTheLoop } from '@copilotkitnext/react';
+import { z } from 'zod';
 import { GenericApprovalDialog } from './generic-dialog';
 
 /**
- * Hook to handle LangGraph interrupts and route to appropriate UI components.
- * Returns JSX for the interrupt dialog or null if no interrupt is active.
+ * Registers all HITL interrupt handlers with CopilotKit.
+ * Must be called inside a CopilotKitProvider context.
+ *
+ * Each interrupt type from InterruptPayload gets its own HITL tool:
+ * - approve_prd: PRD review gate
+ * - approve_entities: Entity review gate
+ * - approve_phase: Phase approval gate
+ * - approve_generic: Generic approval gate
  */
 export function useLangGraphInterrupt() {
-  const [interruptPayload, setInterruptPayload] = useState<InterruptPayload | null>(null);
-  const [resumeCallback, setResumeCallback] = useState<((response: unknown) => void) | null>(null);
+  useHumanInTheLoop(
+    {
+      name: 'approve_prd',
+      description: 'Review and approve a PRD document before the pipeline continues',
+      parameters: z.object({
+        type: z.literal('prd-review'),
+        prdTitle: z.string(),
+        prdContent: z.string(),
+      }),
+      render: ({ args, respond }) => {
+        if (!respond) {
+          return <div className="p-4 text-sm text-muted-foreground">Loading PRD review...</div>;
+        }
+        return (
+          <GenericApprovalDialog
+            open={true}
+            title={`PRD Review: ${args.prdTitle}`}
+            message={args.prdContent?.substring(0, 500) || 'Review the PRD document'}
+            onResolve={(approved) => respond({ approved })}
+          />
+        );
+      },
+    },
+    []
+  );
 
-  try {
-    // Subscribe to agent state changes via AG-UI protocol
-    // Interrupts are communicated via agent state
-    const { agent } = useAgent({
-      updates: [UseAgentUpdate.OnStateChanged],
-    });
+  useHumanInTheLoop(
+    {
+      name: 'approve_entities',
+      description: 'Review and approve extracted entities before proceeding',
+      parameters: z.object({
+        type: z.literal('entity-review'),
+        entities: z.array(z.record(z.string(), z.unknown())),
+      }),
+      render: ({ args, respond }) => {
+        if (!respond) {
+          return <div className="p-4 text-sm text-muted-foreground">Loading entity review...</div>;
+        }
+        const count = args.entities?.length ?? 0;
+        return (
+          <GenericApprovalDialog
+            open={true}
+            title="Entity Review Required"
+            message={`Review ${count} entities before the pipeline continues`}
+            onResolve={(approved) => respond({ approved })}
+          />
+        );
+      },
+    },
+    []
+  );
 
-    // Detect when an interrupt occurs by checking agent state
-    useEffect(() => {
-      // Check if agent state contains interrupt information
-      const state = agent.state as Record<string, unknown> | undefined;
-      const interruptData = state?.interrupt as InterruptPayload | undefined;
-      const isWaitingForInput = state?.waitingForInput as boolean | undefined;
+  useHumanInTheLoop(
+    {
+      name: 'approve_phase',
+      description: 'Approve a content pipeline phase before it proceeds to the next stage',
+      parameters: z.object({
+        type: z.literal('phase-approval'),
+        phaseTitle: z.string(),
+        phaseDescription: z.string(),
+      }),
+      render: ({ args, respond }) => {
+        if (!respond) {
+          return <div className="p-4 text-sm text-muted-foreground">Loading phase approval...</div>;
+        }
+        return (
+          <GenericApprovalDialog
+            open={true}
+            title={args.phaseTitle}
+            message={args.phaseDescription}
+            onResolve={(approved) => respond({ approved })}
+          />
+        );
+      },
+    },
+    []
+  );
 
-      if (isWaitingForInput && interruptData) {
-        setInterruptPayload(interruptData);
-
-        // Store resume function for later use
-        // Resume by sending the response back through the agent
-        setResumeCallback(() => (response: unknown) => {
-          // Send resume response - implementation depends on CopilotKit AG-UI protocol
-          // For now, we'll assume the agent has a method to continue
-          if (agent && typeof (agent as any).sendMessage === 'function') {
-            (agent as any).sendMessage({ type: 'interrupt-response', data: response });
-          }
-          setInterruptPayload(null);
-          setResumeCallback(null);
-        });
-      } else if (!isWaitingForInput && interruptPayload) {
-        // Clear interrupt if agent is no longer waiting
-        setInterruptPayload(null);
-        setResumeCallback(null);
-      }
-    }, [agent, agent.state, interruptPayload]);
-
-    // Route interrupts to appropriate UI component
-    if (interruptPayload && resumeCallback) {
-      return <InterruptRouter payload={interruptPayload} onResume={resumeCallback} />;
-    }
-
-    return null;
-  } catch {
-    // Gracefully handle when CopilotKit context is not available
-    return null;
-  }
-}
-
-/**
- * Routes interrupt payloads to the appropriate UI component
- */
-function InterruptRouter({
-  payload,
-  onResume,
-}: {
-  payload: InterruptPayload;
-  onResume: (response: unknown) => void;
-}) {
-  switch (payload.type) {
-    case 'prd-review':
-      // TODO: Implement PRD editor modal integration
-      // For now, fallback to generic approval dialog
-      return (
-        <GenericApprovalDialog
-          open={true}
-          title="PRD Review Required"
-          message={`Review PRD: ${payload.prdTitle}`}
-          onResolve={(approved) => onResume({ approved })}
-        />
-      );
-
-    case 'entity-review':
-      // TODO: Implement entity review UI
-      return (
-        <GenericApprovalDialog
-          open={true}
-          title="Entity Review Required"
-          message={`Review ${payload.entities.length} entities`}
-          onResolve={(approved) => onResume({ approved })}
-        />
-      );
-
-    case 'phase-approval':
-      // TODO: Implement phase approval UI
-      return (
-        <GenericApprovalDialog
-          open={true}
-          title={payload.phaseTitle}
-          message={payload.phaseDescription}
-          onResolve={(approved) => onResume({ approved })}
-        />
-      );
-
-    case 'generic':
-      return (
-        <GenericApprovalDialog
-          open={true}
-          title={payload.title}
-          message={payload.message}
-          onResolve={(approved) => onResume({ approved })}
-        />
-      );
-
-    default: {
-      // Exhaustiveness check
-      const _exhaustive: never = payload;
-      return _exhaustive;
-    }
-  }
+  useHumanInTheLoop(
+    {
+      name: 'approve_generic',
+      description: 'Generic approval gate for any content pipeline step',
+      parameters: z.object({
+        type: z.literal('generic'),
+        title: z.string(),
+        message: z.string(),
+      }),
+      render: ({ args, respond }) => {
+        if (!respond) {
+          return <div className="p-4 text-sm text-muted-foreground">Loading approval...</div>;
+        }
+        return (
+          <GenericApprovalDialog
+            open={true}
+            title={args.title}
+            message={args.message}
+            onResolve={(approved) => respond({ approved })}
+          />
+        );
+      },
+    },
+    []
+  );
 }
