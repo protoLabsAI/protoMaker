@@ -211,11 +211,11 @@ services:
 
 ### Optional Authentication
 
-| Variable            | Description                                                    |
-| ------------------- | -------------------------------------------------------------- |
+| Variable            | Description                                                     |
+| ------------------- | --------------------------------------------------------------- |
 | `AUTOMAKER_API_KEY` | API key for protoMaker authentication (auto-generated if blank) |
-| `CURSOR_AUTH_TOKEN` | Cursor CLI OAuth token                                         |
-| `GH_TOKEN`          | GitHub CLI token for git operations                            |
+| `CURSOR_AUTH_TOKEN` | Cursor CLI OAuth token                                          |
+| `GH_TOKEN`          | GitHub CLI token for git operations                             |
 
 ### Optional Configuration
 

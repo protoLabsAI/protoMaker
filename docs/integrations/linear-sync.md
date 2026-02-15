@@ -21,11 +21,11 @@ Linear                          protoMaker
 
 ### Three integration modes
 
-| Mode      | Direction          | Trigger         | Description                                      |
-| --------- | ------------------ | --------------- | ------------------------------------------------ |
+| Mode      | Direction           | Trigger         | Description                                      |
+| --------- | ------------------- | --------------- | ------------------------------------------------ |
 | **Push**  | protoMaker → Linear | Feature events  | Creates issues, syncs status, adds comments      |
 | **Pull**  | Linear → protoMaker | Webhooks        | Detects approvals, syncs status/priority changes |
-| **Agent** | Bidirectional      | OAuth actor=app | protoMaker appears as an agent in Linear          |
+| **Agent** | Bidirectional       | OAuth actor=app | protoMaker appears as an agent in Linear         |
 
 ## Setup
 
@@ -121,7 +121,7 @@ In the protoMaker UI or via API, configure per-project Linear settings:
 | `syncOnFeatureCreate` | boolean  | `true`                               | Create Linear issue when feature is created              |
 | `syncOnStatusChange`  | boolean  | `true`                               | Sync status changes to Linear                            |
 | `commentOnCompletion` | boolean  | `true`                               | Add comment when agent completes work                    |
-| `syncEnabled`         | boolean  | `false`                              | Enable bidirectional sync (Linear → protoMaker)           |
+| `syncEnabled`         | boolean  | `false`                              | Enable bidirectional sync (Linear → protoMaker)          |
 | `approvalStates`      | string[] | `["Approved", "Ready for Planning"]` | Workflow states that trigger approval pipeline           |
 | `conflictResolution`  | string   | `"linear"`                           | Who wins on conflict: `linear`, `automaker`, or `manual` |
 | `labelName`           | string   | —                                    | Custom label applied to synced issues                    |
@@ -142,23 +142,23 @@ In the protoMaker UI or via API, configure per-project Linear settings:
 
 ### Status Sync Mapping
 
-| protoMaker Status | Linear Status           | Direction          |
-| ---------------- | ----------------------- | ------------------ |
-| `backlog`        | `Backlog` / `Todo`      | Both               |
-| `in_progress`    | `In Progress`           | Both               |
-| `review`         | `In Review`             | protoMaker → Linear |
-| `done`           | `Done`                  | Both               |
-| `blocked`        | `Blocked` / `Cancelled` | protoMaker → Linear |
+| protoMaker Status | Linear Status           | Direction           |
+| ----------------- | ----------------------- | ------------------- |
+| `backlog`         | `Backlog` / `Todo`      | Both                |
+| `in_progress`     | `In Progress`           | Both                |
+| `review`          | `In Review`             | protoMaker → Linear |
+| `done`            | `Done`                  | Both                |
+| `blocked`         | `Blocked` / `Cancelled` | protoMaker → Linear |
 
 ### Priority Mapping
 
 | Linear Priority | protoMaker Complexity |
-| --------------- | -------------------- |
-| Urgent (1)      | `large`              |
-| High (2)        | `large`              |
-| Normal (3)      | `medium`             |
-| Low (4)         | `small`              |
-| None (0)        | `medium`             |
+| --------------- | --------------------- |
+| Urgent (1)      | `large`               |
+| High (2)        | `large`               |
+| Normal (3)      | `medium`              |
+| Low (4)         | `small`               |
+| None (0)        | `medium`              |
 
 ## Agent Routing
 

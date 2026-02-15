@@ -332,26 +332,26 @@ Content-Type: application/json
 
 Recommended webhooks:
 
-| Channel           | Webhook Name     | Source                |
-| ----------------- | ---------------- | --------------------- |
-| #agent-logs       | protoMaker Agent  | protoMaker server      |
-| #pr-notifications | GitHub           | GitHub webhook        |
-| #deployments      | CI/CD            | GitHub Actions        |
-| #ai-news          | AI News Feed     | RSS/Atom aggregator   |
+| Channel           | Webhook Name      | Source                |
+| ----------------- | ----------------- | --------------------- |
+| #agent-logs       | protoMaker Agent  | protoMaker server     |
+| #pr-notifications | GitHub            | GitHub webhook        |
+| #deployments      | CI/CD             | GitHub Actions        |
+| #ai-news          | AI News Feed      | RSS/Atom aggregator   |
 | #alerts           | protoMaker Alerts | Health monitor        |
-| #approvals        | Trust System     | Policy engine         |
-| #infra            | DevOps Bot       | Backup/deploy scripts |
+| #approvals        | Trust System      | Policy engine         |
+| #infra            | DevOps Bot        | Backup/deploy scripts |
 
 ### Linear Integration
 
 Linear issues map to Discord channels through the team hierarchy:
 
 | Linear Team | Discord Channel | protoMaker Role |
-| ----------- | --------------- | -------------- |
-| Frontend    | #team-frontend  | `frontend`     |
-| Backend     | #team-backend   | `backend`      |
-| AI/ML       | #team-ai-ml     | `ai-ml`        |
-| DevOps      | #team-devops    | `devops`       |
+| ----------- | --------------- | --------------- |
+| Frontend    | #team-frontend  | `frontend`      |
+| Backend     | #team-backend   | `backend`       |
+| AI/ML       | #team-ai-ml     | `ai-ml`         |
+| DevOps      | #team-devops    | `devops`        |
 
 Cross-team blockers identified in Linear triage are posted to #project-issues.
 

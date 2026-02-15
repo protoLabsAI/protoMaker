@@ -169,7 +169,7 @@ Configure these in your shell or the plugin's `plugin.json`:
 
 | Variable            | Description                | Default                 |
 | ------------------- | -------------------------- | ----------------------- |
-| `AUTOMAKER_API_URL` | protoMaker API base URL     | `http://localhost:3008` |
+| `AUTOMAKER_API_URL` | protoMaker API base URL    | `http://localhost:3008` |
 | `AUTOMAKER_API_KEY` | API key for authentication | (required)              |
 
 ### Plugin Configuration
@@ -899,10 +899,10 @@ The MCP server exposes 32 tools organized by category:
 
 ### Utilities
 
-| Tool                | Description                          |
-| ------------------- | ------------------------------------ |
+| Tool                | Description                           |
+| ------------------- | ------------------------------------- |
 | `health_check`      | Check if protoMaker server is running |
-| `get_board_summary` | Get feature counts by status         |
+| `get_board_summary` | Get feature counts by status          |
 
 ## Examples
 

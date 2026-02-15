@@ -445,11 +445,11 @@ Linear Projects (PM / Owner)    Strategic view, resource allocation
 
 ### Role Mapping
 
-| Role                     | Where It Lives     | Responsibility                            |
-| ------------------------ | ------------------ | ----------------------------------------- |
-| Project Owner (Human)    | Linear + Discord   | Strategic direction, final approvals      |
-| PM                       | Linear projects    | What to build, why, priorities            |
-| Project Manager          | Linear issues      | When, how, milestone tracking             |
+| Role                     | Where It Lives      | Responsibility                            |
+| ------------------------ | ------------------- | ----------------------------------------- |
+| Project Owner (Human)    | Linear + Discord    | Strategic direction, final approvals      |
+| PM                       | Linear projects     | What to build, why, priorities            |
+| Project Manager          | Linear issues       | When, how, milestone tracking             |
 | EM (Engineering Manager) | protoMaker instance | Who does what, capacity, agent assignment |
 | PE (Product Engineer)    | protoMaker agent    | Implementation, code, tests, PRs          |
 

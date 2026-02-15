@@ -517,7 +517,7 @@ The `ava-staging` runner has access to resources that GitHub-hosted runners don'
 | -------------------------- | ----------------------------------------------------- |
 | Claude CLI (authenticated) | AI-assisted PR reviews, changelog generation          |
 | Anthropic API key          | Automated code analysis, release notes                |
-| protoMaker MCP server       | Board updates, feature status, agent orchestration    |
+| protoMaker MCP server      | Board updates, feature status, agent orchestration    |
 | Docker (host)              | Staging deploys, integration tests against real infra |
 | gh CLI (authenticated)     | PR creation, issue management, release publishing     |
 | 125GB RAM / 24 CPUs        | Full E2E test suites, parallel builds                 |

@@ -191,13 +191,13 @@ sudo systemctl disable automaker
 
 ### Authentication
 
-| Variable                   | Required | Description                                 |
-| -------------------------- | -------- | ------------------------------------------- |
-| `ANTHROPIC_API_KEY`        | Yes\*    | Anthropic API key                           |
-| `CLAUDE_OAUTH_CREDENTIALS` | Yes\*    | Claude CLI OAuth JSON                       |
+| Variable                   | Required | Description                                  |
+| -------------------------- | -------- | -------------------------------------------- |
+| `ANTHROPIC_API_KEY`        | Yes\*    | Anthropic API key                            |
+| `CLAUDE_OAUTH_CREDENTIALS` | Yes\*    | Claude CLI OAuth JSON                        |
 | `AUTOMAKER_API_KEY`        | No       | protoMaker API key (auto-generated if blank) |
-| `CURSOR_AUTH_TOKEN`        | No       | Cursor CLI OAuth token                      |
-| `GH_TOKEN`                 | No       | GitHub CLI token                            |
+| `CURSOR_AUTH_TOKEN`        | No       | Cursor CLI OAuth token                       |
+| `GH_TOKEN`                 | No       | GitHub CLI token                             |
 
 \*At least one of `ANTHROPIC_API_KEY` or `CLAUDE_OAUTH_CREDENTIALS` is required.
 
