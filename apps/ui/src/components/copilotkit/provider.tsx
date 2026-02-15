@@ -215,13 +215,32 @@ export function CopilotSidebarWrapper({ children }: { children: ReactNode }) {
  */
 function SidebarControls() {
   const { selectedWorkflow, setSelectedWorkflow } = useModelSelection();
+  const [sidebarKey, setSidebarKey] = useState(0);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Check for Cmd+K (macOS) or Ctrl+K (other platforms)
+      const isModifierPressed = event.metaKey || event.ctrlKey;
+      if (isModifierPressed && event.key === 'k') {
+        event.preventDefault(); // Prevent browser's default Cmd+K behavior
+        setIsSidebarOpen((prev) => !prev);
+        // Force re-render of CopilotSidebar by changing the key
+        setSidebarKey((prev) => prev + 1);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   return (
     <div style={getCopilotKitThemeStyles()}>
       <WorkflowSelector value={selectedWorkflow} onChange={setSelectedWorkflow} />
       <SidebarModelSelector workflowId={selectedWorkflow} />
       <CopilotSidebar
-        defaultOpen={false}
+        key={sidebarKey}
+        defaultOpen={isSidebarOpen}
         labels={{
           modalHeaderTitle: 'Ava',
           welcomeMessageText: 'How can I help with your project?',
