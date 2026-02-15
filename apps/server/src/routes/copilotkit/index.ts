@@ -6,11 +6,8 @@
  * can find the "default" agent on /api/copilotkit/info.
  */
 
-import {
-  CopilotRuntime,
-  copilotRuntimeNodeExpressEndpoint,
-  EmptyAdapter,
-} from '@copilotkit/runtime';
+import { CopilotRuntime } from '@copilotkitnext/runtime';
+import { createCopilotEndpointExpress } from '@copilotkitnext/runtime/express';
 import { BuiltInAgent, defineTool } from '@copilotkitnext/agent';
 import { z } from 'zod';
 import { createLogger } from '@automaker/utils';
@@ -178,12 +175,8 @@ export function createCopilotKitEndpoint(deps: CopilotKitDependencies) {
 
   logger.info(`CopilotKit runtime initialized with Ava agent (${tools.length} tools)`);
 
-  // endpoint '/' because Express strips the mount prefix (/api/copilotkit)
-  // before passing req.url to the handler — Hono basePath must match the
-  // stripped path, not the original URL.
-  return copilotRuntimeNodeExpressEndpoint({
-    runtime,
-    endpoint: '/',
-    serviceAdapter: new EmptyAdapter(),
-  });
+  // Use @copilotkitnext/runtime's Express-native endpoint (proper Express Router)
+  // instead of @copilotkit/runtime's Hono-based adapter which has path mismatch issues.
+  // basePath '/' because Express strips the mount prefix (/api/copilotkit) from req.url.
+  return createCopilotEndpointExpress({ runtime, basePath: '/' });
 }

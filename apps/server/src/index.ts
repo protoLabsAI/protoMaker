@@ -183,7 +183,7 @@ import { LinearApprovalBridge } from './services/linear-approval-bridge.js';
 import { createDeployRoutes } from './routes/deploy/index.js';
 import { createAnalyticsRoutes } from './routes/analytics.js';
 import { AntagonisticReviewService } from './services/antagonistic-review-service.js';
-// CopilotKit imports are dynamic — @copilotkit/runtime may not be installed (e.g. Docker)
+// CopilotKit imports are dynamic — @copilotkitnext/runtime may not be installed
 // See conditional registration below at /api/copilotkit routes
 
 const PORT = parseInt(process.env.PORT || '3008', 10);
@@ -1042,7 +1042,7 @@ if (process.env.ANTHROPIC_API_KEY) {
     app.use('/api/copilotkit/threads', createCopilotKitThreadRoutes(copilotKitThreadService));
   } catch (err) {
     logger.warn(
-      'CopilotKit routes disabled — @copilotkit/runtime not installed:',
+      'CopilotKit routes disabled — @copilotkitnext/runtime not installed:',
       (err as Error).message
     );
   }
