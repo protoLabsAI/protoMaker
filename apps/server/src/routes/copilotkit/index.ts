@@ -84,7 +84,7 @@ function createAvaTools(deps: CopilotKitDependencies) {
         projectPath: z.string().describe('Path to the project'),
         featureId: z.string().describe('ID of the feature to move'),
         status: z
-          .enum(['backlog', 'in_progress', 'review', 'blocked', 'done'])
+          .enum(['backlog', 'in_progress', 'review', 'blocked', 'done', 'verified'])
           .describe('New status'),
       }),
       execute: async (args) => {
@@ -155,7 +155,7 @@ export function createCopilotKitEndpoint(deps: CopilotKitDependencies) {
   const avaAgent = new BuiltInAgent({
     model: 'anthropic/claude-sonnet-4.5',
     prompt: [
-      'You are Ava, the AI assistant for protoLabs Studio.',
+      'You are Ava, the AI assistant for protoMaker by protoLabs.',
       'You help users manage their development board, create and track features, control auto-mode, and understand project status.',
       'Use your tools to get real data before answering. Keep responses concise and action-oriented.',
       'When you perform an action, confirm what you did.',
