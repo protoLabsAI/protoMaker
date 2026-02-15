@@ -1,5 +1,8 @@
 /**
- * Core policy engine implementation
+ * Policy engine — inlined from former @automaker/policy-engine package.
+ *
+ * Trust-based authorization: permission matrix, status transition guards,
+ * and risk gating for agent actions.
  */
 
 import type {
@@ -7,15 +10,169 @@ import type {
   AgentTrustProfile,
   EnginePolicyConfig,
   EnginePolicyDecision,
+  PermissionMatrix,
   PermissionMatrixEntry,
   StatusTransitionGuard,
   RiskLevel,
 } from '@automaker/types';
-import { compareRiskLevels } from './defaults.js';
 
-/**
- * Check if a role has permission to perform an action
- */
+// ---------------------------------------------------------------------------
+// Risk level comparison
+// ---------------------------------------------------------------------------
+
+const RISK_LEVEL_ORDER = {
+  low: 0,
+  medium: 1,
+  high: 2,
+  critical: 3,
+} as const;
+
+function compareRiskLevels(
+  a: keyof typeof RISK_LEVEL_ORDER,
+  b: keyof typeof RISK_LEVEL_ORDER
+): number {
+  return RISK_LEVEL_ORDER[a] - RISK_LEVEL_ORDER[b];
+}
+
+// ---------------------------------------------------------------------------
+// Default configuration
+// ---------------------------------------------------------------------------
+
+export const DEFAULT_PERMISSION_MATRIX: PermissionMatrix = {
+  CTO: {
+    allowedActions: [
+      'create_work',
+      'assign',
+      'change_scope',
+      'block_release',
+      'modify_architecture',
+      'approve_work',
+    ],
+    maxRisk: 'critical',
+  },
+  PM: {
+    allowedActions: ['create_work', 'change_scope'],
+    maxRisk: 'medium',
+  },
+  ProjM: {
+    allowedActions: ['create_work', 'assign'],
+    maxRisk: 'medium',
+  },
+  EM: {
+    allowedActions: ['assign', 'block_release'],
+    maxRisk: 'high',
+  },
+  PE: {
+    allowedActions: ['modify_architecture', 'approve_work', 'block_release'],
+    maxRisk: 'high',
+  },
+};
+
+export const DEFAULT_STATUS_TRANSITIONS: StatusTransitionGuard[] = [
+  // Anyone can move to backlog
+  {
+    from: 'in_progress',
+    to: 'backlog',
+    allowedRoles: ['CTO', 'PM', 'ProjM', 'EM', 'PE'],
+  },
+  {
+    from: 'review',
+    to: 'backlog',
+    allowedRoles: ['CTO', 'PM', 'ProjM', 'EM', 'PE'],
+  },
+  // Work assignment transitions
+  {
+    from: 'backlog',
+    to: 'in_progress',
+    allowedRoles: ['CTO', 'ProjM', 'EM'],
+  },
+  // Review transitions - need approval role
+  {
+    from: 'in_progress',
+    to: 'review',
+    allowedRoles: ['CTO', 'PE', 'EM'],
+  },
+  // Completion - need approval authority
+  {
+    from: 'review',
+    to: 'done',
+    allowedRoles: ['CTO', 'PE'],
+    requiresApprovalAbove: 'medium',
+  },
+  // Blocking work
+  {
+    from: 'in_progress',
+    to: 'blocked',
+    allowedRoles: ['CTO', 'EM', 'PE'],
+  },
+  {
+    from: 'review',
+    to: 'blocked',
+    allowedRoles: ['CTO', 'EM', 'PE'],
+  },
+  // Unblocking
+  {
+    from: 'blocked',
+    to: 'in_progress',
+    allowedRoles: ['CTO', 'EM', 'PE'],
+  },
+
+  // === Authority pipeline workItemState transitions ===
+
+  // PM reviews ideas
+  {
+    from: 'idea',
+    to: 'pm_review',
+    allowedRoles: ['CTO', 'PM'],
+  },
+  // PM approves idea
+  {
+    from: 'pm_review',
+    to: 'approved',
+    allowedRoles: ['CTO', 'PM'],
+  },
+  // PM requests changes from CTO
+  {
+    from: 'pm_review',
+    to: 'pm_changes_requested',
+    allowedRoles: ['CTO', 'PM'],
+  },
+  // CTO resubmits after PM changes requested
+  {
+    from: 'pm_changes_requested',
+    to: 'pm_review',
+    allowedRoles: ['CTO', 'PM'],
+  },
+  // ProjM decomposes approved idea into tasks
+  {
+    from: 'approved',
+    to: 'planned',
+    allowedRoles: ['CTO', 'ProjM'],
+  },
+  // ProjM marks planned work as ready for execution
+  {
+    from: 'planned',
+    to: 'ready',
+    allowedRoles: ['CTO', 'ProjM'],
+  },
+  // EM assigns ready work to engineers
+  {
+    from: 'ready',
+    to: 'in_progress',
+    allowedRoles: ['CTO', 'EM'],
+  },
+];
+
+export const DEFAULT_POLICY_CONFIG: EnginePolicyConfig = {
+  permissionMatrix: DEFAULT_PERMISSION_MATRIX,
+  statusTransitions: DEFAULT_STATUS_TRANSITIONS,
+  strictRiskGating: true,
+};
+
+// ---------------------------------------------------------------------------
+// Policy check helpers
+// ---------------------------------------------------------------------------
+
 function checkPermission(
   trustProfile: AgentTrustProfile,
   proposal: EngineActionProposal,
@@ -26,7 +183,6 @@ function checkPermission(
     return { hasPermission: false };
   }
 
-  // Check custom permissions first
   if (trustProfile.customPermissions?.[proposal.action] !== undefined) {
     return {
       hasPermission: trustProfile.customPermissions[proposal.action] ?? false,
@@ -34,47 +190,35 @@ function checkPermission(
     };
   }
 
-  // Check if action is in allowed actions
   const hasPermission = permissionEntry.allowedActions.includes(proposal.action);
   return { hasPermission, permissionEntry };
 }
 
-/**
- * Check if a status transition is allowed
- */
 function checkStatusTransition(
   trustProfile: AgentTrustProfile,
   proposal: EngineActionProposal,
   config: EnginePolicyConfig
 ): { allowed: boolean; guard?: StatusTransitionGuard } {
-  // If no status transition is specified, allow it
   if (!proposal.currentStatus || !proposal.targetStatus) {
     return { allowed: true };
   }
 
-  // If no transition guards configured, allow all
   if (!config.statusTransitions || config.statusTransitions.length === 0) {
     return { allowed: true };
   }
 
-  // Find matching transition guard
   const guard = config.statusTransitions.find(
     (g) => g.from === proposal.currentStatus && g.to === proposal.targetStatus
   );
 
-  // If no guard exists for this transition, deny by default
   if (!guard) {
     return { allowed: false };
   }
 
-  // Check if role is allowed for this transition
   const allowed = guard.allowedRoles.includes(trustProfile.role);
   return { allowed, guard };
 }
 
-/**
- * Check risk gating rules
- */
 function checkRiskGating(
   trustProfile: AgentTrustProfile,
   proposal: EngineActionProposal,
@@ -95,7 +239,6 @@ function checkRiskGating(
     permissionRiskLimit: permissionEntry.actionRiskLimits?.[proposal.action],
   };
 
-  // Check if action risk exceeds agent's max risk level
   if (compareRiskLevels(proposal.actionRisk, trustProfile.maxRiskLevel) > 0) {
     return {
       gateTriggered: true,
@@ -104,7 +247,6 @@ function checkRiskGating(
     };
   }
 
-  // Check permission-level risk limits
   if (details.permissionRiskLimit) {
     if (compareRiskLevels(proposal.actionRisk, details.permissionRiskLimit) > 0) {
       return {
@@ -115,7 +257,6 @@ function checkRiskGating(
     }
   }
 
-  // Check transition-specific risk requirements
   if (guard?.requiresApprovalAbove) {
     if (compareRiskLevels(proposal.actionRisk, guard.requiresApprovalAbove) > 0) {
       return {
@@ -132,25 +273,21 @@ function checkRiskGating(
   };
 }
 
+// ---------------------------------------------------------------------------
+// Main export
+// ---------------------------------------------------------------------------
+
 /**
- * Main policy checking function
- *
- * Evaluates an action proposal against policy configuration:
- * 1. Check permission matrix (does role have permission for action?)
- * 2. Check status transition guards (is transition allowed?)
- * 3. Check risk gating (does action risk exceed agent's limits?)
- *
- * @param proposal - The action being proposed
- * @param trustProfile - Agent's trust profile with role and risk limits
- * @param config - Policy configuration
- * @returns EnginePolicyDecision with allow/deny/require_approval and detailed reasoning
+ * Evaluate an action proposal against policy configuration:
+ * 1. Permission matrix (does role have permission for action?)
+ * 2. Status transition guards (is transition allowed?)
+ * 3. Risk gating (does action risk exceed agent's limits?)
  */
 export function checkPolicy(
   proposal: EngineActionProposal,
   trustProfile: AgentTrustProfile,
   config: EnginePolicyConfig
 ): EnginePolicyDecision {
-  // Step 1: Check permission matrix
   const { hasPermission, permissionEntry } = checkPermission(trustProfile, proposal, config);
 
   if (!hasPermission) {
@@ -158,12 +295,11 @@ export function checkPolicy(
       decision: 'deny',
       reason: `Role ${trustProfile.role} does not have permission for action ${proposal.action}`,
       hasPermission: false,
-      transitionAllowed: true, // Not relevant if no permission
+      transitionAllowed: true,
       riskGateTriggered: false,
     };
   }
 
-  // Step 2: Check status transition guards
   const { allowed: transitionAllowed, guard } = checkStatusTransition(
     trustProfile,
     proposal,
@@ -180,7 +316,6 @@ export function checkPolicy(
     };
   }
 
-  // Step 3: Check risk gating
   const riskCheck = checkRiskGating(trustProfile, proposal, permissionEntry!, guard);
 
   if (riskCheck.gateTriggered) {
@@ -194,7 +329,6 @@ export function checkPolicy(
     };
   }
 
-  // All checks passed
   return {
     decision: 'allow',
     reason: 'All policy checks passed',

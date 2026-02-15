@@ -471,7 +471,6 @@ Understanding the dependency chain helps prevent circular dependencies:
 @automaker/platform
 @automaker/model-resolver
 @automaker/dependency-resolver
-@automaker/policy-engine
 @automaker/spec-parser
 @automaker/observability
 @automaker/llm-providers

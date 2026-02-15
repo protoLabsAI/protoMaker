@@ -82,7 +82,6 @@ automaker/
     ├── platform/     # Path management, security, process spawning
     ├── model-resolver/    # Claude model alias resolution
     ├── dependency-resolver/  # Feature dependency ordering
-    ├── policy-engine/     # Trust-based policy checking for authority system
     ├── spec-parser/       # XML/markdown spec parsing for project plans
     ├── git-utils/    # Git operations & worktree management
     ├── flows/        # LangGraph state graph primitives & flow orchestration
@@ -97,7 +96,7 @@ Packages can only depend on packages above them:
 ```
 @automaker/types (no dependencies)
     ↓
-@automaker/utils, @automaker/prompts, @automaker/platform, @automaker/model-resolver, @automaker/dependency-resolver, @automaker/policy-engine, @automaker/spec-parser, @automaker/flows, @automaker/llm-providers, @automaker/observability
+@automaker/utils, @automaker/prompts, @automaker/platform, @automaker/model-resolver, @automaker/dependency-resolver, @automaker/spec-parser, @automaker/flows, @automaker/llm-providers, @automaker/observability
     ↓
 @automaker/git-utils
     ↓

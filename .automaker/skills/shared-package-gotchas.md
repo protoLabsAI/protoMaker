@@ -42,7 +42,7 @@ Packages can ONLY depend on packages above them:
     ↓
 @automaker/utils, @automaker/prompts, @automaker/platform,
 @automaker/model-resolver, @automaker/dependency-resolver,
-@automaker/policy-engine, @automaker/spec-parser
+@automaker/spec-parser
     ↓
 @automaker/git-utils
     ↓

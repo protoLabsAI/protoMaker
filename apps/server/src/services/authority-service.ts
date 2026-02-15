@@ -27,7 +27,7 @@ import type {
   PolicyAction,
 } from '@automaker/types';
 import { AUTHORITY_TO_ROLE_NAME } from '@automaker/types';
-import { checkPolicy, DEFAULT_POLICY_CONFIG } from '@automaker/policy-engine';
+import { checkPolicy, DEFAULT_POLICY_CONFIG } from './policy-engine.js';
 import { createLogger, atomicWriteJson, readJsonWithRecovery } from '@automaker/utils';
 import { getAutomakerDir } from '@automaker/platform';
 import type { EventEmitter } from '../lib/events.js';

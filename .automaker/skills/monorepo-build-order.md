@@ -22,7 +22,7 @@ The Automaker monorepo has a strict dependency chain. Building out of order caus
     ↓
 @automaker/utils, @automaker/prompts, @automaker/platform,
 @automaker/model-resolver, @automaker/dependency-resolver,
-@automaker/policy-engine, @automaker/spec-parser
+@automaker/spec-parser
     ↓
 @automaker/git-utils
     ↓
