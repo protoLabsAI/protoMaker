@@ -24,11 +24,17 @@ export default defineConfig({
     baseURL: `http://localhost:${port}`,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
-    // 720px default is too short — modals with inputs push confirm buttons
-    // below the fold causing "element is outside of the viewport" failures
-    viewport: { width: 1280, height: 900 },
+    // Desktop Chrome default is 720px. Position:fixed dialogs use
+    // top:50%/translateY(-50%) centering — if the dialog is taller than
+    // expected (Ubuntu CI fonts render taller than macOS), footer buttons
+    // land outside the viewport. scrollIntoView() cannot fix fixed-position
+    // elements. 1080px gives enough headroom for any dialog content.
+    viewport: { width: 1280, height: 1080 },
     // Give CI actions (click, fill, etc.) more time on slow shared runners
     actionTimeout: process.env.CI ? 10_000 : 0,
+    // Disable CSS animations for deterministic rendering on CI.
+    // Prevents "element not stable" from in-flight dialog transitions.
+    reducedMotion: 'reduce',
   },
   // Global setup - authenticate before each test
   globalSetup: require.resolve('./tests/global-setup.ts'),
@@ -37,8 +43,8 @@ export default defineConfig({
       name: 'chromium',
       use: {
         ...devices['Desktop Chrome'],
-        // Override Desktop Chrome's 720px height — keep the user agent and other device props
-        viewport: { width: 1280, height: 900 },
+        // Override Desktop Chrome's 720px — see use.viewport comment above
+        viewport: { width: 1280, height: 1080 },
       },
     },
   ],
