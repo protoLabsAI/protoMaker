@@ -26,13 +26,16 @@ import { ModelSelector, getStoredModel, storeModel, type ModelTier } from './mod
 const CopilotAvailableContext = createContext(false);
 
 /**
- * Model selection context shared between provider and sidebar.
+ * Model + workflow selection context shared between provider and sidebar.
  * Lives at the CopilotKitProvider level so model changes can
  * trigger CKProvider re-mount with updated headers.
+ * Workflow state is co-located here because model persistence is per-workflow.
  */
 interface ModelContextValue {
   selectedModel: ModelTier;
   setSelectedModel: (model: ModelTier) => void;
+  selectedWorkflow: string;
+  setSelectedWorkflow: (workflow: string) => void;
 }
 
 const ModelContext = createContext<ModelContextValue | null>(null);
@@ -113,13 +116,20 @@ class CopilotErrorBoundary extends Component<
 export function CopilotKitProvider({ children }: { children: ReactNode }) {
   const [available, setAvailable] = useState<boolean | null>(null);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const [selectedWorkflow, setSelectedWorkflowState] = useState('default');
   const [selectedModel, setSelectedModelState] = useState<ModelTier>(() =>
     getStoredModel('default')
   );
 
+  const setSelectedWorkflow = (workflow: string) => {
+    setSelectedWorkflowState(workflow);
+    // Load the stored model preference for the new workflow
+    setSelectedModelState(getStoredModel(workflow));
+  };
+
   const setSelectedModel = (model: ModelTier) => {
     setSelectedModelState(model);
-    storeModel('default', model);
+    storeModel(selectedWorkflow, model);
   };
 
   useEffect(() => {
@@ -162,7 +172,9 @@ export function CopilotKitProvider({ children }: { children: ReactNode }) {
   return (
     <CopilotErrorBoundary fallback={unavailableFallback}>
       <CopilotAvailableContext.Provider value={true}>
-        <ModelContext.Provider value={{ selectedModel, setSelectedModel }}>
+        <ModelContext.Provider
+          value={{ selectedModel, setSelectedModel, selectedWorkflow, setSelectedWorkflow }}
+        >
           <CKProvider
             key={selectedModel}
             runtimeUrl="/api/copilotkit"
@@ -184,7 +196,6 @@ export function CopilotKitProvider({ children }: { children: ReactNode }) {
  */
 export function CopilotSidebarWrapper({ children }: { children: ReactNode }) {
   const available = useContext(CopilotAvailableContext);
-  const [selectedWorkflow, setSelectedWorkflow] = useState('default');
 
   if (!available) {
     return <>{children}</>;
@@ -193,19 +204,31 @@ export function CopilotSidebarWrapper({ children }: { children: ReactNode }) {
   return (
     <>
       {children}
-      <div style={getCopilotKitThemeStyles()}>
-        <WorkflowSelector value={selectedWorkflow} onChange={setSelectedWorkflow} />
-        <SidebarModelSelector workflowId={selectedWorkflow} />
-        <CopilotSidebar
-          defaultOpen={false}
-          labels={{
-            modalHeaderTitle: 'Ava',
-            welcomeMessageText: 'How can I help with your project?',
-          }}
-        />
-        <AgentStateDisplay />
-      </div>
+      <SidebarControls />
     </>
+  );
+}
+
+/**
+ * Sidebar controls rendered inside the CopilotKit context.
+ * Separated so useModelSelection() has access to the provider context.
+ */
+function SidebarControls() {
+  const { selectedWorkflow, setSelectedWorkflow } = useModelSelection();
+
+  return (
+    <div style={getCopilotKitThemeStyles()}>
+      <WorkflowSelector value={selectedWorkflow} onChange={setSelectedWorkflow} />
+      <SidebarModelSelector workflowId={selectedWorkflow} />
+      <CopilotSidebar
+        defaultOpen={false}
+        labels={{
+          modalHeaderTitle: 'Ava',
+          welcomeMessageText: 'How can I help with your project?',
+        }}
+      />
+      <AgentStateDisplay />
+    </div>
   );
 }
 
