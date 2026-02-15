@@ -27,6 +27,7 @@ import { getLinearSpecialistPrompt } from './agents/linear-specialist.js';
 import { getPrMaintainerPrompt } from './agents/pr-maintainer.js';
 import { getBoardJanitorPrompt } from './agents/board-janitor.js';
 import { getFrankPrompt } from './agents/frank.js';
+import { getKaiPrompt } from './agents/kai.js';
 
 /** Base config that all prompt functions accept */
 export interface BasePromptConfig {
@@ -168,3 +169,4 @@ registerPrompt('linear-specialist', () => getLinearSpecialistPrompt());
 registerPrompt('pr-maintainer', () => getPrMaintainerPrompt());
 registerPrompt('board-janitor', () => getBoardJanitorPrompt());
 registerPrompt('frank', () => getFrankPrompt());
+registerPrompt('kai', () => getKaiPrompt());
