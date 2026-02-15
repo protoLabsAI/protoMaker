@@ -9,12 +9,9 @@
  */
 
 import { Component, createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { CopilotKit } from '@copilotkit/react-core';
-import { CopilotSidebar } from '@copilotkit/react-ui';
-import '@copilotkit/react-ui/styles.css';
+import { CopilotKitProvider as CKProvider, CopilotSidebar } from '@copilotkitnext/react';
+import '@copilotkitnext/react/styles.css';
 import { getCopilotKitThemeStyles } from './theme-bridge';
-import { useCopilotKitContext } from '@/hooks/use-copilotkit-context';
-import { useCopilotKitSuggestions } from '@/hooks/use-copilotkit-suggestions';
 import { getAuthHeaders } from '@/lib/api-fetch';
 
 const CopilotAvailableContext = createContext(false);
@@ -46,16 +43,6 @@ class CopilotErrorBoundary extends Component<
     }
     return this.props.children;
   }
-}
-
-/**
- * Injects CopilotKit hooks when provider is active.
- * Must be rendered inside <CopilotKit>.
- */
-function CopilotKitHooks({ children }: { children: ReactNode }) {
-  useCopilotKitContext();
-  useCopilotKitSuggestions();
-  return <>{children}</>;
 }
 
 /**
@@ -96,14 +83,9 @@ export function CopilotKitProvider({ children }: { children: ReactNode }) {
   return (
     <CopilotErrorBoundary fallback={unavailableFallback}>
       <CopilotAvailableContext.Provider value={true}>
-        <CopilotKit
-          runtimeUrl="/api/copilotkit"
-          agent="default"
-          headers={getAuthHeaders()}
-          credentials="include"
-        >
-          <CopilotKitHooks>{children}</CopilotKitHooks>
-        </CopilotKit>
+        <CKProvider runtimeUrl="/api/copilotkit" headers={getAuthHeaders()} credentials="include">
+          {children}
+        </CKProvider>
       </CopilotAvailableContext.Provider>
     </CopilotErrorBoundary>
   );
@@ -121,18 +103,17 @@ export function CopilotSidebarWrapper({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div style={getCopilotKitThemeStyles()}>
-      <CopilotSidebar
-        defaultOpen={false}
-        clickOutsideToClose={false}
-        shortcut="\\"
-        labels={{
-          title: 'Ava',
-          initial: 'How can I help with your project?',
-        }}
-      >
-        {children}
-      </CopilotSidebar>
-    </div>
+    <>
+      {children}
+      <div style={getCopilotKitThemeStyles()}>
+        <CopilotSidebar
+          defaultOpen={false}
+          labels={{
+            modalHeaderTitle: 'Ava',
+            welcomeMessageText: 'How can I help with your project?',
+          }}
+        />
+      </div>
+    </>
   );
 }
