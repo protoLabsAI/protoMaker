@@ -8,4 +8,5 @@ export { ProjectActions } from './project-actions';
 export { SidebarNavigation } from './sidebar-navigation';
 export { ProjectSelectorWithOptions } from './project-selector-with-options';
 export { SidebarFooter } from './sidebar-footer';
+export { ThemeToggleButton } from './theme-toggle-button';
 export { MobileSidebarToggle } from './mobile-sidebar-toggle';

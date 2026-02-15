@@ -2,6 +2,7 @@ import type { NavigateOptions } from '@tanstack/react-router';
 import { cn } from '@/lib/utils';
 import { formatShortcut } from '@/store/app-store';
 import { Activity, Settings } from 'lucide-react';
+import { ThemeToggleButton } from './theme-toggle-button';
 
 interface SidebarFooterProps {
   sidebarOpen: boolean;
@@ -128,6 +129,8 @@ export function SidebarFooter({
           </button>
         </div>
       )}
+      {/* Theme Toggle */}
+      <ThemeToggleButton sidebarOpen={sidebarOpen} />
       {/* Settings Link */}
       <div className="p-2">
         <button
