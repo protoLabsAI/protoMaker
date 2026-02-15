@@ -11,6 +11,9 @@ allowed-tools:
   - mcp__automaker__get_project_spec
   - mcp__automaker__list_context_files
   - mcp__automaker__get_context_file
+  # Context7 - live library documentation
+  - mcp__plugin_automaker_context7__resolve-library-id
+  - mcp__plugin_automaker_context7__query-docs
 model: opus
 ---
 
