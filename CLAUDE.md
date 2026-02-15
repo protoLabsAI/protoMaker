@@ -295,6 +295,9 @@ mcp__automaker__create_feature({
 - `AUTOMAKER_MOCK_AGENT=true` - Enable mock agent mode for CI testing
 - `AUTOMAKER_AUTO_LOGIN=true` - Skip login prompt in development (disabled when NODE_ENV=production)
 - `VITE_HOSTNAME` - Hostname for frontend API URLs (default: localhost)
+- `LANGFUSE_PUBLIC_KEY` - Langfuse public key (optional, enables observability)
+- `LANGFUSE_SECRET_KEY` - Langfuse secret key (optional, enables observability)
+- `LANGFUSE_BASE_URL` - Langfuse API URL (default: https://cloud.langfuse.com)
 
 ## MCP Server & Claude Code Plugin
 
@@ -316,7 +319,7 @@ claude plugin install automaker
 
 ### Available MCP Tools
 
-The MCP server exposes 42+ tools organized by category:
+The MCP server exposes 48+ tools organized by category:
 
 **Feature Management:** `list_features`, `get_feature`, `create_feature`, `update_feature`, `delete_feature`, `move_feature`
 
@@ -335,6 +338,8 @@ The MCP server exposes 42+ tools organized by category:
 **Agent Templates:** `list_agent_templates`, `get_agent_template`, `register_agent_template`, `update_agent_template`, `unregister_agent_template`, `execute_dynamic_agent`, `get_role_registry_status`
 
 **GitHub Operations:** `merge_pr`, `check_pr_status`, `resolve_review_threads`
+
+**Observability:** `langfuse_list_traces`, `langfuse_get_trace`, `langfuse_get_costs`, `langfuse_list_prompts`, `langfuse_score_trace`, `langfuse_add_to_dataset`
 
 **Utilities:** `health_check`, `get_board_summary`
 
