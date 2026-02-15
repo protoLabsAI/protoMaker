@@ -9,15 +9,59 @@
  */
 
 import { Component, createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { CopilotKitProvider as CKProvider, CopilotSidebar } from '@copilotkitnext/react';
+import {
+  CopilotKitProvider as CKProvider,
+  CopilotSidebar,
+  useAgentContext,
+} from '@copilotkitnext/react';
 import '@copilotkitnext/react/styles.css';
 import { getCopilotKitThemeStyles } from './theme-bridge';
 import { getAuthHeaders } from '@/lib/api-fetch';
 import { useAuthStore } from '@/store/auth-store';
 import { AgentStateDisplay } from './agent-state-display';
 import { WorkflowSelector, WorkflowProvider } from './workflow-selector';
+import { useAppStore } from '@/store/app-store';
 
 const CopilotAvailableContext = createContext(false);
+
+/**
+ * Injects project context into CopilotKit using useAgentContext.
+ * This provides agents with current project path, spec, and feature list.
+ */
+function ProjectContextInjector() {
+  const currentProject = useAppStore((s) => s.currentProject);
+  const features = useAppStore((s) => s.features);
+  const spec = useAppStore((s) => s.spec);
+
+  // Inject current project path
+  useAgentContext({
+    description: 'Current project path',
+    value: currentProject?.path || null,
+  });
+
+  // Inject feature list summary
+  useAgentContext({
+    description: 'Feature list summary',
+    value:
+      features.length > 0
+        ? features.map((f) => ({
+            id: f.id,
+            title: f.title,
+            status: f.status,
+            complexity: f.complexity,
+            milestone: f.milestone,
+          }))
+        : null,
+  });
+
+  // Inject project spec when available
+  useAgentContext({
+    description: 'Project specification',
+    value: spec || null,
+  });
+
+  return null;
+}
 
 /**
  * Error boundary that catches CopilotKit crashes and falls through
@@ -93,6 +137,7 @@ export function CopilotKitProvider({ children }: { children: ReactNode }) {
       <CopilotAvailableContext.Provider value={true}>
         <WorkflowProvider>
           <CKProvider runtimeUrl="/api/copilotkit" headers={getAuthHeaders()} credentials="include">
+            <ProjectContextInjector />
             {children}
           </CKProvider>
         </WorkflowProvider>
