@@ -1,0 +1,58 @@
+{
+  "name": "@automaker/ui-components",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Shared UI components for AutoMaker",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./atoms": {
+      "types": "./dist/atoms/index.d.ts",
+      "default": "./dist/atoms/index.js"
+    },
+    "./molecules": {
+      "types": "./dist/molecules/index.d.ts",
+      "default": "./dist/molecules/index.js"
+    },
+    "./organisms": {
+      "types": "./dist/organisms/index.d.ts",
+      "default": "./dist/organisms/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch"
+  },
+  "keywords": [
+    "automaker",
+    "ui",
+    "components"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "author": "AutoMaker Team",
+  "license": "SEE LICENSE IN LICENSE",
+  "engines": {
+    "node": ">=22.0.0 <23.0.0"
+  },
+  "dependencies": {
+    "class-variance-authority": "0.7.1",
+    "clsx": "2.1.1",
+    "tailwind-merge": "3.4.0",
+    "lucide-react": "0.562.0"
+  },
+  "peerDependencies": {
+    "react": ">=19",
+    "tailwindcss": ">=4"
+  },
+  "devDependencies": {
+    "@types/node": "22.19.3",
+    "@types/react": "^19.0.10",
+    "typescript": "5.9.3"
+  }
+}
