@@ -81,6 +81,7 @@ jobs:
           done
 
       - name: Rebuild and restart staging
+        id: rebuild
         working-directory: /home/josh/staging-deploy/automaker
         run: |
           ./scripts/setup-staging.sh --build
@@ -134,7 +135,7 @@ jobs:
           DISCORD_ALERTS_WEBHOOK: ${{ secrets.DISCORD_ALERTS_WEBHOOK }}
 
       - name: Rollback on failure
-        if: failure() && (steps.verify.outcome == 'failure' || steps.smoke.outcome == 'failure')
+        if: failure() && (steps.rebuild.outcome == 'failure' || steps.verify.outcome == 'failure' || steps.smoke.outcome == 'failure')
         working-directory: /home/josh/staging-deploy/automaker
         run: |
           echo "Deploy verification failed — rolling back to previous images"
@@ -180,6 +181,7 @@ jobs:
           if [ $retries -eq 15 ]; then
             echo "CRITICAL: Rollback also failed. Manual intervention required."
             docker compose -f docker-compose.staging.yml logs --tail=50 server
+            exit 1
           fi
 
       - name: Cleanup
