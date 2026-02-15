@@ -127,6 +127,18 @@ export type { BasePromptConfig } from './prompt-registry.js';
 // Shared types
 export type { PromptConfig } from './types.js';
 
+// Shared prompt fragments (team-base)
+export {
+  TEAM_ROSTER,
+  BRAND_IDENTITY,
+  CONTEXT7_GUIDE,
+  WORKTREE_SAFETY,
+  PORT_PROTECTION,
+  MONOREPO_STANDARDS,
+  getEngineeringBase,
+  getContentBase,
+} from './shared/team-base.js';
+
 // Agent role prompts (generic roles)
 export { getProductManagerPrompt, getResearchPrompt } from './agents/product-manager-prompt.js';
 export {
