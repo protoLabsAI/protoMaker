@@ -13,6 +13,7 @@ import {
 } from '@automaker/types';
 import { createLogger } from '@automaker/utils';
 import { resolveModelString } from '@automaker/model-resolver';
+import { getPromptForRole, hasPrompt } from '@automaker/prompts';
 import type { RoleRegistryService } from './role-registry-service.js';
 import type { EventEmitter } from '../lib/events.js';
 
@@ -260,10 +261,26 @@ export class AgentFactoryService {
 
   /**
    * Resolve a template into a concrete AgentConfig.
+   *
+   * System prompt resolution order:
+   * 1. Template's inline systemPrompt (if set)
+   * 2. Prompt registry lookup by template name (e.g., 'matt', 'ava')
+   * 3. Prompt registry lookup by role (e.g., 'backend-engineer')
+   * 4. undefined (no system prompt)
    */
   private resolveConfig(template: AgentTemplate, projectPath: string): AgentConfig {
     const modelAlias = template.model ?? 'sonnet';
     const resolvedModel = resolveModelString(modelAlias);
+
+    // Resolve system prompt with registry fallback
+    let systemPrompt = template.systemPrompt;
+    if (!systemPrompt) {
+      // Try template name first, then role
+      const lookupKey = hasPrompt(template.name) ? template.name : template.role;
+      if (hasPrompt(lookupKey)) {
+        systemPrompt = getPromptForRole(lookupKey, { projectPath });
+      }
+    }
 
     return {
       templateName: template.name,
@@ -273,7 +290,7 @@ export class AgentFactoryService {
       disallowedTools: template.disallowedTools ?? [],
       maxTurns: template.maxTurns ?? DEFAULT_MAX_TURNS,
       systemPromptTemplate: template.systemPromptTemplate,
-      systemPrompt: template.systemPrompt,
+      systemPrompt,
       role: template.role,
       displayName: template.displayName,
       trustLevel: template.trustLevel ?? DEFAULT_TRUST_LEVEL,

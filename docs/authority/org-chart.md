@@ -12,46 +12,20 @@ The system has three layers:
 
 ## Organization Chart
 
-```
-Project Owner (Trust=3, Autonomous)
- |  Technical architecture, product vision, final authority
- |
- |-- Chief of Staff (Trust=2, Conditional) — Orchestrator
- |    Operational leader, product direction, team expansion
- |    |
- |    |-- Crew Loop Members (scheduled, auto-escalate)
- |    |    |
- |    |    |-- PR Maintainer (Haiku, every 10 min)
- |    |    |    Stale PRs, auto-merge, thread resolution
- |    |    |
- |    |    |-- Board Janitor (Haiku, every 15 min)
- |    |    |    Board consistency, orphaned features, dep chains
- |    |    |
- |    |    |-- DevOps Engineer (Sonnet, every 10 min)
- |    |         Infrastructure, deployment, monitoring, staging
- |    |
- |    |-- Interactive Agents (CLI + Discord accessible)
- |    |    |
- |    |    |-- Frontend Engineer (Sonnet, Trust=2)
- |    |    |    UI components, design system, Tailwind, a11y
- |    |    |
- |    |    |-- GTM Specialist (Sonnet, Trust=2)
- |    |         Content pipeline, brand strategy, growth
- |    |
- |    |-- Implementation Agents (auto-mode assigned)
- |    |    |
- |    |    |-- Backend Engineer (Sonnet)
- |    |    |-- QA Engineer (Sonnet)
- |    |    |-- Documentation Engineer (Haiku)
- |    |    |-- Product Manager (Sonnet)
- |    |    |-- Engineering Manager (Sonnet)
- |    |
- |    |-- Authority Agents (dormant — event-driven)
- |         |
- |         |-- PM Agent — idea research pipeline
- |         |-- ProjM Agent — project decomposition
- |         |-- EM Agent — work assignment
- |         |-- Principal Engineer — architecture review
+```text
+Josh Mabry (CEO, Human)
+├── Ava Loveland, Opus, Trust=3 — Engineering
+│   ├── Matt, Sonnet, Trust=2
+│   ├── Sam, Sonnet, Trust=2
+│   ├── Frank, Sonnet, Trust=2
+│   ├── Cindi, Sonnet, Trust=2
+│   ├── Backend Engineer, Sonnet, Trust=2
+│   ├── Product Manager, Sonnet, Trust=1
+│   ├── Engineering Manager, Sonnet, Trust=1
+│   ├── Linear Specialist, Sonnet, Trust=2
+│   ├── PR Maintainer, Haiku, Trust=2 [Crew]
+│   └── Board Janitor, Haiku, Trust=1 [Crew]
+└── Jon, Sonnet, Trust=1 — Go-to-Market
 ```
 
 ## Roles

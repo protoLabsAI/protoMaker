@@ -124,7 +124,10 @@ export {
 } from './prompt-registry.js';
 export type { BasePromptConfig } from './prompt-registry.js';
 
-// Agent role prompts
+// Shared types
+export type { PromptConfig } from './types.js';
+
+// Agent role prompts (generic roles)
 export { getProductManagerPrompt, getResearchPrompt } from './agents/product-manager-prompt.js';
 export {
   getEngineeringManagerPrompt,
@@ -136,6 +139,17 @@ export { getDevOpsEngineerPrompt } from './agents/devops-engineer-prompt.js';
 export { getQAEngineerPrompt } from './agents/qa-engineer-prompt.js';
 export { getDocsEngineerPrompt } from './agents/docs-engineer-prompt.js';
 export { getGTMSpecialistPrompt } from './agents/gtm-specialist-prompt.js';
+
+// Personified agent prompts (named agents)
+export { getAvaPrompt } from './agents/ava.js';
+export { getMattPrompt } from './agents/matt.js';
+export { getSamPrompt } from './agents/sam.js';
+export { getCindiPrompt } from './agents/cindi.js';
+export { getJonPrompt } from './agents/jon.js';
+export { getLinearSpecialistPrompt } from './agents/linear-specialist.js';
+export { getPrMaintainerPrompt } from './agents/pr-maintainer.js';
+export { getBoardJanitorPrompt } from './agents/board-janitor.js';
+export { getFrankPrompt } from './agents/frank.js';
 
 // Content generation prompts
 export { getOutlinePlannerPrompt } from './content/outline-planner.js';

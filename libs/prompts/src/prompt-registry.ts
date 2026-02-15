@@ -18,6 +18,15 @@ import { getDevOpsEngineerPrompt } from './agents/devops-engineer-prompt.js';
 import { getQAEngineerPrompt } from './agents/qa-engineer-prompt.js';
 import { getDocsEngineerPrompt } from './agents/docs-engineer-prompt.js';
 import { getGTMSpecialistPrompt } from './agents/gtm-specialist-prompt.js';
+import { getAvaPrompt } from './agents/ava.js';
+import { getMattPrompt } from './agents/matt.js';
+import { getSamPrompt } from './agents/sam.js';
+import { getCindiPrompt } from './agents/cindi.js';
+import { getJonPrompt } from './agents/jon.js';
+import { getLinearSpecialistPrompt } from './agents/linear-specialist.js';
+import { getPrMaintainerPrompt } from './agents/pr-maintainer.js';
+import { getBoardJanitorPrompt } from './agents/board-janitor.js';
+import { getFrankPrompt } from './agents/frank.js';
 
 /** Base config that all prompt functions accept */
 export interface BasePromptConfig {
@@ -147,3 +156,15 @@ registerPrompt('gtm-specialist', (config) =>
     focus: (config.focus as string) ?? '',
   })
 );
+
+// --- Register personified agent prompts ---
+
+registerPrompt('ava', () => getAvaPrompt());
+registerPrompt('matt', () => getMattPrompt());
+registerPrompt('sam', () => getSamPrompt());
+registerPrompt('cindi', () => getCindiPrompt());
+registerPrompt('jon', () => getJonPrompt());
+registerPrompt('linear-specialist', () => getLinearSpecialistPrompt());
+registerPrompt('pr-maintainer', () => getPrMaintainerPrompt());
+registerPrompt('board-janitor', () => getBoardJanitorPrompt());
+registerPrompt('frank', () => getFrankPrompt());

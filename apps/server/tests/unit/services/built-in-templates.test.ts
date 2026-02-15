@@ -14,7 +14,7 @@ describe('registerBuiltInTemplates', () => {
   it('registers all built-in templates', () => {
     const count = registerBuiltInTemplates(registry);
     // Use dynamic count — adding a team member shouldn't break tests
-    expect(count).toBeGreaterThanOrEqual(12);
+    expect(count).toBeGreaterThanOrEqual(10);
     expect(registry.size).toBe(count);
   });
 
@@ -32,8 +32,6 @@ describe('registerBuiltInTemplates', () => {
     expect(names).toContain('backend-engineer');
     expect(names).toContain('matt');
     expect(names).toContain('frank');
-    expect(names).toContain('qa-engineer');
-    expect(names).toContain('docs-engineer');
     expect(names).toContain('product-manager');
     expect(names).toContain('engineering-manager');
     expect(names).toContain('ava');
@@ -53,12 +51,14 @@ describe('registerBuiltInTemplates', () => {
     expect(cos!.trustLevel).toBe(3);
   });
 
-  it('docs-engineer uses haiku model', () => {
+  it('frank has personified systemPrompt', () => {
     registerBuiltInTemplates(registry);
-    const docs = registry.get('docs-engineer');
-    expect(docs).toBeDefined();
-    expect(docs!.model).toBe('haiku');
-    expect(docs!.canUseBash).toBe(false);
+    const frank = registry.get('frank');
+    expect(frank).toBeDefined();
+    expect(frank!.model).toBe('sonnet');
+    expect(frank!.systemPrompt).toBeDefined();
+    expect(frank!.systemPrompt).toContain('Frank');
+    expect(frank!.systemPrompt).toContain('DevOps');
   });
 
   it('implementation roles have full capabilities', () => {
