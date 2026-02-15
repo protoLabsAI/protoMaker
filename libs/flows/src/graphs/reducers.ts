@@ -167,3 +167,73 @@ export function minReducer(left: number | undefined, right: number | undefined):
   if (right === undefined) return left;
   return Math.min(left, right);
 }
+
+/**
+ * ID-based deduplicating append reducer
+ * Generic over T extends { id: string }
+ * Merges left + right arrays, deduplicating by id field
+ * Later entries (from right) win on conflict (update semantics)
+ * Preserves insertion order
+ */
+export function idDedupAppendReducer<T extends { id: string }>(
+  left: T[] | undefined,
+  right: T[] | undefined
+): T[] {
+  if (!left && !right) return [];
+  if (!left) return right || [];
+  if (!right) return left;
+
+  const idMap = new Map<string, T>();
+
+  // Add all items from left, maintaining order
+  for (const item of left) {
+    idMap.set(item.id, item);
+  }
+
+  // Merge items from right, with right taking precedence
+  for (const item of right) {
+    idMap.set(item.id, item);
+  }
+
+  // Return in order: first left items (preserving order), then new right items
+  const result: T[] = [];
+  const seenIds = new Set<string>();
+
+  // Add left items in original order
+  for (const item of left) {
+    result.push(idMap.get(item.id)!);
+    seenIds.add(item.id);
+  }
+
+  // Add new items from right (those not in left)
+  for (const item of right) {
+    if (!seenIds.has(item.id)) {
+      result.push(idMap.get(item.id)!);
+    }
+  }
+
+  return result;
+}
+
+/**
+ * LRU-evicting reducer factory
+ * Creates a reducer that appends new items and evicts oldest when exceeding maxSize
+ * Works with any array type (no ID requirement)
+ * Useful for bounded event logs, recent findings, etc.
+ */
+export function createLruReducer<T>(maxSize: number) {
+  return function lruReducer(left: T[] | undefined, right: T[] | undefined): T[] {
+    if (!left && !right) return [];
+    if (!left) {
+      // Only right exists, trim to maxSize if needed
+      return right ? right.slice(-maxSize) : [];
+    }
+    if (!right) return left;
+
+    // Combine left and right
+    const combined = [...left, ...right];
+
+    // Keep only the last maxSize items
+    return combined.slice(-maxSize);
+  };
+}

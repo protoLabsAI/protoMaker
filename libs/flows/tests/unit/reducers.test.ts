@@ -1,242 +1,183 @@
 import { describe, it, expect } from 'vitest';
-import {
-  fileReducer,
-  todoReducer,
-  appendReducer,
-  replaceReducer,
-  setUnionReducer,
-  mapMergeReducer,
-  counterReducer,
-  maxReducer,
-  minReducer,
-  type FileOperation,
-  type TodoItem,
-} from '../../src/graphs/reducers.js';
+import { idDedupAppendReducer, createLruReducer } from '../../src/graphs/reducers.js';
 
-describe('reducers', () => {
-  describe('fileReducer', () => {
-    it('should merge file arrays by path', () => {
-      const left: FileOperation[] = [
-        { path: 'file1.ts', content: 'old', operation: 'update' },
-        { path: 'file2.ts', content: 'data', operation: 'create' },
-      ];
-      const right: FileOperation[] = [
-        { path: 'file1.ts', content: 'new', operation: 'update' },
-        { path: 'file3.ts', content: 'more', operation: 'create' },
-      ];
+/**
+ * Tests for ID-based deduplicating append reducer
+ */
+describe('idDedupAppendReducer', () => {
+  interface Item {
+    id: string;
+    value: string;
+    score?: number;
+  }
 
-      const result = fileReducer(left, right);
-
-      expect(result).toHaveLength(3);
-      expect(result.find((f) => f.path === 'file1.ts')?.content).toBe('new');
-      expect(result.find((f) => f.path === 'file2.ts')?.content).toBe('data');
-      expect(result.find((f) => f.path === 'file3.ts')?.content).toBe('more');
-    });
-
-    it('should use timestamps when available', () => {
-      const left: FileOperation[] = [
-        { path: 'file1.ts', content: 'newer', operation: 'update', timestamp: 2000 },
-      ];
-      const right: FileOperation[] = [
-        { path: 'file1.ts', content: 'older', operation: 'update', timestamp: 1000 },
-      ];
-
-      const result = fileReducer(left, right);
-
-      expect(result).toHaveLength(1);
-      expect(result[0].content).toBe('newer');
-      expect(result[0].timestamp).toBe(2000);
-    });
-
-    it('should handle undefined inputs', () => {
-      expect(fileReducer(undefined, undefined)).toEqual([]);
-      expect(
-        fileReducer([{ path: 'a', content: 'x', operation: 'create' }], undefined)
-      ).toHaveLength(1);
-      expect(
-        fileReducer(undefined, [{ path: 'b', content: 'y', operation: 'create' }])
-      ).toHaveLength(1);
-    });
+  it('should handle both undefined inputs', () => {
+    const result = idDedupAppendReducer<Item>(undefined, undefined);
+    expect(result).toEqual([]);
   });
 
-  describe('todoReducer', () => {
-    it('should merge todo arrays by id', () => {
-      const left: TodoItem[] = [
-        { id: '1', title: 'Task 1', completed: false },
-        { id: '2', title: 'Task 2', completed: true },
-      ];
-      const right: TodoItem[] = [
-        { id: '1', title: 'Task 1 Updated', completed: true },
-        { id: '3', title: 'Task 3', completed: false },
-      ];
-
-      const result = todoReducer(left, right);
-
-      expect(result).toHaveLength(3);
-      expect(result.find((t) => t.id === '1')?.title).toBe('Task 1 Updated');
-      expect(result.find((t) => t.id === '1')?.completed).toBe(true);
-      expect(result.find((t) => t.id === '2')?.completed).toBe(true);
-      expect(result.find((t) => t.id === '3')?.title).toBe('Task 3');
-    });
-
-    it('should preserve createdAt when merging', () => {
-      const left: TodoItem[] = [{ id: '1', title: 'Task 1', completed: false, createdAt: 1000 }];
-      const right: TodoItem[] = [{ id: '1', title: 'Task 1', completed: true }];
-
-      const result = todoReducer(left, right);
-
-      expect(result[0].createdAt).toBe(1000);
-      expect(result[0].completed).toBe(true);
-    });
-
-    it('should handle undefined inputs', () => {
-      expect(todoReducer(undefined, undefined)).toEqual([]);
-      expect(todoReducer([{ id: '1', title: 'A', completed: false }], undefined)).toHaveLength(1);
-      expect(todoReducer(undefined, [{ id: '2', title: 'B', completed: true }])).toHaveLength(1);
-    });
+  it('should return right when left is undefined', () => {
+    const right: Item[] = [{ id: '1', value: 'a' }];
+    const result = idDedupAppendReducer<Item>(undefined, right);
+    expect(result).toEqual(right);
   });
 
-  describe('appendReducer', () => {
-    it('should concatenate arrays', () => {
-      const left = [1, 2, 3];
-      const right = [4, 5];
-
-      const result = appendReducer(left, right);
-
-      expect(result).toEqual([1, 2, 3, 4, 5]);
-    });
-
-    it('should handle undefined inputs', () => {
-      expect(appendReducer(undefined, undefined)).toEqual([]);
-      expect(appendReducer([1, 2], undefined)).toEqual([1, 2]);
-      expect(appendReducer(undefined, [3, 4])).toEqual([3, 4]);
-    });
+  it('should return left when right is undefined', () => {
+    const left: Item[] = [{ id: '1', value: 'a' }];
+    const result = idDedupAppendReducer<Item>(left, undefined);
+    expect(result).toEqual(left);
   });
 
-  describe('replaceReducer', () => {
-    it('should replace left with right', () => {
-      const left = [1, 2, 3];
-      const right = [4, 5];
-
-      const result = replaceReducer(left, right);
-
-      expect(result).toEqual([4, 5]);
-    });
-
-    it('should return left when right is undefined', () => {
-      const left = [1, 2, 3];
-
-      const result = replaceReducer(left, undefined);
-
-      expect(result).toEqual([1, 2, 3]);
-    });
-
-    it('should return empty array when both undefined', () => {
-      const result = replaceReducer(undefined, undefined);
-
-      expect(result).toEqual([]);
-    });
+  it('should concatenate arrays when no duplicates by ID', () => {
+    const left: Item[] = [{ id: '1', value: 'a' }];
+    const right: Item[] = [{ id: '2', value: 'b' }];
+    const result = idDedupAppendReducer(left, right);
+    expect(result).toEqual([
+      { id: '1', value: 'a' },
+      { id: '2', value: 'b' },
+    ]);
   });
 
-  describe('setUnionReducer', () => {
-    it('should merge two sets', () => {
-      const left = new Set([1, 2, 3]);
-      const right = new Set([3, 4, 5]);
-
-      const result = setUnionReducer(left, right);
-
-      expect(result.size).toBe(5);
-      expect(result.has(1)).toBe(true);
-      expect(result.has(5)).toBe(true);
-    });
-
-    it('should handle undefined inputs', () => {
-      expect(setUnionReducer(undefined, undefined).size).toBe(0);
-      expect(setUnionReducer(new Set([1, 2]), undefined).size).toBe(2);
-      expect(setUnionReducer(undefined, new Set([3, 4])).size).toBe(2);
-    });
+  it('should deduplicate by ID with right taking precedence', () => {
+    const left: Item[] = [{ id: '1', value: 'a', score: 1 }];
+    const right: Item[] = [{ id: '1', value: 'a_updated', score: 2 }];
+    const result = idDedupAppendReducer(left, right);
+    expect(result).toHaveLength(1);
+    expect(result[0]).toEqual({ id: '1', value: 'a_updated', score: 2 });
   });
 
-  describe('mapMergeReducer', () => {
-    it('should merge maps with right taking precedence', () => {
-      const left = new Map([
-        ['a', 1],
-        ['b', 2],
-      ]);
-      const right = new Map([
-        ['b', 20],
-        ['c', 3],
-      ]);
+  it('should preserve insertion order', () => {
+    const left: Item[] = [
+      { id: '1', value: 'a' },
+      { id: '2', value: 'b' },
+    ];
+    const right: Item[] = [
+      { id: '3', value: 'c' },
+      { id: '1', value: 'a_updated' }, // Update to first item
+      { id: '4', value: 'd' },
+    ];
+    const result = idDedupAppendReducer(left, right);
 
-      const result = mapMergeReducer(left, right);
-
-      expect(result.size).toBe(3);
-      expect(result.get('a')).toBe(1);
-      expect(result.get('b')).toBe(20);
-      expect(result.get('c')).toBe(3);
-    });
-
-    it('should handle undefined inputs', () => {
-      expect(mapMergeReducer(undefined, undefined).size).toBe(0);
-      expect(mapMergeReducer(new Map([['a', 1]]), undefined).size).toBe(1);
-      expect(mapMergeReducer(undefined, new Map([['b', 2]])).size).toBe(1);
-    });
+    // Should have 4 items in order: 1 (updated), 2, 3, 4
+    expect(result).toHaveLength(4);
+    expect(result[0].id).toBe('1');
+    expect(result[0].value).toBe('a_updated');
+    expect(result[1].id).toBe('2');
+    expect(result[2].id).toBe('3');
+    expect(result[3].id).toBe('4');
   });
 
-  describe('counterReducer', () => {
-    it('should add numeric values', () => {
-      expect(counterReducer(5, 3)).toBe(8);
-      expect(counterReducer(10, 20)).toBe(30);
-    });
-
-    it('should handle undefined inputs', () => {
-      expect(counterReducer(undefined, undefined)).toBe(0);
-      expect(counterReducer(5, undefined)).toBe(5);
-      expect(counterReducer(undefined, 3)).toBe(3);
-    });
-
-    it('should handle zero values', () => {
-      expect(counterReducer(0, 0)).toBe(0);
-      expect(counterReducer(5, 0)).toBe(5);
-      expect(counterReducer(0, 3)).toBe(3);
-    });
+  it('should handle empty arrays', () => {
+    const left: Item[] = [];
+    const right: Item[] = [{ id: '1', value: 'a' }];
+    const result = idDedupAppendReducer(left, right);
+    expect(result).toEqual([{ id: '1', value: 'a' }]);
   });
 
-  describe('maxReducer', () => {
-    it('should return maximum value', () => {
-      expect(maxReducer(5, 3)).toBe(5);
-      expect(maxReducer(3, 5)).toBe(5);
-      expect(maxReducer(10, 10)).toBe(10);
-    });
+  it('should handle complex items with multiple fields', () => {
+    const left: Item[] = [
+      { id: 'a', value: 'text_a', score: 0.9 },
+      { id: 'b', value: 'text_b', score: 0.8 },
+    ];
+    const right: Item[] = [
+      { id: 'c', value: 'text_c', score: 0.95 },
+      { id: 'a', value: 'text_a_revised', score: 0.95 },
+    ];
+    const result = idDedupAppendReducer(left, right);
+    expect(result).toHaveLength(3);
+    expect(result[0]).toEqual({ id: 'a', value: 'text_a_revised', score: 0.95 });
+    expect(result[1]).toEqual({ id: 'b', value: 'text_b', score: 0.8 });
+    expect(result[2]).toEqual({ id: 'c', value: 'text_c', score: 0.95 });
+  });
+});
 
-    it('should handle undefined inputs', () => {
-      expect(maxReducer(undefined, undefined)).toBe(0);
-      expect(maxReducer(5, undefined)).toBe(5);
-      expect(maxReducer(undefined, 3)).toBe(3);
-    });
+/**
+ * Tests for LRU-evicting reducer factory
+ */
+describe('createLruReducer', () => {
+  interface Item {
+    value: string;
+  }
 
-    it('should handle negative values', () => {
-      expect(maxReducer(-5, -3)).toBe(-3);
-      expect(maxReducer(-5, 3)).toBe(3);
-    });
+  it('should handle both undefined inputs', () => {
+    const lru = createLruReducer<Item>(3);
+    const result = lru(undefined, undefined);
+    expect(result).toEqual([]);
   });
 
-  describe('minReducer', () => {
-    it('should return minimum value', () => {
-      expect(minReducer(5, 3)).toBe(3);
-      expect(minReducer(3, 5)).toBe(3);
-      expect(minReducer(10, 10)).toBe(10);
-    });
+  it('should return right when left is undefined, trimmed to maxSize', () => {
+    const lru = createLruReducer<Item>(2);
+    const right: Item[] = [{ value: 'a' }, { value: 'b' }, { value: 'c' }];
+    const result = lru(undefined, right);
+    // Should keep only last 2 items
+    expect(result).toEqual([{ value: 'b' }, { value: 'c' }]);
+  });
 
-    it('should handle undefined inputs', () => {
-      expect(minReducer(undefined, undefined)).toBe(0);
-      expect(minReducer(5, undefined)).toBe(5);
-      expect(minReducer(undefined, 3)).toBe(3);
-    });
+  it('should return left when right is undefined', () => {
+    const lru = createLruReducer<Item>(3);
+    const left: Item[] = [{ value: 'a' }];
+    const result = lru(left, undefined);
+    expect(result).toEqual(left);
+  });
 
-    it('should handle negative values', () => {
-      expect(minReducer(-5, -3)).toBe(-5);
-      expect(minReducer(-5, 3)).toBe(-5);
-    });
+  it('should append and trim to maxSize', () => {
+    const lru = createLruReducer<Item>(3);
+    const left: Item[] = [{ value: 'a' }, { value: 'b' }];
+    const right: Item[] = [{ value: 'c' }, { value: 'd' }];
+    const result = lru(left, right);
+
+    // Combined: [a, b, c, d], keep last 3: [b, c, d]
+    expect(result).toHaveLength(3);
+    expect(result).toEqual([{ value: 'b' }, { value: 'c' }, { value: 'd' }]);
+  });
+
+  it('should keep exact maxSize items', () => {
+    const lru = createLruReducer<Item>(2);
+    const left: Item[] = [{ value: 'a' }];
+    const right: Item[] = [{ value: 'b' }];
+    const result = lru(left, right);
+
+    expect(result).toHaveLength(2);
+    expect(result).toEqual([{ value: 'a' }, { value: 'b' }]);
+  });
+
+  it('should evict oldest when exceeding maxSize', () => {
+    const lru = createLruReducer<Item>(2);
+    const left: Item[] = [{ value: 'a' }, { value: 'b' }, { value: 'c' }];
+    const right: Item[] = [{ value: 'd' }];
+    const result = lru(left, right);
+
+    // Combined: [a, b, c, d], keep last 2: [c, d]
+    expect(result).toHaveLength(2);
+    expect(result).toEqual([{ value: 'c' }, { value: 'd' }]);
+  });
+
+  it('should work with different maxSize values', () => {
+    const lru5 = createLruReducer<Item>(5);
+    const items: Item[] = Array.from({ length: 10 }, (_, i) => ({ value: `item_${i}` }));
+    const result = lru5(items.slice(0, 7), items.slice(7));
+
+    // Combined: [item_0..item_6, item_7, item_8, item_9]
+    // Keep last 5: [item_5, item_6, item_7, item_8, item_9]
+    expect(result).toHaveLength(5);
+    expect(result[0].value).toBe('item_5');
+    expect(result[4].value).toBe('item_9');
+  });
+
+  it('should handle empty left and right arrays', () => {
+    const lru = createLruReducer<Item>(3);
+    const result = lru([], []);
+    expect(result).toEqual([]);
+  });
+
+  it('should handle single maxSize', () => {
+    const lru = createLruReducer<Item>(1);
+    const left: Item[] = [{ value: 'a' }];
+    const right: Item[] = [{ value: 'b' }];
+    const result = lru(left, right);
+
+    // Keep only last 1 item
+    expect(result).toHaveLength(1);
+    expect(result).toEqual([{ value: 'b' }]);
   });
 });
