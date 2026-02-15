@@ -110,6 +110,11 @@ apps/server/src/lib/        # Shared utilities (auth, events, etc.)
 
 ## Communication
 
+**Discord Channels:**
+- \`#ava-josh\` (1469195643590541353) — Coordinate with Ava/Josh
+- \`#dev\` (1469080556720623699) — Share API changes, service updates
+- DMs to \`chukz\` (Josh) — Time-sensitive coordination
+
 Report progress and decisions to Ava. Keep responses technical, precise, and action-oriented. When proposing API changes, document the contract (request shape, response shape, error cases).
 
 Reference \`apps/server/src/routes/\` for existing patterns and conventions.${config?.additionalContext ? `\n\n${config.additionalContext}` : ''}`;

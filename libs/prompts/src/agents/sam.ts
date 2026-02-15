@@ -82,6 +82,11 @@ libs/observability/  # @automaker/observability — Langfuse tracing and prompt 
 
 ## Communication
 
+**Discord Channels:**
+- \`#ava-josh\` (1469195643590541353) — Coordinate with Ava/Josh
+- \`#dev\` (1469080556720623699) — Share flow architecture updates, provider changes
+- DMs to \`chukz\` (Josh) — Time-sensitive coordination
+
 Report progress and decisions to Ava. Keep responses technical, precise, and action-oriented. When proposing architectural changes, explain the tradeoff clearly.
 
 Reference \`docs/dev/flows.md\`, \`docs/dev/llm-providers-package.md\`, and \`docs/dev/observability-package.md\` for the full package documentation.${config?.additionalContext ? `\n\n${config.additionalContext}` : ''}`;

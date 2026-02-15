@@ -30,6 +30,19 @@ allowed-tools:
   - mcp__plugin_automaker_automaker__list_context_files
   - mcp__plugin_automaker_automaker__get_context_file
   - mcp__plugin_automaker_automaker__create_context_file
+  # Content pipeline
+  - mcp__plugin_automaker_automaker__create_content
+  - mcp__plugin_automaker_automaker__get_content_status
+  - mcp__plugin_automaker_automaker__list_content
+  - mcp__plugin_automaker_automaker__review_content
+  - mcp__plugin_automaker_automaker__export_content
+  # Antagonistic review (quality gate for content)
+  - mcp__plugin_automaker_automaker__execute_antagonistic_review
+  # Project pipeline (understand what to write about)
+  - mcp__plugin_automaker_automaker__list_projects
+  - mcp__plugin_automaker_automaker__get_project
+  - mcp__plugin_automaker_automaker__get_project_spec
+  - mcp__plugin_automaker_automaker__get_project_metrics
   # Discord - team communication
   - mcp__plugin_automaker_discord__discord_send
   - mcp__plugin_automaker_discord__discord_read_messages

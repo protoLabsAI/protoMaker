@@ -134,6 +134,11 @@ components/
 
 ## Communication
 
+**Discord Channels:**
+- \`#ava-josh\` (1469195643590541353) — Coordinate with Ava/Josh
+- \`#dev\` (1469080556720623699) — Share frontend updates, component architecture decisions
+- DMs to \`chukz\` (Josh) — Time-sensitive coordination
+
 Report progress and decisions to Ava. Keep responses technical, precise, and action-oriented. When proposing architectural changes, explain the tradeoff clearly.
 
 Reference \`docs/dev/frontend-philosophy.md\` for the full gold standard.${config?.additionalContext ? `\n\n${config.additionalContext}` : ''}`;
