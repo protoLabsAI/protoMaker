@@ -13,6 +13,7 @@ import '@copilotkit/react-ui/styles.css';
 import { getCopilotKitThemeStyles } from './theme-bridge';
 import { useCopilotKitContext } from '@/hooks/use-copilotkit-context';
 import { useCopilotKitSuggestions } from '@/hooks/use-copilotkit-suggestions';
+import { getAuthHeaders } from '@/lib/api-fetch';
 
 const CopilotAvailableContext = createContext(false);
 
@@ -38,11 +39,12 @@ export function CopilotKitProvider({ children }: { children: ReactNode }) {
     fetch('/api/copilotkit', {
       method: 'HEAD',
       signal: controller.signal,
+      credentials: 'include',
+      headers: getAuthHeaders(),
     })
       .then((res) => {
-        // Only enable if the route actually exists and responds.
-        // 401 = auth middleware caught it but route may not be registered (disabled).
-        // 404 = route not found. Both mean CopilotKit is unavailable.
+        // 2xx or 405 = route exists and CopilotKit is available.
+        // 401 = auth failed or route not registered. 404 = route not found.
         setAvailable(res.ok || res.status === 405);
       })
       .catch(() => {
@@ -61,7 +63,12 @@ export function CopilotKitProvider({ children }: { children: ReactNode }) {
 
   return (
     <CopilotAvailableContext.Provider value={true}>
-      <CopilotKit runtimeUrl="/api/copilotkit" agent="default">
+      <CopilotKit
+        runtimeUrl="/api/copilotkit"
+        agent="default"
+        headers={getAuthHeaders()}
+        credentials="include"
+      >
         <CopilotKitHooks>{children}</CopilotKitHooks>
       </CopilotKit>
     </CopilotAvailableContext.Provider>
