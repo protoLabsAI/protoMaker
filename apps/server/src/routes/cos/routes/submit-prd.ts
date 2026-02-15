@@ -9,6 +9,7 @@
 import type { Request, Response } from 'express';
 import type { EventEmitter } from '../../../lib/events.js';
 import type { FeatureLoader } from '../../../services/feature-loader.js';
+import type { SettingsService } from '../../../services/settings-service.js';
 import type { AuthorityAgents } from '../index.js';
 import { createLogger } from '@automaker/utils';
 import { getErrorMessage } from '../../common.js';
@@ -20,6 +21,7 @@ interface SubmitPrdPayload {
   title: string;
   description: string;
   complexity?: 'small' | 'medium' | 'large' | 'architectural';
+  category?: string;
   milestones?: Array<{
     title: string;
     description: string;
@@ -29,12 +31,13 @@ interface SubmitPrdPayload {
 export function createSubmitPrdHandler(
   events: EventEmitter,
   featureLoader: FeatureLoader,
-  agents: AuthorityAgents
+  agents: AuthorityAgents,
+  settingsService?: SettingsService
 ) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
       const payload = req.body as SubmitPrdPayload;
-      const { projectPath, title, description, complexity, milestones } = payload;
+      const { projectPath, title, description, complexity, category, milestones } = payload;
 
       // Validate required fields
       if (!projectPath) {
@@ -135,6 +138,18 @@ export function createSubmitPrdHandler(
         }
       }
 
+      // Evaluate trust boundary to determine if HITL gates should auto-pass
+      let trustBoundaryResult: 'autoApprove' | 'requireReview' = 'requireReview';
+      if (settingsService) {
+        trustBoundaryResult = settingsService.evaluateTrustBoundary({
+          category: category || 'feature',
+          complexity: complexity || 'medium',
+        });
+        logger.info(
+          `Trust boundary evaluation: ${trustBoundaryResult} (category=${category || 'feature'}, complexity=${complexity || 'medium'})`
+        );
+      }
+
       // Create feature as an epic with approved state
       const feature = await featureLoader.create(projectPath, {
         title,
@@ -157,6 +172,7 @@ export function createSubmitPrdHandler(
           featureId: feature.id,
           complexity: complexity || 'medium',
           milestones: milestones || [],
+          trustBoundaryResult,
         });
 
         // Also emit cos:prd-submitted for tracking
@@ -165,6 +181,7 @@ export function createSubmitPrdHandler(
           featureId: feature.id,
           title,
           milestoneCount: milestones?.length || 0,
+          trustBoundaryResult,
         });
       } catch (emitError) {
         logger.warn(
@@ -179,7 +196,11 @@ export function createSubmitPrdHandler(
       res.json({
         success: true,
         featureId: feature.id,
-        message: `PRD "${title}" submitted successfully. ProjM agent will begin milestone planning.`,
+        trustBoundaryResult,
+        message:
+          trustBoundaryResult === 'autoApprove'
+            ? `PRD "${title}" auto-approved by trust boundary. HITL gates will be bypassed.`
+            : `PRD "${title}" submitted for review. HITL gates will pause for human approval.`,
       });
     } catch (error) {
       logger.error('Failed to submit PRD:', error);

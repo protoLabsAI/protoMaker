@@ -1025,12 +1025,17 @@ app.use(
 app.use(
   '/api/cos',
   authMiddleware,
-  createCosRoutes(events, featureLoader, {
-    pm: pmAgent,
-    projm: projmAgent,
-    em: emAgent,
-    statusMonitor,
-  })
+  createCosRoutes(
+    events,
+    featureLoader,
+    {
+      pm: pmAgent,
+      projm: projmAgent,
+      em: emAgent,
+      statusMonitor,
+    },
+    settingsService
+  )
 );
 app.use('/api/pipeline', createPipelineRoutes(pipelineService));
 app.use('/api/metrics', createMetricsRoutes(metricsService, ledgerService));

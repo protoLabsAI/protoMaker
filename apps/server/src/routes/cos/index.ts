@@ -8,6 +8,7 @@
 import { Router } from 'express';
 import type { EventEmitter } from '../../lib/events.js';
 import type { FeatureLoader } from '../../services/feature-loader.js';
+import type { SettingsService } from '../../services/settings-service.js';
 import type { PMAuthorityAgent } from '../../services/authority-agents/pm-agent.js';
 import type { ProjMAuthorityAgent } from '../../services/authority-agents/projm-agent.js';
 import type { EMAuthorityAgent } from '../../services/authority-agents/em-agent.js';
@@ -25,7 +26,8 @@ export interface AuthorityAgents {
 export function createCosRoutes(
   events: EventEmitter,
   featureLoader: FeatureLoader,
-  agents: AuthorityAgents
+  agents: AuthorityAgents,
+  settingsService?: SettingsService
 ): Router {
   const router = Router();
 
@@ -36,7 +38,7 @@ export function createCosRoutes(
   router.post(
     '/submit-prd',
     validatePathParams('projectPath'),
-    createSubmitPrdHandler(events, featureLoader, agents)
+    createSubmitPrdHandler(events, featureLoader, agents, settingsService)
   );
 
   return router;

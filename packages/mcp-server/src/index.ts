@@ -1113,6 +1113,12 @@ const tools: Tool[] = [
           default: 'medium',
           description: 'Feature complexity level for model selection',
         },
+        category: {
+          type: 'string',
+          enum: ['ops', 'improvement', 'bug', 'feature', 'idea', 'architectural'],
+          description:
+            'PRD category for trust boundary evaluation. Determines if HITL gates auto-pass or require human review.',
+        },
         milestones: {
           type: 'array',
           items: {
@@ -2996,6 +3002,7 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         title: args.title,
         description: args.description,
         complexity: args.complexity || 'medium',
+        category: args.category,
         milestones: args.milestones,
       });
 

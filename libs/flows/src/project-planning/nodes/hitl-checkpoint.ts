@@ -19,6 +19,9 @@ const MAX_REVISIONS = 3;
 /**
  * Route after a HITL checkpoint based on user response.
  *
+ * If the trust boundary evaluated to 'autoApprove', all HITL gates
+ * auto-pass without requiring human intervention.
+ *
  * Returns the next node name to execute.
  */
 export function createHitlRouter(config: {
@@ -27,6 +30,11 @@ export function createHitlRouter(config: {
   reviseTarget: string;
 }) {
   return (state: ProjectPlanningState): string => {
+    // Trust boundary auto-approval bypasses all HITL gates
+    if (state.trustBoundaryResult === 'autoApprove') {
+      return config.approveTarget;
+    }
+
     const { latestHitlResponse, revisionCounts } = state;
 
     if (!latestHitlResponse) {

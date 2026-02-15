@@ -179,6 +179,11 @@ export interface ProjectPlanningState {
   /** Linear project ID for linking issues */
   linearProjectId?: string;
 
+  // ─── Trust Boundary ──────────────────────────────────────
+
+  /** Trust boundary evaluation result — determines if HITL gates auto-pass */
+  trustBoundaryResult?: 'autoApprove' | 'requireReview';
+
   // ─── Errors ───────────────────────────────────────────────
 
   /** Error messages accumulated during the flow */
@@ -231,6 +236,9 @@ export const ProjectPlanningStateAnnotation = Annotation.Root({
     default: () => [],
   }),
   linearProjectId: Annotation<string | undefined>,
+
+  // Trust boundary
+  trustBoundaryResult: Annotation<'autoApprove' | 'requireReview' | undefined>,
 
   // Errors
   errors: Annotation<string[]>({
