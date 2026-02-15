@@ -1,15 +1,11 @@
 /**
- * Workflow Selector Component
+ * Workflow Selector for CopilotKit Sidebar
  *
- * Provides a dropdown UI to select which LangGraph workflow/agent to invoke.
- * Queries the /api/copilotkit/info endpoint to discover available agents.
- * Selection persists across messages within the session.
- *
- * Note: Agent selection currently managed via local state.
- * Future enhancement will integrate with CopilotKit's agent routing mechanism.
+ * Dropdown to choose between available workflows (agents).
+ * Fetches workflow metadata from GET /api/copilotkit/workflows.
  */
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Select,
   SelectContent,
@@ -17,112 +13,88 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { getAuthHeaders } from '@/lib/api-fetch';
+import { Workflow } from 'lucide-react';
 
-interface AgentInfo {
+export interface WorkflowMetadata {
+  id: string;
   name: string;
-  description?: string;
+  description: string;
+  supportedModels: string[];
 }
 
-interface WorkflowContextValue {
-  selectedAgent: string;
-  setSelectedAgent: (agent: string) => void;
+interface WorkflowSelectorProps {
+  value: string;
+  onChange: (workflowId: string) => void;
+  disabled?: boolean;
 }
 
-const WorkflowContext = createContext<WorkflowContextValue | null>(null);
-
-export function useWorkflowSelection() {
-  const context = useContext(WorkflowContext);
-  if (!context) {
-    throw new Error('useWorkflowSelection must be used within WorkflowProvider');
-  }
-  return context;
-}
-
-export function WorkflowProvider({ children }: { children: ReactNode }) {
-  const [selectedAgent, setSelectedAgent] = useState<string>('default');
-
-  return (
-    <WorkflowContext.Provider value={{ selectedAgent, setSelectedAgent }}>
-      {children}
-    </WorkflowContext.Provider>
-  );
-}
-
-export function WorkflowSelector() {
-  const [agents, setAgents] = useState<AgentInfo[]>([]);
+export function WorkflowSelector({ value, onChange, disabled }: WorkflowSelectorProps) {
+  const [workflows, setWorkflows] = useState<WorkflowMetadata[]>([]);
   const [loading, setLoading] = useState(true);
-  const { selectedAgent, setSelectedAgent } = useWorkflowSelection();
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const controller = new AbortController();
-
-    fetch('/api/copilotkit/info', {
-      signal: controller.signal,
-      credentials: 'include',
-      headers: getAuthHeaders(),
-    })
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error(`Failed to fetch agents: ${res.status}`);
+    const fetchWorkflows = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await fetch('/api/copilotkit/workflows');
+        if (!response.ok) {
+          throw new Error(`Failed to fetch workflows: ${response.statusText}`);
         }
-        return res.json();
-      })
-      .then((data) => {
-        // CopilotKit /info endpoint returns { agents: { [name: string]: AgentInfo } }
-        const agentList: AgentInfo[] = [];
-
-        if (data.agents && typeof data.agents === 'object') {
-          for (const [name, info] of Object.entries(data.agents)) {
-            agentList.push({
-              name,
-              description: (info as any)?.description || getDefaultDescription(name),
-            });
-          }
-        }
-
-        setAgents(agentList);
+        const data = await response.json();
+        setWorkflows(data.workflows || []);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Unknown error');
+        console.error('Failed to fetch workflows:', err);
+      } finally {
         setLoading(false);
-      })
-      .catch((err) => {
-        if (err.name !== 'AbortError') {
-          console.warn('[WorkflowSelector] Failed to load agents:', err);
-          // Fallback to default agent
-          setAgents([{ name: 'default', description: 'Ava - Board Assistant' }]);
-          setLoading(false);
-        }
-      });
+      }
+    };
 
-    return () => controller.abort();
+    fetchWorkflows();
   }, []);
 
-  const handleAgentChange = (value: string) => {
-    setSelectedAgent(value);
-    console.log('[WorkflowSelector] Agent selected:', value);
-  };
+  const selected = workflows.find((w) => w.id === value);
 
   if (loading) {
-    return <div className="px-4 py-2 text-sm text-muted-foreground">Loading workflows...</div>;
+    return (
+      <div className="flex items-center gap-2">
+        <Select disabled>
+          <SelectTrigger className="h-8 w-[180px] text-xs">
+            <div className="flex items-center gap-1.5">
+              <Workflow className="w-3.5 h-3.5" />
+              <span>Loading...</span>
+            </div>
+          </SelectTrigger>
+        </Select>
+      </div>
+    );
   }
 
-  if (agents.length === 0) {
-    return null;
+  if (error) {
+    return (
+      <div className="flex items-center gap-2 text-destructive text-xs">
+        <span>Failed to load workflows</span>
+      </div>
+    );
   }
 
   return (
-    <div className="px-4 py-2 border-b border-border">
-      <Select value={selectedAgent} onValueChange={handleAgentChange}>
-        <SelectTrigger className="w-full">
-          <SelectValue placeholder="Select workflow" />
+    <div className="flex items-center gap-2">
+      <Select value={value} onValueChange={onChange} disabled={disabled}>
+        <SelectTrigger className="h-8 w-[180px] text-xs">
+          <div className="flex items-center gap-1.5">
+            <Workflow className="w-3.5 h-3.5" />
+            <SelectValue />
+          </div>
         </SelectTrigger>
         <SelectContent>
-          {agents.map((agent) => (
-            <SelectItem key={agent.name} value={agent.name}>
-              <div className="flex flex-col items-start">
-                <span className="font-medium">{formatAgentName(agent.name)}</span>
-                {agent.description && (
-                  <span className="text-xs text-muted-foreground">{agent.description}</span>
-                )}
+          {workflows.map((workflow) => (
+            <SelectItem key={workflow.id} value={workflow.id}>
+              <div className="flex flex-col">
+                <span className="font-medium">{workflow.name}</span>
+                <span className="text-muted-foreground text-[10px]">{workflow.description}</span>
               </div>
             </SelectItem>
           ))}
@@ -130,29 +102,4 @@ export function WorkflowSelector() {
       </Select>
     </div>
   );
-}
-
-/**
- * Format agent name for display (e.g., "content-pipeline" -> "Content Pipeline")
- */
-function formatAgentName(name: string): string {
-  if (name === 'default') {
-    return 'Ava (Default)';
-  }
-  return name
-    .split('-')
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
-}
-
-/**
- * Provide default descriptions for known agents
- */
-function getDefaultDescription(name: string): string {
-  const descriptions: Record<string, string> = {
-    default: 'Board management and project assistance',
-    'content-pipeline': 'Autonomous content creation workflow',
-    'antagonistic-review': 'Code review and quality assurance',
-  };
-  return descriptions[name] || 'AI workflow agent';
 }

@@ -18,6 +18,7 @@ import { createContentCreationFlow, createAntagonisticReviewerGraph } from '@aut
 import { ChatAnthropic } from '@langchain/anthropic';
 import type { FeatureLoader } from '../../services/feature-loader.js';
 import type { AutoModeService } from '../../services/auto-mode-service.js';
+import { Router } from 'express';
 
 const logger = createLogger('CopilotKit');
 
@@ -204,6 +205,36 @@ function createAntagonisticReviewTools() {
   ];
 }
 
+// Workflow metadata interface
+interface WorkflowMetadata {
+  id: string;
+  name: string;
+  description: string;
+  supportedModels: string[];
+}
+
+// Static workflow definitions
+const WORKFLOW_METADATA: WorkflowMetadata[] = [
+  {
+    id: 'default',
+    name: 'Ava',
+    description: 'Board management and feature operations',
+    supportedModels: ['haiku', 'sonnet', 'opus'],
+  },
+  {
+    id: 'content-pipeline',
+    name: 'Content Pipeline',
+    description: 'Multi-stage content creation workflow',
+    supportedModels: ['haiku', 'sonnet', 'opus'],
+  },
+  {
+    id: 'antagonistic-review',
+    name: 'Antagonistic Review',
+    description: 'Rigorous quality review of content',
+    supportedModels: ['haiku', 'sonnet', 'opus'],
+  },
+];
+
 export function createCopilotKitEndpoint(deps: CopilotKitDependencies) {
   const avaTools = createAvaTools(deps);
   const reviewTools = createAntagonisticReviewTools();
@@ -258,8 +289,19 @@ export function createCopilotKitEndpoint(deps: CopilotKitDependencies) {
     `CopilotKit runtime initialized with 3 agents: Ava (${avaTools.length} tools), content-pipeline (LangGraph), Antagonistic Review (${reviewTools.length} tools)`
   );
 
+  // Create router to combine CopilotKit endpoint and workflow metadata endpoint
+  const router = Router();
+
+  // GET /api/copilotkit/workflows - returns workflow metadata
+  router.get('/workflows', (_req, res) => {
+    res.json({ workflows: WORKFLOW_METADATA });
+  });
+
+  // Mount the CopilotKit runtime endpoint
   // Use @copilotkitnext/runtime's Express-native endpoint (proper Express Router)
   // instead of @copilotkit/runtime's Hono-based adapter which has path mismatch issues.
   // basePath '/' because Express strips the mount prefix (/api/copilotkit) from req.url.
-  return createCopilotEndpointExpress({ runtime, basePath: '/' });
+  router.use('/', createCopilotEndpointExpress({ runtime, basePath: '/' }));
+
+  return router;
 }

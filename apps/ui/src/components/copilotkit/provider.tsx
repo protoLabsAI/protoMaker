@@ -19,7 +19,7 @@ import { getCopilotKitThemeStyles } from './theme-bridge';
 import { getAuthHeaders } from '@/lib/api-fetch';
 import { useAuthStore } from '@/store/auth-store';
 import { AgentStateDisplay } from './agent-state-display';
-import { WorkflowSelector, WorkflowProvider } from './workflow-selector';
+import { WorkflowSelector } from './workflow-selector';
 import { useAppStore } from '@/store/app-store';
 
 const CopilotAvailableContext = createContext(false);
@@ -127,12 +127,10 @@ export function CopilotKitProvider({ children }: { children: ReactNode }) {
   return (
     <CopilotErrorBoundary fallback={unavailableFallback}>
       <CopilotAvailableContext.Provider value={true}>
-        <WorkflowProvider>
-          <CKProvider runtimeUrl="/api/copilotkit" headers={getAuthHeaders()} credentials="include">
-            <ProjectContextInjector />
-            {children}
-          </CKProvider>
-        </WorkflowProvider>
+        <CKProvider runtimeUrl="/api/copilotkit" headers={getAuthHeaders()} credentials="include">
+          <ProjectContextInjector />
+          {children}
+        </CKProvider>
       </CopilotAvailableContext.Provider>
     </CopilotErrorBoundary>
   );
@@ -144,6 +142,7 @@ export function CopilotKitProvider({ children }: { children: ReactNode }) {
  */
 export function CopilotSidebarWrapper({ children }: { children: ReactNode }) {
   const available = useContext(CopilotAvailableContext);
+  const [selectedWorkflow, setSelectedWorkflow] = useState('default');
 
   if (!available) {
     return <>{children}</>;
@@ -153,7 +152,7 @@ export function CopilotSidebarWrapper({ children }: { children: ReactNode }) {
     <>
       {children}
       <div style={getCopilotKitThemeStyles()}>
-        <WorkflowSelector />
+        <WorkflowSelector value={selectedWorkflow} onChange={setSelectedWorkflow} />
         <CopilotSidebar
           defaultOpen={false}
           labels={{
