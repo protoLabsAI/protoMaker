@@ -13,6 +13,7 @@ import { CopilotKitProvider as CKProvider, CopilotSidebar } from '@copilotkitnex
 import '@copilotkitnext/react/styles.css';
 import { getCopilotKitThemeStyles } from './theme-bridge';
 import { getAuthHeaders } from '@/lib/api-fetch';
+import { useAuthStore } from '@/store/auth-store';
 
 const CopilotAvailableContext = createContext(false);
 
@@ -52,8 +53,13 @@ class CopilotErrorBoundary extends Component<
  */
 export function CopilotKitProvider({ children }: { children: ReactNode }) {
   const [available, setAvailable] = useState<boolean | null>(null);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   useEffect(() => {
+    // Only check when authenticated — endpoint requires auth
+    if (!isAuthenticated) {
+      return;
+    }
     const controller = new AbortController();
     fetch('/api/copilotkit/info', {
       signal: controller.signal,
@@ -69,7 +75,7 @@ export function CopilotKitProvider({ children }: { children: ReactNode }) {
         setAvailable(false);
       });
     return () => controller.abort();
-  }, []);
+  }, [isAuthenticated]);
 
   const isAvailable = available === true;
   const unavailableFallback = (
