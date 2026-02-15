@@ -12,6 +12,23 @@ import { Annotation } from '@langchain/langgraph';
 import { appendReducer, fileReducer, type FileOperation } from '../graphs/reducers.js';
 
 /**
+ * CopilotKit State Annotation Specification
+ *
+ * Common state fields for LangGraph flows integrated with CopilotKit.
+ * These fields support thread management, tracing, and user context.
+ */
+export const CopilotKitStateAnnotation = {
+  /** Session/thread ID for CopilotKit runtime */
+  sessionId: Annotation<string | undefined>,
+
+  /** User ID or identifier for context */
+  userId: Annotation<string | undefined>,
+
+  /** Thread metadata for CopilotKit thread management */
+  threadMetadata: Annotation<Record<string, unknown> | undefined>,
+};
+
+/**
  * Research finding from parallel research nodes
  */
 export interface ResearchFinding {
@@ -94,6 +111,11 @@ export interface GenerationMetadata {
  * Content creation pipeline state
  */
 export interface ContentState {
+  // CopilotKit integration fields
+  sessionId?: string;
+  userId?: string;
+  threadMetadata?: Record<string, unknown>;
+
   // Research results - parallel collection
   researchFindings: ResearchFinding[];
 
@@ -129,8 +151,13 @@ export interface ContentState {
  * - appendReducer: For parallel Send() safety (arrays that grow)
  * - Default (replace): For single values that get updated
  * - fileReducer: For document operations
+ *
+ * Includes CopilotKit state fields for integration with CopilotKit runtime.
  */
 export const ContentStateAnnotation = Annotation.Root({
+  // CopilotKit integration fields
+  ...CopilotKitStateAnnotation,
+
   // Parallel collection fields - use appendReducer
   researchFindings: Annotation<ResearchFinding[]>({
     reducer: appendReducer,
