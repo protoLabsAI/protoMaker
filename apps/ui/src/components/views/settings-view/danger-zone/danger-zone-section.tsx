@@ -12,15 +12,15 @@ export function DangerZoneSection({ project, onDeleteClick }: DangerZoneSectionP
   return (
     <div
       className={cn(
-        'rounded-2xl overflow-hidden',
+        'rounded-lg overflow-hidden',
         'border border-destructive/30',
         'bg-gradient-to-br from-destructive/5 via-card/70 to-card/80 backdrop-blur-xl',
         'shadow-sm shadow-destructive/5'
       )}
     >
-      <div className="p-6 border-b border-destructive/20 bg-gradient-to-r from-destructive/5 via-transparent to-transparent">
+      <div className="p-4 border-b border-destructive/20 bg-gradient-to-r from-destructive/5 via-transparent to-transparent">
         <div className="flex items-center gap-3 mb-2">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-destructive/20 to-destructive/10 flex items-center justify-center border border-destructive/20">
+          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-destructive/20 to-destructive/10 flex items-center justify-center border border-destructive/20">
             <AlertTriangle className="w-5 h-5 text-destructive" />
           </div>
           <h2 className="text-lg font-semibold text-foreground tracking-tight">Danger Zone</h2>

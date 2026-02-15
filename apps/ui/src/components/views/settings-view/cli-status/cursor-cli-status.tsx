@@ -25,13 +25,13 @@ export function CursorCliStatusSkeleton() {
   return (
     <div
       className={cn(
-        'rounded-2xl overflow-hidden',
+        'rounded-lg overflow-hidden',
         'border border-border/50',
         'bg-gradient-to-br from-card/90 via-card/70 to-card/80 backdrop-blur-xl',
         'shadow-sm shadow-black/5'
       )}
     >
-      <div className="p-6 border-b border-border/50 bg-gradient-to-r from-transparent via-accent/5 to-transparent">
+      <div className="p-4 border-b border-border/50 bg-gradient-to-r from-transparent via-accent/5 to-transparent">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-3">
             <SkeletonPulse className="w-9 h-9 rounded-xl" />
@@ -69,13 +69,13 @@ export function CursorPermissionsSkeleton() {
   return (
     <div
       className={cn(
-        'rounded-2xl overflow-hidden',
+        'rounded-lg overflow-hidden',
         'border border-border/50',
         'bg-gradient-to-br from-card/90 via-card/70 to-card/80 backdrop-blur-xl',
         'shadow-sm shadow-black/5'
       )}
     >
-      <div className="p-6 border-b border-border/50 bg-gradient-to-r from-transparent via-accent/5 to-transparent flex items-center justify-between">
+      <div className="p-4 border-b border-border/50 bg-gradient-to-r from-transparent via-accent/5 to-transparent flex items-center justify-between">
         <div className="flex items-center gap-3">
           <SkeletonPulse className="w-9 h-9 rounded-xl" />
           <div className="text-left">
@@ -88,7 +88,7 @@ export function CursorPermissionsSkeleton() {
           <SkeletonPulse className="w-5 h-5 rounded" />
         </div>
       </div>
-      <div className="p-6 space-y-6">
+      <div className="p-4 space-y-4">
         {/* Security Warning skeleton */}
         <div className="flex items-start gap-3 p-4 rounded-xl border border-border/30 bg-muted/10">
           <SkeletonPulse className="w-5 h-5 rounded shrink-0 mt-0.5" />
@@ -154,13 +154,13 @@ export function ModelConfigSkeleton() {
   return (
     <div
       className={cn(
-        'rounded-2xl overflow-hidden',
+        'rounded-lg overflow-hidden',
         'border border-border/50',
         'bg-gradient-to-br from-card/90 via-card/70 to-card/80 backdrop-blur-xl',
         'shadow-sm shadow-black/5'
       )}
     >
-      <div className="p-6 border-b border-border/50 bg-gradient-to-r from-transparent via-accent/5 to-transparent">
+      <div className="p-4 border-b border-border/50 bg-gradient-to-r from-transparent via-accent/5 to-transparent">
         <div className="flex items-center gap-3 mb-2">
           <SkeletonPulse className="w-9 h-9 rounded-xl" />
           <SkeletonPulse className="h-6 w-40" />
@@ -169,7 +169,7 @@ export function ModelConfigSkeleton() {
           <SkeletonPulse className="h-4 w-72" />
         </div>
       </div>
-      <div className="p-6 space-y-6">
+      <div className="p-4 space-y-4">
         {/* Default Model skeleton */}
         <div className="space-y-2">
           <SkeletonPulse className="h-4 w-24" />
@@ -261,16 +261,16 @@ export function CursorCliStatus({ status, isChecking, onRefresh }: CursorCliStat
   return (
     <div
       className={cn(
-        'rounded-2xl overflow-hidden',
+        'rounded-lg overflow-hidden',
         'border border-border/50',
         'bg-gradient-to-br from-card/90 via-card/70 to-card/80 backdrop-blur-xl',
         'shadow-sm shadow-black/5'
       )}
     >
-      <div className="p-6 border-b border-border/50 bg-gradient-to-r from-transparent via-accent/5 to-transparent">
+      <div className="p-4 border-b border-border/50 bg-gradient-to-r from-transparent via-accent/5 to-transparent">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500/20 to-brand-600/10 flex items-center justify-center border border-brand-500/20">
+            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-brand-500/20 to-brand-600/10 flex items-center justify-center border border-brand-500/20">
               <CursorIcon className="w-5 h-5 text-brand-500" />
             </div>
             <h2 className="text-lg font-semibold text-foreground tracking-tight">Cursor CLI</h2>

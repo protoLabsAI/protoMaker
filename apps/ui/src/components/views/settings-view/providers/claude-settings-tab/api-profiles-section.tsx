@@ -310,7 +310,7 @@ export function ApiProfilesSection() {
   return (
     <div
       className={cn(
-        'rounded-2xl overflow-hidden',
+        'rounded-lg overflow-hidden',
         'border border-border/50',
         'bg-linear-to-br from-card/90 via-card/70 to-card/80 backdrop-blur-xl',
         'shadow-sm shadow-black/5'

@@ -182,13 +182,13 @@ export const KanbanCard = memo(function KanbanCard({
 
   const innerCardClasses = cn(
     'kanban-card-content h-full relative',
-    reduceEffects ? 'shadow-none' : 'shadow-sm',
+    reduceEffects ? 'shadow-none' : 'shadow',
     'transition-all duration-200 ease-out',
     // Disable hover translate for in-progress cards to prevent gap showing gradient
     isInteractive &&
       !reduceEffects &&
       !isCurrentAutoTask &&
-      'hover:-translate-y-0.5 hover:shadow-md hover:shadow-black/10 bg-transparent',
+      'hover:-translate-y-0.5 hover:shadow-sm hover:shadow-black/5 bg-transparent',
     !glassmorphism && 'backdrop-blur-[0px]!',
     !isCurrentAutoTask &&
       cardBorderEnabled &&
@@ -216,7 +216,7 @@ export const KanbanCard = memo(function KanbanCard({
       {(!isDragging || isOverlay) && (
         <div
           className={cn(
-            'absolute inset-0 rounded-xl bg-card -z-10',
+            'absolute inset-0 rounded-lg bg-card -z-10',
             glassmorphism && 'backdrop-blur-sm'
           )}
           style={{ opacity: opacity / 100 }}

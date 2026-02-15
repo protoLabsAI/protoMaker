@@ -269,7 +269,7 @@ export function EditFeatureDialog({
   }
 
   // Shared card styling
-  const cardClass = 'rounded-lg border border-border/50 bg-muted/30 p-4 space-y-3';
+  const cardClass = 'rounded-lg border border-border/50 bg-muted/30 p-3 space-y-2.5';
   const sectionHeaderClass = 'flex items-center gap-2 text-sm font-medium text-foreground';
 
   return (
