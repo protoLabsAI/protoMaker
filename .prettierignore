@@ -12,6 +12,10 @@ release/
 # Automaker
 .automaker/
 
+# Git worktrees (created by agents, exist on self-hosted runner)
+.worktrees/
+worktrees/
+
 # Logs
 logs/
 *.log
