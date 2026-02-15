@@ -8,36 +8,35 @@
 
 ```
 libs/flows/src/
-├── graphs/
-│   ├── state-utils.ts          # Zod-to-Annotation bridging
-│   ├── reducers.ts             # Built-in state reducers
-│   ├── routing.ts              # Conditional edge routers
-│   ├── builder.ts              # GraphBuilder class + helpers
-│   ├── research-flow.ts        # Reference: linear research flow
-│   ├── review-flow.ts          # Reference: human-in-the-loop review
-│   ├── coordinator-flow.ts     # Reference: Send() fan-out coordinator
-│   ├── nodes/
-│   │   ├── draft.ts            # Draft node for review flow
-│   │   └── revise.ts           # Revise node for review flow
-│   ├── subgraphs/
-│   │   ├── researcher.ts       # Researcher subgraph
-│   │   └── analyzer.ts         # Analyzer subgraph
+├── graphs/                         # Core primitives
+│   ├── state-utils.ts              # Zod-to-Annotation bridging
+│   ├── reducers.ts                 # Built-in state reducers
+│   ├── routing.ts                  # Conditional edge routers
+│   ├── builder.ts                  # GraphBuilder class + helpers
+│   ├── research-flow.ts            # Reference: linear research flow
+│   ├── review-flow.ts              # Reference: human-in-the-loop review
+│   ├── coordinator-flow.ts         # Reference: Send() fan-out coordinator
+│   ├── nodes/                      # Reference node implementations
+│   ├── subgraphs/                  # Reference subgraph implementations
 │   └── utils/
-│       └── subgraph-wrapper.ts # Subgraph isolation utility
-├── content/
+│       └── subgraph-wrapper.ts     # Subgraph isolation utility
+├── antagonistic-review/            # Dual-perspective PRD review
+│   ├── state.ts                    # AntagonisticReviewStateAnnotation
+│   ├── graph.ts                    # Graph with type bridge adapters
+│   └── nodes/                      # Classify, pair-review, consensus, HITL
+├── project-planning/               # Linear-native project planning
+│   ├── types.ts                    # ProjectPlanningStateAnnotation
+│   ├── graph.ts                    # Graph with 4 HITL checkpoints
+│   ├── nodes/                      # Research, PRD, milestones, HITL, issues
+│   └── executors/                  # LLM executor implementations
+├── content/                        # Content creation pipeline
 │   ├── content-creation-flow.ts    # Main 6-phase content pipeline
 │   ├── state.ts                    # ContentStateAnnotation
 │   ├── types.ts                    # Zod schemas: BlogPost, TechDoc, etc.
 │   ├── prompt-loader.ts            # Handlebars prompt compilation
 │   ├── prompts/                    # .md prompt templates
-│   ├── nodes/
-│   │   ├── outline-planner.ts      # Outline generation + HITL
-│   │   ├── generation-dispatch.ts  # Section generation fan-out
-│   │   └── review-workers.ts       # Technical/style/fact reviewers
-│   └── subgraphs/
-│       ├── research-subgraph.ts    # Parallel research workers
-│       ├── section-writer.ts       # Isolated per-section generation
-│       └── review-subgraph.ts      # Parallel review pipeline
+│   ├── nodes/                      # Outline, generation, review nodes
+│   └── subgraphs/                  # Research, section writer, review
 └── index.ts
 ```
 
@@ -392,6 +391,113 @@ const result = await compiled.invoke({
 - `TechDoc` — Technical documentation with API references
 - `TrainingExample` — LLM fine-tuning data (system/user/assistant messages)
 - `HFDatasetRow` — HuggingFace dataset format with metadata
+
+## Antagonistic Review Flow
+
+Dual-perspective PRD review with distillation depth routing. Two reviewers (Ava: operational, Jon: strategic) review a PRD independently, then a consolidation step merges their perspectives.
+
+### Architecture
+
+```
+classify_topic → fan_out_pairs → [pair_review (parallel)] →
+aggregate_pairs → ava_review → jon_review → check_consensus →
+[consolidate | resolution → consolidate] → check_hitl → [interrupt | done]
+```
+
+### Distillation Depth Routing
+
+After `classify_topic`, the flow routes based on PRD complexity:
+
+| Depth    | Behavior                                      |
+| -------- | --------------------------------------------- |
+| Surface  | Skip pair reviews entirely                    |
+| Standard | Activate most relevant pair via `Send()`      |
+| Deep     | Activate all 3 pairs via `Send()` in parallel |
+
+### Model Injection
+
+The graph accepts `smartModel` and `fastModel` via state. When provided, real LLM nodes execute; when absent, deterministic mock fallbacks run (enabling tests without API keys).
+
+```typescript
+import { createAntagonisticReviewGraph } from '@automaker/flows';
+
+const graph = createAntagonisticReviewGraph(true);
+const result = await graph.invoke({
+  prd: { situation: '...', problem: '...', approach: '...', results: '...' },
+  smartModel: new ChatAnthropic({ model: 'claude-sonnet-4-5-20250929' }),
+});
+```
+
+### Key Files
+
+| File                           | Purpose                                                  |
+| ------------------------------ | -------------------------------------------------------- |
+| `antagonistic-review/state.ts` | State annotation with `pairReviews` append reducer       |
+| `antagonistic-review/graph.ts` | Graph builder with type bridge adapters                  |
+| `antagonistic-review/nodes/`   | Classify, pair-review, consensus, resolution, HITL nodes |
+
+## Project Planning Flow
+
+Linear-native project planning workflow that takes a project from idea through research, PRD generation, milestone planning, and issue creation.
+
+### Architecture
+
+```
+research → create_planning_doc → [HITL] → deep_research → [HITL] →
+generate_prd → [HITL] → plan_milestones → [HITL] → create_issues → done
+```
+
+### HITL Checkpoints
+
+Four human-in-the-loop gates pause the flow for approval. Each gate supports approve/revise/cancel with a max of 3 revision iterations per checkpoint.
+
+### Trust Boundary Integration
+
+The `trustBoundaryResult` field in state controls whether HITL gates auto-pass:
+
+| Value           | Behavior                                 |
+| --------------- | ---------------------------------------- |
+| `autoApprove`   | All HITL gates auto-pass without pausing |
+| `requireReview` | HITL gates pause for human approval      |
+| `undefined`     | Default behavior (pause for review)      |
+
+The trust boundary is evaluated at PRD submission time via `SettingsService.evaluateTrustBoundary()`. Rules are configurable:
+
+- **Auto-approve**: small complexity + ops/improvement/bug categories
+- **Require review**: large/architectural complexity or idea/architectural categories
+
+```typescript
+// Trust boundary auto-approval flows through the planning graph
+const result = await graph.invoke({
+  projectInput: { ... },
+  trustBoundaryResult: 'autoApprove', // bypasses all 4 HITL gates
+});
+```
+
+### Executor Injection
+
+All processing nodes accept pluggable executors for dependency injection:
+
+```typescript
+import { createProjectPlanningFlow } from '@automaker/flows';
+
+const flow = createProjectPlanningFlow({
+  researchExecutor: myLLMResearcher,
+  prdGenerator: myLLMPrdGenerator,
+  milestonePlanner: myLLMMilestonePlanner,
+  issueCreator: myLinearIssueCreator,
+});
+```
+
+### Key Files
+
+| File                                        | Purpose                                      |
+| ------------------------------------------- | -------------------------------------------- |
+| `project-planning/types.ts`                 | State annotation with HITL response tracking |
+| `project-planning/graph.ts`                 | Graph builder with conditional HITL routing  |
+| `project-planning/nodes/hitl-checkpoint.ts` | HITL router + trust boundary check           |
+| `project-planning/nodes/research.ts`        | Research executor node                       |
+| `project-planning/nodes/generate-prd.ts`    | SPARC PRD generation node                    |
 
 ## Known Gotchas
 
