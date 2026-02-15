@@ -20,6 +20,7 @@
 import { useHumanInTheLoop } from '@copilotkitnext/react';
 import { z } from 'zod';
 import { GenericApprovalDialog } from './generic-dialog';
+import { EntityWizard } from './entity-wizard';
 
 /**
  * Registers all HITL interrupt handlers with CopilotKit.
@@ -61,22 +62,28 @@ export function useLangGraphInterrupt() {
   useHumanInTheLoop(
     {
       name: 'approve_entities',
-      description: 'Review and approve extracted entities before proceeding',
+      description: 'Review and approve extracted entities using a multi-step wizard',
       parameters: z.object({
         type: z.literal('entity-review'),
-        entities: z.array(z.record(z.string(), z.unknown())),
+        entities: z.array(
+          z.object({
+            id: z.string(),
+            name: z.string(),
+            type: z.string(),
+            approved: z.boolean().optional(),
+          })
+        ),
       }),
       render: ({ args, respond }) => {
         if (!respond) {
           return <div className="p-4 text-sm text-muted-foreground">Loading entity review...</div>;
         }
-        const count = args.entities?.length ?? 0;
         return (
-          <GenericApprovalDialog
+          <EntityWizard
             open={true}
-            title="Entity Review Required"
-            message={`Review ${count} entities before the pipeline continues`}
-            onResolve={(approved) => respond({ approved })}
+            entities={args.entities ?? []}
+            onResolve={(decisions) => respond({ decisions })}
+            onCancel={() => respond({ cancelled: true })}
           />
         );
       },
