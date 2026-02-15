@@ -13,6 +13,7 @@ import { AgentInfoPanel } from './agent-info-panel';
 import { CardActions } from './card-actions';
 import { EpicProgress } from './epic-progress';
 import { AgentSuggestion } from './agent-suggestion';
+import { AgentInspector } from '../agent-inspector';
 
 function getCardBorderStyle(enabled: boolean, opacity: number): React.CSSProperties {
   if (!enabled) {
@@ -270,6 +271,13 @@ export const KanbanCard = memo(function KanbanCard({
           projectPath={currentProject?.path ?? ''}
           contextContent={contextContent}
           summary={summary}
+          isCurrentAutoTask={isCurrentAutoTask}
+        />
+
+        {/* Agent Inspector */}
+        <AgentInspector
+          feature={feature}
+          projectPath={currentProject?.path ?? ''}
           isCurrentAutoTask={isCurrentAutoTask}
         />
 
