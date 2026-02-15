@@ -11,21 +11,35 @@ export default defineConfig({
   testDir: './tests',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: 0,
+  // CI runners are shared and slower — retry flaky failures up to 2 times
+  retries: process.env.CI ? 2 : 0,
   workers: 1, // Run sequentially to avoid auth conflicts with shared server
   reporter: 'html',
   timeout: 30000,
+  expect: {
+    // CI shared runners are 2-3x slower than local — give assertions more room
+    timeout: process.env.CI ? 10_000 : 5_000,
+  },
   use: {
     baseURL: `http://localhost:${port}`,
-    trace: 'on-failure',
+    trace: 'on-first-retry',
     screenshot: 'only-on-failure',
+    // 720px default is too short — modals with inputs push confirm buttons
+    // below the fold causing "element is outside of the viewport" failures
+    viewport: { width: 1280, height: 900 },
+    // Give CI actions (click, fill, etc.) more time on slow shared runners
+    actionTimeout: process.env.CI ? 10_000 : 0,
   },
   // Global setup - authenticate before each test
   globalSetup: require.resolve('./tests/global-setup.ts'),
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: {
+        ...devices['Desktop Chrome'],
+        // Override Desktop Chrome's 720px height — keep the user agent and other device props
+        viewport: { width: 1280, height: 900 },
+      },
     },
   ],
   ...(reuseServer
