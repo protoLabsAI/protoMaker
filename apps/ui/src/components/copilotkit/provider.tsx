@@ -22,6 +22,7 @@ import { AgentStateDisplay } from './agent-state-display';
 import { WorkflowSelector } from './workflow-selector';
 import { useAppStore } from '@/store/app-store';
 import { ModelSelector, getStoredModel, storeModel, type ModelTier } from './model-selector';
+import { useLangGraphInterrupt } from './use-langgraph-interrupt';
 
 const CopilotAvailableContext = createContext(false);
 
@@ -74,6 +75,15 @@ function ProjectContextInjector() {
   });
 
   return null;
+}
+
+/**
+ * Handles LangGraph interrupts and renders appropriate approval UI.
+ * Must be rendered inside CopilotKitProvider context.
+ */
+function InterruptHandler() {
+  const interruptUI = useLangGraphInterrupt();
+  return <>{interruptUI}</>;
 }
 
 /**
@@ -170,6 +180,7 @@ export function CopilotKitProvider({ children }: { children: ReactNode }) {
             credentials="include"
           >
             <ProjectContextInjector />
+            <InterruptHandler />
             {children}
           </CKProvider>
         </ModelContext.Provider>
