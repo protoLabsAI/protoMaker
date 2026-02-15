@@ -19,15 +19,15 @@ export function DeveloperSection() {
   return (
     <div
       className={cn(
-        'rounded-2xl overflow-hidden',
+        'rounded-lg overflow-hidden',
         'border border-border/50',
         'bg-gradient-to-br from-card/90 via-card/70 to-card/80 backdrop-blur-xl',
         'shadow-sm shadow-black/5'
       )}
     >
-      <div className="p-6 border-b border-border/50 bg-gradient-to-r from-transparent via-accent/5 to-transparent">
+      <div className="p-4 border-b border-border/50 bg-gradient-to-r from-transparent via-accent/5 to-transparent">
         <div className="flex items-center gap-3 mb-2">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-600/10 flex items-center justify-center border border-purple-500/20">
+          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-purple-500/20 to-purple-600/10 flex items-center justify-center border border-purple-500/20">
             <Code2 className="w-5 h-5 text-purple-500" />
           </div>
           <h2 className="text-lg font-semibold text-foreground tracking-tight">Developer</h2>
@@ -36,7 +36,7 @@ export function DeveloperSection() {
           Advanced settings for debugging and development.
         </p>
       </div>
-      <div className="p-6 space-y-6">
+      <div className="p-4 space-y-4">
         {/* Server Log Level */}
         <div className="space-y-3">
           <Label className="text-foreground font-medium">Server Log Level</Label>

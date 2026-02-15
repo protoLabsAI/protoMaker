@@ -52,16 +52,16 @@ export function CursorPermissionsSection({
     <Collapsible open={permissionsExpanded} onOpenChange={setPermissionsExpanded}>
       <div
         className={cn(
-          'rounded-2xl overflow-hidden',
+          'rounded-lg overflow-hidden',
           'border border-border/50',
           'bg-gradient-to-br from-card/90 via-card/70 to-card/80 backdrop-blur-xl',
           'shadow-sm shadow-black/5'
         )}
       >
         <CollapsibleTrigger className="w-full">
-          <div className="p-6 border-b border-border/50 bg-gradient-to-r from-transparent via-accent/5 to-transparent flex items-center justify-between">
+          <div className="p-4 border-b border-border/50 bg-gradient-to-r from-transparent via-accent/5 to-transparent flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500/20 to-amber-600/10 flex items-center justify-center border border-amber-500/20">
+              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-500/20 to-amber-600/10 flex items-center justify-center border border-amber-500/20">
                 <Shield className="w-5 h-5 text-amber-500" />
               </div>
               <div className="text-left">
@@ -103,7 +103,7 @@ export function CursorPermissionsSection({
         </CollapsibleTrigger>
 
         <CollapsibleContent>
-          <div className="p-6 space-y-6">
+          <div className="p-4 space-y-4">
             {/* Security Warning */}
             <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20">
               <ShieldAlert className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />

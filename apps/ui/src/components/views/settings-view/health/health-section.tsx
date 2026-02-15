@@ -126,17 +126,17 @@ export function HealthSection() {
   return (
     <div
       className={cn(
-        'rounded-2xl overflow-hidden',
+        'rounded-lg overflow-hidden',
         'border border-border/50',
         'bg-gradient-to-br from-card/90 via-card/70 to-card/80 backdrop-blur-xl',
         'shadow-sm shadow-black/5'
       )}
     >
       {/* Header */}
-      <div className="p-6 border-b border-border/50 bg-gradient-to-r from-transparent via-accent/5 to-transparent">
+      <div className="p-4 border-b border-border/50 bg-gradient-to-r from-transparent via-accent/5 to-transparent">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 flex items-center justify-center border border-emerald-500/20">
+            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 flex items-center justify-center border border-emerald-500/20">
               <Activity className="w-5 h-5 text-emerald-500" />
             </div>
             <h2 className="text-lg font-semibold text-foreground tracking-tight">System Health</h2>
@@ -163,7 +163,7 @@ export function HealthSection() {
         </p>
       </div>
 
-      <div className="p-6 space-y-6">
+      <div className="p-4 space-y-4">
         {error && (
           <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
             {error}
