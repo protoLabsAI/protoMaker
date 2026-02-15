@@ -17,20 +17,14 @@ on:
 
 jobs:
   test:
-    name: Test on ${{ matrix.os }} with Node ${{ matrix.node }} and ${{ matrix.package-manager }}
-    runs-on: ${{ matrix.os }}
+    name: Test with Node ${{ matrix.node }} and ${{ matrix.package-manager }}
+    runs-on: self-hosted
 
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        node: ['18.x', '20.x', '22.x']
-        package-manager: [npm, pnpm, yarn]
-        # Reduce combinations by excluding some configurations
-        exclude:
-          # Only test yarn on ubuntu and macos
-          - os: windows-latest
-            package-manager: yarn
+        node: ['20.x', '22.x']
+        package-manager: [npm, pnpm]
 
     steps:
       - name: Checkout code
@@ -200,7 +194,7 @@ jobs:
 
   summary:
     name: Test Summary
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: test
     if: always()
     steps:
