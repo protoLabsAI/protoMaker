@@ -702,3 +702,12 @@ export type {
   TimeSeriesMetric,
   TimeGroupBy,
 } from './metrics.js';
+
+// CopilotKit / AG-UI Protocol types (HITL approval system)
+export type {
+  InterruptPayload,
+  PRDReviewInterrupt,
+  EntityReviewInterrupt,
+  PhaseApprovalInterrupt,
+  GenericInterrupt,
+} from './copilotkit.js';
