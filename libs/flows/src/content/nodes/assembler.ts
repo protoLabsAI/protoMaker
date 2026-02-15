@@ -12,6 +12,8 @@
  */
 
 import { LangfuseClient } from '@automaker/observability';
+import type { RunnableConfig } from '@langchain/core/runnables';
+import { copilotkitEmitState, emitHeartbeat } from '../copilotkit-utils.js';
 
 /**
  * Document section with content and metadata
@@ -59,6 +61,7 @@ export interface AssemblerState {
   coherenceChecked?: boolean;
   crossReferencesResolved?: boolean;
   validationWarnings?: ValidationWarning[];
+  config?: RunnableConfig;
 }
 
 /**
@@ -357,6 +360,16 @@ export async function assembler(
   langfuseClient?: LangfuseClient,
   coherencePrompt?: string
 ): Promise<Partial<AssemblerState>> {
+  const { config } = state;
+
+  // Emit state to CopilotKit
+  if (config) {
+    await copilotkitEmitState(config, {
+      currentActivity: 'Assembling document sections',
+      progress: 0,
+    });
+  }
+
   // Create a trace if Langfuse is available
   const traceId = langfuseClient
     ? langfuseClient.createTrace({
@@ -373,13 +386,24 @@ export async function assembler(
     console.log(`[assembler] Document type: ${state.documentType}`);
     console.log(`[assembler] Sections: ${state.sections.length}`);
 
+    // Emit heartbeat
+    if (config) {
+      await emitHeartbeat(config, 'Merging sections in order');
+    }
+
     // Step 1: Merge sections in order
     let document = mergeSections(state.sections);
 
     // Step 2: Resolve cross-references
+    if (config) {
+      await emitHeartbeat(config, 'Resolving cross-references');
+    }
     document = resolveCrossReferences(document, state.sections);
 
     // Step 3: Number code examples
+    if (config) {
+      await emitHeartbeat(config, 'Numbering code examples');
+    }
     document = numberCodeExamples(document);
 
     // Step 4: Generate table of contents for docs
@@ -419,6 +443,14 @@ export async function assembler(
     }
 
     console.log('[assembler] Assembly complete');
+
+    // Emit completion state
+    if (config) {
+      await copilotkitEmitState(config, {
+        currentActivity: 'Document assembly complete',
+        progress: 100,
+      });
+    }
 
     // Flush trace if available
     if (langfuseClient && traceId) {

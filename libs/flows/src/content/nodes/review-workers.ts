@@ -8,10 +8,12 @@
  */
 
 import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
+import type { RunnableConfig } from '@langchain/core/runnables';
 import { createLogger } from '@automaker/utils';
 import { LangfuseClient } from '@automaker/observability';
 import { compilePrompt } from '../prompt-loader.js';
 import { extractAllTags, extractTag, extractRequiredEnum } from '../xml-parser.js';
+import { copilotkitEmitState, emitHeartbeat } from '../copilotkit-utils.js';
 
 const logger = createLogger('review-workers');
 
@@ -42,6 +44,7 @@ export interface ReviewWorkerState {
   model?: BaseChatModel; // LangChain chat model for LLM-powered review
   langfuseClient?: LangfuseClient; // Optional Langfuse tracing
   traceId?: string; // Trace ID for Langfuse
+  config?: RunnableConfig;
 }
 
 /**
@@ -408,8 +411,16 @@ function parseFactFindings(xmlOutput: string): ReviewFinding[] {
 export async function technicalReviewerNode(
   state: ReviewWorkerState
 ): Promise<Partial<ReviewWorkerState>> {
-  const { content, model, langfuseClient, traceId } = state;
+  const { content, model, langfuseClient, traceId, config } = state;
   let findings: ReviewFinding[] = [];
+
+  // Emit state to CopilotKit
+  if (config) {
+    await copilotkitEmitState(config, {
+      currentActivity: 'Running technical review',
+      progress: 0,
+    });
+  }
 
   // If no model available, fall back to heuristics
   if (!model) {
@@ -420,6 +431,11 @@ export async function technicalReviewerNode(
 
   try {
     logger.info('Starting LLM-based technical review...');
+
+    // Emit heartbeat
+    if (config) {
+      await emitHeartbeat(config, 'Invoking LLM for technical review');
+    }
 
     // Build the prompt using compilePrompt (loads from prompts/technical-reviewer.md)
     const compiled = await compilePrompt({
@@ -513,6 +529,14 @@ export async function technicalReviewerNode(
       logger.warn('No findings parsed from LLM response, using heuristics');
       findings = runHeuristicChecks(content);
     }
+
+    // Emit completion state
+    if (config) {
+      await copilotkitEmitState(config, {
+        currentActivity: 'Technical review complete',
+        progress: 100,
+      });
+    }
   } catch (error) {
     logger.error('LLM review failed, falling back to heuristics:', error);
     findings = runHeuristicChecks(content);
@@ -528,8 +552,16 @@ export async function technicalReviewerNode(
 export async function styleReviewerNode(
   state: ReviewWorkerState
 ): Promise<Partial<ReviewWorkerState>> {
-  const { content, model, langfuseClient, traceId } = state;
+  const { content, model, langfuseClient, traceId, config } = state;
   let findings: ReviewFinding[] = [];
+
+  // Emit state to CopilotKit
+  if (config) {
+    await copilotkitEmitState(config, {
+      currentActivity: 'Running style review',
+      progress: 0,
+    });
+  }
 
   // If no model available, fall back to heuristics
   if (!model) {
@@ -540,6 +572,11 @@ export async function styleReviewerNode(
 
   try {
     logger.info('Starting LLM-based style review with 8-dimension scoring...');
+
+    // Emit heartbeat
+    if (config) {
+      await emitHeartbeat(config, 'Invoking LLM for style review');
+    }
 
     // Build the prompt using compilePrompt (loads from prompts/style-reviewer.md)
     const compiled = await compilePrompt({
@@ -671,6 +708,14 @@ export async function styleReviewerNode(
       logger.warn('No scoring dimensions parsed from LLM response, using heuristics');
       findings = runStyleHeuristicChecks(content);
     }
+
+    // Emit completion state
+    if (config) {
+      await copilotkitEmitState(config, {
+        currentActivity: 'Style review complete',
+        progress: 100,
+      });
+    }
   } catch (error) {
     logger.error('Error during LLM-based style review, falling back to heuristics', error);
     findings = runStyleHeuristicChecks(content);
@@ -686,8 +731,16 @@ export async function styleReviewerNode(
 export async function factCheckerNode(
   state: ReviewWorkerState
 ): Promise<Partial<ReviewWorkerState>> {
-  const { content, researchFindings, model, langfuseClient, traceId } = state;
+  const { content, researchFindings, model, langfuseClient, traceId, config } = state;
   let findings: ReviewFinding[] = [];
+
+  // Emit state to CopilotKit
+  if (config) {
+    await copilotkitEmitState(config, {
+      currentActivity: 'Running fact check',
+      progress: 0,
+    });
+  }
 
   // If no model available, fall back to heuristics
   if (!model) {
@@ -698,6 +751,11 @@ export async function factCheckerNode(
 
   try {
     logger.info('Starting LLM-based fact checking...');
+
+    // Emit heartbeat
+    if (config) {
+      await emitHeartbeat(config, 'Invoking LLM for fact checking');
+    }
 
     // Build the prompt using compilePrompt (loads from prompts/fact-checker.md)
     const compiled = await compilePrompt({
@@ -782,6 +840,14 @@ export async function factCheckerNode(
     if (findings.length === 0) {
       logger.warn('No findings parsed from LLM response, using heuristics');
       findings = runFactHeuristicChecks(content, researchFindings);
+    }
+
+    // Emit completion state
+    if (config) {
+      await copilotkitEmitState(config, {
+        currentActivity: 'Fact check complete',
+        progress: 100,
+      });
     }
   } catch (error) {
     logger.error('LLM fact checking failed, falling back to heuristics:', error);
