@@ -15,6 +15,7 @@ import { getCopilotKitThemeStyles } from './theme-bridge';
 import { getAuthHeaders } from '@/lib/api-fetch';
 import { useAuthStore } from '@/store/auth-store';
 import { AgentStateDisplay } from './agent-state-display';
+import { WorkflowSelector, WorkflowProvider } from './workflow-selector';
 
 const CopilotAvailableContext = createContext(false);
 
@@ -90,9 +91,11 @@ export function CopilotKitProvider({ children }: { children: ReactNode }) {
   return (
     <CopilotErrorBoundary fallback={unavailableFallback}>
       <CopilotAvailableContext.Provider value={true}>
-        <CKProvider runtimeUrl="/api/copilotkit" headers={getAuthHeaders()} credentials="include">
-          {children}
-        </CKProvider>
+        <WorkflowProvider>
+          <CKProvider runtimeUrl="/api/copilotkit" headers={getAuthHeaders()} credentials="include">
+            {children}
+          </CKProvider>
+        </WorkflowProvider>
       </CopilotAvailableContext.Provider>
     </CopilotErrorBoundary>
   );
@@ -113,6 +116,7 @@ export function CopilotSidebarWrapper({ children }: { children: ReactNode }) {
     <>
       {children}
       <div style={getCopilotKitThemeStyles()}>
+        <WorkflowSelector />
         <CopilotSidebar
           defaultOpen={false}
           labels={{
