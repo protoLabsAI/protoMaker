@@ -1,4 +1,5 @@
-// Atoms will be populated by subsequent features
+export { Button, buttonVariants } from './button.js';
+export { Badge, badgeVariants } from './badge.js';
 export { Checkbox } from './checkbox.js';
 export { RadioGroup, RadioGroupItem } from './radio-group.js';
 export {
