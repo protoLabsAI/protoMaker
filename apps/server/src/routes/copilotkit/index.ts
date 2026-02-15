@@ -154,7 +154,7 @@ export function createCopilotKitEndpoint(deps: CopilotKitDependencies) {
   const tools = createAvaTools(deps);
 
   const avaAgent = new BuiltInAgent({
-    model: 'anthropic/claude-sonnet-4.5',
+    model: 'anthropic/claude-sonnet-4-5-20250929',
     prompt: [
       'You are Ava, the AI assistant for protoMaker by protoLabs.',
       'You help users manage their development board, create and track features, control auto-mode, and understand project status.',
