@@ -13,7 +13,7 @@
  * - Configurable via ContentConfig
  */
 
-import { StateGraph, Annotation, Send, Command } from '@langchain/langgraph';
+import { StateGraph, Annotation, Send, Command, interrupt } from '@langchain/langgraph';
 import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { createLogger } from '@automaker/utils';
 import { LangfuseClient } from '@automaker/observability';
@@ -325,16 +325,45 @@ ${r.findings.references.map((ref) => `- ${ref}`).join('\n')}
  *
  * When the graph resumes after interrupt, the state will contain
  * researchApproved and optionally researchFeedback, set by the caller.
- * This node is a passthrough — routing logic happens in routeAfterResearchReview.
+ * This node triggers an interrupt when critical issues are found.
  */
 async function researchHitlNode(
   state: ContentCreationStateType
 ): Promise<Partial<ContentCreationStateType>> {
-  const { researchReview, researchApproved } = state;
+  const { researchReview, researchApproved, researchResults, config } = state;
 
   logger.info(
     `Research HITL: Review score ${researchReview?.percentage.toFixed(1)}%, approved=${researchApproved}`
   );
+
+  // Only interrupt if HITL is enabled and there are critical issues
+  if (config.enableHITL && researchReview && researchReview.criticalIssues.length > 0) {
+    // Format research content for display
+    const researchContent = researchResults
+      .map(
+        (r) => `
+## Query: ${r.query}
+
+### Facts
+${r.findings.facts.map((f) => `- ${f}`).join('\n')}
+
+### Examples
+${r.findings.examples.map((e) => `- ${e}`).join('\n')}
+
+### References
+${r.findings.references.map((ref) => `- ${ref}`).join('\n')}
+`
+      )
+      .join('\n\n');
+
+    logger.info('Research has critical issues, triggering HITL interrupt');
+    interrupt({
+      type: 'review_approval',
+      phase: 'research',
+      reviewResult: researchReview,
+      content: researchContent,
+    });
+  }
 
   return {};
 }
@@ -505,11 +534,40 @@ ${s.description}
 async function outlineHitlNode(
   state: ContentCreationStateType
 ): Promise<Partial<ContentCreationStateType>> {
-  const { outlineReview, outlineApproved, userEditedContent } = state;
+  const { outlineReview, outlineApproved, userEditedContent, outline, config } = state;
 
   logger.info(
     `Outline HITL: Review score ${outlineReview?.percentage.toFixed(1)}%, approved=${outlineApproved}`
   );
+
+  // Only interrupt if HITL is enabled and there are critical issues
+  if (config.enableHITL && outlineReview && outlineReview.criticalIssues.length > 0 && outline) {
+    // Format outline for display
+    const outlineContent = `
+# ${outline.title}
+
+${outline.sections
+  .map(
+    (s) => `
+## ${s.title}
+
+${s.description}
+
+- Include code examples: ${s.includeCodeExamples ? 'Yes' : 'No'}
+- Target length: ${s.targetLength} words
+`
+  )
+  .join('\n')}
+`;
+
+    logger.info('Outline has critical issues, triggering HITL interrupt');
+    interrupt({
+      type: 'review_approval',
+      phase: 'outline',
+      reviewResult: outlineReview,
+      content: outlineContent,
+    });
+  }
 
   // If user provided edited content, attempt to parse it as an updated outline
   if (userEditedContent && outlineApproved) {
@@ -820,11 +878,27 @@ async function finalContentReviewNode(
 async function finalReviewHitlNode(
   state: ContentCreationStateType
 ): Promise<Partial<ContentCreationStateType>> {
-  const { finalReview, reviewApproved, userEditedContent } = state;
+  const { finalReview, reviewApproved, userEditedContent, assembledContent, config } = state;
 
   logger.info(
     `Final content HITL: Review score ${finalReview?.percentage.toFixed(1)}%, approved=${reviewApproved}`
   );
+
+  // Only interrupt if HITL is enabled and there are critical issues
+  if (
+    config.enableHITL &&
+    finalReview &&
+    finalReview.criticalIssues.length > 0 &&
+    assembledContent
+  ) {
+    logger.info('Final content has critical issues, triggering HITL interrupt');
+    interrupt({
+      type: 'review_approval',
+      phase: 'final',
+      reviewResult: finalReview,
+      content: assembledContent,
+    });
+  }
 
   // If user provided edited content, replace the assembled content
   if (userEditedContent && reviewApproved) {
