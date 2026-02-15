@@ -17,8 +17,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Copy root package files
-COPY package*.json ./
+# Copy root package files and npm config
+COPY package*.json .npmrc ./
 
 # Copy all libs package.json files (centralized - add new libs here)
 COPY libs/types/package*.json ./libs/types/
