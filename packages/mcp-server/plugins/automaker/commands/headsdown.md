@@ -33,6 +33,9 @@ allowed-tools:
   - mcp__plugin_automaker_automaker__health_check
   - mcp__plugin_automaker_discord__send_message
   - mcp__plugin_automaker_discord__list_channels
+  # Context7 - live library documentation
+  - mcp__plugin_automaker_context7__resolve-library-id
+  - mcp__plugin_automaker_context7__query-docs
 ---
 
 # Heads Down Mode
@@ -47,6 +50,10 @@ These run automatically in the background — don't duplicate their work:
 - **Safety guard** blocks dangerous bash commands (`rm -rf /`, force push to main, `git reset --hard`, etc.). You can't accidentally break things.
 - **Auto-format** runs prettier on every Edit/Write. Never run `npm run format` manually.
 - **Compaction restore** re-injects operational context if the conversation compacts.
+
+## Context7 — Live Library Docs
+
+Use Context7 to look up current library docs when implementing features. Two-step: `resolve-library-id` then `query-docs`. Use when unsure about an API or when a library version may differ from your training data.
 
 ## Core Philosophy
 
