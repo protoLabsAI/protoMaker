@@ -53,7 +53,8 @@ export class LinearProjectUpdateService {
   /**
    * Get Linear API token from project settings or environment.
    *
-   * Priority: apiKey from settings > LINEAR_API_KEY env var
+   * Priority: OAuth agentToken > settings apiKey > LINEAR_API_KEY env var
+   * (Matches LinearMCPClient.getAccessToken() priority order)
    *
    * @throws {Error} If no token is configured
    */
@@ -61,14 +62,14 @@ export class LinearProjectUpdateService {
     const settings = await this.settingsService.getProjectSettings(this.projectPath);
     const linearConfig = settings.integrations?.linear;
 
-    // Priority 1: API key from project settings
-    if (linearConfig?.apiKey) {
-      return linearConfig.apiKey;
-    }
-
-    // Priority 2: OAuth agent token (legacy path)
+    // Priority 1: OAuth agent token (full delegated permissions)
     if (linearConfig?.agentToken) {
       return linearConfig.agentToken;
+    }
+
+    // Priority 2: Personal API key from project settings
+    if (linearConfig?.apiKey) {
+      return linearConfig.apiKey;
     }
 
     // Priority 3: Environment variable

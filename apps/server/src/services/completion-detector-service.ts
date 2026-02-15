@@ -227,8 +227,14 @@ export class CompletionDetectorService {
     if (project.linearProjectId && this.settingsService) {
       try {
         const client = new LinearMCPClient(this.settingsService, projectPath);
-        await client.updateProject(project.linearProjectId, { status: 'completed' });
-        logger.info(`Updated Linear project "${project.title}" to completed`);
+        // Linear uses workspace-specific status IDs, not string enums
+        const statusId = await client.resolveProjectStatusId('completed');
+        if (statusId) {
+          await client.updateProject(project.linearProjectId, { statusId });
+          logger.info(`Updated Linear project "${project.title}" to completed`);
+        } else {
+          logger.warn('No "completed" project status found in Linear workspace');
+        }
       } catch (error) {
         logger.error('Failed to update Linear project status (non-blocking):', error);
       }

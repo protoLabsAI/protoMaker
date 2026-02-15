@@ -283,8 +283,10 @@ export interface UpdateProjectOptions {
   name?: string;
   /** New project description (optional) */
   description?: string;
-  /** New project status (optional) */
+  /** New project status string — mapped to GraphQL `state` field (optional) */
   status?: string;
+  /** Workspace-specific project status ID — use getProjectStatuses() to resolve (optional) */
+  statusId?: string;
   /** New project progress percentage (optional, 0-100) */
   progress?: number;
 }
@@ -1320,7 +1322,7 @@ export class LinearMCPClient {
    * @throws {LinearAPIError} On API errors
    */
   async updateProject(projectId: string, options: UpdateProjectOptions): Promise<boolean> {
-    const { name, description, status, progress } = options;
+    const { name, description, status, statusId, progress } = options;
 
     const mutation = `
       mutation UpdateProject(
@@ -1328,6 +1330,7 @@ export class LinearMCPClient {
         $name: String
         $description: String
         $state: String
+        $statusId: String
         $progress: Float
       ) {
         projectUpdate(
@@ -1336,6 +1339,7 @@ export class LinearMCPClient {
             name: $name
             description: $description
             state: $state
+            statusId: $statusId
             progress: $progress
           }
         ) {
@@ -1353,6 +1357,7 @@ export class LinearMCPClient {
       name,
       description,
       state: status,
+      statusId,
       progress: progress !== undefined ? progress / 100 : undefined, // Convert percentage to 0-1
     };
 
@@ -1375,6 +1380,47 @@ export class LinearMCPClient {
     logger.info(`Updated Linear project: ${data.projectUpdate.project.name}`);
 
     return true;
+  }
+
+  /**
+   * Get workspace project statuses (for resolving status IDs).
+   * Linear uses workspace-specific status IDs rather than string enums.
+   */
+  async getProjectStatuses(): Promise<Array<{ id: string; name: string; type: string }>> {
+    const query = `
+      query {
+        projectStatuses {
+          nodes {
+            id
+            name
+            type
+          }
+        }
+      }
+    `;
+
+    interface ProjectStatusesResponse {
+      projectStatuses: {
+        nodes: Array<{ id: string; name: string; type: string }>;
+      };
+    }
+
+    const data = await this.executeGraphQL<ProjectStatusesResponse>(query, {});
+    return data.projectStatuses.nodes;
+  }
+
+  /**
+   * Resolve a project status type (e.g. "completed") to its workspace-specific ID.
+   * Returns undefined if no matching status found.
+   */
+  async resolveProjectStatusId(statusType: string): Promise<string | undefined> {
+    const statuses = await this.getProjectStatuses();
+    const match = statuses.find(
+      (s) =>
+        s.type.toLowerCase() === statusType.toLowerCase() ||
+        s.name.toLowerCase() === statusType.toLowerCase()
+    );
+    return match?.id;
   }
 
   /**
