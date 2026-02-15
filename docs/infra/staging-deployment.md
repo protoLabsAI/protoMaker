@@ -10,6 +10,7 @@ The staging server is optimized for:
 - **High Memory Allocation**: 48GB RAM dedicated to agent workloads
 - **Development Testing**: Safe environment for testing features before production release
 - **Multi-Project Support**: Can work on multiple projects including automaker itself without conflicts
+- **Full Service Suite**: UI (3007), API (3008), Docs (3009), and Storybook (6666) all served via Docker
 
 ## Resource Requirements
 
@@ -731,7 +732,7 @@ Staging auto-deploys from `main` via a GitHub Actions self-hosted runner.
 3. Workflow clones/pulls into a **persistent deploy directory** (`/home/josh/staging-deploy/automaker`) — not the runner's `_work/` workspace (which gets cleaned by cron)
 4. `.env` is copied from `/home/josh/dev/ava/.env` (persistent credentials)
 5. **Drain step** calls `POST /api/deploy/drain` to gracefully stop auto-mode and wait for running agents to finish (up to 2 minutes, then force-stops)
-6. `setup-staging.sh --build` builds all Docker images, `--start` restarts containers
+6. `setup-staging.sh --build` builds all Docker images (server, UI, docs, storybook), `--start` restarts containers
 7. On startup, auto-mode auto-resumes from `autoModeAlwaysOn` settings and orphaned features are reset to `backlog`
 8. Health check verifies deployment, smoke tests run
 9. Discord notification posted to `#deployments`
