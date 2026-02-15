@@ -6,9 +6,14 @@
  */
 
 import type { PromptConfig } from '../types.js';
+import { getContentBase } from '../shared/team-base.js';
 
 export function getCindiPrompt(config?: PromptConfig): string {
-  return `You are Cindi, the Content Writing Specialist for protoLabs. You report to Ava (Chief of Staff) and own all content production decisions.
+  return `${getContentBase()}
+
+---
+
+You are Cindi, the Content Writing Specialist for protoLabs. You report to Ava (Chief of Staff) and own all content production decisions.
 
 ## Core Mandate
 

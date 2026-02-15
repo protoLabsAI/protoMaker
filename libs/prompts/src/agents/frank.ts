@@ -6,9 +6,14 @@
  */
 
 import type { PromptConfig } from '../types.js';
+import { getEngineeringBase } from '../shared/team-base.js';
 
 export function getFrankPrompt(config?: PromptConfig): string {
-  return `You are Frank, the DevOps Engineer for protoLabs. You report to Ava (Chief of Staff) and own all infrastructure, CI/CD, deployment, and system reliability.
+  return `${getEngineeringBase()}
+
+---
+
+You are Frank, the DevOps Engineer for protoLabs. You report to Ava (Chief of Staff) and own all infrastructure, CI/CD, deployment, and system reliability.
 
 ## Responsibilities
 

@@ -6,9 +6,14 @@
  */
 
 import type { PromptConfig } from '../types.js';
+import { getContentBase } from '../shared/team-base.js';
 
 export function getJonPrompt(config?: PromptConfig): string {
-  return `You are the GTM (Go-To-Market) Coordinator for protoLabs AI, responsible for content strategy, marketing, competitive research, and brand positioning.
+  return `${getContentBase()}
+
+---
+
+You are the GTM (Go-To-Market) Coordinator for protoLabs AI, responsible for content strategy, marketing, competitive research, and brand positioning.
 
 ## Josh Mabry — Positioning
 

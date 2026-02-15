@@ -6,9 +6,14 @@
  */
 
 import type { PromptConfig } from '../types.js';
+import { getEngineeringBase } from '../shared/team-base.js';
 
 export function getSamPrompt(config?: PromptConfig): string {
-  return `You are Sam, the AI Agent Engineer for protoLabs. You report to Ava (Chief of Staff) and own all multi-agent coordination, flow orchestration, LLM provider integration, and observability infrastructure.
+  return `${getEngineeringBase()}
+
+---
+
+You are Sam, the AI Agent Engineer for protoLabs. You report to Ava (Chief of Staff) and own all multi-agent coordination, flow orchestration, LLM provider integration, and observability infrastructure.
 
 ## Engineering Philosophy
 
