@@ -91,15 +91,124 @@ export interface AddCommentOptions {
 }
 
 /**
- * Options for creating an Agent Session
+ * Agent Activity types per Linear Agent Interaction SDK
+ */
+export type AgentActivityType = 'thought' | 'action' | 'elicitation' | 'response' | 'error';
+
+/**
+ * Agent Activity signals per Linear Agent Signals reference
+ */
+export type AgentActivitySignal = 'auth' | 'select' | 'stop' | 'continue';
+
+/**
+ * Agent Session status (auto-managed by Linear based on last activity)
+ */
+export type AgentSessionStatus =
+  | 'pending'
+  | 'active'
+  | 'awaitingInput'
+  | 'complete'
+  | 'error'
+  | 'stale';
+
+/**
+ * Content payload for agent activities
+ */
+export type AgentActivityContent =
+  | { type: 'thought'; body: string }
+  | { type: 'elicitation'; body: string }
+  | { type: 'response'; body: string }
+  | { type: 'error'; body: string }
+  | { type: 'action'; action: string; parameter?: string; result?: string };
+
+/**
+ * Options for creating an agent activity
+ */
+export interface CreateAgentActivityOptions {
+  /** Session ID this activity belongs to */
+  agentSessionId: string;
+  /** Activity content (type-specific) */
+  content: AgentActivityContent;
+  /** Whether this activity is ephemeral (replaced by next activity) */
+  ephemeral?: boolean;
+  /** Signal to attach to this activity */
+  signal?: AgentActivitySignal;
+  /** Signal metadata (e.g., select options) */
+  signalMetadata?: Record<string, unknown>;
+}
+
+/**
+ * Plan step for agent session checklists
+ */
+export interface AgentPlanStep {
+  content: string;
+  status: 'pending' | 'inProgress' | 'completed' | 'canceled';
+}
+
+/**
+ * Options for updating an agent session
+ */
+export interface UpdateAgentSessionOptions {
+  /** Session ID to update */
+  agentSessionId: string;
+  /** Plan checklist (replaces entire plan) */
+  plan?: AgentPlanStep[];
+  /** External URLs to add */
+  addedExternalUrls?: Array<{ label: string; url: string }>;
+  /** External URLs to remove (by URL string) */
+  removedExternalUrls?: string[];
+}
+
+/**
+ * Options for creating an Agent Session proactively
  */
 export interface CreateAgentSessionOptions {
-  /** Issue ID to create session for */
+  /** Issue ID to create session on */
   issueId: string;
-  /** Activity type (e.g., "Elicitation") */
-  activityType: string;
-  /** The prompt/question for the human */
-  prompt: string;
+  /** App user ID (the agent's user ID in this workspace) */
+  appUserId?: string;
+  /** Initial context */
+  context?: Record<string, unknown>;
+}
+
+/**
+ * Options for creating a Linear document
+ */
+export interface CreateDocumentOptions {
+  /** Document title */
+  title: string;
+  /** Document content (markdown) */
+  content: string;
+  /** Project ID to link document to */
+  projectId?: string;
+  /** Icon for the document */
+  icon?: string;
+  /** Color for the document */
+  color?: string;
+}
+
+/**
+ * Options for updating a Linear document
+ */
+export interface UpdateDocumentOptions {
+  /** New title */
+  title?: string;
+  /** New content (markdown) */
+  content?: string;
+  /** New icon */
+  icon?: string;
+  /** New color */
+  color?: string;
+}
+
+/**
+ * Result of a document operation
+ */
+export interface DocumentResult {
+  id: string;
+  title: string;
+  url?: string;
+  slugId?: string;
 }
 
 /**
@@ -664,61 +773,379 @@ export class LinearMCPClient {
     return true;
   }
 
+  // ─── Agent Session & Activity Methods ───────────────────────────────
+
   /**
-   * Create an Agent Session for elicitation (human input request)
-   *
-   * @param options - Agent session creation options
-   * @returns The created session ID
-   * @throws {LinearAPIError} On API errors
+   * Create an Agent Session proactively (without being @mentioned).
+   * Use agentSessionCreateOnIssue for issue-scoped sessions.
    */
   async createAgentSession(options: CreateAgentSessionOptions): Promise<string> {
-    const { issueId, activityType, prompt } = options;
+    const { issueId, appUserId, context } = options;
 
+    // Use agentSessionCreateOnIssue for proactive session creation
     const mutation = `
-      mutation CreateAgentSession(
-        $issueId: String!
-        $activityType: String!
-        $prompt: String!
-      ) {
-        agentSessionCreate(
-          input: {
-            issueId: $issueId
-            activityType: $activityType
-            prompt: $prompt
-          }
-        ) {
+      mutation CreateAgentSessionOnIssue($input: AgentSessionCreateInput!) {
+        agentSessionCreate(input: $input) {
           success
           agentSession {
+            id
+            status
+          }
+        }
+      }
+    `;
+
+    const input: Record<string, unknown> = { issueId };
+    if (appUserId) input.appUserId = appUserId;
+    if (context) input.context = context;
+
+    interface CreateAgentSessionResponse {
+      agentSessionCreate: {
+        success: boolean;
+        agentSession: { id: string; status: string };
+      };
+    }
+
+    const data = await this.executeGraphQL<CreateAgentSessionResponse>(mutation, { input });
+
+    if (!data.agentSessionCreate.success) {
+      throw new LinearAPIError('Failed to create Agent Session');
+    }
+
+    logger.info(
+      `Created Agent Session ${data.agentSessionCreate.agentSession.id} for issue ${issueId}`
+    );
+    return data.agentSessionCreate.agentSession.id;
+  }
+
+  /**
+   * Create an Agent Activity on a session.
+   * This is the primary way agents communicate back to Linear.
+   *
+   * Activity types:
+   * - thought: Internal reasoning (must emit within 10s of session creation)
+   * - action: Tool invocation with optional result
+   * - elicitation: Ask user a question (with optional select signal)
+   * - response: Final answer / completed work
+   * - error: Failure report
+   */
+  async createAgentActivity(
+    options: CreateAgentActivityOptions
+  ): Promise<{ activityId: string; success: boolean }> {
+    const { agentSessionId, content, ephemeral, signal, signalMetadata } = options;
+
+    const mutation = `
+      mutation AgentActivityCreate($input: AgentActivityCreateInput!) {
+        agentActivityCreate(input: $input) {
+          success
+          agentActivity {
             id
           }
         }
       }
     `;
 
-    const variables = {
-      issueId,
-      activityType,
-      prompt,
+    const input: Record<string, unknown> = {
+      agentSessionId,
+      content,
     };
+    if (ephemeral !== undefined) input.ephemeral = ephemeral;
+    if (signal) input.signal = signal;
+    if (signalMetadata) input.signalMetadata = signalMetadata;
 
-    interface CreateAgentSessionResponse {
-      agentSessionCreate: {
+    interface AgentActivityCreateResponse {
+      agentActivityCreate: {
         success: boolean;
-        agentSession: {
-          id: string;
+        agentActivity: { id: string };
+      };
+    }
+
+    const data = await this.executeGraphQL<AgentActivityCreateResponse>(mutation, { input });
+
+    if (!data.agentActivityCreate.success) {
+      throw new LinearAPIError('Failed to create Agent Activity');
+    }
+
+    logger.debug(
+      `Created ${content.type} activity on session ${agentSessionId}: ${data.agentActivityCreate.agentActivity.id}`
+    );
+
+    return {
+      activityId: data.agentActivityCreate.agentActivity.id,
+      success: true,
+    };
+  }
+
+  /**
+   * Update an agent session (plan, external URLs).
+   * Plans must be replaced in their entirety — no partial updates.
+   */
+  async updateAgentSession(options: UpdateAgentSessionOptions): Promise<boolean> {
+    const { agentSessionId, plan, addedExternalUrls, removedExternalUrls } = options;
+
+    const mutation = `
+      mutation AgentSessionUpdate($id: String!, $input: AgentSessionUpdateInput!) {
+        agentSessionUpdate(id: $id, input: $input) {
+          success
+        }
+      }
+    `;
+
+    const input: Record<string, unknown> = {};
+    if (plan) input.plan = plan;
+    if (addedExternalUrls) input.addedExternalUrls = addedExternalUrls;
+    if (removedExternalUrls) input.removedExternalUrls = removedExternalUrls;
+
+    interface AgentSessionUpdateResponse {
+      agentSessionUpdate: { success: boolean };
+    }
+
+    const data = await this.executeGraphQL<AgentSessionUpdateResponse>(mutation, {
+      id: agentSessionId,
+      input,
+    });
+
+    if (!data.agentSessionUpdate.success) {
+      throw new LinearAPIError('Failed to update Agent Session');
+    }
+
+    logger.debug(`Updated agent session ${agentSessionId}`);
+    return true;
+  }
+
+  /**
+   * List activities for an agent session (for conversation history reconstruction)
+   */
+  async listAgentActivities(agentSessionId: string): Promise<
+    Array<{
+      id: string;
+      content: AgentActivityContent;
+      createdAt: string;
+      signal?: AgentActivitySignal;
+    }>
+  > {
+    const query = `
+      query GetAgentSessionActivities($id: String!) {
+        agentSession(id: $id) {
+          activities {
+            nodes {
+              id
+              content
+              createdAt
+              signal
+            }
+          }
+        }
+      }
+    `;
+
+    interface ActivitiesResponse {
+      agentSession: {
+        activities: {
+          nodes: Array<{
+            id: string;
+            content: AgentActivityContent;
+            createdAt: string;
+            signal?: AgentActivitySignal;
+          }>;
         };
       };
     }
 
-    const data = await this.executeGraphQL<CreateAgentSessionResponse>(mutation, variables);
+    const data = await this.executeGraphQL<ActivitiesResponse>(query, { id: agentSessionId });
+    return data.agentSession.activities.nodes;
+  }
 
-    if (!data.agentSessionCreate.success) {
-      throw new LinearAPIError('Failed to create Agent Session in Linear');
+  // ─── Document CRUD Methods ─────────────────────────────────────────
+
+  /**
+   * Create a document, optionally linked to a project.
+   */
+  async createDocument(options: CreateDocumentOptions): Promise<DocumentResult> {
+    const { title, content, projectId, icon, color } = options;
+
+    const mutation = `
+      mutation DocumentCreate($input: DocumentCreateInput!) {
+        documentCreate(input: $input) {
+          success
+          document {
+            id
+            title
+            url
+            slugId
+          }
+        }
+      }
+    `;
+
+    const input: Record<string, unknown> = { title, content };
+    if (projectId) input.projectId = projectId;
+    if (icon) input.icon = icon;
+    if (color) input.color = color;
+
+    interface DocumentCreateResponse {
+      documentCreate: {
+        success: boolean;
+        document: { id: string; title: string; url: string; slugId: string };
+      };
     }
 
-    logger.info(`Created Agent Session for issue ${issueId} with activity type ${activityType}`);
+    const data = await this.executeGraphQL<DocumentCreateResponse>(mutation, { input });
 
-    return data.agentSessionCreate.agentSession.id;
+    if (!data.documentCreate.success) {
+      throw new LinearAPIError('Failed to create document');
+    }
+
+    logger.info(`Created document: ${title} (${data.documentCreate.document.id})`);
+    return data.documentCreate.document;
+  }
+
+  /**
+   * Update an existing document's content or metadata.
+   */
+  async updateDocument(documentId: string, options: UpdateDocumentOptions): Promise<boolean> {
+    const mutation = `
+      mutation DocumentUpdate($id: String!, $input: DocumentUpdateInput!) {
+        documentUpdate(id: $id, input: $input) {
+          success
+          document {
+            id
+            title
+          }
+        }
+      }
+    `;
+
+    interface DocumentUpdateResponse {
+      documentUpdate: {
+        success: boolean;
+        document: { id: string; title: string };
+      };
+    }
+
+    const data = await this.executeGraphQL<DocumentUpdateResponse>(mutation, {
+      id: documentId,
+      input: options,
+    });
+
+    if (!data.documentUpdate.success) {
+      throw new LinearAPIError('Failed to update document');
+    }
+
+    logger.info(`Updated document: ${data.documentUpdate.document.title}`);
+    return true;
+  }
+
+  /**
+   * Get a document by ID with full content.
+   */
+  async getDocument(
+    documentId: string
+  ): Promise<{ id: string; title: string; content: string; url: string; slugId: string }> {
+    const query = `
+      query GetDocument($id: String!) {
+        document(id: $id) {
+          id
+          title
+          content
+          url
+          slugId
+        }
+      }
+    `;
+
+    interface GetDocumentResponse {
+      document: { id: string; title: string; content: string; url: string; slugId: string };
+    }
+
+    const data = await this.executeGraphQL<GetDocumentResponse>(query, { id: documentId });
+    return data.document;
+  }
+
+  /**
+   * List documents for a project.
+   */
+  async listProjectDocuments(
+    projectId: string
+  ): Promise<Array<{ id: string; title: string; url: string; slugId: string; createdAt: string }>> {
+    const query = `
+      query GetProjectDocuments($projectId: String!) {
+        project(id: $projectId) {
+          documents {
+            nodes {
+              id
+              title
+              url
+              slugId
+              createdAt
+            }
+          }
+        }
+      }
+    `;
+
+    interface ProjectDocumentsResponse {
+      project: {
+        documents: {
+          nodes: Array<{
+            id: string;
+            title: string;
+            url: string;
+            slugId: string;
+            createdAt: string;
+          }>;
+        };
+      };
+    }
+
+    const data = await this.executeGraphQL<ProjectDocumentsResponse>(query, { projectId });
+    return data.project.documents.nodes;
+  }
+
+  /**
+   * Delete a document.
+   */
+  async deleteDocument(documentId: string): Promise<boolean> {
+    const mutation = `
+      mutation DocumentDelete($id: String!) {
+        documentDelete(id: $id) {
+          success
+        }
+      }
+    `;
+
+    interface DocumentDeleteResponse {
+      documentDelete: { success: boolean };
+    }
+
+    const data = await this.executeGraphQL<DocumentDeleteResponse>(mutation, { id: documentId });
+
+    if (!data.documentDelete.success) {
+      throw new LinearAPIError('Failed to delete document');
+    }
+
+    logger.info(`Deleted document: ${documentId}`);
+    return true;
+  }
+
+  /**
+   * Get the authenticated app user's ID (needed for proactive session creation)
+   */
+  async getAppUserId(): Promise<string> {
+    const query = `
+      query Me {
+        viewer {
+          id
+        }
+      }
+    `;
+
+    interface ViewerResponse {
+      viewer: { id: string };
+    }
+
+    const data = await this.executeGraphQL<ViewerResponse>(query, {});
+    return data.viewer.id;
   }
 
   /**

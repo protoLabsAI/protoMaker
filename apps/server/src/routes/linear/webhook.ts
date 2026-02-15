@@ -1,14 +1,15 @@
 /**
  * Linear Webhook Handler
  *
- * Receives AgentSessionEvent webhooks from Linear.
- * Routes mentions and delegations to the appropriate agent.
+ * Receives webhooks from Linear for agent sessions, issues, projects, and comments.
+ * Routes events to appropriate handlers via the event emitter.
  *
- * Events:
- * - agent_session.created: Agent mentioned or assigned
- * - agent_session.updated: User provided additional prompt
+ * Agent Session Events (Linear Agent Interaction SDK):
+ * - create: New agent session (mention or delegation). Must acknowledge < 10s.
+ * - update: Session state changed. If `prompt` present, user responded to elicitation.
+ * - remove: Session deleted.
  *
- * Must respond within 5 seconds (Linear requirement).
+ * Must respond to Linear within 5 seconds — all processing is async after 200 OK.
  */
 
 import type { RequestHandler, Request, Response } from 'express';
@@ -45,16 +46,22 @@ interface LinearAgentSessionPayload extends LinearWebhookPayload {
     id: string;
     /** The issue this session is associated with */
     issueId?: string;
-    /** The comment that triggered this session (for mentions) */
-    commentId?: string;
     /** How this session was triggered */
     trigger?: AgentSessionTrigger;
     /** The user's prompt/message to the agent */
     prompt?: string;
+    /** Rich XML context from Linear (issue details, comments, team guidance) */
+    promptContext?: string;
     /** Current session status */
     status?: string;
     /** Workspace ID */
     organizationId?: string;
+    /** The latest agent activity that triggered this update */
+    agentActivity?: {
+      id: string;
+      type: string;
+      body?: string;
+    };
     /** Timestamps */
     createdAt?: string;
     updatedAt?: string;
@@ -246,6 +253,11 @@ async function processWebhookEvent(
 
 /**
  * Handle AgentSession webhook events
+ *
+ * Linear Agent Interaction SDK sends these when:
+ * - create: User @mentions the agent or delegates an issue
+ * - update: Session state changes (including user responding to elicitation)
+ * - remove: Session is deleted
  */
 async function handleAgentSessionEvent(
   payload: LinearAgentSessionPayload,
@@ -258,6 +270,7 @@ async function handleAgentSessionEvent(
     sessionId: data.id,
     trigger: data.trigger,
     issueId: data.issueId,
+    hasPrompt: !!data.prompt,
   });
 
   switch (action) {
@@ -307,7 +320,6 @@ async function handleIssueEvent(
       break;
     case 'remove':
       logger.info(`Issue removed: ${data.id}`);
-      // Future: handle issue removal if needed
       break;
     default:
       logger.debug(`Unhandled action: ${action}`);
@@ -331,7 +343,6 @@ async function handleIssueUpdated(
   });
 
   // Delegate to sync service for status, title, priority, and relation sync
-  // The sync service handles loop prevention, conflict detection, and batched updates
   const stateName = data.state?.name || 'Unknown';
   const projectPath = process.cwd();
 
@@ -386,7 +397,6 @@ async function handleSLAEvent(
 
   switch (slaStatus) {
     case 'highRisk':
-      // Emit elevated escalation signal
       events.emit('linear:sla:highRisk', {
         issueId: data.id,
         title: data.title,
@@ -399,7 +409,6 @@ async function handleSLAEvent(
       break;
 
     case 'breached':
-      // Emit emergency escalation signal for DM
       events.emit('linear:sla:breached', {
         issueId: data.id,
         title: data.title,
@@ -411,7 +420,6 @@ async function handleSLAEvent(
       break;
 
     default:
-      // 'active' or unknown status - no action needed
       break;
   }
 }
@@ -432,14 +440,23 @@ async function handleProjectEvent(
         name: data.name,
         state: data.state,
       });
-      // Future: handle project creation if needed
+      // Emit project created event — triggers planning flow
+      events.emit('linear:project:created', {
+        projectId: data.id,
+        name: data.name,
+        description: data.description,
+        state: data.state,
+        teamId: data.team?.id,
+        teamName: data.team?.name,
+        url: data.url,
+        createdAt: data.createdAt,
+      });
       break;
     case 'update':
       await handleProjectUpdated(data, events);
       break;
     case 'remove':
       logger.info(`Project removed: ${data.id}`);
-      // Future: handle project removal if needed
       break;
     default:
       logger.debug(`Unhandled action: ${action}`);
@@ -478,7 +495,10 @@ async function handleProjectUpdated(
 }
 
 /**
- * Handle new agent session (mention or delegation)
+ * Handle new agent session (mention or delegation).
+ *
+ * Per Linear Agent API: Must acknowledge within 10 seconds by emitting
+ * a thought activity. The router handles this after receiving the event.
  */
 async function handleSessionCreated(
   data: LinearAgentSessionPayload['data'],
@@ -490,46 +510,67 @@ async function handleSessionCreated(
     sessionId: data.id,
     issueId: data.issueId,
     prompt: data.prompt?.substring(0, 100),
+    hasPromptContext: !!data.promptContext,
   });
 
   // Determine agent type based on context
-  // Check prompt for GTM-related keywords
   const prompt = data.prompt?.toLowerCase() || '';
   const gtmKeywords = ['gtm', 'marketing', 'positioning', 'messaging', 'go-to-market', 'launch'];
   const isGtmRelated = gtmKeywords.some((keyword) => prompt.includes(keyword));
-
-  // Route to GTM agent if prompt contains GTM keywords, otherwise route to Ava
   const agentType: 'jon' | 'ava' = isGtmRelated ? 'jon' : 'ava';
 
   events.emit('linear:agent-session:created', {
     sessionId: data.id,
     issueId: data.issueId,
-    commentId: data.commentId,
     trigger,
     prompt: data.prompt,
+    promptContext: data.promptContext,
     agentType,
     organizationId: data.organizationId,
   });
 }
 
 /**
- * Handle session update (user provided additional prompt)
+ * Handle session update.
+ *
+ * When the update includes a `prompt` field, this means the user responded
+ * to an elicitation (agent asked a question, user answered). This is the
+ * multi-turn conversation mechanism in Linear's Agent SDK.
+ *
+ * When no prompt is present, this is a status-only update (e.g., session
+ * transitioning to complete/error/stale).
  */
 async function handleSessionUpdated(
   data: LinearAgentSessionPayload['data'],
   events: EventEmitter
 ): Promise<void> {
-  logger.info(`Agent session updated`, {
-    sessionId: data.id,
-    prompt: data.prompt?.substring(0, 100),
-  });
+  if (data.prompt) {
+    // User responded to an elicitation — this is a multi-turn follow-up
+    logger.info(`Agent session prompted (user responded)`, {
+      sessionId: data.id,
+      issueId: data.issueId,
+      prompt: data.prompt.substring(0, 100),
+    });
 
-  events.emit('linear:agent-session:updated', {
-    sessionId: data.id,
-    issueId: data.issueId,
-    prompt: data.prompt,
-    status: data.status,
-  });
+    events.emit('linear:agent-session:prompted', {
+      sessionId: data.id,
+      issueId: data.issueId,
+      prompt: data.prompt,
+      agentType: 'ava',
+    });
+  } else {
+    // Status-only update (no user message)
+    logger.info(`Agent session updated`, {
+      sessionId: data.id,
+      status: data.status,
+    });
+
+    events.emit('linear:agent-session:updated', {
+      sessionId: data.id,
+      issueId: data.issueId,
+      status: data.status,
+    });
+  }
 }
 
 /**
@@ -548,11 +589,9 @@ async function handleCommentEvent(
       break;
     case 'update':
       logger.debug(`Comment updated: ${data.id}`);
-      // Future: handle comment updates if needed
       break;
     case 'remove':
       logger.debug(`Comment removed: ${data.id}`);
-      // Future: handle comment removal if needed
       break;
     default:
       logger.debug(`Unhandled action: ${action}`);
@@ -562,7 +601,6 @@ async function handleCommentEvent(
 /**
  * Handle new comment creation
  * Routes comment to LinearSyncService for parsing and routing
- * Also detects human responses to agent elicitation sessions
  */
 async function handleCommentCreated(
   data: LinearCommentWebhookPayload['data'],
@@ -584,7 +622,6 @@ async function handleCommentCreated(
   });
 
   // Check if this is a human response to an agent elicitation
-  // Emit escalation signal for the escalation router
   if (data.issueId && data.user) {
     events.emit('escalation:signal-received', {
       source: 'agent_needs_input',

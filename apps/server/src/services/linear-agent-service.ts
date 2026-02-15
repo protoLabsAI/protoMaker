@@ -1,171 +1,295 @@
 /**
- * Linear Agent Service
+ * Linear Agent Service — Agent Activity Protocol
  *
- * Posts agent responses back to Linear issues as comments.
- * Handles formatting, length limits, and session status updates.
+ * Communicates with Linear users via Agent Activities (not comments).
+ * Supports the full activity lifecycle: thought → action → elicitation → response/error.
+ * Manages session plans and multi-turn conversations.
  */
 
 import { createLogger } from '@automaker/utils';
+import {
+  LinearMCPClient,
+  type AgentActivityContent,
+  type AgentActivitySignal,
+  type AgentPlanStep,
+  type CreateAgentActivityOptions,
+} from './linear-mcp-client.js';
 import type { SettingsService } from './settings-service.js';
 
 const logger = createLogger('LinearAgentService');
 
 /**
- * Metadata stored in agent session for Linear integration
+ * Select option for elicitation signals
  */
-export interface LinearAgentMetadata {
-  linearIssueId: string; // Linear issue ID
-  linearIssueIdentifier?: string; // Human-readable identifier like "ENG-123"
-  agentType: 'jon' | 'ava'; // Agent type for routing
-  teamId?: string; // Linear team ID
+export interface SelectOption {
+  label: string;
+  description?: string;
+  value: string;
 }
 
 /**
- * LinearAgentService - Posts agent responses to Linear issues
+ * Session context for tracking active conversations
+ */
+export interface ActiveSession {
+  sessionId: string;
+  issueId: string;
+  issueIdentifier?: string;
+  agentType: string;
+  plan?: AgentPlanStep[];
+  createdAt: string;
+}
+
+/**
+ * LinearAgentService — Full Agent Activity Protocol implementation
  *
- * This service:
- * - Formats agent responses as markdown
- * - Posts comments to Linear issues via GraphQL
- * - Handles long responses with summary + detail
- * - Updates agent session status
+ * Replaces the old comment-based response system with proper Linear agent activities.
+ * Each method maps directly to a Linear agent activity type.
  */
 export class LinearAgentService {
-  /** Maximum comment length before truncating (Linear soft limit) */
-  private readonly MAX_COMMENT_LENGTH = 10000;
+  private client: LinearMCPClient | null = null;
+  private activeSessions = new Map<string, ActiveSession>();
 
-  /** Summary length for truncated responses */
-  private readonly SUMMARY_LENGTH = 500;
-
-  private settingsService?: SettingsService;
-  private projectPath?: string;
+  constructor(
+    private settingsService?: SettingsService,
+    private projectPath?: string
+  ) {
+    if (settingsService && projectPath) {
+      this.client = new LinearMCPClient(settingsService, projectPath);
+    }
+  }
 
   /**
-   * Set settings service and project path for accessing OAuth token
+   * Initialize or reconfigure the service
    */
-  setSettingsService(settingsService: SettingsService, projectPath: string): void {
+  configure(settingsService: SettingsService, projectPath: string): void {
     this.settingsService = settingsService;
     this.projectPath = projectPath;
+    this.client = new LinearMCPClient(settingsService, projectPath);
+  }
+
+  private getClient(): LinearMCPClient {
+    if (!this.client) {
+      throw new Error('LinearAgentService not configured — call configure() first');
+    }
+    return this.client;
+  }
+
+  // ─── Activity Methods ────────────────────────────────────────────
+
+  /**
+   * Acknowledge a session — MUST be called within 10s of session creation.
+   * Emits a thought activity to prevent the session from being marked unresponsive.
+   */
+  async acknowledge(sessionId: string, thought: string): Promise<void> {
+    await this.getClient().createAgentActivity({
+      agentSessionId: sessionId,
+      content: { type: 'thought', body: thought },
+      ephemeral: true,
+    });
+    logger.debug(`Acknowledged session ${sessionId}`);
   }
 
   /**
-   * Process agent response and post to Linear issue
+   * Emit a thought (visible reasoning step).
+   * Use ephemeral=true for transient thoughts that get replaced.
    */
-  async processAgentResponse(params: {
-    linearIssueId: string;
-    linearIssueIdentifier?: string;
-    agentType: 'jon' | 'ava';
-    response: string;
-  }): Promise<void> {
-    const { linearIssueId, linearIssueIdentifier, agentType, response } = params;
-
-    logger.info(
-      `Posting ${agentType} agent response to Linear issue ${linearIssueIdentifier || linearIssueId}`
-    );
-
-    // Format response as markdown
-    const formattedResponse = this.formatResponse(response, agentType);
-
-    // Post comment to Linear issue
-    await this.postLinearComment(linearIssueId, formattedResponse);
-
-    logger.info(
-      `Successfully posted ${agentType} agent response to Linear issue ${linearIssueIdentifier || linearIssueId}`
-    );
+  async emitThought(sessionId: string, thought: string, ephemeral = false): Promise<string> {
+    const result = await this.getClient().createAgentActivity({
+      agentSessionId: sessionId,
+      content: { type: 'thought', body: thought },
+      ephemeral,
+    });
+    return result.activityId;
   }
 
   /**
-   * Format agent response as markdown
-   * Handles long responses with summary + details
+   * Emit an action (tool invocation).
+   * Call without result first, then with result when done.
    */
-  private formatResponse(response: string, agentType: string): string {
-    const agentLabel = agentType === 'jon' ? '🎯 Jon' : '🤖 Ava';
+  async emitAction(
+    sessionId: string,
+    action: string,
+    parameter?: string,
+    result?: string
+  ): Promise<string> {
+    const content: AgentActivityContent = { type: 'action', action };
+    if (parameter) (content as { parameter?: string }).parameter = parameter;
+    if (result) (content as { result?: string }).result = result;
 
-    // Check if response is too long
-    if (response.length <= this.MAX_COMMENT_LENGTH) {
-      return `## ${agentLabel} Response\n\n${response}`;
-    }
-
-    // Truncate with summary
-    const summary = response.substring(0, this.SUMMARY_LENGTH);
-    const remaining = response.length - this.SUMMARY_LENGTH;
-
-    return `## ${agentLabel} Response
-
-**Summary** (truncated, ${remaining} characters omitted):
-
-${summary}...
-
-<details>
-<summary>View full response</summary>
-
-${response}
-
-</details>`;
+    const res = await this.getClient().createAgentActivity({
+      agentSessionId: sessionId,
+      content,
+      ephemeral: !result, // ephemeral while in-progress, persistent when done
+    });
+    return res.activityId;
   }
 
   /**
-   * Post comment to Linear issue via GraphQL mutation
-   *
-   * Uses the OAuth token from settings to create a comment.
+   * Ask the user a question. Optionally present selectable options.
+   * Session automatically transitions to awaitingInput.
+   * User response comes back as a 'prompted' webhook event.
    */
-  private async postLinearComment(issueId: string, body: string): Promise<void> {
-    if (!this.settingsService || !this.projectPath) {
-      throw new Error('LinearAgentService not initialized with settings service');
-    }
-
-    // Get OAuth token from settings
-    const settings = await this.settingsService.getProjectSettings(this.projectPath);
-    const linearAccessToken = settings.integrations?.linear?.agentToken;
-
-    if (!linearAccessToken) {
-      throw new Error('No Linear OAuth token found in settings');
-    }
-
-    // GraphQL mutation to create comment
-    const mutation = `
-      mutation CreateComment($issueId: String!, $body: String!) {
-        commentCreate(input: { issueId: $issueId, body: $body }) {
-          success
-          comment {
-            id
-            body
-          }
-        }
-      }
-    `;
-
-    const variables = {
-      issueId,
-      body,
+  async askQuestion(
+    sessionId: string,
+    question: string,
+    options?: SelectOption[]
+  ): Promise<string> {
+    const activityOptions: CreateAgentActivityOptions = {
+      agentSessionId: sessionId,
+      content: { type: 'elicitation', body: question },
     };
 
-    // Call Linear GraphQL API
-    const response = await fetch('https://api.linear.app/graphql', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${linearAccessToken}`,
-      },
-      body: JSON.stringify({ query: mutation, variables }),
+    if (options && options.length > 0) {
+      activityOptions.signal = 'select';
+      activityOptions.signalMetadata = {
+        options: options.map((o) => ({
+          label: o.label,
+          description: o.description,
+          value: o.value,
+        })),
+      };
+    }
+
+    const result = await this.getClient().createAgentActivity(activityOptions);
+    logger.info(`Asked question on session ${sessionId}: ${question.substring(0, 80)}`);
+    return result.activityId;
+  }
+
+  /**
+   * Send a final response. Session automatically transitions to complete.
+   */
+  async sendResponse(sessionId: string, body: string): Promise<string> {
+    const result = await this.getClient().createAgentActivity({
+      agentSessionId: sessionId,
+      content: { type: 'response', body },
+    });
+    logger.info(`Sent response on session ${sessionId}`);
+    this.activeSessions.delete(sessionId);
+    return result.activityId;
+  }
+
+  /**
+   * Report an error. Session automatically transitions to error state.
+   */
+  async reportError(sessionId: string, error: string): Promise<string> {
+    const result = await this.getClient().createAgentActivity({
+      agentSessionId: sessionId,
+      content: { type: 'error', body: error },
+    });
+    logger.error(`Reported error on session ${sessionId}: ${error}`);
+    this.activeSessions.delete(sessionId);
+    return result.activityId;
+  }
+
+  // ─── Plan Management ─────────────────────────────────────────────
+
+  /**
+   * Set or update the plan for a session.
+   * Plans must be replaced in their entirety.
+   */
+  async updatePlan(sessionId: string, steps: AgentPlanStep[]): Promise<void> {
+    await this.getClient().updateAgentSession({
+      agentSessionId: sessionId,
+      plan: steps,
     });
 
-    if (!response.ok) {
-      throw new Error(`Linear API error: ${response.status} ${response.statusText}`);
+    // Track locally
+    const session = this.activeSessions.get(sessionId);
+    if (session) {
+      session.plan = steps;
     }
 
-    const result = (await response.json()) as {
-      data?: { commentCreate?: { success: boolean } };
-      errors?: Array<{ message: string }>;
-    };
+    logger.debug(`Updated plan for session ${sessionId}: ${steps.length} steps`);
+  }
 
-    if (result.errors) {
-      throw new Error(`Linear GraphQL error: ${result.errors.map((e) => e.message).join(', ')}`);
-    }
+  // ─── Session Management ──────────────────────────────────────────
 
-    if (!result.data?.commentCreate?.success) {
-      throw new Error('Failed to create Linear comment');
-    }
+  /**
+   * Create a proactive session on an issue (without being @mentioned).
+   */
+  async createSession(issueId: string, issueIdentifier?: string): Promise<string> {
+    const client = this.getClient();
+    const appUserId = await client.getAppUserId();
 
-    logger.info(`Successfully posted comment to Linear issue ${issueId}`);
+    const sessionId = await client.createAgentSession({
+      issueId,
+      appUserId,
+    });
+
+    this.activeSessions.set(sessionId, {
+      sessionId,
+      issueId,
+      issueIdentifier,
+      agentType: 'ava',
+      createdAt: new Date().toISOString(),
+    });
+
+    logger.info(`Created proactive session ${sessionId} on issue ${issueIdentifier || issueId}`);
+    return sessionId;
+  }
+
+  /**
+   * Track an externally-created session (from webhook).
+   */
+  trackSession(session: ActiveSession): void {
+    this.activeSessions.set(session.sessionId, session);
+  }
+
+  /**
+   * Get an active session by ID.
+   */
+  getSession(sessionId: string): ActiveSession | undefined {
+    return this.activeSessions.get(sessionId);
+  }
+
+  /**
+   * Get conversation history for a session (for multi-turn context reconstruction).
+   * Per Linear best practices: read from activities, not comments.
+   */
+  async getConversationHistory(sessionId: string): Promise<
+    Array<{
+      id: string;
+      content: AgentActivityContent;
+      createdAt: string;
+      signal?: AgentActivitySignal;
+    }>
+  > {
+    return this.getClient().listAgentActivities(sessionId);
+  }
+
+  // ─── Document Operations ─────────────────────────────────────────
+
+  /**
+   * Create a document linked to a project.
+   */
+  async createProjectDocument(
+    projectId: string,
+    title: string,
+    content: string
+  ): Promise<{ id: string; title: string; url?: string }> {
+    return this.getClient().createDocument({ title, content, projectId });
+  }
+
+  /**
+   * Update an existing document's content.
+   */
+  async updateDocument(documentId: string, content: string, title?: string): Promise<boolean> {
+    const opts: { content: string; title?: string } = { content };
+    if (title) opts.title = title;
+    return this.getClient().updateDocument(documentId, opts);
+  }
+
+  /**
+   * Get a document's content.
+   */
+  async getDocument(documentId: string) {
+    return this.getClient().getDocument(documentId);
+  }
+
+  /**
+   * List all documents for a project.
+   */
+  async listProjectDocuments(projectId: string) {
+    return this.getClient().listProjectDocuments(projectId);
   }
 }

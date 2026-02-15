@@ -66,7 +66,6 @@ describe('Linear Webhook Handler', () => {
   let featureLoader: Partial<FeatureLoader>;
   let req: Request;
   let res: Response;
-  let webhookSecret: string | undefined;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -76,7 +75,6 @@ describe('Linear Webhook Handler', () => {
     const context = createMockExpressContext();
     req = context.req;
     res = context.res;
-    webhookSecret = undefined;
 
     // Setup environment
     delete process.env.LINEAR_WEBHOOK_SECRET;
@@ -169,6 +167,7 @@ describe('Linear Webhook Handler', () => {
           issueId: 'issue-456',
           trigger: 'mention',
           prompt: 'Help with this issue',
+          promptContext: '<issue>context</issue>',
           organizationId: 'org-789',
         },
       };
@@ -182,16 +181,14 @@ describe('Linear Webhook Handler', () => {
       );
 
       await handler(req, res, vi.fn());
-
-      // Wait for async processing
       await new Promise((resolve) => setTimeout(resolve, 10));
 
       expect(events.emit).toHaveBeenCalledWith('linear:agent-session:created', {
         sessionId: 'session-123',
         issueId: 'issue-456',
-        commentId: undefined,
         trigger: 'mention',
         prompt: 'Help with this issue',
+        promptContext: '<issue>context</issue>',
         agentType: 'ava',
         organizationId: 'org-789',
       });
@@ -228,15 +225,14 @@ describe('Linear Webhook Handler', () => {
       );
     });
 
-    it('handles AgentSession update event', async () => {
+    it('handles AgentSession update with prompt as prompted event', async () => {
       const payload = {
         action: 'update',
         type: 'AgentSession',
         data: {
           id: 'session-123',
           issueId: 'issue-456',
-          prompt: 'Additional context',
-          status: 'active',
+          prompt: 'Yes, please proceed with option A',
         },
       };
 
@@ -251,12 +247,55 @@ describe('Linear Webhook Handler', () => {
       await handler(req, res, vi.fn());
       await new Promise((resolve) => setTimeout(resolve, 10));
 
+      // User responded — should emit prompted event, not updated
+      expect(events.emit).toHaveBeenCalledWith('linear:agent-session:prompted', {
+        sessionId: 'session-123',
+        issueId: 'issue-456',
+        prompt: 'Yes, please proceed with option A',
+        agentType: 'ava',
+      });
+
+      // Should NOT emit generic updated event
+      expect(events.emit).not.toHaveBeenCalledWith(
+        'linear:agent-session:updated',
+        expect.anything()
+      );
+    });
+
+    it('handles AgentSession update without prompt as status update', async () => {
+      const payload = {
+        action: 'update',
+        type: 'AgentSession',
+        data: {
+          id: 'session-123',
+          issueId: 'issue-456',
+          status: 'complete',
+        },
+      };
+
+      req.body = payload;
+
+      const handler = createWebhookHandler(
+        settingsService as SettingsService,
+        events,
+        featureLoader as FeatureLoader
+      );
+
+      await handler(req, res, vi.fn());
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      // No prompt — should emit generic updated event
       expect(events.emit).toHaveBeenCalledWith('linear:agent-session:updated', {
         sessionId: 'session-123',
         issueId: 'issue-456',
-        prompt: 'Additional context',
-        status: 'active',
+        status: 'complete',
       });
+
+      // Should NOT emit prompted event
+      expect(events.emit).not.toHaveBeenCalledWith(
+        'linear:agent-session:prompted',
+        expect.anything()
+      );
     });
 
     it('handles AgentSession remove event', async () => {
@@ -480,6 +519,45 @@ describe('Linear Webhook Handler', () => {
   });
 
   describe('Project Events', () => {
+    it('handles Project create event and emits planning trigger', async () => {
+      const payload = {
+        action: 'create',
+        type: 'Project',
+        data: {
+          id: 'project-123',
+          name: 'New Project',
+          description: 'Build something amazing',
+          state: 'planned',
+          team: { id: 'team-1', name: 'Engineering' },
+          createdAt: '2024-01-01T00:00:00Z',
+          updatedAt: '2024-01-01T00:00:00Z',
+          url: 'https://linear.app/project/project-123',
+        },
+      };
+
+      req.body = payload;
+
+      const handler = createWebhookHandler(
+        settingsService as SettingsService,
+        events,
+        featureLoader as FeatureLoader
+      );
+
+      await handler(req, res, vi.fn());
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(events.emit).toHaveBeenCalledWith('linear:project:created', {
+        projectId: 'project-123',
+        name: 'New Project',
+        description: 'Build something amazing',
+        state: 'planned',
+        teamId: 'team-1',
+        teamName: 'Engineering',
+        url: 'https://linear.app/project/project-123',
+        createdAt: '2024-01-01T00:00:00Z',
+      });
+    });
+
     it('handles Project update event', async () => {
       const payload = {
         action: 'update',
@@ -513,35 +591,6 @@ describe('Linear Webhook Handler', () => {
         state: 'started',
         updatedAt: '2024-01-02T00:00:00Z',
       });
-    });
-
-    it('handles Project create event', async () => {
-      const payload = {
-        action: 'create',
-        type: 'Project',
-        data: {
-          id: 'project-123',
-          name: 'New Project',
-          state: 'planned',
-          createdAt: '2024-01-01T00:00:00Z',
-          updatedAt: '2024-01-01T00:00:00Z',
-          url: 'https://linear.app/project/project-123',
-        },
-      };
-
-      req.body = payload;
-
-      const handler = createWebhookHandler(
-        settingsService as SettingsService,
-        events,
-        featureLoader as FeatureLoader
-      );
-
-      await handler(req, res, vi.fn());
-      await new Promise((resolve) => setTimeout(resolve, 10));
-
-      // Project create doesn't emit events currently
-      expect(events.emit).not.toHaveBeenCalled();
     });
   });
 

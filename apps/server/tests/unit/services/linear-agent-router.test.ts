@@ -75,7 +75,11 @@ function createIssueContext(overrides: Record<string, unknown> = {}) {
     state: 'In Progress',
     team: 'Engineering',
     labels: [] as string[],
+    priority: 3,
+    priorityLabel: 'Medium',
     comments: [],
+    children: [],
+    relations: [],
     ...overrides,
   };
 }

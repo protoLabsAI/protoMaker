@@ -150,8 +150,11 @@ export type EventType =
   | 'feature:agent-assigned'
   // Linear agent session events (webhook-driven)
   | 'linear:agent-session:created'
+  | 'linear:agent-session:prompted'
   | 'linear:agent-session:updated'
   | 'linear:agent-session:removed'
+  // Linear project planning events
+  | 'linear:project:created'
   // Linear comment events (webhook-driven)
   | 'linear:comment:created'
   | 'linear:comment:instruction'

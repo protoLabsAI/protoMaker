@@ -668,6 +668,18 @@ export type {
   StateOperator,
 } from './agent-templates.js';
 
+// ConversationSurface types (platform-agnostic agent interaction)
+export type {
+  ConversationPlatform,
+  SurfaceCapabilities,
+  SurfaceChoiceOption,
+  SurfacePlanStep,
+  SurfaceDocument,
+  SurfaceMessage,
+  SurfaceSession,
+  ConversationSurface,
+} from './conversation-surface.js';
+
 // Escalation router types (signal routing to channels)
 export { EscalationSeverity, EscalationSource } from './escalation.js';
 export type { EscalationSignal, EscalationChannel } from './escalation.js';

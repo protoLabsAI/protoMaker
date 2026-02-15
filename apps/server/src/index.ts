@@ -589,7 +589,7 @@ issueCreationService.initialize();
 
 // Initialize Linear Agent Service and Router for Linear agent integration
 const linearAgentService = new LinearAgentService();
-linearAgentService.setSettingsService(settingsService, REPO_ROOT);
+linearAgentService.configure(settingsService, REPO_ROOT);
 const linearAgentRouter = new LinearAgentRouter(
   events,
   roleRegistryService,
@@ -598,6 +598,11 @@ const linearAgentRouter = new LinearAgentRouter(
   REPO_ROOT
 );
 linearAgentRouter.start();
+
+// Initialize Project Planning Service — LangGraph flow for Linear-native project planning
+const { ProjectPlanningService } = await import('./services/project-planning-service.js');
+const projectPlanningService = new ProjectPlanningService(events, linearAgentService, REPO_ROOT);
+projectPlanningService.start();
 
 // Initialize Graphite sync scheduler (now registered as maintenance:graphite-sync task)
 const graphiteSyncScheduler = new GraphiteSyncScheduler(
