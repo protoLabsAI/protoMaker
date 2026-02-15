@@ -183,6 +183,9 @@ import { LinearApprovalBridge } from './services/linear-approval-bridge.js';
 import { createDeployRoutes } from './routes/deploy/index.js';
 import { createAnalyticsRoutes } from './routes/analytics.js';
 import { AntagonisticReviewService } from './services/antagonistic-review-service.js';
+import { createLangfuseRoutes } from './routes/langfuse/index.js';
+import { shutdownLangfuse } from './lib/langfuse-singleton.js';
+import { AgentScoringService } from './services/agent-scoring-service.js';
 // CopilotKit imports are dynamic — @copilotkitnext/runtime may not be installed
 // See conditional registration below at /api/copilotkit routes
 
@@ -412,6 +415,9 @@ const antagonisticReviewService = AntagonisticReviewService.getInstance(
   events,
   settingsService
 );
+
+// Initialize Agent Scoring Service (auto-scores agent traces based on feature lifecycle)
+const _agentScoringService = new AgentScoringService(events, featureLoader);
 
 // Initialize HeadsdownService for autonomous agent management
 const headsdownService = HeadsdownService.getInstance(
@@ -1054,6 +1060,7 @@ app.use('/api/crew', createCrewRoutes(crewLoopService));
 app.use('/api/deploy', createDeployRoutes(autoModeService));
 app.use('/api/escalation', createEscalationRoutes(escalationRouter));
 app.use('/api/analytics', createAnalyticsRoutes(events));
+app.use('/api/langfuse', createLangfuseRoutes());
 app.use('/api/flows', createFlowsRoutes(antagonisticReviewService));
 if (process.env.ANTHROPIC_API_KEY) {
   try {
@@ -1551,6 +1558,7 @@ async function gracefulShutdown() {
   issueCreationService.shutdown();
   linearAgentRouter.stop();
   agentDiscordRouter.stop();
+  await shutdownLangfuse();
 
   server.close(() => {
     logger.info('Server closed');

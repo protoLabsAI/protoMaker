@@ -15,7 +15,7 @@ import type { AgentFactoryService } from './agent-factory-service.js';
 import { DynamicAgentExecutor } from './dynamic-agent-executor.js';
 import type { SPARCPrd } from '@automaker/types';
 import { AntagonisticReviewAdapter } from './antagonistic-review-adapter.js';
-import { LangfuseClient } from '@automaker/observability';
+import { getLangfuseInstance } from '../lib/langfuse-singleton.js';
 import type { SettingsService } from './settings-service.js';
 
 const logger = createLogger('AntagonisticReview');
@@ -92,19 +92,9 @@ export class AntagonisticReviewService {
    */
   private async initializeLangfuse(): Promise<void> {
     try {
-      // Check if Langfuse credentials are configured
-      const langfusePublicKey = process.env.LANGFUSE_PUBLIC_KEY;
-      const langfuseSecretKey = process.env.LANGFUSE_SECRET_KEY;
-      const langfuseBaseUrl = process.env.LANGFUSE_BASE_URL;
+      const langfuseClient = getLangfuseInstance();
 
-      if (langfusePublicKey && langfuseSecretKey) {
-        const langfuseClient = new LangfuseClient({
-          publicKey: langfusePublicKey,
-          secretKey: langfuseSecretKey,
-          baseUrl: langfuseBaseUrl,
-          enabled: true,
-        });
-
+      if (langfuseClient.isAvailable()) {
         this.adapter = new AntagonisticReviewAdapter({
           smartModel: 'claude-3-5-sonnet-20241022',
           enableHITL: false,
@@ -113,7 +103,7 @@ export class AntagonisticReviewService {
 
         logger.info('Langfuse tracing initialized for antagonistic reviews');
       } else {
-        logger.info('Langfuse credentials not found, tracing disabled');
+        logger.info('Langfuse not available, tracing disabled for antagonistic reviews');
       }
     } catch (error) {
       logger.error('Failed to initialize Langfuse:', error);

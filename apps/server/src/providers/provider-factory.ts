@@ -6,8 +6,10 @@
  */
 
 import { BaseProvider } from './base-provider.js';
+import { TracedProvider } from './traced-provider.js';
 import type { InstallationStatus, ModelDefinition } from './types.js';
 import { isCursorModel, isCodexModel, isOpencodeModel, type ModelProvider } from '@automaker/types';
+import { getLangfuseInstance } from '../lib/langfuse-singleton.js';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -121,12 +123,12 @@ export class ProviderFactory {
       // Fallback to claude if provider not found
       const claudeReg = providerRegistry.get('claude');
       if (claudeReg) {
-        return claudeReg.factory();
+        return this.wrapWithTracing(claudeReg.factory());
       }
       throw new Error(`No provider found for model: ${modelId}`);
     }
 
-    return provider;
+    return this.wrapWithTracing(provider);
   }
 
   /**
@@ -156,6 +158,26 @@ export class ProviderFactory {
 
     // Default to claude (first registered provider or claude)
     return 'claude';
+  }
+
+  /**
+   * Wrap a provider with Langfuse tracing if available.
+   * Returns the original provider unchanged if Langfuse is not configured.
+   */
+  private static wrapWithTracing(provider: BaseProvider): BaseProvider {
+    try {
+      const langfuse = getLangfuseInstance();
+      if (langfuse.isAvailable()) {
+        return new TracedProvider(provider, {
+          enabled: true,
+          client: langfuse,
+          defaultTags: ['automaker'],
+        });
+      }
+    } catch {
+      // Langfuse initialization failed — return unwrapped provider
+    }
+    return provider;
   }
 
   /**

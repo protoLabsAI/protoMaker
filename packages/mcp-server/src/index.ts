@@ -2506,6 +2506,108 @@ const tools: Tool[] = [
       required: ['clientRepoUrl'],
     },
   },
+  // ========== Langfuse Observability ==========
+  {
+    name: 'langfuse_list_traces',
+    description:
+      'List recent Langfuse traces. Filter by name, tags, userId, sessionId, date range. Returns traceId, name, model, cost, latency, timestamp.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        page: { type: 'number', description: 'Page number (default: 1)' },
+        limit: { type: 'number', description: 'Results per page (default: 20)' },
+        name: { type: 'string', description: 'Filter by trace name' },
+        tags: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Filter by tags (e.g., ["automaker", "feature:abc123"])',
+        },
+        userId: { type: 'string', description: 'Filter by user ID' },
+        sessionId: { type: 'string', description: 'Filter by session ID' },
+        fromTimestamp: { type: 'string', description: 'Start date (ISO 8601)' },
+        toTimestamp: { type: 'string', description: 'End date (ISO 8601)' },
+      },
+    },
+  },
+  {
+    name: 'langfuse_get_trace',
+    description:
+      'Get full trace detail: all generations, spans, scores, token usage, cost breakdown.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        traceId: { type: 'string', description: 'The trace ID to retrieve' },
+      },
+      required: ['traceId'],
+    },
+  },
+  {
+    name: 'langfuse_get_costs',
+    description:
+      'Get observations/generations for cost analysis. Filter by model, time range. Returns token usage and costs per generation.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        page: { type: 'number', description: 'Page number (default: 1)' },
+        limit: { type: 'number', description: 'Results per page (default: 50)' },
+        model: { type: 'string', description: 'Filter by model name' },
+        fromStartTime: { type: 'string', description: 'Start date (ISO 8601)' },
+        toStartTime: { type: 'string', description: 'End date (ISO 8601)' },
+      },
+    },
+  },
+  {
+    name: 'langfuse_list_prompts',
+    description: 'List all managed prompts in Langfuse with versions and labels.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        page: { type: 'number', description: 'Page number (default: 1)' },
+        limit: { type: 'number', description: 'Results per page (default: 50)' },
+        name: { type: 'string', description: 'Filter by prompt name' },
+        label: { type: 'string', description: 'Filter by label (e.g., "production")' },
+      },
+    },
+  },
+  {
+    name: 'langfuse_score_trace',
+    description:
+      'Score a trace (name, value 0-1, optional comment). Use for manual quality review of agent outputs.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        traceId: { type: 'string', description: 'The trace ID to score' },
+        name: {
+          type: 'string',
+          description: 'Score name (e.g., "quality", "accuracy", "helpfulness")',
+        },
+        value: { type: 'number', description: 'Score value (0 to 1)' },
+        comment: { type: 'string', description: 'Optional comment explaining the score' },
+      },
+      required: ['traceId', 'name', 'value'],
+    },
+  },
+  {
+    name: 'langfuse_add_to_dataset',
+    description:
+      'Add a trace to a named dataset for evaluation. Creates the dataset if it does not exist.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        datasetName: {
+          type: 'string',
+          description: 'Name of the dataset (created if it does not exist)',
+        },
+        traceId: { type: 'string', description: 'Trace ID to add to the dataset' },
+        observationId: {
+          type: 'string',
+          description: 'Optional observation ID within the trace',
+        },
+        metadata: { type: 'object', description: 'Optional metadata for the dataset item' },
+      },
+      required: ['datasetName', 'traceId'],
+    },
+  },
 ];
 
 // Tool implementations
@@ -3488,6 +3590,57 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         gapsSummary: args.gapsSummary,
         changesMade: args.changesMade,
         alignmentPerformed: args.alignmentPerformed ?? false,
+      });
+
+    // Langfuse Observability
+    case 'langfuse_list_traces':
+      return apiCall('/langfuse/traces', {
+        page: args.page,
+        limit: args.limit,
+        name: args.name,
+        tags: args.tags,
+        userId: args.userId,
+        sessionId: args.sessionId,
+        fromTimestamp: args.fromTimestamp,
+        toTimestamp: args.toTimestamp,
+      });
+
+    case 'langfuse_get_trace':
+      return apiCall('/langfuse/traces/detail', {
+        traceId: args.traceId,
+      });
+
+    case 'langfuse_get_costs':
+      return apiCall('/langfuse/costs', {
+        page: args.page,
+        limit: args.limit,
+        model: args.model,
+        fromStartTime: args.fromStartTime,
+        toStartTime: args.toStartTime,
+      });
+
+    case 'langfuse_list_prompts':
+      return apiCall('/langfuse/prompts', {
+        page: args.page,
+        limit: args.limit,
+        name: args.name,
+        label: args.label,
+      });
+
+    case 'langfuse_score_trace':
+      return apiCall('/langfuse/scores', {
+        traceId: args.traceId,
+        name: args.name,
+        value: args.value,
+        comment: args.comment,
+      });
+
+    case 'langfuse_add_to_dataset':
+      return apiCall('/langfuse/datasets/items', {
+        datasetName: args.datasetName,
+        traceId: args.traceId,
+        observationId: args.observationId,
+        metadata: args.metadata,
       });
 
     default:

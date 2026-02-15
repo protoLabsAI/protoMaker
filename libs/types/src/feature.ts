@@ -397,6 +397,12 @@ export interface Feature {
    */
   statusHistory?: StatusTransition[];
 
+  /**
+   * Last Langfuse trace ID from the most recent agent execution.
+   * Used to correlate agent runs with observability data for scoring and analysis.
+   */
+  lastTraceId?: string;
+
   // Hivemind fields
   /** Domain this feature belongs to (e.g. "frontend", "server") for mesh routing */
   domain?: string;

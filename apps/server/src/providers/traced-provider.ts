@@ -12,6 +12,13 @@ import type {
 } from './types.js';
 import { wrapProviderWithTracing, type TracingConfig } from '@automaker/observability';
 
+/** Feature context for enriching traces */
+export interface TracedProviderContext {
+  featureId?: string;
+  featureName?: string;
+  agentRole?: string;
+}
+
 /**
  * Wrapper that adds tracing to any provider
  */
@@ -25,6 +32,30 @@ export class TracedProvider extends BaseProvider {
     this.tracingConfig = tracingConfig;
     // Override the name property set by BaseProvider constructor
     this.name = wrapped.getName();
+  }
+
+  /**
+   * Set feature context for trace enrichment.
+   * Call after provider creation to correlate traces with board features.
+   */
+  setContext(ctx: TracedProviderContext): void {
+    this.tracingConfig.defaultMetadata = {
+      ...this.tracingConfig.defaultMetadata,
+      ...ctx,
+    };
+    // Also add feature-specific tags
+    if (ctx.featureId) {
+      this.tracingConfig.defaultTags = [
+        ...(this.tracingConfig.defaultTags ?? []),
+        `feature:${ctx.featureId}`,
+      ];
+    }
+    if (ctx.agentRole) {
+      this.tracingConfig.defaultTags = [
+        ...(this.tracingConfig.defaultTags ?? []),
+        `role:${ctx.agentRole}`,
+      ];
+    }
   }
 
   getName(): string {
