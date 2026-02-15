@@ -2,10 +2,11 @@
  * CopilotKit routes - Express endpoint for CopilotKit runtime
  *
  * Provides the /api/copilotkit endpoint that the CopilotKit React provider connects to.
- * Registers two agents via the AG-UI protocol:
+ * Registers three agents via the AG-UI protocol:
  * - "default" (Ava): BuiltInAgent with board-operation tools
  * - "content-pipeline": LangGraph flow for content creation
- * Both agents are discoverable via /api/copilotkit/info.
+ * - "antagonistic-review": BuiltInAgent for content quality review
+ * All agents are discoverable via /api/copilotkit/info.
  */
 
 import { CopilotRuntime } from '@copilotkitnext/runtime';
@@ -13,7 +14,8 @@ import { createCopilotEndpointExpress } from '@copilotkitnext/runtime/express';
 import { BuiltInAgent, defineTool } from '@copilotkitnext/agent';
 import { z } from 'zod';
 import { createLogger } from '@automaker/utils';
-import { createContentCreationFlow } from '@automaker/flows';
+import { createContentCreationFlow, createAntagonisticReviewerGraph } from '@automaker/flows';
+import { ChatAnthropic } from '@langchain/anthropic';
 import type { FeatureLoader } from '../../services/feature-loader.js';
 import type { AutoModeService } from '../../services/auto-mode-service.js';
 
@@ -153,8 +155,58 @@ function createAvaTools(deps: CopilotKitDependencies) {
   ];
 }
 
+function createAntagonisticReviewTools() {
+  const reviewGraph = createAntagonisticReviewerGraph();
+
+  return [
+    defineTool({
+      name: 'reviewContent',
+      description:
+        'Review content using antagonistic review. Supports three modes: research (validates research findings), outline (reviews outline structure), full (comprehensive 8-dimension review)',
+      parameters: z.object({
+        mode: z
+          .enum(['research', 'outline', 'full'])
+          .describe('Review mode: research, outline, or full'),
+        content: z.string().describe('Content to review'),
+        researchFindings: z
+          .string()
+          .optional()
+          .describe('Research context (only for research mode)'),
+      }),
+      execute: async (args) => {
+        const smartModel = new ChatAnthropic({
+          model: 'claude-3-5-sonnet-20241022',
+          temperature: 0.7,
+        });
+
+        const result = await reviewGraph.invoke({
+          mode: args.mode,
+          content: args.content,
+          researchFindings: args.researchFindings,
+          smartModel,
+        });
+
+        if (result.error) {
+          throw new Error(result.error);
+        }
+
+        return {
+          verdict: result.result?.verdict,
+          passed: result.result?.passed,
+          percentage: result.result?.percentage,
+          threshold: result.result?.threshold,
+          dimensions: result.result?.dimensions,
+          criticalIssues: result.result?.criticalIssues,
+          recommendations: result.result?.recommendations,
+        };
+      },
+    }),
+  ];
+}
+
 export function createCopilotKitEndpoint(deps: CopilotKitDependencies) {
-  const tools = createAvaTools(deps);
+  const avaTools = createAvaTools(deps);
+  const reviewTools = createAntagonisticReviewTools();
 
   const avaAgent = new BuiltInAgent({
     model: 'anthropic/claude-sonnet-4-5-20250929',
@@ -167,7 +219,7 @@ export function createCopilotKitEndpoint(deps: CopilotKitDependencies) {
     // ToolDefinition<ZodObject<…>> ⊄ ToolDefinition<ZodTypeAny> due to generic variance.
     // Cast is safe — each tool already satisfies the ToolDefinition contract.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    tools: tools as any,
+    tools: avaTools as any,
     maxSteps: 5,
   });
 
@@ -175,20 +227,35 @@ export function createCopilotKitEndpoint(deps: CopilotKitDependencies) {
   // Compiled without HITL gates for autonomous operation
   const contentPipelineGraph = createContentCreationFlow({ enableHITL: false });
 
+  const antagonisticReviewAgent = new BuiltInAgent({
+    model: 'anthropic/claude-sonnet-4-5-20250929',
+    prompt: [
+      'You are the Antagonistic Review Agent for protoMaker.',
+      'You perform rigorous quality reviews of content using a scoring rubric.',
+      'You support three review modes: research (validates research findings), outline (reviews structure), and full (8-dimension comprehensive review).',
+      'Use the reviewContent tool to perform reviews and provide honest, critical feedback.',
+      'Be harsh but fair in your assessments.',
+    ].join(' '),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    tools: reviewTools as any,
+    maxSteps: 3,
+  });
+
   // CopilotKit v1.51 constructor types have a MaybePromise intersection bug
   // that rejects plain objects. The cast is safe — runtime accepts Record<string, Agent>.
-  // Register both Ava (BuiltInAgent) and content-pipeline (LangGraph) agents.
-  // The AG-UI runtime handles LangGraph state streaming automatically.
+  // Register all three agents: Ava (BuiltInAgent), content-pipeline (LangGraph),
+  // and antagonistic-review (BuiltInAgent). AG-UI handles state streaming.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const runtime = new CopilotRuntime({
     agents: {
       default: avaAgent,
       'content-pipeline': contentPipelineGraph,
+      'antagonistic-review': antagonisticReviewAgent,
     } as any,
   });
 
   logger.info(
-    `CopilotKit runtime initialized with 2 agents: Ava (${tools.length} tools), content-pipeline (LangGraph)`
+    `CopilotKit runtime initialized with 3 agents: Ava (${avaTools.length} tools), content-pipeline (LangGraph), Antagonistic Review (${reviewTools.length} tools)`
   );
 
   // Use @copilotkitnext/runtime's Express-native endpoint (proper Express Router)
