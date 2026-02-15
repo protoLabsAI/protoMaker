@@ -16,8 +16,8 @@ import type {
   GitHubPushWebhookPayload,
   GitHubPingWebhookPayload,
   WebhookVerificationResult,
+  GitHubCheckSuiteWebhookPayload,
 } from '@automaker/types';
-import type { GitHubCheckSuiteWebhookPayload } from '@automaker/types/dist/webhook.js';
 import type { SettingsService } from '../../../services/settings-service.js';
 import type { EventEmitter } from '../../../lib/events.js';
 
