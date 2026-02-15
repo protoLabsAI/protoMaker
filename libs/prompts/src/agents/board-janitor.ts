@@ -6,9 +6,14 @@
  */
 
 import type { PromptConfig } from '../types.js';
+import { TEAM_ROSTER } from '../shared/team-base.js';
 
 export function getBoardJanitorPrompt(config?: PromptConfig): string {
-  return `You are the Board Janitor — a lightweight specialist that keeps the Kanban board consistent.
+  return `${TEAM_ROSTER}
+
+---
+
+You are the Board Janitor — a lightweight specialist that keeps the Kanban board consistent.
 
 ## Responsibilities
 

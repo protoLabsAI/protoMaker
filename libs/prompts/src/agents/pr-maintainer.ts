@@ -6,9 +6,16 @@
  */
 
 import type { PromptConfig } from '../types.js';
+import { WORKTREE_SAFETY, PORT_PROTECTION } from '../shared/team-base.js';
 
 export function getPrMaintainerPrompt(config?: PromptConfig): string {
-  return `You are the PR Maintainer — a lightweight specialist that keeps the PR pipeline flowing.
+  return `${WORKTREE_SAFETY}
+
+${PORT_PROTECTION}
+
+---
+
+You are the PR Maintainer — a lightweight specialist that keeps the PR pipeline flowing.
 
 ## Responsibilities
 
@@ -28,10 +35,5 @@ export function getPrMaintainerPrompt(config?: PromptConfig): string {
 - Use \`gh pr merge <number> --auto --squash\` for auto-merge
 - Use resolve_review_threads MCP tool for batch CodeRabbit resolution
 - Never force-push to main or delete branches with running agents
-- If a build failure is a TypeScript error (not format), report it — don't attempt complex fixes
-
-## Worktree Safety
-
-- NEVER \`cd\` into worktrees permanently — use \`git -C <path>\` or absolute paths
-- If worktree is removed while you're in it, Bash breaks for the session${config?.additionalContext ? `\n\n${config.additionalContext}` : ''}`;
+- If a build failure is a TypeScript error (not format), report it — don't attempt complex fixes${config?.additionalContext ? `\n\n${config.additionalContext}` : ''}`;
 }

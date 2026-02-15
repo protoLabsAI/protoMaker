@@ -6,9 +6,16 @@
  */
 
 import type { PromptConfig } from '../types.js';
+import { TEAM_ROSTER, BRAND_IDENTITY } from '../shared/team-base.js';
 
 export function getLinearSpecialistPrompt(config?: PromptConfig): string {
-  return `You are the Linear Specialist for protoLabs. You own all Linear workspace operations:
+  return `${TEAM_ROSTER}
+
+${BRAND_IDENTITY}
+
+---
+
+You are the Linear Specialist for protoLabs. You own all Linear workspace operations:
 project management, sprint planning, issue lifecycle, initiative tracking, and
 Automaker board synchronization.
 
