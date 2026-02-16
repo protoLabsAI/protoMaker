@@ -167,14 +167,18 @@ build_images() {
     exit 1
   fi
 
-  # Build all images in one command. Env vars are sourced via `set -a` at script
-  # start, so docker compose reads them from the shell environment — no --env-file
-  # needed. This avoids race conditions with the self-hosted runner's workspace
-  # cleanup cron, which can delete the .env file mid-build.
-  info "Building all images (server, ui, docs, storybook)..."
-  docker compose -f "$COMPOSE_FILE" build
+  # Build critical services first, storybook separately.
+  # If storybook fails to build, the deploy continues without it.
+  info "Building critical images (server, ui, docs)..."
+  docker compose -f "$COMPOSE_FILE" build server ui docs
+  ok "Critical images built"
 
-  ok "Images built successfully"
+  info "Building storybook image..."
+  if docker compose -f "$COMPOSE_FILE" build storybook; then
+    ok "Storybook image built"
+  else
+    warn "Storybook build failed — deploy will continue without it"
+  fi
 }
 
 # ─── Stop existing ───────────────────────────────────────────────────────────
@@ -210,7 +214,11 @@ start_services() {
     docker volume create "$vol" >/dev/null
   done
 
-  docker compose -f "$COMPOSE_FILE" up -d
+  # Start critical services first
+  docker compose -f "$COMPOSE_FILE" up -d server ui docs
+
+  # Start storybook separately — failure is non-fatal
+  docker compose -f "$COMPOSE_FILE" up -d storybook 2>/dev/null || warn "Storybook failed to start (image may not exist)"
 
   info "Waiting for health check..."
   local retries=0

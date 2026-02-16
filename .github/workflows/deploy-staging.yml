@@ -84,6 +84,8 @@ jobs:
         id: rebuild
         working-directory: /home/josh/staging-deploy/automaker
         run: |
+          # setup-staging.sh --build isolates storybook from critical services.
+          # If storybook fails to build, the script continues (non-fatal).
           ./scripts/setup-staging.sh --build
           ./scripts/setup-staging.sh --start
 
@@ -157,9 +159,9 @@ jobs:
         run: |
           echo "Deploy verification failed — rolling back to previous images"
 
-          # Check if rollback images exist
+          # Check if rollback images exist for critical services
           has_rollback=false
-          for svc in server ui docs storybook; do
+          for svc in server ui docs; do
             if docker image inspect "automaker-staging-${svc}:rollback" &>/dev/null; then
               has_rollback=true
               break
@@ -175,6 +177,7 @@ jobs:
           docker compose -f docker-compose.staging.yml down 2>/dev/null || true
 
           # Retag rollback images as latest and collect which services to start
+          # Critical services first, storybook is best-effort
           ROLLBACK_SERVICES=""
           for svc in server ui docs storybook; do
             if docker image inspect "automaker-staging-${svc}:rollback" &>/dev/null; then
