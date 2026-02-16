@@ -593,7 +593,7 @@ export function analyzeGaps(
   }
 
   // --- Python: Ruff ---
-  if (research.python.hasPythonServices && !research.python.hasRuff) {
+  if (research.python?.hasPythonServices && !research.python.hasRuff) {
     addGap({
       id: 'python-ruff',
       category: 'python',
@@ -608,7 +608,7 @@ export function analyzeGaps(
   }
 
   // --- Python: pytest ---
-  if (research.python.hasPythonServices && !research.python.hasPytest) {
+  if (research.python?.hasPythonServices && !research.python.hasPytest) {
     addGap({
       id: 'python-pytest',
       category: 'python',
