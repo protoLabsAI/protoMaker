@@ -14,10 +14,11 @@ const packageJson = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'package.
 const appVersion = packageJson.version;
 
 export default defineConfig(({ command }) => {
-  // Only skip electron plugin during dev server in CI (no display available for Electron)
-  // Always include it during build - we need dist-electron/main.js for electron-builder
+  // Skip electron plugin when VITE_SKIP_ELECTRON is set (Docker web/storybook builds)
+  // or during dev server in CI (no display available for Electron).
+  // Electron desktop builds (build:electron) don't set this env var.
   const skipElectron =
-    command === 'serve' && (process.env.CI === 'true' || process.env.VITE_SKIP_ELECTRON === 'true');
+    process.env.VITE_SKIP_ELECTRON === 'true' || (command === 'serve' && process.env.CI === 'true');
 
   return {
     plugins: [
