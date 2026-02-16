@@ -161,6 +161,8 @@ import { getDiscordService } from './services/discord-service.js';
 import { createDiscordRoutes } from './routes/discord/index.js';
 import { createAvaRoutes } from './routes/ava/index.js';
 import { createLinearRoutes } from './routes/linear/index.js';
+import { createIdeasRoutes } from './routes/ideas/index.js';
+import { IdeaProcessingService } from './services/idea-processing-service.js';
 import { LinearAgentService } from './services/linear-agent-service.js';
 import { LinearAgentRouter } from './services/linear-agent-router.js';
 import { MAX_SYSTEM_CONCURRENCY } from '@automaker/types';
@@ -376,6 +378,7 @@ const mcpTestService = new MCPTestService(settingsService);
 const featureHealthService = new FeatureHealthService(featureLoader, autoModeService);
 const beadsService = new BeadsService('bd', events);
 const discordService = getDiscordService();
+const ideaProcessingService = new IdeaProcessingService(DATA_DIR, events);
 
 // Initialize Escalation Router
 const escalationRouter = getEscalationRouter();
@@ -753,6 +756,9 @@ specGenerationMonitor.startMonitoring();
   await agentService.initialize();
   logger.info('Agent service initialized');
 
+  await ideaProcessingService.init();
+  logger.info('Idea processing service initialized');
+
   // Recover orphaned features (stuck in running/in-progress with no agent after restart)
   try {
     const settings = await settingsService.getGlobalSettings();
@@ -1069,6 +1075,7 @@ app.use('/api/escalation', createEscalationRoutes(escalationRouter));
 app.use('/api/analytics', createAnalyticsRoutes(events));
 app.use('/api/langfuse', createLangfuseRoutes());
 app.use('/api/flows', createFlowsRoutes(antagonisticReviewService, projectPlanningService));
+app.use('/api/ideas', createIdeasRoutes(ideaProcessingService));
 if (process.env.ANTHROPIC_API_KEY) {
   try {
     const { createCopilotKitEndpoint } = await import('./routes/copilotkit/index.js');
