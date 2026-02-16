@@ -29,11 +29,11 @@
     "node": ">=22.0.0 <23.0.0"
   },
   "dependencies": {
-    "@automaker/types": "workspace:*",
+    "@automaker/types": "file:../types",
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@types/express": "5.0.8",
+    "@types/express": "5.0.6",
     "@types/node": "22.19.3",
     "tsup": "^8.5.1",
     "typescript": "5.9.3"
