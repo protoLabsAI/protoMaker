@@ -7,19 +7,19 @@
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
     "./atoms": {
-      "types": "./dist/atoms/index.d.ts",
+      "import": "./dist/atoms/index.js",
       "default": "./dist/atoms/index.js"
     },
     "./molecules": {
-      "types": "./dist/molecules/index.d.ts",
+      "import": "./dist/molecules/index.js",
       "default": "./dist/molecules/index.js"
     },
     "./organisms": {
-      "types": "./dist/organisms/index.d.ts",
+      "import": "./dist/organisms/index.js",
       "default": "./dist/organisms/index.js"
     }
   },

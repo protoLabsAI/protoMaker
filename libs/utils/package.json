@@ -7,11 +7,11 @@
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
     "./logger": {
-      "types": "./dist/logger.d.ts",
+      "import": "./dist/logger.js",
       "default": "./dist/logger.js"
     }
   },
