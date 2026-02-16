@@ -7,7 +7,7 @@
 
 // Core state utilities
 export * from './graphs/state-utils.js';
-export * from './graphs/reducers.js';
+export * from './graphs/reducers.js'; // Includes idDedupAppendReducer and createLruReducer
 export * from './graphs/routing.js';
 export * from './graphs/builder.js';
 export * from './graphs/state-transforms.js';

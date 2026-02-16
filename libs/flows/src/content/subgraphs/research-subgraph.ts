@@ -6,6 +6,7 @@
  */
 
 import { StateGraph, Annotation, Send, Command, MemorySaver } from '@langchain/langgraph';
+import { idDedupAppendReducer } from '../../graphs/reducers.js';
 
 /**
  * Content configuration - which research types are enabled
@@ -21,6 +22,7 @@ export interface ContentConfig {
  * Individual research finding
  */
 export interface ResearchFinding {
+  id: string; // Unique identifier for deduplication
   type: 'web' | 'codebase' | 'documentation' | 'api';
   content: string;
   relevanceScore: number;
@@ -44,7 +46,7 @@ export const ResearchSubgraphState = Annotation.Root({
   query: Annotation<string>,
   contentConfig: Annotation<ContentConfig>,
   findings: Annotation<ResearchFinding[]>({
-    reducer: (left, right) => [...left, ...right],
+    reducer: idDedupAppendReducer,
     default: () => [],
   }),
   summary: Annotation<ResearchSummary | undefined>,
@@ -97,12 +99,14 @@ async function webWorkerNode(
   // Simulate web search findings
   const findings: ResearchFinding[] = [
     {
+      id: `web:${query}:1`,
       type: 'web',
       content: `Web result 1 for: ${query}`,
       relevanceScore: 0.85,
       source: 'https://example.com/article1',
     },
     {
+      id: `web:${query}:2`,
       type: 'web',
       content: `Web result 2 for: ${query}`,
       relevanceScore: 0.72,
@@ -123,6 +127,7 @@ async function codebaseWorkerNode(
 
   const findings: ResearchFinding[] = [
     {
+      id: `codebase:${query}:1`,
       type: 'codebase',
       content: `Codebase pattern found for: ${query}`,
       relevanceScore: 0.91,
@@ -143,6 +148,7 @@ async function documentationWorkerNode(
 
   const findings: ResearchFinding[] = [
     {
+      id: `documentation:${query}:1`,
       type: 'documentation',
       content: `Documentation insight for: ${query}`,
       relevanceScore: 0.88,
@@ -163,6 +169,7 @@ async function apiWorkerNode(
 
   const findings: ResearchFinding[] = [
     {
+      id: `api:${query}:1`,
       type: 'api',
       content: `API endpoint found for: ${query}`,
       relevanceScore: 0.79,
@@ -174,40 +181,18 @@ async function apiWorkerNode(
 }
 
 /**
- * Deduplicates findings by content similarity
- * Simple implementation using exact content matching
- */
-function deduplicateFindings(findings: ResearchFinding[]): ResearchFinding[] {
-  const seen = new Set<string>();
-  const deduplicated: ResearchFinding[] = [];
-
-  for (const finding of findings) {
-    // Use content + type as deduplication key
-    const key = `${finding.type}:${finding.content}`;
-
-    if (!seen.has(key)) {
-      seen.add(key);
-      deduplicated.push(finding);
-    }
-  }
-
-  return deduplicated;
-}
-
-/**
- * Aggregator node - receives all findings via reducer, deduplicates, scores by relevance
- * Produces consolidated ResearchSummary
+ * Aggregator node - receives all findings via reducer (already deduplicated by ID),
+ * scores findings by relevance and produces consolidated ResearchSummary
  */
 async function aggregatorNode(
   state: ResearchSubgraphStateType
 ): Promise<Partial<ResearchSubgraphStateType>> {
   const { findings } = state;
 
-  // Deduplicate findings
-  const deduplicated = deduplicateFindings(findings);
+  // Findings are already deduplicated by the idDedupAppendReducer
 
   // Sort by relevance score (descending)
-  const sorted = deduplicated.sort((a, b) => b.relevanceScore - a.relevanceScore);
+  const sorted = [...findings].sort((a, b) => b.relevanceScore - a.relevanceScore);
 
   // Calculate average relevance
   const averageRelevance =
