@@ -11,3 +11,6 @@ export { toLangGraphTool, toLangGraphTools } from './adapters/langgraph-adapter.
 export type { ToolContext, ToolResult, SharedTool, ToolDefinition } from './types.js';
 export { toMCPTool, toMCPTools, type MCPToolEntry } from './adapters/index.js';
 export { toExpressRouter, type ExpressAdapterOptions } from './adapters/index.js';
+
+// Domain-specific tools
+export * from './domains/ideas/index.js';
