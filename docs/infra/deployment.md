@@ -11,6 +11,72 @@ This guide covers different deployment options for protoMaker.
 | Docker (Projects Mounted)          | Personal use            | Partial      | Medium                   |
 | systemd + Docker                   | Production server       | Configurable | Medium                   |
 | [Staging](./staging-deployment.md) | High-concurrency agents | Partial      | Low (`setup-staging.sh`) |
+| Cloudflare Pages                   | Landing page hosting    | Full         | Low                      |
+
+## Landing Page (Cloudflare Pages)
+
+The protoLabs.studio landing page (`site/index.html`) is deployed as a static site on Cloudflare Pages.
+
+### Architecture
+
+```
+site/index.html → Cloudflare Pages → protolabs.studio
+                   (300+ edge nodes, serverless)
+```
+
+No build step. Cloudflare serves the static HTML directly from the `site/` directory on the `main` branch.
+
+### Cloudflare Pages Configuration
+
+| Setting           | Value                     |
+| ----------------- | ------------------------- |
+| Project name      | `protolabs-studio`        |
+| Repository        | `proto-labs-ai/automaker` |
+| Production branch | `main`                    |
+| Root directory    | `site`                    |
+| Build command     | _(none)_                  |
+| Build output      | `/`                       |
+| Watch paths       | `site/**`                 |
+
+### Custom Domains
+
+| Domain                 | Type  | Behavior                 |
+| ---------------------- | ----- | ------------------------ |
+| `protolabs.studio`     | Apex  | Primary (serves content) |
+| `www.protolabs.studio` | CNAME | 301 redirect to apex     |
+
+### Security & Performance
+
+All configured in the `protolabs.studio` Cloudflare zone:
+
+| Setting           | Value                                    |
+| ----------------- | ---------------------------------------- |
+| SSL mode          | Full (strict)                            |
+| HSTS              | ON, max-age=31536000, include subdomains |
+| Min TLS Version   | 1.2                                      |
+| Bot Fight Mode    | Super Bot Fight Mode (Pro)               |
+| Auto Minify       | HTML, CSS, JS                            |
+| Brotli            | ON                                       |
+| HTTP/3            | ON                                       |
+| Always Online     | ON                                       |
+| Browser Cache TTL | 4 hours                                  |
+| Edge Cache TTL    | 1 day                                    |
+
+### Newsletter Integration
+
+The signup form posts directly to Buttondown (username: `protoLabsAI`). No server-side code or API keys required. Submissions are tagged `launch-list` for segmentation.
+
+### Deployment Trigger
+
+Merging to `main` with changes in `site/**` triggers an automatic Cloudflare Pages deploy. No CI configuration needed — Cloudflare watches the repo directly.
+
+### Verification
+
+```bash
+curl -I https://protolabs.studio      # 200 + CF-Ray header
+curl -I https://www.protolabs.studio   # 301 → apex
+curl -I http://protolabs.studio        # redirect → HTTPS
+```
 
 ## Local Development
 
