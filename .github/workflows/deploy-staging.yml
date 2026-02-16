@@ -93,8 +93,8 @@ jobs:
         working-directory: /home/josh/staging-deploy/automaker
         run: |
           # Save current working images so we can restore on failure.
-          # If no images exist yet (first deploy), this is a no-op.
-          for svc in server ui docs; do
+          # Only tag app services — docs runs independently and is never rolled back.
+          for svc in server ui; do
             img=$(docker compose -f docker-compose.staging.yml images -q "$svc" 2>/dev/null || true)
             if [ -n "$img" ]; then
               docker tag "$img" "automaker-staging-${svc}:rollback"
@@ -136,20 +136,11 @@ jobs:
             exit 1
           fi
 
-          # Check docs health
-          retries=0
-          while [ $retries -lt 10 ]; do
-            if curl -sf http://localhost:3009/ > /dev/null; then
-              echo "Docs site is healthy"
-              break
-            fi
-            retries=$((retries + 1))
-            sleep 2
-          done
-          if [ $retries -eq 10 ]; then
-            echo "Docs health check failed after 20s"
-            docker compose -f docker-compose.staging.yml logs --tail=20 docs
-            # Non-fatal — docs failure shouldn't block the deploy
+          # Check docs health (runs independently via docker-compose.docs.yml)
+          if curl -sf http://localhost:3009/ > /dev/null; then
+            echo "Docs site is healthy"
+          else
+            echo "Docs not responding (runs independently — non-fatal for app deploy)"
           fi
 
       - name: Smoke tests
@@ -167,11 +158,11 @@ jobs:
         if: failure() && (steps.rebuild.outcome == 'failure' || steps.verify.outcome == 'failure' || steps.smoke.outcome == 'failure')
         working-directory: /home/josh/staging-deploy/automaker
         run: |
-          echo "Deploy verification failed — rolling back to previous images"
+          echo "Deploy verification failed — rolling back app services (docs runs independently)"
 
-          # Check if rollback images exist for critical services
+          # Check if rollback images exist for app services
           has_rollback=false
-          for svc in server ui docs; do
+          for svc in server ui; do
             if docker image inspect "automaker-staging-${svc}:rollback" &>/dev/null; then
               has_rollback=true
               break
@@ -183,13 +174,12 @@ jobs:
             exit 1
           fi
 
-          # Stop broken containers
+          # Stop broken app containers only — docs is untouched
           docker compose -f docker-compose.staging.yml down 2>/dev/null || true
 
           # Retag rollback images as latest and collect which services to start
-          # Critical services first, storybook is best-effort
           ROLLBACK_SERVICES=""
-          for svc in server ui docs; do
+          for svc in server ui; do
             if docker image inspect "automaker-staging-${svc}:rollback" &>/dev/null; then
               docker tag "automaker-staging-${svc}:rollback" "automaker-staging-${svc}:latest"
               ROLLBACK_SERVICES="$ROLLBACK_SERVICES $svc"
@@ -199,7 +189,7 @@ jobs:
             fi
           done
 
-          # Restart only services that have rollback images
+          # Restart only app services that have rollback images
           docker compose -f docker-compose.staging.yml up -d $ROLLBACK_SERVICES
 
           # Verify rollback health
@@ -222,7 +212,7 @@ jobs:
         if: always()
         run: |
           # Remove rollback tags (keep images for layer cache)
-          for svc in server ui docs; do
+          for svc in server ui; do
             docker rmi "automaker-staging-${svc}:rollback" 2>/dev/null || true
           done
           docker image prune -f 2>/dev/null || true

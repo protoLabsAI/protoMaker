@@ -137,37 +137,8 @@ services:
         max-size: '100m'
         max-file: '10'
 
-  # Documentation Site
-  docs:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: docs
-      args:
-        GIT_COMMIT_SHA: ${GIT_COMMIT_SHA:-unknown}
-    container_name: automaker-docs
-    restart: unless-stopped
-    ports:
-      - '${DOCS_PORT:-3009}:80'
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 128M
-        reservations:
-          cpus: '0.1'
-          memory: 32M
-    healthcheck:
-      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:80/']
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-    logging:
-      driver: json-file
-      options:
-        max-size: '5m'
-        max-file: '3'
+  # Documentation Site — runs independently via docker-compose.docs.yml
+  # See deploy-docs.yml workflow for its deploy lifecycle.
 
 volumes:
   automaker-data:
