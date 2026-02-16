@@ -1,0 +1,314 @@
+/* protoLabs Brand Theme — docs.protolabs.studio
+ * Source of truth: docs/protolabs/design-system.md
+ * Overrides VitePress default theme to match protolabs.studio landing page.
+ */
+
+/* ═══════════════════════════════════════════
+   Fonts — Geist (sans) + Geist Mono
+   ═══════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap');
+
+:root {
+  --vp-font-family-base:
+    'Geist', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu,
+    Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  --vp-font-family-mono:
+    'Geist Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Monaco, Consolas,
+    'Liberation Mono', 'Courier New', monospace;
+}
+
+/* ═══════════════════════════════════════════
+   Dark Mode Colors (primary — dark-first brand)
+   ═══════════════════════════════════════════ */
+
+.dark {
+  /* Surfaces */
+  --vp-c-bg: #09090b;
+  --vp-c-bg-alt: #111113;
+  --vp-c-bg-elv: #111113;
+  --vp-c-bg-soft: #111113;
+  --vp-c-bg-mute: #18181b;
+
+  /* Brand / accent — violet */
+  --vp-c-brand-1: #a78bfa;
+  --vp-c-brand-2: #8b6fde;
+  --vp-c-brand-3: #7c5cbf;
+  --vp-c-brand-soft: rgba(167, 139, 250, 0.14);
+
+  /* Text */
+  --vp-c-text-1: #fafafa;
+  --vp-c-text-2: #a1a1aa;
+  --vp-c-text-3: #71717a;
+
+  /* Borders */
+  --vp-c-divider: rgba(255, 255, 255, 0.06);
+  --vp-c-border: rgba(255, 255, 255, 0.08);
+  --vp-c-gutter: rgba(255, 255, 255, 0.04);
+
+  /* Default badge */
+  --vp-c-default-1: #a1a1aa;
+  --vp-c-default-2: #71717a;
+  --vp-c-default-3: #52525b;
+  --vp-c-default-soft: rgba(113, 113, 122, 0.14);
+
+  /* Semantic — tip */
+  --vp-c-tip-1: #a78bfa;
+  --vp-c-tip-2: #8b6fde;
+  --vp-c-tip-3: #7c5cbf;
+  --vp-c-tip-soft: rgba(167, 139, 250, 0.14);
+
+  /* Semantic — warning */
+  --vp-c-warning-1: #facc15;
+  --vp-c-warning-2: #eab308;
+  --vp-c-warning-3: #ca8a04;
+  --vp-c-warning-soft: rgba(250, 204, 21, 0.14);
+
+  /* Semantic — danger */
+  --vp-c-danger-1: #f87171;
+  --vp-c-danger-2: #ef4444;
+  --vp-c-danger-3: #dc2626;
+  --vp-c-danger-soft: rgba(248, 113, 113, 0.14);
+
+  /* Semantic — important (green) */
+  --vp-c-important-1: #4ade80;
+  --vp-c-important-2: #22c55e;
+  --vp-c-important-3: #16a34a;
+  --vp-c-important-soft: rgba(74, 222, 128, 0.14);
+
+  /* Code blocks */
+  --vp-code-block-bg: #111113;
+  --vp-code-tab-divider: rgba(255, 255, 255, 0.06);
+  --vp-code-copy-code-border-color: rgba(255, 255, 255, 0.08);
+  --vp-code-copy-code-bg: #18181b;
+  --vp-code-copy-code-hover-border-color: rgba(167, 139, 250, 0.3);
+  --vp-code-copy-code-hover-bg: #222225;
+  --vp-code-copy-code-active-text: #a78bfa;
+
+  /* Sidebar */
+  --vp-sidebar-bg-color: #09090b;
+
+  /* Nav */
+  --vp-nav-bg-color: rgba(9, 9, 11, 0.8);
+
+  /* Home hero */
+  --vp-home-hero-name-color: transparent;
+  --vp-home-hero-name-background: linear-gradient(135deg, #a78bfa 0%, #818cf8 50%, #6366f1 100%);
+  --vp-home-hero-image-background-image: linear-gradient(
+    135deg,
+    rgba(167, 139, 250, 0.2) 0%,
+    rgba(99, 102, 241, 0.2) 100%
+  );
+  --vp-home-hero-image-filter: blur(68px);
+
+  /* Button brand */
+  --vp-button-brand-border: transparent;
+  --vp-button-brand-text: #fff;
+  --vp-button-brand-bg: #a78bfa;
+  --vp-button-brand-hover-border: transparent;
+  --vp-button-brand-hover-text: #fff;
+  --vp-button-brand-hover-bg: #7c5cbf;
+  --vp-button-brand-active-border: transparent;
+  --vp-button-brand-active-text: #fff;
+  --vp-button-brand-active-bg: #6d4fad;
+
+  /* Button alt */
+  --vp-button-alt-border: rgba(255, 255, 255, 0.1);
+  --vp-button-alt-text: #a1a1aa;
+  --vp-button-alt-bg: #18181b;
+  --vp-button-alt-hover-border: rgba(255, 255, 255, 0.15);
+  --vp-button-alt-hover-text: #fafafa;
+  --vp-button-alt-hover-bg: #222225;
+
+  /* Custom block backgrounds */
+  --vp-custom-block-tip-bg: rgba(167, 139, 250, 0.08);
+  --vp-custom-block-tip-border: rgba(167, 139, 250, 0.2);
+  --vp-custom-block-tip-text: #e4e4e7;
+  --vp-custom-block-tip-code-bg: rgba(167, 139, 250, 0.1);
+
+  --vp-custom-block-warning-bg: rgba(250, 204, 21, 0.08);
+  --vp-custom-block-warning-border: rgba(250, 204, 21, 0.2);
+  --vp-custom-block-warning-text: #e4e4e7;
+
+  --vp-custom-block-danger-bg: rgba(248, 113, 113, 0.08);
+  --vp-custom-block-danger-border: rgba(248, 113, 113, 0.2);
+  --vp-custom-block-danger-text: #e4e4e7;
+
+  --vp-custom-block-info-bg: rgba(96, 165, 250, 0.08);
+  --vp-custom-block-info-border: rgba(96, 165, 250, 0.2);
+  --vp-custom-block-info-text: #e4e4e7;
+}
+
+/* ═══════════════════════════════════════════
+   Light Mode Colors (minimal — keep readable)
+   ═══════════════════════════════════════════ */
+
+:root {
+  --vp-c-brand-1: #7c3aed;
+  --vp-c-brand-2: #6d28d9;
+  --vp-c-brand-3: #5b21b6;
+  --vp-c-brand-soft: rgba(124, 58, 237, 0.1);
+
+  --vp-c-tip-1: #7c3aed;
+  --vp-c-tip-2: #6d28d9;
+  --vp-c-tip-3: #5b21b6;
+  --vp-c-tip-soft: rgba(124, 58, 237, 0.1);
+
+  --vp-home-hero-name-color: transparent;
+  --vp-home-hero-name-background: linear-gradient(135deg, #7c3aed 0%, #6366f1 50%, #4f46e5 100%);
+
+  --vp-button-brand-border: transparent;
+  --vp-button-brand-text: #fff;
+  --vp-button-brand-bg: #7c3aed;
+  --vp-button-brand-hover-border: transparent;
+  --vp-button-brand-hover-text: #fff;
+  --vp-button-brand-hover-bg: #6d28d9;
+}
+
+/* ═══════════════════════════════════════════
+   Global refinements
+   ═══════════════════════════════════════════ */
+
+/* Smoother scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Antialiased text */
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Focus ring — accent purple */
+:focus-visible {
+  outline: 2px solid var(--vp-c-brand-1);
+  outline-offset: 2px;
+}
+
+/* ═══════════════════════════════════════════
+   Nav — frosted glass effect
+   ═══════════════════════════════════════════ */
+
+.dark .VPNav {
+  backdrop-filter: blur(16px) saturate(180%);
+}
+
+/* ═══════════════════════════════════════════
+   Home page — hero adjustments
+   ═══════════════════════════════════════════ */
+
+.dark .VPHero .name {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.dark .VPHero .tagline {
+  color: #a1a1aa;
+}
+
+.dark .VPHero .text {
+  color: #e4e4e7;
+}
+
+/* Feature cards — surface-1 with subtle border */
+.dark .VPFeature {
+  background-color: #111113;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  transition: border-color 0.2s ease;
+}
+
+.dark .VPFeature:hover {
+  border-color: rgba(167, 139, 250, 0.2);
+}
+
+.dark .VPFeature .title {
+  color: #fafafa;
+}
+
+.dark .VPFeature .details {
+  color: #a1a1aa;
+}
+
+/* ═══════════════════════════════════════════
+   Content — code blocks, tables
+   ═══════════════════════════════════════════ */
+
+/* Inline code */
+.dark .vp-doc :not(pre) > code {
+  background-color: rgba(167, 139, 250, 0.1);
+  color: #c4b5fd;
+}
+
+/* Code block line highlight */
+.dark .vp-doc div[class*='language-'] .has-highlighted .line.highlighted {
+  background-color: rgba(167, 139, 250, 0.08);
+}
+
+/* Table styling */
+.dark .vp-doc table {
+  border-collapse: collapse;
+}
+
+.dark .vp-doc tr {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.dark .vp-doc tr:nth-child(2n) {
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+.dark .vp-doc th,
+.dark .vp-doc td {
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.dark .vp-doc th {
+  background-color: #111113;
+  color: #fafafa;
+  font-weight: 600;
+}
+
+/* ═══════════════════════════════════════════
+   Sidebar — minimal, clean
+   ═══════════════════════════════════════════ */
+
+.dark .VPSidebar {
+  background-color: #09090b;
+}
+
+.dark .VPSidebarItem .link.active {
+  color: #a78bfa;
+  border-left-color: #a78bfa;
+}
+
+/* ═══════════════════════════════════════════
+   Footer
+   ═══════════════════════════════════════════ */
+
+.dark .VPFooter {
+  background-color: #09090b;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* ═══════════════════════════════════════════
+   Scrollbar (subtle)
+   ═══════════════════════════════════════════ */
+
+.dark ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}

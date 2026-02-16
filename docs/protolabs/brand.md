@@ -4,18 +4,19 @@ This is the living brand bible for protoLabs. All agents, content, and external 
 
 ## Names & Domains
 
-| Name                  | What It Is                            | Usage                                                                                            |
-| --------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| **protoLabs**         | The AI-native development agency      | Always camelCase: "protoLabs" (not "ProtoLabs", "Protolabs", or "Proto Labs")                    |
-| **protoLabs.studio**  | Primary domain                        | Website, social bios, email                                                                      |
-| **protoMaker**        | The AI development studio product     | Kanban board + autonomous agents. The tool that powers the agency.                               |
-| **proto-labs-ai**     | GitHub organization                   | `github.com/proto-labs-ai`                                                                       |
-| **Automaker**         | Internal codename / upstream origin   | Used in code (`@automaker/*` packages, `.automaker/` directory). NOT used in external marketing. |
-| **create-protolab**   | npx CLI tool                          | Scaffolds new projects with protoLabs methodology                                                |
-| **MythXEngine**       | AI-powered TTRPG engine               | Built with protoMaker. Portfolio proof of methodology.                                           |
-| **SVGVal**            | SVG validation toolkit                | Built with protoMaker. Portfolio proof of methodology.                                           |
-| **rabbit-hole**       | AI-powered TTRPG (legacy name)        | Now MythXEngine. Built with protoMaker.                                                          |
-| **Agentic Jumpstart** | Community Discord / educational brand | Community-facing, not the agency brand                                                           |
+| Name                           | What It Is                            | Usage                                                                                                        |
+| ------------------------------ | ------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| **protoLabs**                  | The AI-native development agency      | Always camelCase: "protoLabs" (not "ProtoLabs", "Protolabs", or "Proto Labs")                                |
+| **protoLabs.studio**           | Primary domain                        | Website, social bios, email                                                                                  |
+| **protoMaker**                 | The AI development studio product     | Kanban board + autonomous agents. The tool that powers the agency.                                           |
+| **proto-labs-ai**              | GitHub organization                   | `github.com/proto-labs-ai`                                                                                   |
+| **Automaker**                  | Internal codename / upstream origin   | Used in code (`@automaker/*` packages, `.automaker/` directory). NOT used in external marketing.             |
+| **create-protolab**            | npx CLI tool                          | Scaffolds new projects with protoLabs methodology                                                            |
+| **MythXEngine**                | AI-powered TTRPG engine               | Built with protoMaker. Portfolio proof of methodology.                                                       |
+| **SVGVal**                     | SVG validation toolkit                | Built with protoMaker. Portfolio proof of methodology.                                                       |
+| **rabbit-hole**                | AI-powered TTRPG (legacy name)        | Now MythXEngine. Built with protoMaker.                                                                      |
+| **Agentic Jumpstart**          | Community Discord / educational brand | Community-facing, not the agency brand                                                                       |
+| **intelligent product engine** | Product category / positioning term   | Describes the autonomous system architecture. NOT an acronym — always lowercase, always spelled out in full. |
 
 ### Naming Rules
 
@@ -63,8 +64,8 @@ The team is organized into **Operations** and **Engineering** branches. Orchestr
 | Name             | Role                       | Type     | Notes                                                                    |
 | ---------------- | -------------------------- | -------- | ------------------------------------------------------------------------ |
 | **Josh Mabry**   | Founder / Project Owner    | Human    | Architect. Directs everything.                                           |
-| **Ava Loveland** | Chief of Staff             | AI Agent | Signal triage, antagonistic review, crew loops, ceremonies, Discord.     |
-| **Jon**          | GTM Specialist             | AI Agent | Content strategy, brand positioning, antagonistic review (market value). |
+| **Ava Loveland** | Operations                 | AI Agent | Signal triage, antagonistic review, crew loops, ceremonies, Discord.     |
+| **Jon**          | GTM                        | AI Agent | Content strategy, brand positioning, antagonistic review (market value). |
 | **Cindi**        | Content Writing Specialist | AI Agent | Blog posts, technical docs, SEO, content pipeline.                       |
 | **Abdellah**     | Strategy Partner           | Human    | Personal branding, visual identity. NOT content creation.                |
 
