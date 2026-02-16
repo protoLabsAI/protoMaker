@@ -12,6 +12,10 @@ on:
     # Run weekly on Mondays at 9 AM UTC
     - cron: '0 9 * * 1'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   audit:
     runs-on: self-hosted
@@ -24,6 +28,7 @@ jobs:
         uses: ./.github/actions/setup-project
         with:
           check-lockfile: 'true'
+          skip-native-rebuild: 'true'
 
       - name: Run npm audit
         run: npm audit --audit-level=critical
