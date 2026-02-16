@@ -6,12 +6,12 @@
     <title>protoLabs — AI-Native Development Agency</title>
     <meta
       name="description"
-      content="One architect. Six AI agents. Production software shipped autonomously."
+      content="An autonomous development studio where ideas become shipped software — orchestrated by AI, validated by humans."
     />
     <meta property="og:title" content="protoLabs — AI-Native Development Agency" />
     <meta
       property="og:description"
-      content="One architect. Six AI agents. Production software shipped autonomously."
+      content="An autonomous development studio where ideas become shipped software — orchestrated by AI, validated by humans."
     />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://protolabs.studio" />
@@ -20,7 +20,7 @@
     <meta name="twitter:title" content="protoLabs — AI-Native Development Agency" />
     <meta
       name="twitter:description"
-      content="One architect. Six AI agents. Production software shipped autonomously."
+      content="An autonomous development studio where ideas become shipped software — orchestrated by AI, validated by humans."
     />
     <link
       rel="icon"
@@ -81,14 +81,12 @@
       .input-glow:focus {
         box-shadow: 0 0 0 2px rgba(167, 139, 250, 0.3);
       }
-      /* Focus-visible for keyboard accessibility */
       a:focus-visible,
       button:focus-visible,
       input:focus-visible {
         outline: 2px solid #a78bfa;
         outline-offset: 2px;
       }
-      /* Skip to content */
       .skip-link {
         position: absolute;
         top: -100%;
@@ -106,8 +104,8 @@
       .skip-link:focus {
         top: 0;
       }
-      /* Terminal mockup */
-      .terminal {
+      /* Shared mockup panel styles */
+      .mockup-panel {
         background: #111113;
         border: 1px solid rgba(255, 255, 255, 0.06);
         border-radius: 12px;
@@ -116,7 +114,7 @@
         font-size: 13px;
         line-height: 1.6;
       }
-      .terminal-bar {
+      .mockup-bar {
         display: flex;
         align-items: center;
         gap: 6px;
@@ -124,26 +122,32 @@
         background: rgba(255, 255, 255, 0.03);
         border-bottom: 1px solid rgba(255, 255, 255, 0.06);
       }
-      .terminal-dot {
+      .mockup-dot {
         width: 10px;
         height: 10px;
         border-radius: 50%;
       }
-      .terminal-body {
+      .mockup-body {
         padding: 16px;
         color: #a1a1aa;
       }
-      .terminal-body .prompt {
+      .mockup-body .prompt {
         color: #a78bfa;
       }
-      .terminal-body .cmd {
+      .mockup-body .cmd {
         color: #e4e4e7;
       }
-      .terminal-body .success {
+      .mockup-body .success {
         color: #4ade80;
       }
-      .terminal-body .dim {
+      .mockup-body .warn {
+        color: #facc15;
+      }
+      .mockup-body .dim {
         color: #52525b;
+      }
+      .mockup-body .info {
+        color: #60a5fa;
       }
       @keyframes blink {
         0%,
@@ -162,6 +166,62 @@
         vertical-align: text-bottom;
         animation: blink 1.2s step-end infinite;
       }
+      /* Badge styles */
+      .badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      .badge-purple {
+        background: rgba(167, 139, 250, 0.15);
+        color: #a78bfa;
+      }
+      .badge-green {
+        background: rgba(74, 222, 128, 0.15);
+        color: #4ade80;
+      }
+      .badge-yellow {
+        background: rgba(250, 204, 21, 0.15);
+        color: #facc15;
+      }
+      .badge-blue {
+        background: rgba(96, 165, 250, 0.15);
+        color: #60a5fa;
+      }
+      .badge-red {
+        background: rgba(248, 113, 113, 0.15);
+        color: #f87171;
+      }
+      /* Check icon */
+      .check-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: rgba(74, 222, 128, 0.2);
+        color: #4ade80;
+        font-size: 10px;
+        flex-shrink: 0;
+      }
+      /* Scroll-triggered fade-in */
+      .fade-section {
+        opacity: 0;
+        transform: translateY(24px);
+        transition:
+          opacity 0.7s ease-out,
+          transform 0.7s ease-out;
+      }
+      .fade-section.visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      /* Hero animations (immediate, not scroll-triggered) */
       @keyframes fade-up {
         from {
           opacity: 0;
@@ -191,6 +251,47 @@
         animation-delay: 0.6s;
         opacity: 0;
       }
+      /* Architecture diagram */
+      .arch-box {
+        background: #18181b;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 8px;
+        padding: 10px 16px;
+        font-size: 13px;
+        font-family: 'Geist Mono', monospace;
+        color: #e4e4e7;
+        text-align: center;
+        white-space: nowrap;
+      }
+      .arch-box-accent {
+        border-color: rgba(167, 139, 250, 0.3);
+        background: rgba(167, 139, 250, 0.08);
+      }
+      .arch-arrow {
+        color: #a78bfa;
+        font-size: 18px;
+        line-height: 1;
+      }
+      /* Separator line for mockups */
+      .mockup-sep {
+        border-top: 1px solid rgba(255, 255, 255, 0.04);
+        margin: 8px 0;
+      }
+      /* Score bar */
+      .score-bar {
+        height: 4px;
+        border-radius: 2px;
+        background: #222225;
+      }
+      .score-fill {
+        height: 100%;
+        border-radius: 2px;
+      }
+      /* Dependency line */
+      .dep-line {
+        width: 2px;
+        background: rgba(167, 139, 250, 0.3);
+      }
     </style>
   </head>
   <body class="min-h-screen antialiased">
@@ -204,6 +305,13 @@
           <span>proto<span class="text-accent">Labs</span></span>
         </a>
         <div class="flex items-center gap-6 text-sm text-muted">
+          <a
+            href="https://docs.protolabs.studio"
+            target="_blank"
+            rel="noopener"
+            class="hover:text-white transition-colors"
+            >Docs</a
+          >
           <a
             href="https://x.com/protoLabsAI"
             target="_blank"
@@ -227,33 +335,32 @@
 
     <!-- Hero -->
     <main id="main-content" class="relative">
-      <div class="max-w-5xl mx-auto px-6 pt-28 pb-16 md:pt-52 md:pb-32">
+      <div class="max-w-5xl mx-auto px-6 pt-28 pb-16 md:pt-44 md:pb-24">
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
           <div>
             <h1
-              class="text-3xl sm:text-4xl md:text-6xl font-bold leading-[1.1] tracking-tight animate-fade-up"
+              class="text-3xl sm:text-4xl md:text-5xl font-bold leading-[1.1] tracking-tight animate-fade-up"
             >
               Software doesn't need to be built the way we've been building it.
             </h1>
             <p
               class="mt-6 text-lg md:text-xl text-zinc-400 leading-relaxed max-w-2xl animate-fade-up animate-delay-1"
             >
-              One architect. Six AI agents. Production software shipped autonomously.
+              An autonomous development studio where ideas become shipped software — orchestrated by
+              AI, validated by humans.
             </p>
             <p
               class="mt-4 text-base text-zinc-400 leading-relaxed max-w-2xl animate-fade-up animate-delay-2"
             >
-              We're building
-              <span class="text-zinc-200 font-medium">protoMaker</span> — an AI development studio
-              where you describe features and autonomous agents build, review, and ship them as
-              merged pull requests.
+              <span class="text-zinc-200 font-medium">protoMaker</span> handles planning,
+              implementation, review, and deployment. You architect. The system builds.
             </p>
-            <div class="mt-8 flex items-center gap-3 animate-fade-up animate-delay-3">
+            <div class="mt-8 flex flex-wrap items-center gap-3 animate-fade-up animate-delay-3">
               <a
-                href="#notify"
+                href="#how-it-works"
                 class="inline-flex items-center gap-2 px-5 py-2.5 bg-accent hover:bg-accent-dim text-white text-sm font-medium rounded-lg transition-colors"
               >
-                Get notified when we launch
+                See how it works
                 <svg
                   class="w-4 h-4"
                   fill="none"
@@ -265,7 +372,29 @@
                     stroke-linecap="round"
                     stroke-linejoin="round"
                     stroke-width="2"
-                    d="M17 8l4 4m0 0l-4 4m4-4H3"
+                    d="M19 14l-7 7m0 0l-7-7m7 7V3"
+                  />
+                </svg>
+              </a>
+              <a
+                href="https://docs.protolabs.studio"
+                target="_blank"
+                rel="noopener"
+                class="inline-flex items-center gap-2 px-5 py-2.5 border border-white/10 hover:border-white/20 text-zinc-300 hover:text-white text-sm font-medium rounded-lg transition-colors"
+              >
+                Read the docs
+                <svg
+                  class="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
                   />
                 </svg>
               </a>
@@ -274,17 +403,17 @@
 
           <!-- Terminal mockup -->
           <div
-            class="terminal glow animate-fade-up animate-delay-4"
+            class="mockup-panel glow animate-fade-up animate-delay-4"
             role="img"
             aria-label="Terminal showing protoMaker creating a feature and an AI agent shipping it as a merged pull request"
           >
-            <div class="terminal-bar">
-              <div class="terminal-dot" style="background: #ff5f57"></div>
-              <div class="terminal-dot" style="background: #febc2e"></div>
-              <div class="terminal-dot" style="background: #28c840"></div>
+            <div class="mockup-bar">
+              <div class="mockup-dot" style="background: #ff5f57"></div>
+              <div class="mockup-dot" style="background: #febc2e"></div>
+              <div class="mockup-dot" style="background: #28c840"></div>
               <span class="ml-2 text-xs text-zinc-600 font-mono">protoMaker</span>
             </div>
-            <div class="terminal-body">
+            <div class="mockup-body">
               <div>
                 <span class="prompt">$</span>
                 <span class="cmd"> proto create "Add user auth"</span>
@@ -300,11 +429,11 @@
               <div class="mt-1">
                 <span class="success">AUTH-001</span>
                 <span class="dim"> in_progress </span>
-                <span style="color: #facc15">12 files changed</span>
+                <span class="warn">12 files changed</span>
               </div>
               <div class="dim">Agent: writing tests... (turn 8/25)</div>
               <div class="mt-2">
-                <span class="success">PR #447 merged</span>
+                <span class="success">PR #651 merged</span>
                 <span class="dim"> &mdash; 4m 22s &mdash; $0.38</span>
               </div>
               <div class="mt-2">
@@ -322,11 +451,11 @@
           class="max-w-5xl mx-auto px-6 py-10 grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8 text-center"
         >
           <div>
-            <div class="text-3xl md:text-4xl font-bold font-mono text-white">2,473</div>
+            <div class="text-3xl md:text-4xl font-bold font-mono text-white">2,500+</div>
             <div class="mt-1 text-sm text-zinc-500">commits shipped</div>
           </div>
           <div>
-            <div class="text-3xl md:text-4xl font-bold font-mono text-white">445</div>
+            <div class="text-3xl md:text-4xl font-bold font-mono text-white">650+</div>
             <div class="mt-1 text-sm text-zinc-500">PRs merged</div>
           </div>
           <div>
@@ -336,28 +465,667 @@
         </div>
       </div>
 
-      <!-- Teaser -->
-      <div class="max-w-5xl mx-auto px-6 py-24 md:py-32">
-        <div class="max-w-2xl mx-auto text-center">
-          <p class="text-zinc-400 text-sm font-mono uppercase tracking-widest">Coming Soon</p>
+      <!-- How It Works -->
+      <div id="how-it-works" class="max-w-5xl mx-auto px-6 pt-24 pb-8 md:pt-32 md:pb-12">
+        <div class="max-w-2xl mx-auto text-center fade-section">
+          <p class="text-accent text-sm font-mono uppercase tracking-widest">How It Works</p>
           <h2 class="mt-4 text-2xl md:text-3xl font-semibold text-white">
-            The source goes public.
+            From idea to merged PR — every step orchestrated, every decision challenged.
           </h2>
-          <p class="mt-4 text-zinc-400 leading-relaxed">
-            protoMaker. The methodology. The agent team. The full stack — source-available. Sign up
-            below to get early access and launch-day updates.
-          </p>
         </div>
       </div>
 
+      <!-- Flow Section A: Describe — Signal Intake (mockup left, text right) -->
+      <section class="max-w-5xl mx-auto px-6 py-12 md:py-20">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center fade-section">
+          <!-- Mockup -->
+          <div
+            class="mockup-panel glow"
+            role="img"
+            aria-label="Chat interface showing an idea being submitted with classification badges"
+          >
+            <div class="mockup-bar">
+              <div class="mockup-dot" style="background: #ff5f57"></div>
+              <div class="mockup-dot" style="background: #febc2e"></div>
+              <div class="mockup-dot" style="background: #28c840"></div>
+              <span class="ml-2 text-xs text-zinc-600 font-mono">signal-intake</span>
+            </div>
+            <div class="mockup-body space-y-3">
+              <div class="flex items-start gap-3">
+                <div
+                  class="w-7 h-7 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5"
+                >
+                  J
+                </div>
+                <div>
+                  <div class="text-xs text-zinc-500">josh via Discord</div>
+                  <div class="cmd text-sm mt-0.5">
+                    We need API rate limiting — 100 req/min per key, with Redis backing
+                  </div>
+                </div>
+              </div>
+              <div class="mockup-sep"></div>
+              <div class="flex items-center gap-2 text-xs">
+                <span class="dim">classified as</span>
+                <span class="badge badge-purple">feature</span>
+                <span class="dim">routed to</span>
+                <span class="text-zinc-300">operations pipeline</span>
+              </div>
+              <div class="mockup-sep"></div>
+              <div class="flex items-start gap-3">
+                <div
+                  class="w-7 h-7 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5"
+                >
+                  A
+                </div>
+                <div>
+                  <div class="text-xs text-zinc-500">ava (chief of staff)</div>
+                  <div class="text-sm mt-0.5">
+                    <span class="success">Signal received.</span>
+                    <span class="dim">
+                      Queued for antagonistic review. Estimated complexity:
+                      <span class="warn">medium</span></span
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Text -->
+          <div>
+            <p class="text-accent text-sm font-mono uppercase tracking-widest">01 / Describe</p>
+            <h3 class="mt-3 text-xl md:text-2xl font-semibold text-white">Signal Intake</h3>
+            <p class="mt-4 text-zinc-400 leading-relaxed">
+              Ideas enter from anywhere — a Discord message, a Linear issue, a conversation. The
+              system classifies the signal and routes it to the right pipeline. No context is lost,
+              no idea falls through the cracks.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Flow Section B: Challenge — Antagonistic Review (text left, mockup right) -->
+      <section class="max-w-5xl mx-auto px-6 py-12 md:py-20">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center fade-section">
+          <!-- Text -->
+          <div class="order-2 lg:order-1">
+            <p class="text-accent text-sm font-mono uppercase tracking-widest">02 / Challenge</p>
+            <h3 class="mt-3 text-xl md:text-2xl font-semibold text-white">Antagonistic Review</h3>
+            <p class="mt-4 text-zinc-400 leading-relaxed">
+              Every idea faces cross-functional scrutiny before a single line of code is written.
+              Operations validates feasibility. GTM validates market value. Bad ideas die cheap.
+            </p>
+          </div>
+          <!-- Mockup -->
+          <div
+            class="mockup-panel glow order-1 lg:order-2"
+            role="img"
+            aria-label="Review panel showing two reviewers scoring a feature proposal"
+          >
+            <div class="mockup-bar">
+              <div class="mockup-dot" style="background: #ff5f57"></div>
+              <div class="mockup-dot" style="background: #febc2e"></div>
+              <div class="mockup-dot" style="background: #28c840"></div>
+              <span class="ml-2 text-xs text-zinc-600 font-mono">antagonistic-review</span>
+            </div>
+            <div class="mockup-body space-y-3">
+              <div class="text-xs text-zinc-500 mb-2">
+                Feature: <span class="cmd">API Rate Limiting</span>
+              </div>
+              <!-- Reviewer 1 -->
+              <div
+                class="border border-white/5 rounded-lg p-3 space-y-2"
+                style="background: rgba(255, 255, 255, 0.02)"
+              >
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <div
+                      class="w-5 h-5 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-[10px] font-bold"
+                    >
+                      A
+                    </div>
+                    <span class="text-xs text-zinc-300">Ava</span>
+                    <span class="badge badge-purple" style="font-size: 9px">Operations</span>
+                  </div>
+                  <span class="badge badge-green">Approve</span>
+                </div>
+                <div class="grid grid-cols-3 gap-2 text-[10px]">
+                  <div>
+                    <div class="text-zinc-500 mb-1">Feasibility</div>
+                    <div class="score-bar">
+                      <div class="score-fill bg-green-500" style="width: 90%"></div>
+                    </div>
+                  </div>
+                  <div>
+                    <div class="text-zinc-500 mb-1">Risk</div>
+                    <div class="score-bar">
+                      <div class="score-fill bg-yellow-500" style="width: 35%"></div>
+                    </div>
+                  </div>
+                  <div>
+                    <div class="text-zinc-500 mb-1">Priority</div>
+                    <div class="score-bar">
+                      <div class="score-fill bg-purple-500" style="width: 80%"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- Reviewer 2 -->
+              <div
+                class="border border-white/5 rounded-lg p-3 space-y-2"
+                style="background: rgba(255, 255, 255, 0.02)"
+              >
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <div
+                      class="w-5 h-5 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-[10px] font-bold"
+                    >
+                      J
+                    </div>
+                    <span class="text-xs text-zinc-300">Jon</span>
+                    <span class="badge badge-blue" style="font-size: 9px">GTM</span>
+                  </div>
+                  <span class="badge badge-green">Approve</span>
+                </div>
+                <div class="grid grid-cols-3 gap-2 text-[10px]">
+                  <div>
+                    <div class="text-zinc-500 mb-1">Market Value</div>
+                    <div class="score-bar">
+                      <div class="score-fill bg-blue-500" style="width: 75%"></div>
+                    </div>
+                  </div>
+                  <div>
+                    <div class="text-zinc-500 mb-1">Differentiation</div>
+                    <div class="score-bar">
+                      <div class="score-fill bg-blue-500" style="width: 60%"></div>
+                    </div>
+                  </div>
+                  <div>
+                    <div class="text-zinc-500 mb-1">Timing</div>
+                    <div class="score-bar">
+                      <div class="score-fill bg-green-500" style="width: 85%"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="mockup-sep"></div>
+              <div class="flex items-center justify-between text-xs">
+                <span class="dim">Verdict</span>
+                <span class="success font-medium">Approved — proceed to planning</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Flow Section C: Plan — Decomposition (mockup left, text right) -->
+      <section class="max-w-5xl mx-auto px-6 py-12 md:py-20">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center fade-section">
+          <!-- Mockup -->
+          <div
+            class="mockup-panel glow"
+            role="img"
+            aria-label="Task breakdown showing a milestone with phases and dependencies"
+          >
+            <div class="mockup-bar">
+              <div class="mockup-dot" style="background: #ff5f57"></div>
+              <div class="mockup-dot" style="background: #febc2e"></div>
+              <div class="mockup-dot" style="background: #28c840"></div>
+              <span class="ml-2 text-xs text-zinc-600 font-mono">project-planner</span>
+            </div>
+            <div class="mockup-body space-y-2">
+              <div class="text-xs text-zinc-500 mb-3">
+                Project: <span class="cmd">API Rate Limiting</span>
+              </div>
+              <!-- Milestone -->
+              <div class="flex items-center gap-2 mb-2">
+                <span class="text-accent text-xs">M1</span>
+                <span class="text-sm text-zinc-200 font-medium">Foundation</span>
+                <span class="badge badge-yellow" style="font-size: 9px">3 phases</span>
+              </div>
+              <!-- Phase 1 -->
+              <div class="ml-4 flex items-start gap-2">
+                <div class="flex flex-col items-center">
+                  <div class="check-icon">&#10003;</div>
+                  <div class="dep-line h-6 mt-1"></div>
+                </div>
+                <div class="pb-2">
+                  <div class="text-xs text-zinc-300">P1: Add rate limit types</div>
+                  <div class="text-[10px] text-zinc-600">
+                    complexity: <span class="text-zinc-500">small</span> &middot; 2 files
+                  </div>
+                </div>
+              </div>
+              <!-- Phase 2 -->
+              <div class="ml-4 flex items-start gap-2">
+                <div class="flex flex-col items-center">
+                  <div
+                    class="check-icon"
+                    style="background: rgba(250, 204, 21, 0.2); color: #facc15"
+                  >
+                    &#9679;
+                  </div>
+                  <div class="dep-line h-6 mt-1"></div>
+                </div>
+                <div class="pb-2">
+                  <div class="text-xs text-zinc-300">P2: Redis middleware</div>
+                  <div class="text-[10px] text-zinc-600">
+                    complexity: <span class="text-zinc-500">medium</span> &middot; 4 files &middot;
+                    <span class="text-accent">depends on P1</span>
+                  </div>
+                </div>
+              </div>
+              <!-- Phase 3 -->
+              <div class="ml-4 flex items-start gap-2">
+                <div class="flex flex-col items-center">
+                  <div
+                    class="w-4 h-4 rounded-full border border-zinc-700 flex items-center justify-center"
+                  ></div>
+                </div>
+                <div>
+                  <div class="text-xs text-zinc-300">P3: Route integration + tests</div>
+                  <div class="text-[10px] text-zinc-600">
+                    complexity: <span class="text-zinc-500">medium</span> &middot; 6 files &middot;
+                    <span class="text-accent">depends on P2</span>
+                  </div>
+                </div>
+              </div>
+              <div class="mockup-sep mt-3"></div>
+              <div class="flex items-center justify-between text-[11px]">
+                <span class="dim">Estimated total</span>
+                <span class="text-zinc-400">3 features &middot; ~$24 &middot; sonnet tier</span>
+              </div>
+            </div>
+          </div>
+          <!-- Text -->
+          <div>
+            <p class="text-accent text-sm font-mono uppercase tracking-widest">03 / Plan</p>
+            <h3 class="mt-3 text-xl md:text-2xl font-semibold text-white">Decomposition</h3>
+            <p class="mt-4 text-zinc-400 leading-relaxed">
+              Approved projects decompose into milestones, phases, and features — each with
+              acceptance criteria, complexity estimates, and dependency graphs. The system knows
+              what to build and in what order.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Flow Section D: Build — Autonomous Execution (text left, mockup right) -->
+      <section class="max-w-5xl mx-auto px-6 py-12 md:py-20">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center fade-section">
+          <!-- Text -->
+          <div class="order-2 lg:order-1">
+            <p class="text-accent text-sm font-mono uppercase tracking-widest">04 / Build</p>
+            <h3 class="mt-3 text-xl md:text-2xl font-semibold text-white">Autonomous Execution</h3>
+            <p class="mt-4 text-zinc-400 leading-relaxed">
+              AI agents implement features in isolated git worktrees. Auto-mode orchestrates
+              concurrency, respects dependencies, and escalates model complexity when needed. Each
+              agent works in its own branch — the main codebase stays clean.
+            </p>
+          </div>
+          <!-- Mockup -->
+          <div
+            class="mockup-panel glow order-1 lg:order-2"
+            role="img"
+            aria-label="Terminal showing an agent building a feature with file changes and progress"
+          >
+            <div class="mockup-bar">
+              <div class="mockup-dot" style="background: #ff5f57"></div>
+              <div class="mockup-dot" style="background: #febc2e"></div>
+              <div class="mockup-dot" style="background: #28c840"></div>
+              <span class="ml-2 text-xs text-zinc-600 font-mono">auto-mode</span>
+            </div>
+            <div class="mockup-body space-y-1">
+              <div class="text-xs text-zinc-500 mb-2">
+                <span class="success">&#9679;</span> auto-mode active &middot;
+                <span class="text-zinc-400">2 agents running</span>
+              </div>
+              <div class="mockup-sep"></div>
+              <div class="mt-2">
+                <span class="info text-xs">RATE-002</span>
+                <span class="dim text-xs"> Redis middleware</span>
+              </div>
+              <div class="text-xs dim">
+                agent: sonnet &middot; worktree: .worktrees/feature/redis-rate-limit
+              </div>
+              <div class="text-xs dim mt-1">turn 14/25</div>
+              <div class="mt-2 space-y-0.5 text-xs">
+                <div>
+                  <span class="success">+</span>
+                  <span class="dim"> src/middleware/rate-limiter.ts</span>
+                </div>
+                <div>
+                  <span class="success">+</span>
+                  <span class="dim"> src/lib/redis-client.ts</span>
+                </div>
+                <div>
+                  <span class="warn">~</span>
+                  <span class="dim"> src/routes/api.ts</span>
+                </div>
+                <div>
+                  <span class="success">+</span>
+                  <span class="dim"> tests/rate-limiter.test.ts</span>
+                </div>
+              </div>
+              <div class="mockup-sep mt-2"></div>
+              <div class="mt-2">
+                <span class="info text-xs">RATE-001</span>
+                <span class="dim text-xs"> Add rate limit types</span>
+                <span class="badge badge-green ml-1" style="font-size: 9px">Done</span>
+              </div>
+              <div class="text-[11px] dim">PR #652 merged &middot; 2m 18s &middot; $0.12</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Flow Section E: Ship — Quality Pipeline (mockup left, text right) -->
+      <section class="max-w-5xl mx-auto px-6 py-12 md:py-20">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center fade-section">
+          <!-- Mockup -->
+          <div
+            class="mockup-panel glow"
+            role="img"
+            aria-label="Pull request status panel showing CI checks passing and auto-merge enabled"
+          >
+            <div class="mockup-bar">
+              <div class="mockup-dot" style="background: #ff5f57"></div>
+              <div class="mockup-dot" style="background: #febc2e"></div>
+              <div class="mockup-dot" style="background: #28c840"></div>
+              <span class="ml-2 text-xs text-zinc-600 font-mono">pr-pipeline</span>
+            </div>
+            <div class="mockup-body space-y-2">
+              <div class="flex items-center justify-between mb-2">
+                <div>
+                  <span class="text-sm text-zinc-200">PR #653</span>
+                  <span class="dim text-xs ml-2">feat: add Redis rate limiting middleware</span>
+                </div>
+                <span class="badge badge-green">Auto-merge</span>
+              </div>
+              <div class="mockup-sep"></div>
+              <div class="space-y-2 mt-2">
+                <div class="flex items-center gap-2 text-xs">
+                  <span class="check-icon">&#10003;</span>
+                  <span class="text-zinc-300">build</span>
+                  <span class="dim ml-auto">passed (42s)</span>
+                </div>
+                <div class="flex items-center gap-2 text-xs">
+                  <span class="check-icon">&#10003;</span>
+                  <span class="text-zinc-300">test</span>
+                  <span class="dim ml-auto">passed (1m 08s)</span>
+                </div>
+                <div class="flex items-center gap-2 text-xs">
+                  <span class="check-icon">&#10003;</span>
+                  <span class="text-zinc-300">format</span>
+                  <span class="dim ml-auto">passed (12s)</span>
+                </div>
+                <div class="flex items-center gap-2 text-xs">
+                  <span class="check-icon">&#10003;</span>
+                  <span class="text-zinc-300">audit</span>
+                  <span class="dim ml-auto">passed (8s)</span>
+                </div>
+                <div class="flex items-center gap-2 text-xs">
+                  <span class="check-icon">&#10003;</span>
+                  <span class="text-zinc-300">CodeRabbit</span>
+                  <span class="dim ml-auto">approved</span>
+                </div>
+              </div>
+              <div class="mockup-sep"></div>
+              <div class="flex items-center justify-between text-xs mt-1">
+                <span class="dim">All checks passed</span>
+                <span class="success">Merging automatically...</span>
+              </div>
+            </div>
+          </div>
+          <!-- Text -->
+          <div>
+            <p class="text-accent text-sm font-mono uppercase tracking-widest">05 / Ship</p>
+            <h3 class="mt-3 text-xl md:text-2xl font-semibold text-white">Quality Pipeline</h3>
+            <p class="mt-4 text-zinc-400 leading-relaxed">
+              Four layers of quality guardrails: TypeScript strict mode, automated formatting, CI
+              test suites, and AI code review. PRs auto-merge when all checks pass. No human
+              bottleneck in the merge path.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Flow Section F: Learn — Reflection Loop (text left, mockup right) -->
+      <section class="max-w-5xl mx-auto px-6 py-12 md:py-20">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center fade-section">
+          <!-- Text -->
+          <div class="order-2 lg:order-1">
+            <p class="text-accent text-sm font-mono uppercase tracking-widest">06 / Learn</p>
+            <h3 class="mt-3 text-xl md:text-2xl font-semibold text-white">Reflection Loop</h3>
+            <p class="mt-4 text-zinc-400 leading-relaxed">
+              Every completed project triggers retrospectives, metrics analysis, and improvement
+              tickets. The system upgrades itself through the same pipeline it uses for your work.
+              Lessons compound. Costs drop. Quality rises.
+            </p>
+          </div>
+          <!-- Mockup -->
+          <div
+            class="mockup-panel glow order-1 lg:order-2"
+            role="img"
+            aria-label="Metrics dashboard showing cycle time, cost per feature, and success rate"
+          >
+            <div class="mockup-bar">
+              <div class="mockup-dot" style="background: #ff5f57"></div>
+              <div class="mockup-dot" style="background: #febc2e"></div>
+              <div class="mockup-dot" style="background: #28c840"></div>
+              <span class="ml-2 text-xs text-zinc-600 font-mono">reflection</span>
+            </div>
+            <div class="mockup-body space-y-3">
+              <div class="text-xs text-zinc-500 mb-2">
+                Project retrospective: <span class="cmd">API Rate Limiting</span>
+              </div>
+              <!-- Metrics grid -->
+              <div class="grid grid-cols-2 gap-3">
+                <div
+                  class="border border-white/5 rounded-lg p-3"
+                  style="background: rgba(255, 255, 255, 0.02)"
+                >
+                  <div class="text-[10px] text-zinc-500 uppercase tracking-wider">Cycle Time</div>
+                  <div class="text-lg text-zinc-200 font-mono mt-1">18m</div>
+                  <div class="text-[10px] text-green-500 mt-0.5">-23% vs avg</div>
+                </div>
+                <div
+                  class="border border-white/5 rounded-lg p-3"
+                  style="background: rgba(255, 255, 255, 0.02)"
+                >
+                  <div class="text-[10px] text-zinc-500 uppercase tracking-wider">Total Cost</div>
+                  <div class="text-lg text-zinc-200 font-mono mt-1">$6.42</div>
+                  <div class="text-[10px] text-green-500 mt-0.5">3 features</div>
+                </div>
+                <div
+                  class="border border-white/5 rounded-lg p-3"
+                  style="background: rgba(255, 255, 255, 0.02)"
+                >
+                  <div class="text-[10px] text-zinc-500 uppercase tracking-wider">Success Rate</div>
+                  <div class="text-lg text-zinc-200 font-mono mt-1">100%</div>
+                  <div class="text-[10px] text-zinc-500 mt-0.5">0 retries needed</div>
+                </div>
+                <div
+                  class="border border-white/5 rounded-lg p-3"
+                  style="background: rgba(255, 255, 255, 0.02)"
+                >
+                  <div class="text-[10px] text-zinc-500 uppercase tracking-wider">Self-Improve</div>
+                  <div class="text-lg text-zinc-200 font-mono mt-1">2</div>
+                  <div class="text-[10px] text-accent mt-0.5">improvement tickets filed</div>
+                </div>
+              </div>
+              <div class="mockup-sep"></div>
+              <div class="text-[11px] dim">
+                <span class="text-accent">&#9670;</span> Lessons written to agent memory &middot;
+                patterns indexed for reuse
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Architecture Diagram -->
+      <section class="max-w-5xl mx-auto px-6 py-16 md:py-24">
+        <div class="text-center mb-12 fade-section">
+          <p class="text-accent text-sm font-mono uppercase tracking-widest">Architecture</p>
+          <h2 class="mt-4 text-2xl md:text-3xl font-semibold text-white">The Full Pipeline</h2>
+        </div>
+        <div class="fade-section">
+          <!-- Desktop diagram (horizontal flow) -->
+          <div
+            class="hidden lg:block mockup-panel glow p-8"
+            role="img"
+            aria-label="Architecture diagram showing the full pipeline from signal intake through reflection"
+          >
+            <!-- Row 1: Main flow -->
+            <div class="flex items-center justify-center gap-3 flex-wrap">
+              <div class="arch-box">Signal</div>
+              <div class="arch-arrow">&rarr;</div>
+              <div class="arch-box arch-box-accent">Ava (Triage)</div>
+              <div class="arch-arrow">&rarr;</div>
+              <div class="arch-box">Review</div>
+              <div class="arch-arrow">&rarr;</div>
+              <div class="arch-box arch-box-accent">Approval</div>
+              <div class="arch-arrow">&rarr;</div>
+              <div class="arch-box">Lead Engineer</div>
+              <div class="arch-arrow">&rarr;</div>
+              <div class="arch-box arch-box-accent">Auto-mode</div>
+            </div>
+            <!-- Arrow down -->
+            <div class="flex justify-center my-4">
+              <div class="arch-arrow text-2xl">&darr;</div>
+            </div>
+            <!-- Row 2: Agent zones & merge -->
+            <div class="flex items-center justify-center gap-3 flex-wrap">
+              <div class="arch-box" style="border-color: rgba(74, 222, 128, 0.2)">
+                Agent Zones (worktrees)
+              </div>
+              <div class="arch-arrow">&rarr;</div>
+              <div class="arch-box">PR Pipeline</div>
+              <div class="arch-arrow">&rarr;</div>
+              <div
+                class="arch-box"
+                style="border-color: rgba(74, 222, 128, 0.3); background: rgba(74, 222, 128, 0.05)"
+              >
+                Merge
+              </div>
+              <div class="arch-arrow">&rarr;</div>
+              <div class="arch-box arch-box-accent">Reflection</div>
+              <div class="arch-arrow" style="color: #52525b">&circlearrowleft;</div>
+            </div>
+            <!-- Divisions label -->
+            <div
+              class="mt-8 pt-6 border-t border-white/5 grid grid-cols-2 gap-8 text-center text-sm"
+            >
+              <div>
+                <span class="text-accent font-medium">Operations</span>
+                <span class="text-zinc-500 ml-2"
+                  >Quality gates &middot; learning &middot; triage</span
+                >
+              </div>
+              <div>
+                <span class="text-accent font-medium">Engineering</span>
+                <span class="text-zinc-500 ml-2">Execution &middot; delivery &middot; tooling</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Mobile diagram (vertical flow) -->
+          <div
+            class="lg:hidden mockup-panel glow p-6"
+            role="img"
+            aria-label="Architecture diagram showing the full pipeline from signal intake through reflection"
+          >
+            <div class="flex flex-col items-center gap-2">
+              <div class="arch-box w-full">Signal Intake</div>
+              <div class="arch-arrow">&darr;</div>
+              <div class="arch-box arch-box-accent w-full">Ava (Triage)</div>
+              <div class="arch-arrow">&darr;</div>
+              <div class="arch-box w-full">Antagonistic Review</div>
+              <div class="arch-arrow">&darr;</div>
+              <div class="arch-box arch-box-accent w-full">Approval Gate</div>
+              <div class="arch-arrow">&darr;</div>
+              <div class="arch-box w-full">Lead Engineer</div>
+              <div class="arch-arrow">&darr;</div>
+              <div class="arch-box arch-box-accent w-full">Auto-mode</div>
+              <div class="arch-arrow">&darr;</div>
+              <div class="arch-box w-full" style="border-color: rgba(74, 222, 128, 0.2)">
+                Agent Zones
+              </div>
+              <div class="arch-arrow">&darr;</div>
+              <div class="arch-box w-full">PR Pipeline</div>
+              <div class="arch-arrow">&darr;</div>
+              <div
+                class="arch-box w-full"
+                style="border-color: rgba(74, 222, 128, 0.3); background: rgba(74, 222, 128, 0.05)"
+              >
+                Merge
+              </div>
+              <div class="arch-arrow">&darr;</div>
+              <div class="arch-box arch-box-accent w-full">Reflection Loop</div>
+            </div>
+            <div class="mt-6 pt-4 border-t border-white/5 text-center text-sm">
+              <p>
+                <span class="text-accent font-medium">Operations</span>
+                <span class="text-zinc-500"> &middot; Quality gates &middot; learning</span>
+              </p>
+              <p class="mt-1">
+                <span class="text-accent font-medium">Engineering</span>
+                <span class="text-zinc-500"> &middot; Execution &middot; delivery</span>
+              </p>
+            </div>
+          </div>
+        </div>
+        <p class="mt-8 text-center text-zinc-400 text-sm max-w-xl mx-auto fade-section">
+          Two divisions. Operations handles quality gates and learning. Engineering handles
+          execution and delivery. The pipeline connects them.
+        </p>
+      </section>
+
+      <!-- Docs CTA -->
+      <section class="border-t border-white/5 bg-surface-1/30">
+        <div class="max-w-5xl mx-auto px-6 py-16 md:py-24 text-center fade-section">
+          <p class="text-accent text-sm font-mono uppercase tracking-widest">Documentation</p>
+          <h2 class="mt-4 text-2xl md:text-3xl font-semibold text-white">
+            Explore the full documentation
+          </h2>
+          <p class="mt-4 text-zinc-400 text-sm leading-relaxed max-w-lg mx-auto">
+            Architecture deep dives, setup guides, agent system reference, and the complete
+            methodology.
+          </p>
+          <a
+            href="https://docs.protolabs.studio"
+            target="_blank"
+            rel="noopener"
+            class="inline-flex items-center gap-2 mt-8 px-6 py-3 bg-accent hover:bg-accent-dim text-white text-sm font-medium rounded-lg transition-colors"
+          >
+            Read the docs
+            <svg
+              class="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+              />
+            </svg>
+          </a>
+        </div>
+      </section>
+
       <!-- Newsletter CTA -->
-      <div id="notify" class="border-t border-white/5 bg-surface-1/30">
+      <div id="notify" class="border-t border-white/5">
         <div class="max-w-5xl mx-auto px-6 py-20 md:py-28">
-          <div class="max-w-lg mx-auto text-center">
+          <div class="max-w-lg mx-auto text-center fade-section">
             <h2 class="text-2xl md:text-3xl font-semibold text-white">Get launch-day access</h2>
             <p class="mt-3 text-zinc-400 text-sm leading-relaxed">
-              Join the list. We'll email you when the repo, docs, and site go live. No spam.
-              Unsubscribe anytime.
+              protoMaker is going source-available. Get launch-day access to the repo, docs, and
+              methodology. No spam. Unsubscribe anytime.
             </p>
 
             <form
@@ -409,6 +1177,13 @@
         </div>
         <div class="flex items-center gap-5 text-sm text-zinc-500">
           <a
+            href="https://docs.protolabs.studio"
+            target="_blank"
+            rel="noopener"
+            class="hover:text-zinc-300 transition-colors"
+            >Docs</a
+          >
+          <a
             href="https://x.com/protoLabsAI"
             target="_blank"
             rel="noopener"
@@ -432,5 +1207,32 @@
         </div>
       </div>
     </footer>
+
+    <!-- Scroll-triggered animations -->
+    <script>
+      document.addEventListener('DOMContentLoaded', function () {
+        var sections = document.querySelectorAll('.fade-section');
+        if (!('IntersectionObserver' in window)) {
+          sections.forEach(function (s) {
+            s.classList.add('visible');
+          });
+          return;
+        }
+        var observer = new IntersectionObserver(
+          function (entries) {
+            entries.forEach(function (entry) {
+              if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+                observer.unobserve(entry.target);
+              }
+            });
+          },
+          { threshold: 0.15, rootMargin: '0px 0px -40px 0px' }
+        );
+        sections.forEach(function (s) {
+          observer.observe(s);
+        });
+      });
+    </script>
   </body>
 </html>
