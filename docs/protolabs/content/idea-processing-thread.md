@@ -36,10 +36,11 @@ The protoLabs way: All of that happens automatically. In parallel. With cross-fu
 I drop an idea in Discord: "We should add export-to-PDF for project plans."
 
 Ava (Chief of Staff) immediately classifies it:
+
 - Signal type: feature idea
 - Urgency: standard
 - Complexity: medium
-→ Routes to PRD pipeline
+  → Routes to PRD pipeline
 
 ---
 
@@ -48,6 +49,7 @@ Ava (Chief of Staff) immediately classifies it:
 **STEP 2: PRD Creation (5-15s)**
 
 The system generates a SPARC PRD:
+
 - **S**ituation: Current state
 - **P**roblem: What's broken/missing
 - **A**pproach: Proposed solution
@@ -100,6 +102,7 @@ For standard work, I review in Linear and approve or request changes.
 **STEP 5: Deep Research (45-60s)**
 
 Once approved, ProjM (Project Manager agent) does deep research:
+
 - Scans the codebase for relevant patterns
 - Identifies files to modify
 - Designs milestones and phases
@@ -111,6 +114,7 @@ Once approved, ProjM (Project Manager agent) does deep research:
 **9/12**
 
 ProjM outputs:
+
 - Ordered milestones
 - Dependency-aware phases
 - Acceptance criteria for each

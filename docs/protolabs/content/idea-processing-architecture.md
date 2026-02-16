@@ -152,6 +152,7 @@ The system generates a SPARC PRD document:
 This is the magic. Two agents review the PRD from **opposing perspectives**:
 
 **Ava's Review (Operations):**
+
 - Is this technically feasible?
 - Do we have agent capacity?
 - What's the risk?
@@ -159,6 +160,7 @@ This is the magic. Two agents review the PRD from **opposing perspectives**:
 - Estimated cost and duration?
 
 **Jon's Review (Market):**
+
 - Does this create customer value?
 - Can we position this?
 - Does it strengthen our market fit?
@@ -173,21 +175,25 @@ They **challenge each other's conclusions**. Ava might flag a technical risk Jon
 # Consolidated PRD
 
 ## Original Proposal
+
 [SPARC PRD]
 
 ## Ava's Assessment
+
 - Feasibility: High
 - Risk: Medium (requires UI redesign)
 - Capacity: 2 agents, 4-6 hours
 - Recommendation: Approve with phased rollout
 
 ## Jon's Assessment
+
 - Market value: High (users explicitly requested)
 - Positioning: Strengthens "complete workflow" narrative
 - Content opportunity: Strong (case study potential)
 - Recommendation: Approve, prioritize for launch
 
 ## Consolidated Decision
+
 APPROVED — Phase 1: Backend only. Phase 2: UI polish post-launch.
 ```
 
@@ -208,11 +214,13 @@ APPROVED — Phase 1: Backend only. Phase 2: UI polish post-launch.
 The PRD lands in Linear as a document. Two paths:
 
 **Path A: Standard Review**
+
 - Josh reads the PRD in Linear
 - Can comment, request changes, approve, or reject
 - Changes loop back to Ava/Jon for revision
 
 **Path B: preApproved (Trust Boundary)**
+
 - Small scope (complexity ≤ small) + category = ops improvement
 - Auto-proceeds without human review
 - Still posted to Linear for visibility
@@ -318,14 +326,14 @@ Each phase becomes a **feature** on the protoMaker Kanban board:
 
 ## The Full Flow: 60 Seconds
 
-| Phase | Time | Actor | Input | Output |
-|-------|------|-------|-------|--------|
-| 1. Signal Intake | 0-5s | Ava | Discord message | Classified signal |
-| 2. PRD Creation | 5-15s | Automated | Classified signal | SPARC PRD |
-| 3. Antagonistic Review | 15-40s | Ava + Jon | SPARC PRD | Consolidated PRD |
-| 4. Approval Gate | 40-45s | Josh / Auto | Consolidated PRD | Approved PRD |
-| 5. Deep Research | 45-60s | ProjM | Approved PRD | Linear project + phases |
-| 6. Board Creation | 60s | Automated | Project phases | Board features (ready to execute) |
+| Phase                  | Time   | Actor       | Input             | Output                            |
+| ---------------------- | ------ | ----------- | ----------------- | --------------------------------- |
+| 1. Signal Intake       | 0-5s   | Ava         | Discord message   | Classified signal                 |
+| 2. PRD Creation        | 5-15s  | Automated   | Classified signal | SPARC PRD                         |
+| 3. Antagonistic Review | 15-40s | Ava + Jon   | SPARC PRD         | Consolidated PRD                  |
+| 4. Approval Gate       | 40-45s | Josh / Auto | Consolidated PRD  | Approved PRD                      |
+| 5. Deep Research       | 45-60s | ProjM       | Approved PRD      | Linear project + phases           |
+| 6. Board Creation      | 60s    | Automated   | Project phases    | Board features (ready to execute) |
 
 **Total:** ~60 seconds from idea to shippable work queue.
 
