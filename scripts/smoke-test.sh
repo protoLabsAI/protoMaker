@@ -107,13 +107,13 @@ echo ""
 echo "UI (port 3007):"
 UI_URL="${UI_URL:-${BASE_URL/3008/3007}}"
 if UI_RESPONSE=$(curl -sf --max-time 10 "$UI_URL/" 2>/dev/null); then
-  if echo "$UI_RESPONSE" | grep -q '<div id="root"'; then
-    echo "  PASS: UI serves HTML with #root"
+  if echo "$UI_RESPONSE" | grep -q '<div id="app"'; then
+    echo "  PASS: UI serves HTML with #app"
     PASSED=$((PASSED + 1))
   else
-    echo "  FAIL: UI response missing <div id=\"root\""
+    echo "  FAIL: UI response missing <div id=\"app\""
     FAILED=$((FAILED + 1))
-    FAILURES="${FAILURES}\n- UI HTML: missing <div id=\"root\">"
+    FAILURES="${FAILURES}\n- UI HTML: missing <div id=\"app\">"
   fi
 else
   echo "  FAIL: UI not responding on ${UI_URL}"
