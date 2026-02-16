@@ -31,10 +31,7 @@ export async function createFeature(
 
     // Check for duplicate title if title is provided
     if (feature.title && feature.title.trim()) {
-      const duplicate = await context.featureLoader.findDuplicateTitle(
-        projectPath,
-        feature.title
-      );
+      const duplicate = await context.featureLoader.findDuplicateTitle(projectPath, feature.title);
       if (duplicate) {
         return {
           success: false,
