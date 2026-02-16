@@ -72,7 +72,7 @@ graph TB
     end
 
     subgraph EXECUTION["6. Board Creation (60s)"]
-        PROJECT --> BOARD["protoMaker Board<br/>Features with Dependencies<br/>Ready for Auto-Mode"]
+        PROJECT --> BOARD["protoLabs Board<br/>Features with Dependencies<br/>Ready for Auto-Mode"]
     end
 
     style AVA_CLASS fill:#e1bee7
@@ -309,7 +309,7 @@ ProjM does deep research on the codebase:
 
 **Process:**
 
-Each phase becomes a **feature** on the protoMaker Kanban board:
+Each phase becomes a **feature** on the protoLabs Kanban board:
 
 - **Epic support:** Milestones can become epics (container features)
 - **Dependencies:** Encoded in feature metadata (blocks/blocked-by relationships)
@@ -341,7 +341,7 @@ Each phase becomes a **feature** on the protoMaker Kanban board:
 
 ## What Happens Next?
 
-After the 60-second processing window, the features sit in `backlog` status on the protoMaker board.
+After the 60-second processing window, the features sit in `backlog` status on the protoLabs board.
 
 **Auto-mode** (the execution loop) picks them up:
 
@@ -483,4 +483,4 @@ Follow on Twitter/X: [@joshmabry](https://twitter.com/joshmabry)
 
 ---
 
-**License:** This content is published under the same source-available license as protoMaker. You can learn from it, reference it, and build on these ideas. You cannot resell, redistribute, or sublicense this content.
+**License:** This content is published under the same source-available license as protoLabs. You can learn from it, reference it, and build on these ideas. You cannot resell, redistribute, or sublicense this content.

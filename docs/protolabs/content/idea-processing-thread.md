@@ -128,7 +128,7 @@ This gets posted to Linear as a project. Now it's visible, trackable, and ready 
 
 **STEP 6: Board Creation (60s)**
 
-The project phases become features on the protoMaker Kanban board.
+The project phases become features on the protoLabs Kanban board.
 
 Auto-mode can now pick them up in dependency order, route to appropriate agent models (Haiku/Sonnet/Opus), and execute in isolated git worktrees.
 

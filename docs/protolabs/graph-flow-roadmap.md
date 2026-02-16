@@ -40,7 +40,7 @@ Each layer has a single responsibility:
 - **LangGraph Flow** — Pure state machine. Nodes are functions, edges are conditional routing. No Express, no MCP, no side effects beyond LLM calls.
 - **Adapter** — Translates between flow state and service interfaces. Handles Langfuse tracing setup, feature flag checks, backward-compatible event emission.
 - **Express API** — HTTP endpoint for direct invocation. POST routes with `req.body` parameters (Express 5 convention).
-- **MCP Tool** — Exposes the flow to Claude Code agents via the protoMaker plugin.
+- **MCP Tool** — Exposes the flow to Claude Code agents via the protoLabs plugin.
 
 ## Reference Implementation: Antagonistic Review
 

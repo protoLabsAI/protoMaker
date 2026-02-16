@@ -258,14 +258,14 @@ Required checks on every PR before merge:
 ### Scaling Strategy
 
 - **Vertical**: Staging hardware handles more concurrent agents
-- **Horizontal**: Multiple protoMaker instances via [Hivemind](../architecture/instance-state.md#hivemind-multi-instance-mesh) — domain-scoped mesh where each instance owns a slice of the codebase
+- **Horizontal**: Multiple protoLabs instances via [Hivemind](../architecture/instance-state.md#hivemind-multi-instance-mesh) — domain-scoped mesh where each instance owns a slice of the codebase
 - **Efficiency**: Model routing (Haiku for mechanical work, Sonnet default, Opus only for architectural decisions or 2+ failures)
 - **Fast-path rules**: Lead Engineer handles routine orchestration decisions (mergedNotDone, orphanedInProgress, staleDeps, autoModeHealth, staleReview, stuckAgent, capacityRestart, projectCompleting) without LLM calls
 - **Automation**: Every manual step today becomes automated tomorrow — this is the self-improvement loop
 
 ### Instance State Model
 
-protoMaker follows a **fresh state per instance** design. Operational state (board, task queue, project plans) is instance-local and ephemeral. Knowledge (agent memory, context files, skills, project spec) is shared via git.
+protoLabs follows a **fresh state per instance** design. Operational state (board, task queue, project plans) is instance-local and ephemeral. Knowledge (agent memory, context files, skills, project spec) is shared via git.
 
 This split is foundational for multi-instance scaling:
 
