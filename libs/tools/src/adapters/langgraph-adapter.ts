@@ -1,11 +1,11 @@
 /**
- * MCP Adapter
+ * LangGraph Adapter
  *
- * Adapts unified tools for use with MCP (Model Context Protocol)
- * Maps tool functions to MCP tool schemas and handlers
+ * Adapts unified tools for use with LangGraph agent workflows
+ * Maps tool functions to LangGraph tool definitions
  */
 
-import type { ToolContext, ToolResult } from '../types.js';
+import type { ToolContext } from '../types.js';
 import { listFeatures } from '../domains/features/list-features.js';
 import { getFeature } from '../domains/features/get-feature.js';
 import { createFeature } from '../domains/features/create-feature.js';
@@ -13,30 +13,23 @@ import { updateFeature } from '../domains/features/update-feature.js';
 import { deleteFeature } from '../domains/features/delete-feature.js';
 
 /**
- * MCP tool definition
+ * LangGraph tool definition
  */
-export interface McpToolDefinition {
+export interface LangGraphToolDefinition {
   name: string;
   description: string;
-  inputSchema: {
+  schema: {
     type: 'object';
     properties: Record<string, unknown>;
     required?: string[];
   };
+  func: (args: Record<string, unknown>) => Promise<string>;
 }
 
 /**
- * MCP tool handler function
+ * LangGraph adapter for feature tools
  */
-export type McpToolHandler = (
-  context: ToolContext,
-  args: Record<string, unknown>
-) => Promise<ToolResult>;
-
-/**
- * MCP adapter for feature tools
- */
-export class McpFeatureAdapter {
+export class LangGraphFeatureAdapter {
   private context: ToolContext;
 
   constructor(context: ToolContext) {
@@ -44,15 +37,15 @@ export class McpFeatureAdapter {
   }
 
   /**
-   * Get all tool definitions
+   * Get all tool definitions for LangGraph
    */
-  getToolDefinitions(): McpToolDefinition[] {
+  getToolDefinitions(): LangGraphToolDefinition[] {
     return [
       {
         name: 'list_features',
         description:
-          'List all features for a project. Use compact=true to reduce response size for MCP context.',
-        inputSchema: {
+          'List all features for a project. Use compact=true to reduce response size.',
+        schema: {
           type: 'object',
           properties: {
             projectPath: {
@@ -66,17 +59,24 @@ export class McpFeatureAdapter {
             },
             compact: {
               type: 'boolean',
-              description:
-                'Return compact feature format to reduce response size (default: false)',
+              description: 'Return compact feature format (default: false)',
             },
           },
           required: ['projectPath'],
+        },
+        func: async (args: Record<string, unknown>): Promise<string> => {
+          const result = await listFeatures(this.context, {
+            projectPath: args.projectPath as string,
+            status: args.status as any,
+            compact: (args.compact as boolean) ?? false,
+          });
+          return JSON.stringify(result);
         },
       },
       {
         name: 'get_feature',
         description: 'Get details for a specific feature by ID.',
-        inputSchema: {
+        schema: {
           type: 'object',
           properties: {
             projectPath: {
@@ -90,12 +90,18 @@ export class McpFeatureAdapter {
           },
           required: ['projectPath', 'featureId'],
         },
+        func: async (args: Record<string, unknown>): Promise<string> => {
+          const result = await getFeature(this.context, {
+            projectPath: args.projectPath as string,
+            featureId: args.featureId as string,
+          });
+          return JSON.stringify(result);
+        },
       },
       {
         name: 'create_feature',
-        description:
-          'Create a new feature on the Kanban board. Features start in the backlog by default.',
-        inputSchema: {
+        description: 'Create a new feature on the Kanban board.',
+        schema: {
           type: 'object',
           properties: {
             projectPath: {
@@ -108,45 +114,54 @@ export class McpFeatureAdapter {
             },
             description: {
               type: 'string',
-              description:
-                'Detailed description with requirements and acceptance criteria. Be specific about file locations, components, and expected behavior.',
+              description: 'Detailed description with requirements and acceptance criteria.',
             },
             status: {
               type: 'string',
               enum: ['backlog', 'in-progress'],
-              default: 'backlog',
-              description: "Initial status. Use 'in-progress' to immediately start an agent.",
+              description: 'Initial status (default: backlog)',
             },
             branchName: {
               type: 'string',
-              description:
-                'Optional git branch name for this feature. If not provided, auto-generated from title.',
+              description: 'Optional git branch name',
             },
             dependencies: {
               type: 'array',
               items: { type: 'string' },
-              description: 'Array of feature IDs that this feature depends on.',
+              description: 'Array of feature IDs that this feature depends on',
             },
             complexity: {
               type: 'string',
               enum: ['small', 'medium', 'large', 'architectural'],
-              description:
-                'Feature complexity level for model selection. small=haiku, medium/large=sonnet, architectural=opus.',
+              description: 'Feature complexity level',
             },
             assignee: {
               type: 'string',
-              description:
-                "Who this feature is assigned to. If set to a human name, auto-mode will skip this feature.",
+              description: 'Who this feature is assigned to',
             },
           },
           required: ['projectPath', 'title', 'description'],
         },
+        func: async (args: Record<string, unknown>): Promise<string> => {
+          const result = await createFeature(this.context, {
+            projectPath: args.projectPath as string,
+            feature: {
+              title: args.title as string,
+              description: args.description as string,
+              status: args.status as any,
+              branchName: args.branchName as string | undefined,
+              dependencies: args.dependencies as string[] | undefined,
+              complexity: args.complexity as any,
+              assignee: args.assignee as string | undefined,
+            },
+          });
+          return JSON.stringify(result);
+        },
       },
       {
         name: 'update_feature',
-        description:
-          "Update a feature's properties. Can be used to change status, title, description, or move between columns.",
-        inputSchema: {
+        description: "Update a feature's properties.",
+        schema: {
           type: 'object',
           properties: {
             projectPath: {
@@ -168,25 +183,39 @@ export class McpFeatureAdapter {
             status: {
               type: 'string',
               enum: ['backlog', 'in-progress', 'review', 'done'],
-              description: "New status (optional). Moving to 'in-progress' starts an agent.",
+              description: 'New status (optional)',
             },
             complexity: {
               type: 'string',
               enum: ['small', 'medium', 'large', 'architectural'],
-              description: 'Feature complexity level for model selection.',
+              description: 'Feature complexity level',
             },
             assignee: {
               type: ['string', 'null'],
-              description: 'Who this feature is assigned to. Pass null to unassign.',
+              description: 'Who this feature is assigned to',
             },
           },
           required: ['projectPath', 'featureId'],
+        },
+        func: async (args: Record<string, unknown>): Promise<string> => {
+          const result = await updateFeature(this.context, {
+            projectPath: args.projectPath as string,
+            featureId: args.featureId as string,
+            updates: {
+              title: args.title as string | undefined,
+              description: args.description as string | undefined,
+              status: args.status as any,
+              complexity: args.complexity as any,
+              assignee: args.assignee as string | null | undefined,
+            },
+          });
+          return JSON.stringify(result);
         },
       },
       {
         name: 'delete_feature',
         description: 'Delete a feature from the board.',
-        inputSchema: {
+        schema: {
           type: 'object',
           properties: {
             projectPath: {
@@ -200,67 +229,14 @@ export class McpFeatureAdapter {
           },
           required: ['projectPath', 'featureId'],
         },
+        func: async (args: Record<string, unknown>): Promise<string> => {
+          const result = await deleteFeature(this.context, {
+            projectPath: args.projectPath as string,
+            featureId: args.featureId as string,
+          });
+          return JSON.stringify(result);
+        },
       },
     ];
-  }
-
-  /**
-   * Handle a tool call
-   */
-  async handleToolCall(name: string, args: Record<string, unknown>): Promise<ToolResult> {
-    switch (name) {
-      case 'list_features':
-        return listFeatures(this.context, {
-          projectPath: args.projectPath as string,
-          status: args.status as any,
-          compact: (args.compact as boolean) ?? false,
-        });
-
-      case 'get_feature':
-        return getFeature(this.context, {
-          projectPath: args.projectPath as string,
-          featureId: args.featureId as string,
-        });
-
-      case 'create_feature':
-        return createFeature(this.context, {
-          projectPath: args.projectPath as string,
-          feature: {
-            title: args.title as string,
-            description: args.description as string,
-            status: args.status as any,
-            branchName: args.branchName as string | undefined,
-            dependencies: args.dependencies as string[] | undefined,
-            complexity: args.complexity as any,
-            assignee: args.assignee as string | undefined,
-          },
-        });
-
-      case 'update_feature':
-        return updateFeature(this.context, {
-          projectPath: args.projectPath as string,
-          featureId: args.featureId as string,
-          updates: {
-            title: args.title as string | undefined,
-            description: args.description as string | undefined,
-            status: args.status as any,
-            complexity: args.complexity as any,
-            assignee: args.assignee as string | null | undefined,
-          },
-        });
-
-      case 'delete_feature':
-        return deleteFeature(this.context, {
-          projectPath: args.projectPath as string,
-          featureId: args.featureId as string,
-        });
-
-      default:
-        return {
-          success: false,
-          error: `Unknown tool: ${name}`,
-          errorCode: 'UNKNOWN_TOOL',
-        };
-    }
   }
 }
