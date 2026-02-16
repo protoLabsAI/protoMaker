@@ -33,6 +33,9 @@
     "@automaker/types": "file:../types",
     "zod": "^4.3.6"
   },
+  "peerDependencies": {
+    "@langchain/core": "^0.3.33"
+  },
   "devDependencies": {
     "@types/node": "22.19.3",
     "tsup": "^8.5.1",
