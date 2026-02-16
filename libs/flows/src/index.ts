@@ -292,3 +292,19 @@ export {
   improvementsHitlRouter,
   hitlImprovementsProcessor,
 } from './wrap-up/index.js';
+
+// Idea processing flow (complexity-based routing)
+export {
+  createIdeaProcessingGraph,
+  ideaProcessingGraph,
+  IdeaProcessingStateAnnotation,
+  IdeaProcessingStateSchema,
+  ReviewOutputSchema,
+  type IdeaProcessingState,
+  type IdeaProcessingStateType,
+  type IdeaComplexity,
+  type IdeaInput,
+  type ResearchFinding as IdeaResearchFinding,
+  type ResearchResult as IdeaResearchResult,
+  type ReviewOutput,
+} from './idea-processing/index.js';
