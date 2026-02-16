@@ -19,6 +19,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 COMPOSE_FILE="$PROJECT_ROOT/docker-compose.staging.yml"
+DOCS_COMPOSE_FILE="$PROJECT_ROOT/docker-compose.docs.yml"
 ENV_FILE="$PROJECT_ROOT/.env"
 
 # Colors
@@ -174,29 +175,31 @@ build_images() {
     info "Auto-detected GIT_COMMIT_SHA: ${GIT_COMMIT_SHA:0:12}"
   fi
 
-  info "Building images (server, ui, docs)..."
+  info "Building images (server, ui)..."
   docker compose -f "$COMPOSE_FILE" build
 
-  ok "Images built successfully"
+  info "Building docs image..."
+  docker compose -f "$DOCS_COMPOSE_FILE" build || warn "Docs build failed (non-fatal)"
+
+  ok "App images built successfully"
 }
 
 # ─── Stop existing ───────────────────────────────────────────────────────────
 
 stop_existing() {
-  info "Stopping existing Automaker containers..."
+  info "Stopping existing Automaker app containers (docs runs independently)..."
 
-  # Use the staging compose file to cleanly stop and remove containers + networks.
-  # This is the only compose file used in staging — never mix with docker-compose.yml.
+  # Stop app services only — docs has its own compose and lifecycle.
   docker compose -f "$COMPOSE_FILE" down 2>/dev/null || true
 
   # Force-remove if compose down didn't clean up (e.g. containers from a different project)
-  for name in automaker-server automaker-ui automaker-docs; do
+  for name in automaker-server automaker-ui; do
     if docker ps -aq --filter "name=^${name}$" | grep -q .; then
       docker rm -f "$name" 2>/dev/null || true
     fi
   done
 
-  ok "Existing containers stopped"
+  ok "App containers stopped (docs untouched)"
 }
 
 # ─── Start ───────────────────────────────────────────────────────────────────
@@ -213,8 +216,11 @@ start_services() {
     docker volume create "$vol" >/dev/null
   done
 
-  # Start critical services first
-  docker compose -f "$COMPOSE_FILE" up -d server ui docs
+  # Start app services (server + UI)
+  docker compose -f "$COMPOSE_FILE" up -d server ui
+
+  # Start docs independently (won't be affected by app restarts)
+  docker compose -f "$DOCS_COMPOSE_FILE" up -d 2>/dev/null || warn "Docs failed to start"
 
   # Start storybook separately — failure is non-fatal
   docker compose -f "$COMPOSE_FILE" up -d storybook 2>/dev/null || warn "Storybook failed to start (image may not exist)"
@@ -246,6 +252,7 @@ stop_services() {
   info "Stopping services..."
   cd "$PROJECT_ROOT"
   docker compose -f "$COMPOSE_FILE" down
+  docker compose -f "$DOCS_COMPOSE_FILE" down 2>/dev/null || true
   ok "Services stopped"
 }
 
@@ -261,6 +268,7 @@ teardown() {
 
   cd "$PROJECT_ROOT"
   docker compose -f "$COMPOSE_FILE" down -v
+  docker compose -f "$DOCS_COMPOSE_FILE" down -v 2>/dev/null || true
 
   # External volumes are not removed by compose down -v, so remove them explicitly
   for vol in automaker-data automaker-claude-config automaker-cursor-config \
@@ -280,11 +288,15 @@ show_status() {
 
   cd "$PROJECT_ROOT"
 
-  # Container status
+  # Container status (app + docs)
   local ps_output
   ps_output=$(docker compose -f "$COMPOSE_FILE" ps 2>/dev/null) || true
-  if echo "$ps_output" | grep -q automaker; then
+  local docs_output
+  docs_output=$(docker compose -f "$DOCS_COMPOSE_FILE" ps 2>/dev/null) || true
+
+  if echo "$ps_output$docs_output" | grep -q automaker; then
     echo "$ps_output"
+    echo "$docs_output" | grep -v "^NAME" | grep -v "^$" || true
   else
     warn "No containers running"
     return
