@@ -178,7 +178,7 @@ export function AgentToolsView() {
   return (
     <div className="flex-1 flex flex-col overflow-hidden content-bg" data-testid="agent-tools-view">
       {/* Header */}
-      <div className="flex items-center gap-3 p-4 border-b border-border bg-glass backdrop-blur-md">
+      <div className="flex items-center gap-3 p-4 border-b border-border bg-card/80 backdrop-blur-md">
         <Wrench className="w-5 h-5 text-primary" />
         <div>
           <h1 className="text-xl font-bold">Agent Tools</h1>
@@ -236,16 +236,16 @@ export function AgentToolsView() {
                   className={cn(
                     'p-3 rounded-md border',
                     readFileResult.success
-                      ? 'bg-green-500/10 border-green-500/20'
-                      : 'bg-red-500/10 border-red-500/20'
+                      ? 'bg-status-success-bg border-status-success/20'
+                      : 'bg-status-error-bg border-status-error/20'
                   )}
                   data-testid="read-file-result"
                 >
                   <div className="flex items-center gap-2 mb-2">
                     {readFileResult.success ? (
-                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      <CheckCircle className="w-4 h-4 text-status-success" />
                     ) : (
-                      <XCircle className="w-4 h-4 text-red-500" />
+                      <XCircle className="w-4 h-4 text-status-error" />
                     )}
                     <span className="text-sm font-medium">
                       {readFileResult.success ? 'Success' : 'Failed'}
@@ -315,16 +315,16 @@ export function AgentToolsView() {
                   className={cn(
                     'p-3 rounded-md border',
                     writeFileResult.success
-                      ? 'bg-green-500/10 border-green-500/20'
-                      : 'bg-red-500/10 border-red-500/20'
+                      ? 'bg-status-success-bg border-status-success/20'
+                      : 'bg-status-error-bg border-status-error/20'
                   )}
                   data-testid="write-file-result"
                 >
                   <div className="flex items-center gap-2 mb-2">
                     {writeFileResult.success ? (
-                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      <CheckCircle className="w-4 h-4 text-status-success" />
                     ) : (
-                      <XCircle className="w-4 h-4 text-red-500" />
+                      <XCircle className="w-4 h-4 text-status-error" />
                     )}
                     <span className="text-sm font-medium">
                       {writeFileResult.success ? 'Success' : 'Failed'}
@@ -383,16 +383,16 @@ export function AgentToolsView() {
                   className={cn(
                     'p-3 rounded-md border',
                     terminalResult.success
-                      ? 'bg-green-500/10 border-green-500/20'
-                      : 'bg-red-500/10 border-red-500/20'
+                      ? 'bg-status-success-bg border-status-success/20'
+                      : 'bg-status-error-bg border-status-error/20'
                   )}
                   data-testid="terminal-result"
                 >
                   <div className="flex items-center gap-2 mb-2">
                     {terminalResult.success ? (
-                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      <CheckCircle className="w-4 h-4 text-status-success" />
                     ) : (
-                      <XCircle className="w-4 h-4 text-red-500" />
+                      <XCircle className="w-4 h-4 text-status-error" />
                     )}
                     <span className="text-sm font-medium">
                       {terminalResult.success ? 'Success' : 'Failed'}

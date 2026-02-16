@@ -76,7 +76,7 @@ const PROVIDER_TYPE_COLORS: Record<ClaudeCompatibleProviderType, string> = {
   glm: 'bg-emerald-500/20 text-emerald-500',
   minimax: 'bg-purple-500/20 text-purple-500',
   openrouter: 'bg-amber-500/20 text-amber-500',
-  custom: 'bg-zinc-500/20 text-zinc-400',
+  custom: 'bg-muted text-muted-foreground',
 };
 
 // Claude model display names
@@ -850,7 +850,7 @@ function ProviderCard({ provider, onEdit, onDelete, onToggleEnabled }: ProviderC
               {PROVIDER_TYPE_LABELS[provider.providerType]}
             </Badge>
             {!isEnabled && (
-              <Badge variant="secondary" className="text-xs bg-zinc-500/20 text-zinc-400">
+              <Badge variant="secondary" className="text-xs bg-muted text-muted-foreground">
                 Disabled
               </Badge>
             )}

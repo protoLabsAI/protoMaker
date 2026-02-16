@@ -21,7 +21,7 @@ export function AnimatedTabs({ tabs, activeTab, onTabChange, children }: Animate
   return (
     <div>
       {/* Tab bar */}
-      <div className="flex items-center gap-1 p-1 bg-muted/30 rounded-lg backdrop-blur-sm border border-white/5 w-fit mb-6">
+      <div className="flex items-center gap-1 p-1 bg-muted/30 rounded-lg backdrop-blur-sm border border-border w-fit mb-6">
         {tabs.map((tab) => {
           const isActive = tab.id === activeTab;
           const Icon = tab.icon;
@@ -38,7 +38,7 @@ export function AnimatedTabs({ tabs, activeTab, onTabChange, children }: Animate
               {isActive && (
                 <motion.div
                   layoutId={`activeTabBg-${layoutId}`}
-                  className="absolute inset-0 bg-background/80 rounded-md border border-white/10 shadow-sm"
+                  className="absolute inset-0 bg-background/80 rounded-md border border-border shadow-sm"
                   style={{ zIndex: 0 }}
                   transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                 />

@@ -308,7 +308,7 @@ export function MemoryView() {
   return (
     <div className="flex-1 flex flex-col overflow-hidden content-bg" data-testid="memory-view">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-border bg-glass backdrop-blur-md">
+      <div className="flex items-center justify-between p-4 border-b border-border bg-card/80 backdrop-blur-md">
         <div className="flex items-center gap-3">
           <Brain className="w-5 h-5 text-muted-foreground" />
           <div>

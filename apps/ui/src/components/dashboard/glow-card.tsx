@@ -43,12 +43,12 @@ export function GlowCard({
         transition: { type: 'spring', stiffness: 300, damping: 20 },
       }}
       className={cn(
-        'relative overflow-hidden rounded-xl border border-white/10 backdrop-blur-md',
+        'relative overflow-hidden rounded-xl border border-border backdrop-blur-md',
         'bg-card/80 text-card-foreground',
         'shadow-[0_1px_2px_rgba(0,0,0,0.05),0_4px_6px_rgba(0,0,0,0.05),0_10px_20px_rgba(0,0,0,0.04)]',
-        'hover:shadow-xl hover:border-white/20 transition-shadow duration-300',
+        'hover:shadow-xl hover:border-border transition-shadow duration-300',
         gradientBorder &&
-          'before:absolute before:inset-0 before:rounded-xl before:p-[1px] before:bg-gradient-to-br before:from-white/20 before:via-transparent before:to-white/5 before:pointer-events-none before:-z-10',
+          'before:absolute before:inset-0 before:rounded-xl before:p-[1px] before:bg-gradient-to-br before:from-border before:via-transparent before:to-border/30 before:pointer-events-none before:-z-10',
         className
       )}
       {...props}

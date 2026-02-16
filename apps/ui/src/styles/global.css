@@ -431,33 +431,7 @@
   display: none; /* Chrome, Safari, Opera */
 }
 
-/* Glass morphism utilities */
 @layer utilities {
-  .glass {
-    @apply backdrop-blur-md border-white/10;
-  }
-
-  .glass-subtle {
-    @apply backdrop-blur-sm border-white/5;
-  }
-
-  .glass-strong {
-    @apply backdrop-blur-xl border-white/20;
-  }
-
-  /* Text color hierarchy utilities */
-  .text-primary-white {
-    color: oklch(1 0 0);
-  }
-
-  .text-secondary {
-    color: oklch(0.588 0 0); /* zinc-400 equivalent */
-  }
-
-  .text-muted {
-    color: oklch(0.525 0 0); /* zinc-500 equivalent */
-  }
-
   /* Brand gradient utilities */
   .gradient-brand {
     background: linear-gradient(135deg, oklch(0.55 0.25 265), oklch(0.5 0.28 270));
@@ -465,19 +439,6 @@
 
   .gradient-brand-subtle {
     background: linear-gradient(135deg, oklch(0.55 0.25 265 / 0.1), oklch(0.5 0.28 270 / 0.1));
-  }
-
-  /* Glass morphism background utilities */
-  .bg-glass {
-    background: var(--card);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-  }
-
-  .bg-glass-80 {
-    background: var(--popover);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
   }
 
   /* Hover state utilities */

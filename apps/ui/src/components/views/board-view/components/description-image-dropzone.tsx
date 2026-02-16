@@ -469,7 +469,7 @@ export function DescriptionImageDropZone({
                 data-testid={`description-image-preview-${image.id}`}
               >
                 {/* Image thumbnail or placeholder */}
-                <div className="w-16 h-16 flex items-center justify-center bg-zinc-800">
+                <div className="w-16 h-16 flex items-center justify-center bg-muted">
                   {previewImages.has(image.id) ? (
                     <img
                       src={previewImages.get(image.id)}
@@ -503,8 +503,8 @@ export function DescriptionImageDropZone({
                   </button>
                 )}
                 {/* Filename tooltip on hover */}
-                <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-1 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <p className="text-[10px] text-white truncate">{image.filename}</p>
+                <div className="absolute bottom-0 left-0 right-0 bg-background/80 px-1 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <p className="text-[10px] text-foreground truncate">{image.filename}</p>
                 </div>
               </div>
             ))}
@@ -516,7 +516,7 @@ export function DescriptionImageDropZone({
                 data-testid={`description-text-file-preview-${file.id}`}
               >
                 {/* Text file icon */}
-                <div className="w-16 h-16 flex items-center justify-center bg-zinc-800">
+                <div className="w-16 h-16 flex items-center justify-center bg-muted">
                   <FileText className="w-6 h-6 text-muted-foreground" />
                 </div>
                 {/* Remove button */}
@@ -534,9 +534,11 @@ export function DescriptionImageDropZone({
                   </button>
                 )}
                 {/* Filename and size tooltip on hover */}
-                <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-1 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <p className="text-[10px] text-white truncate">{file.filename}</p>
-                  <p className="text-[9px] text-white/70">{formatFileSize(file.content.length)}</p>
+                <div className="absolute bottom-0 left-0 right-0 bg-background/80 px-1 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <p className="text-[10px] text-foreground truncate">{file.filename}</p>
+                  <p className="text-[9px] text-muted-foreground">
+                    {formatFileSize(file.content.length)}
+                  </p>
                 </div>
               </div>
             ))}

@@ -33,7 +33,7 @@ export function SettingsHeader({
                 'w-10 h-10 lg:w-12 lg:h-12 rounded-xl lg:rounded-2xl flex items-center justify-center',
                 'bg-gradient-to-br from-brand-500 to-brand-600',
                 'shadow-lg shadow-brand-500/25',
-                'ring-1 ring-white/10'
+                'ring-1 ring-border'
               )}
             >
               <Cog className="w-5 h-5 lg:w-6 lg:h-6 text-white" />

@@ -50,31 +50,31 @@ function getColorClasses(color: 'green' | 'red' | 'blue' | 'yellow') {
   switch (color) {
     case 'green':
       return {
-        bg: 'bg-green-500/10',
-        border: 'border-green-500/30',
-        icon: 'text-green-500',
-        text: 'text-green-600 dark:text-green-400',
+        bg: 'bg-status-success-bg',
+        border: 'border-status-success/30',
+        icon: 'text-status-success',
+        text: 'text-status-success',
       };
     case 'red':
       return {
-        bg: 'bg-red-500/10',
-        border: 'border-red-500/30',
-        icon: 'text-red-500',
-        text: 'text-red-600 dark:text-red-400',
+        bg: 'bg-status-error-bg',
+        border: 'border-status-error/30',
+        icon: 'text-status-error',
+        text: 'text-status-error',
       };
     case 'blue':
       return {
-        bg: 'bg-blue-500/10',
-        border: 'border-blue-500/30',
-        icon: 'text-blue-500',
-        text: 'text-blue-600 dark:text-blue-400',
+        bg: 'bg-status-info-bg',
+        border: 'border-status-info/30',
+        icon: 'text-status-info',
+        text: 'text-status-info',
       };
     case 'yellow':
       return {
-        bg: 'bg-yellow-500/10',
-        border: 'border-yellow-500/30',
-        icon: 'text-yellow-500',
-        text: 'text-yellow-600 dark:text-yellow-400',
+        bg: 'bg-status-warning-bg',
+        border: 'border-status-warning/30',
+        icon: 'text-status-warning',
+        text: 'text-status-warning',
       };
   }
 }
@@ -94,7 +94,7 @@ export function EventFeed({ projectPath, className }: EventFeedProps) {
             <div
               className={cn(
                 'w-2 h-2 rounded-full',
-                isConnected ? 'bg-green-500 animate-pulse' : 'bg-gray-400'
+                isConnected ? 'bg-status-success animate-pulse' : 'bg-muted-foreground'
               )}
               title={isConnected ? 'Connected' : 'Disconnected'}
             />
@@ -106,7 +106,7 @@ export function EventFeed({ projectPath, className }: EventFeedProps) {
       </CardHeader>
       <CardContent className="flex-1 overflow-hidden p-0">
         {error && (
-          <div className="p-4 text-sm text-red-600 dark:text-red-400 bg-red-500/10 border-l-2 border-red-500">
+          <div className="p-4 text-sm text-status-error bg-status-error-bg border-l-2 border-status-error">
             Error: {error}
           </div>
         )}

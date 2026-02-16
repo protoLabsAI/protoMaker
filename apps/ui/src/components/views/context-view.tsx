@@ -687,7 +687,7 @@ export function ContextView() {
       />
 
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-border bg-glass backdrop-blur-md">
+      <div className="flex items-center justify-between p-4 border-b border-border bg-card/80 backdrop-blur-md">
         <div className="flex items-center gap-3">
           <BookOpen className="w-5 h-5 text-muted-foreground" />
           <div>

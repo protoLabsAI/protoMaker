@@ -24,17 +24,17 @@ function StatusBadge({ status }: StatusBadgeProps) {
     running: {
       label: 'Running',
       icon: PlayCircle,
-      className: 'bg-green-500/10 text-green-500',
+      className: 'bg-status-success-bg text-status-success',
     },
     idle: {
       label: 'Idle',
       icon: Clock,
-      className: 'bg-yellow-500/10 text-yellow-500',
+      className: 'bg-status-warning-bg text-status-warning',
     },
     stopped: {
       label: 'Stopped',
       icon: StopCircle,
-      className: 'bg-gray-500/10 text-gray-500',
+      className: 'bg-muted text-muted-foreground',
     },
   };
 

@@ -257,8 +257,8 @@ export function FeatureImageUpload({
                   </button>
                 )}
                 {/* Filename tooltip on hover */}
-                <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-1 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <p className="text-[10px] text-white truncate">{image.filename}</p>
+                <div className="absolute bottom-0 left-0 right-0 bg-background/80 px-1 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <p className="text-[10px] text-foreground truncate">{image.filename}</p>
                 </div>
               </div>
             ))}

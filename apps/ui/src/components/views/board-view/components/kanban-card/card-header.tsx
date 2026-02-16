@@ -132,7 +132,7 @@ export const CardHeaderSection = memo(function CardHeaderSection({
           <Button
             variant="ghost"
             size="sm"
-            className="h-6 w-6 p-0 hover:bg-white/10 text-muted-foreground hover:text-foreground"
+            className="h-6 w-6 p-0 hover:bg-accent text-muted-foreground hover:text-foreground"
             onClick={(e) => {
               e.stopPropagation();
               onSpawnTask?.();
@@ -146,7 +146,7 @@ export const CardHeaderSection = memo(function CardHeaderSection({
           <Button
             variant="ghost"
             size="sm"
-            className="h-6 w-6 p-0 hover:bg-white/10 text-muted-foreground hover:text-destructive"
+            className="h-6 w-6 p-0 hover:bg-accent text-muted-foreground hover:text-destructive"
             onClick={handleDeleteClick}
             onPointerDown={(e) => e.stopPropagation()}
             data-testid={`delete-backlog-${feature.id}`}
@@ -165,7 +165,7 @@ export const CardHeaderSection = memo(function CardHeaderSection({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-6 w-6 p-0 hover:bg-white/10 text-muted-foreground hover:text-foreground"
+                className="h-6 w-6 p-0 hover:bg-accent text-muted-foreground hover:text-foreground"
                 onClick={(e) => {
                   e.stopPropagation();
                   onEdit();
@@ -181,7 +181,7 @@ export const CardHeaderSection = memo(function CardHeaderSection({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-6 w-6 p-0 hover:bg-white/10 text-muted-foreground hover:text-foreground"
+                className="h-6 w-6 p-0 hover:bg-accent text-muted-foreground hover:text-foreground"
                 onClick={(e) => {
                   e.stopPropagation();
                   onSpawnTask?.();
@@ -198,7 +198,7 @@ export const CardHeaderSection = memo(function CardHeaderSection({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-6 w-6 p-0 hover:bg-white/10 text-muted-foreground hover:text-foreground"
+                  className="h-6 w-6 p-0 hover:bg-accent text-muted-foreground hover:text-foreground"
                   onClick={(e) => {
                     e.stopPropagation();
                     onViewOutput();
@@ -215,7 +215,7 @@ export const CardHeaderSection = memo(function CardHeaderSection({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-6 w-6 p-0 hover:bg-white/10 text-muted-foreground hover:text-destructive"
+                className="h-6 w-6 p-0 hover:bg-accent text-muted-foreground hover:text-destructive"
                 onClick={handleDeleteClick}
                 onPointerDown={(e) => e.stopPropagation()}
                 data-testid={`delete-${
@@ -236,7 +236,7 @@ export const CardHeaderSection = memo(function CardHeaderSection({
             <Button
               variant="ghost"
               size="sm"
-              className="h-6 w-6 p-0 hover:bg-white/10 text-muted-foreground hover:text-destructive"
+              className="h-6 w-6 p-0 hover:bg-accent text-muted-foreground hover:text-destructive"
               onClick={handleDeleteClick}
               onPointerDown={(e) => e.stopPropagation()}
               data-testid={`delete-feature-${feature.id}`}

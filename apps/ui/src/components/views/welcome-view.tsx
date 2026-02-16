@@ -527,7 +527,7 @@ export function WelcomeView() {
   return (
     <div className="flex-1 flex flex-col content-bg" data-testid="welcome-view">
       {/* Header Section */}
-      <div className="shrink-0 border-b border-border bg-glass backdrop-blur-md">
+      <div className="shrink-0 border-b border-border bg-card/80 backdrop-blur-md">
         <div className="px-8 py-6">
           <div className="flex items-center gap-4 animate-in fade-in slide-in-from-top-2 duration-500">
             <div className="w-12 h-12 rounded-xl bg-linear-to-br from-brand-500/20 to-brand-600/10 border border-brand-500/20 flex items-center justify-center shadow-lg shadow-brand-500/10">

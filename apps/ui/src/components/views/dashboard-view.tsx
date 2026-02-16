@@ -496,7 +496,7 @@ export function DashboardView() {
   return (
     <div className="flex-1 flex flex-col h-screen content-bg" data-testid="dashboard-view">
       {/* Header with logo */}
-      <header className="shrink-0 border-b border-border bg-glass backdrop-blur-md">
+      <header className="shrink-0 border-b border-border bg-card/80 backdrop-blur-md">
         {/* Electron titlebar drag region */}
         {isElectron() && (
           <div

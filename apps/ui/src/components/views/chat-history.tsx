@@ -180,14 +180,14 @@ export function ChatHistory() {
   return (
     <div
       className={cn(
-        'flex flex-col h-full bg-zinc-950/50 backdrop-blur-md border-r border-white/10 transition-all duration-200',
+        'flex flex-col h-full bg-background/50 backdrop-blur-md border-r border-border transition-all duration-200',
         chatHistoryOpen ? 'w-80' : 'w-0 overflow-hidden'
       )}
     >
       {chatHistoryOpen && (
         <>
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-white/10">
+          <div className="flex items-center justify-between p-4 border-b border-border">
             <div className="flex items-center gap-2">
               <MessageSquare className="w-5 h-5" />
               <h2 className="font-semibold">Chat History</h2>

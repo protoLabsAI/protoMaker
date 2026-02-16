@@ -56,10 +56,8 @@ function IntegrationCard({ title, icon: Icon, status, stats, iconColor }: Integr
           <div className="flex items-center gap-1.5">
             {isConnected ? (
               <>
-                <CheckCircle2 className="h-4 w-4 text-green-500" />
-                <span className="text-xs text-green-600 dark:text-green-400 font-medium">
-                  Connected
-                </span>
+                <CheckCircle2 className="h-4 w-4 text-status-success" />
+                <span className="text-xs text-status-success font-medium">Connected</span>
               </>
             ) : (
               <>
@@ -99,7 +97,7 @@ function ActivityTicker({ projectPath }: ActivityTickerProps) {
     <Card className="bg-card/50 backdrop-blur-sm border-border/50">
       <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
-          <Activity className="h-4 w-4 text-blue-500" />
+          <Activity className="h-4 w-4 text-status-info" />
           <CardTitle className="text-base">Activity Feed</CardTitle>
           <span className="text-xs text-muted-foreground">
             {events.length} recent {events.length === 1 ? 'event' : 'events'}
@@ -120,7 +118,7 @@ function ActivityTicker({ projectPath }: ActivityTickerProps) {
                   key={i}
                   className="flex items-start gap-2 p-2 rounded-md hover:bg-muted/50 transition-colors"
                 >
-                  <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 shrink-0" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-status-info mt-2 shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-foreground leading-tight">
                       {event.description || event.message || 'Activity event'}
@@ -151,7 +149,7 @@ function AgentSessionCard() {
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="rounded-lg p-2 bg-purple-500/10 text-purple-500">
+            <div className="rounded-lg p-2 bg-primary/10 text-primary">
               <Bot className="h-4 w-4" />
             </div>
             <CardTitle className="text-base">Agent Sessions</CardTitle>
@@ -186,14 +184,14 @@ function AgentSessionCard() {
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Bot className="h-3.5 w-3.5 text-purple-500" />
+                      <Bot className="h-3.5 w-3.5 text-primary" />
                       <span className="text-sm font-medium text-foreground">
                         {agent.featureId || agent.sessionId}
                       </span>
                     </div>
                     <span
-                      className="text-xs px-2 py-0.5 rounded-full bg-purple-500/10
-                                   text-purple-600 dark:text-purple-400 font-medium"
+                      className="text-xs px-2 py-0.5 rounded-full bg-primary/10
+                                   text-primary font-medium"
                     >
                       {agent.model || 'sonnet'}
                     </span>

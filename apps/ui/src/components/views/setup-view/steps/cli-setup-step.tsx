@@ -544,11 +544,11 @@ export function CliSetupStep({ config, state, onNext, onBack, onSkip }: CliSetup
                           <>
                             <p className="text-sm text-red-400">{mainError}</p>
                             {details && (
-                              <div className="mt-2 p-3 rounded bg-black/20 border border-red-500/20">
+                              <div className="mt-2 p-3 rounded bg-muted/20 border border-status-error/20">
                                 <p className="text-xs font-medium text-muted-foreground mb-1">
                                   Technical details:
                                 </p>
-                                <pre className="text-xs text-red-300 whitespace-pre-wrap font-mono">
+                                <pre className="text-xs text-status-error whitespace-pre-wrap font-mono">
                                   {details}
                                 </pre>
                               </div>
@@ -736,13 +736,13 @@ export function CliSetupStep({ config, state, onNext, onBack, onSkip }: CliSetup
 
                         return (
                           <>
-                            <p className="text-sm text-red-400">{mainError}</p>
+                            <p className="text-sm text-status-error">{mainError}</p>
                             {details && (
-                              <div className="mt-2 p-3 rounded bg-black/20 border border-red-500/20">
+                              <div className="mt-2 p-3 rounded bg-muted/20 border border-status-error/20">
                                 <p className="text-xs font-medium text-muted-foreground mb-1">
                                   Technical details:
                                 </p>
-                                <pre className="text-xs text-red-300 whitespace-pre-wrap font-mono">
+                                <pre className="text-xs text-status-error whitespace-pre-wrap font-mono">
                                   {details}
                                 </pre>
                               </div>

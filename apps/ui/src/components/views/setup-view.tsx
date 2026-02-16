@@ -93,7 +93,7 @@ export function SetupView() {
   return (
     <div className="h-full flex flex-col content-bg" data-testid="setup-view">
       {/* Header */}
-      <div className="shrink-0 border-b border-border bg-glass backdrop-blur-md titlebar-drag-region">
+      <div className="shrink-0 border-b border-border bg-card/80 backdrop-blur-md titlebar-drag-region">
         <div className="px-8 py-4">
           <div className="flex items-center gap-3 titlebar-no-drag">
             <img src="/logo.png" alt="Automaker" className="w-8 h-8" />

@@ -37,11 +37,11 @@ function getAgentIcon(role: AgentStatus['role']) {
 function getStatusClasses(status: AgentStatus['status']) {
   switch (status) {
     case 'active':
-      return 'text-green-500 border-green-500/30 bg-green-500/10';
+      return 'text-status-success border-status-success/30 bg-status-success-bg';
     case 'processing':
-      return 'text-blue-500 border-blue-500/30 bg-blue-500/10';
+      return 'text-status-info border-status-info/30 bg-status-info-bg';
     case 'idle':
-      return 'text-gray-500 border-gray-500/30 bg-gray-500/10';
+      return 'text-muted-foreground border-muted-foreground/30 bg-muted';
   }
 }
 
@@ -51,11 +51,11 @@ function getStatusClasses(status: AgentStatus['status']) {
 function getStatusDotColor(status: AgentStatus['status']) {
   switch (status) {
     case 'active':
-      return 'bg-green-500';
+      return 'bg-status-success';
     case 'processing':
-      return 'bg-blue-500 animate-pulse';
+      return 'bg-status-info animate-pulse';
     case 'idle':
-      return 'bg-gray-500';
+      return 'bg-muted-foreground';
   }
 }
 

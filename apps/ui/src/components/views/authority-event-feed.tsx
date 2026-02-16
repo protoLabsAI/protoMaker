@@ -34,13 +34,13 @@ function getEventIcon(type: EventType) {
 function getSeverityClasses(severity: AuthorityEvent['severity']) {
   switch (severity) {
     case 'success':
-      return 'text-green-400 border-green-500/30 bg-green-500/10';
+      return 'text-status-success border-status-success/30 bg-status-success-bg';
     case 'warning':
-      return 'text-yellow-400 border-yellow-500/30 bg-yellow-500/10';
+      return 'text-status-warning border-status-warning/30 bg-status-warning-bg';
     case 'error':
-      return 'text-red-400 border-red-500/30 bg-red-500/10';
+      return 'text-status-error border-status-error/30 bg-status-error-bg';
     default:
-      return 'text-blue-400 border-blue-500/30 bg-blue-500/10';
+      return 'text-status-info border-status-info/30 bg-status-info-bg';
   }
 }
 
@@ -78,7 +78,7 @@ export const AuthorityEventFeed = memo(function AuthorityEventFeed() {
           <div
             className={cn(
               'h-2 w-2 rounded-full',
-              isConnected ? 'bg-green-500 animate-pulse' : 'bg-gray-500'
+              isConnected ? 'bg-status-success animate-pulse' : 'bg-muted-foreground'
             )}
             title={isConnected ? 'Connected' : 'Disconnected'}
           />

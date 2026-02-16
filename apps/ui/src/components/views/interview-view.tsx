@@ -391,7 +391,7 @@ export function InterviewView() {
   return (
     <div className="flex-1 flex flex-col content-bg min-h-0" data-testid="interview-view">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-border bg-glass backdrop-blur-md">
+      <div className="flex items-center justify-between p-4 border-b border-border bg-card/80 backdrop-blur-md">
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
@@ -421,14 +421,14 @@ export function InterviewView() {
               className={cn(
                 'w-2 h-2 rounded-full transition-colors',
                 index < currentQuestionIndex
-                  ? 'bg-green-500'
+                  ? 'bg-status-success'
                   : index === currentQuestionIndex
                     ? 'bg-primary'
-                    : 'bg-zinc-700'
+                    : 'bg-muted'
               )}
             />
           ))}
-          {isComplete && <CheckCircle className="w-4 h-4 text-green-500 ml-2" />}
+          {isComplete && <CheckCircle className="w-4 h-4 text-status-success ml-2" />}
         </div>
       </div>
 
@@ -503,7 +503,7 @@ export function InterviewView() {
         {/* Project Setup Form */}
         {showProjectSetup && (
           <div className="mt-6">
-            <Card className="bg-zinc-900/50 border-white/10" data-testid="project-setup-form">
+            <Card className="bg-card border-border" data-testid="project-setup-form">
               <CardContent className="p-6 space-y-4">
                 <div className="flex items-center gap-2 mb-4">
                   <FileText className="w-5 h-5 text-primary" />
@@ -512,7 +512,10 @@ export function InterviewView() {
 
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <label htmlFor="project-name" className="text-sm font-medium text-zinc-300">
+                    <label
+                      htmlFor="project-name"
+                      className="text-sm font-medium text-foreground-secondary"
+                    >
                       Project Name
                     </label>
                     <Input
@@ -520,13 +523,16 @@ export function InterviewView() {
                       placeholder="my-awesome-project"
                       value={projectName}
                       onChange={(e) => setProjectName(e.target.value)}
-                      className="bg-zinc-950/50 border-white/10 text-white placeholder:text-zinc-500"
+                      className="bg-background/50 border-border text-foreground placeholder:text-muted-foreground"
                       data-testid="interview-project-name-input"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <label htmlFor="project-path" className="text-sm font-medium text-zinc-300">
+                    <label
+                      htmlFor="project-path"
+                      className="text-sm font-medium text-foreground-secondary"
+                    >
                       Parent Directory
                     </label>
                     <div className="flex gap-2">
@@ -535,13 +541,13 @@ export function InterviewView() {
                         placeholder="/path/to/projects"
                         value={projectPath}
                         onChange={(e) => setProjectPath(e.target.value)}
-                        className="flex-1 bg-zinc-950/50 border-white/10 text-white placeholder:text-zinc-500"
+                        className="flex-1 bg-background/50 border-border text-foreground placeholder:text-muted-foreground"
                         data-testid="interview-project-path-input"
                       />
                       <Button
                         variant="secondary"
                         onClick={handleSelectDirectory}
-                        className="bg-white/5 hover:bg-white/10 text-white border border-white/10"
+                        className="bg-accent hover:bg-accent/80 text-foreground border border-border"
                         data-testid="interview-browse-directory"
                       >
                         Browse
@@ -551,14 +557,14 @@ export function InterviewView() {
 
                   {/* Preview of generated spec */}
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-zinc-300">
+                    <label className="text-sm font-medium text-foreground-secondary">
                       Generated Specification Preview
                     </label>
                     <div
-                      className="bg-zinc-950/50 border border-white/10 rounded-md p-3 max-h-48 overflow-y-auto"
+                      className="bg-background/50 border border-border rounded-md p-3 max-h-48 overflow-y-auto"
                       data-testid="spec-preview"
                     >
-                      <pre className="text-xs text-zinc-400 whitespace-pre-wrap font-mono">
+                      <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-mono">
                         {generatedSpec}
                       </pre>
                     </div>

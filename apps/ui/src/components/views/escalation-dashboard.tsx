@@ -55,17 +55,17 @@ function getSeverityIcon(severity: string) {
 function getSeverityClasses(severity: string) {
   switch (severity) {
     case 'emergency':
-      return 'text-red-600 border-red-600/30 bg-red-600/20';
+      return 'text-status-error border-status-error/30 bg-status-error-bg';
     case 'critical':
-      return 'text-red-500 border-red-500/30 bg-red-500/20';
+      return 'text-status-error border-status-error/30 bg-status-error-bg';
     case 'high':
-      return 'text-orange-500 border-orange-500/30 bg-orange-500/20';
+      return 'text-status-warning border-status-warning/30 bg-status-warning-bg';
     case 'medium':
-      return 'text-yellow-500 border-yellow-500/30 bg-yellow-500/20';
+      return 'text-status-warning border-status-warning/30 bg-status-warning-bg';
     case 'low':
-      return 'text-blue-500 border-blue-500/30 bg-blue-500/20';
+      return 'text-status-info border-status-info/30 bg-status-info-bg';
     default:
-      return 'text-gray-500 border-gray-500/30 bg-gray-500/20';
+      return 'text-muted-foreground border-muted-foreground/30 bg-muted';
   }
 }
 
@@ -132,7 +132,7 @@ const EscalationFeed = memo(function EscalationFeed() {
           <div
             className={cn(
               'h-2 w-2 rounded-full',
-              isConnected ? 'bg-green-500 animate-pulse' : 'bg-gray-500'
+              isConnected ? 'bg-status-success animate-pulse' : 'bg-muted-foreground'
             )}
             title={isConnected ? 'Connected' : 'Disconnected'}
           />
@@ -314,16 +314,18 @@ const ChannelStatus = memo(function ChannelStatus() {
                   <div
                     className={cn(
                       'h-2 w-2 rounded-full',
-                      stats.status === 'active' && 'bg-green-500',
-                      stats.status === 'error' && 'bg-red-500',
-                      stats.status === 'inactive' && 'bg-gray-500'
+                      stats.status === 'active' && 'bg-status-success',
+                      stats.status === 'error' && 'bg-status-error',
+                      stats.status === 'inactive' && 'bg-muted-foreground'
                     )}
                   />
                   <span className="text-sm font-medium capitalize">{channel}</span>
                 </div>
                 <div className="flex items-center gap-3 text-xs">
-                  <span className="text-green-400">{stats.sent} sent</span>
-                  {stats.failed > 0 && <span className="text-red-400">{stats.failed} failed</span>}
+                  <span className="text-status-success">{stats.sent} sent</span>
+                  {stats.failed > 0 && (
+                    <span className="text-status-error">{stats.failed} failed</span>
+                  )}
                 </div>
               </div>
             ))
@@ -378,7 +380,7 @@ const AcknowledgedPendingCounts = memo(function AcknowledgedPendingCounts() {
             onClick={() => setFilter('pending')}
             className="flex flex-col items-center py-3 h-auto"
           >
-            <span className="text-lg font-bold text-yellow-400">{counts.pending}</span>
+            <span className="text-lg font-bold text-status-warning">{counts.pending}</span>
             <span className="text-xs">Pending</span>
           </Button>
           <Button
@@ -387,7 +389,7 @@ const AcknowledgedPendingCounts = memo(function AcknowledgedPendingCounts() {
             onClick={() => setFilter('acknowledged')}
             className="flex flex-col items-center py-3 h-auto"
           >
-            <span className="text-lg font-bold text-green-400">{counts.acknowledged}</span>
+            <span className="text-lg font-bold text-status-success">{counts.acknowledged}</span>
             <span className="text-xs">Acknowledged</span>
           </Button>
         </div>
@@ -402,7 +404,7 @@ const AcknowledgedPendingCounts = memo(function AcknowledgedPendingCounts() {
           </div>
           <div className="h-2 bg-muted/30 rounded-full overflow-hidden">
             <div
-              className="h-full bg-green-500 transition-all"
+              className="h-full bg-status-success transition-all"
               style={{
                 width: `${counts.total > 0 ? (counts.acknowledged / counts.total) * 100 : 0}%`,
               }}

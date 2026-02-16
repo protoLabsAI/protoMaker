@@ -215,7 +215,7 @@ export function CodeView() {
   return (
     <div className="flex-1 flex flex-col overflow-hidden content-bg" data-testid="code-view">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-white/10 bg-zinc-950/50 backdrop-blur-md">
+      <div className="flex items-center justify-between p-4 border-b border-border bg-card backdrop-blur-md">
         <div className="flex items-center gap-3">
           <Code className="w-5 h-5 text-muted-foreground" />
           <div>

@@ -487,7 +487,7 @@ export function KanbanBoard({
                       >
                         <Plus className="w-4 h-4 mr-2" />
                         Add Feature
-                        <span className="ml-auto pl-2 text-[10px] font-mono opacity-70 bg-black/20 px-1.5 py-0.5 rounded">
+                        <span className="ml-auto pl-2 text-[10px] font-mono opacity-70 bg-muted/20 px-1.5 py-0.5 rounded">
                           {formatShortcut(addFeatureShortcut, true)}
                         </span>
                       </Button>

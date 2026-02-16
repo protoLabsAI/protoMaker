@@ -230,7 +230,7 @@ export function DevServerLogsPanel({
 
         {/* Log content area - fills remaining space */}
         <div
-          className="flex-1 min-h-0 overflow-hidden bg-zinc-950"
+          className="flex-1 min-h-0 overflow-hidden bg-background"
           data-testid="dev-server-logs-content"
         >
           {isLoading && !logs ? (

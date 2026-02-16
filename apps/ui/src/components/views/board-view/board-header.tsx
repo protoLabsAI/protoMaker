@@ -136,7 +136,7 @@ export function BoardHeader({
   const isTablet = useIsTablet();
 
   return (
-    <div className="flex items-center justify-between gap-5 p-4 border-b border-border bg-glass backdrop-blur-md">
+    <div className="flex items-center justify-between gap-5 p-4 border-b border-border bg-card/80 backdrop-blur-md">
       <div className="flex items-center gap-4">
         <BoardSearchBar
           searchQuery={searchQuery}

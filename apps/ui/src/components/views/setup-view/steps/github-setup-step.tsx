@@ -82,8 +82,8 @@ export function GitHubSetupStep({ onNext, onBack, onSkip }: GitHubSetupStepProps
   return (
     <div className="space-y-6">
       <div className="text-center mb-8">
-        <div className="w-16 h-16 rounded-xl bg-zinc-800 flex items-center justify-center mx-auto mb-4">
-          <Github className="w-8 h-8 text-white" />
+        <div className="w-16 h-16 rounded-xl bg-muted flex items-center justify-center mx-auto mb-4">
+          <Github className="w-8 h-8 text-foreground" />
         </div>
         <h2 className="text-2xl font-bold text-foreground mb-2">GitHub CLI Setup</h2>
         <p className="text-muted-foreground">Optional - Used for creating pull requests</p>

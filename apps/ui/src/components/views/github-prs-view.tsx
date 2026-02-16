@@ -51,11 +51,19 @@ export function GitHubPRsView() {
     if (pr.isDraft) return { label: 'Draft', color: 'text-muted-foreground', bg: 'bg-muted' };
     switch (pr.reviewDecision) {
       case 'APPROVED':
-        return { label: 'Approved', color: 'text-green-500', bg: 'bg-green-500/10' };
+        return { label: 'Approved', color: 'text-status-success', bg: 'bg-status-success-bg' };
       case 'CHANGES_REQUESTED':
-        return { label: 'Changes requested', color: 'text-orange-500', bg: 'bg-orange-500/10' };
+        return {
+          label: 'Changes requested',
+          color: 'text-status-warning',
+          bg: 'bg-status-warning-bg',
+        };
       case 'REVIEW_REQUIRED':
-        return { label: 'Review required', color: 'text-yellow-500', bg: 'bg-yellow-500/10' };
+        return {
+          label: 'Review required',
+          color: 'text-status-warning',
+          bg: 'bg-status-warning-bg',
+        };
       default:
         return null;
     }
@@ -101,8 +109,8 @@ export function GitHubPRsView() {
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-blue-500/10">
-              <GitPullRequest className="h-5 w-5 text-blue-500" />
+            <div className="p-2 rounded-lg bg-status-info-bg">
+              <GitPullRequest className="h-5 w-5 text-status-info" />
             </div>
             <div>
               <h1 className="text-lg font-bold">Pull Requests</h1>
@@ -176,9 +184,9 @@ export function GitHubPRsView() {
           <div className="flex items-center justify-between p-3 border-b border-border bg-muted/30">
             <div className="flex items-center gap-2 min-w-0">
               {selectedPR.state === 'MERGED' ? (
-                <GitMerge className="h-4 w-4 text-purple-500 shrink-0" />
+                <GitMerge className="h-4 w-4 text-primary shrink-0" />
               ) : (
-                <GitPullRequest className="h-4 w-4 text-green-500 shrink-0" />
+                <GitPullRequest className="h-4 w-4 text-status-success shrink-0" />
               )}
               <span className="text-sm font-medium truncate">
                 #{selectedPR.number} {selectedPR.title}
@@ -215,10 +223,10 @@ export function GitHubPRsView() {
                 className={cn(
                   'px-2 py-0.5 rounded-full text-xs font-medium',
                   selectedPR.state === 'MERGED'
-                    ? 'bg-purple-500/10 text-purple-500'
+                    ? 'bg-primary/10 text-primary'
                     : selectedPR.isDraft
                       ? 'bg-muted text-muted-foreground'
-                      : 'bg-green-500/10 text-green-500'
+                      : 'bg-status-success-bg text-status-success'
                 )}
               >
                 {selectedPR.state === 'MERGED' ? 'Merged' : selectedPR.isDraft ? 'Draft' : 'Open'}
@@ -321,9 +329,9 @@ function PRRow({
       onClick={onClick}
     >
       {pr.state === 'MERGED' ? (
-        <GitMerge className="h-4 w-4 text-purple-500 mt-0.5 shrink-0" />
+        <GitMerge className="h-4 w-4 text-primary mt-0.5 shrink-0" />
       ) : (
-        <GitPullRequest className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
+        <GitPullRequest className="h-4 w-4 text-status-success mt-0.5 shrink-0" />
       )}
 
       <div className="flex-1 min-w-0">
