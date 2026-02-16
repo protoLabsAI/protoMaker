@@ -34,6 +34,9 @@
     "zod": "^4.3.6",
     "zod-to-json-schema": "^3.24.1"
   },
+  "peerDependencies": {
+    "@langchain/core": "^0.3.33"
+  },
   "devDependencies": {
     "@types/node": "22.19.3",
     "tsup": "^8.5.1",
