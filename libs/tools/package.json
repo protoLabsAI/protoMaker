@@ -31,7 +31,8 @@
   },
   "dependencies": {
     "@automaker/types": "file:../types",
-    "zod": "^4.3.6"
+    "zod": "^4.3.6",
+    "zod-to-json-schema": "^3.24.1"
   },
   "devDependencies": {
     "@types/node": "22.19.3",
