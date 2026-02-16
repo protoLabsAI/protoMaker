@@ -388,3 +388,20 @@ Map to the shadcn/ui CSS variable system:
 - `--accent` → `surface-2`
 
 Replace fonts with Geist. Keep shadcn/ui component architecture — just update the tokens.
+
+### protoMaker UI App (OKLch)
+
+The UI app uses OKLch (perceptually uniform) rather than hex. Same brand identity, different color space for precision across 41 themes. The `studio-dark` theme in `apps/ui/src/styles/themes/studio-dark.css` is the canonical mapping:
+
+| Brand Token (hex)      | UI Token (OKLch)        | CSS Variable             |
+| ---------------------- | ----------------------- | ------------------------ |
+| `surface-0` `#09090b`  | `oklch(0.13 0.005 260)` | `--background`           |
+| `surface-1` `#111113`  | `oklch(0.16 0.005 260)` | `--card`                 |
+| `surface-2` `#18181b`  | `oklch(0.2 0.005 260)`  | `--muted`                |
+| `accent` `#a78bfa`     | `oklch(0.68 0.153 275)` | `--brand-400`            |
+| `accent-dim` `#7c5cbf` | `oklch(0.45 0.171 275)` | `--brand-600`            |
+| `#fafafa`              | `oklch(0.93 0 0)`       | `--foreground`           |
+| `#a1a1aa`              | `oklch(0.65 0.005 260)` | `--foreground-secondary` |
+| `#71717a`              | `oklch(0.5 0.005 260)`  | `--foreground-muted`     |
+
+The hue 275 (violet) and hue 260 (zinc) carry through identically. See [`frontend-philosophy.md`](../dev/frontend-philosophy.md) for the full OKLch token system and implementation details.
