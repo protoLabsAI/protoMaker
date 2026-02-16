@@ -970,7 +970,7 @@ const apiLimiter = rateLimit({
   limit: 300,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
-  skip: (req) => req.path === '/api/health' || req.path.startsWith('/api/health/'),
+  skip: (req) => req.path === '/health' || req.path.startsWith('/health/'),
   message: { error: 'Too many requests, please try again later' },
 });
 app.use('/api', apiLimiter);

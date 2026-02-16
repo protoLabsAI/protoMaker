@@ -105,7 +105,7 @@ fi
 # Phase 4: UI serving check
 echo ""
 echo "UI (port 3007):"
-UI_URL="${BASE_URL/3008/3007}"
+UI_URL="${UI_URL:-${BASE_URL/3008/3007}}"
 if UI_RESPONSE=$(curl -sf --max-time 10 "$UI_URL/" 2>/dev/null); then
   if echo "$UI_RESPONSE" | grep -q '<div id="root"'; then
     echo "  PASS: UI serves HTML with #root"
@@ -124,7 +124,7 @@ fi
 # Phase 5: Docs site check (non-fatal)
 echo ""
 echo "Docs (port 3009):"
-DOCS_URL="${BASE_URL/3008/3009}"
+DOCS_URL="${DOCS_URL:-${BASE_URL/3008/3009}}"
 if DOCS_RESPONSE=$(curl -sf --max-time 10 "$DOCS_URL/" 2>/dev/null); then
   if echo "$DOCS_RESPONSE" | grep -qi 'vitepress\|protolabs\|automaker'; then
     echo "  PASS: Docs site serving content"
