@@ -35,8 +35,12 @@ runs:
     - name: Configure Git for HTTPS
       shell: bash
       # Convert SSH URLs to HTTPS for git dependencies (e.g., @electron/node-gyp)
-      # This is needed because SSH authentication isn't available in CI
-      run: git config --global url."https://github.com/".insteadOf "git@github.com:"
+      # Use a per-workspace config file to avoid .gitconfig.lock races when
+      # multiple self-hosted runners share the same $HOME directory.
+      run: |
+        GIT_CONF="${RUNNER_TEMP:-.}/.gitconfig-ci"
+        git config -f "$GIT_CONF" url."https://github.com/".insteadOf "git@github.com:"
+        echo "GIT_CONFIG_GLOBAL=$GIT_CONF" >> "$GITHUB_ENV"
 
     - name: Install dependencies
       shell: bash
