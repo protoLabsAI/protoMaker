@@ -9,5 +9,5 @@ export default defineConfig({
   clean: true,
   sourcemap: true,
   treeshake: true,
-  external: ['groq-sdk'],
+  external: [/^@automaker\//, 'groq-sdk'],
 });

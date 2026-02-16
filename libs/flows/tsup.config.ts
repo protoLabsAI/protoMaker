@@ -8,4 +8,5 @@ export default defineConfig({
   sourcemap: true,
   treeshake: true,
   splitting: true, // Enable code splitting for better tree-shaking
+  external: [/^@automaker\//, /^@langchain\//],
 });
