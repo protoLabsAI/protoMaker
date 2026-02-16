@@ -13,4 +13,5 @@ export { toMCPTool, toMCPTools, type MCPToolEntry } from './adapters/index.js';
 export { toExpressRouter, type ExpressAdapterOptions } from './adapters/index.js';
 
 // Domain-specific tools
+export * from './domains/features/index.js';
 export * from './domains/ideas/index.js';
