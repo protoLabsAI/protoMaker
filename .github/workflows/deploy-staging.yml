@@ -137,10 +137,11 @@ jobs:
           fi
 
           # Check docs health (runs independently via docker-compose.docs.yml)
-          if curl -sf http://localhost:3009/ > /dev/null; then
-            echo "Docs site is healthy"
+          DOCS_PORT=$(grep -oP 'DOCS_PORT=\K\d+' .env 2>/dev/null || echo "3009")
+          if curl -sf "http://localhost:${DOCS_PORT}/" > /dev/null; then
+            echo "Docs site is healthy on port ${DOCS_PORT}"
           else
-            echo "Docs not responding (runs independently — non-fatal for app deploy)"
+            echo "Docs not responding on port ${DOCS_PORT} (runs independently — non-fatal)"
           fi
 
       - name: Smoke tests

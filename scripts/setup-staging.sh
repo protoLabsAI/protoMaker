@@ -179,9 +179,9 @@ build_images() {
   docker compose -f "$COMPOSE_FILE" build
 
   info "Building docs image..."
-  docker compose -f "$DOCS_COMPOSE_FILE" build
+  docker compose -f "$DOCS_COMPOSE_FILE" build || warn "Docs build failed (non-fatal)"
 
-  ok "Images built successfully"
+  ok "App images built successfully"
 }
 
 # ─── Stop existing ───────────────────────────────────────────────────────────
