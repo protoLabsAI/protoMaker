@@ -50,6 +50,7 @@ const LOG_LEVEL_MAP: Record<string, LogLevel> = {
   info: LogLevel.INFO,
   debug: LogLevel.DEBUG,
 };
+import rateLimit from 'express-rate-limit';
 import { authMiddleware, validateWsConnectionToken, checkRawAuthentication } from './lib/auth.js';
 import { requireJsonContentType } from './middleware/require-json-content-type.js';
 import { createAuthRoutes } from './routes/auth/index.js';
@@ -963,6 +964,27 @@ setInterval(() => {
   }
 }, VALIDATION_CLEANUP_INTERVAL_MS);
 
+// Rate limiting — general API (skip health checks)
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  limit: 300,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  skip: (req) => req.path === '/api/health' || req.path.startsWith('/api/health/'),
+  message: { error: 'Too many requests, please try again later' },
+});
+app.use('/api', apiLimiter);
+
+// Stricter rate limit for auth login (brute force protection)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  limit: 20,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { error: 'Too many login attempts, please try again later' },
+});
+app.use('/api/auth/login', authLimiter);
+
 // Require Content-Type: application/json for all API POST/PUT/PATCH requests
 // This helps prevent CSRF and content-type confusion attacks
 app.use('/api', requireJsonContentType);
@@ -1582,6 +1604,15 @@ process.on('uncaughtException', (error: Error) => {
 // Graceful shutdown
 async function gracefulShutdown() {
   logger.info('Shutting down gracefully...');
+
+  // Notify all connected WebSocket clients before shutting down
+  try {
+    events.emit('server:shutdown', { timestamp: new Date().toISOString() });
+    // Give clients a moment to receive the notification
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  } catch (err) {
+    logger.warn('[SHUTDOWN] Failed to broadcast shutdown notification:', err);
+  }
 
   // Write clean shutdown marker so next startup knows this wasn't a crash
   try {

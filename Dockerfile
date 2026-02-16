@@ -221,18 +221,27 @@ LABEL automaker.git.commit.sha="${GIT_COMMIT_SHA}"
 # Copy built docs site
 COPY --from=docs-builder /app/docs/.vitepress/dist /usr/share/nginx/html
 
-# Simple nginx config for static site
+# Nginx config with gzip, security headers, and static asset caching
 RUN printf 'server {\n\
     listen 80;\n\
     server_name localhost;\n\
     root /usr/share/nginx/html;\n\
     index index.html;\n\
 \n\
+    gzip on;\n\
+    gzip_vary on;\n\
+    gzip_proxied any;\n\
+    gzip_min_length 1024;\n\
+    gzip_types text/plain text/css text/javascript application/javascript application/json application/xml image/svg+xml;\n\
+\n\
+    add_header X-Content-Type-Options "nosniff" always;\n\
+    add_header X-Frame-Options "DENY" always;\n\
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;\n\
+\n\
     location / {\n\
         try_files $uri $uri/ $uri.html /index.html;\n\
     }\n\
 \n\
-    # Cache static assets\n\
     location ~* \\.(js|css|png|jpg|jpeg|gif|ico|svg|woff2?)$ {\n\
         expires 7d;\n\
         add_header Cache-Control "public, immutable";\n\

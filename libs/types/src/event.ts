@@ -310,7 +310,9 @@ export type EventType =
   | 'lead-engineer:action-executed'
   | 'lead-engineer:rule-evaluated'
   | 'lead-engineer:project-completing'
-  | 'lead-engineer:project-completed';
+  | 'lead-engineer:project-completed'
+  // Server lifecycle events
+  | 'server:shutdown';
 
 export type EventCallback = (type: EventType, payload: unknown) => void;
 

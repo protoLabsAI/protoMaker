@@ -22,6 +22,8 @@ services:
       context: .
       dockerfile: Dockerfile
       target: ui
+      args:
+        GIT_COMMIT_SHA: ${GIT_COMMIT_SHA:-unknown}
     container_name: automaker-ui
     restart: unless-stopped
     ports:
@@ -58,8 +60,9 @@ services:
       args:
         UID: ${UID:-1001}
         GID: ${GID:-1001}
+        GIT_COMMIT_SHA: ${GIT_COMMIT_SHA:-unknown}
     container_name: automaker-server
-    restart: unless-stopped
+    restart: on-failure:5
     ports:
       - '${API_PORT:-3008}:3008'
     environment:
@@ -140,6 +143,8 @@ services:
       context: .
       dockerfile: Dockerfile
       target: docs
+      args:
+        GIT_COMMIT_SHA: ${GIT_COMMIT_SHA:-unknown}
     container_name: automaker-docs
     restart: unless-stopped
     ports:

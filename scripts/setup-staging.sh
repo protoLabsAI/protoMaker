@@ -167,6 +167,13 @@ build_images() {
     exit 1
   fi
 
+  # Auto-detect git commit SHA if not already set (deploy workflow sets this)
+  if [ -z "${GIT_COMMIT_SHA:-}" ]; then
+    GIT_COMMIT_SHA=$(git -C "$PROJECT_ROOT" rev-parse HEAD 2>/dev/null || echo "unknown")
+    export GIT_COMMIT_SHA
+    info "Auto-detected GIT_COMMIT_SHA: ${GIT_COMMIT_SHA:0:12}"
+  fi
+
   info "Building images (server, ui, docs)..."
   docker compose -f "$COMPOSE_FILE" build
 

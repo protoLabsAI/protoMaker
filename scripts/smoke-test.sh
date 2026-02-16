@@ -102,6 +102,57 @@ if [ -n "$SESSION_COOKIE" ]; then
   smoke_test "GET /api/models/available" GET "/api/models/available"
 fi
 
+# Phase 4: UI serving check
+echo ""
+echo "UI (port 3007):"
+UI_URL="${BASE_URL/3008/3007}"
+if UI_RESPONSE=$(curl -sf --max-time 10 "$UI_URL/" 2>/dev/null); then
+  if echo "$UI_RESPONSE" | grep -q '<div id="root"'; then
+    echo "  PASS: UI serves HTML with #root"
+    PASSED=$((PASSED + 1))
+  else
+    echo "  FAIL: UI response missing <div id=\"root\""
+    FAILED=$((FAILED + 1))
+    FAILURES="${FAILURES}\n- UI HTML: missing <div id=\"root\">"
+  fi
+else
+  echo "  FAIL: UI not responding on ${UI_URL}"
+  FAILED=$((FAILED + 1))
+  FAILURES="${FAILURES}\n- UI: not responding"
+fi
+
+# Phase 5: Docs site check (non-fatal)
+echo ""
+echo "Docs (port 3009):"
+DOCS_URL="${BASE_URL/3008/3009}"
+if DOCS_RESPONSE=$(curl -sf --max-time 10 "$DOCS_URL/" 2>/dev/null); then
+  if echo "$DOCS_RESPONSE" | grep -qi 'vitepress\|protolabs\|automaker'; then
+    echo "  PASS: Docs site serving content"
+    PASSED=$((PASSED + 1))
+  else
+    echo "  WARN: Docs responded but content unexpected (non-fatal)"
+  fi
+else
+  echo "  WARN: Docs not responding on ${DOCS_URL} (non-fatal)"
+fi
+
+# Phase 6: WebSocket token check
+if [ -n "$SESSION_COOKIE" ]; then
+  echo ""
+  echo "WebSocket:"
+  WS_RESPONSE=$(curl -sf --max-time 10 \
+    -b "automaker_session=${SESSION_COOKIE}" \
+    "${BASE_URL}/api/auth/token" 2>/dev/null) || true
+  if echo "$WS_RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); assert d.get('success') and d.get('token')" 2>/dev/null; then
+    echo "  PASS: WebSocket token endpoint returns token"
+    PASSED=$((PASSED + 1))
+  else
+    echo "  FAIL: WebSocket token endpoint failed"
+    FAILED=$((FAILED + 1))
+    FAILURES="${FAILURES}\n- WebSocket token: endpoint failed or missing token"
+  fi
+fi
+
 # Results
 echo ""
 echo "================================"
