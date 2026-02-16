@@ -3,95 +3,12 @@ import { Feature } from '@/store/app-store';
 import { useAgentOutput } from '@/hooks/queries';
 import { ChevronDown, ChevronRight, FileCode, Activity, Clock, DollarSign } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { formatModelName } from '@/lib/agent-context-parser';
-
-/**
- * Parsed agent activity entry
- */
-interface ActivityEntry {
-  timestamp?: string;
-  type: 'tool_call' | 'file_edit' | 'git_operation' | 'reasoning';
-  tool?: string;
-  file?: string;
-  description: string;
-}
-
-/**
- * Extracts tool calls from agent output
- */
-function extractActivityLog(content: string): ActivityEntry[] {
-  const activities: ActivityEntry[] = [];
-
-  // Match tool calls with format: 🔧 Tool: ToolName
-  const toolCallMatches = content.matchAll(/🔧\s*Tool:\s*(\w+)/g);
-  for (const match of toolCallMatches) {
-    const tool = match[1];
-    activities.push({
-      type: 'tool_call',
-      tool,
-      description: `Called ${tool}`,
-    });
-  }
-
-  // Extract file operations from Edit/Write tool mentions
-  const editMatches = content.matchAll(/(?:Edit|Write).*?file[:\s]+([^\s\n]+)/gi);
-  for (const match of editMatches) {
-    const file = match[1].replace(/["`']/g, '');
-    activities.push({
-      type: 'file_edit',
-      file,
-      description: `Modified ${file}`,
-    });
-  }
-
-  // Extract git operations
-  const gitMatches = content.matchAll(/(?:git\s+(?:commit|push|checkout|branch|add))([^\n]*)/gi);
-  for (const match of gitMatches) {
-    activities.push({
-      type: 'git_operation',
-      description: `Git: ${match[0].trim()}`,
-    });
-  }
-
-  // Reverse to show latest first
-  return activities.reverse();
-}
-
-/**
- * Extracts list of files changed from agent output
- */
-function extractFilesChanged(content: string): string[] {
-  const files = new Set<string>();
-
-  // Match file paths in Edit/Write tool calls
-  const editMatches = content.matchAll(/(?:Edit|Write).*?file[:\s]+([^\s\n]+)/gi);
-  for (const match of editMatches) {
-    const file = match[1].replace(/["`']/g, '').trim();
-    if (file && !file.includes('{') && !file.includes('...')) {
-      files.add(file);
-    }
-  }
-
-  return Array.from(files);
-}
-
-/**
- * Extracts agent state info (turns, cost, duration)
- */
-function extractAgentState(content: string) {
-  // Try to extract turn count from various patterns
-  const turnMatch = content.match(/turn[s]?\s*(?:used|count)?[:\s]*(\d+)/i);
-  const turns = turnMatch ? parseInt(turnMatch[1], 10) : undefined;
-
-  // Try to extract cost information
-  const costMatch = content.match(/\$?([\d.]+)\s*(?:USD|dollars?)?/i);
-  const cost = costMatch ? parseFloat(costMatch[1]) : undefined;
-
-  // Calculate approximate duration based on content length (rough estimate)
-  const duration = content.length > 1000 ? `${Math.floor(content.length / 500)}m` : undefined;
-
-  return { turns, cost, duration };
-}
+import {
+  formatModelName,
+  extractActivityLog,
+  extractFilesChanged,
+  extractAgentState,
+} from '@/lib/agent-context-parser';
 
 interface AgentInspectorProps {
   feature: Feature;
