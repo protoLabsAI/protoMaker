@@ -75,6 +75,7 @@ automaker/
 ├── apps/
 │   ├── ui/           # React + Vite + Electron frontend (port 3007)
 │   └── server/       # Express + WebSocket backend (port 3008)
+├── site/             # Landing page (protolabs.studio) — static HTML on Cloudflare Pages
 └── libs/             # Shared packages (@automaker/*)
     ├── types/        # Core TypeScript definitions (no dependencies)
     ├── utils/        # Logging, errors, image processing, context loading

@@ -10,7 +10,7 @@ The staging server is optimized for:
 - **High Memory Allocation**: 48GB RAM dedicated to agent workloads
 - **Development Testing**: Safe environment for testing features before production release
 - **Multi-Project Support**: Can work on multiple projects including automaker itself without conflicts
-- **Full Service Suite**: UI (3007), API (3008), Docs (3009), and Storybook (6666) all served via Docker
+- **Full Service Suite**: UI (3007), API (3008), Docs (3009) — docs runs independently via `docker-compose.docs.yml`
 
 ## Resource Requirements
 
@@ -63,117 +63,46 @@ Example - no conflicts:
 
 ## Docker Compose Configuration
 
-### Staging-Optimized docker-compose.yml
+### Service Architecture
 
-Create `docker-compose.staging.yml` based on production config with increased resources:
+Staging uses **two separate compose files** for independent lifecycles:
 
-```yaml
-services:
-  server:
-    image: automaker-server:latest
-    container_name: automaker-server-staging
-    restart: unless-stopped
+| File                         | Services   | Project Name        | Purpose                           |
+| ---------------------------- | ---------- | ------------------- | --------------------------------- |
+| `docker-compose.staging.yml` | server, ui | `automaker-staging` | App services (restart together)   |
+| `docker-compose.docs.yml`    | docs       | `automaker-docs`    | Docs site (survives app restarts) |
 
-    # High-memory configuration for concurrent agents
-    deploy:
-      resources:
-        limits:
-          cpus: '8'
-          memory: 48G
-        reservations:
-          cpus: '4'
-          memory: 24G
+This separation means app deploys and rollbacks never touch the docs container. A docs build failure also does not abort the app deploy.
 
-    environment:
-      - NODE_ENV=staging
-      - HOST=0.0.0.0
-      - HOSTNAME=localhost
-      - PORT=3008
-      - DATA_DIR=/data
-      - ALLOWED_ROOT_DIRECTORY=/projects
+### App Services (`docker-compose.staging.yml`)
 
-      # API Keys (use secrets in production)
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      - LINEAR_API_KEY=${LINEAR_API_KEY}
-      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN}
-      - AUTOMAKER_API_KEY=${AUTOMAKER_API_KEY}
+The staging compose configures server and UI with high-memory resources:
 
-      # Node.js memory tuning for high-concurrency
-      - NODE_OPTIONS=--max-old-space-size=32768
+- **Server**: `on-failure:5` restart policy (stops after 5 consecutive crashes instead of looping forever), 48GB memory limit, `GIT_COMMIT_SHA` build arg for version tracking
+- **UI**: `unless-stopped` restart policy, depends on server health, 2GB memory limit
+- **Volumes**: All marked `external: true` — created by `setup-staging.sh` on first run
 
-    volumes:
-      - automaker-data:/data
-      - automaker-claude-config:/home/automaker/.claude
-      - automaker-cursor-config:/home/automaker/.cursor
-      # Mount projects directory for multi-project work
-      - /path/to/projects:/projects
+### Docs Site (`docker-compose.docs.yml`)
 
-    ports:
-      - '3008:3008'
+Lightweight VitePress docs container running independently:
 
-    healthcheck:
-      test: ['CMD', 'curl', '-f', 'http://localhost:3008/api/health']
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
-
-    logging:
-      driver: json-file
-      options:
-        max-size: '20m'
-        max-file: '5'
-
-  ui:
-    image: automaker-ui:latest
-    container_name: automaker-ui-staging
-    restart: unless-stopped
-
-    deploy:
-      resources:
-        limits:
-          cpus: '2'
-          memory: 2G
-        reservations:
-          cpus: '1'
-          memory: 512M
-
-    environment:
-      - VITE_HOSTNAME=localhost
-
-    ports:
-      - '3007:80'
-
-    depends_on:
-      server:
-        condition: service_healthy
-
-    logging:
-      driver: json-file
-      options:
-        max-size: '10m'
-        max-file: '3'
-
-volumes:
-  automaker-data:
-    driver: local
-  automaker-claude-config:
-    driver: local
-  automaker-cursor-config:
-    driver: local
-```
+- 128MB memory limit, nginx:alpine serving static files
+- `unless-stopped` restart policy (nginx rarely crashes)
+- Port configurable via `DOCS_PORT` env var (default: 3009)
 
 ### Key Configuration Changes from Production
 
-| Setting                      | Production | Staging | Reason                              |
-| ---------------------------- | ---------- | ------- | ----------------------------------- |
-| Memory limit                 | 8G         | 48G     | Support 6-10 concurrent agents      |
-| CPU limit                    | 2          | 8       | Parallel agent execution            |
-| `NODE_OPTIONS` max-old-space | default    | 32768   | Prevent Node.js heap exhaustion     |
-| Health check timeout         | 3s         | 10s     | More generous for high load         |
-| Health check start period    | 5s         | 30s     | Allow longer initialization         |
-| Log max-size (server)        | 10m        | 20m     | More verbose logging for debugging  |
-| Log max-file (server)        | 3          | 5       | Keep more history for investigation |
+| Setting                      | Production       | Staging          | Reason                              |
+| ---------------------------- | ---------------- | ---------------- | ----------------------------------- |
+| Memory limit                 | 8G               | 48G              | Support 6-10 concurrent agents      |
+| CPU limit                    | 2                | 8                | Parallel agent execution            |
+| `NODE_OPTIONS` max-old-space | default          | 32768            | Prevent Node.js heap exhaustion     |
+| Server restart policy        | `unless-stopped` | `on-failure:5`   | Stop crash loops after 5 retries    |
+| Health check timeout         | 3s               | 10s              | More generous for high load         |
+| Health check start period    | 5s               | 60s              | Allow longer initialization         |
+| Log max-size (server)        | 10m              | 100m             | More verbose logging for debugging  |
+| Log max-file (server)        | 3                | 10               | Keep more history for investigation |
+| Docs lifecycle               | Same compose     | Separate compose | Independent deploys and rollbacks   |
 
 ## Deployment Steps
 
@@ -209,24 +138,40 @@ docker images | grep automaker
 
 ### 3. Configure Environment
 
+The staging deploy uses a **dedicated** `.env.staging` file at `/home/josh/staging-deploy/.env.staging` — separate from the dev `.env` to prevent accidental breakage. The deploy workflow copies this into the deploy directory as `.env` on each run.
+
 Create `.env.staging`:
 
 ```bash
 # API Keys
 ANTHROPIC_API_KEY=your_anthropic_key
 LINEAR_API_KEY=your_linear_key
-DISCORD_BOT_TOKEN=your_discord_token
 AUTOMAKER_API_KEY=automaker-staging-key-2026
 
+# Container User
+UID=1000
+GID=1000
+
 # Paths
-PROJECTS_DIR=/path/to/your/projects
+PROJECTS_MOUNT=/home/youruser/dev
+ALLOWED_ROOT_DIRECTORY=/home/youruser/dev
+
+# Resources (auto-detected by setup-staging.sh if omitted)
+MEMORY_LIMIT=48G
+CPU_LIMIT=8
+NODE_MAX_OLD_SPACE=32768
+AUTOMAKER_MAX_CONCURRENCY=6
 ```
 
 ### 4. Start Services
 
 ```bash
-# Start with staging config
-docker compose -f docker-compose.staging.yml --env-file .env.staging up -d
+# One-command setup (recommended)
+./scripts/setup-staging.sh
+
+# Or step by step:
+./scripts/setup-staging.sh --build    # Build images
+./scripts/setup-staging.sh --start    # Start containers
 
 # Watch logs
 docker compose -f docker-compose.staging.yml logs -f
@@ -730,12 +675,16 @@ Staging auto-deploys from `main` via a GitHub Actions self-hosted runner.
 1. Code merges to `main`
 2. `.github/workflows/deploy-staging.yml` triggers on the self-hosted runner
 3. Workflow clones/pulls into a **persistent deploy directory** (`/home/josh/staging-deploy/automaker`) — not the runner's `_work/` workspace (which gets cleaned by cron)
-4. `.env` is copied from `/home/josh/dev/ava/.env` (persistent credentials)
-5. **Drain step** calls `POST /api/deploy/drain` to gracefully stop auto-mode and wait for running agents to finish (up to 2 minutes, then force-stops)
-6. `setup-staging.sh --build` builds all Docker images (server, UI, docs, storybook), `--start` restarts containers
-7. On startup, auto-mode auto-resumes from `autoModeAlwaysOn` settings and orphaned features are reset to `backlog`
-8. Health check verifies deployment, smoke tests run
-9. Discord notification posted to `#deployments`
+4. `.env` is copied from `/home/josh/staging-deploy/.env.staging` (dedicated staging credentials, separate from dev `.env`)
+5. **Disk pre-check** verifies 10GB+ free space, prunes dangling Docker images first
+6. **Drain step** calls `POST /api/deploy/drain` to gracefully stop auto-mode and wait for running agents to finish (up to 2 minutes, then force-stops)
+7. **Rollback images tagged** — current server and UI images saved as `:rollback` before build
+8. `setup-staging.sh --build` builds app images (server + UI) and docs image separately (docs failure is non-fatal), `--start` restarts containers
+9. On startup, auto-mode auto-resumes from `autoModeAlwaysOn` settings and orphaned features are reset to `backlog`
+10. **Health check** verifies server API and docs site (docs check is non-fatal)
+11. **Smoke tests** (`scripts/smoke-test.sh`) verify API endpoints, UI HTML, docs site, and WebSocket auth
+12. **Rollback on failure** — if build, health check, or smoke tests fail, previous images are restored automatically
+13. Discord notification posted to `#deployments`
 
 ### Zero-Downtime Deploy (Agent Drain)
 
@@ -855,15 +804,53 @@ Set the `DISCORD_DEPLOY_WEBHOOK` secret in GitHub repo settings to receive deplo
 
 Create webhooks in Discord: Server Settings > Integrations > Webhooks > New Webhook, target the `#deployments` channel.
 
-## Next Steps
+## Staging Hardening Features
 
-After staging deployment is stable:
+The staging environment includes several hardening features beyond standard production config:
 
-1. Document capacity limits observed (agents per complexity)
-2. Tune `maxConcurrency` based on actual usage patterns
-3. Set up automated monitoring/alerting
-4. Plan production rollout with learned optimizations
-5. Consider dedicated agent worker architecture for >10 concurrent agents
+### Nginx Hardening
+
+The UI nginx config (`apps/ui/nginx.conf`) includes:
+
+- **Gzip compression** for text, CSS, JS, JSON, SVG, XML content types
+- **Security headers**: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`
+- **Proxy buffers**: `proxy_buffer_size 128k`, `proxy_buffers 4 256k` for large agent outputs
+- **Body size limit**: `client_max_body_size 50m` for image uploads
+- **Static asset caching**: `expires 7d` with `Cache-Control: public, immutable` for files in `/assets/`
+
+### Rate Limiting
+
+Express rate limiting protects against abuse:
+
+- **General API**: 300 requests/minute per IP (skips `/api/health` endpoints)
+- **Auth login**: 20 requests/15 minutes per IP (brute force protection)
+- Responses include `RateLimit-Remaining` header (draft-7 standard)
+- Returns 429 when exceeded
+
+### WebSocket Resilience
+
+- **Exponential backoff**: Reconnects at 1s, 2s, 4s, 8s, 16s, 30s (capped) with 20% jitter
+- **Shutdown notification**: Server broadcasts `server:shutdown` event to all WebSocket clients during SIGTERM, giving the UI time to show a graceful "reconnecting" state
+
+### Smoke Tests
+
+`scripts/smoke-test.sh` runs after every deploy and checks:
+
+1. **API health** — `/api/health` returns 200
+2. **Feature endpoints** — list features, board summary
+3. **UI HTML** — port 3007 returns page with `<div id="app"`
+4. **Docs site** — port 3009 responds (non-fatal if docs container is restarting)
+5. **WebSocket auth** — `/api/auth/ws-token` returns a valid token
+
+Failed smoke tests trigger automatic rollback to previous working images.
+
+### Deploy Safety
+
+- **Disk pre-check**: Requires 10GB+ free space before Docker build
+- **Rollback images**: Previous working images tagged as `:rollback` before build; auto-restored on failure
+- **Dedicated env**: `.env.staging` at `/home/josh/staging-deploy/` — separate from dev `.env`
+- **Non-fatal docs build**: Docs build failure doesn't abort app service deploy
+- **Crash loop protection**: Server uses `on-failure:5` restart policy (stops after 5 consecutive crashes)
 
 ---
 

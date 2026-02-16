@@ -23,7 +23,7 @@ Deploy protoMaker. Docker, systemd, staging — pick what fits your stack.
 
 ## Infrastructure Overview
 
-protoMaker uses a containerized architecture with two main services:
+protoMaker uses a containerized architecture with three services:
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -91,29 +91,34 @@ sudo systemctl start protomaker
 
 ### Docker Compose
 
-| File                          | Purpose                                   |
-| ----------------------------- | ----------------------------------------- |
-| `docker-compose.yml`          | Production (isolated, named volumes only) |
-| `docker-compose.dev.yml`      | Development (source mounted, live reload) |
-| `docker-compose.override.yml` | Local customization (gitignored)          |
+| File                          | Purpose                                    |
+| ----------------------------- | ------------------------------------------ |
+| `docker-compose.yml`          | Production (isolated, named volumes only)  |
+| `docker-compose.dev.yml`      | Development (source mounted, live reload)  |
+| `docker-compose.staging.yml`  | Staging app services (server + UI)         |
+| `docker-compose.docs.yml`     | Docs site (independent lifecycle from app) |
+| `docker-compose.override.yml` | Local customization (gitignored)           |
 
 ### CI/CD Workflows
 
-| File                                   | Purpose                        |
-| -------------------------------------- | ------------------------------ |
-| `.github/workflows/test.yml`           | Unit tests (Vitest)            |
-| `.github/workflows/e2e-tests.yml`      | E2E tests (Playwright)         |
-| `.github/workflows/pr-check.yml`       | Build verification             |
-| `.github/workflows/format-check.yml`   | Prettier formatting            |
-| `.github/workflows/security-audit.yml` | npm audit                      |
-| `.github/workflows/release.yml`        | Multi-platform Electron builds |
+| File                                   | Purpose                                |
+| -------------------------------------- | -------------------------------------- |
+| `.github/workflows/test.yml`           | Unit tests (Vitest)                    |
+| `.github/workflows/e2e-tests.yml`      | E2E tests (Playwright)                 |
+| `.github/workflows/pr-check.yml`       | Build verification                     |
+| `.github/workflows/format-check.yml`   | Prettier formatting                    |
+| `.github/workflows/security-audit.yml` | npm audit                              |
+| `.github/workflows/release.yml`        | Multi-platform Electron builds         |
+| `.github/workflows/deploy-staging.yml` | Auto-deploy to staging on push to main |
 
 ### Scripts
 
-| File                          | Purpose                                  |
-| ----------------------------- | ---------------------------------------- |
-| `scripts/get-claude-token.sh` | Extract Claude OAuth from macOS Keychain |
-| `scripts/get-cursor-token.sh` | Extract Cursor OAuth from macOS Keychain |
+| File                          | Purpose                                         |
+| ----------------------------- | ----------------------------------------------- |
+| `scripts/setup-staging.sh`    | One-command staging setup (build, start, drain) |
+| `scripts/smoke-test.sh`       | Post-deploy smoke tests (API, UI, docs, WS)     |
+| `scripts/get-claude-token.sh` | Extract Claude OAuth from macOS Keychain        |
+| `scripts/get-cursor-token.sh` | Extract Cursor OAuth from macOS Keychain        |
 
 ### Service
 
@@ -128,6 +133,7 @@ sudo systemctl start protomaker
 | ---- | ------- | -------------------------------------------- |
 | 3007 | UI      | Web interface (nginx in Docker, Vite in dev) |
 | 3008 | Server  | Backend API + WebSocket                      |
+| 3009 | Docs    | VitePress documentation site (nginx)         |
 
 ## Environment Variables
 
