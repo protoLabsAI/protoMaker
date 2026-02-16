@@ -20,6 +20,7 @@ import {
   ListToolsRequestSchema,
   Tool,
 } from '@modelcontextprotocol/sdk/types.js';
+import { processIdea, toMCPTool } from '@automaker/tools';
 
 // Configuration
 const API_URL = process.env.AUTOMAKER_API_URL || 'http://localhost:3008';
@@ -2614,6 +2615,31 @@ const tools: Tool[] = [
       required: ['datasetName', 'traceId'],
     },
   },
+
+  // ========== Idea Processing ==========
+  {
+    name: 'process_idea',
+    description:
+      'Process an idea through the LangGraph flow. Returns a session ID for tracking progress and resuming if human approval is needed.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        idea: {
+          type: 'string',
+          description: 'The idea text to process',
+        },
+        autoApprove: {
+          type: 'boolean',
+          description: 'Automatically approve the idea after processing',
+        },
+        countdownSeconds: {
+          type: 'number',
+          description: 'Number of seconds for pre-approval countdown',
+        },
+      },
+      required: ['idea'],
+    },
+  },
 ];
 
 // Tool implementations
@@ -3648,6 +3674,14 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         traceId: args.traceId,
         observationId: args.observationId,
         metadata: args.metadata,
+      });
+
+    // Idea Processing
+    case 'process_idea':
+      return apiCall('/ideas/process', {
+        idea: args.idea,
+        autoApprove: args.autoApprove,
+        countdownSeconds: args.countdownSeconds,
       });
 
     default:
