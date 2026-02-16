@@ -13,18 +13,7 @@
     "resolveJsonModule": true,
     "declaration": true,
     "declarationMap": true,
-    "sourceMap": true,
-    "paths": {
-      "@automaker/types": ["../../libs/types/dist/index.d.ts"],
-      "@automaker/utils": ["../../libs/utils/dist/index.d.ts"],
-      "@automaker/prompts": ["../../libs/prompts/dist/index.d.ts"],
-      "@automaker/platform": ["../../libs/platform/dist/index.d.ts"],
-      "@automaker/model-resolver": ["../../libs/model-resolver/dist/index.d.ts"],
-      "@automaker/dependency-resolver": ["../../libs/dependency-resolver/dist/index.d.ts"],
-      "@automaker/spec-parser": ["../../libs/spec-parser/dist/index.d.ts"],
-      "@automaker/git-utils": ["../../libs/git-utils/dist/index.d.ts"],
-      "@automaker/flows": ["../../libs/flows/dist/index.d.ts"]
-    }
+    "sourceMap": true
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]
