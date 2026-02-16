@@ -1,0 +1,41 @@
+{
+  "name": "@automaker/tools",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Unified tool definition and registry system for AutoMaker",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "build:check": "tsc --noEmit",
+    "watch": "tsup --watch"
+  },
+  "keywords": [
+    "automaker",
+    "tools",
+    "registry"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "author": "AutoMaker Team",
+  "license": "SEE LICENSE IN LICENSE",
+  "engines": {
+    "node": ">=22.0.0 <23.0.0"
+  },
+  "dependencies": {
+    "@automaker/types": "file:../types",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "22.19.3",
+    "tsup": "^8.5.1",
+    "typescript": "5.9.3"
+  }
+}
