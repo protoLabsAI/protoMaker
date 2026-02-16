@@ -668,6 +668,7 @@ export class HttpApiClient implements ElectronAPI {
   private ws: WebSocket | null = null;
   private eventCallbacks: Map<EventType, Set<EventCallback>> = new Map();
   private reconnectTimer: NodeJS.Timeout | null = null;
+  private reconnectAttempt = 0;
   private isConnecting = false;
   private recentEventIds: Set<string> = new Set();
   private eventIdOrder: string[] = [];
@@ -813,6 +814,7 @@ export class HttpApiClient implements ElectronAPI {
       this.ws.onopen = () => {
         logger.info('WebSocket connected');
         this.isConnecting = false;
+        this.reconnectAttempt = 0; // Reset backoff on successful connection
         if (this.reconnectTimer) {
           clearTimeout(this.reconnectTimer);
           this.reconnectTimer = null;
@@ -855,16 +857,28 @@ export class HttpApiClient implements ElectronAPI {
         }
       };
 
-      this.ws.onclose = () => {
+      this.ws.onclose = (event) => {
         logger.info('WebSocket disconnected');
         this.isConnecting = false;
         this.ws = null;
-        // Attempt to reconnect after 5 seconds
+
+        // Check for server shutdown signal (code 4100 = planned shutdown)
+        if (event.code === 4100) {
+          logger.info('Server shutting down, will reconnect shortly');
+        }
+
+        // Exponential backoff: 1s, 2s, 4s, 8s, 16s, 30s (capped)
         if (!this.reconnectTimer) {
+          const baseDelay = Math.min(1000 * Math.pow(2, this.reconnectAttempt), 30000);
+          // Add 0-20% jitter to prevent thundering herd
+          const jitter = baseDelay * Math.random() * 0.2;
+          const delay = Math.round(baseDelay + jitter);
+          this.reconnectAttempt++;
+          logger.info(`WebSocket reconnecting in ${delay}ms (attempt ${this.reconnectAttempt})`);
           this.reconnectTimer = setTimeout(() => {
             this.reconnectTimer = null;
             this.connectWebSocket();
-          }, 5000);
+          }, delay);
         }
       };
 

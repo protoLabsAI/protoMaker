@@ -60,12 +60,22 @@ export function createDeepHandler(
 ) {
   return async (_req: Request, res: Response): Promise<void> => {
     const startTime = Date.now();
-    let timedOut = false;
+
+    // Guard against double-send (TOCTOU race between timeout and async completion)
+    let responseSent = false;
+
+    function sendResponse(statusCode: number, body: unknown): void {
+      if (responseSent) return;
+      responseSent = true;
+      clearTimeout(timeoutId);
+      const duration = Date.now() - startTime;
+      res.setHeader('X-Response-Time', `${duration}ms`);
+      res.status(statusCode).json(body);
+    }
 
     // Set up timeout protection
     const timeoutId = setTimeout(() => {
-      timedOut = true;
-      res.status(503).json({
+      sendResponse(503, {
         status: 'unhealthy',
         error: 'Health check timed out',
         uptime: process.uptime(),
@@ -98,9 +108,6 @@ export function createDeepHandler(
       let status: 'ok' | 'degraded' | 'unhealthy' = 'ok';
       if (duration > TARGET_TIME) {
         status = 'degraded';
-      }
-      if (timedOut) {
-        status = 'unhealthy';
       }
 
       const response: DeepHealthResponse = {
@@ -142,29 +149,19 @@ export function createDeepHandler(
         },
       };
 
-      clearTimeout(timeoutId);
-
-      if (!timedOut) {
-        res.setHeader('X-Response-Time', `${duration}ms`);
-        res.json(response);
-      }
+      sendResponse(200, response);
     } catch (error) {
-      clearTimeout(timeoutId);
-
-      if (!timedOut) {
-        const duration = Date.now() - startTime;
-        res.setHeader('X-Response-Time', `${duration}ms`);
-        res.status(503).json({
-          status: 'unhealthy',
-          error: error instanceof Error ? error.message : 'Unknown error',
-          uptime: process.uptime(),
-          version: getVersion(),
-          performance: {
-            responseTime: duration,
-            timedOut: false,
-          },
-        });
-      }
+      const duration = Date.now() - startTime;
+      sendResponse(503, {
+        status: 'unhealthy',
+        error: error instanceof Error ? error.message : 'Unknown error',
+        uptime: process.uptime(),
+        version: getVersion(),
+        performance: {
+          responseTime: duration,
+          timedOut: false,
+        },
+      });
     }
   };
 }
