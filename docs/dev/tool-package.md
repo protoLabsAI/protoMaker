@@ -40,11 +40,11 @@ The `ToolContext` interface enables **dependency injection** at execution time:
 
 ```typescript
 interface ToolContext {
-  services?: Record<string, any>;  // Service instances (DB, API clients, etc.)
-  config?: Record<string, any>;    // Configuration values
-  featureId?: string;              // Current feature/context identifier
-  projectPath?: string;            // Project file system path
-  metadata?: Record<string, any>;  // Additional metadata
+  services?: Record<string, any>; // Service instances (DB, API clients, etc.)
+  config?: Record<string, any>; // Configuration values
+  featureId?: string; // Current feature/context identifier
+  projectPath?: string; // Project file system path
+  metadata?: Record<string, any>; // Additional metadata
 }
 ```
 
@@ -56,9 +56,9 @@ All tools return a standardized `ToolResult<TOutput>`:
 
 ```typescript
 interface ToolResult<TOutput> {
-  success: boolean;       // Execution success/failure
-  data?: TOutput;         // Output data (if successful)
-  error?: string;         // Error message (if failed)
+  success: boolean; // Execution success/failure
+  data?: TOutput; // Output data (if successful)
+  error?: string; // Error message (if failed)
   metadata?: Record<string, any>; // Additional execution metadata
 }
 ```
@@ -82,9 +82,7 @@ const greetTool = defineSharedTool({
     message: z.string(),
   }),
   execute: async (input, context) => {
-    const greeting = input.age
-      ? `Hello ${input.name}, age ${input.age}!`
-      : `Hello ${input.name}!`;
+    const greeting = input.age ? `Hello ${input.name}, age ${input.age}!` : `Hello ${input.name}!`;
 
     return {
       success: true,
@@ -388,7 +386,12 @@ async function processData(input: unknown, context: ToolContext) {
 Chain tools together with output → input mapping:
 
 ```typescript
-async function chainTools(registry: ToolRegistry, toolNames: string[], initialInput: unknown, context: ToolContext) {
+async function chainTools(
+  registry: ToolRegistry,
+  toolNames: string[],
+  initialInput: unknown,
+  context: ToolContext
+) {
   let currentInput = initialInput;
 
   for (const toolName of toolNames) {
@@ -464,10 +467,7 @@ describe('saveFileTool', () => {
       services: { fs: mockFs },
     };
 
-    const result = await saveFileTool.execute(
-      { content: 'Hello world' },
-      context
-    );
+    const result = await saveFileTool.execute({ content: 'Hello world' }, context);
 
     expect(result.success).toBe(true);
     expect(result.data?.path).toBe('/tmp/test/output.txt');
@@ -589,14 +589,14 @@ Factory function to create type-safe tool definitions.
 
 ```typescript
 interface ToolDefinition<TInput, TOutput> {
-  name: string;                                  // Unique tool identifier
-  description: string;                           // Human-readable description
-  inputSchema: z.ZodSchema<TInput>;              // Zod schema for input validation
-  outputSchema: z.ZodSchema<TOutput>;            // Zod schema for output validation
+  name: string; // Unique tool identifier
+  description: string; // Human-readable description
+  inputSchema: z.ZodSchema<TInput>; // Zod schema for input validation
+  outputSchema: z.ZodSchema<TOutput>; // Zod schema for output validation
   execute: (input: TInput, context: ToolContext) => Promise<ToolResult<TOutput>>;
   metadata?: {
-    category?: string;                           // Tool category (e.g., 'file-operations')
-    tags?: string[];                             // Tags for filtering (e.g., ['io', 'files'])
+    category?: string; // Tool category (e.g., 'file-operations')
+    tags?: string[]; // Tags for filtering (e.g., ['io', 'files'])
   };
 }
 ```
@@ -630,11 +630,11 @@ Context interface for dependency injection.
 
 ```typescript
 interface ToolContext {
-  services?: Record<string, any>;      // Service instances (DB, API clients, etc.)
-  config?: Record<string, any>;        // Configuration values
-  featureId?: string;                  // Current feature/context identifier
-  projectPath?: string;                // Project file system path
-  metadata?: Record<string, any>;      // Additional metadata
+  services?: Record<string, any>; // Service instances (DB, API clients, etc.)
+  config?: Record<string, any>; // Configuration values
+  featureId?: string; // Current feature/context identifier
+  projectPath?: string; // Project file system path
+  metadata?: Record<string, any>; // Additional metadata
 }
 ```
 
@@ -646,10 +646,10 @@ Tool execution result.
 
 ```typescript
 interface ToolResult<TOutput> {
-  success: boolean;                    // Boolean indicating success/failure
-  data?: TOutput;                      // Output data (if successful)
-  error?: string;                      // Error message (if failed)
-  metadata?: Record<string, any>;      // Additional execution metadata
+  success: boolean; // Boolean indicating success/failure
+  data?: TOutput; // Output data (if successful)
+  error?: string; // Error message (if failed)
+  metadata?: Record<string, any>; // Additional execution metadata
 }
 ```
 

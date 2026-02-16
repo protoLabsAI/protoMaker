@@ -21,33 +21,36 @@ classify_complexity → [Heuristic: length-based classification]
 
 ### Nodes
 
-| Node                   | Purpose                                          | Inputs                           | Outputs                                                    |
-| ---------------------- | ------------------------------------------------ | -------------------------------- | ---------------------------------------------------------- |
-| `classify_complexity`  | Determines processing path via heuristics        | `idea`                           | `complexity`, `processingNotes`                            |
-| `fast_path_review`     | Quick approval for trivial ideas (bypasses R&D)  | `idea`, `complexity`             | `reviewOutput`, `approved`, `category`, `impact`, `effort` |
-| `research`             | Deep research phase for non-trivial ideas        | `idea`, `complexity`             | `researchResults`, `processingNotes`                       |
-| `review`               | Comprehensive review with research context       | `idea`, `researchResults`        | `reviewOutput`, `approved`, `category`, `impact`, `effort` |
-| `done`                 | Terminal node (no-op)                            | All prior state                  | No changes                                                 |
+| Node                  | Purpose                                         | Inputs                    | Outputs                                                    |
+| --------------------- | ----------------------------------------------- | ------------------------- | ---------------------------------------------------------- |
+| `classify_complexity` | Determines processing path via heuristics       | `idea`                    | `complexity`, `processingNotes`                            |
+| `fast_path_review`    | Quick approval for trivial ideas (bypasses R&D) | `idea`, `complexity`      | `reviewOutput`, `approved`, `category`, `impact`, `effort` |
+| `research`            | Deep research phase for non-trivial ideas       | `idea`, `complexity`      | `researchResults`, `processingNotes`                       |
+| `review`              | Comprehensive review with research context      | `idea`, `researchResults` | `reviewOutput`, `approved`, `category`, `impact`, `effort` |
+| `done`                | Terminal node (no-op)                           | All prior state           | No changes                                                 |
 
 ### State Schema
 
 The flow uses `IdeaProcessingStateAnnotation` defined in `libs/flows/src/idea-processing/state.ts`:
 
 ```typescript
-import { IdeaProcessingStateAnnotation, type IdeaProcessingState } from '@automaker/flows/idea-processing';
+import {
+  IdeaProcessingStateAnnotation,
+  type IdeaProcessingState,
+} from '@automaker/flows/idea-processing';
 
 interface IdeaProcessingState {
   // Input
-  idea: IdeaInput;                      // { title, description, category?, conversationId? }
+  idea: IdeaInput; // { title, description, category?, conversationId? }
 
   // Classification
-  complexity?: IdeaComplexity;          // 'trivial' | 'simple' | 'complex'
+  complexity?: IdeaComplexity; // 'trivial' | 'simple' | 'complex'
 
   // Research phase (optional for trivial)
-  researchResults?: ResearchResult;     // findings, summary, recommendations
+  researchResults?: ResearchResult; // findings, summary, recommendations
 
   // Review phase
-  reviewOutput?: ReviewOutput;          // { approve, category, impact, effort, suggestions, reasoning }
+  reviewOutput?: ReviewOutput; // { approve, category, impact, effort, suggestions, reasoning }
 
   // Final output
   approved?: boolean;
@@ -56,8 +59,8 @@ interface IdeaProcessingState {
   effort?: 'low' | 'medium' | 'high';
 
   // Metadata
-  usedFastPath?: boolean;               // true if trivial path taken
-  processingNotes: string[];            // Accumulated logs (append reducer)
+  usedFastPath?: boolean; // true if trivial path taken
+  processingNotes: string[]; // Accumulated logs (append reducer)
 }
 ```
 
@@ -65,11 +68,11 @@ interface IdeaProcessingState {
 
 The `classify_complexity` node uses **heuristic-based classification** (no LLM required):
 
-| Complexity | Criteria                                    | Processing Path    |
-| ---------- | ------------------------------------------- | ------------------ |
-| `trivial`  | `description < 50 chars` AND `title < 30 chars` | Fast-path review   |
-| `simple`   | `description < 200 chars`                   | Standard research  |
-| `complex`  | `description >= 200 chars`                  | Deep research      |
+| Complexity | Criteria                                        | Processing Path   |
+| ---------- | ----------------------------------------------- | ----------------- |
+| `trivial`  | `description < 50 chars` AND `title < 30 chars` | Fast-path review  |
+| `simple`   | `description < 200 chars`                       | Standard research |
+| `complex`  | `description >= 200 chars`                      | Deep research     |
 
 **Why heuristics?** This design avoids expensive LLM calls for classification, reserving compute for research/review phases.
 
@@ -264,7 +267,8 @@ describe('Idea Processing Flow', () => {
     const result = await graph.invoke({
       idea: {
         title: 'Implement AI-powered search',
-        description: 'Build a comprehensive semantic search system with vector embeddings, RAG pipeline, and real-time indexing. Should support multi-modal search (text, images, code) with advanced filtering and personalized ranking.',
+        description:
+          'Build a comprehensive semantic search system with vector embeddings, RAG pipeline, and real-time indexing. Should support multi-modal search (text, images, code) with advanced filtering and personalized ranking.',
       },
     });
 
@@ -298,7 +302,8 @@ async function classifyComplexityNode(state: IdeaProcessingState) {
   const response = await smartModel.invoke([
     {
       role: 'system',
-      content: 'Classify idea complexity as trivial/simple/complex based on scope and requirements clarity.',
+      content:
+        'Classify idea complexity as trivial/simple/complex based on scope and requirements clarity.',
     },
     {
       role: 'user',
@@ -319,12 +324,7 @@ Use LangGraph's `Send()` for parallel research:
 import { Send } from '@langchain/langgraph';
 
 async function researchDispatchNode(state: IdeaProcessingState) {
-  const queries = [
-    'project-analysis',
-    'web-search',
-    'codebase-grep',
-    'dependency-impact',
-  ];
+  const queries = ['project-analysis', 'web-search', 'codebase-grep', 'dependency-impact'];
 
   const sends = queries.map((query) => new Send('research_worker', { ...state, query }));
   return new Command({ goto: sends });
