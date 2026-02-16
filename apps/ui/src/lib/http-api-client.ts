@@ -887,7 +887,7 @@ export class HttpApiClient implements ElectronAPI {
     let hash = 0;
     for (let i = 0; i < contentStr.length; i++) {
       const char = contentStr.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
+      hash = (hash << 5) - hash + char;
       hash = hash & hash; // Convert to 32bit integer
     }
     return `hash-${Math.abs(hash).toString(36)}`;
