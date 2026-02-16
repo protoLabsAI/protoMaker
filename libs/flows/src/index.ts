@@ -308,3 +308,23 @@ export {
   type ResearchResult as IdeaResearchResult,
   type ReviewOutput,
 } from './idea-processing/index.js';
+
+// Idea processing nodes — research tree utilities
+export {
+  createResearchTreeSubgraph,
+  createResearchTreeNode,
+  runResearchTree,
+  type AvaTriageAssessment,
+  type AvaSynthesisResult,
+  type ResearchTreeState,
+  ResearchTreeStateAnnotation,
+} from './idea-processing/nodes/ava-research-tree.js';
+export {
+  jonTriage,
+  fanOutGTM,
+  gtmResearchWorker,
+  aggregateGTM,
+  jonSynthesis,
+  type WorldStateContext,
+  type GTMResearchResult,
+} from './idea-processing/nodes/jon-research-tree.js';
