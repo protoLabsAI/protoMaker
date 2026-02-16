@@ -1,7 +1,7 @@
 /**
  * Board Janitor Crew Member - Board consistency checks
  *
- * Lightweight check (every 15 min):
+ * Lightweight check (every 10 min):
  *   - Features in review with merged PRs → should be done
  *   - Features in in_progress with no running agent for >4h → orphaned
  *   - Dependency chain: features with deps on done features but deps not cleared
@@ -24,7 +24,7 @@ export const boardJanitorCrewMember: CrewMemberDefinition = {
   id: 'board-janitor',
   displayName: 'Board Janitor',
   templateName: 'board-janitor',
-  defaultSchedule: '*/15 * * * *',
+  defaultSchedule: '*/10 * * * *',
   enabledByDefault: true,
 
   async check(ctx: CrewCheckContext): Promise<CrewCheckResult> {
@@ -57,7 +57,7 @@ export const boardJanitorCrewMember: CrewMemberDefinition = {
         // 1. Features in review with merged PR → should be done
         const reviewFeatures = allFeatures.filter((f) => f.status === 'review');
         for (const feature of reviewFeatures) {
-          if (feature.prMerged) {
+          if (feature.prMergedAt) {
             findings.push({
               type: 'merged-not-done',
               message: `Feature "${feature.title}" has merged PR but is still in review`,
