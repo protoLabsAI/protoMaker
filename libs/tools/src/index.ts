@@ -1,10 +1,17 @@
 /**
- * @automaker/tools
+ * @automaker/tools - Unified tool implementations
  *
- * Unified tool definition and registry system for AutoMaker.
- * Provides type-safe tool creation with Zod schemas and centralized tool management.
+ * This package provides tool implementations that work across multiple surfaces:
+ * - MCP (Model Context Protocol)
+ * - REST API (Express)
+ * - LangGraph (Agent workflows)
  */
 
-export { defineSharedTool } from './define-tool.js';
-export { ToolRegistry } from './registry.js';
-export type { ToolContext, ToolResult, SharedTool, ToolDefinition } from './types.js';
+// Export types
+export * from './types.js';
+
+// Export feature tools
+export * from './domains/features/index.js';
+
+// Export adapters
+export * from './adapters/index.js';

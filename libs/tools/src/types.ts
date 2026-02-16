@@ -1,112 +1,138 @@
-import type { z } from 'zod';
+/**
+ * Core tool types for the unified tool package
+ */
+
+import type { Feature, FeatureStatus } from '@automaker/types';
 
 /**
- * Context interface for dependency injection into tools.
- * Provides access to services, configuration, and execution context.
+ * Tool execution context - dependency injection container
  */
 export interface ToolContext {
-  /**
-   * Services available to the tool (e.g., database, API clients, etc.)
-   */
-  services?: Record<string, unknown>;
-
-  /**
-   * Configuration values specific to the tool execution
-   */
-  config?: Record<string, unknown>;
-
-  /**
-   * Feature ID or context identifier for the current execution
-   */
-  featureId?: string;
-
-  /**
-   * Project path for file system operations
-   */
-  projectPath?: string;
-
-  /**
-   * Additional metadata that can be passed to tools
-   */
-  metadata?: Record<string, unknown>;
+  featureLoader: {
+    getAll: (projectPath: string) => Promise<Feature[]>;
+    get: (projectPath: string, featureId: string) => Promise<Feature | null>;
+    create: (projectPath: string, feature: Partial<Feature>) => Promise<Feature>;
+    update: (
+      projectPath: string,
+      featureId: string,
+      updates: Partial<Feature>,
+      metadata?: Record<string, unknown>
+    ) => Promise<Feature | null>;
+    delete: (projectPath: string, featureId: string) => Promise<boolean>;
+    findDuplicateTitle: (
+      projectPath: string,
+      title: string,
+      excludeId?: string
+    ) => Promise<Feature | null>;
+  };
+  events?: {
+    emit: (event: string, data: unknown) => void;
+  };
 }
 
 /**
- * Tool execution result with optional metadata and errors
+ * Tool result - standardized response format
  */
-export interface ToolResult<TOutput> {
-  /**
-   * Indicates if the tool execution was successful
-   */
+export interface ToolResult<T = unknown> {
   success: boolean;
-
-  /**
-   * The output data from the tool execution
-   */
-  data?: TOutput;
-
-  /**
-   * Error message if the execution failed
-   */
+  data?: T;
   error?: string;
-
-  /**
-   * Additional metadata about the execution
-   */
+  errorCode?: string;
   metadata?: Record<string, unknown>;
 }
 
 /**
- * Shared tool definition with type-safe input/output schemas
+ * List features input
  */
-export interface SharedTool<TInput = unknown, TOutput = unknown> {
-  /**
-   * Unique identifier for the tool
-   */
-  name: string;
-
-  /**
-   * Human-readable description of what the tool does
-   */
-  description: string;
-
-  /**
-   * Zod schema for validating tool inputs
-   */
-  inputSchema: z.ZodType<TInput>;
-
-  /**
-   * Zod schema for validating tool outputs
-   */
-  outputSchema: z.ZodType<TOutput>;
-
-  /**
-   * The tool execution function
-   */
-  execute: (input: TInput, context: ToolContext) => Promise<ToolResult<TOutput>>;
-
-  /**
-   * Optional metadata for categorizing or tagging tools
-   */
-  metadata?: {
-    category?: string;
-    tags?: string[];
-    version?: string;
-  };
+export interface ListFeaturesInput {
+  projectPath: string;
+  status?: FeatureStatus;
+  compact?: boolean;
 }
 
 /**
- * Tool definition input for the defineSharedTool factory
+ * List features output
  */
-export interface ToolDefinition<TInput = unknown, TOutput = unknown> {
-  name: string;
-  description: string;
-  inputSchema: z.ZodType<TInput>;
-  outputSchema: z.ZodType<TOutput>;
-  execute: (input: TInput, context: ToolContext) => Promise<ToolResult<TOutput>>;
-  metadata?: {
-    category?: string;
-    tags?: string[];
-    version?: string;
-  };
+export interface ListFeaturesOutput {
+  features: Feature[] | CompactFeature[];
+}
+
+/**
+ * Compact feature representation for reduced context usage
+ */
+export interface CompactFeature {
+  id: string;
+  title?: string;
+  status?: FeatureStatus | string;
+  complexity?: 'small' | 'medium' | 'large' | 'architectural';
+  branchName?: string;
+  costUsd?: number;
+  prNumber?: number;
+  prUrl?: string;
+  epicId?: string;
+  isEpic?: boolean;
+  assignee?: string | null;
+  dependencies?: string[];
+  updatedAt?: unknown;
+}
+
+/**
+ * Get feature input
+ */
+export interface GetFeatureInput {
+  projectPath: string;
+  featureId: string;
+}
+
+/**
+ * Get feature output
+ */
+export interface GetFeatureOutput {
+  feature: Feature;
+}
+
+/**
+ * Create feature input
+ */
+export interface CreateFeatureInput {
+  projectPath: string;
+  feature: Partial<Feature>;
+}
+
+/**
+ * Create feature output
+ */
+export interface CreateFeatureOutput {
+  feature: Feature;
+}
+
+/**
+ * Update feature input
+ */
+export interface UpdateFeatureInput {
+  projectPath: string;
+  featureId: string;
+  updates: Partial<Feature>;
+}
+
+/**
+ * Update feature output
+ */
+export interface UpdateFeatureOutput {
+  feature: Feature;
+}
+
+/**
+ * Delete feature input
+ */
+export interface DeleteFeatureInput {
+  projectPath: string;
+  featureId: string;
+}
+
+/**
+ * Delete feature output
+ */
+export interface DeleteFeatureOutput {
+  success: boolean;
 }
