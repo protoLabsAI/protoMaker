@@ -14,32 +14,35 @@ The system has three layers:
 
 ```text
 Josh Mabry (CEO, Human)
-├── Ava Loveland, Opus, Trust=3 — Engineering
-│   ├── Matt, Sonnet, Trust=2
-│   ├── Sam, Sonnet, Trust=2
-│   ├── Frank, Sonnet, Trust=2
-│   ├── Cindi, Sonnet, Trust=2
-│   ├── Backend Engineer, Sonnet, Trust=2
-│   ├── Product Manager, Sonnet, Trust=1
-│   ├── Engineering Manager, Sonnet, Trust=1
-│   ├── Linear Specialist, Sonnet, Trust=2
+├── Operations (Ava Loveland, CoS, Opus, Trust=3)
+│   ├── Jon, Sonnet, Trust=2 — GTM / Antagonistic Review
+│   ├── Cindi, Sonnet, Trust=2 — Content
 │   ├── PR Maintainer, Haiku, Trust=2 [Crew]
-│   └── Board Janitor, Haiku, Trust=1 [Crew]
-└── Jon, Sonnet, Trust=1 — Go-to-Market
+│   ├── Board Janitor, Haiku, Trust=1 [Crew]
+│   └── System Health, Haiku, Trust=1 [Crew]
+└── Engineering (Lead Engineer, Service)
+    ├── Auto-mode Agents, Sonnet/Opus — Feature Implementation
+    ├── Matt, Sonnet, Trust=2 — Frontend
+    ├── Sam, Sonnet, Trust=2 — AI Agent Engineering
+    ├── Frank, Sonnet, Trust=2 — DevOps [Crew]
+    └── Kai, Sonnet, Trust=2 — Backend
 ```
+
+**Note:** PM, ProjM, and EM authority agents still exist in code but are now absorbed into the pipeline's automated steps (PRD generation, milestone decomposition, auto-mode orchestration) rather than being standalone team members. Their policy roles remain active for trust-gated permission checks.
 
 ## Roles
 
-| Role                | Code     | Trust           | Owns                   | Description                                                                                         |
-| ------------------- | -------- | --------------- | ---------------------- | --------------------------------------------------------------------------------------------------- |
-| GTM Specialist      | `GTM`    | 2 (Conditional) | Growth & Go-to-Market  | Top-level orchestrator. Content pipeline, brand strategy, external outreach.                        |
-| Project Owner       | `CTO`    | 3 (Autonomous)  | Strategy & direction   | **The human user.** Full access to all actions. Sets vision, approves proposals, sets trust levels. |
-| Chief of Staff      | `CoS`    | 2 (Conditional) | Operations & alignment | AI operational leader. Product direction, audit, team expansion, context continuity.                |
-| DevOps Engineer     | `DevOps` | 1 (Assisted)    | Infrastructure         | Deployment, monitoring, staging, Docker, CI/CD, system health.                                      |
-| Product Manager     | `PM`     | 1 (Assisted)    | What & Why             | Researches ideas, creates PRDs, defines scope. Creates work and manages scope changes.              |
-| Project Manager     | `ProjM`  | 1 (Assisted)    | When & How             | Decomposes epics into tasks, manages dependencies, assigns work.                                    |
-| Engineering Manager | `EM`     | 1 (Assisted)    | Who & Capacity         | Assigns engineers, manages capacity/WIP limits, quality gates.                                      |
-| Principal Engineer  | `PE`     | 2 (Conditional) | Architecture & Quality | Reviews architecture decisions, approves work, blocks releases for quality.                         |
+| Role                | Code     | Trust           | Owns                       | Description                                                                                         |
+| ------------------- | -------- | --------------- | -------------------------- | --------------------------------------------------------------------------------------------------- |
+| Project Owner       | `CTO`    | 3 (Autonomous)  | Strategy & direction       | **The human user.** Full access to all actions. Sets vision, approves proposals, sets trust levels. |
+| Chief of Staff      | `CoS`    | 2 (Conditional) | Operations & orchestration | AI operational leader. Signal triage, antagonistic review, crew loops, ceremonies.                  |
+| GTM Specialist      | `GTM`    | 2 (Conditional) | Growth & Go-to-Market      | Content pipeline, brand strategy, antagonistic review (market perspective).                         |
+| Lead Engineer       | —        | —               | Production orchestration   | Service (not an agent). Fast-path rules, auto-mode management, event-driven actions.                |
+| DevOps Engineer     | `DevOps` | 1 (Assisted)    | Infrastructure             | Deployment, monitoring, staging, Docker, CI/CD, system health.                                      |
+| Product Manager     | `PM`     | 1 (Assisted)    | What & Why                 | PRD generation pipeline step. Creates work and manages scope changes.                               |
+| Project Manager     | `ProjM`  | 1 (Assisted)    | When & How                 | Milestone decomposition pipeline step. Manages dependencies.                                        |
+| Engineering Manager | `EM`     | 1 (Assisted)    | Who & Capacity             | Auto-mode orchestration step. Capacity/WIP limits, quality gates.                                   |
+| Principal Engineer  | `PE`     | 2 (Conditional) | Architecture & Quality     | Reviews architecture decisions, approves work, blocks releases for quality.                         |
 
 ## Trust Levels
 

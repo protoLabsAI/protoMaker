@@ -14,53 +14,25 @@ graph TB
 
     subgraph TRIAGE["2. TRIAGE & ROUTING"]
         AVA_TRIAGE["Ava (CoS)<br/>Signal Classification"]
-        AVA_TRIAGE -->|idea| PRD_PIPE
+        AVA_TRIAGE -->|idea| IDEA_PROC
         AVA_TRIAGE -->|bug| BUG_FAST["Fast-track:<br/>Create feature → Agent"]
         AVA_TRIAGE -->|ops improvement| BEADS_CREATE["Create Bead<br/>→ Self-improvement"]
         AVA_TRIAGE -->|gtm/content| JON_ROUTE["Route to Jon"]
     end
 
-    subgraph PRD_REVIEW["3. PRD PIPELINE"]
-        PRD_PIPE["SPARC PRD<br/>Creation"]
-        PRD_PIPE --> ANTAG["Antagonistic Review"]
-        AVA_REV["Ava: Feasibility<br/>Risk, Capacity"]
-        JON_REV["Jon: Market Value<br/>Positioning, ROI"]
-        AVA_REV <-->|Challenge| JON_REV
-        ANTAG --> AVA_REV
-        ANTAG --> JON_REV
-        AVA_REV --> CONSOLIDATED["Consolidated PRD"]
-        JON_REV --> CONSOLIDATED
+    subgraph PIPELINE["3. IDEA → PRODUCTION PIPELINE"]
+        IDEA_PROC["process_idea<br/>LangGraph Flow"]
+        IDEA_PROC --> INITIATE["initiate_project<br/>Dedup + Linear project"]
+        INITIATE --> GEN_PRD["generate_project_prd<br/>SPARC PRD Creation"]
+        GEN_PRD --> ANTAG["Antagonistic Review<br/>Ava (ops) + Jon (market)"]
+        ANTAG --> APPROVE["approve_project_prd<br/>Board features + Linear sync"]
+        APPROVE --> LAUNCH["launch_project<br/>Linear → started"]
     end
 
-    subgraph APPROVAL["4. APPROVAL GATE"]
-        CONSOLIDATED --> GATE{Approval?}
-        GATE -->|preApproved<br/>small/ops| AUTO_APPROVE["Auto-approve"]
-        GATE -->|standard| JOSH_REVIEW["Josh reviews<br/>in Linear"]
-        JOSH_REVIEW -->|approved| APPROVED
-        JOSH_REVIEW -->|changes| CONSOLIDATED
-        AUTO_APPROVE --> APPROVED["Approved PRD"]
-    end
-
-    subgraph PLANNING["5. PLANNING"]
-        APPROVED --> PROJM["ProjM Agent<br/>Deep Research"]
-        PROJM --> MILESTONES["Milestones + Phases<br/>+ Dependencies"]
-        MILESTONES --> LINEAR_POST["Post to Linear<br/>Project + Issues"]
-        LINEAR_POST --> HITL_CHECK{HITL<br/>Scope Review?}
-        HITL_CHECK -->|adjust| MILESTONES
-        HITL_CHECK -->|proceed| BOARD_CREATE["Create Features<br/>on protoMaker Board"]
-    end
-
-    subgraph SYNC["6. SYSTEM OF RECORD"]
-        LINEAR_SOT["Linear<br/>(Source of Truth)"]
-        AUTOMAKER_BOARD["protoMaker Board<br/>(Execution)"]
-        GITHUB_REPO["GitHub<br/>(Code + PRs)"]
-        LINEAR_SOT <-->|Bidirectional Sync| AUTOMAKER_BOARD
-        AUTOMAKER_BOARD <-->|Branches + PRs| GITHUB_REPO
-        GITHUB_REPO <-->|Issue Sync| LINEAR_SOT
-    end
-
-    subgraph EXECUTION["7. EXECUTION LOOP"]
-        AUTO_MODE["Auto-Mode<br/>Tick Loop"]
+    subgraph PRODUCTION["4. PRODUCTION PHASE"]
+        LAUNCH --> LEAD_ENG["Lead Engineer<br/>auto-starts on launch event"]
+        LEAD_ENG --> FAST_PATH["Fast-Path Rules<br/>no-LLM reactive orchestration"]
+        LEAD_ENG --> AUTO_MODE["Auto-Mode<br/>Tick Loop"]
         AUTO_MODE --> PICK["Pick Unblocked<br/>Feature"]
         PICK --> WORKTREE["Create Worktree"]
         WORKTREE --> AGENT["Agent Implements<br/>(Sonnet/Opus)"]
@@ -70,7 +42,7 @@ graph TB
         TESTS -->|yes| VERIFIED["Verified"]
     end
 
-    subgraph PR_PIPELINE["8. PR PIPELINE"]
+    subgraph PR_PIPELINE["5. PR PIPELINE"]
         VERIFIED --> REBASE["Rebase + Format"]
         REBASE --> PR_CREATE["Push + PR"]
         PR_CREATE --> CI["CI Checks<br/>build, test, format, audit"]
@@ -80,7 +52,7 @@ graph TB
         MERGE --> DONE["Feature → Done"]
     end
 
-    subgraph REFLECTION["9. REFLECTION LOOP"]
+    subgraph REFLECTION["6. REFLECTION LOOP"]
         DONE --> EPIC_CHECK{Epic Done?}
         EPIC_CHECK -->|no| AUTO_MODE
         EPIC_CHECK -->|yes| RETRO["Milestone Retro"]
@@ -95,94 +67,162 @@ graph TB
 
     %% Cross-cutting connections
     INTAKE --> AVA_TRIAGE
-    BOARD_CREATE --> AUTO_MODE
-    BOARD_CREATE --> SYNC
-    DONE --> SYNC
+    DONE --> LEAD_ENG
+    FAST_PATH -->|"mergedNotDone, staleReview,<br/>stuckAgent, capacityRestart"| AUTO_MODE
 ```
+
+## The Pipeline: 7 Steps from Idea to Production
+
+The core execution flow is a 7-step pipeline backed by MCP tools:
+
+| Step | MCP Tool / Service      | What Happens                                                            |
+| ---- | ----------------------- | ----------------------------------------------------------------------- |
+| 1    | `process_idea`          | LangGraph flow validates idea, optional HITL approval gate              |
+| 2    | `initiate_project`      | Dedup check, create Linear project, write idea doc                      |
+| 3    | `generate_project_prd`  | SPARC PRD creation + antagonistic review (Ava ops + Jon market)         |
+| 4    | `approve_project_prd`   | Create board features from milestones, sync to Linear, set dependencies |
+| 5    | `launch_project`        | Set Linear status to "started", start auto-mode                         |
+| 6    | Lead Engineer (service) | Auto-starts on `project:lifecycle:launched` event, runs fast-path rules |
+| 7    | Auto-mode + PR pipeline | Agents implement features → CI → CodeRabbit → merge → done              |
+
+Steps 1-5 are MCP tools callable from any context (CLI, UI, agent). Step 6 is event-driven. Step 7 is the autonomous execution loop.
+
+## Operations + Engineering Split
+
+The agency is organized into two branches with clear boundaries:
+
+### Operations (Ava, Chief of Staff)
+
+Signal triage, quality gates, team health, and external communication.
+
+- **Signal classification** — Routes incoming ideas, bugs, ops improvements, GTM work
+- **Antagonistic review** — Challenges every PRD alongside Jon before approval
+- **Crew loops** — Manages PR Maintainer, Board Janitor, System Health monitors
+- **Ceremonies** — Standup, retro, project-retro via Discord
+- **Beads** — Operational work queue for self-improvement tasks
+- **Discord comms** — Status updates, alerts, Josh coordination
+
+### Engineering (Lead Engineer)
+
+Production orchestration, auto-mode execution, and code quality.
+
+- **Lead Engineer** — Event-driven orchestrator with fast-path rules (no LLM for routine decisions)
+- **Auto-mode** — Dependency-aware feature processing with model escalation
+- **Worktree isolation** — Per-feature git worktrees protect main branch
+- **Agent execution** — Sonnet for standard work, Opus for architectural, Haiku for mechanical
+- **PR pipeline** — Rebase → push → CI → CodeRabbit → thread resolution → merge
+- **CI/CD guardrails** — Build, test, format, audit checks on every PR
+
+### Cross-Cutting
+
+- **Domain tools** — SharedTool system with Zod schemas, used across MCP/LangGraph/Express
+- **Antagonistic review** — Bridges ops (Ava feasibility) and engineering (Jon market value)
+- **HITL gates** — Human approval at milestone boundaries, optional interrupt-before in flows
+- **Langfuse observability** — Traces, costs, prompt versioning across all agent execution
+
+## Agent Communication Topology
+
+```
+                    Josh (Human)
+                    ↕ Discord / Linear
+                   Ava (CoS)
+              ╱         │         ╲
+      Operations    Cross-cut    Engineering
+       ╱    ╲          │          ╱      ╲
+    Jon    Cindi    Antag.    Lead Eng    Frank
+   (GTM)  (Content) Review   (Orchestr.) (DevOps)
+                               │
+                           Auto-mode
+                          ╱    │    ╲
+                      Agent₁ Agent₂ Agent₃
+                     (Sonnet)(Sonnet)(Haiku)
+                          ╲    │    ╱
+                    PR Maintainer (Crew)
+                    Board Janitor (Crew)
+```
+
+Ava is the hub. All strategic decisions flow through her. Communication channels:
+
+- **MCP tools** for system operations (48+ tools)
+- **Discord** for human-facing updates and Josh coordination
+- **Events** for system-to-system (`feature:completed`, `project:lifecycle:launched`, etc.)
+- **Agent memory** for persistent cross-session learning
+- **Domain tools** for feature management, git ops, and project orchestration
 
 ## Component Inventory
 
-### Exists and Working
+| Component                       | Location                                                    | Notes                                                   |
+| ------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------- |
+| **Idea processing flow**        | `libs/tools/src/domains/ideas/process-idea.ts`              | LangGraph flow with HITL checkpoints                    |
+| **Antagonistic review**         | `apps/server/src/services/antagonistic-review-service.ts`   | 3-stage: Ava ops → Jon market → consolidated resolution |
+| **Antagonistic review adapter** | `apps/server/src/services/antagonistic-review-adapter.ts`   | LangGraph flow wrapper with Langfuse tracing            |
+| **Lead Engineer service**       | `apps/server/src/services/lead-engineer-service.ts`         | Production orchestrator with fast-path rules            |
+| **Lead Engineer rules**         | `apps/server/src/services/lead-engineer-rules.ts`           | 8 pure-function rules (no LLM, no service imports)      |
+| **SharedTool system**           | `libs/tools/src/types.ts`, `define-tool.ts`                 | Zod-validated tool definitions for MCP/LangGraph/REST   |
+| **Feature domain tools**        | `libs/tools/src/domains/features/`                          | CRUD operations via SharedTool pattern                  |
+| **Project lifecycle**           | `apps/server/src/services/project-lifecycle-service.ts`     | 6 MCP tool steps from idea to launch                    |
+| **submit_prd MCP tool**         | `packages/mcp-server/src/index.ts`                          | Creates epic, ProjM decomposes                          |
+| **SPARC PRD skill**             | `plugins/automaker/commands/sparc-prd.md`                   | Interactive PRD creation                                |
+| **ProjM deep research**         | `apps/server/src/services/authority-agents/`                | Milestone/phase decomposition                           |
+| **Auto-mode execution**         | `apps/server/src/services/auto-mode-service.ts`             | Dependency-aware, model escalation                      |
+| **Agent factory + registry**    | `apps/server/src/services/agent-factory-service.ts`         | Template-based agent creation                           |
+| **Dynamic agent executor**      | `apps/server/src/services/dynamic-agent-executor.ts`        | Runs agents in worktrees via Claude Agent SDK           |
+| **Worktree isolation**          | `apps/server/src/services/agent-service.ts`                 | Per-feature branches                                    |
+| **PR pipeline**                 | `apps/server/src/services/git-workflow-service.ts`          | Create, push, merge                                     |
+| **CodeRabbit integration**      | Branch protection + `resolve_review_threads`                | Required check                                          |
+| **CI/CD**                       | `.github/workflows/`                                        | Build, test, format, audit                              |
+| **Linear sync**                 | `apps/server/src/services/linear-sync-service.ts`           | Feature → Linear issue push                             |
+| **Linear webhook**              | `apps/server/src/routes/linear/webhook.ts`                  | Receives mentions/delegations                           |
+| **Ceremony service**            | `apps/server/src/services/ceremony-service.ts`              | Standup, retro, project-retro                           |
+| **Crew loops**                  | `apps/server/src/services/crew-loop-service.ts`             | PR Maintainer, Board Janitor, Frank, System Health      |
+| **Escalation pipeline**         | `apps/server/src/services/escalation-router.ts`             | 5 channels, SLA engine                                  |
+| **Signal accumulator**          | `apps/server/src/services/`                                 | Severity classification + briefing                      |
+| **Agent memory**                | `.automaker/memory/*.md`                                    | Per-agent learning files                                |
+| **Beads task tracking**         | `.beads/issues.jsonl`                                       | Operational task queue                                  |
+| **Discord MCP**                 | `packages/mcp-server/plugins/automaker/`                    | Send, read, channels, webhooks                          |
+| **Conflict resolution UI**      | `apps/ui/src/`                                              | Linear sync conflict handling                           |
+| **Idea processing service**     | `apps/server/src/services/idea-processing-service.ts`       | Session management for LangGraph idea flow              |
+| **Content review pipeline**     | `libs/flows/src/content/subgraphs/antagonistic-reviewer.ts` | 8-dimension scoring for content quality                 |
 
-| Component                    | Location                                            | Status  | Notes                               |
-| ---------------------------- | --------------------------------------------------- | ------- | ----------------------------------- |
-| **submit_prd MCP tool**      | `packages/mcp-server/src/index.ts`                  | Working | Creates epic, ProjM decomposes      |
-| **SPARC PRD skill**          | `plugins/automaker/commands/sparc-prd.md`           | Working | Interactive PRD creation            |
-| **ProjM deep research**      | `apps/server/src/services/authority-agents/`        | Working | Milestone/phase decomposition       |
-| **Auto-mode execution**      | `apps/server/src/services/auto-mode-service.ts`     | Working | Dependency-aware, model escalation  |
-| **Agent factory + registry** | `apps/server/src/services/agent-factory-service.ts` | Working | Template-based agent creation       |
-| **Worktree isolation**       | `apps/server/src/services/agent-service.ts`         | Working | Per-feature branches                |
-| **PR pipeline**              | `apps/server/src/services/git-workflow-service.ts`  | Working | Create, push, merge                 |
-| **CodeRabbit integration**   | Branch protection + resolve_review_threads          | Working | Required check                      |
-| **CI/CD**                    | `.github/workflows/`                                | Working | Build, test, format, audit          |
-| **Linear sync (features)**   | `apps/server/src/services/linear-sync-service.ts`   | Working | Feature → Linear issue push         |
-| **Linear webhook**           | `apps/server/src/routes/linear/webhook.ts`          | Working | Receives mentions/delegations       |
-| **Ceremony service**         | `apps/server/src/services/ceremony-service.ts`      | Working | Standup, retro, project-retro       |
-| **Crew loops**               | `apps/server/src/services/crew-loop-service.ts`     | Working | PR Maintainer, Board Janitor, Frank |
-| **Escalation pipeline**      | `apps/server/src/services/escalation-router.ts`     | Working | 5 channels, SLA engine              |
-| **Signal accumulator**       | `apps/server/src/services/`                         | Working | Severity classification + briefing  |
-| **Agent memory**             | `.automaker/memory/*.md`                            | Working | Per-agent learning files            |
-| **Beads task tracking**      | `.beads/issues.jsonl`                               | Working | Operational task queue              |
-| **Discord MCP**              | `packages/mcp-server/plugins/automaker/`            | Working | Send, read, channels, webhooks      |
-| **Conflict resolution UI**   | `apps/ui/src/`                                      | Working | Linear sync conflict handling       |
+## Quality Guardrails
 
-### Partially Built
+Four layers of quality assurance protect the pipeline:
 
-| Component               | What Exists                              | What's Missing                                                           |
-| ----------------------- | ---------------------------------------- | ------------------------------------------------------------------------ |
-| **Signal intake**       | Discord/Linear/GitHub receive messages   | No auto-triage pipeline. Messages don't auto-trigger PRD creation.       |
-| **Jon GTM agent**       | Template registered, `/gtm` skill exists | Not wired into PRD review pipeline. Only does standalone content work.   |
-| **Linear project sync** | Feature-level sync works                 | Can't create Linear projects or documents programmatically. Only issues. |
-| **Ceremonies**          | Discord posts on milestone events        | Don't spawn improvement tickets. Don't capture learnings systematically. |
-| **HITL approval**       | Linear agent sessions, elicitation tools | No structured approval gate for milestones/scope in Linear.              |
-| **preApproved flag**    | submit_prd creates features directly     | No trust-boundary logic for auto-approval vs. human review.              |
+### 1. Antagonistic Review
 
-### Doesn't Exist Yet
+Every PRD passes through a 3-stage sequential review before approval:
 
-| Component                            | Purpose                                                   | Priority                                                 |
-| ------------------------------------ | --------------------------------------------------------- | -------------------------------------------------------- |
-| **Antagonistic review**              | Ava + Jon cross-challenge PRDs before approval            | Critical — prevents garbage-in                           |
-| **Unified signal router**            | Any signal source → classification → correct pipeline     | Critical — intake bottleneck                             |
-| **Retro → improvement tickets**      | Ceremony retros auto-create Beads/Linear items            | High — closes the loop                                   |
-| **Linear project/document creation** | Programmatic project + doc creation in Linear             | High — can't be automation agency with manual Linear ops |
-| **Automated changelog**              | Generate changelog from merged features per epic/project  | Medium — visibility                                      |
-| **Metrics-driven impact analysis**   | "Was this project worth it?" automated analysis           | Medium — accountability                                  |
-| **Knowledge synthesis**              | Project-level learning rollup (not just per-agent memory) | Medium — organizational learning                         |
-| **preApproved trust boundaries**     | Rules: complexity ≤ small + category = ops → auto-approve | Medium — removes bottleneck                              |
+1. **Ava (operational feasibility)** — Capacity, risk, technical debt, implementation feasibility
+2. **Jon (market value)** — Customer impact, ROI, positioning, priority. Sees Ava's critique.
+3. **Resolution (Ava as CoS)** — Merges both verdicts into consolidated PRD with final decision
+
+Uses LangGraph flows with Langfuse tracing. 3-minute timeout for the entire pipeline. Fallback to DynamicAgentExecutor if graph flows are disabled.
+
+### 2. HITL Gates
+
+- Human scope review at milestone boundaries
+- Optional interrupt-before in LangGraph flows
+- Josh reviews PRDs in Linear (standard path)
+- preApproved path for low-risk operational items
+
+### 3. CI Pipeline
+
+Required checks on every PR before merge:
+
+- `build` — TypeScript compilation
+- `test` — Playwright E2E + Vitest unit
+- `format` — Prettier formatting
+- `audit` — Security audit
+
+### 4. Code Quality
+
+- **CodeRabbit** — AI-powered code review (required check)
+- **Branch protection** — Squash-only merges, required status checks, admin bypass
+- **TypeScript strict mode** — Catches type errors at compile time
+- **Prettier** — Enforced formatting consistency
+- **Thread resolution** — All review threads must be resolved before merge
 
 ## Data Flow
-
-### Signal → Production
-
-```
-Signal (Discord/Linear/GitHub)
-  ↓
-Ava classifies signal type and urgency
-  ↓
-[idea] → SPARC PRD created
-  ↓
-Antagonistic review: Ava ↔ Jon
-  ↓
-Consolidated PRD → Linear document
-  ↓
-Approval gate (Josh or preApproved)
-  ↓
-ProjM: deep research → milestones → phases
-  ↓
-Linear project + protoMaker board features
-  ↓
-Auto-mode picks features in dependency order
-  ↓
-Agent implements in worktree → tests → verified
-  ↓
-PR pipeline: rebase → push → CI → CodeRabbit → merge
-  ↓
-Feature → done, sync to Linear
-  ↓
-Epic complete → ceremony (retro + metrics)
-  ↓
-Improvement tickets + knowledge update → REPEAT
-```
 
 ### System of Record Boundaries
 
@@ -206,46 +246,21 @@ Improvement tickets + knowledge update → REPEAT
 └──────────────────────────────────────────────────────┘
 ```
 
-### Agent Communication Topology
-
-```
-                    Josh (Human)
-                    ↕ Discord / Linear
-                   Ava (CoS)
-                 ↙    ↓    ↘
-              Jon    ProjM    Frank
-             (GTM)  (Plan)   (DevOps)
-                      ↓
-                   Features
-                 ↙    ↓    ↘
-            Agent₁  Agent₂  Agent₃
-            (Sonnet) (Sonnet) (Haiku)
-                 ↘    ↓    ↙
-               PR Maintainer (Crew)
-               Board Janitor (Crew)
-```
-
-Ava is the hub. All strategic decisions flow through her. Agents communicate via:
-
-- **MCP tools** for system operations
-- **Discord** for human-facing updates
-- **Events** for system-to-system (feature:completed, milestone:started, etc.)
-- **Agent memory** for persistent cross-session learning
-
 ## Scalability Considerations
 
 ### Current Limits
 
 - 2-3 concurrent agents on dev hardware (8GB heap)
-- 6-10 concurrent agents on staging (32GB heap, 125GB RAM)
-- Linear MCP has basic CRUD only (no project/doc creation)
+- 6-10 concurrent agents on staging (48GB heap limit, 125GB RAM, 24 CPUs)
 - Agent turns limited (hit turn limit = uncommitted work)
+- Lead Engineer fast-path rules run with zero LLM cost
 
 ### Scaling Strategy
 
 - **Vertical**: Staging hardware handles more concurrent agents
 - **Horizontal**: Multiple protoMaker instances via [Hivemind](../architecture/instance-state.md#hivemind-multi-instance-mesh) — domain-scoped mesh where each instance owns a slice of the codebase
-- **Efficiency**: Model routing (Haiku for mechanical work, Opus only for architectural decisions)
+- **Efficiency**: Model routing (Haiku for mechanical work, Sonnet default, Opus only for architectural decisions or 2+ failures)
+- **Fast-path rules**: Lead Engineer handles routine orchestration decisions (mergedNotDone, orphanedInProgress, staleDeps, autoModeHealth, staleReview, stuckAgent, capacityRestart, projectCompleting) without LLM calls
 - **Automation**: Every manual step today becomes automated tomorrow — this is the self-improvement loop
 
 ### Instance State Model

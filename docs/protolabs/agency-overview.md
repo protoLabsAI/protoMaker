@@ -24,20 +24,34 @@ The gap between "AI can write code" and "AI can run a development organization" 
 
 ### The ProtoLabs Answer
 
-Every human development org has these roles: product (what), engineering (how), QA (quality), PM (when), and leadership (why). ProtoLabs fills these with specialized AI agents that communicate through well-defined interfaces:
+ProtoLabs is organized into two branches — **Operations** and **Engineering** — with clear boundaries, quality guardrails, and domain tools that enable orchestration at scale.
 
-| Role                | Agent           | Responsibilities                                            |
-| ------------------- | --------------- | ----------------------------------------------------------- |
-| CEO / Visionary     | Josh (human)    | Ideas, direction, final approval                            |
-| Chief of Staff      | Ava             | Triage, orchestration, quality gates, antagonistic review   |
-| GTM / Strategy      | Jon             | Market perspective, customer value, content, positioning    |
-| Project Manager     | ProjM           | Deep research, milestone decomposition, dependency planning |
-| Engineering Manager | EM              | PR pipeline, merge strategy, build health                   |
-| Backend Engineer    | Agents (Sonnet) | Feature implementation in worktrees                         |
-| Frontend Engineer   | Matt            | UI components, design systems, Storybook                    |
-| DevOps              | Frank           | Infrastructure health, deploys, monitoring                  |
-| PR Maintainer       | Crew (Haiku)    | Auto-merge, format fixes, CodeRabbit resolution             |
-| Board Janitor       | Crew (Haiku)    | Board consistency, orphaned features, stale deps            |
+### Operations
+
+Signal triage, quality gates, team health, and external communication. Orchestration agents use domain tools and subagents to manage tasks, distill information, and maintain context.
+
+| Agent               | Type         | Responsibilities                                                          |
+| ------------------- | ------------ | ------------------------------------------------------------------------- |
+| **Josh Mabry**      | Human (CEO)  | Ideas, direction, final approval                                          |
+| **Ava** (CoS)       | AI Orchestr. | Signal triage, antagonistic review, crew loops, ceremonies, Discord comms |
+| **Jon** (GTM)       | AI Agent     | Market perspective, content strategy, positioning, antagonistic review    |
+| **Cindi** (Content) | AI Agent     | Blog posts, technical docs, SEO, content pipeline                         |
+| **PR Maintainer**   | Crew (Haiku) | Auto-merge, format fixes, CodeRabbit thread resolution                    |
+| **Board Janitor**   | Crew (Haiku) | Board consistency, orphaned features, stale deps                          |
+| **System Health**   | Crew (Haiku) | RAM, swap, disk, CPU, temperature, zombie processes                       |
+
+### Engineering
+
+Production orchestration, auto-mode execution, and code quality. The Lead Engineer uses fast-path rules (pure functions, no LLM) for routine decisions and escalates to full agent execution only when needed.
+
+| Agent                  | Type        | Responsibilities                                                        |
+| ---------------------- | ----------- | ----------------------------------------------------------------------- |
+| **Lead Engineer**      | Service     | Production orchestrator — fast-path rules, auto-mode management, events |
+| **Matt** (Frontend)    | AI Agent    | React 19, design systems, Storybook, component architecture             |
+| **Sam** (AI Agent Eng) | AI Agent    | LangGraph flows, LLM providers, observability, multi-agent coordination |
+| **Frank** (DevOps)     | AI + Crew   | Infrastructure health, deploys, monitoring, system reliability          |
+| **Kai** (Backend)      | AI Agent    | Server-side features, API design, database, services                    |
+| **Auto-mode Agents**   | Sonnet/Opus | Feature implementation in isolated git worktrees                        |
 
 ## Three Surfaces, Clear Separation
 
@@ -87,7 +101,7 @@ Every idea gets a SPARC PRD (Situation, Problem, Approach, Results, Constraints)
 - **Ava (CoS)**: Is this operationally feasible? Does it align with current capacity? What's the risk?
 - **Jon (GTM)**: Does this create customer value? Can we sell this? Does it strengthen our positioning?
 
-They challenge each other. The output is a consolidated plan that has survived cross-functional scrutiny.
+They challenge each other in a 3-stage sequential review. The output is a consolidated plan that has survived cross-functional scrutiny.
 
 ### 3. Approval Gate
 
@@ -108,7 +122,16 @@ ProjM takes the approved PRD and does deep research:
 
 Output: Milestones with ordered phases, posted to Linear for visibility.
 
-### 5. Execution
+### 5. Launch + Lead Engineer
+
+`launch_project` sets Linear status to "started" and kicks off auto-mode. The Lead Engineer auto-starts on the `project:lifecycle:launched` event and takes over production orchestration:
+
+- Maintains comprehensive world state (board counts, features, agents, PRs, milestones)
+- Evaluates fast-path rules on every event — no LLM calls for routine decisions
+- Handles: mergedNotDone, orphanedInProgress, staleDeps, autoModeHealth, staleReview, stuckAgent, capacityRestart, projectCompleting
+- Refreshes state every 5 minutes and on significant events
+
+### 6. Execution
 
 Auto-mode processes features in dependency order:
 
@@ -117,7 +140,7 @@ Auto-mode processes features in dependency order:
 - Agent implements, tests, verifies
 - On failure: iterate with more context, escalate model, or flag for human help
 
-### 6. PR Pipeline
+### 7. PR Pipeline
 
 Automated quality assurance:
 
@@ -129,7 +152,7 @@ Automated quality assurance:
 - Thread resolution
 - Auto-merge (squash to main)
 
-### 7. Reflection
+### 8. Reflection
 
 When an epic completes:
 
@@ -153,8 +176,9 @@ The system is both the product and the factory that makes the product. Every pro
 
 ## What Makes This Different
 
-- **Not a copilot** — it's a team. Multiple specialized agents with defined roles and communication protocols.
+- **Not a copilot** — it's a team. Operations + Engineering branches with specialized agents, domain tools, and subagent delegation.
 - **Not one-shot** — it's a loop. Continuous improvement feeds learning back into planning.
-- **Not just code** — it's organizational. Planning, review, execution, reflection, knowledge management.
-- **Not a black box** — it's observable. Linear for strategy, protoMaker board for tactics, Discord for communication. Full audit trail.
+- **Not just code** — it's organizational. Antagonistic review, HITL gates, CI pipeline, and code quality checks form four layers of quality assurance.
+- **Not a black box** — it's observable. Linear for strategy, protoMaker board for tactics, Discord for communication. Langfuse for traces and costs. Full audit trail.
 - **Not static** — it's self-improving. The system upgrades itself through the same pipeline it uses for customer work.
+- **Not LLM-dependent** — fast-path rules handle routine orchestration decisions without API calls. LLM agents are reserved for creative work.

@@ -56,16 +56,27 @@ This is the living brand bible for protoLabs. All agents, content, and external 
 
 ## Team
 
+The team is organized into **Operations** and **Engineering** branches. Orchestration agents use domain tools (feature management, git ops, Linear, Discord) and subagents rather than direct agent execution for every task.
+
+### Operations
+
 | Name             | Role                       | Type     | Notes                                                                    |
 | ---------------- | -------------------------- | -------- | ------------------------------------------------------------------------ |
 | **Josh Mabry**   | Founder / Project Owner    | Human    | Architect. Directs everything.                                           |
-| **Ava Loveland** | Chief of Staff             | AI Agent | Operational automation, agent management. The proof AI teammates work.   |
-| **Jon**          | GTM Specialist             | AI Agent | Content strategy, brand positioning, social media, launch execution.     |
-| **Matt**         | Frontend Engineer          | AI Agent | React 19, design systems, Storybook, component architecture.             |
-| **Sam**          | AI Agent Engineer          | AI Agent | LangGraph flows, LLM providers, observability, multi-agent coordination. |
-| **Frank**        | DevOps Engineer            | AI Agent | Staging infra, deployments, health monitoring, system reliability.       |
+| **Ava Loveland** | Chief of Staff             | AI Agent | Signal triage, antagonistic review, crew loops, ceremonies, Discord.     |
+| **Jon**          | GTM Specialist             | AI Agent | Content strategy, brand positioning, antagonistic review (market value). |
 | **Cindi**        | Content Writing Specialist | AI Agent | Blog posts, technical docs, SEO, content pipeline.                       |
 | **Abdellah**     | Strategy Partner           | Human    | Personal branding, visual identity. NOT content creation.                |
+
+### Engineering
+
+| Name              | Role                 | Type     | Notes                                                                    |
+| ----------------- | -------------------- | -------- | ------------------------------------------------------------------------ |
+| **Lead Engineer** | Production Orchestr. | Service  | Fast-path rules, auto-mode management, event-driven orchestration.       |
+| **Matt**          | Frontend Engineer    | AI Agent | React 19, design systems, Storybook, component architecture.             |
+| **Sam**           | AI Agent Engineer    | AI Agent | LangGraph flows, LLM providers, observability, multi-agent coordination. |
+| **Frank**         | DevOps Engineer      | AI Agent | Staging infra, deployments, health monitoring, system reliability.       |
+| **Kai**           | Backend Engineer     | AI Agent | Server-side features, API design, database, services.                    |
 
 ## Content Strategy
 
