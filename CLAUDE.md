@@ -84,6 +84,7 @@ automaker/
     ├── dependency-resolver/  # Feature dependency ordering
     ├── spec-parser/       # XML/markdown spec parsing for project plans
     ├── git-utils/    # Git operations & worktree management
+    ├── tools/        # Unified tool definition and registry system
     ├── flows/        # LangGraph state graph primitives & flow orchestration
     ├── llm-providers/# Multi-provider LLM abstraction layer
     └── observability/# Langfuse tracing, prompt versioning & cost tracking
@@ -96,7 +97,7 @@ Packages can only depend on packages above them:
 ```
 @automaker/types (no dependencies)
     ↓
-@automaker/utils, @automaker/prompts, @automaker/platform, @automaker/model-resolver, @automaker/dependency-resolver, @automaker/spec-parser, @automaker/flows, @automaker/llm-providers, @automaker/observability
+@automaker/utils, @automaker/prompts, @automaker/platform, @automaker/model-resolver, @automaker/dependency-resolver, @automaker/spec-parser, @automaker/tools, @automaker/flows, @automaker/llm-providers, @automaker/observability
     ↓
 @automaker/git-utils
     ↓

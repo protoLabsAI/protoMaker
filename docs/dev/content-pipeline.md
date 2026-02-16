@@ -1224,10 +1224,12 @@ const mockSection: ContentSection = {
 
 ## Related Documentation
 
-- [Flows Package](./flows) — LangGraph flow architecture and patterns
-- [LLM Providers Package](./llm-providers-package) — Multi-provider LLM abstraction
-- [Observability Package](./observability-package) — Langfuse tracing and cost tracking
-- [Shared Packages](./shared-packages) — Monorepo package overview
+- [Flows Package](./flows.md) — LangGraph flow architecture and patterns
+- [Idea Processing Flow](./idea-processing.md) — Validate and enrich raw ideas with complexity routing
+- [Tools Package](./tool-package.md) — Unified tool definition and registry system
+- [LLM Providers Package](./llm-providers-package.md) — Multi-provider LLM abstraction
+- [Observability Package](./observability-package.md) — Langfuse tracing and cost tracking
+- [Shared Packages](./shared-packages.md) — Monorepo package overview
 
 ## Next Steps
 
