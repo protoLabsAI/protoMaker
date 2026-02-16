@@ -293,18 +293,14 @@ export {
   hitlImprovementsProcessor,
 } from './wrap-up/index.js';
 
-// Idea processing flow (complexity-based routing)
+// Idea processing nodes (Ava + Jon research trees)
 export {
-  createIdeaProcessingGraph,
-  ideaProcessingGraph,
-  IdeaProcessingStateAnnotation,
-  IdeaProcessingStateSchema,
-  ReviewOutputSchema,
-  type IdeaProcessingState,
-  type IdeaProcessingStateType,
-  type IdeaComplexity,
-  type IdeaInput,
-  type ResearchFinding as IdeaResearchFinding,
-  type ResearchResult as IdeaResearchResult,
-  type ReviewOutput,
-} from './idea-processing/index.js';
+  processAvaResearch,
+  getAvaWorldState,
+  type AvaWorldState,
+} from './idea-processing/nodes/ava-research-tree.js';
+export {
+  processJonResearch,
+  getJonWorldState,
+  type JonWorldState,
+} from './idea-processing/nodes/jon-research-tree.js';

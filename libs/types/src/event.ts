@@ -294,7 +294,16 @@ export type EventType =
   | 'project:lifecycle:prd-approved'
   | 'project:lifecycle:launched'
   | 'project:lifecycle:completed'
-  | 'project:lifecycle:phase-changed';
+  | 'project:lifecycle:phase-changed'
+  // Idea processing events (Ava + Jon research trees)
+  | 'idea:research-started'
+  | 'idea:research-progress'
+  | 'idea:research-completed'
+  | 'idea:ava-analysis'
+  | 'idea:jon-analysis'
+  | 'idea:synthesis-started'
+  | 'idea:synthesis-completed'
+  | 'idea:processing-error';
 
 export type EventCallback = (type: EventType, payload: unknown) => void;
 
