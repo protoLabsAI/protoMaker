@@ -86,6 +86,7 @@ DevOps documentation in [`docs/infra/`](./infra/):
 | [Flows Package](./dev/flows.md)                           | LangGraph state graph primitives and patterns        |
 | [LLM Providers Package](./dev/llm-providers-package.md)   | Multi-provider LLM abstraction layer                 |
 | [Observability Package](./dev/observability-package.md)   | Langfuse tracing, prompt management, cost tracking   |
+| [Langfuse Integration](./dev/langfuse-integration.md)     | Server-side tracing, scoring, MCP tools              |
 | [Content Pipeline](./dev/content-pipeline.md)             | Content generation pipeline (blog, docs, training)   |
 | [Antagonistic Review](./dev/antagonistic-review.md)       | Multi-perspective review with G-Eval scoring         |
 | [CopilotKit Integration](./dev/copilotkit-integration.md) | AI chat sidebar and HITL approval flows              |
