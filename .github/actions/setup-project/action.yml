@@ -26,8 +26,6 @@ runs:
       uses: actions/setup-node@v4
       with:
         node-version-file: ${{ inputs.node-version-file }}
-        cache: 'npm'
-        cache-dependency-path: package-lock.json
 
     - name: Check for SSH URLs in lockfile
       if: inputs.check-lockfile == 'true'
