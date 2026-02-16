@@ -52,6 +52,8 @@ export const boardJanitorCrewMember: CrewMemberDefinition = {
 
     try {
       for (const projectPath of ctx.projectPaths) {
+        if (ctx.managedProjectPaths?.has(projectPath)) continue;
+
         const allFeatures = await ctx.featureLoader.getAll(projectPath);
 
         // 1. Features in review with merged PR → should be done

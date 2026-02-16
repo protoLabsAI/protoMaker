@@ -134,6 +134,8 @@ export const prMaintainerCrewMember: CrewMemberDefinition = {
 
     try {
       for (const projectPath of ctx.projectPaths) {
+        if (ctx.managedProjectPaths?.has(projectPath)) continue;
+
         const allFeatures = await ctx.featureLoader.getAll(projectPath);
         const reviewFeatures = allFeatures.filter((f) => f.status === 'review');
 

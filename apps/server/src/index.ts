@@ -515,6 +515,20 @@ changelogService.initialize(events, settingsService, featureLoader, projectServi
 const completionDetectorService = new CompletionDetectorService();
 completionDetectorService.initialize(events, featureLoader, projectService, settingsService);
 
+// Initialize Lead Engineer Service — production-phase nerve center
+const { LeadEngineerService } = await import('./services/lead-engineer-service.js');
+const leadEngineerService = new LeadEngineerService(
+  events,
+  featureLoader,
+  autoModeService,
+  projectService,
+  projectLifecycleService,
+  settingsService,
+  metricsService,
+  REPO_ROOT
+);
+leadEngineerService.initialize();
+
 const projmAgent = new ProjMAuthorityAgent(events, authorityService, featureLoader, projectService);
 const emAgent = new EMAuthorityAgent(
   events,
@@ -674,7 +688,15 @@ const crewCheckContext = {
   healthMonitorService,
   autoModeService,
   settingsService,
+  managedProjectPaths: new Set<string>(),
 };
+
+// Sync managed paths when Lead Engineer starts/stops
+events.subscribe((type) => {
+  if (type === 'lead-engineer:started' || type === 'lead-engineer:stopped') {
+    crewCheckContext.managedProjectPaths = new Set(leadEngineerService.getManagedProjectPaths());
+  }
+});
 const crewLoopService = new CrewLoopService(
   events,
   schedulerService,
@@ -1073,6 +1095,10 @@ app.use('/api/crew', createCrewRoutes(crewLoopService));
 app.use('/api/deploy', createDeployRoutes(autoModeService));
 app.use('/api/escalation', createEscalationRoutes(escalationRouter));
 app.use('/api/analytics', createAnalyticsRoutes(events));
+
+// Lead Engineer routes (production-phase nerve center)
+const { createLeadEngineerRoutes } = await import('./routes/lead-engineer/index.js');
+app.use('/api/lead-engineer', createLeadEngineerRoutes(leadEngineerService));
 app.use('/api/langfuse', createLangfuseRoutes());
 app.use('/api/flows', createFlowsRoutes(antagonisticReviewService, projectPlanningService));
 app.use('/api/ideas', createIdeasRoutes(ideaProcessingService));
@@ -1564,6 +1590,7 @@ async function gracefulShutdown() {
     logger.warn('[SHUTDOWN] Failed to write clean shutdown marker:', err);
   }
 
+  leadEngineerService.destroy();
   await autoModeService.shutdown();
   healthMonitorService.stopMonitoring();
   schedulerService.stop();

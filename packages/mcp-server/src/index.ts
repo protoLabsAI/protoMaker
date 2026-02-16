@@ -1699,6 +1699,60 @@ const tools: Tool[] = [
     },
   },
 
+  // ========== Lead Engineer (Production Phase) ==========
+  {
+    name: 'start_lead_engineer',
+    description:
+      'Start the Lead Engineer to manage a project through the production phase. Orchestrates auto-mode, reacts to events with fast-path rules, and wraps up with retro + improvement tickets.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        projectSlug: {
+          type: 'string',
+          description: 'Project slug',
+        },
+        maxConcurrency: {
+          type: 'number',
+          description: 'Maximum number of features to process concurrently (default: 1)',
+        },
+      },
+      required: ['projectPath', 'projectSlug'],
+    },
+  },
+  {
+    name: 'stop_lead_engineer',
+    description: 'Stop the Lead Engineer from managing a project.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+      },
+      required: ['projectPath'],
+    },
+  },
+  {
+    name: 'get_lead_engineer_status',
+    description:
+      'Get Lead Engineer status including world state, flow state, rule execution log, and metrics.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+      },
+      required: ['projectPath'],
+    },
+  },
+
   // ========== Worktree Management ==========
   {
     name: 'list_worktrees',
@@ -3592,6 +3646,24 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         projectSlug: args.projectSlug,
         linearProjectId: args.linearProjectId,
         issueIds: args.issueIds,
+      });
+
+    // Lead Engineer (Production Phase)
+    case 'start_lead_engineer':
+      return apiCall('/lead-engineer/start', {
+        projectPath: args.projectPath,
+        projectSlug: args.projectSlug,
+        maxConcurrency: args.maxConcurrency,
+      });
+
+    case 'stop_lead_engineer':
+      return apiCall('/lead-engineer/stop', {
+        projectPath: args.projectPath,
+      });
+
+    case 'get_lead_engineer_status':
+      return apiCall('/lead-engineer/status', {
+        projectPath: args.projectPath,
       });
 
     // ProtoLabs Setup Pipeline
