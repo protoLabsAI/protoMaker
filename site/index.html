@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>protoLabs — AI-Native Development Agency</title>
+    <meta
+      name="description"
+      content="One architect. Six AI agents. Production software shipped autonomously."
+    />
+    <meta property="og:title" content="protoLabs — AI-Native Development Agency" />
+    <meta
+      property="og:description"
+      content="One architect. Six AI agents. Production software shipped autonomously."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://protolabs.studio" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@protoLabsAI" />
+    <meta name="twitter:title" content="protoLabs — AI-Native Development Agency" />
+    <meta
+      name="twitter:description"
+      content="One architect. Six AI agents. Production software shipped autonomously."
+    />
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#9670;</text></svg>"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Geist', 'system-ui', 'sans-serif'],
+              mono: ['Geist Mono', 'monospace'],
+            },
+            colors: {
+              surface: {
+                0: '#09090b',
+                1: '#111113',
+                2: '#18181b',
+                3: '#222225',
+              },
+              accent: {
+                DEFAULT: '#a78bfa',
+                dim: '#7c5cbf',
+              },
+              muted: '#71717a',
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        background-color: #09090b;
+        color: #fafafa;
+        font-family: 'Geist', system-ui, sans-serif;
+      }
+      .gradient-text {
+        background: linear-gradient(135deg, #a78bfa 0%, #818cf8 50%, #6366f1 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+      .glow {
+        box-shadow: 0 0 80px rgba(167, 139, 250, 0.08);
+      }
+      .input-glow:focus {
+        box-shadow: 0 0 0 2px rgba(167, 139, 250, 0.3);
+      }
+      /* Focus-visible for keyboard accessibility */
+      a:focus-visible,
+      button:focus-visible,
+      input:focus-visible {
+        outline: 2px solid #a78bfa;
+        outline-offset: 2px;
+      }
+      /* Skip to content */
+      .skip-link {
+        position: absolute;
+        top: -100%;
+        left: 16px;
+        z-index: 100;
+        padding: 8px 16px;
+        background: #a78bfa;
+        color: #fff;
+        border-radius: 0 0 8px 8px;
+        font-size: 14px;
+        font-weight: 500;
+        text-decoration: none;
+        transition: top 0.2s;
+      }
+      .skip-link:focus {
+        top: 0;
+      }
+      /* Terminal mockup */
+      .terminal {
+        background: #111113;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 12px;
+        overflow: hidden;
+        font-family: 'Geist Mono', monospace;
+        font-size: 13px;
+        line-height: 1.6;
+      }
+      .terminal-bar {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 10px 14px;
+        background: rgba(255, 255, 255, 0.03);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      }
+      .terminal-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+      }
+      .terminal-body {
+        padding: 16px;
+        color: #a1a1aa;
+      }
+      .terminal-body .prompt {
+        color: #a78bfa;
+      }
+      .terminal-body .cmd {
+        color: #e4e4e7;
+      }
+      .terminal-body .success {
+        color: #4ade80;
+      }
+      .terminal-body .dim {
+        color: #52525b;
+      }
+      @keyframes blink {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0;
+        }
+      }
+      .cursor {
+        display: inline-block;
+        width: 8px;
+        height: 16px;
+        background: #a78bfa;
+        vertical-align: text-bottom;
+        animation: blink 1.2s step-end infinite;
+      }
+      @keyframes fade-up {
+        from {
+          opacity: 0;
+          transform: translateY(24px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .animate-fade-up {
+        animation: fade-up 0.8s ease-out forwards;
+      }
+      .animate-delay-1 {
+        animation-delay: 0.15s;
+        opacity: 0;
+      }
+      .animate-delay-2 {
+        animation-delay: 0.3s;
+        opacity: 0;
+      }
+      .animate-delay-3 {
+        animation-delay: 0.45s;
+        opacity: 0;
+      }
+      .animate-delay-4 {
+        animation-delay: 0.6s;
+        opacity: 0;
+      }
+    </style>
+  </head>
+  <body class="min-h-screen antialiased">
+    <a href="#main-content" class="skip-link">Skip to content</a>
+
+    <!-- Nav -->
+    <nav class="fixed top-0 w-full z-50 border-b border-white/5 bg-surface-0/80 backdrop-blur-xl">
+      <div class="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
+        <a href="/" class="flex items-center gap-2 text-white font-semibold tracking-tight">
+          <span class="text-accent text-lg">&#9670;</span>
+          <span>proto<span class="text-accent">Labs</span></span>
+        </a>
+        <div class="flex items-center gap-6 text-sm text-muted">
+          <a
+            href="https://x.com/protoLabsAI"
+            target="_blank"
+            rel="noopener"
+            class="hover:text-white transition-colors"
+            >Twitter</a
+          >
+          <a
+            href="https://twitch.tv/protoLabsTV"
+            target="_blank"
+            rel="noopener"
+            class="hover:text-white transition-colors"
+            >Twitch</a
+          >
+          <a href="#notify" class="text-accent hover:text-white transition-colors font-medium"
+            >Get Notified</a
+          >
+        </div>
+      </div>
+    </nav>
+
+    <!-- Hero -->
+    <main id="main-content" class="relative">
+      <div class="max-w-5xl mx-auto px-6 pt-28 pb-16 md:pt-52 md:pb-32">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+          <div>
+            <h1
+              class="text-3xl sm:text-4xl md:text-6xl font-bold leading-[1.1] tracking-tight animate-fade-up"
+            >
+              Software doesn't need to be built the way we've been building it.
+            </h1>
+            <p
+              class="mt-6 text-lg md:text-xl text-zinc-400 leading-relaxed max-w-2xl animate-fade-up animate-delay-1"
+            >
+              One architect. Six AI agents. Production software shipped autonomously.
+            </p>
+            <p
+              class="mt-4 text-base text-zinc-400 leading-relaxed max-w-2xl animate-fade-up animate-delay-2"
+            >
+              We're building
+              <span class="text-zinc-200 font-medium">protoMaker</span> — an AI development studio
+              where you describe features and autonomous agents build, review, and ship them as
+              merged pull requests.
+            </p>
+            <div class="mt-8 flex items-center gap-3 animate-fade-up animate-delay-3">
+              <a
+                href="#notify"
+                class="inline-flex items-center gap-2 px-5 py-2.5 bg-accent hover:bg-accent-dim text-white text-sm font-medium rounded-lg transition-colors"
+              >
+                Get notified when we launch
+                <svg
+                  class="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M17 8l4 4m0 0l-4 4m4-4H3"
+                  />
+                </svg>
+              </a>
+            </div>
+          </div>
+
+          <!-- Terminal mockup -->
+          <div
+            class="terminal glow animate-fade-up animate-delay-4"
+            role="img"
+            aria-label="Terminal showing protoMaker creating a feature and an AI agent shipping it as a merged pull request"
+          >
+            <div class="terminal-bar">
+              <div class="terminal-dot" style="background: #ff5f57"></div>
+              <div class="terminal-dot" style="background: #febc2e"></div>
+              <div class="terminal-dot" style="background: #28c840"></div>
+              <span class="ml-2 text-xs text-zinc-600 font-mono">protoMaker</span>
+            </div>
+            <div class="terminal-body">
+              <div>
+                <span class="prompt">$</span>
+                <span class="cmd"> proto create "Add user auth"</span>
+              </div>
+              <div class="dim mt-1">Creating feature...</div>
+              <div class="success mt-1">Feature created: AUTH-001</div>
+              <div class="dim mt-2">Agent assigned: sonnet</div>
+              <div class="dim">Worktree: .worktrees/feature/add-user-auth</div>
+              <div class="mt-2">
+                <span class="prompt">$</span>
+                <span class="cmd"> proto status</span>
+              </div>
+              <div class="mt-1">
+                <span class="success">AUTH-001</span>
+                <span class="dim"> in_progress </span>
+                <span style="color: #facc15">12 files changed</span>
+              </div>
+              <div class="dim">Agent: writing tests... (turn 8/25)</div>
+              <div class="mt-2">
+                <span class="success">PR #447 merged</span>
+                <span class="dim"> &mdash; 4m 22s &mdash; $0.38</span>
+              </div>
+              <div class="mt-2">
+                <span class="prompt">$</span>
+                <span class="cursor"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats bar -->
+      <div class="border-y border-white/5 bg-surface-1/50">
+        <div
+          class="max-w-5xl mx-auto px-6 py-10 grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8 text-center"
+        >
+          <div>
+            <div class="text-3xl md:text-4xl font-bold font-mono text-white">2,473</div>
+            <div class="mt-1 text-sm text-zinc-500">commits shipped</div>
+          </div>
+          <div>
+            <div class="text-3xl md:text-4xl font-bold font-mono text-white">445</div>
+            <div class="mt-1 text-sm text-zinc-500">PRs merged</div>
+          </div>
+          <div>
+            <div class="text-3xl md:text-4xl font-bold font-mono text-white">~$8</div>
+            <div class="mt-1 text-sm text-zinc-500">avg cost per feature</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Teaser -->
+      <div class="max-w-5xl mx-auto px-6 py-24 md:py-32">
+        <div class="max-w-2xl mx-auto text-center">
+          <p class="text-zinc-400 text-sm font-mono uppercase tracking-widest">Coming Soon</p>
+          <h2 class="mt-4 text-2xl md:text-3xl font-semibold text-white">
+            The source goes public.
+          </h2>
+          <p class="mt-4 text-zinc-400 leading-relaxed">
+            protoMaker. The methodology. The agent team. The full stack — source-available. Sign up
+            below to get early access and launch-day updates.
+          </p>
+        </div>
+      </div>
+
+      <!-- Newsletter CTA -->
+      <div id="notify" class="border-t border-white/5 bg-surface-1/30">
+        <div class="max-w-5xl mx-auto px-6 py-20 md:py-28">
+          <div class="max-w-lg mx-auto text-center">
+            <h2 class="text-2xl md:text-3xl font-semibold text-white">Get launch-day access</h2>
+            <p class="mt-3 text-zinc-400 text-sm leading-relaxed">
+              Join the list. We'll email you when the repo, docs, and site go live. No spam.
+              Unsubscribe anytime.
+            </p>
+
+            <form
+              action="https://buttondown.com/api/emails/embed-subscribe/protoLabsAI"
+              method="post"
+              target="popupwindow"
+              class="mt-8"
+            >
+              <label for="email-input" class="sr-only">Email address</label>
+              <div class="flex flex-col sm:flex-row gap-3">
+                <input
+                  type="email"
+                  id="email-input"
+                  name="email"
+                  required
+                  autocomplete="email"
+                  placeholder="you@example.com"
+                  class="flex-1 px-4 py-3 bg-surface-2 border border-white/10 rounded-lg text-white placeholder:text-zinc-500 text-sm input-glow focus:outline-none focus:border-accent/50 transition-all"
+                />
+                <input type="hidden" name="embed" value="1" />
+                <input type="hidden" name="tag" value="launch-list" />
+                <button
+                  type="submit"
+                  class="px-6 py-3 bg-accent hover:bg-accent-dim text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap"
+                >
+                  Notify me
+                </button>
+              </div>
+            </form>
+
+            <p class="mt-6 text-xs text-zinc-500">
+              We respect your privacy. One email at launch, then you choose what's next.
+            </p>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-white/5">
+      <div
+        class="max-w-5xl mx-auto px-6 py-10 flex flex-col md:flex-row items-center justify-between gap-4"
+      >
+        <div class="flex items-center gap-2 text-sm text-zinc-500">
+          <span class="text-accent">&#9670;</span>
+          <span>proto<span class="text-zinc-400">Labs</span></span>
+          <span class="text-zinc-700">&middot;</span>
+          <span>AI-native development agency</span>
+        </div>
+        <div class="flex items-center gap-5 text-sm text-zinc-500">
+          <a
+            href="https://x.com/protoLabsAI"
+            target="_blank"
+            rel="noopener"
+            class="hover:text-zinc-300 transition-colors"
+            >X / Twitter</a
+          >
+          <a
+            href="https://twitch.tv/protoLabsTV"
+            target="_blank"
+            rel="noopener"
+            class="hover:text-zinc-300 transition-colors"
+            >Twitch</a
+          >
+          <a
+            href="https://github.com/proto-labs-ai"
+            target="_blank"
+            rel="noopener"
+            class="hover:text-zinc-300 transition-colors"
+            >GitHub</a
+          >
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>
