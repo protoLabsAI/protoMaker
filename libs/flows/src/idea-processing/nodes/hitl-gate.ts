@@ -76,9 +76,7 @@ export async function hitlGateNode(state: HITLGateState): Promise<Partial<HITLGa
       const reasons: string[] = [];
       if (!allApproved) {
         const approvedCount = reviews.filter((r) => r.verdict === 'approved').length;
-        reasons.push(
-          `Not all approved (${approvedCount}/${reviews.length} approved)`
-        );
+        reasons.push(`Not all approved (${approvedCount}/${reviews.length} approved)`);
       }
       if (totalBlockers > 0) {
         reasons.push(`${totalBlockers} blocker(s) identified`);

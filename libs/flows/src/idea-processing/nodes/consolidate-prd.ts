@@ -122,12 +122,11 @@ Return ONLY the JSON object, no additional text.`,
     ]);
 
     // Parse and validate the LLM response
-    const consolidatedPRD = parseAndValidateConsolidation(
-      response.content.toString(),
-      nodeName
-    );
+    const consolidatedPRD = parseAndValidateConsolidation(response.content.toString(), nodeName);
 
-    console.log(`[${nodeName}] Consolidation complete: ${consolidatedPRD.changesApplied.length} changes applied`);
+    console.log(
+      `[${nodeName}] Consolidation complete: ${consolidatedPRD.changesApplied.length} changes applied`
+    );
 
     return { consolidatedPRD };
   } catch (error) {
