@@ -9,3 +9,6 @@ export { defineSharedTool } from './define-tool.js';
 export { ToolRegistry } from './registry.js';
 export type { ToolContext, ToolResult, SharedTool, ToolDefinition } from './types.js';
 export { toMCPTool, toMCPTools, type MCPToolEntry } from './adapters/index.js';
+
+// Domain-specific tools
+export * from './domains/ideas/index.js';
