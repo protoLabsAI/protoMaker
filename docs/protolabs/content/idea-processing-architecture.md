@@ -468,10 +468,10 @@ If you're building with AI agents, this is the blueprint.
 ## Resources
 
 - **Source Code:** [github.com/proto-labs-ai/protomaker](https://github.com/proto-labs-ai/protomaker)
-- **Architecture Docs:** [docs/protolabs/agency-architecture.md](./agency-architecture.md)
-- **Brand & Team:** [docs/protolabs/brand.md](./brand.md)
-- **PRD Pipeline:** [docs/protolabs/agency-prd.md](./agency-prd.md)
-- **Setup Guide:** [docs/protolabs/setup-pipeline.md](./setup-pipeline.md)
+- **Architecture Docs:** [docs/protolabs/agency-architecture.md](../agency-architecture.md)
+- **Brand & Team:** [docs/protolabs/brand.md](../brand.md)
+- **PRD Pipeline:** [docs/protolabs/agency-prd.md](../agency-prd.md)
+- **Setup Guide:** [docs/protolabs/setup-pipeline.md](../setup-pipeline.md)
 
 ---
 

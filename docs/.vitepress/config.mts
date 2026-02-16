@@ -49,8 +49,8 @@ export default defineConfig({
       : []),
   ],
 
-  // Allow dead links to: files outside docs/
-  ignoreDeadLinks: [/^\.\.\//],
+  // Allow dead links to: files outside docs/ (../foo or ./../foo)
+  ignoreDeadLinks: [/^(?:\.\/)?\.\.\/(?!\.)/],
 
   themeConfig: {
     logo: '/logo.svg',
