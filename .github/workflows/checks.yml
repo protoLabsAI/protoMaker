@@ -1,4 +1,4 @@
-name: Security Audit
+name: Checks
 
 on:
   pull_request:
@@ -7,9 +7,8 @@ on:
   push:
     branches:
       - main
-      - master
   schedule:
-    # Run weekly on Mondays at 9 AM UTC
+    # Run weekly on Mondays at 9 AM UTC (security audit)
     - cron: '0 9 * * 1'
 
 concurrency:
@@ -17,7 +16,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  audit:
+  checks:
     runs-on: self-hosted
 
     steps:
@@ -30,6 +29,14 @@ jobs:
           check-lockfile: 'true'
           skip-native-rebuild: 'true'
 
+      - name: Check formatting
+        run: npm run format:check
+
+      - name: Lint UI
+        run: npm run lint:ui
+
+      - name: Lint Server (import safety)
+        run: npm run lint:server
+
       - name: Run npm audit
         run: npm audit --audit-level=critical
-        continue-on-error: false

@@ -1,13 +1,10 @@
 name: E2E Tests
 
 on:
-  pull_request:
-    branches:
-      - '*'
   push:
     branches:
       - main
-      - master
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
