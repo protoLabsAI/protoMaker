@@ -21,7 +21,11 @@
 
 import { MemorySaver } from '@langchain/langgraph';
 import { GraphBuilder } from '../graphs/builder.js';
-import { IdeaProcessingStateAnnotation, type IdeaProcessingState, type IdeaComplexity } from './state.js';
+import {
+  IdeaProcessingStateAnnotation,
+  type IdeaProcessingState,
+  type IdeaComplexity,
+} from './state.js';
 
 // ─── Node Implementations ──────────────────────────────────────────────────
 
@@ -129,10 +133,7 @@ async function reviewNode(state: IdeaProcessingState): Promise<Partial<IdeaProce
     category: research?.recommendedCategory || state.idea.category || 'feature',
     impact: research?.estimatedImpact || 'medium',
     effort: research?.estimatedEffort || 'medium',
-    suggestions: [
-      'Consider adding user stories',
-      'Define clear acceptance criteria',
-    ],
+    suggestions: ['Consider adding user stories', 'Define clear acceptance criteria'],
     reasoning: research?.summary || 'Standard review completed',
   };
 
