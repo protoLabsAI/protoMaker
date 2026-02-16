@@ -14,6 +14,10 @@ inputs:
     description: 'Working directory for node-pty rebuild (empty = root)'
     required: false
     default: ''
+  skip-native-rebuild:
+    description: 'Skip native module rebuilds (for lightweight jobs like lint/audit)'
+    required: false
+    default: 'false'
 
 runs:
   using: 'composite'
@@ -45,6 +49,7 @@ runs:
       run: npm install --ignore-scripts --force
 
     - name: Install Linux native bindings
+      if: inputs.skip-native-rebuild != 'true'
       shell: bash
       # Workaround for npm optional dependencies bug (npm/cli#4828)
       # Explicitly install Linux bindings needed for build tools
@@ -59,13 +64,13 @@ runs:
       run: npm run build:packages
 
     - name: Rebuild native modules (root)
-      if: inputs.rebuild-node-pty-path == ''
+      if: inputs.skip-native-rebuild != 'true' && inputs.rebuild-node-pty-path == ''
       shell: bash
       # Rebuild node-pty and other native modules for Electron
       run: npm rebuild node-pty
 
     - name: Rebuild native modules (workspace)
-      if: inputs.rebuild-node-pty-path != ''
+      if: inputs.skip-native-rebuild != 'true' && inputs.rebuild-node-pty-path != ''
       shell: bash
       # Rebuild node-pty and other native modules needed for server
       run: npm rebuild node-pty
