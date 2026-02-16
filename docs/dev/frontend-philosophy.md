@@ -2,6 +2,8 @@
 
 Gold standard decisions for frontend engineering across protoLabs projects. These guidelines apply to automaker and serve as the template for all future proto lab setups.
 
+> **Brand visual identity** — For the canonical color palette, typography, and component specs as they appear on the landing page and marketing properties, see [`design-system.md`](../protolabs/design-system.md). This document covers the _implementation_ of those design decisions in the UI app's OKLch token system.
+
 ## Design tokens
 
 ### Color space: OKLch
@@ -257,15 +259,16 @@ Themes are activated by setting a class on the root HTML element. Each theme def
 
 20+ font families available via `@fontsource/*` packages. Default: Geist (sans) and Geist Mono. Fonts are runtime-switchable through the font selector component.
 
-## Storybook (target state)
+## Storybook
 
-protoMaker does not currently have Storybook. This section defines the target setup.
+Storybook is configured at `apps/ui/.storybook/` with theme integration and accessibility auditing.
 
 ### Setup
 
-- Framework: `@storybook/react-vite` (matches our Vite build)
-- Location: `apps/ui/.storybook/` config, stories co-located with components
-- Addons: essentials (controls, actions, docs, viewport, backgrounds), addon-a11y
+- Framework: `@storybook/react-vite`
+- Config: `apps/ui/.storybook/main.ts` + `preview.tsx`
+- Addons: essentials, `@storybook/addon-a11y`, Chromatic (visual regression)
+- Theme switcher: Toolbar cycles through all 6 curated themes
 
 ### Story conventions
 
@@ -292,7 +295,7 @@ export const Destructive: Story = { args: { children: 'Delete', variant: 'destru
 
 ### Theme integration
 
-A custom toolbar addon switches between all 41 themes by toggling the root class. This validates every component renders correctly in every theme.
+The preview decorator applies theme classes to the document root. All 6 theme CSS files are imported in `preview.tsx`, and the toolbar provides a theme switcher. This validates every component renders correctly across themes.
 
 ### Accessibility
 
@@ -419,7 +422,7 @@ Current gaps between philosophy and implementation. These are tracked as future 
 | -------------------------- | ------------------------------------------------------------------------------ | ---------------------------------------------------------------------- | -------- |
 | God store                  | `app-store.ts` is 4,268 lines with all state                                   | Split into domain slices (board, agent, settings, theme)               | High     |
 | Monolithic views           | `board-view.tsx` (1,908 lines), `terminal-view.tsx` (1,809 lines)              | Decompose into sub-components like `settings-view/` already has        | High     |
-| No Storybook               | Zero stories, no `.storybook/` config                                          | Full Storybook setup with theme switcher and a11y addon                | High     |
+| Storybook coverage         | Config + 6 stories (button, card, dialog, tabs, badge, dashboard)              | Stories for all UI primitives, interaction tests, Chromatic CI         | High     |
 | Domain components in `ui/` | `git-diff-panel`, `dependency-selector`, `log-viewer` etc. in `components/ui/` | Move to `components/shared/` or view-specific directories              | Medium   |
 | No UI package              | All components in `apps/ui/`, not shareable                                    | Extract to `libs/ui/` (`@automaker/ui`)                                | Medium   |
 | Static theme files         | 41 hand-written CSS files                                                      | Generate from TypeScript config                                        | Medium   |
