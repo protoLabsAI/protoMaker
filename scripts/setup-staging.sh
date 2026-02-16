@@ -167,18 +167,10 @@ build_images() {
     exit 1
   fi
 
-  # Build critical services first, storybook separately.
-  # If storybook fails to build, the deploy continues without it.
-  info "Building critical images (server, ui, docs)..."
-  docker compose -f "$COMPOSE_FILE" build server ui docs
-  ok "Critical images built"
+  info "Building images (server, ui, docs)..."
+  docker compose -f "$COMPOSE_FILE" build
 
-  info "Building storybook image..."
-  if docker compose -f "$COMPOSE_FILE" build storybook; then
-    ok "Storybook image built"
-  else
-    warn "Storybook build failed — deploy will continue without it"
-  fi
+  ok "Images built successfully"
 }
 
 # ─── Stop existing ───────────────────────────────────────────────────────────
@@ -191,7 +183,7 @@ stop_existing() {
   docker compose -f "$COMPOSE_FILE" down 2>/dev/null || true
 
   # Force-remove if compose down didn't clean up (e.g. containers from a different project)
-  for name in automaker-server automaker-ui automaker-docs automaker-storybook; do
+  for name in automaker-server automaker-ui automaker-docs; do
     if docker ps -aq --filter "name=^${name}$" | grep -q .; then
       docker rm -f "$name" 2>/dev/null || true
     fi
@@ -305,8 +297,6 @@ show_status() {
   echo -e "  UI:     ${GREEN}http://localhost:${ui_port}${NC}"
   echo -e "  API:    ${GREEN}http://localhost:${api_port}${NC}"
   echo -e "  Docs:   ${GREEN}http://localhost:${docs_port}${NC}"
-  local storybook_port="${STORYBOOK_PORT:-6666}"
-  echo -e "  Storybook: ${GREEN}http://localhost:${storybook_port}${NC}"
   echo -e "  Health: ${GREEN}http://localhost:${api_port}/api/health${NC}"
   echo ""
 }
