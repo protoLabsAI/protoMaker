@@ -37,8 +37,18 @@
   "peerDependencies": {
     "@langchain/core": "^0.3.33"
   },
+  "peerDependencies": {
+    "express": "^4.0.0 || ^5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "express": {
+      "optional": true
+    }
+  },
   "devDependencies": {
+    "@types/express": "^5.0.0",
     "@types/node": "22.19.3",
+    "express": "^5.0.0",
     "tsup": "^8.5.1",
     "typescript": "5.9.3"
   }
