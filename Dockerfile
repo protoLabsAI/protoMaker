@@ -260,6 +260,8 @@ COPY libs ./libs
 COPY apps/ui ./apps/ui
 
 # Build packages in dependency order, then build Storybook static site
+# VITE_SKIP_ELECTRON prevents vite-plugin-electron from loading (no Electron in Docker)
+ENV VITE_SKIP_ELECTRON=true
 RUN npm run build:libs \
     && npx storybook build --config-dir apps/ui/.storybook --output-dir apps/ui/storybook-static
 
