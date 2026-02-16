@@ -334,7 +334,10 @@ async function avaSynthesisNode(state: ResearchTreeState): Promise<Partial<Resea
       )
       .join('\n\n');
 
-    const errorsSummary = errors.length > 0 ? `\n\nErrors encountered:\n${errors.map((e) => `- ${e.subordinate}: ${e.error}${e.timedOut ? ' (timeout)' : ''}`).join('\n')}` : '';
+    const errorsSummary =
+      errors.length > 0
+        ? `\n\nErrors encountered:\n${errors.map((e) => `- ${e.subordinate}: ${e.error}${e.timedOut ? ' (timeout)' : ''}`).join('\n')}`
+        : '';
 
     // Execute with model fallback
     const result = await executeWithFallback(
@@ -396,13 +399,17 @@ Consider:
         summary: `Research completed for: ${idea}. ${subordinateFindings.length} findings collected from ${new Set(subordinateFindings.map((f) => f.source)).size} subordinates.`,
         recommendations: ['Review findings in detail', 'Conduct follow-up research if needed'],
         feasibility: 'medium',
-        keyInsights: subordinateFindings.map((f) => `${f.source}: ${f.findings.substring(0, 100)}...`),
+        keyInsights: subordinateFindings.map(
+          (f) => `${f.source}: ${f.findings.substring(0, 100)}...`
+        ),
         concerns: errors.length > 0 ? [`${errors.length} subordinates encountered errors`] : [],
         verdict: errors.length >= 3 ? 'defer' : 'proceed',
       };
     }
 
-    console.log(`[${nodeName}] Synthesis complete: verdict=${avaSynthesis.verdict}, feasibility=${avaSynthesis.feasibility}`);
+    console.log(
+      `[${nodeName}] Synthesis complete: verdict=${avaSynthesis.verdict}, feasibility=${avaSynthesis.feasibility}`
+    );
 
     return { avaSynthesis };
   } catch (error) {

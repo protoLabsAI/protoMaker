@@ -94,9 +94,7 @@ async function executeWithTimeout(
   try {
     const result = await Promise.race([
       researchFn(),
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Timeout')), timeoutMs)
-      ),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Timeout')), timeoutMs)),
     ]);
     return result;
   } catch (error) {
