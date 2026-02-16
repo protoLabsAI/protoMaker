@@ -44,6 +44,8 @@ export interface CrewCheckContext {
   healthMonitorService: HealthMonitorService;
   autoModeService: AutoModeService;
   settingsService: SettingsService;
+  /** Project paths managed by Lead Engineer — crew members should skip these */
+  managedProjectPaths?: Set<string>;
 }
 
 /** Result returned by a crew member's check function */

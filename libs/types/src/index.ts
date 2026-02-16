@@ -723,3 +723,17 @@ export type {
   PhaseApprovalInterrupt,
   GenericInterrupt,
 } from './copilotkit.js';
+
+// Lead Engineer types (production-phase nerve center)
+export type {
+  LeadFeatureSnapshot,
+  LeadAgentSnapshot,
+  LeadPRSnapshot,
+  LeadMilestoneSnapshot,
+  LeadWorldState,
+  LeadRuleAction,
+  LeadFastPathRule,
+  LeadEngineerFlowState,
+  LeadEngineerSession,
+  LeadRuleLogEntry,
+} from './lead-engineer.js';

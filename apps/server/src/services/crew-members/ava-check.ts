@@ -77,6 +77,8 @@ export const avaCrewMember: CrewMemberDefinition = {
     // 2. Count blocked features
     try {
       for (const projectPath of ctx.projectPaths) {
+        if (ctx.managedProjectPaths?.has(projectPath)) continue;
+
         const allFeatures = await ctx.featureLoader.getAll(projectPath);
         const blockedFeatures = allFeatures.filter((f) => f.status === 'blocked');
         if (blockedFeatures.length >= 3) {

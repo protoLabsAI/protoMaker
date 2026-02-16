@@ -303,7 +303,14 @@ export type EventType =
   | 'idea:jon-analysis'
   | 'idea:synthesis-started'
   | 'idea:synthesis-completed'
-  | 'idea:processing-error';
+  | 'idea:processing-error'
+  // Lead Engineer events (production-phase nerve center)
+  | 'lead-engineer:started'
+  | 'lead-engineer:stopped'
+  | 'lead-engineer:action-executed'
+  | 'lead-engineer:rule-evaluated'
+  | 'lead-engineer:project-completing'
+  | 'lead-engineer:project-completed';
 
 export type EventCallback = (type: EventType, payload: unknown) => void;
 
@@ -508,6 +515,23 @@ export interface EventPayloadMap {
   // Milestone/project lifecycle
   'milestone:completed': { milestone?: string; projectPath?: string };
   'project:completed': { project?: string; projectPath?: string };
+
+  // Lead Engineer events
+  'lead-engineer:started': { projectPath: string; projectSlug: string };
+  'lead-engineer:stopped': { projectPath: string; projectSlug: string };
+  'lead-engineer:action-executed': {
+    projectPath: string;
+    actionType: string;
+    details?: Record<string, unknown>;
+  };
+  'lead-engineer:rule-evaluated': {
+    projectPath: string;
+    ruleName: string;
+    eventType: string;
+    actionCount: number;
+  };
+  'lead-engineer:project-completing': { projectPath: string; projectSlug: string };
+  'lead-engineer:project-completed': { projectPath: string; projectSlug: string };
 }
 
 /**

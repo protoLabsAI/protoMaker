@@ -1,0 +1,287 @@
+/**
+ * Lead Engineer fast-path rules
+ *
+ * Pure functions only. No service imports. Only types.
+ * Each rule evaluates a WorldState + event and returns zero or more actions.
+ */
+
+import type {
+  LeadWorldState,
+  LeadRuleAction,
+  LeadFastPathRule,
+  LeadFeatureSnapshot,
+} from '@automaker/types';
+
+// ────────────────────────── Thresholds ──────────────────────────
+
+const ORPHANED_IN_PROGRESS_MS = 4 * 60 * 60 * 1000; // 4 hours
+const STUCK_AGENT_MS = 2 * 60 * 60 * 1000; // 2 hours
+const STALE_REVIEW_MS = 30 * 60 * 1000; // 30 minutes
+
+// ────────────────────────── Helper ──────────────────────────
+
+function featureFromPayload(
+  worldState: LeadWorldState,
+  payload: unknown
+): LeadFeatureSnapshot | undefined {
+  const p = payload as Record<string, unknown> | null;
+  const id = p?.featureId as string | undefined;
+  if (!id) return undefined;
+  return worldState.features[id];
+}
+
+// ────────────────────────── Rules ──────────────────────────
+
+/**
+ * mergedNotDone — Features in review with a merged PR should be moved to done.
+ * Absorbed from: board-janitor
+ */
+export const mergedNotDone: LeadFastPathRule = {
+  name: 'mergedNotDone',
+  description: 'Feature in review with merged PR → move to done',
+  triggers: ['feature:pr-merged', 'feature:status-changed'],
+
+  evaluate(worldState, _eventType, payload): LeadRuleAction[] {
+    const feature = featureFromPayload(worldState, payload);
+    if (!feature) return [];
+    if (feature.status === 'review' && feature.prMergedAt) {
+      return [{ type: 'move_feature', featureId: feature.id, toStatus: 'done' }];
+    }
+    return [];
+  },
+};
+
+/**
+ * orphanedInProgress — In-progress >4h with no running agent → reset to backlog.
+ * Absorbed from: board-janitor
+ */
+export const orphanedInProgress: LeadFastPathRule = {
+  name: 'orphanedInProgress',
+  description: 'In-progress >4h with no running agent → reset to backlog',
+  triggers: ['feature:error', 'feature:stopped', 'lead-engineer:rule-evaluated'],
+
+  evaluate(worldState, _eventType, payload): LeadRuleAction[] {
+    const actions: LeadRuleAction[] = [];
+    const now = Date.now();
+    const runningFeatureIds = new Set(worldState.agents.map((a) => a.featureId));
+
+    // If triggered by a specific feature event, check just that feature
+    const feature = featureFromPayload(worldState, payload);
+    const candidates = feature ? [feature] : Object.values(worldState.features);
+
+    for (const f of candidates) {
+      if (f.status !== 'in_progress') continue;
+      if (runningFeatureIds.has(f.id)) continue;
+      if (!f.startedAt) continue;
+
+      const age = now - new Date(f.startedAt).getTime();
+      if (age > ORPHANED_IN_PROGRESS_MS) {
+        const hours = Math.round(age / (60 * 60 * 1000));
+        actions.push({
+          type: 'reset_feature',
+          featureId: f.id,
+          reason: `Orphaned in-progress for ${hours}h with no running agent`,
+        });
+      }
+    }
+    return actions;
+  },
+};
+
+/**
+ * staleDeps — Blocked feature with all deps done → unblock (move to backlog).
+ * Absorbed from: board-janitor
+ */
+export const staleDeps: LeadFastPathRule = {
+  name: 'staleDeps',
+  description: 'Blocked + all deps done → unblock',
+  triggers: ['feature:status-changed'],
+
+  evaluate(worldState, _eventType, payload): LeadRuleAction[] {
+    const feature = featureFromPayload(worldState, payload);
+    if (!feature) return [];
+    if (feature.status !== 'blocked') return [];
+    if (!feature.dependencies || feature.dependencies.length === 0) return [];
+
+    const allDepsDone = feature.dependencies.every((depId) => {
+      const dep = worldState.features[depId];
+      return dep && (dep.status === 'done' || dep.status === 'verified');
+    });
+
+    if (allDepsDone) {
+      return [{ type: 'unblock_feature', featureId: feature.id }];
+    }
+    return [];
+  },
+};
+
+/**
+ * autoModeHealth — Backlog >0 + auto-mode not running → restart auto-mode.
+ * Absorbed from: ava-check
+ */
+export const autoModeHealth: LeadFastPathRule = {
+  name: 'autoModeHealth',
+  description: 'Backlog >0 + auto-mode not running → restart auto-mode',
+  triggers: ['auto-mode:stopped', 'auto-mode:idle'],
+
+  evaluate(worldState): LeadRuleAction[] {
+    const backlogCount = worldState.boardCounts['backlog'] || 0;
+    if (backlogCount > 0 && !worldState.autoModeRunning) {
+      return [
+        {
+          type: 'restart_auto_mode',
+          projectPath: worldState.projectPath,
+          maxConcurrency: worldState.maxConcurrency,
+        },
+      ];
+    }
+    return [];
+  },
+};
+
+/**
+ * staleReview — In review >30min with no auto-merge → enable auto-merge.
+ * Absorbed from: pr-maintainer
+ */
+export const staleReview: LeadFastPathRule = {
+  name: 'staleReview',
+  description: 'In review >30min + no auto-merge → enable auto-merge',
+  triggers: ['feature:status-changed', 'lead-engineer:rule-evaluated'],
+
+  evaluate(worldState, _eventType, payload): LeadRuleAction[] {
+    const actions: LeadRuleAction[] = [];
+    const now = Date.now();
+
+    const feature = featureFromPayload(worldState, payload);
+    const candidates = feature ? [feature] : Object.values(worldState.features);
+
+    for (const f of candidates) {
+      if (f.status !== 'review') continue;
+      if (!f.prNumber) continue;
+
+      // Check if PR already has auto-merge
+      const pr = worldState.openPRs.find((p) => p.featureId === f.id);
+      if (pr?.autoMergeEnabled) continue;
+
+      // Check age
+      const reviewStart = f.prCreatedAt;
+      if (!reviewStart) continue;
+      const age = now - new Date(reviewStart).getTime();
+      if (age > STALE_REVIEW_MS) {
+        actions.push({
+          type: 'enable_auto_merge',
+          featureId: f.id,
+          prNumber: f.prNumber,
+        });
+      }
+    }
+    return actions;
+  },
+};
+
+/**
+ * stuckAgent — Agent running >2h → send "wrap up" message.
+ * Absorbed from: ava-check
+ */
+export const stuckAgent: LeadFastPathRule = {
+  name: 'stuckAgent',
+  description: 'Agent running >2h → send wrap-up message',
+  triggers: ['lead-engineer:rule-evaluated'],
+
+  evaluate(worldState): LeadRuleAction[] {
+    const actions: LeadRuleAction[] = [];
+    const now = Date.now();
+
+    for (const agent of worldState.agents) {
+      const age = now - new Date(agent.startTime).getTime();
+      if (age > STUCK_AGENT_MS) {
+        const hours = Math.round((age / (60 * 60 * 1000)) * 10) / 10;
+        actions.push({
+          type: 'send_agent_message',
+          featureId: agent.featureId,
+          message: `You have been running for ${hours}h. Please wrap up your current work, commit changes, and create a PR. If you are stuck, describe what's blocking you.`,
+        });
+      }
+    }
+    return actions;
+  },
+};
+
+/**
+ * capacityRestart — Feature completed + agents < max + backlog > 0 + auto-mode stopped → restart.
+ * Absorbed from: ava-check
+ */
+export const capacityRestart: LeadFastPathRule = {
+  name: 'capacityRestart',
+  description: 'Agents < max + backlog > 0 + auto-mode stopped → restart',
+  triggers: ['feature:completed', 'feature:pr-merged'],
+
+  evaluate(worldState): LeadRuleAction[] {
+    const backlogCount = worldState.boardCounts['backlog'] || 0;
+    if (
+      backlogCount > 0 &&
+      !worldState.autoModeRunning &&
+      worldState.agents.length < worldState.maxConcurrency
+    ) {
+      return [
+        {
+          type: 'restart_auto_mode',
+          projectPath: worldState.projectPath,
+          maxConcurrency: worldState.maxConcurrency,
+        },
+      ];
+    }
+    return [];
+  },
+};
+
+/**
+ * projectCompleting — All features done → transition to completing state.
+ */
+export const projectCompleting: LeadFastPathRule = {
+  name: 'projectCompleting',
+  description: 'All features done → trigger project completion',
+  triggers: ['project:completed'],
+
+  evaluate(worldState): LeadRuleAction[] {
+    const total = worldState.metrics.totalFeatures;
+    const completed = worldState.metrics.completedFeatures;
+    if (total > 0 && completed >= total) {
+      return [{ type: 'project_completing' }];
+    }
+    return [];
+  },
+};
+
+// ────────────────────────── Exports ──────────────────────────
+
+/** Default set of fast-path rules */
+export const DEFAULT_RULES: LeadFastPathRule[] = [
+  mergedNotDone,
+  orphanedInProgress,
+  staleDeps,
+  autoModeHealth,
+  staleReview,
+  stuckAgent,
+  capacityRestart,
+  projectCompleting,
+];
+
+/**
+ * Evaluate all applicable rules for an event.
+ * Returns the union of all actions from matching rules.
+ */
+export function evaluateRules(
+  rules: LeadFastPathRule[],
+  worldState: LeadWorldState,
+  eventType: string,
+  eventPayload: unknown
+): LeadRuleAction[] {
+  const actions: LeadRuleAction[] = [];
+  for (const rule of rules) {
+    if (!rule.triggers.includes(eventType)) continue;
+    const ruleActions = rule.evaluate(worldState, eventType, eventPayload);
+    actions.push(...ruleActions);
+  }
+  return actions;
+}
