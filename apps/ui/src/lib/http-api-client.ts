@@ -669,6 +669,10 @@ export class HttpApiClient implements ElectronAPI {
   private eventCallbacks: Map<EventType, Set<EventCallback>> = new Map();
   private reconnectTimer: NodeJS.Timeout | null = null;
   private isConnecting = false;
+  private recentEventIds: Set<string> = new Set();
+  private eventIdOrder: string[] = [];
+  private readonly MAX_DEDUP_ENTRIES = 1000;
+  private readonly EVICT_BATCH_SIZE = 200;
 
   constructor() {
     this.serverUrl = getServerUrl();
@@ -818,6 +822,13 @@ export class HttpApiClient implements ElectronAPI {
       this.ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
+
+          // Check for duplicate events using deduplication window
+          if (!this.checkAndTrackEventId(data.type, data.payload, data.id || data.eventId)) {
+            // Event is a duplicate, skip dispatch
+            return;
+          }
+
           logger.info(
             'WebSocket message:',
             data.type,
@@ -865,6 +876,48 @@ export class HttpApiClient implements ElectronAPI {
       logger.error('Failed to create WebSocket:', error);
       this.isConnecting = false;
     }
+  }
+
+  /**
+   * Generate a deterministic event ID from type and payload
+   */
+  private generateEventHash(type: string, payload: unknown): string {
+    const contentStr = type + JSON.stringify(payload);
+    // Simple hash function - sufficient for deduplication purposes
+    let hash = 0;
+    for (let i = 0; i < contentStr.length; i++) {
+      const char = contentStr.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32bit integer
+    }
+    return `hash-${Math.abs(hash).toString(36)}`;
+  }
+
+  /**
+   * Extract or generate event ID, then check deduplication
+   * Returns true if event is new (should be processed), false if duplicate
+   */
+  private checkAndTrackEventId(type: string, payload: unknown, serverEventId?: string): boolean {
+    // Use server-provided ID if available, otherwise generate from content
+    const eventId = serverEventId || this.generateEventHash(type, payload);
+
+    if (this.recentEventIds.has(eventId)) {
+      logger.debug('Duplicate event detected, skipping:', eventId);
+      return false;
+    }
+
+    // Add to dedup tracking
+    this.recentEventIds.add(eventId);
+    this.eventIdOrder.push(eventId);
+
+    // Batch eviction: when we exceed max entries, remove oldest entries
+    if (this.recentEventIds.size > this.MAX_DEDUP_ENTRIES) {
+      const toRemove = this.eventIdOrder.splice(0, this.EVICT_BATCH_SIZE);
+      toRemove.forEach((id) => this.recentEventIds.delete(id));
+      logger.debug(`Event dedup window evicted ${toRemove.length} old entries`);
+    }
+
+    return true;
   }
 
   private subscribeToEvent(type: EventType, callback: EventCallback): () => void {
