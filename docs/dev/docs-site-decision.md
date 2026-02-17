@@ -5,7 +5,7 @@
 
 ## Context
 
-protoMaker has 50+ markdown files across a well-organized `docs/` directory with multiple sections (agents, infra, dev, protolabs, server, integrations). These docs were only accessible via GitHub's markdown renderer or direct file reading. We need a generated documentation site with search, navigation, and dark mode.
+protoLabs has 50+ markdown files across a well-organized `docs/` directory with multiple sections (agents, infra, dev, protolabs, server, integrations). These docs were only accessible via GitHub's markdown renderer or direct file reading. We need a generated documentation site with search, navigation, and dark mode.
 
 ## Options Evaluated
 

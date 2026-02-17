@@ -1,6 +1,6 @@
 # Deployment Guide
 
-This guide covers different deployment options for protoMaker.
+This guide covers different deployment options for protoLabs.
 
 ## Deployment Options
 
@@ -80,7 +80,7 @@ curl -I http://protolabs.studio        # redirect → HTTPS
 
 ## Local Development
 
-For development, run protoMaker directly on your machine:
+For development, run protoLabs directly on your machine:
 
 ```bash
 # Install dependencies
@@ -111,7 +111,7 @@ AUTOMAKER_API_KEY=your-local-key
 
 ## Docker (Isolated)
 
-Run protoMaker in complete isolation from your filesystem:
+Run protoLabs in complete isolation from your filesystem:
 
 ```bash
 docker compose up -d
@@ -127,7 +127,7 @@ Access at `http://localhost:3007` (UI), `http://localhost:3008` (API), `http://l
 
 ### When to Use
 
-- Testing protoMaker safely
+- Testing protoLabs safely
 - Demo environments
 - CI/CD testing
 
@@ -195,7 +195,7 @@ Edit the service file:
 
 ```ini
 [Unit]
-Description=protoMaker AI Development Studio
+Description=protoLabs AI Development Studio
 After=docker.service
 Requires=docker.service
 
@@ -257,13 +257,13 @@ sudo systemctl disable automaker
 
 ### Authentication
 
-| Variable                   | Required | Description                                  |
-| -------------------------- | -------- | -------------------------------------------- |
-| `ANTHROPIC_API_KEY`        | Yes\*    | Anthropic API key                            |
-| `CLAUDE_OAUTH_CREDENTIALS` | Yes\*    | Claude CLI OAuth JSON                        |
-| `AUTOMAKER_API_KEY`        | No       | protoMaker API key (auto-generated if blank) |
-| `CURSOR_AUTH_TOKEN`        | No       | Cursor CLI OAuth token                       |
-| `GH_TOKEN`                 | No       | GitHub CLI token                             |
+| Variable                   | Required | Description                                 |
+| -------------------------- | -------- | ------------------------------------------- |
+| `ANTHROPIC_API_KEY`        | Yes\*    | Anthropic API key                           |
+| `CLAUDE_OAUTH_CREDENTIALS` | Yes\*    | Claude CLI OAuth JSON                       |
+| `AUTOMAKER_API_KEY`        | No       | protoLabs API key (auto-generated if blank) |
+| `CURSOR_AUTH_TOKEN`        | No       | Cursor CLI OAuth token                      |
+| `GH_TOKEN`                 | No       | GitHub CLI token                            |
 
 \*At least one of `ANTHROPIC_API_KEY` or `CLAUDE_OAUTH_CREDENTIALS` is required.
 

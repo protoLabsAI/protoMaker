@@ -1,12 +1,12 @@
 # Integrations
 
-Connect protoMaker to your workflow. Discord, Linear, GitHub, Claude Code CLI.
+Connect protoLabs to your workflow. Discord, Linear, GitHub, Claude Code CLI.
 
 ## Available Integrations
 
 ### [Claude Code Plugin](./claude-plugin)
 
-Control protoMaker from the Claude Code CLI via MCP tools. Create features, start agents, manage the board, and orchestrate projects — all from your terminal.
+Control protoLabs from the Claude Code CLI via MCP tools. Create features, start agents, manage the board, and orchestrate projects — all from your terminal.
 
 ### [Discord](./discord)
 
@@ -22,7 +22,7 @@ Full Linear integration with three modes: @mention the agent on any issue for co
 
 ## External Tools
 
-protoMaker also works with:
+protoLabs also works with:
 
 - **[GitHub Actions](/infra/ci-cd)** — CI/CD pipelines for testing and deployment
 - **[Graphite](https://graphite.dev)** — Stack-aware PR management for epic workflows

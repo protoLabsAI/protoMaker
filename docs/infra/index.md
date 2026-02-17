@@ -1,6 +1,6 @@
 # Infrastructure Documentation
 
-Deploy protoMaker. Docker, systemd, staging — pick what fits your stack.
+Deploy protoLabs. Docker, systemd, staging — pick what fits your stack.
 
 ## Quick Links
 
@@ -23,7 +23,7 @@ Deploy protoMaker. Docker, systemd, staging — pick what fits your stack.
 
 ## Infrastructure Overview
 
-protoMaker uses a containerized architecture with three services:
+protoLabs uses a containerized architecture with three services:
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -141,7 +141,7 @@ See [deployment.md](./deployment.md) for a complete list of environment variable
 
 ## Using the /devops Skill
 
-protoMaker includes a `/devops` skill for managing infrastructure from Claude Code:
+protoLabs includes a `/devops` skill for managing infrastructure from Claude Code:
 
 ```
 /devops           # Show container status

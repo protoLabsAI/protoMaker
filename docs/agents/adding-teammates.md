@@ -1,6 +1,6 @@
 # Adding Agent Teammates
 
-This guide explains how to add new **authority agents** (autonomous team members like PM, ProjM, EM) to protoMaker's agent team.
+This guide explains how to add new **authority agents** (autonomous team members like PM, ProjM, EM) to protoLabs's agent team.
 
 ## Table of Contents
 

@@ -1,6 +1,6 @@
 # Docker Compose Configuration
 
-protoMaker provides multiple Docker Compose configurations for different use cases.
+protoLabs provides multiple Docker Compose configurations for different use cases.
 
 ## Compose Files
 
@@ -15,7 +15,7 @@ protoMaker provides multiple Docker Compose configurations for different use cas
 
 ## Production Configuration
 
-`docker-compose.yml` runs protoMaker in complete isolation:
+`docker-compose.yml` runs protoLabs in complete isolation:
 
 ```yaml
 services:
@@ -212,11 +212,11 @@ services:
 
 ### Optional Authentication
 
-| Variable            | Description                                                     |
-| ------------------- | --------------------------------------------------------------- |
-| `AUTOMAKER_API_KEY` | API key for protoMaker authentication (auto-generated if blank) |
-| `CURSOR_AUTH_TOKEN` | Cursor CLI OAuth token                                          |
-| `GH_TOKEN`          | GitHub CLI token for git operations                             |
+| Variable            | Description                                                    |
+| ------------------- | -------------------------------------------------------------- |
+| `AUTOMAKER_API_KEY` | API key for protoLabs authentication (auto-generated if blank) |
+| `CURSOR_AUTH_TOKEN` | Cursor CLI OAuth token                                         |
+| `GH_TOKEN`          | GitHub CLI token for git operations                            |
 
 ### Optional Configuration
 

@@ -1,6 +1,6 @@
 # Adding New Team Members
 
-How to add a new agent role to protoMaker's multi-agent system. There are two approaches:
+How to add a new agent role to protoLabs's multi-agent system. There are two approaches:
 
 1. **Dynamic (recommended)** — Register a template at runtime via API/MCP. No code changes needed. See [Dynamic Role Registry](/agents/dynamic-role-registry).
 2. **Static** — Add to the type system, create a prompt, wire Discord routing. Requires code changes and a deploy.

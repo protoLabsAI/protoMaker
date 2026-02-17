@@ -1,6 +1,6 @@
 # Docker Architecture
 
-protoMaker uses a multi-stage Dockerfile to build both server and UI images from a single file.
+protoLabs uses a multi-stage Dockerfile to build both server and UI images from a single file.
 
 ## Files
 

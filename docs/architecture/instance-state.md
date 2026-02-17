@@ -1,10 +1,10 @@
 # Instance State Architecture
 
-How protoMaker manages state across instances, and why each machine starts fresh.
+How protoLabs manages state across instances, and why each machine starts fresh.
 
 ## Core Principle: Fresh State Per Instance
 
-Every protoMaker instance — whether a dev laptop, staging VM, or production node in a hivemind mesh — starts with a **clean operational slate**. There is no inherited task queue, no stale project plans, no accumulated operational debt from another machine's history.
+Every protoLabs instance — whether a dev laptop, staging VM, or production node in a hivemind mesh — starts with a **clean operational slate**. There is no inherited task queue, no stale project plans, no accumulated operational debt from another machine's history.
 
 This is intentional. An instance's operational state is ephemeral. Its _knowledge_ is persistent.
 
@@ -56,7 +56,7 @@ When a new instance spins up against a repo, it doesn't inherit understanding �
 6. EXECUTE     →  Agents implement alignment work
 ```
 
-This is the `/setuplab` skill. It takes a git URL or local path and produces a fully contextualized protoMaker instance in minutes. The instance understands the codebase _because it researched it_, not because someone told it.
+This is the `/setuplab` skill. It takes a git URL or local path and produces a fully contextualized protoLabs instance in minutes. The instance understands the codebase _because it researched it_, not because someone told it.
 
 ### Future: Onboarding Task Templates
 
@@ -72,7 +72,7 @@ These tasks produce the context files and memory entries that make all subsequen
 
 ## Hivemind: Multi-Instance Mesh
 
-The fresh-state model is foundational for **hivemind** — protoMaker's multi-instance architecture where several machines work together on the same codebase, each owning specific domains.
+The fresh-state model is foundational for **hivemind** — protoLabs's multi-instance architecture where several machines work together on the same codebase, each owning specific domains.
 
 ### Architecture Overview
 

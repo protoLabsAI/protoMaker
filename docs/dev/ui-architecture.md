@@ -1,6 +1,6 @@
 # UI Component Architecture
 
-This document maps protoMaker's UI component structure for developers working on the frontend. All UI code lives in `apps/ui/src/`.
+This document maps protoLabs's UI component structure for developers working on the frontend. All UI code lives in `apps/ui/src/`.
 
 ## Table of Contents
 
@@ -290,7 +290,7 @@ Idea management and prompt organization.
 
 ## Store Architecture
 
-protoMaker uses [Zustand](https://zustand-demo.pmnd.rs/) for state management with localStorage persistence.
+protoLabs uses [Zustand](https://zustand-demo.pmnd.rs/) for state management with localStorage persistence.
 
 ### App Store (`store/app-store.ts`)
 
@@ -419,7 +419,7 @@ useEffect(() => {
 
 ## Routing
 
-protoMaker uses [TanStack Router](https://tanstack.com/router) with file-based routing.
+protoLabs uses [TanStack Router](https://tanstack.com/router) with file-based routing.
 
 ### Route Structure
 

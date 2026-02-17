@@ -213,7 +213,7 @@ Files that should NEVER be mounted or committed:
 
 ### API Key Authentication
 
-The protoMaker API requires authentication:
+The protoLabs API requires authentication:
 
 ```bash
 curl -H "Authorization: Bearer YOUR_API_KEY" \

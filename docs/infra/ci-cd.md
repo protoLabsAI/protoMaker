@@ -1,6 +1,6 @@
 # CI/CD Pipelines
 
-protoMaker uses GitHub Actions for continuous integration and delivery.
+protoLabs uses GitHub Actions for continuous integration and delivery.
 
 ## Workflows Overview
 
@@ -517,7 +517,7 @@ The `ava-staging` runner has access to resources that GitHub-hosted runners don'
 | -------------------------- | ----------------------------------------------------- |
 | Claude CLI (authenticated) | AI-assisted PR reviews, changelog generation          |
 | Anthropic API key          | Automated code analysis, release notes                |
-| protoMaker MCP server      | Board updates, feature status, agent orchestration    |
+| protoLabs MCP server       | Board updates, feature status, agent orchestration    |
 | Docker (host)              | Staging deploys, integration tests against real infra |
 | gh CLI (authenticated)     | PR creation, issue management, release publishing     |
 | 125GB RAM / 24 CPUs        | Full E2E test suites, parallel builds                 |
@@ -557,7 +557,7 @@ The `ava-staging` runner has access to resources that GitHub-hosted runners don'
 ### Adding New Workflows
 
 Self-hosted workflows use `runs-on: self-hosted` and have access to the host environment.
-The self-hosted runner has access to the host environment where protoMaker is deployed.
+The self-hosted runner has access to the host environment where protoLabs is deployed.
 
 ```yaml
 jobs:
@@ -566,7 +566,7 @@ jobs:
     steps:
       - name: Use Claude CLI
         run: claude --version
-      - name: Use protoMaker MCP
+      - name: Use protoLabs MCP
         run: curl -sf http://localhost:3008/api/health
 ```
 

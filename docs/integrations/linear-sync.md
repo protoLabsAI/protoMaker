@@ -1,11 +1,11 @@
 # Linear integration
 
-protoMaker integrates with [Linear](https://linear.app) for bidirectional project management and AI agent interaction. @mention the agent on any issue to get context-aware analysis, or create a Linear project to trigger automated planning.
+protoLabs integrates with [Linear](https://linear.app) for bidirectional project management and AI agent interaction. @mention the agent on any issue to get context-aware analysis, or create a Linear project to trigger automated planning.
 
 ## Architecture
 
 ```
-Linear                              protoMaker
+Linear                              protoLabs
 ┌──────────────────┐               ┌───────────────────────────┐
 │ @mention agent   │──webhook────▶ │ LinearAgentRouter          │
 │                  │               │   ↓ intelligent routing    │
@@ -29,8 +29,8 @@ Linear                              protoMaker
 | ------------ | ------------- | ---------------------- | -------------------------------------------------- |
 | **Agent**    | Bidirectional | @mention or delegation | AI agent responds via activities, multi-turn chat  |
 | **Planning** | Bidirectional | Project created        | LangGraph flow with HITL checkpoints and documents |
-| **Push**     | protoMaker →  | Feature events         | Creates issues, syncs status                       |
-| **Pull**     | → protoMaker  | Webhooks               | Detects approvals, syncs priority changes          |
+| **Push**     | protoLabs →   | Feature events         | Creates issues, syncs status                       |
+| **Pull**     | → protoLabs   | Webhooks               | Detects approvals, syncs priority changes          |
 
 ## Setup
 
@@ -39,7 +39,7 @@ Linear                              protoMaker
 1. Go to [Linear Settings > API > OAuth Applications](https://linear.app/settings/api/applications)
 2. Click **New Application**
 3. Fill in:
-   - **Name**: `protoMaker` (this is the name users will see when they @mention the agent)
+   - **Name**: `protoLabs` (this is the name users will see when they @mention the agent)
    - **Description**: `AI Development Studio agent`
    - **Redirect URI**: your callback URL (see below)
    - **Client credentials**: **Yes**
@@ -253,29 +253,29 @@ At each checkpoint, users can:
 
 ### Status sync mapping
 
-| protoMaker Status | Linear Status           | Direction           |
-| ----------------- | ----------------------- | ------------------- |
-| `backlog`         | `Backlog` / `Todo`      | Both                |
-| `in_progress`     | `In Progress`           | Both                |
-| `review`          | `In Review`             | protoMaker → Linear |
-| `done`            | `Done`                  | Both                |
-| `blocked`         | `Blocked` / `Cancelled` | protoMaker → Linear |
+| protoLabs Status | Linear Status           | Direction          |
+| ---------------- | ----------------------- | ------------------ |
+| `backlog`        | `Backlog` / `Todo`      | Both               |
+| `in_progress`    | `In Progress`           | Both               |
+| `review`         | `In Review`             | protoLabs → Linear |
+| `done`           | `Done`                  | Both               |
+| `blocked`        | `Blocked` / `Cancelled` | protoLabs → Linear |
 
 ### Priority mapping
 
-| Linear Priority | protoMaker Complexity | Claude Model |
-| --------------- | --------------------- | ------------ |
-| Urgent (1)      | `large`               | Opus         |
-| High (2)        | `large`               | Opus         |
-| Normal (3)      | `medium`              | Sonnet       |
-| Low (4)         | `small`               | Haiku        |
-| None (0)        | `medium`              | Sonnet       |
+| Linear Priority | protoLabs Complexity | Claude Model |
+| --------------- | -------------------- | ------------ |
+| Urgent (1)      | `large`              | Opus         |
+| High (2)        | `large`              | Opus         |
+| Normal (3)      | `medium`             | Sonnet       |
+| Low (4)         | `small`              | Haiku        |
+| None (0)        | `medium`             | Sonnet       |
 
 ### Approval workflow
 
 1. Product manager creates issue and moves to "Approved" state
 2. Webhook fires → `LinearApprovalHandler` detects the state match
-3. `ApprovalBridge` creates an epic feature on the protoMaker board
+3. `ApprovalBridge` creates an epic feature on the protoLabs board
 4. AI classifier suggests an agent role based on issue content
 5. Auto-mode picks up features and assigns agents
 6. Agent implements, creates PR, merges
@@ -291,7 +291,7 @@ At each checkpoint, users can:
 | `syncOnFeatureCreate` | boolean  | `true`                               | Create Linear issue when feature is created              |
 | `syncOnStatusChange`  | boolean  | `true`                               | Sync status changes to Linear                            |
 | `commentOnCompletion` | boolean  | `true`                               | Add comment when agent completes work                    |
-| `syncEnabled`         | boolean  | `false`                              | Enable bidirectional sync (Linear → protoMaker)          |
+| `syncEnabled`         | boolean  | `false`                              | Enable bidirectional sync (Linear → protoLabs)           |
 | `approvalStates`      | string[] | `["Approved", "Ready for Planning"]` | Workflow states that trigger approval pipeline           |
 | `conflictResolution`  | string   | `"linear"`                           | Who wins on conflict: `linear`, `automaker`, or `manual` |
 | `labelName`           | string   | —                                    | Custom label applied to synced issues                    |
@@ -354,13 +354,13 @@ This error means the Authorization header has `Bearer lin_api_...`. Linear API k
 
 ### Sync conflicts
 
-When the same field is modified in both Linear and protoMaker simultaneously:
+When the same field is modified in both Linear and protoLabs simultaneously:
 
 - **`conflictResolution: "linear"`** — Linear's value wins (default, safest)
-- **`conflictResolution: "automaker"`** — protoMaker's value wins
+- **`conflictResolution: "automaker"`** — protoLabs's value wins
 - **`conflictResolution: "manual"`** — Neither side overwrites; requires manual resolution
 
-Loop prevention: Every sync operation sets a `syncedFromLinear` / `syncedFromprotoMaker` flag. The other side checks this flag and skips updates that originated from itself.
+Loop prevention: Every sync operation sets a `syncedFromLinear` / `syncedFromprotoLabs` flag. The other side checks this flag and skips updates that originated from itself.
 
 ### Status not syncing
 

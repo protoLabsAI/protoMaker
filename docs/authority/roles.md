@@ -81,7 +81,7 @@ Autonomous operator with full authority. Manages operations, coordinates agents,
 - [Backend Engineer](#backend-engineer) — Implements server-side features, APIs, services, and database logic
 - [Product Manager](#product-manager) — Manages requirements, priorities, roadmap, and stakeholder communication
 - [Engineering Manager](#engineering-manager) — Oversees engineering execution, code review, team coordination, and technical decisions
-- [Linear Specialist](#linear-specialist) — Owns all Linear workspace operations: project management, sprint planning, issue lifecycle, initiative tracking, and protoMaker board synchronization
+- [Linear Specialist](#linear-specialist) — Owns all Linear workspace operations: project management, sprint planning, issue lifecycle, initiative tracking, and protoLabs board synchronization
 - [PR Maintainer](#pr-maintainer) — Handles PR pipeline mechanics: auto-merge enablement, CodeRabbit thread resolution, format fixing in worktrees, branch rebasing, and PR creation from orphaned worktrees
 - [Board Janitor](#board-janitor) — Maintains board consistency: moves merged-PR features to done, resets stale in-progress features, repairs dependency chains
 
@@ -223,7 +223,7 @@ Oversees engineering execution, code review, team coordination, and technical de
 
 ### Description
 
-Owns all Linear workspace operations: project management, sprint planning, issue lifecycle, initiative tracking, and protoMaker board synchronization.
+Owns all Linear workspace operations: project management, sprint planning, issue lifecycle, initiative tracking, and protoLabs board synchronization.
 
 ---
 

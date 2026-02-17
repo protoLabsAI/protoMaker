@@ -1,6 +1,6 @@
 # Server Reference
 
-Technical reference for the protoMaker backend (`apps/server/`).
+Technical reference for the protoLabs backend (`apps/server/`).
 
 ## Architecture
 

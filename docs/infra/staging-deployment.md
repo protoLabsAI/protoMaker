@@ -1,6 +1,6 @@
 # High-Concurrency Deployment
 
-This guide covers deploying protoMaker in a staging or high-concurrency environment with high-memory configuration for increased concurrent agent capacity.
+This guide covers deploying protoLabs in a staging or high-concurrency environment with high-memory configuration for increased concurrent agent capacity.
 
 ## Overview
 
@@ -51,7 +51,7 @@ Based on observed behavior and Claude Agent SDK usage patterns:
 
 **Important:** Multiple projects with the same name can coexist without conflicts.
 
-protoMaker isolates projects by **absolute path**, not by name. Each project's data is stored in `{projectPath}/.automaker/`.
+protoLabs isolates projects by **absolute path**, not by name. Each project's data is stored in `{projectPath}/.automaker/`.
 
 Example - no conflicts:
 
@@ -513,9 +513,9 @@ curl -s https://api.linear.app/graphql \
   -d '{"query":"{ viewer { id name } }"}' | python3 -m json.tool
 ```
 
-### protoMaker API Key (`AUTOMAKER_API_KEY`)
+### protoLabs API Key (`AUTOMAKER_API_KEY`)
 
-protoMaker uses `X-API-Key` header (NOT `Authorization: Bearer`):
+protoLabs uses `X-API-Key` header (NOT `Authorization: Bearer`):
 
 ```bash
 # Correct
@@ -854,4 +854,4 @@ Failed smoke tests trigger automatic rollback to previous working images.
 
 ---
 
-**Applies to:** protoMaker v1.x with Docker deployment
+**Applies to:** protoLabs v1.x with Docker deployment

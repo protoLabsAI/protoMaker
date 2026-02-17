@@ -1,6 +1,6 @@
 # Hivemind Interface Extraction
 
-Interface abstractions that decouple protoMaker's core services from their concrete implementations, enabling the future hivemind multi-instance architecture.
+Interface abstractions that decouple protoLabs's core services from their concrete implementations, enabling the future hivemind multi-instance architecture.
 
 ## Overview
 

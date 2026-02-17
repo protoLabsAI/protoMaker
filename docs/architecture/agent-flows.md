@@ -1,10 +1,10 @@
 # Agent Flows
 
-End-to-end pipeline diagrams documenting how work moves through protoMaker's autonomous development system.
+End-to-end pipeline diagrams documenting how work moves through protoLabs's autonomous development system.
 
-## protoMaker Dev Cycle — Idea to Merged PR
+## protoLabs Dev Cycle — Idea to Merged PR
 
-The complete lifecycle from an idea entering the system through to code merged on main. This is the core pipeline that protoMaker automates.
+The complete lifecycle from an idea entering the system through to code merged on main. This is the core pipeline that protoLabs automates.
 
 ### Full Pipeline Diagram
 
@@ -130,7 +130,7 @@ sequenceDiagram
     participant CoS as Ava (Chief of Staff)
     participant API as Server API
     participant ProjM as ProjM Agent
-    participant Board as protoMaker Board
+    participant Board as protoLabs Board
     participant Git as Git / Worktrees
 
     CoS->>API: POST /api/cos/submit-prd
@@ -226,7 +226,7 @@ flowchart LR
 
 ## Instance State & Onboarding
 
-All flows above operate within a single protoMaker instance. Each instance starts with a **clean operational slate** — no inherited board, no stale task queue.
+All flows above operate within a single protoLabs instance. Each instance starts with a **clean operational slate** — no inherited board, no stale task queue.
 
 ### What's Shared vs Instance-Local
 

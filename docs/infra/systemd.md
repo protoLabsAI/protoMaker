@@ -1,6 +1,6 @@
 # systemd Service Configuration
 
-This guide covers running protoMaker as a systemd service for persistent deployments.
+This guide covers running protoLabs as a systemd service for persistent deployments.
 
 ## Service File
 
@@ -8,7 +8,7 @@ The service file is located at `automaker.service` in the repository root.
 
 ```ini
 [Unit]
-Description=protoMaker AI Development Studio
+Description=protoLabs AI Development Studio
 Documentation=https://github.com/proto-labs-ai/automaker
 After=docker.service
 Requires=docker.service
@@ -50,7 +50,7 @@ sudo nano /etc/systemd/system/automaker.service
 
 Update:
 
-- `WorkingDirectory` - Path to your protoMaker installation
+- `WorkingDirectory` - Path to your protoLabs installation
 - `User` / `Group` - Your username
 
 ### 3. Reload systemd
@@ -75,7 +75,7 @@ sudo systemctl start automaker
 
 ```ini
 [Unit]
-Description=protoMaker AI Development Studio
+Description=protoLabs AI Development Studio
 Documentation=https://github.com/proto-labs-ai/automaker
 After=docker.service
 Requires=docker.service
@@ -147,7 +147,7 @@ sudo systemctl status automaker
 Output:
 
 ```
-● automaker.service - protoMaker AI Development Studio
+● automaker.service - protoLabs AI Development Studio
      Loaded: loaded (/etc/systemd/system/automaker.service; enabled)
      Active: active (exited) since Wed 2026-02-05 10:00:00 UTC
        Docs: https://github.com/proto-labs-ai/automaker
@@ -295,7 +295,7 @@ sudo systemctl status docker
 # Start Docker if needed
 sudo systemctl start docker
 
-# Then restart protoMaker
+# Then restart protoLabs
 sudo systemctl restart automaker
 ```
 
@@ -330,7 +330,7 @@ Create a timer:
 ```ini
 # /etc/systemd/system/automaker-healthcheck.timer
 [Unit]
-Description=protoMaker Health Check
+Description=protoLabs Health Check
 
 [Timer]
 OnBootSec=5min
@@ -343,7 +343,7 @@ WantedBy=timers.target
 ```ini
 # /etc/systemd/system/automaker-healthcheck.service
 [Unit]
-Description=protoMaker Health Check
+Description=protoLabs Health Check
 
 [Service]
 Type=oneshot
@@ -359,12 +359,12 @@ sudo systemctl start automaker-healthcheck.timer
 
 ### Multiple Instances
 
-For running multiple protoMaker instances:
+For running multiple protoLabs instances:
 
 ```ini
 # /etc/systemd/system/automaker@.service
 [Unit]
-Description=protoMaker AI Development Studio - %i
+Description=protoLabs AI Development Studio - %i
 After=docker.service
 Requires=docker.service
 

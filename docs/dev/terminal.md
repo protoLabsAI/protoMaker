@@ -1,6 +1,6 @@
 # Terminal
 
-The integrated terminal provides a full-featured terminal emulator within protoMaker, powered by xterm.js.
+The integrated terminal provides a full-featured terminal emulator within protoLabs, powered by xterm.js.
 
 ## Configuration
 

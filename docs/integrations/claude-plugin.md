@@ -1,6 +1,6 @@
-# Claude Code Plugin for protoMaker
+# Claude Code Plugin for protoLabs
 
-Comprehensive guide to using the Claude Code plugin and MCP server for programmatic control of protoMaker.
+Comprehensive guide to using the Claude Code plugin and MCP server for programmatic control of protoLabs.
 
 ## Quick Start
 
@@ -9,13 +9,13 @@ Comprehensive guide to using the Claude Code plugin and MCP server for programma
 Install directly from the GitHub repository:
 
 ```bash
-# 1. Add the protoMaker plugin marketplace from GitHub
+# 1. Add the protoLabs plugin marketplace from GitHub
 claude plugin marketplace add https://github.com/proto-labs-ai/automaker/tree/main/packages/mcp-server/plugins
 
 # 2. Install the plugin
 claude plugin install automaker
 
-# 3. Start protoMaker server (in a separate terminal)
+# 3. Start protoLabs server (in a separate terminal)
 git clone https://github.com/proto-labs-ai/automaker.git
 cd automaker
 npm install
@@ -28,10 +28,10 @@ claude
 
 ### Option 2: Install from Local Clone (Development)
 
-For developers working on protoMaker:
+For developers working on protoLabs:
 
 ```bash
-# 1. Clone and install protoMaker
+# 1. Clone and install protoLabs
 git clone https://github.com/proto-labs-ai/automaker.git
 cd automaker
 npm install
@@ -39,7 +39,7 @@ npm install
 # 2. Build the MCP server
 npm run build:packages
 
-# 3. Start protoMaker server
+# 3. Start protoLabs server
 npm run dev:web
 
 # 4. In a new terminal, add the plugin marketplace and install
@@ -82,7 +82,7 @@ That's it! You now have access to 32 MCP tools and slash commands for managing y
 
 ## Overview
 
-The protoMaker Claude Code plugin enables you to:
+The protoLabs Claude Code plugin enables you to:
 
 - **Manage Features**: Create, update, and track features on your Kanban board
 - **Control Agents**: Start, stop, and monitor AI agents working on features
@@ -91,23 +91,23 @@ The protoMaker Claude Code plugin enables you to:
 
 The plugin consists of:
 
-1. **MCP Server** (`@automaker/mcp-server`) - Exposes protoMaker's API via Model Context Protocol
+1. **MCP Server** (`@automaker/mcp-server`) - Exposes protoLabs's API via Model Context Protocol
 2. **Claude Plugin** (`packages/mcp-server/plugins/automaker`) - Provides slash commands and subagents
 
 ## Installation
 
 ### Prerequisites
 
-- protoMaker server running (`npm run dev` from the automaker root directory)
+- protoLabs server running (`npm run dev` from the automaker root directory)
 - Claude Code CLI installed and authenticated
 - Node.js 22+
 
-### Step 1: Start protoMaker with a Fixed API Key
+### Step 1: Start protoLabs with a Fixed API Key
 
-By default, protoMaker generates a random API key on each restart. For Claude Code integration, use a fixed key:
+By default, protoLabs generates a random API key on each restart. For Claude Code integration, use a fixed key:
 
 ```bash
-# Start protoMaker with a fixed API key
+# Start protoLabs with a fixed API key
 AUTOMAKER_API_KEY=your-dev-key-2026 npm run dev
 ```
 
@@ -159,7 +159,7 @@ Test that the plugin is working:
 /board
 ```
 
-You should see your Kanban board or a message to start the protoMaker server.
+You should see your Kanban board or a message to start the protoLabs server.
 
 ## Configuration
 
@@ -169,7 +169,7 @@ Configure these in your shell or the plugin's `plugin.json`:
 
 | Variable            | Description                | Default                 |
 | ------------------- | -------------------------- | ----------------------- |
-| `AUTOMAKER_API_URL` | protoMaker API base URL    | `http://localhost:3008` |
+| `AUTOMAKER_API_URL` | protoLabs API base URL     | `http://localhost:3008` |
 | `AUTOMAKER_API_KEY` | API key for authentication | (required)              |
 
 ### Plugin Configuration
@@ -179,7 +179,7 @@ The plugin configuration is in `packages/mcp-server/plugins/automaker/.claude-pl
 ```json
 {
   "name": "automaker",
-  "description": "protoMaker - AI Development Studio",
+  "description": "protoLabs - AI Development Studio",
   "version": "1.0.0",
   "mcpServers": {
     "automaker": {
@@ -215,12 +215,12 @@ If you prefer to configure MCP directly, add to `~/.claude/claude_desktop_config
 
 ## Docker Deployment
 
-For production deployments using Docker, follow these steps to configure the MCP plugin to communicate with a containerized protoMaker server.
+For production deployments using Docker, follow these steps to configure the MCP plugin to communicate with a containerized protoLabs server.
 
 ### Prerequisites
 
 - Docker and Docker Compose installed
-- protoMaker repository cloned
+- protoLabs repository cloned
 - Claude Code CLI installed
 
 ### Step 1: Configure docker-compose.override.yml
@@ -228,7 +228,7 @@ For production deployments using Docker, follow these steps to configure the MCP
 Create `docker-compose.override.yml` in the automaker root directory:
 
 ```yaml
-# protoMaker Production Override
+# protoLabs Production Override
 # Mounts host project directories for development work
 
 services:
@@ -293,7 +293,7 @@ Edit `packages/mcp-server/plugins/automaker/.claude-plugin/plugin.json` to use a
 ```json
 {
   "name": "automaker",
-  "description": "protoMaker - AI Development Studio",
+  "description": "protoLabs - AI Development Studio",
   "version": "1.0.2",
   "mcpServers": {
     "automaker": {
@@ -356,7 +356,7 @@ Adjust Docker memory limits based on your workload:
 
 ### Working with Multiple Projects
 
-With the path mapping configuration above, you can use protoMaker with any project under your `ALLOWED_ROOT_DIRECTORY`:
+With the path mapping configuration above, you can use protoLabs with any project under your `ALLOWED_ROOT_DIRECTORY`:
 
 ```bash
 # Project A
@@ -378,7 +378,7 @@ Each project maintains its own `.automaker/` directory with independent features
 
 ### /board
 
-View and manage the protoMaker Kanban board.
+View and manage the protoLabs Kanban board.
 
 ```bash
 /board                    # Show board overview with feature counts
@@ -899,10 +899,10 @@ The MCP server exposes 32 tools organized by category:
 
 ### Utilities
 
-| Tool                | Description                           |
-| ------------------- | ------------------------------------- |
-| `health_check`      | Check if protoMaker server is running |
-| `get_board_summary` | Get feature counts by status          |
+| Tool                | Description                          |
+| ------------------- | ------------------------------------ |
+| `health_check`      | Check if protoLabs server is running |
+| `get_board_summary` | Get feature counts by status         |
 
 ## Examples
 
@@ -1020,7 +1020,7 @@ Claude: Let me check the agent output.
 
 ### Connection Errors
 
-1. Ensure protoMaker server is running:
+1. Ensure protoLabs server is running:
 
    ```bash
    npm run dev
@@ -1035,14 +1035,14 @@ Claude: Let me check the agent output.
 
 3. Verify the API key:
    ```bash
-   # Should match what's set in protoMaker
+   # Should match what's set in protoLabs
    echo $AUTOMAKER_API_KEY
    ```
 
 ### Authentication Errors
 
 1. Ensure `AUTOMAKER_API_KEY` is set in both:
-   - protoMaker server (via env or .env file)
+   - protoLabs server (via env or .env file)
    - Plugin configuration (plugin.json)
 
 2. The keys must match exactly
@@ -1055,7 +1055,7 @@ Claude: Let me check the agent output.
    /board
    ```
 
-   If it fails with "server not running", start protoMaker.
+   If it fails with "server not running", start protoLabs.
 
 2. Verify MCP tools are loaded:
    ```bash
@@ -1423,5 +1423,5 @@ mcp__automaker__create_feature({
 
 ## Related Documentation
 
-- [protoMaker README](../README.md) - Main project documentation
+- [protoLabs README](../README.md) - Main project documentation
 - [Context System](/agents/context-system) - Best practices for context files

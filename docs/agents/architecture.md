@@ -1,6 +1,6 @@
 # Agent Architecture Overview
 
-This document provides a high-level overview of protoMaker's agent system architecture, execution model, and key concepts for contributors.
+This document provides a high-level overview of protoLabs's agent system architecture, execution model, and key concepts for contributors.
 
 ## Table of Contents
 
@@ -13,24 +13,24 @@ This document provides a high-level overview of protoMaker's agent system archit
 
 ## Core Concepts
 
-protoMaker's agent system is built on three key concepts from Claude's agent ecosystem:
+protoLabs's agent system is built on three key concepts from Claude's agent ecosystem:
 
 ### Skills
 
 **What:** Reusable CLI commands that invoke specific modes or workflows
-**protoMaker Examples:** `/ava` (Chief of Staff), `/board` (Kanban management), `/headsdown` (autonomous work mode)
+**protoLabs Examples:** `/ava` (Chief of Staff), `/board` (Kanban management), `/headsdown` (autonomous work mode)
 **Claude Docs:** [Skills explained](https://claude.com/blog/skills-explained)
 
 ### Subagents
 
 **What:** Independent Claude instances with custom prompts, tool restrictions, and isolated contexts
-**protoMaker Examples:** Task tool agents (explore, plan, deepdive, deepcode), feature execution agents
+**protoLabs Examples:** Task tool agents (explore, plan, deepdive, deepcode), feature execution agents
 **Claude Docs:** [Create custom subagents](https://code.claude.com/docs/en/sub-agents)
 
 ### Agent Teams
 
 **What:** Multiple independent agents that coordinate autonomously via shared task lists
-**protoMaker Examples:** Authority agents (PM, ProjM, EM) working together on idea → PRD → decomposition → execution pipeline
+**protoLabs Examples:** Authority agents (PM, ProjM, EM) working together on idea → PRD → decomposition → execution pipeline
 **Claude Docs:** [Agent Teams](https://code.claude.com/docs/en/agent-teams)
 
 ## Architecture Layers
@@ -76,7 +76,7 @@ protoMaker's agent system is built on three key concepts from Claude's agent eco
 
 ### All Agents Use Native Claude SDK
 
-**Every agent in protoMaker** (whether triggered by UI, CLI, or MCP) executes via the native Claude Agent SDK with full capabilities:
+**Every agent in protoLabs** (whether triggered by UI, CLI, or MCP) executes via the native Claude Agent SDK with full capabilities:
 
 - ✅ **Cost tracking** - Every agent execution tracks `total_cost_usd`
 - ✅ **File checkpointing** - Safe rollback on errors without git operations

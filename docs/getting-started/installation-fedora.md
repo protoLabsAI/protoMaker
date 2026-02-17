@@ -1,10 +1,10 @@
-# Installing protoMaker on Fedora/RHEL
+# Installing protoLabs on Fedora/RHEL
 
-This guide covers installation of protoMaker on Fedora, RHEL, Rocky Linux, AlmaLinux, and other RPM-based distributions.
+This guide covers installation of protoLabs on Fedora, RHEL, Rocky Linux, AlmaLinux, and other RPM-based distributions.
 
 ## Prerequisites
 
-protoMaker requires:
+protoLabs requires:
 
 - **64-bit x86_64 architecture**
 - **Fedora 39+** or **RHEL 9+** (earlier versions may work but not officially supported)
@@ -27,18 +27,18 @@ See main [README.md authentication section](../README.md#authentication) for det
 
 1. Visit [GitHub Releases](https://github.com/AutoMaker-Org/automaker/releases)
 2. Find the latest release and download the `.rpm` file:
-   - Download: `protoMaker-<version>-x86_64.rpm`
+   - Download: `protoLabs-<version>-x86_64.rpm`
 
 3. Install using dnf (Fedora):
 
    ```bash
-   sudo dnf install ./protoMaker-<version>-x86_64.rpm
+   sudo dnf install ./protoLabs-<version>-x86_64.rpm
    ```
 
    Or using yum (RHEL/CentOS):
 
    ```bash
-   sudo yum localinstall ./protoMaker-<version>-x86_64.rpm
+   sudo yum localinstall ./protoLabs-<version>-x86_64.rpm
    ```
 
 ### Option 2: Install Directly from URL
@@ -49,24 +49,24 @@ Install from GitHub releases URL without downloading first. Visit [releases page
 
 ```bash
 # Replace v0.11.0 with the actual latest version
-sudo dnf install https://github.com/AutoMaker-Org/automaker/releases/download/v0.11.0/protoMaker-0.11.0-x86_64.rpm
+sudo dnf install https://github.com/AutoMaker-Org/automaker/releases/download/v0.11.0/protoLabs-0.11.0-x86_64.rpm
 ```
 
 **RHEL/CentOS:**
 
 ```bash
 # Replace v0.11.0 with the actual latest version
-sudo yum install https://github.com/AutoMaker-Org/automaker/releases/download/v0.11.0/protoMaker-0.11.0-x86_64.rpm
+sudo yum install https://github.com/AutoMaker-Org/automaker/releases/download/v0.11.0/protoLabs-0.11.0-x86_64.rpm
 ```
 
-## Running protoMaker
+## Running protoLabs
 
-After successful installation, launch protoMaker:
+After successful installation, launch protoLabs:
 
 ### From Application Menu
 
 - Open Activities/Applications
-- Search for "protoMaker"
+- Search for "protoLabs"
 - Click to launch
 
 ### From Terminal
@@ -151,7 +151,7 @@ ANTHROPIC_API_KEY=sk-ant-...
 
 ### Configuration Directory
 
-protoMaker stores configuration and cache in:
+protoLabs stores configuration and cache in:
 
 ```
 ~/.automaker/                # Project-specific data
@@ -201,7 +201,7 @@ sudo dnf install gtk3 libnotify nss libXScrnSaver libXtst xdg-utils at-spi2-core
 
 ### SELinux Denials
 
-If protoMaker fails on SELinux-enforced systems:
+If protoLabs fails on SELinux-enforced systems:
 
 **Temporary workaround (testing):**
 
@@ -209,7 +209,7 @@ If protoMaker fails on SELinux-enforced systems:
 # Set SELinux to permissive mode
 sudo setenforce 0
 
-# Run protoMaker
+# Run protoLabs
 automaker
 
 # Check for denials
@@ -224,7 +224,7 @@ Create custom SELinux policy based on ausearch output. For support, see [GitHub 
 
 ### Port Conflicts
 
-protoMaker uses port 3008 for the internal server. If port is already in use:
+protoLabs uses port 3008 for the internal server. If port is already in use:
 
 **Find process using port 3008:**
 
@@ -240,7 +240,7 @@ lsof -i :3008
 sudo kill -9 <PID>
 ```
 
-Or configure protoMaker to use different port (see Configuration section).
+Or configure protoLabs to use different port (see Configuration section).
 
 ### Firewall Issues
 
@@ -254,7 +254,7 @@ sudo firewall-cmd --permanent --add-port=3008/tcp
 
 ### GPU/Acceleration
 
-protoMaker uses Chromium for rendering. GPU acceleration should work automatically on supported systems.
+protoLabs uses Chromium for rendering. GPU acceleration should work automatically on supported systems.
 
 **Check acceleration:**
 
@@ -335,7 +335,7 @@ rm -rf ~/.cache/automaker
 
 ## Building from Source
 
-To build protoMaker from source on Fedora/RHEL:
+To build protoLabs from source on Fedora/RHEL:
 
 **Prerequisites:**
 
@@ -370,10 +370,10 @@ ls apps/ui/release/*.rpm
 
 See main [README.md](../README.md) for detailed build instructions.
 
-## Updating protoMaker
+## Updating protoLabs
 
 **Automatic Updates:**
-protoMaker checks for updates on startup. Install available updates through notifications.
+protoLabs checks for updates on startup. Install available updates through notifications.
 
 **Manual Update:**
 
@@ -390,7 +390,7 @@ sudo dnf remove automaker
 # Download the latest .rpm from releases page
 # https://github.com/AutoMaker-Org/automaker/releases
 # Then reinstall with:
-# sudo dnf install ./protoMaker-<VERSION>-x86_64.rpm
+# sudo dnf install ./protoLabs-<VERSION>-x86_64.rpm
 ```
 
 ## Getting Help
@@ -411,7 +411,7 @@ When reporting Fedora/RHEL issues, include:
 lsb_release -a
 uname -m
 
-# protoMaker version
+# protoLabs version
 rpm -qi automaker
 
 # Error output (run from terminal)

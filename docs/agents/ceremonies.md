@@ -1,6 +1,6 @@
 # Agile Ceremony System
 
-protoMaker's Ceremony Service automates agile ceremonies — standups, milestone retros, project retros, and board grooming — posting structured updates to Discord as projects progress through their lifecycle.
+protoLabs's Ceremony Service automates agile ceremonies — standups, milestone retros, project retros, and board grooming — posting structured updates to Discord as projects progress through their lifecycle.
 
 ## Ceremony Types
 

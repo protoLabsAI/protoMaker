@@ -2,7 +2,7 @@
 layout: home
 
 hero:
-  name: protoMaker
+  name: protoLabs
   text: AI-Native Development Studio
   tagline: Describe what you want. Agents build it. PRs ship automatically.
   actions:
@@ -11,7 +11,7 @@ hero:
       link: /getting-started/
     - theme: alt
       text: View on GitHub
-      link: https://github.com/proto-labs-ai/protolabs-studio
+      link: https://github.com/proto-labs-ai
 
 features:
   - title: Ship Features with AI
@@ -31,18 +31,17 @@ features:
     link: /protolabs/
   - title: Source Available
     details: View the source. Learn the methodology. Build with it. No vendor lock-in.
-    link: https://github.com/proto-labs-ai/protolabs-studio
+    link: https://github.com/proto-labs-ai
 ---
 
 ## Quick Links
 
-| Service  | URL                                                                                 | Description                       |
-| -------- | ----------------------------------------------------------------------------------- | --------------------------------- |
-| GitHub   | [proto-labs-ai/protolabs-studio](https://github.com/proto-labs-ai/protolabs-studio) | Source code, issues, PRs          |
-| Linear   | [protolabsai](https://linear.app/protolabsai)                                       | Strategic roadmap and initiatives |
-| Graphite | [proto-labs-ai](https://app.graphite.dev/github/pr/proto-labs-ai/protolabs-studio)  | Stacked PR dashboard              |
-| Discord  | [Agentic Jumpstart](https://discord.gg/jjem7aEDKU)                                  | Community and team chat           |
+| Service | URL                                               | Description              |
+| ------- | ------------------------------------------------- | ------------------------ |
+| GitHub  | [proto-labs-ai](https://github.com/proto-labs-ai) | Source code, issues, PRs |
+| X       | [@protoLabsAI](https://x.com/protoLabsAI)         | Updates and threads      |
+| Twitch  | [protoLabsTV](https://twitch.tv/protoLabsTV)      | Live building sessions   |
 
 ---
 
-<small>Built with <a href="https://github.com/proto-labs-ai/protolabs-studio">protoMaker</a> — the source-available AI development studio that powers protoLabs.</small>
+<small>Built with <a href="https://protolabs.studio">protoLabs</a> — the source-available AI-native development studio.</small>

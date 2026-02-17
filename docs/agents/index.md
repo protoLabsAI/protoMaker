@@ -1,10 +1,10 @@
 # Agent System Documentation
 
-protoMaker's agent system. Specialized AI agents claim features, work in isolated worktrees, and ship PRs — autonomously.
+protoLabs's agent system. Specialized AI agents claim features, work in isolated worktrees, and ship PRs — autonomously.
 
 ## Quick Start
 
-**New to protoMaker's agents?** Start here:
+**New to protoLabs's agents?** Start here:
 
 1. Read [Architecture Overview](./architecture.md) for the big picture
 2. Read [Context System](./context-system.md) to understand how agents get project knowledge
@@ -26,7 +26,7 @@ Covers:
 - Agent types (Interactive, Feature Execution, Authority)
 - Context system overview
 
-**Read this if:** You're new to protoMaker or want to understand how agents work.
+**Read this if:** You're new to protoLabs or want to understand how agents work.
 
 ### Agent Development
 
@@ -97,7 +97,7 @@ Covers:
 Covers:
 
 - What is MCP?
-- protoMaker's MCP architecture
+- protoLabs's MCP architecture
 - MCP → Agent execution flow
 - Available MCP tools (32 tools documented)
 - Creating new MCP tools
@@ -201,7 +201,7 @@ Covers:
 
 ### MCP Tools
 
-**Programmatic API for controlling protoMaker**
+**Programmatic API for controlling protoLabs**
 
 - 32 tools for features, agents, auto-mode, context, etc.
 - Used by the Chief of Staff agent and external integrations

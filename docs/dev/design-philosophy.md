@@ -1,6 +1,6 @@
 # Design philosophy
 
-Design decisions for protoMaker's UI, informed by Linear, Vercel, and shadcn/ui. This document is the source of truth for visual direction — agents and humans should reference it when making UI decisions.
+Design decisions for protoLabs's UI, informed by Linear, Vercel, and shadcn/ui. This document is the source of truth for visual direction — agents and humans should reference it when making UI decisions.
 
 ## Inspirations and what we take from each
 

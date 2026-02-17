@@ -1,6 +1,6 @@
 # Development
 
-Extend protoMaker. Architecture, packages, code standards, and how to contribute.
+Extend protoLabs. Architecture, packages, code standards, and how to contribute.
 
 ## Architecture
 

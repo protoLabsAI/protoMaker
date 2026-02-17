@@ -1,6 +1,6 @@
 # Monitoring & Observability
 
-This guide covers health checks, logging, and observability for protoMaker.
+This guide covers health checks, logging, and observability for protoLabs.
 
 ## Health Checks
 

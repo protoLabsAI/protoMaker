@@ -274,7 +274,7 @@ services:
 ### UFW (Ubuntu)
 
 ```bash
-# Allow protoMaker ports (if exposing externally)
+# Allow protoLabs ports (if exposing externally)
 sudo ufw allow 3007/tcp
 sudo ufw allow 3008/tcp
 

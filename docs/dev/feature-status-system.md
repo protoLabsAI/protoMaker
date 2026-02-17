@@ -2,7 +2,7 @@
 
 ## Canonical 6-Status Flow
 
-protoMaker uses a consolidated 6-status system for all features:
+protoLabs uses a consolidated 6-status system for all features:
 
 ```
 backlog → in_progress → review → done

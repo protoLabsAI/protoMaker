@@ -108,17 +108,17 @@ if (isValidEnhancementMode('improve')) {
 
 **Import for:**
 
-- `getprotoMakerDir(projectPath)` - Get .automaker directory
+- `getprotoLabsDir(projectPath)` - Get .automaker directory
 - `getFeaturesDir(projectPath)` - Get features directory
 - `getFeatureDir(projectPath, featureId)` - Get specific feature directory
-- `ensureprotoMakerDir(projectPath)` - Create .automaker if needed
+- `ensureprotoLabsDir(projectPath)` - Create .automaker if needed
 - `spawnJSONLProcess()` - Spawn process with JSONL output
 - `initAllowedPaths()` - Security path validation
 
 **Example:**
 
 ```typescript
-import { getFeatureDir, ensureprotoMakerDir } from '@automaker/platform';
+import { getFeatureDir, ensureprotoLabsDir } from '@automaker/platform';
 ```
 
 **Never import from:** `lib/automaker-paths`, `lib/subprocess-manager`, `lib/security`
@@ -411,7 +411,7 @@ import { createLogger, classifyError } from '@automaker/utils';
 import { getEnhancementPrompt, isValidEnhancementMode } from '@automaker/prompts';
 
 // Import platform utils from @automaker/platform
-import { getFeatureDir, ensureprotoMakerDir } from '@automaker/platform';
+import { getFeatureDir, ensureprotoLabsDir } from '@automaker/platform';
 
 // Import model resolution from @automaker/model-resolver
 import { resolveModelString } from '@automaker/model-resolver';

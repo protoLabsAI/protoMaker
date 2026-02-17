@@ -1,10 +1,10 @@
 # Discord Communication Guide
 
-This document defines the communication channels and rules for Discord integration with protoMaker, which serves as the real-time coordination layer for development teams.
+This document defines the communication channels and rules for Discord integration with protoLabs, which serves as the real-time coordination layer for development teams.
 
 ## Server Setup
 
-Create a Discord server for your protoMaker team. The channel structure below is the recommended layout.
+Create a Discord server for your protoLabs team. The channel structure below is the recommended layout.
 
 ## Channel Structure
 
@@ -44,7 +44,7 @@ Domain-specific technical discussion. Each channel maps to a team role in the [a
 
 ### AUTOMAKER
 
-protoMaker system activity and monitoring. Primarily bot/webhook-driven.
+protoLabs system activity and monitoring. Primarily bot/webhook-driven.
 
 | Channel           | Purpose                                               |
 | ----------------- | ----------------------------------------------------- |
@@ -231,7 +231,7 @@ Post in #standups daily (async, no specific time required):
 - `#team-*` channels are team workspaces for day-to-day sprint coordination
 - Keep project-specific discussions in the appropriate team channel
 
-### protoMaker Channels
+### protoLabs Channels
 
 These channels are primarily automated:
 
@@ -240,7 +240,7 @@ These channels are primarily automated:
 - `#deployments` - CI/CD pipeline notifications
 - `#bugs-and-issues` - Manual bug reports and automated error alerts
 
-Human messages in protoMaker channels should be limited to:
+Human messages in protoLabs channels should be limited to:
 
 - Responding to alerts
 - Adding context to automated notifications
@@ -248,7 +248,7 @@ Human messages in protoMaker channels should be limited to:
 
 ## Agent Communication Protocol
 
-AI agents in the protoMaker hierarchy use Discord for status updates and coordination.
+AI agents in the protoLabs hierarchy use Discord for status updates and coordination.
 
 ### Which agents post where
 
@@ -277,7 +277,7 @@ Details: <brief description>
 
 ### Event-Driven Notifications
 
-protoMaker emits events that can be routed to Discord channels:
+protoLabs emits events that can be routed to Discord channels:
 
 | Event                  | Channel           | Message                                   |
 | ---------------------- | ----------------- | ----------------------------------------- |
@@ -326,32 +326,32 @@ Content-Type: application/json
 
 {
   "content": "Message text",
-  "username": "protoMaker Bot"
+  "username": "protoLabs Bot"
 }
 ```
 
 Recommended webhooks:
 
-| Channel           | Webhook Name      | Source                |
-| ----------------- | ----------------- | --------------------- |
-| #agent-logs       | protoMaker Agent  | protoMaker server     |
-| #pr-notifications | GitHub            | GitHub webhook        |
-| #deployments      | CI/CD             | GitHub Actions        |
-| #ai-news          | AI News Feed      | RSS/Atom aggregator   |
-| #alerts           | protoMaker Alerts | Health monitor        |
-| #approvals        | Trust System      | Policy engine         |
-| #infra            | DevOps Bot        | Backup/deploy scripts |
+| Channel           | Webhook Name     | Source                |
+| ----------------- | ---------------- | --------------------- |
+| #agent-logs       | protoLabs Agent  | protoLabs server      |
+| #pr-notifications | GitHub           | GitHub webhook        |
+| #deployments      | CI/CD            | GitHub Actions        |
+| #ai-news          | AI News Feed     | RSS/Atom aggregator   |
+| #alerts           | protoLabs Alerts | Health monitor        |
+| #approvals        | Trust System     | Policy engine         |
+| #infra            | DevOps Bot       | Backup/deploy scripts |
 
 ### Linear Integration
 
 Linear issues map to Discord channels through the team hierarchy:
 
-| Linear Team | Discord Channel | protoMaker Role |
-| ----------- | --------------- | --------------- |
-| Frontend    | #team-frontend  | `frontend`      |
-| Backend     | #team-backend   | `backend`       |
-| AI/ML       | #team-ai-ml     | `ai-ml`         |
-| DevOps      | #team-devops    | `devops`        |
+| Linear Team | Discord Channel | protoLabs Role |
+| ----------- | --------------- | -------------- |
+| Frontend    | #team-frontend  | `frontend`     |
+| Backend     | #team-backend   | `backend`      |
+| AI/ML       | #team-ai-ml     | `ai-ml`        |
+| DevOps      | #team-devops    | `devops`       |
 
 Cross-team blockers identified in Linear triage are posted to #project-issues.
 

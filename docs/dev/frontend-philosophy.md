@@ -353,7 +353,7 @@ This enables sharing UI components across future apps (docs site, template repos
 
 ### Not adopted
 
-- **Server Components:** protoMaker is a Vite SPA (+ Electron), not Next.js. All components are client components. If/when we build Next.js apps (template repos, setupLab), Server Components become relevant there.
+- **Server Components:** protoLabs is a Vite SPA (+ Electron), not Next.js. All components are client components. If/when we build Next.js apps (template repos, setupLab), Server Components become relevant there.
 
 ## Accessibility
 

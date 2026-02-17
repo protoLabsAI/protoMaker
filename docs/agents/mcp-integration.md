@@ -1,11 +1,11 @@
 # MCP Integration with Agents
 
-This guide explains how **Model Context Protocol (MCP) tools** interact with protoMaker's agent system, enabling programmatic control of agent execution.
+This guide explains how **Model Context Protocol (MCP) tools** interact with protoLabs's agent system, enabling programmatic control of agent execution.
 
 ## Table of Contents
 
 - [What is MCP?](#what-is-mcp)
-- [protoMaker's MCP Architecture](#automakers-mcp-architecture)
+- [protoLabs's MCP Architecture](#automakers-mcp-architecture)
 - [MCP → Agent Flow](#mcp--agent-flow)
 - [Available MCP Tools](#available-mcp-tools)
 - [Creating New MCP Tools](#creating-new-mcp-tools)
@@ -22,15 +22,15 @@ This guide explains how **Model Context Protocol (MCP) tools** interact with pro
 - **MCP Tool** - Individual capability (e.g., "start_agent", "create_feature")
 - **MCP Resource** - Data that can be read (e.g., feature list, agent output)
 
-**protoMaker's MCP Server:**
+**protoLabs's MCP Server:**
 
 - **Location:** `packages/mcp-server/`
-- **Exposes:** 32 tools for controlling protoMaker programmatically
+- **Exposes:** 32 tools for controlling protoLabs programmatically
 - **Used By:** The Chief of Staff agent, other AI agents, external integrations
 
 **Official Docs:** [MCP Specification](https://spec.modelcontextprotocol.io/)
 
-## protoMaker's MCP Architecture
+## protoLabs's MCP Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -39,15 +39,15 @@ This guide explains how **Model Context Protocol (MCP) tools** interact with pro
 └──────────────────────┬──────────────────────────────────┘
                        │ MCP Protocol (stdio/HTTP)
 ┌──────────────────────▼──────────────────────────────────┐
-│  protoMaker MCP Server                                   │
+│  protoLabs MCP Server                                   │
 │  Location: packages/mcp-server/src/index.ts            │
 │  - Tool definitions (32 tools)                          │
-│  - API client (calls protoMaker server)                  │
+│  - API client (calls protoLabs server)                  │
 │  - Auth (AUTOMAKER_API_KEY)                            │
 └──────────────────────┬──────────────────────────────────┘
                        │ HTTP REST API
 ┌──────────────────────▼──────────────────────────────────┐
-│  protoMaker Server                                       │
+│  protoLabs Server                                       │
 │  Location: apps/server/src/                            │
 │  - API routes (agent, features, auto-mode)              │
 │  - Services (AgentService, AutoModeService)             │

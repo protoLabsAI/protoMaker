@@ -4,7 +4,7 @@ This document describes the implementation of Claude Compatible Providers, allow
 
 ## Overview
 
-Claude Compatible Providers allow protoMaker to work with third-party API endpoints that implement Claude's API protocol. This enables:
+Claude Compatible Providers allow protoLabs to work with third-party API endpoints that implement Claude's API protocol. This enables:
 
 - **Cost savings**: Use providers like z.AI GLM or MiniMax at lower costs
 - **Alternative models**: Access models like GLM-4.7 or MiniMax M2.1 through familiar interfaces

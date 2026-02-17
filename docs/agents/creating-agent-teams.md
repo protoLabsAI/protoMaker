@@ -5,7 +5,7 @@ This guide explains how to build **multi-agent coordination systems** where mult
 ## Table of Contents
 
 - [What are Agent Teams?](#what-are-agent-teams)
-- [protoMaker's Agent Team Architecture](#automakers-agent-team-architecture)
+- [protoLabs's Agent Team Architecture](#automakers-agent-team-architecture)
 - [Team Coordination Patterns](#team-coordination-patterns)
 - [Building a New Agent Team](#building-a-new-agent-team)
 - [Example: Security Review Team](#example-security-review-team)
@@ -23,14 +23,14 @@ This guide explains how to build **multi-agent coordination systems** where mult
 - Independent context windows per agent
 - **Reference:** [Agent Teams Docs](https://code.claude.com/docs/en/agent-teams)
 
-**protoMaker's Implementation:**
+**protoLabs's Implementation:**
 
 - Event-driven coordination (shared EventEmitter bus)
 - Policy-gated state transitions (AuthorityService)
 - Persistent state (Feature data in `.automaker/features/`)
 - Discord integration for human oversight
 
-## protoMaker's Agent Team Architecture
+## protoLabs's Agent Team Architecture
 
 ### Current Teams
 

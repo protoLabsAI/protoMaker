@@ -1,6 +1,6 @@
 # Documentation Site
 
-protoMaker uses [VitePress](https://vitepress.dev) to generate a documentation site from the `docs/` directory.
+protoLabs uses [VitePress](https://vitepress.dev) to generate a documentation site from the `docs/` directory.
 
 ## Quick Start
 

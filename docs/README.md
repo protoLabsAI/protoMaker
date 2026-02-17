@@ -2,17 +2,17 @@
 
 ## Quick Links
 
-| Service  | URL                                                                                 | Description              |
-| -------- | ----------------------------------------------------------------------------------- | ------------------------ |
-| GitHub   | [proto-labs-ai/protolabs-studio](https://github.com/proto-labs-ai/protolabs-studio) | Source code, issues, PRs |
-| Graphite | [proto-labs-ai](https://app.graphite.dev/github/pr/proto-labs-ai/protolabs-studio)  | Stacked PR dashboard     |
-| Discord  | [Agentic Jumpstart](https://discord.gg/jjem7aEDKU)                                  | Community and team chat  |
+| Service | URL                                               | Description              |
+| ------- | ------------------------------------------------- | ------------------------ |
+| GitHub  | [proto-labs-ai](https://github.com/proto-labs-ai) | Source code, issues, PRs |
+| X       | [@protoLabsAI](https://x.com/protoLabsAI)         | Updates and threads      |
+| Twitch  | [protoLabsTV](https://twitch.tv/protoLabsTV)      | Live building sessions   |
 
 ## Getting Started
 
 | Document                                                               | Description                      |
 | ---------------------------------------------------------------------- | -------------------------------- |
-| [Overview](./getting-started/index.md)                                 | What is protoMaker, key concepts |
+| [Overview](./getting-started/index.md)                                 | What is protoLabs, key concepts  |
 | [Installation (Fedora/RHEL)](./getting-started/installation-fedora.md) | Install the desktop app on Linux |
 
 ## Agent System

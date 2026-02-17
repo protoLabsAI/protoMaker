@@ -478,7 +478,7 @@ docker network inspect automaker_default
 
 Include:
 
-1. protoMaker version (git commit)
+1. protoLabs version (git commit)
 2. Docker version
 3. Operating system
 4. Steps to reproduce
