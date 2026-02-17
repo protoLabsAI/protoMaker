@@ -162,6 +162,7 @@ import { createAvaRoutes } from './routes/ava/index.js';
 import { createLinearRoutes } from './routes/linear/index.js';
 import { createIdeasRoutes } from './routes/ideas/index.js';
 import { IdeaProcessingService } from './services/idea-processing-service.js';
+import { createTwitchRoutes } from './routes/twitch.js';
 import { LinearAgentService } from './services/linear-agent-service.js';
 import { LinearAgentRouter } from './services/linear-agent-router.js';
 import { MAX_SYSTEM_CONCURRENCY } from '@automaker/types';
@@ -381,6 +382,15 @@ const featureHealthService = new FeatureHealthService(featureLoader, autoModeSer
 const beadsService = new BeadsService('bd', events);
 const discordService = getDiscordService();
 const ideaProcessingService = new IdeaProcessingService(DATA_DIR, events);
+
+// Initialize Twitch Service for chat integration (only loads if TWITCH_ENABLED=true)
+import { TwitchService } from './services/twitch/twitch-service.js';
+const twitchSettings = {
+  enabled: process.env.TWITCH_ENABLED === 'true',
+  channelName: process.env.TWITCH_CHANNEL_NAME,
+  botUsername: process.env.TWITCH_BOT_USERNAME,
+};
+const twitchService = new TwitchService(twitchSettings, REPO_ROOT);
 
 // Initialize Escalation Router
 const escalationRouter = getEscalationRouter();
@@ -1028,7 +1038,8 @@ app.get(
     featureLoader,
     autoModeService,
     roleRegistryService,
-    REPO_ROOT
+    REPO_ROOT,
+    twitchService
   )
 );
 app.get(
@@ -1142,6 +1153,7 @@ app.use('/api/lead-engineer', createLeadEngineerRoutes(leadEngineerService));
 app.use('/api/langfuse', createLangfuseRoutes());
 app.use('/api/flows', createFlowsRoutes(antagonisticReviewService, projectPlanningService));
 app.use('/api/ideas', createIdeasRoutes(ideaProcessingService));
+app.use('/api/twitch', createTwitchRoutes(twitchService, events, featureLoader));
 if (process.env.ANTHROPIC_API_KEY) {
   try {
     const { createCopilotKitEndpoint } = await import('./routes/copilotkit/index.js');
@@ -1650,6 +1662,7 @@ async function gracefulShutdown() {
   issueCreationService.shutdown();
   linearAgentRouter.stop();
   agentDiscordRouter.stop();
+  await twitchService.disconnect(); // Gracefully disconnect from Twitch chat
   await shutdownLangfuse();
 
   server.close(() => {

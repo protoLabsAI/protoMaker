@@ -2694,6 +2694,74 @@ const tools: Tool[] = [
       required: ['idea'],
     },
   },
+
+  // ========== Twitch Integration ==========
+  {
+    name: 'twitch_list_suggestions',
+    description:
+      'View Twitch chat suggestion queue with filtering. Use filter="unprocessed" to see only new suggestions, "approved" for processed ones, or "all" for everything.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        filter: {
+          type: 'string',
+          enum: ['all', 'unprocessed', 'approved'],
+          description: 'Filter suggestions by processing status',
+          default: 'all',
+        },
+      },
+    },
+  },
+  {
+    name: 'twitch_build_suggestion',
+    description:
+      'Approve a Twitch suggestion and create a board feature directly (skip poll). Marks suggestion as processed and creates feature with chat attribution.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        suggestionId: {
+          type: 'string',
+          description: 'ID of the suggestion to build',
+        },
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+      },
+      required: ['suggestionId', 'projectPath'],
+    },
+  },
+  {
+    name: 'twitch_create_poll',
+    description:
+      'Create a native Twitch poll from 2-4 selected suggestions. When poll ends, winning suggestion auto-creates a board feature. Requires Twitch API credentials.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        suggestionIds: {
+          type: 'array',
+          items: {
+            type: 'string',
+          },
+          minItems: 2,
+          maxItems: 4,
+          description: 'Array of 2-4 suggestion IDs to include in the poll',
+        },
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        durationSeconds: {
+          type: 'number',
+          description: 'Poll duration in seconds (15-1800, default: 60)',
+          default: 60,
+          minimum: 15,
+          maximum: 1800,
+        },
+      },
+      required: ['suggestionIds', 'projectPath'],
+    },
+  },
 ];
 
 // Tool implementations
@@ -3773,6 +3841,28 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         idea: args.idea,
         autoApprove: args.autoApprove,
         countdownSeconds: args.countdownSeconds,
+      });
+
+    // Twitch Integration
+    case 'twitch_list_suggestions':
+      return apiCall(
+        '/twitch/suggestions',
+        {
+          filter: args.filter,
+        },
+        'GET'
+      );
+
+    case 'twitch_build_suggestion':
+      return apiCall(`/twitch/suggestions/${args.suggestionId}/build`, {
+        projectPath: args.projectPath,
+      });
+
+    case 'twitch_create_poll':
+      return apiCall('/twitch/poll', {
+        suggestionIds: args.suggestionIds,
+        projectPath: args.projectPath,
+        durationSeconds: args.durationSeconds,
       });
 
     default:

@@ -348,4 +348,129 @@ export class TwitchService {
       return [];
     }
   }
+
+  /**
+   * Update a suggestion's properties
+   *
+   * Note: This rewrites the entire JSONL file with the updated suggestion.
+   * For high-volume scenarios, consider a more efficient update strategy.
+   */
+  async updateSuggestion(id: string, updates: Partial<TwitchSuggestion>): Promise<void> {
+    try {
+      const filePath = join(
+        this.projectPath,
+        '.automaker',
+        this.settings.suggestionsFilePath ?? 'twitch/suggestions.jsonl'
+      );
+
+      // Read all suggestions
+      const suggestions = await this.readSuggestions();
+
+      // Find and update the suggestion
+      const index = suggestions.findIndex((s) => s.id === id);
+      if (index === -1) {
+        throw new Error(`Suggestion with id ${id} not found`);
+      }
+
+      suggestions[index] = { ...suggestions[index], ...updates };
+
+      // Rewrite the file
+      const lines = suggestions.map((s) => JSON.stringify(s)).join('\n') + '\n';
+      await fs.writeFile(filePath, lines, 'utf-8');
+
+      logger.debug(`Updated suggestion ${id}`);
+    } catch (error) {
+      logger.error('Failed to update suggestion:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create a Twitch poll via Helix API
+   *
+   * Requires @twurple/api to be installed and TWITCH_CLIENT_ID + TWITCH_ACCESS_TOKEN
+   * to be set in environment variables.
+   */
+  async createPoll(options: {
+    title: string;
+    choices: Array<{ title: string }>;
+    durationSeconds: number;
+  }): Promise<any> {
+    try {
+      // Dynamically import Twurple API
+      const { ApiClient } = await import('@twurple/api');
+      const { StaticAuthProvider } = await import('@twurple/auth');
+
+      const clientId = process.env.TWITCH_CLIENT_ID;
+      const accessToken = process.env.TWITCH_ACCESS_TOKEN;
+
+      if (!clientId || !accessToken) {
+        throw new Error('TWITCH_CLIENT_ID and TWITCH_ACCESS_TOKEN are required to create polls');
+      }
+
+      // Create auth provider and API client
+      const authProvider = new StaticAuthProvider(clientId, accessToken);
+      const apiClient = new ApiClient({ authProvider });
+
+      // Get broadcaster user ID (required for creating polls)
+      const user = await apiClient.users.getUserByName(this.settings.channelName || '');
+      if (!user) {
+        throw new Error(`Twitch user ${this.settings.channelName} not found`);
+      }
+
+      // Create poll
+      const poll = await apiClient.polls.createPoll(user.id, {
+        title: options.title,
+        choices: options.choices.map((c) => c.title),
+        duration: options.durationSeconds,
+      });
+
+      logger.info(
+        `Created Twitch poll: ${poll.id} with ${options.choices.length} choices for ${options.durationSeconds}s`
+      );
+
+      return {
+        id: poll.id,
+        title: poll.title,
+        choices: poll.choices,
+        durationSeconds: poll.duration,
+        status: poll.status,
+      };
+    } catch (error) {
+      logger.error('Failed to create Twitch poll:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Store poll metadata for result tracking
+   *
+   * Stores poll metadata in a separate JSONL file for tracking poll results.
+   */
+  async storePollMetadata(
+    pollId: string,
+    metadata: {
+      suggestionIds: string[];
+      projectPath: string;
+      pollId: string;
+      createdAt: string;
+      status: string;
+    }
+  ): Promise<void> {
+    try {
+      const filePath = join(this.projectPath, '.automaker', 'twitch/polls.jsonl');
+
+      // Ensure directory exists
+      await fs.mkdir(dirname(filePath), { recursive: true });
+
+      // Append to JSONL file
+      const line = JSON.stringify({ pollId, ...metadata }) + '\n';
+      await fs.appendFile(filePath, line, 'utf-8');
+
+      logger.debug(`Stored poll metadata for ${pollId}`);
+    } catch (error) {
+      logger.error('Failed to store poll metadata:', error);
+      throw error;
+    }
+  }
 }
