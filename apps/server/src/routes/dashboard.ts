@@ -2,33 +2,42 @@
  * Dashboard Routes - System health and status endpoints
  */
 
+import { freemem, totalmem, cpus, loadavg } from 'node:os';
+import v8 from 'node:v8';
 import { Router, Request, Response } from 'express';
 import { createLogger } from '@automaker/utils';
 import type { AutoModeService } from '../services/auto-mode-service.js';
 import type { CrewLoopService } from '../services/crew-loop-service.js';
+import type { LeadEngineerService } from '../services/lead-engineer-service.js';
 
 const logger = createLogger('DashboardRoutes');
 
 export function createDashboardRoutes(
   autoModeService: AutoModeService,
-  crewLoopService: CrewLoopService
+  crewLoopService: CrewLoopService,
+  leadEngineerService?: LeadEngineerService
 ): Router {
   const router = Router();
 
   /**
    * POST /api/system/health-dashboard
-   * Get comprehensive system health including memory, CPU, heap, agent count, auto-mode status, crew status
+   * Comprehensive system health with computed percentages for UI gauges.
    */
   router.post('/health-dashboard', async (req: Request, res: Response) => {
     try {
-      // Get memory and CPU metrics
       const memoryUsage = process.memoryUsage();
-      const cpuUsage = process.cpuUsage();
+      const heapStats = v8.getHeapStatistics();
+      const totalSystemMem = totalmem();
+      const freeSystemMem = freemem();
+      const usedSystemMem = totalSystemMem - freeSystemMem;
 
-      // Get auto-mode status (no arguments)
+      // CPU load average (1 min) normalized to 0-100 by core count
+      const coreCount = cpus().length || 1;
+      const loadAvg = loadavg()[0];
+      const cpuPercent = Math.min((loadAvg / coreCount) * 100, 100);
+
       const autoModeStatus = autoModeService.getStatus();
 
-      // Get crew status
       let crewStatus = null;
       try {
         crewStatus = crewLoopService.getStatus();
@@ -36,22 +45,36 @@ export function createDashboardRoutes(
         logger.warn('Failed to get crew status:', error);
       }
 
+      // Lead engineer sessions
+      const leadEngineerSessions = leadEngineerService
+        ? leadEngineerService.getAllSessions().map((s) => ({
+            projectPath: s.projectPath,
+            projectSlug: s.projectSlug,
+            flowState: s.flowState,
+            startedAt: s.startedAt,
+          }))
+        : [];
+
       res.json({
         success: true,
         memory: {
+          rss: memoryUsage.rss,
           heapUsed: memoryUsage.heapUsed,
           heapTotal: memoryUsage.heapTotal,
-          rss: memoryUsage.rss,
           external: memoryUsage.external,
+          systemUsed: usedSystemMem,
+          systemTotal: totalSystemMem,
+          usedPercent: Math.round((usedSystemMem / totalSystemMem) * 100),
         },
         cpu: {
-          user: cpuUsage.user,
-          system: cpuUsage.system,
+          loadAvg1m: loadAvg,
+          cores: cpus().length,
+          loadPercent: Math.round(cpuPercent),
         },
         heap: {
           used: memoryUsage.heapUsed,
-          total: memoryUsage.heapTotal,
-          percentage: (memoryUsage.heapUsed / memoryUsage.heapTotal) * 100,
+          total: heapStats.heap_size_limit,
+          percentage: Math.round((memoryUsage.heapUsed / heapStats.heap_size_limit) * 100),
         },
         agents: {
           count: autoModeStatus.runningCount,
@@ -61,6 +84,11 @@ export function createDashboardRoutes(
           isRunning: autoModeStatus.isRunning,
           runningCount: autoModeStatus.runningCount,
           runningFeatures: autoModeStatus.runningFeatures,
+        },
+        leadEngineer: {
+          running: leadEngineerSessions.length > 0,
+          sessionCount: leadEngineerSessions.length,
+          sessions: leadEngineerSessions,
         },
         crew: crewStatus,
         uptime: process.uptime(),

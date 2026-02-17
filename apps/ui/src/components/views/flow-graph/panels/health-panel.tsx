@@ -9,6 +9,13 @@ import { Gauge } from '@/components/dashboard';
 import { useSystemHealth, useCapacityMetrics } from '@/hooks/queries/use-metrics';
 import { useRunningAgentsCount } from '@/hooks/queries/use-running-agents';
 
+interface HealthDashboardResponse {
+  memory?: { usedPercent?: number };
+  cpu?: { loadPercent?: number };
+  heap?: { percentage?: number };
+  agents?: { count?: number };
+}
+
 interface HealthPanelProps {
   projectPath?: string;
 }
@@ -18,11 +25,12 @@ export function HealthPanel({ projectPath }: HealthPanelProps) {
   const { data: rawCapacity } = useCapacityMetrics(projectPath);
   const { data: agentCount } = useRunningAgentsCount();
 
-  const health = rawHealth as Record<string, any> | undefined;
-  const capacity = rawCapacity as Record<string, any> | undefined;
-  const memoryPercent = (health?.memory?.usedPercent as number) ?? 0;
-  const cpuPercent = (health?.cpu?.loadPercent as number) ?? 0;
-  const heapPercent = (health?.heap?.usedPercent as number) ?? 0;
+  const health = rawHealth as HealthDashboardResponse | undefined;
+  const capacity = rawCapacity as { maxConcurrency?: number } | undefined;
+
+  const memoryPercent = health?.memory?.usedPercent ?? 0;
+  const cpuPercent = health?.cpu?.loadPercent ?? 0;
+  const heapPercent = health?.heap?.percentage ?? 0;
 
   return (
     <motion.div
@@ -44,7 +52,7 @@ export function HealthPanel({ projectPath }: HealthPanelProps) {
       <div className="flex items-center justify-between text-xs px-1 pt-1 border-t border-border/30">
         <span className="text-muted-foreground">Agents</span>
         <span className="font-semibold tabular-nums">
-          {agentCount}/{(capacity?.maxConcurrency as number) ?? 6}
+          {agentCount}/{capacity?.maxConcurrency ?? 6}
         </span>
       </div>
     </motion.div>
