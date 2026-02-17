@@ -8,7 +8,7 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { authenticateForTests, API_BASE_URL } from './utils';
+import { authenticateForTests, API_BASE_URL, UI_BASE_URL } from './utils';
 
 test.describe('CopilotKit Integration', () => {
   test('CopilotKit endpoint responds or returns 404 gracefully', async ({ page }) => {
@@ -46,7 +46,7 @@ test.describe('CopilotKit Integration', () => {
     await authenticateForTests(page);
 
     // Navigate to the app root
-    await page.goto('http://localhost:3007');
+    await page.goto(UI_BASE_URL);
     await page.waitForLoadState('networkidle');
 
     // The app should render without crashing
@@ -62,7 +62,7 @@ test.describe('CopilotKit Integration', () => {
   test('Sidebar toggle shortcut does not crash the app', async ({ page }) => {
     await authenticateForTests(page);
 
-    await page.goto('http://localhost:3007');
+    await page.goto(UI_BASE_URL);
     await page.waitForLoadState('networkidle');
 
     // Press the sidebar toggle shortcut (backslash)
