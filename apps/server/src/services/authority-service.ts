@@ -32,6 +32,8 @@ import { createLogger, atomicWriteJson, readJsonWithRecovery } from '@automaker/
 import { getAutomakerDir } from '@automaker/platform';
 import type { EventEmitter } from '../lib/events.js';
 import * as secureFs from '../lib/secure-fs.js';
+import type { RiskClassifier } from './risk-classifier.js';
+import type { WorkItemForClassification, RiskClassification } from './risk-classifier.js';
 
 const logger = createLogger('AuthorityService');
 
@@ -66,6 +68,22 @@ interface ApprovalQueueFile {
   requests: ApprovalRequest[];
 }
 
+/**
+ * AuditLogEntry - Record of auto-approval decision
+ */
+interface AuditLogEntry {
+  id: string;
+  timestamp: string;
+  proposal: ActionProposal;
+  classification: RiskClassification;
+  decision: 'auto_approved' | 'requires_approval';
+  reason: string;
+}
+
+interface AuditLogFile {
+  entries: AuditLogEntry[];
+}
+
 // ============================================================================
 // Constants
 // ============================================================================
@@ -77,6 +95,7 @@ const AUTHORITY_DIR = 'authority';
 const AGENTS_FILE = 'agents.json';
 const TRUST_PROFILES_FILE = 'trust-profiles.json';
 const APPROVAL_QUEUE_FILE = 'approval-queue.json';
+const AUDIT_LOG_FILE = 'audit-log.json';
 
 /** Default trust level assigned to each role on registration */
 const DEFAULT_TRUST_BY_ROLE: Record<AuthorityRole, TrustLevel> = {
@@ -115,15 +134,18 @@ const ACTION_TYPE_TO_ENGINE_ACTION: Partial<Record<PolicyActionType, PolicyActio
 
 export class AuthorityService {
   private readonly events: EventEmitter;
+  private readonly riskClassifier?: RiskClassifier;
 
   /** In-memory cache keyed by projectPath */
   private agents: Map<string, RegisteredAgent[]> = new Map();
   private trustProfiles: Map<string, TrustProfile[]> = new Map();
   private approvalQueues: Map<string, ApprovalRequest[]> = new Map();
+  private auditLogs: Map<string, AuditLogEntry[]> = new Map();
   private initialized: Set<string> = new Set();
 
-  constructor(events: EventEmitter) {
+  constructor(events: EventEmitter, riskClassifier?: RiskClassifier) {
     this.events = events;
+    this.riskClassifier = riskClassifier;
   }
 
   // --------------------------------------------------------------------------
@@ -145,6 +167,7 @@ export class AuthorityService {
     this.agents.set(projectPath, await this.loadAgents(authorityDir));
     this.trustProfiles.set(projectPath, await this.loadTrustProfiles(authorityDir));
     this.approvalQueues.set(projectPath, await this.loadApprovalQueue(authorityDir));
+    this.auditLogs.set(projectPath, await this.loadAuditLog(authorityDir));
 
     this.initialized.add(projectPath);
     logger.info(`Authority service initialized for project: ${projectPath}`);
@@ -213,11 +236,13 @@ export class AuthorityService {
    *
    * Flow:
    * 1. Find the proposing agent
-   * 2. Bridge the authority proposal to an engine proposal
-   * 3. Call checkPolicy() for a fast permission check
-   * 4. Map the engine decision to an authority PolicyDecision
-   * 5. If require_approval, queue an ApprovalRequest
-   * 6. Emit the appropriate event
+   * 2. If risk classifier is available and proposal is preApproved, run risk classification
+   * 3. If auto-approved by classifier, skip policy check and approve
+   * 4. Otherwise, bridge the authority proposal to an engine proposal
+   * 5. Call checkPolicy() for a fast permission check
+   * 6. Map the engine decision to an authority PolicyDecision
+   * 7. If require_approval, queue an ApprovalRequest
+   * 8. Emit the appropriate event
    */
   async submitProposal(proposal: ActionProposal, projectPath: string): Promise<PolicyDecision> {
     await this.initialize(projectPath);
@@ -236,6 +261,53 @@ export class AuthorityService {
       return decision;
     }
 
+    // Check for auto-approval via risk classifier
+    if (this.riskClassifier && proposal.preApproved) {
+      const classification = await this.classifyProposal(proposal);
+
+      if (classification.autoApprove) {
+        const decision: PolicyDecision = {
+          verdict: 'allow',
+          reason: `Auto-approved: ${classification.reasoning} (confidence: ${classification.confidence.toFixed(2)})`,
+        };
+
+        // Log audit entry
+        await this.logAuditEntry(proposal, classification, 'auto_approved', decision.reason, projectPath);
+
+        // Update stats
+        this.updateProfileStats(agent.role, 'allow', projectPath);
+
+        this.events.emit('authority:proposal-submitted', {
+          projectPath,
+          proposal,
+          decision,
+        });
+
+        this.events.emit('authority:auto-approved', {
+          projectPath,
+          proposal,
+          decision,
+          classification,
+        });
+
+        logger.info(`Auto-approved proposal: ${proposal.what} (risk: ${classification.overallRisk})`);
+        return decision;
+      } else {
+        // Risk too high, log and proceed to normal approval flow
+        await this.logAuditEntry(
+          proposal,
+          classification,
+          'requires_approval',
+          `Risk too high: ${classification.reasoning}`,
+          projectPath
+        );
+        logger.info(
+          `Proposal requires approval: ${proposal.what} (risk: ${classification.overallRisk})`
+        );
+      }
+    }
+
+    // Normal policy check flow
     const engineProposal = this.bridgeToEngineProposal(proposal, agent);
     const trustProfile = this.buildAgentTrustProfile(agent);
     const engineDecision = checkPolicy(engineProposal, trustProfile, DEFAULT_POLICY_CONFIG);
@@ -370,6 +442,18 @@ export class AuthorityService {
     return this.getAgentsForProject(projectPath).map((a) => this.toPublicAgent(a));
   }
 
+  /**
+   * Get audit log entries for a project (most recent first)
+   */
+  async getAuditLog(projectPath: string, limit?: number): Promise<AuditLogEntry[]> {
+    await this.initialize(projectPath);
+    const log = this.getAuditLogForProject(projectPath);
+    const sorted = [...log].sort(
+      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
+    return limit ? sorted.slice(0, limit) : sorted;
+  }
+
   // --------------------------------------------------------------------------
   // Trust Management
   // --------------------------------------------------------------------------
@@ -418,6 +502,83 @@ export class AuthorityService {
       `Trust updated for agent ${agentId}: ${previousTrust} -> ${newTrustLevel} (max risk: ${newMaxRisk})`
     );
     return this.toPublicAgent(agent);
+  }
+
+  /**
+   * Update the auto-approve threshold for risk classification
+   */
+  updateAutoApproveThreshold(newThreshold: RiskLevel): void {
+    if (!this.riskClassifier) {
+      logger.warn('Cannot update threshold: risk classifier not configured');
+      return;
+    }
+    this.riskClassifier.updateThreshold(newThreshold);
+    logger.info(`Auto-approve threshold updated to: ${newThreshold}`);
+  }
+
+  /**
+   * Get the current auto-approve threshold
+   */
+  getAutoApproveThreshold(): RiskLevel | null {
+    return this.riskClassifier?.getThreshold() ?? null;
+  }
+
+  // --------------------------------------------------------------------------
+  // Risk Classification
+  // --------------------------------------------------------------------------
+
+  /**
+   * Classify a proposal using the risk classifier
+   */
+  private async classifyProposal(proposal: ActionProposal): Promise<RiskClassification> {
+    if (!this.riskClassifier) {
+      throw new Error('Risk classifier not configured');
+    }
+
+    const workItem: WorkItemForClassification = {
+      title: proposal.target,
+      description: `Action: ${proposal.what}\nTarget: ${proposal.target}\nDescription: ${proposal.description || 'N/A'}`,
+      filesToModify: proposal.metadata?.filesToModify,
+      acceptanceCriteria: proposal.metadata?.acceptanceCriteria,
+      complexity: proposal.metadata?.complexity,
+    };
+
+    return this.riskClassifier.classify(workItem);
+  }
+
+  /**
+   * Log an audit entry for auto-approval decision
+   */
+  private async logAuditEntry(
+    proposal: ActionProposal,
+    classification: RiskClassification,
+    decision: 'auto_approved' | 'requires_approval',
+    reason: string,
+    projectPath: string
+  ): Promise<void> {
+    const entry: AuditLogEntry = {
+      id: randomUUID(),
+      timestamp: new Date().toISOString(),
+      proposal,
+      classification,
+      decision,
+      reason,
+    };
+
+    const log = this.getAuditLogForProject(projectPath);
+    log.push(entry);
+
+    // Keep only last 1000 entries to prevent unbounded growth
+    if (log.length > 1000) {
+      log.splice(0, log.length - 1000);
+    }
+
+    await this.persistAuditLog(projectPath);
+
+    this.events.emit('authority:audit-logged', {
+      projectPath,
+      entry,
+    });
   }
 
   // --------------------------------------------------------------------------
@@ -561,6 +722,13 @@ export class AuthorityService {
     return this.approvalQueues.get(projectPath)!;
   }
 
+  private getAuditLogForProject(projectPath: string): AuditLogEntry[] {
+    if (!this.auditLogs.has(projectPath)) {
+      this.auditLogs.set(projectPath, []);
+    }
+    return this.auditLogs.get(projectPath)!;
+  }
+
   private findAgentById(agentId: string, projectPath: string): RegisteredAgent | undefined {
     return this.getAgentsForProject(projectPath).find((a) => a.id === agentId);
   }
@@ -609,6 +777,12 @@ export class AuthorityService {
     return result.data?.requests ?? [];
   }
 
+  private async loadAuditLog(authorityDir: string): Promise<AuditLogEntry[]> {
+    const filePath = path.join(authorityDir, AUDIT_LOG_FILE);
+    const result = await readJsonWithRecovery<AuditLogFile>(filePath, { entries: [] });
+    return result.data?.entries ?? [];
+  }
+
   // --------------------------------------------------------------------------
   // Persistence: Save
   // --------------------------------------------------------------------------
@@ -628,6 +802,12 @@ export class AuthorityService {
   private async persistApprovalQueue(projectPath: string): Promise<void> {
     const filePath = path.join(this.getAuthorityDir(projectPath), APPROVAL_QUEUE_FILE);
     const data: ApprovalQueueFile = { requests: this.getApprovalQueueForProject(projectPath) };
+    await atomicWriteJson(filePath, data, { createDirs: true });
+  }
+
+  private async persistAuditLog(projectPath: string): Promise<void> {
+    const filePath = path.join(this.getAuthorityDir(projectPath), AUDIT_LOG_FILE);
+    const data: AuditLogFile = { entries: this.getAuditLogForProject(projectPath) };
     await atomicWriteJson(filePath, data, { createDirs: true });
   }
 }

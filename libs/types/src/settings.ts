@@ -2184,6 +2184,8 @@ export interface TrustBoundaryConfig {
   autoApprove: AutoApproveRule;
   /** Review requirement rules (any condition triggers review) */
   requireReview: RequireReviewRule;
+  /** Risk auto-approve threshold (work items with risk <= this level skip approval) */
+  riskAutoApproveThreshold?: import('./policy.js').RiskLevel;
 }
 
 /**
@@ -2193,6 +2195,7 @@ export interface TrustBoundaryConfig {
  * - Small complexity
  * - ops/improvement/bug categories
  * - No cost limit
+ * - Low risk level
  *
  * Always requires review:
  * - idea/architectural categories
@@ -2210,6 +2213,7 @@ export const DEFAULT_TRUST_BOUNDARY_CONFIG: TrustBoundaryConfig = {
     minComplexity: 'large',
     minEstimatedCost: undefined,
   },
+  riskAutoApproveThreshold: 'low',
 };
 
 // ============================================================================

@@ -195,6 +195,8 @@ export type EventType =
   | 'authority:awaiting-approval'
   | 'authority:agent-registered'
   | 'authority:trust-updated'
+  | 'authority:auto-approved'
+  | 'authority:audit-logged'
   | 'authority:idea-injected'
   | 'authority:pm-review-started'
   | 'authority:pm-review-approved'

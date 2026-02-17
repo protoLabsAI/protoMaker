@@ -223,6 +223,16 @@ export interface ActionProposal {
     from: string;
     to: string;
   };
+  /** Optional description for risk classification */
+  description?: string;
+  /** Whether this proposal is pre-approved for auto-gate evaluation */
+  preApproved?: boolean;
+  /** Additional metadata for risk classification */
+  metadata?: {
+    filesToModify?: string[];
+    acceptanceCriteria?: string[];
+    complexity?: 'small' | 'medium' | 'large' | 'architectural';
+  };
 }
 
 /**
