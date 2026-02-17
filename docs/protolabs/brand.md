@@ -29,15 +29,15 @@ This is the living brand bible for protoLabs. All agents, content, and external 
 
 ### Josh Mabry — Positioning
 
-**Who Josh is:** Architect, founder, technical leader. NOT a developer — an orchestrator who designs systems and directs AI agents to build them.
+**Who Josh is:** Architect, founder, AI systems expert. Three years deep in agentic AI — building production systems from design to deployment since LLMs had 4K context windows. Not someone who discovered AI coding tools last month. An expert who 10x'd his workflow through AI tooling, then 10x'd again by building autonomous agent orchestration.
 
-**Background:** Former Principal Application Architect at Vizient. Now building protoLabs — the first AI-native development agency.
+**Background:** 8+ years shipping production software. Design systems architect for Fortune 500 clients (Phase2 Technology), AI lead at a SaaS platform (Knapsack), now founder of protoLabs. Has built countless AI systems — RAG pipelines, multi-agent research platforms, generative gaming engines, autonomous dev tooling. Was "vibe coding" before the term existed, copy-pasting into 4K context windows and telling anyone who'd listen to learn these systems.
 
 **Language rules:**
 
 - USE: "architect, orchestrate, ship, design, direct, build (systems)"
-- NEVER USE: "coded, built in React, implemented, programmed, developed"
-- Josh architects systems. AI agents implement them. This distinction IS the brand.
+- AVOID: "coded, implemented, programmed" (in present tense — Josh orchestrates now, but he earned that position through years of hands-on AI systems work)
+- Josh's authority comes from deep experience, not just tooling. He built the systems that build the systems.
 
 ### Brand Voice
 
