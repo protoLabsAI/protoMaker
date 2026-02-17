@@ -17,6 +17,7 @@ import type {
 const ORPHANED_IN_PROGRESS_MS = 4 * 60 * 60 * 1000; // 4 hours
 const STUCK_AGENT_MS = 2 * 60 * 60 * 1000; // 2 hours
 const STALE_REVIEW_MS = 30 * 60 * 1000; // 30 minutes
+const REMEDIATION_STALL_MS = 60 * 60 * 1000; // 1 hour
 
 // ────────────────────────── Helper ──────────────────────────
 
@@ -253,6 +254,103 @@ export const projectCompleting: LeadFastPathRule = {
   },
 };
 
+/**
+ * prApproved — PR approved → enable auto-merge + resolve threads directly.
+ */
+export const prApproved: LeadFastPathRule = {
+  name: 'prApproved',
+  description: 'PR approved → enable auto-merge + resolve unresolved threads',
+  triggers: ['pr:approved', 'github:pr:approved'],
+
+  evaluate(worldState, _eventType, payload): LeadRuleAction[] {
+    const actions: LeadRuleAction[] = [];
+    const feature = featureFromPayload(worldState, payload);
+    if (!feature) return [];
+    if (!feature.prNumber) return [];
+
+    const pr = worldState.openPRs.find((p) => p.featureId === feature.id);
+
+    // Enable auto-merge if not already enabled
+    if (!pr?.autoMergeEnabled) {
+      actions.push({
+        type: 'enable_auto_merge',
+        featureId: feature.id,
+        prNumber: feature.prNumber,
+      });
+    }
+
+    // Resolve threads directly if any are unresolved
+    if (pr && (pr.unresolvedThreads ?? 0) > 0) {
+      actions.push({
+        type: 'resolve_threads_direct',
+        featureId: feature.id,
+        prNumber: feature.prNumber,
+      });
+    }
+
+    return actions;
+  },
+};
+
+/**
+ * threadsBlocking — Merge blocked by critical threads → resolve directly.
+ */
+export const threadsBlocking: LeadFastPathRule = {
+  name: 'threadsBlocking',
+  description: 'Merge blocked by critical threads → resolve directly',
+  triggers: ['pr:merge-blocked-critical-threads'],
+
+  evaluate(worldState, _eventType, payload): LeadRuleAction[] {
+    const feature = featureFromPayload(worldState, payload);
+    if (!feature) return [];
+    if (!feature.prNumber) return [];
+
+    return [
+      {
+        type: 'resolve_threads_direct',
+        featureId: feature.id,
+        prNumber: feature.prNumber,
+      },
+    ];
+  },
+};
+
+/**
+ * remediationStalled — Feature remediating >1h → reset to backlog for retry.
+ */
+export const remediationStalled: LeadFastPathRule = {
+  name: 'remediationStalled',
+  description: 'Remediation in-progress >1h → reset to backlog',
+  triggers: ['lead-engineer:rule-evaluated'],
+
+  evaluate(worldState): LeadRuleAction[] {
+    const actions: LeadRuleAction[] = [];
+    const now = Date.now();
+
+    for (const pr of worldState.openPRs) {
+      if (!pr.isRemediating) continue;
+
+      const feature = worldState.features[pr.featureId];
+      if (!feature) continue;
+
+      // Use feature startedAt or PR creation time as proxy for remediation start
+      const startTime = feature.startedAt || pr.prCreatedAt;
+      if (!startTime) continue;
+
+      const age = now - new Date(startTime).getTime();
+      if (age > REMEDIATION_STALL_MS) {
+        actions.push({
+          type: 'reset_feature',
+          featureId: pr.featureId,
+          reason: `PR remediation stalled for >${Math.round(age / (60 * 60 * 1000))}h`,
+        });
+      }
+    }
+
+    return actions;
+  },
+};
+
 // ────────────────────────── Exports ──────────────────────────
 
 /** Default set of fast-path rules */
@@ -265,6 +363,9 @@ export const DEFAULT_RULES: LeadFastPathRule[] = [
   stuckAgent,
   capacityRestart,
   projectCompleting,
+  prApproved,
+  threadsBlocking,
+  remediationStalled,
 ];
 
 /**

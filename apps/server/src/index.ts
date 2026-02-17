@@ -607,6 +607,10 @@ avaGatewayService.setDiscordBot(discordBotService);
 // Wire Discord bot service to Lead Engineer for post_discord action
 leadEngineerService.setDiscordBot(discordBotService);
 
+// Wire CodeRabbit resolver to Lead Engineer for direct thread resolution
+import { codeRabbitResolverService } from './services/coderabbit-resolver-service.js';
+leadEngineerService.setCodeRabbitResolver(codeRabbitResolverService);
+
 // Initialize Event Hook Service for custom event triggers (with history storage)
 // Must be after DiscordBotService is created so it can use the real Discord client
 eventHookService.initialize(
