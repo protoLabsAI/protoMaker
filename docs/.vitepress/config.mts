@@ -35,18 +35,14 @@ export default defineConfig({
 
   head: [
     ['link', { rel: 'icon', type: 'image/svg+xml', href: '/logo.svg' }],
-    ...(process.env.UMAMI_WEBSITE_ID
-      ? [
-          [
-            'script',
-            {
-              defer: '',
-              src: process.env.UMAMI_URL || 'https://umami.proto-labs.ai/script.js',
-              'data-website-id': process.env.UMAMI_WEBSITE_ID,
-            },
-          ] as [string, Record<string, string>],
-        ]
-      : []),
+    [
+      'script',
+      {
+        defer: '',
+        src: 'https://umami.proto-labs.ai/script.js',
+        'data-website-id': process.env.UMAMI_WEBSITE_ID || '64973d40-7eb6-4044-816e-b2302d1025e8',
+      },
+    ],
   ],
 
   // Allow dead links to: files outside docs/ (../foo or ./../foo)
