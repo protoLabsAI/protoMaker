@@ -280,6 +280,7 @@ export type EventType =
   // Metrics ledger events (persistent analytics)
   | 'ledger:record-written'
   | 'ledger:backfill-completed'
+  | 'ledger:enrichment-completed'
   // Feature archival events (board cleanup)
   | 'feature:archived'
   | 'archival:cycle-completed'
