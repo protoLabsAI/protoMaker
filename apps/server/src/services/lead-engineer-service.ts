@@ -10,6 +10,8 @@
  * 6. Guards crew members from duplicating work on managed projects
  */
 
+import { exec } from 'node:child_process';
+import { promisify } from 'node:util';
 import { createLogger } from '@automaker/utils';
 import type {
   EventType,
@@ -31,8 +33,10 @@ import type { ProjectService } from './project-service.js';
 import type { ProjectLifecycleService } from './project-lifecycle-service.js';
 import type { SettingsService } from './settings-service.js';
 import type { MetricsService } from './metrics-service.js';
+import type { CodeRabbitResolverService } from './coderabbit-resolver-service.js';
 import { DEFAULT_RULES, evaluateRules } from './lead-engineer-rules.js';
 
+const execAsync = promisify(exec);
 const logger = createLogger('LeadEngineerService');
 
 const WORLD_STATE_REFRESH_MS = 5 * 60 * 1000; // 5 minutes
@@ -46,6 +50,8 @@ export class LeadEngineerService {
   private discordBotService?: {
     sendToChannel(channelId: string, content: string): Promise<boolean>;
   };
+
+  private codeRabbitResolver?: CodeRabbitResolverService;
 
   constructor(
     private events: EventEmitter,
@@ -64,6 +70,13 @@ export class LeadEngineerService {
     sendToChannel(channelId: string, content: string): Promise<boolean>;
   }): void {
     this.discordBotService = bot;
+  }
+
+  /**
+   * Set CodeRabbit resolver service for direct thread resolution.
+   */
+  setCodeRabbitResolver(resolver: CodeRabbitResolverService): void {
+    this.codeRabbitResolver = resolver;
   }
 
   /**
@@ -305,16 +318,30 @@ export class LeadEngineerService {
       // Running agents API may fail
     }
 
-    // Open PRs
+    // Open PRs — check auto-merge status
     const openPRs: LeadPRSnapshot[] = [];
     const reviewFeatures = features.filter((f) => f.status === 'review' && f.prNumber);
     for (const f of reviewFeatures) {
-      openPRs.push({
+      const prSnapshot: LeadPRSnapshot = {
         featureId: f.id,
         prNumber: f.prNumber!,
         prUrl: f.prUrl,
         prCreatedAt: f.prCreatedAt,
-      });
+      };
+
+      // Check auto-merge status via gh CLI
+      try {
+        const { stdout } = await execAsync(`gh pr view ${f.prNumber} --json autoMergeRequest`, {
+          cwd: projectPath,
+          timeout: 10000,
+        });
+        const data = JSON.parse(stdout);
+        prSnapshot.autoMergeEnabled = !!data.autoMergeRequest;
+      } catch {
+        // gh CLI may fail — leave autoMergeEnabled undefined
+      }
+
+      openPRs.push(prSnapshot);
     }
 
     // Milestones
@@ -463,7 +490,98 @@ export class LeadEngineerService {
         state.autoModeRunning = false;
         break;
       }
+
+      case 'pr:approved':
+      case 'github:pr:approved': {
+        if (featureId) {
+          const pr = this.findOrCreatePR(state, featureId, p);
+          if (pr) pr.reviewState = 'approved';
+        }
+        break;
+      }
+
+      case 'pr:changes-requested':
+      case 'github:pr:changes-requested': {
+        if (featureId) {
+          const pr = this.findOrCreatePR(state, featureId, p);
+          if (pr) pr.reviewState = 'changes_requested';
+        }
+        break;
+      }
+
+      case 'pr:ci-failure': {
+        if (featureId) {
+          const pr = this.findOrCreatePR(state, featureId, p);
+          if (pr) pr.ciStatus = 'failing';
+        }
+        break;
+      }
+
+      case 'pr:remediation-started': {
+        if (featureId) {
+          const pr = this.findOrCreatePR(state, featureId, p);
+          if (pr) {
+            pr.isRemediating = true;
+            pr.remediationCount = (pr.remediationCount || 0) + 1;
+          }
+        }
+        break;
+      }
+
+      case 'pr:remediation-completed': {
+        if (featureId) {
+          const pr = this.findOrCreatePR(state, featureId, p);
+          if (pr) pr.isRemediating = false;
+        }
+        break;
+      }
+
+      case 'pr:remediation-failed': {
+        if (featureId) {
+          const pr = this.findOrCreatePR(state, featureId, p);
+          if (pr) pr.isRemediating = false;
+        }
+        break;
+      }
+
+      case 'pr:threads-resolved': {
+        if (featureId) {
+          const pr = this.findOrCreatePR(state, featureId, p);
+          if (pr) pr.unresolvedThreads = 0;
+        }
+        break;
+      }
+
+      case 'pr:merge-blocked-critical-threads': {
+        if (featureId) {
+          const pr = this.findOrCreatePR(state, featureId, p);
+          if (pr) {
+            pr.unresolvedThreads =
+              (p?.unresolvedCount as number) ?? (p?.threadCount as number) ?? 1;
+          }
+        }
+        break;
+      }
     }
+  }
+
+  /**
+   * Find or create a PR snapshot for a feature.
+   * Handles events arriving before the WorldState refresh populates the PR.
+   */
+  private findOrCreatePR(
+    state: LeadWorldState,
+    featureId: string,
+    payload: Record<string, unknown> | null
+  ): LeadPRSnapshot | undefined {
+    let pr = state.openPRs.find((p) => p.featureId === featureId);
+    if (!pr) {
+      const prNumber = (payload?.prNumber as number) ?? state.features[featureId]?.prNumber;
+      if (!prNumber) return undefined;
+      pr = { featureId, prNumber };
+      state.openPRs.push(pr);
+    }
+    return pr;
   }
 
   /**
@@ -564,14 +682,35 @@ export class LeadEngineerService {
 
       case 'enable_auto_merge': {
         try {
-          const { execSync } = await import('child_process');
-          execSync(`gh pr merge ${action.prNumber} --auto --squash`, {
+          await execAsync(`gh pr merge ${action.prNumber} --auto --squash`, {
             cwd: session.projectPath,
-            stdio: 'pipe',
+            timeout: 30000,
           });
+          // Update in-memory PR snapshot so staleReview doesn't re-fire
+          const pr = session.worldState.openPRs.find((p) => p.featureId === action.featureId);
+          if (pr) pr.autoMergeEnabled = true;
           logger.info(`Enabled auto-merge on PR #${action.prNumber}`);
         } catch (err) {
           logger.warn(`Failed to enable auto-merge on PR #${action.prNumber}:`, err);
+        }
+        break;
+      }
+
+      case 'resolve_threads_direct': {
+        if (!this.codeRabbitResolver) {
+          logger.warn('CodeRabbitResolverService not available, cannot resolve threads directly');
+          break;
+        }
+        try {
+          const result = await this.codeRabbitResolver.resolveThreads(
+            session.projectPath,
+            action.prNumber
+          );
+          logger.info(
+            `Resolved ${result.resolvedCount}/${result.totalThreads} threads on PR #${action.prNumber}`
+          );
+        } catch (err) {
+          logger.warn(`Failed to resolve threads on PR #${action.prNumber}:`, err);
         }
         break;
       }

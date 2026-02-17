@@ -9,6 +9,9 @@ import {
   stuckAgent,
   capacityRestart,
   projectCompleting,
+  prApproved,
+  threadsBlocking,
+  remediationStalled,
   evaluateRules,
   DEFAULT_RULES,
 } from '@/services/lead-engineer-rules.js';
@@ -399,6 +402,153 @@ describe('projectCompleting', () => {
     });
     const actions = projectCompleting.evaluate(ws, 'project:completed', {});
     expect(actions).toHaveLength(0);
+  });
+});
+
+// ────────────────────────── prApproved ──────────────────────────
+
+describe('prApproved', () => {
+  it('enables auto-merge when PR is approved and auto-merge not enabled', () => {
+    const feature = createFeature({
+      id: 'f1',
+      status: 'review',
+      prNumber: 50,
+    });
+    const ws = createMockWorldState({
+      features: { f1: feature },
+      openPRs: [{ featureId: 'f1', prNumber: 50, autoMergeEnabled: false }],
+    });
+    const actions = prApproved.evaluate(ws, 'pr:approved', { featureId: 'f1' });
+    expect(actions.some((a) => a.type === 'enable_auto_merge')).toBe(true);
+  });
+
+  it('resolves threads when PR is approved and has unresolved threads', () => {
+    const feature = createFeature({
+      id: 'f1',
+      status: 'review',
+      prNumber: 50,
+    });
+    const ws = createMockWorldState({
+      features: { f1: feature },
+      openPRs: [{ featureId: 'f1', prNumber: 50, unresolvedThreads: 3 }],
+    });
+    const actions = prApproved.evaluate(ws, 'github:pr:approved', { featureId: 'f1' });
+    expect(actions.some((a) => a.type === 'resolve_threads_direct')).toBe(true);
+  });
+
+  it('skips auto-merge when already enabled', () => {
+    const feature = createFeature({
+      id: 'f1',
+      status: 'review',
+      prNumber: 50,
+    });
+    const ws = createMockWorldState({
+      features: { f1: feature },
+      openPRs: [{ featureId: 'f1', prNumber: 50, autoMergeEnabled: true, unresolvedThreads: 0 }],
+    });
+    const actions = prApproved.evaluate(ws, 'pr:approved', { featureId: 'f1' });
+    expect(actions).toHaveLength(0);
+  });
+
+  it('no-ops when feature has no PR number', () => {
+    const feature = createFeature({ id: 'f1', status: 'review' });
+    const ws = createMockWorldState({ features: { f1: feature } });
+    const actions = prApproved.evaluate(ws, 'pr:approved', { featureId: 'f1' });
+    expect(actions).toHaveLength(0);
+  });
+});
+
+// ────────────────────────── threadsBlocking ──────────────────────────
+
+describe('threadsBlocking', () => {
+  it('resolves threads when merge blocked by critical threads', () => {
+    const feature = createFeature({
+      id: 'f1',
+      status: 'review',
+      prNumber: 42,
+    });
+    const ws = createMockWorldState({ features: { f1: feature } });
+    const actions = threadsBlocking.evaluate(ws, 'pr:merge-blocked-critical-threads', {
+      featureId: 'f1',
+    });
+    expect(actions).toHaveLength(1);
+    expect(actions[0]).toEqual({
+      type: 'resolve_threads_direct',
+      featureId: 'f1',
+      prNumber: 42,
+    });
+  });
+
+  it('no-ops when feature has no PR number', () => {
+    const feature = createFeature({ id: 'f1', status: 'review' });
+    const ws = createMockWorldState({ features: { f1: feature } });
+    const actions = threadsBlocking.evaluate(ws, 'pr:merge-blocked-critical-threads', {
+      featureId: 'f1',
+    });
+    expect(actions).toHaveLength(0);
+  });
+
+  it('no-ops when featureId missing from payload', () => {
+    const ws = createMockWorldState();
+    const actions = threadsBlocking.evaluate(ws, 'pr:merge-blocked-critical-threads', {});
+    expect(actions).toHaveLength(0);
+  });
+});
+
+// ────────────────────────── remediationStalled ──────────────────────────
+
+describe('remediationStalled', () => {
+  it('resets feature when remediation stalled >1h', () => {
+    const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+    const feature = createFeature({
+      id: 'f1',
+      status: 'review',
+      startedAt: twoHoursAgo,
+    });
+    const ws = createMockWorldState({
+      features: { f1: feature },
+      openPRs: [{ featureId: 'f1', prNumber: 42, isRemediating: true, prCreatedAt: twoHoursAgo }],
+    });
+    const actions = remediationStalled.evaluate(ws, 'lead-engineer:rule-evaluated', {});
+    expect(actions).toHaveLength(1);
+    expect(actions[0].type).toBe('reset_feature');
+  });
+
+  it('no-ops when PR is not remediating', () => {
+    const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+    const feature = createFeature({ id: 'f1', status: 'review', startedAt: twoHoursAgo });
+    const ws = createMockWorldState({
+      features: { f1: feature },
+      openPRs: [{ featureId: 'f1', prNumber: 42, isRemediating: false, prCreatedAt: twoHoursAgo }],
+    });
+    const actions = remediationStalled.evaluate(ws, 'lead-engineer:rule-evaluated', {});
+    expect(actions).toHaveLength(0);
+  });
+
+  it('no-ops when remediation is under 1h', () => {
+    const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+    const feature = createFeature({ id: 'f1', status: 'review', startedAt: thirtyMinAgo });
+    const ws = createMockWorldState({
+      features: { f1: feature },
+      openPRs: [{ featureId: 'f1', prNumber: 42, isRemediating: true, prCreatedAt: thirtyMinAgo }],
+    });
+    const actions = remediationStalled.evaluate(ws, 'lead-engineer:rule-evaluated', {});
+    expect(actions).toHaveLength(0);
+  });
+
+  it('checks multiple PRs', () => {
+    const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+    const f1 = createFeature({ id: 'f1', status: 'review', startedAt: twoHoursAgo });
+    const f2 = createFeature({ id: 'f2', status: 'review', startedAt: twoHoursAgo });
+    const ws = createMockWorldState({
+      features: { f1, f2 },
+      openPRs: [
+        { featureId: 'f1', prNumber: 41, isRemediating: true, prCreatedAt: twoHoursAgo },
+        { featureId: 'f2', prNumber: 42, isRemediating: true, prCreatedAt: twoHoursAgo },
+      ],
+    });
+    const actions = remediationStalled.evaluate(ws, 'lead-engineer:rule-evaluated', {});
+    expect(actions).toHaveLength(2);
   });
 });
 

@@ -45,6 +45,10 @@ export interface LeadPRSnapshot {
   prCreatedAt?: string;
   autoMergeEnabled?: boolean;
   unresolvedThreads?: number;
+  reviewState?: 'pending' | 'approved' | 'changes_requested';
+  ciStatus?: 'pending' | 'passing' | 'failing';
+  isRemediating?: boolean;
+  remediationCount?: number;
 }
 
 /** Milestone progress snapshot */
@@ -102,6 +106,7 @@ export type LeadRuleAction =
   | { type: 'unblock_feature'; featureId: string }
   | { type: 'enable_auto_merge'; featureId: string; prNumber: number }
   | { type: 'resolve_threads'; featureId: string; prNumber: number }
+  | { type: 'resolve_threads_direct'; featureId: string; prNumber: number }
   | { type: 'restart_auto_mode'; projectPath: string; maxConcurrency?: number }
   | { type: 'stop_agent'; featureId: string }
   | { type: 'send_agent_message'; featureId: string; message: string }
