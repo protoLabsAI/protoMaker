@@ -220,8 +220,10 @@ start_services() {
   docker compose -f "$COMPOSE_FILE" up -d server ui
 
   # Start docs independently (won't be affected by app restarts)
-  # Force-recreate ensures the container picks up the newly built image.
-  docker compose -f "$DOCS_COMPOSE_FILE" up -d --force-recreate 2>/dev/null || warn "Docs failed to start"
+  # Remove old container first — it may belong to a different compose project
+  # (automaker-staging vs automaker-docs), causing name conflicts on recreate.
+  docker rm -f automaker-docs 2>/dev/null || true
+  docker compose -f "$DOCS_COMPOSE_FILE" up -d 2>/dev/null || warn "Docs failed to start"
 
   # Start storybook separately — failure is non-fatal
   docker compose -f "$COMPOSE_FILE" up -d storybook 2>/dev/null || warn "Storybook failed to start (image may not exist)"
