@@ -9,11 +9,7 @@ import path from 'path';
 import * as secureFs from '../lib/secure-fs.js';
 import type { EventEmitter } from '../lib/events.js';
 import { createLogger } from '@automaker/utils';
-import {
-  ideaProcessingGraph,
-  type IdeaProcessingState,
-  type IdeaInput,
-} from '@automaker/flows';
+import { ideaProcessingGraph, type IdeaProcessingState, type IdeaInput } from '@automaker/flows';
 import { LangfuseClient } from '@automaker/observability';
 
 interface IdeaSession {
@@ -167,10 +163,7 @@ export class IdeaProcessingService {
   /**
    * Execute the LangGraph idea processing flow
    */
-  private async executeIdeaFlow(
-    sessionId: string,
-    options: ProcessIdeaOptions
-  ): Promise<void> {
+  private async executeIdeaFlow(sessionId: string, options: ProcessIdeaOptions): Promise<void> {
     const startTime = new Date();
 
     // Create Langfuse trace

@@ -45,7 +45,4 @@ export { createRouteImprovementsNode, type ImprovementRouter } from './nodes/rou
 export { improvementsHitlRouter, hitlImprovementsProcessor } from './nodes/hitl-improvements.js';
 
 // Tracing helper
-export {
-  executeWrapUpFlowWithTracing,
-  type ExecuteWrapUpFlowOptions,
-} from './with-tracing.js';
+export { executeWrapUpFlowWithTracing, type ExecuteWrapUpFlowOptions } from './with-tracing.js';
