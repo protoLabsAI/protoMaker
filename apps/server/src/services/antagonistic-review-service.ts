@@ -17,6 +17,7 @@ import type { SPARCPrd } from '@automaker/types';
 import { AntagonisticReviewAdapter } from './antagonistic-review-adapter.js';
 import { getLangfuseInstance } from '../lib/langfuse-singleton.js';
 import type { SettingsService } from './settings-service.js';
+import { resolveModelString } from '@automaker/model-resolver';
 
 const logger = createLogger('AntagonisticReview');
 
@@ -96,7 +97,7 @@ export class AntagonisticReviewService {
 
       if (langfuseClient.isAvailable()) {
         this.adapter = new AntagonisticReviewAdapter({
-          smartModel: 'claude-3-5-sonnet-20241022',
+          smartModel: resolveModelString('sonnet'),
           enableHITL: false,
           langfuseClient,
         });

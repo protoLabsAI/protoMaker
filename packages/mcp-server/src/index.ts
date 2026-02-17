@@ -2448,7 +2448,7 @@ const tools: Tool[] = [
           properties: {
             smartModel: {
               type: 'string',
-              description: 'Model to use for review (default: claude-3-5-sonnet-20241022)',
+              description: 'Model to use for review (default: claude-sonnet-4-5-20250929)',
             },
             enableHITL: {
               type: 'boolean',
@@ -3587,13 +3587,32 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         format: args.format,
       });
 
-    case 'execute_antagonistic_review':
-      return apiCall('/flows/antagonistic-review', {
+    case 'execute_antagonistic_review': {
+      // Parse SPARC sections from the description text
+      const desc = String(args.prdDescription || '');
+      const parseSparc = (text: string) => {
+        const extract = (label: string) => {
+          const re = new RegExp(`##\\s*${label}[\\s\\S]*?\\n([\\s\\S]*?)(?=\\n##\\s|$)`, 'i');
+          const m = text.match(re);
+          return m ? m[1].trim() : '';
+        };
+        const situation = extract('Situation');
+        const problem = extract('Problem');
+        const approach = extract('Approach');
+        const results = extract('Results');
+        const constraints = extract('Constraints');
+        // If no SPARC sections found, use full text as situation
+        if (!situation && !problem && !approach && !results) {
+          return { situation: text, problem: text, approach: text, results: text, constraints: '' };
+        }
+        return { situation, problem, approach, results, constraints };
+      };
+      return apiCall('/flows/antagonistic-review/execute', {
         projectPath: args.projectPath,
-        prdTitle: args.prdTitle,
-        prdDescription: args.prdDescription,
+        prd: parseSparc(desc),
         config: args.config,
       });
+    }
 
     // Linear Sync
     case 'sync_project_to_linear':

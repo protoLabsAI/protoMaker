@@ -177,7 +177,7 @@ function createAntagonisticReviewTools() {
       }),
       execute: async (args) => {
         const smartModel = new ChatAnthropic({
-          model: 'claude-3-5-sonnet-20241022',
+          model: resolveModelString('sonnet'),
           temperature: 0.7,
         });
 
