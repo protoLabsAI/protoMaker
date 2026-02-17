@@ -24,6 +24,7 @@ import { WorkflowSelector } from './workflow-selector';
 import { useAppStore } from '@/store/app-store';
 import { ModelSelector, getStoredModel, storeModel, type ModelTier } from './model-selector';
 import { useLangGraphInterrupt } from './use-langgraph-interrupt';
+import { RecentChats } from './recent-chats';
 
 const CopilotAvailableContext = createContext(false);
 
@@ -71,9 +72,9 @@ function ProjectContextInjector() {
       features.length > 0
         ? features.map((f) => ({
             id: f.id,
-            title: f.title,
-            status: f.status,
-            complexity: f.complexity,
+            title: f.title ?? '',
+            status: f.status as string,
+            complexity: (f.complexity as string) ?? 'medium',
           }))
         : null,
   });
@@ -223,11 +224,39 @@ export function CopilotSidebarWrapper({ children }: { children: ReactNode }) {
 }
 
 /**
+ * Custom header rendered inside the CopilotSidebar.
+ * Contains workflow selector, model selector, and recent chats.
+ */
+function ChatPanelHeader() {
+  const { selectedWorkflow, setSelectedWorkflow, selectedModel, setSelectedModel } =
+    useModelSelection();
+
+  return (
+    <div className="flex flex-col gap-2 px-3 py-2.5 border-b border-border bg-background/80 backdrop-blur-sm">
+      {/* Title row */}
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-semibold text-foreground">Chat</span>
+        <RecentChats />
+      </div>
+      {/* Controls row */}
+      <div className="flex items-center gap-2">
+        <WorkflowSelector value={selectedWorkflow} onChange={setSelectedWorkflow} />
+        <ModelSelector
+          workflowId={selectedWorkflow}
+          value={selectedModel}
+          onChange={setSelectedModel}
+        />
+      </div>
+    </div>
+  );
+}
+
+/**
  * Sidebar controls rendered inside the CopilotKit context.
  * Separated so useModelSelection() has access to the provider context.
  */
 function SidebarControls() {
-  const { selectedWorkflow, setSelectedWorkflow } = useModelSelection();
+  const { selectedWorkflow } = useModelSelection();
   const [sidebarKey, setSidebarKey] = useState(0);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
@@ -247,34 +276,25 @@ function SidebarControls() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  // Map workflow ID to CopilotKit agent ID
+  const agentId = selectedWorkflow === 'default' ? undefined : selectedWorkflow;
+
   return (
     <div style={getCopilotKitThemeStyles()}>
-      <WorkflowSelector value={selectedWorkflow} onChange={setSelectedWorkflow} />
-      <SidebarModelSelector workflowId={selectedWorkflow} />
       <CopilotSidebar
         key={sidebarKey}
         defaultOpen={isSidebarOpen}
+        agentId={agentId}
+        // SlotValue type doesn't accept plain JSX — pass as function component
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        header={ChatPanelHeader as any}
         labels={{
-          modalHeaderTitle: 'Ava',
+          modalHeaderTitle: 'Chat',
           welcomeMessageText: 'How can I help with your project?',
         }}
       />
       <AgentStateDisplay />
       <ErrorDisplay />
-    </div>
-  );
-}
-
-/**
- * Model selector shown in sidebar below workflow selector
- */
-function SidebarModelSelector({ workflowId }: { workflowId: string }) {
-  const { selectedModel, setSelectedModel } = useModelSelection();
-
-  return (
-    <div className="px-4 py-2 border-b border-border">
-      <div className="text-xs text-muted-foreground mb-1">Model</div>
-      <ModelSelector workflowId={workflowId} value={selectedModel} onChange={setSelectedModel} />
     </div>
   );
 }

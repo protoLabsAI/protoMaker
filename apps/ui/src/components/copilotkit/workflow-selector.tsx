@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { getAuthHeaders } from '@/lib/api-fetch';
 import { Workflow } from 'lucide-react';
 
 export interface WorkflowMetadata {
@@ -38,7 +39,10 @@ export function WorkflowSelector({ value, onChange, disabled }: WorkflowSelector
       try {
         setLoading(true);
         setError(null);
-        const response = await fetch('/api/copilotkit/workflows');
+        const response = await fetch('/api/copilotkit/workflows', {
+          credentials: 'include',
+          headers: getAuthHeaders(),
+        });
         if (!response.ok) {
           throw new Error(`Failed to fetch workflows: ${response.statusText}`);
         }

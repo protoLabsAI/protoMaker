@@ -4,9 +4,11 @@
  * Provides the /api/copilotkit endpoint that the CopilotKit React provider connects to.
  * Registers three agents via the AG-UI protocol:
  * - "default" (Ava): BuiltInAgent with board-operation tools
- * - "content-pipeline": LangGraph flow for content creation
+ * - "content-pipeline": LangGraph flow for content creation (with HITL gates)
  * - "antagonistic-review": BuiltInAgent for content quality review
- * All agents are discoverable via /api/copilotkit/info.
+ *
+ * Model selection: Pre-builds one CopilotRuntime per model tier (haiku/sonnet/opus).
+ * The X-Copilotkit-Model header routes each request to the correct runtime.
  */
 
 import { CopilotRuntime } from '@copilotkitnext/runtime';
@@ -27,6 +29,10 @@ interface CopilotKitDependencies {
   featureLoader: FeatureLoader;
   autoModeService: AutoModeService;
 }
+
+/** Model tiers that map to pre-built runtimes */
+const MODEL_TIERS = ['haiku', 'sonnet', 'opus'] as const;
+type ModelTier = (typeof MODEL_TIERS)[number];
 
 function createAvaTools(deps: CopilotKitDependencies) {
   const { featureLoader, autoModeService } = deps;
@@ -61,6 +67,33 @@ function createAvaTools(deps: CopilotKitDependencies) {
     }),
 
     defineTool({
+      name: 'getFeature',
+      description: 'Get full details for a single feature by ID',
+      parameters: z.object({
+        projectPath: z.string().describe('Path to the project'),
+        featureId: z.string().describe('ID of the feature'),
+      }),
+      execute: async (args) => {
+        const feature = await featureLoader.get(args.projectPath, args.featureId);
+        if (!feature) {
+          throw new Error(`Feature ${args.featureId} not found`);
+        }
+        return {
+          id: feature.id,
+          title: feature.title,
+          status: feature.status,
+          complexity: feature.complexity,
+          description: feature.description,
+          isEpic: feature.isEpic ?? false,
+          epicId: feature.epicId,
+          prUrl: feature.prUrl,
+          branchName: feature.branchName,
+          dependencies: feature.dependencies,
+        };
+      },
+    }),
+
+    defineTool({
       name: 'createFeature',
       description: 'Create a new feature on the board',
       parameters: z.object({
@@ -82,6 +115,50 @@ function createAvaTools(deps: CopilotKitDependencies) {
           status: 'backlog',
         });
         return { id: feature.id, title: feature.title, status: feature.status };
+      },
+    }),
+
+    defineTool({
+      name: 'updateFeature',
+      description: 'Update a feature — edit its title, description, or complexity',
+      parameters: z.object({
+        projectPath: z.string().describe('Path to the project'),
+        featureId: z.string().describe('ID of the feature to update'),
+        title: z.string().optional().describe('New title'),
+        description: z.string().optional().describe('New description'),
+        complexity: z
+          .enum(['small', 'medium', 'large', 'architectural'])
+          .optional()
+          .describe('New complexity'),
+      }),
+      execute: async (args) => {
+        const updates: Record<string, string | undefined> = {};
+        if (args.title) updates.title = args.title;
+        if (args.description) updates.description = args.description;
+        if (args.complexity) updates.complexity = args.complexity;
+        const updated = await featureLoader.update(args.projectPath, args.featureId, updates);
+        return {
+          id: updated.id,
+          title: updated.title,
+          status: updated.status,
+          complexity: updated.complexity,
+        };
+      },
+    }),
+
+    defineTool({
+      name: 'deleteFeature',
+      description: 'Delete a feature from the board',
+      parameters: z.object({
+        projectPath: z.string().describe('Path to the project'),
+        featureId: z.string().describe('ID of the feature to delete'),
+      }),
+      execute: async (args) => {
+        const deleted = await featureLoader.delete(args.projectPath, args.featureId);
+        if (!deleted) {
+          throw new Error(`Feature ${args.featureId} not found or could not be deleted`);
+        }
+        return { deleted: true, featureId: args.featureId };
       },
     }),
 
@@ -237,30 +314,31 @@ const WORKFLOW_METADATA: WorkflowMetadata[] = [
 ];
 
 /**
- * Extract model preference from request headers and resolve to full model string
- * Falls back to sonnet if not specified
+ * Resolve a model tier string to the CopilotKit-formatted model identifier.
+ * Returns "anthropic/claude-..." format.
  */
-function getModelFromRequest(req: Request): string {
-  const modelHeader = req.headers['x-copilotkit-model'];
-  const modelKey = typeof modelHeader === 'string' ? modelHeader : 'sonnet';
+function resolveModelForCopilotKit(tier: string): string {
+  const resolved = resolveModelString(tier, 'claude-sonnet-4-5-20250929');
+  return resolved.startsWith('claude-') ? `anthropic/${resolved}` : resolved;
+}
 
-  // Resolve model alias to full model string using model-resolver
-  const resolvedModel = resolveModelString(modelKey, 'claude-sonnet-4-5-20250929');
-
-  // Map Claude model strings to CopilotKit's expected format (anthropic/model-name)
-  if (resolvedModel.startsWith('claude-')) {
-    return `anthropic/${resolvedModel}`;
+/**
+ * Extract model tier from request header. Falls back to 'sonnet'.
+ */
+function getModelTierFromRequest(req: Request): ModelTier {
+  const header = req.headers['x-copilotkit-model'];
+  const tier = typeof header === 'string' ? header : 'sonnet';
+  if (MODEL_TIERS.includes(tier as ModelTier)) {
+    return tier as ModelTier;
   }
-
-  return resolvedModel;
+  return 'sonnet';
 }
 
 export function createCopilotKitEndpoint(deps: CopilotKitDependencies) {
   const avaTools = createAvaTools(deps);
   const reviewTools = createAntagonisticReviewTools();
 
-  // Create agent factory functions that accept a model parameter
-  // This allows dynamic model selection per request
+  // Agent factory functions
   const createAvaAgent = (model: string) =>
     new BuiltInAgent({
       model,
@@ -270,8 +348,6 @@ export function createCopilotKitEndpoint(deps: CopilotKitDependencies) {
         'Use your tools to get real data before answering. Keep responses concise and action-oriented.',
         'When you perform an action, confirm what you did.',
       ].join(' '),
-      // ToolDefinition<ZodObject<…>> ⊄ ToolDefinition<ZodTypeAny> due to generic variance.
-      // Cast is safe — each tool already satisfies the ToolDefinition contract.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       tools: avaTools as any,
       maxSteps: 5,
@@ -292,31 +368,30 @@ export function createCopilotKitEndpoint(deps: CopilotKitDependencies) {
       maxSteps: 3,
     });
 
-  // Create the content-pipeline LangGraph flow
-  // Compiled without HITL gates for autonomous operation
-  const contentPipelineGraph = createContentCreationFlow({ enableHITL: false });
+  // Content pipeline with HITL gates enabled for interactive review
+  const contentPipelineGraph = createContentCreationFlow({ enableHITL: true });
 
-  // Default model for agent initialization
-  const defaultModel = 'anthropic/claude-sonnet-4-5-20250929';
+  // Pre-build one CopilotRuntime + Express handler per model tier.
+  // This avoids recreating agents on every request while supporting dynamic model selection.
+  const tierHandlers = new Map<ModelTier, ReturnType<typeof createCopilotEndpointExpress>>();
 
-  // CopilotKit v1.51 constructor types have a MaybePromise intersection bug
-  // that rejects plain objects. The cast is safe — runtime accepts Record<string, Agent>.
-  // Register all three agents: Ava (BuiltInAgent), content-pipeline (LangGraph),
-  // and antagonistic-review (BuiltInAgent). AG-UI handles state streaming.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const runtime = new CopilotRuntime({
-    agents: {
-      default: createAvaAgent(defaultModel),
-      'content-pipeline': contentPipelineGraph,
-      'antagonistic-review': createAntagonisticAgent(defaultModel),
-    } as any,
-  });
+  for (const tier of MODEL_TIERS) {
+    const model = resolveModelForCopilotKit(tier);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const runtime = new CopilotRuntime({
+      agents: {
+        default: createAvaAgent(model),
+        'content-pipeline': contentPipelineGraph,
+        'antagonistic-review': createAntagonisticAgent(model),
+      } as any,
+    });
+    tierHandlers.set(tier, createCopilotEndpointExpress({ runtime, basePath: '/' }));
+  }
 
   logger.info(
-    `CopilotKit runtime initialized with 3 agents: Ava (${avaTools.length} tools), content-pipeline (LangGraph), Antagonistic Review (${reviewTools.length} tools)`
+    `CopilotKit initialized: 3 model tiers x 3 agents (Ava: ${avaTools.length} tools, content-pipeline: LangGraph+HITL, Antagonistic Review: ${reviewTools.length} tools)`
   );
 
-  // Create router to combine CopilotKit endpoint and workflow metadata endpoint
   const router = Router();
 
   // GET /api/copilotkit/workflows - returns workflow metadata
@@ -324,22 +399,19 @@ export function createCopilotKitEndpoint(deps: CopilotKitDependencies) {
     res.json({ workflows: WORKFLOW_METADATA });
   });
 
-  // Log model selection on each CopilotKit request
-  router.use((req, _res, next) => {
-    if (req.method === 'POST') {
-      const model = getModelFromRequest(req);
-      logger.debug(`CopilotKit request with model preference: ${model}`);
+  // Route POST requests to the correct model-tier runtime
+  router.use('/', (req, res, next) => {
+    if (req.method !== 'POST') {
+      // Non-POST requests (GET /info, etc.) can use any tier — default to sonnet
+      const handler = tierHandlers.get('sonnet')!;
+      return handler(req, res, next);
     }
-    next();
-  });
 
-  // Mount the CopilotKit runtime endpoint
-  // Use @copilotkitnext/runtime's Express-native endpoint (proper Express Router)
-  // instead of @copilotkit/runtime's Hono-based adapter which has path mismatch issues.
-  // basePath '/' because Express strips the mount prefix (/api/copilotkit) from req.url.
-  // TODO: AG-UI protocol supports dynamic model selection via runtime properties.
-  // For now, agents use default model. Future: recreate agents per-request with resolved model.
-  router.use('/', createCopilotEndpointExpress({ runtime, basePath: '/' }));
+    const tier = getModelTierFromRequest(req);
+    logger.debug(`CopilotKit request routed to ${tier} runtime`);
+    const handler = tierHandlers.get(tier) ?? tierHandlers.get('sonnet')!;
+    return handler(req, res, next);
+  });
 
   return router;
 }

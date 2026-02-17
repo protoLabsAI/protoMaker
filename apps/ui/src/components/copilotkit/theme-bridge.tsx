@@ -1,24 +1,20 @@
 /**
- * Theme bridge for CopilotKit - maps Automaker CSS variables to CopilotKit CSS variables
+ * Theme bridge for CopilotKit
  *
- * CopilotKit has its own dark mode support via .dark class detection,
- * but we override specific variables to match Automaker's custom themes.
+ * CopilotKit v1.51 uses standard Tailwind CSS 4 variables (--primary, --background, etc.)
+ * which our design system already provides. This bridge only sets sidebar-specific overrides
+ * and ensures CopilotKit's internal styles integrate cleanly with our theme.
  */
 
 import type { CSSProperties } from 'react';
 
 /**
- * Returns CopilotKit CSS custom properties that map to the current Automaker theme.
- * Applied via a wrapper div's style prop around the CopilotSidebar.
+ * Returns CSS properties applied to the CopilotSidebar wrapper div.
+ * Sets the sidebar width and any CopilotKit-specific overrides.
  */
 export function getCopilotKitThemeStyles(): CSSProperties {
   return {
-    '--copilot-kit-primary-color': 'hsl(var(--primary))',
-    '--copilot-kit-contrast-color': 'hsl(var(--primary-foreground))',
-    '--copilot-kit-background-color': 'hsl(var(--background))',
-    '--copilot-kit-secondary-color': 'hsl(var(--card))',
-    '--copilot-kit-secondary-contrast-color': 'hsl(var(--card-foreground))',
-    '--copilot-kit-separator-color': 'hsl(var(--border))',
-    '--copilot-kit-muted-color': 'hsl(var(--muted))',
+    // CopilotKit sidebar width (default is 480px)
+    '--sidebar-width': '420px',
   } as CSSProperties;
 }
