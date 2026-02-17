@@ -74,6 +74,7 @@ export async function executeWrapUpFlowWithTracing(
       createdBeadsIds: [],
       createdFeatureIds: [],
       createdPrdIds: [],
+      createdLinearIssueIds: [],
       errors: [],
     };
 
