@@ -138,6 +138,116 @@ designs/
 | `--info`           | `#60a5fa` | Info               |
 | `--error`          | `#f87171` | Errors             |
 
+## agent-browser — Automated UI Testing (Matt Exclusive)
+
+You have access to `agent-browser`, a headless browser CLI built for AI agents. Use it to visually verify UI changes, test interactions, and catch rendering issues before creating PRs.
+
+### When to Use
+
+- **After implementing a component** — verify it renders correctly
+- **After theme/token changes** — check all chart colors, backgrounds, text contrast
+- **After layout changes** — verify responsive behavior at different viewports
+- **Before creating a PR** — screenshot the feature for visual proof of work
+- **Debugging visual bugs** — take screenshots, inspect element state
+
+### Core Workflow
+
+```bash
+# 1. Open the dev server (must be running on localhost:3007)
+agent-browser open http://localhost:3007
+
+# 2. Take a snapshot — get interactive element refs
+agent-browser snapshot -i --json
+
+# 3. Interact using refs from the snapshot
+agent-browser click @e5          # Click by ref
+agent-browser fill @e3 "text"    # Fill an input
+agent-browser select @e1 "opt"   # Select dropdown option
+
+# 4. Wait for state changes
+agent-browser wait --load networkidle
+agent-browser wait --url "**/dashboard"
+
+# 5. Screenshot to verify
+agent-browser screenshot result.png
+agent-browser screenshot --full full-page.png
+
+# 6. Close when done
+agent-browser close
+```
+
+### Key Commands
+
+| Command                                  | Purpose                            |
+| ---------------------------------------- | ---------------------------------- |
+| `agent-browser open <url>`               | Navigate to URL                    |
+| `agent-browser snapshot -i --json`       | Get interactive elements with refs |
+| `agent-browser click @ref`               | Click element by ref               |
+| `agent-browser fill @ref "text"`         | Fill input field                   |
+| `agent-browser screenshot [file]`        | Take screenshot                    |
+| `agent-browser screenshot --full [file]` | Full-page screenshot               |
+| `agent-browser get text @ref`            | Get text content                   |
+| `agent-browser get url`                  | Get current URL                    |
+| `agent-browser is visible @ref`          | Check element visibility           |
+| `agent-browser wait --text "..."`        | Wait for text to appear            |
+| `agent-browser set viewport 1280 720`    | Set viewport size                  |
+| `agent-browser set media dark`           | Set dark color scheme              |
+| `agent-browser tab new <url>`            | Open new tab                       |
+| `agent-browser console`                  | View console messages              |
+| `agent-browser errors`                   | View page errors                   |
+
+### Testing Patterns
+
+**Visual regression check:**
+
+```bash
+agent-browser open http://localhost:3007/dashboard
+agent-browser set viewport 1280 720
+agent-browser screenshot dashboard-desktop.png
+agent-browser set viewport 375 812
+agent-browser screenshot dashboard-mobile.png
+```
+
+**Theme validation:**
+
+```bash
+agent-browser open http://localhost:3007
+# Check dark mode (default)
+agent-browser screenshot theme-dark.png
+# Navigate to settings, switch theme, re-screenshot
+```
+
+**Chart color verification:**
+
+```bash
+agent-browser open http://localhost:3007/dashboard
+agent-browser wait --load networkidle
+agent-browser snapshot -i --json  # Check chart elements render
+agent-browser screenshot charts.png
+agent-browser errors  # Check for console errors
+```
+
+**Form interaction test:**
+
+```bash
+agent-browser open http://localhost:3007/settings
+agent-browser snapshot -i --json
+agent-browser fill @e3 "new-value"
+agent-browser click @e5  # Save button
+agent-browser wait --text "Saved"
+agent-browser screenshot settings-saved.png
+```
+
+### Rules
+
+- Always use `--json` flag when parsing snapshot output programmatically
+- Refs (`@e1`, `@e2`) are deterministic within a page state — re-snapshot after navigation
+- Dev server must be running on `localhost:3007` before using agent-browser
+- Screenshots go to the current working directory — use descriptive filenames
+- Clean up screenshots after PR is created (don't commit them)
+- Use `agent-browser close` when done to free resources
+- For Electron testing, connect via CDP: `agent-browser --cdp 9222 open http://localhost:3007`
+
 ## Team & Delegation
 
 Route non-frontend work to the right person: backend/API → **Kai**, infra/CI → **Frank**, agent flows → **Sam**, content → **Cindi**/**Jon**, strategic → **Ava**. Don't attempt work outside your domain.
