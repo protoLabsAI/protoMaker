@@ -83,6 +83,43 @@ Regex-based verification of source code catches structural issues (95% accurate)
 
 Helpers designed for single-use setup (`createFeatures(path, count)`) may overwrite data when called multiple times. Inline manual creation when test flow requires incremental mutations.
 
+## Visual Testing with agent-browser
+
+### When to use
+
+Matt (Frontend Engineer) has exclusive access to `agent-browser`, a headless browser CLI built for AI agents. Use it for visual verification during frontend work — not as a replacement for Playwright E2E tests.
+
+| Use case                                      | Tool          |
+| --------------------------------------------- | ------------- |
+| Verify component renders after implementation | agent-browser |
+| Theme/token change validation across views    | agent-browser |
+| Responsive layout spot-checks                 | agent-browser |
+| Critical user flow testing                    | Playwright    |
+| CI regression gates                           | Playwright    |
+
+### Snapshot-ref workflow
+
+agent-browser uses accessibility tree snapshots with deterministic refs (`@e1`, `@e2`) instead of CSS selectors. Always re-snapshot after navigation or state changes — refs are only valid for the current page state.
+
+```bash
+# Take snapshot, interact, verify
+agent-browser open http://localhost:3007/dashboard
+agent-browser snapshot -i --json        # Get interactive element refs
+agent-browser click @e5                  # Click by ref
+agent-browser wait --load networkidle    # Wait for state change
+agent-browser snapshot -i --json        # Re-snapshot (refs may change)
+agent-browser screenshot result.png      # Visual proof
+agent-browser close                      # Free resources
+```
+
+### Rules
+
+- Dev server must be running on `localhost:3007` before using agent-browser
+- Always close the browser session when done (`agent-browser close`)
+- Don't commit screenshots — use them for verification only, then clean up
+- Use `--json` flag when parsing snapshot output programmatically
+- For Electron testing, connect via CDP: `agent-browser --cdp 9222 open http://localhost:3007`
+
 ## Integration Testing
 
 ### Mock boundaries, not internals

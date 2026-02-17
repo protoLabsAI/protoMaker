@@ -387,6 +387,7 @@ Lucide React is the standard icon library. It provides tree-shakeable, consisten
 | Unit              | Vitest                      | Utility functions, hooks, store logic                               |
 | Component         | Storybook interaction tests | UI behavior, accessibility, visual states                           |
 | Visual regression | Chromatic (target)          | Unintended UI changes between releases                              |
+| Agent visual      | agent-browser               | Theme validation, chart colors, responsive layouts (Matt exclusive) |
 | E2E               | Playwright                  | Critical user flows (create feature, run agent, board interactions) |
 
 ## Build and tooling

@@ -237,15 +237,15 @@ Covers:
 
 These agents can be invoked interactively via CLI skills or Discord.
 
-| Role              | Agent | Model  | Trigger                 | Location                         |
-| ----------------- | ----- | ------ | ----------------------- | -------------------------------- |
-| Chief of Staff    | Ava   | Opus   | CLI, Discord, crew loop | `services/built-in-templates.ts` |
-| Frontend Engineer | Matt  | Sonnet | CLI, Discord            | `services/built-in-templates.ts` |
-| AI Agent Engineer | Sam   | Sonnet | CLI, Discord            | `services/built-in-templates.ts` |
-| Backend Engineer  | Kai   | Sonnet | CLI, Discord            | `services/built-in-templates.ts` |
-| DevOps Engineer   | Frank | Sonnet | CLI, Discord, crew loop | `services/built-in-templates.ts` |
-| Content Writer    | Cindi | Sonnet | CLI, Discord            | `services/built-in-templates.ts` |
-| GTM Specialist    | Jon   | Sonnet | CLI, Discord            | `services/built-in-templates.ts` |
+| Role              | Agent | Model  | Trigger                 | Exclusive Tools                   |
+| ----------------- | ----- | ------ | ----------------------- | --------------------------------- |
+| Chief of Staff    | Ava   | Opus   | CLI, Discord, crew loop | —                                 |
+| Frontend Engineer | Matt  | Sonnet | CLI, Discord            | Pencil design tool, agent-browser |
+| AI Agent Engineer | Sam   | Sonnet | CLI, Discord            | —                                 |
+| Backend Engineer  | Kai   | Sonnet | CLI, Discord            | —                                 |
+| DevOps Engineer   | Frank | Sonnet | CLI, Discord, crew loop | —                                 |
+| Content Writer    | Cindi | Sonnet | CLI, Discord            | —                                 |
+| GTM Specialist    | Jon   | Sonnet | CLI, Discord            | —                                 |
 
 ### Crew Loop Members (Scheduled)
 
