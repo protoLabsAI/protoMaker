@@ -154,7 +154,7 @@ export function createTwitchRoutes(
    */
   router.post('/suggestions/:id/approve', async (req: Request, res: Response) => {
     try {
-      const { id } = req.params;
+      const id = req.params.id as string;
 
       // Read all suggestions
       const suggestions = await twitchService.readSuggestions();
@@ -204,7 +204,7 @@ export function createTwitchRoutes(
    */
   router.post('/suggestions/:id/build', async (req: Request, res: Response) => {
     try {
-      const { id } = req.params;
+      const id = req.params.id as string;
       const { projectPath } = req.body;
 
       if (!projectPath || typeof projectPath !== 'string') {
@@ -346,7 +346,6 @@ export function createTwitchRoutes(
       await twitchService.storePollMetadata(pollResult.id, {
         suggestionIds,
         projectPath,
-        pollId: pollResult.id,
         createdAt: new Date().toISOString(),
         status: 'active',
       });

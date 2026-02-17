@@ -316,6 +316,11 @@ export type EventType =
   | 'lead-engineer:rule-evaluated'
   | 'lead-engineer:project-completing'
   | 'lead-engineer:project-completed'
+  // Twitch integration events
+  | 'twitch:connection'
+  | 'twitch:suggestion:updated'
+  | 'twitch:suggestion:built'
+  | 'twitch:poll:created'
   // Server lifecycle events
   | 'server:shutdown';
 

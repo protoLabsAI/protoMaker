@@ -433,7 +433,7 @@ export class TwitchService {
         id: poll.id,
         title: poll.title,
         choices: poll.choices,
-        durationSeconds: poll.duration,
+        durationSeconds: options.durationSeconds,
         status: poll.status,
       };
     } catch (error) {
@@ -452,7 +452,6 @@ export class TwitchService {
     metadata: {
       suggestionIds: string[];
       projectPath: string;
-      pollId: string;
       createdAt: string;
       status: string;
     }
