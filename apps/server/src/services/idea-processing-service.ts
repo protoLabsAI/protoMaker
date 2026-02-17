@@ -9,6 +9,8 @@ import path from 'path';
 import * as secureFs from '../lib/secure-fs.js';
 import type { EventEmitter } from '../lib/events.js';
 import { createLogger } from '@automaker/utils';
+import { ideaProcessingGraph, type IdeaProcessingState, type IdeaInput } from '@automaker/flows';
+import { LangfuseClient } from '@automaker/observability';
 
 interface IdeaSession {
   id: string;
@@ -43,10 +45,17 @@ export class IdeaProcessingService {
   private stateDir: string;
   private events: EventEmitter;
   private logger = createLogger('IdeaProcessingService');
+  private langfuse: LangfuseClient;
 
   constructor(dataDir: string, events: EventEmitter) {
     this.stateDir = path.join(dataDir, 'idea-sessions');
     this.events = events;
+    this.langfuse = new LangfuseClient({
+      publicKey: process.env.LANGFUSE_PUBLIC_KEY,
+      secretKey: process.env.LANGFUSE_SECRET_KEY,
+      baseUrl: process.env.LANGFUSE_BASE_URL || 'https://cloud.langfuse.com',
+      enabled: !!(process.env.LANGFUSE_PUBLIC_KEY && process.env.LANGFUSE_SECRET_KEY),
+    });
   }
 
   /**
@@ -138,18 +147,169 @@ export class IdeaProcessingService {
       idea: options.idea,
     });
 
-    // TODO: Execute LangGraph flow when available
-    // For now, just set to awaiting_approval to simulate HITL checkpoint
     this.logger.info('Idea processing started', { sessionId, idea: options.idea });
 
-    // Simulate processing by setting to awaiting_approval
-    setTimeout(() => {
-      this.updateSessionStatus(sessionId, 'awaiting_approval', {
-        state: { idea: options.idea, checkpoint: 'pre-approval' },
+    // Execute LangGraph flow asynchronously
+    this.executeIdeaFlow(sessionId, options).catch((error) => {
+      this.logger.error('Idea processing flow failed', { sessionId, error });
+      this.updateSessionStatus(sessionId, 'failed', {
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
-    }, 100);
+    });
 
     return sessionId;
+  }
+
+  /**
+   * Execute the LangGraph idea processing flow
+   */
+  private async executeIdeaFlow(sessionId: string, options: ProcessIdeaOptions): Promise<void> {
+    const startTime = new Date();
+
+    // Create Langfuse trace
+    const trace = this.langfuse.createTrace({
+      id: `idea-${sessionId}`,
+      name: 'Idea Processing',
+      sessionId,
+      metadata: {
+        idea: options.idea,
+        autoApprove: options.autoApprove,
+        countdownSeconds: options.countdownSeconds,
+      },
+      tags: ['idea-processing', 'langgraph'],
+    });
+
+    try {
+      // Parse idea text into structured input
+      const ideaInput: IdeaInput = {
+        title: this.extractTitle(options.idea),
+        description: options.idea,
+      };
+
+      // Create initial state
+      const initialState: IdeaProcessingState = {
+        idea: ideaInput,
+        processingNotes: [],
+      };
+
+      // Stream the graph execution
+      const stream = await ideaProcessingGraph.stream(initialState);
+
+      let finalState: IdeaProcessingState | undefined;
+
+      for await (const event of stream) {
+        // Event is a Record<nodeName, Partial<State>>
+        const nodeNames = Object.keys(event);
+        for (const nodeName of nodeNames) {
+          const nodeOutput = event[nodeName];
+
+          // Log span for each node execution
+          this.langfuse.createSpan({
+            traceId: trace?.id || `idea-${sessionId}`,
+            name: nodeName,
+            input: nodeOutput,
+            metadata: {
+              sessionId,
+              node: nodeName,
+            },
+          });
+
+          // Emit streaming event
+          this.events.emit('ideation:stream', {
+            sessionId,
+            node: nodeName,
+            output: nodeOutput,
+          });
+
+          // Track final state
+          finalState = { ...finalState, ...nodeOutput } as IdeaProcessingState;
+        }
+      }
+
+      if (!finalState) {
+        throw new Error('Flow completed without producing final state');
+      }
+
+      const endTime = new Date();
+
+      // Update trace
+      if (trace) {
+        trace.update({
+          output: {
+            approved: finalState.approved,
+            category: finalState.category,
+            impact: finalState.impact,
+            effort: finalState.effort,
+            usedFastPath: finalState.usedFastPath,
+          },
+          metadata: {
+            complexity: finalState.complexity,
+            processingNotes: finalState.processingNotes,
+            duration: endTime.getTime() - startTime.getTime(),
+          },
+        });
+      }
+
+      // Decide next status based on autoApprove and flow result
+      if (finalState.approved && options.autoApprove) {
+        // Auto-approved, move to completed
+        await this.updateSessionStatus(sessionId, 'completed', {
+          state: finalState,
+          result: {
+            approved: finalState.approved,
+            category: finalState.category,
+            impact: finalState.impact,
+            effort: finalState.effort,
+          },
+        });
+      } else if (finalState.approved) {
+        // Needs human approval
+        await this.updateSessionStatus(sessionId, 'awaiting_approval', {
+          state: finalState,
+        });
+      } else {
+        // Flow rejected the idea
+        await this.updateSessionStatus(sessionId, 'failed', {
+          state: finalState,
+          error: finalState.reviewOutput?.reasoning || 'Idea rejected by flow',
+        });
+      }
+
+      await this.langfuse.flush();
+    } catch (error) {
+      const endTime = new Date();
+
+      // Log error to trace
+      if (trace) {
+        trace.update({
+          output: {
+            error: error instanceof Error ? error.message : 'Unknown error',
+          },
+          metadata: {
+            duration: endTime.getTime() - startTime.getTime(),
+            failed: true,
+          },
+        });
+      }
+
+      await this.langfuse.flush();
+      throw error;
+    }
+  }
+
+  /**
+   * Extract title from idea text (first line or first sentence)
+   */
+  private extractTitle(idea: string): string {
+    const lines = idea.split('\n');
+    const firstLine = lines[0].trim();
+    if (firstLine.length > 0 && firstLine.length <= 100) {
+      return firstLine;
+    }
+    // Fallback to first sentence
+    const sentences = idea.split(/[.!?]/);
+    const firstSentence = sentences[0].trim();
+    return firstSentence.substring(0, 100);
   }
 
   /**
@@ -182,20 +342,24 @@ export class IdeaProcessingService {
     });
 
     if (options.approved) {
-      // Update status to processing and continue flow
-      session.status = 'processing';
+      // Mark as completed with user approval
+      session.status = 'completed';
       session.updatedAt = new Date().toISOString();
+      session.result = {
+        approved: true,
+        state: session.state,
+        userFeedback: options.feedback,
+      };
       await this.saveSession(session);
 
-      this.logger.info('Idea session approved, resuming', { sessionId: options.sessionId });
+      this.logger.info('Idea session approved by user', { sessionId: options.sessionId });
 
-      // TODO: Resume LangGraph flow execution
-      // For now, simulate completion
-      setTimeout(() => {
-        this.updateSessionStatus(options.sessionId, 'completed', {
-          result: { success: true, idea: session.idea },
-        });
-      }, 100);
+      // Emit completion event
+      this.events.emit('ideation:stream', {
+        sessionId: options.sessionId,
+        status: 'completed',
+        result: session.result,
+      });
     } else {
       // Mark as failed if rejected
       session.status = 'failed';
