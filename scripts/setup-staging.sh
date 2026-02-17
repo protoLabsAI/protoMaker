@@ -220,7 +220,8 @@ start_services() {
   docker compose -f "$COMPOSE_FILE" up -d server ui
 
   # Start docs independently (won't be affected by app restarts)
-  docker compose -f "$DOCS_COMPOSE_FILE" up -d 2>/dev/null || warn "Docs failed to start"
+  # Force-recreate ensures the container picks up the newly built image.
+  docker compose -f "$DOCS_COMPOSE_FILE" up -d --force-recreate 2>/dev/null || warn "Docs failed to start"
 
   # Start storybook separately — failure is non-fatal
   docker compose -f "$COMPOSE_FILE" up -d storybook 2>/dev/null || warn "Storybook failed to start (image may not exist)"
