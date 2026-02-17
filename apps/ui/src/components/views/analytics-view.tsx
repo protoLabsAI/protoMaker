@@ -18,7 +18,7 @@ export function AnalyticsView() {
   const handleFeatureClick = useCallback(
     (featureId: string) => {
       // Navigate to board — the feature will be highlighted there
-      navigate({ to: '/board', search: { featureId } as any });
+      navigate({ to: '/board', search: { featureId } });
     },
     [navigate]
   );

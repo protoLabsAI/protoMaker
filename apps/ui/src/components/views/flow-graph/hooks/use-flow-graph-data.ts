@@ -45,8 +45,16 @@ export function useFlowGraphData() {
   const { data: capacityData } = useCapacityMetrics(projectPath);
   const { data: healthData } = useSystemHealth(projectPath);
 
-  const runningAgents = runningAgentsData?.agents ?? [];
-  const agentCount = runningAgentsData?.count ?? 0;
+  const allRunningAgents = runningAgentsData?.agents ?? [];
+  // Filter to current project to avoid node ID collisions across projects
+  const runningAgents = useMemo(
+    () =>
+      projectPath
+        ? allRunningAgents.filter((a) => a.projectPath === projectPath)
+        : allRunningAgents,
+    [allRunningAgents, projectPath]
+  );
+  const agentCount = runningAgents.length;
 
   // Active features: in_progress or waiting_approval (review)
   const activeFeatures = useMemo(
