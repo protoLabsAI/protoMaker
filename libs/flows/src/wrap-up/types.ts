@@ -58,6 +58,32 @@ export interface ProjectMetrics {
   milestoneBreakdown: MilestoneSummary[];
   prUrls: string[];
   dataSummary: string;
+  /** Complexity prediction accuracy metrics */
+  complexityAccuracy?: ComplexityAccuracyMetrics;
+}
+
+/** Complexity prediction accuracy tracking */
+export interface ComplexityAccuracyMetrics {
+  /** Total features with predicted complexity */
+  totalPredictions: number;
+  /** Features where predicted complexity matched actual */
+  accuratePredictions: number;
+  /** Accuracy percentage (0-100) */
+  accuracyPercent: number;
+  /** Breakdown by complexity level */
+  byComplexity: {
+    small: { predicted: number; accurate: number };
+    medium: { predicted: number; accurate: number };
+    large: { predicted: number; accurate: number };
+    architectural: { predicted: number; accurate: number };
+  };
+  /** Average cost overrun by complexity (positive = over budget, negative = under budget) */
+  avgCostOverrunByComplexity: {
+    small: number;
+    medium: number;
+    large: number;
+    architectural: number;
+  };
 }
 
 // ─── Memory Types ────────────────────────────────────────────────────────────
@@ -83,6 +109,12 @@ export interface ImprovementItem {
   type: 'operational' | 'code' | 'strategic';
   priority: 1 | 2 | 3;
   category?: string;
+  /** Linear issue ID (set after creation) */
+  linearIssueId?: string;
+  /** Linear issue identifier (e.g., AUTO-123) */
+  linearIdentifier?: string;
+  /** Linear issue URL */
+  linearUrl?: string;
 }
 
 // ─── HITL Types ──────────────────────────────────────────────────────────────
@@ -128,6 +160,7 @@ export interface WrapUpState {
   createdBeadsIds: string[];
   createdFeatureIds: string[];
   createdPrdIds: string[];
+  createdLinearIssueIds: string[];
 
   // ─── Errors ──────────────────────────────────────
   errors: string[];
@@ -185,6 +218,10 @@ export const WrapUpStateAnnotation = Annotation.Root({
     default: () => [],
   }),
   createdPrdIds: Annotation<string[]>({
+    reducer: appendReducer,
+    default: () => [],
+  }),
+  createdLinearIssueIds: Annotation<string[]>({
     reducer: appendReducer,
     default: () => [],
   }),

@@ -11,7 +11,7 @@ import type { WrapUpState, ImprovementItem } from '../types.js';
 
 /**
  * Interface for routing improvements to external systems.
- * Server injects real implementation with Beads, FeatureLoader, PRD submission.
+ * Server injects real implementation with Beads, FeatureLoader, PRD submission, Linear.
  */
 export interface ImprovementRouter {
   /** Create a Beads task for operational improvements */
@@ -22,6 +22,12 @@ export interface ImprovementRouter {
 
   /** Submit a PRD for strategic improvements (full pipeline loop) */
   submitPrd?(projectPath: string, item: ImprovementItem): Promise<{ id: string } | null>;
+
+  /** Create a Linear issue for any improvement item (tagged with 'reflection' label) */
+  createLinearIssue?(
+    projectPath: string,
+    item: ImprovementItem
+  ): Promise<{ issueId: string; identifier?: string; url?: string } | null>;
 }
 
 /** Default mock router */
@@ -42,10 +48,12 @@ export function createRouteImprovementsNode(router?: ImprovementRouter) {
     const beadsIds: string[] = [];
     const featureIds: string[] = [];
     const prdIds: string[] = [];
+    const linearIssueIds: string[] = [];
     const errors: string[] = [];
 
     for (const item of improvements) {
       try {
+        // Route to primary system based on type
         switch (item.type) {
           case 'operational': {
             const result = await impl.createBeadsTask(input.projectPath, item);
@@ -69,6 +77,23 @@ export function createRouteImprovementsNode(router?: ImprovementRouter) {
             break;
           }
         }
+
+        // Also create Linear issue for all improvement items (tagged with 'reflection')
+        if (impl.createLinearIssue) {
+          try {
+            const linearResult = await impl.createLinearIssue(input.projectPath, item);
+            if (linearResult) {
+              linearIssueIds.push(linearResult.issueId);
+              // Store Linear metadata on the improvement item
+              item.linearIssueId = linearResult.issueId;
+              item.linearIdentifier = linearResult.identifier;
+              item.linearUrl = linearResult.url;
+            }
+          } catch (linearError) {
+            // Don't fail the entire routing if Linear creation fails
+            errors.push(`Failed to create Linear issue for "${item.title}": ${linearError}`);
+          }
+        }
       } catch (error) {
         errors.push(`Failed to route improvement "${item.title}": ${error}`);
       }
@@ -79,6 +104,7 @@ export function createRouteImprovementsNode(router?: ImprovementRouter) {
       createdBeadsIds: beadsIds,
       createdFeatureIds: featureIds,
       createdPrdIds: prdIds,
+      createdLinearIssueIds: linearIssueIds,
       errors: errors.length > 0 ? errors : undefined,
     };
   };

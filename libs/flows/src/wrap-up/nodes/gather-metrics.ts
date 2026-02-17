@@ -3,9 +3,12 @@
  *
  * Pure function: formats input data into a structured metrics object
  * and a pre-formatted text summary for LLM consumption.
+ *
+ * Enhanced to track complexity prediction accuracy by comparing predicted
+ * vs actual feature complexity based on execution metrics.
  */
 
-import type { WrapUpState, ProjectMetrics } from '../types.js';
+import type { WrapUpState, ProjectMetrics, ComplexityAccuracyMetrics } from '../types.js';
 
 /**
  * Interface for pluggable metrics collection.
@@ -20,6 +23,7 @@ export interface MetricsCollector {
     shippedFeatures: number;
     failedFeatures: number;
     prUrls: string[];
+    complexityAccuracy?: ComplexityAccuracyMetrics;
   }>;
 }
 
@@ -35,7 +39,7 @@ const defaultCollector: MetricsCollector = {
  */
 function buildDataSummary(
   input: WrapUpState['input'],
-  extra: { shipped: number; failed: number }
+  extra: { shipped: number; failed: number; complexityAccuracy?: ComplexityAccuracyMetrics }
 ): string {
   const lines = [
     `Project: ${input.projectTitle}`,
@@ -51,6 +55,28 @@ function buildDataSummary(
 
   for (const ms of input.milestoneSummaries) {
     lines.push(`  - ${ms.milestoneTitle}: ${ms.featureCount} features, $${ms.costUsd.toFixed(2)}`);
+  }
+
+  // Add complexity prediction accuracy if available
+  if (extra.complexityAccuracy) {
+    const ca = extra.complexityAccuracy;
+    lines.push('');
+    lines.push('Complexity Prediction Accuracy:');
+    lines.push(`  - Predictions: ${ca.totalPredictions}`);
+    lines.push(`  - Accuracy: ${ca.accuracyPercent.toFixed(1)}%`);
+    lines.push('  - By Complexity:');
+    lines.push(
+      `    • Small: ${ca.byComplexity.small.accurate}/${ca.byComplexity.small.predicted} accurate (${ca.byComplexity.small.predicted > 0 ? ((ca.byComplexity.small.accurate / ca.byComplexity.small.predicted) * 100).toFixed(1) : 0}%)`
+    );
+    lines.push(
+      `    • Medium: ${ca.byComplexity.medium.accurate}/${ca.byComplexity.medium.predicted} accurate (${ca.byComplexity.medium.predicted > 0 ? ((ca.byComplexity.medium.accurate / ca.byComplexity.medium.predicted) * 100).toFixed(1) : 0}%)`
+    );
+    lines.push(
+      `    • Large: ${ca.byComplexity.large.accurate}/${ca.byComplexity.large.predicted} accurate (${ca.byComplexity.large.predicted > 0 ? ((ca.byComplexity.large.accurate / ca.byComplexity.large.predicted) * 100).toFixed(1) : 0}%)`
+    );
+    lines.push(
+      `    • Architectural: ${ca.byComplexity.architectural.accurate}/${ca.byComplexity.architectural.predicted} accurate (${ca.byComplexity.architectural.predicted > 0 ? ((ca.byComplexity.architectural.accurate / ca.byComplexity.architectural.predicted) * 100).toFixed(1) : 0}%)`
+    );
   }
 
   return lines.join('\n');
@@ -75,7 +101,9 @@ export function createGatherMetricsNode(collector?: MetricsCollector) {
       dataSummary: buildDataSummary(input, {
         shipped: extra.shippedFeatures || input.totalFeatures,
         failed: extra.failedFeatures || input.failureCount,
+        complexityAccuracy: extra.complexityAccuracy,
       }),
+      complexityAccuracy: extra.complexityAccuracy,
     };
 
     return {

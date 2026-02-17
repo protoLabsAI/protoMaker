@@ -270,6 +270,7 @@ export {
   type WrapUpInput,
   type MilestoneSummary as WrapUpMilestoneSummary,
   type ProjectMetrics as WrapUpProjectMetrics,
+  type ComplexityAccuracyMetrics,
   type MemoryFileEntry,
   type StructuredLearning,
   type ImprovementItem,

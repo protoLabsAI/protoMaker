@@ -18,6 +18,7 @@ export {
   type WrapUpInput,
   type MilestoneSummary,
   type ProjectMetrics,
+  type ComplexityAccuracyMetrics,
   type MemoryFileEntry,
   type StructuredLearning,
   type ImprovementItem,
