@@ -87,7 +87,7 @@ export function useFlowGraphData() {
       draggable: false,
     });
 
-    // 2. Crew nodes
+    // 2. Crew nodes (members is now an array after transform in useCrewStatus)
     const crewMembers = crewStatus?.members ?? [];
     for (const member of crewMembers) {
       const nodeId = CREW_NODE_ID_MAP[member.id];
@@ -97,9 +97,9 @@ export function useFlowGraphData() {
         id: member.id,
         label: CREW_DISPLAY_NAMES[member.id] || member.id,
         enabled: member.enabled,
-        isRunning: member.isRunning,
-        lastCheckTime: member.lastCheckTime,
-        lastSeverity: member.lastCheckResult?.severity ?? null,
+        isRunning: member.running,
+        lastCheckTime: member.lastCheck?.timestamp ?? null,
+        lastSeverity: member.lastCheck?.result?.severity ?? null,
       };
       result.push({
         id: nodeId,
