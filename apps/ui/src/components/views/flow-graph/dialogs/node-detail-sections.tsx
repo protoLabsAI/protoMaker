@@ -5,9 +5,21 @@
  * existing hooks and the node's data prop.
  */
 
-import { ExternalLink, Clock, Activity, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
+import {
+  ExternalLink,
+  Clock,
+  Activity,
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+  DollarSign,
+  Square,
+  FileText,
+} from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { scrubPii } from '@/lib/scrub-pii';
+import { formatCostUsd } from '@/lib/format';
 import { getLangfuseTraceUrl } from '@/lib/langfuse-url';
 import type {
   OrchestratorNodeData,
@@ -255,31 +267,80 @@ export function FeatureSection({ data }: { data: FeatureNodeData }) {
 // Agent Section
 // ============================================
 
-export function AgentSection({ data }: { data: AgentNodeData }) {
+interface AgentSectionProps {
+  data: AgentNodeData;
+  onStop?: () => void;
+  onViewLogs?: () => void;
+  isStopping?: boolean;
+}
+
+export function AgentSection({ data, onStop, onViewLogs, isStopping }: AgentSectionProps) {
   const elapsed = Date.now() - data.startTime;
 
   return (
-    <div className="space-y-1">
-      {data.model && (
-        <SectionRow label="Model">
-          <Badge variant="outline">{data.model}</Badge>
+    <div className="space-y-3">
+      <div className="space-y-1">
+        {data.description && (
+          <SectionRow label="Description">
+            <span className="text-xs max-w-[200px] truncate" title={scrubPii(data.description)}>
+              {scrubPii(data.description)}
+            </span>
+          </SectionRow>
+        )}
+        {data.model && (
+          <SectionRow label="Model">
+            <Badge variant="outline">{data.model}</Badge>
+          </SectionRow>
+        )}
+        <SectionRow label="Mode">
+          <Badge variant={data.isAutoMode ? 'default' : 'secondary'}>
+            {data.isAutoMode ? 'Auto' : 'Manual'}
+          </Badge>
         </SectionRow>
-      )}
-      <SectionRow label="Mode">
-        <Badge variant={data.isAutoMode ? 'default' : 'secondary'}>
-          {data.isAutoMode ? 'Auto' : 'Manual'}
-        </Badge>
-      </SectionRow>
-      <SectionRow label="Running For">
-        <span className="flex items-center gap-1.5 tabular-nums">
-          <Clock className="w-3 h-3" />
-          {formatDuration(elapsed)}
-        </span>
-      </SectionRow>
-      {data.traceId && (
-        <SectionRow label="Trace">
-          <TraceLink traceId={data.traceId} />
+        <SectionRow label="Running For">
+          <span className="flex items-center gap-1.5 tabular-nums">
+            <Clock className="w-3 h-3" />
+            {formatDuration(elapsed)}
+          </span>
         </SectionRow>
+        {typeof data.costUsd === 'number' && data.costUsd > 0 && (
+          <SectionRow label="Cost">
+            <span className="inline-flex items-center gap-1 text-emerald-400">
+              <DollarSign className="w-3 h-3" />
+              {formatCostUsd(data.costUsd)}
+            </span>
+          </SectionRow>
+        )}
+        {data.projectName && <SectionRow label="Project">{data.projectName}</SectionRow>}
+        {data.traceId && (
+          <SectionRow label="Trace">
+            <TraceLink traceId={data.traceId} />
+          </SectionRow>
+        )}
+      </div>
+
+      {/* Action buttons */}
+      {(onViewLogs || onStop) && (
+        <div className="flex items-center gap-2 pt-1">
+          {onViewLogs && (
+            <Button variant="outline" size="sm" className="flex-1" onClick={onViewLogs}>
+              <FileText className="w-3.5 h-3.5 mr-1.5" />
+              View Logs
+            </Button>
+          )}
+          {onStop && (
+            <Button
+              variant="destructive"
+              size="sm"
+              className="flex-1"
+              onClick={onStop}
+              disabled={isStopping}
+            >
+              <Square className="w-3.5 h-3.5 mr-1.5" />
+              Stop Agent
+            </Button>
+          )}
+        </div>
       )}
     </div>
   );

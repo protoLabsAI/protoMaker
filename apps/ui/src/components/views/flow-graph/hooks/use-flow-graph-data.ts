@@ -226,6 +226,11 @@ export function useFlowGraphData() {
         model: agent.model,
         startTime: agent.startTime || Date.now(),
         isAutoMode: agent.isAutoMode,
+        description: agent.description,
+        projectPath: agent.projectPath,
+        projectName: agent.projectName,
+        branchName: agent.branchName,
+        costUsd: agent.costUsd,
       };
       result.push({
         id: `agent-${agent.featureId}`,

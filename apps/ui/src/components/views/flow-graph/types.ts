@@ -62,6 +62,11 @@ export interface AgentNodeData {
   startTime: number;
   isAutoMode: boolean;
   traceId?: string;
+  description?: string;
+  projectPath?: string;
+  projectName?: string;
+  branchName?: string;
+  costUsd?: number;
   [key: string]: unknown;
 }
 

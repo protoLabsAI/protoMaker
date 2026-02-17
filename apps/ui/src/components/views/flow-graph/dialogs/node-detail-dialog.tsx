@@ -5,6 +5,7 @@
  * All displayed text is scrubbed of PII for safe screenshots/demos.
  */
 
+import { useState, useCallback } from 'react';
 import {
   Brain,
   Server,
@@ -24,6 +25,8 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { useCrewStatus } from '@/hooks/queries/use-crew-status';
+import { useStopFeature } from '@/hooks/mutations';
+import { AgentOutputModal } from '@/components/views/board-view/dialogs/agent-output-modal';
 import {
   OrchestratorSection,
   CrewSection,
@@ -90,6 +93,17 @@ function getNodeSubtitle(nodeType: string): string {
 
 export function NodeDetailDialog({ open, onOpenChange, node }: NodeDetailDialogProps) {
   const { data: crewStatus } = useCrewStatus();
+  const stopFeature = useStopFeature();
+  const [showLogsModal, setShowLogsModal] = useState(false);
+
+  const handleStop = useCallback(() => {
+    if (!node || node.nodeType !== 'agent') return;
+    const agentData = node.nodeData as AgentNodeData;
+    stopFeature.mutate(
+      { featureId: agentData.featureId, projectPath: agentData.projectPath },
+      { onSuccess: () => onOpenChange(false) }
+    );
+  }, [node, stopFeature, onOpenChange]);
 
   if (!node) return null;
 
@@ -106,40 +120,64 @@ export function NodeDetailDialog({ open, onOpenChange, node }: NodeDetailDialogP
       ? crewStatus.members.find((m) => m.id === (node.nodeData as CrewNodeData).id)
       : undefined;
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-violet-500/15 text-violet-400">
-              <Icon className="w-4 h-4" />
-            </div>
-            <div>
-              <DialogTitle className="text-base">{title}</DialogTitle>
-              <DialogDescription className="text-xs">{subtitle}</DialogDescription>
-            </div>
-          </div>
-        </DialogHeader>
+  const agentData = node.nodeType === 'agent' ? (node.nodeData as AgentNodeData) : null;
 
-        <div className="mt-2">
-          {node.nodeType === 'orchestrator' && (
-            <OrchestratorSection data={node.nodeData as OrchestratorNodeData} />
-          )}
-          {node.nodeType === 'crew' && (
-            <CrewSection data={node.nodeData as CrewNodeData} memberStatus={crewMemberStatus} />
-          )}
-          {node.nodeType === 'service' && (
-            <ServiceSection data={node.nodeData as ServiceNodeData} />
-          )}
-          {node.nodeType === 'integration' && (
-            <IntegrationSection data={node.nodeData as IntegrationNodeData} />
-          )}
-          {node.nodeType === 'feature' && (
-            <FeatureSection data={node.nodeData as FeatureNodeData} />
-          )}
-          {node.nodeType === 'agent' && <AgentSection data={node.nodeData as AgentNodeData} />}
-        </div>
-      </DialogContent>
-    </Dialog>
+  return (
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-violet-500/15 text-violet-400">
+                <Icon className="w-4 h-4" />
+              </div>
+              <div>
+                <DialogTitle className="text-base">{title}</DialogTitle>
+                <DialogDescription className="text-xs">{subtitle}</DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="mt-2">
+            {node.nodeType === 'orchestrator' && (
+              <OrchestratorSection data={node.nodeData as OrchestratorNodeData} />
+            )}
+            {node.nodeType === 'crew' && (
+              <CrewSection data={node.nodeData as CrewNodeData} memberStatus={crewMemberStatus} />
+            )}
+            {node.nodeType === 'service' && (
+              <ServiceSection data={node.nodeData as ServiceNodeData} />
+            )}
+            {node.nodeType === 'integration' && (
+              <IntegrationSection data={node.nodeData as IntegrationNodeData} />
+            )}
+            {node.nodeType === 'feature' && (
+              <FeatureSection data={node.nodeData as FeatureNodeData} />
+            )}
+            {node.nodeType === 'agent' && agentData && (
+              <AgentSection
+                data={agentData}
+                onStop={handleStop}
+                onViewLogs={() => setShowLogsModal(true)}
+                isStopping={stopFeature.isPending}
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Agent Output Modal — rendered outside the Dialog to avoid z-index issues */}
+      {agentData && showLogsModal && (
+        <AgentOutputModal
+          open={true}
+          onClose={() => setShowLogsModal(false)}
+          projectPath={agentData.projectPath}
+          featureDescription={agentData.description || agentData.title}
+          featureId={agentData.featureId}
+          featureStatus="running"
+          branchName={agentData.branchName}
+        />
+      )}
+    </>
   );
 }

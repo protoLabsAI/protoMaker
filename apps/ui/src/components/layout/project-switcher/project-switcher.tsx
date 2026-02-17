@@ -36,7 +36,6 @@ export function ProjectSwitcher() {
   const navigate = useNavigate();
   const location = useLocation();
   const { hideWiki } = SIDEBAR_FEATURE_FLAGS;
-  const isWikiActive = location.pathname === '/wiki';
   const {
     projects,
     currentProject,
@@ -125,8 +124,9 @@ export function ProjectSwitcher() {
   }, []);
 
   const handleWikiClick = useCallback(() => {
-    navigate({ to: '/wiki' });
-  }, [navigate]);
+    const api = getElectronAPI();
+    api.openExternalLink('https://docs.protolabs.studio');
+  }, []);
 
   /**
    * Opens the system folder selection dialog and initializes the selected project.
@@ -416,32 +416,21 @@ export function ProjectSwitcher() {
 
         {/* Wiki and Bug Report Buttons at the very bottom */}
         <div className="p-2 border-t border-border/40 space-y-2">
-          {/* Wiki Button */}
+          {/* Docs Button (opens docs.protolabs.studio) */}
           {!hideWiki && (
             <button
               onClick={handleWikiClick}
               className={cn(
                 'w-full aspect-square rounded-xl flex items-center justify-center',
                 'transition-all duration-200 ease-out',
-                isWikiActive
-                  ? [
-                      'bg-gradient-to-r from-brand-500/20 via-brand-500/15 to-brand-600/10',
-                      'text-foreground',
-                      'border border-brand-500/30',
-                      'shadow-md shadow-brand-500/10',
-                    ]
-                  : [
-                      'text-muted-foreground hover:text-foreground',
-                      'hover:bg-accent/50 border border-transparent hover:border-border/40',
-                      'hover:shadow-sm hover:scale-105 active:scale-95',
-                    ]
+                'text-muted-foreground hover:text-foreground',
+                'hover:bg-accent/50 border border-transparent hover:border-border/40',
+                'hover:shadow-sm hover:scale-105 active:scale-95'
               )}
-              title="Wiki"
-              data-testid="wiki-button"
+              title="Documentation"
+              data-testid="docs-button"
             >
-              <BookOpen
-                className={cn('w-5 h-5', isWikiActive && 'text-brand-500 drop-shadow-sm')}
-              />
+              <BookOpen className="w-5 h-5" />
             </button>
           )}
           {/* Bug Report Button */}
