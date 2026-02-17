@@ -27,7 +27,11 @@ export function Gauge({
   const offset = circumference - (percent / 100) * circumference;
 
   const color =
-    percent >= thresholds.critical ? '#ef4444' : percent >= thresholds.warn ? '#f59e0b' : '#10b981';
+    percent >= thresholds.critical
+      ? 'var(--status-error)'
+      : percent >= thresholds.warn
+        ? 'var(--status-warning)'
+        : 'var(--status-success)';
 
   return (
     <div className="flex flex-col items-center">
@@ -135,7 +139,7 @@ interface CapacityBarProps {
   color?: string;
 }
 
-export function CapacityBar({ label, current, max, color = '#8b5cf6' }: CapacityBarProps) {
+export function CapacityBar({ label, current, max, color = 'var(--chart-1)' }: CapacityBarProps) {
   const percent = max > 0 ? Math.min((current / max) * 100, 100) : 0;
 
   return (

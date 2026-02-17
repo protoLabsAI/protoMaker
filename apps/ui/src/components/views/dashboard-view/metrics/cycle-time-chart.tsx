@@ -65,7 +65,7 @@ export function CycleTimeChart({ data, isLoading }: CycleTimeChartProps) {
                 }}
                 formatter={(value: number | undefined) => [value ?? 0, 'Features']}
               />
-              <Bar dataKey="count" fill="#a78bfa" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="count" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>

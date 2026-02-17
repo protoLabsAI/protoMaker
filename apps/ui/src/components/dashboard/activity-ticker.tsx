@@ -14,7 +14,7 @@ const sourceStyles: Record<string, { color: string; label: string }> = {
   discord: { color: '#5865F2', label: 'Discord' },
   linear: { color: '#5E6AD2', label: 'Linear' },
   github: { color: '#238636', label: 'GitHub' },
-  agent: { color: '#8b5cf6', label: 'Agent' },
+  agent: { color: 'var(--chart-1)', label: 'Agent' },
 };
 
 interface ActivityTickerProps {

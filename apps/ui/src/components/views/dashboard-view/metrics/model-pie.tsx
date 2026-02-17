@@ -6,9 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 const MODEL_COLORS: Record<string, string> = {
-  sonnet: '#8b5cf6',
-  opus: '#f59e0b',
-  haiku: '#10b981',
+  sonnet: 'var(--chart-1)',
+  opus: 'var(--chart-3)',
+  haiku: 'var(--chart-2)',
 };
 
 interface ModelPieChartProps {
@@ -63,7 +63,7 @@ export function ModelPieChart({ data, isLoading }: ModelPieChartProps) {
                 {chartData.map((entry) => (
                   <Cell
                     key={entry.key}
-                    fill={MODEL_COLORS[entry.key] || '#6b7280'}
+                    fill={MODEL_COLORS[entry.key] || 'var(--muted)'}
                     stroke="transparent"
                   />
                 ))}

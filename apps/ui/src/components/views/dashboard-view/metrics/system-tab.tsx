@@ -128,19 +128,19 @@ export function SystemTab({ projectPath }: SystemTabProps) {
             label="Agent Slots"
             current={capacity?.concurrency ?? 0}
             max={capacity?.maxConcurrency ?? 3}
-            color="#8b5cf6"
+            color="var(--chart-1)"
           />
           <CapacityBar
             label="Active Worktrees"
             current={capacity?.concurrency ?? 0}
             max={capacity?.maxConcurrency ?? 3}
-            color="#06b6d4"
+            color="var(--chart-4)"
           />
           <CapacityBar
             label="Queue Depth"
             current={capacity?.backlog ?? 0}
             max={Math.max(capacity?.backlog ?? 10, 10)}
-            color="#f59e0b"
+            color="var(--chart-3)"
           />
         </div>
       </GlowCard>

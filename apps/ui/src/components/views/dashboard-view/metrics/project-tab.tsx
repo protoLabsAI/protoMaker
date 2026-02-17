@@ -78,14 +78,14 @@ export function ProjectMetricsTab({ projectPath }: ProjectMetricsTabProps) {
           title="PRs Merged"
           data={prSeries.data}
           isLoading={prSeries.isLoading}
-          color="#f97316"
+          color="var(--chart-5)"
           valueLabel="PRs"
         />
         <ThroughputChart
           title="Commits"
           data={commitSeries.data}
           isLoading={commitSeries.isLoading}
-          color="#06b6d4"
+          color="var(--chart-4)"
           valueLabel="Commits"
         />
       </div>

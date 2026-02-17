@@ -94,42 +94,42 @@ export function KpiCards({ data, isLoading }: KpiCardsProps) {
         value={formatCost(data.totalCostUsd)}
         subtitle={`${formatCost(data.totalCostUsd / Math.max(data.totalFeatures, 1))}/feature`}
         icon={DollarSign}
-        iconColor="bg-green-500/10 text-green-500"
+        iconColor="bg-chart-2/10 text-chart-2"
       />
       <MetricCard
         label="Features"
         value={String(data.totalFeatures)}
         subtitle={`${data.successRate.toFixed(0)}% success`}
         icon={Hash}
-        iconColor="bg-blue-500/10 text-blue-500"
+        iconColor="bg-chart-4/10 text-chart-4"
       />
       <MetricCard
         label="Throughput"
         value={`${data.throughputPerDay.toFixed(1)}/d`}
         subtitle="features per day"
         icon={Zap}
-        iconColor="bg-yellow-500/10 text-yellow-500"
+        iconColor="bg-chart-3/10 text-chart-3"
       />
       <MetricCard
         label="Cycle Time"
         value={formatDuration(data.avgCycleTimeMs)}
         subtitle="avg per feature"
         icon={Clock}
-        iconColor="bg-purple-500/10 text-purple-500"
+        iconColor="bg-chart-1/10 text-chart-1"
       />
       <MetricCard
         label="PRs/Day"
         value={data.prsPerDay.toFixed(1)}
         subtitle="merged per day"
         icon={GitPullRequest}
-        iconColor="bg-orange-500/10 text-orange-500"
+        iconColor="bg-chart-5/10 text-chart-5"
       />
       <MetricCard
         label="Commits/Day"
         value={data.commitsPerDay.toFixed(1)}
         subtitle="per day"
         icon={GitCommit}
-        iconColor="bg-cyan-500/10 text-cyan-500"
+        iconColor="bg-chart-4/10 text-chart-4"
       />
     </div>
   );

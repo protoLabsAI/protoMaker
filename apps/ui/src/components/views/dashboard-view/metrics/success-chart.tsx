@@ -51,8 +51,8 @@ export function SuccessChart({ data, isLoading }: SuccessChartProps) {
             <AreaChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="successGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                  <stop offset="5%" stopColor="var(--chart-2)" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="var(--chart-2)" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid
@@ -73,7 +73,12 @@ export function SuccessChart({ data, isLoading }: SuccessChartProps) {
                 tickLine={false}
                 tickFormatter={(v: number) => `${v}%`}
               />
-              <ReferenceLine y={90} stroke="#f59e0b" strokeDasharray="3 3" strokeOpacity={0.6} />
+              <ReferenceLine
+                y={90}
+                stroke="var(--chart-3)"
+                strokeDasharray="3 3"
+                strokeOpacity={0.6}
+              />
               <Tooltip
                 contentStyle={{
                   backgroundColor: 'hsl(var(--card))',
@@ -86,7 +91,7 @@ export function SuccessChart({ data, isLoading }: SuccessChartProps) {
               <Area
                 type="monotone"
                 dataKey="rate"
-                stroke="#10b981"
+                stroke="var(--chart-2)"
                 fill="url(#successGradient)"
                 strokeWidth={2}
               />

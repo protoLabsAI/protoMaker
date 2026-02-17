@@ -304,21 +304,21 @@ export function IntegrationsTab({ projectPath }: IntegrationsTabProps) {
           icon={MessageSquare}
           status={discordConnected ? 'connected' : 'offline'}
           stats={discordStats}
-          iconColor="bg-indigo-500/10 text-indigo-500"
+          iconColor="bg-chart-1/10 text-chart-1"
         />
         <IntegrationCard
           title="Linear"
           icon={Hash}
           status={linearConnected ? 'connected' : 'offline'}
           stats={linearStats}
-          iconColor="bg-blue-500/10 text-blue-500"
+          iconColor="bg-chart-4/10 text-chart-4"
         />
         <IntegrationCard
           title="GitHub"
           icon={GitPullRequest}
           status={githubConnected ? 'connected' : 'offline'}
           stats={githubStats}
-          iconColor="bg-orange-500/10 text-orange-500"
+          iconColor="bg-chart-5/10 text-chart-5"
         />
       </div>
 
