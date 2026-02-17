@@ -68,9 +68,7 @@ export type ViewMode =
   | 'settings'
   | 'interview'
   | 'context'
-  | 'running-agents'
   | 'terminal'
-  | 'wiki'
   | 'ideation';
 
 export type ThemeMode =

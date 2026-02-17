@@ -144,6 +144,9 @@ export interface ExecutionResult {
 
   /** SDK session ID for continuity */
   sessionId?: string;
+
+  /** Langfuse trace ID from this execution (if tracing enabled) */
+  traceId?: string;
 }
 
 /**
@@ -284,6 +287,12 @@ export class AgentExecutionService {
 
       const durationMs = Date.now() - startTime;
 
+      // Extract Langfuse trace ID if available
+      const traceId =
+        'getLastTraceId' in provider && typeof (provider as any).getLastTraceId === 'function'
+          ? (((provider as any).getLastTraceId() as string | null) ?? undefined)
+          : undefined;
+
       logger.info(`"${logContext}" completed in ${durationMs}ms (${output.length} chars)`);
 
       // Emit complete event
@@ -301,6 +310,7 @@ export class AgentExecutionService {
         durationMs,
         model: bareModel,
         sessionId,
+        traceId,
       };
     } catch (err) {
       const durationMs = Date.now() - startTime;

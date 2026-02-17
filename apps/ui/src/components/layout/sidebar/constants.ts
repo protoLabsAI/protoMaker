@@ -48,7 +48,6 @@ export const PROJECT_LIGHT_THEMES = lightThemes.map((opt) => ({
 export const SIDEBAR_FEATURE_FLAGS = {
   hideTerminal: import.meta.env.VITE_HIDE_TERMINAL === 'true',
   hideWiki: import.meta.env.VITE_HIDE_WIKI === 'true',
-  hideRunningAgents: import.meta.env.VITE_HIDE_RUNNING_AGENTS === 'true',
   hideContext: import.meta.env.VITE_HIDE_CONTEXT === 'true',
   hideSpecEditor: import.meta.env.VITE_HIDE_SPEC_EDITOR === 'true',
 } as const;

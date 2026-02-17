@@ -28,7 +28,6 @@ import { TrashDialog, OnboardingDialog } from './sidebar/dialogs';
 import { SIDEBAR_FEATURE_FLAGS } from './sidebar/constants';
 import {
   useSidebarAutoCollapse,
-  useRunningAgents,
   useSpecRegeneration,
   useNavigation,
   useProjectCreation,
@@ -64,7 +63,7 @@ export function Sidebar() {
   const isCompact = useIsCompact();
 
   // Environment variable flags for hiding sidebar items
-  const { hideTerminal, hideRunningAgents, hideContext, hideSpecEditor } = SIDEBAR_FEATURE_FLAGS;
+  const { hideTerminal, hideContext, hideSpecEditor } = SIDEBAR_FEATURE_FLAGS;
 
   // Get customizable keyboard shortcuts
   const shortcuts = useKeyboardShortcutsConfig();
@@ -131,9 +130,6 @@ export function Sidebar() {
 
   // Auto-collapse sidebar on small screens and update Electron window minWidth
   useSidebarAutoCollapse({ sidebarOpen, toggleSidebar });
-
-  // Running agents count
-  const { runningAgentsCount } = useRunningAgents();
 
   // Unviewed validations count
   const { count: unviewedValidationsCount } = useUnviewedValidations(currentProject);
@@ -330,8 +326,6 @@ export function Sidebar() {
           sidebarOpen={sidebarOpen}
           isActiveRoute={isActiveRoute}
           navigate={navigate}
-          hideRunningAgents={hideRunningAgents}
-          runningAgentsCount={runningAgentsCount}
           shortcuts={{ settings: shortcuts.settings }}
         />
         <TrashDialog

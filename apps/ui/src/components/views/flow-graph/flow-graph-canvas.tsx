@@ -26,7 +26,7 @@ import { edgeTypes } from './edges';
 interface FlowGraphCanvasProps {
   nodes: Node[];
   edges: Edge[];
-  onNodeClick?: (nodeId: string, nodeType: string) => void;
+  onNodeClick?: (nodeId: string, nodeType: string, nodeData: Record<string, unknown>) => void;
 }
 
 export function FlowGraphCanvas({
@@ -48,7 +48,7 @@ export function FlowGraphCanvas({
 
   const handleNodeClick = useCallback(
     (_event: React.MouseEvent, node: Node) => {
-      onNodeClick?.(node.id, node.type || '');
+      onNodeClick?.(node.id, node.type || '', node.data as Record<string, unknown>);
     },
     [onNodeClick]
   );

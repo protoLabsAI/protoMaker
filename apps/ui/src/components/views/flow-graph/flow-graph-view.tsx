@@ -2,7 +2,7 @@
  * FlowGraphView — Main view component
  *
  * Composes data hooks -> canvas + floating panels.
- * Handles feature node click -> edit dialog.
+ * Click any node to open a detail dialog.
  */
 
 import { useCallback, useState } from 'react';
@@ -14,6 +14,7 @@ import { HealthPanel } from './panels/health-panel';
 import { ChartsPanel } from './panels/charts-panel';
 import { PanelToolbar } from './panels/panel-toolbar';
 import { FlowGraphLegend } from './flow-graph-legend';
+import { NodeDetailDialog, type SelectedNode } from './dialogs/node-detail-dialog';
 
 export interface FlowGraphViewProps {
   projectPath?: string;
@@ -29,10 +30,17 @@ export function FlowGraphView({ projectPath, onFeatureClick }: FlowGraphViewProp
   const [showCharts, setShowCharts] = useState(false);
   const [showLegend, setShowLegend] = useState(false);
 
+  // Node detail dialog state
+  const [selectedNode, setSelectedNode] = useState<SelectedNode | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+
   const handleNodeClick = useCallback(
-    (nodeId: string, nodeType: string) => {
+    (nodeId: string, nodeType: string, nodeData: Record<string, unknown>) => {
+      setSelectedNode({ nodeId, nodeType, nodeData });
+      setDialogOpen(true);
+
+      // Also fire feature click callback for board navigation
       if (nodeType === 'feature' && onFeatureClick) {
-        // Extract feature ID from node ID: "feature-{id}" -> "{id}"
         const featureId = nodeId.replace('feature-', '');
         onFeatureClick(featureId);
       }
@@ -84,6 +92,9 @@ export function FlowGraphView({ projectPath, onFeatureClick }: FlowGraphViewProp
           <FlowGraphLegend />
         </div>
       )}
+
+      {/* Node detail dialog */}
+      <NodeDetailDialog open={dialogOpen} onOpenChange={setDialogOpen} node={selectedNode} />
     </div>
   );
 }
