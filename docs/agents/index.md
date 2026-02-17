@@ -285,12 +285,12 @@ These agents are assigned features dynamically by auto-mode and implement them i
 
 These event-driven agents exist in code but aren't actively staffed yet.
 
-| Agent        | Trigger                  | Purpose                     | Location                                                    |
-| ------------ | ------------------------ | --------------------------- | ----------------------------------------------------------- |
-| PM           | `idea:injected` event    | Research ideas, create PRDs | `apps/server/src/services/authority-agents/pm-agent.ts`     |
-| ProjM        | `prd:approved` event     | Decompose into milestones   | `apps/server/src/services/authority-agents/projm-agent.ts`  |
-| EM           | `decomposition:complete` | Technical feasibility       | `apps/server/src/services/authority-agents/em-agent.ts`     |
-| Status Agent | Periodic polling         | Progress monitoring         | `apps/server/src/services/authority-agents/status-agent.ts` |
+| Agent         | Trigger                  | Purpose                               | Location                                                       |
+| ------------- | ------------------------ | ------------------------------------- | -------------------------------------------------------------- |
+| PM            | `idea:injected` event    | Research ideas, create PRDs           | `apps/server/src/services/authority-agents/pm-agent.ts`        |
+| ProjM         | `prd:approved` event     | Decompose into milestones             | `apps/server/src/services/authority-agents/projm-agent.ts`     |
+| EM            | `decomposition:complete` | Technical feasibility                 | `apps/server/src/services/authority-agents/em-agent.ts`        |
+| Board Janitor | Crew loop (every 15min)  | Blocker detection, deadlock detection | `apps/server/src/services/crew-members/board-janitor-check.ts` |
 
 ## Official Claude Resources
 

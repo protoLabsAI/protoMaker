@@ -25,12 +25,6 @@ Authority agents are AI-powered roles that manage different aspects of the devel
 **Responsibility:** Assign ready features to agents, manage WIP limits, handle PR approvals
 **Pipeline:** ready → in_progress → pr_ready → done
 
-### Status Agent
-
-**File:** `status-agent.ts`
-**Role:** `status-reporter`
-**Responsibility:** Monitor for blockers (stale PRs, stuck features, failed agents), escalate to Discord
-
 ## Agent Utilities
 
 **File:** `agent-utils.ts`
@@ -109,35 +103,6 @@ async initialize(projectPath: string): Promise<void> {
 }
 ```
 
-#### `registerEventListener(state, getListenerRegistered, setListenerRegistered, events, eventName, handler, initialize, options?)`
-
-Event subscription with auto-initialization:
-
-1. Check if listener already registered (skip if yes)
-2. Subscribe to event
-3. Auto-initialize projects from event data
-4. Filter events (optional)
-5. Extract project path (configurable)
-6. Call handler with error handling
-
-**Usage:**
-
-```typescript
-setupEventListeners(): void {
-  registerEventListener(
-    this.state,
-    () => this.listenerRegistered,
-    (val) => { this.listenerRegistered = val; },
-    this.events,
-    'feature:created',
-    async (event) => {
-      await this.reviewFeature(event.projectPath, event.featureId);
-    },
-    (projectPath) => this.initialize(projectPath)
-  );
-}
-```
-
 ## Code Reduction Benefits
 
 ### Per-Agent Savings
@@ -145,18 +110,15 @@ setupEventListeners(): void {
 - **State tracking:** 78% reduction (9 lines → 2 lines)
 - **Initialization:** 36% reduction (14 lines → 9 lines)
 - **Processing guards:** 100% elimination of boilerplate (5 lines per usage)
-- **Event listeners:** 20% reduction (25 lines → 20 lines)
+  **Total per agent:** ~70-80 lines of boilerplate eliminated (~9% of typical agent file size)
 
-**Total per agent:** ~70-80 lines of boilerplate eliminated (~9% of typical agent file size)
-
-### Total Savings (4 Agents)
+### Total Savings (3 Agents)
 
 - **PM Agent:** ~74 lines (from 865 lines)
 - **ProjM Agent:** ~70 lines (from 732 lines)
 - **EM Agent:** ~75 lines (from ~600 lines estimated)
-- **Status Agent:** ~72 lines (from ~500 lines estimated)
 
-**Grand total:** ~290-320 lines of duplicate code eliminated
+**Grand total:** ~220 lines of duplicate code eliminated
 
 ## Testing
 
@@ -167,7 +129,6 @@ Comprehensive test suite covering:
 - State creation and access methods
 - Processing guard blocking and cleanup
 - Initialization patterns and skip logic
-- Event listener registration and filtering
 - Error handling and edge cases
 
 **Run tests:**
@@ -289,7 +250,7 @@ if (this.state.isProcessing(id)) { ... }
 ## Next Steps
 
 1. **Phase 1 Complete:** ✅ Agent utilities extracted and tested
-2. **Phase 2:** Apply to all 4 agents (PM, ProjM, EM, Status)
+2. **Phase 2 Complete:** ✅ Applied to all 3 agents (PM, ProjM, EM)
 3. **Phase 3:** Consider base agent class if patterns warrant it
 4. **Phase 4:** Evaluate domain-specific tool collections (linear-tools, discord-tools, etc.)
 

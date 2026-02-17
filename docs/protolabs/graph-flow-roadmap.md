@@ -95,7 +95,7 @@ graph LR
 ```
 
 **Nodes:** classify, route, enrich (add context), validate (schema check)
-**Replaces:** `signal-router-service.ts` manual routing logic
+**Replaces:** Manual signal routing logic (signal-router-service was removed in PR #673)
 **Risk:** LOW — Deterministic classification is straightforward. LLM fallback for ambiguous signals.
 
 ### 2. Approval Gate Flow
@@ -238,13 +238,13 @@ Replace Claude Code deep agents with LangGraph ReAct agents using `@automaker/ll
 
 Segments of the full IDEA → SHIP pipeline and their current implementation:
 
-| Segment               | Current                     | Target                       | Status   |
-| --------------------- | --------------------------- | ---------------------------- | -------- |
-| Signal classification | `signal-router-service.ts`  | Signal Intake Flow           | Planned  |
-| PRD review            | `DynamicAgentExecutor`      | **Antagonistic Review Flow** | **DONE** |
-| Approval              | Discord manual              | Approval Gate Flow           | Planned  |
-| Decomposition         | `proj-m-agent.ts`           | Planning Flow                | Planned  |
-| Agent execution       | `AgentService` + Claude SDK | Keep as-is (Phase 3 future)  | N/A      |
-| PR lifecycle          | PR Maintainer crew          | PR Pipeline Flow             | Planned  |
-| Reflection            | `trigger_ceremony`          | Retrospective Flow           | Planned  |
-| Full orchestration    | Ava manual loop             | Master Orchestrator Flow     | Planned  |
+| Segment               | Current                       | Target                       | Status   |
+| --------------------- | ----------------------------- | ---------------------------- | -------- |
+| Signal classification | Escalation channels (PR #673) | Signal Intake Flow           | Partial  |
+| PRD review            | `DynamicAgentExecutor`        | **Antagonistic Review Flow** | **DONE** |
+| Approval              | Discord manual                | Approval Gate Flow           | Planned  |
+| Decomposition         | `proj-m-agent.ts`             | Planning Flow                | Planned  |
+| Agent execution       | `AgentService` + Claude SDK   | Keep as-is (Phase 3 future)  | N/A      |
+| PR lifecycle          | PR Maintainer crew            | PR Pipeline Flow             | Planned  |
+| Reflection            | `trigger_ceremony`            | Retrospective Flow           | Planned  |
+| Full orchestration    | Ava manual loop               | Master Orchestrator Flow     | Planned  |

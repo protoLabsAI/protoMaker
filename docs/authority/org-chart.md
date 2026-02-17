@@ -283,23 +283,22 @@ The authority system emits these events via WebSocket:
 
 ## File Locations
 
-| File                                                                   | Purpose                                            |
-| ---------------------------------------------------------------------- | -------------------------------------------------- |
-| `libs/types/src/policy.ts`                                             | All policy and trust type definitions              |
-| `libs/types/src/authority.ts`                                          | Authority agent and work item types                |
-| `libs/policy-engine/src/engine.ts`                                     | Core `checkPolicy()` function                      |
-| `libs/policy-engine/src/defaults.ts`                                   | Default permission matrix and transitions          |
-| `libs/policy-engine/tests/engine.test.ts`                              | Unit tests for policy engine                       |
-| `apps/server/src/services/authority-service.ts`                        | Authority service (registry, proposals, approvals) |
-| `apps/server/src/routes/authority/index.ts`                            | REST API routes                                    |
-| `apps/server/src/services/authority-agents/pm-agent.ts`                | PM agent (idea research + PRD + epics)             |
-| `apps/server/src/services/authority-agents/projm-agent.ts`             | ProjM agent (epic decomposition + deps)            |
-| `apps/server/src/services/authority-agents/em-agent.ts`                | EM agent (assignment + capacity + PR feedback)     |
-| `apps/server/src/services/authority-agents/status-agent.ts`            | Status agent (blocker detection + escalation)      |
-| `apps/server/src/services/authority-agents/discord-approval-router.ts` | Discord approval notifications                     |
-| `apps/server/src/services/audit-service.ts`                            | Append-only JSONL audit trail                      |
-| `apps/server/src/services/pr-feedback-service.ts`                      | GitHub PR review monitoring                        |
-| `apps/server/src/services/worktree-lifecycle-service.ts`               | Auto-cleanup on merge/complete                     |
+| File                                                           | Purpose                                            |
+| -------------------------------------------------------------- | -------------------------------------------------- |
+| `libs/types/src/policy.ts`                                     | All policy and trust type definitions              |
+| `libs/types/src/authority.ts`                                  | Authority agent and work item types                |
+| `libs/policy-engine/src/engine.ts`                             | Core `checkPolicy()` function                      |
+| `libs/policy-engine/src/defaults.ts`                           | Default permission matrix and transitions          |
+| `libs/policy-engine/tests/engine.test.ts`                      | Unit tests for policy engine                       |
+| `apps/server/src/services/authority-service.ts`                | Authority service (registry, proposals, approvals) |
+| `apps/server/src/routes/authority/index.ts`                    | REST API routes                                    |
+| `apps/server/src/services/authority-agents/pm-agent.ts`        | PM agent (idea research + PRD + epics)             |
+| `apps/server/src/services/authority-agents/projm-agent.ts`     | ProjM agent (epic decomposition + deps)            |
+| `apps/server/src/services/authority-agents/em-agent.ts`        | EM agent (assignment + capacity + PR feedback)     |
+| `apps/server/src/services/crew-members/board-janitor-check.ts` | Blocker detection, cycle detection, escalation     |
+| `apps/server/src/services/audit-service.ts`                    | Append-only JSONL audit trail                      |
+| `apps/server/src/services/pr-feedback-service.ts`              | GitHub PR review monitoring                        |
+| `apps/server/src/services/worktree-lifecycle-service.ts`       | Auto-cleanup on merge/complete                     |
 
 ## Persistence
 
