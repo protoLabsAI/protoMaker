@@ -389,7 +389,7 @@ Map to the shadcn/ui CSS variable system:
 
 Replace fonts with Geist. Keep shadcn/ui component architecture — just update the tokens.
 
-### protoMaker UI App (OKLch)
+### protoLabs UI App (OKLch)
 
 The UI app uses OKLch (perceptually uniform) rather than hex. Same brand identity, different color space for precision across 41 themes. The `studio-dark` theme in `apps/ui/src/styles/themes/studio-dark.css` is the canonical mapping:
 

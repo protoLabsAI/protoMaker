@@ -8,22 +8,22 @@ This is the living brand bible for protoLabs. All agents, content, and external 
 | ------------------------------ | ------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
 | **protoLabs**                  | The AI-native development agency      | Always camelCase: "protoLabs" (not "ProtoLabs", "Protolabs", or "Proto Labs")                                |
 | **protoLabs.studio**           | Primary domain                        | Website, social bios, email                                                                                  |
-| **protoMaker**                 | The AI development studio product     | Kanban board + autonomous agents. The tool that powers the agency.                                           |
+| ~~**protoMaker**~~             | RETIRED — now just protoLabs          | Was the product name. Consolidated into protoLabs. Do not use in new content.                                |
 | **proto-labs-ai**              | GitHub organization                   | `github.com/proto-labs-ai`                                                                                   |
 | **Automaker**                  | Internal codename / upstream origin   | Used in code (`@automaker/*` packages, `.automaker/` directory). NOT used in external marketing.             |
 | **create-protolab**            | npx CLI tool                          | Scaffolds new projects with protoLabs methodology                                                            |
-| **MythXEngine**                | AI-powered TTRPG engine               | Built with protoMaker. Portfolio proof of methodology.                                                       |
-| **SVGVal**                     | SVG validation toolkit                | Built with protoMaker. Portfolio proof of methodology.                                                       |
-| **rabbit-hole**                | AI-powered TTRPG (legacy name)        | Now MythXEngine. Built with protoMaker.                                                                      |
+| **MythXEngine**                | AI-powered TTRPG engine               | Built with protoLabs. Portfolio proof of methodology.                                                        |
+| **SVGVal**                     | SVG validation toolkit                | Built with protoLabs. Portfolio proof of methodology.                                                        |
+| **rabbit-hole**                | AI-powered TTRPG (legacy name)        | Now MythXEngine. Built with protoLabs.                                                                       |
 | **Agentic Jumpstart**          | Community Discord / educational brand | Community-facing, not the agency brand                                                                       |
 | **intelligent product engine** | Product category / positioning term   | Describes the autonomous system architecture. NOT an acronym — always lowercase, always spelled out in full. |
 
 ### Naming Rules
 
-- External content uses **protoLabs** and **protoMaker** — never "Automaker"
+- External content uses **protoLabs** — never "Automaker" or "protoMaker"
 - Internal code keeps `@automaker/*` package names and `.automaker/` directories (intentional — renaming the codebase would break everything)
-- When referring to the product in docs or content: "protoMaker" or "protoLabs Studio"
-- The distinction matters: protoLabs = the agency, protoMaker = the tool
+- When referring to the product in docs or content: "protoLabs" or "protoLabs Studio"
+- protoLabs is both the agency AND the tool. No separate product name.
 
 ## Voice & Tone
 
@@ -106,7 +106,7 @@ Work -> AI generates content -> Schedule across platforms -> Josh engages with r
 
 **Philosophy: No SaaS, no subscriptions, no obligations.** Build cool things, share how, let people pay once for the knowledge. Indie maker, not startup.
 
-1. **Free tool** — protoMaker is source-available. Builds community trust and distribution.
+1. **Free tool** — protoLabs is source-available. Builds community trust and distribution.
 2. **$49 lifetime Pro** — Written tutorials, agent templates, prompt library, methodology guide. One-time payment, lifetime access. No recurring obligations on either side.
 3. **Consulting** — setupLab offering. Happens organically when people see the work and want help. Not outbound sales — inbound from community trust.
 

@@ -64,7 +64,7 @@ ProtoLabs operates across three systems that each own a distinct layer:
 - Clients see progress here
 - The "exec team" view
 
-### protoMaker Board — Tactical Layer
+### protoLabs Board — Tactical Layer
 
 - Features, agents, branches, PRs, task execution
 - Where code actually gets written
@@ -78,7 +78,7 @@ ProtoLabs operates across three systems that each own a distinct layer:
 - Josh ↔ Ava primary channel
 - The "office" view
 
-**Rule: Never mix the layers.** Linear doesn't track individual PRs. protoMaker doesn't own roadmap vision. Discord doesn't store state.
+**Rule: Never mix the layers.** Linear doesn't track individual PRs. protoLabs doesn't own roadmap vision. Discord doesn't store state.
 
 ## The Flow
 
@@ -168,7 +168,7 @@ The reflection loop is what makes this a **learning system**, not just an execut
 
 No SaaS, no subscriptions, no obligations. Indie maker, not startup.
 
-1. **Free tool**: protoMaker is source-available. Builds community trust and distribution.
+1. **Free tool**: protoLabs is source-available. Builds community trust and distribution.
 2. **$49 lifetime Pro**: Written tutorials, agent templates, prompt library, methodology guide. One-time payment, lifetime access.
 3. **Consulting (setupLab)**: Help organizations set up their own proto labs. Organic inbound from community trust, not outbound sales.
 
@@ -179,6 +179,6 @@ The system is both the product and the factory that makes the product. Every pro
 - **Not a copilot** — it's a team. Operations + Engineering branches with specialized agents, domain tools, and subagent delegation.
 - **Not one-shot** — it's a loop. Continuous improvement feeds learning back into planning.
 - **Not just code** — it's organizational. Antagonistic review, HITL gates, CI pipeline, and code quality checks form four layers of quality assurance.
-- **Not a black box** — it's observable. Linear for strategy, protoMaker board for tactics, Discord for communication. Langfuse for traces and costs. Full audit trail.
+- **Not a black box** — it's observable. Linear for strategy, protoLabs board for tactics, Discord for communication. Langfuse for traces and costs. Full audit trail.
 - **Not static** — it's self-improving. The system upgrades itself through the same pipeline it uses for customer work.
 - **Not LLM-dependent** — fast-path rules handle routine orchestration decisions without API calls. LLM agents are reserved for creative work.
