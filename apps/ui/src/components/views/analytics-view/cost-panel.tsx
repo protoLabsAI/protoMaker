@@ -70,7 +70,7 @@ export function CostPanel({ costByModel, totalCost, isLoading }: CostPanelProps)
                     innerRadius={25}
                     outerRadius={50}
                     strokeWidth={2}
-                    stroke="hsl(var(--card))"
+                    stroke="var(--card)"
                   >
                     {chartData.map((entry, idx) => (
                       <Cell key={idx} fill={entry.fill} />
@@ -79,8 +79,8 @@ export function CostPanel({ costByModel, totalCost, isLoading }: CostPanelProps)
                   <Tooltip
                     formatter={(value: number) => [`$${value.toFixed(2)}`, 'Cost']}
                     contentStyle={{
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
+                      backgroundColor: 'var(--card)',
+                      border: '1px solid var(--border)',
                       borderRadius: '8px',
                       fontSize: '12px',
                     }}

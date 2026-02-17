@@ -30,7 +30,7 @@ export function HeroStat({
   icon: Icon,
   trend,
   sparkline,
-  color = 'hsl(var(--primary))',
+  color = 'var(--primary)',
   orb = 'top-right',
 }: HeroStatProps) {
   return (

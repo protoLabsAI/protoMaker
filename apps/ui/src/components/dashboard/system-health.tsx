@@ -45,7 +45,7 @@ export function Gauge({
         <path
           d={`M ${6} ${size / 2} A ${radius} ${radius} 0 0 1 ${size - 6} ${size / 2}`}
           fill="none"
-          stroke="hsl(var(--muted))"
+          stroke="var(--muted)"
           strokeWidth={6}
           strokeLinecap="round"
         />

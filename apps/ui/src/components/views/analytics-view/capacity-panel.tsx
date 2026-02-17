@@ -61,10 +61,10 @@ export function CapacityPanel({
                     width: `${Math.min(utilizationPercent, 100)}%`,
                     backgroundColor:
                       utilizationPercent > 80
-                        ? 'hsl(var(--destructive))'
+                        ? 'var(--destructive)'
                         : utilizationPercent > 50
-                          ? '#f59e0b'
-                          : 'hsl(var(--primary))',
+                          ? 'var(--chart-3)'
+                          : 'var(--primary)',
                   }}
                 />
               </div>

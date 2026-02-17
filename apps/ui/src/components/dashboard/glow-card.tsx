@@ -20,7 +20,7 @@ interface GlowCardProps extends React.ComponentProps<typeof motion.div> {
 }
 
 export function GlowCard({
-  glowColor = 'hsl(var(--primary))',
+  glowColor = 'var(--primary)',
   gradientBorder = false,
   orb = 'none',
   orbColor,

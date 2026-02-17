@@ -78,19 +78,19 @@ export function GlowAreaChart({
             </defs>
             <CartesianGrid
               strokeDasharray="3 3"
-              stroke="hsl(var(--border))"
+              stroke="var(--border)"
               strokeOpacity={0.3}
               vertical={false}
             />
             <XAxis
               dataKey={xKey}
-              stroke="hsl(var(--muted-foreground))"
+              stroke="var(--muted-foreground)"
               fontSize={10}
               tickLine={false}
               axisLine={false}
             />
             <YAxis
-              stroke="hsl(var(--muted-foreground))"
+              stroke="var(--muted-foreground)"
               fontSize={10}
               tickLine={false}
               axisLine={false}
@@ -98,8 +98,8 @@ export function GlowAreaChart({
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: 'hsl(var(--card))',
-                border: '1px solid hsl(var(--border))',
+                backgroundColor: 'var(--card)',
+                border: '1px solid var(--border)',
                 borderRadius: '8px',
                 fontSize: '12px',
                 backdropFilter: 'blur(8px)',

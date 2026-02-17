@@ -81,7 +81,7 @@ interface SparklineProps {
 
 export function Sparkline({
   data,
-  color = 'hsl(var(--primary))',
+  color = 'var(--primary)',
   height = 32,
   className = '',
 }: SparklineProps) {
