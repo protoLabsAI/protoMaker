@@ -55,7 +55,7 @@ Follow a two-tier token system: **primitive** (raw values) and **semantic** (int
 
 Tokens live as CSS custom properties in per-theme CSS files (`styles/themes/*.css`). The `@theme inline` block in `global.css` bridges these to Tailwind utilities.
 
-**Current state:** 41 static CSS files, one per theme.
+**Current state:** 6 curated theme CSS files (`studio-dark`, `studio-light`, `nord`, `catppuccin`, `dracula`, `monokai`).
 
 **Target state:** Generate theme CSS from a TypeScript config object. This enables:
 
@@ -180,10 +180,17 @@ UI primitives must be pure: same props = same output, no side effects.
 
 Global state lives in Zustand stores. Each store represents a domain slice.
 
-| Store         | Purpose                                        | Persistence                  |
-| ------------- | ---------------------------------------------- | ---------------------------- |
-| `app-store`   | Board state, view state, preferences, settings | localStorage                 |
-| `setup-store` | Onboarding flow state                          | localStorage (cleared after) |
+| Store                 | Purpose                              | Persistence              |
+| --------------------- | ------------------------------------ | ------------------------ |
+| `app-store`           | Board state, view state, preferences | API sync (settings-sync) |
+| `setup-store`         | Onboarding flow state                | Ephemeral                |
+| `auth-store`          | Authentication state, API keys       | API sync                 |
+| `settings-store`      | User settings and preferences        | API sync                 |
+| `chat-store`          | Chat/conversation state              | API sync                 |
+| `ai-models-store`     | AI model configuration               | API sync                 |
+| `terminal-store`      | Terminal session state               | Ephemeral                |
+| `worktree-store`      | Git worktree state                   | Ephemeral                |
+| `notifications-store` | Notification queue                   | Ephemeral                |
 
 **Rules:**
 
@@ -235,22 +242,23 @@ Follow this order in className strings:
 
 ### Dark mode
 
-Dark mode uses class-based switching via `@custom-variant dark`. The root element gets a theme class (`.dark`, `.nord`, `.dracula`, etc.) and theme-specific CSS variables override the defaults.
+Dark mode uses class-based switching via `@custom-variant`. The root element gets a theme class (`.studio-dark`, `.nord`, `.dracula`, etc.) and theme-specific CSS variables override the defaults.
 
 ## Theming
 
-### 41 themes, class-based switching
+### 6 themes, class-based switching
 
 Themes are activated by setting a class on the root HTML element. Each theme defines the full set of semantic CSS variables.
 
 **Architecture:**
 
 ```
-:root              → light theme defaults
-:root.dark         → dark theme
+:root              → light theme defaults (studio-light)
+:root.studio-dark  → dark theme
 :root.nord         → nord theme
 :root.catppuccin   → catppuccin theme
-... (41 total)
+:root.dracula      → dracula theme
+:root.monokai      → monokai theme
 ```
 
 **Runtime switching:** The app store persists the active theme. A `ThemeProvider` (or equivalent) applies the class. System preference detection (`prefers-color-scheme`) provides the initial default.
@@ -295,46 +303,34 @@ export const Destructive: Story = { args: { children: 'Delete', variant: 'destru
 
 ### Theme integration
 
-The preview decorator applies theme classes to the document root. All 6 theme CSS files are imported in `preview.tsx`, and the toolbar provides a theme switcher. This validates every component renders correctly across themes.
+The preview decorator applies theme classes to the document root. All theme CSS files are imported in `preview.tsx`, and the toolbar provides a theme switcher. This validates every component renders correctly across themes.
 
 ### Accessibility
 
 `addon-a11y` runs axe-core checks on every story. Violations are warnings in dev, errors in CI.
 
-## Extracted UI package (target state)
+## Extracted UI package
 
-Currently all UI components live in `apps/ui/src/components/ui/`. The target is to extract them into a shared `@automaker/ui` package.
+UI primitives are extracted to `@automaker/ui-components` at `libs/ui/`. The package uses an atoms/molecules/organisms structure with 26+ atom components (button, card, dialog, badge, etc.).
 
-### Package structure (target)
+### Package structure
 
 ```
 libs/ui/
   src/
     components/
-      button.tsx
-      card.tsx
-      dialog.tsx
-      ...
-    styles/
-      tokens.css        # Semantic token definitions
-      themes/            # Theme CSS files
+      atoms/           # Primitive components (button, badge, card, etc.)
+      molecules/       # Composed components
+      organisms/       # Complex composed components
     lib/
-      utils.ts           # cn() and helpers
-    index.ts             # Barrel export
-  package.json
+      theme/           # Theme generator and utilities
+      utils.ts         # cn() and helpers
+    index.ts           # Barrel export
+  package.json         # @automaker/ui-components
   tsconfig.json
 ```
 
-### Migration path
-
-1. Create `libs/ui/` package with `package.json` and `tsconfig.json`
-2. Move `apps/ui/src/components/ui/*` into `libs/ui/src/components/`
-3. Move `apps/ui/src/lib/utils.ts` (cn function) into `libs/ui/src/lib/`
-4. Move theme CSS files into `libs/ui/src/styles/themes/`
-5. Update all imports in `apps/ui/` to use `@automaker/ui`
-6. Verify the package works as a dependency in the workspace
-
-This enables sharing UI components across future apps (docs site, template repos, setupLab offerings).
+`apps/ui/` depends on `@automaker/ui-components` via workspace linking. This enables sharing UI components across future apps (docs site, template repos, setupLab offerings).
 
 ## React 19 patterns
 
@@ -371,7 +367,7 @@ Radix UI primitives (Dialog, Dropdown, Tooltip, etc.) provide correct ARIA attri
 
 ### Testing
 
-When Storybook is added, `addon-a11y` provides automated a11y auditing. Until then, manual testing with browser dev tools accessibility panel.
+Storybook is configured with `addon-a11y` for automated a11y auditing via axe-core. Violations appear as warnings in dev.
 
 ## Icons
 
@@ -422,10 +418,10 @@ Current gaps between philosophy and implementation. These are tracked as future 
 | -------------------------- | ------------------------------------------------------------------------------ | ---------------------------------------------------------------------- | -------- |
 | God store                  | `app-store.ts` is 4,268 lines with all state                                   | Split into domain slices (board, agent, settings, theme)               | High     |
 | Monolithic views           | `board-view.tsx` (1,908 lines), `terminal-view.tsx` (1,809 lines)              | Decompose into sub-components like `settings-view/` already has        | High     |
-| Storybook coverage         | Config + 6 stories (button, card, dialog, tabs, badge, dashboard)              | Stories for all UI primitives, interaction tests, Chromatic CI         | High     |
+| Storybook coverage         | Config + 14 stories (5 ui primitives + 9 dashboard components)                 | Stories for all UI primitives, interaction tests, Chromatic CI         | High     |
 | Domain components in `ui/` | `git-diff-panel`, `dependency-selector`, `log-viewer` etc. in `components/ui/` | Move to `components/shared/` or view-specific directories              | Medium   |
-| No UI package              | All components in `apps/ui/`, not shareable                                    | Extract to `libs/ui/` (`@automaker/ui`)                                | Medium   |
-| Static theme files         | 41 hand-written CSS files                                                      | Generate from TypeScript config                                        | Medium   |
+| UI package gaps            | 26 atoms extracted to `@automaker/ui-components`; molecules/organisms pending  | Full extraction of all primitives to `libs/ui/`                        | Medium   |
+| Static theme files         | 6 hand-written CSS files                                                       | Generate from TypeScript config                                        | Medium   |
 | No typography tokens       | Font sizes, line heights are ad-hoc Tailwind classes                           | Formalize as semantic tokens                                           | Low      |
 | No spacing tokens          | Spacing uses Tailwind defaults only                                            | Define semantic spacing scale if needed                                | Low      |
 | Minimal a11y               | Relies on Radix defaults, no linting or testing                                | `eslint-plugin-jsx-a11y`, Storybook `addon-a11y`, skip-to-content link | Medium   |

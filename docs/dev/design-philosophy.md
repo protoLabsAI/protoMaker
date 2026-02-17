@@ -130,14 +130,14 @@ Follow a 4px base grid:
 ### Border radius
 
 ```css
---radius: 0.5rem; /* 8px — the base */
---radius-sm: calc(var(--radius) - 4px); /* 4px — small badges, chips */
---radius-md: calc(var(--radius) - 2px); /* 6px — inputs, small cards */
---radius-lg: var(--radius); /* 8px — cards, dialogs */
---radius-xl: calc(var(--radius) + 4px); /* 12px — large containers */
+--radius: 0.375rem; /* 6px — the base */
+--radius-sm: calc(var(--radius) - 2px); /* 4px — small badges, chips */
+--radius-md: var(--radius); /* 6px — inputs, small cards */
+--radius-lg: calc(var(--radius) + 2px); /* 8px — cards, dialogs */
+--radius-xl: calc(var(--radius) + 6px); /* 12px — large containers */
 ```
 
-8px is the sweet spot. 4px looks engineered (Vercel). 12px looks friendly (Notion). 8px splits the difference — professional but not cold.
+6px is the base — closer to Vercel's engineering precision than Notion's friendly roundness. Professional, subtle, and consistent across the system.
 
 ### Borders
 
