@@ -25,7 +25,7 @@ This guide explains how **Model Context Protocol (MCP) tools** interact with pro
 **protoLabs's MCP Server:**
 
 - **Location:** `packages/mcp-server/`
-- **Exposes:** 32 tools for controlling protoLabs programmatically
+- **Exposes:** 112 tools for controlling protoLabs programmatically
 - **Used By:** The Chief of Staff agent, other AI agents, external integrations
 
 **Official Docs:** [MCP Specification](https://spec.modelcontextprotocol.io/)
@@ -41,7 +41,7 @@ This guide explains how **Model Context Protocol (MCP) tools** interact with pro
 ┌──────────────────────▼──────────────────────────────────┐
 │  protoLabs MCP Server                                   │
 │  Location: packages/mcp-server/src/index.ts            │
-│  - Tool definitions (32 tools)                          │
+│  - Tool definitions (112 tools)                         │
 │  - API client (calls protoLabs server)                  │
 │  - Auth (AUTOMAKER_API_KEY)                            │
 └──────────────────────┬──────────────────────────────────┘
