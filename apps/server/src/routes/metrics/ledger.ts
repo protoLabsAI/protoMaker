@@ -139,5 +139,19 @@ export function createLedgerRoutes(ledgerService: LedgerService): Router {
     }
   );
 
+  /**
+   * POST /enrich - Enrich all ledger records with GitHub PR data
+   * Bulk-fetches PR metadata and rewrites the ledger file.
+   */
+  router.post('/enrich', validatePathParams('projectPath'), async (req: Request, res: Response) => {
+    try {
+      const { projectPath } = req.body;
+      const result = await ledgerService.enrichAllRecords(projectPath);
+      res.json({ success: true, ...result });
+    } catch (err) {
+      res.status(500).json({ success: false, error: (err as Error).message });
+    }
+  });
+
   return router;
 }

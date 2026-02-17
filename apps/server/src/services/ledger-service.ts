@@ -11,7 +11,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import readline from 'node:readline';
 import { randomUUID } from 'node:crypto';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import { createLogger } from '@automaker/utils';
+
+const execFileAsync = promisify(execFile);
 import type {
   Feature,
   MetricsLedgerRecord,
@@ -114,7 +118,7 @@ export class LedgerService {
       return;
     }
 
-    const record = this.buildRecord(feature);
+    const record = await this.buildRecord(feature, projectPath);
 
     // Ensure directory exists
     const dir = path.dirname(ledgerPath);
@@ -143,9 +147,74 @@ export class LedgerService {
   }
 
   /**
-   * Build a MetricsLedgerRecord from a Feature object
+   * Query GitHub for PR data by branch name.
+   * Returns null if no PR found or on failure.
    */
-  private buildRecord(feature: Feature): MetricsLedgerRecord {
+  private async getGitHubPRData(
+    projectPath: string,
+    branchName: string
+  ): Promise<{
+    prNumber: number;
+    prUrl: string;
+    prCreatedAt: string;
+    prMergedAt?: string;
+    commitCount: number;
+  } | null> {
+    try {
+      // Try merged PRs first, then open
+      for (const state of ['merged', 'open'] as const) {
+        const { stdout } = await execFileAsync(
+          'gh',
+          [
+            'pr',
+            'list',
+            '--head',
+            branchName,
+            '--state',
+            state,
+            '--limit',
+            '1',
+            '--json',
+            'number,url,createdAt,mergedAt',
+          ],
+          { cwd: projectPath, timeout: 15000 }
+        );
+        const prs = JSON.parse(stdout.trim() || '[]');
+        if (prs.length > 0) {
+          const pr = prs[0];
+          // Get commit count separately to avoid GraphQL limits
+          let commitCount = 0;
+          try {
+            const { stdout: countOut } = await execFileAsync(
+              'gh',
+              ['pr', 'view', String(pr.number), '--json', 'commits', '--jq', '.commits | length'],
+              { cwd: projectPath, timeout: 10000 }
+            );
+            commitCount = parseInt(countOut.trim(), 10) || 0;
+          } catch {
+            // Leave as 0 on failure
+          }
+          return {
+            prNumber: pr.number,
+            prUrl: pr.url,
+            prCreatedAt: pr.createdAt,
+            prMergedAt: pr.mergedAt || undefined,
+            commitCount,
+          };
+        }
+      }
+      return null;
+    } catch (err) {
+      logger.debug(`GitHub PR lookup failed for branch ${branchName}: ${err}`);
+      return null;
+    }
+  }
+
+  /**
+   * Build a MetricsLedgerRecord from a Feature object,
+   * enriching with GitHub PR data when available.
+   */
+  private async buildRecord(feature: Feature, projectPath?: string): Promise<MetricsLedgerRecord> {
     const now = new Date().toISOString();
     const completedAt = feature.completedAt || now;
     const createdAt = feature.createdAt || now;
@@ -196,6 +265,32 @@ export class LedgerService {
     // PR review time
     const prReviewTimeMs = feature.prReviewDurationMs || undefined;
 
+    // Start with feature-level PR data (may be null)
+    let prNumber = feature.prNumber;
+    let prUrl = feature.prUrl;
+    let prCreatedAt = feature.prCreatedAt;
+    let prMergedAt = feature.prMergedAt;
+    let commitCount: number | undefined;
+
+    // Enrich from GitHub if we have a branch name and missing PR data
+    if (projectPath && feature.branchName && (!prCreatedAt || !prMergedAt || !prNumber)) {
+      const ghData = await this.getGitHubPRData(projectPath, feature.branchName);
+      if (ghData) {
+        prNumber = prNumber || ghData.prNumber;
+        prUrl = prUrl || ghData.prUrl;
+        prCreatedAt = prCreatedAt || ghData.prCreatedAt;
+        prMergedAt = prMergedAt || ghData.prMergedAt;
+        commitCount = ghData.commitCount;
+      }
+    }
+
+    // Compute PR review time from enriched data if not already set
+    const effectivePrReviewTimeMs =
+      prReviewTimeMs ||
+      (prCreatedAt && prMergedAt
+        ? new Date(prMergedAt).getTime() - new Date(prCreatedAt).getTime()
+        : undefined);
+
     return {
       recordId: randomUUID(),
       recordType: 'feature_completion',
@@ -213,7 +308,7 @@ export class LedgerService {
       completedAt,
       cycleTimeMs,
       agentTimeMs,
-      prReviewTimeMs,
+      prReviewTimeMs: effectivePrReviewTimeMs,
       totalCostUsd,
       costByModel,
       totalInputTokens,
@@ -224,11 +319,11 @@ export class LedgerService {
       escalated: (feature.failureCount || 0) > 0,
       finalStatus: (feature.status as string) || 'done',
       executions,
-      prNumber: feature.prNumber,
-      prUrl: feature.prUrl,
-      prCreatedAt: feature.prCreatedAt,
-      prMergedAt: feature.prMergedAt,
-      commitCount: feature.ciIterationCount,
+      prNumber,
+      prUrl,
+      prCreatedAt,
+      prMergedAt,
+      commitCount,
       branchName: feature.branchName,
       assignedModel: feature.model,
     };
@@ -562,6 +657,141 @@ export class LedgerService {
     }
 
     return backfillCount;
+  }
+
+  /**
+   * Rewrite all ledger records, enriching PR/commit data from GitHub.
+   * Fetches all merged+open PRs in bulk, then rewrites the JSONL file.
+   */
+  async enrichAllRecords(projectPath: string): Promise<{ updated: number; total: number }> {
+    const records = await this.getRecords(projectPath, {});
+    if (records.length === 0) return { updated: 0, total: 0 };
+
+    // Bulk-fetch all merged PRs from GitHub (up to 500)
+    const prMap = new Map<
+      string,
+      { number: number; url: string; createdAt: string; mergedAt?: string; commitCount: number }
+    >();
+
+    for (const state of ['merged', 'open'] as const) {
+      try {
+        // Fetch PR metadata (without commits — causes GraphQL explosion on large repos)
+        const { stdout } = await execFileAsync(
+          'gh',
+          [
+            'pr',
+            'list',
+            '--state',
+            state,
+            '--limit',
+            '500',
+            '--json',
+            'number,headRefName,url,createdAt,mergedAt',
+          ],
+          { cwd: projectPath, timeout: 30000 }
+        );
+        const prs = JSON.parse(stdout.trim() || '[]');
+        for (const pr of prs) {
+          if (pr.headRefName && !prMap.has(pr.headRefName)) {
+            prMap.set(pr.headRefName, {
+              number: pr.number,
+              url: pr.url,
+              createdAt: pr.createdAt,
+              mergedAt: pr.mergedAt || undefined,
+              commitCount: 0,
+            });
+          }
+        }
+      } catch (err) {
+        logger.warn(`Failed to fetch ${state} PRs from GitHub: ${err}`);
+      }
+    }
+
+    logger.info(`Fetched ${prMap.size} PRs from GitHub for ledger enrichment`);
+
+    // Fetch commit counts individually for records that need them
+    const branchesNeedingCounts = new Set<string>();
+    for (const record of records) {
+      if (record.branchName && prMap.has(record.branchName) && !record.commitCount) {
+        branchesNeedingCounts.add(record.branchName);
+      }
+    }
+
+    for (const branch of branchesNeedingCounts) {
+      const prData = prMap.get(branch);
+      if (!prData) continue;
+      try {
+        const { stdout } = await execFileAsync(
+          'gh',
+          ['pr', 'view', String(prData.number), '--json', 'commits', '--jq', '.commits | length'],
+          { cwd: projectPath, timeout: 10000 }
+        );
+        prData.commitCount = parseInt(stdout.trim(), 10) || 0;
+      } catch {
+        // Commit count stays 0 on failure
+      }
+    }
+
+    // Rewrite records with enriched data
+    let updated = 0;
+    const enrichedRecords: MetricsLedgerRecord[] = [];
+
+    for (const record of records) {
+      let changed = false;
+      const enriched = { ...record };
+
+      if (record.branchName) {
+        const ghData = prMap.get(record.branchName);
+        if (ghData) {
+          if (!enriched.prNumber) {
+            enriched.prNumber = ghData.number;
+            changed = true;
+          }
+          if (!enriched.prUrl) {
+            enriched.prUrl = ghData.url;
+            changed = true;
+          }
+          if (!enriched.prCreatedAt) {
+            enriched.prCreatedAt = ghData.createdAt;
+            changed = true;
+          }
+          if (!enriched.prMergedAt && ghData.mergedAt) {
+            enriched.prMergedAt = ghData.mergedAt;
+            changed = true;
+          }
+          if (!enriched.commitCount && ghData.commitCount > 0) {
+            enriched.commitCount = ghData.commitCount;
+            changed = true;
+          }
+          // Compute PR review time if now available
+          if (!enriched.prReviewTimeMs && enriched.prCreatedAt && enriched.prMergedAt) {
+            enriched.prReviewTimeMs =
+              new Date(enriched.prMergedAt).getTime() - new Date(enriched.prCreatedAt).getTime();
+            changed = true;
+          }
+        }
+      }
+
+      if (changed) updated++;
+      enrichedRecords.push(enriched);
+    }
+
+    // Atomically rewrite the ledger file
+    const ledgerPath = getLedgerPath(projectPath);
+    const tmpPath = ledgerPath + '.tmp';
+    const lines = enrichedRecords.map((r) => JSON.stringify(r)).join('\n') + '\n';
+    await fs.promises.writeFile(tmpPath, lines, 'utf-8');
+    await fs.promises.rename(tmpPath, ledgerPath);
+
+    logger.info(`Enriched ${updated}/${records.length} ledger records with GitHub PR data`);
+
+    this.events.emit('ledger:enrichment-completed', {
+      projectPath,
+      updated,
+      total: records.length,
+    });
+
+    return { updated, total: records.length };
   }
 
   /**
