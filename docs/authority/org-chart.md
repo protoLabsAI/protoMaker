@@ -14,21 +14,27 @@ The system has three layers:
 
 ```text
 Josh Mabry (CEO, Human)
-├── Operations (Ava Loveland, CoS, Opus, Trust=3)
-│   ├── Jon, Sonnet, Trust=2 — GTM / Antagonistic Review
-│   ├── Cindi, Sonnet, Trust=2 — Content
+├── Ava Loveland, Opus, Trust=3 — Chief of Staff
+│   ├── Matt, Sonnet, Trust=2 — Frontend Engineer
+│   ├── Sam, Sonnet, Trust=2 — AI Agent Engineer
+│   ├── Kai, Sonnet, Trust=2 — Backend Engineer
+│   ├── Frank, Sonnet, Trust=2 — DevOps Engineer
+│   ├── Cindi, Sonnet, Trust=2 — Content Writer
+│   ├── Backend Engineer, Sonnet, Trust=2 — Generic Implementation
+│   ├── Product Manager, Sonnet, Trust=1 — Planning
+│   ├── Engineering Manager, Sonnet, Trust=1 — Coordination
+│   ├── Linear Specialist, Sonnet, Trust=2 — Linear Ops
 │   ├── PR Maintainer, Haiku, Trust=2 [Crew]
-│   ├── Board Janitor, Haiku, Trust=1 [Crew]
-│   └── System Health, Haiku, Trust=1 [Crew]
-└── Engineering (Lead Engineer, Service)
-    ├── Auto-mode Agents, Sonnet/Opus — Feature Implementation
-    ├── Matt, Sonnet, Trust=2 — Frontend
-    ├── Sam, Sonnet, Trust=2 — AI Agent Engineering
-    ├── Frank, Sonnet, Trust=2 — DevOps [Crew]
-    └── Kai, Sonnet, Trust=2 — Backend
+│   └── Board Janitor, Haiku, Trust=1 [Crew]
+└── Jon, Sonnet, Trust=1 — GTM Specialist
 ```
 
-**Note:** PM, ProjM, and EM authority agents still exist in code but are now absorbed into the pipeline's automated steps (PRD generation, milestone decomposition, auto-mode orchestration) rather than being standalone team members. Their policy roles remain active for trust-gated permission checks.
+> **Source of truth:** `docs/authority/roles.md` is auto-generated from `built-in-templates.ts` via `scripts/generate-org-docs.ts`. This org chart should match that file. Run `npx tsx scripts/generate-org-docs.ts` to regenerate roles.md.
+
+**Notes:**
+
+- PM, ProjM, and EM authority agents still exist in code but are now absorbed into the pipeline's automated steps (PRD generation, milestone decomposition, auto-mode orchestration) rather than being standalone team members. Their policy roles remain active for trust-gated permission checks.
+- Crew checks (System Health, PR State Sync) run as lightweight in-process monitors without corresponding agent templates. They escalate to Frank when issues are detected. See [Crew Loops](../dev/crew-loops.md) for details.
 
 ## Roles
 

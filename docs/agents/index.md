@@ -99,7 +99,7 @@ Covers:
 - What is MCP?
 - protoLabs's MCP architecture
 - MCP → Agent execution flow
-- Available MCP tools (32 tools documented)
+- Available MCP tools (112 tools)
 - Creating new MCP tools
 - Context passing
 
@@ -203,7 +203,7 @@ Covers:
 
 **Programmatic API for controlling protoLabs**
 
-- 32 tools for features, agents, auto-mode, context, etc.
+- 112 tools for features, agents, auto-mode, context, projects, content, observability, and more
 - Used by the Chief of Staff agent and external integrations
 - **Official Docs:** [MCP Specification](https://spec.modelcontextprotocol.io/)
 
@@ -237,37 +237,43 @@ Covers:
 
 These agents can be invoked interactively via CLI skills or Discord.
 
-| Role              | Model  | Trigger                 | Location                               |
-| ----------------- | ------ | ----------------------- | -------------------------------------- |
-| Chief of Staff    | Opus   | CLI, Discord, crew loop | `services/built-in-templates.ts`       |
-| DevOps Engineer   | Sonnet | CLI, Discord, crew loop | `services/crew-members/frank-check.ts` |
-| Frontend Engineer | Sonnet | CLI, Discord            | `services/built-in-templates.ts`       |
-| GTM Specialist    | Sonnet | CLI, Discord, crew loop | `services/built-in-templates.ts`       |
+| Role              | Agent | Model  | Trigger                 | Location                         |
+| ----------------- | ----- | ------ | ----------------------- | -------------------------------- |
+| Chief of Staff    | Ava   | Opus   | CLI, Discord, crew loop | `services/built-in-templates.ts` |
+| Frontend Engineer | Matt  | Sonnet | CLI, Discord            | `services/built-in-templates.ts` |
+| AI Agent Engineer | Sam   | Sonnet | CLI, Discord            | `services/built-in-templates.ts` |
+| Backend Engineer  | Kai   | Sonnet | CLI, Discord            | `services/built-in-templates.ts` |
+| DevOps Engineer   | Frank | Sonnet | CLI, Discord, crew loop | `services/built-in-templates.ts` |
+| Content Writer    | Cindi | Sonnet | CLI, Discord            | `services/built-in-templates.ts` |
+| GTM Specialist    | Jon   | Sonnet | CLI, Discord            | `services/built-in-templates.ts` |
 
 ### Crew Loop Members (Scheduled)
 
 These run lightweight checks on cron schedules and escalate to full agents only when problems are detected. See [Crew Loops](../dev/crew-loops.md) for details.
 
-| Member          | Model  | Schedule | Checks                                                    |
-| --------------- | ------ | -------- | --------------------------------------------------------- |
-| Chief of Staff  | Opus   | 10 min   | Stuck agents, blocked features, auto-mode health          |
-| DevOps Engineer | Sonnet | 10 min   | V8 heap, RSS memory, agent capacity, health monitor       |
-| PR Maintainer   | Haiku  | 10 min   | Stale PRs, auto-merge status, orphaned worktrees          |
-| Board Janitor   | Haiku  | 15 min   | Merged-not-done, orphaned in-progress, stale dependencies |
-| GTM Specialist  | Sonnet | 6 hours  | Recently completed features (disabled by default)         |
+| Member          | Model  | Schedule | Checks                                                      |
+| --------------- | ------ | -------- | ----------------------------------------------------------- |
+| Chief of Staff  | Opus   | 10 min   | Stuck agents, blocked features, auto-mode health            |
+| DevOps Engineer | Sonnet | 10 min   | V8 heap, RSS memory, agent capacity, health monitor         |
+| PR Maintainer   | Haiku  | 10 min   | Stale PRs, auto-merge status, orphaned worktrees            |
+| Board Janitor   | Haiku  | 15 min   | Merged-not-done, orphaned in-progress, stale dependencies   |
+| System Health   | —      | 10 min   | System RAM, swap, disk, CPU load, temperature, zombie procs |
+| PR State Sync   | —      | 5 min    | GitHub → Linear state drift detection and event emission    |
+| GTM Specialist  | Sonnet | 6 hours  | Recently completed features (disabled by default)           |
 
 ### Implementation Agents (Auto-Mode)
 
 These agents are assigned features dynamically by auto-mode and implement them in isolated worktrees.
 
-| Template               | Model  | Purpose                                  |
-| ---------------------- | ------ | ---------------------------------------- |
-| Backend Engineer       | Sonnet | Server-side features, APIs, services     |
-| Frontend Engineer      | Sonnet | UI components, design system, styling    |
-| QA Engineer            | Sonnet | Tests, bug identification, validation    |
-| Documentation Engineer | Haiku  | Docs, READMEs, API guides                |
-| Product Manager        | Sonnet | Requirements, priorities, roadmap        |
-| Engineering Manager    | Sonnet | Code review, capacity, quality standards |
+| Template            | Model  | Purpose                                     |
+| ------------------- | ------ | ------------------------------------------- |
+| Backend Engineer    | Sonnet | Server-side features, APIs, services        |
+| Frontend Engineer   | Sonnet | UI components, design system, styling       |
+| Product Manager     | Sonnet | Requirements, priorities, roadmap           |
+| Engineering Manager | Sonnet | Code review, capacity, quality standards    |
+| PR Maintainer       | Haiku  | Format fixes, PR creation, auto-merge       |
+| Board Janitor       | Haiku  | Board consistency, status reconciliation    |
+| Linear Specialist   | Sonnet | Linear workspace ops, sprint planning, sync |
 
 - Run in isolated worktrees
 - Create PRs on completion
