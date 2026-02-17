@@ -9,6 +9,7 @@ import { Annotation } from '@langchain/langgraph';
 import { z } from 'zod';
 import { appendReducer } from '../graphs/reducers.js';
 import type { IdeaCategory, ImpactLevel, EffortLevel } from '@automaker/types';
+import type { LangfuseClient } from '@automaker/observability';
 
 /**
  * Complexity level determines processing path
@@ -150,6 +151,12 @@ export interface IdeaProcessingState {
   /** Fast LLM model for simple tasks (injected by adapter) */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   fastModel?: any;
+
+  /** Langfuse client for observability tracing */
+  langfuseClient?: LangfuseClient;
+
+  /** Langfuse trace ID for this flow execution */
+  traceId?: string;
 }
 
 /**
@@ -192,6 +199,10 @@ export const IdeaProcessingStateAnnotation = Annotation.Root({
   smartModel: Annotation<any>,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   fastModel: Annotation<any>,
+
+  // Observability tracing
+  langfuseClient: Annotation<LangfuseClient | undefined>,
+  traceId: Annotation<string | undefined>,
 });
 
 /**

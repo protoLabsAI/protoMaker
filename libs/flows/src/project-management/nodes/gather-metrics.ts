@@ -16,6 +16,7 @@ import type {
   DependencyMetrics,
   AgentMetrics,
 } from '../types.js';
+import { createLogger } from '@automaker/utils';
 
 /**
  * Service interface for metrics collection
@@ -89,6 +90,8 @@ export const mockMetricsCollector: MetricsCollector = {
 // Module-level collector reference — set via createGatherMetricsNode()
 let _collector: MetricsCollector = mockMetricsCollector;
 
+const logger = createLogger('GatherMetricsNode');
+
 /**
  * Creates a gather metrics node with injected collector
  */
@@ -96,7 +99,24 @@ export function createGatherMetricsNode(
   collector: MetricsCollector
 ): (state: ProjectStatusState) => Promise<Partial<ProjectStatusState>> {
   return async (state: ProjectStatusState): Promise<Partial<ProjectStatusState>> => {
+    const nodeName = 'gather_metrics';
+    const startTime = new Date();
+    let spanId: string | undefined;
+
     try {
+      // Create trace span if Langfuse is available
+      if (state.langfuseClient?.isAvailable() && state.traceId) {
+        spanId = `${nodeName}-${Date.now()}`;
+        state.langfuseClient.createSpan({
+          traceId: state.traceId,
+          id: spanId,
+          name: nodeName,
+          input: { projectPath: state.projectPath },
+          metadata: { nodeType: 'metrics' },
+          startTime,
+        });
+      }
+
       const [boardMetrics, prMetrics, dependencyMetrics, agentMetrics] = await Promise.all([
         collector.getBoardMetrics(state.projectPath),
         collector.getPRMetrics(state.projectPath),
@@ -104,10 +124,55 @@ export function createGatherMetricsNode(
         collector.getAgentMetrics(state.projectPath),
       ]);
 
+      const endTime = new Date();
+
+      // Update span with output
+      if (state.langfuseClient?.isAvailable() && state.traceId && spanId) {
+        state.langfuseClient.createSpan({
+          traceId: state.traceId,
+          id: spanId,
+          name: nodeName,
+          input: { projectPath: state.projectPath },
+          output: {
+            totalFeatures: boardMetrics.totalFeatures,
+            openPRs: prMetrics.openPRs,
+            dependencies: dependencyMetrics.totalDependencies,
+            agents: agentMetrics.runningAgents,
+          },
+          metadata: {
+            nodeType: 'metrics',
+            success: true,
+            features: boardMetrics.totalFeatures,
+            prs: prMetrics.openPRs,
+          },
+          startTime,
+          endTime,
+        });
+        await state.langfuseClient.flush();
+      }
+
       return { boardMetrics, prMetrics, dependencyMetrics, agentMetrics };
     } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      logger.error(`[${nodeName}] Failed:`, err);
+
+      // Update span with error
+      if (state.langfuseClient?.isAvailable() && state.traceId && spanId) {
+        state.langfuseClient.createSpan({
+          traceId: state.traceId,
+          id: spanId,
+          name: nodeName,
+          input: { projectPath: state.projectPath },
+          output: '',
+          metadata: { nodeType: 'metrics', success: false, error: errorMsg },
+          startTime,
+          endTime: new Date(),
+        });
+        await state.langfuseClient.flush();
+      }
+
       return {
-        error: `Failed to gather metrics: ${err instanceof Error ? err.message : String(err)}`,
+        error: `Failed to gather metrics: ${errorMsg}`,
       };
     }
   };
@@ -119,5 +184,67 @@ export function createGatherMetricsNode(
 export async function gatherMetrics(
   state: ProjectStatusState
 ): Promise<Partial<ProjectStatusState>> {
-  return createGatherMetricsNode(_collector)(state);
+  const nodeName = 'gather_metrics';
+  const startTime = new Date();
+  let spanId: string | undefined;
+
+  try {
+    // Create trace span if Langfuse is available
+    if (state.langfuseClient?.isAvailable() && state.traceId) {
+      spanId = `${nodeName}-${Date.now()}`;
+      state.langfuseClient.createSpan({
+        traceId: state.traceId,
+        id: spanId,
+        name: nodeName,
+        input: { projectPath: state.projectPath },
+        metadata: { nodeType: 'metrics' },
+        startTime,
+      });
+    }
+
+    const result = await createGatherMetricsNode(_collector)(state);
+
+    const endTime = new Date();
+
+    // Update span with output
+    if (state.langfuseClient?.isAvailable() && state.traceId && spanId) {
+      const boardMetrics = result.boardMetrics;
+      state.langfuseClient.createSpan({
+        traceId: state.traceId,
+        id: spanId,
+        name: nodeName,
+        input: { projectPath: state.projectPath },
+        output: boardMetrics ? { totalFeatures: boardMetrics.totalFeatures } : {},
+        metadata: {
+          nodeType: 'metrics',
+          success: !result.error,
+        },
+        startTime,
+        endTime,
+      });
+      await state.langfuseClient.flush();
+    }
+
+    return result;
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    logger.error(`[${nodeName}] Failed:`, err);
+
+    // Update span with error
+    if (state.langfuseClient?.isAvailable() && state.traceId && spanId) {
+      state.langfuseClient.createSpan({
+        traceId: state.traceId,
+        id: spanId,
+        name: nodeName,
+        input: { projectPath: state.projectPath },
+        output: '',
+        metadata: { nodeType: 'metrics', success: false, error: errorMsg },
+        startTime,
+        endTime: new Date(),
+      });
+      await state.langfuseClient.flush();
+    }
+
+    throw err;
+  }
 }

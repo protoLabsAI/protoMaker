@@ -10,6 +10,7 @@
 import { Annotation } from '@langchain/langgraph';
 import { z } from 'zod';
 import { appendReducer } from '../graphs/reducers.js';
+import type { LangfuseClient } from '@automaker/observability';
 
 // ─── Metric Types ──────────────────────────────────────────────────────────
 
@@ -198,6 +199,12 @@ export interface ProjectStatusState {
 
   /** Error message if flow fails */
   error?: string;
+
+  /** Langfuse client for observability tracing */
+  langfuseClient?: LangfuseClient;
+
+  /** Langfuse trace ID for this flow execution */
+  traceId?: string;
 }
 
 /**
@@ -235,6 +242,9 @@ export const ProjectStatusStateAnnotation = Annotation.Root({
 
   formattedReport: Annotation<string | undefined>,
   error: Annotation<string | undefined>,
+
+  langfuseClient: Annotation<LangfuseClient | undefined>,
+  traceId: Annotation<string | undefined>,
 });
 
 export type ProjectStatusStateType = typeof ProjectStatusStateAnnotation.State;
@@ -334,6 +344,12 @@ export interface MilestoneSummaryState {
 
   /** Error message if flow fails */
   error?: string;
+
+  /** Langfuse client for observability tracing */
+  langfuseClient?: LangfuseClient;
+
+  /** Langfuse trace ID for this flow execution */
+  traceId?: string;
 }
 
 export const MilestoneSummaryStateAnnotation = Annotation.Root({
@@ -363,6 +379,9 @@ export const MilestoneSummaryStateAnnotation = Annotation.Root({
   milestoneReport: Annotation<MilestoneReport | undefined>,
   formattedReport: Annotation<string | undefined>,
   error: Annotation<string | undefined>,
+
+  langfuseClient: Annotation<LangfuseClient | undefined>,
+  traceId: Annotation<string | undefined>,
 });
 
 export type MilestoneSummaryStateType = typeof MilestoneSummaryStateAnnotation.State;

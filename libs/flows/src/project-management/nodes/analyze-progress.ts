@@ -9,6 +9,7 @@
  */
 
 import type { ProjectStatusState, ProgressAnalysis, HealthStatus } from '../types.js';
+import { createLogger } from '@automaker/utils';
 
 /**
  * Determine project health from metrics
@@ -145,36 +146,105 @@ function identifyHighlights(state: ProjectStatusState): string[] {
   return highlights;
 }
 
+const logger = createLogger('AnalyzeProgressNode');
+
 /**
  * Analyze progress node — deterministic heuristic analysis
  */
 export async function analyzeProgress(
   state: ProjectStatusState
 ): Promise<Partial<ProjectStatusState>> {
-  if (state.error) return {};
+  const nodeName = 'analyze_progress';
+  const startTime = new Date();
+  let spanId: string | undefined;
 
-  const health = assessHealth(state);
-  const velocity = calculateVelocity(state);
-  const bottlenecks = identifyBottlenecks(state);
-  const highlights = identifyHighlights(state);
+  try {
+    if (state.error) return {};
 
-  // Estimate completion time
-  const board = state.boardMetrics;
-  let estimatedCompletion: string | undefined;
-  if (board && velocity > 0) {
-    const remaining = board.totalFeatures - (board.byStatus['done'] ?? 0);
-    const hoursRemaining = remaining / velocity;
-    const completionDate = new Date(Date.now() + hoursRemaining * 3_600_000);
-    estimatedCompletion = completionDate.toISOString();
+    // Create trace span if Langfuse is available
+    if (state.langfuseClient?.isAvailable() && state.traceId) {
+      spanId = `${nodeName}-${Date.now()}`;
+      state.langfuseClient.createSpan({
+        traceId: state.traceId,
+        id: spanId,
+        name: nodeName,
+        input: {
+          health: state.boardMetrics?.completionPercentage,
+          features: state.boardMetrics?.totalFeatures,
+        },
+        metadata: { nodeType: 'analysis' },
+        startTime,
+      });
+    }
+
+    const health = assessHealth(state);
+    const velocity = calculateVelocity(state);
+    const bottlenecks = identifyBottlenecks(state);
+    const highlights = identifyHighlights(state);
+
+    // Estimate completion time
+    const board = state.boardMetrics;
+    let estimatedCompletion: string | undefined;
+    if (board && velocity > 0) {
+      const remaining = board.totalFeatures - (board.byStatus['done'] ?? 0);
+      const hoursRemaining = remaining / velocity;
+      const completionDate = new Date(Date.now() + hoursRemaining * 3_600_000);
+      estimatedCompletion = completionDate.toISOString();
+    }
+
+    const progressAnalysis: ProgressAnalysis = {
+      health,
+      velocity,
+      estimatedCompletion,
+      bottlenecks,
+      highlights,
+    };
+
+    const endTime = new Date();
+
+    // Update span with output
+    if (state.langfuseClient?.isAvailable() && state.traceId && spanId) {
+      state.langfuseClient.createSpan({
+        traceId: state.traceId,
+        id: spanId,
+        name: nodeName,
+        input: {
+          health: state.boardMetrics?.completionPercentage,
+          features: state.boardMetrics?.totalFeatures,
+        },
+        output: { health, velocity: velocity.toFixed(2), bottlenecks: bottlenecks.length },
+        metadata: {
+          nodeType: 'analysis',
+          success: true,
+          health,
+          bottleneckCount: bottlenecks.length,
+        },
+        startTime,
+        endTime,
+      });
+      await state.langfuseClient.flush();
+    }
+
+    return { progressAnalysis };
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    logger.error(`[${nodeName}] Failed:`, error);
+
+    // Update span with error
+    if (state.langfuseClient?.isAvailable() && state.traceId && spanId) {
+      state.langfuseClient.createSpan({
+        traceId: state.traceId,
+        id: spanId,
+        name: nodeName,
+        input: { features: state.boardMetrics?.totalFeatures },
+        output: '',
+        metadata: { nodeType: 'analysis', success: false, error: errorMsg },
+        startTime,
+        endTime: new Date(),
+      });
+      await state.langfuseClient.flush();
+    }
+
+    throw error;
   }
-
-  const progressAnalysis: ProgressAnalysis = {
-    health,
-    velocity,
-    estimatedCompletion,
-    bottlenecks,
-    highlights,
-  };
-
-  return { progressAnalysis };
 }
