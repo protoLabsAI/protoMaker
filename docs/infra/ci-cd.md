@@ -1,20 +1,66 @@
 # CI/CD Pipelines
 
-protoLabs uses GitHub Actions for continuous integration and delivery.
+protoLabs uses GitHub Actions for continuous integration and delivery. All workflows run on a self-hosted runner (`ava-staging`) with access to Claude CLI, Docker, and the staging environment.
 
 ## Workflows Overview
 
-| Workflow                 | Trigger           | Purpose                 |
-| ------------------------ | ----------------- | ----------------------- |
-| `test.yml`               | PR, push to main  | Unit tests              |
-| `e2e-tests.yml`          | PR, push to main  | End-to-end tests        |
-| `pr-check.yml`           | PR, push to main  | Build verification      |
-| `format-check.yml`       | PR, push to main  | Code formatting         |
-| `security-audit.yml`     | PR, push, weekly  | npm audit               |
-| `release.yml`            | Release published | Multi-platform builds   |
-| `deploy-staging.yml`     | Push to main      | Auto-deploy staging     |
-| `generate-changelog.yml` | Release published | AI changelog generation |
-| `linear-sync.yml`        | PR merge to main  | Linear issue sync       |
+| Workflow                 | Trigger                   | Runner      | Purpose                 |
+| ------------------------ | ------------------------- | ----------- | ----------------------- |
+| `checks.yml`             | PR, push to main, weekly  | self-hosted | Format, lint, audit     |
+| `test.yml`               | PR, push to main          | self-hosted | Unit tests              |
+| `e2e-tests.yml`          | Push to main, manual      | self-hosted | End-to-end tests        |
+| `pr-check.yml`           | PR, push to main          | self-hosted | Build verification      |
+| `release.yml`            | Release published         | matrix      | Multi-platform builds   |
+| `deploy-staging.yml`     | Push to main, manual      | self-hosted | Auto-deploy staging     |
+| `generate-changelog.yml` | Release published, manual | self-hosted | AI changelog generation |
+| `linear-sync.yml`        | PR merged to main         | self-hosted | Linear issue sync       |
+
+> **Note:** There are no separate `format-check.yml` or `security-audit.yml` workflows. Format checking, linting, and security audit are consolidated into `checks.yml`.
+
+## Checks (`checks.yml`)
+
+Consolidates format checking, linting, and security auditing into a single workflow.
+
+```yaml
+name: Checks
+
+on:
+  pull_request:
+    branches: ['*']
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 9 * * 1' # Weekly on Mondays (security audit)
+
+jobs:
+  checks:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-project
+        with:
+          check-lockfile: 'true'
+          skip-native-rebuild: 'true'
+      - run: npm run format:check
+      - run: npm run lint:ui
+      - run: npm run lint:server
+      - run: npm audit --audit-level=critical
+```
+
+### What It Checks
+
+- `npm run format:check` — Prettier formatting across entire codebase
+- `npm run lint:ui` — ESLint for UI code
+- `npm run lint:server` — Import safety linting for server
+- `npm audit --audit-level=critical` — Fails only on critical vulnerabilities
+
+### Fixing Issues
+
+```bash
+npm run format       # Auto-fix formatting
+npm run lint -- --fix # Auto-fix lint issues
+npm audit            # Check all vulnerabilities
+```
 
 ## Test Suite (`test.yml`)
 
@@ -31,7 +77,7 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-project
@@ -44,34 +90,24 @@ jobs:
 
 ### What It Tests
 
-- `npm run test:packages` - Tests for all `libs/*` packages
-- `npm run test:server:coverage` - Server tests with coverage report
-
-### Setup Action
-
-The `setup-project` composite action:
-
-1. Sets up Node.js 22
-2. Caches npm dependencies
-3. Installs dependencies
-4. Optionally rebuilds native modules (node-pty)
+- `npm run test:packages` — Tests for all `libs/*` packages
+- `npm run test:server:coverage` — Server tests with coverage report
 
 ## E2E Tests (`e2e-tests.yml`)
 
-Runs Playwright end-to-end tests.
+Runs Playwright end-to-end tests. Only triggered on push to main (not on PRs) and via manual dispatch.
 
 ```yaml
 name: E2E Tests
 
 on:
-  pull_request:
-    branches: ['*']
   push:
-    branches: [main, master]
+    branches: [main]
+  workflow_dispatch:
 
 jobs:
   e2e:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -79,9 +115,10 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run build --workspace=apps/server
 
-      # Start backend
+      # Start backend on port 3018 (avoids conflict with staging on 3008)
       - run: npm run start --workspace=apps/server &
         env:
+          PORT: 3018
           AUTOMAKER_API_KEY: test-api-key-for-e2e-tests
           AUTOMAKER_MOCK_AGENT: 'true'
           IS_CONTAINERIZED: 'true'
@@ -89,36 +126,32 @@ jobs:
       # Wait for health check
       - run: |
           for i in {1..60}; do
-            curl -s -f http://localhost:3008/api/health && exit 0
+            curl -s -f http://localhost:3018/api/health && exit 0
             sleep 1
           done
           exit 1
 
-      # Run tests (Playwright starts Vite automatically)
+      # Run tests (Playwright starts Vite automatically via webServer config)
       - run: npm run test --workspace=apps/ui
         env:
-          VITE_SERVER_URL: http://localhost:3008
-
-      # Upload artifacts on failure
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: playwright-report
-          path: apps/ui/playwright-report/
+          VITE_SERVER_URL: http://localhost:3018
+          TEST_PORT: 3017
+          TEST_SERVER_PORT: 3018
 ```
 
 ### Test Environment
 
-- `AUTOMAKER_MOCK_AGENT=true` - Uses mock agent instead of real API
-- `IS_CONTAINERIZED=true` - Skips sandbox confirmation dialogs
+- `AUTOMAKER_MOCK_AGENT=true` — Uses mock agent instead of real API
+- `IS_CONTAINERIZED=true` — Skips sandbox confirmation dialogs
+- Port 3018 for server, 3017 for UI (avoids conflict with staging)
 - Deterministic API key for reliable login
 
 ### Artifacts
 
 On failure, uploads:
 
-- `playwright-report/` - HTML test report
-- `test-results/` - Screenshots, traces, videos
+- `playwright-report/` — HTML test report
+- `test-results/` — Screenshots, traces, videos
 
 ## PR Build Check (`pr-check.yml`)
 
@@ -135,11 +168,13 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-project
-      - run: npm run build:electron:dir # Directory only (faster)
+      - run: npm run build:electron:dir
+        env:
+          NODE_OPTIONS: '--max-old-space-size=4096'
 ```
 
 ### Why Directory Build
@@ -149,70 +184,6 @@ jobs:
 - Faster than full build
 - Still validates the build process
 - Catches TypeScript errors, missing imports, etc.
-
-## Format Check (`format-check.yml`)
-
-Ensures code follows Prettier formatting.
-
-```yaml
-name: Format Check
-
-on:
-  pull_request:
-    branches: ['*']
-  push:
-    branches: [main, master]
-
-jobs:
-  format:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-      - run: npm install --ignore-scripts --force
-      - run: npm run format:check
-```
-
-### Fixing Formatting Issues
-
-```bash
-npm run format  # Auto-fix
-```
-
-## Security Audit (`security-audit.yml`)
-
-Checks for vulnerable dependencies.
-
-```yaml
-name: Security Audit
-
-on:
-  pull_request:
-    branches: ['*']
-  push:
-    branches: [main, master]
-  schedule:
-    - cron: '0 9 * * 1' # Weekly on Mondays
-
-jobs:
-  audit:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup-project
-      - run: npm audit --audit-level=critical
-```
-
-### Audit Level
-
-Only fails on **critical** vulnerabilities. To check all:
-
-```bash
-npm audit
-```
 
 ## Release Build (`release.yml`)
 
@@ -229,51 +200,26 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [self-hosted, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-
-      # Extract version from tag
       - id: version
         run: |
           VERSION="${{ github.event.release.tag_name }}"
-          VERSION="${VERSION#v}"
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
-
-      # Update package.json version
+          echo "version=${VERSION#v}" >> $GITHUB_OUTPUT
       - run: node apps/ui/scripts/update-version.mjs "${{ steps.version.outputs.version }}"
-
       - uses: ./.github/actions/setup-project
-
       # Platform-specific builds
       - run: npm run build:electron:mac --workspace=apps/ui
         if: matrix.os == 'macos-latest'
       - run: npm run build:electron:win --workspace=apps/ui
         if: matrix.os == 'windows-latest'
       - run: npm run build:electron:linux --workspace=apps/ui
-        if: matrix.os == 'ubuntu-latest'
-
-      # Upload artifacts
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.os }}-builds
-          path: apps/ui/release/*
-
-  upload:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/download-artifact@v4
-      - uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            artifacts/**/*.dmg
-            artifacts/**/*.exe
-            artifacts/**/*.AppImage
-            artifacts/**/*.deb
-            artifacts/**/*.rpm
+        if: matrix.os == 'self-hosted'
 ```
+
+> **Note:** Linux builds use `self-hosted` (not `ubuntu-latest`) since GitHub-hosted runner minutes are exhausted.
 
 ### Release Artifacts
 
@@ -285,53 +231,20 @@ jobs:
 
 ### Creating a Release
 
-1. Create and push a tag:
-
-   ```bash
-   git tag v1.0.0
-   git push origin v1.0.0
-   ```
-
+1. Create and push a tag: `git tag v1.0.0 && git push origin v1.0.0`
 2. Create a GitHub Release from the tag
-
 3. The workflow builds and uploads artifacts
 
 ## Changelog Generation (`generate-changelog.yml`)
 
 Auto-generates changelogs when a GitHub Release is published.
 
-```yaml
-name: Generate Changelog
-
-on:
-  release:
-    types: [published]
-  workflow_dispatch:
-
-jobs:
-  changelog:
-    runs-on: self-hosted
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - run: ./scripts/generate-changelog.sh
-```
-
-### What It Does
-
-- Triggered automatically when a GitHub Release is published
-- Runs on the self-hosted runner (requires Claude CLI for AI summarization)
-- Collects all merged PRs since the last release using `gh pr list`
-- Uses Claude CLI to generate a categorized changelog with sections for:
-  - Features
-  - Bug Fixes
-  - Documentation
-  - Refactoring
-  - Infrastructure
-- Updates `CHANGELOG.md` in the repository
-- Updates the GitHub Release notes with the generated content
-- Script location: `scripts/generate-changelog.sh`
+- Triggered on release publish or manual dispatch
+- Runs on self-hosted runner (requires Claude CLI for AI summarization)
+- Collects merged PRs since last release via `gh pr list`
+- Uses Claude CLI to categorize changes (features, bug fixes, docs, infra)
+- Updates `CHANGELOG.md` and the GitHub Release notes
+- Script: `scripts/generate-changelog.sh`
 
 ### Requirements
 
@@ -343,75 +256,37 @@ jobs:
 
 Automatically syncs Linear issues when PRs merge to main.
 
-```yaml
-name: Linear Sync
-
-on:
-  pull_request:
-    types: [closed]
-    branches: [main]
-
-jobs:
-  sync:
-    if: github.event.pull_request.merged == true
-    runs-on: self-hosted
-    steps:
-      - Parses PRO-NNN from PR title, body, and branch name
-      - Adds merge comment to Linear issue via GraphQL API
-      - Transitions issue to Done state
-      - Posts notification to Discord #deployments
-```
-
-### What It Does
-
-- Triggered when a pull request is merged into the `main` branch
-- Extracts Linear issue identifiers (e.g., `PRO-123`) from:
-  - PR title
-  - PR body/description
-  - Branch name
-- Adds a comment to the Linear issue with:
-  - Link to the merged PR
-  - Merge timestamp
-  - Commit SHA
-- Automatically transitions the Linear issue status to "Done"
-- Posts a notification to the Discord `#deployments` channel with:
-  - Issue identifier and title
-  - PR link
-  - Merge author
+- Triggered when a PR is merged into `main`
+- Extracts Linear issue identifiers (e.g., `PRO-123`) from PR title, body, or branch name
+- Adds a comment to the Linear issue with PR link, merge timestamp, and commit SHA
+- Transitions the Linear issue status to "Done"
+- Posts a notification to Discord `#deployments` channel
 
 ### Requirements
 
 - `LINEAR_API_TOKEN` secret for GraphQL API access
 - `DISCORD_DEPLOY_WEBHOOK` secret for Discord notifications
-- Linear issue identifier must be present in PR title, body, or branch name
 
 ## Deploy Staging (`deploy-staging.yml`)
 
-Auto-deploys to the staging server when code merges to `main`.
+Auto-deploys to the staging server when code merges to `main`. Includes agent draining, rollback support, and smoke tests.
 
-```yaml
-name: Deploy Staging
+### Deployment Pipeline
 
-on:
-  push:
-    branches: [main]
-  workflow_dispatch:
+1. **Setup** — Clone/pull repo into persistent deploy directory (`/home/josh/staging-deploy/automaker`)
+2. **Disk check** — Require at least 10GB free, prune dangling Docker images
+3. **Drain agents** — POST to `/api/deploy/drain` to gracefully stop auto-mode and wait for agents to finish
+4. **Tag rollback** — Tag current working Docker images as `rollback` for restore on failure
+5. **Build & start** — `./scripts/setup-staging.sh --build && --start`
+6. **Verify** — Health check with 15 retries (30s total), docs site check (non-fatal)
+7. **Smoke tests** — `./scripts/smoke-test.sh` verifies critical functionality
+8. **Rollback** — On failure, restores rollback-tagged images and verifies recovery
+9. **Cleanup** — Prune rollback tags and unused images
+10. **Notify Discord** — Posts deploy result to `#deployments` via webhook
 
-jobs:
-  deploy:
-    runs-on: self-hosted
-    steps:
-      - uses: actions/checkout@v4
-      - run: ./scripts/setup-staging.sh --build
-      - run: ./scripts/setup-staging.sh --start
-      - run: curl -sf http://localhost:3008/api/health
-      - run: ./scripts/smoke-test.sh
-      - run: docker image prune -f
-```
+See [staging-deployment.md](./staging-deployment.md#automated-deploys) for full setup.
 
 ### Self-Hosted Runner
-
-Requires a GitHub Actions runner on the staging machine:
 
 ```bash
 # Install runner
@@ -420,29 +295,6 @@ Requires a GitHub Actions runner on the staging machine:
 # Check status
 ./scripts/setup-runner.sh --status
 ```
-
-See [staging-deployment.md](./staging-deployment.md#automated-deploys) for full setup.
-
-### Deployment Steps
-
-1. **Checkout Code**: Uses `actions/checkout@v4` for a clean copy in the runner workspace
-2. **Build**: Runs `./scripts/setup-staging.sh --build` to rebuild Docker images
-3. **Start Services**: Runs `./scripts/setup-staging.sh --start` to restart containers
-4. **Health Check**: Verifies `/api/health` endpoint responds (15 retries, 2s interval)
-5. **Smoke Tests**: Runs `./scripts/smoke-test.sh` to verify critical functionality
-6. **Cleanup**: Prunes unused Docker images to free disk space
-
-### Smoke Tests
-
-The smoke test script verifies:
-
-- API health endpoint responds
-- WebSocket connection succeeds
-- MCP server tools are accessible
-- Database migrations are applied
-- Feature board loads successfully
-
-If smoke tests fail, an alert is posted to Discord `#alerts` channel via `DISCORD_ALERTS_WEBHOOK`.
 
 ### Secrets
 
@@ -465,6 +317,9 @@ inputs:
   rebuild-node-pty-path:
     description: Path to rebuild node-pty (for native modules)
     default: ''
+  skip-native-rebuild:
+    description: Skip native module rebuild
+    default: 'false'
 
 runs:
   using: composite
@@ -473,38 +328,29 @@ runs:
       with:
         node-version: '22'
         cache: 'npm'
-
     - run: npm ci --legacy-peer-deps --force
-      shell: bash
-
-    - run: npm rebuild node-pty
-      if: inputs.rebuild-node-pty-path != ''
-      working-directory: ${{ inputs.rebuild-node-pty-path }}
-      shell: bash
-
+    - run: npm rebuild node-pty # if rebuild-node-pty-path set
     - run: npm run build:packages
-      shell: bash
 ```
 
 ## Branch Protection
 
-Recommended branch protection rules for `main`:
+The `main` branch is protected by a single consolidated ruleset ("Protect main", ID 12552305):
 
-- Require status checks:
-  - `test`
-  - `e2e`
-  - `build`
-  - `format`
-  - `audit`
-- Require pull request reviews
-- Require branches to be up to date
+- **Required status checks**: `checks`, `test`, `build`
+- **Required reviews**: CodeRabbit
+- **Required review thread resolution**: Yes (CodeRabbit comments must be resolved)
+- **Squash-only merges**: Yes
+- **Admin bypass**: Enabled
+- **Branches do NOT need to be up-to-date**: `strict_required_status_checks_policy` is `false` — PRs can merge without rebasing onto the latest main. This eliminates the cascade problem where each merge forces all other PRs to update and re-run CI.
+
+IaC source of truth: `scripts/infra/rulesets/main.json`
 
 ## Secrets
 
 | Secret                   | Purpose                                     |
 | ------------------------ | ------------------------------------------- |
 | `GITHUB_TOKEN`           | Auto-provided, used for releases            |
-| `CODECOV_TOKEN`          | (Optional) Coverage reporting               |
 | `DISCORD_DEPLOY_WEBHOOK` | Staging deploy notifications (#deployments) |
 | `DISCORD_ALERTS_WEBHOOK` | Smoke test failure alerts (#alerts)         |
 | `LINEAR_API_TOKEN`       | Linear issue sync on PR merge               |
@@ -515,75 +361,24 @@ The `ava-staging` runner has access to resources that GitHub-hosted runners don'
 
 | Capability                 | What It Enables                                       |
 | -------------------------- | ----------------------------------------------------- |
-| Claude CLI (authenticated) | AI-assisted PR reviews, changelog generation          |
-| Anthropic API key          | Automated code analysis, release notes                |
+| Claude CLI (authenticated) | AI-assisted changelog generation                      |
+| Anthropic API key          | Agent execution, code analysis                        |
 | protoLabs MCP server       | Board updates, feature status, agent orchestration    |
 | Docker (host)              | Staging deploys, integration tests against real infra |
 | gh CLI (authenticated)     | PR creation, issue management, release publishing     |
 | 125GB RAM / 24 CPUs        | Full E2E test suites, parallel builds                 |
-
-### Automation Status
-
-**✅ Implemented:**
-
-- **Release Automation**: Changelog generation via `generate-changelog.yml` using Claude CLI
-- **Board Integration**: Linear issue sync via `linear-sync.yml` on PR merge to main
-- **Testing**: Post-deploy smoke tests in `deploy-staging.yml` with Discord alerting
-
-**📋 Planned:**
-
-**PR Workflow:**
-
-- Claude-powered PR review on self-hosted (no API key in GH secrets needed)
-- Auto-fix formatting/lint issues and push commits
-- Dependency update PRs with AI-generated migration notes
-
-**Release Automation:**
-
-- Automated version bumping based on conventional commits
-- AI-assisted release notes with feature summaries from Linear context
-
-**Board Integration:**
-
-- Post deploy summaries to Discord with feature lists
-- Sync GitHub milestones with Linear project status
-
-**Testing:**
-
-- Run full E2E suite against staging post-deploy
-- Performance regression testing with real agent workloads
-- Security scanning with Claude code analysis
-
-### Adding New Workflows
-
-Self-hosted workflows use `runs-on: self-hosted` and have access to the host environment.
-The self-hosted runner has access to the host environment where protoLabs is deployed.
-
-```yaml
-jobs:
-  my-job:
-    runs-on: self-hosted
-    steps:
-      - name: Use Claude CLI
-        run: claude --version
-      - name: Use protoLabs MCP
-        run: curl -sf http://localhost:3008/api/health
-```
 
 ## Local CI Simulation
 
 Run CI checks locally before pushing:
 
 ```bash
-# All tests
-npm run test:packages && npm run test:server
+# Checks (format + lint + audit)
+npm run format:check && npm run lint && npm audit --audit-level=critical
 
-# Format check
-npm run format:check
+# Tests
+npm run test:packages && npm run test:server
 
 # Build check
 npm run build:electron:dir
-
-# Security audit
-npm audit --audit-level=critical
 ```

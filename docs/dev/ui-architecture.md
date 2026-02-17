@@ -11,411 +11,135 @@ This document maps protoLabs's UI component structure for developers working on 
 
 ## View Components
 
-### Agent Runner (`components/views/agent-view/`)
-
-Full-featured chat interface for interacting with AI agents.
-
-**Core Components (~12 total):**
-
-- `agent-view.tsx` - Main container
-- `agent-header.tsx` - Model selector, queue display
-- `agent-chat-area.tsx` - Message scroll container
-- `agent-message.tsx` - Individual message rendering
-- `thinking-indicator.tsx` - Loading states
-- `agent-input-area.tsx` - User input with controls
-- Message type variants (user, assistant, system, tool)
-- Queue management UI
-
-**Key Features:**
-
-- Real-time message streaming via WebSocket
-- Model selection (haiku/sonnet/opus)
-- Feature queue display
-- Thinking indicator during agent processing
-- Markdown rendering with syntax highlighting
-
 ### Board View (`components/views/board-view/`)
 
-Kanban board for feature management with extensive dialog system.
+Kanban board for feature management with an extensive dialog system.
 
-**Core Components (20+ dialogs):**
+**Core Components:**
 
-- `board-view.tsx` - Main Kanban board
-- `board-column.tsx` - Status columns (backlog/in-progress/review/done)
-- `board-card.tsx` - Feature cards with drag-and-drop
-- `board-list-view.tsx` - Alternative list view
-- `board-search.tsx` - Feature filtering
-- `worktree-panel.tsx` - Git worktree management
+- `board-view.tsx` — Main Kanban board (1,908 lines — known tech debt, decomposition planned)
+- `board-view/components/` — Board-specific sub-components
 
-**Dialogs (20+ components):**
+**Dialogs (`board-view/dialogs/`, 27 components):**
 
-- **Planning**: `plan-dialog.tsx`, `backlog-plan-dialog.tsx`, `plan-approval-dialog.tsx`, `plan-settings-dialog.tsx`
-- **PR Management**: `pr-dialog.tsx`, `pr-feedback-dialog.tsx`
-- **Worktrees**: `worktree-dialog.tsx`, `worktree-delete-dialog.tsx`
-- **Dependencies**: `dependency-dialog.tsx`, `dependency-graph-dialog.tsx`
-- **Feature Operations**: `create-feature-dialog.tsx`, `edit-feature-dialog.tsx`, `delete-feature-dialog.tsx`, `clone-feature-dialog.tsx`, `move-feature-dialog.tsx`
-- **Execution**: `execute-dialog.tsx`, `agent-output-dialog.tsx`
-- **Images**: `image-upload-dialog.tsx`, `image-view-dialog.tsx`
-- **Projects**: `project-create-dialog.tsx`, `project-list-dialog.tsx`
+- **Feature CRUD**: `add-feature-dialog.tsx`, `edit-feature-dialog.tsx`, `delete-completed-feature-dialog.tsx`
+- **Planning**: `backlog-plan-dialog.tsx`, `plan-approval-dialog.tsx`, `plan-settings-popover.tsx`
+- **Pipeline**: `pipeline-settings-dialog.tsx`, `add-edit-pipeline-step-dialog.tsx`
+- **Worktrees**: `create-worktree-dialog.tsx`, `delete-worktree-dialog.tsx`, `commit-worktree-dialog.tsx`, `merge-worktree-dialog.tsx`, `view-worktree-changes-dialog.tsx`, `pull-resolve-conflicts-dialog.tsx`, `push-to-remote-dialog.tsx`, `worktree-settings-popover.tsx`
+- **Dependencies**: `dependency-link-dialog.tsx`, `dependency-tree-dialog.tsx`
+- **Git**: `create-branch-dialog.tsx`, `create-pr-dialog.tsx`
+- **Agent Output**: `agent-output-modal.tsx`
+- **Bulk Operations**: `mass-edit-dialog.tsx`, `archive-all-verified-dialog.tsx`, `delete-all-verified-dialog.tsx`, `completed-features-modal.tsx`
+- **Follow-up**: `follow-up-dialog.tsx`
+- **Auto-mode**: `auto-mode-settings-popover.tsx`
 
 **Key Features:**
 
-- Drag-and-drop between columns
-- Real-time status updates via WebSocket
+- Drag-and-drop between status columns
+- Real-time status updates via WebSocket → TanStack Query invalidation
 - Feature search and filtering
 - Worktree isolation for parallel development
-- Dependency management
-- PR creation and review
-- Agent output viewing
+- Dependency management and visualization
+- PR creation and agent output viewing
 
 ### Settings View (`components/views/settings-view/`)
 
-Comprehensive configuration system with 60+ components organized by category.
-
-**Major Sections:**
-
-#### API Keys & Authentication
-
-- `api-keys-settings.tsx` - Anthropic, GitHub, Linear, Discord tokens
-- Provider-specific key management
-
-#### MCP Servers
-
-- `mcp-servers-settings.tsx` - Model Context Protocol server configuration
-- Server status monitoring
-- Tool permissions
-
-#### Model Configuration
-
-- `model-defaults-settings.tsx` - Default model selection per feature complexity
-- Model alias resolution (haiku/sonnet/opus)
-- Cost tracking preferences
-
-#### Prompt Templates
-
-- `prompts-settings.tsx` - System prompt customization
-- Feature-specific prompt overrides
-- Context injection rules
-
-#### Providers
-
-- `claude-provider-settings.tsx` - Claude API configuration
-- `codex-provider-settings.tsx` - OpenAI Codex settings
-- `cursor-provider-settings.tsx` - Cursor integration
-- `opencode-provider-settings.tsx` - Open source model providers
-
-#### Security
-
-- `security-settings.tsx` - ALLOWED_ROOT_DIRECTORY, path restrictions
-- Sandbox settings
-- API key visibility controls
-
-#### Terminal & Execution
-
-- `terminal-settings.tsx` - Shell preferences, history size
-- Command whitelisting
-- Process timeout configuration
-
-#### Worktrees & Git
-
-- `worktrees-settings.tsx` - Worktree cleanup policies
-- Branch naming conventions
-- Auto-merge preferences
-
-#### Feature Defaults
-
-- `feature-defaults-settings.tsx` - Default complexity, priority, status
-- Auto-assignment rules
-
-#### Event Hooks
-
-- `event-hooks-settings.tsx` - Webhook configuration for feature lifecycle events
-- Discord notifications
-- External integrations
-
-#### Keyboard Shortcuts
-
-- `keyboard-shortcuts-settings.tsx` - Customizable keybindings
-- Chord key support
-
-**Architecture Pattern:**
-Each settings section follows a consistent structure:
-
-```tsx
-// 1. Read settings from store
-const { settings } = useAppStore();
-
-// 2. Local state for edits
-const [localValue, setLocalValue] = useState(settings.someValue);
-
-// 3. Update handler with validation
-const handleSave = async () => {
-  await api.updateSettings({ someValue: localValue });
-  // Update store
-};
-
-// 4. Form UI with inputs and save button
-```
+Comprehensive configuration system organized by category. See the directory for the full list of settings panels (API keys, MCP servers, model config, prompts, providers, security, terminal, worktrees, feature defaults, event hooks, keyboard shortcuts).
 
 ### Project Settings View (`components/views/project-settings-view/`)
 
-Per-project configuration overrides.
+Per-project configuration overrides — identity, models, Claude config, themes, webhooks, worktree preferences.
 
-**Sections:**
+### Dashboard View (`components/views/dashboard-view/`)
 
-- `project-identity.tsx` - Name, description, owner
-- `project-models.tsx` - Project-specific model overrides
-- `claude-config.tsx` - Claude SDK configuration
-- `project-themes.tsx` - UI theme preferences
-- `project-webhooks.tsx` - Project-specific webhook endpoints
-- `project-worktree-prefs.tsx` - Worktree behavior for this project
+Project overview with directory components for sub-views.
 
-**Key Features:**
+### Analytics View (`components/views/analytics-view/`)
 
-- Settings inheritance (global → project override)
-- Per-project API keys
-- Custom prompt templates per project
+Analytics dashboard with directory components for sub-views.
 
-### Planning View
+### Terminal View (`components/views/terminal-view/`)
 
-**Components:**
+Embedded terminal with directory components. (1,809 lines — known tech debt, decomposition planned.)
 
-- `planning-mode-selector.tsx` - Switch between planning modes
-- `dependency-graph-view.tsx` - Visual dependency graph
-- Plan dialogs (see Board View dialogs above)
+### Graph View (`components/views/graph-view/`)
 
-**Missing (Known Gap):**
-Standalone PRD → Milestones → Phases → Features workflow view. Currently planning is embedded in board dialogs rather than a dedicated view.
+Visual dependency graph and feature relationship visualization. Has a dedicated `graph-view-page.tsx` entry point.
 
-### Context View (`components/views/context-view.tsx`)
+### Spec View (`components/views/spec-view/`)
 
-Manage context files that are injected into agent prompts.
+Project specification viewer and editor with directory components.
 
-**Key Features:**
+### Setup View (`components/views/setup-view/`)
 
-- List all `.automaker/context/*.md` files
-- Create/edit/delete context files
-- Preview how context is injected into prompts
-- File path and description display
+Initial setup and onboarding wizard with directory components.
 
-**Use Cases:**
+### GitHub Issues View (`components/views/github-issues-view/`)
 
-- Add coding standards (TypeScript strict mode, naming conventions)
-- Define architectural patterns
-- Security policies
-- Testing guidelines
+GitHub issue listing, filtering, and sync with board features. Has directory components.
 
-### Ideation View (`components/views/ideation-view/`)
+### Single-File Views
 
-Idea management and prompt organization.
+These views are implemented as standalone files without sub-component directories:
 
-**Components:**
-
-- `ideation-dashboard.tsx` - Overview of ideas
-- `prompt-categories.tsx` - Organized prompt library
-- `prompt-lists.tsx` - Saved prompt templates
-
-**Key Features:**
-
-- Idea capture and organization
-- Prompt template library
-- Category-based browsing
-
-### GitHub Integration
-
-#### Issues View (`components/views/github-issues-view/`)
-
-- `github-issues-list.tsx` - Issue listing with filters
-- `github-issue-detail-panel.tsx` - Issue details, comments, labels
-- `github-issue-filters.tsx` - Filter by status, labels, assignee
-- `github-issue-validation.tsx` - Validate issue format
-
-**Key Features:**
-
-- Sync GitHub issues to board features
-- Bi-directional sync (board → GitHub)
-- Issue triage and labeling
-
-#### PRs View (`components/views/github-prs-view.tsx`)
-
-- PR listing and filtering
-- PR status tracking
-- Code review integration
-- Merge conflict detection
-
-### Other Views
-
-**Dashboard** (`components/views/dashboard-view.tsx`)
-
-- Project overview
-- Recent activity feed
-- Agent status summary
-- Quick actions
-
-**Notifications** (`components/views/notifications-view.tsx`)
-
-- Event stream display
-- Notification preferences
-- Mark as read/unread
-
-**Memory** (`components/views/memory-view.tsx`)
-
-- Agent memory management
-- Context file usage tracking
-- Memory file editing
-
-**Chat History** (`components/views/chat-history-view.tsx`)
-
-- Past agent conversations
-- Session replay
-- Export conversations
-
-**Interview/Onboarding** (`components/views/interview-view.tsx`, `onboarding-view.tsx`)
-
-- Initial setup wizard
-- Project configuration interview
-- Feature creation tutorial
-
-**Analysis** (`components/views/analysis-view.tsx`)
-
-- Codebase structure analysis
-- Dependency graphs
-- Code metrics
-
-**Graph View** (`components/views/graph-view.tsx`)
-
-- Visual dependency graph
-- Feature relationships
-- Epic hierarchies
+| View                    | File                          | Purpose                               |
+| ----------------------- | ----------------------------- | ------------------------------------- |
+| Agent Tools             | `agent-tools-view.tsx`        | Available agent tool listing          |
+| Analysis                | `analysis-view.tsx`           | Codebase structure analysis           |
+| Authority Agents Status | `authority-agents-status.tsx` | PM/ProjM/EM agent status              |
+| Authority Event Feed    | `authority-event-feed.tsx`    | Authority system event stream         |
+| Chat History            | `chat-history.tsx`            | Past agent conversations              |
+| Code View               | `code-view.tsx`               | Code file viewer                      |
+| Context                 | `context-view.tsx`            | `.automaker/context/` file management |
+| Escalation Dashboard    | `escalation-dashboard.tsx`    | Escalation tracking                   |
+| Feature Detail          | `feature-detail.tsx`          | Individual feature view               |
+| GitHub PRs              | `github-prs-view.tsx`         | PR listing and status                 |
+| Interview               | `interview-view.tsx`          | Project configuration interview       |
+| Logged Out              | `logged-out-view.tsx`         | Unauthenticated state                 |
+| Login                   | `login-view.tsx`              | Authentication                        |
+| Memory                  | `memory-view.tsx`             | Agent memory management               |
+| Notifications           | `notifications-view.tsx`      | Event stream and notification display |
+| PRD Review Modal        | `prd-review-modal.tsx`        | PRD review and approval               |
+| Running Agents          | `running-agents-view.tsx`     | Active agent monitoring               |
+| Welcome                 | `welcome-view.tsx`            | First-run welcome screen              |
+| Wiki                    | `wiki-view.tsx`               | Documentation/wiki viewer             |
 
 ## Store Architecture
 
-protoLabs uses [Zustand](https://zustand-demo.pmnd.rs/) for state management with localStorage persistence.
+protoLabs uses [Zustand 5](https://zustand-demo.pmnd.rs/) for client state management. Server state is managed by TanStack Query 5.
 
-### App Store (`store/app-store.ts`)
+### Stores
 
-Main application state with persistence.
+| Store                 | File                           | Purpose                              | Persistence |
+| --------------------- | ------------------------------ | ------------------------------------ | ----------- |
+| `app-store`           | `store/app-store.ts`           | Board state, view state, preferences | API sync    |
+| `auth-store`          | `store/auth-store.ts`          | Authentication state, API keys       | API sync    |
+| `settings-store`      | `store/settings-store.ts`      | User settings and preferences        | API sync    |
+| `chat-store`          | `store/chat-store.ts`          | Chat/conversation state              | API sync    |
+| `ai-models-store`     | `store/ai-models-store.ts`     | AI model configuration               | API sync    |
+| `setup-store`         | `store/setup-store.ts`         | Onboarding flow state                | Ephemeral   |
+| `terminal-store`      | `store/terminal-store.ts`      | Terminal session state               | Ephemeral   |
+| `worktree-store`      | `store/worktree-store.ts`      | Git worktree state                   | Ephemeral   |
+| `notifications-store` | `store/notifications-store.ts` | Notification queue                   | Ephemeral   |
 
-**State Slices:**
+### State Management Rules
 
-```typescript
-interface AppStore {
-  // Board state
-  selectedProject: string | null;
-  boardViewMode: 'kanban' | 'list';
-  boardFilters: {
-    status?: FeatureStatus[];
-    complexity?: Complexity[];
-    search?: string;
-  };
+- Colocate state as close to its consumer as possible — prefer local `useState` over global store
+- Only lift to Zustand when 2+ unrelated components need the same data
+- Use selectors to prevent unnecessary re-renders: `useAppStore(s => s.theme)`
+- Never put ephemeral state (loading, form inputs) in the global store
+- Server state goes through TanStack Query 5, never Zustand
+- WebSocket events trigger query invalidation, not direct state mutation
 
-  // View state
-  activeView: 'board' | 'agent' | 'settings' | 'planning' | ...;
-  sidebarCollapsed: boolean;
+### Real-Time Updates
 
-  // Agent state
-  activeFeatureId: string | null;
-  agentMessages: Message[];
-  agentQueue: Feature[];
+Real-time data is delivered via WebSocket and processed through TanStack Query invalidation, not direct Zustand mutation:
 
-  // Preferences
-  theme: 'light' | 'dark' | 'system';
-  compactMode: boolean;
-
-  // Settings
-  settings: GlobalSettings;
-
-  // Actions
-  setSelectedProject: (projectPath: string) => void;
-  setBoardViewMode: (mode: 'kanban' | 'list') => void;
-  updateSettings: (partial: Partial<GlobalSettings>) => Promise<void>;
-  // ... more actions
-}
+```
+WebSocket event → invalidate relevant TanStack Query → UI re-renders with fresh data
 ```
 
-**Persistence:**
-
-- Uses `zustand/middleware` `persist`
-- Stores to `localStorage` with key `automaker-app-store`
-- Selective persistence (excludes ephemeral state like messages)
-
-**Usage Example:**
-
-```tsx
-import { useAppStore } from '@/store/app-store';
-
-function MyComponent() {
-  const { selectedProject, setSelectedProject } = useAppStore();
-
-  return (
-    <select value={selectedProject ?? ''} onChange={(e) => setSelectedProject(e.target.value)}>
-      {/* ... */}
-    </select>
-  );
-}
-```
-
-### Setup Store (`store/setup-store.ts`)
-
-Onboarding and setup flow state.
-
-**State:**
-
-```typescript
-interface SetupStore {
-  // Setup progress
-  currentStep: 'welcome' | 'api-keys' | 'project' | 'complete';
-  completedSteps: string[];
-
-  // Temporary data during setup
-  tempApiKey: string | null;
-  tempProjectPath: string | null;
-
-  // Actions
-  nextStep: () => void;
-  previousStep: () => void;
-  completeSetup: () => void;
-}
-```
-
-**Persistence:**
-
-- Persists to `localStorage` with key `automaker-setup-store`
-- Cleared after setup completion
-
-### WebSocket State
-
-Real-time updates are managed via WebSocket connection, not Zustand:
-
-**Implementation:**
-
-```tsx
-// apps/ui/src/lib/websocket.ts
-export class WebSocketClient {
-  on(event: string, handler: (data: unknown) => void): void;
-  emit(event: string, data: unknown): void;
-}
-
-// Usage in components
-useEffect(() => {
-  const ws = getWebSocketClient();
-
-  ws.on('feature:status_changed', (data) => {
-    // Update UI
-  });
-
-  return () => ws.off('feature:status_changed');
-}, []);
-```
-
-**Events:**
-
-- `feature:created`, `feature:updated`, `feature:deleted`
-- `feature:status_changed`
-- `agent:started`, `agent:completed`, `agent:failed`
-- `message:new` (agent chat messages)
-- `worktree:created`, `worktree:deleted`
-- `pr:created`, `pr:merged`
+The WebSocket connection is managed within `apps/ui/src/lib/http-api-client.ts` (not a standalone `websocket.ts` file).
 
 ## Routing
 
@@ -425,24 +149,30 @@ protoLabs uses [TanStack Router](https://tanstack.com/router) with file-based ro
 
 ```
 apps/ui/src/routes/
-├── __root.tsx              # Root layout with sidebar, header
+├── __root.tsx              # Root layout with sidebar, CopilotKit provider
 ├── index.tsx               # Dashboard (/)
 ├── board.tsx               # Kanban board (/board)
-├── agent.tsx               # Agent chat (/agent)
-├── settings/
-│   ├── index.tsx           # Settings home (/settings)
-│   ├── api-keys.tsx        # API keys (/settings/api-keys)
-│   ├── models.tsx          # Model config (/settings/models)
-│   └── ...
-├── project-settings.tsx    # Project settings (/project-settings)
-├── planning.tsx            # Planning view (/planning)
 ├── context.tsx             # Context files (/context)
-├── ideation.tsx            # Ideation (/ideation)
-├── github/
-│   ├── issues.tsx          # GitHub issues (/github/issues)
-│   └── prs.tsx             # GitHub PRs (/github/prs)
-└── ...
+├── dashboard.tsx           # Dashboard (/dashboard)
+├── github-issues.tsx       # GitHub issues (/github-issues)
+├── github-prs.tsx          # GitHub PRs (/github-prs)
+├── graph.tsx               # Dependency graph (/graph)
+├── interview.tsx           # Project interview (/interview)
+├── logged-out.tsx          # Logged out (/logged-out)
+├── login.tsx               # Login (/login)
+├── memory.tsx              # Agent memory (/memory)
+├── notifications.tsx       # Notifications (/notifications)
+├── project-settings.tsx    # Project settings (/project-settings)
+├── running-agents.tsx      # Running agents (/running-agents)
+├── settings.tsx            # Settings (/settings)
+├── setup.tsx               # Setup wizard (/setup)
+├── spec.tsx                # Project spec (/spec)
+├── terminal.tsx            # Terminal (/terminal)
+├── wiki.tsx                # Wiki (/wiki)
+└── analytics.tsx           # Analytics (/analytics)
 ```
+
+All routes are flat files — there are no nested route directories (e.g., no `settings/` or `github/` subdirectories).
 
 ### Route Definition Pattern
 
@@ -453,11 +183,6 @@ import { BoardView } from '@/components/views/board-view/board-view';
 
 export const Route = createFileRoute('/board')({
   component: BoardView,
-  // Optional: preload data
-  loader: async () => {
-    const features = await api.listFeatures();
-    return { features };
-  },
 });
 ```
 
@@ -468,112 +193,31 @@ import { useNavigate } from '@tanstack/react-router';
 
 function MyComponent() {
   const navigate = useNavigate();
-
-  const handleClick = () => {
-    navigate({ to: '/board', search: { status: 'backlog' } });
-  };
+  const handleClick = () => navigate({ to: '/board' });
 }
-```
-
-### Route Guards
-
-Protected routes check for API key configuration:
-
-```tsx
-// apps/ui/src/routes/__root.tsx
-export const Route = createRootRoute({
-  beforeLoad: async ({ location }) => {
-    const settings = await api.getSettings();
-
-    if (!settings.anthropicApiKey && location.pathname !== '/settings/api-keys') {
-      throw redirect({ to: '/settings/api-keys' });
-    }
-  },
-  component: RootLayout,
-});
 ```
 
 ## Known Gaps
 
+### God Store
+
+`app-store.ts` is 4,268 lines with all board, view, agent, and preference state. Target: split into domain slices (board, agent, settings, theme).
+
+### Monolithic Views
+
+`board-view.tsx` (1,908 lines) and `terminal-view.tsx` (1,809 lines) need decomposition into sub-components.
+
 ### Standalone Project Planning View
 
-**Missing:** Dedicated PRD → Milestones → Phases → Features workflow UI
-
-**Current State:**
-
-- Planning is embedded in board dialogs
-- Project creation via `project-create-dialog.tsx` opens in modal
-- No dedicated view for managing project hierarchy
-
-**Desired State:**
-
-- Dedicated `/planning/:projectSlug` route
-- Visual PRD editor
-- Milestone/phase cards with drag-and-drop
-- Inline feature creation from phases
-- Dependency visualization in planning context
-
-**Related Features:**
-
-- `feature-1770360655459-xxxxxxx` - Standalone planning view (backlog)
+Planning is embedded in board dialogs rather than a dedicated view. Desired: `/planning/:projectSlug` route with visual PRD editor, milestone/phase cards, and inline feature creation.
 
 ### My Tasks Filter
 
-**Missing:** Filter board by assignee to show "my work"
-
-**Current State:**
-
-- Board shows all features for selected project
-- No assignee filtering
-
-**Desired State:**
-
-- "My Tasks" button in board header
-- Filter board to show only features assigned to current user
-- Persist filter preference in app store
-
-**Related Features:**
-
-- Created in backlog, ID pending
+No assignee-based filtering on the board. Desired: "My Tasks" button to filter features by assigned user.
 
 ### Priority and Due Date Badges
 
-**Missing:** Visual priority indicators and due date badges on board cards
-
-**Current State:**
-
-- Features have `priority` and `dueDate` fields
-- Not displayed on board cards
-
-**Desired State:**
-
-- Priority badge (P0/P1/P2/P3) with color coding
-- Due date badge with overdue highlighting
-- Hover tooltip with full details
-
-**Related Features:**
-
-- Created in backlog, ID pending
-
-### Auto-Mode UI Controls
-
-**Missing:** Visual controls for auto-mode settings in UI
-
-**Current State:**
-
-- Auto-mode configuration via API or CLI
-- No UI for setting `maxConcurrency`, viewing queue, or pausing
-
-**Desired State:**
-
-- Auto-mode settings panel in board header
-- Real-time queue display
-- Start/stop/pause controls
-- Concurrency slider
-
-**Potential Location:**
-
-- Board view header or right sidebar panel
+Features have `priority` and `dueDate` fields but these aren't displayed on board cards. Desired: colored priority badges and overdue highlighting.
 
 ---
 
@@ -582,9 +226,7 @@ export const Route = createRootRoute({
 When adding new UI components:
 
 1. **Place in correct view directory** (`components/views/{view-name}/`)
-2. **Use Zustand stores** for shared state (don't duplicate state in components)
-3. **Connect to WebSocket** for real-time updates
+2. **Use Zustand stores** for shared client state, TanStack Query for server state
+3. **Use query invalidation** for real-time updates (not direct state mutation)
 4. **Follow TanStack Router** patterns for navigation
 5. **Update this document** with new components and their purpose
-
-For questions or improvements to this doc, see `docs/agents/README.md`.

@@ -13,32 +13,37 @@ How the CopilotKit sidebar provides AI chat, LangGraph workflows, and HITL appro
 │         └─ CopilotSidebar (right panel)              │
 │              ├─ Chat interface                       │
 │              ├─ Workflow selector                    │
+│              ├─ Model selector                      │
 │              ├─ Execution list                       │
 │              └─ Workflow history                     │
 │                                                      │
 │  Hooks:                                              │
-│    useCopilotKitContext    → project context          │
-│    useCopilotKitSuggestions → chat suggestions        │
-│    useSidebarState        → localStorage persistence │
+│    useAgentContext      → project context injection   │
+│    useLangGraphInterrupt → HITL approval flows       │
+│    useSidebarState     → localStorage persistence    │
 └───────────────────┬─────────────────────────────────┘
                     │ POST /api/copilotkit
                     ▼
 ┌─────────────────────────────────────────────────────┐
 │  Server (Express)                                    │
 │                                                      │
-│  CopilotRuntime                                      │
-│    ├─ AnthropicAdapter (claude-sonnet-4-5)            │
-│    ├─ Server Actions                                 │
-│    │   ├─ listFeatures                               │
-│    │   ├─ createFeature                              │
-│    │   ├─ moveFeature                                │
-│    │   ├─ getBoardSummary                            │
-│    │   ├─ startAutoMode                              │
-│    │   └─ stopAutoMode                               │
-│    └─ LangGraph Agents (registered flows)            │
+│  CopilotRuntime + createCopilotEndpointExpress       │
+│    ├─ "default" agent (Ava): BuiltInAgent            │
+│    │   └─ defineTool() board-operation tools          │
+│    │       ├─ listFeatures                           │
+│    │       ├─ createFeature                          │
+│    │       ├─ moveFeature                            │
+│    │       ├─ getBoardSummary                        │
+│    │       ├─ startAutoMode                          │
+│    │       └─ stopAutoMode                           │
+│    ├─ "content-pipeline" agent: LangGraph flow       │
+│    └─ "antagonistic-review" agent: BuiltInAgent      │
+│                                                      │
+│  Agent discovery: GET /api/copilotkit/info            │
 │                                                      │
 │  Thread API: /api/copilotkit/threads                 │
 │    ├─ GET    / (list)                                │
+│    ├─ POST   / (create)                              │
 │    ├─ GET    /:id                                    │
 │    ├─ PATCH  /:id                                    │
 │    └─ DELETE /:id                                    │
@@ -49,44 +54,48 @@ How the CopilotKit sidebar provides AI chat, LangGraph workflows, and HITL appro
 
 ### CopilotKit Route
 
-The CopilotKit runtime is mounted at `/api/copilotkit` in `apps/server/src/routes/copilotkit/index.ts`. It uses the `AnthropicAdapter` with the existing `ANTHROPIC_API_KEY`.
+The CopilotKit runtime is mounted at `/api/copilotkit` in `apps/server/src/routes/copilotkit/index.ts`. It registers three agents via the AG-UI protocol using `@copilotkitnext/runtime` and `@copilotkitnext/agent`.
 
 ```typescript
-import {
-  CopilotRuntime,
-  AnthropicAdapter,
-  copilotRuntimeNodeExpressEndpoint,
-} from '@copilotkit/runtime';
+import { CopilotRuntime } from '@copilotkitnext/runtime';
+import { createCopilotEndpointExpress } from '@copilotkitnext/runtime/express';
+import { BuiltInAgent, defineTool } from '@copilotkitnext/agent';
 
-const runtime = new CopilotRuntime({ actions });
-const serviceAdapter = new AnthropicAdapter({ model: 'claude-sonnet-4-5-20250929' });
+// Define board-operation tools using defineTool()
+const avaTools = [
+  defineTool({
+    name: 'listFeatures',
+    description: 'List all features on the board',
+    parameters: z.object({ projectPath: z.string(), status: z.string().optional() }),
+    execute: async (args) => {
+      /* ... */
+    },
+  }),
+  // createFeature, moveFeature, getBoardSummary, startAutoMode, stopAutoMode
+];
 
-app.use(
-  '/api/copilotkit',
-  copilotRuntimeNodeExpressEndpoint({
-    runtime,
-    serviceAdapter,
-    endpoint: '/api/copilotkit',
-  })
-);
+// Register agents — discoverable via /api/copilotkit/info
+const avaAgent = new BuiltInAgent({ name: 'default', tools: avaTools });
+const runtime = new CopilotRuntime({
+  agents: [avaAgent /* content-pipeline, antagonistic-review */],
+});
+
+// Mount as Express router
+const copilotRouter = createCopilotEndpointExpress({ runtime });
+app.use('/api/copilotkit', copilotRouter);
 ```
 
 ### Graceful Degradation
 
-The route is guarded behind `process.env.ANTHROPIC_API_KEY`. When the key is not set (CI, E2E tests), the route returns 404 and the frontend falls through to render without CopilotKit.
+The route is dynamically imported and guarded behind `ANTHROPIC_API_KEY`. When the key is not set (CI, E2E tests), the route is not mounted and the frontend falls through to render without CopilotKit.
 
-### Server Actions
+### Registered Agents
 
-Server actions let the chat assistant interact with the protoLabs board:
-
-| Action            | Description                                  |
-| ----------------- | -------------------------------------------- |
-| `listFeatures`    | List features, optionally filtered by status |
-| `createFeature`   | Create a new feature on the board            |
-| `moveFeature`     | Move a feature to a new status               |
-| `getBoardSummary` | Get feature counts by status + agent info    |
-| `startAutoMode`   | Start autonomous feature processing          |
-| `stopAutoMode`    | Stop autonomous feature processing           |
+| Agent                 | Type         | Description                           |
+| --------------------- | ------------ | ------------------------------------- |
+| `default` (Ava)       | BuiltInAgent | Board operations via defineTool()     |
+| `content-pipeline`    | LangGraph    | Content creation flow with HITL gates |
+| `antagonistic-review` | BuiltInAgent | Content quality review                |
 
 ### Thread Management
 
@@ -98,9 +107,10 @@ Thread metadata is stored in `{DATA_DIR}/copilotkit-threads/{threadId}.json`. Th
 
 `CopilotKitProvider` (in `apps/ui/src/components/copilotkit/provider.tsx`) conditionally enables CopilotKit:
 
-1. Probes `/api/copilotkit` with a HEAD request
-2. If the endpoint exists (non-404), wraps children with `<CopilotKit>`
-3. If unavailable, renders children without CopilotKit
+1. Probes `/api/copilotkit/info` with a GET request (requires authentication)
+2. If the endpoint responds with 2xx, wraps children with `<CKProvider>`
+3. If unavailable or 404, renders children without CopilotKit
+4. Wrapped in an error boundary so CopilotKit failures never crash the app
 
 This ensures the app works in CI and environments without an API key.
 
@@ -108,23 +118,28 @@ This ensures the app works in CI and environments without an API key.
 
 `CopilotSidebarWrapper` renders the CopilotKit sidebar on the right side. The left sidebar is protoLabs's navigation. Configuration:
 
-- `defaultOpen={false}` — starts collapsed
-- `shortcut="\\"` — toggle with backslash key
+- Toggle with `Cmd+K` (macOS) / `Ctrl+K` (other platforms)
+- Labels: header title "Ava", welcome message "How can I help with your project?"
 - Theme mapped from protoLabs CSS variables via `getCopilotKitThemeStyles()`
 
 ### Context Injection
 
-`useCopilotKitContext` hook injects project context via `useCopilotReadable`:
+`ProjectContextInjector` component uses `useAgentContext` (from `@copilotkitnext/react`) to inject project context:
 
-- Current project name and path
-- Board summary (feature counts by status)
+- Current project path
 - Feature list (id, title, status, complexity)
 
 Context refreshes automatically when the project or features change.
 
-### Chat Suggestions
+### Model Selection
 
-`useCopilotKitSuggestions` provides contextual quick-start suggestions based on whether a project is selected.
+The `ModelSelector` component in the sidebar allows switching between model tiers. The selected model is sent to the server via the `X-Copilotkit-Model` header. Model preference is persisted per-workflow in localStorage with key format `copilotkit-model-{workflowId}`.
+
+| Tier   | Model                        | Use Case           |
+| ------ | ---------------------------- | ------------------ |
+| Haiku  | `claude-haiku-4-5-20251001`  | Fast, simple tasks |
+| Sonnet | `claude-sonnet-4-5-20250929` | Balanced (default) |
+| Opus   | `claude-opus-4-5-20251101`   | Maximum capability |
 
 ## HITL Interrupt Flows
 
@@ -136,7 +151,7 @@ When the content creation flow runs with `enableHITL=true`, it compiles with `in
 2. `outline_hitl` — after outline structure review
 3. `final_review_hitl` — after final content review
 
-The graph pauses at these nodes, and the `ContentFlowService` sets the status to `interrupted`. The frontend shows an approval UI.
+The graph pauses at these nodes, and the `ContentFlowService` sets the status to `interrupted`. The frontend shows an approval UI via `useLangGraphInterrupt` (registered as a HITL tool with CopilotKit using `useHumanInTheLoop` from `@copilotkitnext/react`).
 
 ### Resume with Edits
 
@@ -164,25 +179,32 @@ If `editedContent` is provided:
 
 ## Components Reference
 
-| Component               | File                                         | Purpose                        |
-| ----------------------- | -------------------------------------------- | ------------------------------ |
-| `CopilotKitProvider`    | `components/copilotkit/provider.tsx`         | Conditional CopilotKit wrapper |
-| `CopilotSidebarWrapper` | `components/copilotkit/provider.tsx`         | Themed sidebar container       |
-| `RecentChats`           | `components/copilotkit/recent-chats.tsx`     | Thread history popover         |
-| `GenericApprovalDialog` | `components/copilotkit/generic-dialog.tsx`   | Yes/no fallback for interrupts |
-| `ModelSelector`         | `components/copilotkit/model-selector.tsx`   | Haiku/sonnet/opus dropdown     |
-| `WorkflowAbortButton`   | `components/copilotkit/workflow-abort.tsx`   | Stop running workflow          |
-| `ExecutionList`         | `components/copilotkit/execution-list.tsx`   | Active execution tracker       |
-| `WorkflowHistory`       | `components/copilotkit/workflow-history.tsx` | Recent runs list               |
+| Component               | File                                            | Purpose                        |
+| ----------------------- | ----------------------------------------------- | ------------------------------ |
+| `CopilotKitProvider`    | `components/copilotkit/provider.tsx`            | Conditional CopilotKit wrapper |
+| `CopilotSidebarWrapper` | `components/copilotkit/provider.tsx`            | Themed sidebar container       |
+| `AgentStateDisplay`     | `components/copilotkit/agent-state-display.tsx` | Agent state visualization      |
+| `ErrorDisplay`          | `components/copilotkit/error-display.tsx`       | CopilotKit error handling      |
+| `ModelSelector`         | `components/copilotkit/model-selector.tsx`      | Haiku/sonnet/opus dropdown     |
+| `WorkflowSelector`      | `components/copilotkit/workflow-selector.tsx`   | Agent/workflow picker          |
+| `WorkflowAbortButton`   | `components/copilotkit/workflow-abort.tsx`      | Stop running workflow          |
+| `ExecutionList`         | `components/copilotkit/execution-list.tsx`      | Active execution tracker       |
+| `WorkflowHistory`       | `components/copilotkit/workflow-history.tsx`    | Recent runs list               |
+| `RecentChats`           | `components/copilotkit/recent-chats.tsx`        | Thread history popover         |
+| `GenericApprovalDialog` | `components/copilotkit/generic-dialog.tsx`      | Yes/no fallback for interrupts |
+| `EntityWizard`          | `components/copilotkit/entity-wizard.tsx`       | Guided entity creation         |
+| `PhaseApproval`         | `components/copilotkit/phase-approval.tsx`      | Phase approval UI              |
+| `PrdEditorModal`        | `components/copilotkit/prd-editor-modal.tsx`    | PRD editing in modal           |
+| `TiptapEditor`          | `components/copilotkit/tiptap-editor.tsx`       | Rich text editor for content   |
 
 ### Hooks
 
-| Hook                       | File                                         | Purpose                        |
-| -------------------------- | -------------------------------------------- | ------------------------------ |
-| `useCopilotKitContext`     | `hooks/use-copilotkit-context.ts`            | Project context injection      |
-| `useCopilotKitSuggestions` | `hooks/use-copilotkit-suggestions.ts`        | Chat suggestions               |
-| `useSidebarState`          | `components/copilotkit/use-sidebar-state.ts` | Persistent sidebar preferences |
-| `useWorkflowHistory`       | `components/copilotkit/workflow-history.tsx` | History entry management       |
+| Hook                    | File                                                | Purpose                          |
+| ----------------------- | --------------------------------------------------- | -------------------------------- |
+| `useAgentContext`       | `@copilotkitnext/react` (library)                   | Project context injection        |
+| `useLangGraphInterrupt` | `components/copilotkit/use-langgraph-interrupt.tsx` | HITL interrupt tool registration |
+| `useSidebarState`       | `components/copilotkit/use-sidebar-state.ts`        | Persistent sidebar preferences   |
+| `useAgent`              | `@copilotkitnext/react` (library)                   | Agent state access               |
 
 ## Theming
 
@@ -200,21 +222,13 @@ CopilotKit CSS variables are mapped from protoLabs's theme in `theme-bridge.tsx`
 }
 ```
 
-This ensures the sidebar matches all protoLabs themes (dark, light, custom).
+> **Note:** The `hsl()` wrapper is from CopilotKit's CSS variable format. protoLabs tokens use OKLch internally — the `hsl()` wrapping here is a compatibility layer for CopilotKit's theming system.
 
-## Model Selection
-
-The `ModelSelector` component persists the selected model tier per workflow in localStorage with key format `copilotkit-model-{workflowId}`. Available tiers:
-
-| Tier   | Model                        | Use Case           |
-| ------ | ---------------------------- | ------------------ |
-| Haiku  | `claude-haiku-4-5-20251001`  | Fast, simple tasks |
-| Sonnet | `claude-sonnet-4-5-20250929` | Balanced (default) |
-| Opus   | `claude-opus-4-5-20251101`   | Maximum capability |
+This ensures the sidebar matches all protoLabs themes.
 
 ## Packages
 
 CopilotKit packages are declared in workspace `package.json` files:
 
-- **Server**: `@copilotkit/runtime@^1.51.3`
-- **UI**: `@copilotkit/react-core@^1.51.3`, `@copilotkit/react-ui@^1.51.3`
+- **Server**: `@copilotkitnext/runtime@^1.51.3`, `@copilotkitnext/agent@^1.51.3`
+- **UI**: `@copilotkitnext/react@^1.51.3`

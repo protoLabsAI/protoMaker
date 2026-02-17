@@ -1,6 +1,6 @@
 # Provider Architecture Reference
 
-This document describes the modular provider architecture in `apps/server/src/providers/` that enables support for multiple AI model providers (Claude SDK, OpenAI Codex CLI, and future providers like Cursor, OpenCode, etc.).
+This document describes the modular provider architecture in `apps/server/src/providers/` that enables support for multiple AI model providers (Claude SDK, OpenAI Codex CLI, Cursor, OpenCode, and more).
 
 ---
 
@@ -29,25 +29,31 @@ The provider architecture separates AI model execution logic from business logic
 └──────────────────┬──────────────────────┘
                    │
          ┌─────────▼──────────┐
-         │  ProviderFactory   │  Model-based routing
-         │  (Routes by model) │  "gpt-*" → Codex
-         └─────────┬──────────┘  "claude-*" → Claude
+         │  ProviderFactory   │  Registry-based routing
+         │  (Routes by model) │  "claude-*" → Claude
+         └─────────┬──────────┘  "gpt-*" → Codex
+                   │              "cursor-*" → Cursor
+      ┌────────────┼────────────┐ "opencode-*" → OpenCode
+      │            │            │
+┌─────▼──────┐ ┌──▼──────┐ ┌──▼──────────┐
+│   Claude   │ │  Codex  │ │ Cursor /    │
+│  Provider  │ │ Provider│ │ OpenCode    │
+│ (Agent SDK)│ │ (CLI)   │ │ (CLI)       │
+└────────────┘ └─────────┘ └─────────────┘
                    │
-      ┌────────────┴────────────┐
-      │                         │
-┌─────▼──────┐          ┌──────▼──────┐
-│   Claude   │          │    Codex    │
-│  Provider  │          │   Provider  │
-│ (Agent SDK)│          │ (CLI Spawn) │
-└────────────┘          └─────────────┘
+            ┌──────▼──────┐
+            │   Traced    │  (Langfuse wrapper,
+            │  Provider   │   wraps any provider)
+            └─────────────┘
 ```
 
 ### Key Benefits
 
-- ✅ **Adding new providers**: Only 1 new file + 1 line in factory
+- ✅ **Adding new providers**: Create provider file + register in factory
 - ✅ **Services remain clean**: No provider-specific logic
 - ✅ **All providers implement same interface**: Consistent behavior
-- ✅ **Model prefix determines provider**: Automatic routing
+- ✅ **Registry pattern**: Providers self-register with model matching functions
+- ✅ **Traced wrapper**: Langfuse observability wraps any provider transparently
 - ✅ **Easy to test**: Each provider can be tested independently
 
 ---
@@ -344,44 +350,44 @@ enabled_tools = ["UpdateFeatureStatus"]
 
 Routes requests to the appropriate provider based on model string.
 
-### Model-Based Routing
+### Registry-Based Routing
+
+The factory uses a registry pattern where providers self-register with model matching functions:
 
 ```typescript
+// Provider registration (happens on import)
+registerProvider('claude', {
+  factory: () => new ClaudeProvider(),
+  canHandleModel: (model) =>
+    model.startsWith('claude-') || ['haiku', 'sonnet', 'opus'].includes(model),
+  priority: 10,
+});
+
+registerProvider('codex', {
+  factory: () => new CodexProvider(),
+  canHandleModel: (model) => isCodexModel(model),
+});
+
+registerProvider('cursor', {
+  factory: () => new CursorProvider(),
+  canHandleModel: (model) => isCursorModel(model),
+});
+
+registerProvider('opencode', {
+  factory: () => new OpencodeProvider(),
+  canHandleModel: (model) => isOpencodeModel(model),
+});
+
+// Factory routes by checking each provider's canHandleModel()
 export class ProviderFactory {
-  /**
-   * Get provider for a specific model
-   */
-  static getProviderForModel(modelId: string): BaseProvider {
-    const lowerModel = modelId.toLowerCase();
-
-    // OpenAI/Codex models
-    if (lowerModel.startsWith('gpt-') || lowerModel.startsWith('o')) {
-      return new CodexProvider();
-    }
-
-    // Claude models
-    if (lowerModel.startsWith('claude-') || ['haiku', 'sonnet', 'opus'].includes(lowerModel)) {
-      return new ClaudeProvider();
-    }
-
-    // Default to Claude
-    return new ClaudeProvider();
-  }
-
-  /**
-   * Check installation status of all providers
-   */
-  static async checkAllProviders(): Promise<Record<string, InstallationStatus>> {
-    const claude = new ClaudeProvider();
-    const codex = new CodexProvider();
-
-    return {
-      claude: await claude.detectInstallation(),
-      codex: await codex.detectInstallation(),
-    };
+  static getProviderForModel(model: string): BaseProvider {
+    // Iterates registered providers sorted by priority (highest first)
+    // Returns first match, or defaults to Claude
   }
 }
 ```
+
+When Langfuse is configured, the factory automatically wraps providers in `TracedProvider` for observability.
 
 ### Usage in Services
 
@@ -456,33 +462,18 @@ export class CursorProvider extends BaseProvider {
 }
 ```
 
-### Step 2: Add Routing in Factory
+### Step 2: Register in Factory
 
-Update `apps/server/src/providers/provider-factory.ts`:
+Register your provider in `apps/server/src/providers/provider-factory.ts`:
 
 ```typescript
-import { CursorProvider } from "./cursor-provider.js";
+import { MyProvider } from './my-provider.js';
 
-static getProviderForModel(modelId: string): BaseProvider {
-  const lowerModel = modelId.toLowerCase();
-
-  // Cursor models
-  if (lowerModel.startsWith("cursor-")) {
-    return new CursorProvider();
-  }
-
-  // ... existing routing
-}
-
-static async checkAllProviders() {
-  const cursor = new CursorProvider();
-
-  return {
-    claude: await claude.detectInstallation(),
-    codex: await codex.detectInstallation(),
-    cursor: await cursor.detectInstallation(), // NEW
-  };
-}
+registerProvider('my-provider', {
+  factory: () => new MyProvider(),
+  canHandleModel: (model) => model.startsWith('my-'),
+  priority: 5, // Higher = checked first
+});
 ```
 
 ### Step 3: Update Models List
@@ -772,29 +763,68 @@ CODEX_CLI_PATH=/custom/path/to/codex
 
 ---
 
+### 3. Cursor Provider (CLI-based)
+
+**Location**: `apps/server/src/providers/cursor-provider.ts`
+
+Uses the Cursor CLI as a subprocess for code-focused AI interactions. Extends `CliProvider` base class for CLI spawn management.
+
+#### Features
+
+- Subprocess execution via `CliProvider` spawn strategy
+- CLI configuration managed by `CursorConfigManager`
+- Model detection for `cursor-*` prefixed models
+
+#### Configuration
+
+**Location**: `apps/server/src/providers/cursor-config-manager.ts`
+
+### 4. OpenCode Provider (CLI-based)
+
+**Location**: `apps/server/src/providers/opencode-provider.ts`
+
+Open-source model provider via CLI subprocess.
+
+#### Features
+
+- CLI-based execution
+- Model detection for `opencode-*` prefixed models
+
+### 5. Traced Provider (Langfuse Wrapper)
+
+**Location**: `apps/server/src/providers/traced-provider.ts`
+
+Wraps any other provider with Langfuse tracing for observability. Not a standalone provider — it decorates an existing provider to add cost tracking, latency measurement, and trace collection.
+
+### 6. Fake Provider (Testing)
+
+**Location**: `apps/server/src/providers/fake-provider.ts`
+
+Mock provider for testing. Returns deterministic responses without making real API calls. Used in CI/E2E tests via `AUTOMAKER_MOCK_AGENT=true`.
+
+### 7. CLI Provider (Base Class)
+
+**Location**: `apps/server/src/providers/cli-provider.ts`
+
+Abstract base class for CLI-based providers (Codex, Cursor, OpenCode). Provides common subprocess spawning, JSONL parsing, and abort signal handling. Providers extend this instead of `BaseProvider` directly when they wrap a CLI tool.
+
+---
+
 ## Future Provider Ideas
 
 Potential providers to add:
 
-1. **Cursor Provider** (`cursor-*`)
-   - CLI-based
-   - Code completion specialist
-
-2. **OpenCode Provider** (`opencode-*`)
-   - SDK or CLI-based
-   - Open-source alternative
-
-3. **Gemini Provider** (`gemini-*`)
+1. **Gemini Provider** (`gemini-*`)
    - Google's AI models
    - SDK-based via `@google/generative-ai`
 
-4. **Ollama Provider** (`ollama-*`)
+2. **Ollama Provider** (`ollama-*`)
    - Local model hosting
    - CLI or HTTP API
 
 Each would follow the same pattern:
 
-1. Create `[name]-provider.ts` implementing `BaseProvider`
-2. Add routing in `provider-factory.ts`
+1. Create `[name]-provider.ts` extending `BaseProvider` (SDK) or `CliProvider` (CLI)
+2. Register via `registerProvider()` in `provider-factory.ts`
 3. Update models list
-4. Done! ✅
+4. Done!
