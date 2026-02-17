@@ -204,8 +204,18 @@ export class GitWorkflowService {
       }
 
       if (!commitHash) {
-        logger.info(`No changes to commit for feature ${featureId}`);
-        return null;
+        // Agent may have already committed. Check for unpushed commits before bailing out.
+        const unpushedHash = await this.getUnpushedCommitHash(workDir, branchName);
+        if (!unpushedHash) {
+          logger.info(`No changes to commit and no unpushed commits for feature ${featureId}`);
+          return null;
+        }
+        // Agent pre-committed — format and amend, then continue pipeline
+        logger.info(
+          `No uncommitted changes but found unpushed commits for feature ${featureId}, continuing pipeline`
+        );
+        await this.formatAndAmendLastCommit(workDir);
+        commitHash = unpushedHash;
       }
       result.commitHash = commitHash;
       logger.info(`Committed changes for feature ${featureId}: ${commitHash}`);
@@ -730,6 +740,108 @@ export class GitWorkflowService {
     });
 
     return hashOutput.trim().substring(0, 8);
+  }
+
+  /**
+   * Check if the branch has commits that haven't been pushed to remote.
+   * Handles the case where the branch doesn't exist on remote yet.
+   * @returns HEAD short hash if unpushed commits exist, null otherwise
+   */
+  private async getUnpushedCommitHash(workDir: string, branchName: string): Promise<string | null> {
+    try {
+      // Check if the branch exists on remote
+      const { stdout: remoteRef } = await execAsync(`git ls-remote --heads origin ${branchName}`, {
+        cwd: workDir,
+        env: execEnv,
+      });
+
+      if (!remoteRef.trim()) {
+        // Branch doesn't exist on remote — any local commits are unpushed
+        const { stdout: localHead } = await execAsync('git rev-parse --short HEAD', {
+          cwd: workDir,
+          env: execEnv,
+        });
+        const hash = localHead.trim();
+        // Verify there actually are commits on this branch (not just the base)
+        const { stdout: commitCount } = await execAsync(
+          `git rev-list --count origin/main..HEAD 2>/dev/null || echo "0"`,
+          { cwd: workDir, env: execEnv }
+        );
+        return parseInt(commitCount.trim(), 10) > 0 ? hash : null;
+      }
+
+      // Branch exists on remote — check for unpushed commits
+      const { stdout: unpushed } = await execAsync(
+        `git rev-list origin/${branchName}..HEAD --count`,
+        { cwd: workDir, env: execEnv }
+      );
+
+      if (parseInt(unpushed.trim(), 10) > 0) {
+        const { stdout: head } = await execAsync('git rev-parse --short HEAD', {
+          cwd: workDir,
+          env: execEnv,
+        });
+        return head.trim();
+      }
+
+      return null;
+    } catch {
+      // If anything fails (no remote, etc.), check for local commits vs main
+      try {
+        const { stdout: ahead } = await execAsync('git rev-list origin/main..HEAD --count', {
+          cwd: workDir,
+          env: execEnv,
+        });
+        if (parseInt(ahead.trim(), 10) > 0) {
+          const { stdout: head } = await execAsync('git rev-parse --short HEAD', {
+            cwd: workDir,
+            env: execEnv,
+          });
+          return head.trim();
+        }
+      } catch {
+        // Truly nothing to do
+      }
+      return null;
+    }
+  }
+
+  /**
+   * Run prettier on all changed files and amend the last commit.
+   * Used when the agent committed without formatting.
+   */
+  private async formatAndAmendLastCommit(workDir: string): Promise<void> {
+    try {
+      // Get files changed in the last commit
+      const { stdout: changedFiles } = await execAsync(
+        "git diff --name-only HEAD~1..HEAD -- '*.ts' '*.tsx' '*.js' '*.jsx' '*.json' '*.css' '*.md'",
+        { cwd: workDir, env: execEnv }
+      );
+      const files = changedFiles.trim().split('\n').filter(Boolean);
+      if (files.length === 0) return;
+
+      // Format them
+      await execAsync(
+        `npx prettier --ignore-path .prettierignore --write ${files.map((f) => `"${f}"`).join(' ')}`,
+        { cwd: workDir, env: execEnv }
+      );
+
+      // Check if formatting actually changed anything
+      const { stdout: status } = await execAsync('git status --porcelain', {
+        cwd: workDir,
+        env: execEnv,
+      });
+      if (!status.trim()) return; // No formatting changes needed
+
+      // Stage and amend
+      await execAsync("git add -A -- ':!.automaker/'", { cwd: workDir, env: execEnv });
+      await execAsync('git commit --amend --no-edit', { cwd: workDir, env: execEnv });
+      logger.info(`Formatted and amended last commit (${files.length} files checked)`);
+    } catch (error) {
+      logger.warn(
+        `Format-and-amend failed (non-fatal): ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
   }
 
   /**

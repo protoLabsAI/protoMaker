@@ -909,7 +909,6 @@ Implement this feature by:
 2. Read ONLY those files (2-4 files max) to understand the existing patterns
 3. Write the code changes
 4. Build and verify the changes compile
-5. Commit your work
 
 **CRITICAL: Scope Discipline**
 - Implement EXACTLY what the feature description says. Nothing more.
