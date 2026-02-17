@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `/setuplab` command is the entry point for onboarding any repository to ProtoLabs. It runs a 5-phase pipeline that scans, analyzes, initializes, proposes, and (on approval) executes alignment work.
+The `/setuplab` command is the entry point for onboarding any repository to protoLabs. It runs a 5-phase pipeline that scans, analyzes, initializes, proposes, and (on approval) executes alignment work.
 
 ## Architecture
 

@@ -1,8 +1,8 @@
-# ProtoLabs Agency System — Overview
+# protoLabs Agency System — Overview
 
 ## What It Is
 
-ProtoLabs is a fully autonomous software development agency powered by AI agents. It takes ideas from any source — human conversation, Discord messages, Linear issues, GitHub — and transforms them into shipped, tested, merged code through a repeatable, measurable loop.
+protoLabs is a fully autonomous software development agency powered by AI agents. It takes ideas from any source — human conversation, Discord messages, Linear issues, GitHub — and transforms them into shipped, tested, merged code through a repeatable, measurable loop.
 
 The system doesn't just execute. It plans, challenges its own plans, breaks work into measurable pieces, delegates to specialized agents, monitors quality, and — critically — reflects on what it learned and feeds that back into better future work.
 
@@ -12,7 +12,7 @@ The system doesn't just execute. It plans, challenges its own plans, breaks work
 
 ### The Problem With AI-Assisted Development Today
 
-Most AI coding tools operate at the wrong altitude. They help you write a function or fix a bug. ProtoLabs operates at the **organizational** level — it's not a tool, it's a **team**.
+Most AI coding tools operate at the wrong altitude. They help you write a function or fix a bug. protoLabs operates at the **organizational** level — it's not a tool, it's a **team**.
 
 The gap between "AI can write code" and "AI can run a development organization" is:
 
@@ -22,9 +22,9 @@ The gap between "AI can write code" and "AI can run a development organization" 
 - **Accountability**: How do you know if the work was worth doing?
 - **Learning**: How does the org get smarter over time?
 
-### The ProtoLabs Answer
+### The protoLabs Answer
 
-ProtoLabs is organized into two branches — **Operations** and **Engineering** — with clear boundaries, quality guardrails, and domain tools that enable orchestration at scale.
+protoLabs is organized into two branches — **Operations** and **Engineering** — with clear boundaries, quality guardrails, and domain tools that enable orchestration at scale.
 
 ### Operations
 
@@ -55,7 +55,7 @@ Production orchestration, auto-mode execution, and code quality. The Lead Engine
 
 ## Three Surfaces, Clear Separation
 
-ProtoLabs operates across three systems that each own a distinct layer:
+protoLabs operates across three systems that each own a distinct layer:
 
 ### Linear — Strategic Layer (Source of Truth)
 

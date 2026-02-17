@@ -1,6 +1,6 @@
-# CI/CD Setup Guide for ProtoLab
+# CI/CD Setup Guide for protoLabs
 
-Complete guide for setting up GitHub Actions CI/CD and branch protection for ProtoLab projects.
+Complete guide for setting up GitHub Actions CI/CD and branch protection for protoLabs projects.
 
 ## Quick Start
 
@@ -143,7 +143,7 @@ Choose an option (1-3):
 
 **Warning**: This overwrites existing workflows!
 
-**Choose 3** to standardize on ProtoLab workflows
+**Choose 3** to standardize on protoLabs workflows
 
 ---
 

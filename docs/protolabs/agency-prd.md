@@ -1,4 +1,12 @@
-# PRD: ProtoLabs Agency System — Full-Loop Automation
+# PRD: protoLabs Agency System — Full-Loop Automation
+
+> **Implementation Status (2026-02-16):**
+> Milestone 1 (Signal Intake) — partially implemented (signal accumulator, idea processing flow).
+> Milestone 2 (Antagonistic Review) — **complete** (3-stage sequential review with LangGraph + Langfuse tracing).
+> Milestone 3 (Approval Gate) — partially implemented (HITL gates exist, trust boundaries in progress).
+> Milestone 4 (Linear Project API) — **complete** (project lifecycle, Linear sync, bidirectional webhooks).
+> Milestone 5 (Reflection Loop) — partially implemented (ceremonies exist, retro → improvement tickets pending).
+> Milestone 6 (E2E Integration) — in progress (pipeline view pending, core flow functional).
 
 ## Situation
 
@@ -218,7 +226,7 @@ Build the cross-functional PRD review where Ava and Jon challenge each other.
 
 **Phase 6.2: Dashboard & Observability**
 
-- Add ProtoLabs pipeline view to protoLabs UI:
+- Add protoLabs pipeline view to protoLabs UI:
   - Current signals being triaged
   - PRDs in review
   - Projects in execution
@@ -228,7 +236,7 @@ Build the cross-functional PRD review where Ava and Jon challenge each other.
 
 ## Results
 
-When complete, the ProtoLabs agency system will:
+When complete, the protoLabs agency system will:
 
 1. **Accept ideas from any source** (Discord, Linear, GitHub, agent observations) and auto-triage them into the correct pipeline
 2. **Challenge every plan** through antagonistic cross-functional review before committing resources

@@ -1,4 +1,4 @@
-# ProtoLabs Agency System — Architecture
+# protoLabs Agency System — Architecture
 
 ## System Architecture Diagram
 

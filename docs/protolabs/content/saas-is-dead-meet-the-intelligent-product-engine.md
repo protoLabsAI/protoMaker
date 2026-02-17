@@ -187,7 +187,7 @@ The architecture is documented. The source is available. The costs are transpare
 
 Your SaaS bill is opaque by design. Ours is open by default.
 
-**[protolabs.studio](https://protolabs.studio)**
+**[protoLabs.studio](https://protolabs.studio)**
 
 ---
 

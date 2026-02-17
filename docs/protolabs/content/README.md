@@ -1,4 +1,4 @@
-# ProtoLabs Content
+# protoLabs Content
 
 Pre-launch content required for official launch (per Jon's requirement from review).
 
@@ -67,7 +67,7 @@ Pre-launch content required for official launch (per Jon's requirement from revi
 
 - **Voice:** Both pieces use Josh's authentic builder voice (architect/orchestrator, not developer)
 - **Tone:** Technical, direct, pragmatic, show-the-work
-- **Brand alignment:** Uses protoLabs/protoLabs naming correctly (never "Automaker" in public-facing content)
+- **Brand alignment:** Uses protoLabs naming correctly (never "Automaker" in public-facing content)
 - **Team attribution:** Ava, Jon, ProjM, Matt, Sam, Frank, Cindi correctly referenced
 - **Technical accuracy:** All architecture details verified against actual codebase (agency-architecture.md, agency-overview.md)
 
