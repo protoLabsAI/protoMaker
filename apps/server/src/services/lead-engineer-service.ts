@@ -43,6 +43,10 @@ export class LeadEngineerService {
   private unsubscribe: (() => void) | null = null;
   private refreshIntervals = new Map<string, ReturnType<typeof setInterval>>();
 
+  private discordBotService?: {
+    sendToChannel(channelId: string, content: string): Promise<boolean>;
+  };
+
   constructor(
     private events: EventEmitter,
     private featureLoader: FeatureLoader,
@@ -50,9 +54,17 @@ export class LeadEngineerService {
     private projectService: ProjectService,
     private projectLifecycleService: ProjectLifecycleService,
     private settingsService: SettingsService,
-    private metricsService: MetricsService,
-    private repoRoot: string
+    private metricsService: MetricsService
   ) {}
+
+  /**
+   * Set Discord bot service for post_discord action.
+   */
+  setDiscordBot(bot: {
+    sendToChannel(channelId: string, content: string): Promise<boolean>;
+  }): void {
+    this.discordBotService = bot;
+  }
 
   /**
    * Subscribe to events for auto-start and routing.
@@ -466,14 +478,6 @@ export class LeadEngineerService {
 
     if (actions.length === 0) return;
 
-    // Log the evaluation
-    const logEntry: LeadRuleLogEntry = {
-      timestamp: new Date().toISOString(),
-      ruleName: '', // Will be set below
-      eventType,
-      actions,
-    };
-
     // Determine which rules produced actions (for logging)
     for (const rule of DEFAULT_RULES) {
       if (!rule.triggers.includes(eventType)) continue;
@@ -573,10 +577,18 @@ export class LeadEngineerService {
       }
 
       case 'resolve_threads': {
-        // This would use the PR feedback service; log for now
-        logger.info(
-          `Would resolve threads on PR #${action.prNumber} for feature ${action.featureId}`
-        );
+        this.events.emit('escalation:signal-received', {
+          source: 'pr_feedback',
+          severity: 'medium',
+          type: 'thread_resolution_requested',
+          context: {
+            featureId: action.featureId,
+            prNumber: action.prNumber,
+            projectPath: session.projectPath,
+          },
+          deduplicationKey: `resolve_threads_${action.prNumber}`,
+          timestamp: new Date().toISOString(),
+        });
         break;
       }
 
@@ -619,7 +631,11 @@ export class LeadEngineerService {
       }
 
       case 'post_discord': {
-        logger.info(`Discord post to ${action.channelId}: ${action.message}`);
+        if (this.discordBotService) {
+          await this.discordBotService
+            .sendToChannel(action.channelId, action.message)
+            .catch((err) => logger.warn(`Failed to post to Discord: ${err}`));
+        }
         break;
       }
 
@@ -629,7 +645,18 @@ export class LeadEngineerService {
       }
 
       case 'escalate_llm': {
-        logger.info(`LLM escalation requested: ${action.reason}`);
+        this.events.emit('escalation:signal-received', {
+          source: 'crew_escalation',
+          severity: 'high',
+          type: 'lead_engineer_escalation',
+          context: {
+            ...action.context,
+            projectPath: session.projectPath,
+            reason: action.reason,
+          },
+          deduplicationKey: `le_escalation_${session.projectPath}_${Date.now()}`,
+          timestamp: new Date().toISOString(),
+        });
         break;
       }
 

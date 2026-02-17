@@ -16,7 +16,6 @@ import type { FeatureLoader } from '../../services/feature-loader.js';
 import type { PMAuthorityAgent } from '../../services/authority-agents/pm-agent.js';
 import type { ProjMAuthorityAgent } from '../../services/authority-agents/projm-agent.js';
 import type { EMAuthorityAgent } from '../../services/authority-agents/em-agent.js';
-import type { StatusMonitorAgent } from '../../services/authority-agents/status-agent.js';
 import type { EventEmitter } from '../../lib/events.js';
 import type { AuditService } from '../../services/audit-service.js';
 
@@ -26,7 +25,6 @@ interface AuthorityAgents {
   pm?: PMAuthorityAgent;
   projm?: ProjMAuthorityAgent;
   em?: EMAuthorityAgent;
-  statusMonitor?: StatusMonitorAgent;
 }
 
 export function createAuthorityRoutes(
@@ -244,7 +242,6 @@ export function createAuthorityRoutes(
       if (agents?.pm) await agents.pm.initialize(projectPath);
       if (agents?.projm) await agents.projm.initialize(projectPath);
       if (agents?.em) await agents.em.initialize(projectPath);
-      if (agents?.statusMonitor) await agents.statusMonitor.initialize(projectPath);
 
       // Create a feature in 'backlog' status with workItemState='idea'
       const feature = await featureLoader.create(projectPath, {

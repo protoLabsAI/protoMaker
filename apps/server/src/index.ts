@@ -138,8 +138,6 @@ import { createCeremoniesRoutes } from './routes/ceremonies/index.js';
 import { PMAuthorityAgent } from './services/authority-agents/pm-agent.js';
 import { ProjMAuthorityAgent } from './services/authority-agents/projm-agent.js';
 import { EMAuthorityAgent } from './services/authority-agents/em-agent.js';
-import { StatusMonitorAgent } from './services/authority-agents/status-agent.js';
-import { DiscordApprovalRouter } from './services/authority-agents/discord-approval-router.js';
 import { AuditService } from './services/audit-service.js';
 import { PRFeedbackService } from './services/pr-feedback-service.js';
 import { WorktreeLifecycleService } from './services/worktree-lifecycle-service.js';
@@ -385,6 +383,12 @@ const ideaProcessingService = new IdeaProcessingService(DATA_DIR, events);
 const escalationRouter = getEscalationRouter();
 escalationRouter.setEventEmitter(events);
 
+// Register global escalation channels (project-scoped channels deferred)
+import { UINotificationChannel } from './services/escalation-channels/ui-notification-channel.js';
+import { DiscordChannelEscalation } from './services/escalation-channels/discord-channel-escalation.js';
+escalationRouter.registerChannel(new UINotificationChannel(events));
+escalationRouter.registerChannel(new DiscordChannelEscalation(discordService));
+
 // Initialize Health Monitor Service early with autoRemediate enabled
 const healthMonitorService = getHealthMonitorService(featureLoader, {
   autoRemediate: true,
@@ -525,8 +529,7 @@ const leadEngineerService = new LeadEngineerService(
   projectService,
   projectLifecycleService,
   settingsService,
-  metricsService,
-  REPO_ROOT
+  metricsService
 );
 leadEngineerService.initialize();
 
@@ -539,11 +542,6 @@ const emAgent = new EMAuthorityAgent(
   auditService,
   settingsService
 );
-const statusMonitor = new StatusMonitorAgent(events, authorityService, featureLoader);
-
-// Initialize Discord approval routing (listens for authority:awaiting-approval events)
-const discordApprovalRouter = new DiscordApprovalRouter(events);
-discordApprovalRouter.initialize();
 
 // Initialize Linear approval detection + bridge to CoS pipeline
 linearApprovalHandler.initialize(settingsService, events);
@@ -591,13 +589,16 @@ const discordBotService = new DiscordBotService(
   featureLoader,
   settingsService,
   REPO_ROOT,
-  { pm: pmAgent, projm: projmAgent, em: emAgent, statusMonitor }
+  { pm: pmAgent, projm: projmAgent, em: emAgent }
 );
 discordBotService.setRoleRegistry(roleRegistryService);
 void discordBotService.initialize();
 
 // Wire Discord bot service to Ava Gateway (must be after discordBotService is created)
 avaGatewayService.setDiscordBot(discordBotService);
+
+// Wire Discord bot service to Lead Engineer for post_discord action
+leadEngineerService.setDiscordBot(discordBotService);
 
 // Initialize Event Hook Service for custom event triggers (with history storage)
 // Must be after DiscordBotService is created so it can use the real Discord client
@@ -617,6 +618,10 @@ agentDiscordRouter.start();
 
 // Wire Discord bot service to headsdown service for message fetching
 headsdownService.setDiscordBotService(discordBotService);
+
+// Register Discord DM escalation channel (requires discordBotService)
+import { DiscordDMChannel } from './services/escalation-channels/discord-dm-channel.js';
+escalationRouter.registerChannel(new DiscordDMChannel(discordBotService, events));
 
 // Initialize Issue Management Pipeline (failure → triage → GitHub issue → Discord)
 const triageService = new TriageService(events);
@@ -1069,7 +1074,6 @@ app.use(
       pm: pmAgent,
       projm: projmAgent,
       em: emAgent,
-      statusMonitor,
     },
     auditService
   )
@@ -1084,7 +1088,6 @@ app.use(
       pm: pmAgent,
       projm: projmAgent,
       em: emAgent,
-      statusMonitor,
     },
     settingsService
   )
@@ -1116,7 +1119,7 @@ app.use('/api/issues', createIssuesRoutes(events));
 app.use('/api/crew', createCrewRoutes(crewLoopService));
 app.use('/api/deploy', createDeployRoutes(autoModeService));
 app.use('/api/escalation', createEscalationRoutes(escalationRouter));
-app.use('/api/analytics', createAnalyticsRoutes(events));
+app.use('/api/analytics', createAnalyticsRoutes());
 
 // Lead Engineer routes (production-phase nerve center)
 const { createLeadEngineerRoutes } = await import('./routes/lead-engineer/index.js');

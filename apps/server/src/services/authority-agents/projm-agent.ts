@@ -26,6 +26,7 @@ import type { AuthorityService } from '../authority-service.js';
 import type { FeatureLoader } from '../feature-loader.js';
 import type { ProjectService } from '../project-service.js';
 import { simpleQuery } from '../../providers/simple-query-service.js';
+import { resolveModelString } from '@automaker/model-resolver';
 import {
   createAgentState,
   initializeAgent,
@@ -39,7 +40,7 @@ const logger = createLogger('ProjMAgent');
 const POLL_INTERVAL_MS = 15_000;
 
 /** Model used for milestone planning */
-const PLANNING_MODEL = 'claude-sonnet-4-20250514';
+const PLANNING_MODEL = resolveModelString('sonnet');
 
 /** Custom state for ProjM agent */
 interface ProjMCustomState {

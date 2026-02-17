@@ -158,7 +158,106 @@ export const boardJanitorCrewMember: CrewMemberDefinition = {
           }
         }
 
-        // 4. Features in in_progress with unsatisfied dependencies
+        // 4. Failed features (failureCount >= 2) — repeated failures need escalation
+        const failedOrBlockedFeatures = allFeatures.filter(
+          (f) => (f.status === 'blocked' || f.status === 'backlog') && (f.failureCount || 0) >= 2
+        );
+        for (const feature of failedOrBlockedFeatures) {
+          findings.push({
+            type: 'repeated-failure',
+            message: `Feature "${feature.title}" has failed ${feature.failureCount} times`,
+            severity: 'warning',
+            context: {
+              featureId: feature.id,
+              failureCount: feature.failureCount,
+              error: feature.error,
+              projectPath,
+            },
+          });
+          raise('warning');
+
+          ctx.events.emit('escalation:signal-received', {
+            source: EscalationSource.board_anomaly,
+            severity: EscalationSeverity.high,
+            type: 'repeated_feature_failure',
+            context: {
+              featureId: feature.id,
+              featureTitle: feature.title,
+              failureCount: feature.failureCount,
+              error: feature.error,
+              projectPath,
+            },
+            deduplicationKey: `repeated_failure_${feature.id}`,
+            timestamp: new Date().toISOString(),
+          });
+        }
+
+        // 5. Circular dependency deadlock detection (DFS)
+        {
+          const featureMap = new Map(allFeatures.map((f) => [f.id, f]));
+          const visited = new Set<string>();
+          const inStack = new Set<string>();
+
+          const hasCycle = (featureId: string): boolean => {
+            if (inStack.has(featureId)) return true;
+            if (visited.has(featureId)) return false;
+
+            visited.add(featureId);
+            inStack.add(featureId);
+
+            const feature = featureMap.get(featureId);
+            if (feature?.dependencies) {
+              for (const depId of feature.dependencies) {
+                const dep = featureMap.get(depId);
+                if (dep && dep.status !== 'done' && dep.status !== 'verified') {
+                  if (hasCycle(depId)) return true;
+                }
+              }
+            }
+
+            inStack.delete(featureId);
+            return false;
+          };
+
+          for (const feature of allFeatures) {
+            if (
+              feature.dependencies?.length &&
+              feature.status !== 'done' &&
+              feature.status !== 'verified' &&
+              !visited.has(feature.id)
+            ) {
+              if (hasCycle(feature.id)) {
+                findings.push({
+                  type: 'dependency-deadlock',
+                  message: `Feature "${feature.title}" is involved in a circular dependency`,
+                  severity: 'critical',
+                  context: {
+                    featureId: feature.id,
+                    dependencies: feature.dependencies,
+                    projectPath,
+                  },
+                });
+                raise('critical');
+
+                ctx.events.emit('escalation:signal-received', {
+                  source: EscalationSource.board_anomaly,
+                  severity: EscalationSeverity.critical,
+                  type: 'dependency_deadlock',
+                  context: {
+                    featureId: feature.id,
+                    featureTitle: feature.title,
+                    dependencies: feature.dependencies,
+                    projectPath,
+                  },
+                  deduplicationKey: `deadlock_${feature.id}`,
+                  timestamp: new Date().toISOString(),
+                });
+              }
+            }
+          }
+        }
+
+        // 6. Features in in_progress with unsatisfied dependencies
         for (const feature of inProgressFeatures) {
           if (feature.dependencies && feature.dependencies.length > 0) {
             const unsatisfiedDeps = feature.dependencies.filter((depId) => {
@@ -248,7 +347,9 @@ Please:
 2. For orphaned-in-progress: reset feature to backlog via \`update_feature\`
 3. For stale-deps: unblock feature by moving to backlog via \`update_feature\`
 4. For unsatisfied-deps: stop any agent if running, reset to backlog, fix deps with \`set_feature_dependencies\`
-5. Post a summary to Discord #dev if more than 2 fixes were made
+5. For repeated-failure: investigate error, consider increasing complexity or filing a bug
+6. For dependency-deadlock: break the cycle by removing one dependency via \`set_feature_dependencies\`
+7. Post a summary to Discord #dev if more than 2 fixes were made
 
 This is an automated triage request triggered by the crew loop system.`;
   },

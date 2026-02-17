@@ -129,15 +129,6 @@ export function createSubmitPrdHandler(
         }
       }
 
-      if (agents?.statusMonitor) {
-        try {
-          await agents.statusMonitor.initialize(projectPath);
-          logger.info(`[CoSRoutes:SubmitPRD] Status Monitor initialized successfully`);
-        } catch (error) {
-          logger.error(`[CoSRoutes:SubmitPRD] Status Monitor initialization failed:`, error);
-        }
-      }
-
       // Evaluate trust boundary to determine if HITL gates should auto-pass
       let trustBoundaryResult: 'autoApprove' | 'requireReview' = 'requireReview';
       if (settingsService) {

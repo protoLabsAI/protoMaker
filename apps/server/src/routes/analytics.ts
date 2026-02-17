@@ -5,20 +5,16 @@
  * - POST /api/analytics/summary - Get summary statistics
  * - POST /api/analytics/pr - Get metrics for specific PR
  * - POST /api/analytics/feature - Get metrics for specific feature
- * - POST /api/analytics/patterns - Get detected patterns
- * - POST /api/analytics/detect - Run pattern detection
  * - POST /api/analytics/all - Get all analytics
  */
 
 import { Router } from 'express';
 import { createLogger } from '@automaker/utils';
 import { FeedbackAnalyticsService } from '../services/feedback-analytics-service.js';
-import { FeedbackPatternDetector } from '../services/feedback-pattern-detector.js';
-import type { EventEmitter } from '../lib/events.js';
 
 const logger = createLogger('AnalyticsRoutes');
 
-export function createAnalyticsRoutes(events: EventEmitter): Router {
+export function createAnalyticsRoutes(): Router {
   const router = Router();
 
   /**
@@ -155,74 +151,6 @@ export function createAnalyticsRoutes(events: EventEmitter): Router {
       logger.error('Failed to get feature analytics:', error);
       res.status(500).json({
         error: 'Failed to get feature analytics',
-        message: error instanceof Error ? error.message : String(error),
-      });
-    }
-  });
-
-  /**
-   * POST /api/analytics/patterns
-   * Get detected patterns for a project
-   */
-  router.post('/patterns', async (req, res) => {
-    try {
-      const { projectPath } = req.body as { projectPath: string };
-
-      if (!projectPath) {
-        res.status(400).json({ error: 'projectPath is required' });
-        return;
-      }
-
-      const patternDetector = new FeedbackPatternDetector(projectPath, events);
-      await patternDetector.initialize();
-
-      const patterns = patternDetector.getDetectedPatterns();
-
-      res.json({
-        success: true,
-        projectPath,
-        patterns,
-      });
-    } catch (error) {
-      logger.error('Failed to get patterns:', error);
-      res.status(500).json({
-        error: 'Failed to get patterns',
-        message: error instanceof Error ? error.message : String(error),
-      });
-    }
-  });
-
-  /**
-   * POST /api/analytics/detect
-   * Run pattern detection for a project
-   */
-  router.post('/detect', async (req, res) => {
-    try {
-      const { projectPath } = req.body as { projectPath: string };
-
-      if (!projectPath) {
-        res.status(400).json({ error: 'projectPath is required' });
-        return;
-      }
-
-      const analyticsService = new FeedbackAnalyticsService(projectPath);
-      const patternDetector = new FeedbackPatternDetector(projectPath, events);
-      await patternDetector.initialize();
-
-      const result = await patternDetector.detectPatterns(analyticsService);
-
-      res.json({
-        success: true,
-        projectPath,
-        totalPatterns: result.patterns.length,
-        newEscalationsCount: result.newEscalations.length,
-        patterns: result.patterns,
-        newEscalations: result.newEscalations,
-      });
-    } catch (error) {
-      logger.error('Failed to detect patterns:', error);
-      res.status(500).json({
-        error: 'Failed to detect patterns',
         message: error instanceof Error ? error.message : String(error),
       });
     }

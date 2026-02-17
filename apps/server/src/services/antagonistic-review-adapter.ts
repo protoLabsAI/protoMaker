@@ -2,7 +2,7 @@
  * Antagonistic Review Adapter
  *
  * Adapter that wraps LangGraph flow execution to match the AntagonisticReviewService interface.
- * Allows signal-router-service to use the new flow-based implementation as a drop-in replacement
+ * Allows callers to use the new flow-based implementation as a drop-in replacement
  * for the old service with zero changes to calling code.
  */
 

@@ -12,7 +12,6 @@ import type { SettingsService } from '../../services/settings-service.js';
 import type { PMAuthorityAgent } from '../../services/authority-agents/pm-agent.js';
 import type { ProjMAuthorityAgent } from '../../services/authority-agents/projm-agent.js';
 import type { EMAuthorityAgent } from '../../services/authority-agents/em-agent.js';
-import type { StatusMonitorAgent } from '../../services/authority-agents/status-agent.js';
 import { validatePathParams } from '../../middleware/validate-paths.js';
 import { createSubmitPrdHandler } from './routes/submit-prd.js';
 
@@ -20,7 +19,6 @@ export interface AuthorityAgents {
   pm?: PMAuthorityAgent;
   projm?: ProjMAuthorityAgent;
   em?: EMAuthorityAgent;
-  statusMonitor?: StatusMonitorAgent;
 }
 
 export function createCosRoutes(

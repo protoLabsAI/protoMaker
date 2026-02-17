@@ -41,7 +41,6 @@ import type { FeatureLoader } from './feature-loader.js';
 import type { PMAuthorityAgent } from './authority-agents/pm-agent.js';
 import type { ProjMAuthorityAgent } from './authority-agents/projm-agent.js';
 import type { EMAuthorityAgent } from './authority-agents/em-agent.js';
-import type { StatusMonitorAgent } from './authority-agents/status-agent.js';
 import type { SettingsService } from './settings-service.js';
 import type { RoleRegistryService } from './role-registry-service.js';
 
@@ -49,7 +48,6 @@ interface AuthorityAgents {
   pm?: PMAuthorityAgent;
   projm?: ProjMAuthorityAgent;
   em?: EMAuthorityAgent;
-  statusMonitor?: StatusMonitorAgent;
 }
 import * as https from 'node:https';
 import * as http from 'node:http';
@@ -1349,7 +1347,6 @@ export class DiscordBotService {
       if (this.agents?.pm) await this.agents.pm.initialize(this.projectPath);
       if (this.agents?.projm) await this.agents.projm.initialize(this.projectPath);
       if (this.agents?.em) await this.agents.em.initialize(this.projectPath);
-      if (this.agents?.statusMonitor) await this.agents.statusMonitor.initialize(this.projectPath);
 
       // Create feature in 'idea' state via the inject-idea pipeline
       const feature = await this.featureLoader.create(this.projectPath, {
