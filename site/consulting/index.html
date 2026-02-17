@@ -1,0 +1,568 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>protoLabs Consulting — setupLab</title>
+    <meta
+      name="description"
+      content="We help teams build their own autonomous development pipeline. The hard part isn't the tool — it's learning to think in terms of orchestration. That's what we teach."
+    />
+    <meta property="og:title" content="protoLabs Consulting — setupLab" />
+    <meta
+      property="og:description"
+      content="We help teams build their own autonomous development pipeline. From architecture to autonomous agents — operational in weeks, not quarters."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://protolabs.consulting" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@protoLabsAI" />
+    <meta name="twitter:title" content="protoLabs Consulting — setupLab" />
+    <meta
+      name="twitter:description"
+      content="We help teams build their own autonomous development pipeline. From architecture to autonomous agents — operational in weeks, not quarters."
+    />
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#9670;</text></svg>"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <!-- Umami Analytics — Josh will configure data-website-id -->
+    <script
+      defer
+      src="https://umami.proto-labs.ai/script.js"
+      data-website-id="REPLACE_WITH_WEBSITE_ID"
+    ></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Geist', 'system-ui', 'sans-serif'],
+              mono: ['Geist Mono', 'monospace'],
+            },
+            colors: {
+              surface: {
+                0: '#09090b',
+                1: '#111113',
+                2: '#18181b',
+                3: '#222225',
+              },
+              accent: {
+                DEFAULT: '#a78bfa',
+                dim: '#7c5cbf',
+              },
+              muted: '#71717a',
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        background-color: #09090b;
+        color: #fafafa;
+        font-family: 'Geist', system-ui, sans-serif;
+      }
+      .gradient-text {
+        background: linear-gradient(135deg, #a78bfa 0%, #818cf8 50%, #6366f1 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+      .glow {
+        box-shadow: 0 0 80px rgba(167, 139, 250, 0.08);
+      }
+      a:focus-visible,
+      button:focus-visible {
+        outline: 2px solid #a78bfa;
+        outline-offset: 2px;
+      }
+      .skip-link {
+        position: absolute;
+        top: -100%;
+        left: 16px;
+        z-index: 100;
+        padding: 8px 16px;
+        background: #a78bfa;
+        color: #fff;
+        border-radius: 0 0 8px 8px;
+        font-size: 14px;
+        font-weight: 500;
+        text-decoration: none;
+        transition: top 0.2s;
+      }
+      .skip-link:focus {
+        top: 0;
+      }
+      .check-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: rgba(74, 222, 128, 0.15);
+        color: #4ade80;
+        font-size: 11px;
+        flex-shrink: 0;
+      }
+      @keyframes fade-up {
+        from {
+          opacity: 0;
+          transform: translateY(24px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .animate-fade-up {
+        animation: fade-up 0.8s ease-out forwards;
+      }
+      .animate-delay-1 {
+        animation-delay: 0.15s;
+        opacity: 0;
+      }
+      .animate-delay-2 {
+        animation-delay: 0.3s;
+        opacity: 0;
+      }
+      .animate-delay-3 {
+        animation-delay: 0.45s;
+        opacity: 0;
+      }
+      .fade-section {
+        opacity: 0;
+        transform: translateY(24px);
+        transition:
+          opacity 0.7s ease-out,
+          transform 0.7s ease-out;
+      }
+      .fade-section.visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      .step-number {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: rgba(167, 139, 250, 0.12);
+        color: #a78bfa;
+        font-size: 14px;
+        font-weight: 600;
+        font-family: 'Geist Mono', monospace;
+        flex-shrink: 0;
+      }
+    </style>
+  </head>
+  <body class="min-h-screen antialiased">
+    <a href="#main-content" class="skip-link">Skip to content</a>
+
+    <!-- Nav -->
+    <nav class="fixed top-0 w-full z-50 border-b border-white/5 bg-surface-0/80 backdrop-blur-xl">
+      <div class="max-w-4xl mx-auto px-6 h-14 flex items-center justify-between">
+        <a href="/" class="flex items-center gap-2 text-white font-semibold tracking-tight">
+          <span class="text-accent text-lg">&#9670;</span>
+          <span>proto<span class="text-accent">Labs</span></span>
+          <span class="text-zinc-600 text-sm font-normal ml-1">consulting</span>
+        </a>
+        <a
+          href="mailto:hello@protolabs.consulting"
+          class="text-sm text-accent hover:text-white transition-colors font-medium"
+          >hello@protolabs.consulting</a
+        >
+      </div>
+    </nav>
+
+    <main id="main-content" class="relative">
+      <!-- Hero -->
+      <div class="max-w-4xl mx-auto px-6 pt-28 pb-16 md:pt-40 md:pb-24">
+        <div class="max-w-2xl">
+          <p class="text-accent text-sm font-mono uppercase tracking-widest animate-fade-up">
+            setupLab
+          </p>
+          <h1
+            class="mt-4 text-3xl sm:text-4xl md:text-5xl font-bold leading-[1.1] tracking-tight animate-fade-up animate-delay-1"
+          >
+            We build autonomous development pipelines for your team.
+          </h1>
+          <p class="mt-6 text-lg text-zinc-400 leading-relaxed animate-fade-up animate-delay-2">
+            The hard part isn't the tool. It's learning to think in terms of orchestration instead
+            of implementation. That's what we teach.
+          </p>
+          <div class="mt-8 flex flex-wrap items-center gap-4 animate-fade-up animate-delay-3">
+            <a
+              href="mailto:hello@protolabs.consulting"
+              class="inline-flex items-center gap-2 px-6 py-3 bg-accent hover:bg-accent-dim text-white text-sm font-medium rounded-lg transition-colors"
+            >
+              Start a conversation
+              <svg
+                class="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M14 5l7 7m0 0l-7 7m7-7H3"
+                />
+              </svg>
+            </a>
+            <a
+              href="https://protolabs.studio"
+              class="inline-flex items-center gap-2 px-5 py-3 border border-white/10 hover:border-white/20 text-zinc-300 hover:text-white text-sm font-medium rounded-lg transition-colors"
+            >
+              See the product
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats bar -->
+      <div class="border-y border-white/5 bg-surface-1/50">
+        <div class="max-w-4xl mx-auto px-6 py-10 grid grid-cols-2 sm:grid-cols-4 gap-6 text-center">
+          <div>
+            <div class="text-2xl md:text-3xl font-bold font-mono text-white">2,600+</div>
+            <div class="mt-1 text-xs text-zinc-500">commits shipped</div>
+          </div>
+          <div>
+            <div class="text-2xl md:text-3xl font-bold font-mono text-white">580+</div>
+            <div class="mt-1 text-xs text-zinc-500">PRs merged</div>
+          </div>
+          <div>
+            <div class="text-2xl md:text-3xl font-bold font-mono text-white">$0.56</div>
+            <div class="mt-1 text-xs text-zinc-500">avg cost per feature</div>
+          </div>
+          <div>
+            <div class="text-2xl md:text-3xl font-bold font-mono text-white">3</div>
+            <div class="mt-1 text-xs text-zinc-500">products shipped</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- The Problem -->
+      <section class="max-w-4xl mx-auto px-6 py-20 md:py-28">
+        <div class="max-w-2xl fade-section">
+          <p class="text-accent text-sm font-mono uppercase tracking-widest">The Problem</p>
+          <h2 class="mt-4 text-2xl md:text-3xl font-semibold text-white">
+            Your team knows AI changes everything. They don't know how to change with it.
+          </h2>
+          <p class="mt-6 text-zinc-400 leading-relaxed">
+            You've seen the demos. You've bought the Copilot licenses. Maybe you've even run a
+            hackathon. But your development process is fundamentally the same: humans writing code,
+            humans reviewing code, humans managing tickets.
+          </p>
+          <p class="mt-4 text-zinc-400 leading-relaxed">
+            The gap isn't tooling. It's architecture. Knowing how to decompose work so AI agents can
+            execute it reliably. Knowing how to build trust boundaries, quality gates, and feedback
+            loops that make autonomous execution safe. Knowing what to automate and what to keep
+            human.
+          </p>
+          <p class="mt-4 text-zinc-500 text-sm">
+            We've spent three years building this. We'll teach your team in weeks.
+          </p>
+        </div>
+      </section>
+
+      <!-- What You Get -->
+      <section class="border-y border-white/5 bg-surface-1/30">
+        <div class="max-w-4xl mx-auto px-6 py-20 md:py-28">
+          <div class="fade-section">
+            <p class="text-accent text-sm font-mono uppercase tracking-widest">What You Get</p>
+            <h2 class="mt-4 text-2xl md:text-3xl font-semibold text-white">
+              A working autonomous pipeline. Not a slide deck.
+            </h2>
+          </div>
+          <div class="mt-12 grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- Deliverable 1 -->
+            <div class="fade-section">
+              <div class="p-6 rounded-xl border border-white/5 bg-surface-0/50 h-full">
+                <div class="flex items-center gap-3 mb-4">
+                  <span class="check-icon">&#10003;</span>
+                  <h3 class="text-white font-medium">Pipeline Architecture</h3>
+                </div>
+                <p class="text-zinc-400 text-sm leading-relaxed">
+                  Custom-designed orchestration architecture for your codebase. Signal intake, task
+                  decomposition, agent assignment, quality gates, and merge automation — mapped to
+                  your team's workflow.
+                </p>
+              </div>
+            </div>
+            <!-- Deliverable 2 -->
+            <div class="fade-section">
+              <div class="p-6 rounded-xl border border-white/5 bg-surface-0/50 h-full">
+                <div class="flex items-center gap-3 mb-4">
+                  <span class="check-icon">&#10003;</span>
+                  <h3 class="text-white font-medium">Agent Configuration</h3>
+                </div>
+                <p class="text-zinc-400 text-sm leading-relaxed">
+                  Tuned agent templates with system prompts, context files, tool configurations, and
+                  model routing. Your agents know your codebase conventions, your test patterns,
+                  your review standards.
+                </p>
+              </div>
+            </div>
+            <!-- Deliverable 3 -->
+            <div class="fade-section">
+              <div class="p-6 rounded-xl border border-white/5 bg-surface-0/50 h-full">
+                <div class="flex items-center gap-3 mb-4">
+                  <span class="check-icon">&#10003;</span>
+                  <h3 class="text-white font-medium">CI/CD Integration</h3>
+                </div>
+                <p class="text-zinc-400 text-sm leading-relaxed">
+                  Git worktree isolation, automated PR pipelines, branch protection rules, AI code
+                  review, and auto-merge workflows. Agents ship through the same quality bar as your
+                  human engineers.
+                </p>
+              </div>
+            </div>
+            <!-- Deliverable 4 -->
+            <div class="fade-section">
+              <div class="p-6 rounded-xl border border-white/5 bg-surface-0/50 h-full">
+                <div class="flex items-center gap-3 mb-4">
+                  <span class="check-icon">&#10003;</span>
+                  <h3 class="text-white font-medium">Team Enablement</h3>
+                </div>
+                <p class="text-zinc-400 text-sm leading-relaxed">
+                  Your team learns to architect for autonomous execution — decomposing work, writing
+                  specs agents can implement, reviewing AI output, and evolving the system as models
+                  improve.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- How It Works -->
+      <section class="max-w-4xl mx-auto px-6 py-20 md:py-28">
+        <div class="fade-section">
+          <p class="text-accent text-sm font-mono uppercase tracking-widest">How It Works</p>
+          <h2 class="mt-4 text-2xl md:text-3xl font-semibold text-white">
+            Three phases. Operational in weeks.
+          </h2>
+        </div>
+        <div class="mt-12 space-y-10">
+          <!-- Step 1 -->
+          <div class="flex items-start gap-5 fade-section">
+            <div class="step-number mt-0.5">1</div>
+            <div>
+              <h3 class="text-white font-medium text-lg">Audit</h3>
+              <p class="mt-2 text-zinc-400 text-sm leading-relaxed">
+                We analyze your codebase, CI pipeline, team structure, and development workflow. We
+                identify what can be automated today, what needs architectural changes, and what
+                should stay human. You get a concrete assessment, not a generic playbook.
+              </p>
+            </div>
+          </div>
+          <!-- Step 2 -->
+          <div class="flex items-start gap-5 fade-section">
+            <div class="step-number mt-0.5">2</div>
+            <div>
+              <h3 class="text-white font-medium text-lg">Build</h3>
+              <p class="mt-2 text-zinc-400 text-sm leading-relaxed">
+                We architect and configure your autonomous pipeline — agent templates tuned to your
+                codebase, worktree isolation, quality gates, model routing, and CI integration. We
+                build it alongside your team so they understand every decision.
+              </p>
+            </div>
+          </div>
+          <!-- Step 3 -->
+          <div class="flex items-start gap-5 fade-section">
+            <div class="step-number mt-0.5">3</div>
+            <div>
+              <h3 class="text-white font-medium text-lg">Transfer</h3>
+              <p class="mt-2 text-zinc-400 text-sm leading-relaxed">
+                Your team runs the pipeline independently. We stay available for questions, but the
+                goal is full ownership. The system is yours — no vendor lock-in, no recurring fees,
+                no dependency on us.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Who -->
+      <section class="border-t border-white/5 bg-surface-1/30">
+        <div class="max-w-4xl mx-auto px-6 py-20 md:py-28">
+          <div class="max-w-2xl fade-section">
+            <p class="text-accent text-sm font-mono uppercase tracking-widest">Who This Is For</p>
+            <h2 class="mt-4 text-2xl md:text-3xl font-semibold text-white">
+              Teams that build software and want to build it faster.
+            </h2>
+            <div class="mt-8 space-y-4">
+              <div class="flex items-start gap-3">
+                <span class="check-icon mt-0.5">&#10003;</span>
+                <p class="text-zinc-400 text-sm leading-relaxed">
+                  <span class="text-zinc-200 font-medium">Startups</span> that need to ship at 10x
+                  speed with a small team
+                </p>
+              </div>
+              <div class="flex items-start gap-3">
+                <span class="check-icon mt-0.5">&#10003;</span>
+                <p class="text-zinc-400 text-sm leading-relaxed">
+                  <span class="text-zinc-200 font-medium">Mid-size engineering teams</span> looking
+                  to multiply output without multiplying headcount
+                </p>
+              </div>
+              <div class="flex items-start gap-3">
+                <span class="check-icon mt-0.5">&#10003;</span>
+                <p class="text-zinc-400 text-sm leading-relaxed">
+                  <span class="text-zinc-200 font-medium">Technical leaders</span> who understand AI
+                  is the shift but need help with the architecture
+                </p>
+              </div>
+              <div class="flex items-start gap-3">
+                <span class="check-icon mt-0.5">&#10003;</span>
+                <p class="text-zinc-400 text-sm leading-relaxed">
+                  <span class="text-zinc-200 font-medium">Solo founders</span> building their first
+                  AI-native development workflow
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- About -->
+      <section class="max-w-4xl mx-auto px-6 py-20 md:py-28">
+        <div class="max-w-2xl fade-section">
+          <p class="text-accent text-sm font-mono uppercase tracking-widest">Who We Are</p>
+          <h2 class="mt-4 text-xl md:text-2xl font-semibold text-white">
+            Built by the team that built the system.
+          </h2>
+          <p class="mt-6 text-zinc-400 leading-relaxed">
+            protoLabs is led by <span class="text-zinc-200">Josh Mabry</span> — 8+ years shipping
+            production software, former Principal Application Architect at Vizient, 3+ years deep in
+            agentic AI. Josh designed the autonomous development methodology and uses it every day
+            to ship real products.
+          </p>
+          <p class="mt-4 text-zinc-400 leading-relaxed">
+            The proof is in the git log. 370,000 lines of production TypeScript. Three shipped
+            products — including the tool itself. 94 features at $0.56 average cost per feature.
+            This isn't a methodology we theorized. It's one we run in production.
+          </p>
+        </div>
+      </section>
+
+      <!-- CTA -->
+      <section class="border-t border-white/5">
+        <div class="max-w-4xl mx-auto px-6 py-20 md:py-28 text-center fade-section">
+          <h2 class="text-2xl md:text-3xl font-semibold text-white">Ready to build faster?</h2>
+          <p class="mt-4 text-zinc-400 text-sm leading-relaxed max-w-md mx-auto">
+            Tell us about your team, your codebase, and what you're trying to accomplish. We'll tell
+            you if we can help.
+          </p>
+          <a
+            href="mailto:hello@protolabs.consulting"
+            class="inline-flex items-center gap-2 mt-8 px-8 py-3.5 bg-accent hover:bg-accent-dim text-white text-sm font-medium rounded-lg transition-colors"
+          >
+            hello@protolabs.consulting
+            <svg
+              class="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M14 5l7 7m0 0l-7 7m7-7H3"
+              />
+            </svg>
+          </a>
+          <p class="mt-4 text-xs text-zinc-600">
+            No sales deck. No demo request form. Just a conversation.
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-white/5">
+      <div
+        class="max-w-4xl mx-auto px-6 py-10 flex flex-col md:flex-row items-center justify-between gap-4"
+      >
+        <div class="flex items-center gap-2 text-sm text-zinc-500">
+          <span class="text-accent">&#9670;</span>
+          <span>proto<span class="text-zinc-400">Labs</span></span>
+          <span class="text-zinc-700">&middot;</span>
+          <span>consulting</span>
+        </div>
+        <div class="flex items-center gap-5 text-sm text-zinc-500">
+          <a href="https://protolabs.studio" class="hover:text-zinc-300 transition-colors"
+            >Product</a
+          >
+          <a
+            href="https://docs.protolabs.studio"
+            target="_blank"
+            rel="noopener"
+            class="hover:text-zinc-300 transition-colors"
+            >Docs</a
+          >
+          <a
+            href="https://x.com/protoLabsAI"
+            target="_blank"
+            rel="noopener"
+            class="hover:text-zinc-300 transition-colors"
+            >X / Twitter</a
+          >
+          <a
+            href="https://github.com/proto-labs-ai"
+            target="_blank"
+            rel="noopener"
+            class="hover:text-zinc-300 transition-colors"
+            >GitHub</a
+          >
+        </div>
+      </div>
+    </footer>
+
+    <!-- Scroll-triggered animations -->
+    <script>
+      document.addEventListener('DOMContentLoaded', function () {
+        var sections = document.querySelectorAll('.fade-section');
+        if (!('IntersectionObserver' in window)) {
+          sections.forEach(function (s) {
+            s.classList.add('visible');
+          });
+          return;
+        }
+        var observer = new IntersectionObserver(
+          function (entries) {
+            entries.forEach(function (entry) {
+              if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+                observer.unobserve(entry.target);
+              }
+            });
+          },
+          { threshold: 0.15, rootMargin: '0px 0px -40px 0px' }
+        );
+        sections.forEach(function (s) {
+          observer.observe(s);
+        });
+      });
+    </script>
+  </body>
+</html>
