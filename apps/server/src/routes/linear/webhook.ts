@@ -14,6 +14,7 @@
 
 import type { RequestHandler, Request, Response } from 'express';
 import { createHmac } from 'node:crypto';
+import { execSync } from 'node:child_process';
 import { createLogger } from '@automaker/utils';
 import type { SettingsService } from '../../services/settings-service.js';
 import type { EventEmitter } from '../../lib/events.js';
@@ -375,7 +376,15 @@ async function handleIssueUpdated(
 
   // Delegate to sync service for status, title, priority, and relation sync
   const stateName = data.state?.name || 'Unknown';
-  const projectPath = process.cwd();
+  let projectPath: string;
+  try {
+    projectPath = execSync('git rev-parse --show-toplevel', {
+      encoding: 'utf-8',
+      timeout: 5000,
+    }).trim();
+  } catch {
+    projectPath = process.cwd();
+  }
 
   await linearSyncService.onLinearIssueUpdated(data.id, stateName, projectPath, {
     title: data.title,

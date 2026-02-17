@@ -438,6 +438,14 @@ export class LinearSyncService {
   }
 
   /**
+   * Format the Authorization header value for a Linear API token.
+   * API keys (lin_api_*) must be sent raw; OAuth tokens use Bearer prefix.
+   */
+  private formatLinearAuth(token: string): string {
+    return token.startsWith('lin_api_') ? token : `Bearer ${token}`;
+  }
+
+  /**
    * Get sync metadata for a feature
    */
   getSyncMetadata(featureId: string): SyncMetadata | undefined {
@@ -889,7 +897,7 @@ export class LinearSyncService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${linearAccessToken}`,
+          Authorization: this.formatLinearAuth(linearAccessToken),
         },
         body: JSON.stringify({ query: mutation, variables }),
         signal: controller.signal,
@@ -980,7 +988,7 @@ export class LinearSyncService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${linearAccessToken}`,
+          Authorization: this.formatLinearAuth(linearAccessToken),
         },
         body: JSON.stringify({ query: mutation, variables }),
         signal: controller.signal,
@@ -1248,7 +1256,7 @@ export class LinearSyncService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${linearAccessToken}`,
+          Authorization: this.formatLinearAuth(linearAccessToken),
         },
         body: JSON.stringify({ query, variables }),
         signal: controller.signal,
@@ -1336,7 +1344,7 @@ export class LinearSyncService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${linearAccessToken}`,
+          Authorization: this.formatLinearAuth(linearAccessToken),
         },
         body: JSON.stringify({ query: mutation, variables }),
         signal: controller.signal,
@@ -1417,7 +1425,7 @@ export class LinearSyncService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${linearAccessToken}`,
+          Authorization: this.formatLinearAuth(linearAccessToken),
         },
         body: JSON.stringify({ query, variables }),
         signal: controller.signal,
@@ -1545,7 +1553,7 @@ export class LinearSyncService {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${linearAccessToken}`,
+            Authorization: this.formatLinearAuth(linearAccessToken),
           },
           body: JSON.stringify({ query: mutation, variables }),
           signal: controller.signal,
@@ -1661,7 +1669,7 @@ export class LinearSyncService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${linearAccessToken}`,
+          Authorization: this.formatLinearAuth(linearAccessToken),
         },
         body: JSON.stringify({ query, variables }),
         signal: controller.signal,
@@ -1885,7 +1893,7 @@ export class LinearSyncService {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${linearAccessToken}`,
+        Authorization: this.formatLinearAuth(linearAccessToken),
       },
       body: JSON.stringify({ query: mutation, variables }),
     });
@@ -2737,7 +2745,7 @@ ${prdContent}
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${linearAccessToken}`,
+          Authorization: this.formatLinearAuth(linearAccessToken),
         },
         body: JSON.stringify({ query: mutation, variables }),
         signal: controller.signal,
@@ -2831,7 +2839,7 @@ ${prdContent}
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${linearAccessToken}`,
+          Authorization: this.formatLinearAuth(linearAccessToken),
         },
         body: JSON.stringify({ query, variables }),
         signal: controller.signal,

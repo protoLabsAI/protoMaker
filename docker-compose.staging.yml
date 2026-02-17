@@ -83,6 +83,8 @@ services:
       - LINEAR_CLIENT_SECRET=${LINEAR_CLIENT_SECRET:-}
       - LINEAR_REDIRECT_URI=${LINEAR_REDIRECT_URI:-}
       - LINEAR_WEBHOOK_SECRET=${LINEAR_WEBHOOK_SECRET:-}
+      - LINEAR_API_KEY=${LINEAR_API_KEY:-}
+      - LINEAR_API_TOKEN=${LINEAR_API_TOKEN:-}
 
       # Staging configuration
       - NODE_ENV=production
@@ -114,8 +116,9 @@ services:
       - automaker-opencode-config:/home/automaker/.config/opencode
       - automaker-opencode-cache:/home/automaker/.cache/opencode
 
-      # Host project directory - mount at same path for MCP path compatibility
+      # Host project directories - mount at same path for MCP path compatibility
       - ${PROJECTS_MOUNT:-/home/josh/dev}:${PROJECTS_MOUNT:-/home/josh/dev}:rw
+      - /home/josh/labs:/home/josh/labs:rw
 
     deploy:
       resources:

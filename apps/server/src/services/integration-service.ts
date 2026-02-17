@@ -998,9 +998,24 @@ export class IntegrationService {
    */
   async checkLinearOAuthStatus(): Promise<boolean> {
     try {
-      // Check if Linear OAuth token is valid
-      // This is a placeholder - actual implementation would validate OAuth token
-      return false;
+      // Check for any token source: env vars (most common in Docker/staging)
+      const token = process.env.LINEAR_API_KEY || process.env.LINEAR_API_TOKEN || '';
+      if (!token) return false;
+
+      // Validate token with a lightweight API call
+      const auth = token.startsWith('lin_api_') ? token : `Bearer ${token}`;
+
+      const res = await fetch('https://api.linear.app/graphql', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: auth,
+        },
+        body: JSON.stringify({ query: '{ viewer { id } }' }),
+        signal: AbortSignal.timeout(5000),
+      });
+
+      return res.ok;
     } catch (error) {
       logger.error('Failed to check Linear OAuth status:', error);
       return false;
