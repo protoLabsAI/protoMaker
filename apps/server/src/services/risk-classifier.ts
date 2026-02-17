@@ -201,8 +201,7 @@ export class RiskClassifier {
       const overallRisk = this.getHighestRisk(dimensions);
 
       // Auto-approve if overall risk is at or below threshold
-      const autoApprove =
-        RISK_ORDER[overallRisk] <= RISK_ORDER[this.config.autoApproveThreshold];
+      const autoApprove = RISK_ORDER[overallRisk] <= RISK_ORDER[this.config.autoApproveThreshold];
 
       const classification: RiskClassification = {
         overallRisk,
@@ -239,7 +238,9 @@ export class RiskClassifier {
    * Update the auto-approve threshold
    */
   updateThreshold(newThreshold: RiskLevel): void {
-    logger.info(`Updating auto-approve threshold: ${this.config.autoApproveThreshold} -> ${newThreshold}`);
+    logger.info(
+      `Updating auto-approve threshold: ${this.config.autoApproveThreshold} -> ${newThreshold}`
+    );
     this.config.autoApproveThreshold = newThreshold;
   }
 

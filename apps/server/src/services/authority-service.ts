@@ -272,7 +272,13 @@ export class AuthorityService {
         };
 
         // Log audit entry
-        await this.logAuditEntry(proposal, classification, 'auto_approved', decision.reason, projectPath);
+        await this.logAuditEntry(
+          proposal,
+          classification,
+          'auto_approved',
+          decision.reason,
+          projectPath
+        );
 
         // Update stats
         this.updateProfileStats(agent.role, 'allow', projectPath);
@@ -290,7 +296,9 @@ export class AuthorityService {
           classification,
         });
 
-        logger.info(`Auto-approved proposal: ${proposal.what} (risk: ${classification.overallRisk})`);
+        logger.info(
+          `Auto-approved proposal: ${proposal.what} (risk: ${classification.overallRisk})`
+        );
         return decision;
       } else {
         // Risk too high, log and proceed to normal approval flow
