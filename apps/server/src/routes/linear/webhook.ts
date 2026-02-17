@@ -378,15 +378,18 @@ async function handleIssueUpdated(
 
   // Delegate to sync service for status, title, priority, and relation sync
   const stateName = data.state?.name || 'Unknown';
-  let projectPath: string;
-  try {
-    projectPath = execSync('git rev-parse --show-toplevel', {
-      encoding: 'utf-8',
-      timeout: 5000,
-    }).trim();
-  } catch {
-    projectPath = process.cwd();
-  }
+  const projectPath =
+    process.env.AUTOMAKER_PROJECT_PATH ||
+    (() => {
+      try {
+        return execSync('git rev-parse --show-toplevel', {
+          encoding: 'utf-8',
+          timeout: 5000,
+        }).trim();
+      } catch {
+        return process.cwd();
+      }
+    })();
 
   await linearSyncService.onLinearIssueUpdated(data.id, stateName, projectPath, {
     title: data.title,
