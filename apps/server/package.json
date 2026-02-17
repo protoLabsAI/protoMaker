@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.2.36",
+    "@anthropic-ai/sdk": "^0.65.0",
     "@automaker/dependency-resolver": "1.0.0",
     "@automaker/flows": "1.0.0",
     "@automaker/git-utils": "1.0.0",
