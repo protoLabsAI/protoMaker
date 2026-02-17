@@ -152,6 +152,13 @@ export class LinearApprovalBridge {
       .filter(Boolean)
       .join('\n');
 
+    // Check if feature already exists for this Linear issue
+    const existing = await this.featureLoader.findByLinearIssueId(projectPath, issueId);
+    if (existing) {
+      logger.info(`Feature already exists for Linear issue ${issueId}: ${existing.id}, skipping`);
+      return;
+    }
+
     // Create epic feature with approved state (same as CoS submit-prd)
     const feature = await this.featureLoader.create(projectPath, {
       title,

@@ -212,6 +212,8 @@ export class LinearSyncService {
         this.handleProjectStatusChanged(payload as ProjectStatusChangedPayload);
       } else if (type === 'linear:comment:created') {
         this.handleCommentCreated(payload as CommentCreatedPayload);
+      } else if (type === 'authority:pm-prd-ready') {
+        this.handlePrdReady(payload as { projectPath?: string; featureId?: string; prd?: string });
       }
     });
 
@@ -1921,6 +1923,43 @@ export class LinearSyncService {
     }
 
     logger.info(`Added comment to Linear issue ${issueId}`);
+  }
+
+  /**
+   * Handle authority:pm-prd-ready events — post PRD back to originating Linear issue
+   */
+  private handlePrdReady(payload: {
+    projectPath?: string;
+    featureId?: string;
+    prd?: string;
+  }): void {
+    const { projectPath, featureId, prd } = payload;
+    if (!projectPath || !featureId || !prd || !this.featureLoader) return;
+
+    this.postPrdToLinear(projectPath, featureId, prd).catch((err) => {
+      logger.warn(`Failed to post PRD to Linear for feature ${featureId}:`, err);
+    });
+  }
+
+  private async postPrdToLinear(
+    projectPath: string,
+    featureId: string,
+    prd: string
+  ): Promise<void> {
+    const feature = await this.featureLoader!.get(projectPath, featureId);
+    if (!feature?.linearIssueId) {
+      logger.debug(`Feature ${featureId} has no linearIssueId, skipping PRD comment`);
+      return;
+    }
+
+    const MAX_PRD_LENGTH = 4000;
+    const truncatedPrd =
+      prd.length > MAX_PRD_LENGTH ? prd.slice(0, MAX_PRD_LENGTH) + '\n\n…(truncated)' : prd;
+
+    const commentBody = `## PRD Generated\n\n${truncatedPrd}`;
+
+    await this.addCommentToIssue(projectPath, feature.linearIssueId, commentBody);
+    logger.info(`Posted PRD to Linear issue ${feature.linearIssueId} for feature ${featureId}`);
   }
 
   /**

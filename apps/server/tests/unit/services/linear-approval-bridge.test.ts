@@ -36,6 +36,7 @@ function createMockEventEmitter(): EventEmitter {
 function createMockFeatureLoader(): Partial<FeatureLoader> {
   return {
     create: vi.fn().mockResolvedValue({ id: 'feature-created-123' }),
+    findByLinearIssueId: vi.fn().mockResolvedValue(null),
     getAll: vi.fn(),
     load: vi.fn(),
     update: vi.fn(),

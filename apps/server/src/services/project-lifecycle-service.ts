@@ -264,7 +264,7 @@ export class ProjectLifecycleService {
 
     this.events.emit('project:lifecycle:launched', {
       projectPath,
-      slug: projectSlug,
+      projectSlug,
       featuresInBacklog: backlogFeatures.length,
       autoModeStarted,
     });
