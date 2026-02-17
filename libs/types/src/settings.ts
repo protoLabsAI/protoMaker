@@ -1896,6 +1896,14 @@ export interface ProjectSettings {
    * @see CeremonySettings
    */
   ceremonySettings?: CeremonySettings;
+
+  // Twitch Integration (per-project)
+  /**
+   * Project-specific Twitch chat integration settings.
+   * Enables receiving suggestions from Twitch chat via !idea commands.
+   * @see TwitchSettings
+   */
+  twitch?: import('./twitch.js').TwitchSettings;
 }
 
 /**

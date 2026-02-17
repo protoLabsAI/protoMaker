@@ -737,3 +737,7 @@ export type {
   LeadEngineerSession,
   LeadRuleLogEntry,
 } from './lead-engineer.js';
+
+// Twitch integration types (chat suggestions)
+export type { TwitchSuggestion, TwitchSettings } from './twitch.js';
+export { DEFAULT_TWITCH_SETTINGS } from './twitch.js';
