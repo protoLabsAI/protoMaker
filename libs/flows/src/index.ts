@@ -291,6 +291,8 @@ export {
   type ImprovementRouter,
   improvementsHitlRouter,
   hitlImprovementsProcessor,
+  executeWrapUpFlowWithTracing,
+  type ExecuteWrapUpFlowOptions,
 } from './wrap-up/index.js';
 
 // Idea processing flow (complexity-based routing)

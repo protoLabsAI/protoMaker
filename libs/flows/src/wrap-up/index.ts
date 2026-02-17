@@ -43,3 +43,9 @@ export {
 } from './nodes/propose-improvements.js';
 export { createRouteImprovementsNode, type ImprovementRouter } from './nodes/route-improvements.js';
 export { improvementsHitlRouter, hitlImprovementsProcessor } from './nodes/hitl-improvements.js';
+
+// Tracing helper
+export {
+  executeWrapUpFlowWithTracing,
+  type ExecuteWrapUpFlowOptions,
+} from './with-tracing.js';
