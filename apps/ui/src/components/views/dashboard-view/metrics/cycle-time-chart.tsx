@@ -3,6 +3,7 @@
  */
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useChartColors } from '@/hooks/use-chart-colors';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface CycleTimeChartProps {
@@ -11,6 +12,8 @@ interface CycleTimeChartProps {
 }
 
 export function CycleTimeChart({ data, isLoading }: CycleTimeChartProps) {
+  const colors = useChartColors();
+
   if (isLoading || !data?.buckets?.length) {
     return (
       <Card className="bg-card/50 backdrop-blur-sm border-border/50">
@@ -39,15 +42,15 @@ export function CycleTimeChart({ data, isLoading }: CycleTimeChartProps) {
         <div className="h-[200px]">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data.buckets} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" strokeOpacity={0.5} />
+              <CartesianGrid strokeDasharray="3 3" stroke={colors.border} strokeOpacity={0.5} />
               <XAxis
                 dataKey="label"
-                tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
+                tick={{ fontSize: 10, fill: colors.mutedForeground }}
                 axisLine={false}
                 tickLine={false}
               />
               <YAxis
-                tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
+                tick={{ fontSize: 10, fill: colors.mutedForeground }}
                 axisLine={false}
                 tickLine={false}
                 allowDecimals={false}
@@ -61,7 +64,7 @@ export function CycleTimeChart({ data, isLoading }: CycleTimeChartProps) {
                 }}
                 formatter={(value: number | undefined) => [value ?? 0, 'Features']}
               />
-              <Bar dataKey="count" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="count" fill={colors.chart1} radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>

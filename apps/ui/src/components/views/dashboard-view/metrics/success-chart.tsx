@@ -3,6 +3,7 @@
  */
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useChartColors } from '@/hooks/use-chart-colors';
 import {
   AreaChart,
   Area,
@@ -20,6 +21,8 @@ interface SuccessChartProps {
 }
 
 export function SuccessChart({ data, isLoading }: SuccessChartProps) {
+  const colors = useChartColors();
+
   if (isLoading || !data?.points?.length) {
     return (
       <Card className="bg-card/50 backdrop-blur-sm border-border/50">
@@ -51,27 +54,27 @@ export function SuccessChart({ data, isLoading }: SuccessChartProps) {
             <AreaChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="successGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="var(--chart-2)" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="var(--chart-2)" stopOpacity={0} />
+                  <stop offset="5%" stopColor={colors.chart2} stopOpacity={0.3} />
+                  <stop offset="95%" stopColor={colors.chart2} stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" strokeOpacity={0.5} />
+              <CartesianGrid strokeDasharray="3 3" stroke={colors.border} strokeOpacity={0.5} />
               <XAxis
                 dataKey="date"
-                tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
+                tick={{ fontSize: 10, fill: colors.mutedForeground }}
                 axisLine={false}
                 tickLine={false}
               />
               <YAxis
                 domain={[0, 100]}
-                tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
+                tick={{ fontSize: 10, fill: colors.mutedForeground }}
                 axisLine={false}
                 tickLine={false}
                 tickFormatter={(v: number) => `${v}%`}
               />
               <ReferenceLine
                 y={90}
-                stroke="var(--chart-3)"
+                stroke={colors.chart3}
                 strokeDasharray="3 3"
                 strokeOpacity={0.6}
               />
@@ -87,7 +90,7 @@ export function SuccessChart({ data, isLoading }: SuccessChartProps) {
               <Area
                 type="monotone"
                 dataKey="rate"
-                stroke="var(--chart-2)"
+                stroke={colors.chart2}
                 fill="url(#successGradient)"
                 strokeWidth={2}
               />

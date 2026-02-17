@@ -3,13 +3,16 @@
  */
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useChartColors, type ChartColors } from '@/hooks/use-chart-colors';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
-const MODEL_COLORS: Record<string, string> = {
-  sonnet: 'var(--chart-1)',
-  opus: 'var(--chart-3)',
-  haiku: 'var(--chart-2)',
-};
+function getModelColors(colors: ChartColors): Record<string, string> {
+  return {
+    sonnet: colors.chart1,
+    opus: colors.chart3,
+    haiku: colors.chart2,
+  };
+}
 
 interface ModelPieChartProps {
   data?: { distribution: Record<string, number> };
@@ -17,6 +20,9 @@ interface ModelPieChartProps {
 }
 
 export function ModelPieChart({ data, isLoading }: ModelPieChartProps) {
+  const colors = useChartColors();
+  const modelColors = getModelColors(colors);
+
   if (isLoading || !data?.distribution || Object.keys(data.distribution).length === 0) {
     return (
       <Card className="bg-card/50 backdrop-blur-sm border-border/50">
@@ -63,7 +69,7 @@ export function ModelPieChart({ data, isLoading }: ModelPieChartProps) {
                 {chartData.map((entry) => (
                   <Cell
                     key={entry.key}
-                    fill={MODEL_COLORS[entry.key] || 'var(--muted)'}
+                    fill={modelColors[entry.key] || colors.muted}
                     stroke="transparent"
                   />
                 ))}

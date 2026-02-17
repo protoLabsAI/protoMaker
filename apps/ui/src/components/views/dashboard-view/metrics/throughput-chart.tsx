@@ -4,6 +4,7 @@
  */
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useChartColors } from '@/hooks/use-chart-colors';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface ThroughputChartProps {
@@ -18,9 +19,11 @@ export function ThroughputChart({
   title,
   data,
   isLoading,
-  color = 'var(--primary)',
+  color,
   valueLabel = 'Features',
 }: ThroughputChartProps) {
+  const colors = useChartColors();
+
   if (isLoading || !data?.points?.length) {
     return (
       <Card className="bg-card/50 backdrop-blur-sm border-border/50">
@@ -41,6 +44,8 @@ export function ThroughputChart({
     value: p.value,
   }));
 
+  const barColor = color ?? colors.primary;
+
   return (
     <Card className="bg-card/50 backdrop-blur-sm border-border/50">
       <CardHeader className="pb-2">
@@ -50,15 +55,15 @@ export function ThroughputChart({
         <div className="h-[200px]">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" strokeOpacity={0.5} />
+              <CartesianGrid strokeDasharray="3 3" stroke={colors.border} strokeOpacity={0.5} />
               <XAxis
                 dataKey="date"
-                tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
+                tick={{ fontSize: 10, fill: colors.mutedForeground }}
                 axisLine={false}
                 tickLine={false}
               />
               <YAxis
-                tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
+                tick={{ fontSize: 10, fill: colors.mutedForeground }}
                 axisLine={false}
                 tickLine={false}
                 allowDecimals={false}
@@ -72,7 +77,7 @@ export function ThroughputChart({
                 }}
                 formatter={(value: number | undefined) => [value ?? 0, valueLabel]}
               />
-              <Bar dataKey="value" fill={color} radius={[4, 4, 0, 0]} />
+              <Bar dataKey="value" fill={barColor} radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>

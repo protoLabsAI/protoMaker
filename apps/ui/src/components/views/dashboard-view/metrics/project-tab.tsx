@@ -13,6 +13,7 @@ import {
   useModelDistribution,
   useCycleTimeDistribution,
 } from '@/hooks/queries/use-metrics';
+import { useChartColors } from '@/hooks/use-chart-colors';
 import { TimeRangeSelector, useTimeRangeDates, type TimeRange } from './time-range';
 import { KpiCards } from './kpi-cards';
 import { CostChart } from './cost-chart';
@@ -26,6 +27,7 @@ interface ProjectMetricsTabProps {
 }
 
 export function ProjectMetricsTab({ projectPath }: ProjectMetricsTabProps) {
+  const colors = useChartColors();
   const [timeRange, setTimeRange] = useState<TimeRange>('30d');
   const { startDate, endDate } = useTimeRangeDates(timeRange);
 
@@ -78,14 +80,14 @@ export function ProjectMetricsTab({ projectPath }: ProjectMetricsTabProps) {
           title="PRs Merged"
           data={prSeries.data}
           isLoading={prSeries.isLoading}
-          color="var(--chart-5)"
+          color={colors.chart5}
           valueLabel="PRs"
         />
         <ThroughputChart
           title="Commits"
           data={commitSeries.data}
           isLoading={commitSeries.isLoading}
-          color="var(--chart-4)"
+          color={colors.chart4}
           valueLabel="Commits"
         />
       </div>

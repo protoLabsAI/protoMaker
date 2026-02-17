@@ -3,6 +3,7 @@
  */
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useChartColors } from '@/hooks/use-chart-colors';
 import {
   AreaChart,
   Area,
@@ -19,6 +20,8 @@ interface CostChartProps {
 }
 
 export function CostChart({ data, isLoading }: CostChartProps) {
+  const colors = useChartColors();
+
   if (isLoading || !data?.points?.length) {
     return (
       <Card className="bg-card/50 backdrop-blur-sm border-border/50">
@@ -50,19 +53,19 @@ export function CostChart({ data, isLoading }: CostChartProps) {
             <AreaChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="costGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
+                  <stop offset="5%" stopColor={colors.primary} stopOpacity={0.3} />
+                  <stop offset="95%" stopColor={colors.primary} stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" strokeOpacity={0.5} />
+              <CartesianGrid strokeDasharray="3 3" stroke={colors.border} strokeOpacity={0.5} />
               <XAxis
                 dataKey="date"
-                tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
+                tick={{ fontSize: 10, fill: colors.mutedForeground }}
                 axisLine={false}
                 tickLine={false}
               />
               <YAxis
-                tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
+                tick={{ fontSize: 10, fill: colors.mutedForeground }}
                 axisLine={false}
                 tickLine={false}
                 tickFormatter={(v: number) => `$${v}`}
@@ -79,7 +82,7 @@ export function CostChart({ data, isLoading }: CostChartProps) {
               <Area
                 type="monotone"
                 dataKey="cost"
-                stroke="var(--primary)"
+                stroke={colors.primary}
                 fill="url(#costGradient)"
                 strokeWidth={2}
               />
