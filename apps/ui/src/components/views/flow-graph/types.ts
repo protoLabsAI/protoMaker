@@ -51,6 +51,7 @@ export interface FeatureNodeData {
   status: string;
   branchName?: string;
   progress?: number;
+  lastTraceId?: string;
   [key: string]: unknown;
 }
 
@@ -60,6 +61,7 @@ export interface AgentNodeData {
   model?: string;
   startTime: number;
   isAutoMode: boolean;
+  traceId?: string;
   [key: string]: unknown;
 }
 

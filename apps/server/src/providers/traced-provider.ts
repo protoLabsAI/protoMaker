@@ -2,6 +2,7 @@
  * Traced Provider - Wraps a base provider with Langfuse tracing
  */
 
+import { randomUUID } from 'node:crypto';
 import { BaseProvider } from './base-provider.js';
 import type {
   ExecuteOptions,
@@ -25,6 +26,7 @@ export interface TracedProviderContext {
 export class TracedProvider extends BaseProvider {
   private wrapped: BaseProvider;
   private tracingConfig: TracingConfig;
+  private _lastTraceId: string | null = null;
 
   constructor(wrapped: BaseProvider, tracingConfig: TracingConfig) {
     super(wrapped.getConfig());
@@ -32,6 +34,11 @@ export class TracedProvider extends BaseProvider {
     this.tracingConfig = tracingConfig;
     // Override the name property set by BaseProvider constructor
     this.name = wrapped.getName();
+  }
+
+  /** Get the trace ID from the most recent executeQuery invocation. */
+  getLastTraceId(): string | null {
+    return this._lastTraceId;
   }
 
   /**
@@ -68,11 +75,16 @@ export class TracedProvider extends BaseProvider {
     // Extract model from options
     const model = options.model || 'unknown';
 
+    // Pre-generate trace ID so callers can read it after execution
+    const traceId = randomUUID();
+    this._lastTraceId = traceId;
+
     // Wrap the provider's generator with tracing
     const generator = this.wrapped.executeQuery(options);
 
     yield* wrapProviderWithTracing(generator, this.tracingConfig, {
       model,
+      traceId,
       traceName: `provider:${this.getName()}`,
       sessionId: options.sdkSessionId,
       metadata: {

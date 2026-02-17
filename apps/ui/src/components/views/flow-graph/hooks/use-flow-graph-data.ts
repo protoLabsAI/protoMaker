@@ -203,6 +203,7 @@ export function useFlowGraphData() {
         title: feature.title || 'Untitled',
         status: feature.status,
         branchName: feature.branchName as string | undefined,
+        lastTraceId: feature.lastTraceId as string | undefined,
       };
       result.push({
         id: `feature-${feature.id}`,

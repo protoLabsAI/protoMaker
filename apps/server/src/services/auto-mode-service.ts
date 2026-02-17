@@ -5653,6 +5653,18 @@ After generating the revised spec, output:
         clearTimeout(rawWriteTimeout);
         rawWriteTimeout = null;
       }
+
+      // Save Langfuse trace ID to feature for observability linking
+      if ('getLastTraceId' in provider && typeof (provider as any).getLastTraceId === 'function') {
+        const lastTraceId = (provider as any).getLastTraceId() as string | null;
+        if (lastTraceId) {
+          try {
+            await this.featureLoader.update(projectPath, featureId, { lastTraceId });
+          } catch (traceErr) {
+            logger.warn(`Failed to save traceId for ${featureId}:`, traceErr);
+          }
+        }
+      }
     }
   }
 
