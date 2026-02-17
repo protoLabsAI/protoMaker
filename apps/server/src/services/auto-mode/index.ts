@@ -17,10 +17,18 @@ export * from './types.js';
 
 // Export modules
 export { AutoModeHealthMonitor } from './health-monitor.js';
-export type { EventEmitter as HealthMonitorEventEmitter, AutoLoopRestarter, AutoLoopStopper } from './health-monitor.js';
+export type {
+  EventEmitter as HealthMonitorEventEmitter,
+  AutoLoopRestarter,
+  AutoLoopStopper,
+} from './health-monitor.js';
 
 export { AutoModeScheduler } from './scheduler.js';
-export type { WorktreeBranchesGetter, FeatureFinishedChecker, FeatureSelectionContext } from './scheduler.js';
+export type {
+  WorktreeBranchesGetter,
+  FeatureFinishedChecker,
+  FeatureSelectionContext,
+} from './scheduler.js';
 
 export { AutoModeExecutor } from './executor.js';
 export type { ExecuteOptions, ExecutionResult } from './executor.js';

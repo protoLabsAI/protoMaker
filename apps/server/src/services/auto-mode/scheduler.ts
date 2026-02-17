@@ -59,9 +59,7 @@ export interface FeatureSelectionContext {
 }
 
 export class AutoModeScheduler {
-  constructor(
-    private readonly getWorktreeBranches: WorktreeBranchesGetter
-  ) {}
+  constructor(private readonly getWorktreeBranches: WorktreeBranchesGetter) {}
 
   /**
    * Load pending features for a project/worktree with dependency ordering
@@ -281,10 +279,7 @@ export class AutoModeScheduler {
 
     // Find a feature not currently running, not being started, and not yet finished
     const nextFeature = pendingFeatures.find(
-      (f) =>
-        !runningFeatureIds.has(f.id) &&
-        !startingFeatureIds.has(f.id) &&
-        !isFeatureFinished(f)
+      (f) => !runningFeatureIds.has(f.id) && !startingFeatureIds.has(f.id) && !isFeatureFinished(f)
     );
 
     // Log selection details for debugging
@@ -312,7 +307,10 @@ export class AutoModeScheduler {
    * @param projectState - The project auto-loop state
    * @param currentRunningCount - Current running feature count
    */
-  getCapacityInfo(projectState: ProjectAutoLoopState, currentRunningCount: number): {
+  getCapacityInfo(
+    projectState: ProjectAutoLoopState,
+    currentRunningCount: number
+  ): {
     running: number;
     starting: number;
     total: number;

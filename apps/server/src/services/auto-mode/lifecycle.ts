@@ -74,7 +74,10 @@ export class AutoModeLifecycle {
   /**
    * Get project state (without creating)
    */
-  getProjectState(projectPath: string, branchName: string | null): ProjectAutoLoopState | undefined {
+  getProjectState(
+    projectPath: string,
+    branchName: string | null
+  ): ProjectAutoLoopState | undefined {
     const worktreeKey = getWorktreeAutoLoopKey(projectPath, branchName);
     return this.autoLoopsByProject.get(worktreeKey);
   }
