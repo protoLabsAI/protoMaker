@@ -65,6 +65,7 @@ export default defineConfig({
         items: [
           { text: 'Reference', link: '/dev/' },
           { text: 'ProtoLabs', link: '/protolabs/' },
+          { text: 'Consulting', link: 'https://protolabs.consulting' },
         ],
       },
     ],
