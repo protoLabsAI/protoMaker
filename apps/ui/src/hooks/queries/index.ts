@@ -91,7 +91,22 @@ export type { CursorPermissionsData } from './use-cursor-permissions';
 export { useWorkspaceDirectories } from './use-workspace';
 
 // Metrics
-export { useProjectMetrics, useCapacityMetrics, useForecast } from './use-metrics';
+export {
+  useProjectMetrics,
+  useCapacityMetrics,
+  useForecast,
+  useLedgerAggregate,
+  useTimeSeries,
+  useModelDistribution,
+  useCycleTimeDistribution,
+  useIntegrationStatus,
+  useSystemHealth,
+  useActivityFeed,
+} from './use-metrics';
+
+// Crew Status
+export { useCrewStatus } from './use-crew-status';
+export type { CrewMemberStatus, CrewStatusResponse } from './use-crew-status';
 
 // Agent Templates
 export { useAgentTemplates } from './use-agent-templates';

@@ -11,7 +11,6 @@ import {
   Network,
   Bell,
   Settings,
-  BarChart3,
 } from 'lucide-react';
 import type { NavSection, NavItem } from '../types';
 import type { KeyboardShortcut } from '@/hooks/use-keyboard-shortcuts';
@@ -138,20 +137,14 @@ export function useNavigation({
     const projectItems: NavItem[] = [
       {
         id: 'analytics',
-        label: 'Dashboard',
-        icon: BarChart3,
+        label: 'System View',
+        icon: Network,
       },
       {
         id: 'board',
         label: 'Kanban Board',
         icon: LayoutGrid,
         shortcut: shortcuts.board,
-      },
-      {
-        id: 'graph',
-        label: 'Graph View',
-        icon: Network,
-        shortcut: shortcuts.graph,
       },
     ];
 

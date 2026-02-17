@@ -233,6 +233,9 @@ export interface RunningAgent {
   projectPath: string;
   projectName: string;
   isAutoMode: boolean;
+  startTime: number;
+  model?: string;
+  provider?: string;
   title?: string;
   description?: string;
   branchName?: string;
