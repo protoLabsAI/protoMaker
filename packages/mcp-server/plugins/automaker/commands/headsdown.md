@@ -33,6 +33,11 @@ allowed-tools:
   - mcp__plugin_automaker_automaker__health_check
   - mcp__plugin_automaker_discord__send_message
   - mcp__plugin_automaker_discord__list_channels
+  # Linear — create issues for discovered work (Linear-first)
+  - mcp__linear__linear_createIssue
+  - mcp__linear__linear_updateIssue
+  - mcp__linear__linear_searchIssues
+  - mcp__linear__linear_getIssues
   # Context7 - live library documentation
   - mcp__plugin_automaker_context7__resolve-library-id
   - mcp__plugin_automaker_context7__query-docs
@@ -66,6 +71,22 @@ Use Context7 to look up current library docs when implementing features. Two-ste
 - **Clean as you go** - Hooks handle format; you handle tests and docs
 - **Communicate progress** - Update Discord, log status
 - **Exponential backoff** - When truly blocked, sleep intelligently
+
+## Linear-First Awareness
+
+Work enters the board via the **Linear intake bridge**. When a Linear issue moves to "In Progress", the intake bridge auto-creates a board feature. Headsdown mode processes whatever lands on the board — you don't need to interact with Linear directly.
+
+**If you find new work during productive waiting** (bugs, improvements, cleanup needs), create a Linear issue instead of a board feature:
+
+```
+mcp__linear__linear_createIssue({
+  teamId: "185e7caa-2855-4c67-a347-2011016bdddf",
+  title: "Fix: [description]",
+  description: "[details]"
+})
+```
+
+Then move it to "In Progress" (`stateId: "3f4a449a-f1c1-49e4-999c-e0ccf0f828ad"`) to trigger intake.
 
 ## Workflow Loop
 
