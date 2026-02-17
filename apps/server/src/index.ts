@@ -550,7 +550,7 @@ const approvalBridge = new LinearApprovalBridge(events, featureLoader);
 approvalBridge.start();
 
 // Initialize Linear intake bridge — transfers issues to board as simple features
-const intakeBridge = new LinearIntakeBridge(events, featureLoader);
+const intakeBridge = new LinearIntakeBridge(events, featureLoader, REPO_ROOT);
 intakeBridge.start();
 
 // Listen for Linear comment follow-up events and route to agent
@@ -1630,6 +1630,8 @@ async function gracefulShutdown() {
   }
 
   leadEngineerService.destroy();
+  approvalBridge.stop();
+  intakeBridge.stop();
   await autoModeService.shutdown();
   healthMonitorService.stopMonitoring();
   schedulerService.stop();

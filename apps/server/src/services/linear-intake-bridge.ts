@@ -42,7 +42,8 @@ export class LinearIntakeBridge {
 
   constructor(
     private events: EventEmitter,
-    private featureLoader: FeatureLoader
+    private featureLoader: FeatureLoader,
+    private projectPath: string
   ) {}
 
   start(): void {
@@ -73,7 +74,7 @@ export class LinearIntakeBridge {
     if (!this.running) return;
 
     const { issueId, title, description, priority, identifier, assignee } = context;
-    const projectPath = process.cwd();
+    const projectPath = this.projectPath;
 
     // Guard: skip issues assigned to a user (human-owned work)
     if (assignee) {
