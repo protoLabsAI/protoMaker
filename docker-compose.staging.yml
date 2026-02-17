@@ -97,6 +97,7 @@ services:
 
       # Project access - host path mounted at same path for MCP compatibility
       - ALLOWED_ROOT_DIRECTORY=${ALLOWED_ROOT_DIRECTORY:-/home/josh/dev}
+      - AUTOMAKER_PROJECT_PATH=${AUTOMAKER_PROJECT_PATH:-/home/josh/dev/ava}
 
       # CORS
       - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:3007}
