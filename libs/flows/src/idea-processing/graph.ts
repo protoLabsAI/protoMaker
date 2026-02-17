@@ -168,7 +168,11 @@ async function researchNode(state: IdeaProcessingState): Promise<Partial<IdeaPro
         name: nodeName,
         input: { ideaTitle: state.idea.title, complexity: state.complexity },
         output: { findings: researchResults.findings.length, summary: researchResults.summary },
-        metadata: { nodeType: 'research', success: true, findingsCount: researchResults.findings.length },
+        metadata: {
+          nodeType: 'research',
+          success: true,
+          findingsCount: researchResults.findings.length,
+        },
         startTime,
         endTime,
       });
@@ -386,7 +390,12 @@ async function reviewNode(state: IdeaProcessingState): Promise<Partial<IdeaProce
         name: nodeName,
         input: { ideaTitle: state.idea.title, complexity: state.complexity },
         output: '',
-        metadata: { nodeType: 'review', reviewType: 'comprehensive', success: false, error: errorMsg },
+        metadata: {
+          nodeType: 'review',
+          reviewType: 'comprehensive',
+          success: false,
+          error: errorMsg,
+        },
         startTime,
         endTime: new Date(),
       });
