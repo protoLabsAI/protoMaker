@@ -14,7 +14,7 @@ libs/
 ├── platform/           # Platform utilities
 ├── model-resolver/     # Claude model resolution
 ├── dependency-resolver/# Feature dependency resolution
-├── policy-engine/      # Trust-based policy checking
+├── tools/              # Unified tool definition and registry system
 ├── spec-parser/        # XML/markdown spec parsing
 ├── git-utils/          # Git operations
 ├── flows/              # LangGraph state graph primitives
@@ -138,7 +138,7 @@ import { getFeatureDir, ensureprotoLabsDir } from '@automaker/platform';
 import { resolveModelString, DEFAULT_MODELS } from '@automaker/model-resolver';
 
 // Convert user input to model ID
-const modelId = resolveModelString('sonnet'); // → 'claude-sonnet-4-20250514'
+const modelId = resolveModelString('sonnet'); // → 'claude-sonnet-4-5-20250929'
 
 // Use default for auto-mode feature implementation
 const autoModeModel = DEFAULT_MODELS.autoMode; // → sonnet
@@ -148,8 +148,8 @@ const autoModeModel = DEFAULT_MODELS.autoMode; // → sonnet
 
 **Model aliases:**
 
-- `haiku` → `claude-haiku-4-5` (fast, simple/trivial tasks)
-- `sonnet` → `claude-sonnet-4-20250514` (balanced, feature implementation)
+- `haiku` → `claude-haiku-4-5-20251001` (fast, simple/trivial tasks)
+- `sonnet` → `claude-sonnet-4-5-20250929` (balanced, feature implementation)
 - `opus` → `claude-opus-4-5-20251101` (maximum capability, orchestration/architecture)
 
 **DEFAULT_MODELS use cases:**
@@ -475,6 +475,7 @@ Understanding the dependency chain helps prevent circular dependencies:
 @automaker/observability
 @automaker/llm-providers
 @automaker/flows
+@automaker/tools
     ↓
 @automaker/git-utils
     ↓
@@ -531,6 +532,7 @@ import { Feature } from '../../../src/services/feature-loader';
 - LangGraph Flows → `@automaker/flows`
 - LLM Providers → `@automaker/llm-providers`
 - Tracing/Observability → `@automaker/observability`
+- Tool Definitions → `@automaker/tools`
 
 **Never import from:** `lib/*`, `services/feature-loader` (for types), `providers/types`, `routes/common`
 

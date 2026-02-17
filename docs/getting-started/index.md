@@ -20,13 +20,14 @@ You create a feature → Agent claims it → Works in isolated branch → Create
 
 Features are units of work on the Kanban board. Each has a status:
 
-| Status        | Meaning                     |
-| ------------- | --------------------------- |
-| `backlog`     | Queued, ready to start      |
-| `in_progress` | Being worked on by an agent |
-| `review`      | PR created, under review    |
-| `blocked`     | Temporarily halted          |
-| `done`        | PR merged, work complete    |
+| Status        | Meaning                             |
+| ------------- | ----------------------------------- |
+| `backlog`     | Queued, ready to start              |
+| `in_progress` | Being worked on by an agent         |
+| `review`      | PR created, under review            |
+| `blocked`     | Temporarily halted                  |
+| `done`        | PR merged, work complete            |
+| `verified`    | Quality checks passed (Ralph loops) |
 
 ### Agents
 

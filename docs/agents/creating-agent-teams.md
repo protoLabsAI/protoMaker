@@ -371,7 +371,7 @@ logger.info('Security Review Team initialized');
 
 ## Example: Security Review Team
 
-Full implementation: see `apps/server/src/services/security-agents/` in the repo
+The security review team above is a reference architecture example showing the multi-agent coordination pattern
 
 **Trigger:** PR created
 **Coordination:** Event bus + shared JSON state

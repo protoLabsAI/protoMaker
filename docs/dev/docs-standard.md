@@ -17,7 +17,7 @@ Every documentation page must belong to one of these 8 top-level sections:
 | Server Reference | `server/`          | Backend API reference and internals      | Developers       |
 | Authority        | `authority/`       | Trust hierarchy, roles, team structure   | Team leads       |
 | Development      | `dev/`             | Contributing, architecture, processes    | Contributors     |
-| ProtoLabs        | `protolabs/`       | Agency setup pipeline and onboarding     | Agency operators |
+| protoLabs        | `protolabs/`       | Agency setup pipeline and onboarding     | Agency operators |
 
 **Special locations:**
 

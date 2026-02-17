@@ -1,6 +1,17 @@
 # Server Utilities Reference
 
-This document describes all utility modules available in `apps/server/src/lib/`. These utilities provide reusable functionality for image handling, prompt building, model resolution, conversation management, and error handling.
+> **Note:** Most utilities documented here have been extracted to shared packages. Import from `@automaker/utils`, `@automaker/model-resolver`, and `@automaker/platform` instead of `apps/server/src/lib/`. See [Shared Packages](../dev/shared-packages) for the canonical import guide.
+>
+> | Old Path                    | New Package                 |
+> | --------------------------- | --------------------------- |
+> | `lib/image-handler.ts`      | `@automaker/utils`          |
+> | `lib/prompt-builder.ts`     | `@automaker/utils`          |
+> | `lib/model-resolver.ts`     | `@automaker/model-resolver` |
+> | `lib/conversation-utils.ts` | `@automaker/utils`          |
+> | `lib/error-handler.ts`      | `@automaker/utils`          |
+> | `lib/subprocess-manager.ts` | `@automaker/platform`       |
+
+This document describes utility functions available for server-side code. The canonical imports use shared packages (`@automaker/utils`, `@automaker/model-resolver`, `@automaker/platform`), not direct `lib/` paths.
 
 ---
 
@@ -211,8 +222,8 @@ Model alias mapping for Claude models.
 
 ```typescript
 export const CLAUDE_MODEL_MAP: Record<string, string> = {
-  haiku: 'claude-haiku-4-5',
-  sonnet: 'claude-sonnet-4-20250514',
+  haiku: 'claude-haiku-4-5-20251001',
+  sonnet: 'claude-sonnet-4-5-20250929',
   opus: 'claude-opus-4-5-20251101',
 } as const;
 ```
