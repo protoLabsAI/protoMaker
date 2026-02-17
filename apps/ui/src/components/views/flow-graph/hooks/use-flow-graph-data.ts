@@ -62,11 +62,17 @@ export function useFlowGraphData() {
     [features]
   );
 
-  // Auto-mode status from health data (untyped API response)
-  const health = healthData as Record<string, any> | undefined;
-  const autoModeRunning = health?.autoMode?.status === 'running';
-  const capacity = capacityData as Record<string, any> | undefined;
-  const queueDepth = (capacity?.backlog as number) ?? 0;
+  // Typed health dashboard response fields
+  const health = healthData as
+    | {
+        autoMode?: { isRunning?: boolean; runningCount?: number };
+        leadEngineer?: { running?: boolean; sessionCount?: number };
+      }
+    | undefined;
+  const autoModeRunning = health?.autoMode?.isRunning === true;
+  const leadEngineerRunning = health?.leadEngineer?.running === true;
+  const capacity = capacityData as { backlogSize?: number; maxConcurrency?: number } | undefined;
+  const queueDepth = capacity?.backlogSize ?? 0;
 
   const nodes = useMemo(() => {
     const result: Node[] = [];
@@ -148,7 +154,7 @@ export function useFlowGraphData() {
     const leadEngData: ServiceNodeData = {
       label: 'Lead Engineer',
       serviceType: 'lead-engineer',
-      running: false, // TODO: wire to actual lead engineer status
+      running: leadEngineerRunning,
       queueDepth: 0,
     };
     result.push({
@@ -236,6 +242,7 @@ export function useFlowGraphData() {
     agentCount,
     activeFeatures,
     autoModeRunning,
+    leadEngineerRunning,
     queueDepth,
     crewStatus,
     integrationStatus,
