@@ -409,6 +409,7 @@ async function handleIssueUpdated(
       description: data.description,
       priority: data.priority,
       team: data.team,
+      assignee: data.assignee ? { id: data.assignee.id, name: data.assignee.name } : undefined,
     });
   }
 

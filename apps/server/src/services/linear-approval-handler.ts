@@ -16,6 +16,7 @@ const logger = createLogger('linear:approval');
 
 const DEFAULT_APPROVAL_STATES = ['Approved', 'Ready for Planning'];
 const DEFAULT_CHANGES_REQUESTED_STATES = ['Changes Requested'];
+const DEFAULT_INTAKE_TRIGGER_STATES = ['In Progress'];
 
 export interface ApprovalContext {
   /** Linear issue ID */
@@ -34,6 +35,8 @@ export interface ApprovalContext {
   team?: { id: string; name: string };
   /** Labels */
   labels?: string[];
+  /** Assignee info (if assigned to a user) */
+  assignee?: { id: string; name: string };
   /** Timestamp of approval detection */
   detectedAt: string;
 }
@@ -106,6 +109,30 @@ export class LinearApprovalHandler {
   }
 
   /**
+   * Get configured intake trigger states from project settings
+   */
+  private async getIntakeTriggerStates(projectPath: string): Promise<string[]> {
+    if (!this.settingsService) {
+      return DEFAULT_INTAKE_TRIGGER_STATES;
+    }
+
+    try {
+      const settings = await this.settingsService.getProjectSettings(projectPath);
+      return settings?.integrations?.linear?.intakeTriggerStates || DEFAULT_INTAKE_TRIGGER_STATES;
+    } catch {
+      return DEFAULT_INTAKE_TRIGGER_STATES;
+    }
+  }
+
+  /**
+   * Check if a Linear workflow state name triggers intake transfer
+   */
+  async isIntakeTriggerState(stateName: string, projectPath: string): Promise<boolean> {
+    const intakeStates = await this.getIntakeTriggerStates(projectPath);
+    return intakeStates.some((s) => s.toLowerCase() === stateName.toLowerCase());
+  }
+
+  /**
    * Handle a Linear issue state change and detect approval transitions.
    * Called from the webhook handler or sync service when a Linear issue updates.
    *
@@ -125,6 +152,7 @@ export class LinearApprovalHandler {
       priority?: number;
       team?: { id: string; name: string };
       labels?: string[];
+      assignee?: { id: string; name: string };
     }
   ): Promise<void> {
     if (!this.running) return;
@@ -141,6 +169,7 @@ export class LinearApprovalHandler {
         priority: issueContext?.priority,
         team: issueContext?.team,
         labels: issueContext?.labels,
+        assignee: issueContext?.assignee,
         detectedAt: new Date().toISOString(),
       };
 
@@ -167,6 +196,7 @@ export class LinearApprovalHandler {
         priority: issueContext?.priority,
         team: issueContext?.team,
         labels: issueContext?.labels,
+        assignee: issueContext?.assignee,
         detectedAt: new Date().toISOString(),
       };
 
@@ -177,6 +207,34 @@ export class LinearApprovalHandler {
 
       if (this.emitter) {
         this.emitter.emit('linear:changes-requested:detected', changesRequestedContext);
+      }
+      return;
+    }
+
+    // Check for intake trigger state (transfer to Automaker board)
+    const isIntake = await this.isIntakeTriggerState(stateName, projectPath);
+    if (isIntake) {
+      const intakeContext: ApprovalContext = {
+        issueId,
+        identifier: issueContext?.identifier,
+        title: issueContext?.title || 'Unknown',
+        description: issueContext?.description,
+        approvalState: stateName,
+        priority: issueContext?.priority,
+        team: issueContext?.team,
+        labels: issueContext?.labels,
+        assignee: issueContext?.assignee,
+        detectedAt: new Date().toISOString(),
+      };
+
+      logger.info(`Intake trigger detected for issue ${issueId}: state "${stateName}"`, {
+        identifier: intakeContext.identifier,
+        title: intakeContext.title,
+        assignee: intakeContext.assignee?.name,
+      });
+
+      if (this.emitter) {
+        this.emitter.emit('linear:intake:triggered', intakeContext);
       }
       return;
     }

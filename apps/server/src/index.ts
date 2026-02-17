@@ -181,6 +181,7 @@ import {
 import { createCrewRoutes } from './routes/crew/index.js';
 import { linearApprovalHandler } from './services/linear-approval-handler.js';
 import { LinearApprovalBridge } from './services/linear-approval-bridge.js';
+import { LinearIntakeBridge } from './services/linear-intake-bridge.js';
 import { createDeployRoutes } from './routes/deploy/index.js';
 import { createAnalyticsRoutes } from './routes/analytics.js';
 import { AntagonisticReviewService } from './services/antagonistic-review-service.js';
@@ -547,6 +548,10 @@ const emAgent = new EMAuthorityAgent(
 linearApprovalHandler.initialize(settingsService, events);
 const approvalBridge = new LinearApprovalBridge(events, featureLoader);
 approvalBridge.start();
+
+// Initialize Linear intake bridge — transfers issues to board as simple features
+const intakeBridge = new LinearIntakeBridge(events, featureLoader);
+intakeBridge.start();
 
 // Listen for Linear comment follow-up events and route to agent
 events.subscribe((type, payload) => {

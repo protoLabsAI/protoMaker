@@ -76,12 +76,28 @@ describe('LinearApprovalHandler', () => {
       );
     });
 
-    it('should not emit for non-approval states', async () => {
-      await handler.onIssueStateChange('issue-456', 'In Progress', '/test', {
+    it('should not emit for unrecognized states', async () => {
+      await handler.onIssueStateChange('issue-456', 'Done', '/test', {
         title: 'Some Issue',
       });
 
       expect(emitSpy).not.toHaveBeenCalled();
+    });
+
+    it('should emit linear:intake:triggered for intake trigger states', async () => {
+      await handler.onIssueStateChange('issue-intake', 'In Progress', '/test', {
+        title: 'Intake Issue',
+        description: 'Transfer this to the board',
+      });
+
+      expect(emitSpy).toHaveBeenCalledWith(
+        'linear:intake:triggered',
+        expect.objectContaining({
+          issueId: 'issue-intake',
+          title: 'Intake Issue',
+          approvalState: 'In Progress',
+        })
+      );
     });
 
     it('should not emit when handler is stopped', async () => {
