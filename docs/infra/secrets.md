@@ -15,6 +15,8 @@ This causes friction when onboarding team members and creates security risks fro
 
 ## Solution: Infisical
 
+> **Status: Planned.** Infisical is not yet deployed. protoLabs currently uses `.env` files (gitignored) for secret management. This section describes the target architecture for when centralized secret management is adopted.
+
 [Infisical](https://infisical.com) is an open-source secret management platform that provides:
 
 - Web UI for browsing and editing secrets

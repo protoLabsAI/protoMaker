@@ -1,6 +1,6 @@
 # Crew Loop System
 
-The Crew Loop system provides unified scheduling for team members (Ava, Frank, GTM, and future agents). Each member runs a lightweight in-process check on an independent cron schedule. When a check detects problems, the system escalates by spawning the member's agent template via `DynamicAgentExecutor`.
+The Crew Loop system provides unified scheduling for team members (Ava, Frank, GTM, PR Maintainer, Board Janitor, System Health, PR State Sync). Each member runs a lightweight in-process check on an independent cron schedule. When a check detects problems, the system escalates by spawning the member's agent template via `DynamicAgentExecutor`.
 
 ## Architecture
 
@@ -41,13 +41,15 @@ Re-export from `crew-members/index.ts`.
 
 ## Current Crew Members
 
-| Member        | ID              | Schedule                | Default  | Purpose                                                           |
-| ------------- | --------------- | ----------------------- | -------- | ----------------------------------------------------------------- |
-| Ava           | `ava`           | `*/10 * * * *` (10 min) | Enabled  | Stuck agents, blocked features, auto-mode health, capacity        |
-| Frank         | `frank`         | `*/10 * * * *` (10 min) | Enabled  | Server health, memory, capacity, health monitor, worktree health  |
-| GTM           | `gtm`           | `0 */6 * * *` (6 hours) | Disabled | Content pipeline (placeholder)                                    |
-| PR Maintainer | `pr-maintainer` | `*/10 * * * *` (10 min) | Enabled  | Stale PRs, auto-merge, CodeRabbit threads, orphaned worktrees     |
-| Board Janitor | `board-janitor` | `*/15 * * * *` (15 min) | Enabled  | Merged-not-done, orphaned in-progress, broken deps, stale blocked |
+| Member        | ID              | Schedule                | Default  | Purpose                                                                    |
+| ------------- | --------------- | ----------------------- | -------- | -------------------------------------------------------------------------- |
+| Ava           | `ava`           | `*/10 * * * *` (10 min) | Enabled  | Stuck agents, blocked features, auto-mode health, capacity                 |
+| Frank         | `frank`         | `*/10 * * * *` (10 min) | Enabled  | Server health, memory, capacity, health monitor, worktree health           |
+| GTM           | `gtm`           | `0 */6 * * *` (6 hours) | Disabled | Content pipeline (placeholder)                                             |
+| PR Maintainer | `pr-maintainer` | `*/10 * * * *` (10 min) | Enabled  | Stale PRs, auto-merge, CodeRabbit threads, orphaned worktrees              |
+| Board Janitor | `board-janitor` | `*/10 * * * *` (10 min) | Enabled  | Merged-not-done, orphaned in-progress, broken deps, stale blocked          |
+| System Health | `system-health` | `*/10 * * * *` (10 min) | Enabled  | System RAM, swap, disk, CPU load, temperature, GPU/VRAM, zombie processes  |
+| PR State Sync | `pr-state-sync` | `*/5 * * * *` (5 min)   | Enabled  | GitHub-to-board state drift detection (merged PRs, CI failures, stale PRs) |
 
 ## API Endpoints
 

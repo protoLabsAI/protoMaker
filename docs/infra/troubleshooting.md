@@ -408,7 +408,7 @@ docker compose logs -f server | grep -i agent
 docker exec automaker-server ls -la /path/to/project/.automaker/features
 
 # Check API response
-curl -H "Authorization: Bearer KEY" \
+curl -H "X-API-Key: KEY" \
   "http://localhost:3008/api/features?projectPath=/path/to/project"
 ```
 

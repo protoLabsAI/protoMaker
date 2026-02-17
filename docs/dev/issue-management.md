@@ -83,7 +83,7 @@ Create issues manually via the REST API:
 ```bash
 curl -X POST http://localhost:3008/api/issues/create \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $AUTOMAKER_API_KEY" \
+  -H "X-API-Key: $AUTOMAKER_API_KEY" \
   -d '{"projectPath": "/path/to/project", "featureId": "feature-id"}'
 ```
 

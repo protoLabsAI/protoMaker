@@ -166,7 +166,7 @@ The server emits events for:
 
 ```bash
 curl http://localhost:3008/api/board/summary \
-  -H "Authorization: Bearer YOUR_API_KEY"
+  -H "X-API-Key: YOUR_API_KEY"
 ```
 
 Response:
@@ -188,7 +188,7 @@ Response:
 
 ```bash
 curl http://localhost:3008/api/agents/running \
-  -H "Authorization: Bearer YOUR_API_KEY"
+  -H "X-API-Key: YOUR_API_KEY"
 ```
 
 ## Alerting

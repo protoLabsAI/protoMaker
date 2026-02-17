@@ -216,7 +216,7 @@ Files that should NEVER be mounted or committed:
 The protoLabs API requires authentication:
 
 ```bash
-curl -H "Authorization: Bearer YOUR_API_KEY" \
+curl -H "X-API-Key: YOUR_API_KEY" \
   http://localhost:3008/api/health
 ```
 
