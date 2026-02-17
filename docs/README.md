@@ -108,12 +108,21 @@ DevOps documentation in [`docs/infra/`](./infra/):
 | [Docs Site Decision](./dev/docs-site-decision.md)         | ADR: Why VitePress was chosen                        |
 | [Docs Standard](./dev/docs-standard.md)                   | IA rules, content guidelines, maintenance            |
 
-## ProtoLabs
+## protoLabs
 
-| Document                                        | Description                        |
-| ----------------------------------------------- | ---------------------------------- |
-| [Setup Pipeline](./protolabs/setup-pipeline.md) | 5-phase ProtoLab setup pipeline    |
-| [CI/CD Setup](./protolabs/ci-cd-setup.md)       | CI/CD pipeline setup for ProtoLabs |
+| Document                                                            | Description                                         |
+| ------------------------------------------------------------------- | --------------------------------------------------- |
+| [Overview](./protolabs/index.md)                                    | protoLabs methodology and guides                    |
+| [Brand Identity](./protolabs/brand.md)                              | Brand bible: naming, voice, team, content strategy  |
+| [Design System](./protolabs/design-system.md)                       | Visual identity: surfaces, typography, components   |
+| [Agency Overview](./protolabs/agency-overview.md)                   | How the full-loop automation system works           |
+| [Agency Architecture](./protolabs/agency-architecture.md)           | System architecture, component inventory, data flow |
+| [Agency PRD](./protolabs/agency-prd.md)                             | Full-loop automation PRD with implementation status |
+| [Setup Pipeline](./protolabs/setup-pipeline.md)                     | 5-phase protoLabs setup pipeline                    |
+| [CI/CD Setup](./protolabs/ci-cd-setup.md)                           | CI/CD pipeline setup for protoLabs                  |
+| [Flow Builder Agent Spec](./protolabs/flow-builder-agent-spec.md)   | Agent spec for LangGraph flow generation            |
+| [Flow Development Pattern](./protolabs/flow-development-pattern.md) | 5-layer flow development pattern                    |
+| [Graph Flow Roadmap](./protolabs/graph-flow-roadmap.md)             | LangGraph migration roadmap and status              |
 
 ## Legal
 

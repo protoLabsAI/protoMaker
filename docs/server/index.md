@@ -9,7 +9,7 @@ The server is an Express 5 application with WebSocket streaming, organized into 
 ## Reference
 
 - **[Route Organization](./route-organization)** — Express route structure, middleware, and patterns
-- **[Providers](./providers)** — AI provider abstraction (Claude, Cursor, Codex)
+- **[Providers](./providers)** — AI provider abstraction (Claude, Cursor, Codex, OpenCode)
 - **[Utilities](./utilities)** — Server utility functions and helpers
 
 ## Key Technologies
