@@ -8,7 +8,8 @@
  * setup and use stale server settings instead.
  */
 
-const API_BASE_URL = 'http://localhost:3008';
+const API_PORT = process.env.TEST_SERVER_PORT || '3008';
+const API_BASE_URL = `http://localhost:${API_PORT}`;
 
 async function globalSetup() {
   const apiKey = process.env.AUTOMAKER_API_KEY || 'test-api-key-for-e2e-tests';

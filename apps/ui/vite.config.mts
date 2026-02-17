@@ -71,7 +71,7 @@ export default defineConfig(({ command }) => {
       allowedHosts: true,
       proxy: {
         '/api': {
-          target: 'http://localhost:3008',
+          target: process.env.VITE_SERVER_URL || 'http://localhost:3008',
           changeOrigin: true,
           ws: true,
         },
