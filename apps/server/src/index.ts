@@ -128,6 +128,7 @@ import { graphiteService } from './services/graphite-service.js';
 import { createWebhooksRoutes } from './routes/webhooks/index.js';
 import { createSchedulerRoutes } from './routes/scheduler/index.js';
 import { integrationService } from './services/integration-service.js';
+import { SignalIntakeService } from './services/signal-intake-service.js';
 import { createIntegrationRoutes } from './routes/integrations/index.js';
 import { createDashboardRoutes } from './routes/dashboard.js';
 import { AuthorityService } from './services/authority-service.js';
@@ -475,6 +476,10 @@ const briefingCursorService = getBriefingCursorService(DATA_DIR);
 
 // Initialize Integration Service for Linear, Discord, and other external integrations
 integrationService.initialize(events, settingsService, featureLoader);
+
+// Initialize Signal Intake Service — bridges external signals to PM Agent pipeline
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const signalIntakeService = new SignalIntakeService(events, featureLoader, REPO_ROOT);
 
 // Initialize Authority Service for trust-based policy enforcement
 const authorityService = new AuthorityService(events);
