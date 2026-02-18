@@ -60,6 +60,8 @@ The Ops branch owns all code — from feature creation to production deployment.
 | **Matt**  | UI, components, design system, frontend architecture, Storybook | UI files, components, styles    | Kai (needs API endpoint) |
 | **Kai**   | Express routes, services, API design, backend logic, database   | Server code, services, routes   | Sam (needs flow change)  |
 
+**Note:** Sam and Kai both register as `backend-engineer` in the role registry today. Domain detection uses file-path pattern matching (see INTAKE), not the template role field. M2 should formalize this — each persona gets a unique role identifier.
+
 **Peer requests** create feature dependencies. If Matt needs an API endpoint, that spawns a Kai feature as a dependency. The Lead Engineer handles ordering.
 
 ### GTM Branch (Parked)
@@ -274,25 +276,37 @@ The agent template system (`RoleRegistryService`, `AgentFactoryService`) serves 
 
 Systems removed by this architecture:
 
-| System                    | File(s)                                                    | Why                                     |
-| ------------------------- | ---------------------------------------------------------- | --------------------------------------- |
-| PR Maintainer crew        | `crew-members/pr-maintainer-check.ts`                      | Absorbed by REVIEW state                |
-| Board Janitor crew        | `crew-members/board-janitor-check.ts`                      | Absorbed by state transitions           |
-| System Health crew        | `crew-members/system-health-check.ts`                      | Signals route through AVA to Frank      |
-| PR State Sync crew        | `crew-members/pr-state-sync-check.ts`                      | GH -> Linear sync handles it            |
-| GTM crew                  | `crew-members/gtm-check.ts`                                | GTM branch is parked                    |
-| Ava crew check            | `crew-members/ava-check.ts`                                | AVA is the router, not a crew member    |
-| CrewLoopService           | `services/crew-loop-service.ts`                            | Replaced by Lead Engineer state machine |
-| Crew API routes           | `routes/crew/`                                             | No more crew system                     |
-| AgentExecutionService     | `services/agent-execution-service.ts`                      | Unused consolidation target (551 lines) |
-| auto-mode/ subdirectory   | `services/auto-mode/`                                      | Abandoned refactor, never integrated    |
-| Legacy auto-mode methods  | `startAutoLoop()`, `runAutoLoop()`                         | Superseded by per-project methods       |
-| Unused LangGraph flows    | Status Report, Risk Assessment, Milestone Summary, Wrap-Up | Wired but never called                  |
-| generate_project_prd stub | `routes/projects/lifecycle/generate-prd.ts`                | Returns null, dead code                 |
-| Content pipeline mocks    | Research/outline nodes in `libs/flows/src/content/`        | Mock data, not functional               |
-| Storybook reference       | `scripts/setup-staging.sh` line 229                        | No compose service exists               |
+| System                    | File(s)                                                    | Lines | Why                                       |
+| ------------------------- | ---------------------------------------------------------- | ----- | ----------------------------------------- |
+| PR Maintainer crew        | `crew-members/pr-maintainer-check.ts`                      | ~250  | Absorbed by REVIEW state                  |
+| Board Janitor crew        | `crew-members/board-janitor-check.ts`                      | ~200  | Absorbed by state transitions             |
+| PR State Sync crew        | `crew-members/pr-state-sync-check.ts`                      | ~150  | GH -> Linear sync handles it              |
+| GTM crew                  | `crew-members/gtm-check.ts`                                | ~100  | GTM branch is parked                      |
+| Ava crew check            | `crew-members/ava-check.ts`                                | ~300  | AVA is the router, not a crew member      |
+| Frank crew check          | `crew-members/frank-check.ts`                              | ~200  | Host health routes through AVA to Frank   |
+| Crew barrel + test        | `crew-members/index.ts`, `crew-loop.test.ts`               | ~300  | Entire crew system removed                |
+| CrewLoopService           | `services/crew-loop-service.ts`                            | ~800  | Replaced by Lead Engineer state machine   |
+| Crew API routes           | `routes/crew/`                                             | ~200  | No more crew system                       |
+| AgentExecutionService     | `services/agent-execution-service.ts`                      | ~550  | Unused consolidation target, never called |
+| auto-mode/ subdirectory   | `services/auto-mode/`                                      | ~600  | Abandoned refactor, never integrated      |
+| Legacy auto-mode methods  | `startAutoLoop()`, `runAutoLoop()`                         | ~200  | Superseded by per-project methods         |
+| Unused LangGraph flows    | Status Report, Risk Assessment, Milestone Summary, Wrap-Up | ~500  | Wired but never called                    |
+| LangGraph flow tests      | `libs/flows/tests/` (status, risk, milestone, wrap-up)     | ~500  | Tests for unused flows                    |
+| generate_project_prd stub | `routes/projects/lifecycle/generate-prd.ts`                | ~50   | Returns null, dead code                   |
+| generate_project_prd MCP  | `packages/mcp-server/src/index.ts` handler                 | ~30   | Calls the dead stub above                 |
+| GitHubStateChecker        | `services/github-state-checker.ts`                         | ~440  | Abandoned, PR pipeline handles this       |
+| ReconciliationService     | `services/reconciliation-service.ts`                       | ~390  | Never called, orphaned from refactor      |
+| CrewLoop types            | `libs/types/src/crew.ts` (if standalone)                   | ~100  | Types for removed system                  |
+| UI crew components        | `apps/ui/src/components/views/crew/`                       | ~300  | Frontend for removed crew system          |
+| Storybook reference       | `scripts/setup-staging.sh` line 229                        | ~5    | No compose service exists                 |
 
-**Estimated removal**: ~3000+ lines
+**Cautions** (verify before removing):
+
+- **System Health crew** (`system-health-check.ts`): Currently the only host-level health monitor. Must migrate RAM/disk/CPU checks into a Frank-triggered probe or Lead Engineer pre-flight before removing.
+- **Legacy auto-mode methods** (`startAutoLoop`, `runAutoLoop`): Confirm all callers have been migrated to `startAutoModeForProject`/`runAutoModeForProject` before deleting.
+- **Content pipeline** (`libs/flows/src/content/`): NOT dead code — the pipeline has real LLM-calling nodes (section-writer, antagonistic-reviewer). Only the research/outline stubs are mocked. Do NOT remove the full directory.
+
+**Estimated removal**: ~5,500+ confirmed lines, ~9,500+ including UI components and types cleanup
 
 ---
 
@@ -310,7 +324,60 @@ Systems removed by this architecture:
 | Deploy pipeline              | Drain, build, verify, rollback. Gets hardening.                           |
 | Antagonistic review flow     | Functional LangGraph flow. Used in PLAN state gate.                       |
 | Project planning flow        | Functional LangGraph flow. Used in full-path intake.                      |
+| Content pipeline (partial)   | Section-writer + antagonistic-reviewer are functional LLM nodes. Keep.    |
 | Context file loader          | Loads .automaker/context/ and memory into agent prompts.                  |
+
+---
+
+## Agent Self-Improvement Loop
+
+Agents don't just execute — they learn. Every agent has a feedback channel back into the system.
+
+### Per-Agent Improvement Tool
+
+Every persona agent receives a `file_improvement_request` tool. During execution, if the agent notices:
+
+- A missing context file that would have helped
+- A prompt instruction that was misleading or incomplete
+- A tool that should exist but doesn't
+- A pattern that should be documented
+
+...it files an improvement request. These go to a queue, not directly to code.
+
+### Periodic Reflection
+
+A reflection agent runs on schedule (post-batch completion + daily):
+
+1. **Reads Langfuse traces** — cost spikes, failure patterns, slow nodes
+2. **Reads improvement request queue** — deduplicates, clusters by theme
+3. **Reads `.automaker/memory/`** — checks for stale or contradictory learnings
+4. **Produces recommendations** — ranked by impact, with specific file paths
+
+### Context and Prompt Evolution
+
+Recommendations flow through an antagonistic gate before touching prompts or context:
+
+1. Reflection agent proposes a change (e.g., "add import convention to CLAUDE.md")
+2. Antagonistic review challenges: "Does this conflict with existing instructions? Is it premature?"
+3. If approved: change applied automatically (context files) or queued for human review (system prompts)
+4. If rejected: logged with reason for future pattern matching
+
+### Host Health Migration
+
+System Health crew's RAM/disk/CPU checks migrate into this loop as a **pre-flight probe**. Before any agent starts, the Lead Engineer checks host capacity. This replaces the standalone cron with an integrated check.
+
+---
+
+## Analytics Flow Alignment
+
+The analytics dashboard (`/analytics`) visualizes agent flow execution as node graphs. As the engine architecture evolves, the analytics flows must reflect the actual system:
+
+- **Lead Engineer state machine** nodes (INTAKE, PLAN, EXECUTE, REVIEW, MERGE, DONE, ESCALATE) should appear as trackable flow nodes with timing and cost data
+- **Signal routing** classification decisions should be traced as flow entry points
+- **Antagonistic gates** should show as decision nodes with approve/reject branches
+- **Self-improvement loop** reflection runs should appear as periodic flow executions
+
+The existing LangGraph flow visualization infrastructure supports this — the analytics page already renders node graphs from Langfuse traces. M2+ implementations should emit trace events that the analytics dashboard can consume without UI changes.
 
 ---
 
@@ -323,4 +390,6 @@ Systems removed by this architecture:
 5. **Kill crew loops** — remove crew system after Lead Engineer handles their responsibilities
 6. **Clean dead code** — remove everything on the kill list
 7. **Signal routing** — AVA classification layer
-8. **Deploy hardening** — fix concurrency, health checks
+8. **Self-improvement loop** — `file_improvement_request` tool, reflection agent, context evolution
+9. **Analytics alignment** — ensure new flows emit traces consumable by `/analytics` dashboard
+10. **Deploy hardening** — fix concurrency, health checks
