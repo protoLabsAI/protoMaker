@@ -97,7 +97,7 @@ Signal triage, quality gates, team health, and external communication.
 
 - **Signal classification** — Routes incoming ideas, bugs, ops improvements, GTM work
 - **Antagonistic review** — Challenges every PRD alongside Jon before approval
-- **Crew loops** — Manages PR Maintainer, Board Janitor, System Health monitors
+- **Lead Engineer** — Event-driven orchestrator with fast-path rules, state machine
 - **Ceremonies** — Standup, retro, project-retro via Discord
 - **Beads** — Operational work queue for self-improvement tasks
 - **Discord comms** — Status updates, alerts, Josh coordination
@@ -137,8 +137,8 @@ Production orchestration, auto-mode execution, and code quality.
                       Agent₁ Agent₂ Agent₃
                      (Sonnet)(Sonnet)(Haiku)
                           ╲    │    ╱
-                    PR Maintainer (Crew)
-                    Board Janitor (Crew)
+                           PR Pipeline
+                          (Lead Engineer)
 ```
 
 Ava is the hub. All strategic decisions flow through her. Communication channels:
@@ -174,7 +174,7 @@ Ava is the hub. All strategic decisions flow through her. Communication channels
 | **Linear sync**                 | `apps/server/src/services/linear-sync-service.ts`           | Feature → Linear issue push                             |
 | **Linear webhook**              | `apps/server/src/routes/linear/webhook.ts`                  | Receives mentions/delegations                           |
 | **Ceremony service**            | `apps/server/src/services/ceremony-service.ts`              | Standup, retro, project-retro                           |
-| **Crew loops**                  | `apps/server/src/services/crew-loop-service.ts`             | PR Maintainer, Board Janitor, Frank, System Health      |
+| **Lead Engineer rules**         | `apps/server/src/services/lead-engineer-rules.ts`           | 8 pure-function rules (no LLM, no service imports)      |
 | **Escalation pipeline**         | `apps/server/src/services/escalation-router.ts`             | 5 channels, SLA engine                                  |
 | **Signal accumulator**          | `apps/server/src/services/`                                 | Severity classification + briefing                      |
 | **Agent memory**                | `.automaker/memory/*.md`                                    | Per-agent learning files                                |

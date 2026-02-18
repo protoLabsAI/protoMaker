@@ -90,7 +90,7 @@ DevOps documentation in [`docs/infra/`](./infra/):
 | [Content Pipeline](./dev/content-pipeline.md)             | Content generation pipeline (blog, docs, training)   |
 | [Antagonistic Review](./dev/antagonistic-review.md)       | Multi-perspective review with G-Eval scoring         |
 | [CopilotKit Integration](./dev/copilotkit-integration.md) | AI chat sidebar and HITL approval flows              |
-| [Crew Loops](./dev/crew-loops.md)                         | Scheduled crew member health checks                  |
+| [Engine Architecture](./dev/engine-architecture.md)       | Lead Engineer state machine, signal routing          |
 | [PR Remediation Loop](./dev/pr-remediation-loop.md)       | Autonomous PR review feedback handling               |
 | [Project Lifecycle](./dev/project-lifecycle.md)           | Linear-native project state machine                  |
 | [Hivemind Interfaces](./dev/hivemind-interfaces.md)       | Service abstractions for multi-instance architecture |

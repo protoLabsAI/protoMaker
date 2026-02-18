@@ -161,7 +161,7 @@ graph LR
 ```
 
 **Nodes:** format-check, auto-fix, create-pr, wait-ci, diagnose-failure, resolve-threads, enable-merge
-**Replaces:** PR Maintainer crew loop (partial) + manual post-flight workflow
+**Replaces:** manual post-flight workflow
 **Risk:** MEDIUM — CI wait states need robust polling with backoff. Merge conflict resolution is hard to automate fully.
 
 ### 5. Retrospective Flow
@@ -245,6 +245,6 @@ Segments of the full IDEA → SHIP pipeline and their current implementation:
 | Approval              | Discord manual                | Approval Gate Flow           | Planned  |
 | Decomposition         | `proj-m-agent.ts`             | Planning Flow                | Planned  |
 | Agent execution       | `AgentService` + Claude SDK   | Keep as-is (Phase 3 future)  | N/A      |
-| PR lifecycle          | PR Maintainer crew            | PR Pipeline Flow             | Planned  |
+| PR lifecycle          | Manual PR management          | PR Pipeline Flow             | Planned  |
 | Reflection            | `trigger_ceremony`            | Retrospective Flow           | Planned  |
 | Full orchestration    | Ava manual loop               | Master Orchestrator Flow     | Planned  |

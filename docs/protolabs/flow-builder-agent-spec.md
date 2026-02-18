@@ -114,7 +114,7 @@ execute_dynamic_agent({
 
 1. **Register template** — Add `flow-builder` to built-in templates in `apps/server/src/services/agent-templates/`
 2. **System prompt** — Create detailed prompt in `@automaker/prompts` with the 5-layer pattern reference
-3. **Crew integration** — Optional: add as a crew member that watches for flow-related features and auto-activates
+3. **Agent integration** — Optional: register as an agent template that watches for flow-related features and auto-activates
 
 ## Dependencies
 

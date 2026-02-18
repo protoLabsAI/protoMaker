@@ -24,8 +24,8 @@ Josh Mabry (CEO, Human)
 │   ├── Product Manager, Sonnet, Trust=1 — Planning
 │   ├── Engineering Manager, Sonnet, Trust=1 — Coordination
 │   ├── Linear Specialist, Sonnet, Trust=2 — Linear Ops
-│   ├── PR Maintainer, Haiku, Trust=2 [Crew]
-│   └── Board Janitor, Haiku, Trust=1 [Crew]
+│   ├── PR Maintainer, Haiku, Trust=2
+│   └── Board Janitor, Haiku, Trust=1
 └── Jon, Sonnet, Trust=1 — GTM Specialist
 ```
 
@@ -34,14 +34,14 @@ Josh Mabry (CEO, Human)
 **Notes:**
 
 - PM, ProjM, and EM authority agents still exist in code but are now absorbed into the pipeline's automated steps (PRD generation, milestone decomposition, auto-mode orchestration) rather than being standalone team members. Their policy roles remain active for trust-gated permission checks.
-- Crew checks (System Health, PR State Sync) run as lightweight in-process monitors without corresponding agent templates. They escalate to Frank when issues are detected. See [Crew Loops](../dev/crew-loops.md) for details.
+- System Health and PR State Sync functionality has been absorbed into the Lead Engineer state machine. See [Engine Architecture](../dev/engine-architecture.md) for details.
 
 ## Roles
 
 | Role                | Code     | Trust           | Owns                       | Description                                                                                         |
 | ------------------- | -------- | --------------- | -------------------------- | --------------------------------------------------------------------------------------------------- |
 | Project Owner       | `CTO`    | 3 (Autonomous)  | Strategy & direction       | **The human user.** Full access to all actions. Sets vision, approves proposals, sets trust levels. |
-| Chief of Staff      | `CoS`    | 2 (Conditional) | Operations & orchestration | AI operational leader. Signal triage, antagonistic review, crew loops, ceremonies.                  |
+| Chief of Staff      | `CoS`    | 2 (Conditional) | Operations & orchestration | AI operational leader. Signal triage, antagonistic review, ceremonies.                              |
 | GTM Specialist      | `GTM`    | 2 (Conditional) | Growth & Go-to-Market      | Content pipeline, brand strategy, antagonistic review (market perspective).                         |
 | Lead Engineer       | —        | —               | Production orchestration   | Service (not an agent). Fast-path rules, auto-mode management, event-driven actions.                |
 | DevOps Engineer     | `DevOps` | 1 (Assisted)    | Infrastructure             | Deployment, monitoring, staging, Docker, CI/CD, system health.                                      |
@@ -283,22 +283,22 @@ The authority system emits these events via WebSocket:
 
 ## File Locations
 
-| File                                                           | Purpose                                            |
-| -------------------------------------------------------------- | -------------------------------------------------- |
-| `libs/types/src/policy.ts`                                     | All policy and trust type definitions              |
-| `libs/types/src/authority.ts`                                  | Authority agent and work item types                |
-| `libs/policy-engine/src/engine.ts`                             | Core `checkPolicy()` function                      |
-| `libs/policy-engine/src/defaults.ts`                           | Default permission matrix and transitions          |
-| `libs/policy-engine/tests/engine.test.ts`                      | Unit tests for policy engine                       |
-| `apps/server/src/services/authority-service.ts`                | Authority service (registry, proposals, approvals) |
-| `apps/server/src/routes/authority/index.ts`                    | REST API routes                                    |
-| `apps/server/src/services/authority-agents/pm-agent.ts`        | PM agent (idea research + PRD + epics)             |
-| `apps/server/src/services/authority-agents/projm-agent.ts`     | ProjM agent (epic decomposition + deps)            |
-| `apps/server/src/services/authority-agents/em-agent.ts`        | EM agent (assignment + capacity + PR feedback)     |
-| `apps/server/src/services/crew-members/board-janitor-check.ts` | Blocker detection, cycle detection, escalation     |
-| `apps/server/src/services/audit-service.ts`                    | Append-only JSONL audit trail                      |
-| `apps/server/src/services/pr-feedback-service.ts`              | GitHub PR review monitoring                        |
-| `apps/server/src/services/worktree-lifecycle-service.ts`       | Auto-cleanup on merge/complete                     |
+| File                                                       | Purpose                                            |
+| ---------------------------------------------------------- | -------------------------------------------------- |
+| `libs/types/src/policy.ts`                                 | All policy and trust type definitions              |
+| `libs/types/src/authority.ts`                              | Authority agent and work item types                |
+| `libs/policy-engine/src/engine.ts`                         | Core `checkPolicy()` function                      |
+| `libs/policy-engine/src/defaults.ts`                       | Default permission matrix and transitions          |
+| `libs/policy-engine/tests/engine.test.ts`                  | Unit tests for policy engine                       |
+| `apps/server/src/services/authority-service.ts`            | Authority service (registry, proposals, approvals) |
+| `apps/server/src/routes/authority/index.ts`                | REST API routes                                    |
+| `apps/server/src/services/authority-agents/pm-agent.ts`    | PM agent (idea research + PRD + epics)             |
+| `apps/server/src/services/authority-agents/projm-agent.ts` | ProjM agent (epic decomposition + deps)            |
+| `apps/server/src/services/authority-agents/em-agent.ts`    | EM agent (assignment + capacity + PR feedback)     |
+| `apps/server/src/services/lead-engineer-service.ts`        | Lead Engineer state machine, fast-path rules       |
+| `apps/server/src/services/audit-service.ts`                | Append-only JSONL audit trail                      |
+| `apps/server/src/services/pr-feedback-service.ts`          | GitHub PR review monitoring                        |
+| `apps/server/src/services/worktree-lifecycle-service.ts`   | Auto-cleanup on merge/complete                     |
 
 ## Persistence
 

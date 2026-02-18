@@ -556,6 +556,6 @@ This provides:
 
 ## Related Documentation
 
-- [Crew Loops](./crew-loops.md) - PR Maintainer crew member
+- [Engine Architecture](./engine-architecture.md) - Lead Engineer state machine
 - [Authority System](../authority/index.md) - Escalation and approval flow
 - [Feature Status System](./feature-status-system.md) - Status transitions
