@@ -9,6 +9,7 @@ import {
   GitPullRequest,
   Brain,
   Network,
+  Lightbulb,
   Bell,
   Settings,
 } from 'lucide-react';
@@ -139,6 +140,12 @@ export function useNavigation({
         id: 'analytics',
         label: 'System View',
         icon: Network,
+      },
+      {
+        id: 'ideas',
+        label: 'Idea Pipeline',
+        icon: Lightbulb,
+        shortcut: shortcuts.ideation,
       },
       {
         id: 'board',
