@@ -990,13 +990,18 @@ setInterval(() => {
   }
 }, VALIDATION_CLEANUP_INTERVAL_MS);
 
-// Rate limiting — general API (skip health checks)
+// Rate limiting — general API (skip health checks and read-only status endpoints)
 const apiLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   limit: 300,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
-  skip: (req) => req.path === '/health' || req.path.startsWith('/health/'),
+  skip: (req) =>
+    req.path === '/health' ||
+    req.path.startsWith('/health/') ||
+    req.path.startsWith('/setup/') ||
+    req.path === '/settings/status' ||
+    req.path === '/copilotkit/info',
   message: { error: 'Too many requests, please try again later' },
 });
 app.use('/api', apiLimiter);
