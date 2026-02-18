@@ -149,22 +149,6 @@ export const queryKeys = {
   },
 
   // ============================================
-  // Ideation
-  // ============================================
-  ideation: {
-    /** Ideation prompts */
-    prompts: () => ['ideation', 'prompts'] as const,
-    /** Ideas for a project */
-    ideas: (projectPath: string) => ['ideation', 'ideas', projectPath] as const,
-    /** Single idea */
-    idea: (projectPath: string, ideaId: string) =>
-      ['ideation', 'ideas', projectPath, ideaId] as const,
-    /** Session */
-    session: (projectPath: string, sessionId: string) =>
-      ['ideation', 'session', projectPath, sessionId] as const,
-  },
-
-  // ============================================
   // CLI Status
   // ============================================
   cli: {

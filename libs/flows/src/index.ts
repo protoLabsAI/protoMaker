@@ -295,39 +295,3 @@ export {
   executeWrapUpFlowWithTracing,
   type ExecuteWrapUpFlowOptions,
 } from './wrap-up/index.js';
-
-// Idea processing flow (complexity-based routing)
-export {
-  createIdeaProcessingGraph,
-  ideaProcessingGraph,
-  IdeaProcessingStateAnnotation,
-  IdeaProcessingStateSchema,
-  ReviewOutputSchema,
-  type IdeaProcessingState,
-  type IdeaProcessingStateType,
-  type IdeaComplexity,
-  type IdeaInput,
-  type ResearchFinding as IdeaResearchFinding,
-  type ResearchResult as IdeaResearchResult,
-  type ReviewOutput,
-} from './idea-processing/index.js';
-
-// Idea processing nodes — research tree utilities
-export {
-  createResearchTreeSubgraph,
-  createResearchTreeNode,
-  runResearchTree,
-  type AvaTriageAssessment,
-  type AvaSynthesisResult,
-  type ResearchTreeState,
-  ResearchTreeStateAnnotation,
-} from './idea-processing/nodes/ava-research-tree.js';
-export {
-  jonTriage,
-  fanOutGTM,
-  gtmResearchWorker,
-  aggregateGTM,
-  jonSynthesis,
-  type WorldStateContext,
-  type GTMResearchResult,
-} from './idea-processing/nodes/jon-research-tree.js';

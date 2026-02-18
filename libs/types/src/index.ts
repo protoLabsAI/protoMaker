@@ -399,37 +399,6 @@ export { STATIC_PORT, SERVER_PORT, RESERVED_PORTS } from './ports.js';
 // Editor types
 export type { EditorInfo } from './editor.js';
 
-// Ideation types
-export type {
-  IdeaCategory,
-  IdeaStatus,
-  ImpactLevel,
-  EffortLevel,
-  IdeaAttachment,
-  Idea,
-  IdeationSessionStatus,
-  IdeaSessionStatus,
-  IdeaNodeStatus,
-  IdeaSessionPath,
-  IdeaNodeState,
-  IdeationSession,
-  IdeationMessage,
-  IdeationSessionWithMessages,
-  PromptCategory,
-  IdeationPrompt,
-  AnalysisFileInfo,
-  AnalysisSuggestion,
-  ProjectAnalysisResult,
-  StartSessionOptions,
-  SendMessageOptions,
-  CreateIdeaInput,
-  UpdateIdeaInput,
-  ConvertToFeatureOptions,
-  IdeationEventType,
-  IdeationStreamEvent,
-  IdeationAnalysisEvent,
-} from './ideation.js';
-
 // Notification types
 export type { NotificationType, Notification, NotificationsFile } from './notification.js';
 export { NOTIFICATIONS_VERSION, DEFAULT_NOTIFICATIONS_FILE } from './notification.js';

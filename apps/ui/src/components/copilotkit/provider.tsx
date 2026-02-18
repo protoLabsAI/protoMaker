@@ -102,11 +102,6 @@ function InterruptHandler() {
 
 // Route-to-context mapping for page-aware sidebar
 const ROUTE_CONTEXT_MAP: Record<string, { workflow: string; contextHint: string }> = {
-  '/ideas': {
-    workflow: 'default',
-    contextHint:
-      'User is on the Idea Pipeline — a visual flow showing ideas moving through intake, research, PRD drafting, review, approval, and backlog stages. Help with brainstorming, refining ideas, or managing the pipeline.',
-  },
   '/board': {
     workflow: 'default',
     contextHint:
