@@ -5,6 +5,7 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { createLogger } from '@automaker/utils/logger';
 import { Sidebar } from '@/components/layout/sidebar';
 import { ProjectSwitcher } from '@/components/layout/project-switcher';
+import { ChatSidebar } from '@/components/views/chat/chat-sidebar';
 import {
   FileBrowserProvider,
   useFileBrowser,
@@ -829,6 +830,7 @@ function RootLayoutContent() {
         <div className="flex-1 flex flex-col overflow-hidden">
           <Outlet />
         </div>
+        <ChatSidebar />
         <Toaster richColors position="bottom-right" />
       </main>
       <SandboxRiskDialog
