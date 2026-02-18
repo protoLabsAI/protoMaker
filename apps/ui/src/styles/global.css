@@ -1,11 +1,11 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 
-/* Scan shared UI component library for Tailwind class usage */
-@source "../../../../libs/ui/src";
-
 /* Import theme library */
 @import '../../../../libs/ui/src/themes/themes.css';
+
+/* Scan shared UI component library for Tailwind class usage */
+@source "../../../../libs/ui/src";
 
 /* Curated themes */
 @custom-variant studio-dark (&:is(.studio-dark *));
