@@ -21,6 +21,10 @@
     "./organisms": {
       "import": "./dist/organisms/index.js",
       "default": "./dist/organisms/index.js"
+    },
+    "./lib": {
+      "import": "./dist/lib/index.js",
+      "default": "./dist/lib/index.js"
     }
   },
   "scripts": {
