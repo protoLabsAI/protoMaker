@@ -161,3 +161,160 @@ export interface LeadRuleLogEntry {
   eventType: string;
   actions: LeadRuleAction[];
 }
+
+// ────────────────────────── State Machine ──────────────────────────
+
+/**
+ * Feature lifecycle states managed by the Lead Engineer
+ *
+ * Flow:
+ * INTAKE → PLAN → EXECUTE → REVIEW → MERGE → DEPLOY → DONE
+ *
+ * Short-circuits:
+ * - Any state can → ESCALATE (on critical errors or max retries)
+ * - ESCALATE → [appropriate state] (after human intervention)
+ */
+export enum FeatureState {
+  /** Initial state: feature created, awaiting intake */
+  INTAKE = 'INTAKE',
+  /** Planning phase: requirements analysis, spec generation */
+  PLAN = 'PLAN',
+  /** Execution phase: implementation work in progress */
+  EXECUTE = 'EXECUTE',
+  /** Review phase: PR created, under review */
+  REVIEW = 'REVIEW',
+  /** Merge phase: PR approved, CI passing, ready to merge */
+  MERGE = 'MERGE',
+  /** Deploy phase: merged to main, deployment in progress */
+  DEPLOY = 'DEPLOY',
+  /** Terminal state: feature fully deployed and verified */
+  DONE = 'DONE',
+  /** Escalation state: blocked, needs human intervention */
+  ESCALATE = 'ESCALATE',
+}
+
+/** Valid state transitions in the state machine */
+export interface StateTransition {
+  from: FeatureState;
+  to: FeatureState;
+  /** ISO 8601 timestamp of the transition */
+  timestamp: string;
+  /** Optional reason for the transition */
+  reason?: string;
+  /** Optional automation/agent that triggered this transition */
+  triggeredBy?: string;
+}
+
+/**
+ * Short-circuit conditions that bypass normal flow
+ * These are checked before each state transition
+ */
+export interface ShortCircuitCondition {
+  /** Condition name for logging/debugging */
+  name: string;
+  /** Predicate that evaluates to true if short-circuit should activate */
+  evaluate: (context: FeatureStateContext) => boolean;
+  /** Target state to transition to if condition is met */
+  targetState: FeatureState;
+  /** Reason message for the short-circuit */
+  reason: string;
+}
+
+/** Context information used by state machine logic */
+export interface FeatureStateContext {
+  featureId: string;
+  currentState: FeatureState;
+  feature: LeadFeatureSnapshot;
+  worldState: LeadWorldState;
+  /** Number of consecutive failures in current state */
+  failureCount: number;
+  /** Maximum allowed failures before escalation */
+  maxFailures: number;
+  /** Whether auto-mode is running */
+  autoModeActive: boolean;
+}
+
+/**
+ * Triggers that cause escalation to ESCALATE state
+ * These are evaluated at each state to determine if escalation is needed
+ */
+export interface EscalationTrigger {
+  /** Trigger name */
+  name: string;
+  /** Predicate that evaluates if escalation should occur */
+  shouldEscalate: (context: FeatureStateContext) => boolean;
+  /** Severity level (info, warn, error, critical) */
+  severity: 'info' | 'warn' | 'error' | 'critical';
+  /** Human-readable reason for escalation */
+  reason: string;
+}
+
+/**
+ * Persona assignments for different state machine phases
+ * Maps personas to their preferred states for autonomous work
+ */
+export interface PersonaAssignment {
+  /** Agent persona/role name */
+  persona: string;
+  /** States this persona can handle autonomously */
+  handledStates: FeatureState[];
+  /** Model preference for this persona */
+  preferredModel?: string;
+  /** Maximum concurrent features this persona can handle */
+  maxConcurrency?: number;
+}
+
+/**
+ * Lead Engineer Service interface
+ * Core orchestration service for managing feature lifecycle
+ */
+export interface LeadEngineerService {
+  /**
+   * Start managing a project (initializes world state, starts event listeners)
+   */
+  startProject(projectPath: string): Promise<LeadEngineerSession>;
+
+  /**
+   * Stop managing a project (cleanup, persist state)
+   */
+  stopProject(projectPath: string): Promise<void>;
+
+  /**
+   * Get current session for a project
+   */
+  getSession(projectPath: string): LeadEngineerSession | null;
+
+  /**
+   * Transition a feature to a new state
+   */
+  transitionFeature(
+    featureId: string,
+    toState: FeatureState,
+    reason?: string
+  ): Promise<StateTransition>;
+
+  /**
+   * Evaluate short-circuit conditions for a feature
+   */
+  evaluateShortCircuits(featureId: string): Promise<ShortCircuitCondition | null>;
+
+  /**
+   * Evaluate escalation triggers for a feature
+   */
+  evaluateEscalation(featureId: string): Promise<EscalationTrigger | null>;
+
+  /**
+   * Assign appropriate persona to handle a feature in a given state
+   */
+  assignPersona(featureId: string, state: FeatureState): Promise<PersonaAssignment | null>;
+
+  /**
+   * Execute fast-path rules in response to an event
+   */
+  executeRules(eventType: string, eventPayload: unknown): Promise<LeadRuleAction[]>;
+
+  /**
+   * Update world state from current system state
+   */
+  refreshWorldState(projectPath: string): Promise<LeadWorldState>;
+}

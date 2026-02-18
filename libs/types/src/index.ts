@@ -698,6 +698,9 @@ export type {
 } from './copilotkit.js';
 
 // Lead Engineer types (production-phase nerve center)
+export {
+  FeatureState,
+} from './lead-engineer.js';
 export type {
   LeadFeatureSnapshot,
   LeadAgentSnapshot,
@@ -709,6 +712,12 @@ export type {
   LeadEngineerFlowState,
   LeadEngineerSession,
   LeadRuleLogEntry,
+  StateTransition,
+  ShortCircuitCondition,
+  FeatureStateContext,
+  EscalationTrigger,
+  PersonaAssignment,
+  LeadEngineerService,
 } from './lead-engineer.js';
 
 // Twitch integration types (chat suggestions)
