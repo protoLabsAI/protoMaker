@@ -2728,11 +2728,17 @@ Complete the pipeline step instructions above. Review the previous work and appl
       const workDir = worktreePath ? path.resolve(worktreePath) : path.resolve(projectPath);
       validateWorkingDirectory(workDir);
 
-      // Update running feature with worktree info
+      // Get model and provider for this feature
+      const model = getModelForFeature(feature);
+      const provider = ProviderFactory.getProviderNameForModel(model);
+
+      // Update running feature with worktree info and model
       const runningFeature = this.runningFeatures.get(featureId);
       if (runningFeature) {
         runningFeature.worktreePath = worktreePath;
         runningFeature.branchName = branchName ?? null;
+        runningFeature.model = model;
+        runningFeature.provider = provider;
       }
 
       // Emit resume event
@@ -2745,6 +2751,8 @@ Complete the pipeline step instructions above. Review the previous work and appl
           title: feature.title || 'Resuming Pipeline',
           description: feature.description,
         },
+        model,
+        provider,
       });
 
       this.emitAutoModeEvent('auto_mode_progress', {

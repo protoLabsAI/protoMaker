@@ -191,5 +191,50 @@ describe('running-agents routes', () => {
       expect(response.runningAgents[0].projectPath).toBe('/workspace/project-alpha');
       expect(response.runningAgents[1].projectPath).toBe('/workspace/project-beta');
     });
+
+    it('should include model and provider information in response', async () => {
+      // Arrange
+      const runningAgents = [
+        {
+          featureId: 'feature-sonnet',
+          projectPath: '/home/user/project',
+          projectName: 'project',
+          isAutoMode: true,
+          model: 'claude-sonnet-4-5-20250929',
+          provider: 'claude',
+          title: 'Sonnet Feature',
+          description: 'Running with sonnet',
+        },
+        {
+          featureId: 'feature-haiku',
+          projectPath: '/home/user/project',
+          projectName: 'project',
+          isAutoMode: true,
+          model: 'claude-haiku-4-5-20251001',
+          provider: 'claude',
+          title: 'Haiku Feature',
+          description: 'Running with haiku',
+        },
+      ];
+
+      vi.mocked(mockAutoModeService.getRunningAgents!).mockResolvedValue(runningAgents);
+
+      // Act
+      const handler = createIndexHandler(mockAutoModeService as AutoModeService);
+      await handler(req, res);
+
+      // Assert
+      expect(res.json).toHaveBeenCalledWith({
+        success: true,
+        runningAgents,
+        totalCount: 2,
+      });
+
+      const response = vi.mocked(res.json).mock.calls[0][0];
+      expect(response.runningAgents[0].model).toBe('claude-sonnet-4-5-20250929');
+      expect(response.runningAgents[0].provider).toBe('claude');
+      expect(response.runningAgents[1].model).toBe('claude-haiku-4-5-20251001');
+      expect(response.runningAgents[1].provider).toBe('claude');
+    });
   });
 });
