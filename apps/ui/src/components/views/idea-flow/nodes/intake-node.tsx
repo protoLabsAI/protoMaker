@@ -52,14 +52,10 @@ function IntakeNodeComponent({ data }: NodeProps & { data: IntakeNodeData }) {
         </div>
 
         {/* Title - truncated to 2 lines */}
-        <h4 className="text-xs font-medium leading-tight line-clamp-2 mb-auto">
-          {data.title}
-        </h4>
+        <h4 className="text-xs font-medium leading-tight line-clamp-2 mb-auto">{data.title}</h4>
 
         {/* Timestamp */}
-        <div className="text-[10px] text-muted-foreground mt-1">
-          {data.timestamp}
-        </div>
+        <div className="text-[10px] text-muted-foreground mt-1">{data.timestamp}</div>
       </div>
 
       <Handle

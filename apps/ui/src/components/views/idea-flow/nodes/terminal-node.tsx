@@ -52,10 +52,7 @@ function TerminalNodeComponent({ data }: NodeProps & { data: TerminalNodeData })
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.8 }}
       transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-      className={cn(
-        'rounded-full border backdrop-blur-md bg-card/90 px-4 py-2',
-        config.border
-      )}
+      className={cn('rounded-full border backdrop-blur-md bg-card/90 px-4 py-2', config.border)}
     >
       <div className="flex items-center gap-2">
         {/* Outcome badge */}
