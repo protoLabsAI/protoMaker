@@ -78,7 +78,7 @@ export function createLeadEngineerRoutes(service: LeadEngineerService): Router {
         return;
       }
 
-      service.stop(projectPath);
+      await service.stop(projectPath);
       res.json({ success: true });
     } catch (error) {
       logError(error, 'Lead Engineer stop failed');
