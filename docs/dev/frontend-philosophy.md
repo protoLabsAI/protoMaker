@@ -311,26 +311,55 @@ The preview decorator applies theme classes to the document root. All theme CSS 
 
 ## Extracted UI package
 
-UI primitives are extracted to `@protolabs/ui` at `libs/ui/`. The package uses an atoms/molecules/organisms structure with 26+ atom components (button, card, dialog, badge, etc.).
+UI primitives are extracted to `@protolabs/ui` at `libs/ui/`. The package uses an atoms/molecules/organisms structure with 26+ atom components (button, card, dialog, badge, etc.) and 6+ molecule components (confirm-dialog, autocomplete, markdown, etc.).
 
 ### Package structure
 
 ```
 libs/ui/
   src/
-    components/
-      atoms/           # Primitive components (button, badge, card, etc.)
-      molecules/       # Composed components
-      organisms/       # Complex composed components
+    atoms/           # Primitive components (button, badge, card, etc.) - 26+ components
+    molecules/       # Composed components (confirm-dialog, autocomplete, etc.) - 6+ components
+    organisms/       # Complex composed components (coming soon)
     lib/
-      theme/           # Theme generator and utilities
-      utils.ts         # cn() and helpers
-    index.ts           # Barrel export
-  package.json         # @protolabs/ui
+      utils.ts       # cn() and helpers
+    themes/          # CSS theme files (base, studio-dark, nord, etc.)
+    index.ts         # Barrel export
+  .storybook/        # Storybook configuration
+  package.json       # @protolabs/ui
   tsconfig.json
+  README.md          # Installation and usage guide
 ```
 
 `apps/ui/` depends on `@protolabs/ui` via workspace linking. This enables sharing UI components across future apps (docs site, template repos, setupLab offerings).
+
+### Documentation and usage
+
+The package includes comprehensive documentation in `libs/ui/README.md` covering:
+
+- Installation and peer dependencies (React 19+, Tailwind CSS 4+)
+- Theme setup (6 curated themes with OKLch color space)
+- Component usage examples (atoms, molecules, utilities)
+- Customization patterns (variants, className, cn() utility)
+- TypeScript support and accessibility guidelines
+- Link to hosted Storybook for interactive component exploration
+
+**Quick start:**
+
+```tsx
+// Install
+npm install @protolabs/ui
+
+// Import theme CSS
+import '@protolabs/ui/themes.css';
+
+// Use components
+import { Button, Card, Dialog } from '@protolabs/ui';
+import { ConfirmDialog, Autocomplete } from '@protolabs/ui/molecules';
+import { cn } from '@protolabs/ui/lib';
+```
+
+See `libs/ui/README.md` for complete documentation.
 
 ## React 19 patterns
 
