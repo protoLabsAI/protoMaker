@@ -11,10 +11,7 @@ function getAbsolutePath(value: string) {
 
 const config: StorybookConfig = {
   stories: ['../src/**/*.mdx', '../src/**/*.stories.@(js|jsx|mjs|ts|tsx)'],
-  addons: [
-    getAbsolutePath('@storybook/addon-docs'),
-    getAbsolutePath('@chromatic-com/storybook'),
-  ],
+  addons: [getAbsolutePath('@storybook/addon-docs'), getAbsolutePath('@chromatic-com/storybook')],
   framework: getAbsolutePath('@storybook/react-vite'),
   typescript: {
     reactDocgen: 'react-docgen-typescript',
