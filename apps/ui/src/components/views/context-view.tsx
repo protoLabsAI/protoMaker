@@ -45,7 +45,7 @@ import { cn } from '@/lib/utils';
 
 const logger = createLogger('ContextView');
 import { sanitizeFilename } from '@/lib/image-utils';
-import { Markdown } from '../ui/markdown';
+import { Markdown } from '@protolabs/ui/molecules';
 import {
   DropdownMenu,
   DropdownMenuContent,
