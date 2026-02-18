@@ -295,6 +295,7 @@ export interface KeyboardShortcuts {
   projectSettings: string;
   terminal: string;
   ideation: string;
+  notes: string;
   notifications: string;
   githubIssues: string;
   githubPrs: string;
@@ -332,6 +333,7 @@ export const DEFAULT_KEYBOARD_SHORTCUTS: KeyboardShortcuts = {
   projectSettings: 'Shift+S',
   terminal: 'T',
   ideation: 'I',
+  notes: 'W',
   notifications: 'X',
   githubIssues: 'G',
   githubPrs: 'R',

@@ -125,6 +125,40 @@ export function getContextDir(projectPath: string): string {
 }
 
 /**
+ * Get the notes directory for a project
+ *
+ * Stores workspace.json with all note tabs and content.
+ *
+ * @param projectPath - Absolute path to project directory
+ * @returns Absolute path to {projectPath}/.automaker/notes
+ */
+export function getNotesDir(projectPath: string): string {
+  return path.join(getAutomakerDir(projectPath), 'notes');
+}
+
+/**
+ * Get the notes workspace file path for a project
+ *
+ * @param projectPath - Absolute path to project directory
+ * @returns Absolute path to {projectPath}/.automaker/notes/workspace.json
+ */
+export function getNotesWorkspacePath(projectPath: string): string {
+  return path.join(getNotesDir(projectPath), 'workspace.json');
+}
+
+/**
+ * Ensure the notes directory exists for a project
+ *
+ * @param projectPath - Absolute path to project directory
+ * @returns Promise resolving to the created notes directory path
+ */
+export async function ensureNotesDir(projectPath: string): Promise<string> {
+  const notesDir = getNotesDir(projectPath);
+  await secureFs.mkdir(notesDir, { recursive: true });
+  return notesDir;
+}
+
+/**
  * Get the worktrees metadata directory for a project
  *
  * Stores information about git worktrees associated with the project.

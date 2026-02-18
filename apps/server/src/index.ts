@@ -178,6 +178,7 @@ import { createAnalyticsRoutes } from './routes/analytics.js';
 import { AntagonisticReviewService } from './services/antagonistic-review-service.js';
 import { createLangfuseRoutes } from './routes/langfuse/index.js';
 import { createChatRoutes } from './routes/chat/index.js';
+import { createNotesRoutes } from './routes/notes/index.js';
 import { shutdownLangfuse } from './lib/langfuse-singleton.js';
 import { initOTEL, shutdownOTEL } from './lib/otel-setup.js';
 import { AgentScoringService } from './services/agent-scoring-service.js';
@@ -1113,6 +1114,7 @@ app.use('/api/lead-engineer', createLeadEngineerRoutes(leadEngineerService));
 app.use('/api/langfuse', createLangfuseRoutes());
 app.use('/api/flows', createFlowsRoutes(antagonisticReviewService, projectPlanningService));
 app.use('/api/chat', createChatRoutes());
+app.use('/api/notes', createNotesRoutes());
 app.use('/api/twitch', createTwitchRoutes(twitchService, events, featureLoader));
 
 // Create HTTP server

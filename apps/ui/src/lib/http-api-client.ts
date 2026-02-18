@@ -2558,6 +2558,19 @@ export class HttpApiClient implements ElectronAPI {
     }> => this.post('/api/context/describe-file', { filePath }),
   };
 
+  // Notes API
+  notes = {
+    getWorkspace: (
+      projectPath: string
+    ): Promise<{ workspace: import('@automaker/types').NotesWorkspace }> =>
+      this.post('/api/notes/get', { projectPath }),
+
+    saveWorkspace: (
+      projectPath: string,
+      workspace: import('@automaker/types').NotesWorkspace
+    ): Promise<{ success: boolean }> => this.post('/api/notes/save', { projectPath, workspace }),
+  };
+
   // Backlog Plan API
   backlogPlan = {
     generate: (

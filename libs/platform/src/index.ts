@@ -14,6 +14,10 @@ export {
   getBoardDir,
   getImagesDir,
   getContextDir,
+  // Notes paths
+  getNotesDir,
+  getNotesWorkspacePath,
+  ensureNotesDir,
   getWorktreesDir,
   getValidationsDir,
   getValidationDir,

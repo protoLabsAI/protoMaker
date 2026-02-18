@@ -68,7 +68,7 @@ export function ChartsPanel({ projectPath }: ChartsPanelProps) {
       </div>
 
       {/* Chart content */}
-      <div className="p-3 h-[220px]">
+      <div className="p-3 h-[232px]">
         {activeTab === 'cost' && (
           <CostChart data={costQuery.data} isLoading={costQuery.isLoading} />
         )}

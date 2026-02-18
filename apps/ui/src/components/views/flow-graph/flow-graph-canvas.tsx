@@ -10,7 +10,6 @@ import {
   ReactFlow,
   Background,
   BackgroundVariant,
-  MiniMap,
   Controls,
   useNodesState,
   useEdgesState,
@@ -78,13 +77,6 @@ export function FlowGraphCanvas({
           gap={24}
           size={1}
           color="oklch(0.4 0 0 / 0.15)"
-        />
-        <MiniMap
-          nodeStrokeWidth={3}
-          pannable
-          zoomable
-          className="!bg-card/80 !border-border/50 !rounded-lg backdrop-blur-sm"
-          maskColor="oklch(0.15 0 0 / 0.7)"
         />
         <Controls
           showInteractive={false}

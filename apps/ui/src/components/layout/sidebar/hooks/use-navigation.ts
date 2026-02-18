@@ -11,6 +11,7 @@ import {
   Network,
   Bell,
   Settings,
+  NotebookPen,
 } from 'lucide-react';
 import type { NavSection, NavItem } from '../types';
 import type { KeyboardShortcut } from '@/hooks/use-keyboard-shortcuts';
@@ -27,6 +28,7 @@ interface UseNavigationProps {
     spec: string;
     context: string;
     memory: string;
+    notes: string;
     board: string;
     graph: string;
     agent: string;
@@ -118,6 +120,12 @@ export function useNavigation({
         label: 'Memory',
         icon: Brain,
         shortcut: shortcuts.memory,
+      },
+      {
+        id: 'notes',
+        label: 'Notes',
+        icon: NotebookPen,
+        shortcut: shortcuts.notes,
       },
     ];
 

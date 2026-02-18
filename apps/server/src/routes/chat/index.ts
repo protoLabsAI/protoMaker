@@ -11,6 +11,7 @@ import { streamText, type ModelMessage } from 'ai';
 import { anthropic } from '@ai-sdk/anthropic';
 import { createLogger } from '@automaker/utils';
 import { resolveModelString } from '@automaker/model-resolver';
+import { selectPersona, buildPersonaPrompt, type NotesContext } from './personas.js';
 
 const logger = createLogger('ChatRoutes');
 
@@ -56,7 +57,7 @@ export function createChatRoutes(): Router {
    * Streaming chat endpoint compatible with @ai-sdk/react useChat hook.
    * Accepts both UIMessage (parts) and ModelMessage (content) formats.
    *
-   * Body: { messages: Message[], model?: string, system?: string }
+   * Body: { messages: Message[], model?: string, system?: string, context?: { view, projectPath, notesContext? } }
    * Headers: x-model-alias (optional) — override model (haiku|sonnet|opus)
    */
   router.post('/', async (req: Request, res: Response) => {
@@ -65,6 +66,7 @@ export function createChatRoutes(): Router {
         messages: rawMessages,
         model: bodyModel,
         system,
+        context,
       } = req.body as {
         messages: Array<{
           role: string;
@@ -73,6 +75,7 @@ export function createChatRoutes(): Router {
         }>;
         model?: string;
         system?: string;
+        context?: NotesContext;
       };
 
       if (!rawMessages || !Array.isArray(rawMessages) || rawMessages.length === 0) {
@@ -87,14 +90,24 @@ export function createChatRoutes(): Router {
 
       const aiModel = resolveAISDKModel(modelAlias);
 
+      // Build system prompt — use persona if notes context is provided
+      let systemPrompt = system;
+      if (!systemPrompt && context?.view === 'notes') {
+        const persona = selectPersona(context.activeTabName);
+        systemPrompt = buildPersonaPrompt(persona, context);
+        logger.info(`Chat persona: ${persona} (tab: "${context.activeTabName}")`);
+      }
+      if (!systemPrompt) {
+        systemPrompt =
+          'You are a helpful AI assistant integrated into protoLabs Studio, an autonomous AI development platform. Be concise and technical.';
+      }
+
       logger.info(`Chat request: ${messages.length} messages, model=${modelAlias}`);
 
       const result = streamText({
         model: aiModel,
         messages,
-        system:
-          system ||
-          'You are a helpful AI assistant integrated into protoLabs Studio, an autonomous AI development platform. Be concise and technical.',
+        system: systemPrompt,
         experimental_telemetry: {
           isEnabled: true,
           metadata: {

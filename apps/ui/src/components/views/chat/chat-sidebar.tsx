@@ -5,25 +5,55 @@
  * Sits alongside the main content area in the root layout.
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useChat } from '@ai-sdk/react';
+import { useLocation } from '@tanstack/react-router';
 import { MessageSquare, X, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@protolabs/ui/atoms';
 import { ChatMessageList } from './components/chat-message-list';
 import { ChatInput } from './components/chat-input';
 import { useChatModelSelection } from './components/chat-model-select';
+import { useNotesStore } from '@/store/notes-store';
+import { useAppStore } from '@/store/app-store';
 
 export function ChatSidebar({ className }: { className?: string }) {
   const [isOpen, setIsOpen] = useState(false);
   const [modelAlias, setModelAlias] = useChatModelSelection('sonnet');
   const [inputValue, setInputValue] = useState('');
+  const location = useLocation();
+  const workspace = useNotesStore((s) => s.workspace);
+  const currentProject = useAppStore((s) => s.currentProject);
+
+  // Build notes context when on /notes route
+  const notesContext = useMemo(() => {
+    if (location.pathname !== '/notes' || !workspace || !currentProject?.path) return undefined;
+
+    const activeTab = workspace.activeTabId ? workspace.tabs[workspace.activeTabId] : null;
+    const tabs = workspace.tabOrder
+      .map((id) => workspace.tabs[id])
+      .filter(Boolean)
+      .map((tab) => ({
+        name: tab.name,
+        wordCount: tab.metadata.wordCount ?? 0,
+        agentRead: tab.permissions.agentRead,
+      }));
+
+    return {
+      view: 'notes' as const,
+      projectPath: currentProject.path,
+      activeTabName: activeTab?.name,
+      activeTabContent: activeTab?.permissions.agentRead ? activeTab.content : undefined,
+      tabs,
+    };
+  }, [location.pathname, workspace, currentProject?.path]);
 
   const { messages, sendMessage, stop, status, setMessages, error } = useChat({
     api: '/api/chat',
     headers: {
       'x-model-alias': modelAlias,
     },
+    body: notesContext ? { context: notesContext } : undefined,
     onError: (err) => {
       console.error('Chat error:', err);
     },
