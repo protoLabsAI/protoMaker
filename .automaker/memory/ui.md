@@ -146,3 +146,10 @@ usageStats:
 - **Rejected:** Four separate decision types (verbose), open string+object (no type safety), boolean flags (unclear semantics)
 - **Trade-offs:** Slightly more verbose type definition but eliminates entire class of runtime bugs. Graph validation becomes simpler.
 - **Breaking if changed:** Adding new action type requires updating EntityDecision union AND all places that pattern-match on action field.
+
+### Dark theme hardcoded in stream-overlay-view.tsx with no theme switching capability, despite app having Zustand-based theme store (2026-02-17)
+- **Context:** OBS overlay must present consistent appearance across all streaming scenarios. User-facing app themes can vary, but stream overlay appearance must be predictable and broadcast-quality
+- **Why:** Hardcoded dark theme eliminates runtime theme selection issues, ensures streamer cannot accidentally switch to light theme mid-broadcast (destroying overlay appearance), and simplifies component — no theme provider logic needed
+- **Rejected:** Respect app theme store (useThemeStore) — creates risk that theme changes in main app affect stream appearance during live broadcast
+- **Trade-offs:** Reduced flexibility vs guaranteed visual stability. Overlay cannot adopt user's theme preference, but that's acceptable because overlay is not for user's personal use, it's a broadcast artifact
+- **Breaking if changed:** If theme is made dynamic via theme store, a user accidentally switching themes in the app will change the stream overlay mid-broadcast, potentially during an important moment

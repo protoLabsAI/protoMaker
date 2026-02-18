@@ -1558,3 +1558,40 @@ usageStats:
 - **Situation:** Implementation creates router component but integration point is not specified
 - **Root cause:** useAgent hook depends on CopilotKit provider being ancestor. Router only receives interrupts if within that tree.
 - **How to avoid:** Context dependency ensures proper lifecycle management but restricts placement flexibility.
+
+#### [Pattern] Service initialization in Express index.ts follows early instantiation + route binding + graceful shutdown pattern. TwitchService initialized once, passed to route creators, then drained in gracefulShutdown() before process exit. (2026-02-17)
+- **Problem solved:** Integrating a stateful service (TwitchService maintaining IRC connection) into Express without connection leaks or orphaned processes on restart
+- **Why this works:** Early initialization ensures single instance. Route-level dependency injection avoids globals. Graceful shutdown prevents zombie connections when dev server restarts or deploys.
+- **Trade-offs:** More code in index.ts (service plumbing) but guarantees connection lifecycle is managed centrally. Early binding means TwitchService must not fail startup or entire server fails.
+
+#### [Gotcha] updateSuggestion() rewrites entire append-only JSONL file instead of appending. Works for current low-volume scenario but becomes inefficient and risky at scale (partial writes on crash). (2026-02-17)
+- **Situation:** Marking suggestions as processed requires state mutation, but file was designed append-only for crash safety
+- **Root cause:** Simpler implementation - read all, modify in-memory, rewrite. Avoids need for indexing or separate files.
+- **How to avoid:** Simple now, brittle later. High-volume scenarios (1000s of suggestions) would cause perf degradation and crash vulnerability during rewrite.
+
+#### [Gotcha] Poll result handling is missing - POST /api/twitch/poll creates poll but never listens for completion. Winning suggestion is not auto-created on board when poll ends. (2026-02-17)
+- **Situation:** Feature spec defined end-to-end flow (collect ideas → pick 3 → poll → auto-create winner), but implementation stopped at poll creation
+- **Root cause:** Scope constraint. Poll result detection requires either EventSub webhooks (external event ingestion) or polling Helix API periodically.
+- **How to avoid:** MVP is feature-incomplete but deployable. Poll metadata is persisted for future webhook handler. Backend responsibility is clear but frontend/external system must handle the bridge.
+
+#### [Pattern] WebSocket events (twitch:connection, twitch:suggestion:updated, etc.) are emitted from routes for all state changes, enabling real-time UI updates without polling. (2026-02-17)
+- **Problem solved:** UI needs to show suggestion queue, connection status, and poll results in real-time as they change
+- **Why this works:** Event-driven pattern decouples UI from polling logic. Server pushes changes instead of client polling. Reduces latency and server load.
+- **Trade-offs:** Requires WebSocket connection to remain open. Clients must handle connection loss. But enables low-latency reactive UI.
+
+#### [Gotcha] Health check integration for Twitch status is optional (uses ...(twitchStatus && { twitch: twitchStatus })) instead of always present. Means Twitch connection status only appears in health if enabled. (2026-02-17)
+- **Situation:** TwitchService may not be initialized if TWITCH_ENABLED=false. Health check endpoint must handle optional services gracefully.
+- **Root cause:** Conditional logic avoids null/undefined values in health response. Only includes status if service is active.
+- **How to avoid:** Response shape varies based on configuration. Clients must handle conditional fields. But avoids misleading false statuses.
+
+### Created separate dedicated overlay components (stream-overlay-view, overlay-board, suggestion-queue, activity-feed) instead of modifying existing board-view.tsx (2026-02-17)
+- **Context:** Stream overlay is a specialized view for OBS with different constraints (1920x1080, dark theme, no interactivity, WebSocket-driven) than the standard board view used in the app UI
+- **Why:** Separation prevents scope creep in board-view.tsx, avoids coupling overlay constraints (hardcoded dark theme, view-only) into the general-purpose board component, and allows independent iteration on streaming UX without affecting the main app
+- **Rejected:** Reusing board-view.tsx with conditional rendering flags (e.g., isOverlay prop) — would complicate component logic and create maintenance burden for two different rendering paths
+- **Trade-offs:** More code duplication (board columns rendered twice) vs cleaner separation of concerns. The duplication is acceptable here because overlay and main board have fundamentally different goals
+- **Breaking if changed:** If overlay components are merged back into board-view.tsx, the hardcoded dark theme and view-only constraints must be made conditional, potentially introducing bugs in the main board view
+
+#### [Pattern] Chat response handler (ChatResponseHandler) designed as injectable service with dependency-injected fetcher functions, not coupled to TwitchService (2026-02-17)
+- **Problem solved:** `!help`, `!queue`, `!status` commands need access to suggestion state and build status, but these live in different layers (Zustand store, HTTP API), not in the chat service itself
+- **Why this works:** Injection pattern makes handler testable without Twitch connection — unit tests can pass mock fetchers. Keeps chat response logic separate from Twitch client coupling. Handler can be instantiated independently for testing
+- **Trade-offs:** Requires plumbing fetcher functions through constructor vs simpler 'just access the store' approach. Additional lines of boilerplate, but significant testability gain

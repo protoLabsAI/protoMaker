@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 195
-  referenced: 91
-  successfulFeatures: 91
+  loaded: 197
+  referenced: 93
+  successfulFeatures: 93
 ---
 # gotchas
 
@@ -135,3 +135,8 @@ usageStats:
 - **Situation:** CopilotKit agent state stores errors with unknown shape; component accesses error properties without knowing definitive structure
 - **Root cause:** No TypeScript interface definition available for CopilotKit error objects; reasonable inference from standard error patterns
 - **How to avoid:** Defensive null checks and optional chaining prevent crashes but silently hide error details if structure differs from assumption
+
+#### [Gotcha] WebSocket event subscription must be established on component mount and cleaned up on unmount to prevent memory leaks and duplicate handlers when overlay route is revisited (2026-02-17)
+- **Situation:** Activity feed uses http-api-client.subscribeToEvents() via WebSocket. If subscription is not cleaned up, revisiting the overlay route creates multiple listeners for the same event, each updating separate ring buffers
+- **Root cause:** Browser component lifecycle: mount creates subscription, unmount must unsubscribe. Without cleanup, browser tab accumulates handlers (each adding to memory) and each route revisit multiplies active subscriptions
+- **How to avoid:** Requires proper React useEffect cleanup vs simpler no-cleanup code. Cleanup is mandatory for any WebSocket/event subscription pattern

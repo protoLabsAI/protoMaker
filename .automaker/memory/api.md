@@ -5,9 +5,9 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 46
-  referenced: 27
-  successfulFeatures: 27
+  loaded: 47
+  referenced: 28
+  successfulFeatures: 28
 ---
 # api
 
@@ -336,3 +336,22 @@ usageStats:
 - **Situation:** Initial assumption was interrupt resolution = approve/reject boolean. Actual protocol requires passing decision object back to graph.
 - **Root cause:** Agent needs to process decisions (merge targets, corrections, specific entity IDs). Simple boolean loses this context.
 - **How to avoid:** Richer payload enables complex workflows but requires careful serialization. Type safety becomes critical.
+
+### MCP tool array is manually defined with switch statement handler instead of using automated discovery/adapter pattern. Each tool requires explicit registration in packages/mcp-server/src/index.ts. (2026-02-17)
+- **Context:** Three new MCP tools (twitch_list_suggestions, twitch_build_suggestion, twitch_create_poll) needed to be exposed to Claude Code and agents
+- **Why:** Explicit registration is deterministic and type-safe. Avoids reflection/convention-over-config complexity. Error handling is localized to each tool.
+- **Rejected:** Automated discovery (scan domains/twitch/ for tools) - would create implicit coupling and harder to debug MCP registration failures. Generic adapter - would reduce type safety.
+- **Trade-offs:** More boilerplate (3 switch cases + 3 tool definitions) but every tool is visible and traceable. Future tool additions are explicit and reviewable.
+- **Breaking if changed:** If tool is defined but not added to switch statement, it's silently unavailable to Claude - hard to debug. If tool is in switch but not in array, MCP server rejects the call.
+
+### POST /api/twitch/suggestions/:id/build creates Automaker board feature directly instead of just approving suggestion. Approval and feature creation are fused into one operation. (2026-02-17)
+- **Context:** Twitch suggestions need to become features on the Automaker board. Could be two operations (approve → then auto-create) or one (approve-and-create).
+- **Why:** Fusing into one operation reduces API surface and user interaction. No intermediate 'approved' state that blocks feature creation. Josh can go directly from suggestion to board without extra steps.
+- **Rejected:** Separate approve and auto-create endpoints - would require Josh to call both or would create race condition where suggestion is approved but feature not created.
+- **Trade-offs:** One operation is faster but less flexible. Can't approve without creating feature. But given use case (Twitch polls are final), this is acceptable.
+- **Breaking if changed:** If approval and creation are ever decoupled (e.g., approve now, create later), this endpoint becomes misleading.
+
+#### [Gotcha] TwitchSuggestion type already exists in @automaker/types, but no API endpoint exists to fetch suggestions — ChatResponseHandler.readSuggestions() currently returns empty array (2026-02-17)
+- **Situation:** Suggestion queue component and chat `!queue` command both need to display suggestions, but the data model exists while the data transport does not
+- **Root cause:** Type was defined during initial Twitch feature planning (types are infrastructure), but the HTTP endpoint to serialize/transmit suggestions was not implemented. This is a common gap: types built first, implementation deferred
+- **How to avoid:** Suggestions display 'empty state' currently. Once endpoint is added, queue and chat command will work automatically because types are already aligned

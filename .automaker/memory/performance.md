@@ -62,3 +62,8 @@ usageStats:
 - **Rejected:** Direct import of TipTap at top-level: simpler code but forces all users to download 200KB unused in happy path. Dynamic import without Suspense: requires manual loading state management.
 - **Trade-offs:** Lazy loading adds slight UX delay (~500ms-1s) when modal first opens while TipTap bundle loads, but saves 200KB on initial pageload for 95%+ of users. Suspense boundary provides fallback UI (spinner) during load.
 - **Breaking if changed:** Removing lazy loading restores immediate modal rendering but bloats main bundle by 200KB. Removing Suspense boundary causes render error if chunk fails to load. Moving TipTap import to top level defeats lazy load benefit and increases initial JS payload.
+
+#### [Pattern] Activity feed implemented as client-side ring buffer (last 10 events stored in component state) rather than server-side pagination or unbounded accumulation (2026-02-17)
+- **Problem solved:** Overlay needs to display recent system events in real-time, updated via WebSocket, but memory must not grow unbounded if overlay runs 24/7 during streams
+- **Why this works:** Ring buffer prevents memory leaks on long-running streams by keeping fixed-size array. Client-side implementation avoids extra API calls and reduces server load. 10-event buffer is sufficient for visual context without cluttering the overlay
+- **Trade-offs:** Lost events older than 10 are not retrievable — acceptable for a real-time activity display where historical context is not needed. Ring buffer adds minor complexity vs simple array.push()
