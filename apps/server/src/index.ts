@@ -134,6 +134,7 @@ import { AuthorityService } from './services/authority-service.js';
 import { createAuthorityRoutes } from './routes/authority/index.js';
 import { createCosRoutes } from './routes/cos/index.js';
 import { CompletionDetectorService } from './services/completion-detector-service.js';
+import { ReflectionService } from './services/reflection-service.js';
 import { createCeremoniesRoutes } from './routes/ceremonies/index.js';
 import { PMAuthorityAgent } from './services/authority-agents/pm-agent.js';
 import { ProjMAuthorityAgent } from './services/authority-agents/projm-agent.js';
@@ -531,6 +532,10 @@ changelogService.initialize(events, settingsService, featureLoader, projectServi
 // Initialize Completion Detector Service — cascades feature done → epic → milestone → project
 const completionDetectorService = new CompletionDetectorService();
 completionDetectorService.initialize(events, featureLoader, projectService, settingsService);
+
+// Initialize Reflection Service — generates retrospective when projects complete
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const reflectionService = new ReflectionService(events, featureLoader);
 
 // Initialize Lead Engineer Service — production-phase nerve center
 const { LeadEngineerService } = await import('./services/lead-engineer-service.js');
