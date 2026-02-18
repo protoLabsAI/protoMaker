@@ -4,12 +4,7 @@ import { Input } from '@protolabs/ui/atoms';
 import { Label } from '@protolabs/ui/atoms';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@protolabs/ui/atoms';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@protolabs/ui/atoms';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@protolabs/ui/atoms';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@protolabs/ui/atoms';
 import { useSetupStore } from '@/store/setup-store';
 import { useAppStore } from '@/store/app-store';
 import { getElectronAPI } from '@/lib/electron';

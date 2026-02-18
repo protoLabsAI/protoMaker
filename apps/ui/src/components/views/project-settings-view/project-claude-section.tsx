@@ -1,13 +1,7 @@
 import { useAppStore } from '@/store/app-store';
 import { useSetupStore } from '@/store/setup-store';
 import { Label } from '@protolabs/ui/atoms';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@protolabs/ui/atoms';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@protolabs/ui/atoms';
 import { Bot, Cloud, Server, Globe } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Project } from '@/lib/electron';

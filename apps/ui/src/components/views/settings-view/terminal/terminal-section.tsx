@@ -3,13 +3,7 @@ import { Switch } from '@protolabs/ui/atoms';
 import { Slider } from '@protolabs/ui/atoms';
 import { Input } from '@protolabs/ui/atoms';
 import { Button } from '@protolabs/ui/atoms';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@protolabs/ui/atoms';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@protolabs/ui/atoms';
 import {
   SquareTerminal,
   RefreshCw,

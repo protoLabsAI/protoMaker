@@ -5,13 +5,7 @@ import { Input } from '@protolabs/ui/atoms';
 import { Textarea } from '@protolabs/ui/atoms';
 import { Card, CardContent, CardHeader, CardTitle } from '@protolabs/ui/atoms';
 import { Label } from '@protolabs/ui/atoms';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@protolabs/ui/atoms';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@protolabs/ui/atoms';
 import type { SpecOutput } from '@automaker/spec-parser';
 
 type RoadmapPhase = NonNullable<SpecOutput['implementation_roadmap']>[number];

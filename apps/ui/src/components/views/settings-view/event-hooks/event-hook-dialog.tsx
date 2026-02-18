@@ -11,13 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@protolabs/ui/atoms';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@protolabs/ui/atoms';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@protolabs/ui/atoms';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@protolabs/ui/atoms';
 import { Terminal, Globe } from 'lucide-react';
 import type {

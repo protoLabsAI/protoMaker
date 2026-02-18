@@ -1,11 +1,5 @@
 import { Zap, ClipboardList, FileText, ScrollText } from 'lucide-react';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@protolabs/ui/atoms';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@protolabs/ui/atoms';
 import { Checkbox } from '@protolabs/ui/atoms';
 import { Label } from '@protolabs/ui/atoms';
 import { cn } from '@/lib/utils';

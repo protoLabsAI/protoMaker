@@ -31,13 +31,7 @@ import { Slider } from '@protolabs/ui/atoms';
 import { Label } from '@protolabs/ui/atoms';
 import { Input } from '@protolabs/ui/atoms';
 import { Switch } from '@protolabs/ui/atoms';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@protolabs/ui/atoms';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@protolabs/ui/atoms';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { useAppStore, DEFAULT_KEYBOARD_SHORTCUTS, type KeyboardShortcuts } from '@/store/app-store';
 import { useShallow } from 'zustand/react/shallow';

@@ -28,13 +28,7 @@ import { Label } from '@protolabs/ui/atoms';
 import { Slider } from '@protolabs/ui/atoms';
 import { Switch } from '@protolabs/ui/atoms';
 import { Popover, PopoverContent, PopoverTrigger } from '@protolabs/ui/atoms';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@protolabs/ui/atoms';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@protolabs/ui/atoms';
 import { TERMINAL_FONT_OPTIONS } from '@/config/terminal-themes';
 import { DEFAULT_FONT_VALUE } from '@/config/ui-font-options';
 import { toast } from 'sonner';

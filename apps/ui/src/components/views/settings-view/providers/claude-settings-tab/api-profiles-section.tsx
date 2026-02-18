@@ -3,13 +3,7 @@ import { useAppStore } from '@/store/app-store';
 import { Button } from '@protolabs/ui/atoms';
 import { Input } from '@protolabs/ui/atoms';
 import { Label } from '@protolabs/ui/atoms';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@protolabs/ui/atoms';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@protolabs/ui/atoms';
 import { Switch } from '@protolabs/ui/atoms';
 import {
   Dialog,

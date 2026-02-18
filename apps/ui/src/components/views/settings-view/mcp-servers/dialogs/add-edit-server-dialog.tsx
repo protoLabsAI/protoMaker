@@ -10,13 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@protolabs/ui/atoms';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@protolabs/ui/atoms';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@protolabs/ui/atoms';
 import type { MCPServerConfig } from '@automaker/types';
 import type { ServerFormData, ServerType } from '../types';
 

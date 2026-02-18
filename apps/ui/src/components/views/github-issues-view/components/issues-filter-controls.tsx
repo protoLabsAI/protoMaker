@@ -1,12 +1,6 @@
 import { ChevronDown, Tag, X } from 'lucide-react';
 import { Button } from '@protolabs/ui/atoms';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@protolabs/ui/atoms';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@protolabs/ui/atoms';
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,

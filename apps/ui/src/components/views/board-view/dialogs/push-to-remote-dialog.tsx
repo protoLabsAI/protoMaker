@@ -10,13 +10,7 @@ import {
 } from '@protolabs/ui/atoms';
 import { Button } from '@protolabs/ui/atoms';
 import { Label } from '@protolabs/ui/atoms';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@protolabs/ui/atoms';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@protolabs/ui/atoms';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { toast } from 'sonner';
 import { Upload, RefreshCw, AlertTriangle, Sparkles } from 'lucide-react';
