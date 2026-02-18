@@ -9,7 +9,7 @@ import { useState, useCallback } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { MessageSquare, X, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
+import { Button } from '@protolabs/ui/atoms';
 import { ChatMessageList } from './components/chat-message-list';
 import { ChatInput } from './components/chat-input';
 import { useChatModelSelection } from './components/chat-model-select';

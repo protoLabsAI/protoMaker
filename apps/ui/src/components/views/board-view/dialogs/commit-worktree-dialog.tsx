@@ -6,12 +6,12 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
+} from '@protolabs/ui/atoms';
+import { Button } from '@protolabs/ui/atoms';
+import { Textarea } from '@protolabs/ui/atoms';
+import { Label } from '@protolabs/ui/atoms';
 import { GitCommit, Sparkles } from 'lucide-react';
-import { Spinner } from '@/components/ui/spinner';
+import { Spinner } from '@protolabs/ui/atoms';
 import { getElectronAPI } from '@/lib/electron';
 import { toast } from 'sonner';
 import { useAppStore } from '@/store/app-store';

@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 import { formatShortcut } from '@/store/app-store';
 import type { NavSection } from '../types';
 import type { Project } from '@/lib/electron';
-import { Spinner } from '@/components/ui/spinner';
+import { Spinner } from '@protolabs/ui/atoms';
 
 interface SidebarNavigationProps {
   currentProject: Project | null;

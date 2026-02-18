@@ -33,7 +33,7 @@ import type { BacklogPlanResult } from '@automaker/types';
 import { pathsEqual } from '@/lib/utils';
 import { toast } from 'sonner';
 import { BoardBackgroundModal } from '@/components/dialogs/board-background-modal';
-import { Spinner } from '@/components/ui/spinner';
+import { Spinner } from '@protolabs/ui/atoms';
 import { useShallow } from 'zustand/react/shallow';
 import { useAutoMode } from '@/hooks/use-auto-mode';
 import { useKeyboardShortcutsConfig } from '@/hooks/use-keyboard-shortcuts';

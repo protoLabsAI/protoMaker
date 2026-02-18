@@ -5,9 +5,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Markdown } from '@protolabs/ui/molecules';
+} from '@protolabs/ui/atoms';
+import { Button } from '@protolabs/ui/atoms';
+import { Markdown } from '@/components/ui/markdown';
 import {
   CheckCircle2,
   XCircle,

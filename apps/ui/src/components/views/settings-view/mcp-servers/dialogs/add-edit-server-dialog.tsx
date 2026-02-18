@@ -1,7 +1,7 @@
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@protolabs/ui/atoms';
+import { Input } from '@protolabs/ui/atoms';
+import { Label } from '@protolabs/ui/atoms';
+import { Textarea } from '@protolabs/ui/atoms';
 import {
   Dialog,
   DialogContent,
@@ -9,14 +9,14 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from '@protolabs/ui/atoms';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@protolabs/ui/atoms';
 import type { MCPServerConfig } from '@automaker/types';
 import type { ServerFormData, ServerType } from '../types';
 

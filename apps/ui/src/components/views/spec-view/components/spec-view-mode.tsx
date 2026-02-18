@@ -1,13 +1,13 @@
 import type { SpecOutput } from '@automaker/spec-parser';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Card, CardContent, CardHeader, CardTitle } from '@protolabs/ui/atoms';
+import { Badge } from '@protolabs/ui/atoms';
+import { ScrollArea } from '@protolabs/ui/atoms';
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from '@/components/ui/accordion';
+} from '@protolabs/ui/atoms';
 import {
   CheckCircle2,
   Circle,

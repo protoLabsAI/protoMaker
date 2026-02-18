@@ -16,8 +16,8 @@ import {
   Square,
   FileText,
 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Badge } from '@protolabs/ui/atoms';
+import { Button } from '@protolabs/ui/atoms';
 import { scrubPii } from '@/lib/scrub-pii';
 import { formatCostUsd } from '@/lib/format';
 import { getLangfuseTraceUrl } from '@/lib/langfuse-url';

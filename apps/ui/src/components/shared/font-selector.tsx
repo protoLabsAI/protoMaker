@@ -4,7 +4,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@protolabs/ui/atoms';
 import { DEFAULT_FONT_VALUE } from '@/config/ui-font-options';
 
 interface FontOption {

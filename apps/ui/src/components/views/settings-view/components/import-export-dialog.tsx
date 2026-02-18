@@ -6,8 +6,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+} from '@protolabs/ui/atoms';
+import { Button } from '@protolabs/ui/atoms';
 import { JsonSyntaxEditor } from '@/components/shared/json-syntax-editor';
 import { apiGet, apiPut } from '@/lib/api-fetch';
 import { toast } from 'sonner';

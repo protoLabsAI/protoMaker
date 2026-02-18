@@ -5,10 +5,10 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+} from '@protolabs/ui/atoms';
+import { Button } from '@protolabs/ui/atoms';
 import { Folder, FolderOpen, AlertCircle } from 'lucide-react';
-import { Spinner } from '@/components/ui/spinner';
+import { Spinner } from '@protolabs/ui/atoms';
 import { useWorkspaceDirectories } from '@/hooks/queries';
 
 interface WorkspaceDirectory {

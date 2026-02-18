@@ -6,8 +6,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+} from '@protolabs/ui/atoms';
+import { Button } from '@protolabs/ui/atoms';
 import { Plus, Trash2, ChevronUp, ChevronDown, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import type { PipelineConfig, PipelineStep } from '@automaker/types';

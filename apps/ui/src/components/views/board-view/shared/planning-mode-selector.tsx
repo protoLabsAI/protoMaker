@@ -11,10 +11,10 @@ import {
   RefreshCw,
   Sparkles,
 } from 'lucide-react';
-import { Spinner } from '@/components/ui/spinner';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Spinner } from '@protolabs/ui/atoms';
+import { Label } from '@protolabs/ui/atoms';
+import { Button } from '@protolabs/ui/atoms';
+import { Checkbox } from '@protolabs/ui/atoms';
 import { cn } from '@/lib/utils';
 import type { PlanSpec } from '@/store/app-store';
 

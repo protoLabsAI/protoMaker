@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Activity, RefreshCw, CheckCircle, AlertTriangle, XCircle, Wrench } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { Spinner } from '@/components/ui/spinner';
+import { Button } from '@protolabs/ui/atoms';
+import { Spinner } from '@protolabs/ui/atoms';
 import { useAppStore } from '@/store/app-store';
 import { apiFetch } from '@/lib/api-fetch';
 

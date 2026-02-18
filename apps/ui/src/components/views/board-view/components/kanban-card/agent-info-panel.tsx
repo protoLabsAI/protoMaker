@@ -6,7 +6,7 @@ import { parseAgentContext, formatModelName, DEFAULT_MODEL } from '@/lib/agent-c
 import { cn } from '@/lib/utils';
 import type { AutoModeEvent } from '@/types/electron';
 import { Brain, ListTodo, Sparkles, Expand, CheckCircle2, Circle, Wrench } from 'lucide-react';
-import { Spinner } from '@/components/ui/spinner';
+import { Spinner } from '@protolabs/ui/atoms';
 import { getElectronAPI } from '@/lib/electron';
 import { SummaryDialog } from './summary-dialog';
 import { getProviderIconForModel } from '@/components/shared/provider-icon';

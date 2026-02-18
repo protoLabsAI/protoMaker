@@ -1,8 +1,8 @@
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Button } from '@protolabs/ui/atoms';
+import { Input } from '@protolabs/ui/atoms';
+import { Label } from '@protolabs/ui/atoms';
 import { AlertCircle, CheckCircle2, Eye, EyeOff, Zap } from 'lucide-react';
-import { Spinner } from '@/components/ui/spinner';
+import { Spinner } from '@protolabs/ui/atoms';
 import type { ProviderConfig } from '@/config/api-providers';
 
 interface ApiKeyFieldProps {

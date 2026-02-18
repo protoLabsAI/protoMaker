@@ -3,7 +3,7 @@
 // @ts-nocheck
 import { memo, useCallback, useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@protolabs/ui/atoms';
 import { AlertCircle, Lock, Hand, Sparkles, FileText } from 'lucide-react';
 import type { Feature } from '@/store/app-store';
 import { RowActions, type RowActionHandlers } from './row-actions';

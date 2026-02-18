@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
-import { Button } from '@/components/ui/button';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Button } from '@protolabs/ui/atoms';
+import { Popover, PopoverContent, PopoverTrigger } from '@protolabs/ui/atoms';
 import { History } from 'lucide-react';
 import { toast } from 'sonner';
 import { EnhancementMode, ENHANCEMENT_MODE_LABELS } from './enhancement-constants';

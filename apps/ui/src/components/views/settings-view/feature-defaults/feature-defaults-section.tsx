@@ -1,5 +1,5 @@
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@protolabs/ui/atoms';
+import { Checkbox } from '@protolabs/ui/atoms';
 import {
   FlaskConical,
   TestTube,
@@ -20,7 +20,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@protolabs/ui/atoms';
 import type { PhaseModelEntry } from '@automaker/types';
 import { PhaseModelSelector } from '../model-defaults/phase-model-selector';
 

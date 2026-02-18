@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@protolabs/ui/atoms';
+import { Input } from '@protolabs/ui/atoms';
+import { Label } from '@protolabs/ui/atoms';
+import { Textarea } from '@protolabs/ui/atoms';
 import {
   Dialog,
   DialogContent,
@@ -10,15 +10,15 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from '@protolabs/ui/atoms';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+} from '@protolabs/ui/atoms';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@protolabs/ui/atoms';
 import { Terminal, Globe } from 'lucide-react';
 import type {
   EventHook,

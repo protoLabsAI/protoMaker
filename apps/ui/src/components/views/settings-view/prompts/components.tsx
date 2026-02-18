@@ -1,6 +1,6 @@
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
+import { Label } from '@protolabs/ui/atoms';
+import { Textarea } from '@protolabs/ui/atoms';
+import { Switch } from '@protolabs/ui/atoms';
 import { Info, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { PromptCustomization, CustomPrompt } from '@automaker/types';

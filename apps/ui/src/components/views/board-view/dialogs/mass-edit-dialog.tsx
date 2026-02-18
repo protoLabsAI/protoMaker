@@ -6,10 +6,10 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
+} from '@protolabs/ui/atoms';
+import { Button } from '@protolabs/ui/atoms';
+import { Checkbox } from '@protolabs/ui/atoms';
+import { Label } from '@protolabs/ui/atoms';
 import { AlertCircle } from 'lucide-react';
 import { modelSupportsThinking } from '@/lib/utils';
 import { Feature, ModelAlias, ThinkingLevel, PlanningMode } from '@/store/app-store';
@@ -18,7 +18,7 @@ import type { WorkMode } from '../shared';
 import { PhaseModelSelector } from '@/components/views/settings-view/model-defaults/phase-model-selector';
 import { isCursorModel, isClaudeModel, type PhaseModelEntry } from '@automaker/types';
 import { cn } from '@/lib/utils';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@protolabs/ui/atoms';
 
 interface MassEditDialogProps {
   open: boolean;

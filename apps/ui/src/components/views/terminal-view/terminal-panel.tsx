@@ -23,21 +23,21 @@ import {
   ArrowDown,
   GitBranch,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Spinner } from '@/components/ui/spinner';
+import { Button } from '@protolabs/ui/atoms';
+import { Spinner } from '@protolabs/ui/atoms';
 import { cn } from '@/lib/utils';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Slider } from '@/components/ui/slider';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Switch } from '@/components/ui/switch';
+import { Popover, PopoverContent, PopoverTrigger } from '@protolabs/ui/atoms';
+import { Slider } from '@protolabs/ui/atoms';
+import { Label } from '@protolabs/ui/atoms';
+import { Input } from '@protolabs/ui/atoms';
+import { Switch } from '@protolabs/ui/atoms';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@protolabs/ui/atoms';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { useAppStore, DEFAULT_KEYBOARD_SHORTCUTS, type KeyboardShortcuts } from '@/store/app-store';
 import { useShallow } from 'zustand/react/shallow';

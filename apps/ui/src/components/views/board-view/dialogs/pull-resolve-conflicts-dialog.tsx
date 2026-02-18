@@ -7,9 +7,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
+} from '@protolabs/ui/atoms';
+import { Button } from '@protolabs/ui/atoms';
+import { Label } from '@protolabs/ui/atoms';
 import {
   Select,
   SelectContent,
@@ -18,11 +18,11 @@ import {
   SelectLabel,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@protolabs/ui/atoms';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { toast } from 'sonner';
 import { GitMerge, RefreshCw, AlertTriangle } from 'lucide-react';
-import { Spinner } from '@/components/ui/spinner';
+import { Spinner } from '@protolabs/ui/atoms';
 
 interface WorktreeInfo {
   path: string;

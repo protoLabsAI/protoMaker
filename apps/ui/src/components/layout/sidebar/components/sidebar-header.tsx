@@ -5,7 +5,7 @@ import { cn, isMac } from '@/lib/utils';
 import { getAuthenticatedImageUrl } from '@/lib/api-fetch';
 import { isElectron, type Project } from '@/lib/electron';
 import { useIsCompact } from '@/hooks/use-media-query';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@protolabs/ui/atoms';
 import { useAppStore } from '@/store/app-store';
 
 interface SidebarHeaderProps {

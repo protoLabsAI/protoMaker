@@ -1,7 +1,7 @@
 import { useRef, useEffect } from 'react';
-import { Input } from '@/components/ui/input';
+import { Input } from '@protolabs/ui/atoms';
 import { Search, X } from 'lucide-react';
-import { Spinner } from '@/components/ui/spinner';
+import { Spinner } from '@protolabs/ui/atoms';
 
 interface BoardSearchBarProps {
   searchQuery: string;

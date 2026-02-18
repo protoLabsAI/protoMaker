@@ -1,8 +1,8 @@
 // @ts-nocheck
 import { memo, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@protolabs/ui/atoms';
+import { ScrollArea } from '@protolabs/ui/atoms';
+import { Badge } from '@protolabs/ui/atoms';
 import {
   GitPullRequest,
   AlertCircle,

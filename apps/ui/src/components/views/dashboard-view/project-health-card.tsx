@@ -9,7 +9,7 @@
  * Updates via polling (30s) and WebSocket events
  */
 
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent } from '@protolabs/ui/atoms';
 import { useProjectHealth } from '@/hooks/use-project-health';
 import { useAppStore } from '@/store/app-store';
 import { Activity, CheckCircle2, Clock, ListTodo, PlayCircle, StopCircle } from 'lucide-react';

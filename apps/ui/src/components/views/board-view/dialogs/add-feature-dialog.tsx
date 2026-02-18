@@ -8,12 +8,12 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+} from '@protolabs/ui/atoms';
+import { Button } from '@protolabs/ui/atoms';
 import { HotkeyButton } from '@protolabs/ui/molecules';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@protolabs/ui/atoms';
+import { Label } from '@protolabs/ui/atoms';
+import { Checkbox } from '@protolabs/ui/atoms';
 import { CategoryAutocomplete } from '@/components/views/board-view/components/category-autocomplete';
 import { DependencySelector } from '@/components/views/board-view/components/dependency-selector';
 import {
@@ -41,7 +41,7 @@ import {
 } from '../shared';
 import type { WorkMode } from '../shared';
 import { PhaseModelSelector } from '@/components/views/settings-view/model-defaults/phase-model-selector';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@protolabs/ui/atoms';
 import {
   getAncestors,
   formatAncestorContextForPrompt,

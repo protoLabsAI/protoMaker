@@ -2,7 +2,7 @@
  * EpicBadge - Shows which epic a feature belongs to
  */
 
-import { Badge } from '@/components/ui/badge';
+import { Badge } from '@protolabs/ui/atoms';
 import { Feature, useAppStore } from '@/store/app-store';
 import { useShallow } from 'zustand/react/shallow';
 import { Layers } from 'lucide-react';

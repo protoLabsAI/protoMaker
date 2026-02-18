@@ -1,7 +1,7 @@
 import { useAppStore } from '@/store/app-store';
 import type { ModelProvider } from '@automaker/types';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
+import { Switch } from '@protolabs/ui/atoms';
+import { Label } from '@protolabs/ui/atoms';
 import { EyeOff, Eye } from 'lucide-react';
 
 interface ProviderToggleProps {

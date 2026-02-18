@@ -1,6 +1,6 @@
 import { Code } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@protolabs/ui/atoms';
+import { Textarea } from '@protolabs/ui/atoms';
 import {
   Dialog,
   DialogContent,
@@ -8,7 +8,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from '@protolabs/ui/atoms';
 import type { MCPServerConfig } from '@automaker/types';
 
 interface JsonEditDialogProps {

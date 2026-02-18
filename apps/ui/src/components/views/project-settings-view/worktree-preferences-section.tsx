@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Button } from '@/components/ui/button';
+import { Label } from '@protolabs/ui/atoms';
+import { Checkbox } from '@protolabs/ui/atoms';
+import { Button } from '@protolabs/ui/atoms';
 import { ShellSyntaxEditor } from '@/components/shared/shell-syntax-editor';
 import {
   GitBranch,
@@ -12,7 +12,7 @@ import {
   Trash2,
   PanelBottomClose,
 } from 'lucide-react';
-import { Spinner } from '@/components/ui/spinner';
+import { Spinner } from '@protolabs/ui/atoms';
 import { cn } from '@/lib/utils';
 import { apiGet, apiPut, apiDelete } from '@/lib/api-fetch';
 import { toast } from 'sonner';

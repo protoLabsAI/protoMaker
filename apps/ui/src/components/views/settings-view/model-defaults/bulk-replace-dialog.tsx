@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useAppStore } from '@/store/app-store';
-import { Button } from '@/components/ui/button';
+import { Button } from '@protolabs/ui/atoms';
 import {
   Dialog,
   DialogContent,
@@ -8,14 +8,14 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from '@protolabs/ui/atoms';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@protolabs/ui/atoms';
 import { ArrowRight, Cloud, Server, Check, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type {

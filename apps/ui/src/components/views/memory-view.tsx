@@ -2,8 +2,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { createLogger } from '@automaker/utils/logger';
 import { useAppStore } from '@/store/app-store';
 import { getElectronAPI } from '@/lib/electron';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { Button } from '@protolabs/ui/atoms';
+import { Card } from '@protolabs/ui/atoms';
 import {
   HeaderActionsPanel,
   HeaderActionsPanelTrigger,
@@ -19,7 +19,7 @@ import {
   FilePlus,
   MoreVertical,
 } from 'lucide-react';
-import { Spinner } from '@/components/ui/spinner';
+import { Spinner } from '@protolabs/ui/atoms';
 import {
   Dialog,
   DialogContent,
@@ -27,9 +27,9 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+} from '@protolabs/ui/atoms';
+import { Input } from '@protolabs/ui/atoms';
+import { Label } from '@protolabs/ui/atoms';
 import { cn } from '@/lib/utils';
 import { Markdown } from '@protolabs/ui/molecules';
 import {
@@ -37,7 +37,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from '@protolabs/ui/atoms';
 
 const logger = createLogger('MemoryView');
 

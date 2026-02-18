@@ -1,7 +1,7 @@
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { SkeletonPulse } from '@/components/ui/skeleton';
-import { Spinner } from '@/components/ui/spinner';
+import { Button } from '@protolabs/ui/atoms';
+import { Badge } from '@protolabs/ui/atoms';
+import { SkeletonPulse } from '@protolabs/ui/atoms';
+import { Spinner } from '@protolabs/ui/atoms';
 import { CheckCircle2, AlertCircle, RefreshCw, Bot, Cloud } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { CliStatus } from '../shared/types';

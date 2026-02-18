@@ -1,8 +1,8 @@
 import { ChevronDown, ChevronRight, Code, Pencil, Trash2, PlayCircle } from 'lucide-react';
-import { Spinner } from '@/components/ui/spinner';
-import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Spinner } from '@protolabs/ui/atoms';
+import { Button } from '@protolabs/ui/atoms';
+import { Switch } from '@protolabs/ui/atoms';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@protolabs/ui/atoms';
 import { cn } from '@/lib/utils';
 import type { MCPServerConfig } from '@automaker/types';
 import type { ServerTestState } from '../types';

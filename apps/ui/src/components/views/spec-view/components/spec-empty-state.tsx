@@ -1,6 +1,6 @@
-import { Button } from '@/components/ui/button';
+import { Button } from '@protolabs/ui/atoms';
 import { FileText, FilePlus2 } from 'lucide-react';
-import { Spinner } from '@/components/ui/spinner';
+import { Spinner } from '@protolabs/ui/atoms';
 import { PHASE_LABELS } from '../constants';
 
 interface SpecEmptyStateProps {

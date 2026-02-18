@@ -41,7 +41,7 @@ import {
   MiniMaxIcon,
   getProviderIconForModel,
 } from '@/components/shared/provider-icon';
-import { Button } from '@/components/ui/button';
+import { Button } from '@protolabs/ui/atoms';
 import {
   Command,
   CommandEmpty,
@@ -50,8 +50,8 @@ import {
   CommandItem,
   CommandList,
   CommandSeparator,
-} from '@/components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+} from '@protolabs/ui/atoms';
+import { Popover, PopoverContent, PopoverTrigger } from '@protolabs/ui/atoms';
 
 const OPENCODE_CLI_GROUP_LABEL = 'OpenCode CLI';
 const OPENCODE_PROVIDER_FALLBACK = 'opencode';

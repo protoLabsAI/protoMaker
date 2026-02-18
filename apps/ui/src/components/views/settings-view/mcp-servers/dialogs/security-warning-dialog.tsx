@@ -1,5 +1,5 @@
 import { ShieldAlert, Terminal, Globe } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@protolabs/ui/atoms';
 import {
   Dialog,
   DialogContent,
@@ -7,7 +7,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from '@protolabs/ui/atoms';
 
 interface SecurityWarningDialogProps {
   open: boolean;

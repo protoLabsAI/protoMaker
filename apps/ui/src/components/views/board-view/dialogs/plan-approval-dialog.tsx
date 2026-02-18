@@ -8,14 +8,14 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Markdown } from '@protolabs/ui/molecules';
-import { Label } from '@/components/ui/label';
+} from '@protolabs/ui/atoms';
+import { Button } from '@protolabs/ui/atoms';
+import { Textarea } from '@protolabs/ui/atoms';
+import { Markdown } from '@/components/ui/markdown';
+import { Label } from '@protolabs/ui/atoms';
 import { Feature } from '@/store/app-store';
 import { Check, RefreshCw, Edit2, Eye } from 'lucide-react';
-import { Spinner } from '@/components/ui/spinner';
+import { Spinner } from '@protolabs/ui/atoms';
 
 interface PlanApprovalDialogProps {
   open: boolean;

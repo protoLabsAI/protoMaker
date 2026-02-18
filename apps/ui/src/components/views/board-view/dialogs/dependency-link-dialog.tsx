@@ -7,8 +7,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+} from '@protolabs/ui/atoms';
+import { Button } from '@protolabs/ui/atoms';
 import { ArrowDown, ArrowUp, Link2, X } from 'lucide-react';
 import type { Feature } from '@/store/app-store';
 import { cn } from '@/lib/utils';

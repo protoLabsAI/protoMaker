@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
-import { Button } from '@/components/ui/button';
-import { SkeletonPulse } from '@/components/ui/skeleton';
-import { Spinner } from '@/components/ui/spinner';
+import { Button } from '@protolabs/ui/atoms';
+import { SkeletonPulse } from '@protolabs/ui/atoms';
+import { Spinner } from '@protolabs/ui/atoms';
 import { CheckCircle2, AlertCircle, RefreshCw, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { CliStatus } from '../shared/types';

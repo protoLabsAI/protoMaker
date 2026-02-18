@@ -1,5 +1,5 @@
 import { Sparkles, Clock } from 'lucide-react';
-import { Spinner } from '@/components/ui/spinner';
+import { Spinner } from '@protolabs/ui/atoms';
 import {
   Dialog,
   DialogContent,
@@ -7,10 +7,10 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+} from '@protolabs/ui/atoms';
+import { Button } from '@protolabs/ui/atoms';
 import { HotkeyButton } from '@protolabs/ui/molecules';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Checkbox } from '@protolabs/ui/atoms';
 import { cn } from '@/lib/utils';
 import { FEATURE_COUNT_OPTIONS } from '../constants';
 import type { RegenerateSpecDialogProps, FeatureCount } from '../types';

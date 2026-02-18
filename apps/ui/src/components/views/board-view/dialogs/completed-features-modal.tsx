@@ -6,9 +6,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+} from '@protolabs/ui/atoms';
+import { Button } from '@protolabs/ui/atoms';
+import { Card, CardHeader, CardTitle, CardDescription } from '@protolabs/ui/atoms';
 import { ArchiveRestore, Trash2 } from 'lucide-react';
 import { Feature } from '@/store/app-store';
 

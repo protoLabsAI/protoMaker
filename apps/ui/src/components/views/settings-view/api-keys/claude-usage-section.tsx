@@ -2,8 +2,8 @@ import { useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { useSetupStore } from '@/store/setup-store';
 import { useClaudeUsage } from '@/hooks/queries';
-import { Button } from '@/components/ui/button';
-import { Spinner } from '@/components/ui/spinner';
+import { Button } from '@protolabs/ui/atoms';
+import { Spinner } from '@protolabs/ui/atoms';
 import { RefreshCw, AlertCircle } from 'lucide-react';
 
 const CLAUDE_USAGE_TITLE = 'Claude Usage';

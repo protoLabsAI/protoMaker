@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@protolabs/ui/atoms';
+import { Checkbox } from '@protolabs/ui/atoms';
 import { Palette, Moon, Sun, Type } from 'lucide-react';
 import { darkThemes, lightThemes, type Theme } from '@/config/theme-options';
 import {

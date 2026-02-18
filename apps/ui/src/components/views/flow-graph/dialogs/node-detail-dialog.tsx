@@ -23,7 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from '@/components/ui/dialog';
+} from '@protolabs/ui/atoms';
 import { useCrewStatus } from '@/hooks/queries/use-crew-status';
 import { useStopFeature } from '@/hooks/mutations';
 import { AgentOutputModal } from '@/components/views/board-view/dialogs/agent-output-modal';

@@ -2,8 +2,8 @@
 import React, { memo, useLayoutEffect, useState, useCallback } from 'react';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { cn } from '@/lib/utils';
-import { Card, CardContent } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Card, CardContent } from '@protolabs/ui/atoms';
+import { Checkbox } from '@protolabs/ui/atoms';
 import { Feature, useAppStore } from '@/store/app-store';
 import { useShallow } from 'zustand/react/shallow';
 import { CardBadges, PriorityBadges } from './card-badges';

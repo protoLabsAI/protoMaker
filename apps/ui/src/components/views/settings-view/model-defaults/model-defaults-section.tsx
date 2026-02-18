@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Workflow, RotateCcw, Replace } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store/app-store';
-import { Button } from '@/components/ui/button';
+import { Button } from '@protolabs/ui/atoms';
 import { PhaseModelSelector } from './phase-model-selector';
 import { BulkReplaceDialog } from './bulk-replace-dialog';
 import type { PhaseModelKey } from '@automaker/types';

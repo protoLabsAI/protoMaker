@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ChevronDown, ChevronRight, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
+import { Button } from '@protolabs/ui/atoms';
 import type { Project } from '@/lib/electron';
 import type { NavigationItem, NavigationGroup } from '../config/navigation';
 import { GLOBAL_NAV_GROUPS } from '../config/navigation';

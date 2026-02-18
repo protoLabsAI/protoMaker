@@ -7,9 +7,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
+} from '@protolabs/ui/atoms';
+import { Button } from '@protolabs/ui/atoms';
+import { Label } from '@protolabs/ui/atoms';
 import { HotkeyButton } from '@protolabs/ui/molecules';
 import {
   DescriptionImageDropZone,

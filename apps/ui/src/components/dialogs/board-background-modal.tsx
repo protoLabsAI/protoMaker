@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { createLogger } from '@automaker/utils/logger';
 import { ImageIcon, Upload, Trash2 } from 'lucide-react';
-import { Spinner } from '@/components/ui/spinner';
+import { Spinner } from '@protolabs/ui/atoms';
 
 const logger = createLogger('BoardBackgroundModal');
 import {
@@ -10,11 +10,11 @@ import {
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from '@/components/ui/sheet';
-import { Button } from '@/components/ui/button';
-import { Slider } from '@/components/ui/slider';
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
+} from '@protolabs/ui/atoms';
+import { Button } from '@protolabs/ui/atoms';
+import { Slider } from '@protolabs/ui/atoms';
+import { Label } from '@protolabs/ui/atoms';
+import { Checkbox } from '@protolabs/ui/atoms';
 import { cn } from '@/lib/utils';
 import { useAppStore, defaultBackgroundSettings } from '@/store/app-store';
 import { getHttpApiClient } from '@/lib/http-api-client';

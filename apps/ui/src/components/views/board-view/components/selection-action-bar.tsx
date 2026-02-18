@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@protolabs/ui/atoms';
 import { Pencil, X, CheckSquare, Trash2, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -9,7 +9,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from '@protolabs/ui/atoms';
 
 export type SelectionActionMode = 'backlog' | 'waiting_approval';
 

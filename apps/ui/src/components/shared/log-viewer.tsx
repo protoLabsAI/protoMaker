@@ -22,7 +22,7 @@ import {
   Filter,
   Circle,
 } from 'lucide-react';
-import { Spinner } from '@/components/ui/spinner';
+import { Spinner } from '@protolabs/ui/atoms';
 import { cn } from '@/lib/utils';
 import {
   parseLogOutput,

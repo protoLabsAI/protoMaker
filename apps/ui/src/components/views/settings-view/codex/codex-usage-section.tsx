@@ -1,5 +1,5 @@
-import { Button } from '@/components/ui/button';
-import { Spinner } from '@/components/ui/spinner';
+import { Button } from '@protolabs/ui/atoms';
+import { Spinner } from '@protolabs/ui/atoms';
 import { RefreshCw, AlertCircle } from 'lucide-react';
 import { OpenAIIcon } from '@/components/shared/provider-icon';
 import { cn } from '@/lib/utils';

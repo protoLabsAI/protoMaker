@@ -7,8 +7,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+} from '@protolabs/ui/atoms';
+import { Button } from '@protolabs/ui/atoms';
 import { DeleteConfirmDialog } from '@/components/ui/delete-confirm-dialog';
 import { ConfirmDialog } from '@protolabs/ui/molecules';
 import type { TrashedProject } from '@/lib/electron';

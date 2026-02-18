@@ -4,9 +4,9 @@ import { useAppStore } from '@/store/app-store';
 import { getElectronAPI } from '@/lib/electron';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
+import { Button } from '@protolabs/ui/atoms';
 import { HotkeyButton } from '@protolabs/ui/molecules';
-import { Card } from '@/components/ui/card';
+import { Card } from '@protolabs/ui/atoms';
 import {
   HeaderActionsPanel,
   HeaderActionsPanelTrigger,
@@ -25,7 +25,7 @@ import {
   FileUp,
   MoreVertical,
 } from 'lucide-react';
-import { Spinner } from '@/components/ui/spinner';
+import { Spinner } from '@protolabs/ui/atoms';
 import {
   useKeyboardShortcuts,
   useKeyboardShortcutsConfig,
@@ -38,21 +38,21 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+} from '@protolabs/ui/atoms';
+import { Input } from '@protolabs/ui/atoms';
+import { Label } from '@protolabs/ui/atoms';
 import { cn } from '@/lib/utils';
 
 const logger = createLogger('ContextView');
 import { sanitizeFilename } from '@/lib/image-utils';
-import { Markdown } from '@protolabs/ui/molecules';
+import { Markdown } from '../ui/markdown';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Textarea } from '@/components/ui/textarea';
+} from '@protolabs/ui/atoms';
+import { Textarea } from '@protolabs/ui/atoms';
 
 interface ContextFile {
   name: string;

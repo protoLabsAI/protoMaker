@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Slider } from '@/components/ui/slider';
+import { Popover, PopoverContent, PopoverTrigger } from '@protolabs/ui/atoms';
+import { Label } from '@protolabs/ui/atoms';
+import { Switch } from '@protolabs/ui/atoms';
+import { Slider } from '@protolabs/ui/atoms';
 import { FastForward, Bot, Settings2, Lock, CheckCircle, Clock } from 'lucide-react';
 import { useAppStore } from '@/store/app-store';
 import { getBlockingDependencies } from '@automaker/dependency-resolver';

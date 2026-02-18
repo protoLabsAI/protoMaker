@@ -1,7 +1,7 @@
 import { Plus, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card } from '@/components/ui/card';
+import { Button } from '@protolabs/ui/atoms';
+import { Input } from '@protolabs/ui/atoms';
+import { Card } from '@protolabs/ui/atoms';
 import { useRef, useState, useEffect } from 'react';
 
 interface ArrayFieldEditorProps {

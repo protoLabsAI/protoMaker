@@ -1,6 +1,6 @@
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
+import { Popover, PopoverContent, PopoverTrigger } from '@protolabs/ui/atoms';
+import { Label } from '@protolabs/ui/atoms';
+import { Switch } from '@protolabs/ui/atoms';
 import { GitBranch, Settings2 } from 'lucide-react';
 
 interface PlanSettingsPopoverProps {

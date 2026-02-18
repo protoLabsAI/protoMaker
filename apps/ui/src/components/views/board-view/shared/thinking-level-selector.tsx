@@ -1,4 +1,4 @@
-import { Label } from '@/components/ui/label';
+import { Label } from '@protolabs/ui/atoms';
 import { Brain } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ThinkingLevel } from '@/store/app-store';

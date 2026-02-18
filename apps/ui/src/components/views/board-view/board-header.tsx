@@ -1,9 +1,9 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
+import { Switch } from '@protolabs/ui/atoms';
+import { Label } from '@protolabs/ui/atoms';
 import { Wand2, GitBranch, ClipboardCheck, Users, Bot, User, DollarSign } from 'lucide-react';
 import { ConflictBadge } from './components/conflict-badge';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@protolabs/ui/atoms';
 import { UsagePopover } from '@/components/usage-popover';
 import { useAppStore } from '@/store/app-store';
 import { useSetupStore } from '@/store/setup-store';

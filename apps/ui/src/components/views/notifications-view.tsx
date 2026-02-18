@@ -7,10 +7,10 @@ import { useAppStore } from '@/store/app-store';
 import { useNotificationsStore } from '@/store/notifications-store';
 import { useLoadNotifications, useNotificationEvents } from '@/hooks/use-notification-events';
 import { getHttpApiClient } from '@/lib/http-api-client';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@protolabs/ui/atoms';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@protolabs/ui/atoms';
 import { Bell, Check, CheckCheck, Trash2, ExternalLink } from 'lucide-react';
-import { Spinner } from '@/components/ui/spinner';
+import { Spinner } from '@protolabs/ui/atoms';
 import { useNavigate } from '@tanstack/react-router';
 import type { Notification } from '@automaker/types';
 

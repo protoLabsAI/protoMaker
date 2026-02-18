@@ -1,6 +1,6 @@
 import { Cog, Menu, X, FileJson } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
+import { Button } from '@protolabs/ui/atoms';
 
 interface SettingsHeaderProps {
   title?: string;

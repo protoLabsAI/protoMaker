@@ -9,7 +9,7 @@ import {
 } from 'react';
 import { DragOverlay } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { Button } from '@/components/ui/button';
+import { Button } from '@protolabs/ui/atoms';
 import { KanbanColumn, KanbanCard, EmptyStateCard } from './components';
 import { Feature, useAppStore, formatShortcut } from '@/store/app-store';
 import { Archive, Settings2, CheckSquare, GripVertical, Plus } from 'lucide-react';

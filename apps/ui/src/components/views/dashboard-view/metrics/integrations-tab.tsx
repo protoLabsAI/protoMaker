@@ -7,8 +7,8 @@
  * - Agent session status card showing running agents with model and current task
  */
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Card, CardContent, CardHeader, CardTitle } from '@protolabs/ui/atoms';
+import { ScrollArea } from '@protolabs/ui/atoms';
 import { useIntegrationStatus, useActivityFeed } from '@/hooks/queries/use-metrics';
 import { useRunningAgents } from '@/hooks/queries/use-running-agents';
 import {

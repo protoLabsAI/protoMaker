@@ -7,7 +7,7 @@
 
 import { useCallback, useEffect, useRef } from 'react';
 import { Send, Square } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@protolabs/ui/atoms';
 import { cn } from '@/lib/utils';
 import { ChatModelSelect } from './chat-model-select';
 

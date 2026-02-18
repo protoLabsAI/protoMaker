@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@protolabs/ui/atoms';
 import { Cpu } from 'lucide-react';
 import { ArrayFieldEditor } from './array-field-editor';
 

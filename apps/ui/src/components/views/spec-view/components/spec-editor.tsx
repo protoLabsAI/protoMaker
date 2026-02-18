@@ -1,4 +1,4 @@
-import { Card } from '@/components/ui/card';
+import { Card } from '@protolabs/ui/atoms';
 import { XmlSyntaxEditor } from '@/components/shared/xml-syntax-editor';
 
 interface SpecEditorProps {

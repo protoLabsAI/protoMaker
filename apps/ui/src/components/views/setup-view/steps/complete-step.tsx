@@ -1,4 +1,4 @@
-import { Button } from '@/components/ui/button';
+import { Button } from '@protolabs/ui/atoms';
 import { CheckCircle2, Sparkles } from 'lucide-react';
 
 interface CompleteStepProps {

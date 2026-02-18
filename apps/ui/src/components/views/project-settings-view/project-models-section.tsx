@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAppStore } from '@/store/app-store';
-import { Button } from '@/components/ui/button';
+import { Button } from '@protolabs/ui/atoms';
 import { Workflow, RotateCcw, Globe, Check, Replace } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Project } from '@/lib/electron';

@@ -1,4 +1,4 @@
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent } from '@protolabs/ui/atoms';
 import { CheckCircle2 } from 'lucide-react';
 
 interface ReadyStateCardProps {

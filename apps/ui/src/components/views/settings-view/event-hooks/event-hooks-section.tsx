@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Button } from '@protolabs/ui/atoms';
+import { Switch } from '@protolabs/ui/atoms';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@protolabs/ui/atoms';
 import { cn } from '@/lib/utils';
 import { Webhook, Plus, Trash2, Pencil, Terminal, Globe, History } from 'lucide-react';
 import { useAppStore } from '@/store/app-store';

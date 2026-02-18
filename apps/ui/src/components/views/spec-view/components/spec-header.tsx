@@ -1,10 +1,10 @@
-import { Button } from '@/components/ui/button';
+import { Button } from '@protolabs/ui/atoms';
 import {
   HeaderActionsPanel,
   HeaderActionsPanelTrigger,
 } from '@/components/shared/header-actions-panel';
 import { Save, Sparkles, FileText, AlertCircle, ListPlus, RefreshCcw } from 'lucide-react';
-import { Spinner } from '@/components/ui/spinner';
+import { Spinner } from '@protolabs/ui/atoms';
 import { PHASE_LABELS } from '../constants';
 
 interface SpecHeaderProps {

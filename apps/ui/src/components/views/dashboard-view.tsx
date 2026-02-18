@@ -8,7 +8,7 @@ import { initializeProject } from '@/lib/project-init';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { isMac } from '@/lib/utils';
 import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
+import { Button } from '@protolabs/ui/atoms';
 import { NewProjectModal } from '@/components/dialogs/new-project-modal';
 import { WorkspacePickerModal } from '@/components/dialogs/workspace-picker-modal';
 import type { StarterTemplate } from '@/lib/templates';
@@ -28,15 +28,15 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
-import { Spinner } from '@/components/ui/spinner';
-import { Input } from '@/components/ui/input';
+import { Spinner } from '@protolabs/ui/atoms';
+import { Input } from '@protolabs/ui/atoms';
 import { getAuthenticatedImageUrl } from '@/lib/api-fetch';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from '@protolabs/ui/atoms';
 import {
   Dialog,
   DialogContent,
@@ -44,7 +44,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from '@protolabs/ui/atoms';
 import { EventFeed } from './dashboard-view/event-feed';
 import { ProjectHealthCard } from './dashboard-view/project-health-card';
 import { MetricsSection } from './dashboard-view/metrics/metrics-section';

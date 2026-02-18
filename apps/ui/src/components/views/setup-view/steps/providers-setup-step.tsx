@@ -1,15 +1,15 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@protolabs/ui/atoms';
+import { Input } from '@protolabs/ui/atoms';
+import { Label } from '@protolabs/ui/atoms';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@protolabs/ui/atoms';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@protolabs/ui/atoms';
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from '@/components/ui/accordion';
+} from '@protolabs/ui/atoms';
 import { useSetupStore } from '@/store/setup-store';
 import { useAppStore } from '@/store/app-store';
 import { getElectronAPI } from '@/lib/electron';
@@ -28,7 +28,7 @@ import {
   Terminal,
   AlertCircle,
 } from 'lucide-react';
-import { Spinner } from '@/components/ui/spinner';
+import { Spinner } from '@protolabs/ui/atoms';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import {

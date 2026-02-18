@@ -1,4 +1,4 @@
-import { Button } from '@/components/ui/button';
+import { Button } from '@protolabs/ui/atoms';
 import { Trash2, Folder, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Project } from '../shared/types';

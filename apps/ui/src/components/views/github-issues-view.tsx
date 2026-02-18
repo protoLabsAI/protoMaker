@@ -5,7 +5,7 @@ import { CircleDot, RefreshCw, SearchX } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { getElectronAPI, GitHubIssue, IssueValidationResult } from '@/lib/electron';
 import { useAppStore } from '@/store/app-store';
-import { Button } from '@/components/ui/button';
+import { Button } from '@protolabs/ui/atoms';
 import { ConfirmDialog } from '@protolabs/ui/molecules';
 import { LoadingState } from '@protolabs/ui/molecules';
 import { ErrorState } from '@protolabs/ui/molecules';

@@ -1,7 +1,7 @@
 import { memo, useMemo, useCallback, useState } from 'react';
 import { ChevronDown, ChevronRight, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
+import { Button } from '@protolabs/ui/atoms';
 import { getBlockingDependencies } from '@automaker/dependency-resolver';
 import type { Feature } from '@/store/app-store';
 import type { PipelineConfig, FeatureStatusWithPipeline } from '@automaker/types';

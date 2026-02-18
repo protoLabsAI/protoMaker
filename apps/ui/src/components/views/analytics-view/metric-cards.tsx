@@ -1,4 +1,4 @@
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent } from '@protolabs/ui/atoms';
 import { DollarSign, CheckCircle2, TrendingUp, Zap } from 'lucide-react';
 
 interface MetricCardsProps {

@@ -7,15 +7,15 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+} from '@protolabs/ui/atoms';
+import { Button } from '@protolabs/ui/atoms';
 import { HotkeyButton } from '@protolabs/ui/molecules';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
+import { Input } from '@protolabs/ui/atoms';
+import { Label } from '@protolabs/ui/atoms';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@protolabs/ui/atoms';
+import { Badge } from '@protolabs/ui/atoms';
 import { FolderPlus, FolderOpen, Rocket, ExternalLink, Check, Link, Folder } from 'lucide-react';
-import { Spinner } from '@/components/ui/spinner';
+import { Spinner } from '@protolabs/ui/atoms';
 import { starterTemplates, type StarterTemplate } from '@/lib/templates';
 import { getElectronAPI } from '@/lib/electron';
 import { cn } from '@/lib/utils';

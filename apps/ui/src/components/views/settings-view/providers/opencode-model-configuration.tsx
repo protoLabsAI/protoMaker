@@ -1,18 +1,18 @@
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Button } from '@/components/ui/button';
+import { Label } from '@protolabs/ui/atoms';
+import { Badge } from '@protolabs/ui/atoms';
+import { Checkbox } from '@protolabs/ui/atoms';
+import { Button } from '@protolabs/ui/atoms';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@protolabs/ui/atoms';
 import { Terminal, Cloud, Cpu, Brain, Github, KeyRound, ShieldCheck } from 'lucide-react';
-import { Spinner } from '@/components/ui/spinner';
+import { Spinner } from '@protolabs/ui/atoms';
 import { cn } from '@/lib/utils';
-import { Input } from '@/components/ui/input';
+import { Input } from '@protolabs/ui/atoms';
 import type {
   OpencodeModelId,
   OpencodeProvider,

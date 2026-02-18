@@ -4,7 +4,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from '@protolabs/ui/atoms';
 import { FileText } from 'lucide-react';
 import { GitDiffPanel } from '@/components/shared/git-diff-panel';
 

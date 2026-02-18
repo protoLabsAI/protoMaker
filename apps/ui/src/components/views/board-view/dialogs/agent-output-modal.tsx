@@ -5,9 +5,9 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from '@protolabs/ui/atoms';
 import { List, FileText, GitBranch, ClipboardList } from 'lucide-react';
-import { Spinner } from '@/components/ui/spinner';
+import { Spinner } from '@protolabs/ui/atoms';
 import { getElectronAPI } from '@/lib/electron';
 import { LogViewer } from '@/components/shared/log-viewer';
 import { GitDiffPanel } from '@/components/shared/git-diff-panel';

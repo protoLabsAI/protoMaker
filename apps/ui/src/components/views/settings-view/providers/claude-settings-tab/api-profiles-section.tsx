@@ -1,16 +1,16 @@
 import { useState } from 'react';
 import { useAppStore } from '@/store/app-store';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Button } from '@protolabs/ui/atoms';
+import { Input } from '@protolabs/ui/atoms';
+import { Label } from '@protolabs/ui/atoms';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
+} from '@protolabs/ui/atoms';
+import { Switch } from '@protolabs/ui/atoms';
 import {
   Dialog,
   DialogContent,
@@ -18,7 +18,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from '@protolabs/ui/atoms';
 import { cn } from '@/lib/utils';
 import {
   ChevronDown,
@@ -39,7 +39,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from '@protolabs/ui/atoms';
 import type {
   ClaudeCompatibleProvider,
   ClaudeCompatibleProviderType,
@@ -48,7 +48,7 @@ import type {
   ClaudeModelAlias,
 } from '@automaker/types';
 import { CLAUDE_PROVIDER_TEMPLATES } from '@automaker/types';
-import { Badge } from '@/components/ui/badge';
+import { Badge } from '@protolabs/ui/atoms';
 
 // Generate unique ID for providers
 function generateProviderId(): string {

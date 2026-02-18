@@ -1,6 +1,6 @@
 // @ts-nocheck
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
+import { Label } from '@protolabs/ui/atoms';
+import { Badge } from '@protolabs/ui/atoms';
 import { Brain, AlertTriangle } from 'lucide-react';
 import { AnthropicIcon, CursorIcon, OpenAIIcon } from '@/components/shared/provider-icon';
 import { cn } from '@/lib/utils';
@@ -11,7 +11,7 @@ import { getModelProvider, PROVIDER_PREFIXES, stripProviderPrefix } from '@autom
 import type { ModelProvider } from '@automaker/types';
 import { CLAUDE_MODELS, CURSOR_MODELS, ModelOption } from './model-constants';
 import { useEffect } from 'react';
-import { Spinner } from '@/components/ui/spinner';
+import { Spinner } from '@protolabs/ui/atoms';
 
 interface ModelSelectorProps {
   selectedModel: string; // Can be ModelAlias or "cursor-{id}"

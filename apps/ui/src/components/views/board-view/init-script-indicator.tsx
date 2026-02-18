@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Terminal, Check, X, ChevronDown, ChevronUp } from 'lucide-react';
-import { Spinner } from '@/components/ui/spinner';
+import { Spinner } from '@protolabs/ui/atoms';
 import { cn } from '@/lib/utils';
 import { useAppStore, type InitScriptState } from '@/store/app-store';
 import { AnsiOutput } from '@/components/shared/ansi-output';

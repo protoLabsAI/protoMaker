@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@protolabs/ui/atoms';
 import { Feature } from '@/store/app-store';
 import { AlertCircle, CheckCircle2, Circle } from 'lucide-react';
 import { cn } from '@/lib/utils';

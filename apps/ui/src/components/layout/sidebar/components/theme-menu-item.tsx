@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { DropdownMenuRadioItem } from '@/components/ui/dropdown-menu';
+import { DropdownMenuRadioItem } from '@protolabs/ui/atoms';
 import type { ThemeMenuItemProps } from '../types';
 
 export const ThemeMenuItem = memo(function ThemeMenuItem({

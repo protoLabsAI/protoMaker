@@ -1,15 +1,15 @@
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Slider } from '@/components/ui/slider';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
+import { Label } from '@protolabs/ui/atoms';
+import { Switch } from '@protolabs/ui/atoms';
+import { Slider } from '@protolabs/ui/atoms';
+import { Input } from '@protolabs/ui/atoms';
+import { Button } from '@protolabs/ui/atoms';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@protolabs/ui/atoms';
 import {
   SquareTerminal,
   RefreshCw,

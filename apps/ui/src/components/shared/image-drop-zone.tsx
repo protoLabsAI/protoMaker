@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 
 const logger = createLogger('ImageDropZone');
 import { ImageIcon, X } from 'lucide-react';
-import { Spinner } from '@/components/ui/spinner';
+import { Spinner } from '@protolabs/ui/atoms';
 import type { ImageAttachment } from '@/store/app-store';
 import {
   fileToBase64,

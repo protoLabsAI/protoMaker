@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@protolabs/ui/atoms';
 import { ArrowRight, ArrowLeft, Check, Moon, Sun } from 'lucide-react';
 import { darkThemes, lightThemes } from '@/config/theme-options';
 import { useAppStore } from '@/store/app-store';

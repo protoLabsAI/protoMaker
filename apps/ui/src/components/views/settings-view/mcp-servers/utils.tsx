@@ -1,5 +1,5 @@
 import { Terminal, Globe, CheckCircle2, XCircle } from 'lucide-react';
-import { Spinner } from '@/components/ui/spinner';
+import { Spinner } from '@protolabs/ui/atoms';
 import type { ServerType, ServerTestState } from './types';
 import { SENSITIVE_PARAM_PATTERNS } from './constants';
 

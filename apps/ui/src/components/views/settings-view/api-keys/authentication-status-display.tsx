@@ -1,4 +1,4 @@
-import { Label } from '@/components/ui/label';
+import { Label } from '@protolabs/ui/atoms';
 import { CheckCircle2, AlertCircle, Info, Terminal } from 'lucide-react';
 import type { ClaudeAuthStatus } from '@/store/setup-store';
 

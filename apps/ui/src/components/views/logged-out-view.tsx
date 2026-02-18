@@ -1,5 +1,5 @@
 import { useNavigate } from '@tanstack/react-router';
-import { Button } from '@/components/ui/button';
+import { Button } from '@protolabs/ui/atoms';
 import { LogOut } from 'lucide-react';
 
 export function LoggedOutView() {

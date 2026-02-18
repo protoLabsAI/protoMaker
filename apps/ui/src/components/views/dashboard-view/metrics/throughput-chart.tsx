@@ -3,7 +3,7 @@
  * Also used for PR throughput and commit throughput
  */
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@protolabs/ui/atoms';
 import { useChartColors } from '@/hooks/use-chart-colors';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 

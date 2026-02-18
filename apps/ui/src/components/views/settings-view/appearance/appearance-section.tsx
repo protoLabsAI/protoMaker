@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Label } from '@/components/ui/label';
+import { Label } from '@protolabs/ui/atoms';
 import { Palette, Moon, Sun, Type } from 'lucide-react';
 import { darkThemes, lightThemes } from '@/config/theme-options';
 import {

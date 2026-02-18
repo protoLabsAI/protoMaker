@@ -1,6 +1,6 @@
 'use client';
 
-import { Label } from '@/components/ui/label';
+import { Label } from '@protolabs/ui/atoms';
 import { BranchAutocomplete } from '@/components/views/board-view/components/branch-autocomplete';
 import { GitBranch, GitFork, Pencil } from 'lucide-react';
 import { cn } from '@/lib/utils';

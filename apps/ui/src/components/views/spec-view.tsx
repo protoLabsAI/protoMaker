@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useAppStore } from '@/store/app-store';
-import { Spinner } from '@/components/ui/spinner';
+import { Spinner } from '@protolabs/ui/atoms';
 
 // Extracted hooks
 import { useSpecLoading, useSpecSave, useSpecGeneration, useSpecParser } from './spec-view/hooks';

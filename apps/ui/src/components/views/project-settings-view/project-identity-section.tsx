@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
+import { Label } from '@protolabs/ui/atoms';
+import { Input } from '@protolabs/ui/atoms';
+import { Button } from '@protolabs/ui/atoms';
 import { Palette, Upload, X, ImageIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store/app-store';

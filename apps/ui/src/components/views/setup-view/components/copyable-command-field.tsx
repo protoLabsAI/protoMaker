@@ -1,4 +1,4 @@
-import { Button } from '@/components/ui/button';
+import { Button } from '@protolabs/ui/atoms';
 import { Copy } from 'lucide-react';
 import { toast } from 'sonner';
 

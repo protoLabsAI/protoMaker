@@ -12,8 +12,8 @@ import {
   GitBranch,
   AlertCircle,
 } from 'lucide-react';
-import { Spinner } from '@/components/ui/spinner';
-import { Button } from '@/components/ui/button';
+import { Spinner } from '@protolabs/ui/atoms';
+import { Button } from '@protolabs/ui/atoms';
 import { useWorktreeDiffs, useGitDiffs } from '@/hooks/queries';
 import type { FileStatus } from '@/types/electron';
 

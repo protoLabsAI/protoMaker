@@ -4,8 +4,8 @@ import { cn } from '@/lib/utils';
 
 const logger = createLogger('DescriptionImageDropZone');
 import { ImageIcon, X, FileText } from 'lucide-react';
-import { Spinner } from '@/components/ui/spinner';
-import { Textarea } from '@/components/ui/textarea';
+import { Spinner } from '@protolabs/ui/atoms';
+import { Textarea } from '@protolabs/ui/atoms';
 import { getElectronAPI } from '@/lib/electron';
 import { getAuthenticatedImageUrl } from '@/lib/api-fetch';
 import { useAppStore, type FeatureImagePath, type FeatureTextFilePath } from '@/store/app-store';

@@ -6,10 +6,10 @@ import { cn } from '@/lib/utils';
 
 const logger = createLogger('TaskProgressPanel');
 import { Check, Circle, ChevronDown, ChevronRight, FileCode } from 'lucide-react';
-import { Spinner } from '@/components/ui/spinner';
+import { Spinner } from '@protolabs/ui/atoms';
 import { getElectronAPI } from '@/lib/electron';
 import type { AutoModeEvent } from '@/types/electron';
-import { Badge } from '@/components/ui/badge';
+import { Badge } from '@protolabs/ui/atoms';
 
 interface TaskInfo {
   id: string;

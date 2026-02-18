@@ -2,11 +2,11 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { createLogger } from '@automaker/utils/logger';
 import { useAppStore, Feature } from '@/store/app-store';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Card, CardContent } from '@protolabs/ui/atoms';
+import { Button } from '@protolabs/ui/atoms';
+import { Input } from '@protolabs/ui/atoms';
 import { Bot, Send, User, Sparkles, FileText, ArrowLeft, CheckCircle } from 'lucide-react';
-import { Spinner } from '@/components/ui/spinner';
+import { Spinner } from '@protolabs/ui/atoms';
 import { cn, generateUUID } from '@/lib/utils';
 import { getElectronAPI } from '@/lib/electron';
 import { Markdown } from '@protolabs/ui/molecules';
