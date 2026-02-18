@@ -1477,8 +1477,9 @@ export class LeadEngineerService {
 
       case 'restart_auto_mode': {
         try {
-          await this.autoModeService.startAutoLoop(
+          await this.autoModeService.startAutoLoopForProject(
             action.projectPath,
+            null, // branchName
             action.maxConcurrency || session.worldState.maxConcurrency
           );
           session.worldState.autoModeRunning = true;

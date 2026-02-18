@@ -225,9 +225,6 @@ start_services() {
   docker rm -f automaker-docs 2>/dev/null || true
   docker compose -f "$DOCS_COMPOSE_FILE" up -d 2>/dev/null || warn "Docs failed to start"
 
-  # Start storybook separately — failure is non-fatal
-  docker compose -f "$COMPOSE_FILE" up -d storybook 2>/dev/null || warn "Storybook failed to start (image may not exist)"
-
   info "Waiting for health check..."
   local retries=0
   local max_retries=30
