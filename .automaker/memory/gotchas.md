@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 218
-  referenced: 104
-  successfulFeatures: 104
+  loaded: 230
+  referenced: 110
+  successfulFeatures: 110
 ---
 # gotchas
 
@@ -145,3 +145,13 @@ usageStats:
 - **Situation:** Initial test attempt failed because Playwright browsers weren't installed and environment lacked required dependencies
 - **Root cause:** Playwright bundles Chromium/Firefox/WebKit which require glibc and other system libraries. TEST_REUSE_SERVER allows CI/testing in restricted environments by reusing running instance
 - **How to avoid:** Reusing server makes tests faster and environment-agnostic but requires coordination that server is running; less isolated than full Playwright setup
+
+#### [Gotcha] Classification uses keyword matching on Discord channel names and Linear labels - extensibility requires code changes, not configuration (2026-02-18)
+- **Situation:** Discord channels like '#marketing' and '#social' route to GTM, but the keywords are hardcoded in gtmChannels/opsChannels arrays
+- **Root cause:** Keyword matching is simple and fast for current use case, but discovered limitation is that adding new channels or labels requires code deployment
+- **How to avoid:** Simple implementation vs. runtime flexibility. Current approach works for static organization structure, but breaks if company frequently adds/renames channels or labels.
+
+#### [Gotcha] Docker container restart exhaustion (5 consecutive restart failures) requires explicit detection and signaling - not observable via simple container status checks (2026-02-18)
+- **Situation:** Deployment pipeline was exiting on readiness check timeout but didn't distinguish between 'slow startup' (temporary) vs 'restart loop exhaustion' (permanent failure requiring manual intervention)
+- **Root cause:** Docker restart policy silently caps restart attempts; after 5 failures, container moves to 'exited' state but pipeline wasn't reading RestartCount metric to trigger escalated alert
+- **How to avoid:** Requires querying docker inspect (2 extra calls) but enables critical alerting for infrastructure-level failures vs application-level transient issues

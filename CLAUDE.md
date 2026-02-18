@@ -212,34 +212,36 @@ Use `resolveModelString()` from `@automaker/model-resolver` to convert model ali
 - `sonnet` → `claude-sonnet-4-5-20250929`
 - `opus` → `claude-opus-4-5-20251101`
 
-### Crew Loop System
+### Lead Engineer State Machine
 
-Scheduled health checks and automated escalation for crew members. Lightweight in-process checks run on cron schedules — full agent escalation only when problems are detected.
+The Lead Engineer service (`lead-engineer-service.ts`) is the production-phase nerve center. It manages per-feature lifecycle through a state machine, reacts to events with fast-path rules, and integrates with auto-mode for autonomous execution.
 
 ```
-SchedulerService (cron tick)
-  --> CrewLoopService.runCheck(memberId)
-    --> member.check(context) — lightweight, no API calls
-      --> IF needsEscalation: DynamicAgentExecutor.execute(template, prompt)
-      --> ELSE: log "ok", emit event, done
+Signal (Linear webhook, GitHub event, MCP tool)
+  --> SignalIntakeService.classifySignal() — ops vs gtm routing
+  --> LeadEngineerService.process(feature)
+    --> FeatureStateMachine: INTAKE → PLAN → EXECUTE → REVIEW → MERGE → DONE
+    --> Fast-path rules: pure functions, no LLM, event-driven
+    --> Short-circuit: Any state → ESCALATE (on critical errors)
 ```
 
-**Current crew members:**
+**Feature lifecycle states:**
 
-| Member        | Schedule       | Checks                                                                   | Escalation           |
-| ------------- | -------------- | ------------------------------------------------------------------------ | -------------------- |
-| Ava           | `*/10 * * * *` | Stuck agents (>2h), blocked features, auto-mode health, capacity         | Warning+ findings    |
-| Frank         | `*/10 * * * *` | V8 heap, RSS memory, agent capacity, health monitor                      | Critical issues only |
-| PR Maintainer | `*/10 * * * *` | Stale PRs (>24h), review features needing auto-merge, orphaned worktrees | Warning+ findings    |
-| Board Janitor | `*/15 * * * *` | Merged PRs still in review, orphaned in-progress (>4h), stale deps       | Warning+ findings    |
-| System Health | `*/10 * * * *` | System RAM, swap, disk, CPU load, temperature, GPU/VRAM, zombie procs    | Warning+ findings    |
-| GTM           | `0 */6 * * *`  | Recently completed features (placeholder)                                | Disabled by default  |
+| State    | Description                          | Transitions To              |
+| -------- | ------------------------------------ | --------------------------- |
+| INTAKE   | Feature created, awaiting processing | PLAN, ESCALATE              |
+| PLAN     | Requirements analysis, spec gen      | EXECUTE, ESCALATE           |
+| EXECUTE  | Implementation in worktree           | REVIEW, ESCALATE            |
+| REVIEW   | PR created, under CI/CodeRabbit      | MERGE, EXECUTE (on failure) |
+| MERGE    | PR approved, merging                 | DONE, ESCALATE              |
+| DONE     | Feature fully deployed and verified  | (terminal)                  |
+| ESCALATE | Blocked, needs intervention          | Any state (after fix)       |
 
-Ava acts as orchestrator — PR pipeline monitoring is delegated to PR Maintainer, board consistency to Board Janitor. Both run on Haiku for cost efficiency.
+**Integration with auto-mode:** When `LeadEngineerService` is available, auto-mode delegates to `leadEngineerService.process()` instead of `executeFeature()` directly. This adds state tracking, fast-path rules, and escalation handling on top of the existing agent execution pipeline.
 
-**Adding a new crew member** = one file implementing `CrewMemberDefinition` in `apps/server/src/services/crew-members/`, then register with `crewLoopService.registerMember(def)` in `index.ts`. See `docs/dev/crew-loops.md` for full details.
+**Types:** See `libs/types/src/lead-engineer.ts` for `FeatureState`, `LeadWorldState`, `LeadFastPathRule`, `LeadRuleAction`.
 
-**API:** `GET /api/crew/status`, `POST /api/crew/:id/{trigger,enable,disable,schedule}`
+**API:** `GET /api/lead-engineer/status`, `POST /api/lead-engineer/{start,stop}`
 
 ### Feature Status System
 

@@ -523,3 +523,8 @@ usageStats:
 - **Situation:** Story file was created but Storybook build failed, requiring decision on verification strategy for component correctness
 - **Root cause:** TypeScript compilation and Vite build are sufficient for catching structural errors, but Storybook failure prevented visual verification of component rendering. Decision to skip story given unrelated Storybook configuration issues.
 - **How to avoid:** Saved time by skipping broken Storybook, but lost visual verification benefit. Component structure verified but actual rendering in browser not confirmed.
+
+#### [Pattern] Created temporary integration test using vitest (not Playwright) that verified removal by attempting imports that should fail (2026-02-18)
+- **Problem solved:** Needed to verify 7 crew members, crew-loop-service, and crew routes were all deleted before committing.
+- **Why this works:** Import-time failures are the clearest verification that code paths have been removed. This catches the removal at compile-time rather than runtime. Vitest (existing server test framework) was appropriate rather than Playwright (which tests HTTP endpoints).
+- **Trade-offs:** Temporary test files must be cleaned up after verification vs. permanent regression detection. Tradeoff favors clean commit over permanent test cruft.

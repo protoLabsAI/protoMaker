@@ -1722,3 +1722,87 @@ usageStats:
 - **Problem solved:** New 'ideas' nav item added to projectItems array in use-navigation.ts with specific shape and properties
 - **Why this works:** Single nav item definition generates: sidebar UI item, keyboard shortcut binding, and route navigation. Changes to nav structure automatically propagate everywhere
 - **Trade-offs:** Declarative config is easier to maintain and audit but less flexible for nav items with custom behavior; requires hook infrastructure to consume and generate UI
+
+### Verified no imports existed before deletion rather than relying on grep alone (2026-02-18)
+- **Context:** Removing dead code files that might have been imported from multiple locations
+- **Why:** Grep can return false positives (string matches in comments, paths, or unrelated code). Needed to distinguish actual import statements from incidental string matches to ensure safe deletion
+- **Rejected:** Assuming grep results were complete without manual verification of the actual import statements in matched files
+- **Trade-offs:** Additional manual verification added safety but required more steps; automated tooling alone was insufficient
+- **Breaking if changed:** Skipping verification step could have resulted in deleting code that was actually imported, breaking the build at deployment time rather than development time
+
+#### [Gotcha] Route files imported from `auto-mode-service.js` not from the deleted `services/auto-mode/` directory (2026-02-18)
+- **Situation:** Initial grep search showed files containing 'services/auto-mode/' path, but these were not actual imports of the code being deleted
+- **Root cause:** The string 'services/auto-mode/' appeared in file paths and comments but the actual imports were from a different module (`auto-mode-service.js`). This is a naming ambiguity where the directory path string is similar to but distinct from the actual module being imported
+- **How to avoid:** Required reading actual file contents to understand the true import structure, adding investigation overhead
+
+#### [Pattern] Dead code from abandoned refactor left in codebase with newer implementation running in parallel (2026-02-18)
+- **Problem solved:** The deleted `AgentExecutionService` and `auto-mode/` directory were part of an abandoned refactor while `AutoModeService` became the active implementation
+- **Why this works:** Parallel implementations can exist during refactor transitions to maintain stability while new code is validated. However, leaving both in place after transition completes creates confusion about which is authoritative and wastes maintenance overhead
+- **Trade-offs:** Keeping dead code during transition provides fallback safety but creates ambiguity; removing it post-validation saves maintenance but requires confidence that transition is complete
+
+### Default routing classification to Ops for ambiguous signals, requiring explicit GTM pattern matching (2026-02-18)
+- **Context:** Signal classification needs to handle signals from multiple sources (GitHub, Linear, Discord, MCP) and route to either Ops or GTM pipelines
+- **Why:** Automaker is primarily an engineering tool. Defaulting to Ops is safer - false negatives (GTM signals misclassified as Ops) are preferable to false positives (Ops signals going to GTM pipeline). GTM signals explicitly opt-in via labels/channels rather than implicit.
+- **Rejected:** Could have defaulted to GTM and required Ops signals to explicitly opt-in, or used 50/50 default requiring all signals to match patterns
+- **Trade-offs:** Simpler mental model for Ops-heavy tool, but GTM users need to be aware they must use correct labels/channels. Easier to add Ops sources than GTM sources.
+- **Breaking if changed:** If changed to GTM-first or 50/50 default, would need to audit all signal sources and risk misrouting existing Ops signals through GTM pipeline
+
+#### [Pattern] Event-driven classification layered between IntegrationService and feature creation, using emitted events as integration points (2026-02-18)
+- **Problem solved:** Need to add intelligent routing logic without modifying signal source integrations (GitHub, Linear, Discord, MCP handlers)
+- **Why this works:** IntegrationService emits `signal:received` events, SignalIntakeService listens and classifies. This separation allows classification logic to evolve without touching integration code. New routing rules can be added to classifySignal() without side effects.
+- **Trade-offs:** Clean separation requires event layer overhead, but enables independent evolution of integrations and routing logic. Makes it easier to test classification in isolation.
+
+#### [Pattern] Emitting `signal:routed` event with category and reasoning for every signal, in addition to existing event stream (2026-02-18)
+- **Problem solved:** Need visibility into why signals were classified and routed to specific pipelines for debugging and monitoring
+- **Why this works:** Event emission enables observability without adding logging coupling. Downstream systems can consume `signal:routed` events to track classification decisions, build dashboards, alert on anomalies. The `reason` field captures why classification happened, not just the result.
+- **Trade-offs:** Adds event emission overhead, but provides production observability. Makes classification auditable.
+
+### Used dependency injection with setLeadEngineerService() and 'any' type cast to avoid circular dependency between AutoModeService and LeadEngineerService (2026-02-18)
+- **Context:** Both services needed to reference each other - AutoModeService delegates to LeadEngineerService, but initializing them in sequence created a type safety problem
+- **Why:** Circular imports in TypeScript cause reference errors at runtime. Using 'any' type for injected dependency breaks the cycle while maintaining runtime correctness since AutoModeService only calls the process() method
+- **Rejected:** Could have merged services (breaks separation of concerns), used interfaces (still creates circular reference), or strict dependency ordering (fragile initialization)
+- **Trade-offs:** Gained loose coupling and clean separation of orchestration from execution, lost type safety on injected dependency - but the interface is simple enough (one method) that this is acceptable
+- **Breaking if changed:** If the injected service interface changes beyond process(), or if circular logic is added to LeadEngineerService that references AutoModeService, type safety will mask runtime errors
+
+#### [Pattern] Delegation pattern where AutoModeService (orchestrator) remains unchanged in its polling loop, only adds conditional delegation point for feature execution (2026-02-18)
+- **Problem solved:** Needed to integrate new Lead Engineer state machine into existing auto-mode without refactoring the orchestration logic
+- **Why this works:** Orchestration concerns (heap monitoring, concurrency limits, feature selection, dependency resolution) are orthogonal to execution concerns (state transitions, PR management). Delegation keeps these separate and testable independently
+- **Trade-offs:** Slightly more code paths to maintain (delegation + fallback), but execution engine can be iterated independently and auto-mode remains a stable orchestration layer
+
+### Fallback to legacy executeFeature() when LeadEngineerService not available, rather than requiring it (2026-02-18)
+- **Context:** LeadEngineerService might be disabled or not initialized in some deployments or test scenarios
+- **Why:** Maintains backward compatibility and allows gradual rollout - projects without Lead Engineer continue functioning. Prevents hard dependency that could break existing deployments
+- **Rejected:** Could have required Lead Engineer (forces migration), or removed legacy path entirely (breaks existing code)
+- **Trade-offs:** Gained flexibility and safety, added conditional logic and two code paths to test. But risk is mitigated since both paths have same input/output contract
+- **Breaking if changed:** If legacy executeFeature() is ever removed, this fallback must be removed too or auto-mode will silently fail to process features
+
+#### [Gotcha] Used minimal ExecuteOptions interface at delegation point because Lead Engineer state machine will build complete options internally, but state machine processors are still stubs (2026-02-18)
+- **Situation:** AutoModeService had full ExecuteOptions ready, but Lead Engineer state machine doesn't currently use most fields
+- **Root cause:** Avoids over-engineering the interface before state machine processors are implemented. State machine is responsible for assembling execution context
+- **How to avoid:** Simpler integration now, but when state machine processors are implemented and need AutoModeService data, the interface will need to expand - caught by type system then
+
+### Use environment variable (GITHUB_ENV) to signal restart exhaustion from verification step to notification step rather than exit code or file artifact (2026-02-18)
+- **Context:** Needed to communicate restart exhaustion condition between two separate GitHub Action steps for conditional alerting
+- **Why:** GITHUB_ENV persists state across steps in same job, making it visible to downstream steps without adding complexity. Exit codes are consumed by if conditions and don't preserve semantic meaning
+- **Rejected:** Output files (would require artifact upload) or exit codes (would need step condition logic); GITHUB_ENV is GitHub Actions native for cross-step communication
+- **Trade-offs:** Easier to read/debug than parsing exit codes, but couples implementation to GitHub Actions runtime
+- **Breaking if changed:** Without this pattern, restart exhaustion alert would need to be detected independently in Discord notification step, doubling the detection logic
+
+### Kept crew-members/index.ts as a stub file with backward compatibility note instead of complete deletion (2026-02-18)
+- **Context:** Feature scope specified removing crew loop checks but maintaining system stability. Index file existed as a re-export barrel.
+- **Why:** Prevents import errors if external code references the crew-members directory. Provides a clear migration path with documentation rather than hard breaking changes.
+- **Rejected:** Complete deletion of the directory would have been simpler but would break any code that imports from services/crew-members/ even if those specific members are removed.
+- **Trade-offs:** Slightly more code to maintain vs. cleaner directory structure. Tradeoff favors stability during multi-phase deprecation.
+- **Breaking if changed:** Removing the stub would cause import-time failures for any consuming code, requiring coordinated multi-service updates.
+
+#### [Gotcha] Dashboard endpoint was the only external consumer of crew status despite crew loop being a large system (2026-02-18)
+- **Situation:** Crew loop service was extensively implemented with 7 different member checks and multiple initialization steps, yet only dashboard.ts consumed the status output.
+- **Root cause:** This indicates the crew loop was well-isolated - a large internal system with minimal external API surface. The system did extensive work but only surfaced crew status in one place.
+- **How to avoid:** Well-isolated systems are easier to remove but can hide their scale from initial code review. The isolation made this removal very clean.
+
+### Left scheduler service intact despite crew loop deletion, even though crew loop depended on it (2026-02-18)
+- **Context:** CrewLoopService was a consumer of the scheduler service. Crew member checks were scheduled tasks managed by this scheduler.
+- **Why:** Scheduler service has other legitimate uses (system health monitoring will use it). Removing scheduler would have cascading effects on other features. Better to remove the consumer (crew loop) than the general utility.
+- **Rejected:** Could have removed scheduler too, but that would eliminate infrastructure others depend on.
+- **Trade-offs:** Scheduler remains in codebase even with one fewer consumer vs. complete cleanup. Tradeoff favors general utility preservation.
+- **Breaking if changed:** If scheduler were removed, AVA's health monitoring and any other scheduled tasks would break. The crew loop removal should not affect scheduler lifecycle.

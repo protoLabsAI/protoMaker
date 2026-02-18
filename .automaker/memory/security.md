@@ -128,3 +128,13 @@ usageStats:
 - **Rejected:** Could extract session from JWT/auth context only, but would require business logic inside handlers to validate session ownership, creating authorization bypass opportunities
 - **Trade-offs:** URL parameter is visible in logs and browser history (but session ID itself isn't sensitive), but provides explicit authorization checkpoints
 - **Breaking if changed:** If sessions become cross-user shareable, the assumption that URL sessionId = owner identity breaks, requiring additional permission checks inside handlers
+
+#### [Pattern] Multi-layer deployment readiness verification via /api/health/ready endpoint that checks API key configuration, data directory accessibility, and writability before marking server as ready (2026-02-18)
+- **Problem solved:** Deploy pipeline was accepting server as ready without verifying critical runtime dependencies were properly initialized
+- **Why this works:** Container restart loops can occur silently; checking only HTTP 200 response status misses misconfiguration states. Verifying API key presence and data directory state prevents deployments that appear successful but fail during operation
+- **Trade-offs:** Adds 2-3 extra curl calls per deployment verification (30ms total) but prevents cascading failures and manual rollbacks
+
+#### [Pattern] Graduated alerting strategy: success message includes version and doc status, failure message branches on rollback outcome, critical alerts (restart exhaustion) append to failure message (2026-02-18)
+- **Problem solved:** Discord notifications were generic and didn't provide actionable information about failure root cause or what operator should do
+- **Why this works:** Different failure modes require different human responses: rollback success = monitoring only, rollback failure = immediate manual intervention, restart exhaustion = infrastructure restart. Graduated alerts direct operator attention appropriately
+- **Trade-offs:** More complex notification script but provides semantic information that prevents wrong remediation actions
