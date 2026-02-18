@@ -18,7 +18,14 @@ const logger = createLogger('AutoUpdater');
  * Current update state sent to renderer via IPC
  */
 interface UpdateState {
-  status: 'idle' | 'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'error';
+  status:
+    | 'idle'
+    | 'checking'
+    | 'available'
+    | 'not-available'
+    | 'downloading'
+    | 'downloaded'
+    | 'error';
   info?: UpdateInfo;
   progress?: ProgressInfo;
   error?: string;
