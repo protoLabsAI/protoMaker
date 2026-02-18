@@ -929,6 +929,32 @@ Implement this feature by:
 **Skill Creation:**
 If you discover a reusable pattern during implementation, consider creating a skill file at \`.automaker/skills/{name}.md\`. Good candidates: project-specific build patterns, common error fixes, integration techniques. See the skill format in the system prompt.
 
+## Verification Gates (MANDATORY)
+
+Before writing your summary, you MUST complete ALL of these:
+
+1. Run \`npm run build:server\` (or the appropriate build command) and verify exit code 0
+2. Run tests if any exist for the modified files
+3. Run \`git diff --stat\` to confirm only intended files were changed
+4. If you claim "tests pass" — paste the actual test output
+5. If you claim "build succeeds" — paste the actual build output
+
+DO NOT write your summary until all gates pass. If a gate fails, fix the issue first.
+
+## When Stuck
+
+If you have attempted 3+ fixes for the same error:
+- STOP attempting more fixes
+- Document what you tried and what happened each time
+- Report this in your summary as a blocker
+- Do NOT continue making speculative changes
+
+## Red Flags — STOP if you catch yourself thinking:
+- "This should work" (without running it)
+- "I'm confident this is correct" (confidence is not evidence)
+- "The build will pass" (run it and prove it)
+- "I'll skip verification since the change is small" (small changes need verification too)
+
 When done, wrap your final summary in <summary> tags like this:
 
 <summary>
