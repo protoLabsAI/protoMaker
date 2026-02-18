@@ -184,7 +184,6 @@ export {
   extractOptionalEnum,
 } from './content/xml-parser.js';
 
-
 // Project planning flow (Linear-native HITL workflow)
 export {
   createProjectPlanningFlow,
@@ -224,4 +223,3 @@ export {
   createLLMPRDGenerator,
   createLLMMilestonePlanner,
 } from './project-planning/index.js';
-
