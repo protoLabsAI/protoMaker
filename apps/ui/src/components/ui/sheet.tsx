@@ -7,4 +7,4 @@ export {
   SheetTitle,
   SheetTrigger,
   SheetClose,
-} from '@automaker/ui-components/atoms';
+} from '@protolabs/ui/atoms';

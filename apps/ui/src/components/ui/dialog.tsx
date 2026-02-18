@@ -9,4 +9,4 @@ export {
   DialogPortal,
   DialogTitle,
   DialogTrigger,
-} from '@automaker/ui-components/atoms';
+} from '@protolabs/ui/atoms';

@@ -311,7 +311,7 @@ The preview decorator applies theme classes to the document root. All theme CSS 
 
 ## Extracted UI package
 
-UI primitives are extracted to `@automaker/ui-components` at `libs/ui/`. The package uses an atoms/molecules/organisms structure with 26+ atom components (button, card, dialog, badge, etc.).
+UI primitives are extracted to `@protolabs/ui` at `libs/ui/`. The package uses an atoms/molecules/organisms structure with 26+ atom components (button, card, dialog, badge, etc.).
 
 ### Package structure
 
@@ -326,11 +326,11 @@ libs/ui/
       theme/           # Theme generator and utilities
       utils.ts         # cn() and helpers
     index.ts           # Barrel export
-  package.json         # @automaker/ui-components
+  package.json         # @protolabs/ui
   tsconfig.json
 ```
 
-`apps/ui/` depends on `@automaker/ui-components` via workspace linking. This enables sharing UI components across future apps (docs site, template repos, setupLab offerings).
+`apps/ui/` depends on `@protolabs/ui` via workspace linking. This enables sharing UI components across future apps (docs site, template repos, setupLab offerings).
 
 ## React 19 patterns
 
@@ -421,7 +421,7 @@ Current gaps between philosophy and implementation. These are tracked as future 
 | Monolithic views           | `board-view.tsx` (1,908 lines), `terminal-view.tsx` (1,809 lines)              | Decompose into sub-components like `settings-view/` already has        | High     |
 | Storybook coverage         | Config + 14 stories (5 ui primitives + 9 dashboard components)                 | Stories for all UI primitives, interaction tests, Chromatic CI         | High     |
 | Domain components in `ui/` | `git-diff-panel`, `dependency-selector`, `log-viewer` etc. in `components/ui/` | Move to `components/shared/` or view-specific directories              | Medium   |
-| UI package gaps            | 26 atoms extracted to `@automaker/ui-components`; molecules/organisms pending  | Full extraction of all primitives to `libs/ui/`                        | Medium   |
+| UI package gaps            | 26 atoms extracted to `@protolabs/ui`; molecules/organisms pending             | Full extraction of all primitives to `libs/ui/`                        | Medium   |
 | Static theme files         | 6 hand-written CSS files                                                       | Generate from TypeScript config                                        | Medium   |
 | No typography tokens       | Font sizes, line heights are ad-hoc Tailwind classes                           | Formalize as semantic tokens                                           | Low      |
 | No spacing tokens          | Spacing uses Tailwind defaults only                                            | Define semantic spacing scale if needed                                | Low      |

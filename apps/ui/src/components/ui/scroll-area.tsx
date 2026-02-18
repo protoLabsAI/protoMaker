@@ -1,1 +1,1 @@
-export { ScrollArea, ScrollBar } from '@automaker/ui-components/atoms';
+export { ScrollArea, ScrollBar } from '@protolabs/ui/atoms';

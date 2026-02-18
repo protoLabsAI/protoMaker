@@ -6,4 +6,4 @@ export {
   BreadcrumbPage,
   BreadcrumbSeparator,
   BreadcrumbEllipsis,
-} from '@automaker/ui-components/atoms';
+} from '@protolabs/ui/atoms';

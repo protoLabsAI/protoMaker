@@ -1,1 +1,1 @@
-export { Textarea } from '@automaker/ui-components/atoms';
+export { Textarea } from '@protolabs/ui/atoms';

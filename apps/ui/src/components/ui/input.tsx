@@ -1,1 +1,1 @@
-export { Input } from '@automaker/ui-components/atoms';
+export { Input } from '@protolabs/ui/atoms';

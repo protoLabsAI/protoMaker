@@ -8,4 +8,4 @@ export {
   CommandList,
   CommandSeparator,
   CommandShortcut,
-} from '@automaker/ui-components/atoms';
+} from '@protolabs/ui/atoms';

@@ -7,4 +7,4 @@ export {
   SelectSeparator,
   SelectTrigger,
   SelectValue,
-} from '@automaker/ui-components/atoms';
+} from '@protolabs/ui/atoms';

@@ -1,1 +1,1 @@
-export { Button, buttonVariants } from '@automaker/ui-components/atoms';
+export { Button, buttonVariants } from '@protolabs/ui/atoms';

@@ -1,1 +1,1 @@
-export { Popover, PopoverContent, PopoverTrigger } from '@automaker/ui-components/atoms';
+export { Popover, PopoverContent, PopoverTrigger } from '@protolabs/ui/atoms';

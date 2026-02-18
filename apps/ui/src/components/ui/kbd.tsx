@@ -1,1 +1,1 @@
-export { Kbd, KbdGroup } from '@automaker/ui-components/atoms';
+export { Kbd, KbdGroup } from '@protolabs/ui/atoms';

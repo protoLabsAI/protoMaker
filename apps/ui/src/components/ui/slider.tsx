@@ -1,1 +1,1 @@
-export { Slider } from '@automaker/ui-components/atoms';
+export { Slider } from '@protolabs/ui/atoms';

@@ -1,1 +1,1 @@
-export { Checkbox } from '@automaker/ui-components/atoms';
+export { Checkbox } from '@protolabs/ui/atoms';

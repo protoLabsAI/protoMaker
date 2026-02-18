@@ -5,4 +5,4 @@ export {
   CardTitle,
   CardDescription,
   CardContent,
-} from '@automaker/ui-components/atoms';
+} from '@protolabs/ui/atoms';

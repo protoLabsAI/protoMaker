@@ -14,4 +14,4 @@ export {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
   DropdownMenuCheckboxItem,
-} from '@automaker/ui-components/atoms';
+} from '@protolabs/ui/atoms';

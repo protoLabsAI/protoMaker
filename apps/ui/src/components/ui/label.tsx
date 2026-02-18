@@ -1,1 +1,1 @@
-export { Label } from '@automaker/ui-components/atoms';
+export { Label } from '@protolabs/ui/atoms';

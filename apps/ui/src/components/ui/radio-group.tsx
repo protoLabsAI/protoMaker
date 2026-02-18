@@ -1,1 +1,1 @@
-export { RadioGroup, RadioGroupItem } from '@automaker/ui-components/atoms';
+export { RadioGroup, RadioGroupItem } from '@protolabs/ui/atoms';

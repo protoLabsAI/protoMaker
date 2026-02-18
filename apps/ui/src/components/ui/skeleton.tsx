@@ -1,1 +1,1 @@
-export { SkeletonPulse } from '@automaker/ui-components/atoms';
+export { SkeletonPulse } from '@protolabs/ui/atoms';

@@ -1,1 +1,1 @@
-export { Switch } from '@automaker/ui-components/atoms';
+export { Switch } from '@protolabs/ui/atoms';

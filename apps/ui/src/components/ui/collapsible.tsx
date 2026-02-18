@@ -1,5 +1,1 @@
-export {
-  Collapsible,
-  CollapsibleTrigger,
-  CollapsibleContent,
-} from '@automaker/ui-components/atoms';
+export { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@protolabs/ui/atoms';

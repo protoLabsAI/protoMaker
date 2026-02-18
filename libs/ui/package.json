@@ -1,5 +1,5 @@
 {
-  "name": "@automaker/ui-components",
+  "name": "@protolabs/ui",
   "version": "1.0.0",
   "type": "module",
   "description": "Shared UI components for AutoMaker",

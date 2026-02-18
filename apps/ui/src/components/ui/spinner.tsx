@@ -1,1 +1,1 @@
-export { Spinner } from '@automaker/ui-components/atoms';
+export { Spinner } from '@protolabs/ui/atoms';
