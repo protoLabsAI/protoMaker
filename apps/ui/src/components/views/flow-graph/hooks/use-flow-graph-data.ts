@@ -2,7 +2,7 @@
  * useFlowGraphData — Main adapter hook
  *
  * Transforms existing hooks + board store into React Flow nodes and edges.
- * Static nodes: Ava, crew, services, integrations (fixed positions)
+ * Static nodes: Ava, services, integrations (fixed positions)
  * Dynamic nodes: features (from store), agents (from running agents)
  */
 
@@ -10,7 +10,6 @@ import { useMemo } from 'react';
 import type { Node, Edge } from '@xyflow/react';
 import { useAppStore } from '@/store/app-store';
 import { useRunningAgents } from '@/hooks/queries/use-running-agents';
-import { useCrewStatus } from '@/hooks/queries/use-crew-status';
 import {
   useIntegrationStatus,
   useCapacityMetrics,
@@ -20,8 +19,6 @@ import {
   NODE_IDS,
   STATIC_POSITIONS,
   STATIC_EDGES,
-  CREW_NODE_ID_MAP,
-  CREW_DISPLAY_NAMES,
   DYNAMIC_ZONE_START_Y,
   DYNAMIC_ZONE_CENTER_X,
   PIPELINE_STAGES,
@@ -29,7 +26,6 @@ import {
 } from '../constants';
 import type {
   OrchestratorNodeData,
-  CrewNodeData,
   ServiceNodeData,
   IntegrationNodeData,
   FeatureNodeData,
@@ -50,7 +46,6 @@ export function useFlowGraphData(options: UseFlowGraphDataOptions = {}) {
   const projectPath = currentProject?.path;
 
   const { data: runningAgentsData } = useRunningAgents();
-  const { data: crewStatus } = useCrewStatus();
   const { data: integrationStatus } = useIntegrationStatus(projectPath);
   const { data: capacityData } = useCapacityMetrics(projectPath);
   const { data: healthData } = useSystemHealth(projectPath);
@@ -103,50 +98,7 @@ export function useFlowGraphData(options: UseFlowGraphDataOptions = {}) {
       draggable: false,
     });
 
-    // 2. Crew nodes (members is now an array after transform in useCrewStatus)
-    const crewMembers = crewStatus?.members ?? [];
-    for (const member of crewMembers) {
-      const nodeId = CREW_NODE_ID_MAP[member.id];
-      if (!nodeId) continue; // Skip Ava and GTM in crew nodes
-
-      const crewData: CrewNodeData = {
-        id: member.id,
-        label: CREW_DISPLAY_NAMES[member.id] || member.id,
-        enabled: member.enabled,
-        isRunning: member.running,
-        lastCheckTime: member.lastCheck?.timestamp ?? null,
-        lastSeverity: member.lastCheck?.result?.severity ?? null,
-      };
-      result.push({
-        id: nodeId,
-        type: 'crew',
-        position: STATIC_POSITIONS[nodeId],
-        data: crewData,
-        draggable: false,
-      });
-    }
-
-    // Add crew nodes with defaults if not returned from API
-    for (const [memberId, nodeId] of Object.entries(CREW_NODE_ID_MAP)) {
-      if (result.some((n) => n.id === nodeId)) continue;
-      const crewData: CrewNodeData = {
-        id: memberId,
-        label: CREW_DISPLAY_NAMES[memberId] || memberId,
-        enabled: false,
-        isRunning: false,
-        lastCheckTime: null,
-        lastSeverity: null,
-      };
-      result.push({
-        id: nodeId,
-        type: 'crew',
-        position: STATIC_POSITIONS[nodeId],
-        data: crewData,
-        draggable: false,
-      });
-    }
-
-    // 3. Service nodes
+    // 2. Service nodes
     const autoModeData: ServiceNodeData = {
       label: 'Auto-Mode',
       serviceType: 'auto-mode',
@@ -175,7 +127,7 @@ export function useFlowGraphData(options: UseFlowGraphDataOptions = {}) {
       draggable: false,
     });
 
-    // 4. Integration nodes
+    // 3. Integration nodes
     const integrations = integrationStatus as
       | Record<string, { connected?: boolean; status?: string }>
       | undefined;
@@ -202,7 +154,7 @@ export function useFlowGraphData(options: UseFlowGraphDataOptions = {}) {
       });
     }
 
-    // 5. Dynamic feature nodes
+    // 4. Dynamic feature nodes
     const featureSpacing = 200;
     const featureStartX =
       DYNAMIC_ZONE_CENTER_X - ((activeFeatures.length - 1) * featureSpacing) / 2;
@@ -227,7 +179,7 @@ export function useFlowGraphData(options: UseFlowGraphDataOptions = {}) {
       });
     });
 
-    // 6. Dynamic agent nodes (below their feature)
+    // 5. Dynamic agent nodes (below their feature)
     runningAgents.forEach((agent) => {
       const parentFeatureNode = result.find((n) => n.id === `feature-${agent.featureId}`);
       const agentData: AgentNodeData = {
@@ -253,7 +205,7 @@ export function useFlowGraphData(options: UseFlowGraphDataOptions = {}) {
       });
     });
 
-    // 7. Pipeline stage nodes (if enabled)
+    // 6. Pipeline stage nodes (if enabled)
     if (pipelineEnabled) {
       for (const stage of PIPELINE_STAGES) {
         const aggregate = stageAggregates.find((a) => a.stageId === stage.stageId);
@@ -280,7 +232,6 @@ export function useFlowGraphData(options: UseFlowGraphDataOptions = {}) {
     autoModeRunning,
     leadEngineerRunning,
     queueDepth,
-    crewStatus,
     integrationStatus,
     runningAgents,
   ]);

@@ -6,17 +6,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import {
-  Brain,
-  Server,
-  GitPullRequest,
-  LayoutGrid,
-  HeartPulse,
-  Cog,
-  Plug,
-  FileCode,
-  Bot,
-} from 'lucide-react';
+import { Brain, Cog, Plug, FileCode, Bot } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -24,12 +14,10 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@protolabs/ui/atoms';
-import { useCrewStatus } from '@/hooks/queries/use-crew-status';
 import { useStopFeature } from '@/hooks/mutations';
 import { AgentOutputModal } from '@/components/views/board-view/dialogs/agent-output-modal';
 import {
   OrchestratorSection,
-  CrewSection,
   ServiceSection,
   IntegrationSection,
   FeatureSection,
@@ -37,7 +25,6 @@ import {
 } from './node-detail-sections';
 import type {
   OrchestratorNodeData,
-  CrewNodeData,
   ServiceNodeData,
   IntegrationNodeData,
   FeatureNodeData,
@@ -58,18 +45,10 @@ interface NodeDetailDialogProps {
 
 const NODE_TYPE_ICONS: Record<string, typeof Brain> = {
   orchestrator: Brain,
-  crew: Server,
   service: Cog,
   integration: Plug,
   feature: FileCode,
   agent: Bot,
-};
-
-const CREW_ICONS: Record<string, typeof Server> = {
-  'crew-frank': Server,
-  'crew-pr-maintainer': GitPullRequest,
-  'crew-board-janitor': LayoutGrid,
-  'crew-system-health': HeartPulse,
 };
 
 function getNodeTitle(node: SelectedNode): string {
@@ -82,7 +61,6 @@ function getNodeTitle(node: SelectedNode): string {
 function getNodeSubtitle(nodeType: string): string {
   const subtitles: Record<string, string> = {
     orchestrator: 'Orchestrator',
-    crew: 'Crew Member',
     service: 'Service',
     integration: 'Integration',
     feature: 'Feature',
@@ -92,7 +70,6 @@ function getNodeSubtitle(nodeType: string): string {
 }
 
 export function NodeDetailDialog({ open, onOpenChange, node }: NodeDetailDialogProps) {
-  const { data: crewStatus } = useCrewStatus();
   const stopFeature = useStopFeature();
   const [showLogsModal, setShowLogsModal] = useState(false);
 
@@ -107,18 +84,9 @@ export function NodeDetailDialog({ open, onOpenChange, node }: NodeDetailDialogP
 
   if (!node) return null;
 
-  const Icon =
-    (node.nodeType === 'crew' ? CREW_ICONS[node.nodeId] : null) ||
-    NODE_TYPE_ICONS[node.nodeType] ||
-    Cog;
+  const Icon = NODE_TYPE_ICONS[node.nodeType] || Cog;
   const title = getNodeTitle(node);
   const subtitle = getNodeSubtitle(node.nodeType);
-
-  // Find the full crew member status for crew nodes
-  const crewMemberStatus =
-    node.nodeType === 'crew' && crewStatus?.members
-      ? crewStatus.members.find((m) => m.id === (node.nodeData as CrewNodeData).id)
-      : undefined;
 
   const agentData = node.nodeType === 'agent' ? (node.nodeData as AgentNodeData) : null;
 
@@ -141,9 +109,6 @@ export function NodeDetailDialog({ open, onOpenChange, node }: NodeDetailDialogP
           <div className="mt-2">
             {node.nodeType === 'orchestrator' && (
               <OrchestratorSection data={node.nodeData as OrchestratorNodeData} />
-            )}
-            {node.nodeType === 'crew' && (
-              <CrewSection data={node.nodeData as CrewNodeData} memberStatus={crewMemberStatus} />
             )}
             {node.nodeType === 'service' && (
               <ServiceSection data={node.nodeData as ServiceNodeData} />

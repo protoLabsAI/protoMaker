@@ -1,5 +1,5 @@
 /**
- * Delegation Edge — Gradient stroke with animated dash from Ava to crew/services
+ * Delegation Edge — Gradient stroke with animated dash from Ava to services
  *
  * Uses SVG linearGradient for a violet→transparent fade and animated
  * stroke-dashoffset for subtle directional flow.

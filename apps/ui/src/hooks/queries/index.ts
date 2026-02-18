@@ -101,10 +101,6 @@ export {
   useActivityFeed,
 } from './use-metrics';
 
-// Crew Status
-export { useCrewStatus } from './use-crew-status';
-export type { CrewMemberStatus, CrewStatusResponse } from './use-crew-status';
-
 // Agent Templates
 export { useAgentTemplates } from './use-agent-templates';
 export type { AgentTemplateMetadata } from './use-agent-templates';

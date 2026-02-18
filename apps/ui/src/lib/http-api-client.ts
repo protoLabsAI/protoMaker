@@ -2832,11 +2832,6 @@ export class HttpApiClient implements ElectronAPI {
     status: (projectPath: string) => this.post('/api/integrations/status', { projectPath }),
   };
 
-  // Crew API
-  crew = {
-    status: () => this.get('/api/crew/status'),
-  };
-
   // System API
   system = {
     healthDashboard: (projectPath?: string) =>

@@ -5,17 +5,7 @@
  * existing hooks and the node's data prop.
  */
 
-import {
-  ExternalLink,
-  Clock,
-  Activity,
-  AlertTriangle,
-  CheckCircle,
-  XCircle,
-  DollarSign,
-  Square,
-  FileText,
-} from 'lucide-react';
+import { ExternalLink, Clock, DollarSign, Square, FileText } from 'lucide-react';
 import { Badge } from '@protolabs/ui/atoms';
 import { Button } from '@protolabs/ui/atoms';
 import { scrubPii } from '@/lib/scrub-pii';
@@ -23,13 +13,11 @@ import { formatCostUsd } from '@/lib/format';
 import { getLangfuseTraceUrl } from '@/lib/langfuse-url';
 import type {
   OrchestratorNodeData,
-  CrewNodeData,
   ServiceNodeData,
   IntegrationNodeData,
   FeatureNodeData,
   AgentNodeData,
 } from '../types';
-import type { CrewMemberStatus } from '@/hooks/queries/use-crew-status';
 
 // ============================================
 // Shared helpers
@@ -58,31 +46,10 @@ function TraceLink({ traceId }: { traceId: string }) {
   );
 }
 
-function SeverityBadge({ severity }: { severity: string }) {
-  const variant =
-    severity === 'ok'
-      ? 'default'
-      : severity === 'warning'
-        ? 'secondary'
-        : severity === 'critical' || severity === 'error'
-          ? 'destructive'
-          : 'outline';
-
-  return <Badge variant={variant}>{severity}</Badge>;
-}
-
 function formatDuration(ms: number): string {
   if (ms < 60_000) return `${Math.round(ms / 1000)}s`;
   if (ms < 3_600_000) return `${Math.round(ms / 60_000)}m`;
   return `${(ms / 3_600_000).toFixed(1)}h`;
-}
-
-function formatTimestamp(ts: string | null): string {
-  if (!ts) return 'Never';
-  const diff = Date.now() - new Date(ts).getTime();
-  if (diff < 60_000) return 'Just now';
-  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`;
-  return `${Math.floor(diff / 3_600_000)}h ago`;
 }
 
 // ============================================
@@ -102,84 +69,6 @@ export function OrchestratorSection({ data }: { data: OrchestratorNodeData }) {
           {data.autoModeRunning ? 'Running' : 'Stopped'}
         </Badge>
       </SectionRow>
-    </div>
-  );
-}
-
-// ============================================
-// Crew Section
-// ============================================
-
-export function CrewSection({
-  data,
-  memberStatus,
-}: {
-  data: CrewNodeData;
-  memberStatus?: CrewMemberStatus;
-}) {
-  const findings = memberStatus?.lastCheck?.result?.findings ?? [];
-
-  return (
-    <div className="space-y-3">
-      <div className="space-y-1">
-        <SectionRow label="Status">
-          <Badge variant={data.enabled ? 'default' : 'outline'}>
-            {data.enabled ? 'Enabled' : 'Disabled'}
-          </Badge>
-        </SectionRow>
-        {data.isRunning && (
-          <SectionRow label="State">
-            <span className="flex items-center gap-1.5 text-amber-400">
-              <Activity className="w-3 h-3 animate-pulse" />
-              Running check
-            </span>
-          </SectionRow>
-        )}
-        <SectionRow label="Last Check">{formatTimestamp(data.lastCheckTime)}</SectionRow>
-        {data.lastSeverity && (
-          <SectionRow label="Last Severity">
-            <SeverityBadge severity={data.lastSeverity} />
-          </SectionRow>
-        )}
-        {memberStatus && (
-          <>
-            <SectionRow label="Schedule">{memberStatus.schedule}</SectionRow>
-            <SectionRow label="Checks Run">{memberStatus.checkCount}</SectionRow>
-            <SectionRow label="Escalations">{memberStatus.escalationCount}</SectionRow>
-          </>
-        )}
-      </div>
-
-      {/* Findings list */}
-      {findings.length > 0 && (
-        <div className="space-y-1.5">
-          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            Last Findings
-          </h4>
-          <div className="space-y-1 max-h-40 overflow-y-auto">
-            {findings.map((f, i) => (
-              <div key={i} className="flex items-start gap-2 text-xs py-1 px-2 rounded bg-muted/30">
-                {f.severity === 'ok' ? (
-                  <CheckCircle className="w-3 h-3 mt-0.5 text-emerald-400 shrink-0" />
-                ) : f.severity === 'warning' ? (
-                  <AlertTriangle className="w-3 h-3 mt-0.5 text-amber-400 shrink-0" />
-                ) : (
-                  <XCircle className="w-3 h-3 mt-0.5 text-red-400 shrink-0" />
-                )}
-                <span className="text-foreground/80">{scrubPii(f.message)}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Last escalation */}
-      {memberStatus?.lastEscalation && (
-        <div className="text-xs text-muted-foreground">
-          Last escalation: {formatTimestamp(memberStatus.lastEscalation.timestamp)} (
-          {formatDuration(memberStatus.lastEscalation.durationMs)})
-        </div>
-      )}
     </div>
   );
 }

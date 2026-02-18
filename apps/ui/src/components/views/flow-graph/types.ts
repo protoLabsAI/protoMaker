@@ -19,16 +19,6 @@ export interface OrchestratorNodeData {
   [key: string]: unknown;
 }
 
-export interface CrewNodeData {
-  id: string;
-  label: string;
-  enabled: boolean;
-  isRunning: boolean;
-  lastCheckTime: string | null;
-  lastSeverity: string | null;
-  [key: string]: unknown;
-}
-
 export interface ServiceNodeData {
   label: string;
   serviceType: 'auto-mode' | 'lead-engineer';
@@ -103,7 +93,6 @@ export interface PipelineStageNodeData {
 // ============================================
 
 export type OrchestratorNode = Node<OrchestratorNodeData, 'orchestrator'>;
-export type CrewNode = Node<CrewNodeData, 'crew'>;
 export type ServiceNode = Node<ServiceNodeData, 'service'>;
 export type IntegrationNode = Node<IntegrationNodeData, 'integration'>;
 export type FeatureNode = Node<FeatureNodeData, 'feature'>;
@@ -112,7 +101,6 @@ export type PipelineStageNode = Node<PipelineStageNodeData, 'pipeline-stage'>;
 
 export type FlowNode =
   | OrchestratorNode
-  | CrewNode
   | ServiceNode
   | IntegrationNode
   | FeatureNode
@@ -152,7 +140,6 @@ export const FLOW_COLORS = {
 
 export const NODE_DIMENSIONS = {
   orchestrator: { width: 320, height: 160 },
-  crew: { width: 200, height: 100 },
   service: { width: 200, height: 100 },
   integration: { width: 160, height: 80 },
   feature: { width: 180, height: 80 },

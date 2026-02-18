@@ -3,11 +3,10 @@
  */
 
 import { motion } from 'motion/react';
-import { Brain, Server, Cog, Github, FileCode, Bot } from 'lucide-react';
+import { Brain, Cog, Github, FileCode, Bot } from 'lucide-react';
 
 const NODE_LEGEND = [
   { icon: Brain, label: 'Orchestrator', color: 'text-violet-400' },
-  { icon: Server, label: 'Crew', color: 'text-emerald-400' },
   { icon: Cog, label: 'Service', color: 'text-blue-400' },
   { icon: Github, label: 'Integration', color: 'text-zinc-400' },
   { icon: FileCode, label: 'Feature', color: 'text-amber-400' },
