@@ -12,7 +12,7 @@ import { getElectronAPI } from '@/lib/electron';
 import { LogViewer } from '@/components/shared/log-viewer';
 import { GitDiffPanel } from '@/components/shared/git-diff-panel';
 import { TaskProgressPanel } from '@/components/shared/task-progress-panel';
-import { Markdown } from '@/components/ui/markdown';
+import { Markdown } from '@protolabs/ui/molecules';
 import { useAppStore } from '@/store/app-store';
 import { extractSummary } from '@/lib/log-parser';
 import { useAgentOutput } from '@/hooks/queries';

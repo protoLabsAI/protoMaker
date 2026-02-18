@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Markdown } from '@/components/ui/markdown';
+import { Markdown } from '@protolabs/ui/molecules';
 import { Label } from '@/components/ui/label';
 import { Feature } from '@/store/app-store';
 import { Check, RefreshCw, Edit2, Eye } from 'lucide-react';

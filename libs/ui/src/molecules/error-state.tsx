@@ -1,5 +1,5 @@
 import { CircleDot, RefreshCw } from 'lucide-react';
-import { Button } from './button';
+import { Button } from '../atoms/button.js';
 
 interface ErrorStateProps {
   /** Error message to display */

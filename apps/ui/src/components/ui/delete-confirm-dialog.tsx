@@ -8,7 +8,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { HotkeyButton } from '@/components/shared/hotkey-button';
+import { HotkeyButton } from '@protolabs/ui/molecules';
 import type { ReactNode } from 'react';
 
 interface DeleteConfirmDialogProps {

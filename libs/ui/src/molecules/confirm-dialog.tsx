@@ -7,9 +7,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { HotkeyButton } from '@/components/shared/hotkey-button';
+} from '../atoms/dialog.js';
+import { Button } from '../atoms/button.js';
+import { HotkeyButton } from './hotkey-button.js';
 
 interface ConfirmDialogProps {
   open: boolean;

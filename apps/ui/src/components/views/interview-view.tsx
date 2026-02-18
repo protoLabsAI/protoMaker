@@ -9,7 +9,7 @@ import { Bot, Send, User, Sparkles, FileText, ArrowLeft, CheckCircle } from 'luc
 import { Spinner } from '@/components/ui/spinner';
 import { cn, generateUUID } from '@/lib/utils';
 import { getElectronAPI } from '@/lib/electron';
-import { Markdown } from '@/components/ui/markdown';
+import { Markdown } from '@protolabs/ui/molecules';
 import { useFileBrowser } from '@/contexts/file-browser-context';
 import { toast } from 'sonner';
 import { useNavigate } from '@tanstack/react-router';

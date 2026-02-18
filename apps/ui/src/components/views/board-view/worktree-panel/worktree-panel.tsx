@@ -24,7 +24,7 @@ import {
 } from './components';
 import { useAppStore } from '@/store/app-store';
 import { ViewWorktreeChangesDialog, PushToRemoteDialog, MergeWorktreeDialog } from '../dialogs';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { ConfirmDialog } from '@protolabs/ui/molecules';
 import { Undo2 } from 'lucide-react';
 import { getElectronAPI } from '@/lib/electron';
 

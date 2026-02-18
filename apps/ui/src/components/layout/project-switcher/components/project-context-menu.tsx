@@ -4,7 +4,7 @@ import { Edit2, Trash2, Palette, ChevronRight, Moon, Sun, Monitor } from 'lucide
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { type ThemeMode, useAppStore } from '@/store/app-store';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { ConfirmDialog } from '@protolabs/ui/molecules';
 import type { Project } from '@/lib/electron';
 import {
   PROJECT_DARK_THEMES,

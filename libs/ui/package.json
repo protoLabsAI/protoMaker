@@ -8,22 +8,27 @@
   "exports": {
     ".": {
       "import": "./dist/index.js",
+      "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
     "./atoms": {
       "import": "./dist/atoms/index.js",
+      "types": "./dist/atoms/index.d.ts",
       "default": "./dist/atoms/index.js"
     },
     "./molecules": {
       "import": "./dist/molecules/index.js",
+      "types": "./dist/molecules/index.d.ts",
       "default": "./dist/molecules/index.js"
     },
     "./organisms": {
       "import": "./dist/organisms/index.js",
+      "types": "./dist/organisms/index.d.ts",
       "default": "./dist/organisms/index.js"
     },
     "./lib": {
       "import": "./dist/lib/index.js",
+      "types": "./dist/lib/index.d.ts",
       "default": "./dist/lib/index.js"
     },
     "./themes.css": "./src/themes/themes.css"
@@ -65,6 +70,9 @@
     "clsx": "2.1.1",
     "cmdk": "^1.0.4",
     "lucide-react": "0.562.0",
+    "react-markdown": "10.1.0",
+    "rehype-raw": "7.0.0",
+    "rehype-sanitize": "^6.0.0",
     "tailwind-merge": "3.4.0"
   },
   "peerDependencies": {

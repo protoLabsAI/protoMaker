@@ -10,7 +10,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { getElectronAPI, type GitHubPR } from '@/lib/electron';
 import { useAppStore } from '@/store/app-store';
 import { Button } from '@/components/ui/button';
-import { Markdown } from '@/components/ui/markdown';
+import { Markdown } from '@protolabs/ui/molecules';
 import { cn } from '@/lib/utils';
 import { useGitHubPRs } from '@/hooks/queries';
 

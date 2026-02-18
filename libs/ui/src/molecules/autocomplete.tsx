@@ -1,8 +1,8 @@
 import * as React from 'react';
 import { Check, ChevronsUpDown, LucideIcon } from 'lucide-react';
 
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
+import { cn } from '../lib/utils.js';
+import { Button } from '../atoms/button.js';
 import {
   Command,
   CommandEmpty,
@@ -10,8 +10,8 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from '@/components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+} from '../atoms/command.js';
+import { Popover, PopoverContent, PopoverTrigger } from '../atoms/popover.js';
 
 export interface AutocompleteOption {
   value: string;

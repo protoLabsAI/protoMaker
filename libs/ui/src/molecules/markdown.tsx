@@ -1,7 +1,7 @@
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import rehypeSanitize from 'rehype-sanitize';
-import { cn } from '@/lib/utils';
+import { cn } from '../lib/utils.js';
 
 interface MarkdownProps {
   children: string;

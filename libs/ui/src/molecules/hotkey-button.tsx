@@ -1,6 +1,6 @@
 import React, { useEffect, useCallback, useRef } from 'react';
-import { Button, buttonVariants } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { Button, buttonVariants } from '../atoms/button.js';
+import { cn } from '../lib/utils.js';
 import type { VariantProps } from 'class-variance-authority';
 
 export interface HotkeyConfig {

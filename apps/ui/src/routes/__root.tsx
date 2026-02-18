@@ -35,7 +35,7 @@ import { Toaster } from 'sonner';
 import { type ThemeOption, themeOptions } from '@/config/theme-options';
 import { SandboxRiskDialog } from '@/components/dialogs/sandbox-risk-dialog';
 import { SandboxRejectionScreen } from '@/components/dialogs/sandbox-rejection-screen';
-import { LoadingState } from '@/components/ui/loading-state';
+import { LoadingState } from '@protolabs/ui/molecules';
 import { useProjectSettingsLoader } from '@/hooks/use-project-settings-loader';
 import { useIsCompact } from '@/hooks/use-media-query';
 import type { Project } from '@/lib/electron';

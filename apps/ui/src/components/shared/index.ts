@@ -22,11 +22,7 @@ export { ProviderIcon } from './provider-icon';
 
 // Input Components
 export { PathInput } from './path-input';
-export { Autocomplete } from './autocomplete';
 export { ImageDropZone } from './image-drop-zone';
-
-// Button Components
-export { HotkeyButton } from './hotkey-button';
 
 // Keyboard Components
 export { KeyboardMap } from './keyboard-map';

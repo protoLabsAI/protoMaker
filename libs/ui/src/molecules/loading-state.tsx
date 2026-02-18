@@ -1,4 +1,4 @@
-import { Spinner } from '@/components/ui/spinner';
+import { Spinner } from '../atoms/spinner.js';
 
 interface LoadingStateProps {
   /** Optional custom message to display below the spinner */

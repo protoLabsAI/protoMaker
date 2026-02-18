@@ -5,7 +5,7 @@ import { getElectronAPI } from '@/lib/electron';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { HotkeyButton } from '@/components/shared/hotkey-button';
+import { HotkeyButton } from '@protolabs/ui/molecules';
 import { Card } from '@/components/ui/card';
 import {
   HeaderActionsPanel,
@@ -45,7 +45,7 @@ import { cn } from '@/lib/utils';
 
 const logger = createLogger('ContextView');
 import { sanitizeFilename } from '@/lib/image-utils';
-import { Markdown } from '../ui/markdown';
+import { Markdown } from '@protolabs/ui/molecules';
 import {
   DropdownMenu,
   DropdownMenuContent,

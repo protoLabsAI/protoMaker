@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const logger = createLogger('SessionManager');
 import { Button } from '@/components/ui/button';
-import { HotkeyButton } from '@/components/shared/hotkey-button';
+import { HotkeyButton } from '@protolabs/ui/molecules';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {

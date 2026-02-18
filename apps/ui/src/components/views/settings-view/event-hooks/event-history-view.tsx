@@ -18,7 +18,7 @@ import { useAppStore } from '@/store/app-store';
 import type { StoredEventSummary, StoredEvent, EventHookTrigger } from '@automaker/types';
 import { EVENT_HOOK_TRIGGER_LABELS } from '@automaker/types';
 import { getHttpApiClient } from '@/lib/http-api-client';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { ConfirmDialog } from '@protolabs/ui/molecules';
 
 export function EventHistoryView() {
   const currentProject = useAppStore((state) => state.currentProject);
