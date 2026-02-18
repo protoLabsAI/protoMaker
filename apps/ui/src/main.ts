@@ -1,3 +1,16 @@
+// Suppress EPIPE errors on stdout/stderr.
+// When Electron is launched from Finder (not a terminal), these streams
+// are broken pipes. console.log/warn/error writes throw EPIPE, crashing
+// the main process before the UI can render.
+process.stdout?.on('error', (err) => {
+  if ((err as NodeJS.ErrnoException).code === 'EPIPE') return;
+  throw err;
+});
+process.stderr?.on('error', (err) => {
+  if ((err as NodeJS.ErrnoException).code === 'EPIPE') return;
+  throw err;
+});
+
 /**
  * Electron main process (TypeScript)
  *
