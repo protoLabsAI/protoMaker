@@ -36,7 +36,9 @@
   "scripts": {
     "build": "tsup",
     "watch": "tsup --watch",
-    "build:check": "tsc --noEmit"
+    "build:check": "tsc --noEmit",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
   },
   "keywords": [
     "automaker",
@@ -80,8 +82,13 @@
     "tailwindcss": ">=4"
   },
   "devDependencies": {
+    "@chromatic-com/storybook": "^5.0.1",
+    "@storybook/addon-a11y": "^10.2.8",
+    "@storybook/addon-docs": "^10.2.8",
+    "@storybook/react-vite": "^10.2.8",
     "@types/node": "22.19.3",
     "@types/react": "^19.0.10",
+    "storybook": "^10.2.8",
     "tsup": "^8.5.1",
     "typescript": "5.9.3"
   }
