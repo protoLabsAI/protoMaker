@@ -392,6 +392,24 @@ export class DataIntegrityWatchdogService {
   }
 
   /**
+   * Notify the watchdog that a feature was intentionally deleted.
+   * Decrements lastKnownCount so the threshold isn't tripped by normal operations.
+   */
+  async notifyFeatureDeleted(projectPath: string, count: number = 1): Promise<void> {
+    const state = await this.readState();
+    const projectState = state.projects[projectPath];
+    if (!projectState) return;
+
+    projectState.lastKnownCount = Math.max(0, projectState.lastKnownCount - count);
+    projectState.lastCheckedAt = new Date().toISOString();
+    await this.writeState(state);
+
+    logger.debug(
+      `Decremented lastKnownCount by ${count} for ${projectPath}, now ${projectState.lastKnownCount}`
+    );
+  }
+
+  /**
    * Get current integrity status for a project
    */
   async getStatus(projectPath: string): Promise<{

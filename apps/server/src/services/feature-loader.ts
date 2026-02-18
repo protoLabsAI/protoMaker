@@ -31,6 +31,7 @@ import {
 } from '@automaker/platform';
 import { addImplementedFeature, type ImplementedFeature } from '../lib/xml-extractor.js';
 import { debugLog } from '../lib/debug-log.js';
+import type { DataIntegrityWatchdogService } from './data-integrity-watchdog-service.js';
 
 const logger = createLogger('FeatureLoader');
 
@@ -38,6 +39,11 @@ const logger = createLogger('FeatureLoader');
 export type { Feature };
 
 export class FeatureLoader implements FeatureStore {
+  private integrityWatchdog: DataIntegrityWatchdogService | null = null;
+
+  setIntegrityWatchdog(watchdog: DataIntegrityWatchdogService): void {
+    this.integrityWatchdog = watchdog;
+  }
   /**
    * Normalize feature status to canonical values
    * Defensive: ensures all features use the 6-status system
@@ -605,6 +611,12 @@ export class FeatureLoader implements FeatureStore {
       const featureDir = this.getFeatureDir(projectPath, featureId);
       await secureFs.rm(featureDir, { recursive: true, force: true });
       logger.info(`Deleted feature ${featureId}`);
+
+      // Notify integrity watchdog so it doesn't flag this as data loss
+      if (this.integrityWatchdog) {
+        await this.integrityWatchdog.notifyFeatureDeleted(projectPath);
+      }
+
       return true;
     } catch (error) {
       logger.error(`Failed to delete feature ${featureId}:`, error);

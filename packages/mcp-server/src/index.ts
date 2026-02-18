@@ -824,6 +824,12 @@ const tools: Tool[] = [
           type: 'string',
           description: 'Optional branch/worktree name to run auto-mode on',
         },
+        forceStart: {
+          type: 'boolean',
+          description:
+            'Bypass data integrity check. Use when feature count dropped intentionally (e.g., cleanup).',
+          default: false,
+        },
       },
       required: ['projectPath'],
     },
@@ -3037,6 +3043,7 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         projectPath: args.projectPath,
         maxConcurrency: args.maxConcurrency || 1,
         branchName: args.branchName || null,
+        forceStart: args.forceStart || false,
       });
 
     case 'stop_auto_mode':

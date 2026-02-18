@@ -184,6 +184,7 @@ import { linearApprovalHandler } from './services/linear-approval-handler.js';
 import { LinearApprovalBridge } from './services/linear-approval-bridge.js';
 import { LinearIntakeBridge } from './services/linear-intake-bridge.js';
 import { createDeployRoutes } from './routes/deploy/index.js';
+import { createIntegrityRoutes } from './routes/integrity.js';
 import { createAnalyticsRoutes } from './routes/analytics.js';
 import { AntagonisticReviewService } from './services/antagonistic-review-service.js';
 import { createLangfuseRoutes } from './routes/langfuse/index.js';
@@ -467,6 +468,7 @@ const { getDataIntegrityWatchdogService } =
   await import('./services/data-integrity-watchdog-service.js');
 const integrityWatchdogService = getDataIntegrityWatchdogService(DATA_DIR);
 integrityWatchdogService.setEventEmitter(events);
+featureLoader.setIntegrityWatchdog(integrityWatchdogService);
 
 // Initialize Event History Service
 const eventHistoryService = getEventHistoryService();
@@ -1149,6 +1151,7 @@ app.use('/api/ceremonies', createCeremoniesRoutes(events, featureLoader, project
 app.use('/api/issues', createIssuesRoutes(events));
 app.use('/api/crew', createCrewRoutes(crewLoopService));
 app.use('/api/deploy', createDeployRoutes(autoModeService));
+app.use('/api/integrity', createIntegrityRoutes(integrityWatchdogService));
 app.use('/api/escalation', createEscalationRoutes(escalationRouter));
 app.use('/api/analytics', createAnalyticsRoutes());
 
