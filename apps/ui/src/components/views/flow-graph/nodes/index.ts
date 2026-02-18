@@ -11,6 +11,7 @@ import { ServiceNode } from './service-node';
 import { IntegrationNode } from './integration-node';
 import { FeatureNode } from './feature-node';
 import { AgentNode } from './agent-node';
+import { PipelineStageNode } from './pipeline-stage-node';
 
 export { OrchestratorNode } from './orchestrator-node';
 export { CrewNode } from './crew-node';
@@ -18,6 +19,7 @@ export { ServiceNode } from './service-node';
 export { IntegrationNode } from './integration-node';
 export { FeatureNode } from './feature-node';
 export { AgentNode } from './agent-node';
+export { PipelineStageNode } from './pipeline-stage-node';
 
 export const nodeTypes: NodeTypes = {
   orchestrator: OrchestratorNode,
@@ -26,4 +28,5 @@ export const nodeTypes: NodeTypes = {
   integration: IntegrationNode,
   feature: FeatureNode,
   agent: AgentNode,
+  'pipeline-stage': PipelineStageNode,
 };
