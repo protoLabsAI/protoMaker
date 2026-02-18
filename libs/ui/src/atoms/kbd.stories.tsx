@@ -8,7 +8,15 @@
  */
 
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { Command, Shift, Option, ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from 'lucide-react';
+import {
+  Command,
+  ArrowBigUp,
+  Option,
+  ArrowUp,
+  ArrowDown,
+  ArrowLeft,
+  ArrowRight,
+} from 'lucide-react';
 import { Kbd, KbdGroup } from './kbd';
 
 const meta = {
@@ -84,7 +92,7 @@ export const WithIcons: Story = {
       </KbdGroup>
       <KbdGroup>
         <Kbd>
-          <Shift className="h-3 w-3" />
+          <ArrowBigUp className="h-3 w-3" />
         </Kbd>
         <Kbd>
           <Command className="h-3 w-3" />
