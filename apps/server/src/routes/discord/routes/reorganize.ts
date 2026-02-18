@@ -53,20 +53,10 @@ interface ReorganizePlan {
   };
 }
 
-interface UndoSnapshot {
-  timestamp: string;
-  channelPositions: {
-    channelId: string;
-    channelName: string;
-    categoryId?: string;
-    categoryName?: string;
-  }[];
-}
-
 /**
  * Create reorganization handler
  */
-export function createReorganizeHandler(discordService: DiscordService) {
+export function createReorganizeHandler(_discordService: DiscordService) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
       const {
@@ -127,7 +117,7 @@ export function createReorganizeHandler(discordService: DiscordService) {
 /**
  * Create undo handler
  */
-export function createUndoHandler(discordService: DiscordService) {
+export function createUndoHandler(_discordService: DiscordService) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
       const { snapshotId } = req.body as { snapshotId?: string };

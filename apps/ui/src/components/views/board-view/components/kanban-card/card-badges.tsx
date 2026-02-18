@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck -- Feature index signature causes property access type errors
 import { memo, useEffect, useMemo, useState } from 'react';
 import { Feature, useAppStore } from '@/store/app-store';
 import { cn } from '@/lib/utils';

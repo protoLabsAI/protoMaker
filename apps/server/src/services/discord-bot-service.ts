@@ -380,7 +380,7 @@ export class DiscordBotService {
       if (result.success) {
         // Create a review thread for this idea
         const channel = interaction.channel as TextChannel;
-        const reply = await interaction.editReply(
+        const _reply = await interaction.editReply(
           `**Idea submitted:** "${title}"\n` +
             `**Feature ID:** \`${result.featureId}\`\n` +
             `PM agent is reviewing your idea...`

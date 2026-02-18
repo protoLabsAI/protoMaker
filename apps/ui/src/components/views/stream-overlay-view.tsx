@@ -41,7 +41,6 @@ export function StreamOverlayView() {
 
     const loadSuggestions = async () => {
       try {
-        const api = getHttpApiClient();
         // TODO: Add API endpoint to fetch suggestions
         // For now, use empty array
         setSuggestions([]);

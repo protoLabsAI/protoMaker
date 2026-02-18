@@ -23,7 +23,6 @@ import type {
   ThinkingLevel,
   PlanningMode,
   ExecutionContext,
-  FailureAnalysis,
   ActionProposal,
 } from '@automaker/types';
 import {
@@ -72,7 +71,7 @@ import { FeatureLoader } from './feature-loader.js';
 import type { SettingsService } from './settings-service.js';
 import type { AuthorityService } from './authority-service.js';
 import type { DataIntegrityWatchdogService } from './data-integrity-watchdog-service.js';
-import { pipelineService, PipelineService } from './pipeline-service.js';
+import { pipelineService } from './pipeline-service.js';
 import {
   getAutoLoadClaudeMdSetting,
   filterClaudeMdFromContext,
@@ -315,14 +314,6 @@ function parseTaskLine(line: string, currentPhase?: string): ParsedTask | null {
     phase: currentPhase,
     status: 'pending',
   };
-}
-
-// Feature type is imported from feature-loader.js
-// Extended type with planning fields for local use
-interface FeatureWithPlanning extends Feature {
-  planningMode?: PlanningMode;
-  planSpec?: PlanSpec;
-  requirePlanApproval?: boolean;
 }
 
 interface RunningFeature {
@@ -3730,7 +3721,7 @@ Format your response as a structured markdown document.`;
             branchName = feature.branchName;
             costUsd = feature.costUsd as number | undefined;
           }
-        } catch (error) {
+        } catch (_error) {
           // Silently ignore errors - title/description/branchName are optional
         }
 
@@ -5459,14 +5450,11 @@ After generating the revised spec, output:
                       claudeCompatibleProvider, // Pass provider for alternative endpoint configuration
                     });
 
-                    let taskOutput = '';
-
                     // Process task stream
                     for await (const msg of taskStream) {
                       if (msg.type === 'assistant' && msg.message?.content) {
                         for (const block of msg.message.content) {
                           if (block.type === 'text') {
-                            taskOutput += block.text || '';
                             responseText += block.text || '';
                             this.emitAutoModeEvent('auto_mode_progress', {
                               featureId,
@@ -5485,7 +5473,6 @@ After generating the revised spec, output:
                       } else if (msg.type === 'error') {
                         throw new Error(msg.error || `Error during task ${task.id}`);
                       } else if (msg.type === 'result' && msg.subtype === 'success') {
-                        taskOutput += msg.result || '';
                         responseText += msg.result || '';
                       }
                     }

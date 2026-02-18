@@ -367,7 +367,7 @@ async function handleIssueEvent(
 async function handleIssueUpdated(
   data: LinearIssueWebhookPayload['data'],
   events: EventEmitter,
-  featureLoader: FeatureLoader
+  _featureLoader: FeatureLoader
 ): Promise<void> {
   logger.info(`Issue updated: ${data.id}`, {
     title: data.title,

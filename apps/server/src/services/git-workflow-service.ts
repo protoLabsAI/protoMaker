@@ -13,7 +13,6 @@ import type {
   GitWorkflowSettings,
   GitWorkflowResult,
   GlobalSettings,
-  GraphiteSettings,
 } from '@automaker/types';
 import { DEFAULT_GIT_WORKFLOW_SETTINGS, DEFAULT_GRAPHITE_SETTINGS } from '@automaker/types';
 import { updateWorktreePRInfo } from '../lib/worktree-metadata.js';
@@ -868,15 +867,11 @@ export class GitWorkflowService {
       return true;
     } catch {
       // Try with --set-upstream
-      try {
-        await execAsync(`git push --set-upstream origin ${branchName}`, {
-          cwd: workDir,
-          env: execEnv,
-        });
-        return true;
-      } catch (error) {
-        throw error;
-      }
+      await execAsync(`git push --set-upstream origin ${branchName}`, {
+        cwd: workDir,
+        env: execEnv,
+      });
+      return true;
     }
   }
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { createLogger } from '@automaker/utils/logger';
 import {
@@ -52,7 +52,7 @@ import {
   defaultDropAnimationSideEffects,
 } from '@dnd-kit/core';
 import { cn } from '@/lib/utils';
-import { apiFetch, apiGet, apiPost, apiDeleteRaw, getAuthHeaders } from '@/lib/api-fetch';
+import { apiFetch, apiGet, apiPost, apiDeleteRaw } from '@/lib/api-fetch';
 import { getApiKey } from '@/lib/http-api-client';
 
 const logger = createLogger('Terminal');
@@ -238,7 +238,6 @@ export function TerminalView({ initialCwd, initialBranch, initialMode, nonce }: 
     reorderTerminalTabs,
     moveTerminalToTab,
     setTerminalPanelFontSize,
-    setTerminalTabLayout,
     toggleTerminalMaximized,
     saveTerminalLayout,
     getPersistedTerminalLayout,

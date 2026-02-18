@@ -93,7 +93,7 @@ export function useCommitWorktree() {
       }
       return result.result;
     },
-    onSuccess: (_, { worktreePath }) => {
+    onSuccess: (_, { worktreePath: _worktreePath }) => {
       // Invalidate all worktree queries since we don't know the project path
       queryClient.invalidateQueries({ queryKey: ['worktrees'] });
       toast.success('Changes committed');

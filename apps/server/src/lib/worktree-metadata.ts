@@ -78,7 +78,7 @@ export async function readWorktreeMetadata(
     const metadataPath = getWorktreeMetadataPath(projectPath, branch);
     const content = (await secureFs.readFile(metadataPath, 'utf-8')) as string;
     return JSON.parse(content) as WorktreeMetadata;
-  } catch (error) {
+  } catch (_error) {
     // File doesn't exist or can't be read
     return null;
   }

@@ -10,7 +10,7 @@ import * as path from 'path';
 import * as os from 'os';
 import { createLogger } from '@automaker/utils';
 
-const logger = createLogger('CliDetection');
+const _logger = createLogger('CliDetection');
 
 export interface CliInfo {
   name: string;
@@ -86,7 +86,11 @@ export async function detectCli(
   options: CliDetectionOptions = {}
 ): Promise<CliDetectionResult> {
   const config = CLI_CONFIGS[provider];
-  const { timeout = 5000, includeWsl = false, wslDistribution } = options;
+  const {
+    timeout = 5000,
+    includeWsl: _includeWsl = false,
+    wslDistribution: _wslDistribution,
+  } = options;
   const issues: string[] = [];
 
   const cliInfo: CliInfo = {

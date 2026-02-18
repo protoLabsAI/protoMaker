@@ -13,12 +13,7 @@
 
 import { createLogger } from '@automaker/utils';
 import * as secureFs from '../lib/secure-fs.js';
-import {
-  getEventHistoryDir,
-  getEventHistoryIndexPath,
-  getEventPath,
-  ensureEventHistoryDir,
-} from '@automaker/platform';
+import { getEventHistoryIndexPath, getEventPath, ensureEventHistoryDir } from '@automaker/platform';
 import type {
   StoredEvent,
   StoredEventIndex,

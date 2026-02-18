@@ -4,13 +4,10 @@
 
 import type { Request, Response } from 'express';
 import type { EventEmitter } from '../../../lib/events.js';
-import { createLogger } from '@automaker/utils';
 import type { ThinkingLevel } from '@automaker/types';
 import { getSuggestionsStatus, setRunningState, getErrorMessage, logError } from '../common.js';
 import { generateSuggestions } from '../generate-suggestions.js';
 import type { SettingsService } from '../../../services/settings-service.js';
-
-const logger = createLogger('Suggestions');
 
 export function createGenerateHandler(events: EventEmitter, settingsService?: SettingsService) {
   return async (req: Request, res: Response): Promise<void> => {

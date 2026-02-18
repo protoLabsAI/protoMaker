@@ -35,7 +35,7 @@ export function PRDReviewModal({
   open,
   onOpenChange,
   feature,
-  projectPath,
+  projectPath: _projectPath,
   onApprove,
   onReject,
 }: PRDReviewModalProps) {

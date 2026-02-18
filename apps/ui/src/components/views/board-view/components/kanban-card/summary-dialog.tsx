@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck -- Feature index signature causes property access type errors
 import { Feature } from '@/store/app-store';
 import { AgentTaskInfo } from '@/lib/agent-context-parser';
 import {

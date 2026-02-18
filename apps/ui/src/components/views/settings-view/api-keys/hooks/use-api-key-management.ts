@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck -- Electron API types pending strict validation refactor
 import { useState, useEffect } from 'react';
 import { createLogger } from '@automaker/utils/logger';
 import { useAppStore } from '@/store/app-store';

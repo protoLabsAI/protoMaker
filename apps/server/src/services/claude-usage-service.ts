@@ -367,22 +367,22 @@ export class ClaudeUsageService {
    */
   private stripAnsiCodes(text: string): string {
     // First strip ANSI sequences (colors, etc) and handle CR
-    // eslint-disable-next-line no-control-regex
     let clean = text
-      // CSI sequences: ESC [ ... (letter or @)
-      .replace(/\x1B\[[0-9;?]*[A-Za-z@]/g, '')
-      // OSC sequences: ESC ] ... terminated by BEL, ST, or another ESC
-      .replace(/\x1B\][^\x07\x1B]*(?:\x07|\x1B\\)?/g, '')
-      // Other ESC sequences: ESC (letter)
-      .replace(/\x1B[A-Za-z]/g, '')
-      // Carriage returns: replace with newline to avoid concatenation
-      .replace(/\r\n/g, '\n')
+      // eslint-disable-next-line no-control-regex
+      .replace(/\x1B\[[0-9;?]*[A-Za-z@]/g, '') // CSI sequences: ESC [ ... (letter or @)
+      // eslint-disable-next-line no-control-regex
+      .replace(/\x1B\][^\x07\x1B]*(?:\x07|\x1B\\)?/g, '') // OSC sequences: ESC ] ... terminated by BEL, ST, or another ESC
+      // eslint-disable-next-line no-control-regex
+      .replace(/\x1B[A-Za-z]/g, '') // Other ESC sequences: ESC (letter)
+      .replace(/\r\n/g, '\n') // Carriage returns: replace with newline to avoid concatenation
       .replace(/\r/g, '\n');
 
     // Handle backspaces (\x08) by applying them
     // If we encounter a backspace, remove the character before it
     while (clean.includes('\x08')) {
+      // eslint-disable-next-line no-control-regex
       clean = clean.replace(/[^\x08]\x08/, '');
+      // eslint-disable-next-line no-control-regex
       clean = clean.replace(/^\x08+/, '');
     }
 
@@ -390,12 +390,13 @@ export class ClaudeUsageService {
     // even if ESC is missing (seen in some environments)
     clean = clean
       .replace(/\[\?2026[hl]/g, '') // CSI ? 2026 h/l
+      // eslint-disable-next-line no-control-regex
       .replace(/\]0;[^\x07]*\x07/g, '') // OSC 0; Title BEL
       .replace(/\]0;.*?(\[\?|$)/g, ''); // OSC 0; Title ... (unterminated or hit next sequence)
 
     // Strip remaining non-printable control characters (except newline \n)
-    // ASCII 0-8, 11-31, 127
-    clean = clean.replace(/[\x00-\x08\x0B-\x1F\x7F]/g, '');
+    // eslint-disable-next-line no-control-regex
+    clean = clean.replace(/[\x00-\x08\x0B-\x1F\x7F]/g, ''); // ASCII 0-8, 11-31, 127
 
     return clean;
   }
@@ -532,7 +533,7 @@ export class ClaudeUsageService {
 
       resetTime = this.parseResetTime(resetText, type);
       // Strip timezone like "(Asia/Dubai)" from the display text
-      resetText = resetText.replace(/\s*\([A-Za-z_\/]+\)\s*$/, '').trim();
+      resetText = resetText.replace(/\s*\([A-Za-z_/]+\)\s*$/, '').trim();
     }
 
     return { percentage: percentage ?? 0, resetTime, resetText };

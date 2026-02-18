@@ -167,7 +167,7 @@ export class FeatureHealthService {
    */
   private checkEpicChildrenDone(
     features: Feature[],
-    featureMap: Map<string, Feature>
+    _featureMap: Map<string, Feature>
   ): HealthIssue[] {
     const issues: HealthIssue[] = [];
     const doneStatuses = new Set(['done', 'completed', 'verified', 'review']);

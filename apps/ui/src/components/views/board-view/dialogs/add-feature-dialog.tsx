@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck -- Feature index signature causes property access type errors
 import { useState, useEffect, useRef } from 'react';
 import { createLogger } from '@automaker/utils/logger';
 import {

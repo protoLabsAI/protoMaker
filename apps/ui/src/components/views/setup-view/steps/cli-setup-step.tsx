@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck -- Electron API types pending strict validation refactor
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@protolabs/ui/atoms';
 import { Input } from '@protolabs/ui/atoms';

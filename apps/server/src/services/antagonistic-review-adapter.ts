@@ -89,7 +89,7 @@ export class AntagonisticReviewAdapter {
 
     // Create Langfuse trace for this review flow
     const traceId = uuidv4();
-    const trace = this.langfuse?.createTrace({
+    const _trace = this.langfuse?.createTrace({
       id: traceId,
       name: 'antagonistic-review',
       metadata: {

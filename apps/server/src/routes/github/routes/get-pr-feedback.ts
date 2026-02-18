@@ -19,24 +19,6 @@ interface GetPRFeedbackRequest {
   includeInlineThreads?: boolean;
 }
 
-interface GetPRFeedbackResponse {
-  success: boolean;
-  featureId?: string;
-  branchName?: string;
-  prUrl?: string;
-  issueComments?: GitHubComment[];
-  inlineThreads?: Array<{
-    id: string;
-    path: string;
-    line: number;
-    body: string;
-    author: string;
-    severity?: string;
-  }>;
-  commentCount?: number;
-  error?: string;
-}
-
 export function createGetPRFeedbackHandler() {
   return async (req: Request, res: Response): Promise<void> => {
     try {
@@ -221,7 +203,7 @@ export function createGetPRFeedbackHandler() {
       }
 
       // Step 5: Parse CodeRabbit comments (issue-level only for now)
-      const parseResult = codeRabbitParserService.parseReview(prNumber, prUrl, issueComments);
+      codeRabbitParserService.parseReview(prNumber, prUrl, issueComments);
 
       res.json({
         success: true,

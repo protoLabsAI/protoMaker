@@ -10,7 +10,11 @@ import { getErrorMessage, logError } from '../common.js';
 export function createResolveDirectoryHandler() {
   return async (req: Request, res: Response): Promise<void> => {
     try {
-      const { directoryName, sampleFiles, fileCount } = req.body as {
+      const {
+        directoryName,
+        sampleFiles,
+        fileCount: _fileCount,
+      } = req.body as {
         directoryName: string;
         sampleFiles?: string[];
         fileCount?: number;

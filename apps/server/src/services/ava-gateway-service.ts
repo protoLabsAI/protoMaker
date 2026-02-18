@@ -12,14 +12,13 @@
 
 import { createLogger } from '@automaker/utils';
 import type { EventEmitter } from '../lib/events.js';
-import type { Feature } from '@automaker/types';
 import { FeatureLoader } from './feature-loader.js';
 import { BeadsService } from './beads-service.js';
 import type { DiscordBotService } from './discord-bot-service.js';
 import { ClaudeProvider } from '../providers/claude-provider.js';
 import type { SettingsService } from './settings-service.js';
 import type { HealthMonitorService } from './health-monitor-service.js';
-import { withTimeout, isTimeoutError } from '../lib/timeout-enforcer.js';
+import { withTimeout } from '../lib/timeout-enforcer.js';
 import { CircuitBreaker } from '../lib/circuit-breaker.js';
 
 const logger = createLogger('AvaGatewayService');

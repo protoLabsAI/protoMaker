@@ -1036,7 +1036,7 @@ async function autoRebaseStalePRs(
               `Attempting GitHub CLI rebase for PR #${feature.prNumber} (${feature.title})`
             );
 
-            const { stdout, stderr } = await execFileAsync(
+            const { stdout: _stdout, stderr: _stderr } = await execFileAsync(
               'gh',
               ['pr', 'rebase', String(feature.prNumber)],
               {

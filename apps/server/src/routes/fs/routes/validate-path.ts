@@ -5,7 +5,7 @@
 import type { Request, Response } from 'express';
 import * as secureFs from '../../../lib/secure-fs.js';
 import path from 'path';
-import { isPathAllowed, PathNotAllowedError, getAllowedRootDirectory } from '@automaker/platform';
+import { isPathAllowed, getAllowedRootDirectory } from '@automaker/platform';
 import { getErrorMessage, logError } from '../common.js';
 
 export function createValidatePathHandler() {

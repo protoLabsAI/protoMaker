@@ -22,7 +22,6 @@ import type { AutoModeService } from './auto-mode-service.js';
 import type {
   GitHubComment,
   ReviewThreadFeedback,
-  ReviewThreadStatus,
   FeedbackThreadDecision,
   PendingFeedback,
 } from '@automaker/types';
@@ -949,7 +948,7 @@ ${truncatedOutput}
 
 `;
       }
-    } catch (error) {
+    } catch (_error) {
       // First iteration or file doesn't exist - gracefully continue without previous context
       logger.debug(`No previous agent output found for ${featureId} (likely first iteration)`);
     }
@@ -1764,7 +1763,7 @@ After making your decisions, implement the accepted fixes.`;
   private extractMessage(body: string): string {
     // Remove emoji prefix and extract first paragraph or up to first bold header
     const messageMatch = body.match(/^(.+?)(?:\n\n|\*\*)/s);
-    const message = (messageMatch?.[1] || body).trim().replace(/^[🐰🔍💡⚠️🚨]\s*/, '');
+    const message = (messageMatch?.[1] || body).trim().replace(/^(?:🐰|🔍|💡|⚠️|🚨)\s*/u, '');
     return message;
   }
 
@@ -1997,7 +1996,7 @@ ${truncatedOutput}
 
 `;
       }
-    } catch (error) {
+    } catch (_error) {
       logger.debug(`No previous agent output found for ${featureId}`);
     }
 
@@ -2029,7 +2028,7 @@ This is CI fix iteration ${iteration}.`;
    * Called periodically by the main poll loop.
    */
   private async pollCIStatus(): Promise<void> {
-    for (const [featureId, pr] of this.trackedPRs) {
+    for (const [_featureId, pr] of this.trackedPRs) {
       if (!pr.ciMonitoring) continue;
 
       const { headSha, startedAt, lastPolledAt } = pr.ciMonitoring;

@@ -15,11 +15,9 @@ import {
   loadContextFiles,
   createLogger,
   classifyError,
-  getUserFriendlyErrorMessage,
 } from '@automaker/utils';
 import { ProviderFactory } from '../providers/provider-factory.js';
 import { createChatOptions, validateWorkingDirectory } from '../lib/sdk-options.js';
-import { PathNotAllowedError } from '@automaker/platform';
 import type { SettingsService } from './settings-service.js';
 import type { RoleRegistryService } from './role-registry-service.js';
 import {

@@ -4,12 +4,8 @@
 
 import type { Request, Response } from 'express';
 import { getErrorMessage, logError } from '../common.js';
-import { exec } from 'child_process';
-import { promisify } from 'util';
 import * as fs from 'fs';
 import * as path from 'path';
-
-const execAsync = promisify(exec);
 
 export function createAuthClaudeHandler() {
   return async (_req: Request, res: Response): Promise<void> => {

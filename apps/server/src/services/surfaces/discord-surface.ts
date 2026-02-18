@@ -18,14 +18,9 @@ import type {
   ConversationSurface,
   SurfaceCapabilities,
   SurfaceChoiceOption,
-  SurfaceDocument,
   SurfaceMessage,
-  SurfacePlanStep,
 } from '@automaker/types';
 import type { DiscordBotService } from '../discord-bot-service.js';
-import { createLogger } from '@automaker/utils';
-
-const logger = createLogger('DiscordSurface');
 
 /** Maps session IDs to Discord context */
 interface DiscordSessionContext {

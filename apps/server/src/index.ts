@@ -321,7 +321,7 @@ app.use(
           callback(null, origin);
           return;
         }
-      } catch (err) {
+      } catch (_err) {
         // Ignore URL parsing errors
       }
 
@@ -441,7 +441,7 @@ const headsdownService = HeadsdownService.getInstance(
 headsdownService.setAgentExecution(agentFactoryService, dynamicAgentExecutor);
 
 // Initialize PRDService for SPARC PRD management
-const prdService = PRDService.getInstance(events);
+PRDService.getInstance(events);
 
 // Initialize DevServerService with event emitter for real-time log streaming
 const devServerService = getDevServerService();
@@ -757,7 +757,7 @@ specGenerationMonitor.startMonitoring();
     const enableRequestLog = settings.enableRequestLogging ?? true;
     setRequestLoggingEnabled(enableRequestLog);
     logger.info(`HTTP request logging: ${enableRequestLog ? 'enabled' : 'disabled'}`);
-  } catch (err) {
+  } catch (_err) {
     logger.warn('Failed to load logging settings, using defaults');
   }
 

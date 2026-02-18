@@ -64,8 +64,13 @@ export function createEnhanceHandler(
 ): (req: Request, res: Response) => Promise<void> {
   return async (req: Request, res: Response): Promise<void> => {
     try {
-      const { originalText, enhancementMode, model, thinkingLevel, projectPath } =
-        req.body as EnhanceRequestBody;
+      const {
+        originalText,
+        enhancementMode,
+        model,
+        thinkingLevel,
+        projectPath: _projectPath,
+      } = req.body as EnhanceRequestBody;
 
       // Validate required fields
       if (!originalText || typeof originalText !== 'string') {

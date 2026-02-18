@@ -691,7 +691,7 @@ export class CursorProvider extends CliProvider {
     logger.debug(`CursorProvider.executeQuery called with model: "${options.model}"`);
 
     // Get effective permissions for this project
-    const effectivePermissions = await getEffectivePermissions(options.cwd || process.cwd());
+    const _effectivePermissions = await getEffectivePermissions(options.cwd || process.cwd());
 
     // Debug: log raw events when AUTOMAKER_DEBUG_RAW_OUTPUT is enabled
     const debugRawEvents =

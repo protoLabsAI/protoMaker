@@ -6,7 +6,6 @@ import type { Request, Response } from 'express';
 import type { EventEmitter } from '../../../lib/events.js';
 import type { IssueValidationEvent } from '@automaker/types';
 import {
-  isValidationRunning,
   getValidationStatus,
   getRunningValidations,
   abortValidation,
@@ -15,7 +14,6 @@ import {
   logger,
 } from './validation-common.js';
 import {
-  readValidation,
   getAllValidations,
   getValidationWithFreshness,
   deleteValidation,

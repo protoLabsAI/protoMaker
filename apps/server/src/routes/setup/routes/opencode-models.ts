@@ -14,9 +14,6 @@ import {
 } from '../../../providers/opencode-provider.js';
 import { getErrorMessage, logError } from '../common.js';
 import type { ModelDefinition } from '@automaker/types';
-import { createLogger } from '@automaker/utils';
-
-const logger = createLogger('OpenCodeModelsRoute');
 
 // Singleton provider instance for caching
 let providerInstance: OpencodeProvider | null = null;

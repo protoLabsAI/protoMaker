@@ -19,7 +19,6 @@ import type {
   PolicyDecision,
   ApprovalRequest,
   TrustProfile,
-  PolicyConfig,
   AuthorityAgent,
   PolicyActionType,
   AgentTrustProfile,
@@ -599,7 +598,7 @@ export class AuthorityService {
    */
   private bridgeToEngineProposal(
     proposal: ActionProposal,
-    agent: RegisteredAgent
+    _agent: RegisteredAgent
   ): EngineActionProposal {
     const engineAction = this.mapToEngineAction(proposal.what);
 

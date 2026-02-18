@@ -14,7 +14,6 @@ import type {
   Feature,
   RalphLoopConfig,
   RalphLoopState,
-  RalphLoopStatus,
   RalphIteration,
   CompletionCriterion,
   CriterionCheckResult,
@@ -25,14 +24,13 @@ import type {
 } from '@automaker/types';
 import type { RalphFailureCategory } from '@automaker/types';
 import { DEFAULT_RALPH_CONFIG } from '@automaker/types';
-import { createLogger, atomicWriteJson, readJsonWithRecovery } from '@automaker/utils';
+import { atomicWriteJson, readJsonWithRecovery } from '@automaker/utils';
 import { getFeatureDir, getRalphDir } from '@automaker/platform';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import path from 'path';
 import * as secureFs from '../lib/secure-fs.js';
 
-const logger = createLogger('RalphLoop');
 const execAsync = promisify(exec);
 
 /**
@@ -613,7 +611,7 @@ and ensure all verification criteria pass. Never give up until verified!
   private async runLoopAsync(
     loop: RunningRalphLoop,
     workDir: string,
-    feature: Feature
+    _feature: Feature
   ): Promise<void> {
     const { featureId, projectPath, state, abortController } = loop;
     const config = state.config;
@@ -648,15 +646,11 @@ and ensure all verification criteria pass. Never give up until verified!
         );
 
         // Build Ralph context prompt
-        const ralphContext = this.buildRalphContextPrompt(state, config);
+        const _ralphContext = this.buildRalphContextPrompt(state, config);
 
         // Execute the agent via auto-mode service
         // The agent will receive the Ralph context as additional prompt
         try {
-          // Update feature description to include Ralph context
-          // This is a lightweight way to pass context without modifying auto-mode-service
-          const enhancedDescription = `${feature.description}\n\n---\n\n${ralphContext}`;
-
           // Run the feature using auto-mode service
           // Note: This is a simplified approach - we're leveraging existing infrastructure
           await this.autoModeService.executeFeature(

@@ -29,11 +29,16 @@ export interface PlanningResumeRequest {
  * Handler for starting a project planning flow via HTTP.
  * This triggers the same flow that Linear webhook events trigger.
  */
-export function createPlanningExecuteHandler(planningService: ProjectPlanningService) {
+export function createPlanningExecuteHandler(_planningService: ProjectPlanningService) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
-      const { projectPath, projectId, name, description, teamId } =
-        req.body as PlanningExecuteRequest;
+      const {
+        projectPath,
+        projectId,
+        name,
+        description,
+        teamId: _teamId,
+      } = req.body as PlanningExecuteRequest;
 
       if (!projectPath || !projectId || !name || !description) {
         res.status(400).json({

@@ -6,7 +6,7 @@
  */
 
 import type { EventEmitter } from '../../lib/events.js';
-import type { Feature, BacklogPlanResult, BacklogChange, DependencyUpdate } from '@automaker/types';
+import type { Feature, BacklogPlanResult } from '@automaker/types';
 import {
   DEFAULT_PHASE_MODELS,
   isCursorModel,

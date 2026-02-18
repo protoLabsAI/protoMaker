@@ -1,6 +1,5 @@
-// @ts-nocheck
+// @ts-nocheck -- Feature index signature causes property access type errors
 import { useState, useEffect } from 'react';
-import { createLogger } from '@automaker/utils/logger';
 import {
   Dialog,
   DialogContent,
@@ -26,7 +25,7 @@ import { GitBranch, Cpu, FolderKanban, Settings2 } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
 import { toast } from 'sonner';
 import { cn, modelSupportsThinking } from '@/lib/utils';
-import { Feature, ModelAlias, ThinkingLevel, useAppStore, PlanningMode } from '@/store/app-store';
+import { Feature, ModelAlias, ThinkingLevel, PlanningMode } from '@/store/app-store';
 import type { ReasoningEffort, PhaseModelEntry, DescriptionHistoryEntry } from '@automaker/types';
 import { migrateModelId } from '@automaker/types';
 import {
@@ -42,8 +41,6 @@ import { PhaseModelSelector } from '@/components/views/settings-view/model-defau
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@protolabs/ui/atoms';
 import { DependencyTreeDialog } from './dependency-tree-dialog';
 import { isClaudeModel, supportsReasoningEffort } from '@automaker/types';
-
-const logger = createLogger('EditFeatureDialog');
 
 interface EditFeatureDialogProps {
   feature: Feature | null;

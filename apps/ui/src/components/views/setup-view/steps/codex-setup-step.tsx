@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck -- Electron API types pending strict validation refactor
 import { useMemo, useCallback } from 'react';
 import { useSetupStore } from '@/store/setup-store';
 import { getElectronAPI } from '@/lib/electron';

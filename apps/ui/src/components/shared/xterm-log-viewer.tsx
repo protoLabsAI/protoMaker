@@ -77,7 +77,6 @@ export const XtermLogViewer = forwardRef<XtermLogViewerRef, XtermLogViewerProps>
 
     useEffect(() => {
       const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      // eslint-disable-next-line no-undef
       const handleChange = (e: MediaQueryListEvent) => setSystemIsDark(e.matches);
       mediaQuery.addEventListener('change', handleChange);
       return () => mediaQuery.removeEventListener('change', handleChange);

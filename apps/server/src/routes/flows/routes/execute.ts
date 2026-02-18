@@ -20,7 +20,7 @@ export interface ExecuteRequest {
 export function createExecuteHandler(reviewService: AntagonisticReviewService) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
-      const { projectPath, prd, config } = req.body as ExecuteRequest;
+      const { projectPath, prd, config: _config } = req.body as ExecuteRequest;
 
       // Validate required fields
       if (!projectPath) {

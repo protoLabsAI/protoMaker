@@ -45,8 +45,6 @@ interface ValidateIssueInput {
  * ```
  */
 export function useValidateIssue(projectPath: string) {
-  const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async (input: ValidateIssueInput) => {
       const { issue, model, thinkingLevel, reasoningEffort, comments, linkedPRs } = input;

@@ -386,7 +386,7 @@ export class DeliveryService {
       try {
         await execFileAsync('git', ['remote', 'add', 'fork', forkCloneUrl], { cwd: repoPath });
         logger.info('Fork added as remote');
-      } catch (error) {
+      } catch (_error) {
         // Remote might already exist, try to update it
         try {
           await execFileAsync('git', ['remote', 'set-url', 'fork', forkCloneUrl], {
@@ -407,7 +407,7 @@ export class DeliveryService {
       } catch {
         try {
           await execFileAsync('git', ['checkout', 'master'], { cwd: repoPath });
-        } catch (error) {
+        } catch (_error) {
           logger.warn('Could not checkout main/master, continuing from current branch');
         }
       }

@@ -627,7 +627,7 @@ ${content}`;
           await fs.writeFile(outputPath, outputContent, 'utf-8');
           break;
 
-        case 'hf-dataset':
+        case 'hf-dataset': {
           outputPath = path.join(contentDir, 'dataset.json');
           const datasetEntry = {
             text: content,
@@ -638,6 +638,7 @@ ${content}`;
           };
           await fs.writeFile(outputPath, JSON.stringify(datasetEntry, null, 2), 'utf-8');
           break;
+        }
 
         default:
           throw new Error(`Unsupported format: ${format}`);

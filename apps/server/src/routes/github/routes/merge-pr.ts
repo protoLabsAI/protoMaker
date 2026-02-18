@@ -19,15 +19,6 @@ interface MergePRRequest {
   waitForCI?: boolean;
 }
 
-interface MergePRResponse {
-  success: boolean;
-  mergeCommitSha?: string;
-  error?: string;
-  checksPending?: boolean;
-  checksFailed?: boolean;
-  failedChecks?: string[];
-}
-
 export function createMergePRHandler() {
   return async (req: Request, res: Response): Promise<void> => {
     try {

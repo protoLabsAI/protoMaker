@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck -- Feature index signature causes property access type errors
 import { memo } from 'react';
 import { Feature } from '@/store/app-store';
 import { GitBranch, GitPullRequest, ExternalLink } from 'lucide-react';

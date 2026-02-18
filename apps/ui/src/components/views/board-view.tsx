@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck -- DnD kit type conflicts with Feature index signature
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { createLogger } from '@automaker/utils/logger';
 import {

@@ -16,18 +16,13 @@ const logger = createLogger('CodexSettings');
 export function CodexSettingsTab() {
   const {
     codexAutoLoadAgents,
-    codexSandboxMode,
-    codexApprovalPolicy,
     codexEnableWebSearch,
     codexEnableImages,
     enabledCodexModels,
     codexDefaultModel,
     setCodexAutoLoadAgents,
-    setCodexSandboxMode,
-    setCodexApprovalPolicy,
     setCodexEnableWebSearch,
     setCodexEnableImages,
-    setEnabledCodexModels,
     setCodexDefaultModel,
     toggleCodexModel,
   } = useAppStore();

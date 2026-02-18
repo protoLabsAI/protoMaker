@@ -19,11 +19,7 @@ import { createLogger } from '@automaker/utils';
 import type { EventEmitter } from '../lib/events.js';
 import type { SettingsService } from './settings-service.js';
 import type { FeatureLoader } from './feature-loader.js';
-import type {
-  LinearIntegrationConfig,
-  DiscordIntegrationConfig,
-  ProjectIntegrations,
-} from '@automaker/types';
+import type { LinearIntegrationConfig, ProjectIntegrations } from '@automaker/types';
 import type { Feature } from '@automaker/types';
 import type { CeremonyService } from './ceremony-service.js';
 
@@ -989,14 +985,9 @@ export class IntegrationService {
    * Check Discord bot status
    */
   async checkDiscordBotStatus(): Promise<boolean> {
-    try {
-      // Check if Discord bot is connected
-      // This is a placeholder - actual implementation would check Discord client status
-      return false;
-    } catch (error) {
-      logger.error('Failed to check Discord bot status:', error);
-      return false;
-    }
+    // Check if Discord bot is connected
+    // This is a placeholder - actual implementation would check Discord client status
+    return false;
   }
 
   /**

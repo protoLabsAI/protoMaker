@@ -35,15 +35,6 @@ interface ProjectUpdateCreatedPayload {
   createdAt: string;
 }
 
-/** Payload from linear:comment:created event */
-interface CommentCreatedPayload {
-  commentId: string;
-  issueId?: string;
-  body: string;
-  user?: { id: string; name: string; email?: string };
-  createdAt: string;
-}
-
 export class ProjectUpdateApprovalService {
   private unsubscribe: (() => void) | null = null;
   private appUserId: string | null = null;

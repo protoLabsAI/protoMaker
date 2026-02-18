@@ -84,7 +84,7 @@ export class SignalIntakeService {
     // Linear signals classified by label/project
     if (source === 'linear') {
       const labels = (channelContext.labels as string[]) || [];
-      const projectId = channelContext.projectId as string | undefined;
+      const _projectId = channelContext.projectId as string | undefined;
 
       // Check for GTM labels
       const gtmLabels = ['marketing', 'content', 'social', 'gtm', 'campaign', 'seo'];

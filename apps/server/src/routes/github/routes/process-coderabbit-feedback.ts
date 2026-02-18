@@ -19,13 +19,6 @@ interface ProcessCodeRabbitFeedbackRequest {
   prNumber: number;
 }
 
-interface ProcessCodeRabbitFeedbackResponse {
-  success: boolean;
-  featureId?: string;
-  commentCount?: number;
-  error?: string;
-}
-
 export function createProcessCodeRabbitFeedbackHandler(events: EventEmitter) {
   return async (req: Request, res: Response): Promise<void> => {
     try {

@@ -117,7 +117,7 @@ export function createCreatePRHandler() {
           cwd: worktreePath,
           env: execEnv,
         });
-      } catch (error: unknown) {
+      } catch (_error: unknown) {
         // If push fails, try with --set-upstream
         try {
           await execAsync(`git push --set-upstream origin ${branchName}`, {
@@ -195,7 +195,7 @@ export function createCreatePRHandler() {
             }
           }
         }
-      } catch (error) {
+      } catch (_error) {
         // Couldn't parse remotes - will try fallback
       }
 
@@ -216,7 +216,7 @@ export function createCreatePRHandler() {
             originOwner = owner;
             repoUrl = `https://github.com/${owner}/${repo}`;
           }
-        } catch (error) {
+        } catch (_error) {
           // Failed to get repo URL from config
         }
       }

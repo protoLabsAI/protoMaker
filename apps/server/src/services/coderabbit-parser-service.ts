@@ -110,7 +110,7 @@ function parseCodeRabbitComment(comment: GitHubComment): CodeRabbitComment | nul
 
   // Extract the main message (first paragraph or up to first bold header)
   const messageMatch = comment.body.match(/^(.+?)(?:\n\n|\*\*)/s);
-  const message = (messageMatch?.[1] || comment.body).trim().replace(/^[🐰🔍💡⚠️🚨]\s*/, '');
+  const message = (messageMatch?.[1] || comment.body).trim().replace(/^(?:🐰|🔍|💡|⚠️|🚨)\s*/u, '');
 
   return {
     id: comment.id,

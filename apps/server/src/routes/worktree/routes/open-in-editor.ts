@@ -125,19 +125,14 @@ export function createOpenInEditorHandler() {
           `Failed to open in editor, falling back to file manager: ${getErrorMessage(editorError)}`
         );
 
-        try {
-          const result = await openInFileManager(worktreePath);
-          res.json({
-            success: true,
-            result: {
-              message: `Opened ${worktreePath} in ${result.editorName}`,
-              editorName: result.editorName,
-            },
-          });
-        } catch (fallbackError) {
-          // Both editor and file manager failed
-          throw fallbackError;
-        }
+        const result = await openInFileManager(worktreePath);
+        res.json({
+          success: true,
+          result: {
+            message: `Opened ${worktreePath} in ${result.editorName}`,
+            editorName: result.editorName,
+          },
+        });
       }
     } catch (error) {
       logError(error, 'Open in editor failed');

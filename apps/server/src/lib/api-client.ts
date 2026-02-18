@@ -46,7 +46,7 @@ const MAX_RETRIES = 3;
 /**
  * Options for API request with retry
  */
-export interface ApiRequestOptions<T> {
+export interface ApiRequestOptions<_T = unknown> {
   /**
    * The API provider (determines rate limit handling)
    */
