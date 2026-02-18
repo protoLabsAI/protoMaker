@@ -13,7 +13,7 @@ jobs:
     timeout-minutes: 15
     concurrency:
       group: staging-deploy
-      cancel-in-progress: true
+      cancel-in-progress: false
 
     # Default working directory for all steps — the runner's _work/ dir
     # gets wiped by cron every 5min, so use /tmp as a safe fallback.
@@ -119,20 +119,31 @@ jobs:
         id: verify
         working-directory: /home/josh/staging-deploy/automaker
         run: |
-          # Check server health
+          # Check server readiness (verifies API key, data dir, service init)
           retries=0
           while [ $retries -lt 15 ]; do
-            if curl -sf http://localhost:3008/api/health > /dev/null; then
-              echo "Server is healthy"
-              curl -sf http://localhost:3008/api/health
+            if curl -sf http://localhost:3008/api/health/ready > /dev/null; then
+              echo "Server is ready"
+              curl -sf http://localhost:3008/api/health/ready
               break
             fi
             retries=$((retries + 1))
             sleep 2
           done
           if [ $retries -eq 15 ]; then
-            echo "Server health check failed after 30s"
+            echo "Server readiness check failed after 30s"
             docker compose -f docker-compose.staging.yml logs --tail=50 server
+
+            # Check if server container has exhausted restart attempts
+            SERVER_STATUS=$(docker inspect automaker-server --format='{{.State.Status}}' 2>/dev/null || echo "unknown")
+            SERVER_RESTART_COUNT=$(docker inspect automaker-server --format='{{.RestartCount}}' 2>/dev/null || echo "0")
+
+            if [ "$SERVER_STATUS" = "exited" ] && [ "$SERVER_RESTART_COUNT" -ge 5 ]; then
+              echo "ALERT: Server container exhausted restart attempts (count: $SERVER_RESTART_COUNT)"
+              # Signal restart exhaustion for Discord notification
+              echo "RESTART_EXHAUSTED=true" >> "$GITHUB_ENV"
+            fi
+
             exit 1
           fi
 
@@ -193,11 +204,11 @@ jobs:
           # Restart only app services that have rollback images
           docker compose -f docker-compose.staging.yml up -d $ROLLBACK_SERVICES
 
-          # Verify rollback health
+          # Verify rollback readiness
           retries=0
           while [ $retries -lt 15 ]; do
-            if curl -sf http://localhost:3008/api/health > /dev/null; then
-              echo "Rollback successful — server is healthy"
+            if curl -sf http://localhost:3008/api/health/ready > /dev/null; then
+              echo "Rollback successful — server is ready"
               break
             fi
             retries=$((retries + 1))
@@ -229,6 +240,7 @@ jobs:
           DOCS_STATUS=$(curl -sf http://localhost:3009/ > /dev/null 2>&1 && echo "docs ok" || echo "docs down")
 
           ROLLBACK_OUTCOME="${{ steps.rollback.outcome }}"
+          RESTART_EXHAUSTED="${RESTART_EXHAUSTED:-false}"
 
           if [ "$STATUS" = "success" ]; then
             MSG="Staging deployed: \`${COMMIT}\` (v${VERSION}) - all healthy (${DOCS_STATUS})"
@@ -244,6 +256,11 @@ jobs:
                 MSG="Staging deploy FAILED: \`${COMMIT}\` - no rollback performed. Check GitHub Actions."
                 ;;
             esac
+
+            # Add restart exhaustion alert if detected
+            if [ "$RESTART_EXHAUSTED" = "true" ]; then
+              MSG="${MSG}\n⚠️ **CRITICAL**: Server container exhausted restart attempts (5/5). Manual restart required."
+            fi
           fi
 
           # Post to #deployments channel via webhook if configured

@@ -74,10 +74,11 @@ smoke_test() {
 echo "Smoke Tests: ${BASE_URL}"
 echo "================================"
 
-# Phase 1: Basic health (no auth needed)
+# Phase 1: Basic health and readiness (no auth needed)
 echo ""
 echo "Health:"
 smoke_test "GET /api/health" GET "/api/health" "status"
+smoke_test "GET /api/health/ready" GET "/api/health/ready" "status"
 
 # Phase 2: Auth
 echo ""
