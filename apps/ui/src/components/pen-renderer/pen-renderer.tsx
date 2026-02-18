@@ -17,6 +17,8 @@ interface PenRendererProps {
   componentId?: string;
   /** Show debug outlines for all nodes */
   debug?: boolean;
+  /** Render reusable component definitions (for design kit previews) */
+  showDefinitions?: boolean;
   /** Callback when a node is clicked (for inspector panel) */
   onNodeSelect?: (nodeId: string | null) => void;
   /** Additional CSS class for the root container */
@@ -39,6 +41,7 @@ export function PenRenderer({
   theme = {},
   componentId,
   debug = false,
+  showDefinitions = false,
   onNodeSelect,
   className,
 }: PenRendererProps) {
@@ -105,6 +108,7 @@ export function PenRenderer({
           key={node.id}
           node={node}
           debug={debug}
+          showDefinitions={showDefinitions}
           onNodeClick={handleNodeClick}
           selectedNodeId={selectedNodeId ?? undefined}
         />

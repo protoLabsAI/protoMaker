@@ -5,6 +5,7 @@ import { toCSS } from './utils';
 interface PenFrameProps {
   node: ResolvedNode;
   debug?: boolean;
+  showDefinitions?: boolean;
   onNodeClick?: (nodeId: string, event: React.MouseEvent) => void;
   selectedNodeId?: string;
   isSelected?: boolean;
@@ -18,6 +19,7 @@ interface PenFrameProps {
 export function PenFrame({
   node,
   debug,
+  showDefinitions,
   onNodeClick,
   selectedNodeId,
   isSelected,
@@ -44,6 +46,7 @@ export function PenFrame({
           key={child.id}
           node={child}
           debug={debug}
+          showDefinitions={showDefinitions}
           onNodeClick={onNodeClick}
           selectedNodeId={selectedNodeId}
         />

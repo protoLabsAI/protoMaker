@@ -9,6 +9,8 @@ interface PenNodeProps {
   node: ResolvedNode;
   /** Whether to show component outlines for debugging */
   debug?: boolean;
+  /** Render reusable component definitions (for design kit previews) */
+  showDefinitions?: boolean;
   /** Click handler for node selection */
   onNodeClick?: (nodeId: string, event: React.MouseEvent) => void;
   /** Currently selected node ID */
@@ -19,9 +21,15 @@ interface PenNodeProps {
  * Dispatcher component that renders the appropriate element based on node type.
  * Each node type maps to a specialized renderer.
  */
-export function PenNode({ node, debug, onNodeClick, selectedNodeId }: PenNodeProps) {
-  // Skip reusable component definitions — only render instances
-  if (node.reusable) return null;
+export function PenNode({
+  node,
+  debug,
+  showDefinitions,
+  onNodeClick,
+  selectedNodeId,
+}: PenNodeProps) {
+  // Skip reusable component definitions — unless showDefinitions is enabled (design kit preview)
+  if (node.reusable && !showDefinitions) return null;
 
   const isSelected = selectedNodeId === node.id;
 
@@ -39,6 +47,7 @@ export function PenNode({ node, debug, onNodeClick, selectedNodeId }: PenNodePro
         <PenFrame
           node={node}
           debug={debug}
+          showDefinitions={showDefinitions}
           onNodeClick={onNodeClick}
           selectedNodeId={selectedNodeId}
           isSelected={isSelected}
