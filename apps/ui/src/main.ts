@@ -2,6 +2,7 @@
 // When Electron is launched from Finder (not a terminal), these streams
 // are broken pipes. console.log/warn/error writes throw EPIPE, crashing
 // the main process before the UI can render.
+// Belt: catch async stream errors.
 process.stdout?.on('error', (err) => {
   if ((err as NodeJS.ErrnoException).code === 'EPIPE') return;
   throw err;
@@ -9,6 +10,18 @@ process.stdout?.on('error', (err) => {
 process.stderr?.on('error', (err) => {
   if ((err as NodeJS.ErrnoException).code === 'EPIPE') return;
   throw err;
+});
+// Suspenders: catch synchronous EPIPE throws from afterWriteDispatched
+// that bypass the stream error handler entirely.
+process.on('uncaughtException', (err) => {
+  if ((err as NodeJS.ErrnoException).code === 'EPIPE') return;
+  // Non-EPIPE: log to stderr (may itself fail if pipe is broken, that's fine)
+  try {
+    process.stderr.write(`Uncaught exception: ${err.stack || err.message}\n`);
+  } catch {
+    // stderr is broken too — nothing we can do
+  }
+  process.exit(1);
 });
 
 /**
