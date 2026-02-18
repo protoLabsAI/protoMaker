@@ -133,12 +133,18 @@ packages/mcp-server/plugins/automaker/.env
 .beads/
 
 # Embedded git repos (should be submodules if needed)
-examples/mythxengine
+examples/
 # Ephemeral test directories
 test/*-test-*/
 
 # Labs directory - cloned repositories for testing/development
-labs/*
+labs/
+
+# Local project plans (not repo content)
+projects/
+
+# Large media files (render locally, don't commit)
+gource.mp4
 
 # Test fixture runtime artifacts
 test/fixtures/**/.automaker/categories.json
