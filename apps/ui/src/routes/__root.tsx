@@ -3,7 +3,6 @@ import { useEffect, useState, useCallback, useDeferredValue, useRef } from 'reac
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { createLogger } from '@automaker/utils/logger';
-import { CopilotKitProvider, CopilotSidebarWrapper } from '@/components/copilotkit/provider';
 import { Sidebar } from '@/components/layout/sidebar';
 import { ProjectSwitcher } from '@/components/layout/project-switcher';
 import {
@@ -828,9 +827,7 @@ function RootLayoutContent() {
         {showProjectSwitcher && <ProjectSwitcher />}
         <Sidebar />
         <div className="flex-1 flex flex-col overflow-hidden">
-          <CopilotSidebarWrapper>
-            <Outlet />
-          </CopilotSidebarWrapper>
+          <Outlet />
         </div>
         <Toaster richColors position="bottom-right" />
       </main>
@@ -849,11 +846,9 @@ function RootLayout() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <CopilotKitProvider>
-        <FileBrowserProvider>
-          <RootLayoutContent />
-        </FileBrowserProvider>
-      </CopilotKitProvider>
+      <FileBrowserProvider>
+        <RootLayoutContent />
+      </FileBrowserProvider>
       {SHOW_QUERY_DEVTOOLS && !isCompact ? (
         <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-left" />
       ) : null}

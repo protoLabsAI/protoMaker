@@ -36,8 +36,6 @@
     "@automaker/prompts": "1.0.0",
     "@automaker/types": "1.0.0",
     "@automaker/utils": "1.0.0",
-    "@copilotkitnext/agent": "^1.51.3",
-    "@copilotkitnext/runtime": "^1.51.3",
     "@langchain/anthropic": "^0.3.34",
     "@langchain/core": "^0.3.80",
     "@modelcontextprotocol/sdk": "^1.26.0",
