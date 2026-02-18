@@ -62,6 +62,17 @@ interface ResumeIdeaOptions {
   feedback?: string;
 }
 
+interface RefireNodeOptions {
+  sessionId: string;
+  nodeId: string;
+}
+
+interface EditNodeOptions {
+  sessionId: string;
+  nodeId: string;
+  statePatch: Partial<IdeaProcessingState>;
+}
+
 export class IdeaProcessingService {
   private sessions = new Map<string, IdeaSession>();
   private stateDir: string;
@@ -517,5 +528,320 @@ export class IdeaProcessingService {
     });
 
     this.logger.info('Idea session status updated', { sessionId, status });
+  }
+
+  /**
+   * Refire a node - load checkpoint at target node and re-execute from that point
+   */
+  async refireNode(options: RefireNodeOptions): Promise<void> {
+    const session = this.sessions.get(options.sessionId);
+    if (!session) {
+      throw new Error(`Session ${options.sessionId} not found`);
+    }
+
+    this.logger.info('Refiring node', {
+      sessionId: options.sessionId,
+      nodeId: options.nodeId,
+    });
+
+    // Update session status
+    await this.updateSessionStatus(options.sessionId, 'processing');
+
+    // Execute refire flow asynchronously
+    this.executeRefireFlow(options).catch((error) => {
+      this.logger.error('Refire flow failed', { sessionId: options.sessionId, error });
+      this.updateSessionStatus(options.sessionId, 'failed', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    });
+  }
+
+  /**
+   * Execute refire flow - loads checkpoint and re-streams from current state
+   * Note: LangGraph doesn't support arbitrary node jumping. This resumes from
+   * the current checkpoint state and re-executes remaining nodes.
+   */
+  private async executeRefireFlow(options: RefireNodeOptions): Promise<void> {
+    const startTime = new Date();
+    const session = this.sessions.get(options.sessionId);
+
+    if (!session) {
+      throw new Error(`Session ${options.sessionId} not found`);
+    }
+
+    // Create Langfuse trace for refire
+    const trace = this.langfuse.createTrace({
+      id: `idea-refire-${options.sessionId}-${Date.now()}`,
+      name: 'Idea Processing Refire',
+      sessionId: options.sessionId,
+      metadata: {
+        nodeId: options.nodeId,
+        originalSessionId: options.sessionId,
+      },
+      tags: ['idea-processing', 'refire', 'langgraph'],
+    });
+
+    try {
+      // Resume from checkpoint - passing null tells LangGraph to resume from saved state
+      const stream = await ideaProcessingGraph.stream(null, {
+        configurable: { thread_id: options.sessionId },
+      });
+
+      let finalState: IdeaProcessingState | undefined;
+
+      for await (const event of stream) {
+        // Event is a Record<nodeName, Partial<State>>
+        const nodeNames = Object.keys(event);
+        for (const nodeName of nodeNames) {
+          const nodeOutput = event[nodeName];
+
+          // Log span for each node execution
+          this.langfuse.createSpan({
+            traceId: trace?.id || `idea-refire-${options.sessionId}`,
+            name: nodeName,
+            input: nodeOutput,
+            metadata: {
+              sessionId: options.sessionId,
+              node: nodeName,
+              isRefire: true,
+            },
+          });
+
+          // Emit streaming event
+          this.events.emit('ideation:stream', {
+            sessionId: options.sessionId,
+            node: nodeName,
+            output: nodeOutput,
+            isRefire: true,
+          });
+
+          // Track final state
+          finalState = { ...finalState, ...nodeOutput } as IdeaProcessingState;
+        }
+      }
+
+      if (!finalState) {
+        throw new Error('Refire flow completed without producing final state');
+      }
+
+      const endTime = new Date();
+
+      // Update trace
+      if (trace) {
+        trace.update({
+          output: {
+            approved: finalState.approved,
+            category: finalState.category,
+            impact: finalState.impact,
+            effort: finalState.effort,
+            usedFastPath: finalState.usedFastPath,
+          },
+          metadata: {
+            complexity: finalState.complexity,
+            processingNotes: finalState.processingNotes,
+            duration: endTime.getTime() - startTime.getTime(),
+            isRefire: true,
+          },
+        });
+      }
+
+      // Update session with new state
+      await this.updateSessionStatus(options.sessionId, 'completed', {
+        state: finalState,
+        result: {
+          approved: finalState.approved,
+          category: finalState.category,
+          impact: finalState.impact,
+          effort: finalState.effort,
+        },
+      });
+
+      await this.langfuse.flush();
+    } catch (error) {
+      const endTime = new Date();
+
+      // Log error to trace
+      if (trace) {
+        trace.update({
+          output: {
+            error: error instanceof Error ? error.message : 'Unknown error',
+          },
+          metadata: {
+            duration: endTime.getTime() - startTime.getTime(),
+            failed: true,
+            isRefire: true,
+          },
+        });
+      }
+
+      await this.langfuse.flush();
+      throw error;
+    }
+  }
+
+  /**
+   * Edit node - patch state at target node and re-execute
+   */
+  async editNode(options: EditNodeOptions): Promise<void> {
+    const session = this.sessions.get(options.sessionId);
+    if (!session) {
+      throw new Error(`Session ${options.sessionId} not found`);
+    }
+
+    this.logger.info('Editing node', {
+      sessionId: options.sessionId,
+      nodeId: options.nodeId,
+      patch: Object.keys(options.statePatch),
+    });
+
+    // Update session status
+    await this.updateSessionStatus(options.sessionId, 'processing');
+
+    // Execute edit flow asynchronously
+    this.executeEditFlow(options).catch((error) => {
+      this.logger.error('Edit flow failed', { sessionId: options.sessionId, error });
+      this.updateSessionStatus(options.sessionId, 'failed', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    });
+  }
+
+  /**
+   * Execute edit flow - patches state and re-streams from target node
+   */
+  private async executeEditFlow(options: EditNodeOptions): Promise<void> {
+    const startTime = new Date();
+    const session = this.sessions.get(options.sessionId);
+
+    if (!session) {
+      throw new Error(`Session ${options.sessionId} not found`);
+    }
+
+    // Create Langfuse trace for edit
+    const trace = this.langfuse.createTrace({
+      id: `idea-edit-${options.sessionId}-${Date.now()}`,
+      name: 'Idea Processing Edit',
+      sessionId: options.sessionId,
+      metadata: {
+        nodeId: options.nodeId,
+        originalSessionId: options.sessionId,
+        patchFields: Object.keys(options.statePatch),
+      },
+      tags: ['idea-processing', 'edit', 'langgraph'],
+    });
+
+    try {
+      // Get current state from checkpoint
+      const checkpointConfig = {
+        configurable: { thread_id: options.sessionId },
+      };
+
+      // Update the state with the patch before streaming
+      // This effectively creates a new checkpoint branch
+      await ideaProcessingGraph.updateState(checkpointConfig, options.statePatch);
+
+      // Now stream from the patched state
+      const stream = await ideaProcessingGraph.stream(null, {
+        configurable: { thread_id: options.sessionId },
+        streamMode: 'values',
+      });
+
+      let finalState: IdeaProcessingState | undefined;
+      let foundTargetNode = false;
+
+      for await (const event of stream) {
+        // Event is a Record<nodeName, Partial<State>>
+        const nodeNames = Object.keys(event);
+        for (const nodeName of nodeNames) {
+          // Skip nodes until we reach the target node
+          if (!foundTargetNode && nodeName !== options.nodeId) {
+            continue;
+          }
+          foundTargetNode = true;
+
+          const nodeOutput = event[nodeName];
+
+          // Log span for each node execution
+          this.langfuse.createSpan({
+            traceId: trace?.id || `idea-edit-${options.sessionId}`,
+            name: nodeName,
+            input: nodeOutput,
+            metadata: {
+              sessionId: options.sessionId,
+              node: nodeName,
+              isEdit: true,
+            },
+          });
+
+          // Emit streaming event
+          this.events.emit('ideation:stream', {
+            sessionId: options.sessionId,
+            node: nodeName,
+            output: nodeOutput,
+            isEdit: true,
+          });
+
+          // Track final state
+          finalState = { ...finalState, ...nodeOutput } as IdeaProcessingState;
+        }
+      }
+
+      if (!finalState) {
+        throw new Error('Edit flow completed without producing final state');
+      }
+
+      const endTime = new Date();
+
+      // Update trace
+      if (trace) {
+        trace.update({
+          output: {
+            approved: finalState.approved,
+            category: finalState.category,
+            impact: finalState.impact,
+            effort: finalState.effort,
+            usedFastPath: finalState.usedFastPath,
+          },
+          metadata: {
+            complexity: finalState.complexity,
+            processingNotes: finalState.processingNotes,
+            duration: endTime.getTime() - startTime.getTime(),
+            isEdit: true,
+          },
+        });
+      }
+
+      // Update session with new state
+      await this.updateSessionStatus(options.sessionId, 'completed', {
+        state: finalState,
+        result: {
+          approved: finalState.approved,
+          category: finalState.category,
+          impact: finalState.impact,
+          effort: finalState.effort,
+        },
+      });
+
+      await this.langfuse.flush();
+    } catch (error) {
+      const endTime = new Date();
+
+      // Log error to trace
+      if (trace) {
+        trace.update({
+          output: {
+            error: error instanceof Error ? error.message : 'Unknown error',
+          },
+          metadata: {
+            duration: endTime.getTime() - startTime.getTime(),
+            failed: true,
+            isEdit: true,
+          },
+        });
+      }
+
+      await this.langfuse.flush();
+      throw error;
+    }
   }
 }
