@@ -20,6 +20,33 @@ function resolveAISDKModel(modelAlias?: string) {
   return anthropic(resolved);
 }
 
+/**
+ * Convert UIMessage format (from useChat) to ModelMessage format (for streamText).
+ * useChat sends: { role, parts: [{ type: "text", text: "..." }] }
+ * streamText expects: { role, content: "..." }
+ */
+function toModelMessages(
+  messages: Array<{
+    role: string;
+    content?: string;
+    parts?: Array<{ type: string; text?: string }>;
+  }>
+): ModelMessage[] {
+  return messages.map((msg) => {
+    // If content already exists, use it directly (standard format)
+    if (typeof msg.content === 'string') {
+      return { role: msg.role, content: msg.content } as ModelMessage;
+    }
+    // Convert parts format to content string
+    const text =
+      msg.parts
+        ?.filter((p) => p.type === 'text' && p.text)
+        .map((p) => p.text)
+        .join('') || '';
+    return { role: msg.role, content: text } as ModelMessage;
+  });
+}
+
 export function createChatRoutes(): Router {
   const router = Router();
 
@@ -27,27 +54,33 @@ export function createChatRoutes(): Router {
    * POST /api/chat
    *
    * Streaming chat endpoint compatible with @ai-sdk/react useChat hook.
-   * Accepts the standard AI SDK message format and returns an SSE stream.
+   * Accepts both UIMessage (parts) and ModelMessage (content) formats.
    *
-   * Body: { messages: CoreMessage[], model?: string, system?: string }
+   * Body: { messages: Message[], model?: string, system?: string }
    * Headers: x-model-alias (optional) — override model (haiku|sonnet|opus)
    */
   router.post('/', async (req: Request, res: Response) => {
     try {
       const {
-        messages,
+        messages: rawMessages,
         model: bodyModel,
         system,
       } = req.body as {
-        messages: ModelMessage[];
+        messages: Array<{
+          role: string;
+          content?: string;
+          parts?: Array<{ type: string; text?: string }>;
+        }>;
         model?: string;
         system?: string;
       };
 
-      if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      if (!rawMessages || !Array.isArray(rawMessages) || rawMessages.length === 0) {
         res.status(400).json({ error: 'messages array is required' });
         return;
       }
+
+      const messages = toModelMessages(rawMessages);
 
       // Model selection: header > body > default (sonnet)
       const modelAlias = (req.headers['x-model-alias'] as string) || bodyModel || 'sonnet';
