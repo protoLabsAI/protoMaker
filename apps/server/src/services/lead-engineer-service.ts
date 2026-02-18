@@ -8,6 +8,7 @@
  * 4. Evaluates fast-path rules on every event (pure functions, no LLM)
  * 5. On project completion: CeremonyService handles retro, we handle metrics
  * 6. Guards crew members from duplicating work on managed projects
+ * 7. Per-feature state machine (INTAKE → PLAN → EXECUTE → REVIEW → MERGE → DEPLOY → ESCALATE)
  */
 
 import { exec } from 'node:child_process';
@@ -27,6 +28,8 @@ import type {
   LeadEngineerSession,
   LeadEngineerFlowState,
   LeadRuleLogEntry,
+  ExecuteOptions,
+  AgentRole,
 } from '@automaker/types';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
@@ -43,6 +46,521 @@ const logger = createLogger('LeadEngineerService');
 
 const WORLD_STATE_REFRESH_MS = 5 * 60 * 1000; // 5 minutes
 const MAX_RULE_LOG_ENTRIES = 200;
+
+// ────────────────────────── Feature State Machine ──────────────────────────
+
+/**
+ * Feature processing states for the state machine.
+ * Each feature flows through these states from INTAKE to completion or ESCALATE.
+ */
+export type FeatureProcessingState =
+  | 'INTAKE'
+  | 'PLAN'
+  | 'EXECUTE'
+  | 'REVIEW'
+  | 'MERGE'
+  | 'DEPLOY'
+  | 'ESCALATE';
+
+/**
+ * State transition result
+ */
+export interface StateTransitionResult {
+  /** Next state to transition to (null = terminal state) */
+  nextState: FeatureProcessingState | null;
+  /** Whether processing should continue */
+  shouldContinue: boolean;
+  /** Optional reason for the transition */
+  reason?: string;
+  /** Optional data to pass to next state */
+  context?: Record<string, unknown>;
+}
+
+/**
+ * State processor context - data available to all states
+ */
+export interface StateContext {
+  feature: Feature;
+  projectPath: string;
+  options: ExecuteOptions;
+  retryCount: number;
+  planRequired: boolean;
+  assignedPersona?: AgentRole;
+  planOutput?: string;
+  prNumber?: number;
+  ciStatus?: 'pending' | 'passing' | 'failing';
+  remediationAttempts: number;
+  escalationReason?: string;
+}
+
+/**
+ * State processor interface - each state implements this
+ */
+export interface StateProcessor {
+  /** Called when entering this state */
+  enter(ctx: StateContext): Promise<void>;
+  /** Process the state and determine next transition */
+  process(ctx: StateContext): Promise<StateTransitionResult>;
+  /** Called when exiting this state */
+  exit(ctx: StateContext): Promise<void>;
+}
+
+/**
+ * INTAKE State: Load feature, classify complexity, assign persona, validate deps
+ */
+class IntakeProcessor implements StateProcessor {
+  async enter(ctx: StateContext): Promise<void> {
+    logger.info(`[INTAKE] Processing feature: ${ctx.feature.id}`, {
+      title: ctx.feature.title,
+      complexity: ctx.feature.complexity,
+    });
+  }
+
+  async process(ctx: StateContext): Promise<StateTransitionResult> {
+    const { feature } = ctx;
+
+    // Validate dependencies
+    if (feature.dependencies && feature.dependencies.length > 0) {
+      logger.info(`[INTAKE] Feature has ${feature.dependencies.length} dependencies`);
+    }
+
+    // Classify complexity if not already set
+    if (!feature.complexity) {
+      ctx.feature.complexity = 'medium';
+      logger.info('[INTAKE] Assigned default complexity: medium');
+    }
+
+    // Assign persona based on feature domain
+    ctx.assignedPersona = this.assignPersona(feature);
+    logger.info(`[INTAKE] Assigned persona: ${ctx.assignedPersona}`);
+
+    // Determine if PLAN phase is needed
+    ctx.planRequired = this.requiresPlan(feature);
+
+    if (ctx.planRequired) {
+      logger.info('[INTAKE] Feature requires PLAN phase');
+      return {
+        nextState: 'PLAN',
+        shouldContinue: true,
+        reason: 'Complex feature requires planning',
+      };
+    }
+
+    return {
+      nextState: 'EXECUTE',
+      shouldContinue: true,
+      reason: 'Simple feature, skip planning',
+    };
+  }
+
+  async exit(ctx: StateContext): Promise<void> {
+    logger.info('[INTAKE] Completed intake processing');
+  }
+
+  private assignPersona(feature: Feature): AgentRole {
+    const title = feature.title?.toLowerCase() || '';
+    const description = feature.description?.toLowerCase() || '';
+
+    if (title.includes('test') || description.includes('test')) {
+      return 'qa-engineer';
+    }
+    if (title.includes('docs') || description.includes('documentation')) {
+      return 'docs-engineer';
+    }
+    if (title.includes('ui') || title.includes('frontend') || description.includes('component')) {
+      return 'frontend-engineer';
+    }
+    if (title.includes('api') || title.includes('backend') || description.includes('service')) {
+      return 'backend-engineer';
+    }
+    if (title.includes('deploy') || title.includes('ci') || description.includes('infrastructure')) {
+      return 'devops-engineer';
+    }
+    if (feature.complexity === 'architectural') {
+      return 'engineering-manager';
+    }
+
+    return 'backend-engineer';
+  }
+
+  private requiresPlan(feature: Feature): boolean {
+    if (feature.complexity === 'architectural') return true;
+    if (feature.complexity === 'large') return true;
+    const filesToModify = (feature as { filesToModify?: string[] }).filesToModify;
+    if (filesToModify && filesToModify.length >= 3) return true;
+    return false;
+  }
+}
+
+/**
+ * PLAN State: Agent researches codebase, produces plan. Factor-based antagonistic gate.
+ */
+class PlanProcessor implements StateProcessor {
+  async enter(ctx: StateContext): Promise<void> {
+    logger.info(`[PLAN] Starting planning phase for feature: ${ctx.feature.id}`);
+  }
+
+  async process(ctx: StateContext): Promise<StateTransitionResult> {
+    logger.info('[PLAN] Running planning agent (stub - implementation pending)');
+
+    // Placeholder plan output
+    ctx.planOutput = 'Placeholder plan output';
+
+    // Placeholder antagonistic gate (always approves for now)
+    const gateResult = await this.antagonisticGate(ctx);
+
+    if (!gateResult.approved) {
+      logger.warn('[PLAN] Plan rejected by antagonistic gate', {
+        reason: gateResult.reason,
+      });
+
+      if (gateResult.shouldRetry) {
+        return {
+          nextState: 'PLAN',
+          shouldContinue: true,
+          reason: 'Plan needs revision',
+          context: { gateReason: gateResult.reason },
+        };
+      }
+
+      return {
+        nextState: 'ESCALATE',
+        shouldContinue: false,
+        reason: 'Plan rejected, escalating',
+      };
+    }
+
+    return {
+      nextState: 'EXECUTE',
+      shouldContinue: true,
+      reason: 'Plan approved',
+    };
+  }
+
+  async exit(ctx: StateContext): Promise<void> {
+    logger.info('[PLAN] Planning phase completed');
+  }
+
+  private async antagonisticGate(
+    ctx: StateContext
+  ): Promise<{ approved: boolean; shouldRetry: boolean; reason?: string }> {
+    // Stub implementation - always approve
+    return { approved: true, shouldRetry: false };
+  }
+}
+
+/**
+ * EXECUTE State: Agent runs in worktree. Monitor. On failure → retry with context or ESCALATE.
+ */
+class ExecuteProcessor implements StateProcessor {
+  private readonly MAX_RETRIES = 3;
+  private readonly MAX_BUDGET_USD = 10.0;
+
+  async enter(ctx: StateContext): Promise<void> {
+    logger.info(`[EXECUTE] Starting execution for feature: ${ctx.feature.id}`, {
+      retryCount: ctx.retryCount,
+      persona: ctx.assignedPersona,
+    });
+  }
+
+  async process(ctx: StateContext): Promise<StateTransitionResult> {
+    logger.info('[EXECUTE] Running implementation agent (stub - implementation pending)');
+
+    // Check budget
+    const totalCost = ctx.feature.costUsd || 0;
+    if (totalCost > this.MAX_BUDGET_USD) {
+      ctx.escalationReason = `Budget exceeded: $${totalCost.toFixed(2)}`;
+      return {
+        nextState: 'ESCALATE',
+        shouldContinue: false,
+        reason: ctx.escalationReason,
+      };
+    }
+
+    // Check retry limit
+    if (ctx.retryCount >= this.MAX_RETRIES) {
+      ctx.escalationReason = `Max retries exceeded (${this.MAX_RETRIES})`;
+      return {
+        nextState: 'ESCALATE',
+        shouldContinue: false,
+        reason: ctx.escalationReason,
+      };
+    }
+
+    // Stub: always succeed
+    const success = true;
+
+    if (!success) {
+      ctx.retryCount++;
+      logger.warn('[EXECUTE] Execution failed, will retry', {
+        retryCount: ctx.retryCount,
+      });
+
+      return {
+        nextState: 'EXECUTE',
+        shouldContinue: true,
+        reason: 'Execution failed, retrying with more context',
+      };
+    }
+
+    return {
+      nextState: 'REVIEW',
+      shouldContinue: true,
+      reason: 'Execution completed, PR created',
+    };
+  }
+
+  async exit(ctx: StateContext): Promise<void> {
+    logger.info('[EXECUTE] Execution phase completed');
+  }
+}
+
+/**
+ * REVIEW State: PR created. CI runs. If fails → back to EXECUTE (bounded). If passes → MERGE.
+ */
+class ReviewProcessor implements StateProcessor {
+  private readonly MAX_REMEDIATION_ATTEMPTS = 2;
+
+  async enter(ctx: StateContext): Promise<void> {
+    logger.info(`[REVIEW] PR review started for feature: ${ctx.feature.id}`, {
+      prNumber: ctx.prNumber,
+    });
+  }
+
+  async process(ctx: StateContext): Promise<StateTransitionResult> {
+    logger.info('[REVIEW] Checking PR and CI status (stub - implementation pending)');
+
+    // Stub: In real implementation, this would check actual CI status from GitHub
+    // For now, use context if set, otherwise default to passing
+    if (!ctx.ciStatus) {
+      ctx.ciStatus = 'passing';
+    }
+
+    if (ctx.ciStatus === 'failing') {
+      if (ctx.remediationAttempts >= this.MAX_REMEDIATION_ATTEMPTS) {
+        ctx.escalationReason = `CI failing after ${this.MAX_REMEDIATION_ATTEMPTS} remediation attempts`;
+        return {
+          nextState: 'ESCALATE',
+          shouldContinue: false,
+          reason: ctx.escalationReason,
+        };
+      }
+
+      ctx.remediationAttempts++;
+      return {
+        nextState: 'EXECUTE',
+        shouldContinue: true,
+        reason: 'CI failing, remediating',
+        context: { remediation: true },
+      };
+    }
+
+    return {
+      nextState: 'MERGE',
+      shouldContinue: true,
+      reason: 'PR approved, CI passing',
+    };
+  }
+
+  async exit(ctx: StateContext): Promise<void> {
+    logger.info('[REVIEW] Review phase completed');
+  }
+}
+
+/**
+ * MERGE State: Auto-merge. Update board. GH→Linear sync.
+ */
+class MergeProcessor implements StateProcessor {
+  async enter(ctx: StateContext): Promise<void> {
+    logger.info(`[MERGE] Starting merge for feature: ${ctx.feature.id}`, {
+      prNumber: ctx.prNumber,
+    });
+  }
+
+  async process(ctx: StateContext): Promise<StateTransitionResult> {
+    logger.info('[MERGE] Merging PR (stub - implementation pending)');
+
+    return {
+      nextState: 'DEPLOY',
+      shouldContinue: true,
+      reason: 'PR merged successfully',
+    };
+  }
+
+  async exit(ctx: StateContext): Promise<void> {
+    logger.info('[MERGE] Merge completed');
+  }
+}
+
+/**
+ * DEPLOY State: Triggered by main push. Verify.
+ */
+class DeployProcessor implements StateProcessor {
+  async enter(ctx: StateContext): Promise<void> {
+    logger.info(`[DEPLOY] Deployment verification for feature: ${ctx.feature.id}`);
+  }
+
+  async process(ctx: StateContext): Promise<StateTransitionResult> {
+    logger.info('[DEPLOY] Verifying deployment (stub - implementation pending)');
+
+    return {
+      nextState: null,
+      shouldContinue: false,
+      reason: 'Feature deployed and verified',
+    };
+  }
+
+  async exit(ctx: StateContext): Promise<void> {
+    logger.info('[DEPLOY] Deployment verification completed');
+  }
+}
+
+/**
+ * ESCALATE State: Too many failures, budget exceeded, needs different expertise. Flag AVA.
+ */
+class EscalateProcessor implements StateProcessor {
+  async enter(ctx: StateContext): Promise<void> {
+    logger.warn(`[ESCALATE] Escalating feature: ${ctx.feature.id}`, {
+      reason: ctx.escalationReason,
+    });
+  }
+
+  async process(ctx: StateContext): Promise<StateTransitionResult> {
+    logger.warn('[ESCALATE] Creating escalation (stub - implementation pending)', {
+      reason: ctx.escalationReason,
+    });
+
+    return {
+      nextState: null,
+      shouldContinue: false,
+      reason: 'Feature escalated',
+    };
+  }
+
+  async exit(ctx: StateContext): Promise<void> {
+    logger.info('[ESCALATE] Escalation completed');
+  }
+}
+
+/**
+ * Feature State Machine
+ *
+ * Processes a single feature through states from INTAKE to completion.
+ * Replaces the inner loop of auto-mode's executeFeature().
+ */
+export class FeatureStateMachine {
+  private readonly processors: Map<FeatureProcessingState, StateProcessor>;
+
+  constructor() {
+    this.processors = new Map([
+      ['INTAKE', new IntakeProcessor()],
+      ['PLAN', new PlanProcessor()],
+      ['EXECUTE', new ExecuteProcessor()],
+      ['REVIEW', new ReviewProcessor()],
+      ['MERGE', new MergeProcessor()],
+      ['DEPLOY', new DeployProcessor()],
+      ['ESCALATE', new EscalateProcessor()],
+    ]);
+  }
+
+  /**
+   * Process a feature through the state machine.
+   * This replaces the inner loop of auto-mode's executeFeature().
+   */
+  async processFeature(
+    feature: Feature,
+    projectPath: string,
+    options: ExecuteOptions
+  ): Promise<{ finalState: FeatureProcessingState; context: StateContext }> {
+    const ctx: StateContext = {
+      feature,
+      projectPath,
+      options,
+      retryCount: 0,
+      planRequired: false,
+      remediationAttempts: 0,
+    };
+
+    let currentState: FeatureProcessingState = 'INTAKE';
+    let transitionCount = 0;
+    const MAX_TRANSITIONS = 20;
+
+    logger.info('Starting feature processing', {
+      featureId: feature.id,
+      title: feature.title,
+      initialState: currentState,
+    });
+
+    while (currentState && transitionCount < MAX_TRANSITIONS) {
+      const processor = this.processors.get(currentState);
+      if (!processor) {
+        logger.error(`No processor found for state: ${currentState}`);
+        break;
+      }
+
+      try {
+        await processor.enter(ctx);
+        const result = await processor.process(ctx);
+        await processor.exit(ctx);
+
+        logger.info('State transition', {
+          from: currentState,
+          to: result.nextState || 'DONE',
+          reason: result.reason,
+          shouldContinue: result.shouldContinue,
+        });
+
+        if (!result.shouldContinue || !result.nextState) {
+          logger.info('Feature processing completed', {
+            featureId: feature.id,
+            finalState: currentState,
+            transitionCount,
+          });
+          break;
+        }
+
+        currentState = result.nextState;
+        transitionCount++;
+      } catch (error) {
+        logger.error('Error processing state', {
+          state: currentState,
+          error: error instanceof Error ? error.message : String(error),
+        });
+
+        currentState = 'ESCALATE';
+        ctx.escalationReason = `Unexpected error in ${currentState}: ${error instanceof Error ? error.message : String(error)}`;
+      }
+    }
+
+    if (transitionCount >= MAX_TRANSITIONS) {
+      logger.error('Max transitions exceeded, escalating', {
+        featureId: feature.id,
+        transitionCount,
+      });
+      currentState = 'ESCALATE';
+      ctx.escalationReason = 'Max state transitions exceeded';
+    }
+
+    return { finalState: currentState, context: ctx };
+  }
+
+  /**
+   * Get the processor for a specific state (for testing or custom workflows)
+   */
+  getProcessor(state: FeatureProcessingState): StateProcessor | undefined {
+    return this.processors.get(state);
+  }
+
+  /**
+   * Register a custom processor (allows extending the state machine)
+   */
+  registerProcessor(state: FeatureProcessingState, processor: StateProcessor): void {
+    this.processors.set(state, processor);
+    logger.info(`Registered custom processor for state: ${state}`);
+  }
+}
+
+// ────────────────────────── Session Management ──────────────────────────
 
 /**
  * Persisted session data (subset of LeadEngineerSession)
