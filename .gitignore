@@ -8,6 +8,7 @@ node_modules/
 dist/
 build/
 out/
+storybook-static/
 docs/.vitepress/dist/
 docs/.vitepress/cache/
 .next/
