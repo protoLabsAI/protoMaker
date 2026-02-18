@@ -164,9 +164,7 @@ export class SignalIntakeService {
 
       // GTM signals: log and park (manual handling for now)
       if (classification.category === 'gtm') {
-        logger.info(
-          `GTM signal parked for manual handling: "${title}" (source: ${signal.source})`
-        );
+        logger.info(`GTM signal parked for manual handling: "${title}" (source: ${signal.source})`);
         this.events.emit('signal:routed', {
           projectPath: this.defaultProjectPath,
           title,
