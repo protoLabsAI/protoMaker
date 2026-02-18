@@ -12,6 +12,18 @@ import { createLogger } from '@automaker/utils';
 import { ideaProcessingGraph, type IdeaProcessingState, type IdeaInput } from '@automaker/flows';
 import { LangfuseClient } from '@automaker/observability';
 
+/**
+ * Maps each graph node to a progress percentage (0-100)
+ * Used to track progress through the idea processing flow
+ */
+const NODE_PROGRESS_MAP: Record<string, number> = {
+  classify_complexity: 20,
+  research: 50,
+  fast_path_review: 70,
+  review: 80,
+  done: 100,
+};
+
 interface IdeaSession {
   id: string;
   idea: string;
@@ -141,7 +153,15 @@ export class IdeaProcessingService {
     this.sessions.set(sessionId, session);
     await this.saveSession(session);
 
-    // Emit event for session created
+    // Emit event for session created (new granular event)
+    this.events.emit('idea:session-created', {
+      sessionId,
+      idea: options.idea,
+      autoApprove: options.autoApprove,
+      countdownSeconds: options.countdownSeconds,
+    });
+
+    // Emit legacy event for backward compatibility
     this.events.emit('ideation:session-started', {
       sessionId,
       idea: options.idea,
@@ -203,26 +223,53 @@ export class IdeaProcessingService {
         for (const nodeName of nodeNames) {
           const nodeOutput = event[nodeName];
 
-          // Log span for each node execution
-          this.langfuse.createSpan({
-            traceId: trace?.id || `idea-${sessionId}`,
-            name: nodeName,
-            input: nodeOutput,
-            metadata: {
-              sessionId,
-              node: nodeName,
-            },
-          });
-
-          // Emit streaming event
-          this.events.emit('ideation:stream', {
+          // Emit node-enter event before processing
+          const progress = NODE_PROGRESS_MAP[nodeName] ?? 0;
+          this.events.emit('idea:node-enter', {
             sessionId,
             node: nodeName,
-            output: nodeOutput,
+            progress,
           });
 
-          // Track final state
-          finalState = { ...finalState, ...nodeOutput } as IdeaProcessingState;
+          try {
+            // Log span for each node execution
+            this.langfuse.createSpan({
+              traceId: trace?.id || `idea-${sessionId}`,
+              name: nodeName,
+              input: nodeOutput,
+              metadata: {
+                sessionId,
+                node: nodeName,
+              },
+            });
+
+            // Emit streaming event (legacy)
+            this.events.emit('ideation:stream', {
+              sessionId,
+              node: nodeName,
+              output: nodeOutput,
+            });
+
+            // Track final state
+            finalState = { ...finalState, ...nodeOutput } as IdeaProcessingState;
+
+            // Emit node-complete event after processing
+            this.events.emit('idea:node-complete', {
+              sessionId,
+              node: nodeName,
+              output: nodeOutput,
+              progress,
+            });
+          } catch (nodeError) {
+            // Emit node-error event if node processing fails
+            this.events.emit('idea:node-error', {
+              sessionId,
+              node: nodeName,
+              error: nodeError instanceof Error ? nodeError.message : String(nodeError),
+              progress,
+            });
+            throw nodeError;
+          }
         }
       }
 
@@ -262,16 +309,42 @@ export class IdeaProcessingService {
             effort: finalState.effort,
           },
         });
+
+        // Emit completed event
+        this.events.emit('idea:completed', {
+          sessionId,
+          approved: true,
+          autoApproved: true,
+          category: finalState.category,
+          impact: finalState.impact,
+          effort: finalState.effort,
+        });
       } else if (finalState.approved) {
         // Needs human approval
         await this.updateSessionStatus(sessionId, 'awaiting_approval', {
           state: finalState,
+        });
+
+        // Emit approval-needed event
+        this.events.emit('idea:approval-needed', {
+          sessionId,
+          category: finalState.category,
+          impact: finalState.impact,
+          effort: finalState.effort,
+          countdownSeconds: options.countdownSeconds,
         });
       } else {
         // Flow rejected the idea
         await this.updateSessionStatus(sessionId, 'failed', {
           state: finalState,
           error: finalState.reviewOutput?.reasoning || 'Idea rejected by flow',
+        });
+
+        // Emit completed event with rejected status
+        this.events.emit('idea:completed', {
+          sessionId,
+          approved: false,
+          reason: finalState.reviewOutput?.reasoning || 'Idea rejected by flow',
         });
       }
 

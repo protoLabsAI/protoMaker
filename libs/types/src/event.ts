@@ -309,6 +309,15 @@ export type EventType =
   | 'idea:synthesis-started'
   | 'idea:synthesis-completed'
   | 'idea:processing-error'
+  // Idea processing granular events (LangGraph node execution)
+  | 'idea:session-created'
+  | 'idea:node-enter'
+  | 'idea:node-complete'
+  | 'idea:node-error'
+  | 'idea:approval-needed'
+  | 'idea:approval-resolved'
+  | 'idea:completed'
+  | 'idea:node-refire'
   // Lead Engineer events (production-phase nerve center)
   | 'lead-engineer:started'
   | 'lead-engineer:stopped'
