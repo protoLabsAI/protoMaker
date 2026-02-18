@@ -11,16 +11,26 @@ import type { EventEmitter } from '../lib/events.js';
 import { createLogger } from '@automaker/utils';
 import { ideaProcessingGraph, type IdeaProcessingState, type IdeaInput } from '@automaker/flows';
 import { LangfuseClient } from '@automaker/observability';
+import type {
+  IdeaSessionStatus,
+  IdeaNodeState,
+  IdeaNodeStatus,
+  IdeaSessionPath,
+} from '@automaker/types';
 
 interface IdeaSession {
   id: string;
   idea: string;
-  status: 'processing' | 'awaiting_approval' | 'completed' | 'failed';
+  status: IdeaSessionStatus;
   state?: unknown; // LangGraph state snapshot for resume
   result?: unknown; // Final result when completed
   error?: string;
   createdAt: string;
   updatedAt: string;
+  nodes?: Record<string, IdeaNodeState>;
+  progress?: number;
+  path?: IdeaSessionPath;
+  source?: string;
   countdown?: {
     startedAt: string;
     expiresAt: string;
