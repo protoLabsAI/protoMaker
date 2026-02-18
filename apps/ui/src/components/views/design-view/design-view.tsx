@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Palette } from 'lucide-react';
 import type { PenThemeSelection } from '@automaker/pen-renderer';
 import { useDesignFileList, useDesignFile } from '@/hooks/queries/use-design-files';
@@ -6,12 +6,14 @@ import { useAppStore } from '@/store/app-store';
 import { FileBrowser } from './components/file-browser';
 import { ThemePicker } from './components/theme-picker';
 import { CanvasViewport } from './components/canvas-viewport';
+import { PropsPanel } from './components/props-panel';
 
 export function DesignView() {
   const currentProject = useAppStore((s) => s.currentProject);
   const projectPath = currentProject?.path;
 
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [theme, setTheme] = useState<PenThemeSelection>({
     Mode: 'Dark',
     Base: 'Zinc',
@@ -20,6 +22,15 @@ export function DesignView() {
 
   const { data: files, isLoading: isLoadingFiles } = useDesignFileList(projectPath);
   const { data: fileContent, isLoading: isLoadingFile } = useDesignFile(projectPath, selectedFile);
+
+  const handleFileSelect = useCallback((filePath: string) => {
+    setSelectedFile(filePath);
+    setSelectedNodeId(null);
+  }, []);
+
+  const handleNodeSelect = useCallback((nodeId: string | null) => {
+    setSelectedNodeId(nodeId);
+  }, []);
 
   return (
     <div className="flex h-full">
@@ -36,7 +47,7 @@ export function DesignView() {
             <FileBrowser
               files={files ?? []}
               selectedPath={selectedFile}
-              onSelect={setSelectedFile}
+              onSelect={handleFileSelect}
             />
           )}
         </div>
@@ -69,9 +80,21 @@ export function DesignView() {
             </div>
           )}
 
-          {selectedFile && fileContent && <CanvasViewport json={fileContent} theme={theme} />}
+          {selectedFile && fileContent && (
+            <CanvasViewport json={fileContent} theme={theme} onNodeSelect={handleNodeSelect} />
+          )}
         </div>
       </div>
+
+      {/* Right panel — props inspector */}
+      {selectedFile && fileContent && selectedNodeId && (
+        <PropsPanel
+          json={fileContent}
+          theme={theme}
+          selectedNodeId={selectedNodeId}
+          onClose={() => setSelectedNodeId(null)}
+        />
+      )}
     </div>
   );
 }
