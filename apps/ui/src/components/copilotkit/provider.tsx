@@ -14,7 +14,6 @@ import {
   CopilotSidebar,
   useAgentContext,
 } from '@copilotkitnext/react';
-import '@copilotkitnext/react/styles.css';
 import { getCopilotKitThemeStyles } from './theme-bridge';
 import { getAuthHeaders } from '@/lib/api-fetch';
 import { useAuthStore } from '@/store/auth-store';
