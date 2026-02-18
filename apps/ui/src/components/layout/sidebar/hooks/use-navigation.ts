@@ -11,6 +11,7 @@ import {
   Network,
   Bell,
   Settings,
+  Palette,
 } from 'lucide-react';
 import type { NavSection, NavItem } from '../types';
 import type { KeyboardShortcut } from '@/hooks/use-keyboard-shortcuts';
@@ -145,6 +146,11 @@ export function useNavigation({
         label: 'Kanban Board',
         icon: LayoutGrid,
         shortcut: shortcuts.board,
+      },
+      {
+        id: 'design',
+        label: 'Design',
+        icon: Palette,
       },
     ];
 

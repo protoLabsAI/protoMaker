@@ -55,6 +55,7 @@ import { authMiddleware, validateWsConnectionToken, checkRawAuthentication } fro
 import { requireJsonContentType } from './middleware/require-json-content-type.js';
 import { createAuthRoutes } from './routes/auth/index.js';
 import { createFsRoutes } from './routes/fs/index.js';
+import { createDesignsRoutes } from './routes/designs/index.js';
 import {
   createHealthRoutes,
   createDetailedHandler,
@@ -1053,6 +1054,7 @@ app.get(
 );
 
 app.use('/api/fs', createFsRoutes(events));
+app.use('/api/designs', createDesignsRoutes());
 app.use('/api/sessions', createSessionsRoutes(agentService));
 app.use(
   '/api/features',

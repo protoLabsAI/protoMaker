@@ -347,6 +347,17 @@ export const queryKeys = {
   },
 
   // ============================================
+  // Designs
+  // ============================================
+  designs: {
+    /** Design file tree for a project */
+    list: (projectPath: string) => ['designs', 'list', projectPath] as const,
+    /** Single design file content */
+    file: (projectPath: string, filePath: string) =>
+      ['designs', 'file', projectPath, filePath] as const,
+  },
+
+  // ============================================
   // Activity Feed
   // ============================================
   activity: {
