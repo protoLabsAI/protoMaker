@@ -184,40 +184,6 @@ export {
   extractOptionalEnum,
 } from './content/xml-parser.js';
 
-// Project management flows
-export {
-  createStatusReportFlow,
-  executeStatusReport,
-  type StatusReportFlowConfig,
-  ProjectStatusStateAnnotation,
-  ProjectStatusStateSchema,
-  type ProjectStatusState,
-  type ProjectStatusStateType,
-  type BoardMetrics,
-  type PRMetrics,
-  type DependencyMetrics,
-  type AgentMetrics,
-  type HealthStatus,
-  type ProgressAnalysis,
-  type RiskFactor,
-  type MilestoneSummary,
-  type StatusReport,
-  type MetricsCollector,
-} from './project-management/index.js';
-
-// Risk assessment flow (project management)
-export {
-  createRiskAssessmentGraph,
-  riskAssessmentGraph,
-  RiskAssessmentStateAnnotation,
-  type RiskAssessmentState,
-  type FeatureSummary,
-  type BlockerFinding,
-  type VelocityMetrics,
-  type RiskCategory,
-  type Recommendation,
-  type AntagonisticReview,
-} from './project-management/risk-assessment-flow.js';
 
 // Project planning flow (Linear-native HITL workflow)
 export {
@@ -259,39 +225,3 @@ export {
   createLLMMilestonePlanner,
 } from './project-planning/index.js';
 
-// Project wrap-up flow (knowledge loop)
-export {
-  createWrapUpFlow,
-  type WrapUpFlowConfig,
-  WrapUpStateAnnotation,
-  type WrapUpState,
-  type WrapUpStateType,
-  type WrapUpStage,
-  type WrapUpInput,
-  type MilestoneSummary as WrapUpMilestoneSummary,
-  type ProjectMetrics as WrapUpProjectMetrics,
-  type ComplexityAccuracyMetrics,
-  type MemoryFileEntry,
-  type StructuredLearning,
-  type ImprovementItem,
-  type WrapUpHITLResponse,
-  createGatherMetricsNode,
-  type MetricsCollector as WrapUpMetricsCollector,
-  createGenerateRetroNode,
-  type RetroGenerator,
-  createExtractLearningsNode,
-  type MemoryCollector,
-  type LearningSynthesizer,
-  createUpdateMemoryNode,
-  type MemoryPersister,
-  createGenerateContentBriefNode,
-  type ContentBriefGenerator as WrapUpContentBriefGenerator,
-  createProposeImprovementsNode,
-  type ImprovementExtractor,
-  createRouteImprovementsNode,
-  type ImprovementRouter,
-  improvementsHitlRouter,
-  hitlImprovementsProcessor,
-  executeWrapUpFlowWithTracing,
-  type ExecuteWrapUpFlowOptions,
-} from './wrap-up/index.js';
