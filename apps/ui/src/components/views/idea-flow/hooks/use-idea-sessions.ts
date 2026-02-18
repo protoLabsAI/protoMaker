@@ -1,15 +1,15 @@
 /**
  * Idea Sessions Query Hook
  *
- * React Query hook for fetching ideation sessions with automatic refresh.
- * Provides real-time updates for active ideation sessions via polling.
+ * React Query hook for fetching idea processing sessions with automatic refresh.
+ * Calls GET /api/ideas directly (the idea processing service endpoint).
  */
 
 import { useQuery } from '@tanstack/react-query';
-import type { IdeationSession } from '@automaker/types';
-import { getElectronAPI } from '@/lib/electron';
+import type { IdeationSession, IdeationSessionStatus } from '@automaker/types';
 import { queryKeys } from '@/lib/query-keys';
 import { STALE_TIMES } from '@/lib/query-client';
+import { getAuthHeaders } from '@/lib/api-fetch';
 
 interface IdeaSessionsResult {
   sessions: IdeationSession[];
@@ -17,16 +17,30 @@ interface IdeaSessionsResult {
 }
 
 /**
- * Fetch all ideation sessions for a project
+ * Map server session status to UI session status
+ *
+ * Server uses: 'processing' | 'awaiting_approval' | 'completed' | 'failed'
+ * UI uses: 'active' | 'completed' | 'abandoned'
+ */
+function mapSessionStatus(serverStatus: string): IdeationSessionStatus {
+  switch (serverStatus) {
+    case 'processing':
+    case 'awaiting_approval':
+      return 'active';
+    case 'completed':
+      return 'completed';
+    case 'failed':
+      return 'abandoned';
+    default:
+      return 'active';
+  }
+}
+
+/**
+ * Fetch all idea processing sessions
  *
  * @param projectPath - Path to the project
  * @returns Query result with sessions array, loading state, and error
- *
- * @example
- * ```tsx
- * const { data, isLoading, error } = useIdeaSessions(projectPath);
- * const { sessions } = data ?? { sessions: [], count: 0 };
- * ```
  */
 export function useIdeaSessions(projectPath: string | undefined) {
   const query = useQuery({
@@ -34,37 +48,33 @@ export function useIdeaSessions(projectPath: string | undefined) {
     queryFn: async (): Promise<IdeaSessionsResult> => {
       if (!projectPath) throw new Error('No project path');
 
-      const api = getElectronAPI();
-      const result = await api.ideation?.listIdeas(projectPath);
+      const response = await fetch('/api/ideas', {
+        headers: {
+          ...getAuthHeaders(),
+        },
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch idea sessions: ${response.status}`);
+      }
+
+      const result = await response.json();
 
       if (!result?.success) {
-        throw new Error(result?.error || 'Failed to fetch ideation sessions');
+        throw new Error(result?.error || 'Failed to fetch idea sessions');
       }
 
-      // Extract unique session IDs from ideas
-      const ideas = result.ideas ?? [];
-      const sessionMap = new Map<string, IdeationSession>();
+      // Server returns { sessions: IdeaSession[] } — map to IdeationSession format
+      const serverSessions = (result.sessions ?? []) as Array<Record<string, unknown>>;
 
-      for (const idea of ideas) {
-        if (idea.conversationId) {
-          // Create a session record from the idea's conversation metadata
-          if (!sessionMap.has(idea.conversationId)) {
-            sessionMap.set(idea.conversationId, {
-              id: idea.conversationId,
-              projectPath,
-              promptCategory: idea.category,
-              promptId: idea.sourcePromptId,
-              status: 'completed', // Ideas that exist are from completed sessions
-              createdAt: idea.createdAt,
-              updatedAt: idea.updatedAt,
-            });
-          }
-        }
-      }
-
-      const sessions = Array.from(sessionMap.values()).sort(
-        (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-      );
+      const sessions: IdeationSession[] = serverSessions.map((s) => ({
+        id: s.id as string,
+        projectPath,
+        status: mapSessionStatus(s.status as string),
+        createdAt: s.createdAt as string,
+        updatedAt: s.updatedAt as string,
+      }));
 
       return {
         sessions,
@@ -73,7 +83,6 @@ export function useIdeaSessions(projectPath: string | undefined) {
     },
     enabled: !!projectPath,
     staleTime: STALE_TIMES.FEATURES,
-    // Refetch every 10 seconds to keep sessions up-to-date
     refetchInterval: 10000,
   });
 
