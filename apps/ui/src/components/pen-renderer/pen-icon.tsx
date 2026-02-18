@@ -1,5 +1,33 @@
 import type { ResolvedNode } from '@automaker/pen-renderer';
+import type { LucideIcon } from 'lucide-react';
+import {
+  Check,
+  ChevronDown,
+  ChevronRight,
+  ChevronsUpDown,
+  Circle,
+  Ellipsis,
+  Hexagon,
+  Plus,
+  Search,
+  X,
+  HelpCircle,
+} from 'lucide-react';
 import { toCSS } from './utils';
+
+/** Map of Lucide icon names (kebab-case) to their React components */
+const LUCIDE_ICONS: Record<string, LucideIcon> = {
+  check: Check,
+  'chevron-down': ChevronDown,
+  'chevron-right': ChevronRight,
+  'chevrons-up-down': ChevronsUpDown,
+  circle: Circle,
+  ellipsis: Ellipsis,
+  hexagon: Hexagon,
+  plus: Plus,
+  search: Search,
+  x: X,
+};
 
 interface PenIconProps {
   node: ResolvedNode;
@@ -8,10 +36,8 @@ interface PenIconProps {
 }
 
 /**
- * Renders a .pen icon_font node.
- *
- * If the icon uses a known icon font family (e.g., Lucide), renders the
- * appropriate icon character. Falls back to a placeholder SVG.
+ * Renders a .pen icon_font node using Lucide icons when available.
+ * Falls back to a generic placeholder icon for unknown icon names.
  */
 export function PenIcon({ node, isSelected, onClick }: PenIconProps) {
   const style: React.CSSProperties = {
@@ -23,6 +49,11 @@ export function PenIcon({ node, isSelected, onClick }: PenIconProps) {
   };
 
   const iconName = node.iconName ?? node.name ?? '';
+  const sizeStr = node.styles.width ?? node.styles.height ?? '16px';
+  const size = parseInt(sizeStr, 10) || 16;
+  const color = node.styles.color ?? 'currentColor';
+
+  const IconComponent = LUCIDE_ICONS[iconName] ?? HelpCircle;
 
   return (
     <span
@@ -35,21 +66,7 @@ export function PenIcon({ node, isSelected, onClick }: PenIconProps) {
       onClick={onClick}
       title={iconName}
     >
-      <svg
-        viewBox="0 0 24 24"
-        width={node.styles.width ?? '16px'}
-        height={node.styles.height ?? '16px'}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        style={{ color: node.styles.color ?? 'currentColor' }}
-      >
-        <rect x="3" y="3" width="18" height="18" rx="2" />
-        <line x1="9" y1="9" x2="15" y2="15" />
-        <line x1="15" y1="9" x2="9" y2="15" />
-      </svg>
+      <IconComponent size={size} color={color} strokeWidth={2} />
     </span>
   );
 }

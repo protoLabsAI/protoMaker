@@ -371,5 +371,9 @@ export interface ResolvedNode {
   iconName?: string;
   /** Whether this is a reusable component definition */
   reusable?: boolean;
+  /** SVG path geometry (for path nodes) */
+  geometry?: string;
+  /** Stroke properties for SVG rendering */
+  stroke?: { color?: string; width?: number; cap?: string; join?: string };
   children?: ResolvedNode[];
 }

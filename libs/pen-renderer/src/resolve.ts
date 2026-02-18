@@ -88,6 +88,26 @@ function resolveNode(
     resolved.iconName = icon.iconFontName;
   }
 
+  // Path geometry and stroke info for SVG rendering
+  if (node.type === 'path' || node.type === 'line') {
+    const pathNode = node as PenNode & {
+      geometry?: string;
+      stroke?: { fill?: string; thickness?: number; cap?: string; join?: string };
+    };
+    if (pathNode.geometry) {
+      resolved.geometry = pathNode.geometry;
+    }
+    if (pathNode.stroke) {
+      const strokeColor = pathNode.stroke.fill ? resolveFill(pathNode.stroke.fill) : undefined;
+      resolved.stroke = {
+        color: strokeColor ?? 'currentColor',
+        width: typeof pathNode.stroke.thickness === 'number' ? pathNode.stroke.thickness : 1,
+        cap: pathNode.stroke.cap,
+        join: pathNode.stroke.join,
+      };
+    }
+  }
+
   // Recursively resolve children, passing THIS node's layout as parent context
   const thisLayout = getNodeLayout(node);
   if ('children' in node && Array.isArray(node.children)) {
