@@ -290,6 +290,7 @@ export type EventType =
   // Lead Engineer events (production-phase nerve center)
   | 'lead-engineer:started'
   | 'lead-engineer:stopped'
+  | 'lead-engineer:feature-processed'
   | 'lead-engineer:action-executed'
   | 'lead-engineer:rule-evaluated'
   | 'lead-engineer:project-completing'
@@ -519,6 +520,12 @@ export interface EventPayloadMap {
     ruleName: string;
     eventType: string;
     actionCount: number;
+  };
+  'lead-engineer:feature-processed': {
+    projectPath: string;
+    featureId: string;
+    finalState: string;
+    success: boolean;
   };
   'lead-engineer:project-completing': { projectPath: string; projectSlug: string };
   'lead-engineer:project-completed': { projectPath: string; projectSlug: string };
