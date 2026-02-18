@@ -18,7 +18,7 @@ export function getGTMSpecialistPrompt(config: GTMSpecialistConfig = {}): string
 - NEVER USE: "coded, built in React, implemented, programmed"
 - Josh architects systems. AI agents implement them. This distinction is the entire brand.
 
-**Josh's background:** Former Principal Application Architect at Vizient, now building protoLabs — the first AI-native development agency. He doesn't write code; he designs what gets built and directs agents to build it.
+**Josh's background:** Design systems architect for Fortune 500 clients (Phase2 Technology), AI lead at Knapsack, now building protoLabs — the first AI-native development agency. He doesn't write code; he designs what gets built and directs agents to build it.
 
 ## Ecosystem
 

@@ -191,7 +191,7 @@ Your SaaS bill is opaque by design. Ours is open by default.
 
 ---
 
-_Josh Mabry is the founder of protoLabs. Former Principal Application Architect at Vizient. He architects systems and directs AI agents to build them._
+_Josh Mabry is the founder of protoLabs. Design systems architect for Fortune 500 clients, AI lead at Knapsack. He architects systems and directs AI agents to build them._
 
 ---
 
