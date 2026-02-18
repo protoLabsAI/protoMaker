@@ -685,8 +685,8 @@ export class GitWorkflowService {
    * @returns Commit hash (short) if changes were committed, null if no changes
    */
   private async commitChanges(workDir: string, feature: Feature): Promise<string | null> {
-    // Check for changes
-    const { stdout: status } = await execAsync('git status --porcelain', {
+    // Check for changes - include untracked files explicitly
+    const { stdout: status } = await execAsync('git status --porcelain --untracked-files=all', {
       cwd: workDir,
       env: execEnv,
     });
@@ -695,12 +695,17 @@ export class GitWorkflowService {
       return null; // No changes
     }
 
+    logger.debug(`Detected changes in ${workDir}:\n${status.trim()}`);
+
     // Generate commit message
     const title = feature.title || extractTitleFromDescription(feature.description);
     const commitMessage = `feat: ${title}\n\nImplemented by Automaker auto-mode\nFeature ID: ${feature.id}`;
 
-    // Stage all changes
-    await execAsync("git add -A -- ':!.automaker/'", { cwd: workDir, env: execEnv });
+    // Stage all changes - include .automaker/memory/ but exclude other .automaker/ files
+    await execAsync("git add -A -- ':!.automaker/' '.automaker/memory/'", {
+      cwd: workDir,
+      env: execEnv,
+    });
 
     // Auto-format staged files before committing (matches CI prettier behavior)
     try {
@@ -718,7 +723,10 @@ export class GitWorkflowService {
           }
         );
         // Re-stage after formatting
-        await execAsync("git add -A -- ':!.automaker/'", { cwd: workDir, env: execEnv });
+        await execAsync("git add -A -- ':!.automaker/' '.automaker/memory/'", {
+          cwd: workDir,
+          env: execEnv,
+        });
         logger.debug(`Auto-formatted ${files.length} staged files`);
       }
     } catch (fmtError) {
@@ -834,7 +842,10 @@ export class GitWorkflowService {
       if (!status.trim()) return; // No formatting changes needed
 
       // Stage and amend
-      await execAsync("git add -A -- ':!.automaker/'", { cwd: workDir, env: execEnv });
+      await execAsync("git add -A -- ':!.automaker/' '.automaker/memory/'", {
+        cwd: workDir,
+        env: execEnv,
+      });
       await execAsync('git commit --amend --no-edit', { cwd: workDir, env: execEnv });
       logger.info(`Formatted and amended last commit (${files.length} files checked)`);
     } catch (error) {
