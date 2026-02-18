@@ -3,9 +3,9 @@ import { useEffect, useState, useCallback, useDeferredValue, useRef } from 'reac
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { createLogger } from '@automaker/utils/logger';
-import { CopilotKitProvider, CopilotSidebarWrapper } from '@/components/copilotkit/provider';
 import { Sidebar } from '@/components/layout/sidebar';
 import { ProjectSwitcher } from '@/components/layout/project-switcher';
+import { ChatSidebar } from '@/components/views/chat/chat-sidebar';
 import {
   FileBrowserProvider,
   useFileBrowser,
@@ -828,10 +828,9 @@ function RootLayoutContent() {
         {showProjectSwitcher && <ProjectSwitcher />}
         <Sidebar />
         <div className="flex-1 flex flex-col overflow-hidden">
-          <CopilotSidebarWrapper>
-            <Outlet />
-          </CopilotSidebarWrapper>
+          <Outlet />
         </div>
+        <ChatSidebar />
         <Toaster richColors position="bottom-right" />
       </main>
       <SandboxRiskDialog
@@ -849,11 +848,9 @@ function RootLayout() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <CopilotKitProvider>
-        <FileBrowserProvider>
-          <RootLayoutContent />
-        </FileBrowserProvider>
-      </CopilotKitProvider>
+      <FileBrowserProvider>
+        <RootLayoutContent />
+      </FileBrowserProvider>
       {SHOW_QUERY_DEVTOOLS && !isCompact ? (
         <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-left" />
       ) : null}

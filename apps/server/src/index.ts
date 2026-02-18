@@ -188,10 +188,10 @@ import { createIntegrityRoutes } from './routes/integrity.js';
 import { createAnalyticsRoutes } from './routes/analytics.js';
 import { AntagonisticReviewService } from './services/antagonistic-review-service.js';
 import { createLangfuseRoutes } from './routes/langfuse/index.js';
+import { createChatRoutes } from './routes/chat/index.js';
 import { shutdownLangfuse } from './lib/langfuse-singleton.js';
+import { initOTEL, shutdownOTEL } from './lib/otel-setup.js';
 import { AgentScoringService } from './services/agent-scoring-service.js';
-// CopilotKit imports are dynamic — @copilotkitnext/runtime may not be installed
-// See conditional registration below at /api/copilotkit routes
 
 const PORT = parseInt(process.env.PORT || '3008', 10);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -1026,6 +1026,9 @@ app.use('/api/auth/login', authLimiter);
 // This helps prevent CSRF and content-type confusion attacks
 app.use('/api', requireJsonContentType);
 
+// Initialize OTEL for AI SDK telemetry → Langfuse tracing
+initOTEL().catch((err) => logger.warn('OTEL init failed (non-fatal):', err));
+
 // Mount unauthenticated routes
 app.use('/api/health', createHealthRoutes());
 app.use('/api/auth', createAuthRoutes());
@@ -1164,24 +1167,8 @@ const { createLeadEngineerRoutes } = await import('./routes/lead-engineer/index.
 app.use('/api/lead-engineer', createLeadEngineerRoutes(leadEngineerService));
 app.use('/api/langfuse', createLangfuseRoutes());
 app.use('/api/flows', createFlowsRoutes(antagonisticReviewService, projectPlanningService));
+app.use('/api/chat', createChatRoutes());
 app.use('/api/twitch', createTwitchRoutes(twitchService, events, featureLoader));
-if (process.env.ANTHROPIC_API_KEY) {
-  try {
-    const { createCopilotKitEndpoint } = await import('./routes/copilotkit/index.js');
-    const { createCopilotKitThreadRoutes } = await import('./routes/copilotkit/threads.js');
-    const { CopilotKitThreadService } = await import('./services/copilotkit-thread-service.js');
-    app.use('/api/copilotkit', createCopilotKitEndpoint({ featureLoader, autoModeService }));
-    const copilotKitThreadService = new CopilotKitThreadService(DATA_DIR);
-    app.use('/api/copilotkit/threads', createCopilotKitThreadRoutes(copilotKitThreadService));
-  } catch (err) {
-    logger.warn(
-      'CopilotKit routes disabled — @copilotkitnext/runtime not installed:',
-      (err as Error).message
-    );
-  }
-} else {
-  logger.warn('CopilotKit routes disabled — ANTHROPIC_API_KEY not set');
-}
 
 // Create HTTP server
 const server = createServer(app);
@@ -1675,6 +1662,7 @@ async function gracefulShutdown() {
   agentDiscordRouter.stop();
   await twitchService.disconnect(); // Gracefully disconnect from Twitch chat
   await shutdownLangfuse();
+  await shutdownOTEL();
 
   server.close(() => {
     logger.info('Server closed');
