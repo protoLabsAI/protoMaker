@@ -1,0 +1,111 @@
+name: Build Electron
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+concurrency:
+  group: electron-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-mac:
+    runs-on: macos-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Update package.json version
+        run: node apps/ui/scripts/update-version.mjs "${{ steps.version.outputs.version }}"
+
+      - name: Setup project
+        uses: ./.github/actions/setup-project
+        with:
+          check-lockfile: 'true'
+
+      - name: Build Electron app (macOS x64 + arm64)
+        run: npm run build:electron:mac --workspace=apps/ui
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-builds
+          path: |
+            apps/ui/release/*.dmg
+            apps/ui/release/*.zip
+            apps/ui/release/*.blockmap
+          retention-days: 30
+
+  build-linux:
+    runs-on: self-hosted
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Update package.json version
+        run: node apps/ui/scripts/update-version.mjs "${{ steps.version.outputs.version }}"
+
+      - name: Setup project
+        uses: ./.github/actions/setup-project
+        with:
+          check-lockfile: 'true'
+
+      - name: Install RPM build tools
+        run: sudo apt-get update && sudo apt-get install -y rpm
+
+      - name: Build Electron app (Linux x64)
+        run: npm run build:electron:linux --workspace=apps/ui
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-builds
+          path: |
+            apps/ui/release/*.AppImage
+            apps/ui/release/*.deb
+            apps/ui/release/*.rpm
+            apps/ui/release/*.blockmap
+          retention-days: 30
+
+  upload-release:
+    needs: [build-mac, build-linux]
+    runs-on: self-hosted
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download macOS artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: mac-builds
+          path: artifacts/mac
+
+      - name: Download Linux artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-builds
+          path: artifacts/linux
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/mac/*
+            artifacts/linux/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
