@@ -138,9 +138,7 @@ export const CardLoading: Story = {
         <Spinner size="lg" />
         <div className="text-center space-y-2">
           <h3 className="font-semibold">Loading your data</h3>
-          <p className="text-sm text-muted-foreground">
-            This should only take a few seconds...
-          </p>
+          <p className="text-sm text-muted-foreground">This should only take a few seconds...</p>
         </div>
       </div>
     </div>

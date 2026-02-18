@@ -154,9 +154,7 @@ export const LongPath: Story = {
         </BreadcrumbItem>
         <BreadcrumbSeparator />
         <BreadcrumbItem>
-          <BreadcrumbLink href="/docs/components/atoms/navigation">
-            Navigation
-          </BreadcrumbLink>
+          <BreadcrumbLink href="/docs/components/atoms/navigation">Navigation</BreadcrumbLink>
         </BreadcrumbItem>
         <BreadcrumbSeparator />
         <BreadcrumbItem>
@@ -185,9 +183,7 @@ export const CollapsedLongPath: Story = {
         </BreadcrumbItem>
         <BreadcrumbSeparator />
         <BreadcrumbItem>
-          <BreadcrumbLink href="/docs/components/atoms/navigation">
-            Navigation
-          </BreadcrumbLink>
+          <BreadcrumbLink href="/docs/components/atoms/navigation">Navigation</BreadcrumbLink>
         </BreadcrumbItem>
         <BreadcrumbSeparator />
         <BreadcrumbItem>

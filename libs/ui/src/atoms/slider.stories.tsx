@@ -226,9 +226,7 @@ export const VolumeControl: Story = {
             ) : (
               <span className="text-sm">🔊</span>
             )}
-            <span className="text-sm text-muted-foreground w-8 text-right">
-              {volume[0]}%
-            </span>
+            <span className="text-sm text-muted-foreground w-8 text-right">{volume[0]}%</span>
           </div>
         </div>
         <Slider value={volume} onValueChange={setVolume} max={100} step={1} />

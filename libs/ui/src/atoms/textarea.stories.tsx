@@ -107,9 +107,7 @@ export const WithError: Story = {
         aria-invalid="true"
         defaultValue="This message is too short."
       />
-      <p className="text-xs text-destructive">
-        Message must be at least 10 characters long.
-      </p>
+      <p className="text-xs text-destructive">Message must be at least 10 characters long.</p>
     </div>
   ),
 };
@@ -120,11 +118,7 @@ export const DifferentSizes: Story = {
     <div className="space-y-4">
       <div className="grid w-full max-w-sm gap-1.5">
         <Label htmlFor="small">Small (2 rows)</Label>
-        <Textarea
-          id="small"
-          placeholder="Small textarea..."
-          className="min-h-[60px]"
-        />
+        <Textarea id="small" placeholder="Small textarea..." className="min-h-[60px]" />
       </div>
       <div className="grid w-full max-w-sm gap-1.5">
         <Label htmlFor="medium">Medium (default)</Label>
@@ -132,11 +126,7 @@ export const DifferentSizes: Story = {
       </div>
       <div className="grid w-full max-w-sm gap-1.5">
         <Label htmlFor="large">Large (8 rows)</Label>
-        <Textarea
-          id="large"
-          placeholder="Large textarea..."
-          className="min-h-[200px]"
-        />
+        <Textarea id="large" placeholder="Large textarea..." className="min-h-[200px]" />
       </div>
     </div>
   ),
@@ -157,11 +147,7 @@ export const FormExample: Story = {
       </div>
       <div className="grid gap-1.5">
         <Label htmlFor="feedback">Feedback</Label>
-        <Textarea
-          id="feedback"
-          placeholder="Share your thoughts..."
-          className="min-h-[120px]"
-        />
+        <Textarea id="feedback" placeholder="Share your thoughts..." className="min-h-[120px]" />
       </div>
       <Button className="w-full">Submit Feedback</Button>
     </div>
@@ -201,11 +187,7 @@ export const RequiredField: Story = {
       <Label htmlFor="required">
         Comments <span className="text-destructive">*</span>
       </Label>
-      <Textarea
-        id="required"
-        placeholder="Please provide your comments..."
-        required
-      />
+      <Textarea id="required" placeholder="Please provide your comments..." required />
       <p className="text-xs text-muted-foreground">This field is required.</p>
     </div>
   ),
@@ -267,9 +249,7 @@ export const AutoResize: Story = {
           onChange={(e) => setValue(e.target.value)}
           className="min-h-[80px] max-h-[300px] overflow-y-auto"
         />
-        <p className="text-xs text-muted-foreground">
-          This textarea grows as you type.
-        </p>
+        <p className="text-xs text-muted-foreground">This textarea grows as you type.</p>
       </div>
     );
   },

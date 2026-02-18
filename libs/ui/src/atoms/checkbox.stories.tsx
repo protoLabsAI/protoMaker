@@ -75,8 +75,8 @@ export const WithLongLabel: Story = {
     <div className="flex items-start gap-2 max-w-sm">
       <Checkbox id="privacy" className="mt-1" />
       <Label htmlFor="privacy" className="font-normal">
-        I agree to the privacy policy and understand that my data will be processed according to
-        the terms outlined in the privacy agreement.
+        I agree to the privacy policy and understand that my data will be processed according to the
+        terms outlined in the privacy agreement.
       </Label>
     </div>
   ),

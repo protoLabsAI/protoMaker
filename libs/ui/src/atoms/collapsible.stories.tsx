@@ -51,16 +51,10 @@ export const Default: Story = {
             </Button>
           </CollapsibleTrigger>
         </div>
-        <div className="rounded-md border px-4 py-3 text-sm">
-          @radix-ui/primitives
-        </div>
+        <div className="rounded-md border px-4 py-3 text-sm">@radix-ui/primitives</div>
         <CollapsibleContent className="space-y-2">
-          <div className="rounded-md border px-4 py-3 text-sm">
-            @radix-ui/colors
-          </div>
-          <div className="rounded-md border px-4 py-3 text-sm">
-            @stitches/react
-          </div>
+          <div className="rounded-md border px-4 py-3 text-sm">@radix-ui/colors</div>
+          <div className="rounded-md border px-4 py-3 text-sm">@stitches/react</div>
         </CollapsibleContent>
       </Collapsible>
     );
@@ -154,10 +148,7 @@ export const Multiple: Story = {
 
     return (
       <div className="w-[350px] space-y-4">
-        <Collapsible
-          open={openItems.includes('item-1')}
-          onOpenChange={() => toggleItem('item-1')}
-        >
+        <Collapsible open={openItems.includes('item-1')} onOpenChange={() => toggleItem('item-1')}>
           <CollapsibleTrigger asChild>
             <Button variant="outline" className="w-full justify-between">
               Account Settings
@@ -171,10 +162,7 @@ export const Multiple: Story = {
           </CollapsibleContent>
         </Collapsible>
 
-        <Collapsible
-          open={openItems.includes('item-2')}
-          onOpenChange={() => toggleItem('item-2')}
-        >
+        <Collapsible open={openItems.includes('item-2')} onOpenChange={() => toggleItem('item-2')}>
           <CollapsibleTrigger asChild>
             <Button variant="outline" className="w-full justify-between">
               Privacy
@@ -188,10 +176,7 @@ export const Multiple: Story = {
           </CollapsibleContent>
         </Collapsible>
 
-        <Collapsible
-          open={openItems.includes('item-3')}
-          onOpenChange={() => toggleItem('item-3')}
-        >
+        <Collapsible open={openItems.includes('item-3')} onOpenChange={() => toggleItem('item-3')}>
           <CollapsibleTrigger asChild>
             <Button variant="outline" className="w-full justify-between">
               Notifications

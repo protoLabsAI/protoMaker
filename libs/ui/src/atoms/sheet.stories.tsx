@@ -83,9 +83,7 @@ export const AllSides: Story = {
         <SheetContent side="top">
           <SheetHeader>
             <SheetTitle>Top Sheet</SheetTitle>
-            <SheetDescription>
-              This sheet slides in from the top of the screen.
-            </SheetDescription>
+            <SheetDescription>This sheet slides in from the top of the screen.</SheetDescription>
           </SheetHeader>
         </SheetContent>
       </Sheet>
@@ -111,9 +109,7 @@ export const AllSides: Story = {
         <SheetContent side="bottom">
           <SheetHeader>
             <SheetTitle>Bottom Sheet</SheetTitle>
-            <SheetDescription>
-              This sheet slides in from the bottom of the screen.
-            </SheetDescription>
+            <SheetDescription>This sheet slides in from the bottom of the screen.</SheetDescription>
           </SheetHeader>
         </SheetContent>
       </Sheet>
@@ -145,9 +141,7 @@ export const WithForm: Story = {
       <SheetContent>
         <SheetHeader>
           <SheetTitle>Create a new account</SheetTitle>
-          <SheetDescription>
-            Fill in the information below to create your account.
-          </SheetDescription>
+          <SheetDescription>Fill in the information below to create your account.</SheetDescription>
         </SheetHeader>
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
@@ -299,8 +293,8 @@ export const ScrollableContent: Story = {
             <div key={i} className="space-y-2">
               <h4 className="text-sm font-medium">Section {i + 1}</h4>
               <p className="text-sm text-muted-foreground">
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod
-                tempor incididunt ut labore et dolore magna aliqua.
+                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor
+                incididunt ut labore et dolore magna aliqua.
               </p>
             </div>
           ))}

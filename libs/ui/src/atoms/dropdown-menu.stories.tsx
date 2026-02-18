@@ -132,22 +132,12 @@ export const WithCheckboxes: Story = {
       <DropdownMenuContent className="w-56">
         <DropdownMenuLabel>Display Settings</DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuCheckboxItem checked>
-          Show Toolbar
-        </DropdownMenuCheckboxItem>
-        <DropdownMenuCheckboxItem checked>
-          Show Sidebar
-        </DropdownMenuCheckboxItem>
-        <DropdownMenuCheckboxItem>
-          Show Status Bar
-        </DropdownMenuCheckboxItem>
+        <DropdownMenuCheckboxItem checked>Show Toolbar</DropdownMenuCheckboxItem>
+        <DropdownMenuCheckboxItem checked>Show Sidebar</DropdownMenuCheckboxItem>
+        <DropdownMenuCheckboxItem>Show Status Bar</DropdownMenuCheckboxItem>
         <DropdownMenuSeparator />
-        <DropdownMenuCheckboxItem checked>
-          Enable Animations
-        </DropdownMenuCheckboxItem>
-        <DropdownMenuCheckboxItem>
-          Enable Sounds
-        </DropdownMenuCheckboxItem>
+        <DropdownMenuCheckboxItem checked>Enable Animations</DropdownMenuCheckboxItem>
+        <DropdownMenuCheckboxItem>Enable Sounds</DropdownMenuCheckboxItem>
       </DropdownMenuContent>
     </DropdownMenu>
   ),
@@ -330,19 +320,11 @@ export const InsetItems: Story = {
       <DropdownMenuContent className="w-56">
         <DropdownMenuLabel>My Account</DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem inset>
-          Profile
-        </DropdownMenuItem>
-        <DropdownMenuItem inset>
-          Billing
-        </DropdownMenuItem>
-        <DropdownMenuItem inset>
-          Settings
-        </DropdownMenuItem>
+        <DropdownMenuItem inset>Profile</DropdownMenuItem>
+        <DropdownMenuItem inset>Billing</DropdownMenuItem>
+        <DropdownMenuItem inset>Settings</DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem inset>
-          Log out
-        </DropdownMenuItem>
+        <DropdownMenuItem inset>Log out</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   ),

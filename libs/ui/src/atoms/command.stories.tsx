@@ -233,9 +233,7 @@ export const EmptyState: Story = {
         <CommandEmpty>
           <div className="py-6 text-center text-sm">
             <p className="text-muted-foreground">No results found.</p>
-            <p className="text-muted-foreground text-xs mt-2">
-              Try searching for something else.
-            </p>
+            <p className="text-muted-foreground text-xs mt-2">Try searching for something else.</p>
           </div>
         </CommandEmpty>
       </CommandList>

@@ -35,9 +35,7 @@ export const Default: Story = {
       <PopoverContent>
         <div className="space-y-2">
           <h4 className="font-medium leading-none">Dimensions</h4>
-          <p className="text-sm text-muted-foreground">
-            Set the dimensions for the layer.
-          </p>
+          <p className="text-sm text-muted-foreground">Set the dimensions for the layer.</p>
         </div>
       </PopoverContent>
     </Popover>
@@ -55,9 +53,7 @@ export const WithForm: Story = {
         <div className="grid gap-4">
           <div className="space-y-2">
             <h4 className="font-medium leading-none">Profile Settings</h4>
-            <p className="text-sm text-muted-foreground">
-              Update your profile information.
-            </p>
+            <p className="text-sm text-muted-foreground">Update your profile information.</p>
           </div>
           <div className="grid gap-2">
             <div className="grid grid-cols-3 items-center gap-4">
@@ -163,9 +159,7 @@ export const WithActions: Story = {
         <div className="grid gap-4">
           <div className="space-y-2">
             <h4 className="font-medium leading-none">Quick Settings</h4>
-            <p className="text-sm text-muted-foreground">
-              Adjust your preferences quickly.
-            </p>
+            <p className="text-sm text-muted-foreground">Adjust your preferences quickly.</p>
           </div>
           <div className="grid gap-2">
             <div className="flex items-center justify-between">
@@ -268,8 +262,7 @@ export const CustomWidth: Story = {
         </PopoverTrigger>
         <PopoverContent className="w-96">
           <p className="text-sm">
-            This is a wider popover with more content space available for detailed
-            information.
+            This is a wider popover with more content space available for detailed information.
           </p>
         </PopoverContent>
       </Popover>

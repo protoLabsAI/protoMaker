@@ -8,12 +8,7 @@
  */
 
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import {
-  Accordion,
-  AccordionItem,
-  AccordionTrigger,
-  AccordionContent,
-} from './accordion';
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from './accordion';
 
 const meta = {
   title: 'Atoms/Accordion',
@@ -44,9 +39,7 @@ export const Default: Story = {
     <Accordion type="single" collapsible className="w-[400px]">
       <AccordionItem value="item-1">
         <AccordionTrigger>Is it accessible?</AccordionTrigger>
-        <AccordionContent>
-          Yes. It adheres to the WAI-ARIA design pattern.
-        </AccordionContent>
+        <AccordionContent>Yes. It adheres to the WAI-ARIA design pattern.</AccordionContent>
       </AccordionItem>
       <AccordionItem value="item-2">
         <AccordionTrigger>Is it styled?</AccordionTrigger>
@@ -71,22 +64,22 @@ export const SingleType: Story = {
       <AccordionItem value="item-1">
         <AccordionTrigger>What is React?</AccordionTrigger>
         <AccordionContent>
-          React is a JavaScript library for building user interfaces. It lets you compose
-          complex UIs from small and isolated pieces of code called components.
+          React is a JavaScript library for building user interfaces. It lets you compose complex
+          UIs from small and isolated pieces of code called components.
         </AccordionContent>
       </AccordionItem>
       <AccordionItem value="item-2">
         <AccordionTrigger>What is TypeScript?</AccordionTrigger>
         <AccordionContent>
-          TypeScript is a strongly typed programming language that builds on JavaScript,
-          giving you better tooling at any scale.
+          TypeScript is a strongly typed programming language that builds on JavaScript, giving you
+          better tooling at any scale.
         </AccordionContent>
       </AccordionItem>
       <AccordionItem value="item-3">
         <AccordionTrigger>What is Tailwind CSS?</AccordionTrigger>
         <AccordionContent>
-          Tailwind CSS is a utility-first CSS framework packed with classes that can be
-          composed to build any design, directly in your markup.
+          Tailwind CSS is a utility-first CSS framework packed with classes that can be composed to
+          build any design, directly in your markup.
         </AccordionContent>
       </AccordionItem>
     </Accordion>
@@ -122,8 +115,8 @@ export const MultipleType: Story = {
       <AccordionItem value="item-3">
         <AccordionTrigger>Best Practices</AccordionTrigger>
         <AccordionContent>
-          Keep content concise and scannable. Use clear, descriptive trigger text.
-          Consider the user's workflow when choosing single vs multiple mode.
+          Keep content concise and scannable. Use clear, descriptive trigger text. Consider the
+          user's workflow when choosing single vs multiple mode.
         </AccordionContent>
       </AccordionItem>
     </Accordion>
@@ -148,9 +141,7 @@ export const NonCollapsible: Story = {
       </AccordionItem>
       <AccordionItem value="item-3">
         <AccordionTrigger>Notification Settings</AccordionTrigger>
-        <AccordionContent>
-          Configure how and when you receive notifications.
-        </AccordionContent>
+        <AccordionContent>Configure how and when you receive notifications.</AccordionContent>
       </AccordionItem>
     </Accordion>
   ),
@@ -165,9 +156,7 @@ export const RichContent: Story = {
         <AccordionContent>
           <div className="space-y-2">
             <p>Install the package using your preferred package manager:</p>
-            <pre className="bg-muted p-2 rounded text-xs">
-              npm install @protolabs/ui
-            </pre>
+            <pre className="bg-muted p-2 rounded text-xs">npm install @protolabs/ui</pre>
           </div>
         </AccordionContent>
       </AccordionItem>

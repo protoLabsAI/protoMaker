@@ -8,12 +8,7 @@
  */
 
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from './tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './tooltip';
 import { Button } from './button';
 import { Info, HelpCircle, Settings, User } from 'lucide-react';
 
@@ -155,8 +150,8 @@ export const RichContent: Story = {
         <div className="space-y-2">
           <p className="font-semibold">Detailed Information</p>
           <p className="text-xs">
-            This tooltip contains multiple lines of text and additional formatting
-            to provide comprehensive information.
+            This tooltip contains multiple lines of text and additional formatting to provide
+            comprehensive information.
           </p>
         </div>
       </TooltipContent>
@@ -329,8 +324,8 @@ export const MultipleLines: Story = {
         <div className="space-y-1">
           <p className="font-medium">Important Notice</p>
           <p className="text-xs">
-            This feature requires additional permissions. Please contact your
-            administrator for access.
+            This feature requires additional permissions. Please contact your administrator for
+            access.
           </p>
         </div>
       </TooltipContent>
