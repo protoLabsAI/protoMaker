@@ -9,14 +9,7 @@ import { memo } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import { motion } from 'motion/react';
 import { Lightbulb } from 'lucide-react';
-import { cn } from '@/lib/utils';
-
-export interface IntakeNodeData {
-  title: string;
-  status: 'active' | 'idle';
-  timestamp: string;
-  [key: string]: unknown;
-}
+import type { IntakeNodeData } from '../types';
 
 function IntakeNodeComponent({ data }: NodeProps & { data: IntakeNodeData }) {
   const isActive = data.status === 'active';
@@ -52,7 +45,7 @@ function IntakeNodeComponent({ data }: NodeProps & { data: IntakeNodeData }) {
         </div>
 
         {/* Title - truncated to 2 lines */}
-        <h4 className="text-xs font-medium leading-tight line-clamp-2 mb-auto">{data.title}</h4>
+        <h4 className="text-xs font-medium leading-tight line-clamp-2 mb-auto">{data.label}</h4>
 
         {/* Timestamp */}
         <div className="text-[10px] text-muted-foreground mt-1">{data.timestamp}</div>

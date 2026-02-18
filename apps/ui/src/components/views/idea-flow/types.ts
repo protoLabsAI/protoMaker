@@ -28,7 +28,8 @@ export type StepStatus = 'pending' | 'active' | 'completed' | 'skipped' | 'error
 export interface IntakeNodeData {
   label: string;
   description?: string;
-  source?: 'manual' | 'linear' | 'discord' | 'github';
+  source?: string;
+  status?: 'active' | 'idle';
   timestamp?: string;
   [key: string]: unknown;
 }
