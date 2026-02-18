@@ -63,6 +63,7 @@ export default defineConfig(({ command }) => {
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),
+        '@protolabs/ui': path.resolve(__dirname, '../../libs/ui/src'),
       },
     },
     server: {

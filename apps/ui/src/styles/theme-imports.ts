@@ -3,12 +3,5 @@
  * doesn't tree-shake their CSS when imported dynamically.
  */
 
-// Curated themes (default)
-import './themes/studio-dark.css';
-import './themes/studio-light.css';
-
-// Community presets
-import './themes/nord.css';
-import './themes/catppuccin.css';
-import './themes/dracula.css';
-import './themes/monokai.css';
+// Import all themes from the shared UI library
+import '../../../../libs/ui/src/themes/themes.css';
