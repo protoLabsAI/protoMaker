@@ -2743,6 +2743,31 @@ const tools: Tool[] = [
       required: ['suggestionIds', 'projectPath'],
     },
   },
+
+  // Idea Processing
+  {
+    name: 'process_idea',
+    description:
+      'Process an idea through the PM Agent pipeline. Creates a feature with idea state and triggers the PM Agent for research, PRD generation, and feature decomposition.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        title: {
+          type: 'string',
+          description: 'Short title for the idea',
+        },
+        description: {
+          type: 'string',
+          description: 'Detailed description of the idea',
+        },
+      },
+      required: ['projectPath', 'title', 'description'],
+    },
+  },
 ];
 
 // Tool implementations
@@ -3837,6 +3862,14 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         suggestionIds: args.suggestionIds,
         projectPath: args.projectPath,
         durationSeconds: args.durationSeconds,
+      });
+
+    // Idea Processing
+    case 'process_idea':
+      return apiCall('/authority/inject-idea', {
+        projectPath: args.projectPath,
+        title: args.title,
+        description: args.description,
       });
 
     default:
