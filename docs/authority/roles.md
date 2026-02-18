@@ -17,8 +17,8 @@ Josh Mabry (CEO, Human)
 │   ├── Product Manager, Sonnet, Trust=1
 │   ├── Engineering Manager, Sonnet, Trust=1
 │   ├── Linear Specialist, Sonnet, Trust=2
-│   ├── PR Maintainer, Haiku, Trust=2 [Crew]
-│   └── Board Janitor, Haiku, Trust=1 [Crew]
+│   ├── PR Maintainer, Haiku, Trust=2
+│   └── Board Janitor, Haiku, Trust=1
 └── Jon, Sonnet, Trust=1 — Go-to-Market
 ```
 
@@ -36,8 +36,8 @@ Josh Mabry (CEO, Human)
 | [Product Manager](#product-manager)         | product-manager     | Sonnet | 1 (Assisted)    | Ava Loveland | Read-only                     | Internal     |
 | [Engineering Manager](#engineering-manager) | engineering-manager | Sonnet | 1 (Assisted)    | Ava Loveland | Read-only                     | Internal     |
 | [Linear Specialist](#linear-specialist)     | linear-specialist   | Sonnet | 2 (Conditional) | Ava Loveland | Read-only                     | Internal     |
-| [PR Maintainer](#pr-maintainer) (Crew)      | pr-maintainer       | Haiku  | 2 (Conditional) | Ava Loveland | Bash, Edit, Commit, PR        | Internal     |
-| [Board Janitor](#board-janitor) (Crew)      | board-janitor       | Haiku  | 1 (Assisted)    | Ava Loveland | Read-only                     | Internal     |
+| [PR Maintainer](#pr-maintainer)             | pr-maintainer       | Haiku  | 2 (Conditional) | Ava Loveland | Bash, Edit, Commit, PR        | Internal     |
+| [Board Janitor](#board-janitor)             | board-janitor       | Haiku  | 1 (Assisted)    | Ava Loveland | Read-only                     | Internal     |
 | [Jon](#jon)                                 | gtm-specialist      | Sonnet | 1 (Assisted)    | Josh Mabry   | Edit                          | CLI, Discord |
 
 ## Josh Mabry {#josh}
@@ -229,7 +229,7 @@ Owns all Linear workspace operations: project management, sprint planning, issue
 
 ## PR Maintainer {#pr-maintainer}
 
-**Type:** AI (Crew Loop)
+**Type:** AI (Agent Template)
 **Role:** pr-maintainer
 **Model:** Haiku
 **Trust Level:** 2 (Conditional)
@@ -246,7 +246,7 @@ Handles PR pipeline mechanics: auto-merge enablement, CodeRabbit thread resoluti
 
 ## Board Janitor {#board-janitor}
 
-**Type:** AI (Crew Loop)
+**Type:** AI (Agent Template)
 **Role:** board-janitor
 **Model:** Haiku
 **Trust Level:** 1 (Assisted)

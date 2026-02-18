@@ -64,7 +64,7 @@ The team is organized into **Operations** and **Engineering** branches. Orchestr
 | Name             | Role                       | Type     | Notes                                                                    |
 | ---------------- | -------------------------- | -------- | ------------------------------------------------------------------------ |
 | **Josh Mabry**   | Founder / Project Owner    | Human    | Architect. Directs everything.                                           |
-| **Ava Loveland** | Operations                 | AI Agent | Signal triage, antagonistic review, crew loops, ceremonies, Discord.     |
+| **Ava Loveland** | Operations                 | AI Agent | Signal triage, antagonistic review, ceremonies, Discord.                 |
 | **Jon**          | GTM                        | AI Agent | Content strategy, brand positioning, antagonistic review (market value). |
 | **Cindi**        | Content Writing Specialist | AI Agent | Blog posts, technical docs, SEO, content pipeline.                       |
 | **Abdellah**     | Strategy Partner           | Human    | Personal branding, visual identity. NOT content creation.                |

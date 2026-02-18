@@ -61,7 +61,7 @@ Once a signal enters the pipeline, the operations side handles:
 - **PRD generation** --- Every idea gets a structured plan (Situation, Problem, Approach, Results, Constraints) before any code is written.
 - **Antagonistic review** --- A separate execution context whose sole job is to find flaws. One context reviews for operational feasibility (capacity, risk, technical debt). Another reviews for market value (customer impact, positioning, ROI). They challenge each other's conclusions. This is adversarial by design --- the same principle as code review, but applied to planning.
 - **Approval gates** --- Human-in-the-loop at milestone boundaries. Low-risk operational work auto-approves within defined trust boundaries. Architectural decisions require human judgment.
-- **Scheduling and monitoring** --- Crew loops run on cron schedules: PR pipeline health, board consistency, system resources, stale work detection. Lightweight checks with no LLM cost. Escalation to full agent execution only when problems are detected.
+- **Scheduling and monitoring** --- The Lead Engineer state machine handles PR pipeline health, board consistency, system resources, and stale work detection through fast-path rules. Lightweight checks with no LLM cost. Escalation to full agent execution only when problems are detected.
 - **Content strategy** --- Market positioning, content pipeline, brand-aligned communication. Automated generation, human engagement.
 
 ### The Engineering Branch
@@ -83,15 +83,15 @@ This mirrors how real engineering organizations work. The reason you don't let d
 
 ## What It Replaces
 
-| SaaS Category       | Monthly Cost (typical) | Intelligent Product Engine                                           |
-| ------------------- | ---------------------- | -------------------------------------------------------------------- |
-| Project Management  | $20-50/seat            | Kanban board with dependency-aware auto-scheduling                   |
-| CI/CD Platform      | $50-400/mo             | Automated PR pipeline: build, test, format, audit, merge             |
-| Code Review Tool    | $15-30/seat            | AI code review (CodeRabbit) + adversarial review contexts            |
-| Monitoring/Alerting | $20-100/mo             | Crew loops: system health, board consistency, PR staleness           |
-| Documentation       | $10-20/seat            | Context files loaded into every execution, auto-generated changelogs |
-| Communication Tool  | $8-15/seat             | Event-driven notifications, structured status updates                |
-| Error Tracking      | $30-100/mo             | Agent failure detection with automatic retry and model escalation    |
+| SaaS Category       | Monthly Cost (typical) | Intelligent Product Engine                                                    |
+| ------------------- | ---------------------- | ----------------------------------------------------------------------------- |
+| Project Management  | $20-50/seat            | Kanban board with dependency-aware auto-scheduling                            |
+| CI/CD Platform      | $50-400/mo             | Automated PR pipeline: build, test, format, audit, merge                      |
+| Code Review Tool    | $15-30/seat            | AI code review (CodeRabbit) + adversarial review contexts                     |
+| Monitoring/Alerting | $20-100/mo             | Lead Engineer fast-path rules: system health, board consistency, PR staleness |
+| Documentation       | $10-20/seat            | Context files loaded into every execution, auto-generated changelogs          |
+| Communication Tool  | $8-15/seat             | Event-driven notifications, structured status updates                         |
+| Error Tracking      | $30-100/mo             | Agent failure detection with automatic retry and model escalation             |
 
 A 5-person team easily spends $200-500/month on this stack. A 20-person team, $2,000-5,000/month. None of these tools can tell you what a feature costs to ship.
 

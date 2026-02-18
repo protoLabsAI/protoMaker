@@ -168,9 +168,9 @@ sequenceDiagram
     end
 ```
 
-### Crew Loop Monitoring (Parallel to Execution)
+### Background Monitoring (Parallel to Execution)
 
-While agents execute, crew members run on cron schedules to maintain system health.
+While agents execute, monitoring agents maintain system health.
 
 ```mermaid
 flowchart LR

@@ -237,29 +237,24 @@ Covers:
 
 These agents can be invoked interactively via CLI skills or Discord.
 
-| Role              | Agent | Model  | Trigger                 | Exclusive Tools                   |
-| ----------------- | ----- | ------ | ----------------------- | --------------------------------- |
-| Chief of Staff    | Ava   | Opus   | CLI, Discord, crew loop | —                                 |
-| Frontend Engineer | Matt  | Sonnet | CLI, Discord            | Pencil design tool, agent-browser |
-| AI Agent Engineer | Sam   | Sonnet | CLI, Discord            | —                                 |
-| Backend Engineer  | Kai   | Sonnet | CLI, Discord            | —                                 |
-| DevOps Engineer   | Frank | Sonnet | CLI, Discord, crew loop | —                                 |
-| Content Writer    | Cindi | Sonnet | CLI, Discord            | —                                 |
-| GTM Specialist    | Jon   | Sonnet | CLI, Discord            | —                                 |
+| Role              | Agent | Model  | Trigger      | Exclusive Tools                   |
+| ----------------- | ----- | ------ | ------------ | --------------------------------- |
+| Chief of Staff    | Ava   | Opus   | CLI, Discord | —                                 |
+| Frontend Engineer | Matt  | Sonnet | CLI, Discord | Pencil design tool, agent-browser |
+| AI Agent Engineer | Sam   | Sonnet | CLI, Discord | —                                 |
+| Backend Engineer  | Kai   | Sonnet | CLI, Discord | —                                 |
+| DevOps Engineer   | Frank | Sonnet | CLI, Discord | —                                 |
+| Content Writer    | Cindi | Sonnet | CLI, Discord | —                                 |
+| GTM Specialist    | Jon   | Sonnet | CLI, Discord | —                                 |
 
-### Crew Loop Members (Scheduled)
+### Agent Templates (On-Demand)
 
-These run lightweight checks on cron schedules and escalate to full agents only when problems are detected. See [Crew Loops](../dev/crew-loops.md) for details.
+These agent templates can be invoked on-demand via `execute_dynamic_agent`. Their responsibilities have been absorbed into the Lead Engineer state machine for autonomous operation. See [Engine Architecture](../dev/engine-architecture.md) for details.
 
-| Member          | Model  | Schedule | Checks                                                      |
-| --------------- | ------ | -------- | ----------------------------------------------------------- |
-| Chief of Staff  | Opus   | 10 min   | Stuck agents, blocked features, auto-mode health            |
-| DevOps Engineer | Sonnet | 10 min   | V8 heap, RSS memory, agent capacity, health monitor         |
-| PR Maintainer   | Haiku  | 10 min   | Stale PRs, auto-merge status, orphaned worktrees            |
-| Board Janitor   | Haiku  | 15 min   | Merged-not-done, orphaned in-progress, stale dependencies   |
-| System Health   | —      | 10 min   | System RAM, swap, disk, CPU load, temperature, zombie procs |
-| PR State Sync   | —      | 5 min    | GitHub → Linear state drift detection and event emission    |
-| GTM Specialist  | Sonnet | 6 hours  | Recently completed features (disabled by default)           |
+| Template      | Model | Purpose                                                   |
+| ------------- | ----- | --------------------------------------------------------- |
+| PR Maintainer | Haiku | Stale PRs, auto-merge status, orphaned worktrees          |
+| Board Janitor | Haiku | Merged-not-done, orphaned in-progress, stale dependencies |
 
 ### Implementation Agents (Auto-Mode)
 
@@ -285,12 +280,12 @@ These agents are assigned features dynamically by auto-mode and implement them i
 
 These event-driven agents exist in code but aren't actively staffed yet.
 
-| Agent         | Trigger                  | Purpose                               | Location                                                       |
-| ------------- | ------------------------ | ------------------------------------- | -------------------------------------------------------------- |
-| PM            | `idea:injected` event    | Research ideas, create PRDs           | `apps/server/src/services/authority-agents/pm-agent.ts`        |
-| ProjM         | `prd:approved` event     | Decompose into milestones             | `apps/server/src/services/authority-agents/projm-agent.ts`     |
-| EM            | `decomposition:complete` | Technical feasibility                 | `apps/server/src/services/authority-agents/em-agent.ts`        |
-| Board Janitor | Crew loop (every 15min)  | Blocker detection, deadlock detection | `apps/server/src/services/crew-members/board-janitor-check.ts` |
+| Agent         | Trigger                    | Purpose                               | Location                                                   |
+| ------------- | -------------------------- | ------------------------------------- | ---------------------------------------------------------- |
+| PM            | `idea:injected` event      | Research ideas, create PRDs           | `apps/server/src/services/authority-agents/pm-agent.ts`    |
+| ProjM         | `prd:approved` event       | Decompose into milestones             | `apps/server/src/services/authority-agents/projm-agent.ts` |
+| EM            | `decomposition:complete`   | Technical feasibility                 | `apps/server/src/services/authority-agents/em-agent.ts`    |
+| Board Janitor | Agent template (on-demand) | Blocker detection, deadlock detection | Role Registry (agent template)                             |
 
 ## Official Claude Resources
 

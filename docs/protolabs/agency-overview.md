@@ -30,15 +30,12 @@ protoLabs is organized into two branches — **Operations** and **Engineering** 
 
 Signal triage, quality gates, team health, and external communication. Orchestration agents use domain tools and subagents to manage tasks, distill information, and maintain context.
 
-| Agent               | Type         | Responsibilities                                                          |
-| ------------------- | ------------ | ------------------------------------------------------------------------- |
-| **Josh Mabry**      | Human (CEO)  | Ideas, direction, final approval                                          |
-| **Ava** (CoS)       | AI Orchestr. | Signal triage, antagonistic review, crew loops, ceremonies, Discord comms |
-| **Jon** (GTM)       | AI Agent     | Market perspective, content strategy, positioning, antagonistic review    |
-| **Cindi** (Content) | AI Agent     | Blog posts, technical docs, SEO, content pipeline                         |
-| **PR Maintainer**   | Crew (Haiku) | Auto-merge, format fixes, CodeRabbit thread resolution                    |
-| **Board Janitor**   | Crew (Haiku) | Board consistency, orphaned features, stale deps                          |
-| **System Health**   | Crew (Haiku) | RAM, swap, disk, CPU, temperature, zombie processes                       |
+| Agent               | Type         | Responsibilities                                                       |
+| ------------------- | ------------ | ---------------------------------------------------------------------- |
+| **Josh Mabry**      | Human (CEO)  | Ideas, direction, final approval                                       |
+| **Ava** (CoS)       | AI Orchestr. | Signal triage, antagonistic review, ceremonies, Discord comms          |
+| **Jon** (GTM)       | AI Agent     | Market perspective, content strategy, positioning, antagonistic review |
+| **Cindi** (Content) | AI Agent     | Blog posts, technical docs, SEO, content pipeline                      |
 
 ### Engineering
 
@@ -49,7 +46,7 @@ Production orchestration, auto-mode execution, and code quality. The Lead Engine
 | **Lead Engineer**      | Service     | Production orchestrator — fast-path rules, auto-mode management, events |
 | **Matt** (Frontend)    | AI Agent    | React 19, design systems, Storybook, component architecture             |
 | **Sam** (AI Agent Eng) | AI Agent    | LangGraph flows, LLM providers, observability, multi-agent coordination |
-| **Frank** (DevOps)     | AI + Crew   | Infrastructure health, deploys, monitoring, system reliability          |
+| **Frank** (DevOps)     | AI Agent    | Infrastructure health, deploys, monitoring, system reliability          |
 | **Kai** (Backend)      | AI Agent    | Server-side features, API design, database, services                    |
 | **Auto-mode Agents**   | Sonnet/Opus | Feature implementation in isolated git worktrees                        |
 
