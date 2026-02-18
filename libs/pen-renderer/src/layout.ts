@@ -20,6 +20,8 @@ import type {
   PenCornerRadius,
   PenStrokeThickness,
   PenLayoutMode,
+  PenEffect,
+  PenShadowEffect,
   ResolvedStyles,
 } from './types.js';
 
@@ -182,6 +184,42 @@ export function convertStroke(
 }
 
 /**
+ * Convert a PEN effect (shadow/blur) to CSS properties.
+ */
+export function convertEffect(
+  effect: PenEffect | PenEffect[] | undefined
+): Partial<ResolvedStyles> {
+  if (!effect) return {};
+
+  const effects = Array.isArray(effect) ? effect : [effect];
+  if (effects.length === 0) return {};
+
+  const shadows: string[] = [];
+  const result: Partial<ResolvedStyles> = {};
+
+  for (const e of effects) {
+    if (e.type === 'shadow') {
+      const s = e as PenShadowEffect;
+      const inset = s.shadowType === 'inner' ? 'inset ' : '';
+      const x = s.offset?.x ?? 0;
+      const y = s.offset?.y ?? 0;
+      const blur = s.blur ?? 0;
+      const spread = s.spread ?? 0;
+      const color = s.color ?? '#00000040';
+      shadows.push(`${inset}${x}px ${y}px ${blur}px ${spread}px ${color}`);
+    } else if (e.type === 'blur') {
+      result.filter = `blur(${e.radius ?? 0}px)`;
+    }
+  }
+
+  if (shadows.length > 0) {
+    result.boxShadow = shadows.join(', ');
+  }
+
+  return result;
+}
+
+/**
  * Convert a PEN frame node to CSS styles.
  *
  * @param frame - The frame node
@@ -238,10 +276,16 @@ export function convertFrameLayout(
   Object.assign(styles, convertSize(frame.width, 'width'));
   Object.assign(styles, convertSize(frame.height, 'height'));
 
-  // Background color
+  // Background fill (color or gradient)
   if (frame.fill) {
-    const color = resolveFill(frame.fill);
-    if (color) styles.backgroundColor = color;
+    const resolved = resolveFill(frame.fill);
+    if (resolved) {
+      if (resolved.includes('gradient')) {
+        styles.backgroundImage = resolved;
+      } else {
+        styles.backgroundColor = resolved;
+      }
+    }
   }
 
   // Corner radius
@@ -265,6 +309,9 @@ export function convertFrameLayout(
   if (frame.rotation) {
     styles.transform = `rotate(${frame.rotation}deg)`;
   }
+
+  // Effects (shadows, blurs)
+  Object.assign(styles, convertEffect(frame.effect));
 
   return styles;
 }
@@ -340,12 +387,19 @@ export function convertNodeToStyles(
       Object.assign(styles, convertSize(rect.width, 'width'));
       Object.assign(styles, convertSize(rect.height, 'height'));
       if (rect.fill) {
-        const color = resolveFill(rect.fill);
-        if (color) styles.backgroundColor = color;
+        const resolved = resolveFill(rect.fill);
+        if (resolved) {
+          if (resolved.includes('gradient')) {
+            styles.backgroundImage = resolved;
+          } else {
+            styles.backgroundColor = resolved;
+          }
+        }
       }
       const radius = convertCornerRadius(rect.cornerRadius);
       if (radius) styles.borderRadius = radius;
       Object.assign(styles, convertStroke(rect.stroke, resolveFill));
+      Object.assign(styles, convertEffect(rect.effect));
       applyAbsolutePosition(node, styles, parentLayout);
       return styles;
     }
@@ -362,6 +416,7 @@ export function convertNodeToStyles(
         if (color) styles.backgroundColor = color;
       }
       Object.assign(styles, convertStroke(ellipse.stroke, resolveFill));
+      Object.assign(styles, convertEffect(ellipse.effect));
       applyAbsolutePosition(node, styles, parentLayout);
       return styles;
     }

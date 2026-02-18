@@ -31,6 +31,7 @@ export function resolveVariable(
 
   let bestMatch: PenThemedValue | undefined;
   let bestScore = -1;
+  let bestIsFullMatch = false;
 
   for (const entry of variable.value) {
     if (!entry.theme) {
@@ -58,9 +59,21 @@ export function resolveVariable(
       score++;
     }
 
-    if (compatible && score > bestScore) {
+    if (!compatible) continue;
+
+    // "Full match" = every axis the entry specifies is present in the theme selection.
+    // Full matches beat partial matches at the same score. Among equal matches, last-wins.
+    const entryAxes = Object.keys(entry.theme).length;
+    const isFullMatch = score === entryAxes;
+
+    if (
+      score > bestScore ||
+      (score === bestScore && isFullMatch && !bestIsFullMatch) ||
+      (score === bestScore && isFullMatch === bestIsFullMatch)
+    ) {
       bestMatch = entry;
       bestScore = score;
+      bestIsFullMatch = isFullMatch;
     }
   }
 
@@ -104,19 +117,48 @@ export function resolveFillValue(
   fill: unknown,
   resolvedVars: Map<string, string | number | boolean>
 ): string | undefined {
-  if (typeof fill !== 'string') {
-    // Complex fills (gradients, images) are not resolved here
-    return undefined;
+  if (typeof fill === 'string') {
+    if (fill.startsWith('$')) {
+      const varName = fill.slice(1); // Remove $ prefix
+      const value = resolvedVars.get(varName);
+      return value !== undefined ? String(value) : undefined;
+    }
+    // Plain color value
+    return fill;
   }
 
-  if (fill.startsWith('$')) {
-    const varName = fill.slice(1); // Remove $ prefix
-    const value = resolvedVars.get(varName);
-    return value !== undefined ? String(value) : undefined;
+  // Complex fills — convert gradient objects to CSS
+  if (fill && typeof fill === 'object' && 'type' in fill) {
+    const f = fill as {
+      type: string;
+      angle?: number;
+      stops?: Array<{ color: string; position: number }>;
+    };
+
+    if ((f.type === 'linear' || f.type === 'radial' || f.type === 'angular') && f.stops?.length) {
+      const stops = f.stops
+        .map((s) => {
+          const color = s.color.startsWith('$')
+            ? String(resolvedVars.get(s.color.slice(1)) ?? s.color)
+            : s.color;
+          return `${color} ${Math.round(s.position * 100)}%`;
+        })
+        .join(', ');
+
+      if (f.type === 'linear') {
+        const angle = f.angle ?? 0;
+        return `linear-gradient(${angle}deg, ${stops})`;
+      }
+      if (f.type === 'radial') {
+        return `radial-gradient(circle, ${stops})`;
+      }
+      if (f.type === 'angular') {
+        return `conic-gradient(from ${f.angle ?? 0}deg, ${stops})`;
+      }
+    }
   }
 
-  // Plain color value
-  return fill;
+  return undefined;
 }
 
 /**

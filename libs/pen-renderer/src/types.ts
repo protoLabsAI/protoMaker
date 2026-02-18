@@ -106,6 +106,27 @@ export type PenPadding = number | [number, number] | [number, number, number, nu
 /** Sizing: number (px), "fill_container", "fill_container(min)", "fit_content", or "fit_content(max)" */
 export type PenSize = number | string;
 
+// ─── Effects ────────────────────────────────────────────────────
+
+/** Shadow effect */
+export interface PenShadowEffect {
+  type: 'shadow';
+  shadowType?: 'outer' | 'inner';
+  color?: string;
+  offset?: { x: number; y: number };
+  blur?: number;
+  spread?: number;
+}
+
+/** Blur effect */
+export interface PenBlurEffect {
+  type: 'blur';
+  radius?: number;
+}
+
+/** All effect types */
+export type PenEffect = PenShadowEffect | PenBlurEffect;
+
 // ─── Corner Radius ───────────────────────────────────────────────
 
 /** Corner radius: uniform number or [topLeft, topRight, bottomRight, bottomLeft] */
@@ -135,6 +156,8 @@ export interface PenNodeBase {
   reusable?: boolean;
   /** Theme selection for this node and its subtree */
   theme?: PenThemeSelection;
+  /** Visual effects (shadows, blurs) */
+  effect?: PenEffect | PenEffect[];
 }
 
 /** Frame node — the primary container, maps to CSS flexbox */

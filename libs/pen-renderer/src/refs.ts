@@ -82,17 +82,16 @@ export function resolveRef(
   resolved.id = ref.id;
   if (ref.name) resolved.name = ref.name;
 
-  // Apply direct property overrides from the ref
+  // Apply direct property overrides from the ref.
+  // Collect all non-structural properties that the ref specifies.
+  const structuralKeys = new Set(['id', 'type', 'ref', 'children', 'descendants', 'name']);
   const directOverrides: Record<string, unknown> = {};
-  if (ref.fill !== undefined) directOverrides.fill = ref.fill;
-  if (ref.width !== undefined) directOverrides.width = ref.width;
-  if (ref.height !== undefined) directOverrides.height = ref.height;
-  if (ref.stroke !== undefined) directOverrides.stroke = ref.stroke;
-  if (ref.x !== undefined) directOverrides.x = ref.x;
-  if (ref.y !== undefined) directOverrides.y = ref.y;
-  if (ref.opacity !== undefined) directOverrides.opacity = ref.opacity;
-  if (ref.visible !== undefined) directOverrides.visible = ref.visible;
-  if (ref.theme !== undefined) directOverrides.theme = ref.theme;
+  const refAny = ref as unknown as Record<string, unknown>;
+  for (const key of Object.keys(refAny)) {
+    if (!structuralKeys.has(key) && refAny[key] !== undefined) {
+      directOverrides[key] = refAny[key];
+    }
+  }
 
   applyOverrides(resolved, directOverrides);
 

@@ -32,6 +32,9 @@ export type {
   PenRadialGradient,
   PenAngularGradient,
   PenImageFill,
+  PenEffect,
+  PenShadowEffect,
+  PenBlurEffect,
   ResolvedStyles,
   ResolvedNode,
 } from './types.js';
@@ -60,6 +63,7 @@ export {
   convertPadding,
   convertCornerRadius,
   convertStroke,
+  convertEffect,
   convertFrameLayout,
   convertTextLayout,
   convertNodeToStyles,

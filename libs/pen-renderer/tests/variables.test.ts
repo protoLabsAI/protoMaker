@@ -82,6 +82,38 @@ describe('resolveVariable', () => {
 
     expect(resolveVariable(variable, { Mode: 'Dark', Base: 'Zinc' })).toBe('#two-axes');
   });
+
+  it('breaks ties between equal-score entries with last-wins when both fully match', () => {
+    // Simulates --primary in shadcn: Mode+Base vs Mode+Accent both score 2
+    const variable: PenVariable = {
+      type: 'color',
+      value: [
+        { value: '#default' },
+        { value: '#dark-zinc', theme: { Mode: 'Dark', Base: 'Zinc' } },
+        { value: '#dark-violet', theme: { Mode: 'Dark', Accent: 'Violet' } },
+      ],
+    };
+
+    // When all axes specified: both entries are full matches, last-wins → violet
+    expect(resolveVariable(variable, { Mode: 'Dark', Base: 'Zinc', Accent: 'Violet' })).toBe(
+      '#dark-violet'
+    );
+  });
+
+  it('prefers full match over partial match at same score', () => {
+    const variable: PenVariable = {
+      type: 'color',
+      value: [
+        { value: '#default' },
+        { value: '#dark-zinc', theme: { Mode: 'Dark', Base: 'Zinc' } },
+        { value: '#dark-zinc-violet', theme: { Mode: 'Dark', Base: 'Zinc', Accent: 'Violet' } },
+      ],
+    };
+
+    // When theme only specifies 2 axes, the 3-axis entry is a partial match
+    // The 2-axis entry is a full match and should win despite lower specificity
+    expect(resolveVariable(variable, { Mode: 'Dark', Base: 'Zinc' })).toBe('#dark-zinc');
+  });
 });
 
 describe('resolveAllVariables', () => {
@@ -129,11 +161,11 @@ describe('shadcn-kit.pen variable resolution', () => {
   const result = parsePenDocument(shadcnKitJson);
   const variables = result.document.variables!;
 
-  it('resolves --primary for Dark/Zinc/Violet theme', () => {
+  it('resolves --primary to violet for Dark/Zinc/Violet theme', () => {
     const theme: PenThemeSelection = { Mode: 'Dark', Base: 'Zinc', Accent: 'Violet' };
     const value = resolveVariable(variables['--primary'], theme);
-    expect(value).toBeDefined();
-    expect(typeof value).toBe('string');
+    // Should resolve to the violet accent color, not the zinc base gray
+    expect(value).toBe('#8b5cf6');
   });
 
   it('resolves --background for Dark/Zinc theme', () => {
