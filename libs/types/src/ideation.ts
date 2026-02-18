@@ -65,6 +65,17 @@ export interface Idea {
 // ============================================================================
 
 export type IdeationSessionStatus = 'active' | 'completed' | 'abandoned';
+export type IdeaSessionStatus = 'processing' | 'awaiting_approval' | 'completed' | 'failed';
+export type IdeaNodeStatus = 'pending' | 'running' | 'completed' | 'failed' | 'skipped';
+export type IdeaSessionPath = 'fast' | 'standard' | 'complex';
+
+export interface IdeaNodeState {
+  status: IdeaNodeStatus;
+  startedAt?: string;
+  completedAt?: string;
+  output?: unknown;
+  error?: string;
+}
 
 export interface IdeationSession {
   id: string;
@@ -74,6 +85,10 @@ export interface IdeationSession {
   status: IdeationSessionStatus;
   createdAt: string;
   updatedAt: string;
+  nodes?: Record<string, IdeaNodeState>;
+  progress?: number;
+  path?: IdeaSessionPath;
+  source?: string;
 }
 
 export interface IdeationMessage {
