@@ -14,6 +14,8 @@ import { createGetHandler } from './routes/get.js';
 import { createCreateHandler } from './routes/create.js';
 import { createApproveHandler } from './routes/approve.js';
 import { createRejectHandler } from './routes/reject.js';
+import { createRefireHandler } from './routes/refire.js';
+import { createEditHandler } from './routes/edit.js';
 
 export function createIdeasRoutes(ideaService: IdeaProcessingService): Router {
   const router = Router();
@@ -29,6 +31,12 @@ export function createIdeasRoutes(ideaService: IdeaProcessingService): Router {
   router.post('/process', createProcessHandler(ideaService));
   router.post('/status', createStatusHandler(ideaService));
   router.post('/resume', createResumeHandler(ideaService));
+
+  // Refire from a specific node
+  router.post('/:sessionId/refire/:nodeId', createRefireHandler(ideaService));
+
+  // Edit state and re-execute from a node
+  router.post('/:sessionId/edit/:nodeId', createEditHandler(ideaService));
 
   return router;
 }
