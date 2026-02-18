@@ -1,7 +1,13 @@
 import { defineConfig } from 'tsup';
 
 export default defineConfig({
-  entry: ['src/index.ts', 'src/atoms/index.ts', 'src/molecules/index.ts', 'src/organisms/index.ts', 'src/lib/index.ts'],
+  entry: [
+    'src/index.ts',
+    'src/atoms/index.ts',
+    'src/molecules/index.ts',
+    'src/organisms/index.ts',
+    'src/lib/index.ts',
+  ],
   format: ['esm'],
   dts: {
     resolve: true,
