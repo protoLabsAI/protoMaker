@@ -14,6 +14,7 @@ import http, { Server } from 'http';
 import net from 'net';
 import { app, BrowserWindow, ipcMain, dialog, shell, screen } from 'electron';
 import { createLogger } from '@automaker/utils/logger';
+import { initAutoUpdater } from './auto-updater';
 import {
   findNodeExecutable,
   buildEnhancedPath,
@@ -778,6 +779,11 @@ app.whenReady().then(async () => {
 
     // Create window
     createWindow();
+
+    // Initialize auto-updater (no-op in development)
+    if (mainWindow) {
+      initAutoUpdater(mainWindow);
+    }
   } catch (error) {
     logger.error('Failed to start:', error);
     const errorMessage = (error as Error).message;

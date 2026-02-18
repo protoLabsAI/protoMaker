@@ -104,6 +104,7 @@
     "cmdk": "1.1.1",
     "dagre": "0.8.5",
     "dotenv": "17.2.3",
+    "electron-updater": "^6.8.3",
     "geist": "1.5.1",
     "lucide-react": "0.562.0",
     "motion": "^12.34.0",
@@ -168,7 +169,11 @@
     "productName": "Automaker",
     "artifactName": "${productName}-${version}-${arch}.${ext}",
     "npmRebuild": false,
-    "publish": null,
+    "publish": {
+      "provider": "github",
+      "owner": "proto-labs-ai",
+      "repo": "automaker"
+    },
     "afterPack": "./scripts/rebuild-server-natives.cjs",
     "directories": {
       "output": "release"

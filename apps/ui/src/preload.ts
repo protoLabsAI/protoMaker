@@ -59,6 +59,26 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // App control
   quit: (): Promise<void> => ipcRenderer.invoke('app:quit'),
+
+  // Auto-updater
+  updater: {
+    getState: (): Promise<{
+      status: string;
+      info?: unknown;
+      progress?: unknown;
+      error?: string;
+    }> => ipcRenderer.invoke('updater:getState'),
+    checkForUpdates: (): Promise<{ success: boolean; updateInfo?: unknown; error?: string }> =>
+      ipcRenderer.invoke('updater:checkForUpdates'),
+    downloadUpdate: (): Promise<{ success: boolean; error?: string }> =>
+      ipcRenderer.invoke('updater:downloadUpdate'),
+    installUpdate: (): Promise<void> => ipcRenderer.invoke('updater:installUpdate'),
+    onStateChanged: (callback: (state: unknown) => void): (() => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, state: unknown) => callback(state);
+      ipcRenderer.on('updater:state-changed', handler);
+      return () => ipcRenderer.removeListener('updater:state-changed', handler);
+    },
+  },
 });
 
 logger.info('Electron API exposed (TypeScript)');
