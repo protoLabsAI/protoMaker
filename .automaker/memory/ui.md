@@ -319,3 +319,20 @@ usageStats:
 - **Rejected:** Keep tab bar but conditionally hide/show based on route - would create hidden complexity and make future maintenance harder
 - **Trade-offs:** Simpler components but requires new route file; easier to reason about but slightly more routing boilerplate
 - **Breaking if changed:** If future features need tab selection in analytics, would need to rebuild the state management pattern
+
+#### [Gotcha] Storybook stories.array config with multiple globs must maintain order: local app stories BEFORE library stories, otherwise type discovery or import resolution can fail (2026-02-18)
+- **Situation:** Added '../../../libs/ui/src/**/*.stories' to stories array that already had '../src/**/*.stories'. Configuration order matters for module resolution.
+- **Root cause:** Storybook processes stories array in sequence. If library path comes first and apps/ui stories import from libs/ui, the library stories may be processed before @automaker/ui module symlink is fully resolved by the monorepo.
+- **How to avoid:** Correct ordering ensures reliable builds but requires discipline—new maintainers may accidentally reorder and break CI silently (build succeeds, stories fail to load at runtime).
+
+#### [Gotcha] Interactive Storybook controls (argTypes) enable dark/light theme switching without explicit story variants - Storybook's theme addon handles this automatically (2026-02-18)
+- **Situation:** Requirement stated 'dark/light comparison possible' but implementation doesn't have separate Dark/Light variant stories. Instead, argTypes + Storybook theme switcher UI achieves this
+- **Root cause:** Storybook's built-in theme switching (via toolbar) applies CSS class/theme context globally. Components using CSS variables for theming (shadcn pattern) automatically render in both themes without duplicate stories. This is more maintainable than duplicating every story
+- **How to avoid:** Fewer stories (193 total) with automatic theme switching vs 2x stories with explicit variants. First approach scales better - adding a new component doesn't double story count
+
+### Theme system documentation should enumerate all available themes with their characteristics (light/dark mode, color palette, use cases) rather than generic 'how to switch themes' (2026-02-18)
+- **Context:** Writing theme setup section of README had to balance between technical 'how to' and discovery 'which theme fits my project'
+- **Why:** Users evaluating the package need to know what visual options exist before writing code. Listing 6 specific themes (studio-light, studio-dark, nord, catppuccin, dracula, monokai) with their characteristics (perceptual uniformity via OKLch, design intent) lets them make informed choice upfront rather than trying themes trial-and-error.
+- **Rejected:** Alternative: Generic 'import theme and apply' without listing options. Would force users to browse source code to discover available themes.
+- **Trade-offs:** Longer documentation initially, but reduces friction for new users and showcases package variety. Small maintenance burden if new themes added (must update enumeration).
+- **Breaking if changed:** If theme enumeration becomes stale (new theme added but not documented), users miss it and may not use it. Creates false sense that only documented themes exist.

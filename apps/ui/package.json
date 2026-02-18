@@ -46,7 +46,6 @@
     "@automaker/dependency-resolver": "1.0.0",
     "@automaker/spec-parser": "1.0.0",
     "@automaker/types": "1.0.0",
-    "@protolabs/ui": "*",
     "@codemirror/lang-xml": "6.1.0",
     "@codemirror/language": "^6.12.1",
     "@codemirror/legacy-modes": "^6.5.2",
@@ -133,6 +132,7 @@
     "lightningcss-win32-x64-msvc": "1.29.2"
   },
   "devDependencies": {
+    "@protolabs/ui": "*",
     "@chromatic-com/storybook": "^5.0.1",
     "@electron/rebuild": "^4.0.3",
     "@eslint/js": "9.0.0",

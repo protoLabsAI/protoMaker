@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 230
-  referenced: 110
-  successfulFeatures: 110
+  loaded: 233
+  referenced: 115
+  successfulFeatures: 115
 ---
 # gotchas
 
@@ -146,12 +146,37 @@ usageStats:
 - **Root cause:** Playwright bundles Chromium/Firefox/WebKit which require glibc and other system libraries. TEST_REUSE_SERVER allows CI/testing in restricted environments by reusing running instance
 - **How to avoid:** Reusing server makes tests faster and environment-agnostic but requires coordination that server is running; less isolated than full Playwright setup
 
-#### [Gotcha] Classification uses keyword matching on Discord channel names and Linear labels - extensibility requires code changes, not configuration (2026-02-18)
-- **Situation:** Discord channels like '#marketing' and '#social' route to GTM, but the keywords are hardcoded in gtmChannels/opsChannels arrays
-- **Root cause:** Keyword matching is simple and fast for current use case, but discovered limitation is that adding new channels or labels requires code deployment
-- **How to avoid:** Simple implementation vs. runtime flexibility. Current approach works for static organization structure, but breaks if company frequently adds/renames channels or labels.
+#### [Gotcha] Package.json exports map must exactly match tsup entry points for all export paths to work (2026-02-18)
+- **Situation:** Multiple export paths declared (./atoms, ./molecules, ./organisms, ./lib, root) but only some had corresponding tsup entries during development
+- **Root cause:** tsup generates a separate chunk for each entry point. If an entry point is declared in package.json exports but missing from tsup entry array, no JavaScript file is generated. The TypeScript declaration file may exist (if dts generation happens), but the .js file is missing, causing 'module not found' at runtime.
+- **How to avoid:** Requires discipline to keep two configuration sources in sync, but catches mismatches at build time rather than at runtime in production
 
-#### [Gotcha] Docker container restart exhaustion (5 consecutive restart failures) requires explicit detection and signaling - not observable via simple container status checks (2026-02-18)
-- **Situation:** Deployment pipeline was exiting on readiness check timeout but didn't distinguish between 'slow startup' (temporary) vs 'restart loop exhaustion' (permanent failure requiring manual intervention)
-- **Root cause:** Docker restart policy silently caps restart attempts; after 5 failures, container moves to 'exited' state but pipeline wasn't reading RestartCount metric to trigger escalated alert
-- **How to avoid:** Requires querying docker inspect (2 extra calls) but enables critical alerting for infrastructure-level failures vs application-level transient issues
+#### [Gotcha] CSS imports in monorepos must use relative paths at runtime, not package imports, despite package.json exports being configured (2026-02-18)
+- **Situation:** Added `./themes.css` export to libs/ui/package.json for API completeness, but actual imports in apps/ui still use relative paths (../../../../libs/ui/src/themes/themes.css)
+- **Root cause:** Tailwind CSS content scanner and Vite CSS import resolution don't honor package.json exports for CSS files. They treat CSS imports as file paths, not module specifiers. Package imports work for JS but not CSS in build tools.
+- **How to avoid:** Relative paths are fragile and verbose but work reliably. Package imports are clean but break silently (file not found). Chose paths that work over APIs that fail.
+
+#### [Gotcha] Duplicate nested directory path (libs/ui/libs/ui/) in worktree test file creation due to incorrect write context (2026-02-18)
+- **Situation:** Test file generated during verification landed in doubly-nested path, indicating lost context about working directory during file write operation
+- **Root cause:** Agent context drift: CWD was within worktree subdirectory; relative path construction didn't anchor properly; Write tool used relative paths without verification
+- **How to avoid:** Required manual diagnosis via glob search and path repair; lesson reinforces requirement to always use absolute paths in worktrees
+
+#### [Gotcha] Bulk import updates via task agents missed relative imports (../ui/markdown) that weren't part of standard aliased import patterns (2026-02-18)
+- **Situation:** After moving components and running bulk import updates with aliases (@protolabs/ui/molecules), two files (memory-view.tsx, context-view.tsx) still had old relative imports (from '../ui/markdown'). These weren't caught by the import replacement because they used a different pattern than the task expected.
+- **Root cause:** Automated bulk updates use regex patterns that match common import styles. Relative imports vary widely and may not match the exact pattern. Manual post-verification of grep results catches patterns the automation missed.
+- **How to avoid:** Added manual verification step (grep for old import paths) increases refactoring time but ensures complete migration. Prevents runtime errors from missed imports.
+
+#### [Gotcha] Storybook addon version incompatibility: Removing one problematic addon (addon-a11y) doesn't prevent cascading failures in other addons. The root cause (version mismatch at the monorepo level) persists, breaking remaining addons that depend on the same internal APIs. (2026-02-18)
+- **Situation:** Removed addon-a11y to eliminate addon-highlight dependency (which was throwing 'No matching export' error). After npm install, Storybook still failed with 'Missing ./internal/theming' from @storybook/blocks. This suggests the problem wasn't addon-a11y—it was the version mismatch itself.
+- **Root cause:** All Storybook addons depend on internal APIs that changed between v8 and v10. Removing one addon doesn't update the hoisted Storybook version—it remains v10.2.8 from apps/ui, breaking any addon trying to use v8.x internal APIs.
+- **How to avoid:** Removing addons buys time but hides the real problem. Eventually, you run out of addons to remove. Fixing the root cause (version alignment) is more effort upfront but prevents cascading failures.
+
+#### [Gotcha] Storybook build output directory must be explicitly specified in npm scripts, not just in storybook config, for CI/CD reproducibility (2026-02-18)
+- **Situation:** Feature required configuring Storybook to build into a predictable location for CI verification. The default storybook build behavior outputs to storybook-static/, but this wasn't explicit in the script.
+- **Root cause:** CI workflows that reference the output directory need the location to be declared in the script itself. Relying only on Storybook config defaults makes the contract between package.json scripts and CI workflows implicit and fragile. Explicit --output-dir flag makes the contract visible to anyone reading the script.
+- **How to avoid:** More verbose script declaration but gains explicit visibility. The flag is idempotent (specifying --output-dir storybook-static when that's already the default is harmless).
+
+#### [Gotcha] .npmignore whitelist approach: `*` (exclude all) followed by `!path/**` (include specific) is required for monorepo packages to avoid accidentally including source files when exports reference src/ (2026-02-18)
+- **Situation:** Initial .npmignore excluded src/ globally, but package.json exports included ./src/themes/themes.css. Standard exclude patterns would have prevented themes from being packaged while still leaking other src/ files.
+- **Root cause:** npm's .npmignore matching is line-order dependent. Blacklist approach (exclude src/, then include src/themes/) fails because the first match wins. Whitelist approach (exclude *, then include dist/ and src/themes/) guarantees only intended paths are packaged.
+- **How to avoid:** Whitelist is more explicit but requires maintaining the include list as exports change. Easier to verify what's shipped (npm pack --dry-run shows exactly what publishes). Harder to onboard new developers who expect standard .gitignore semantics.

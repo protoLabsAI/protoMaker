@@ -7,8 +7,18 @@
  */
 
 import { execSync } from 'child_process';
-import { cpSync, existsSync, mkdirSync, rmSync, writeFileSync, readFileSync } from 'fs';
-import { join, dirname } from 'path';
+import {
+  cpSync,
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readdirSync,
+  readlinkSync,
+  rmSync,
+  writeFileSync,
+  readFileSync,
+} from 'fs';
+import { join, dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -116,7 +126,36 @@ execSync('npm install --omit=dev --legacy-peer-deps', {
   },
 });
 
-// Step 7: Rebuild native modules for current architecture
+// Step 7: Replace symlinks with real directory copies
+// npm install with file: references creates symlinks, which break electron-builder
+// when packaging for architectures other than the host (e.g. arm64 on x64).
+console.log('🔗 Resolving symlinks in node_modules...');
+const bundleNodeModules = join(BUNDLE_DIR, 'node_modules');
+
+function resolveSymlinksInDir(dir) {
+  if (!existsSync(dir)) return;
+  for (const entry of readdirSync(dir)) {
+    const entryPath = join(dir, entry);
+    // Handle scoped packages (@automaker/*)
+    if (entry.startsWith('@') && lstatSync(entryPath).isDirectory()) {
+      resolveSymlinksInDir(entryPath);
+      continue;
+    }
+    if (lstatSync(entryPath).isSymbolicLink()) {
+      const realPath = resolve(dirname(entryPath), readlinkSync(entryPath));
+      if (existsSync(realPath)) {
+        console.log(`   ↳ ${entry}: symlink → real copy`);
+        rmSync(entryPath);
+        cpSync(realPath, entryPath, { recursive: true });
+      }
+    }
+  }
+}
+
+resolveSymlinksInDir(bundleNodeModules);
+console.log('✅ Symlinks resolved\n');
+
+// Step 8: Rebuild native modules for current architecture
 // This is critical for modules like node-pty that have native bindings
 console.log('🔨 Rebuilding native modules for current architecture...');
 try {

@@ -74,3 +74,13 @@ usageStats:
 - **Rejected:** Instant toggle without animation - feels broken/unpolished, hard to follow in interface
 - **Trade-offs:** Slight performance cost on older devices, but improved perceived performance. Animation adds 16-24 line motion component wrapper.
 - **Breaking if changed:** If motion/react library is removed or browser doesn't support animations, panels appear/disappear instantly without visual feedback.
+
+#### [Pattern] Named ESM exports preserve tree-shaking across multi-entry monorepo builds (2026-02-18)
+- **Problem solved:** Exporting a utility function (cn) from a shared package that must remain tree-shakeable when imported by multiple apps
+- **Why this works:** The built dist/lib/index.js uses named exports (`export { cn }`) rather than default or wrapped exports. This allows bundlers (webpack, vite, esbuild) to statically analyze which exports are actually used and remove unused code.
+- **Trade-offs:** Named exports require explicit import syntax from consumers (`import { cn } from '@protolabs/ui/lib'`), but this is explicitly desired for clarity. Unused utilities in lib/ are automatically dropped during consumer build.
+
+#### [Gotcha] Large story files (12+ export statements) can impact Storybook build time but tradeoff is worth it for comprehensive component coverage in single file vs split files (2026-02-18)
+- **Situation:** Some atoms (textarea, skeleton, spinner, label, kbd) have 11-12 story exports. Textarea has 12 stories in single file
+- **Root cause:** Keeping variant stories together makes it obvious all variants exist and interact together. Splitting across files spreads them through filesystem making coverage less obvious. Single file per component matches the component file organization principle
+- **How to avoid:** Larger file size (few KB each) with better coherence vs smaller files scattered across directory. Storybook loads all stories anyway so no real performance impact

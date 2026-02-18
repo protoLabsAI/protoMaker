@@ -524,7 +524,47 @@ usageStats:
 - **Root cause:** TypeScript compilation and Vite build are sufficient for catching structural errors, but Storybook failure prevented visual verification of component rendering. Decision to skip story given unrelated Storybook configuration issues.
 - **How to avoid:** Saved time by skipping broken Storybook, but lost visual verification benefit. Component structure verified but actual rendering in browser not confirmed.
 
-#### [Pattern] Created temporary integration test using vitest (not Playwright) that verified removal by attempting imports that should fail (2026-02-18)
-- **Problem solved:** Needed to verify 7 crew members, crew-loop-service, and crew routes were all deleted before committing.
-- **Why this works:** Import-time failures are the clearest verification that code paths have been removed. This catches the removal at compile-time rather than runtime. Vitest (existing server test framework) was appropriate rather than Playwright (which tests HTTP endpoints).
-- **Trade-offs:** Temporary test files must be cleaned up after verification vs. permanent regression detection. Tradeoff favors clean commit over permanent test cruft.
+#### [Pattern] Verification of export paths and TypeScript declarations via dynamic import testing (2026-02-18)
+- **Problem solved:** Need to verify that newly exported functions are actually importable and properly typed after a build change
+- **Why this works:** Static analysis alone cannot detect that an export path produces no JavaScript output. Dynamic imports at runtime can load and test the actual built artifacts. Testing includes: function import, type existence, package.json export map structure.
+- **Trade-offs:** Requires running the full test suite after build changes, but catches export path errors before they reach consumers. Temporary test files can be created and deleted for verification without permanent test overhead.
+
+#### [Pattern] Ephemeral verification test suite: create comprehensive Playwright tests, run them to verify the feature works, then delete the test file (2026-02-18)
+- **Problem solved:** Theme extraction required complex verification across file locations, CSS syntax, build artifacts, and import paths. A permanent test suite would be fragile and maintenance-heavy.
+- **Why this works:** Playwright tests verify real file I/O and CSS syntax without running the app. One-time verification catches mistakes immediately. Deleting after success avoids maintaining brittle filesystem tests that break if the codebase structure changes.
+- **Trade-offs:** Ephemeral tests catch issues faster than manual verification but don't prevent regressions. Permanent e2e tests would catch regressions but add maintenance burden. Pattern trades regression coverage for implementation speed.
+
+#### [Gotcha] E2E test for CSS verification requires the app to successfully load and execute, but unrelated import errors prevent load. Static CSS validation (file inspection, line counts, syntax) becomes the only available verification method. (2026-02-18)
+- **Situation:** Created theme-verification.spec.ts to check CSS variables via Playwright, but app fails to load before any CSS is evaluated.
+- **Root cause:** CSS is evaluated only after TypeScript/JavaScript loads and bundles. Import resolution failures occur earlier in the pipeline, blocking CSS validation. Tests cannot reach the CSS layer if the app fails to start.
+- **How to avoid:** Static verification (head, grep, line counts, syntax checks) is fast and deterministic but less authoritative than runtime verification. Runtime tests are more convincing but depend on independent systems (build, bundler, import resolution).
+
+#### [Gotcha] Node.js ESM import test from browser app context requires explicit path verification and absolute imports due to CWD unpredictability in worktrees (2026-02-18)
+- **Situation:** Test command 'import from @protolabs/ui/themes' executed from apps/ui directory, but actual resolution depends on package.json exports and workspace symlinks being correct
+- **Root cause:** Package resolution in monorepos relies on workspace symlinks + exports field, not relative paths; CWD shifts in worktrees can cause relative path lookups to fail; Node.js import() resolves package names globally first
+- **How to avoid:** Using package name requires correct workspace setup and build artifacts in place; moving code between projects just works; adding new exports requires coordinated changes to tsup + package.json
+
+#### [Gotcha] Storybook major version upgrades (8.x→10.x) introduce breaking changes in internal APIs (internal/theming, internal/preview-api) that aren't caught at build time. The tsup build succeeds, but Storybook dev server fails at runtime when importing addon code. (2026-02-18)
+- **Situation:** Build succeeded (`npm run build -w @protolabs/ui` passed), but `npm run storybook -w @protolabs/ui` failed with internal module errors. This suggests internal APIs aren't part of the public type definitions, making breakage invisible until runtime.
+- **Root cause:** Storybook maintains internal APIs without semantic versioning guarantees. Addons depend on these internals, making major upgrades fragile. The pattern of exposing internals in package exports (e.g., '@storybook/blocks/internal/theming') creates a hidden API surface.
+- **How to avoid:** Testing Storybook locally requires running the dev server, which only fails at runtime. CI that only runs builds won't catch these errors. Adding a Storybook build step (`build-storybook`) to CI would catch errors, but slows CI and adds false positives when Storybook config is unrelated to the change.
+
+#### [Pattern] CSF3 format with autodocs tag + a11y addon provides dual benefit: auto-generated documentation AND automatic accessibility violation detection in one artifact (2026-02-18)
+- **Problem solved:** Need for comprehensive component documentation that also catches a11y regressions during development.
+- **Why this works:** autodocs tag enables Storybook to generate docs from stories without additional doc files, reducing maintenance burden. a11y addon is already in Storybook config, so it runs automatically on every story at dev time—catching a11y issues before code review.
+- **Trade-offs:** Stories become the single source of truth for docs + a11y validation, which is powerful but couples documentation build/visibility to Storybook infra. If Storybook breaks, docs become unavailable.
+
+#### [Pattern] CSF3 with satisfies Meta<typeof Component> provides compile-time type safety for story definitions, preventing prop mismatches that would only surface at runtime (2026-02-18)
+- **Problem solved:** All 25 story files use 'satisfies Meta<typeof Component>' pattern rather than loose typing. This was chosen as the consistent pattern across all atoms
+- **Why this works:** Satisfies operator validates story argTypes and template props against actual component props at TS compile time. Catches typos, missing props, and type mismatches before Storybook loads. Prevents the silent failures common in loosely-typed story files
+- **Trade-offs:** Satisfies requires slightly more verbose type declarations upfront but eliminates entire class of prop-mismatch bugs. Zero runtime cost - purely compile-time validation
+
+#### [Gotcha] Build configuration changes cannot be verified with Playwright tests—verification must be structural (artifact inspection) not functional (UI rendering) (2026-02-18)
+- **Situation:** Feature acceptance criteria included 'Storybook accessible at public URL' but the implementation task only covers build config and CI setup, not deployment. Team initially tried to apply Playwright verification pattern to a non-UI task.
+- **Root cause:** Playwright tests verify rendered UI behavior. Storybook build config produces static artifacts, not interactive pages. Verification happens offline (checking file existence, structure, validity) not via browser automation. The distinction matters: build config is proven by running the build and inspecting output; UI behavior is proven by rendering and interaction.
+- **How to avoid:** Structural verification (test -f index.html && test -d assets) is fast and reliable but doesn't test that the site actually renders correctly in a browser. Deployment/hosting verification is separate and requires a live environment.
+
+#### [Gotcha] Documentation-only features (README, philosophy docs) don't require Playwright verification, only confirmation that files exist, build succeeds, and formatting is correct (2026-02-18)
+- **Situation:** Feature requirement specified 'Playwright verification required' but this milestone is purely documentation with no runtime functionality
+- **Root cause:** Playwright tests verify user-facing behavior and interaction. Documentation has no runtime behavior — it's static content. Verification shifts to: file existence, no build errors, no unintended file changes, correct formatting.
+- **How to avoid:** Simpler verification process for documentation features means faster turnaround. Risk: Could merge malformed docs. Mitigation: Visual review in PR and build gate ensures no syntax errors.

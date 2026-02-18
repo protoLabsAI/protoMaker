@@ -5,9 +5,9 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 56
-  referenced: 32
-  successfulFeatures: 32
+  loaded: 53
+  referenced: 30
+  successfulFeatures: 30
 ---
 # api
 
@@ -381,14 +381,12 @@ usageStats:
 - **Why this works:** Provides flexibility when UI implementation details change. If data-testid is removed, the href-based selector still works. If styling changes the tag type, the selector still finds it. Makes tests resilient to cosmetic refactors
 - **Trade-offs:** Query is more complex to read but more maintainable long-term. Slightly slower selector resolution but negligible in tests
 
-### Enhanced IntegrationService to pass Linear `labels` and `projectId` in signal context rather than inferring from downstream (2026-02-18)
-- **Context:** Linear issue classification depends on labels and project context, but integration layer wasn't providing this metadata
-- **Why:** Early data enrichment (at source) makes classification deterministic and debuggable. Labels and projectId are available at integration time with no additional queries. Passing them enables label-based routing without downstream Linear API calls.
-- **Rejected:** Could have deferred label lookup to classification time by querying Linear API again, but adds latency and complexity
-- **Trade-offs:** IntegrationService now has slightly larger payload, but classification logic stays simple and fast. No N+1 query problem.
-- **Breaking if changed:** If removed, classification would need to fetch Linear context on-demand, requiring API credentials in SignalIntakeService and creating latency/failure points
+#### [Pattern] Theme utility design uses DOM manipulation (document.documentElement) rather than return-value approach, matching existing shadcn theme pattern (2026-02-18)
+- **Problem solved:** Existing apps/ui theme implementation applies CSS classes directly to html element; new utility functions must integrate with this established pattern
+- **Why this works:** applyTheme() mutates document.documentElement.classList; detectPreferredTheme() reads system prefers-color-scheme via matchMedia. This matches Tailwind/shadcn convention where themes are applied globally via class names on root element
+- **Trade-offs:** Direct DOM manipulation is easier to integrate with existing code but couples utility to browser environment; makes testing require jsdom; prevents use in server contexts (e.g., getServerSideProps)
 
-#### [Gotcha] EventType union in TypeScript wouldn't recognize new 'lead-engineer:feature-processed' event even after types were rebuilt, required explicit 'as EventType' cast in emit call (2026-02-18)
-- **Situation:** Added new event type to types package and rebuilt, but lead-engineer-service.ts still showed type error on emit() call
-- **Root cause:** TypeScript type narrowing on EventEmitter.emit() is strict - the literal string type 'lead-engineer:feature-processed' must be assignable to the EventType union, but type inference can lag behind union updates in complex generic types
-- **How to avoid:** Cast reduces type safety slightly but keeps event payload typing intact. Event names are defined once in types, payload types are still checked at compile time
+#### [Pattern] 19 story files created via agent automation shows successful code generation pattern: each story file is 30-50 lines with consistent structure (Meta + Default export + variant exports), enabling reliable bulk creation (2026-02-18)
+- **Problem solved:** Agent created 25 story files without manual review of each one. Quality variance between files was minimal.
+- **Why this works:** Each story follows identical structure: (1) import Component, (2) define Meta with autodocs tag, (3) export Default with template, (4) export variant stories using CSF3. This regularity allows agents to generate valid code without human validation.
+- **Trade-offs:** Consistency is high (all stories follow same pattern) but individual stories may lack sophistication (e.g., complex interaction demos). Trade-off is acceptable for coverage—sophisticated stories can be added later.

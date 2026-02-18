@@ -1723,86 +1723,135 @@ usageStats:
 - **Why this works:** Single nav item definition generates: sidebar UI item, keyboard shortcut binding, and route navigation. Changes to nav structure automatically propagate everywhere
 - **Trade-offs:** Declarative config is easier to maintain and audit but less flexible for nav items with custom behavior; requires hook infrastructure to consume and generate UI
 
-### Verified no imports existed before deletion rather than relying on grep alone (2026-02-18)
-- **Context:** Removing dead code files that might have been imported from multiple locations
-- **Why:** Grep can return false positives (string matches in comments, paths, or unrelated code). Needed to distinguish actual import statements from incidental string matches to ensure safe deletion
-- **Rejected:** Assuming grep results were complete without manual verification of the actual import statements in matched files
-- **Trade-offs:** Additional manual verification added safety but required more steps; automated tooling alone was insufficient
-- **Breaking if changed:** Skipping verification step could have resulted in deleting code that was actually imported, breaking the build at deployment time rather than development time
+#### [Pattern] Multi-entry-point tsup configuration for package.json exports map alignment (2026-02-18)
+- **Problem solved:** Building a monorepo UI package with multiple logical entry points (root, atoms, molecules, organisms, lib utilities)
+- **Why this works:** Each entry point in package.json exports map requires a corresponding tsup entry in the entry array. Without both, the build produces no output for that path and consumers get import failures despite the export being declared.
+- **Trade-offs:** Multiple entries increase build time slightly and create more dist files, but enables granular package consumption and proper tree-shaking per entry point. Consumers can import only what they need.
 
-#### [Gotcha] Route files imported from `auto-mode-service.js` not from the deleted `services/auto-mode/` directory (2026-02-18)
-- **Situation:** Initial grep search showed files containing 'services/auto-mode/' path, but these were not actual imports of the code being deleted
-- **Root cause:** The string 'services/auto-mode/' appeared in file paths and comments but the actual imports were from a different module (`auto-mode-service.js`). This is a naming ambiguity where the directory path string is similar to but distinct from the actual module being imported
-- **How to avoid:** Required reading actual file contents to understand the true import structure, adding investigation overhead
+### Vite alias required for workspace CSS imports in monorepo. Added `@protolabs/ui` alias pointing to `libs/ui/src` in vite.config.mts (2026-02-18)
+- **Context:** Theme CSS files moved from apps/ui to libs/ui, but Vite couldn't resolve relative path imports during build. Build failed with module resolution errors.
+- **Why:** Vite's CSS import resolution and Tailwind's content scanning require explicit alias mappings for workspace packages. Without the alias, Vite treats the relative path as external and fails to bundle CSS.
+- **Rejected:** Using package.json 'exports' field alone. Package exports work for JS imports but not for CSS file resolution during Vite build. Also rejected: symlink resolution—unreliable across platforms.
+- **Trade-offs:** Alias adds build config complexity but guarantees consistent resolution. Alternative of using fully-qualified package imports (@protolabs/ui/themes.css) would require additional loader configuration and wouldn't work with Tailwind's content scanning.
+- **Breaking if changed:** Removing the alias breaks the build immediately—Vite can't find libs/ui imports. Any future workspace CSS packages would need similar alias configuration.
 
-#### [Pattern] Dead code from abandoned refactor left in codebase with newer implementation running in parallel (2026-02-18)
-- **Problem solved:** The deleted `AgentExecutionService` and `auto-mode/` directory were part of an abandoned refactor while `AutoModeService` became the active implementation
-- **Why this works:** Parallel implementations can exist during refactor transitions to maintain stability while new code is validated. However, leaving both in place after transition completes creates confusion about which is authoritative and wastes maintenance overhead
-- **Trade-offs:** Keeping dead code during transition provides fallback safety but creates ambiguity; removing it post-validation saves maintenance but requires confidence that transition is complete
+#### [Gotcha] Tailwind CSS content scanning in monorepos requires explicit `@source` directive in global.css. Without it, CSS classes unique to shared packages don't generate. (2026-02-18)
+- **Situation:** This was NOT part of the current feature but is a critical lesson from session history. Theme CSS files in libs/ui wouldn't be scanned by Tailwind in apps/ui unless @source directive is added to global.css.
+- **Root cause:** Tailwind v4 auto-detects content by scanning from the nearest package.json upward. libs/ui/src is outside apps/ui's scan scope. The @source directive extends the scan to include that directory.
+- **How to avoid:** @source directive is explicit and maintainable but easy to forget. Default scanning is simpler but fails silently for monorepos. Explicit wins for reliability.
 
-### Default routing classification to Ops for ambiguous signals, requiring explicit GTM pattern matching (2026-02-18)
-- **Context:** Signal classification needs to handle signals from multiple sources (GitHub, Linear, Discord, MCP) and route to either Ops or GTM pipelines
-- **Why:** Automaker is primarily an engineering tool. Defaulting to Ops is safer - false negatives (GTM signals misclassified as Ops) are preferable to false positives (Ops signals going to GTM pipeline). GTM signals explicitly opt-in via labels/channels rather than implicit.
-- **Rejected:** Could have defaulted to GTM and required Ops signals to explicitly opt-in, or used 50/50 default requiring all signals to match patterns
-- **Trade-offs:** Simpler mental model for Ops-heavy tool, but GTM users need to be aware they must use correct labels/channels. Easier to add Ops sources than GTM sources.
-- **Breaking if changed:** If changed to GTM-first or 50/50 default, would need to audit all signal sources and risk misrouting existing Ops signals through GTM pipeline
+#### [Gotcha] CSS import path uses relative traversal (../../../../libs/ui/src/themes/base.css) from app-level global.css to shared package-level theme file. This creates a fragile dependency on directory structure. (2026-02-18)
+- **Situation:** When extracting theme definitions from monorepo app to shared package, the import statement must reach across the workspace tree.
+- **Root cause:** Relative paths work because Tailwind CSS 4 processes @import statements without path resolution during compilation. Workspace symlinks don't apply to CSS-level imports.
+- **How to avoid:** Relative paths are fragile to directory moves but work immediately. Package-level imports would be cleaner but require PostCSS plugin for CSS module resolution, adding build complexity.
 
-#### [Pattern] Event-driven classification layered between IntegrationService and feature creation, using emitted events as integration points (2026-02-18)
-- **Problem solved:** Need to add intelligent routing logic without modifying signal source integrations (GitHub, Linear, Discord, MCP handlers)
-- **Why this works:** IntegrationService emits `signal:received` events, SignalIntakeService listens and classifies. This separation allows classification logic to evolve without touching integration code. New routing rules can be added to classifySignal() without side effects.
-- **Trade-offs:** Clean separation requires event layer overhead, but enables independent evolution of integrations and routing logic. Makes it easier to test classification in isolation.
+#### [Pattern] CSS variable extraction creates two-level indirection: @theme inline (Tailwind → CSS var bridge) + :root declaration (CSS var → actual values). This decouples token naming from value assignment. (2026-02-18)
+- **Problem solved:** Tailwind 4 @theme blocks expect CSS variables as values, but color values are expressed in oklch color space. Separating the mapping from the values allows reuse across themes.
+- **Why this works:** The pattern allows @custom-variant definitions and @theme inline to remain static (theme-agnostic structure), while :root and @media (prefers-color-scheme) can swap actual values. Single source of truth for token structure, multiple sources for values.
+- **Trade-offs:** Extra indirection adds one layer of lookup (Tailwind → CSS var → oklch value), negligible performance cost. But it prevents accidental direct color references and forces consistent token usage.
 
-#### [Pattern] Emitting `signal:routed` event with category and reasoning for every signal, in addition to existing event stream (2026-02-18)
-- **Problem solved:** Need visibility into why signals were classified and routed to specific pipelines for debugging and monitoring
-- **Why this works:** Event emission enables observability without adding logging coupling. Downstream systems can consume `signal:routed` events to track classification decisions, build dashboards, alert on anomalies. The `reason` field captures why classification happened, not just the result.
-- **Trade-offs:** Adds event emission overhead, but provides production observability. Makes classification auditable.
+#### [Gotcha] Pre-existing build issue (@protolabs/ui/atoms import resolution failure) blocks verification of CSS changes, creating false uncertainty about correctness. The CSS extraction itself is valid; the test failure masks other problems. (2026-02-18)
+- **Situation:** After extracting theme CSS, E2E tests fail because the app won't load due to unrelated import resolution errors.
+- **Root cause:** The @protolabs/ui package name mismatch (package declares @protolabs/ui, tsconfig doesn't map it, but build still references it) is a separate, pre-existing issue that prevents the app from running at all.
+- **How to avoid:** CSS changes are correct and verified by static inspection (syntax, structure, line reduction), but cannot be validated via end-to-end tests until the import issue is resolved. Increasing build/test complexity to work around unrelated issues is worse than documenting the blockers.
 
-### Used dependency injection with setLeadEngineerService() and 'any' type cast to avoid circular dependency between AutoModeService and LeadEngineerService (2026-02-18)
-- **Context:** Both services needed to reference each other - AutoModeService delegates to LeadEngineerService, but initializing them in sequence created a type safety problem
-- **Why:** Circular imports in TypeScript cause reference errors at runtime. Using 'any' type for injected dependency breaks the cycle while maintaining runtime correctness since AutoModeService only calls the process() method
-- **Rejected:** Could have merged services (breaks separation of concerns), used interfaces (still creates circular reference), or strict dependency ordering (fragile initialization)
-- **Trade-offs:** Gained loose coupling and clean separation of orchestration from execution, lost type safety on injected dependency - but the interface is simple enough (one method) that this is acceptable
-- **Breaking if changed:** If the injected service interface changes beyond process(), or if circular logic is added to LeadEngineerService that references AutoModeService, type safety will mask runtime errors
+### Multi-entry-point tsup configuration with explicit package.json exports field for theme utilities sub-export (2026-02-18)
+- **Context:** Need to expose theme utilities from @protolabs/ui without polluting main export; library already uses tsup with single entry point
+- **Why:** tsup's entry point array allows building isolated chunks; package.json exports creates conditional resolution paths. Consumers import @protolabs/ui/themes (clean API) which resolves to dist/themes/index.js without modifying main entry
+- **Rejected:** Re-export from main index.ts (pollutes bundle, mixes concerns); separate package (adds monorepo complexity); direct dist imports (no type safety, fragile paths)
+- **Trade-offs:** Requires maintaining parallel tsup config array and package.json exports in sync; slightly higher build artifact count; enables precise tree-shaking per sub-export
+- **Breaking if changed:** Removing entry from tsup array or package.json exports breaks @protolabs/ui/themes imports; changing dist folder structure breaks consumer imports
 
-#### [Pattern] Delegation pattern where AutoModeService (orchestrator) remains unchanged in its polling loop, only adds conditional delegation point for feature execution (2026-02-18)
-- **Problem solved:** Needed to integrate new Lead Engineer state machine into existing auto-mode without refactoring the orchestration logic
-- **Why this works:** Orchestration concerns (heap monitoring, concurrency limits, feature selection, dependency resolution) are orthogonal to execution concerns (state transitions, PR management). Delegation keeps these separate and testable independently
-- **Trade-offs:** Slightly more code paths to maintain (delegation + fallback), but execution engine can be iterated independently and auto-mode remains a stable orchestration layer
+### Centralized THEMES constant array over per-file theme definitions, enabling single source of truth for theme metadata (2026-02-18)
+- **Context:** Apps previously had hardcoded theme lists scattered across components; adding new utilities requires consistent metadata (name, class, type, label)
+- **Why:** Array of { name, class, type, label } objects enables reuse across all theme utilities; allows functions like getThemeClass() and UI dropdowns to derive data from single source; future applications can import and consume without re-defining
+- **Rejected:** Enum (lacks rich metadata like labels); Record<string, ThemeInfo> (loses order); inline definitions in each utility function (high duplication, hard to sync)
+- **Trade-offs:** Adds small runtime overhead (one array definition); enables powerful composability and eliminates duplication; slight learning curve for consumers (must understand THEMES structure)
+- **Breaking if changed:** Removing THEMES breaks all downstream code that uses it; changing structure (e.g., renaming 'class' to 'className') requires cascading updates in all consumers and type definitions
 
-### Fallback to legacy executeFeature() when LeadEngineerService not available, rather than requiring it (2026-02-18)
-- **Context:** LeadEngineerService might be disabled or not initialized in some deployments or test scenarios
-- **Why:** Maintains backward compatibility and allows gradual rollout - projects without Lead Engineer continue functioning. Prevents hard dependency that could break existing deployments
-- **Rejected:** Could have required Lead Engineer (forces migration), or removed legacy path entirely (breaks existing code)
-- **Trade-offs:** Gained flexibility and safety, added conditional logic and two code paths to test. But risk is mitigated since both paths have same input/output contract
-- **Breaking if changed:** If legacy executeFeature() is ever removed, this fallback must be removed too or auto-mode will silently fail to process features
+#### [Gotcha] Node.js-specific dependencies bundled into browser build when moving components between packages without declaring them in the target package (2026-02-18)
+- **Situation:** Moved `markdown` component from apps/ui to libs/ui. Build failed with Node.js module errors (fs, path) because react-markdown, rehype-raw, rehype-sanitize were in apps/ui/package.json but not libs/ui/package.json. Vite bundled them as external dependencies into the browser build.
+- **Root cause:** Package.json dependencies control what Vite can resolve. When a package imports a dependency it doesn't declare, the bundler treats it as external and includes it in the output, causing runtime failures in the browser.
+- **How to avoid:** Adding dependencies to libs/ui increases package size and dependency surface, but ensures the package is truly portable and doesn't depend on consumer package.json entries. Required for publishing @protolabs/ui as a standalone package.
 
-#### [Gotcha] Used minimal ExecuteOptions interface at delegation point because Lead Engineer state machine will build complete options internally, but state machine processors are still stubs (2026-02-18)
-- **Situation:** AutoModeService had full ExecuteOptions ready, but Lead Engineer state machine doesn't currently use most fields
-- **Root cause:** Avoids over-engineering the interface before state machine processors are implemented. State machine is responsible for assembling execution context
-- **How to avoid:** Simpler integration now, but when state machine processors are implemented and need AutoModeService data, the interface will need to expand - caught by type system then
+### Move dependent components (hotkey-button before confirm-dialog) in dependency order to avoid circular references when consolidating into single package (2026-02-18)
+- **Context:** confirm-dialog depends on hotkey-button. Both were in apps/ui but needed to move to libs/ui/molecules. Moving only confirm-dialog first would create cross-package dependency (confirm-dialog in libs/ui → hotkey-button in apps/ui).
+- **Why:** When consolidating related components into a shared package, topological ordering prevents circular dependency chains across package boundaries. Keeping dependent components in the same package ensures they share the same resolution scope.
+- **Rejected:** Moving all components simultaneously without ordering. Creates merge conflicts and makes it harder to identify which dependency causes build failures.
+- **Trade-offs:** Requires upfront dependency mapping before refactoring. Easier verification and isolation of build issues per component. Slightly more manual effort vs. bulk-moving everything.
+- **Breaking if changed:** If confirm-dialog remains in apps/ui while hotkey-button moves to libs/ui, the import path becomes apps/ui → libs/ui → apps/ui (circular reference through import chain), causing module resolution loops or duplicate instantiation.
 
-### Use environment variable (GITHUB_ENV) to signal restart exhaustion from verification step to notification step rather than exit code or file artifact (2026-02-18)
-- **Context:** Needed to communicate restart exhaustion condition between two separate GitHub Action steps for conditional alerting
-- **Why:** GITHUB_ENV persists state across steps in same job, making it visible to downstream steps without adding complexity. Exit codes are consumed by if conditions and don't preserve semantic meaning
-- **Rejected:** Output files (would require artifact upload) or exit codes (would need step condition logic); GITHUB_ENV is GitHub Actions native for cross-step communication
-- **Trade-offs:** Easier to read/debug than parsing exit codes, but couples implementation to GitHub Actions runtime
-- **Breaking if changed:** Without this pattern, restart exhaustion alert would need to be detected independently in Discord notification step, doubling the detection logic
+#### [Pattern] libs/ui package uses relative imports with .js extensions (e.g., `from '../atoms/button.js'`) instead of aliased paths (@protolabs/ui/atoms) within the library (2026-02-18)
+- **Problem solved:** When moving components to libs/ui, internal imports must use relative paths with .js extensions, not the @protolabs/ui alias. The alias is only for external consumers (apps/ui, etc).
+- **Why this works:** ESM module resolution in Node.js requires explicit extensions in relative imports. Internal package imports using relative paths resolve directly without going through the export map. Using aliases internally would create circular reference issues during bundling and adds resolution overhead.
+- **Trade-offs:** Internal imports are less consistent with external API, but avoids circular resolution. Requires developers to know the internal convention. However, this is standard practice in monorepo libraries (shadcn/ui follows same pattern).
 
-### Kept crew-members/index.ts as a stub file with backward compatibility note instead of complete deletion (2026-02-18)
-- **Context:** Feature scope specified removing crew loop checks but maintaining system stability. Index file existed as a re-export barrel.
-- **Why:** Prevents import errors if external code references the crew-members directory. Provides a clear migration path with documentation rather than hard breaking changes.
-- **Rejected:** Complete deletion of the directory would have been simpler but would break any code that imports from services/crew-members/ even if those specific members are removed.
-- **Trade-offs:** Slightly more code to maintain vs. cleaner directory structure. Tradeoff favors stability during multi-phase deprecation.
-- **Breaking if changed:** Removing the stub would cause import-time failures for any consuming code, requiring coordinated multi-service updates.
+#### [Pattern] Package.json exports field with type definitions (./molecules export) enables TypeScript and build tools to resolve both ESM and type definitions without manual tsconfig paths (2026-02-18)
+- **Problem solved:** libs/ui/package.json already had `./molecules` configured in exports with types field pointing to dist/molecules/index.d.ts. This made the component consolidation work immediately without adding tsconfig paths or additional configuration.
+- **Why this works:** Modern Node.js and TypeScript resolve packages via exports field first, before falling back to main/types. Properly configured exports work for both runtime (ESM) and type-checking without duplication. This follows Node.js package standard.
+- **Trade-offs:** Requires upfront configuration of package.json exports (which was already done), but eliminates need for tsconfig paths coordination. Scales better across monorepo projects.
 
-#### [Gotcha] Dashboard endpoint was the only external consumer of crew status despite crew loop being a large system (2026-02-18)
-- **Situation:** Crew loop service was extensively implemented with 7 different member checks and multiple initialization steps, yet only dashboard.ts consumed the status output.
-- **Root cause:** This indicates the crew loop was well-isolated - a large internal system with minimal external API surface. The system did extensive work but only surfaced crew status in one place.
-- **How to avoid:** Well-isolated systems are easier to remove but can hide their scale from initial code review. The isolation made this removal very clean.
+#### [Gotcha] NPM workspace hoisting causes version conflicts when different workspace packages need incompatible versions of the same dependency (e.g., apps/ui@Storybook^10.2.8 vs libs/ui@Storybook^8.4.7). Hoisting aggregates dependencies to root node_modules, forcing version resolution that may break the package with stricter constraints. (2026-02-18)
+- **Situation:** Moving Storybook config from apps/ui to libs/ui failed with runtime errors ('No matching export for definePreview', 'Missing ./internal/theming'). Root cause: NPM hoisted the newer v10.2.8 from apps/ui to root, breaking v8.4.7 consumers in libs/ui.
+- **Root cause:** NPM workspace hoisting is a dependency deduplication optimization—it moves common dependencies to root to save disk space. However, this breaks when versions are incompatible across workspaces, and there's no automatic fallback to workspace-local node_modules.
+- **How to avoid:** NPM hoisting saves disk space but forces version lock-in across all workspaces. Isolation (pnpm strict-peer-dependencies or yarn workspaces) would prevent this but costs disk/install time. Monorepo split (Storybook in separate repo) eliminates conflict but increases operational complexity.
 
-### Left scheduler service intact despite crew loop deletion, even though crew loop depended on it (2026-02-18)
-- **Context:** CrewLoopService was a consumer of the scheduler service. Crew member checks were scheduled tasks managed by this scheduler.
-- **Why:** Scheduler service has other legitimate uses (system health monitoring will use it). Removing scheduler would have cascading effects on other features. Better to remove the consumer (crew loop) than the general utility.
-- **Rejected:** Could have removed scheduler too, but that would eliminate infrastructure others depend on.
-- **Trade-offs:** Scheduler remains in codebase even with one fewer consumer vs. complete cleanup. Tradeoff favors general utility preservation.
-- **Breaking if changed:** If scheduler were removed, AVA's health monitoring and any other scheduled tasks would break. The crew loop removal should not affect scheduler lifecycle.
+#### [Pattern] Theme decorator with toolbar switcher pattern: Create a Storybook preview decorator that imports all theme CSS files and exposes theme selection via the toolbar control. The decorator applies a theme class to the story container, allowing all stories to inherit theme styling without manual per-story setup. (2026-02-18)
+- **Problem solved:** libs/ui has 6 theme variants (violet/zinc/slate × dark/light). Goal: allow theme switching in Storybook without duplicating 6 theme CSS imports in every story file.
+- **Why this works:** Centralizing theme setup in the preview decorator scales with N theme variants—adding a 7th theme only requires updating preview.tsx (one file) and doesn't touch individual story files. The toolbar control is discoverable (visible in Storybook UI) and doesn't require story code changes.
+- **Trade-offs:** Importing all theme files upfront (at preview load time) means all CSS is parsed even if only 1 theme is active. Alternative: lazy-load theme CSS only when selected (requires async decorator, more complex). The current approach is simpler and theme CSS files are small (~1KB each).
+
+### Configure Storybook story glob to scan monorepo paths (../src/**/*.stories.*) instead of app-specific paths. This decouples story discovery from app location, allowing libs/ui stories to be found by name pattern alone. (2026-02-18)
+- **Context:** apps/ui previously had Storybook scanning apps/ui/src/. When moving Storybook config to libs/ui, the glob needed to point to libs/ui/src/ instead. Question: should it reference relative paths (../src/) or absolute paths (@protolabs/ui)?
+- **Why:** Relative paths are the Storybook convention (main.ts in .storybook/ is the reference point). They're agnostic to monorepo structure and work with any workspace layout. Absolute paths (@protolabs/ui/src/) would require resolving package imports, adding a dependency on webpack/tsup import configuration.
+- **Rejected:** Absolute imports using @protolabs/ui (adds coupling to package name and import resolution configuration; harder to refactor if package is renamed). Glob that includes both apps/ui and libs/ui (creates confusion about which stories are canonical; duplicates stories if both locations exist).
+- **Trade-offs:** Relative paths are simple and discoverable but break if someone moves .storybook/ to a different depth (would need to update ../../../src/ refs). Absolute imports are more resilient to directory reshuffles but require import resolution setup.
+- **Breaking if changed:** If you change the glob pattern, stories won't be discovered—Storybook UI shows empty story list. If you move .storybook/ without updating ../src/ paths, stories disappear again.
+
+### Storybook story files located in libs/ui/src/atoms/ (shared package) rather than apps/ui/src/ (app project), with configuration update to scan both locations (2026-02-18)
+- **Context:** Component library (@protolabs/ui) is a shared package in monorepo. Stories need discovery by Storybook running in apps/ui app.
+- **Why:** Stories are part of the component library contract, not the consuming app. Co-locating stories with components in libs/ makes them versioned with the library and re-usable across any app that imports components.
+- **Rejected:** Keeping stories only in apps/ui/src/ would decouple component documentation from the library itself, making it impossible to document components when the library is consumed by external projects.
+- **Trade-offs:** Requires Storybook config to explicitly include out-of-project paths (../../../libs/ui/src/). Without this config, story discovery fails silently (no error, just missing stories). Discovered stories now come from TWO locations, increasing cognitive load for maintainers.
+- **Breaking if changed:** Removing the '../../../libs/ui/src/**/*.stories.@(js|jsx|mjs|ts|tsx)' entry from .storybook/main.ts stories array causes 25 stories to vanish from Storybook with no error message—only detection is 'fewer stories than expected'.
+
+#### [Gotcha] CSF3 stories in monorepo shared packages (libs/) with relative imports to component src files can fail silently during Storybook build if typescript path resolution hasn't resolved workspace symlinks (2026-02-18)
+- **Situation:** Stories import from @automaker/ui components using workspace symlink, which must be fully resolved before Storybook transpiles stories.
+- **Root cause:** Monorepo workspace symlinks are 'lazy'—they exist but don't guarantee module resolution order. Storybook can transpile and bundle the story file before the symlink is followed, resulting in 'module not found' at runtime.
+- **How to avoid:** Using workspace symlinks (@automaker/ui) is correct long-term (works in both monorepo and published package) but requires careful Storybook config and occasionally needs full clean rebuild to fix symlink resolution issues.
+
+### Storybook configuration must explicitly include shared library paths via @source directive or story discovery config, not rely on automatic scanning from project root (2026-02-18)
+- **Context:** Stories in libs/ui/src/ were not being discovered by Storybook even though they existed. Tailwind CSS 4 had similar issue (PR #749) where content scanning stopped at package.json boundary
+- **Why:** Storybook scans for stories relative to each project's package.json. Since libs/ui is outside apps/ui project root, stories weren't found without explicit path configuration in main.ts. This mirrors the Tailwind CSS 4 root cause from MEMORY.md
+- **Rejected:** Assumption that Storybook would auto-discover all .stories.tsx files in workspace. Reality: monorepo structure requires explicit scope declaration
+- **Trade-offs:** Explicit config is more verbose but guarantees story discovery across workspace boundaries. Alternative of moving stories into apps/ui/ would break the libs/ui as standalone package principle
+- **Breaking if changed:** Removing the libs/ui/src path from Storybook main.ts makes all 25 component stories disappear from Storybook UI. Any future shared components in libs/ also won't be discoverable
+
+#### [Pattern] Consistent story structure across 25 components: Default export + multiple variant exports + interactive argTypes achieves both discoverability and comprehensive prop coverage without boilerplate (2026-02-18)
+- **Problem solved:** All 25 atoms follow identical pattern: Meta config, Default story, AllVariants/AllSizes/AllStates stories, argTypes for interactive controls. Total 193 stories from consistent template
+- **Why this works:** Pattern scales to new components automatically. Any new atom can copy the template and fill in props. autodocs tag generates docs from Default + argTypes without additional documentation work. Consistent naming (Default, AllVariants) makes Storybook sidebar predictable
+- **Trade-offs:** 194-story structure is higher maintenance than 25-story version but provides much better coverage. Developers can test all prop combinations interactively. Time investment in consistent template pays off across all 25 atoms
+
+### Monorepo workspace commands (--workspace=@protolabs/ui) are used from repo root in CI, not with working-directory context switching (2026-02-18)
+- **Context:** CI workflow needed to run build-storybook for a specific package in a monorepo. Initial implementation used working-directory: libs/ui with workspace flag, then corrected to use workspace flag from root.
+- **Why:** Workspace-aware package managers (npm with workspace support) understand relative paths from the repo root. Using --workspace flag eliminates the need to change directories in CI runners, reducing state management complexity. Running from root means the PATH, environment variables, and relative imports all work consistently regardless of which package is being built.
+- **Rejected:** Could have used cd libs/ui && npm run build-storybook (no workspace flag). This couples the CI step to the physical directory structure and breaks if the package moves. Working-directory context switching also makes it harder to reason about which files are where in CI logs.
+- **Trade-offs:** Workspace flag requires npm 7+ (monorepo support). The package.json must be workspace-aware. Upside: CI steps are directory-agnostic and resilient to package restructuring.
+- **Breaking if changed:** Removing the --workspace flag and expecting cwd to be libs/ui fails because CI starts from root. The script would need to explicitly cd first, adding state management overhead.
+
+### prepublishOnly script (not prepare) for automatic build before npm publish in monorepo packages (2026-02-18)
+- **Context:** Monorepo UI package needs build artifacts in dist/ before publishing, but developers might forget to run build before npm publish
+- **Why:** prepublishOnly only runs during `npm publish`, not on every `npm install`. In a monorepo, prepare runs for every dependency install, causing unnecessary rebuilds and potential CI slowdown. prepublishOnly is surgical - only when package is actually being published.
+- **Rejected:** prepare script - fires on every install, would rebuild package during workspace hoisting and for every developer setup
+- **Trade-offs:** prepublishOnly is safer but requires discipline - if someone runs npm publish without a build, it fails (good failure mode). prepare is always-safe but wastes resources in monorepo context.
+- **Breaking if changed:** If prepublishOnly is removed, package must be manually built before every publish, or old dist/ artifacts get shipped
+
+#### [Pattern] Package documentation (README) should live in package root and reference upper-level philosophy docs, not duplicate content (2026-02-18)
+- **Problem solved:** Creating @protolabs/ui package documentation required deciding where to place README and how to avoid duplication with docs/dev/frontend-philosophy.md
+- **Why this works:** Keeps package-level docs (installation, usage, API) close to source code for discoverability, while higher-level philosophy and design decisions live in docs/ for team-wide reference. Single source of truth per layer prevents drift.
+- **Trade-offs:** Requires maintaining two documents with overlapping content. Benefit: Each document serves its intended audience (package users vs. frontend team philosophy readers) without context-switching.
+
+#### [Pattern] Code examples in README should progress from minimal (5-line getting started) to comprehensive (full component with variants/customization), not jump to advanced patterns (2026-02-18)
+- **Problem solved:** Writing component usage examples for README had choice between showing just basic button import vs. layered examples of increasing complexity
+- **Why this works:** Users of varying skill levels will read the README. Minimal example gets them running in < 5 minutes (acceptance criteria). Subsequent examples show variants, className overrides, cn() utility, custom themes for users who need more. Cognitive load increases gradually.
+- **Trade-offs:** Longer README, but serves broader audience. Benefits: Self-contained reference without needing to jump to Storybook. Cost: More content to maintain if component API changes.
