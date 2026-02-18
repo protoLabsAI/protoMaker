@@ -1,13 +1,13 @@
 /**
- * Idea Flow Edge Types Registry
+ * Idea Flow Edge Types
  *
- * Barrel export + React Flow edgeTypes map for the idea pipeline.
+ * Barrel export + React Flow edgeTypes map for idea flow visualization.
  */
 
 import type { EdgeTypes } from '@xyflow/react';
+import { PipelineEdge } from './pipeline-edge';
 
-// Placeholder edge component — will be implemented in future features
-const PipelineEdge = () => null;
+export { PipelineEdge } from './pipeline-edge';
 
 export const edgeTypes: EdgeTypes = {
   pipeline: PipelineEdge,
