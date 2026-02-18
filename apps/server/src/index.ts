@@ -169,17 +169,6 @@ import { MAX_SYSTEM_CONCURRENCY } from '@automaker/types';
 import { TriageService } from './services/triage-service.js';
 import { IssueCreationService } from './services/issue-creation-service.js';
 import { createIssuesRoutes } from './routes/issues/index.js';
-import { CrewLoopService } from './services/crew-loop-service.js';
-import {
-  avaCrewMember,
-  frankCrewMember,
-  gtmCrewMember,
-  prMaintainerCrewMember,
-  boardJanitorCrewMember,
-  systemHealthCrewMember,
-  prStateSyncCrewMember,
-} from './services/crew-members/index.js';
-import { createCrewRoutes } from './routes/crew/index.js';
 import { linearApprovalHandler } from './services/linear-approval-handler.js';
 import { LinearApprovalBridge } from './services/linear-approval-bridge.js';
 import { LinearIntakeBridge } from './services/linear-intake-bridge.js';
@@ -715,48 +704,6 @@ void schedulerService
 // Initialize Health Monitor Service event emitter
 healthMonitorService.setEventEmitter(events);
 
-// Initialize Crew Loop Service — unified scheduling for Ava, Frank, GTM, etc.
-const crewCheckContext = {
-  projectPaths: [] as string[],
-  events,
-  featureLoader,
-  featureHealthService,
-  healthMonitorService,
-  autoModeService,
-  settingsService,
-  managedProjectPaths: new Set<string>(),
-};
-
-// Sync managed paths when Lead Engineer starts/stops
-events.subscribe((type) => {
-  if (type === 'lead-engineer:started' || type === 'lead-engineer:stopped') {
-    crewCheckContext.managedProjectPaths = new Set(leadEngineerService.getManagedProjectPaths());
-  }
-});
-const crewLoopService = new CrewLoopService(
-  events,
-  schedulerService,
-  agentFactoryService,
-  dynamicAgentExecutor,
-  crewCheckContext,
-  REPO_ROOT
-);
-void (async () => {
-  try {
-    await crewLoopService.registerMember(avaCrewMember);
-    await crewLoopService.registerMember(frankCrewMember);
-    await crewLoopService.registerMember(gtmCrewMember);
-    await crewLoopService.registerMember(prMaintainerCrewMember);
-    await crewLoopService.registerMember(boardJanitorCrewMember);
-    await crewLoopService.registerMember(systemHealthCrewMember);
-    await crewLoopService.registerMember(prStateSyncCrewMember);
-    await crewLoopService.registerAllWithScheduler();
-    logger.info('Crew loop service initialized with all members');
-  } catch (err) {
-    logger.error('Crew loop service initialization failed:', err);
-  }
-})();
-
 // Initialize Ava Gateway Service for heartbeat monitoring
 void avaGatewayService
   .initialize(events, REPO_ROOT, '1469109809939742814')
@@ -1101,7 +1048,7 @@ app.use('/api/integrations', authMiddleware, createIntegrationRoutes(settingsSer
 app.use(
   '/api/system',
   authMiddleware,
-  createDashboardRoutes(autoModeService, crewLoopService, leadEngineerService)
+  createDashboardRoutes(autoModeService, leadEngineerService)
 );
 app.use(
   '/api/authority',
@@ -1156,7 +1103,6 @@ app.use(
 );
 app.use('/api/ceremonies', createCeremoniesRoutes(events, featureLoader, projectService));
 app.use('/api/issues', createIssuesRoutes(events));
-app.use('/api/crew', createCrewRoutes(crewLoopService));
 app.use('/api/deploy', createDeployRoutes(autoModeService));
 app.use('/api/integrity', createIntegrityRoutes(integrityWatchdogService));
 app.use('/api/escalation', createEscalationRoutes(escalationRouter));

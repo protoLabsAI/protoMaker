@@ -1,11 +1,5 @@
 /**
  * Crew Members - Re-exports for all crew member definitions
+ *
+ * NOTE: Crew loop system has been removed. This file is kept for backward compatibility.
  */
-
-export { avaCrewMember } from './ava-check.js';
-export { frankCrewMember } from './frank-check.js';
-export { gtmCrewMember } from './gtm-check.js';
-export { prMaintainerCrewMember } from './pr-maintainer-check.js';
-export { boardJanitorCrewMember } from './board-janitor-check.js';
-export { systemHealthCrewMember } from './system-health-check.js';
-export { prStateSyncCrewMember } from './pr-state-sync-check.js';

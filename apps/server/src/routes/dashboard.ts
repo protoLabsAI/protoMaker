@@ -7,14 +7,12 @@ import v8 from 'node:v8';
 import { Router, Request, Response } from 'express';
 import { createLogger } from '@automaker/utils';
 import type { AutoModeService } from '../services/auto-mode-service.js';
-import type { CrewLoopService } from '../services/crew-loop-service.js';
 import type { LeadEngineerService } from '../services/lead-engineer-service.js';
 
 const logger = createLogger('DashboardRoutes');
 
 export function createDashboardRoutes(
   autoModeService: AutoModeService,
-  crewLoopService: CrewLoopService,
   leadEngineerService?: LeadEngineerService
 ): Router {
   const router = Router();
@@ -37,13 +35,6 @@ export function createDashboardRoutes(
       const cpuPercent = Math.min((loadAvg / coreCount) * 100, 100);
 
       const autoModeStatus = autoModeService.getStatus();
-
-      let crewStatus = null;
-      try {
-        crewStatus = crewLoopService.getStatus();
-      } catch (error) {
-        logger.warn('Failed to get crew status:', error);
-      }
 
       // Lead engineer sessions
       const leadEngineerSessions = leadEngineerService
@@ -90,7 +81,6 @@ export function createDashboardRoutes(
           sessionCount: leadEngineerSessions.length,
           sessions: leadEngineerSessions,
         },
-        crew: crewStatus,
         uptime: process.uptime(),
         timestamp: new Date().toISOString(),
       });
