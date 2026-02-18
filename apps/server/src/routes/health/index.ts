@@ -8,6 +8,7 @@
 import { Router } from 'express';
 import { createIndexHandler } from './routes/index.js';
 import { createEnvironmentHandler } from './routes/environment.js';
+import { createReadyHandler } from './routes/ready.js';
 
 /**
  * Create unauthenticated health routes (basic check only)
@@ -18,6 +19,9 @@ export function createHealthRoutes(): Router {
 
   // Basic health check - no sensitive info
   router.get('/', createIndexHandler());
+
+  // Readiness check - verifies service is ready to serve traffic
+  router.get('/ready', createReadyHandler());
 
   // Environment info including containerization status
   // This is unauthenticated so the UI can check on startup
