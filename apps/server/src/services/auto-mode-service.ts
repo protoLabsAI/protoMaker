@@ -2831,6 +2831,34 @@ Complete the pipeline step instructions above. Review the previous work and appl
         }
       }
 
+      // Transition feature to 'review' or 'done' based on git workflow results
+      // (mirrors the pattern in executeFeature)
+      if (gitWorkflowResult?.prUrl) {
+        const updates: Record<string, unknown> = {
+          prUrl: gitWorkflowResult.prUrl,
+          prNumber: gitWorkflowResult.prNumber,
+        };
+
+        if (gitWorkflowResult.prCreatedAt) {
+          updates.prCreatedAt = gitWorkflowResult.prCreatedAt;
+        }
+
+        if (gitWorkflowResult.merged && gitWorkflowResult.prMergedAt) {
+          updates.status = 'done';
+          updates.prMergedAt = gitWorkflowResult.prMergedAt;
+
+          if (gitWorkflowResult.prCreatedAt) {
+            const createdAt = new Date(gitWorkflowResult.prCreatedAt);
+            const mergedAt = new Date(gitWorkflowResult.prMergedAt);
+            updates.prReviewDurationMs = mergedAt.getTime() - createdAt.getTime();
+          }
+        } else {
+          updates.status = 'review';
+        }
+
+        await this.featureLoader.update(projectPath, featureId, updates);
+      }
+
       const gitInfo = gitWorkflowResult?.commitHash
         ? ` | Committed: ${gitWorkflowResult.commitHash}${gitWorkflowResult.pushed ? ', pushed' : ''}${gitWorkflowResult.prUrl ? `, PR: ${gitWorkflowResult.prUrl}` : ''}`
         : '';

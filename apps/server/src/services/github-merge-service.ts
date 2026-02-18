@@ -78,12 +78,14 @@ interface PRCheckStatus {
  * PR merge result
  */
 export interface PRMergeResult {
-  /** Whether the PR was successfully merged */
+  /** Whether the PR was successfully merged (or auto-merge enabled) */
   success: boolean;
   /** Commit SHA of the merge commit (if successful) */
   mergeCommitSha?: string;
   /** Error message if merge failed */
   error?: string;
+  /** Whether auto-merge was enabled (waiting for CI to pass) */
+  autoMergeEnabled?: boolean;
   /** Whether merge failed due to pending CI checks */
   checksPending?: boolean;
   /** Whether merge failed due to failed CI checks */
@@ -180,14 +182,41 @@ export class GitHubMergeService {
       const checkStatus = await this.checkPRStatus(workDir, prNumber);
 
       if (checkStatus.pendingCount > 0) {
+        // CI is still running — enable auto-merge so GitHub merges once checks pass
         logger.info(
-          `PR #${prNumber} has ${checkStatus.pendingCount} pending checks, skipping merge`
+          `PR #${prNumber} has ${checkStatus.pendingCount} pending checks, enabling auto-merge`
         );
-        return {
-          success: false,
-          error: `${checkStatus.pendingCount} checks still pending`,
-          checksPending: true,
-        };
+        try {
+          let autoMergeCmd = `gh pr merge ${prNumber}`;
+          switch (strategy) {
+            case 'merge':
+              autoMergeCmd += ' --merge';
+              break;
+            case 'squash':
+              autoMergeCmd += ' --squash';
+              break;
+            case 'rebase':
+              autoMergeCmd += ' --rebase';
+              break;
+          }
+          autoMergeCmd += ' --auto';
+          await execAsync(autoMergeCmd, { cwd: workDir, env: execEnv });
+          logger.info(`Auto-merge enabled for PR #${prNumber}, will merge when checks pass`);
+          return {
+            success: true,
+            autoMergeEnabled: true,
+            checksPending: true,
+          };
+        } catch (autoMergeError) {
+          const errMsg =
+            autoMergeError instanceof Error ? autoMergeError.message : String(autoMergeError);
+          logger.warn(`Failed to enable auto-merge for PR #${prNumber}: ${errMsg}`);
+          return {
+            success: false,
+            error: `${checkStatus.pendingCount} checks still pending, auto-merge failed: ${errMsg}`,
+            checksPending: true,
+          };
+        }
       }
 
       if (checkStatus.failedCount > 0) {
