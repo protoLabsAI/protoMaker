@@ -1087,7 +1087,12 @@ export class AutoModeService {
             ? this.leadEngineerService.process(projectPath, nextFeature.id, {
                 model: getModelForFeature(nextFeature),
               } as any) // Cast to any since state machine will build full ExecuteOptions internally
-            : this.executeFeature(projectPath, nextFeature.id, projectState.config.useWorktrees, true);
+            : this.executeFeature(
+                projectPath,
+                nextFeature.id,
+                projectState.config.useWorktrees,
+                true
+              );
 
           executionPromise
             .then(() => {

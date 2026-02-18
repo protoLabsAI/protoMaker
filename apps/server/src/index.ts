@@ -1048,11 +1048,7 @@ app.use('/api/backlog-plan', createBacklogPlanRoutes(events, settingsService));
 app.use('/api/beads', createBeadsRoutes(beadsService));
 app.use('/api/mcp', createMCPRoutes(mcpTestService));
 app.use('/api/integrations', authMiddleware, createIntegrationRoutes(settingsService));
-app.use(
-  '/api/system',
-  authMiddleware,
-  createDashboardRoutes(autoModeService, leadEngineerService)
-);
+app.use('/api/system', authMiddleware, createDashboardRoutes(autoModeService, leadEngineerService));
 app.use(
   '/api/authority',
   authMiddleware,

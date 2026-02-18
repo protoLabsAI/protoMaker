@@ -173,7 +173,11 @@ class IntakeProcessor implements StateProcessor {
     if (title.includes('api') || title.includes('backend') || description.includes('service')) {
       return 'backend-engineer';
     }
-    if (title.includes('deploy') || title.includes('ci') || description.includes('infrastructure')) {
+    if (
+      title.includes('deploy') ||
+      title.includes('ci') ||
+      description.includes('infrastructure')
+    ) {
       return 'devops-engineer';
     }
     if (feature.complexity === 'architectural') {
@@ -789,11 +793,7 @@ export class LeadEngineerService {
    * @param options - Execution options (model, useWorktrees, etc.)
    * @returns Promise that resolves when processing completes
    */
-  async process(
-    projectPath: string,
-    featureId: string,
-    options: ExecuteOptions
-  ): Promise<void> {
+  async process(projectPath: string, featureId: string, options: ExecuteOptions): Promise<void> {
     logger.info(`[LeadEngineer] Processing feature ${featureId}`, {
       projectPath,
       model: options.model,

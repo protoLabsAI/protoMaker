@@ -698,9 +698,7 @@ export type {
 } from './copilotkit.js';
 
 // Lead Engineer types (production-phase nerve center)
-export {
-  FeatureState,
-} from './lead-engineer.js';
+export { FeatureState } from './lead-engineer.js';
 export type {
   LeadFeatureSnapshot,
   LeadAgentSnapshot,
