@@ -95,7 +95,11 @@ export function PenRenderer({
   }
 
   return (
-    <div className={className} data-pen-renderer="root">
+    <div
+      className={className}
+      data-pen-renderer="root"
+      style={{ position: 'relative', width: 'fit-content', height: 'fit-content' }}
+    >
       {resolved.map((node) => (
         <PenNode
           key={node.id}

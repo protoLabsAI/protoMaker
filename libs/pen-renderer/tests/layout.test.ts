@@ -132,7 +132,7 @@ describe('convertFrameLayout', () => {
     expect(styles.justifyContent).toBe('space-between');
   });
 
-  it('converts layout: none to relative positioning', () => {
+  it('converts layout: none to relative positioning (as parent context)', () => {
     const frame: PenFrame = {
       type: 'frame',
       id: 'test',
@@ -140,10 +140,44 @@ describe('convertFrameLayout', () => {
       x: 10,
       y: 20,
     };
+    // With no parent context (top-level), x/y → absolute
     const styles = convertFrameLayout(frame, noopResolver);
-    expect(styles.position).toBe('relative');
+    expect(styles.position).toBe('absolute');
     expect(styles.left).toBe('10px');
     expect(styles.top).toBe('20px');
+  });
+
+  it('positions children absolutely when parent has layout: none', () => {
+    const frame: PenFrame = {
+      type: 'frame',
+      id: 'test',
+      layout: 'vertical',
+      x: 100,
+      y: 200,
+    };
+    // With parent layout: none, child gets absolute positioning
+    const styles = convertFrameLayout(frame, noopResolver, 'none');
+    expect(styles.position).toBe('absolute');
+    expect(styles.left).toBe('100px');
+    expect(styles.top).toBe('200px');
+    // Internal layout still applies
+    expect(styles.display).toBe('flex');
+    expect(styles.flexDirection).toBe('column');
+  });
+
+  it('does not apply absolute positioning when parent is flex', () => {
+    const frame: PenFrame = {
+      type: 'frame',
+      id: 'test',
+      layout: 'none',
+      x: 10,
+      y: 20,
+    };
+    // With parent layout: vertical, x/y are ignored (flex positioning)
+    const styles = convertFrameLayout(frame, noopResolver, 'vertical');
+    expect(styles.position).toBe('relative'); // relative for own children
+    expect(styles.left).toBeUndefined();
+    expect(styles.top).toBeUndefined();
   });
 
   it('resolves fill variable references', () => {

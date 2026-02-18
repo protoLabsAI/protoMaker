@@ -19,6 +19,7 @@ import type {
   PenPadding,
   PenCornerRadius,
   PenStrokeThickness,
+  PenLayoutMode,
   ResolvedStyles,
 } from './types.js';
 
@@ -182,16 +183,21 @@ export function convertStroke(
 
 /**
  * Convert a PEN frame node to CSS styles.
+ *
+ * @param frame - The frame node
+ * @param resolveFill - Variable resolver function
+ * @param parentLayout - The parent node's layout mode (determines if this node is absolutely positioned)
  */
 export function convertFrameLayout(
   frame: PenFrame,
-  resolveFill: (fill: unknown) => string | undefined
+  resolveFill: (fill: unknown) => string | undefined,
+  parentLayout?: PenLayoutMode
 ): ResolvedStyles {
   const styles: ResolvedStyles = {
     boxSizing: 'border-box',
   };
 
-  // Layout mode → flexbox
+  // Layout mode → flexbox (controls how THIS node's children are arranged)
   if (frame.layout === 'vertical') {
     styles.display = 'flex';
     styles.flexDirection = 'column';
@@ -199,7 +205,17 @@ export function convertFrameLayout(
     styles.display = 'flex';
     styles.flexDirection = 'row';
   } else if (frame.layout === 'none') {
+    // This frame uses absolute positioning for its children
     styles.position = 'relative';
+  }
+
+  // Absolute positioning: if parent uses layout: none (or top-level), position with x/y
+  if (parentLayout === 'none' || parentLayout === undefined) {
+    if (frame.x !== undefined || frame.y !== undefined) {
+      styles.position = 'absolute';
+      if (frame.x !== undefined) styles.left = `${frame.x}px`;
+      if (frame.y !== undefined) styles.top = `${frame.y}px`;
+    }
   }
 
   // Gap
@@ -238,14 +254,6 @@ export function convertFrameLayout(
   // Clip
   if (frame.clip) {
     styles.overflow = 'hidden';
-  }
-
-  // Absolute positioning for layout: none children
-  if (frame.x !== undefined && frame.layout !== 'vertical' && frame.layout !== 'horizontal') {
-    styles.left = `${frame.x}px`;
-  }
-  if (frame.y !== undefined && frame.layout !== 'vertical' && frame.layout !== 'horizontal') {
-    styles.top = `${frame.y}px`;
   }
 
   // Opacity
@@ -308,16 +316,24 @@ export function convertTextLayout(
 
 /**
  * Convert any PEN node to CSS styles.
+ *
+ * @param node - The node to convert
+ * @param resolveFill - Variable resolver function
+ * @param parentLayout - The parent node's layout mode
  */
 export function convertNodeToStyles(
   node: PenNode,
-  resolveFill: (fill: unknown) => string | undefined
+  resolveFill: (fill: unknown) => string | undefined,
+  parentLayout?: PenLayoutMode
 ): ResolvedStyles {
   switch (node.type) {
     case 'frame':
-      return convertFrameLayout(node as PenFrame, resolveFill);
-    case 'text':
-      return convertTextLayout(node as PenText, resolveFill);
+      return convertFrameLayout(node as PenFrame, resolveFill, parentLayout);
+    case 'text': {
+      const textStyles = convertTextLayout(node as PenText, resolveFill);
+      applyAbsolutePosition(node, textStyles, parentLayout);
+      return textStyles;
+    }
     case 'rectangle': {
       const rect = node as PenRectangle;
       const styles: ResolvedStyles = { boxSizing: 'border-box' };
@@ -330,6 +346,7 @@ export function convertNodeToStyles(
       const radius = convertCornerRadius(rect.cornerRadius);
       if (radius) styles.borderRadius = radius;
       Object.assign(styles, convertStroke(rect.stroke, resolveFill));
+      applyAbsolutePosition(node, styles, parentLayout);
       return styles;
     }
     case 'ellipse': {
@@ -345,6 +362,7 @@ export function convertNodeToStyles(
         if (color) styles.backgroundColor = color;
       }
       Object.assign(styles, convertStroke(ellipse.stroke, resolveFill));
+      applyAbsolutePosition(node, styles, parentLayout);
       return styles;
     }
     case 'icon_font': {
@@ -356,9 +374,27 @@ export function convertNodeToStyles(
         const color = resolveFill(icon.fill);
         if (color) styles.color = color;
       }
+      applyAbsolutePosition(node, styles, parentLayout);
       return styles;
     }
     default:
       return {};
+  }
+}
+
+/**
+ * Apply absolute positioning for nodes inside layout:none parents.
+ */
+function applyAbsolutePosition(
+  node: PenNode,
+  styles: ResolvedStyles,
+  parentLayout?: PenLayoutMode
+): void {
+  if (parentLayout === 'none' || parentLayout === undefined) {
+    if (node.x !== undefined || node.y !== undefined) {
+      styles.position = 'absolute';
+      if (node.x !== undefined) styles.left = `${node.x}px`;
+      if (node.y !== undefined) styles.top = `${node.y}px`;
+    }
   }
 }

@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import type { PenThemeSelection } from '@automaker/pen-renderer';
 import { PenRenderer } from '@/components/pen-renderer';
 
@@ -19,10 +19,17 @@ export function CanvasViewport({ json, theme, onNodeSelect }: CanvasViewportProp
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
 
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    e.preventDefault();
-    const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
-    setZoom((prev) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, prev + delta)));
+  // Use non-passive wheel listener so preventDefault works
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const handler = (e: WheelEvent) => {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
+      setZoom((prev) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, prev + delta)));
+    };
+    el.addEventListener('wheel', handler, { passive: false });
+    return () => el.removeEventListener('wheel', handler);
   }, []);
 
   const handleMouseDown = useCallback(
@@ -80,7 +87,6 @@ export function CanvasViewport({ json, theme, onNodeSelect }: CanvasViewportProp
         ref={containerRef}
         className="flex-1 overflow-hidden bg-background"
         style={{ cursor: isPanning ? 'grabbing' : 'default' }}
-        onWheel={handleWheel}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}

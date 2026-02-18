@@ -13,6 +13,7 @@ import type {
   PenIconFont,
   PenRef,
   PenThemeSelection,
+  PenLayoutMode,
   ResolvedNode,
   ResolvedStyles,
 } from './types.js';
@@ -22,6 +23,16 @@ import { convertNodeToStyles } from './layout.js';
 import { resolveRef } from './refs.js';
 
 /**
+ * Get the layout mode of a node (for passing to children as parent context).
+ */
+function getNodeLayout(node: PenNode): PenLayoutMode | undefined {
+  if (node.type === 'frame') {
+    return (node as PenFrame).layout;
+  }
+  return undefined;
+}
+
+/**
  * Resolve a single PEN node into a ResolvedNode.
  *
  * This is the core of the rendering pipeline:
@@ -29,26 +40,33 @@ import { resolveRef } from './refs.js';
  * 2. Resolve variable references in fills/colors
  * 3. Convert layout to CSS styles
  * 4. Recursively resolve children
+ *
+ * @param node - The node to resolve
+ * @param resolveFill - Variable resolver function
+ * @param parseResult - Parsed document with indices
+ * @param theme - Active theme selection
+ * @param parentLayout - The parent's layout mode (determines absolute vs flow positioning)
  */
 function resolveNode(
   node: PenNode,
   resolveFill: (fill: unknown) => string | undefined,
   parseResult: ParseResult,
-  theme: PenThemeSelection
+  theme: PenThemeSelection,
+  parentLayout?: PenLayoutMode
 ): ResolvedNode | undefined {
   // Handle ref nodes — expand to component tree first
   if (node.type === 'ref') {
     const ref = node as PenRef;
     const expanded = resolveRef(ref, parseResult.componentIndex, parseResult.nodeIndex);
     if (!expanded) return undefined;
-    return resolveNode(expanded, resolveFill, parseResult, theme);
+    return resolveNode(expanded, resolveFill, parseResult, theme, parentLayout);
   }
 
   // Skip invisible nodes
   if (node.visible === false) return undefined;
 
-  // Convert to CSS styles
-  const styles = convertNodeToStyles(node, resolveFill);
+  // Convert to CSS styles (pass parent layout for positioning context)
+  const styles = convertNodeToStyles(node, resolveFill, parentLayout);
 
   const resolved: ResolvedNode = {
     id: node.id,
@@ -70,11 +88,12 @@ function resolveNode(
     resolved.iconName = icon.iconFontName;
   }
 
-  // Recursively resolve children
+  // Recursively resolve children, passing THIS node's layout as parent context
+  const thisLayout = getNodeLayout(node);
   if ('children' in node && Array.isArray(node.children)) {
     resolved.children = [];
     for (const child of node.children) {
-      const resolvedChild = resolveNode(child, resolveFill, parseResult, theme);
+      const resolvedChild = resolveNode(child, resolveFill, parseResult, theme, thisLayout);
       if (resolvedChild) {
         resolved.children.push(resolvedChild);
       }
