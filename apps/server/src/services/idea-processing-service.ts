@@ -193,7 +193,9 @@ export class IdeaProcessingService {
       };
 
       // Stream the graph execution
-      const stream = await ideaProcessingGraph.stream(initialState);
+      const stream = await ideaProcessingGraph.stream(initialState, {
+        configurable: { thread_id: sessionId },
+      });
 
       let finalState: IdeaProcessingState | undefined;
 
