@@ -555,6 +555,9 @@ const leadEngineerService = new LeadEngineerService(
 );
 await leadEngineerService.initialize();
 
+// Wire Lead Engineer service into auto-mode for delegated feature execution
+autoModeService.setLeadEngineerService(leadEngineerService);
+
 const projmAgent = new ProjMAuthorityAgent(events, authorityService, featureLoader, projectService);
 const emAgent = new EMAuthorityAgent(
   events,

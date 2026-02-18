@@ -778,6 +778,60 @@ export class LeadEngineerService {
     return Array.from(this.sessions.keys());
   }
 
+  /**
+   * Process a feature through the state machine.
+   * This method is called by AutoModeService instead of the monolithic executeFeature().
+   * Delegates to the FeatureStateMachine which handles all state transitions,
+   * PR maintenance, and board consistency.
+   *
+   * @param projectPath - The project path
+   * @param featureId - The feature ID to process
+   * @param options - Execution options (model, useWorktrees, etc.)
+   * @returns Promise that resolves when processing completes
+   */
+  async process(
+    projectPath: string,
+    featureId: string,
+    options: ExecuteOptions
+  ): Promise<void> {
+    logger.info(`[LeadEngineer] Processing feature ${featureId}`, {
+      projectPath,
+      model: options.model,
+    });
+
+    try {
+      // Load the feature
+      const feature = await this.featureLoader.get(projectPath, featureId);
+      if (!feature) {
+        throw new Error(`Feature ${featureId} not found`);
+      }
+
+      // Create state machine and process the feature
+      const stateMachine = new FeatureStateMachine();
+      const result = await stateMachine.processFeature(feature, projectPath, options);
+
+      logger.info(`[LeadEngineer] Feature processing completed`, {
+        featureId,
+        finalState: result.finalState,
+        escalated: result.finalState === 'ESCALATE',
+      });
+
+      // Emit completion event for the world state to react to
+      this.events.emit('lead-engineer:feature-processed' as EventType, {
+        projectPath,
+        featureId,
+        finalState: result.finalState,
+        success: result.finalState !== 'ESCALATE',
+      });
+    } catch (error: unknown) {
+      logger.error(`[LeadEngineer] Feature processing failed`, {
+        featureId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+  }
+
   // ────────────────────────── Private ──────────────────────────
 
   /**

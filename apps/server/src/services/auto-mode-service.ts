@@ -443,6 +443,8 @@ export class AutoModeService {
   private authorityService: AuthorityService | null = null;
   // Data integrity watchdog service for monitoring feature count (optional)
   private integrityWatchdogService: DataIntegrityWatchdogService | null = null;
+  // Lead Engineer service for delegated feature execution (optional)
+  private leadEngineerService: any | null = null; // Type is any to avoid circular dependency
   // Rate-limiting for auto_mode_progress events (per feature)
   private lastProgressEventTime = new Map<string, number>();
   private readonly PROGRESS_EVENT_MIN_INTERVAL_MS = 100; // Max 1 event per 100ms per feature
@@ -474,6 +476,14 @@ export class AutoModeService {
    */
   setIntegrityWatchdogService(service: DataIntegrityWatchdogService): void {
     this.integrityWatchdogService = service;
+  }
+
+  /**
+   * Wire up the Lead Engineer service for delegated feature execution.
+   * When set, auto-mode will delegate feature processing to the state machine.
+   */
+  setLeadEngineerService(service: any): void {
+    this.leadEngineerService = service;
   }
 
   /**
@@ -1072,13 +1082,20 @@ export class AutoModeService {
           }, 30000);
 
           // Start feature execution in background
-          this.executeFeature(projectPath, nextFeature.id, projectState.config.useWorktrees, true)
+          // Delegate to Lead Engineer if available, otherwise use legacy executeFeature
+          const executionPromise = this.leadEngineerService
+            ? this.leadEngineerService.process(projectPath, nextFeature.id, {
+                model: getModelForFeature(nextFeature),
+              } as any) // Cast to any since state machine will build full ExecuteOptions internally
+            : this.executeFeature(projectPath, nextFeature.id, projectState.config.useWorktrees, true);
+
+          executionPromise
             .then(() => {
-              // Remove from starting set once executeFeature completes (successfully or not)
+              // Remove from starting set once execution completes (successfully or not)
               clearTimeout(startingTimeout);
               projectState.startingFeatures.delete(nextFeature.id);
             })
-            .catch((error) => {
+            .catch((error: unknown) => {
               logger.error(`Feature ${nextFeature.id} error:`, error);
               // Remove from starting set on error
               clearTimeout(startingTimeout);
