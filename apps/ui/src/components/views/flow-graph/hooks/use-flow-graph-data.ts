@@ -24,6 +24,8 @@ import {
   CREW_DISPLAY_NAMES,
   DYNAMIC_ZONE_START_Y,
   DYNAMIC_ZONE_CENTER_X,
+  PIPELINE_STAGES,
+  PIPELINE_EDGES,
 } from '../constants';
 import type {
   OrchestratorNodeData,
@@ -32,9 +34,17 @@ import type {
   IntegrationNodeData,
   FeatureNodeData,
   AgentNodeData,
+  PipelineStageNodeData,
 } from '../types';
+import type { StageAggregate } from './use-pipeline-tracker';
 
-export function useFlowGraphData() {
+export interface UseFlowGraphDataOptions {
+  pipelineEnabled?: boolean;
+  stageAggregates?: StageAggregate[];
+}
+
+export function useFlowGraphData(options: UseFlowGraphDataOptions = {}) {
+  const { pipelineEnabled = false, stageAggregates = [] } = options;
   const currentProject = useAppStore((s) => s.currentProject);
   const features = useAppStore((s) => s.features);
   const projectPath = currentProject?.path;
@@ -243,6 +253,26 @@ export function useFlowGraphData() {
       });
     });
 
+    // 7. Pipeline stage nodes (if enabled)
+    if (pipelineEnabled) {
+      for (const stage of PIPELINE_STAGES) {
+        const aggregate = stageAggregates.find((a) => a.stageId === stage.stageId);
+        const pipelineData: PipelineStageNodeData = {
+          stageId: stage.stageId,
+          label: stage.label,
+          status: aggregate?.status || 'idle',
+          workItems: aggregate?.workItems || [],
+        };
+        result.push({
+          id: stage.nodeId,
+          type: 'pipeline-stage',
+          position: stage.position,
+          data: pipelineData,
+          draggable: false,
+        });
+      }
+    }
+
     return result;
   }, [
     agentCount,
@@ -282,8 +312,22 @@ export function useFlowGraphData() {
       }
     }
 
+    // Pipeline edges (if enabled)
+    if (pipelineEnabled) {
+      result.push(...PIPELINE_EDGES);
+
+      // Bridge edge: auto-mode service -> in_progress stage
+      result.push({
+        id: 'e-bridge-auto-pipeline',
+        source: NODE_IDS.autoMode,
+        target: NODE_IDS.pipelineInProgress,
+        type: 'workflow',
+        animated: true,
+      });
+    }
+
     return result;
-  }, [activeFeatures, runningAgents, nodes]);
+  }, [activeFeatures, runningAgents, nodes, pipelineEnabled]);
 
   return { nodes, edges };
 }
