@@ -1,0 +1,1103 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>setupLab Report — protoLabs</title>
+    <meta
+      name="description"
+      content="See what a protoLabs setupLab report looks like. Automated gap analysis for your codebase against our gold standard."
+    />
+    <meta property="og:title" content="setupLab Report — protoLabs" />
+    <meta
+      property="og:description"
+      content="Automated gap analysis for your codebase. See exactly where you stand against the protoLabs gold standard."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://report.protolabs.studio" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="setupLab Report — protoLabs" />
+    <meta
+      name="twitter:description"
+      content="Automated gap analysis for your codebase against the protoLabs gold standard."
+    />
+    <link rel="canonical" href="https://report.protolabs.studio" />
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#9670;</text></svg>"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <!-- Umami Analytics -->
+    <script
+      defer
+      src="https://umami.proto-labs.ai/script.js"
+      data-website-id="3258a55d-2c56-49ca-ad04-679376101de3"
+    ></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Geist', 'system-ui', 'sans-serif'],
+              mono: ['Geist Mono', 'monospace'],
+            },
+            colors: {
+              surface: { 0: '#09090b', 1: '#111113', 2: '#18181b', 3: '#222225' },
+              accent: { DEFAULT: '#a78bfa', dim: '#7c5cbf' },
+              muted: '#71717a',
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        background-color: #09090b;
+        color: #fafafa;
+        font-family: 'Geist', system-ui, sans-serif;
+      }
+      a:focus-visible,
+      button:focus-visible {
+        outline: 2px solid #a78bfa;
+        outline-offset: 2px;
+      }
+
+      /* Animated SVG Score Ring */
+      @keyframes scoreRingAnimation {
+        from {
+          stroke-dashoffset: 553.097;
+        }
+        to {
+          stroke-dashoffset: calc(553.097 - (553.097 * 48 / 100));
+        }
+      }
+      .score-ring {
+        animation: scoreRingAnimation 1.5s ease-out forwards;
+        stroke-dasharray: 553.097 553.097;
+        stroke-dashoffset: 553.097;
+      }
+
+      /* Expandable gap sections */
+      .gap-card {
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+      .gap-card:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 0 40px rgba(167, 139, 250, 0.06);
+      }
+      .gap-details {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease;
+      }
+      .gap-details.expanded {
+        max-height: 500px;
+      }
+      .expand-icon {
+        transition: transform 0.3s ease;
+      }
+      .expand-icon.rotated {
+        transform: rotate(180deg);
+      }
+
+      /* Badges */
+      .badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      .badge-red {
+        background: rgba(248, 113, 113, 0.15);
+        color: #f87171;
+      }
+      .badge-amber {
+        background: rgba(250, 204, 21, 0.15);
+        color: #facc15;
+      }
+      .badge-blue {
+        background: rgba(96, 165, 250, 0.15);
+        color: #60a5fa;
+      }
+      .badge-green {
+        background: rgba(74, 222, 128, 0.15);
+        color: #4ade80;
+      }
+      .badge-purple {
+        background: rgba(167, 139, 250, 0.15);
+        color: #a78bfa;
+      }
+
+      /* Glow */
+      .glow {
+        box-shadow: 0 0 80px rgba(167, 139, 250, 0.08);
+      }
+
+      /* Scroll-triggered fade-in */
+      .fade-section {
+        opacity: 0;
+        transform: translateY(24px);
+        transition:
+          opacity 0.7s ease-out,
+          transform 0.7s ease-out;
+      }
+      .fade-section.visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      /* Hero animation */
+      @keyframes fade-up {
+        from {
+          opacity: 0;
+          transform: translateY(24px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .animate-fade-up {
+        animation: fade-up 0.8s ease-out forwards;
+      }
+      .animate-delay-1 {
+        animation-delay: 0.15s;
+        opacity: 0;
+      }
+      .animate-delay-2 {
+        animation-delay: 0.3s;
+        opacity: 0;
+      }
+      .animate-delay-3 {
+        animation-delay: 0.45s;
+        opacity: 0;
+      }
+
+      /* CTA button */
+      .cta-btn {
+        background: linear-gradient(135deg, #a78bfa 0%, #7c5cbf 100%);
+        transition: all 0.2s ease;
+      }
+      .cta-btn:hover {
+        box-shadow: 0 0 40px rgba(167, 139, 250, 0.3);
+        transform: translateY(-1px);
+      }
+
+      /* Print styles */
+      @media print {
+        body {
+          background: #09090b;
+          print-color-adjust: exact;
+          -webkit-print-color-adjust: exact;
+        }
+        .gap-card {
+          page-break-inside: avoid;
+          break-inside: avoid;
+        }
+        .gap-details {
+          max-height: none !important;
+        }
+        .expand-icon {
+          display: none;
+        }
+        .fade-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+        .demo-banner {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body class="min-h-screen antialiased">
+    <!-- Demo Banner -->
+    <div class="demo-banner bg-accent/10 border-b border-accent/20">
+      <div
+        class="max-w-5xl mx-auto px-6 py-3 flex flex-col sm:flex-row items-center justify-between gap-3"
+      >
+        <div class="flex items-center gap-2 text-sm">
+          <span class="badge badge-purple">Example Report</span>
+          <span class="text-zinc-400"
+            >This is a sample setupLab report generated for a real project.</span
+          >
+        </div>
+        <a
+          href="https://protolabs.studio"
+          class="text-sm text-accent hover:text-white transition-colors font-medium"
+        >
+          Get your own report &rarr;
+        </a>
+      </div>
+    </div>
+
+    <!-- Header -->
+    <header class="border-b border-white/5">
+      <div class="max-w-5xl mx-auto px-6 py-10 md:py-14">
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+          <div class="animate-fade-up">
+            <div class="flex items-center gap-2 text-sm text-zinc-500 mb-3">
+              <span class="text-accent text-lg">&#9670;</span>
+              <span>proto<span class="text-zinc-300">Labs</span></span>
+              <span class="text-zinc-700">&middot;</span>
+              <span>setupLab Report</span>
+            </div>
+            <h1 class="text-2xl md:text-3xl font-bold text-white">joshmabry-dev</h1>
+            <p class="text-zinc-500 text-sm mt-2">
+              Next.js 15 + Payload CMS 3 + React 19 + Tailwind 4
+            </p>
+          </div>
+          <div class="text-center md:text-right animate-fade-up animate-delay-1">
+            <div class="text-5xl font-bold font-mono" style="color: #f87171">48</div>
+            <div class="text-xs text-zinc-500 mt-1 uppercase tracking-widest font-mono">
+              Alignment Score
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-5xl mx-auto px-6 py-10">
+      <!-- Score Gauge -->
+      <section
+        class="rounded-xl border border-white/5 bg-surface-1/50 p-6 md:p-8 mb-8 glow fade-section"
+      >
+        <p class="text-accent text-sm font-mono uppercase tracking-widest mb-6">
+          Overall Alignment
+        </p>
+        <div class="flex flex-col md:flex-row items-center gap-8">
+          <div class="relative w-48 h-48 flex-shrink-0">
+            <svg class="transform -rotate-90 w-48 h-48">
+              <circle cx="96" cy="96" r="88" stroke="#222225" stroke-width="12" fill="none" />
+              <circle
+                class="score-ring"
+                cx="96"
+                cy="96"
+                r="88"
+                stroke="#f87171"
+                stroke-width="12"
+                fill="none"
+                stroke-linecap="round"
+              />
+            </svg>
+            <div class="absolute inset-0 flex items-center justify-center">
+              <div class="text-center">
+                <div class="text-5xl font-bold font-mono text-white">48</div>
+                <div class="text-sm text-zinc-500">/ 100</div>
+              </div>
+            </div>
+          </div>
+          <div class="flex-1 w-full">
+            <div class="grid grid-cols-2 gap-3">
+              <div
+                class="rounded-lg border border-white/5 p-4"
+                style="background: rgba(248, 113, 113, 0.06)"
+              >
+                <div class="text-3xl font-bold font-mono text-red-400">4</div>
+                <div class="text-xs text-zinc-500 mt-1">Critical Gaps</div>
+              </div>
+              <div
+                class="rounded-lg border border-white/5 p-4"
+                style="background: rgba(250, 204, 21, 0.06)"
+              >
+                <div class="text-3xl font-bold font-mono text-yellow-400">4</div>
+                <div class="text-xs text-zinc-500 mt-1">Recommended</div>
+              </div>
+              <div
+                class="rounded-lg border border-white/5 p-4"
+                style="background: rgba(96, 165, 250, 0.06)"
+              >
+                <div class="text-3xl font-bold font-mono text-blue-400">2</div>
+                <div class="text-xs text-zinc-500 mt-1">Optional</div>
+              </div>
+              <div
+                class="rounded-lg border border-white/5 p-4"
+                style="background: rgba(74, 222, 128, 0.06)"
+              >
+                <div class="text-3xl font-bold font-mono text-green-400">10</div>
+                <div class="text-xs text-zinc-500 mt-1">Compliant</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tech Stack Summary -->
+      <section
+        class="rounded-xl border border-white/5 bg-surface-1/50 p-6 md:p-8 mb-8 fade-section"
+      >
+        <p class="text-accent text-sm font-mono uppercase tracking-widest mb-4">Detected Stack</p>
+        <div class="flex flex-wrap gap-2">
+          <span class="badge badge-purple">react 19.1.0</span>
+          <span class="badge badge-purple">nextjs 15.4.10</span>
+          <span class="badge badge-purple">Payload CMS 3.63.0</span>
+          <span class="badge badge-purple">TypeScript 5.7.3</span>
+          <span class="badge badge-purple">Tailwind 4.1.17</span>
+          <span class="badge badge-purple">pnpm</span>
+          <span class="badge badge-purple">Vitest 3.2.3</span>
+          <span class="badge badge-purple">Playwright 1.56.1</span>
+        </div>
+      </section>
+
+      <!-- Gap Analysis -->
+      <section
+        class="rounded-xl border border-white/5 bg-surface-1/50 p-6 md:p-8 mb-8 fade-section"
+      >
+        <p class="text-accent text-sm font-mono uppercase tracking-widest mb-6">Gap Analysis</p>
+
+        <!-- Critical Gaps -->
+        <div class="mb-8">
+          <h3 class="text-base font-semibold text-red-400 mb-3 flex items-center gap-2">
+            <span class="badge badge-red">4</span>
+            Critical Gaps
+          </h3>
+          <div class="space-y-3">
+            <div
+              class="gap-card border-l-2 border-red-500/60 rounded-lg p-4"
+              style="background: rgba(248, 113, 113, 0.04)"
+              data-gap-id="critical-0"
+            >
+              <div class="flex items-start justify-between">
+                <div class="flex-1">
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="badge badge-red">Critical</span>
+                    <span class="font-medium text-zinc-200"
+                      >TypeScript strict mode not enabled</span
+                    >
+                  </div>
+                </div>
+                <svg
+                  class="expand-icon w-5 h-5 text-zinc-500 flex-shrink-0 ml-2"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fill-rule="evenodd"
+                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                    clip-rule="evenodd"
+                  />
+                </svg>
+              </div>
+              <div class="gap-details expanded">
+                <div class="text-sm mt-3 pt-3 border-t border-white/5 space-y-2">
+                  <div>
+                    <span class="text-zinc-500">Current:</span>
+                    <span class="text-zinc-300">TypeScript 5.7.3, strict: false</span>
+                  </div>
+                  <div>
+                    <span class="text-zinc-500">Target:</span>
+                    <span class="text-zinc-300">TypeScript strict mode enabled</span>
+                  </div>
+                  <div class="flex flex-wrap gap-2 mt-3">
+                    <span class="badge badge-red">medium effort</span>
+                    <span
+                      class="badge"
+                      style="background: rgba(255, 255, 255, 0.05); color: #71717a"
+                      >quality</span
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div
+              class="gap-card border-l-2 border-red-500/60 rounded-lg p-4"
+              style="background: rgba(248, 113, 113, 0.04)"
+              data-gap-id="critical-1"
+            >
+              <div class="flex items-start justify-between">
+                <div class="flex-1">
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="badge badge-red">Critical</span>
+                    <span class="font-medium text-zinc-200">CI missing format check</span>
+                  </div>
+                </div>
+                <svg
+                  class="expand-icon w-5 h-5 text-zinc-500 flex-shrink-0 ml-2"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fill-rule="evenodd"
+                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                    clip-rule="evenodd"
+                  />
+                </svg>
+              </div>
+              <div class="gap-details expanded">
+                <div class="text-sm mt-3 pt-3 border-t border-white/5 space-y-2">
+                  <div>
+                    <span class="text-zinc-500">Current:</span>
+                    <span class="text-zinc-300">No format check in CI</span>
+                  </div>
+                  <div>
+                    <span class="text-zinc-500">Target:</span>
+                    <span class="text-zinc-300">Prettier format check in CI</span>
+                  </div>
+                  <div class="flex flex-wrap gap-2 mt-3">
+                    <span class="badge badge-red">small effort</span>
+                    <span
+                      class="badge"
+                      style="background: rgba(255, 255, 255, 0.05); color: #71717a"
+                      >ci</span
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div
+              class="gap-card border-l-2 border-red-500/60 rounded-lg p-4"
+              style="background: rgba(248, 113, 113, 0.04)"
+              data-gap-id="critical-2"
+            >
+              <div class="flex items-start justify-between">
+                <div class="flex-1">
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="badge badge-red">Critical</span>
+                    <span class="font-medium text-zinc-200">CI missing security audit</span>
+                  </div>
+                </div>
+                <svg
+                  class="expand-icon w-5 h-5 text-zinc-500 flex-shrink-0 ml-2"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fill-rule="evenodd"
+                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                    clip-rule="evenodd"
+                  />
+                </svg>
+              </div>
+              <div class="gap-details expanded">
+                <div class="text-sm mt-3 pt-3 border-t border-white/5 space-y-2">
+                  <div>
+                    <span class="text-zinc-500">Current:</span>
+                    <span class="text-zinc-300">No security audit in CI</span>
+                  </div>
+                  <div>
+                    <span class="text-zinc-500">Target:</span>
+                    <span class="text-zinc-300">npm/pnpm audit step in CI</span>
+                  </div>
+                  <div class="flex flex-wrap gap-2 mt-3">
+                    <span class="badge badge-red">small effort</span>
+                    <span
+                      class="badge"
+                      style="background: rgba(255, 255, 255, 0.05); color: #71717a"
+                      >ci</span
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div
+              class="gap-card border-l-2 border-red-500/60 rounded-lg p-4"
+              style="background: rgba(248, 113, 113, 0.04)"
+              data-gap-id="critical-3"
+            >
+              <div class="flex items-start justify-between">
+                <div class="flex-1">
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="badge badge-red">Critical</span>
+                    <span class="font-medium text-zinc-200">No branch protection</span>
+                  </div>
+                </div>
+                <svg
+                  class="expand-icon w-5 h-5 text-zinc-500 flex-shrink-0 ml-2"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fill-rule="evenodd"
+                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                    clip-rule="evenodd"
+                  />
+                </svg>
+              </div>
+              <div class="gap-details expanded">
+                <div class="text-sm mt-3 pt-3 border-t border-white/5 space-y-2">
+                  <div>
+                    <span class="text-zinc-500">Current:</span>
+                    <span class="text-zinc-300">Main branch unprotected</span>
+                  </div>
+                  <div>
+                    <span class="text-zinc-500">Target:</span>
+                    <span class="text-zinc-300">Squash-only merges, required status checks</span>
+                  </div>
+                  <div class="flex flex-wrap gap-2 mt-3">
+                    <span class="badge badge-red">small effort</span>
+                    <span
+                      class="badge"
+                      style="background: rgba(255, 255, 255, 0.05); color: #71717a"
+                      >ci</span
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recommended Gaps -->
+        <div class="mb-8">
+          <h3 class="text-base font-semibold text-yellow-400 mb-3 flex items-center gap-2">
+            <span class="badge badge-amber">4</span>
+            Recommended Improvements
+          </h3>
+          <div class="space-y-3">
+            <div
+              class="gap-card border-l-2 border-yellow-500/60 rounded-lg p-4"
+              style="background: rgba(250, 204, 21, 0.04)"
+              data-gap-id="recommended-0"
+            >
+              <div class="flex items-start justify-between">
+                <div class="flex-1">
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="badge badge-amber">Recommended</span>
+                    <span class="font-medium text-zinc-200">Missing Storybook</span>
+                  </div>
+                </div>
+                <svg
+                  class="expand-icon w-5 h-5 text-zinc-500 flex-shrink-0 ml-2"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fill-rule="evenodd"
+                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                    clip-rule="evenodd"
+                  />
+                </svg>
+              </div>
+              <div class="gap-details">
+                <div class="text-sm mt-3 pt-3 border-t border-white/5 space-y-2">
+                  <div>
+                    <span class="text-zinc-500">Current:</span>
+                    <span class="text-zinc-300">No component development environment</span>
+                  </div>
+                  <div>
+                    <span class="text-zinc-500">Target:</span>
+                    <span class="text-zinc-300">Storybook 10+ with nextjs-vite adapter</span>
+                  </div>
+                  <div class="flex flex-wrap gap-2 mt-3">
+                    <span class="badge badge-amber">medium effort</span>
+                    <span
+                      class="badge"
+                      style="background: rgba(255, 255, 255, 0.05); color: #71717a"
+                      >frontend</span
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div
+              class="gap-card border-l-2 border-yellow-500/60 rounded-lg p-4"
+              style="background: rgba(250, 204, 21, 0.04)"
+              data-gap-id="recommended-1"
+            >
+              <div class="flex items-start justify-between">
+                <div class="flex-1">
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="badge badge-amber">Recommended</span>
+                    <span class="font-medium text-zinc-200">Missing pre-commit hooks</span>
+                  </div>
+                </div>
+                <svg
+                  class="expand-icon w-5 h-5 text-zinc-500 flex-shrink-0 ml-2"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fill-rule="evenodd"
+                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                    clip-rule="evenodd"
+                  />
+                </svg>
+              </div>
+              <div class="gap-details">
+                <div class="text-sm mt-3 pt-3 border-t border-white/5 space-y-2">
+                  <div>
+                    <span class="text-zinc-500">Current:</span>
+                    <span class="text-zinc-300">Husky installed but no lint-staged</span>
+                  </div>
+                  <div>
+                    <span class="text-zinc-500">Target:</span>
+                    <span class="text-zinc-300">Husky + lint-staged for pre-commit formatting</span>
+                  </div>
+                  <div class="flex flex-wrap gap-2 mt-3">
+                    <span class="badge badge-amber">small effort</span>
+                    <span
+                      class="badge"
+                      style="background: rgba(255, 255, 255, 0.05); color: #71717a"
+                      >quality</span
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div
+              class="gap-card border-l-2 border-yellow-500/60 rounded-lg p-4"
+              style="background: rgba(250, 204, 21, 0.04)"
+              data-gap-id="recommended-2"
+            >
+              <div class="flex items-start justify-between">
+                <div class="flex-1">
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="badge badge-amber">Recommended</span>
+                    <span class="font-medium text-zinc-200">No Discord project channels</span>
+                  </div>
+                </div>
+                <svg
+                  class="expand-icon w-5 h-5 text-zinc-500 flex-shrink-0 ml-2"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fill-rule="evenodd"
+                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                    clip-rule="evenodd"
+                  />
+                </svg>
+              </div>
+              <div class="gap-details">
+                <div class="text-sm mt-3 pt-3 border-t border-white/5 space-y-2">
+                  <div>
+                    <span class="text-zinc-500">Current:</span>
+                    <span class="text-zinc-300">No Discord integration</span>
+                  </div>
+                  <div>
+                    <span class="text-zinc-500">Target:</span>
+                    <span class="text-zinc-300"
+                      >Discord category with #general, #updates, #dev channels</span
+                    >
+                  </div>
+                  <div class="flex flex-wrap gap-2 mt-3">
+                    <span class="badge badge-amber">small effort</span>
+                    <span
+                      class="badge"
+                      style="background: rgba(255, 255, 255, 0.05); color: #71717a"
+                      >automation</span
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div
+              class="gap-card border-l-2 border-yellow-500/60 rounded-lg p-4"
+              style="background: rgba(250, 204, 21, 0.04)"
+              data-gap-id="recommended-3"
+            >
+              <div class="flex items-start justify-between">
+                <div class="flex-1">
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="badge badge-amber">Recommended</span>
+                    <span class="font-medium text-zinc-200">Missing CodeRabbit AI review</span>
+                  </div>
+                </div>
+                <svg
+                  class="expand-icon w-5 h-5 text-zinc-500 flex-shrink-0 ml-2"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fill-rule="evenodd"
+                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                    clip-rule="evenodd"
+                  />
+                </svg>
+              </div>
+              <div class="gap-details">
+                <div class="text-sm mt-3 pt-3 border-t border-white/5 space-y-2">
+                  <div>
+                    <span class="text-zinc-500">Current:</span>
+                    <span class="text-zinc-300">No AI code review</span>
+                  </div>
+                  <div>
+                    <span class="text-zinc-500">Target:</span>
+                    <span class="text-zinc-300">CodeRabbit as required CI check</span>
+                  </div>
+                  <div class="flex flex-wrap gap-2 mt-3">
+                    <span class="badge badge-amber">small effort</span>
+                    <span
+                      class="badge"
+                      style="background: rgba(255, 255, 255, 0.05); color: #71717a"
+                      >ci</span
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Optional Gaps -->
+        <div class="mb-8">
+          <h3 class="text-base font-semibold text-blue-400 mb-3 flex items-center gap-2">
+            <span class="badge badge-blue">2</span>
+            Optional Enhancements
+          </h3>
+          <div class="space-y-3">
+            <div
+              class="gap-card border-l-2 border-blue-500/60 rounded-lg p-4"
+              style="background: rgba(96, 165, 250, 0.04)"
+              data-gap-id="optional-0"
+            >
+              <div class="flex items-start justify-between">
+                <div class="flex-1">
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="badge badge-blue">Optional</span>
+                    <span class="font-medium text-zinc-200">No MCP servers</span>
+                  </div>
+                </div>
+                <svg
+                  class="expand-icon w-5 h-5 text-zinc-500 flex-shrink-0 ml-2"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fill-rule="evenodd"
+                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                    clip-rule="evenodd"
+                  />
+                </svg>
+              </div>
+              <div class="gap-details">
+                <div class="text-sm mt-3 pt-3 border-t border-white/5 space-y-2">
+                  <div>
+                    <span class="text-zinc-500">Current:</span>
+                    <span class="text-zinc-300">No Model Context Protocol servers</span>
+                  </div>
+                  <div>
+                    <span class="text-zinc-500">Target:</span>
+                    <span class="text-zinc-300">Domain-specific MCP server in packages/</span>
+                  </div>
+                  <div class="flex flex-wrap gap-2 mt-3">
+                    <span class="badge badge-blue">large effort</span>
+                    <span
+                      class="badge"
+                      style="background: rgba(255, 255, 255, 0.05); color: #71717a"
+                      >agents</span
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div
+              class="gap-card border-l-2 border-blue-500/60 rounded-lg p-4"
+              style="background: rgba(96, 165, 250, 0.04)"
+              data-gap-id="optional-1"
+            >
+              <div class="flex items-start justify-between">
+                <div class="flex-1">
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="badge badge-blue">Optional</span>
+                    <span class="font-medium text-zinc-200">No agent framework</span>
+                  </div>
+                </div>
+                <svg
+                  class="expand-icon w-5 h-5 text-zinc-500 flex-shrink-0 ml-2"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fill-rule="evenodd"
+                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                    clip-rule="evenodd"
+                  />
+                </svg>
+              </div>
+              <div class="gap-details">
+                <div class="text-sm mt-3 pt-3 border-t border-white/5 space-y-2">
+                  <div>
+                    <span class="text-zinc-500">Current:</span>
+                    <span class="text-zinc-300">No Claude SDK or LangGraph</span>
+                  </div>
+                  <div>
+                    <span class="text-zinc-500">Target:</span>
+                    <span class="text-zinc-300">Claude Agent SDK or LangGraph integration</span>
+                  </div>
+                  <div class="flex flex-wrap gap-2 mt-3">
+                    <span class="badge badge-blue">large effort</span>
+                    <span
+                      class="badge"
+                      style="background: rgba(255, 255, 255, 0.05); color: #71717a"
+                      >agents</span
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Compliance Checklist -->
+      <section
+        class="rounded-xl border border-white/5 bg-surface-1/50 p-6 md:p-8 mb-8 fade-section"
+      >
+        <p class="text-accent text-sm font-mono uppercase tracking-widest mb-6">
+          Compliance Checklist
+        </p>
+        <div class="space-y-2">
+          <div
+            class="flex items-start gap-3 p-3 rounded-lg"
+            style="background: rgba(74, 222, 128, 0.04)"
+          >
+            <div
+              class="inline-flex items-center justify-center w-5 h-5 rounded-full flex-shrink-0 mt-0.5"
+              style="background: rgba(74, 222, 128, 0.15); color: #4ade80; font-size: 10px"
+            >
+              &#10003;
+            </div>
+            <div class="flex-1">
+              <div class="font-medium text-zinc-200 text-sm">Automaker initialized</div>
+              <div class="text-sm text-zinc-500 mt-0.5">.automaker/ directory exists</div>
+            </div>
+          </div>
+          <div
+            class="flex items-start gap-3 p-3 rounded-lg"
+            style="background: rgba(74, 222, 128, 0.04)"
+          >
+            <div
+              class="inline-flex items-center justify-center w-5 h-5 rounded-full flex-shrink-0 mt-0.5"
+              style="background: rgba(74, 222, 128, 0.15); color: #4ade80; font-size: 10px"
+            >
+              &#10003;
+            </div>
+            <div class="flex-1">
+              <div class="font-medium text-zinc-200 text-sm">Vitest configured</div>
+              <div class="text-sm text-zinc-500 mt-0.5">Vitest 3.2.3 detected</div>
+            </div>
+          </div>
+          <div
+            class="flex items-start gap-3 p-3 rounded-lg"
+            style="background: rgba(74, 222, 128, 0.04)"
+          >
+            <div
+              class="inline-flex items-center justify-center w-5 h-5 rounded-full flex-shrink-0 mt-0.5"
+              style="background: rgba(74, 222, 128, 0.15); color: #4ade80; font-size: 10px"
+            >
+              &#10003;
+            </div>
+            <div class="flex-1">
+              <div class="font-medium text-zinc-200 text-sm">shadcn/ui</div>
+              <div class="text-sm text-zinc-500 mt-0.5">Component library configured</div>
+            </div>
+          </div>
+          <div
+            class="flex items-start gap-3 p-3 rounded-lg"
+            style="background: rgba(74, 222, 128, 0.04)"
+          >
+            <div
+              class="inline-flex items-center justify-center w-5 h-5 rounded-full flex-shrink-0 mt-0.5"
+              style="background: rgba(74, 222, 128, 0.15); color: #4ade80; font-size: 10px"
+            >
+              &#10003;
+            </div>
+            <div class="flex-1">
+              <div class="font-medium text-zinc-200 text-sm">Tailwind CSS 4</div>
+              <div class="text-sm text-zinc-500 mt-0.5">Tailwind 4.1.17 configured</div>
+            </div>
+          </div>
+          <div
+            class="flex items-start gap-3 p-3 rounded-lg"
+            style="background: rgba(74, 222, 128, 0.04)"
+          >
+            <div
+              class="inline-flex items-center justify-center w-5 h-5 rounded-full flex-shrink-0 mt-0.5"
+              style="background: rgba(74, 222, 128, 0.15); color: #4ade80; font-size: 10px"
+            >
+              &#10003;
+            </div>
+            <div class="flex-1">
+              <div class="font-medium text-zinc-200 text-sm">Playwright</div>
+              <div class="text-sm text-zinc-500 mt-0.5">Playwright 1.56.1 for E2E tests</div>
+            </div>
+          </div>
+          <div
+            class="flex items-start gap-3 p-3 rounded-lg"
+            style="background: rgba(74, 222, 128, 0.04)"
+          >
+            <div
+              class="inline-flex items-center justify-center w-5 h-5 rounded-full flex-shrink-0 mt-0.5"
+              style="background: rgba(74, 222, 128, 0.15); color: #4ade80; font-size: 10px"
+            >
+              &#10003;
+            </div>
+            <div class="flex-1">
+              <div class="font-medium text-zinc-200 text-sm">ESLint 9</div>
+              <div class="text-sm text-zinc-500 mt-0.5">ESLint v9 flat config</div>
+            </div>
+          </div>
+          <div
+            class="flex items-start gap-3 p-3 rounded-lg"
+            style="background: rgba(74, 222, 128, 0.04)"
+          >
+            <div
+              class="inline-flex items-center justify-center w-5 h-5 rounded-full flex-shrink-0 mt-0.5"
+              style="background: rgba(74, 222, 128, 0.15); color: #4ade80; font-size: 10px"
+            >
+              &#10003;
+            </div>
+            <div class="flex-1">
+              <div class="font-medium text-zinc-200 text-sm">Prettier</div>
+              <div class="text-sm text-zinc-500 mt-0.5">Code formatting configured</div>
+            </div>
+          </div>
+          <div
+            class="flex items-start gap-3 p-3 rounded-lg"
+            style="background: rgba(74, 222, 128, 0.04)"
+          >
+            <div
+              class="inline-flex items-center justify-center w-5 h-5 rounded-full flex-shrink-0 mt-0.5"
+              style="background: rgba(74, 222, 128, 0.15); color: #4ade80; font-size: 10px"
+            >
+              &#10003;
+            </div>
+            <div class="flex-1">
+              <div class="font-medium text-zinc-200 text-sm">Beads</div>
+              <div class="text-sm text-zinc-500 mt-0.5">.beads/ task tracker initialized</div>
+            </div>
+          </div>
+          <div
+            class="flex items-start gap-3 p-3 rounded-lg"
+            style="background: rgba(74, 222, 128, 0.04)"
+          >
+            <div
+              class="inline-flex items-center justify-center w-5 h-5 rounded-full flex-shrink-0 mt-0.5"
+              style="background: rgba(74, 222, 128, 0.15); color: #4ade80; font-size: 10px"
+            >
+              &#10003;
+            </div>
+            <div class="flex-1">
+              <div class="font-medium text-zinc-200 text-sm">pnpm</div>
+              <div class="text-sm text-zinc-500 mt-0.5">Using pnpm as package manager</div>
+            </div>
+          </div>
+          <div
+            class="flex items-start gap-3 p-3 rounded-lg"
+            style="background: rgba(74, 222, 128, 0.04)"
+          >
+            <div
+              class="inline-flex items-center justify-center w-5 h-5 rounded-full flex-shrink-0 mt-0.5"
+              style="background: rgba(74, 222, 128, 0.15); color: #4ade80; font-size: 10px"
+            >
+              &#10003;
+            </div>
+            <div class="flex-1">
+              <div class="font-medium text-zinc-200 text-sm">Analytics</div>
+              <div class="text-sm text-zinc-500 mt-0.5">umami analytics configured</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- CTA Section -->
+      <section
+        class="rounded-xl border border-accent/20 bg-accent/5 p-8 md:p-12 text-center fade-section"
+      >
+        <h2 class="text-2xl font-bold text-white mb-3">Want a report for your project?</h2>
+        <p class="text-zinc-400 mb-6 max-w-lg mx-auto">
+          setupLab scans your codebase against the protoLabs gold standard and generates a
+          comprehensive gap analysis in seconds.
+        </p>
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <a
+            href="https://protolabs.studio"
+            class="cta-btn px-6 py-3 rounded-lg text-white font-semibold text-sm"
+          >
+            Get Started Free
+          </a>
+          <a
+            href="https://consulting.protolabs.studio"
+            class="px-6 py-3 rounded-lg border border-white/10 text-zinc-300 hover:text-white hover:border-white/20 transition-all text-sm font-medium"
+          >
+            Book a Consulting Session
+          </a>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-white/5 mt-16">
+      <div
+        class="max-w-5xl mx-auto px-6 py-10 flex flex-col md:flex-row items-center justify-between gap-4"
+      >
+        <div class="flex items-center gap-2 text-sm text-zinc-500">
+          <span class="text-accent">&#9670;</span>
+          <span>proto<span class="text-zinc-400">Labs</span></span>
+          <span class="text-zinc-700">&middot;</span>
+          <span>AI-native development agency</span>
+        </div>
+        <div class="flex items-center gap-6 text-sm text-zinc-600">
+          <a href="https://protolabs.studio" class="hover:text-zinc-400 transition-colors">Home</a>
+          <a
+            href="https://consulting.protolabs.studio"
+            class="hover:text-zinc-400 transition-colors"
+            >Consulting</a
+          >
+          <a href="https://github.com/proto-labs-ai" class="hover:text-zinc-400 transition-colors"
+            >GitHub</a
+          >
+        </div>
+      </div>
+    </footer>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        // Expandable gap sections
+        document.querySelectorAll('.gap-card').forEach((card) => {
+          card.addEventListener('click', () => {
+            const details = card.querySelector('.gap-details');
+            const icon = card.querySelector('.expand-icon');
+            if (details && icon) {
+              details.classList.toggle('expanded');
+              icon.classList.toggle('rotated');
+            }
+          });
+        });
+
+        // Scroll-triggered fade-in
+        const sections = document.querySelectorAll('.fade-section');
+        if ('IntersectionObserver' in window) {
+          const observer = new IntersectionObserver(
+            (entries) => {
+              entries.forEach((entry) => {
+                if (entry.isIntersecting) {
+                  entry.target.classList.add('visible');
+                  observer.unobserve(entry.target);
+                }
+              });
+            },
+            { threshold: 0.15, rootMargin: '0px 0px -40px 0px' }
+          );
+          sections.forEach((s) => observer.observe(s));
+        } else {
+          sections.forEach((s) => s.classList.add('visible'));
+        }
+      });
+    </script>
+  </body>
+</html>
