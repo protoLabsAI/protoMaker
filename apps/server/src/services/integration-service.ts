@@ -915,11 +915,15 @@ export class IntegrationService {
     title: string;
     description?: string;
     state?: { name: string };
+    labels?: string[];
+    projectId?: string;
     createdAt: string;
   }): Promise<void> {
     // All new Linear issues are treated as signals
     logger.info(`Signal detected from Linear issue: ${payload.title}`, {
       issueId: payload.issueId,
+      labels: payload.labels,
+      projectId: payload.projectId,
     });
 
     if (!this.emitter) return;
@@ -934,6 +938,8 @@ export class IntegrationService {
       channelContext: {
         issueId: payload.issueId,
         state: payload.state?.name,
+        labels: payload.labels,
+        projectId: payload.projectId,
       },
       timestamp: payload.createdAt,
     });
