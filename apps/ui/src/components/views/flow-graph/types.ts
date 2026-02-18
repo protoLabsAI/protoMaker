@@ -70,6 +70,34 @@ export interface AgentNodeData {
   [key: string]: unknown;
 }
 
+export type PipelineStageId =
+  | 'backlog'
+  | 'in_progress'
+  | 'review'
+  | 'merge'
+  | 'test'
+  | 'verify'
+  | 'done'
+  | 'blocked';
+
+export type PipelineStageStatus = 'idle' | 'active' | 'blocked' | 'error';
+
+export interface TrackedWorkItem {
+  id: string;
+  title: string;
+  status: PipelineStageId;
+  progress?: number;
+  metadata?: Record<string, unknown>;
+}
+
+export interface PipelineStageNodeData {
+  stageId: PipelineStageId;
+  label: string;
+  status: PipelineStageStatus;
+  workItems: TrackedWorkItem[];
+  [key: string]: unknown;
+}
+
 // ============================================
 // Typed Node/Edge Aliases
 // ============================================
@@ -80,6 +108,7 @@ export type ServiceNode = Node<ServiceNodeData, 'service'>;
 export type IntegrationNode = Node<IntegrationNodeData, 'integration'>;
 export type FeatureNode = Node<FeatureNodeData, 'feature'>;
 export type AgentNode = Node<AgentNodeData, 'agent'>;
+export type PipelineStageNode = Node<PipelineStageNodeData, 'pipeline-stage'>;
 
 export type FlowNode =
   | OrchestratorNode
@@ -87,13 +116,15 @@ export type FlowNode =
   | ServiceNode
   | IntegrationNode
   | FeatureNode
-  | AgentNode;
+  | AgentNode
+  | PipelineStageNode;
 
 export type DelegationEdge = Edge & { type: 'delegation' };
 export type WorkflowEdge = Edge & { type: 'workflow' };
 export type IntegrationEdge = Edge & { type: 'integration' };
+export type PipelineEdge = Edge & { type: 'pipeline' };
 
-export type FlowEdge = DelegationEdge | WorkflowEdge | IntegrationEdge;
+export type FlowEdge = DelegationEdge | WorkflowEdge | IntegrationEdge | PipelineEdge;
 
 // ============================================
 // Brand Constants
@@ -126,4 +157,5 @@ export const NODE_DIMENSIONS = {
   integration: { width: 160, height: 80 },
   feature: { width: 180, height: 80 },
   agent: { width: 160, height: 70 },
+  'pipeline-stage': { width: 200, height: 120 },
 } as const;

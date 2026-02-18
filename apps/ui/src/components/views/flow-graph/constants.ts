@@ -6,7 +6,7 @@
  * Dynamic nodes (features, agents) use dagre layout below center.
  */
 
-import type { FlowNode, FlowEdge } from './types';
+import type { FlowNode, FlowEdge, PipelineStageId } from './types';
 
 // ============================================
 // Static Node IDs
@@ -26,6 +26,15 @@ export const NODE_IDS = {
   github: 'integration-github',
   linear: 'integration-linear',
   discord: 'integration-discord',
+  // Pipeline stages
+  pipelineBacklog: 'pipeline-backlog',
+  pipelineInProgress: 'pipeline-in-progress',
+  pipelineReview: 'pipeline-review',
+  pipelineMerge: 'pipeline-merge',
+  pipelineTest: 'pipeline-test',
+  pipelineVerify: 'pipeline-verify',
+  pipelineDone: 'pipeline-done',
+  pipelineBlocked: 'pipeline-blocked',
 } as const;
 
 // ============================================
@@ -141,3 +150,109 @@ export const CREW_NODE_ID_MAP: Record<string, string> = {
   'board-janitor': NODE_IDS.boardJanitor,
   'system-health': NODE_IDS.systemHealth,
 };
+
+// ============================================
+// Pipeline Stages
+// ============================================
+
+export const PIPELINE_STAGES: Array<{
+  nodeId: string;
+  stageId: PipelineStageId;
+  label: string;
+  position: { x: number; y: number };
+}> = [
+  {
+    nodeId: NODE_IDS.pipelineBacklog,
+    stageId: 'backlog',
+    label: 'Backlog',
+    position: { x: 100, y: 800 },
+  },
+  {
+    nodeId: NODE_IDS.pipelineInProgress,
+    stageId: 'in_progress',
+    label: 'In Progress',
+    position: { x: 350, y: 800 },
+  },
+  {
+    nodeId: NODE_IDS.pipelineReview,
+    stageId: 'review',
+    label: 'Review',
+    position: { x: 600, y: 800 },
+  },
+  {
+    nodeId: NODE_IDS.pipelineMerge,
+    stageId: 'merge',
+    label: 'Merge',
+    position: { x: 850, y: 800 },
+  },
+  {
+    nodeId: NODE_IDS.pipelineTest,
+    stageId: 'test',
+    label: 'Test',
+    position: { x: 1100, y: 800 },
+  },
+  {
+    nodeId: NODE_IDS.pipelineVerify,
+    stageId: 'verify',
+    label: 'Verify',
+    position: { x: 1350, y: 800 },
+  },
+  {
+    nodeId: NODE_IDS.pipelineDone,
+    stageId: 'done',
+    label: 'Done',
+    position: { x: 1600, y: 800 },
+  },
+  {
+    nodeId: NODE_IDS.pipelineBlocked,
+    stageId: 'blocked',
+    label: 'Blocked',
+    position: { x: 600, y: 950 },
+  },
+];
+
+// Pipeline edges connecting stages left-to-right
+export const PIPELINE_EDGES: FlowEdge[] = [
+  {
+    id: 'e-pipe-backlog-progress',
+    source: NODE_IDS.pipelineBacklog,
+    target: NODE_IDS.pipelineInProgress,
+    type: 'pipeline',
+  },
+  {
+    id: 'e-pipe-progress-review',
+    source: NODE_IDS.pipelineInProgress,
+    target: NODE_IDS.pipelineReview,
+    type: 'pipeline',
+  },
+  {
+    id: 'e-pipe-review-merge',
+    source: NODE_IDS.pipelineReview,
+    target: NODE_IDS.pipelineMerge,
+    type: 'pipeline',
+  },
+  {
+    id: 'e-pipe-merge-test',
+    source: NODE_IDS.pipelineMerge,
+    target: NODE_IDS.pipelineTest,
+    type: 'pipeline',
+  },
+  {
+    id: 'e-pipe-test-verify',
+    source: NODE_IDS.pipelineTest,
+    target: NODE_IDS.pipelineVerify,
+    type: 'pipeline',
+  },
+  {
+    id: 'e-pipe-verify-done',
+    source: NODE_IDS.pipelineVerify,
+    target: NODE_IDS.pipelineDone,
+    type: 'pipeline',
+  },
+  {
+    id: 'e-pipe-review-blocked',
+    source: NODE_IDS.pipelineReview,
+    target: NODE_IDS.pipelineBlocked,
+    type: 'pipeline',
+  },
+];
