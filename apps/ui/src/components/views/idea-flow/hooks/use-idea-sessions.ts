@@ -72,6 +72,7 @@ export function useIdeaSessions(projectPath: string | undefined) {
         id: s.id as string,
         projectPath,
         status: mapSessionStatus(s.status as string),
+        source: (s.title as string) || (s.source as string) || undefined,
         createdAt: s.createdAt as string,
         updatedAt: s.updatedAt as string,
       }));

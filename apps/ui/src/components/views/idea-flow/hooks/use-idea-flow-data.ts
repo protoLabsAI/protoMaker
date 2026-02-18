@@ -12,13 +12,7 @@ import { useMemo, useState, useCallback } from 'react';
 import type { Node, Edge } from '@xyflow/react';
 import type { IdeationSession } from '@automaker/types';
 import { useIdeaSessions } from './use-idea-sessions';
-import type {
-  PipelineStep,
-  IntakeNodeData,
-  PipelineStepNodeData,
-  IdeaFlowNode,
-  PipelineEdge,
-} from '../types';
+import type { PipelineStep, IntakeNodeData, PipelineStepNodeData } from '../types';
 
 // Layout constants
 const LANE_HEIGHT = 200;
@@ -129,9 +123,14 @@ export function useIdeaFlowData(projectPath: string | undefined) {
         if (step === 'intake') {
           // Intake node (entry point)
           const intakeData: IntakeNodeData = {
-            label: 'Intake',
+            label:
+              session.source ||
+              (session.promptCategory
+                ? session.promptCategory.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+                : 'New Idea'),
             description: session.promptCategory,
-            source: 'manual',
+            source: session.source,
+            status: session.status === 'active' ? 'active' : 'idle',
             timestamp: session.createdAt,
           };
           result.push({
@@ -184,8 +183,8 @@ export function useIdeaFlowData(projectPath: string | undefined) {
           id: edgeId,
           source: sourceId,
           target: targetId,
-          type: 'smoothstep',
-          animated: false,
+          type: 'pipeline',
+          data: { status: i < currentStepIndex - 1 ? 'completed' : 'active' },
         });
       }
 

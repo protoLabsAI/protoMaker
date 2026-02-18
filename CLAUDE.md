@@ -11,6 +11,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - Never push directly to main. Always create a feature branch and open a PR, even for small changes. Assume branch protection is enabled on all repositories.
 - Before committing, run `git status` and verify that only intended files are staged. Watch for accidentally staged deletions from previously merged PRs.
+- `.automaker/memory/` files are updated by Automaker agents during autonomous work. Include any memory changes in your commits alongside the related code changes — don't leave them as unstaged drift.
 
 ## Session Continuation
 

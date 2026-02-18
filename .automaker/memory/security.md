@@ -5,9 +5,9 @@ relevantTo: [security]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 18
-  referenced: 12
-  successfulFeatures: 12
+  loaded: 20
+  referenced: 13
+  successfulFeatures: 13
 ---
 # security
 
@@ -121,3 +121,10 @@ usageStats:
 - **Situation:** Documentation must show how to handle secrets properly without leaking them
 - **Root cause:** API keys in examples create supply-chain risk. Users who copy examples directly inherit the security practices shown.
 - **How to avoid:** Examples are less 'complete' (missing actual API calls) but safer. Documentation burden shifted to explaining .env patterns clearly.
+
+### Session ID comes from URL path parameter (:sessionId), enabling session-scoped permission checking at routing layer (2026-02-18)
+- **Context:** Multiple users/sessions could potentially access the API, need to ensure users only modify ideas in their own sessions
+- **Why:** URL-path session ID makes authorization middleware simple: check if authenticated user owns the session from the URL before reaching route handler. Prevents entire classes of privilege escalation bugs.
+- **Rejected:** Could extract session from JWT/auth context only, but would require business logic inside handlers to validate session ownership, creating authorization bypass opportunities
+- **Trade-offs:** URL parameter is visible in logs and browser history (but session ID itself isn't sensitive), but provides explicit authorization checkpoints
+- **Breaking if changed:** If sessions become cross-user shareable, the assumption that URL sessionId = owner identity breaks, requiring additional permission checks inside handlers

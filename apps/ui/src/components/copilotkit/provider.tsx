@@ -8,12 +8,21 @@
  * Wrapped in an error boundary so CopilotKit failures never crash the app.
  */
 
-import { Component, createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import {
+  Component,
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import {
   CopilotKitProvider as CKProvider,
   CopilotSidebar,
   useAgentContext,
 } from '@copilotkitnext/react';
+import { useLocation } from '@tanstack/react-router';
 import { getCopilotKitThemeStyles } from './theme-bridge';
 import { getAuthHeaders } from '@/lib/api-fetch';
 import { useAuthStore } from '@/store/auth-store';
@@ -88,6 +97,85 @@ function ProjectContextInjector() {
  */
 function InterruptHandler() {
   useLangGraphInterrupt();
+  return null;
+}
+
+// Route-to-context mapping for page-aware sidebar
+const ROUTE_CONTEXT_MAP: Record<string, { workflow: string; contextHint: string }> = {
+  '/ideas': {
+    workflow: 'default',
+    contextHint:
+      'User is on the Idea Pipeline — a visual flow showing ideas moving through intake, research, PRD drafting, review, approval, and backlog stages. Help with brainstorming, refining ideas, or managing the pipeline.',
+  },
+  '/board': {
+    workflow: 'default',
+    contextHint:
+      'User is on the Kanban Board — shows features organized by status (backlog, in_progress, review, done). Help with feature management, prioritization, starting agents, or checking progress.',
+  },
+  '/analytics': {
+    workflow: 'default',
+    contextHint:
+      'User is viewing the System Graph — real-time visualization of service connections, agent activity, and system health. Help with understanding system architecture or diagnosing issues.',
+  },
+  '/spec': {
+    workflow: 'default',
+    contextHint:
+      'User is editing the project spec — the markdown document that defines the project goals, architecture, and constraints. Help with spec writing, refinement, or clarification.',
+  },
+  '/context': {
+    workflow: 'default',
+    contextHint:
+      'User is managing AI agent context files — rules and guidelines injected into agent prompts. Help with creating, editing, or organizing context files.',
+  },
+  '/terminal': {
+    workflow: 'default',
+    contextHint:
+      'User is viewing agent terminal output — live logs from running AI agents. Help with understanding agent behavior, debugging issues, or interpreting output.',
+  },
+  '/memory': {
+    workflow: 'default',
+    contextHint:
+      'User is viewing agent memory files — persistent knowledge accumulated by agents across sessions. Help with reviewing, organizing, or understanding memory contents.',
+  },
+};
+
+const DEFAULT_ROUTE_CONTEXT = {
+  workflow: 'default',
+  contextHint:
+    'User is navigating the protoLabs Studio interface. Help with any project-related tasks.',
+};
+
+function getRouteContext(pathname: string) {
+  // Exact match first, then prefix match for nested routes
+  if (ROUTE_CONTEXT_MAP[pathname]) return ROUTE_CONTEXT_MAP[pathname];
+  const prefix = Object.keys(ROUTE_CONTEXT_MAP).find((key) => pathname.startsWith(key + '/'));
+  return prefix ? ROUTE_CONTEXT_MAP[prefix] : DEFAULT_ROUTE_CONTEXT;
+}
+
+/**
+ * Injects route-aware context into CopilotKit.
+ * Tells Ava which page the user is on and auto-sets the workflow on navigation.
+ */
+function RouteContextInjector() {
+  const location = useLocation();
+  const modelCtx = useContext(ModelContext);
+  const prevPathRef = useRef(location.pathname);
+
+  const routeContext = getRouteContext(location.pathname);
+
+  useAgentContext({
+    description: 'Current page context — what the user is looking at right now',
+    value: routeContext.contextHint,
+  });
+
+  // Auto-set workflow on navigation (but not on initial mount)
+  useEffect(() => {
+    if (prevPathRef.current !== location.pathname && modelCtx) {
+      modelCtx.setSelectedWorkflow(routeContext.workflow);
+    }
+    prevPathRef.current = location.pathname;
+  }, [location.pathname, routeContext.workflow, modelCtx]);
+
   return null;
 }
 
@@ -194,6 +282,7 @@ export function CopilotKitProvider({ children }: { children: ReactNode }) {
             credentials="include"
           >
             <ProjectContextInjector />
+            <RouteContextInjector />
             <InterruptHandler />
             {children}
           </CKProvider>

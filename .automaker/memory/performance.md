@@ -67,3 +67,10 @@ usageStats:
 - **Problem solved:** Overlay needs to display recent system events in real-time, updated via WebSocket, but memory must not grow unbounded if overlay runs 24/7 during streams
 - **Why this works:** Ring buffer prevents memory leaks on long-running streams by keeping fixed-size array. Client-side implementation avoids extra API calls and reduces server load. 10-event buffer is sufficient for visual context without cluttering the overlay
 - **Trade-offs:** Lost events older than 10 are not retrievable — acceptable for a real-time activity display where historical context is not needed. Ring buffer adds minor complexity vs simple array.push()
+
+### Applied motion/framer-motion animations to panel entrance/exit instead of instant rendering (2026-02-18)
+- **Context:** Panel toggles with PipelineToolbar buttons need visual feedback
+- **Why:** Smooth animations reduce jarring UX, clarify what changed on screen, match modern app conventions established by flow-graph panels
+- **Rejected:** Instant toggle without animation - feels broken/unpolished, hard to follow in interface
+- **Trade-offs:** Slight performance cost on older devices, but improved perceived performance. Animation adds 16-24 line motion component wrapper.
+- **Breaking if changed:** If motion/react library is removed or browser doesn't support animations, panels appear/disappear instantly without visual feedback.

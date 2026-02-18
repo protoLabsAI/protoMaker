@@ -1595,3 +1595,130 @@ usageStats:
 - **Problem solved:** `!help`, `!queue`, `!status` commands need access to suggestion state and build status, but these live in different layers (Zustand store, HTTP API), not in the chat service itself
 - **Why this works:** Injection pattern makes handler testable without Twitch connection — unit tests can pass mock fetchers. Keeps chat response logic separate from Twitch client coupling. Handler can be instantiated independently for testing
 - **Trade-offs:** Requires plumbing fetcher functions through constructor vs simpler 'just access the store' approach. Additional lines of boilerplate, but significant testability gain
+
+#### [Pattern] Step icon mapping as Record<StepType, IconComponent> constant rather than discriminated union or factory (2026-02-18)
+- **Problem solved:** 7 different pipeline steps each need a specific Lucide icon for visual identification
+- **Why this works:** Record approach is simpler than a union discriminator and more explicit than a factory function. Icon lookup is O(1) and exhaustiveness checking at compile time if step type is a discriminated union. Easy to refactor icons later without touching component logic.
+- **Trade-offs:** Static mapping makes adding new steps require updating the constant, but that's intentional coupling - ensures developers remember to pick an icon. Could be lazy-loaded if bundle size matters.
+
+### Centralized idea processing service with operation-specific routing endpoints (refire.ts, edit.ts) that delegate to shared IdeaProcessingService methods (2026-02-18)
+- **Context:** Implementing node refire and edit endpoints that need to handle idea state mutations with consistent error handling and session management
+- **Why:** Separates routing concerns (parameter extraction, HTTP layer) from business logic (idea processing). Allows multiple HTTP endpoints to share the same core service logic without duplication while maintaining clear separation of concerns.
+- **Rejected:** Implementing business logic directly in route handlers would require duplicating session validation, error handling, and idea state mutation logic across endpoints
+- **Trade-offs:** Adds an extra abstraction layer (routes → service) but prevents maintenance burden of duplicated logic. Makes testing more complex at route level but easier at service level.
+- **Breaking if changed:** If service methods are refactored to combine refire/edit logic, individual endpoints lose flexibility to handle operation-specific error cases or response formats
+
+### Used React Query polling (refetchInterval: 10s) instead of WebSocket subscription for real-time session updates (2026-02-18)
+- **Context:** Ideation API lacks WebSocket event system; needed real-time updates for session state changes
+- **Why:** Polling provides immediate real-time behavior without infrastructure overhead. Reduces coupling to event system that doesn't exist yet. Query cache automatically deduplicates redundant requests.
+- **Rejected:** Implemented WebSocket subscription - would require API infrastructure not yet available; over-engineered for current needs
+- **Trade-offs:** Polling trades server load for simplicity and immediate deployability. Must replace with event subscription when WebSocket system exists (pattern exists in codebase via use-query-invalidation.ts)
+- **Breaking if changed:** If refetchInterval removed, sessions become stale until manual refresh. If API gains WebSocket support, polling becomes inefficient but still functional.
+
+#### [Pattern] Lane-based layout with pipeline steps as columns; sessions as rows with fixed LANE_HEIGHT, steps with fixed STEP_WIDTH (2026-02-18)
+- **Problem solved:** Need to visualize many sessions across linear workflow stages in React Flow
+- **Why this works:** Separates two independent concerns: session grouping (rows) and workflow progression (columns). Constants enable responsive adjustment without code changes. Matches existing flow-graph-data pattern in codebase.
+- **Trade-offs:** Fixed dimensions simplify positioning and performance but require adjustment logic for small viewports. Lane structure prevents complex branching visualization naturally (see commented branching topology section).
+
+#### [Gotcha] Branching topology (research vs fast_path at same column) acknowledged but not implemented; deferred as commented structure (2026-02-18)
+- **Situation:** Sessions can follow multiple paths (research-heavy vs fast-path) that converge at same pipeline step
+- **Root cause:** Implementation complexity with visual representation unclear. Placeholder structure documents intent without blocking core feature. Allows future enhancement without refactoring.
+- **How to avoid:** Deferred complexity maintains simple linear layout but creates future tech debt. Commented code preserves design intent for implementer.
+
+### Hook returns selectedSession (current) and selectSession (callback) for external session filtering control instead of managing selection internally (2026-02-18)
+- **Context:** useIdeaFlowData needs to support session filtering for feature requirements
+- **Why:** Inverts control to consumer; allows parent component to manage selection state. Prevents prop drilling and state synchronization issues. Single source of truth for selection lives in consuming component.
+- **Rejected:** Internal useState for selection - couples data transformation with UI state; makes component harder to test and reuse
+- **Trade-offs:** Parent must manage selectedSession state; useIdeaFlowData becomes pure transformation function. Simplifies hook and enables flexible selection patterns (single, multi-select, filters).
+- **Breaking if changed:** If selection moved into hook, loses ability to share selection state across multiple views or sync with URL/navigation state.
+
+#### [Gotcha] Component uses memo() wrapper but state updates (countdown timer tick) cause frequent re-renders that memo doesn't optimize (2026-02-18)
+- **Situation:** CountdownTimer sub-component updates every frame but memo() only prevents re-renders from parent changes, not internal state changes
+- **Root cause:** memo() compares props - it prevents re-renders when ApprovalNodeData props are unchanged. But requestAnimationFrame-driven state updates inside CountdownTimer bypass this optimization entirely. This is a fundamental limitation of memo for components with internal animation loops.
+- **How to avoid:** memo() provides value for parent-driven updates but doesn't optimize animation-driven updates. Acceptable tradeoff since countdown is performance-intensive but localized to single node.
+
+#### [Pattern] TODO markers left for mutation wiring (handleApprove/handleReject) instead of implementing placeholders or throwing errors (2026-02-18)
+- **Problem solved:** Component handlers need to call backend mutations but mutation integration not in scope for initial implementation
+- **Why this works:** TODO markers make incomplete wiring explicit and searchable across codebase. Placeholder console.log prevents component breakage. Better than throwing error (breaks component) or no marker (mutation forgotten).
+- **Trade-offs:** TODO markers require developer discipline to follow up, but prevent accidental breaking changes and document integration points clearly.
+
+#### [Pattern] Separate canvas component (controlled mode) wrapped by view component (ReactFlowProvider) (2026-02-18)
+- **Problem solved:** Managing React Flow initialization and node/edge state across feature views
+- **Why this works:** ReactFlowProvider must wrap canvas for hooks to work; separating concerns allows canvas to be stateless/testable while view handles provider setup and data fetching
+- **Trade-offs:** More files but cleaner separation; canvas is reusable independent of view context; view component purely handles orchestration
+
+#### [Pattern] Node/edge type registries use placeholder components initially (empty objects) (2026-02-18)
+- **Problem solved:** Building foundation for node/edge types without implementing actual renderers
+- **Why this works:** Allows controlled mode setup to succeed without circular dependencies; actual implementations can be added incrementally without touching canvas component
+- **Trade-offs:** Nodes render as nothing initially but render pipeline is correct; type safety maintained; future changes are isolated to registry files
+
+#### [Pattern] Tab state managed via URL query params, not component state (2026-02-18)
+- **Problem solved:** Switching between System Graph and Idea Pipeline views in analytics page
+- **Why this works:** URL as single source of truth enables deep linking, browser back/forward navigation, and tab state persistence without context/reducer; component just renders based on search param value
+- **Trade-offs:** Requires router integration but gains free deep linking and history support; no prop drilling needed
+
+### Used loose SessionItem interface for IdeaListPanel props instead of importing full IdeationSession type to decouple component from domain model (2026-02-18)
+- **Context:** Component needed to display session data but importing full domain type would create tight coupling
+- **Why:** Allows component to be tested independently, reused with different data sources, and evolved without breaking domain changes
+- **Rejected:** Importing IdeationSession directly - would make component tightly coupled to backend schema changes
+- **Trade-offs:** Slightly more work to define interface, but gained flexibility and testability. Easier to mock data in tests.
+- **Breaking if changed:** If props interface is removed/changed, component becomes non-functional. Parent component must guarantee shape matches.
+
+#### [Pattern] Both components handle all their own styling and state representation - no external state management needed for UI toggles (2026-02-18)
+- **Problem solved:** Toolbar doesn't manage its own open/closed state. List panel doesn't manage grouping/filtering state.
+- **Why this works:** Avoids context providers or prop drilling. Parent component controls all state. Components become pure/deterministic - easier to test.
+- **Trade-offs:** Parent must track more state, but UI is fully transparent and testable. No surprise re-renders from internal state changes.
+
+#### [Pattern] onSelectSession callback parameter is just session ID string, not full session object (2026-02-18)
+- **Problem solved:** When user clicks a session, panel calls callback with only the ID
+- **Why this works:** Decouples panel from knowing session shape. Parent already has full session data. Reduces payload/memory, clearer intent (selecting, not mutating).
+- **Trade-offs:** Parent must look up full session by ID, but gains flexibility. If session structure changes, parent logic is isolated.
+
+#### [Pattern] Dialogs receive complete data structures (ReviewOutput, IdeaProcessingState) rather than individual fields (2026-02-18)
+- **Problem solved:** Building dialogs that need to display related but distinct pieces of information
+- **Why this works:** Reduces prop drilling and makes data flow explicit; easier to extend dialog with new fields later without changing consumer API
+- **Trade-offs:** Requires consumers to understand complete data structures but enables better encapsulation and change isolation
+
+#### [Pattern] Context menu implemented with fixed backdrop overlay pattern for outside-click detection rather than relying on React Flow's built-in context menu systems (2026-02-18)
+- **Problem solved:** Needed re-fire action on completed pipeline step nodes without blocking interaction with other UI elements
+- **Why this works:** Fixed positioning backdrop (z-40) with motion.div menu (z-50) provides reliable click-outside detection independent of React Flow's event handling. Allows custom styling and animation control that matches design system. The backdrop preventDefault on contextMenu prevents browser menu interference.
+- **Trade-offs:** Manual z-index management required (40/50) vs automatic handling; must manage click handlers and cleanup; gained full control over animations and styling; lost some accessibility features that libraries provide automatically
+
+#### [Gotcha] Re-fire handler defined in parent view component (idea-flow-view.tsx) but triggered from deeply nested node (PipelineStepNode) - requires prop drilling for callback (2026-02-18)
+- **Situation:** Re-fire context menu action needs to communicate back to parent to execute POST request with sessionId and nodeId
+- **Root cause:** SessionId lives at view level, node ID lives at node level. Rather than using React Context or Redux, props were drilled through because the component tree is shallow (view -> node) and React Flow's custom node props mechanism already expects function callbacks. Avoids premature abstraction.
+- **How to avoid:** Gained: simpler mental model, no extra providers; Lost: won't scale if tree deepens significantly (would need context refactor). Easy to trace data flow but mixes concerns at node level.
+
+#### [Pattern] Node types registry (nodeTypes object) created upfront as extensibility point even though only one node type implemented (2026-02-18)
+- **Problem solved:** Three additional node types noted as pending (intake, approval, terminal) in comments and registry placeholder
+- **Why this works:** React Flow requires nodeTypes to be passed as configuration. By creating registry upfront with placeholder comments showing where types go, future developers see the pattern immediately. Prevents merge conflicts when multiple features add nodes simultaneously. Each feature can modify only their section without touching others.
+- **Trade-offs:** Gained: clear extension points, no config chasing; Lost: slightly verbose for single implementation. Future node additions are now obvious where to go.
+
+### Extracted Idea Pipeline from analytics tab bar into a separate sidebar route rather than keeping it as a parameterized view within analytics (2026-02-18)
+- **Context:** Previously, both System Graph and Idea Pipeline were accessible via a tab switcher within the /analytics route using a 'tab' search parameter validated by Zod
+- **Why:** Separation of concerns - each feature gets its own mental model and URL space. Reduces complexity in analytics view (no tab state management), makes Idea Pipeline discoverable as a top-level feature, and allows independent keyboard shortcuts for each view
+- **Rejected:** Keeping both views in /analytics with conditional rendering based on 'tab' parameter - would have required maintaining Zod schema validation, tab state management, and tab UI components indefinitely
+- **Trade-offs:** Simpler individual views but two separate route definitions instead of one parameterized route. Keyboard shortcut now routes to /ideas instead of /analytics?tab=ideas
+- **Breaking if changed:** Any bookmarks or direct links to /analytics?tab=ideas will no longer work - they must now use /ideas. Any code that relied on the tab parameter will break
+
+### Navigation item placement in Project section after System View and before Kanban Board, with consistent icon/label pattern (2026-02-18)
+- **Context:** Idea Pipeline needed to be added to navigation hierarchy alongside System View and Kanban Board in the Project section
+- **Why:** Maintains visual hierarchy and logical grouping - all project-level analytics/workflows in one section. Consistent icon (Lightbulb for ideas) and label pattern with existing items makes the mental model predictable
+- **Rejected:** Placing in a separate 'Workflows' section - would fragment related features; using text-only without icon - inconsistent with other nav items
+- **Trade-offs:** Navigation structure becomes more crowded as features grow, but remains logically organized. Icon choices must be semantically clear
+- **Breaking if changed:** If navigation layout is restructured without maintaining semantic grouping, users lose the mental model of what features belong together
+
+#### [Pattern] File-based routing with TanStack Router eliminates need for explicit route registration - new route file automatically discovered and route available (2026-02-18)
+- **Problem solved:** Created new `/ideas` route by simply adding `ideas.tsx` file with `createFileRoute('/ideas')` without registering anywhere
+- **Why this works:** Reduces boilerplate and coupling. Route tree generation is automatic, preventing missed route registrations and keeping routing logic decentralized
+- **Trade-offs:** Automatic discovery is convenient but route tree is less visible/auditable than centralized list; file naming becomes contractual
+
+#### [Pattern] Navigation shortcut binding happens declaratively in nav item configuration, then automatically wired via keyboard handler - no imperative event binding needed (2026-02-18)
+- **Problem solved:** Ideation keyboard shortcut added as `shortcut: shortcuts.ideation` property on nav item, keyboard handler in use-navigation.ts lines 269-277 automatically maps it to navigation
+- **Why this works:** Centralizes shortcut definitions with nav items (single source of truth), prevents scattered event listeners, makes shortcuts auditable in one place
+- **Trade-offs:** Declarative approach requires keyboard handler infrastructure but eliminates imperative listener management and duplicate code
+
+#### [Pattern] Navigation items are objects with declarative properties (id, label, icon, shortcut) rather than components - enables centralized nav configuration and consistent behavior (2026-02-18)
+- **Problem solved:** New 'ideas' nav item added to projectItems array in use-navigation.ts with specific shape and properties
+- **Why this works:** Single nav item definition generates: sidebar UI item, keyboard shortcut binding, and route navigation. Changes to nav structure automatically propagate everywhere
+- **Trade-offs:** Declarative config is easier to maintain and audit but less flexible for nav items with custom behavior; requires hook infrastructure to consume and generate UI
