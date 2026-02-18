@@ -35,6 +35,7 @@
     "pretest": "node scripts/kill-test-servers.mjs && node scripts/setup-e2e-fixtures.mjs",
     "test": "playwright test",
     "test:headed": "playwright test --headed",
+    "test:electron": "playwright test --config playwright.electron.config.ts",
     "dev:electron:wsl": "cross-env vite",
     "dev:electron:wsl:gpu": "cross-env MESA_D3D12_DEFAULT_ADAPTER_NAME=NVIDIA vite",
     "storybook": "storybook dev -p 6006",
