@@ -188,7 +188,9 @@ import { createIntegrityRoutes } from './routes/integrity.js';
 import { createAnalyticsRoutes } from './routes/analytics.js';
 import { AntagonisticReviewService } from './services/antagonistic-review-service.js';
 import { createLangfuseRoutes } from './routes/langfuse/index.js';
+import { createChatRoutes } from './routes/chat/index.js';
 import { shutdownLangfuse } from './lib/langfuse-singleton.js';
+import { initOTEL, shutdownOTEL } from './lib/otel-setup.js';
 import { AgentScoringService } from './services/agent-scoring-service.js';
 
 const PORT = parseInt(process.env.PORT || '3008', 10);
@@ -1024,6 +1026,9 @@ app.use('/api/auth/login', authLimiter);
 // This helps prevent CSRF and content-type confusion attacks
 app.use('/api', requireJsonContentType);
 
+// Initialize OTEL for AI SDK telemetry → Langfuse tracing
+initOTEL().catch((err) => logger.warn('OTEL init failed (non-fatal):', err));
+
 // Mount unauthenticated routes
 app.use('/api/health', createHealthRoutes());
 app.use('/api/auth', createAuthRoutes());
@@ -1162,6 +1167,7 @@ const { createLeadEngineerRoutes } = await import('./routes/lead-engineer/index.
 app.use('/api/lead-engineer', createLeadEngineerRoutes(leadEngineerService));
 app.use('/api/langfuse', createLangfuseRoutes());
 app.use('/api/flows', createFlowsRoutes(antagonisticReviewService, projectPlanningService));
+app.use('/api/chat', createChatRoutes());
 app.use('/api/twitch', createTwitchRoutes(twitchService, events, featureLoader));
 
 // Create HTTP server
@@ -1656,6 +1662,7 @@ async function gracefulShutdown() {
   agentDiscordRouter.stop();
   await twitchService.disconnect(); // Gracefully disconnect from Twitch chat
   await shutdownLangfuse();
+  await shutdownOTEL();
 
   server.close(() => {
     logger.info('Server closed');
