@@ -1,0 +1,9 @@
+# Exclude everything by default
+*
+
+# Include only what we need
+!dist/**
+!src/themes/**
+!package.json
+!LICENSE
+!README.md

@@ -37,14 +37,25 @@
     "build": "tsup",
     "watch": "tsup --watch",
     "build:check": "tsc --noEmit",
+    "prepublishOnly": "npm run build",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"
   },
   "keywords": [
     "automaker",
     "ui",
-    "components"
+    "components",
+    "react",
+    "tailwind",
+    "design-system",
+    "radix-ui",
+    "atomic-design"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/proto-labs-ai/automaker.git",
+    "directory": "libs/ui"
+  },
   "publishConfig": {
     "access": "public"
   },
