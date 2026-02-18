@@ -7,7 +7,7 @@
 
 import { useState } from 'react';
 import { Badge } from '@protolabs/ui/atoms';
-import { Markdown } from '@/components/ui/markdown';
+import { Markdown } from '@protolabs/ui/molecules';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@protolabs/ui/atoms';
 import { cn } from '@/lib/utils';
 import {

@@ -15,7 +15,7 @@ import {
   DialogTitle,
 } from '@protolabs/ui/atoms';
 import { Button } from '@protolabs/ui/atoms';
-import { Markdown } from '@/components/ui/markdown';
+import { Markdown } from '@protolabs/ui/molecules';
 import { Spinner } from '@protolabs/ui/atoms';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@protolabs/ui/atoms';
 import { ChevronDown, CheckCircle, XCircle } from 'lucide-react';

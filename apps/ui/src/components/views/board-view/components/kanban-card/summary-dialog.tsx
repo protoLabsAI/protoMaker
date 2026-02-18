@@ -10,7 +10,7 @@ import {
   DialogTitle,
 } from '@protolabs/ui/atoms';
 import { Button } from '@protolabs/ui/atoms';
-import { Markdown } from '@/components/ui/markdown';
+import { Markdown } from '@protolabs/ui/molecules';
 import { Sparkles } from 'lucide-react';
 
 interface SummaryDialogProps {

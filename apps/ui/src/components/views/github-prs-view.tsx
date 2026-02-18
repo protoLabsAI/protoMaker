@@ -10,7 +10,7 @@ import { Spinner } from '@protolabs/ui/atoms';
 import { getElectronAPI, type GitHubPR } from '@/lib/electron';
 import { useAppStore } from '@/store/app-store';
 import { Button } from '@protolabs/ui/atoms';
-import { Markdown } from '@/components/ui/markdown';
+import { Markdown } from '@protolabs/ui/molecules';
 import { cn } from '@/lib/utils';
 import { useGitHubPRs } from '@/hooks/queries';
 
