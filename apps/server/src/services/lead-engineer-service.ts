@@ -12,7 +12,9 @@
 
 import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
-import { createLogger } from '@automaker/utils';
+import path from 'node:path';
+import { createLogger, atomicWriteJson, readJsonWithRecovery } from '@automaker/utils';
+import { getAutomakerDir } from '@automaker/platform';
 import type {
   EventType,
   Feature,
@@ -41,6 +43,16 @@ const logger = createLogger('LeadEngineerService');
 
 const WORLD_STATE_REFRESH_MS = 5 * 60 * 1000; // 5 minutes
 const MAX_RULE_LOG_ENTRIES = 200;
+
+/**
+ * Persisted session data (subset of LeadEngineerSession)
+ */
+interface PersistedSessionData {
+  projectPath: string;
+  projectSlug: string;
+  maxConcurrency: number;
+  startedAt: string;
+}
 
 export class LeadEngineerService {
   private sessions = new Map<string, LeadEngineerSession>();
@@ -81,8 +93,9 @@ export class LeadEngineerService {
 
   /**
    * Subscribe to events for auto-start and routing.
+   * Restores any active sessions from disk.
    */
-  initialize(): void {
+  async initialize(): Promise<void> {
     // Auto-start when a project is launched
     this.unsubscribe = this.events.subscribe((type: EventType, payload: unknown) => {
       if (type === 'project:lifecycle:launched') {
@@ -98,6 +111,9 @@ export class LeadEngineerService {
       // Route all events to managed sessions
       this.onEvent(type, payload);
     });
+
+    // Restore sessions from disk
+    await this.restoreSessions();
 
     logger.info('LeadEngineerService initialized');
   }
@@ -180,6 +196,9 @@ export class LeadEngineerService {
     }, WORLD_STATE_REFRESH_MS);
     this.refreshIntervals.set(projectPath, interval);
 
+    // Save session to disk
+    await this.saveSession(session);
+
     this.events.emit('lead-engineer:started', { projectPath, projectSlug });
     logger.info(`Lead Engineer started for ${projectSlug}`);
 
@@ -189,7 +208,7 @@ export class LeadEngineerService {
   /**
    * Stop managing a project.
    */
-  stop(projectPath: string): void {
+  async stop(projectPath: string): Promise<void> {
     const session = this.sessions.get(projectPath);
     if (!session) {
       logger.warn(`No session found for ${projectPath}`);
@@ -200,6 +219,9 @@ export class LeadEngineerService {
     session.flowState = 'stopped';
     session.stoppedAt = new Date().toISOString();
     this.sessions.delete(projectPath);
+
+    // Remove session from disk
+    await this.removeSession(projectPath);
 
     this.events.emit('lead-engineer:stopped', {
       projectPath,
@@ -239,6 +261,156 @@ export class LeadEngineerService {
   }
 
   // ────────────────────────── Private ──────────────────────────
+
+  /**
+   * Get the path to the session persistence file.
+   */
+  private getSessionFilePath(projectPath: string): string {
+    const automakerDir = getAutomakerDir(projectPath);
+    return path.join(automakerDir, 'lead-engineer-sessions.json');
+  }
+
+  /**
+   * Save session to disk.
+   */
+  private async saveSession(session: LeadEngineerSession): Promise<void> {
+    try {
+      const filePath = this.getSessionFilePath(session.projectPath);
+
+      const data: PersistedSessionData = {
+        projectPath: session.projectPath,
+        projectSlug: session.projectSlug,
+        maxConcurrency: session.worldState.maxConcurrency,
+        startedAt: session.startedAt,
+      };
+
+      await atomicWriteJson(filePath, data);
+      logger.debug(`Saved session to disk: ${session.projectSlug}`);
+    } catch (err) {
+      logger.error(`Failed to save session for ${session.projectSlug}:`, err);
+    }
+  }
+
+  /**
+   * Remove session from disk.
+   */
+  private async removeSession(projectPath: string): Promise<void> {
+    try {
+      const filePath = this.getSessionFilePath(projectPath);
+      const fs = await import('node:fs/promises');
+      await fs.unlink(filePath);
+      logger.debug(`Removed session from disk: ${projectPath}`);
+    } catch (err) {
+      // Ignore ENOENT errors (file doesn't exist)
+      if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
+        logger.error(`Failed to remove session for ${projectPath}:`, err);
+      }
+    }
+  }
+
+  /**
+   * Restore sessions from disk on server startup.
+   */
+  private async restoreSessions(): Promise<void> {
+    // Get all projects to check
+    const projects = new Set<string>();
+
+    // Scan for session files in all potential project directories
+    // For now, we need to find projects that have session files
+    // We'll iterate through features to find unique project paths
+    try {
+      const allProjects = await this.findProjectsWithSessions();
+
+      for (const projectPath of allProjects) {
+        try {
+          const filePath = this.getSessionFilePath(projectPath);
+          const result = await readJsonWithRecovery<PersistedSessionData | null>(filePath, null);
+
+          if (!result.data) {
+            continue;
+          }
+
+          const data = result.data;
+
+          // Check if project is already completed (race condition check)
+          const isCompleted = await this.isProjectCompleted(data.projectPath);
+          if (isCompleted) {
+            logger.info(
+              `Project ${data.projectSlug} was completed during downtime, not restoring session`
+            );
+            await this.removeSession(data.projectPath);
+            continue;
+          }
+
+          // Restore the session
+          logger.info(`Restoring Lead Engineer session for ${data.projectSlug}`);
+          await this.start(data.projectPath, data.projectSlug, {
+            maxConcurrency: data.maxConcurrency,
+          });
+        } catch (err) {
+          logger.error(`Failed to restore session for ${projectPath}:`, err);
+        }
+      }
+    } catch (err) {
+      logger.error('Failed to restore sessions:', err);
+    }
+  }
+
+  /**
+   * Find all projects that have session files.
+   */
+  private async findProjectsWithSessions(): Promise<string[]> {
+    const projects: string[] = [];
+
+    try {
+      // Get all features to find unique project paths
+      // This is a heuristic - in production, you'd want a better way to enumerate projects
+      const features = await this.featureLoader.getAll(process.cwd());
+      const projectPaths = new Set<string>();
+
+      // For now, we'll just check the current project
+      // In a multi-project setup, you'd scan all projects
+      projectPaths.add(process.cwd());
+
+      // Check each project for a session file
+      for (const projectPath of projectPaths) {
+        try {
+          const filePath = this.getSessionFilePath(projectPath);
+          const fs = await import('node:fs/promises');
+          await fs.access(filePath);
+          projects.push(projectPath);
+        } catch {
+          // No session file for this project
+        }
+      }
+    } catch (err) {
+      logger.warn('Failed to enumerate projects for session restore:', err);
+    }
+
+    return projects;
+  }
+
+  /**
+   * Check if a project is completed (all features done).
+   */
+  private async isProjectCompleted(projectPath: string): Promise<boolean> {
+    try {
+      const features = await this.featureLoader.getAll(projectPath);
+
+      // If there are no features, consider it completed
+      if (features.length === 0) {
+        return true;
+      }
+
+      // Check if all features are done or verified
+      const allCompleted = features.every((f) => f.status === 'done' || f.status === 'verified');
+
+      return allCompleted;
+    } catch {
+      // If we can't determine, assume not completed
+      return false;
+    }
+  }
 
   private stopSession(projectPath: string): void {
     const interval = this.refreshIntervals.get(projectPath);
@@ -843,6 +1015,9 @@ export class LeadEngineerService {
     // Clean up
     this.stopSession(session.projectPath);
     this.sessions.delete(session.projectPath);
+
+    // Remove session from disk
+    await this.removeSession(session.projectPath);
 
     this.events.emit('lead-engineer:stopped', {
       projectPath: session.projectPath,

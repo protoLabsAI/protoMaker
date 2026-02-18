@@ -129,7 +129,7 @@ describe('LeadEngineerService', () => {
 
   describe('session management', () => {
     it('starts a session and emits lead-engineer:started', async () => {
-      service.initialize();
+      await await service.initialize();
       const session = await service.start('/test/project', 'my-project');
 
       expect(session.projectPath).toBe('/test/project');
@@ -142,7 +142,7 @@ describe('LeadEngineerService', () => {
     });
 
     it('returns existing session on duplicate start', async () => {
-      service.initialize();
+      await service.initialize();
       const session1 = await service.start('/test/project', 'my-project');
       const session2 = await service.start('/test/project', 'my-project');
 
@@ -150,9 +150,9 @@ describe('LeadEngineerService', () => {
     });
 
     it('stops a session and emits lead-engineer:stopped', async () => {
-      service.initialize();
+      await service.initialize();
       await service.start('/test/project', 'my-project');
-      service.stop('/test/project');
+      await service.stop('/test/project');
 
       expect(events.emit).toHaveBeenCalledWith('lead-engineer:stopped', {
         projectPath: '/test/project',
@@ -162,18 +162,18 @@ describe('LeadEngineerService', () => {
     });
 
     it('isManaged returns true for managed projects', async () => {
-      service.initialize();
+      await service.initialize();
       expect(service.isManaged('/test/project')).toBe(false);
 
       await service.start('/test/project', 'my-project');
       expect(service.isManaged('/test/project')).toBe(true);
 
-      service.stop('/test/project');
+      await service.stop('/test/project');
       expect(service.isManaged('/test/project')).toBe(false);
     });
 
     it('getManagedProjectPaths returns all managed paths', async () => {
-      service.initialize();
+      await service.initialize();
       await service.start('/test/project-a', 'project-a');
       await service.start('/test/project-b', 'project-b');
 
@@ -183,7 +183,7 @@ describe('LeadEngineerService', () => {
     });
 
     it('getAllSessions returns all active sessions', async () => {
-      service.initialize();
+      await service.initialize();
       await service.start('/test/project-a', 'project-a');
       await service.start('/test/project-b', 'project-b');
 
@@ -195,7 +195,7 @@ describe('LeadEngineerService', () => {
 
   describe('auto-start', () => {
     it('auto-starts when project:lifecycle:launched fires', async () => {
-      service.initialize();
+      await service.initialize();
 
       // Simulate lifecycle launched event
       events._fire('project:lifecycle:launched' as EventType, {
@@ -214,7 +214,7 @@ describe('LeadEngineerService', () => {
 
   describe('event routing', () => {
     it('ignores events for unmanaged projects', async () => {
-      service.initialize();
+      await service.initialize();
       await service.start('/test/project', 'my-project');
 
       // Fire event for a different project
@@ -242,7 +242,7 @@ describe('LeadEngineerService', () => {
         metricsService as any,
         '/test/repo'
       );
-      service.initialize();
+      await service.initialize();
       await service.start('/test/project', 'my-project');
 
       // Feature event without projectPath but with featureId
@@ -270,7 +270,7 @@ describe('LeadEngineerService', () => {
         metricsService as any,
         '/test/repo'
       );
-      service.initialize();
+      await service.initialize();
       await service.start('/test/project', 'my-project');
 
       events._fire('feature:status-changed' as EventType, {
@@ -285,7 +285,7 @@ describe('LeadEngineerService', () => {
     });
 
     it('updates autoModeRunning on auto-mode events', async () => {
-      service.initialize();
+      await service.initialize();
       await service.start('/test/project', 'my-project');
 
       events._fire('auto-mode:started' as EventType, { projectPath: '/test/project' });
@@ -300,15 +300,15 @@ describe('LeadEngineerService', () => {
 
   describe('flow state transitions', () => {
     it('starts in running state', async () => {
-      service.initialize();
+      await service.initialize();
       const session = await service.start('/test/project', 'my-project');
       expect(session.flowState).toBe('running');
     });
 
     it('transitions to stopped on stop()', async () => {
-      service.initialize();
+      await service.initialize();
       await service.start('/test/project', 'my-project');
-      service.stop('/test/project');
+      await service.stop('/test/project');
 
       // Session is removed after stop, but stopped event was emitted
       expect(events.emit).toHaveBeenCalledWith('lead-engineer:stopped', expect.any(Object));
@@ -334,7 +334,7 @@ describe('LeadEngineerService', () => {
         metricsService as any,
         '/test/repo'
       );
-      service.initialize();
+      await service.initialize();
       await service.start('/test/project', 'my-project');
 
       expect(projectLifecycleService.launch).toHaveBeenCalledWith(
@@ -346,7 +346,7 @@ describe('LeadEngineerService', () => {
 
     it('does not launch auto-mode when auto-mode is already running', async () => {
       autoModeService.getActiveAutoLoopProjects.mockReturnValue(['/test/project']);
-      service.initialize();
+      await service.initialize();
       await service.start('/test/project', 'my-project');
 
       expect(projectLifecycleService.launch).not.toHaveBeenCalled();
@@ -357,7 +357,7 @@ describe('LeadEngineerService', () => {
 
   describe('cleanup', () => {
     it('destroy clears all sessions and subscriptions', async () => {
-      service.initialize();
+      await service.initialize();
       await service.start('/test/project', 'my-project');
       expect(service.getAllSessions()).toHaveLength(1);
 

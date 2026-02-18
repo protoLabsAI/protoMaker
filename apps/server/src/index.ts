@@ -553,7 +553,7 @@ const leadEngineerService = new LeadEngineerService(
   settingsService,
   metricsService
 );
-leadEngineerService.initialize();
+await leadEngineerService.initialize();
 
 const projmAgent = new ProjMAuthorityAgent(events, authorityService, featureLoader, projectService);
 const emAgent = new EMAuthorityAgent(
