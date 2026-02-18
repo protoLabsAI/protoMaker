@@ -10,7 +10,6 @@
  */
 
 import { create } from 'zustand';
-import { createLogger } from '@automaker/utils/logger';
 import { getElectronAPI } from '@/lib/electron';
 import type {
   ModelAlias,
@@ -34,7 +33,6 @@ import {
   DEFAULT_OPENCODE_MODEL,
 } from '@automaker/types';
 
-const logger = createLogger('AiModelsStore');
 const OPENCODE_BEDROCK_PROVIDER_ID = 'amazon-bedrock';
 const OPENCODE_BEDROCK_MODEL_PREFIX = `${OPENCODE_BEDROCK_PROVIDER_ID}/`;
 

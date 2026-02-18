@@ -103,12 +103,6 @@ export function ContextView() {
   // File input ref for import
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Get images directory path
-  const getImagesPath = useCallback(() => {
-    if (!currentProject) return null;
-    return `${currentProject.path}/.automaker/images`;
-  }, [currentProject]);
-
   // Keyboard shortcuts for this view
   const contextShortcuts: KeyboardShortcut[] = useMemo(
     () => [

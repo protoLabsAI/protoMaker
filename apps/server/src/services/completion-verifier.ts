@@ -156,12 +156,13 @@ export class CompletionVerifierService {
         case 'custom_script':
           return await this.checkCustomScript(criterion, workDir, env, startTime);
 
-        default:
+        default: {
           // Type exhaustiveness check
           const exhaustiveCheck: never = criterion;
           throw new Error(
             `Unknown criterion type: ${(exhaustiveCheck as CompletionCriterion).type}`
           );
+        }
       }
     } catch (error) {
       const duration = Date.now() - startTime;

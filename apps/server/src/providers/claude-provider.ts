@@ -34,7 +34,7 @@ import type {
 
 // Explicit allowlist of environment variables to pass to the SDK.
 // Only these vars are passed - nothing else from process.env leaks through.
-const ALLOWED_ENV_VARS = [
+const _ALLOWED_ENV_VARS = [
   // Authentication
   'ANTHROPIC_API_KEY',
   'ANTHROPIC_AUTH_TOKEN',

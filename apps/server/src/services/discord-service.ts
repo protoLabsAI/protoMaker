@@ -371,7 +371,7 @@ export class DiscordService {
   async editMessage(
     channelId: string,
     messageId: string,
-    newContent: string
+    _newContent: string
   ): Promise<DiscordOperationResult<DiscordMessage>> {
     try {
       logger.info(`Editing message ${messageId} in channel ${channelId}`);
@@ -455,7 +455,7 @@ export class DiscordService {
    * Send a message via webhook
    */
   async sendWebhookMessage(
-    options: SendWebhookMessageOptions
+    _options: SendWebhookMessageOptions
   ): Promise<DiscordOperationResult<void>> {
     try {
       logger.info('Sending webhook message');
@@ -546,7 +546,7 @@ export class DiscordService {
    */
   async sendPrivateMessage(
     userId: string,
-    message: string
+    _message: string
   ): Promise<DiscordOperationResult<DiscordMessage>> {
     try {
       logger.info(`Sending private message to user: ${userId}`);
@@ -569,7 +569,7 @@ export class DiscordService {
    */
   async readPrivateMessages(
     userId: string,
-    count?: number
+    _count?: number
   ): Promise<DiscordOperationResult<DiscordMessage[]>> {
     try {
       logger.info(`Reading private messages with user: ${userId}`);
@@ -641,7 +641,7 @@ export class DiscordService {
   /**
    * Validate channel structure against expected organization
    */
-  async validateStructure(expectedCategories: string[]): Promise<{
+  async validateStructure(_expectedCategories: string[]): Promise<{
     valid: boolean;
     missingCategories: string[];
     unexpectedCategories: string[];

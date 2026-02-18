@@ -1,13 +1,12 @@
-// @ts-nocheck
+// @ts-nocheck -- model alias union types need refactoring for strict checks
 import { Label } from '@protolabs/ui/atoms';
 import { Badge } from '@protolabs/ui/atoms';
 import { Brain, AlertTriangle } from 'lucide-react';
 import { AnthropicIcon, CursorIcon, OpenAIIcon } from '@/components/shared/provider-icon';
 import { cn } from '@/lib/utils';
-import type { ModelAlias } from '@/store/app-store';
 import { useAppStore } from '@/store/app-store';
 import { useSetupStore } from '@/store/setup-store';
-import { getModelProvider, PROVIDER_PREFIXES, stripProviderPrefix } from '@automaker/types';
+import { getModelProvider } from '@automaker/types';
 import type { ModelProvider } from '@automaker/types';
 import { CLAUDE_MODELS, CURSOR_MODELS, ModelOption } from './model-constants';
 import { useEffect } from 'react';

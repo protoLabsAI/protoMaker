@@ -14,7 +14,6 @@ import type {
   HeadsdownConfig,
   HeadsdownState,
   WorkItem,
-  IdleTaskType,
   DesiredStateCondition,
   StateOperator,
 } from '@automaker/types';
@@ -824,7 +823,7 @@ export class HeadsdownService {
   /**
    * Build prompt for work item based on type
    */
-  private buildPromptForWorkItem(workItem: WorkItem, agent: AgentInstance): string {
+  private buildPromptForWorkItem(workItem: WorkItem, _agent: AgentInstance): string {
     switch (workItem.type) {
       case 'discord_message':
         return `Respond to Discord message:\n\n${workItem.metadata?.content || workItem.description}`;

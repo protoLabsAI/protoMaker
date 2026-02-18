@@ -340,7 +340,7 @@ ${this.generateCategoryGuidance(category, successRate, strategies)}
   private generateCategoryGuidance(
     category: FailureCategory,
     successRate: number,
-    strategies: string[]
+    _strategies: string[]
   ): string {
     const guidance: Record<string, string> = {
       test_failure:
@@ -384,7 +384,7 @@ ${this.generateCategoryGuidance(category, successRate, strategies)}
   /**
    * Categorize a failure based on error information
    */
-  private categorizeFailure(errorInfo: ErrorInfo, error: unknown): FailureCategory {
+  private categorizeFailure(errorInfo: ErrorInfo, _error: unknown): FailureCategory {
     const message = errorInfo.message.toLowerCase();
 
     // Check specific error types first
@@ -653,9 +653,9 @@ ${this.generateCategoryGuidance(category, successRate, strategies)}
   private extractTestOutput(agentOutput: string): string | null {
     // Look for common test output patterns
     const patterns = [
-      /FAIL\s+.+\n[\s\S]*?(?=\n\n|\Z)/g,
-      /✗\s+.+\n[\s\S]*?(?=\n\n|\Z)/g,
-      /Error:\s+.+\n[\s\S]*?(?=\n\n|\Z)/g,
+      /FAIL\s+.+\n[\s\S]*?(?=\n\n|$)/g,
+      /✗\s+.+\n[\s\S]*?(?=\n\n|$)/g,
+      /Error:\s+.+\n[\s\S]*?(?=\n\n|$)/g,
     ];
 
     for (const pattern of patterns) {

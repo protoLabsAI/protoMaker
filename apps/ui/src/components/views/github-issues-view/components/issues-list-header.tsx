@@ -1,7 +1,6 @@
 import { CircleDot, RefreshCw } from 'lucide-react';
 import { Button } from '@protolabs/ui/atoms';
 import { Spinner } from '@protolabs/ui/atoms';
-import { cn } from '@/lib/utils';
 import type { IssuesStateFilter } from '../types';
 import { IssuesFilterControls } from './issues-filter-controls';
 

@@ -178,7 +178,7 @@ export class ReconciliationService {
   /**
    * Project milestone is 'stub' but has no child features yet
    */
-  private async reconcileMilestoneNotPlanned(drift: Drift): Promise<string> {
+  private async reconcileMilestoneNotPlanned(_drift: Drift): Promise<string> {
     // TODO: Trigger ProjM to plan the milestone
     logger.info('TODO: Trigger ProjM to plan milestone');
     return 'milestone-planning-triggered';

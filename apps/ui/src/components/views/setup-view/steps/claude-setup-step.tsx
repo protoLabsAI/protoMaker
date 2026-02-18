@@ -33,11 +33,6 @@ interface ClaudeSetupStepProps {
   onSkip: () => void;
 }
 
-interface ClaudeSetupContentProps {
-  /** Hide header and navigation for embedded use */
-  embedded?: boolean;
-}
-
 type VerificationStatus = 'idle' | 'verifying' | 'verified' | 'error';
 
 // Claude Setup Step
@@ -266,12 +261,6 @@ export function ClaudeSetupStep({ onNext, onBack, onSkip }: ClaudeSetupStepProps
   const isCliVerified = cliVerificationStatus === 'verified';
   const isApiKeyVerified = apiKeyVerificationStatus === 'verified';
   const isReady = isCliVerified || isApiKeyVerified;
-
-  const getAuthMethodLabel = () => {
-    if (isApiKeyVerified) return 'API Key';
-    if (isCliVerified) return 'Claude CLI';
-    return null;
-  };
 
   // Helper to get status badge for CLI
   const getCliStatusBadge = () => {

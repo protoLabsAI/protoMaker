@@ -3,11 +3,8 @@
  * Provides analytics for project performance, cost tracking, and capacity planning
  */
 
-import { createLogger } from '@automaker/utils';
-import type { Feature, ExecutionRecord } from '@automaker/types';
+import type { Feature } from '@automaker/types';
 import { FeatureLoader } from './feature-loader.js';
-
-const logger = createLogger('MetricsService');
 
 /**
  * Normalize model identifiers to canonical short names (sonnet, opus, haiku).

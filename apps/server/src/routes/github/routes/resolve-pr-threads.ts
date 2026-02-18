@@ -20,14 +20,6 @@ interface ResolvePRThreadsRequest {
   minSeverity?: 'low' | 'medium' | 'high';
 }
 
-interface ResolvePRThreadsResponse {
-  success: boolean;
-  featureId?: string;
-  resolvedCount?: number;
-  skippedCount?: number;
-  error?: string;
-}
-
 const SEVERITY_LEVELS: Record<string, number> = {
   low: 1,
   medium: 2,

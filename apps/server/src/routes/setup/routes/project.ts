@@ -49,7 +49,7 @@ export function createSetupProjectHandler(
       let stats;
       try {
         stats = await fs.stat(absolutePath);
-      } catch (error) {
+      } catch (_error) {
         res.status(400).json({
           success: false,
           filesCreated: [],

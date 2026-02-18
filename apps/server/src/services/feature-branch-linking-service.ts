@@ -9,7 +9,6 @@ import path from 'path';
 import { createLogger, atomicWriteJson, readJsonWithRecovery } from '@automaker/utils';
 import { getAutomakerDir } from '@automaker/platform';
 import type { Feature, FeatureBranchLink, FeatureCodeRabbitFeedback } from '@automaker/types';
-import * as secureFs from '../lib/secure-fs.js';
 
 const logger = createLogger('FeatureBranchLinking');
 

@@ -34,7 +34,7 @@ export function createGenerateTitleHandler(
 ): (req: Request, res: Response) => Promise<void> {
   return async (req: Request, res: Response): Promise<void> => {
     try {
-      const { description, projectPath } = req.body as GenerateTitleRequestBody;
+      const { description, projectPath: _projectPath } = req.body as GenerateTitleRequestBody;
 
       if (!description || typeof description !== 'string') {
         const response: GenerateTitleErrorResponse = {

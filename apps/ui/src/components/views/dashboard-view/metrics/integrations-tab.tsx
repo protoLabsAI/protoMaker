@@ -17,8 +17,6 @@ import {
   XCircle,
   Hash,
   GitPullRequest,
-  GitMerge,
-  CheckCheck,
   Bot,
   Clock,
   Activity,

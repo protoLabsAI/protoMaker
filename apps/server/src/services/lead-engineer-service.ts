@@ -26,7 +26,6 @@ import type {
   LeadMilestoneSnapshot,
   LeadRuleAction,
   LeadEngineerSession,
-  LeadEngineerFlowState,
   LeadRuleLogEntry,
   ExecuteOptions,
   AgentRole,
@@ -153,7 +152,7 @@ class IntakeProcessor implements StateProcessor {
     };
   }
 
-  async exit(ctx: StateContext): Promise<void> {
+  async exit(_ctx: StateContext): Promise<void> {
     logger.info('[INTAKE] Completed intake processing');
   }
 
@@ -241,12 +240,12 @@ class PlanProcessor implements StateProcessor {
     };
   }
 
-  async exit(ctx: StateContext): Promise<void> {
+  async exit(_ctx: StateContext): Promise<void> {
     logger.info('[PLAN] Planning phase completed');
   }
 
   private async antagonisticGate(
-    ctx: StateContext
+    _ctx: StateContext
   ): Promise<{ approved: boolean; shouldRetry: boolean; reason?: string }> {
     // Stub implementation - always approve
     return { approved: true, shouldRetry: false };
@@ -314,7 +313,7 @@ class ExecuteProcessor implements StateProcessor {
     };
   }
 
-  async exit(ctx: StateContext): Promise<void> {
+  async exit(_ctx: StateContext): Promise<void> {
     logger.info('[EXECUTE] Execution phase completed');
   }
 }
@@ -366,7 +365,7 @@ class ReviewProcessor implements StateProcessor {
     };
   }
 
-  async exit(ctx: StateContext): Promise<void> {
+  async exit(_ctx: StateContext): Promise<void> {
     logger.info('[REVIEW] Review phase completed');
   }
 }
@@ -381,7 +380,7 @@ class MergeProcessor implements StateProcessor {
     });
   }
 
-  async process(ctx: StateContext): Promise<StateTransitionResult> {
+  async process(_ctx: StateContext): Promise<StateTransitionResult> {
     logger.info('[MERGE] Merging PR (stub - implementation pending)');
 
     return {
@@ -391,7 +390,7 @@ class MergeProcessor implements StateProcessor {
     };
   }
 
-  async exit(ctx: StateContext): Promise<void> {
+  async exit(_ctx: StateContext): Promise<void> {
     logger.info('[MERGE] Merge completed');
   }
 }
@@ -404,7 +403,7 @@ class DeployProcessor implements StateProcessor {
     logger.info(`[DEPLOY] Deployment verification for feature: ${ctx.feature.id}`);
   }
 
-  async process(ctx: StateContext): Promise<StateTransitionResult> {
+  async process(_ctx: StateContext): Promise<StateTransitionResult> {
     logger.info('[DEPLOY] Verifying deployment (stub - implementation pending)');
 
     return {
@@ -414,7 +413,7 @@ class DeployProcessor implements StateProcessor {
     };
   }
 
-  async exit(ctx: StateContext): Promise<void> {
+  async exit(_ctx: StateContext): Promise<void> {
     logger.info('[DEPLOY] Deployment verification completed');
   }
 }
@@ -441,7 +440,7 @@ class EscalateProcessor implements StateProcessor {
     };
   }
 
-  async exit(ctx: StateContext): Promise<void> {
+  async exit(_ctx: StateContext): Promise<void> {
     logger.info('[ESCALATE] Escalation completed');
   }
 }
@@ -884,9 +883,6 @@ export class LeadEngineerService {
    * Restore sessions from disk on server startup.
    */
   private async restoreSessions(): Promise<void> {
-    // Get all projects to check
-    const projects = new Set<string>();
-
     // Scan for session files in all potential project directories
     // For now, we need to find projects that have session files
     // We'll iterate through features to find unique project paths
@@ -937,7 +933,7 @@ export class LeadEngineerService {
     try {
       // Get all features to find unique project paths
       // This is a heuristic - in production, you'd want a better way to enumerate projects
-      const features = await this.featureLoader.getAll(process.cwd());
+      const _features = await this.featureLoader.getAll(process.cwd());
       const projectPaths = new Set<string>();
 
       // For now, we'll just check the current project

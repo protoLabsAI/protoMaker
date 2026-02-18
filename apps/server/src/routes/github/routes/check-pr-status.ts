@@ -16,16 +16,6 @@ interface CheckPRStatusRequest {
   prNumber: number;
 }
 
-interface CheckPRStatusResponse {
-  success: boolean;
-  allChecksPassed?: boolean;
-  passedCount?: number;
-  failedCount?: number;
-  pendingCount?: number;
-  failedChecks?: string[];
-  error?: string;
-}
-
 export function createCheckPRStatusHandler() {
   return async (req: Request, res: Response): Promise<void> => {
     try {

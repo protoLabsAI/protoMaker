@@ -9,7 +9,6 @@
  */
 
 import { createLogger } from '@automaker/utils';
-import type { Feature } from '@automaker/types';
 import type { FeatureLoader } from './feature-loader.js';
 import type { LedgerService } from './ledger-service.js';
 import type { SettingsService } from './settings-service.js';

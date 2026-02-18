@@ -139,7 +139,7 @@ export function WorktreeActionsDropdown({
     : null;
 
   // Get available terminals for the "Open In Terminal" submenu
-  const { terminals, hasExternalTerminals } = useAvailableTerminals();
+  const { terminals } = useAvailableTerminals();
 
   // Use shared hook for effective default terminal (null = integrated terminal)
   const effectiveDefaultTerminal = useEffectiveDefaultTerminal(terminals);

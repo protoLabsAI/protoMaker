@@ -323,12 +323,12 @@ export class EventHookService {
     if (!trigger) return;
 
     // Load feature name if we have featureId but no featureName
-    let featureName: string | undefined = undefined;
+    let _featureName: string | undefined = undefined;
     if (payload.featureId && payload.projectPath && this.featureLoader) {
       try {
         const feature = await this.featureLoader.get(payload.projectPath, payload.featureId);
         if (feature?.title) {
-          featureName = feature.title;
+          _featureName = feature.title;
         }
       } catch (error) {
         logger.warn(`Failed to load feature ${payload.featureId} for event hook:`, error);

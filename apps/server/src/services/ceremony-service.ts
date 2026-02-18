@@ -495,7 +495,13 @@ Keep it concise, actionable, and focused on what makes this milestone interestin
    * Generate a retrospective using LLM based on all project features and post to Discord
    */
   private async handleProjectCompleted(payload: ProjectCompletedPayload): Promise<void> {
-    const { projectPath, projectTitle, projectSlug, totalMilestones, totalFeatures } = payload;
+    const {
+      projectPath,
+      projectTitle,
+      projectSlug: _projectSlug,
+      totalMilestones,
+      totalFeatures,
+    } = payload;
 
     // Check if ceremonies are enabled
     const ceremonySettings = await this.getCeremonySettings(projectPath);
@@ -849,7 +855,7 @@ ${dataSummary}`;
     // Calculate metrics
     const totalCost = childFeatures.reduce((sum, f) => sum + (f.costUsd || 0), 0);
     const featureCount = childFeatures.length;
-    const prLinks = childFeatures.filter((f) => f.prUrl && f.prNumber).map((f) => f.prUrl);
+    const _prLinks = childFeatures.filter((f) => f.prUrl && f.prNumber).map((f) => f.prUrl);
 
     // Calculate duration from earliest start to now
     let duration = '';

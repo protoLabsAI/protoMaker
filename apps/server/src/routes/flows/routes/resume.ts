@@ -11,7 +11,7 @@ export interface ResumeRequest {
   hitlFeedback: string;
 }
 
-export function createResumeHandler(reviewService: AntagonisticReviewService) {
+export function createResumeHandler(_reviewService: AntagonisticReviewService) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
       const { threadId, hitlFeedback } = req.body as ResumeRequest;

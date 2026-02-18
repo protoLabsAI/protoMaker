@@ -954,7 +954,7 @@ export class LinearSyncService {
       throw new Error('SettingsService not initialized');
     }
 
-    const settings = await this.settingsService.getProjectSettings(projectPath);
+    const _settings = await this.settingsService.getProjectSettings(projectPath);
     const linearAccessToken = await this.resolveLinearToken(projectPath);
 
     // Format the description with enhanced formatting
@@ -1231,7 +1231,7 @@ export class LinearSyncService {
       throw new Error('SettingsService not initialized');
     }
 
-    const settings = await this.settingsService.getProjectSettings(projectPath);
+    const _settings = await this.settingsService.getProjectSettings(projectPath);
     const linearAccessToken = await this.resolveLinearToken(projectPath);
 
     // GraphQL query to get issue state
@@ -1397,7 +1397,7 @@ export class LinearSyncService {
       throw new Error('SettingsService not initialized');
     }
 
-    const settings = await this.settingsService.getProjectSettings(projectPath);
+    const _settings = await this.settingsService.getProjectSettings(projectPath);
     const linearAccessToken = await this.resolveLinearToken(projectPath);
 
     // GraphQL query to fetch workflow states
@@ -1491,7 +1491,7 @@ export class LinearSyncService {
       return {};
     }
 
-    const settings = await this.settingsService.getProjectSettings(projectPath);
+    const _settings = await this.settingsService.getProjectSettings(projectPath);
     let linearAccessToken: string;
     try {
       linearAccessToken = await this.resolveLinearToken(projectPath);
@@ -1640,7 +1640,7 @@ export class LinearSyncService {
       return {};
     }
 
-    const settings = await this.settingsService.getProjectSettings(projectPath);
+    const _settings = await this.settingsService.getProjectSettings(projectPath);
     let linearAccessToken: string;
     try {
       linearAccessToken = await this.resolveLinearToken(projectPath);
@@ -1870,7 +1870,7 @@ export class LinearSyncService {
       throw new Error('SettingsService not initialized');
     }
 
-    const settings = await this.settingsService.getProjectSettings(projectPath);
+    const _settings = await this.settingsService.getProjectSettings(projectPath);
     const linearAccessToken = await this.resolveLinearToken(projectPath);
 
     // GraphQL mutation to add comment
@@ -2468,7 +2468,7 @@ export class LinearSyncService {
               if (feature && (feature.status === 'done' || feature.status === 'verified')) {
                 completedPhases++;
               }
-            } catch (error) {
+            } catch (_error) {
               logger.debug(`Failed to get feature ${phase.featureId} for progress calculation`);
             }
           }

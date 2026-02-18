@@ -7,7 +7,6 @@ import type { Project, Milestone, Phase } from '@automaker/types';
 import {
   getProjectJsonPath,
   getProjectFilePath,
-  getMilestonesDir,
   getMilestoneFilePath,
   getMilestoneDir,
   listMilestones,

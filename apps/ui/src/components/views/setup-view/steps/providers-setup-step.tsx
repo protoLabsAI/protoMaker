@@ -222,8 +222,6 @@ function ClaudeContent() {
     claudeAuthStatus?.method === 'api_key_env';
 
   const isCliAuthenticated = claudeAuthStatus?.method === 'cli_authenticated';
-  const isApiKeyAuthenticated =
-    claudeAuthStatus?.method === 'api_key' || claudeAuthStatus?.method === 'api_key_env';
   const isReady = claudeCliStatus?.installed && claudeAuthStatus?.authenticated;
 
   return (
@@ -792,7 +790,6 @@ function CodexContent() {
   };
 
   const isReady = codexCliStatus?.installed && codexAuthStatus?.authenticated;
-  const hasApiKey = !!apiKeys.openai || codexAuthStatus?.method === 'api_key';
 
   return (
     <Card className="bg-card border-border">

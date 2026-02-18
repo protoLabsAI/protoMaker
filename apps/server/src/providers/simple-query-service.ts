@@ -16,8 +16,6 @@
 
 import { ProviderFactory } from './provider-factory.js';
 import type {
-  ProviderMessage,
-  ContentBlock,
   ThinkingLevel,
   ReasoningEffort,
   ClaudeApiProfile,

@@ -1,5 +1,3 @@
-import { useState } from 'react';
-import { createLogger } from '@automaker/utils/logger';
 import {
   Dialog,
   DialogContent,
@@ -18,14 +16,7 @@ import {
 } from '@/components/views/board-view/components/description-image-dropzone';
 import { MessageSquare } from 'lucide-react';
 import { Feature } from '@/store/app-store';
-import {
-  EnhanceWithAI,
-  EnhancementHistoryButton,
-  type EnhancementMode,
-  type BaseHistoryEntry,
-} from '../shared';
-
-const logger = createLogger('FollowUpDialog');
+import { EnhanceWithAI, EnhancementHistoryButton, type BaseHistoryEntry } from '../shared';
 
 /**
  * A single entry in the follow-up prompt history

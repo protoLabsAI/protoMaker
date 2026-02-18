@@ -96,7 +96,7 @@ export class AgentDiscordRouter {
    * Checks registry by name, then by role, then hardcoded prompts.
    * Throws if no prompt can be resolved — never returns a generic fallback.
    */
-  private getRolePrompt(agentName: string, username: string): string {
+  private getRolePrompt(agentName: string, _username: string): string {
     const projectPath = process.cwd();
 
     // Try registry first — resolve by name or role

@@ -3,7 +3,7 @@ import { ChevronDown, ChevronRight, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@protolabs/ui/atoms';
 import type { Project } from '@/lib/electron';
-import type { NavigationItem, NavigationGroup } from '../config/navigation';
+import type { NavigationItem } from '../config/navigation';
 import { GLOBAL_NAV_GROUPS } from '../config/navigation';
 import type { SettingsViewId } from '../hooks/use-settings-view';
 import { useAppStore } from '@/store/app-store';
@@ -187,7 +187,7 @@ function NavItemWithSubItems({
 
 export function SettingsNavigation({
   activeSection,
-  currentProject,
+  currentProject: _currentProject,
   onNavigate,
   isOpen = true,
   onClose,

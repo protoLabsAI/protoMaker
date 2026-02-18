@@ -12,7 +12,7 @@
  */
 
 import { createLogger } from '@automaker/utils';
-import { getFeaturesDir, ensureAutomakerDir } from '@automaker/platform';
+import { getFeaturesDir } from '@automaker/platform';
 import * as secureFs from '../lib/secure-fs.js';
 import path from 'path';
 import type { EventEmitter } from '../lib/events.js';

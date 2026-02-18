@@ -9,7 +9,6 @@ import {
   generateToken,
   addToken,
   getTokenExpiryMs,
-  getErrorMessage,
 } from '../common.js';
 
 export function createAuthHandler() {

@@ -28,7 +28,6 @@ import {
   updateTechnologyStack,
   updateRoadmapPhaseStatus,
   type ImplementedFeature,
-  type RoadmapPhase,
 } from '../../lib/xml-extractor.js';
 import { getNotificationService } from '../../services/notification-service.js';
 

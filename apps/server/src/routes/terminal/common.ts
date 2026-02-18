@@ -5,7 +5,6 @@
 import { randomBytes } from 'crypto';
 import { createLogger } from '@automaker/utils';
 import type { Request, Response, NextFunction } from 'express';
-import { getTerminalService } from '../../services/terminal-service.js';
 
 const logger = createLogger('Terminal');
 

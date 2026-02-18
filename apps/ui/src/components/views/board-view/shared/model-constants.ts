@@ -1,4 +1,3 @@
-import type { ModelAlias } from '@/store/app-store';
 import type { ModelProvider, ThinkingLevel, ReasoningEffort } from '@automaker/types';
 import {
   CURSOR_MODEL_MAP,

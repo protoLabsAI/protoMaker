@@ -277,7 +277,7 @@ export class ChangelogService {
     projectTitle: string,
     scope: string,
     features: Feature[],
-    type: 'milestone' | 'project'
+    _type: 'milestone' | 'project'
   ): string {
     const lines: string[] = [];
     const timestamp = new Date().toISOString().split('T')[0]; // YYYY-MM-DD

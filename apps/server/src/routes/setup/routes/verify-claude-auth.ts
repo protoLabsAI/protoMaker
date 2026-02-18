@@ -150,7 +150,7 @@ export function createVerifyClaudeAuthHandler() {
         AuthSessionManager.createSession(sessionId, authMethod || 'api_key', apiKey, 'anthropic');
 
         // Create temporary environment override for SDK call
-        const cleanupEnv = createTempEnvOverride(authEnv);
+        const _cleanupEnv = createTempEnvOverride(authEnv);
 
         // Run a minimal query to verify authentication
         const stream = query({

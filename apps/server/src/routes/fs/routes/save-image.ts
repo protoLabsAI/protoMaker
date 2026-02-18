@@ -11,7 +11,12 @@ import { getImagesDir } from '@automaker/platform';
 export function createSaveImageHandler() {
   return async (req: Request, res: Response): Promise<void> => {
     try {
-      const { data, filename, mimeType, projectPath } = req.body as {
+      const {
+        data,
+        filename,
+        mimeType: _mimeType,
+        projectPath,
+      } = req.body as {
         data: string;
         filename: string;
         mimeType: string;

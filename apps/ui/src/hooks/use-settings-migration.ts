@@ -56,14 +56,6 @@ interface MigrationState {
 /**
  * localStorage keys that may contain settings to migrate
  */
-const LOCALSTORAGE_KEYS = [
-  'automaker-storage',
-  'automaker-setup',
-  'worktree-panel-collapsed',
-  'file-browser-recent-folders',
-  'automaker:lastProjectDir',
-] as const;
-
 // NOTE: We intentionally do NOT clear any localStorage keys after migration.
 // This allows users to switch back to older versions of Automaker that relied on localStorage.
 // The `localStorageMigrated` flag in server settings prevents re-migration on subsequent app loads.
@@ -136,7 +128,7 @@ export function parseLocalStorageSettings(): Partial<GlobalSettings> | null {
         const cacheProjectCount = cached?.projects?.length ?? 0;
         logger.info(`[CACHE_LOADED] projects=${cacheProjectCount}, theme=${cached?.theme}`);
         return cached;
-      } catch (e) {
+      } catch (_e) {
         logger.warn('Failed to parse settings cache, falling back to old storage');
       }
     } else {

@@ -29,7 +29,6 @@ import {
   migratePhaseModelEntry,
   type GlobalSettings,
   type CursorModelId,
-  type OpencodeModelId,
 } from '@automaker/types';
 
 const logger = createLogger('SettingsSync');

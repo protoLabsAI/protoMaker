@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Plus, Bug, FolderOpen, BookOpen } from 'lucide-react';
-import { useNavigate, useLocation } from '@tanstack/react-router';
+import { useNavigate } from '@tanstack/react-router';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store/app-store';
 import { useOSDetection } from '@/hooks/use-os-detection';
@@ -34,7 +34,6 @@ function getOSAbbreviation(os: string): string {
 
 export function ProjectSwitcher() {
   const navigate = useNavigate();
-  const location = useLocation();
   const { hideWiki } = SIDEBAR_FEATURE_FLAGS;
   const {
     projects,
@@ -62,7 +61,6 @@ export function ProjectSwitcher() {
   const isCreatingSpec = specCreatingForProject !== null;
 
   // Version info
-  // eslint-disable-next-line no-undef
   const appVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.0.0';
   const { os } = useOSDetection();
   const appMode = import.meta.env.VITE_APP_MODE || '?';

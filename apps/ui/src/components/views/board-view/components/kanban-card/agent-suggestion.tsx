@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck -- Feature index signature causes property access type errors
 import { memo, useState, useCallback } from 'react';
 import { Bot, ChevronDown, ChevronUp, Check, RefreshCw } from 'lucide-react';
 import { Feature, useAppStore } from '@/store/app-store';
@@ -66,11 +66,6 @@ export const AgentSuggestion = memo(function AgentSuggestion({
     },
     [projectPath, feature.id, refreshFeatures]
   );
-
-  const handleAccept = useCallback(async () => {
-    // Role is already assigned, just collapse
-    setExpanded(false);
-  }, []);
 
   return (
     <div className="mb-2">

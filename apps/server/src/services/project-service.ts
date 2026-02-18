@@ -12,7 +12,6 @@ import type {
   UpdateProjectInput,
   CreateFeaturesFromProjectOptions,
   CreateFeaturesResult,
-  Feature,
 } from '@automaker/types';
 import {
   createLogger,

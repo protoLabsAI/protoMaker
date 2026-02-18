@@ -14,7 +14,7 @@
  */
 
 import { createLogger } from '@automaker/utils';
-import { isRetryableError, ErrorType, classifyError } from '../lib/error-handler.js';
+import { classifyError } from '../lib/error-handler.js';
 import type { EventEmitter } from '../lib/events.js';
 import type { Feature } from '@automaker/types';
 import { FeatureLoader } from './feature-loader.js';

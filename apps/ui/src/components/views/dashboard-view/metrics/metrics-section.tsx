@@ -32,7 +32,7 @@ export function MetricsSection({ projectPath }: MetricsSectionProps) {
 
   // Invalidate queries on relevant WebSocket events
   const handleEvent = useCallback(
-    (type: EventType, payload: any) => {
+    (type: EventType, _payload: any) => {
       // Invalidate on feature completion
       if (type === 'feature:completed') {
         queryClient.invalidateQueries({ queryKey: queryKeys.metrics.ledgerAggregate(projectPath) });

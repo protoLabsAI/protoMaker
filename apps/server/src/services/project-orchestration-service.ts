@@ -8,12 +8,12 @@
  * - Emits progress events for UI updates
  */
 
-import type { Feature, FeatureFactoryResult, Project, Milestone, Phase } from '@automaker/types';
+import type { Feature, FeatureFactoryResult, Project } from '@automaker/types';
 import { getProjectJsonPath } from '@automaker/platform';
 import { secureFs } from '@automaker/platform';
 import { phaseToFeatureDescription, slugify } from '@automaker/utils';
 import { FeatureLoader } from './feature-loader.js';
-import { createEventEmitter, type EventEmitter } from '../lib/events.js';
+import type { EventEmitter } from '../lib/events.js';
 import { getErrorMessage } from '../routes/projects/common.js';
 
 // Epic colors for visual distinction

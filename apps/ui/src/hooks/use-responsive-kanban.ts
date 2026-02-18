@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck -- store type narrowing issues pending refactor
 import { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
 import { useAppStore } from '@/store/app-store';
 

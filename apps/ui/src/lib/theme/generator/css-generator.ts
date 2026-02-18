@@ -9,15 +9,6 @@ import type { AutomakerThemeConfig } from '../config/theme-config';
 import { parseOklch, oklchString } from '../config/color-scales';
 
 /**
- * Derive an OKLCH color with adjusted lightness and optional alpha.
- */
-function adjustLightness(baseColor: string, targetLightness: number, alpha?: number): string {
-  const parsed = parseOklch(baseColor);
-  if (!parsed) return baseColor;
-  return oklchString(targetLightness, parsed.c, parsed.h, alpha);
-}
-
-/**
  * Derive a color with reduced chroma (for hover states, etc).
  */
 function withAlpha(baseColor: string, alpha: number): string {
@@ -43,9 +34,6 @@ export function generateThemeCSS(config: AutomakerThemeConfig): string {
   };
 
   // Derive action colors from primary
-  const primaryParsed = parseOklch(colors.primary[500]);
-  const actionHue = primaryParsed?.h ?? 265;
-
   const actionView = colors.primary[isDark ? 400 : 500];
   const actionViewHover = colors.primary[isDark ? 500 : 600];
   const actionFollowup = oklchString(isDark ? 0.6 : 0.55, 0.16, 230);

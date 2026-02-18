@@ -260,7 +260,7 @@ export class DiscordDMChannel implements EscalationChannel {
     if (payload.emoji !== '✅') return;
 
     // Find the acknowledgment entry for this message
-    for (const [key, ack] of this.acknowledgments.entries()) {
+    for (const [_key, ack] of this.acknowledgments.entries()) {
       if (ack.messageId === payload.messageId && !ack.acknowledgedBy) {
         // Mark as acknowledged
         ack.acknowledgedBy = payload.username;

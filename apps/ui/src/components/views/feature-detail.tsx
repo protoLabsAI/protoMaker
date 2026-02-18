@@ -1,11 +1,10 @@
-// @ts-nocheck
+// @ts-nocheck -- Feature index signature causes property access type errors
 import { memo, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@protolabs/ui/atoms';
 import { ScrollArea } from '@protolabs/ui/atoms';
 import { Badge } from '@protolabs/ui/atoms';
 import {
   GitPullRequest,
-  AlertCircle,
   CheckCircle2,
   Clock,
   MessageSquare,

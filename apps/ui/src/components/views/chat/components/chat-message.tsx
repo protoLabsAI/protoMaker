@@ -5,7 +5,7 @@
  * Uses composition: ChatMessage wraps ChatMessageBubble children.
  */
 
-import { cva, type VariantProps } from 'class-variance-authority';
+import { cva } from 'class-variance-authority';
 import { Bot, User } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';

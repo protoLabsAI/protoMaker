@@ -2,7 +2,7 @@ import { memo, useState, useCallback, useRef, useEffect } from 'react';
 import { Palette } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore, type ThemeMode } from '@/store/app-store';
-import { themeOptions, darkThemes, lightThemes } from '@/config/theme-options';
+import { darkThemes, lightThemes } from '@/config/theme-options';
 import { Popover, PopoverContent, PopoverTrigger } from '@protolabs/ui/atoms';
 import { useThemeTransition } from '@/lib/theme/transitions';
 import { curatedThemes } from '@/lib/theme/registry';
