@@ -5,9 +5,9 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 47
-  referenced: 28
-  successfulFeatures: 28
+  loaded: 53
+  referenced: 30
+  successfulFeatures: 30
 ---
 # api
 
@@ -355,3 +355,28 @@ usageStats:
 - **Situation:** Suggestion queue component and chat `!queue` command both need to display suggestions, but the data model exists while the data transport does not
 - **Root cause:** Type was defined during initial Twitch feature planning (types are infrastructure), but the HTTP endpoint to serialize/transmit suggestions was not implemented. This is a common gap: types built first, implementation deferred
 - **How to avoid:** Suggestions display 'empty state' currently. Once endpoint is added, queue and chat command will work automatically because types are already aligned
+
+#### [Gotcha] Edit endpoint requires statePatch as request body parameter (JSON object), while refire endpoint accepts no body - inconsistent parameter sources between POST endpoints (2026-02-18)
+- **Situation:** Designing two similar mutation endpoints with different semantic requirements - refire is stateless node execution, edit is node state modification
+- **Root cause:** Refire only needs node identity (from URL), but edit needs the specific state changes to apply. Using request body for edit provides structured validation of state patch schema.
+- **How to avoid:** Endpoint API clarity at cost of inconsistent parameter handling. Clients must understand that some POST endpoints take body, others don't.
+
+#### [Pattern] Status code strategy: 400 for validation errors (missing/invalid statePatch), 500 for session not found, 200 for success - mixing client vs server error codes (2026-02-18)
+- **Problem solved:** Error handling in endpoints needs to distinguish between request format problems vs. runtime/data lookup problems
+- **Why this works:** 400 indicates client provided invalid data (recoverable with different input). 500 for session-not-found indicates server state problem (session should exist). This matches HTTP semantics.
+- **Trade-offs:** 400/500 split is semantically clear but differs from strict REST conventions. Makes error handling straightforward for clients.
+
+#### [Gotcha] No dedicated listSessions endpoint exists; sessions must be derived from ideas via conversationId (2026-02-18)
+- **Situation:** Expected direct sessions API but discovered ideation design exposes sessions implicitly through idea relationships
+- **Root cause:** Design choice to normalize sessions through ideas prevents session orphaning and maintains data consistency
+- **How to avoid:** Eliminates redundant data but requires deriving sessions on client (simple with unique() extraction). Future-proofs against stale session state.
+
+#### [Gotcha] TanStack Router search params require Zod schema validation and useSearch hook, not direct URL parsing (2026-02-18)
+- **Situation:** Implementing ?tab=ideas and ?tab=system URL deep linking for tab state
+- **Root cause:** Router maintains type-safe search params through validation schema; useSearch provides reactivity without manual listeners; prevents mismatches between URL and component state
+- **How to avoid:** Requires schema definition but gains type safety, automatic validation, and router integration; search params are auto-persistent to URL
+
+#### [Pattern] Using data-testid attributes with multiple fallback selectors in test queries to handle UI changes gracefully (2026-02-18)
+- **Problem solved:** Test file used selectors like `[data-testid="nav-ideas"], a[href*="/ideas"]` to find elements
+- **Why this works:** Provides flexibility when UI implementation details change. If data-testid is removed, the href-based selector still works. If styling changes the tag type, the selector still finds it. Makes tests resilient to cosmetic refactors
+- **Trade-offs:** Query is more complex to read but more maintainable long-term. Slightly slower selector resolution but negligible in tests

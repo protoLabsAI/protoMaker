@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 197
-  referenced: 93
-  successfulFeatures: 93
+  loaded: 218
+  referenced: 104
+  successfulFeatures: 104
 ---
 # gotchas
 
@@ -140,3 +140,8 @@ usageStats:
 - **Situation:** Activity feed uses http-api-client.subscribeToEvents() via WebSocket. If subscription is not cleaned up, revisiting the overlay route creates multiple listeners for the same event, each updating separate ring buffers
 - **Root cause:** Browser component lifecycle: mount creates subscription, unmount must unsubscribe. Without cleanup, browser tab accumulates handlers (each adding to memory) and each route revisit multiplies active subscriptions
 - **How to avoid:** Requires proper React useEffect cleanup vs simpler no-cleanup code. Cleanup is mandatory for any WebSocket/event subscription pattern
+
+#### [Gotcha] Playwright browser installation requires specific system dependencies that may not exist in some environments; TEST_REUSE_SERVER flag allows tests to run against existing dev server (2026-02-18)
+- **Situation:** Initial test attempt failed because Playwright browsers weren't installed and environment lacked required dependencies
+- **Root cause:** Playwright bundles Chromium/Firefox/WebKit which require glibc and other system libraries. TEST_REUSE_SERVER allows CI/testing in restricted environments by reusing running instance
+- **How to avoid:** Reusing server makes tests faster and environment-agnostic but requires coordination that server is running; less isolated than full Playwright setup

@@ -153,3 +153,169 @@ usageStats:
 - **Rejected:** Respect app theme store (useThemeStore) — creates risk that theme changes in main app affect stream appearance during live broadcast
 - **Trade-offs:** Reduced flexibility vs guaranteed visual stability. Overlay cannot adopt user's theme preference, but that's acceptable because overlay is not for user's personal use, it's a broadcast artifact
 - **Breaking if changed:** If theme is made dynamic via theme store, a user accidentally switching themes in the app will change the stream overlay mid-broadcast, potentially during an important moment
+
+#### [Pattern] CVA (class-variance-authority) used for multi-variant node styling with status-based visual hierarchy (2026-02-18)
+- **Problem solved:** PipelineStepNode needs 5 distinct visual treatments (pending, active, completed, skipped, error) with consistent styling approach
+- **Why this works:** CVA provides type-safe variant composition that scales better than conditional classNames. Prevents style duplication and ensures all combinations are explicitly defined. Easier to audit coverage of all states.
+- **Trade-offs:** Slightly more upfront code but eliminates runtime style conflicts and makes adding new variants explicit. Harder to debug if variant logic is complex.
+
+### Breathing glow animation on active state renders as separate motion.div overlay rather than animating the node itself (2026-02-18)
+- **Context:** Active state needs visible breathing glow effect without performance cost of animating the main node container
+- **Why:** Separating the glow into its own animated element prevents the entire node from re-rendering during animation. This allows React Flow to keep the node geometry stable while only the overlay updates. Matches orchestrator-node pattern which proved performant.
+- **Rejected:** Animating the main node container directly - would cause unnecessary re-renders and geometry changes that React Flow needs to track
+- **Trade-offs:** Adds one extra DOM element per active node, but animation performance is smooth. Would need profiling if thousands of active nodes exist simultaneously.
+- **Breaking if changed:** Removing the overlay pattern requires moving animation to main node, which would cause jank when graph interaction updates geometry
+
+#### [Gotcha] Duration badge requires BOTH startTime AND endTime present - formatting function doesn't gracefully degrade if only one exists (2026-02-18)
+- **Situation:** Completed state should show elapsed time, but timing data might be incomplete during transitions
+- **Root cause:** Prevents displaying 'Invalid Date' or NaN in the UI. Guards against timing race conditions where endTime hasn't been set yet or data loads partially.
+- **How to avoid:** Badge won't show until both timestamps exist, making partially-completed states invisible. But this is actually correct - prevents false 'completed' indication.
+
+### Handle colors coded by status rather than fixed neutral color (2026-02-18)
+- **Context:** React Flow nodes need target/source handles that visually communicate the node's current state
+- **Why:** Status-coded handles provide visual continuity - users immediately see which node is active/errored when tracing connections. Reduces cognitive load compared to neutral handles with separate node states. Matches React Flow best practices for connected node graphs.
+- **Rejected:** Fixed neutral handle colors - loses important state information in dense graphs
+- **Trade-offs:** Makes handle color CSS more complex (status-dependent classNames), but improves UX significantly in complex graphs
+- **Breaking if changed:** If handles are changed to fixed colors, users can't visually scan connections to identify problem areas (e.g., which error node is this connected from?)
+
+### Event propagation blocking implemented via stopPropagation() + nopan CSS class combination for canvas drag prevention (2026-02-18)
+- **Context:** Inline action buttons (Approve/Reject) within ReactFlow nodes would trigger canvas pan/drag on click without explicit isolation
+- **Why:** ReactFlow's canvas event handling captures all pointer events by default. Single stopPropagation() is insufficient because ReactFlow has its own event system. The nopan class signals to ReactFlow's internal handlers to skip pan logic for this element.
+- **Rejected:** Using event.preventDefault() alone - doesn't work with ReactFlow's event delegation. Using pointer-events: none - would break button interactivity entirely.
+- **Trade-offs:** Requires knowledge of both React event system AND ReactFlow's specific event handling architecture. More verbose than typical React patterns, but necessary for correct canvas behavior.
+- **Breaking if changed:** Removing either stopPropagation() or nopan class causes clicks to pan/drag canvas instead of triggering button handlers, making buttons unusable.
+
+#### [Pattern] Countdown timer implemented as SVG animated ring with real-time millisecond updates via requestAnimationFrame, rather than setInterval (2026-02-18)
+- **Problem solved:** Need to show remaining time with smooth visual feedback without visual stuttering or skipped frames
+- **Why this works:** setInterval has variable execution timing (browser throttling, event loop blocking). requestAnimationFrame is synchronized to browser refresh rate (60/120fps), providing smooth animation. SVG ring provides more precise visual representation than text countdown.
+- **Trade-offs:** requestAnimationFrame approach is more complex and requires continuous component re-renders, but delivers superior visual quality. Trade CPU cycles for UX smoothness.
+
+### State machine approach (approved: null | true | false) used instead of string enum or combined 'state' + 'status' fields (2026-02-18)
+- **Context:** Component needs three distinct states: awaiting approval, approved, rejected - each with different UI and behavior
+- **Why:** Boolean null-state pattern maps naturally to approval workflow: null = pending decision, true = approved, false = rejected. Eliminates need for separate enum or multiple fields. Matches common backend API pattern (nullable boolean) reducing transformation logic.
+- **Rejected:** String enum like 'pending'|'approved'|'rejected' - more verbose, requires mapping. Separate isApproved + isRejected booleans - creates invalid state combinations (both true simultaneously).
+- **Trade-offs:** Implicit state machine (null is meaningful, not just absence) requires developers to understand this convention. More concise than alternatives but less self-documenting.
+- **Breaking if changed:** Changing to enum forces all approval data transformations across codebase. Changing to separate booleans creates need for validation logic to prevent invalid states.
+
+### Empty state display ('No idea sessions yet') instead of rendering empty canvas (2026-02-18)
+- **Context:** Analytics view with no idea flow data to display initially
+- **Why:** User feedback clarity - shows feature is working but has no data; prevents confusion with loading/error states; aligns with empty state pattern seen elsewhere
+- **Rejected:** Always rendering empty canvas - would be confusing when no data exists
+- **Trade-offs:** Requires conditional rendering and empty state component; clearer UX but adds slight complexity to view logic
+- **Breaking if changed:** Removing conditional breaks the feedback loop when transitioning from system graph tab with data to empty ideas tab
+
+#### [Gotcha] ReactFlow EdgeProps type assertion required for custom data access - cannot pass custom data type directly to EdgeProps generic (2026-02-18)
+- **Situation:** Initial implementation attempted to use EdgeProps<{ status?: StepStatus }> but @xyflow/react expects base EdgeProps type with type assertion on data prop
+- **Root cause:** ReactFlow's EdgeProps is designed for the framework's internal typing contract, not user data. Custom data must be extracted at runtime via type assertion (data as { status?: StepStatus })?.status
+- **How to avoid:** Requires runtime type assertion which is less type-safe than generic approach, but maintains compatibility with ReactFlow's type system and allows flexible data passing
+
+#### [Pattern] SVG gradient definitions scoped per edge using useId() to prevent ID conflicts in DOM (2026-02-18)
+- **Problem solved:** Multiple edges rendered simultaneously each with their own gradient animations; global IDs would cause conflicts
+- **Why this works:** SVG requires unique IDs for gradient/animation definitions. useId() generates unique identifiers per component instance ensuring no collisions when multiple edges render
+- **Trade-offs:** Adds React hook dependency and slight runtime overhead for ID generation, but eliminates a class of subtle rendering bugs and is the React-idiomatic solution
+
+#### [Pattern] SVG animateMotion with mpath follows WorkflowEdge pattern for particle effects - animation targets path element via mpath reference (2026-02-18)
+- **Problem solved:** Need for smooth animated particles flowing along curved edges similar to existing WorkflowEdge component
+- **Why this works:** mpath allows animation to follow arbitrary SVG path shapes. Using the same pattern as WorkflowEdge ensures consistency and leverages proven animation approach
+- **Trade-offs:** SVG animateMotion is declarative and lightweight but requires SVG-specific knowledge; animation performance depends on browser's SVG rendering capabilities
+
+### Five visual states (active, completed, pending, skipped, error) with asymmetric animation strategies - only active/completed have particles (2026-02-18)
+- **Context:** Need to visually distinguish pipeline step completion statuses while maintaining visual clarity for non-executing states
+- **Why:** Particle animations are attention-grabbing and should indicate dynamic activity. Only active (in-progress) and completed states warrant motion. Pending shows intent, skipped/error are terminal non-completion states
+- **Rejected:** All states with particles (creates visual noise), or no states with particles (loses visual feedback of completion)
+- **Trade-offs:** Animation complexity trades off against visual clarity - selective animation prevents cognitive overload while maintaining status differentiation
+- **Breaking if changed:** Removing animation from completed state removes celebration/completion feedback; removing from active state removes in-progress indication
+
+### Asymmetric animation durations: fast particles for active (2.5s), slow for completed (5s) (2026-02-18)
+- **Context:** Visual distinction needed between active (currently processing) vs completed (finished) states using same particle mechanism
+- **Why:** Speed conveys urgency/activity level - faster animation suggests active work, slower suggests calm completion. Different durations prevent visual confusion between states
+- **Rejected:** Same duration (loses state differentiation), or no animation for completed (loses completion feedback)
+- **Trade-offs:** Additional duration constants add cognitive load but provide clear visual feedback; users must learn association between speed and state
+- **Breaking if changed:** Using same duration makes active/completed visually identical; removing completed animation removes completion feedback mechanism
+
+#### [Pattern] OKLCH color space used for consistent theming across status states - emerald (completed), red (error), with L/C/H components (2026-02-18)
+- **Problem solved:** Need colors that match app design system and maintain perceptual consistency across different backgrounds
+- **Why this works:** OKLCH provides perceptually uniform color space - adjusting lightness/chroma produces consistent perceived color shifts across app. Matches existing app theme infrastructure
+- **Trade-offs:** OKLCH requires modern browser support and understanding of L/C/H parameters, but guarantees consistent color appearance
+
+#### [Pattern] Grouped sessions into four status buckets (processing, awaiting, completed, failed) rather than displaying flat list (2026-02-18)
+- **Problem solved:** IdeaListPanel needed to organize potentially hundreds of sessions for scanability
+- **Why this works:** Cognitive grouping reduces decision fatigue. Mirrors typical workflow states users mentally categorize. Parallels existing patterns in flow-graph panels.
+- **Trade-offs:** More code for grouping logic, but dramatically improved UX. Users can quickly find sessions by status without scrolling.
+
+#### [Gotcha] Used `formatDistanceToNow` from date-fns for timestamps instead of absolute times or ISO strings (2026-02-18)
+- **Situation:** Panel displays relative timestamps like '2 minutes ago' for better UX than machine-readable times
+- **Root cause:** Relative times are immediately understood by users without mental math. Matches common patterns in chat/feed interfaces.
+- **How to avoid:** Timestamps become stale without re-rendering. Component needs update mechanism to refresh timings periodically (or parent handles via prop updates).
+
+### PipelineToolbar uses data-driven approach with icon/label/state mappings instead of individual button components (2026-02-18)
+- **Context:** Toolbar has three identical toggle buttons (List, Detail, Legend) with different labels and callbacks
+- **Why:** Reduces code duplication, makes adding new toggles trivial, scales better than copy-paste button components
+- **Rejected:** Three separate button components - leads to maintenance burden and inconsistency drift
+- **Trade-offs:** Slight indirection in reading code, but gained extensibility. Button definitions could move to constants/config if this expands.
+- **Breaking if changed:** If button structure changes (e.g., new required prop), array element schema must be updated everywhere it's defined.
+
+#### [Gotcha] Fixed panel dimensions (264px width, 400px height) instead of responsive/flexible sizing (2026-02-18)
+- **Situation:** IdeaListPanel has hardcoded w-66 and h-100 (Tailwind units)
+- **Root cause:** ReactFlow canvas context requires predictable floating panel sizing to avoid layout thrashing. Fixed sizing allows canvas to reserve space.
+- **How to avoid:** Works great in 1024px+ viewports, but may overflow on mobile. Panel doesn't adapt to content. Need responsive breakpoints for smaller screens.
+
+#### [Pattern] Dialog components export both default component and typed Props interface for consumer flexibility (2026-02-18)
+- **Problem solved:** Building reusable dialog components that need to be integrated into multiple parts of the idea flow pipeline
+- **Why this works:** Allows consumers to reference the exact props type without needing to import from implementation files, enables better IDE autocomplete and type safety at call sites
+- **Trade-offs:** Adds boilerplate in component definition but dramatically improves ergonomics for consumers - prevents prop type guessing and runtime errors
+
+### Langfuse URL generation uses process.env.LANGFUSE_BASE_URL with cloud.langfuse.com fallback (2026-02-18)
+- **Context:** Need to link step details to Langfuse tracing platform spans from dialog component
+- **Why:** Allows deployment-time configuration for self-hosted Langfuse instances while defaulting to SaaS version, keeps credentials/URLs out of code
+- **Rejected:** Hardcoding cloud.langfuse.com URL directly in component, or storing base URL in app config
+- **Trade-offs:** Requires env var setup but enables multi-environment deployments; fallback ensures component works even if env not set
+- **Breaking if changed:** If env var name changes, all Langfuse links will point to wrong domain; if fallback is removed, deployments without env var will break
+
+#### [Gotcha] Countdown timer needs careful useEffect cleanup to prevent memory leaks and race conditions (2026-02-18)
+- **Situation:** ApprovalDialog implements auto-approval countdown that updates UI every second
+- **Root cause:** setInterval persists across renders; if not cleaned up on unmount or when countdown completes, multiple intervals stack up and trigger callbacks after dialog closes
+- **How to avoid:** Proper cleanup prevents subtle bugs but adds complexity - must track interval ID and clean on unmount/completion
+
+#### [Pattern] Color-coded badge system abstracted to getBadgeColor() utility function (2026-02-18)
+- **Problem solved:** Multiple fields (impact, effort) need visual status indicators with consistent styling
+- **Why this works:** Centralizes color mapping logic so color scheme changes only happen in one place; prevents inconsistent styling across component
+- **Trade-offs:** Adds function call overhead but massively improves maintainability - single source of truth for color logic
+
+### Step detail dialog displays JSON with disabled textarea instead of formatted code block (2026-02-18)
+- **Context:** Need to show complex nested input/output data structures from pipeline steps
+- **Why:** Textarea preserves formatting and structure readability while disabled state prevents accidental edits; simpler than implementing syntax highlighting
+- **Rejected:** Using <pre> tags with syntax highlighting library, or collapsible tree view for JSON navigation
+- **Trade-offs:** Less visually polished than syntax highlighting but significantly simpler to implement; loses ability to navigate large JSON structures interactively
+- **Breaking if changed:** If textarea is replaced with other display method, must ensure JSON formatting/readability is preserved or users lose visibility into data structure
+
+#### [Gotcha] Duration calculation from timestamps must handle missing startTime/endTime gracefully (2026-02-18)
+- **Situation:** Some pipeline steps may not have complete timing information logged
+- **Root cause:** Not all steps may finish executing or may fail before timing data is captured; attempting duration calculation on null/undefined causes NaN display
+- **How to avoid:** Adds null checks but prevents broken UI when timing data missing
+
+### Pipeline step node status rendered as visual indicator (color-coded border) rather than text label or icon badge (2026-02-18)
+- **Context:** Need to show pipeline step status (pending/active/completed/skipped/error) at a glance in flow visualization
+- **Why:** Border-based status indicator takes minimal space in node, maintains readability at zoom levels, color coding is universally understood (green=success, red=error, yellow=pending), doesn't require hover for information. Aligns with existing flow-graph patterns in codebase.
+- **Rejected:** Icon badges (would add visual clutter); text labels (would exceed node size); status inside detail panel only (requires click to discover state)
+- **Trade-offs:** Gained spatial efficiency and immediate visual recognition; required consistent color mapping across all statuses; limited to ~5 statuses before color confusion; breaks if colorblind accessibility not considered
+- **Breaking if changed:** If border styling removed or made subtle, status visibility lost entirely. If color palette changed without maintaining contrast, accessibility fails. If node is zoomed far out, border status becomes imperceptible.
+
+### Detail panel positioned as floating overlay rather than sidebar drawer, with fixed positioning and explicit z-index layering (2026-02-18)
+- **Context:** Need to display session state without consuming horizontal canvas space in flow visualization
+- **Why:** Floating overlay allows canvas to remain full-width for React Flow nodes. Fixed positioning works across scroll contexts. Explicit z-index stack (detail=50, menu=50, backdrop=40) prevents accidental overlap issues. Backdrop click handler provides clear close affordance.
+- **Rejected:** Sidebar drawer (loses canvas space); modal dialog (blocks canvas interaction); inline detail in node (exceeds node size)
+- **Trade-offs:** Gained: preserves full canvas space, can hover over canvas while panel open; Lost: panel can occlude other nodes (mitigated by close affordance), positioning sometimes breaks on small screens (responsive breakpoints needed)
+- **Breaking if changed:** If z-index values changed without coordination, panel disappears behind canvas. If close handler removed, users can't dismiss panel. If fixed positioning removed, scrolling breaks panel visibility.
+
+#### [Gotcha] Removing the tab bar from analytics required also removing the useSearch hook and Zod schema, not just the UI component (2026-02-18)
+- **Situation:** Initial refactor might have only removed the tab UI buttons while leaving the schema and search hook intact, leaving dead code
+- **Root cause:** The Zod schema validates the 'tab' parameter at the route level. If left in place, it would either silently fail to validate or would allow an unused parameter to be passed to /analytics, creating confusion about the route's actual interface
+- **How to avoid:** Requires touching the route definition in addition to the view component. Makes the change slightly larger but cleaner and more correct
+
+### Removed tab bar UI state management entirely rather than adding conditional logic to hide tabs - cleaner separation of concerns (2026-02-18)
+- **Context:** Idea Pipeline moved from analytics tab to own sidebar item, leaving only System Graph in analytics
+- **Why:** Eliminates unused state (`analyticsSearchSchema`, `useSearch` hook) and 40+ lines of conditional rendering. Each route now has single responsibility
+- **Rejected:** Keep tab bar but conditionally hide/show based on route - would create hidden complexity and make future maintenance harder
+- **Trade-offs:** Simpler components but requires new route file; easier to reason about but slightly more routing boilerplate
+- **Breaking if changed:** If future features need tab selection in analytics, would need to rebuild the state management pattern

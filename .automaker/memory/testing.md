@@ -5,9 +5,9 @@ relevantTo: [testing]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 23
-  referenced: 15
-  successfulFeatures: 15
+  loaded: 25
+  referenced: 16
+  successfulFeatures: 16
 ---
 # testing
 
@@ -508,3 +508,18 @@ usageStats:
 - **Situation:** Created error-display-verification.spec.ts to validate implementation but instructions require cleanup
 - **Root cause:** Temporary verification tests can become stale, mislead future developers, and clutter the test suite; one-off validation should not persist in version control
 - **How to avoid:** Deleting test means no permanent verification record (harder to debug if feature regresses) but keeps test suite focused on production behavior
+
+#### [Gotcha] Verification tests created in /tests/e2e directory expect running dev server on port 3008, but dev server startup is manual responsibility, not automated (2026-02-18)
+- **Situation:** Writing validation tests for new endpoints after implementation to ensure they accept/reject correct parameter shapes
+- **Root cause:** End-to-end tests verify actual HTTP behavior with serialization/deserialization, not just unit test mocks. This catches issues with request body parsing that unit tests miss.
+- **How to avoid:** E2E tests catch real integration issues but require infrastructure setup (running server). Unit tests are faster but don't validate HTTP layer.
+
+#### [Pattern] Verification via temporary Playwright test checking file existence and code structure (string contains) rather than runtime type checking (2026-02-18)
+- **Problem solved:** Could not run hooks in browser context; needed to verify implementation without full integration test infrastructure
+- **Why this works:** Static verification catches compilation and structural errors quickly. File existence and key exports ensure module loading won't fail. Avoided complexity of mocking React Query and hook environment.
+- **Trade-offs:** Quick verification but doesn't test hook behavior or data flow. Caught structural issues (e.g., export/import mismatches) but missed runtime logic bugs.
+
+#### [Gotcha] Storybook verification was skipped due to pre-existing build issues, relying only on TypeScript/Vite compilation verification (2026-02-18)
+- **Situation:** Story file was created but Storybook build failed, requiring decision on verification strategy for component correctness
+- **Root cause:** TypeScript compilation and Vite build are sufficient for catching structural errors, but Storybook failure prevented visual verification of component rendering. Decision to skip story given unrelated Storybook configuration issues.
+- **How to avoid:** Saved time by skipping broken Storybook, but lost visual verification benefit. Component structure verified but actual rendering in browser not confirmed.
