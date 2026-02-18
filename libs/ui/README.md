@@ -81,9 +81,7 @@ function Example() {
         <CardTitle>Hello World</CardTitle>
       </CardHeader>
       <CardContent>
-        <Button onClick={() => alert('Clicked!')}>
-          Click me
-        </Button>
+        <Button onClick={() => alert('Clicked!')}>Click me</Button>
       </CardContent>
     </Card>
   );
@@ -113,9 +111,7 @@ Most components support variants via `class-variance-authority`:
 Buttons support loading state with built-in spinner:
 
 ```tsx
-<Button loading={isSubmitting}>
-  Save Changes
-</Button>
+<Button loading={isSubmitting}>Save Changes</Button>
 ```
 
 ### Polymorphic Rendering
@@ -127,7 +123,7 @@ import { Button } from '@protolabs/ui';
 
 <Button asChild>
   <a href="/dashboard">Go to Dashboard</a>
-</Button>
+</Button>;
 ```
 
 ### Dialog Example
@@ -152,9 +148,7 @@ function DeleteDialog() {
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Are you sure?</DialogTitle>
-          <DialogDescription>
-            This action cannot be undone.
-          </DialogDescription>
+          <DialogDescription>This action cannot be undone.</DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <Button variant="outline">Cancel</Button>
@@ -195,6 +189,7 @@ function LoginForm() {
 ### Atoms (26+ primitives)
 
 **Forms:**
+
 - `Button` — Action buttons with variants and loading states
 - `Input` — Text input fields
 - `Textarea` — Multi-line text input
@@ -206,6 +201,7 @@ function LoginForm() {
 - `Slider` — Range sliders
 
 **Layout:**
+
 - `Card` — Content containers with header/footer/content
 - `Accordion` — Collapsible content sections
 - `Tabs` — Tab navigation
@@ -214,6 +210,7 @@ function LoginForm() {
 - `Breadcrumb` — Navigation breadcrumbs
 
 **Overlays:**
+
 - `Dialog` — Modal dialogs
 - `Sheet` — Slide-out panels
 - `Popover` — Floating popovers
@@ -222,6 +219,7 @@ function LoginForm() {
 - `Command` — Command palette (⌘K style)
 
 **Feedback:**
+
 - `Badge` — Status badges
 - `SkeletonPulse` — Loading skeletons
 - `Spinner` — Loading spinners
@@ -247,9 +245,7 @@ function LoginForm() {
 All components accept `className` prop for Tailwind utilities:
 
 ```tsx
-<Button className="w-full mt-4">
-  Full Width Button
-</Button>
+<Button className="w-full mt-4">Full Width Button</Button>
 ```
 
 ### Using `cn()` Utility
@@ -259,13 +255,9 @@ The `cn()` utility combines class names and resolves Tailwind conflicts:
 ```tsx
 import { cn } from '@protolabs/ui/lib';
 
-<Button className={cn(
-  'w-full',
-  isActive && 'bg-primary',
-  isDisabled && 'opacity-50'
-)}>
+<Button className={cn('w-full', isActive && 'bg-primary', isDisabled && 'opacity-50')}>
   Dynamic Button
-</Button>
+</Button>;
 ```
 
 ### Accessing Variants
@@ -275,9 +267,7 @@ Export both components and their variants for custom compositions:
 ```tsx
 import { buttonVariants } from '@protolabs/ui';
 
-<a className={buttonVariants({ variant: 'outline', size: 'sm' })}>
-  Link styled as button
-</a>
+<a className={buttonVariants({ variant: 'outline', size: 'sm' })}>Link styled as button</a>;
 ```
 
 ### Theme Switching
@@ -309,7 +299,7 @@ function ThemeSwitcher() {
 
 Browse all components and their variants in our interactive Storybook:
 
-**🔗 [View Storybook Documentation](https://storybook.automaker.dev)** *(Coming soon)*
+**🔗 [View Storybook Documentation](https://storybook.automaker.dev)** _(Coming soon)_
 
 Run Storybook locally:
 
@@ -319,6 +309,7 @@ npm run storybook
 ```
 
 Storybook includes:
+
 - Live component previews
 - Interactive props controls
 - Theme switcher for testing all 6 themes
@@ -367,11 +358,7 @@ Components extend their native HTML element props:
 
 ```tsx
 // Button extends React.ComponentProps<'button'>
-<Button
-  type="submit"
-  onClick={(e) => console.log(e)}
-  disabled={isDisabled}
-/>
+<Button type="submit" onClick={(e) => console.log(e)} disabled={isDisabled} />
 ```
 
 ## Accessibility
@@ -402,6 +389,7 @@ Supports modern browsers with native CSS features:
 - Safari 17.4+
 
 **Required CSS features:**
+
 - OKLch color space (`oklch()` function)
 - CSS custom properties (CSS variables)
 - CSS Grid and Flexbox
