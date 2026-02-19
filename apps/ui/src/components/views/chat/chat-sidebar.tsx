@@ -17,7 +17,8 @@ import { useNotesStore } from '@/store/notes-store';
 import { useAppStore } from '@/store/app-store';
 
 export function ChatSidebar({ className }: { className?: string }) {
-  const [isOpen, setIsOpen] = useState(false);
+  const isOpen = useAppStore((s) => s.chatSidebarOpen);
+  const setChatSidebarOpen = useAppStore((s) => s.setChatSidebarOpen);
   const [inputValue, setInputValue] = useState('');
   const location = useLocation();
   const workspace = useNotesStore((s) => s.workspace);
@@ -67,22 +68,8 @@ export function ChatSidebar({ className }: { className?: string }) {
     setInputValue('');
   }, [inputValue, isStreaming, sendMessage]);
 
-  // Collapsed state — just show a toggle button
-  if (!isOpen) {
-    return (
-      <Button
-        variant="ghost"
-        size="icon"
-        className={cn(
-          'fixed bottom-4 right-4 z-50 size-10 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90',
-          className
-        )}
-        onClick={() => setIsOpen(true)}
-      >
-        <MessageSquare className="size-5" />
-      </Button>
-    );
-  }
+  // Collapsed state — no floating button, controlled from sidebar
+  if (!isOpen) return null;
 
   return (
     <div
@@ -112,7 +99,7 @@ export function ChatSidebar({ className }: { className?: string }) {
             variant="ghost"
             size="icon"
             className="size-7"
-            onClick={() => setIsOpen(false)}
+            onClick={() => setChatSidebarOpen(false)}
             title="Close chat"
           >
             <X className="size-3.5" />
