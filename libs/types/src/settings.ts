@@ -516,6 +516,43 @@ export type { WebhookSettings } from './webhook.js';
 export { DEFAULT_WEBHOOK_SETTINGS } from './webhook.js';
 
 // ============================================================================
+// Voice Activation Settings - Offline wake word + speech-to-text
+// ============================================================================
+
+/** WhisperModelSize - Available whisper.cpp GGML model sizes */
+export type WhisperModelSize = 'tiny' | 'base' | 'small';
+
+/**
+ * VoiceSettings - Configuration for offline voice activation
+ *
+ * Uses Silero VAD for speech detection in the renderer and whisper.cpp
+ * for local transcription on the server. Fully offline, no paid services.
+ */
+export interface VoiceSettings {
+  /** Whether voice activation is enabled (default: false) */
+  enabled: boolean;
+  /** Wake word to trigger command mode (default: 'ava') */
+  wakeWord: string;
+  /** Whisper model size for transcription (default: 'tiny') */
+  modelSize: WhisperModelSize;
+  /** VAD sensitivity threshold 0.0-1.0 (default: 0.5) */
+  sensitivity: number;
+  /** Microphone device ID, empty string = system default */
+  inputDevice: string;
+}
+
+/**
+ * Default voice settings - disabled by default
+ */
+export const DEFAULT_VOICE_SETTINGS: VoiceSettings = {
+  enabled: false,
+  wakeWord: 'ava',
+  modelSize: 'tiny',
+  sensitivity: 0.5,
+  inputDevice: '',
+};
+
+// ============================================================================
 // Discord Integration Settings - Configuration for Discord bot and notifications
 // ============================================================================
 
@@ -1479,6 +1516,13 @@ export interface GlobalSettings {
    * @see DiscordSettings
    */
   discord?: DiscordSettings;
+
+  /**
+   * Voice activation settings for offline wake word + speech-to-text.
+   * Uses Silero VAD in renderer and whisper.cpp on server. Fully offline.
+   * @see VoiceSettings
+   */
+  voice?: VoiceSettings;
 
   /**
    * Crew loop settings for unified team member scheduling.

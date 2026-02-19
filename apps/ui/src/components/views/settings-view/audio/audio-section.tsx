@@ -2,6 +2,7 @@ import { Label } from '@protolabs/ui/atoms';
 import { Checkbox } from '@protolabs/ui/atoms';
 import { Volume2, VolumeX } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { VoiceSettings } from './voice-settings';
 
 interface AudioSectionProps {
   muteDoneSound: boolean;
@@ -26,7 +27,7 @@ export function AudioSection({ muteDoneSound, onMuteDoneSoundChange }: AudioSect
           <h2 className="text-lg font-semibold text-foreground tracking-tight">Audio</h2>
         </div>
         <p className="text-sm text-muted-foreground/80 ml-12">
-          Configure audio and notification settings.
+          Configure audio, voice activation, and notification settings.
         </p>
       </div>
       <div className="p-6 space-y-4">
@@ -53,6 +54,7 @@ export function AudioSection({ muteDoneSound, onMuteDoneSoundChange }: AudioSect
             </p>
           </div>
         </div>
+        <VoiceSettings />
       </div>
     </div>
   );

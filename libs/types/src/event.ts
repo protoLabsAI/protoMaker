@@ -300,6 +300,11 @@ export type EventType =
   | 'twitch:suggestion:updated'
   | 'twitch:suggestion:built'
   | 'twitch:poll:created'
+  // Voice activation events
+  | 'voice:transcription'
+  | 'voice:wake-word-detected'
+  | 'voice:command-received'
+  | 'voice:model-download-progress'
   // Server lifecycle events
   | 'server:shutdown';
 
