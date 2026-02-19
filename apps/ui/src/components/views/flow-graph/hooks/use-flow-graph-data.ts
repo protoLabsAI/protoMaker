@@ -151,12 +151,12 @@ export function useFlowGraphData() {
     [allRunningAgents, projectPath]
   );
 
-  // Active features: in_progress, waiting_approval, or review
+  // Active features: in_progress or review
   const activeFeatures = useMemo(
     () =>
       features.filter((f) => {
         const s = f.status as string;
-        return s === 'in_progress' || s === 'waiting_approval' || s === 'review';
+        return s === 'in_progress' || s === 'review';
       }),
     [features]
   );

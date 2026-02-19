@@ -181,7 +181,7 @@ function AutoModeDetailPanel() {
               <span className="tabular-nums">{formatDuration(agent.duration)}</span>
             )}
             {typeof agent.costUsd === 'number' && agent.costUsd > 0 && (
-              <span className="text-emerald-400">${formatCostUsd(agent.costUsd)}</span>
+              <span className="text-emerald-400">{formatCostUsd(agent.costUsd)}</span>
             )}
           </div>
         </div>
