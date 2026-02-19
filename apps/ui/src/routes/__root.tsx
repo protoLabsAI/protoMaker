@@ -186,9 +186,6 @@ function RootLayoutContent() {
   // Global Cmd+K / Ctrl+K shortcut for the chat modal (web mode)
   useChatModalShortcut();
 
-  // Check if we're in compact mode (< 1240px) to hide project switcher
-  const isCompact = useIsCompact();
-
   const isSetupRoute = location.pathname === '/setup';
   const isLoginRoute = location.pathname === '/login';
   const isLoggedOutRoute = location.pathname === '/logged-out';

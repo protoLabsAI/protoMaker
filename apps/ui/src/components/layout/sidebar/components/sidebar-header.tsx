@@ -1,10 +1,9 @@
 import { useState } from 'react';
-import { Folder, LucideIcon, X, Menu, Check } from 'lucide-react';
+import { Folder, LucideIcon, X, Menu, Check, ChevronsUpDown } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { cn, isMac } from '@/lib/utils';
 import { getAuthenticatedImageUrl } from '@/lib/api-fetch';
 import { isElectron, type Project } from '@/lib/electron';
-import { useIsCompact } from '@/hooks/use-media-query';
 import { Popover, PopoverContent, PopoverTrigger } from '@protolabs/ui/atoms';
 import { useAppStore } from '@/store/app-store';
 
@@ -21,7 +20,6 @@ export function SidebarHeader({
   onClose,
   onExpand,
 }: SidebarHeaderProps) {
-  const isCompact = useIsCompact();
   const [projectListOpen, setProjectListOpen] = useState(false);
   const { projects, setCurrentProject } = useAppStore();
   // Get the icon component from lucide-react
@@ -61,7 +59,7 @@ export function SidebarHeader({
         </button>
       )}
       {/* Mobile expand button - hamburger menu to expand sidebar when collapsed on mobile */}
-      {!sidebarOpen && isCompact && onExpand && (
+      {!sidebarOpen && onExpand && (
         <button
           onClick={onExpand}
           className={cn(
@@ -85,11 +83,9 @@ export function SidebarHeader({
                 'flex items-center gap-3 px-4 pt-3 pb-1 w-full text-left',
                 'rounded-lg transition-colors duration-150',
                 !sidebarOpen && 'justify-center px-2',
-                // Only enable click behavior on compact screens
-                isCompact && 'hover:bg-accent/50 cursor-pointer',
-                !isCompact && 'pointer-events-none'
+                'hover:bg-accent/50 cursor-pointer'
               )}
-              title={isCompact ? 'Switch project' : undefined}
+              title="Switch project"
             >
               {/* Project Icon */}
               <div className="shrink-0">
@@ -111,11 +107,14 @@ export function SidebarHeader({
 
               {/* Project Name - only show when sidebar is open */}
               {sidebarOpen && (
-                <div className="flex-1 min-w-0">
-                  <h2 className="text-sm font-semibold text-foreground truncate">
-                    {currentProject.name}
-                  </h2>
-                </div>
+                <>
+                  <div className="flex-1 min-w-0">
+                    <h2 className="text-sm font-semibold text-foreground truncate">
+                      {currentProject.name}
+                    </h2>
+                  </div>
+                  <ChevronsUpDown className="w-4 h-4 text-muted-foreground shrink-0" />
+                </>
               )}
             </button>
           </PopoverTrigger>
