@@ -570,10 +570,28 @@ class MergeProcessor implements StateProcessor {
     logger.info(`[MERGE] Attempting to merge PR #${ctx.prNumber}`);
 
     try {
-      await execAsync(`gh pr merge ${ctx.prNumber} --squash --auto`, {
+      // Use --squash without --auto: we're in MERGE state after REVIEW approved,
+      // so checks should have passed. This ensures merge completes immediately.
+      await execAsync(`gh pr merge ${ctx.prNumber} --squash`, {
         cwd: ctx.projectPath,
-        timeout: 30000,
+        timeout: 60000,
       });
+
+      // Verify merge actually completed
+      const { stdout: mergeCheck } = await execAsync(
+        `gh pr view ${ctx.prNumber} --json merged --jq '.merged'`,
+        { cwd: ctx.projectPath, timeout: 15000 }
+      );
+
+      if (mergeCheck.trim() !== 'true') {
+        logger.warn(`[MERGE] PR #${ctx.prNumber} merge command succeeded but PR not yet merged`);
+        await new Promise((r) => setTimeout(r, MERGE_RETRY_DELAY_MS));
+        return {
+          nextState: 'MERGE',
+          shouldContinue: true,
+          reason: 'Merge queued but not yet completed, retrying',
+        };
+      }
 
       // Update feature status
       await this.serviceContext.featureLoader.update(ctx.projectPath, ctx.feature.id, {
