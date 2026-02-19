@@ -85,6 +85,24 @@ export interface StoreEventInput {
  * EventHistoryService - Manages persistent storage of events
  */
 export class EventHistoryService {
+  /** Per-project promise chain to serialize index writes and prevent race conditions */
+  private indexLocks = new Map<string, Promise<void>>();
+
+  /**
+   * Serialize index operations per project path. Concurrent calls queue behind
+   * the previous one, preventing read-modify-write races on index.json.
+   */
+  private withIndexLock(projectPath: string, fn: () => Promise<void>): Promise<void> {
+    const existing = this.indexLocks.get(projectPath) ?? Promise.resolve();
+    const next = existing.then(fn, fn);
+    this.indexLocks.set(projectPath, next);
+    return next.finally(() => {
+      if (this.indexLocks.get(projectPath) === next) {
+        this.indexLocks.delete(projectPath);
+      }
+    });
+  }
+
   /**
    * Store a new event to history
    *
@@ -130,8 +148,8 @@ export class EventHistoryService {
     const eventPath = getEventPath(projectPath, eventId);
     await atomicWriteJson(eventPath, event);
 
-    // Update the index
-    await this.addToIndex(projectPath, event);
+    // Update the index (serialized to prevent concurrent write races)
+    await this.withIndexLock(projectPath, () => this.addToIndex(projectPath, event));
 
     logger.info(
       `Stored event ${eventId} (${trigger}, severity: ${severity}) for project ${projectName}`
@@ -226,20 +244,27 @@ export class EventHistoryService {
    * @returns Promise resolving to true if deleted
    */
   async deleteEvent(projectPath: string, eventId: string): Promise<boolean> {
-    // Remove from index
-    const indexPath = getEventHistoryIndexPath(projectPath);
-    const index = await readJsonFile<StoredEventIndex>(indexPath, DEFAULT_EVENT_HISTORY_INDEX);
+    let deleted = false;
 
-    const initialLength = index.events.length;
-    index.events = index.events.filter((e) => e.id !== eventId);
+    await this.withIndexLock(projectPath, async () => {
+      // Remove from index
+      const indexPath = getEventHistoryIndexPath(projectPath);
+      const index = await readJsonFile<StoredEventIndex>(indexPath, DEFAULT_EVENT_HISTORY_INDEX);
 
-    if (index.events.length === initialLength) {
-      return false; // Event not found in index
-    }
+      const initialLength = index.events.length;
+      index.events = index.events.filter((e) => e.id !== eventId);
 
-    await atomicWriteJson(indexPath, index);
+      if (index.events.length === initialLength) {
+        return; // Event not found in index
+      }
 
-    // Delete the event file
+      await atomicWriteJson(indexPath, index);
+      deleted = true;
+    });
+
+    if (!deleted) return false;
+
+    // Delete the event file (outside lock — independent file, no race)
     const eventPath = getEventPath(projectPath, eventId);
     try {
       await secureFs.unlink(eventPath);
@@ -260,13 +285,22 @@ export class EventHistoryService {
    * @returns Promise resolving to number of events cleared
    */
   async clearEvents(projectPath: string): Promise<number> {
-    const indexPath = getEventHistoryIndexPath(projectPath);
-    const index = await readJsonFile<StoredEventIndex>(indexPath, DEFAULT_EVENT_HISTORY_INDEX);
+    let count = 0;
+    let eventsToDelete: StoredEventSummary[] = [];
 
-    const count = index.events.length;
+    await this.withIndexLock(projectPath, async () => {
+      const indexPath = getEventHistoryIndexPath(projectPath);
+      const index = await readJsonFile<StoredEventIndex>(indexPath, DEFAULT_EVENT_HISTORY_INDEX);
 
-    // Delete all event files
-    for (const event of index.events) {
+      count = index.events.length;
+      eventsToDelete = [...index.events];
+
+      // Reset the index
+      await atomicWriteJson(indexPath, DEFAULT_EVENT_HISTORY_INDEX);
+    });
+
+    // Delete event files outside lock — independent files, no race
+    for (const event of eventsToDelete) {
       const eventPath = getEventPath(projectPath, event.id);
       try {
         await secureFs.unlink(eventPath);
@@ -276,9 +310,6 @@ export class EventHistoryService {
         }
       }
     }
-
-    // Reset the index
-    await atomicWriteJson(indexPath, DEFAULT_EVENT_HISTORY_INDEX);
 
     logger.info(`Cleared ${count} events for project`);
     return count;
