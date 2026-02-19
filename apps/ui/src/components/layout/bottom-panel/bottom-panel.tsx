@@ -7,13 +7,14 @@ import {
   ListTodo,
   Activity,
   GitPullRequest,
-  ChevronUp,
-  ChevronDown,
   History,
   BarChart3,
   MonitorCog,
   LineChart,
   Radio,
+  MessageSquare,
+  PanelBottomOpen,
+  X,
 } from 'lucide-react';
 import { ActivityTab } from './activity-tab';
 import { StatsTab } from './stats-tab';
@@ -30,6 +31,8 @@ export function BottomPanel() {
   const toggleBottomPanel = useAppStore((s) => s.toggleBottomPanel);
   const setBottomPanelActiveTab = useAppStore((s) => s.setBottomPanelActiveTab);
   const features = useAppStore((s) => s.features);
+  const chatSidebarOpen = useAppStore((s) => s.chatSidebarOpen);
+  const toggleChatSidebar = useAppStore((s) => s.toggleChatSidebar);
   const { data: agentCount } = useRunningAgentsCount();
 
   if (isMobile) return null;
@@ -57,7 +60,7 @@ export function BottomPanel() {
             className="h-full flex flex-col gap-0"
           >
             <div className="flex items-center border-b border-border/50 px-3 shrink-0">
-              <TabsList className="h-7 border-0 bg-transparent p-0 gap-0">
+              <TabsList className="h-7 border-0 bg-transparent p-0 gap-0 flex-1">
                 <TabsTrigger value="activity" className={tabTriggerClass}>
                   <History className="h-3.5 w-3.5" />
                   Activity
@@ -79,6 +82,13 @@ export function BottomPanel() {
                   System
                 </TabsTrigger>
               </TabsList>
+              <button
+                onClick={toggleBottomPanel}
+                className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors ml-2"
+                title="Close panel"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
             </div>
             <TabsContent value="activity" className="flex-1 overflow-hidden mt-0">
               <ActivityTab />
@@ -135,12 +145,22 @@ export function BottomPanel() {
         {/* Spacer */}
         <div className="flex-1" />
 
-        {/* Toggle indicator */}
-        {bottomPanelOpen ? (
-          <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-        ) : (
-          <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" />
-        )}
+        {/* Chat toggle */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleChatSidebar();
+          }}
+          className={`p-1 rounded-md transition-colors ${chatSidebarOpen ? 'text-violet-400' : 'text-muted-foreground hover:text-foreground'}`}
+          title="Toggle chat"
+        >
+          <MessageSquare className="h-3.5 w-3.5" />
+        </button>
+
+        {/* Panel toggle */}
+        <PanelBottomOpen
+          className={`h-3.5 w-3.5 ${bottomPanelOpen ? 'text-foreground' : 'text-muted-foreground'}`}
+        />
       </div>
     </>
   );
