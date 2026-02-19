@@ -12,6 +12,20 @@
 import * as v8 from 'node:v8';
 import { ProviderFactory } from '../providers/provider-factory.js';
 import { simpleQuery } from '../providers/simple-query-service.js';
+import { StreamObserver } from './stream-observer-service.js';
+
+/**
+ * Error thrown when stream observer detects an agent loop.
+ * Caught by executeFeature() to retry with recovery guidance.
+ */
+export class LoopDetectedError extends Error {
+  readonly loopSignature: string;
+  constructor(message: string, loopSignature: string) {
+    super(message);
+    this.name = 'LoopDetectedError';
+    this.loopSignature = loopSignature;
+  }
+}
 import type {
   ExecuteOptions,
   Feature,
@@ -2077,7 +2091,39 @@ export class AutoModeService {
         }
       }
 
-      if (errorInfo.isAbort) {
+      if (error instanceof LoopDetectedError && feature && tempRunningFeature) {
+        // Loop detected: retry with recovery guidance
+        const MAX_LOOP_RETRIES = 2;
+        if (tempRunningFeature.retryCount < MAX_LOOP_RETRIES) {
+          logger.warn(
+            `Loop detected for ${featureId} (${error.loopSignature}). Retrying with recovery context.`
+          );
+          this.runningFeatures.delete(featureId);
+          const currentRetryCount = tempRunningFeature.retryCount;
+          const retryTimer = setTimeout(() => {
+            this.retryTimers.delete(featureId);
+            this.executeFeature(projectPath, featureId, useWorktrees, isAutoMode, undefined, {
+              retryCount: currentRetryCount + 1,
+              previousErrors: [...(tempRunningFeature.previousErrors || []), error.message],
+              recoveryContext: `You were repeating the same actions in a loop (${error.loopSignature.split(':')[0]}). Try a different approach to accomplish the task.`,
+            }).catch((retryErr) => {
+              logger.error(`Loop recovery retry failed for ${featureId}:`, retryErr);
+            });
+          }, 5000);
+          this.retryTimers.set(featureId, retryTimer);
+        } else {
+          logger.error(`Feature ${featureId} looped ${MAX_LOOP_RETRIES} times, giving up.`);
+          await this.updateFeatureStatus(projectPath, featureId, 'failed');
+          this.emitAutoModeEvent('auto_mode_feature_complete', {
+            featureId,
+            featureName: feature.title,
+            branchName: feature.branchName ?? null,
+            passes: false,
+            message: `Feature stuck in loop after ${MAX_LOOP_RETRIES} retries`,
+            projectPath,
+          });
+        }
+      } else if (errorInfo.isAbort) {
         this.emitAutoModeEvent('auto_mode_feature_complete', {
           featureId,
           featureName: feature?.title,
@@ -5082,6 +5128,10 @@ This mock response was generated because AUTOMAKER_MOCK_AGENT=true was set.
       }
     }, MEMORY_CHECK_MS);
 
+    // Stream observer for loop and stall detection
+    const streamObserver = new StreamObserver();
+    let loopDetected = false;
+
     // Wrap stream processing in try/finally to ensure timeout cleanup on any error/abort
     try {
       streamLoop: for await (const msg of stream) {
@@ -5097,6 +5147,9 @@ This mock response was generated because AUTOMAKER_MOCK_AGENT=true was set.
 
               // Skip empty text
               if (!newText) continue;
+
+              // Feed text to stream observer for stall detection
+              streamObserver.onTextChunk(newText);
 
               // Note: Cursor-specific dedup (duplicate blocks, accumulated text) is now
               // handled in CursorProvider.deduplicateTextBlocks() for cleaner separation
@@ -5607,6 +5660,28 @@ After generating the revised spec, output:
                 });
               }
             } else if (block.type === 'tool_use') {
+              // Feed tool use to stream observer for loop detection
+              streamObserver.onToolUse(block.name || 'unknown', block.input);
+
+              // Check if observer detected a loop or stall
+              const abortCheck = streamObserver.shouldAbort();
+              if (abortCheck.abort) {
+                logger.warn(
+                  `Stream observer triggered abort for ${featureId}: ${abortCheck.reason}`
+                );
+                loopDetected = true;
+
+                // Emit loop detection event
+                this.events.emit('pipeline:loop-detected' as import('@automaker/types').EventType, {
+                  featureId,
+                  loopSignature: streamObserver.getLoopSignature() || 'unknown',
+                  actionTaken: 'abort_and_retry',
+                });
+
+                abortController.abort();
+                break streamLoop;
+              }
+
               // Emit event for real-time UI
               this.emitAutoModeEvent('auto_mode_tool', {
                 featureId,
@@ -5692,6 +5767,15 @@ After generating the revised spec, output:
 
       // Final write - ensure all accumulated content is saved (on success path)
       await writeToFile();
+
+      // If loop was detected, throw a recognizable error for retry with recovery context
+      if (loopDetected) {
+        const loopSig = streamObserver.getLoopSignature() || 'unknown';
+        throw new LoopDetectedError(
+          `Agent loop detected (${loopSig}). Aborting for retry with recovery guidance.`,
+          loopSig
+        );
+      }
 
       // Flush remaining raw output (only if enabled, on success path)
       if (enableRawOutput && rawOutputLines.length > 0) {

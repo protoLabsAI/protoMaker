@@ -321,6 +321,9 @@ export const queryKeys = {
       ['engine', 'events', 'history', filter] as const,
     /** LangGraph flow definitions */
     flows: (graphId?: string) => ['engine', 'flows', graphId] as const,
+    /** Pipeline checkpoint state */
+    pipelineCheckpoints: (projectPath: string) =>
+      ['engine', 'pipeline-checkpoints', projectPath] as const,
   },
 
   // ============================================

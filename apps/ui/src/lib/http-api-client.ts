@@ -2445,6 +2445,24 @@ export class HttpApiClient implements ElectronAPI {
       errors: string[];
     }> => this.post('/api/settings/migrate', { data }),
 
+    // Workflow settings (per-project pipeline hardening)
+    getWorkflow: (
+      projectPath: string
+    ): Promise<{
+      success: boolean;
+      workflow?: Record<string, unknown>;
+      error?: string;
+    }> => this.post('/api/settings/workflow', { projectPath }),
+
+    updateWorkflow: (
+      projectPath: string,
+      workflow: Record<string, unknown>
+    ): Promise<{
+      success: boolean;
+      workflow?: Record<string, unknown>;
+      error?: string;
+    }> => this.put('/api/settings/workflow', { projectPath, workflow }),
+
     // Filesystem agents discovery (read-only)
     discoverAgents: (
       projectPath?: string,
@@ -2881,6 +2899,42 @@ export class HttpApiClient implements ElectronAPI {
       this.post('/api/system/health-dashboard', { projectPath }),
   };
 
+  // Project Lifecycle API
+  lifecycle = {
+    getProject: (
+      projectPath: string,
+      projectSlug: string
+    ): Promise<{
+      success: boolean;
+      project?: {
+        slug: string;
+        title: string;
+        status: string;
+        prd?: { situation: string; problem: string; approach: string; results: string };
+        milestones?: Array<{ title: string; phases: Array<{ title: string; status?: string }> }>;
+      };
+      error?: string;
+    }> => this.post('/api/projects/get', { projectPath, projectSlug }),
+    approvePrd: (
+      projectPath: string,
+      projectSlug: string,
+      options?: { createEpics?: boolean; setupDependencies?: boolean }
+    ): Promise<{ success: boolean; error?: string }> =>
+      this.post('/api/projects/lifecycle/approve-prd', {
+        projectPath,
+        projectSlug,
+        ...options,
+      }),
+    getStatus: (
+      projectPath: string,
+      projectSlug: string
+    ): Promise<{
+      success: boolean;
+      status?: string;
+      error?: string;
+    }> => this.post('/api/projects/lifecycle/status', { projectPath, projectSlug }),
+  };
+
   // Engine API
   engine = {
     status: (projectPath?: string) => this.post('/api/engine/status', { projectPath }),
@@ -2905,6 +2959,48 @@ export class HttpApiClient implements ElectronAPI {
       timestamp?: string;
       error?: string;
     }> => this.post('/api/engine/pipeline-state', { projectPath }),
+    signalSubmit: (params: {
+      content: string;
+      projectPath?: string;
+      source?: string;
+      images?: string[];
+      files?: string[];
+    }): Promise<{ success: boolean; message?: string; error?: string }> =>
+      this.post('/api/engine/signal/submit', params),
+    pipelineCheckpoints: (
+      projectPath: string,
+      featureId?: string
+    ): Promise<{
+      success: boolean;
+      checkpoints?: Array<{
+        featureId: string;
+        projectPath: string;
+        currentState: string;
+        completedStates: string[];
+        goalGateResults: Array<{
+          gateId: string;
+          state: string;
+          passed: boolean;
+          reason: string;
+        }>;
+        timestamp: string;
+      }>;
+      checkpoint?: {
+        featureId: string;
+        projectPath: string;
+        currentState: string;
+        completedStates: string[];
+        goalGateResults: Array<{
+          gateId: string;
+          state: string;
+          passed: boolean;
+          reason: string;
+        }>;
+        timestamp: string;
+      } | null;
+      total?: number;
+      error?: string;
+    }> => this.post('/api/engine/pipeline-checkpoints', { projectPath, featureId }),
   };
 
   // Voice API

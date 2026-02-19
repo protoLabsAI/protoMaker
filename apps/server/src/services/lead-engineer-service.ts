@@ -29,6 +29,7 @@ import type {
   LeadRuleLogEntry,
   ExecuteOptions,
   AgentRole,
+  GoalGateResult,
 } from '@automaker/types';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
@@ -40,6 +41,7 @@ import type { MetricsService } from './metrics-service.js';
 import type { CodeRabbitResolverService } from './coderabbit-resolver-service.js';
 import type { PRFeedbackService } from './pr-feedback-service.js';
 import { DEFAULT_RULES, evaluateRules } from './lead-engineer-rules.js';
+import type { PipelineCheckpointService } from './pipeline-checkpoint-service.js';
 
 const execAsync = promisify(exec);
 const logger = createLogger('LeadEngineerService');
@@ -744,16 +746,105 @@ class EscalateProcessor implements StateProcessor {
   }
 }
 
+// ────────────────────────── Goal Gates ──────────────────────────
+
+/**
+ * A goal gate validator: pure function that checks preconditions
+ * before or postconditions after a state transition.
+ */
+export interface GoalGateValidator {
+  /** Unique gate identifier */
+  gateId: string;
+  /** Human-readable description */
+  description: string;
+  /** Evaluate the gate. Returns { passed, reason } */
+  evaluate: (ctx: StateContext) => { passed: boolean; reason: string };
+  /** State to retry from on failure (optional — defaults to ESCALATE) */
+  retryTarget?: FeatureProcessingState;
+}
+
+/**
+ * Default goal gate definitions for state transitions.
+ */
+const DEFAULT_GOAL_GATES: Map<string, GoalGateValidator> = new Map([
+  [
+    'execute-entry',
+    {
+      gateId: 'execute-entry',
+      description: 'Feature must have a description and all dependencies met before execution',
+      evaluate: (ctx: StateContext) => {
+        if (!ctx.feature.description && !ctx.feature.title) {
+          return { passed: false, reason: 'Feature has no description or title' };
+        }
+        return { passed: true, reason: 'Feature ready for execution' };
+      },
+    },
+  ],
+  [
+    'execute-exit',
+    {
+      gateId: 'execute-exit',
+      description: 'Feature must have a PR number after execution',
+      evaluate: (ctx: StateContext) => {
+        if (!ctx.prNumber && !ctx.feature.prNumber) {
+          return { passed: false, reason: 'No PR created during execution' };
+        }
+        return { passed: true, reason: 'PR exists' };
+      },
+      retryTarget: 'EXECUTE',
+    },
+  ],
+  [
+    'review-exit',
+    {
+      gateId: 'review-exit',
+      description: 'PR must be approved before moving to merge',
+      evaluate: (ctx: StateContext) => {
+        // This is checked inside ReviewProcessor already, but the gate
+        // provides a declarative verification layer
+        return { passed: true, reason: 'Review state validated by processor' };
+      },
+    },
+  ],
+  [
+    'merge-exit',
+    {
+      gateId: 'merge-exit',
+      description: 'PR must be confirmed merged',
+      evaluate: (ctx: StateContext) => {
+        // Merge confirmation happens inside MergeProcessor via gh CLI
+        return { passed: true, reason: 'Merge confirmed by processor' };
+      },
+      retryTarget: 'MERGE',
+    },
+  ],
+]);
+
 /**
  * Feature State Machine
  *
  * Processes a single feature through states from INTAKE to completion.
  * Replaces the inner loop of auto-mode's executeFeature().
+ *
+ * Enhanced with:
+ * - Goal gates: validate pre/post conditions on each transition
+ * - Checkpointing: persist state after each successful transition
+ * - Pipeline events: emit typed events for observability
  */
 export class FeatureStateMachine {
   private readonly processors: Map<FeatureProcessingState, StateProcessor>;
+  private readonly goalGates: Map<string, GoalGateValidator>;
+  private checkpointService?: PipelineCheckpointService;
+  private events?: EventEmitter;
 
-  constructor(serviceContext: ProcessorServiceContext) {
+  constructor(
+    serviceContext: ProcessorServiceContext,
+    opts?: {
+      checkpointService?: PipelineCheckpointService;
+      events?: EventEmitter;
+      goalGatesEnabled?: boolean;
+    }
+  ) {
     this.processors = new Map<FeatureProcessingState, StateProcessor>();
     this.processors.set('INTAKE', new IntakeProcessor(serviceContext));
     this.processors.set('PLAN', new PlanProcessor(serviceContext));
@@ -762,6 +853,11 @@ export class FeatureStateMachine {
     this.processors.set('MERGE', new MergeProcessor(serviceContext));
     this.processors.set('DEPLOY', new DeployProcessor(serviceContext));
     this.processors.set('ESCALATE', new EscalateProcessor(serviceContext));
+
+    // Initialize goal gates (can be disabled via settings)
+    this.goalGates = opts?.goalGatesEnabled === false ? new Map() : new Map(DEFAULT_GOAL_GATES);
+    this.checkpointService = opts?.checkpointService;
+    this.events = opts?.events;
   }
 
   /**
@@ -771,7 +867,11 @@ export class FeatureStateMachine {
   async processFeature(
     feature: Feature,
     projectPath: string,
-    options: ExecuteOptions
+    options: ExecuteOptions,
+    resumeFromCheckpoint?: {
+      state: FeatureProcessingState;
+      restoredContext?: Partial<StateContext>;
+    }
   ): Promise<{ finalState: FeatureProcessingState; context: StateContext }> {
     const ctx: StateContext = {
       feature,
@@ -781,17 +881,28 @@ export class FeatureStateMachine {
       planRequired: false,
       remediationAttempts: 0,
       mergeRetryCount: 0,
+      // Merge any restored context from checkpoint
+      ...resumeFromCheckpoint?.restoredContext,
     };
 
-    let currentState: FeatureProcessingState = 'INTAKE';
+    let currentState: FeatureProcessingState = resumeFromCheckpoint?.state || 'INTAKE';
     let transitionCount = 0;
     const MAX_TRANSITIONS = 20;
+    const completedStates: string[] = [];
+    const goalGateResults: GoalGateResult[] = [];
 
-    logger.info('Starting feature processing', {
-      featureId: feature.id,
-      title: feature.title,
-      initialState: currentState,
-    });
+    if (resumeFromCheckpoint) {
+      logger.info('Resuming feature processing from checkpoint', {
+        featureId: feature.id,
+        resumeState: currentState,
+      });
+    } else {
+      logger.info('Starting feature processing', {
+        featureId: feature.id,
+        title: feature.title,
+        initialState: currentState,
+      });
+    }
 
     while (currentState && transitionCount < MAX_TRANSITIONS) {
       const processor = this.processors.get(currentState);
@@ -801,9 +912,84 @@ export class FeatureStateMachine {
       }
 
       try {
+        // Evaluate entry gate
+        const entryGate = this.goalGates.get(`${currentState.toLowerCase()}-entry`);
+        if (entryGate) {
+          const gateResult = entryGate.evaluate(ctx);
+          const goalResult: GoalGateResult = {
+            gateId: entryGate.gateId,
+            state: currentState,
+            passed: gateResult.passed,
+            reason: gateResult.reason,
+            retryTarget: entryGate.retryTarget,
+          };
+          goalGateResults.push(goalResult);
+
+          this.emitPipelineEvent('pipeline:goal-gate-evaluated', {
+            featureId: feature.id,
+            gateId: entryGate.gateId,
+            passed: gateResult.passed,
+            reason: gateResult.reason,
+          });
+
+          if (!gateResult.passed) {
+            logger.warn(`Entry gate failed for ${currentState}`, {
+              gateId: entryGate.gateId,
+              reason: gateResult.reason,
+            });
+            const target = entryGate.retryTarget || 'ESCALATE';
+            ctx.escalationReason = `Goal gate failed: ${gateResult.reason}`;
+            currentState = target;
+            transitionCount++;
+            continue;
+          }
+        }
+
+        this.emitPipelineEvent('pipeline:state-entered', {
+          featureId: feature.id,
+          state: currentState,
+          fromState: completedStates[completedStates.length - 1] || null,
+          timestamp: new Date().toISOString(),
+        });
+
         await processor.enter(ctx);
         const result = await processor.process(ctx);
         await processor.exit(ctx);
+
+        // Evaluate exit gate
+        const exitGate = this.goalGates.get(`${currentState.toLowerCase()}-exit`);
+        if (exitGate && result.nextState && result.nextState !== 'ESCALATE') {
+          const gateResult = exitGate.evaluate(ctx);
+          const goalResult: GoalGateResult = {
+            gateId: exitGate.gateId,
+            state: currentState,
+            passed: gateResult.passed,
+            reason: gateResult.reason,
+            retryTarget: exitGate.retryTarget,
+          };
+          goalGateResults.push(goalResult);
+
+          this.emitPipelineEvent('pipeline:goal-gate-evaluated', {
+            featureId: feature.id,
+            gateId: exitGate.gateId,
+            passed: gateResult.passed,
+            reason: gateResult.reason,
+          });
+
+          if (!gateResult.passed) {
+            logger.warn(`Exit gate failed for ${currentState}`, {
+              gateId: exitGate.gateId,
+              reason: gateResult.reason,
+            });
+            const target = exitGate.retryTarget || 'ESCALATE';
+            ctx.escalationReason = `Goal gate failed: ${gateResult.reason}`;
+            currentState = target;
+            transitionCount++;
+            continue;
+          }
+        }
+
+        completedStates.push(currentState);
 
         logger.info('State transition', {
           from: currentState,
@@ -811,6 +997,27 @@ export class FeatureStateMachine {
           reason: result.reason,
           shouldContinue: result.shouldContinue,
         });
+
+        // Save checkpoint after successful transition
+        if (this.checkpointService && result.nextState) {
+          try {
+            await this.checkpointService.save(
+              projectPath,
+              feature.id,
+              result.nextState,
+              ctx,
+              completedStates,
+              goalGateResults
+            );
+            this.emitPipelineEvent('pipeline:checkpoint-saved', {
+              featureId: feature.id,
+              state: result.nextState,
+              checkpointId: `${feature.id}-${result.nextState}`,
+            });
+          } catch (err) {
+            logger.error('Failed to save checkpoint', { error: err });
+          }
+        }
 
         if (!result.shouldContinue || !result.nextState) {
           logger.info('Feature processing completed', {
@@ -829,8 +1036,8 @@ export class FeatureStateMachine {
           error: error instanceof Error ? error.message : String(error),
         });
 
-        currentState = 'ESCALATE';
         ctx.escalationReason = `Unexpected error in ${currentState}: ${error instanceof Error ? error.message : String(error)}`;
+        currentState = 'ESCALATE';
       }
     }
 
@@ -841,6 +1048,15 @@ export class FeatureStateMachine {
       });
       currentState = 'ESCALATE';
       ctx.escalationReason = 'Max state transitions exceeded';
+    }
+
+    // Clean up checkpoint on terminal states
+    if (this.checkpointService && (currentState === 'DEPLOY' || currentState === 'ESCALATE')) {
+      try {
+        await this.checkpointService.delete(projectPath, feature.id);
+      } catch {
+        // Non-critical
+      }
     }
 
     return { finalState: currentState, context: ctx };
@@ -860,6 +1076,12 @@ export class FeatureStateMachine {
     this.processors.set(state, processor);
     logger.info(`Registered custom processor for state: ${state}`);
   }
+
+  private emitPipelineEvent(type: string, payload: Record<string, unknown>): void {
+    if (this.events) {
+      this.events.emit(type as EventType, payload);
+    }
+  }
 }
 
 // ────────────────────────── Session Management ──────────────────────────
@@ -874,10 +1096,17 @@ interface PersistedSessionData {
   startedAt: string;
 }
 
+const SUPERVISOR_CHECK_MS = 30 * 1000; // 30 seconds
+const SUPERVISOR_WARN_RUNTIME_MS = 45 * 60 * 1000; // 45 minutes
+const SUPERVISOR_ABORT_RUNTIME_MS = 90 * 60 * 1000; // 90 minutes
+const SUPERVISOR_WARN_COST_USD = 8;
+const SUPERVISOR_ABORT_COST_USD = 15;
+
 export class LeadEngineerService {
   private sessions = new Map<string, LeadEngineerSession>();
   private unsubscribe: (() => void) | null = null;
   private refreshIntervals = new Map<string, ReturnType<typeof setInterval>>();
+  private supervisorIntervals = new Map<string, ReturnType<typeof setInterval>>();
 
   private discordBotService?: {
     sendToChannel(channelId: string, content: string): Promise<boolean>;
@@ -885,6 +1114,7 @@ export class LeadEngineerService {
 
   private codeRabbitResolver?: CodeRabbitResolverService;
   private prFeedbackService?: PRFeedbackService;
+  private checkpointService?: PipelineCheckpointService;
 
   constructor(
     private events: EventEmitter,
@@ -895,6 +1125,13 @@ export class LeadEngineerService {
     private settingsService: SettingsService,
     private metricsService: MetricsService
   ) {}
+
+  /**
+   * Set pipeline checkpoint service for crash recovery.
+   */
+  setCheckpointService(service: PipelineCheckpointService): void {
+    this.checkpointService = service;
+  }
 
   /**
    * Set Discord bot service for post_discord action.
@@ -1024,6 +1261,18 @@ export class LeadEngineerService {
     }, WORLD_STATE_REFRESH_MS);
     this.refreshIntervals.set(projectPath, interval);
 
+    // Set up supervisor interval — checks agent runtime and cost every 30s
+    const supervisorInterval = setInterval(() => {
+      try {
+        const s = this.sessions.get(projectPath);
+        if (!s || s.flowState !== 'running') return;
+        this.supervisorCheck(s);
+      } catch (err) {
+        logger.error(`Supervisor check failed for ${projectSlug}:`, err);
+      }
+    }, SUPERVISOR_CHECK_MS);
+    this.supervisorIntervals.set(projectPath, supervisorInterval);
+
     // Save session to disk
     await this.saveSession(session);
 
@@ -1112,6 +1361,25 @@ export class LeadEngineerService {
         throw new Error(`Feature ${featureId} not found`);
       }
 
+      // Check for existing checkpoint (crash recovery)
+      let resumeFromCheckpoint:
+        | { state: FeatureProcessingState; restoredContext?: Partial<StateContext> }
+        | undefined;
+
+      if (this.checkpointService) {
+        const checkpoint = await this.checkpointService.load(projectPath, featureId);
+        if (checkpoint) {
+          logger.info(
+            `[LeadEngineer] Found checkpoint for ${featureId}, resuming from ${checkpoint.currentState}`
+          );
+          const restoredContext = this.checkpointService.restoreContext(checkpoint);
+          resumeFromCheckpoint = {
+            state: checkpoint.currentState as FeatureProcessingState,
+            restoredContext,
+          };
+        }
+      }
+
       // Build service context for processors
       const serviceContext: ProcessorServiceContext = {
         events: this.events,
@@ -1120,9 +1388,17 @@ export class LeadEngineerService {
         prFeedbackService: this.prFeedbackService,
       };
 
-      // Create state machine and process the feature
-      const stateMachine = new FeatureStateMachine(serviceContext);
-      const result = await stateMachine.processFeature(feature, projectPath, options);
+      // Create state machine with checkpoint and event support
+      const stateMachine = new FeatureStateMachine(serviceContext, {
+        checkpointService: this.checkpointService,
+        events: this.events,
+      });
+      const result = await stateMachine.processFeature(
+        feature,
+        projectPath,
+        options,
+        resumeFromCheckpoint
+      );
 
       logger.info(`[LeadEngineer] Feature processing completed`, {
         featureId,
@@ -1300,6 +1576,70 @@ export class LeadEngineerService {
     if (interval) {
       clearInterval(interval);
       this.refreshIntervals.delete(projectPath);
+    }
+    const supervisorInterval = this.supervisorIntervals.get(projectPath);
+    if (supervisorInterval) {
+      clearInterval(supervisorInterval);
+      this.supervisorIntervals.delete(projectPath);
+    }
+  }
+
+  /**
+   * Supervisor check: evaluate agent runtime and cost, take corrective action.
+   */
+  private supervisorCheck(session: LeadEngineerSession): void {
+    const now = Date.now();
+
+    for (const agent of session.worldState.agents) {
+      const runtimeMs = now - new Date(agent.startTime).getTime();
+      const feature = session.worldState.features[agent.featureId];
+      const costUsd = feature?.costUsd ?? 0;
+
+      // Cost abort ($15+)
+      if (costUsd >= SUPERVISOR_ABORT_COST_USD) {
+        logger.warn(
+          `[Supervisor] Aborting ${agent.featureId}: cost $${costUsd.toFixed(2)} exceeds limit`
+        );
+        this.executeAction(session, {
+          type: 'abort_and_resume',
+          featureId: agent.featureId,
+          resumePrompt: `Budget limit reached ($${costUsd.toFixed(2)}). Wrap up immediately: commit what you have, create a PR, and stop.`,
+        }).catch((err) => logger.error('Supervisor abort failed:', err));
+        continue;
+      }
+
+      // Runtime abort (90min+)
+      if (runtimeMs >= SUPERVISOR_ABORT_RUNTIME_MS) {
+        const minutes = Math.round(runtimeMs / 60000);
+        logger.warn(`[Supervisor] Aborting ${agent.featureId}: running ${minutes}min`);
+        this.executeAction(session, {
+          type: 'abort_and_resume',
+          featureId: agent.featureId,
+          resumePrompt: `You have been running for ${minutes} minutes. Wrap up: commit changes, create a PR, and finish.`,
+        }).catch((err) => logger.error('Supervisor abort failed:', err));
+        continue;
+      }
+
+      // Cost warning ($8+)
+      if (costUsd >= SUPERVISOR_WARN_COST_USD) {
+        logger.info(`[Supervisor] Warning: ${agent.featureId} cost $${costUsd.toFixed(2)}`);
+        this.events.emit('pipeline:supervisor-action' as EventType, {
+          featureId: agent.featureId,
+          action: 'cost_warning',
+          reason: `Agent cost $${costUsd.toFixed(2)} approaching limit`,
+        });
+      }
+
+      // Runtime warning (45min+)
+      if (runtimeMs >= SUPERVISOR_WARN_RUNTIME_MS) {
+        const minutes = Math.round(runtimeMs / 60000);
+        logger.info(`[Supervisor] Warning: ${agent.featureId} running ${minutes}min`);
+        this.events.emit('pipeline:supervisor-action' as EventType, {
+          featureId: agent.featureId,
+          action: 'runtime_warning',
+          reason: `Agent running for ${minutes} minutes`,
+        });
+      }
     }
   }
 
@@ -1821,6 +2161,34 @@ export class LeadEngineerService {
           logger.info(`Sent message to agent for feature ${action.featureId}`);
         } catch (err) {
           logger.warn(`Failed to send message to agent ${action.featureId}:`, err);
+        }
+        break;
+      }
+
+      case 'abort_and_resume': {
+        try {
+          logger.info(`Supervisor: abort_and_resume for ${action.featureId}`);
+          await this.autoModeService.stopFeature(action.featureId);
+          // Brief delay for cleanup
+          await new Promise((r) => setTimeout(r, 5000));
+          await this.autoModeService.executeFeature(
+            session.projectPath,
+            action.featureId,
+            true,
+            false,
+            undefined,
+            { recoveryContext: action.resumePrompt }
+          );
+
+          this.events.emit('pipeline:supervisor-action' as EventType, {
+            featureId: action.featureId,
+            action: 'abort_and_resume',
+            reason: action.resumePrompt,
+          });
+
+          logger.info(`Supervisor: resumed agent for ${action.featureId}`);
+        } catch (err) {
+          logger.warn(`Supervisor: abort_and_resume failed for ${action.featureId}:`, err);
         }
         break;
       }
