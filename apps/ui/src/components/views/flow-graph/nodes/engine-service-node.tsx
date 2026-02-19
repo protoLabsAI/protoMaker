@@ -74,6 +74,13 @@ function EngineServiceNodeComponent({ data }: NodeProps & { data: EngineServiceN
   const Icon = SERVICE_ICONS[data.serviceId] || Cog;
   const colors = getStatusColor(data.status);
   const isActive = data.status === 'active';
+  const hasAssociatedFlow = !!data.graphId;
+
+  const handleClick = () => {
+    if (hasAssociatedFlow && data.onNodeClick) {
+      data.onNodeClick(data.serviceId, data.graphId!);
+    }
+  };
 
   return (
     <div className="relative">
@@ -97,8 +104,10 @@ function EngineServiceNodeComponent({ data }: NodeProps & { data: EngineServiceN
       <div
         className={cn(
           'relative w-[220px] h-[110px] rounded-xl border backdrop-blur-md bg-card/90',
-          colors.border
+          colors.border,
+          hasAssociatedFlow && 'cursor-pointer hover:border-violet-500/60 transition-colors'
         )}
+        onClick={handleClick}
       >
         <div className="p-3.5">
           {/* Header row: icon + name + status dot */}

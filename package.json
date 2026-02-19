@@ -79,7 +79,9 @@
     "@anthropic-ai/claude-agent-sdk": "^0.2.36",
     "@modelcontextprotocol/sdk": "^1.26.0",
     "@openai/codex-sdk": "^0.98.0",
+    "@types/dagre": "^0.7.53",
     "cross-spawn": "7.0.6",
+    "dagre": "^0.8.5",
     "langsmith": "0.4.12",
     "rehype-sanitize": "6.0.0",
     "tree-kill": "1.2.2"

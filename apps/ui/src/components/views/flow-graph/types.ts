@@ -49,6 +49,10 @@ export interface EngineServiceNodeData {
   throughput: number;
   /** Short status line shown below the label */
   statusLine?: string;
+  /** Associated LangGraph flow ID (if applicable) */
+  graphId?: string;
+  /** Click handler for opening flow detail view */
+  onNodeClick?: (serviceId: EngineServiceId, graphId: string) => void;
   [key: string]: unknown;
 }
 
