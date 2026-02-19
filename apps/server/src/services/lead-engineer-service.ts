@@ -38,6 +38,7 @@ import type { ProjectLifecycleService } from './project-lifecycle-service.js';
 import type { SettingsService } from './settings-service.js';
 import type { MetricsService } from './metrics-service.js';
 import type { CodeRabbitResolverService } from './coderabbit-resolver-service.js';
+import type { PRFeedbackService } from './pr-feedback-service.js';
 import { DEFAULT_RULES, evaluateRules } from './lead-engineer-rules.js';
 
 const execAsync = promisify(exec);
@@ -45,6 +46,24 @@ const logger = createLogger('LeadEngineerService');
 
 const WORLD_STATE_REFRESH_MS = 5 * 60 * 1000; // 5 minutes
 const MAX_RULE_LOG_ENTRIES = 200;
+
+// Budget constants for processors
+const EXECUTE_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+const MAX_PR_ITERATIONS = 2;
+const MAX_TOTAL_REMEDIATION_CYCLES = 4;
+const MERGE_RETRY_DELAY_MS = 60 * 1000; // 60 seconds
+const REVIEW_POLL_DELAY_MS = 30 * 1000; // 30 seconds
+
+/**
+ * Service context injected into state processors.
+ * Provides access to real services without circular dependencies.
+ */
+export interface ProcessorServiceContext {
+  events: EventEmitter;
+  featureLoader: FeatureLoader;
+  autoModeService: AutoModeService;
+  prFeedbackService?: PRFeedbackService;
+}
 
 // ────────────────────────── Feature State Machine ──────────────────────────
 
@@ -108,6 +127,8 @@ export interface StateProcessor {
  * INTAKE State: Load feature, classify complexity, assign persona, validate deps
  */
 class IntakeProcessor implements StateProcessor {
+  constructor(private serviceContext: ProcessorServiceContext) {}
+
   async enter(ctx: StateContext): Promise<void> {
     logger.info(`[INTAKE] Processing feature: ${ctx.feature.id}`, {
       title: ctx.feature.title,
@@ -118,9 +139,32 @@ class IntakeProcessor implements StateProcessor {
   async process(ctx: StateContext): Promise<StateTransitionResult> {
     const { feature } = ctx;
 
-    // Validate dependencies
+    // Validate dependencies against real feature state
     if (feature.dependencies && feature.dependencies.length > 0) {
-      logger.info(`[INTAKE] Feature has ${feature.dependencies.length} dependencies`);
+      const allFeatures = await this.serviceContext.featureLoader.getAll(ctx.projectPath);
+      const unmetDeps: string[] = [];
+
+      for (const depId of feature.dependencies) {
+        const dep = allFeatures.find((f) => f.id === depId);
+        if (!dep || (dep.status !== 'done' && dep.status !== 'verified')) {
+          unmetDeps.push(depId);
+        }
+      }
+
+      if (unmetDeps.length > 0) {
+        ctx.escalationReason = `Unmet dependencies: ${unmetDeps.join(', ')}`;
+        logger.warn(`[INTAKE] Feature has ${unmetDeps.length} unmet dependencies`, {
+          featureId: feature.id,
+          unmetDeps,
+        });
+        return {
+          nextState: 'ESCALATE',
+          shouldContinue: false,
+          reason: ctx.escalationReason,
+        };
+      }
+
+      logger.info(`[INTAKE] All ${feature.dependencies.length} dependencies satisfied`);
     }
 
     // Classify complexity if not already set
@@ -199,6 +243,8 @@ class IntakeProcessor implements StateProcessor {
  * PLAN State: Agent researches codebase, produces plan. Factor-based antagonistic gate.
  */
 class PlanProcessor implements StateProcessor {
+  constructor(private _serviceContext: ProcessorServiceContext) {}
+
   async enter(ctx: StateContext): Promise<void> {
     logger.info(`[PLAN] Starting planning phase for feature: ${ctx.feature.id}`);
   }
@@ -254,10 +300,16 @@ class PlanProcessor implements StateProcessor {
 
 /**
  * EXECUTE State: Agent runs in worktree. Monitor. On failure → retry with context or ESCALATE.
+ *
+ * Calls autoModeService.executeFeature() directly (bypasses the auto-loop's
+ * leadEngineerService.process() delegation, avoiding infinite recursion).
+ * Waits for completion via event listener with a 30-minute timeout.
  */
 class ExecuteProcessor implements StateProcessor {
   private readonly MAX_RETRIES = 3;
   private readonly MAX_BUDGET_USD = 10.0;
+
+  constructor(private serviceContext: ProcessorServiceContext) {}
 
   async enter(ctx: StateContext): Promise<void> {
     logger.info(`[EXECUTE] Starting execution for feature: ${ctx.feature.id}`, {
@@ -267,8 +319,6 @@ class ExecuteProcessor implements StateProcessor {
   }
 
   async process(ctx: StateContext): Promise<StateTransitionResult> {
-    logger.info('[EXECUTE] Running implementation agent (stub - implementation pending)');
-
     // Check budget
     const totalCost = ctx.feature.costUsd || 0;
     if (totalCost > this.MAX_BUDGET_USD) {
@@ -290,39 +340,108 @@ class ExecuteProcessor implements StateProcessor {
       };
     }
 
-    // Stub: always succeed
-    const success = true;
+    logger.info('[EXECUTE] Launching agent via autoModeService.executeFeature()', {
+      featureId: ctx.feature.id,
+      retryCount: ctx.retryCount,
+    });
 
-    if (!success) {
+    // Wait for agent completion via event listener
+    const result = await this.waitForCompletion(ctx);
+
+    if (!result.success) {
       ctx.retryCount++;
       logger.warn('[EXECUTE] Execution failed, will retry', {
         retryCount: ctx.retryCount,
+        error: result.error,
       });
 
       return {
         nextState: 'EXECUTE',
         shouldContinue: true,
-        reason: 'Execution failed, retrying with more context',
+        reason: `Execution failed: ${result.error || 'unknown'}`,
       };
+    }
+
+    // Reload feature to capture updated costUsd, prNumber, etc.
+    const updated = await this.serviceContext.featureLoader.get(ctx.projectPath, ctx.feature.id);
+    if (updated) {
+      ctx.feature = updated;
+      if (updated.prNumber) ctx.prNumber = updated.prNumber;
     }
 
     return {
       nextState: 'REVIEW',
       shouldContinue: true,
-      reason: 'Execution completed, PR created',
+      reason: 'Execution completed, moving to review',
     };
   }
 
   async exit(_ctx: StateContext): Promise<void> {
     logger.info('[EXECUTE] Execution phase completed');
   }
+
+  /**
+   * Execute the feature and wait for a completion event.
+   * Uses executeFeature() directly (not through process()) to avoid recursion.
+   */
+  private waitForCompletion(ctx: StateContext): Promise<{ success: boolean; error?: string }> {
+    return new Promise((resolve) => {
+      let unsubscribe: (() => void) | null = null;
+      let timedOut = false;
+
+      const timeout = setTimeout(() => {
+        timedOut = true;
+        if (unsubscribe) unsubscribe();
+        resolve({ success: false, error: 'Execution timed out after 30 minutes' });
+      }, EXECUTE_TIMEOUT_MS);
+
+      // Subscribe to completion events for this feature
+      unsubscribe = this.serviceContext.events.subscribe((type: EventType, payload: unknown) => {
+        const p = payload as Record<string, unknown> | null;
+        if (p?.featureId !== ctx.feature.id) return;
+
+        if (type === 'feature:completed' || type === 'feature:stopped') {
+          clearTimeout(timeout);
+          if (!timedOut) {
+            if (unsubscribe) unsubscribe();
+            resolve({ success: true });
+          }
+        } else if (type === 'feature:error') {
+          clearTimeout(timeout);
+          if (!timedOut) {
+            if (unsubscribe) unsubscribe();
+            resolve({
+              success: false,
+              error: (p?.error as string) || 'Agent execution failed',
+            });
+          }
+        }
+      });
+
+      // Start execution (bypasses lead engineer delegation — calls executeFeature directly)
+      this.serviceContext.autoModeService
+        .executeFeature(ctx.projectPath, ctx.feature.id, true, false)
+        .catch((err: unknown) => {
+          clearTimeout(timeout);
+          if (!timedOut && unsubscribe) {
+            unsubscribe();
+            resolve({
+              success: false,
+              error: err instanceof Error ? err.message : String(err),
+            });
+          }
+        });
+    });
+  }
 }
 
 /**
  * REVIEW State: PR created. CI runs. If fails → back to EXECUTE (bounded). If passes → MERGE.
+ *
+ * Queries PRFeedbackService for tracked PR state. Falls back to gh CLI if needed.
  */
 class ReviewProcessor implements StateProcessor {
-  private readonly MAX_REMEDIATION_ATTEMPTS = 2;
+  constructor(private serviceContext: ProcessorServiceContext) {}
 
   async enter(ctx: StateContext): Promise<void> {
     logger.info(`[REVIEW] PR review started for feature: ${ctx.feature.id}`, {
@@ -331,17 +450,56 @@ class ReviewProcessor implements StateProcessor {
   }
 
   async process(ctx: StateContext): Promise<StateTransitionResult> {
-    logger.info('[REVIEW] Checking PR and CI status (stub - implementation pending)');
-
-    // Stub: In real implementation, this would check actual CI status from GitHub
-    // For now, use context if set, otherwise default to passing
-    if (!ctx.ciStatus) {
-      ctx.ciStatus = 'passing';
+    // Reload feature to get latest prNumber
+    const fresh = await this.serviceContext.featureLoader.get(ctx.projectPath, ctx.feature.id);
+    if (fresh) {
+      ctx.feature = fresh;
+      if (fresh.prNumber) ctx.prNumber = fresh.prNumber;
     }
 
-    if (ctx.ciStatus === 'failing') {
-      if (ctx.remediationAttempts >= this.MAX_REMEDIATION_ATTEMPTS) {
-        ctx.escalationReason = `CI failing after ${this.MAX_REMEDIATION_ATTEMPTS} remediation attempts`;
+    // No PR means something is wrong
+    if (!ctx.prNumber) {
+      ctx.escalationReason = 'No PR number found after execution';
+      return {
+        nextState: 'ESCALATE',
+        shouldContinue: false,
+        reason: ctx.escalationReason,
+      };
+    }
+
+    // Query PRFeedbackService for tracked PR state
+    const reviewState = this.getPRReviewState(ctx);
+
+    logger.info('[REVIEW] PR status check', {
+      featureId: ctx.feature.id,
+      prNumber: ctx.prNumber,
+      reviewState,
+      remediationAttempts: ctx.remediationAttempts,
+    });
+
+    if (reviewState === 'approved') {
+      return {
+        nextState: 'MERGE',
+        shouldContinue: true,
+        reason: 'PR approved, CI passing',
+      };
+    }
+
+    if (reviewState === 'changes_requested') {
+      // Check remediation budget
+      if (ctx.remediationAttempts >= MAX_TOTAL_REMEDIATION_CYCLES) {
+        ctx.escalationReason = `Max remediation cycles exceeded (${MAX_TOTAL_REMEDIATION_CYCLES})`;
+        return {
+          nextState: 'ESCALATE',
+          shouldContinue: false,
+          reason: ctx.escalationReason,
+        };
+      }
+
+      // Check iteration budget
+      const trackedPR = this.getTrackedPR(ctx);
+      if (trackedPR && trackedPR.iterationCount > MAX_PR_ITERATIONS) {
+        ctx.escalationReason = `Max PR iterations exceeded (${MAX_PR_ITERATIONS})`;
         return {
           nextState: 'ESCALATE',
           shouldContinue: false,
@@ -353,41 +511,112 @@ class ReviewProcessor implements StateProcessor {
       return {
         nextState: 'EXECUTE',
         shouldContinue: true,
-        reason: 'CI failing, remediating',
+        reason: 'Changes requested, remediating',
         context: { remediation: true },
       };
     }
 
+    // Status is 'pending' or 'commented' — wait and re-check
+    logger.info(`[REVIEW] PR pending review, waiting ${REVIEW_POLL_DELAY_MS / 1000}s`, {
+      prNumber: ctx.prNumber,
+    });
+    await new Promise((r) => setTimeout(r, REVIEW_POLL_DELAY_MS));
+
     return {
-      nextState: 'MERGE',
+      nextState: 'REVIEW',
       shouldContinue: true,
-      reason: 'PR approved, CI passing',
+      reason: 'PR pending, re-checking',
     };
   }
 
   async exit(_ctx: StateContext): Promise<void> {
     logger.info('[REVIEW] Review phase completed');
   }
+
+  private getPRReviewState(ctx: StateContext): string {
+    const trackedPR = this.getTrackedPR(ctx);
+    return trackedPR?.reviewState || 'pending';
+  }
+
+  private getTrackedPR(ctx: StateContext) {
+    if (!this.serviceContext.prFeedbackService) return undefined;
+    const prs = this.serviceContext.prFeedbackService.getTrackedPRs();
+    return prs.find((pr) => pr.featureId === ctx.feature.id || pr.prNumber === ctx.prNumber);
+  }
 }
 
 /**
- * MERGE State: Auto-merge. Update board. GH→Linear sync.
+ * MERGE State: Auto-merge via gh CLI. Update board. GH→Linear sync.
  */
 class MergeProcessor implements StateProcessor {
+  constructor(private serviceContext: ProcessorServiceContext) {}
+
   async enter(ctx: StateContext): Promise<void> {
     logger.info(`[MERGE] Starting merge for feature: ${ctx.feature.id}`, {
       prNumber: ctx.prNumber,
     });
   }
 
-  async process(_ctx: StateContext): Promise<StateTransitionResult> {
-    logger.info('[MERGE] Merging PR (stub - implementation pending)');
+  async process(ctx: StateContext): Promise<StateTransitionResult> {
+    if (!ctx.prNumber) {
+      ctx.escalationReason = 'No PR number available for merge';
+      return {
+        nextState: 'ESCALATE',
+        shouldContinue: false,
+        reason: ctx.escalationReason,
+      };
+    }
 
-    return {
-      nextState: 'DEPLOY',
-      shouldContinue: true,
-      reason: 'PR merged successfully',
-    };
+    logger.info(`[MERGE] Attempting to merge PR #${ctx.prNumber}`);
+
+    try {
+      await execAsync(`gh pr merge ${ctx.prNumber} --squash --auto`, {
+        cwd: ctx.projectPath,
+        timeout: 30000,
+      });
+
+      // Update feature status
+      await this.serviceContext.featureLoader.update(ctx.projectPath, ctx.feature.id, {
+        status: 'done',
+      });
+
+      // Emit merge event
+      this.serviceContext.events.emit('feature:pr-merged' as EventType, {
+        featureId: ctx.feature.id,
+        prNumber: ctx.prNumber,
+        projectPath: ctx.projectPath,
+      });
+
+      logger.info(`[MERGE] PR #${ctx.prNumber} merged successfully`);
+
+      return {
+        nextState: 'DEPLOY',
+        shouldContinue: true,
+        reason: 'PR merged successfully',
+      };
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+
+      // If checks are still pending, wait and retry
+      if (errMsg.includes('check') || errMsg.includes('pending') || errMsg.includes('required')) {
+        logger.info(
+          `[MERGE] Checks pending on PR #${ctx.prNumber}, waiting ${MERGE_RETRY_DELAY_MS / 1000}s`
+        );
+        await new Promise((r) => setTimeout(r, MERGE_RETRY_DELAY_MS));
+        return {
+          nextState: 'MERGE',
+          shouldContinue: true,
+          reason: 'Checks pending, retrying merge',
+        };
+      }
+
+      ctx.escalationReason = `Merge failed: ${errMsg}`;
+      return {
+        nextState: 'ESCALATE',
+        shouldContinue: false,
+        reason: ctx.escalationReason,
+      };
+    }
   }
 
   async exit(_ctx: StateContext): Promise<void> {
@@ -396,15 +625,24 @@ class MergeProcessor implements StateProcessor {
 }
 
 /**
- * DEPLOY State: Triggered by main push. Verify.
+ * DEPLOY State: Verify feature is marked done after merge.
  */
 class DeployProcessor implements StateProcessor {
+  constructor(private serviceContext: ProcessorServiceContext) {}
+
   async enter(ctx: StateContext): Promise<void> {
     logger.info(`[DEPLOY] Deployment verification for feature: ${ctx.feature.id}`);
   }
 
-  async process(_ctx: StateContext): Promise<StateTransitionResult> {
-    logger.info('[DEPLOY] Verifying deployment (stub - implementation pending)');
+  async process(ctx: StateContext): Promise<StateTransitionResult> {
+    // Reload feature to verify final status
+    const fresh = await this.serviceContext.featureLoader.get(ctx.projectPath, ctx.feature.id);
+    if (fresh && fresh.status !== 'done' && fresh.status !== 'verified') {
+      await this.serviceContext.featureLoader.update(ctx.projectPath, ctx.feature.id, {
+        status: 'done',
+      });
+      logger.info(`[DEPLOY] Updated feature status to done`);
+    }
 
     return {
       nextState: null,
@@ -419,9 +657,12 @@ class DeployProcessor implements StateProcessor {
 }
 
 /**
- * ESCALATE State: Too many failures, budget exceeded, needs different expertise. Flag AVA.
+ * ESCALATE State: Too many failures, budget exceeded, needs different expertise.
+ * Moves feature to blocked status and emits escalation signal.
  */
 class EscalateProcessor implements StateProcessor {
+  constructor(private serviceContext: ProcessorServiceContext) {}
+
   async enter(ctx: StateContext): Promise<void> {
     logger.warn(`[ESCALATE] Escalating feature: ${ctx.feature.id}`, {
       reason: ctx.escalationReason,
@@ -429,8 +670,32 @@ class EscalateProcessor implements StateProcessor {
   }
 
   async process(ctx: StateContext): Promise<StateTransitionResult> {
-    logger.warn('[ESCALATE] Creating escalation (stub - implementation pending)', {
+    // Move feature to blocked
+    await this.serviceContext.featureLoader.update(ctx.projectPath, ctx.feature.id, {
+      status: 'blocked',
+    });
+
+    // Emit escalation signal
+    this.serviceContext.events.emit('escalation:signal-received' as EventType, {
+      source: 'lead_engineer_state_machine',
+      severity: 'high',
+      type: 'feature_escalated',
+      context: {
+        featureId: ctx.feature.id,
+        featureTitle: ctx.feature.title,
+        reason: ctx.escalationReason,
+        retryCount: ctx.retryCount,
+        remediationAttempts: ctx.remediationAttempts,
+        projectPath: ctx.projectPath,
+      },
+      deduplicationKey: `escalate_${ctx.feature.id}`,
+      timestamp: new Date().toISOString(),
+    });
+
+    logger.warn(`[ESCALATE] Feature ${ctx.feature.id} moved to blocked`, {
       reason: ctx.escalationReason,
+      retryCount: ctx.retryCount,
+      remediationAttempts: ctx.remediationAttempts,
     });
 
     return {
@@ -454,16 +719,15 @@ class EscalateProcessor implements StateProcessor {
 export class FeatureStateMachine {
   private readonly processors: Map<FeatureProcessingState, StateProcessor>;
 
-  constructor() {
-    this.processors = new Map([
-      ['INTAKE', new IntakeProcessor()],
-      ['PLAN', new PlanProcessor()],
-      ['EXECUTE', new ExecuteProcessor()],
-      ['REVIEW', new ReviewProcessor()],
-      ['MERGE', new MergeProcessor()],
-      ['DEPLOY', new DeployProcessor()],
-      ['ESCALATE', new EscalateProcessor()],
-    ]);
+  constructor(serviceContext: ProcessorServiceContext) {
+    this.processors = new Map<FeatureProcessingState, StateProcessor>();
+    this.processors.set('INTAKE', new IntakeProcessor(serviceContext));
+    this.processors.set('PLAN', new PlanProcessor(serviceContext));
+    this.processors.set('EXECUTE', new ExecuteProcessor(serviceContext));
+    this.processors.set('REVIEW', new ReviewProcessor(serviceContext));
+    this.processors.set('MERGE', new MergeProcessor(serviceContext));
+    this.processors.set('DEPLOY', new DeployProcessor(serviceContext));
+    this.processors.set('ESCALATE', new EscalateProcessor(serviceContext));
   }
 
   /**
@@ -585,6 +849,7 @@ export class LeadEngineerService {
   };
 
   private codeRabbitResolver?: CodeRabbitResolverService;
+  private prFeedbackService?: PRFeedbackService;
 
   constructor(
     private events: EventEmitter,
@@ -610,6 +875,13 @@ export class LeadEngineerService {
    */
   setCodeRabbitResolver(resolver: CodeRabbitResolverService): void {
     this.codeRabbitResolver = resolver;
+  }
+
+  /**
+   * Set PR Feedback service for state machine review checks.
+   */
+  setPRFeedbackService(service: PRFeedbackService): void {
+    this.prFeedbackService = service;
   }
 
   /**
@@ -805,8 +1077,16 @@ export class LeadEngineerService {
         throw new Error(`Feature ${featureId} not found`);
       }
 
+      // Build service context for processors
+      const serviceContext: ProcessorServiceContext = {
+        events: this.events,
+        featureLoader: this.featureLoader,
+        autoModeService: this.autoModeService,
+        prFeedbackService: this.prFeedbackService,
+      };
+
       // Create state machine and process the feature
-      const stateMachine = new FeatureStateMachine();
+      const stateMachine = new FeatureStateMachine(serviceContext);
       const result = await stateMachine.processFeature(feature, projectPath, options);
 
       logger.info(`[LeadEngineer] Feature processing completed`, {

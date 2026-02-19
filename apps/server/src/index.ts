@@ -636,6 +636,9 @@ leadEngineerService.setDiscordBot(discordBotService);
 import { codeRabbitResolverService } from './services/coderabbit-resolver-service.js';
 leadEngineerService.setCodeRabbitResolver(codeRabbitResolverService);
 
+// Wire PR Feedback service to Lead Engineer for review state checking
+leadEngineerService.setPRFeedbackService(prFeedbackService);
+
 // Initialize Event Hook Service for custom event triggers (with history storage)
 // Must be after DiscordBotService is created so it can use the real Discord client
 eventHookService.initialize(
