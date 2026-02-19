@@ -822,7 +822,7 @@ export function DashboardView() {
                                     className="text-destructive focus:text-destructive"
                                   >
                                     <Trash2 className="w-4 h-4 mr-2" />
-                                    Remove from Automaker
+                                    Remove project
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
@@ -913,7 +913,7 @@ export function DashboardView() {
                                     className="text-destructive focus:text-destructive"
                                   >
                                     <Trash2 className="w-4 h-4 mr-2" />
-                                    Remove from Automaker
+                                    Remove project
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
@@ -1002,14 +1002,13 @@ export function DashboardView() {
           <DialogHeader>
             <DialogTitle>Remove Project</DialogTitle>
             <DialogDescription>
-              Are you sure you want to remove <strong>{projectToRemove?.name}</strong> from
-              Automaker?
+              Are you sure you want to remove <strong>{projectToRemove?.name}</strong>?
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
             <p className="text-sm text-muted-foreground">
-              This will only remove the project from your Automaker projects list. The project files
-              on your computer will not be deleted.
+              This will only remove the project from your projects list. The project files on your
+              computer will not be deleted.
             </p>
           </div>
           <DialogFooter>

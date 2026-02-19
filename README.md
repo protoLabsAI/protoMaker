@@ -738,19 +738,19 @@ Join the **Agentic Jumpstart** Discord to connect with other builders exploring 
 
 ## License
 
-This project is licensed under the **Automaker License Agreement**. See [LICENSE](LICENSE) for the full text.
+protoLabs.studio is a fork of Automaker and is licensed under the **Automaker License Agreement**. The same license terms apply to this fork. See [LICENSE](LICENSE) for the full text.
 
 **Summary of Terms:**
 
 - **Allowed:**
-  - **Build Anything:** You can clone and use Automaker locally or in your organization to build ANY product (commercial or free).
+  - **Build Anything:** You can clone and use protoLabs.studio locally or in your organization to build ANY product (commercial or free).
   - **Internal Use:** You can use it internally within your company (commercial or non-profit) without restriction.
   - **Modify:** You can modify the code for internal use within your organization (commercial or non-profit).
 
 - **Restricted (The "No Monetization of the Tool" Rule):**
-  - **No Resale:** You cannot resell Automaker itself.
-  - **No SaaS:** You cannot host Automaker as a service for others.
-  - **No Monetizing Mods:** You cannot distribute modified versions of Automaker for money.
+  - **No Resale:** You cannot resell protoLabs.studio or Automaker itself.
+  - **No SaaS:** You cannot host protoLabs.studio as a service for others.
+  - **No Monetizing Mods:** You cannot distribute modified versions for money.
 
 - **Liability:**
   - **Use at Own Risk:** This tool uses AI. We are **NOT** responsible if it breaks your computer, deletes your files, or generates bad code. You assume all risk.
