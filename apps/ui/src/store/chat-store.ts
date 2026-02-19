@@ -1,184 +1,163 @@
 /**
- * Chat Store - State management for chat sessions and messages
+ * Chat Store — Persistent conversation management for Ava chat.
+ *
+ * Stores conversation sessions with messages in localStorage via Zustand persist.
+ * Messages are stored as serializable snapshots compatible with AI SDK's UIMessage.
+ * Both the sidebar and overlay share this store for unified conversation history.
  */
 
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+import type { UIMessage } from 'ai';
 
 // ============================================================================
 // Types
 // ============================================================================
 
-export interface ImageAttachment {
-  id?: string; // Optional - may not be present in messages loaded from server
-  data: string; // base64 encoded image data
-  mimeType: string; // e.g., "image/png", "image/jpeg"
-  filename: string;
-  size?: number; // file size in bytes - optional for messages from server
-}
-
-export interface TextFileAttachment {
-  id: string;
-  content: string; // text content of the file
-  mimeType: string; // e.g., "text/plain", "text/markdown"
-  filename: string;
-  size: number; // file size in bytes
-}
-
-export interface ChatMessage {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: Date;
-  images?: ImageAttachment[];
-  textFiles?: TextFileAttachment[];
-}
-
 export interface ChatSession {
   id: string;
   title: string;
-  projectId: string;
-  messages: ChatMessage[];
-  createdAt: Date;
-  updatedAt: Date;
-  archived: boolean;
+  modelAlias: string;
+  messages: UIMessage[];
+  createdAt: number; // epoch ms (serializable)
+  updatedAt: number;
 }
 
 // ============================================================================
-// State Interface
+// State + Actions
 // ============================================================================
 
 interface ChatStoreState {
-  chatSessions: ChatSession[];
-  currentChatSession: ChatSession | null;
-  chatHistoryOpen: boolean;
+  sessions: ChatSession[];
+  currentSessionId: string | null;
+  historyOpen: boolean;
 }
-
-// ============================================================================
-// Actions Interface
-// ============================================================================
 
 interface ChatActions {
-  createChatSession: (title?: string) => ChatSession;
-  updateChatSession: (sessionId: string, updates: Partial<ChatSession>) => void;
-  addMessageToSession: (sessionId: string, message: ChatMessage) => void;
-  setCurrentChatSession: (session: ChatSession | null) => void;
-  archiveChatSession: (sessionId: string) => void;
-  unarchiveChatSession: (sessionId: string) => void;
-  deleteChatSession: (sessionId: string) => void;
-  setChatHistoryOpen: (open: boolean) => void;
-  toggleChatHistory: () => void;
+  createSession: (modelAlias?: string) => ChatSession;
+  deleteSession: (id: string) => void;
+  switchSession: (id: string) => void;
+  saveMessages: (id: string, messages: UIMessage[]) => void;
+  updateTitle: (id: string, title: string) => void;
+  updateModel: (id: string, modelAlias: string) => void;
+  setHistoryOpen: (open: boolean) => void;
+  toggleHistory: () => void;
+  getCurrentSession: () => ChatSession | null;
 }
 
 // ============================================================================
-// Initial State
+// Helpers
 // ============================================================================
 
-const initialState: ChatStoreState = {
-  chatSessions: [],
-  currentChatSession: null,
-  chatHistoryOpen: false,
-};
+function generateId(): string {
+  return `chat-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+/** Auto-generate a title from the first user message */
+export function autoTitle(messages: UIMessage[]): string {
+  const firstUser = messages.find((m) => m.role === 'user');
+  if (!firstUser) return 'New chat';
+  // Extract text content
+  const text =
+    firstUser.parts
+      ?.filter((p): p is { type: 'text'; text: string } => p.type === 'text')
+      .map((p) => p.text)
+      .join('') || '';
+  if (!text) return 'New chat';
+  return text.length > 50 ? text.slice(0, 47) + '...' : text;
+}
 
 // ============================================================================
 // Store
 // ============================================================================
 
-export const useChatStore = create<ChatStoreState & ChatActions>((set, get) => ({
-  ...initialState,
+const MAX_SESSIONS = 50;
 
-  createChatSession: (title) => {
-    const now = new Date();
-    const session: ChatSession = {
-      id: `chat-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      title: title || `Chat ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`,
-      projectId: '', // Will be set by the caller if needed
-      messages: [
-        {
-          id: 'welcome',
-          role: 'assistant',
-          content:
-            "Hello! I'm the Automaker Agent. I can help you build software autonomously. What would you like to create today?",
-          timestamp: now,
-        },
-      ],
-      createdAt: now,
-      updatedAt: now,
-      archived: false,
-    };
+export const useChatStore = create<ChatStoreState & ChatActions>()(
+  persist(
+    (set, get) => ({
+      sessions: [],
+      currentSessionId: null,
+      historyOpen: false,
 
-    set({
-      chatSessions: [...get().chatSessions, session],
-      currentChatSession: session,
-    });
+      createSession: (modelAlias = 'sonnet') => {
+        const now = Date.now();
+        const session: ChatSession = {
+          id: generateId(),
+          title: 'New chat',
+          modelAlias,
+          messages: [],
+          createdAt: now,
+          updatedAt: now,
+        };
 
-    return session;
-  },
+        const sessions = [session, ...get().sessions];
+        // Cap stored sessions
+        if (sessions.length > MAX_SESSIONS) {
+          sessions.length = MAX_SESSIONS;
+        }
 
-  updateChatSession: (sessionId, updates) => {
-    set({
-      chatSessions: get().chatSessions.map((session) =>
-        session.id === sessionId ? { ...session, ...updates, updatedAt: new Date() } : session
-      ),
-    });
+        set({ sessions, currentSessionId: session.id });
+        return session;
+      },
 
-    // Update current session if it's the one being updated
-    const currentSession = get().currentChatSession;
-    if (currentSession && currentSession.id === sessionId) {
-      set({
-        currentChatSession: {
-          ...currentSession,
-          ...updates,
-          updatedAt: new Date(),
-        },
-      });
+      deleteSession: (id) => {
+        const state = get();
+        const sessions = state.sessions.filter((s) => s.id !== id);
+        const currentSessionId =
+          state.currentSessionId === id ? (sessions[0]?.id ?? null) : state.currentSessionId;
+        set({ sessions, currentSessionId });
+      },
+
+      switchSession: (id) => {
+        set({ currentSessionId: id });
+      },
+
+      saveMessages: (id, messages) => {
+        const sessions = get().sessions.map((s) =>
+          s.id === id
+            ? {
+                ...s,
+                messages,
+                updatedAt: Date.now(),
+                // Auto-title on first user message if still default
+                title: s.title === 'New chat' ? autoTitle(messages) : s.title,
+              }
+            : s
+        );
+        set({ sessions });
+      },
+
+      updateTitle: (id, title) => {
+        const sessions = get().sessions.map((s) =>
+          s.id === id ? { ...s, title, updatedAt: Date.now() } : s
+        );
+        set({ sessions });
+      },
+
+      updateModel: (id, modelAlias) => {
+        const sessions = get().sessions.map((s) =>
+          s.id === id ? { ...s, modelAlias, updatedAt: Date.now() } : s
+        );
+        set({ sessions });
+      },
+
+      setHistoryOpen: (open) => set({ historyOpen: open }),
+      toggleHistory: () => set({ historyOpen: !get().historyOpen }),
+
+      getCurrentSession: () => {
+        const state = get();
+        return state.sessions.find((s) => s.id === state.currentSessionId) ?? null;
+      },
+    }),
+    {
+      name: 'ava-chat-sessions',
+      version: 1,
+      // Only persist sessions and currentSessionId, not UI state
+      partialize: (state) => ({
+        sessions: state.sessions,
+        currentSessionId: state.currentSessionId,
+      }),
     }
-  },
-
-  addMessageToSession: (sessionId, message) => {
-    const sessions = get().chatSessions;
-    const sessionIndex = sessions.findIndex((s) => s.id === sessionId);
-
-    if (sessionIndex >= 0) {
-      const updatedSessions = [...sessions];
-      updatedSessions[sessionIndex] = {
-        ...updatedSessions[sessionIndex],
-        messages: [...updatedSessions[sessionIndex].messages, message],
-        updatedAt: new Date(),
-      };
-
-      set({ chatSessions: updatedSessions });
-
-      // Update current session if it's the one being updated
-      const currentSession = get().currentChatSession;
-      if (currentSession && currentSession.id === sessionId) {
-        set({
-          currentChatSession: updatedSessions[sessionIndex],
-        });
-      }
-    }
-  },
-
-  setCurrentChatSession: (session) => {
-    set({ currentChatSession: session });
-  },
-
-  archiveChatSession: (sessionId) => {
-    get().updateChatSession(sessionId, { archived: true });
-  },
-
-  unarchiveChatSession: (sessionId) => {
-    get().updateChatSession(sessionId, { archived: false });
-  },
-
-  deleteChatSession: (sessionId) => {
-    const currentSession = get().currentChatSession;
-    set({
-      chatSessions: get().chatSessions.filter((s) => s.id !== sessionId),
-      currentChatSession: currentSession?.id === sessionId ? null : currentSession,
-    });
-  },
-
-  setChatHistoryOpen: (open) => set({ chatHistoryOpen: open }),
-
-  toggleChatHistory: () => set({ chatHistoryOpen: !get().chatHistoryOpen }),
-}));
+  )
+);

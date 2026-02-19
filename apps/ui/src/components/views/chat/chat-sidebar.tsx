@@ -1,24 +1,23 @@
 /**
  * ChatSidebar — Collapsible right-side chat panel.
  *
- * Integrates AI SDK's useChat with the chat message list and input components.
+ * Integrates useChatSession for persistent conversations with the chat UI.
  * Sits alongside the main content area in the root layout.
  */
 
 import { useState, useCallback, useMemo } from 'react';
-import { useChat } from '@ai-sdk/react';
 import { useLocation } from '@tanstack/react-router';
 import { MessageSquare, X, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@protolabs/ui/atoms';
 import { ChatMessageList, ChatInput } from '@protolabs/ui/ai';
-import { ChatModelSelect, useChatModelSelection } from './components/chat-model-select';
+import { ChatModelSelect } from './components/chat-model-select';
+import { useChatSession } from '@/hooks/use-chat-session';
 import { useNotesStore } from '@/store/notes-store';
 import { useAppStore } from '@/store/app-store';
 
 export function ChatSidebar({ className }: { className?: string }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [modelAlias, setModelAlias] = useChatModelSelection('sonnet');
   const [inputValue, setInputValue] = useState('');
   const location = useLocation();
   const workspace = useNotesStore((s) => s.workspace);
@@ -47,18 +46,19 @@ export function ChatSidebar({ className }: { className?: string }) {
     };
   }, [location.pathname, workspace, currentProject?.path]);
 
-  const { messages, sendMessage, stop, status, setMessages, error } = useChat({
-    api: '/api/chat',
-    headers: {
-      'x-model-alias': modelAlias,
-    },
+  const {
+    messages,
+    sendMessage,
+    stop,
+    isStreaming,
+    error,
+    modelAlias,
+    handleNewChat,
+    handleModelChange,
+  } = useChatSession({
+    defaultModel: 'sonnet',
     body: notesContext ? { context: notesContext } : undefined,
-    onError: (err) => {
-      console.error('Chat error:', err);
-    },
   });
-
-  const isStreaming = status === 'streaming' || status === 'submitted';
 
   const handleSubmit = useCallback(() => {
     const text = inputValue.trim();
@@ -66,11 +66,6 @@ export function ChatSidebar({ className }: { className?: string }) {
     sendMessage({ text });
     setInputValue('');
   }, [inputValue, isStreaming, sendMessage]);
-
-  const handleNewChat = useCallback(() => {
-    setMessages([]);
-    setInputValue('');
-  }, [setMessages]);
 
   // Collapsed state — just show a toggle button
   if (!isOpen) {
@@ -144,7 +139,7 @@ export function ChatSidebar({ className }: { className?: string }) {
         isStreaming={isStreaming}
         actions={
           <>
-            <ChatModelSelect value={modelAlias} onValueChange={setModelAlias} />
+            <ChatModelSelect value={modelAlias} onValueChange={handleModelChange} />
             <span className="text-[10px] text-muted-foreground">
               {isStreaming ? 'Streaming...' : 'Enter to send'}
             </span>
