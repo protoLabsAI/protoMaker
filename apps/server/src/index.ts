@@ -1146,6 +1146,7 @@ app.use(
     autoModeService,
     leadEngineerService,
     prFeedbackService,
+    signalIntakeService,
     eventStreamBuffer,
     projectService,
     contentFlowService
