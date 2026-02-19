@@ -1,4 +1,4 @@
-import { memo, useState, useCallback, useRef, useEffect } from 'react';
+import { memo, useState, useCallback } from 'react';
 import { Palette } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore, type ThemeMode } from '@/store/app-store';
@@ -16,8 +16,6 @@ interface ThemeGridItemProps {
   isActive: boolean;
   isCurated: boolean;
   onSelect: (value: string, e: React.MouseEvent) => void;
-  onPreviewEnter: (value: string) => void;
-  onPreviewLeave: () => void;
 }
 
 const ThemeGridItem = memo(function ThemeGridItem({
@@ -27,8 +25,6 @@ const ThemeGridItem = memo(function ThemeGridItem({
   color,
   isActive,
   onSelect,
-  onPreviewEnter,
-  onPreviewLeave,
 }: ThemeGridItemProps) {
   return (
     <button
@@ -40,8 +36,6 @@ const ThemeGridItem = memo(function ThemeGridItem({
           : 'text-foreground-secondary hover:bg-accent/50 hover:text-foreground'
       )}
       onClick={(e) => onSelect(value, e)}
-      onPointerEnter={() => onPreviewEnter(value)}
-      onPointerLeave={onPreviewLeave}
       data-testid={`theme-toggle-${value}`}
     >
       <Icon className="w-3.5 h-3.5 shrink-0" style={{ color }} />
@@ -61,8 +55,6 @@ export const ThemeToggleButton = memo(function ThemeToggleButton({
   const { transition } = useThemeTransition();
   const theme = useAppStore((s) => s.theme);
   const setTheme = useAppStore((s) => s.setTheme);
-  const setPreviewTheme = useAppStore((s) => s.setPreviewTheme);
-  const previewTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Curated theme names for filtering
   const curatedNames = new Set(curatedThemes.map((t) => t.name));
@@ -87,33 +79,6 @@ export const ThemeToggleButton = memo(function ThemeToggleButton({
     [setTheme, transition]
   );
 
-  const handlePreviewEnter = useCallback(
-    (value: string) => {
-      if (previewTimeoutRef.current) clearTimeout(previewTimeoutRef.current);
-      previewTimeoutRef.current = setTimeout(() => {
-        setPreviewTheme(value as ThemeMode);
-      }, 16);
-    },
-    [setPreviewTheme]
-  );
-
-  const handlePreviewLeave = useCallback(() => {
-    if (previewTimeoutRef.current) clearTimeout(previewTimeoutRef.current);
-    setPreviewTheme(null);
-  }, [setPreviewTheme]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (previewTimeoutRef.current) clearTimeout(previewTimeoutRef.current);
-    };
-  }, []);
-
-  // Reset preview when popover closes
-  useEffect(() => {
-    if (!open) setPreviewTheme(null);
-  }, [open, setPreviewTheme]);
-
   const renderSection = (label: string, themes: typeof darkThemes, isCurated: boolean) => {
     if (themes.length === 0) return null;
     return (
@@ -132,8 +97,6 @@ export const ThemeToggleButton = memo(function ThemeToggleButton({
               isActive={theme === t.value}
               isCurated={isCurated}
               onSelect={handleSelect}
-              onPreviewEnter={handlePreviewEnter}
-              onPreviewLeave={handlePreviewLeave}
             />
           ))}
         </div>
