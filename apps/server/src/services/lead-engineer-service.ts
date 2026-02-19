@@ -108,6 +108,7 @@ export interface StateContext {
   prNumber?: number;
   ciStatus?: 'pending' | 'passing' | 'failing';
   remediationAttempts: number;
+  mergeRetryCount: number;
   escalationReason?: string;
 }
 
@@ -558,6 +559,8 @@ class MergeProcessor implements StateProcessor {
   }
 
   async process(ctx: StateContext): Promise<StateTransitionResult> {
+    const MAX_MERGE_RETRIES = 5;
+
     if (!ctx.prNumber) {
       ctx.escalationReason = 'No PR number available for merge';
       return {
@@ -567,7 +570,18 @@ class MergeProcessor implements StateProcessor {
       };
     }
 
-    logger.info(`[MERGE] Attempting to merge PR #${ctx.prNumber}`);
+    if (ctx.mergeRetryCount >= MAX_MERGE_RETRIES) {
+      ctx.escalationReason = `Merge failed after ${MAX_MERGE_RETRIES} retries for PR #${ctx.prNumber}`;
+      return {
+        nextState: 'ESCALATE',
+        shouldContinue: false,
+        reason: ctx.escalationReason,
+      };
+    }
+
+    logger.info(
+      `[MERGE] Attempting to merge PR #${ctx.prNumber} (attempt ${ctx.mergeRetryCount + 1}/${MAX_MERGE_RETRIES})`
+    );
 
     try {
       // Use --squash without --auto: we're in MERGE state after REVIEW approved,
@@ -584,6 +598,7 @@ class MergeProcessor implements StateProcessor {
       );
 
       if (mergeCheck.trim() !== 'true') {
+        ctx.mergeRetryCount++;
         logger.warn(`[MERGE] PR #${ctx.prNumber} merge command succeeded but PR not yet merged`);
         await new Promise((r) => setTimeout(r, MERGE_RETRY_DELAY_MS));
         return {
@@ -617,6 +632,7 @@ class MergeProcessor implements StateProcessor {
 
       // If checks are still pending, wait and retry
       if (errMsg.includes('check') || errMsg.includes('pending') || errMsg.includes('required')) {
+        ctx.mergeRetryCount++;
         logger.info(
           `[MERGE] Checks pending on PR #${ctx.prNumber}, waiting ${MERGE_RETRY_DELAY_MS / 1000}s`
         );
@@ -764,6 +780,7 @@ export class FeatureStateMachine {
       retryCount: 0,
       planRequired: false,
       remediationAttempts: 0,
+      mergeRetryCount: 0,
     };
 
     let currentState: FeatureProcessingState = 'INTAKE';
