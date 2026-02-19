@@ -1,8 +1,11 @@
 /**
- * ChatMessage — Role-based message bubble with avatar and markdown rendering.
+ * ChatMessage — Role-based message bubble with avatar and rich part rendering.
  *
  * Composable: ChatMessage wraps ChatMessageAvatar + ChatMessageBubble.
  * Uses CVA variants for user/assistant/system styling.
+ *
+ * Renders all UIMessagePart types: text (markdown), reasoning (collapsible),
+ * tool calls (collapsible card), sources, and step boundaries.
  */
 
 import { cva, type VariantProps } from 'class-variance-authority';
@@ -11,6 +14,8 @@ import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import type { UIMessage } from 'ai';
 import { cn } from '../lib/utils.js';
+import { ReasoningPart } from './reasoning-part.js';
+import { ToolInvocationPart, type ToolInvocationPartProps } from './tool-invocation-part.js';
 
 const messageVariants = cva('flex gap-3 px-4 py-2', {
   variants: {
@@ -97,21 +102,110 @@ export function ChatMessageMarkdown({
               className="text-primary underline underline-offset-2 hover:text-primary/80"
             />
           ),
-          pre: ({ ...props }) => (
+          pre: ({ children: preChildren, ...props }) => (
             <pre
               {...props}
-              className="my-2 overflow-x-auto rounded-md bg-background/50 p-3 text-xs"
-            />
+              className="group/code relative my-2 overflow-x-auto rounded-md bg-background/50 p-3 text-xs"
+            >
+              {preChildren}
+            </pre>
           ),
-          code: ({ ...props }) => (
-            <code {...props} className="rounded bg-background/50 px-1 py-0.5 text-xs" />
-          ),
+          code: ({ className: codeClassName, children: codeChildren, ...props }) => {
+            // Detect fenced code blocks via language class (e.g. "language-typescript")
+            const langMatch = codeClassName?.match(/language-(\w+)/);
+            if (langMatch) {
+              return (
+                <code {...props} className={cn(codeClassName, 'text-xs')}>
+                  <span className="absolute right-2 top-1.5 select-none text-[10px] font-medium uppercase tracking-wider text-muted-foreground opacity-60">
+                    {langMatch[1]}
+                  </span>
+                  {codeChildren}
+                </code>
+              );
+            }
+            // Inline code
+            return (
+              <code {...props} className="rounded bg-background/50 px-1 py-0.5 text-xs">
+                {codeChildren}
+              </code>
+            );
+          },
         }}
       >
         {content}
       </ReactMarkdown>
     </div>
   );
+}
+
+/** Extract the tool name from a part that could be typed or dynamic */
+function getToolName(part: Record<string, unknown>): string {
+  // DynamicToolUIPart has { type: 'dynamic-tool', toolName: '...' }
+  if ('toolName' in part && typeof part.toolName === 'string') return part.toolName;
+  // ToolUIPart has { type: 'tool-<name>' }
+  const typeStr = part.type as string;
+  if (typeStr.startsWith('tool-')) return typeStr.slice(5);
+  return 'unknown';
+}
+
+/** Check if a part is a tool invocation (typed or dynamic) */
+function isToolPart(part: Record<string, unknown>): boolean {
+  const t = part.type as string;
+  return t === 'dynamic-tool' || (t.startsWith('tool-') && t !== 'tool');
+}
+
+/**
+ * Render a single message part based on its type.
+ */
+function MessagePartRenderer({ part, index }: { part: Record<string, unknown>; index: number }) {
+  const type = part.type as string;
+
+  if (type === 'text') {
+    const text = part.text as string;
+    if (!text) return null;
+    return <ChatMessageMarkdown content={text} />;
+  }
+
+  if (type === 'reasoning') {
+    return (
+      <ReasoningPart
+        text={part.text as string}
+        state={part.state as 'streaming' | 'done' | undefined}
+      />
+    );
+  }
+
+  if (isToolPart(part)) {
+    return (
+      <ToolInvocationPart
+        toolName={getToolName(part)}
+        toolCallId={(part.toolCallId as string) ?? `tool-${index}`}
+        state={((part.state as string) ?? 'input-available') as ToolInvocationPartProps['state']}
+        input={part.input}
+        output={part.output}
+        errorText={part.errorText as string | undefined}
+        title={part.title as string | undefined}
+      />
+    );
+  }
+
+  if (type === 'source-url') {
+    const url = part.url as string;
+    const title = (part.title as string) || url;
+    return (
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="my-0.5 inline-flex items-center gap-1 rounded-full border border-border/50 bg-muted/50 px-2 py-0.5 text-[10px] text-primary hover:bg-muted"
+      >
+        {title}
+      </a>
+    );
+  }
+
+  // step-start, source-document, file, data-* — render nothing for now
+  return null;
 }
 
 export function ChatMessage({
@@ -122,23 +216,42 @@ export function ChatMessage({
   className?: string;
 } & Partial<VariantProps<typeof messageVariants>>) {
   const role = message.role as MessageRole;
+  const parts = message.parts ?? [];
 
-  const textContent = message.parts
-    .filter((part): part is { type: 'text'; text: string } => part.type === 'text')
-    .map((part) => part.text)
-    .join('');
+  // For user messages, extract text only (users don't produce tool calls)
+  if (role === 'user') {
+    const textContent = parts
+      .filter((p): p is { type: 'text'; text: string } => p.type === 'text')
+      .map((p) => p.text)
+      .join('');
+    if (!textContent) return null;
+    return (
+      <div data-slot="chat-message" className={cn(messageVariants({ role }), className)}>
+        <ChatMessageAvatar role={role} />
+        <ChatMessageBubble role={role}>
+          <p className="whitespace-pre-wrap">{textContent}</p>
+        </ChatMessageBubble>
+      </div>
+    );
+  }
 
-  if (!textContent) return null;
+  // For assistant/system messages, render all parts
+  const hasContent = parts.some(
+    (p) =>
+      (p.type === 'text' && (p as { text: string }).text) ||
+      p.type === 'reasoning' ||
+      isToolPart(p as Record<string, unknown>) ||
+      p.type === 'source-url'
+  );
+  if (!hasContent) return null;
 
   return (
     <div data-slot="chat-message" className={cn(messageVariants({ role }), className)}>
       <ChatMessageAvatar role={role} />
       <ChatMessageBubble role={role}>
-        {role === 'assistant' ? (
-          <ChatMessageMarkdown content={textContent} />
-        ) : (
-          <p className="whitespace-pre-wrap">{textContent}</p>
-        )}
+        {parts.map((part, i) => (
+          <MessagePartRenderer key={i} part={part as Record<string, unknown>} index={i} />
+        ))}
       </ChatMessageBubble>
     </div>
   );

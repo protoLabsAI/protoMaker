@@ -117,9 +117,10 @@ export function createChatRoutes(): Router {
         },
       });
 
-      // Pipe the AI SDK data stream to the response.
-      // This uses the AI SDK's built-in SSE format that useChat expects.
-      result.pipeTextStreamToResponse(res);
+      // Pipe the full AI SDK UI message stream to the response.
+      // Uses the AI SDK's UI message stream protocol so tool calls, reasoning,
+      // and source parts flow through to the client (not just text tokens).
+      result.pipeUIMessageStreamToResponse(res);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       logger.error('Chat stream error:', error);
