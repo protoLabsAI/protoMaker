@@ -40,15 +40,21 @@ The `ToolContext` interface enables **dependency injection** at execution time:
 
 ```typescript
 interface ToolContext {
-  services?: Record<string, any>; // Service instances (DB, API clients, etc.)
-  config?: Record<string, any>; // Configuration values
+  // Domain-specific service loaders
+  featureLoader?: { getAll; get; create; update; delete; findDuplicateTitle };
+  notesLoader?: { load; save };
+  events?: { emit: (event: string, data: unknown) => void };
+
+  // Generic services (from defineSharedTool pattern)
+  services?: Record<string, unknown>; // Service instances (DB, API clients, etc.)
+  config?: Record<string, unknown>; // Configuration values
   featureId?: string; // Current feature/context identifier
   projectPath?: string; // Project file system path
-  metadata?: Record<string, any>; // Additional metadata
+  metadata?: Record<string, unknown>; // Additional metadata
 }
 ```
 
-This allows tools to access external dependencies without hardcoding them.
+This allows tools to access external dependencies without hardcoding them. The `featureLoader` and `notesLoader` fields provide typed access to domain services, while `services` remains available for generic dependency injection.
 
 ### Tool Result
 
@@ -630,11 +636,14 @@ Context interface for dependency injection.
 
 ```typescript
 interface ToolContext {
-  services?: Record<string, any>; // Service instances (DB, API clients, etc.)
-  config?: Record<string, any>; // Configuration values
-  featureId?: string; // Current feature/context identifier
-  projectPath?: string; // Project file system path
-  metadata?: Record<string, any>; // Additional metadata
+  featureLoader?: { getAll; get; create; update; delete; findDuplicateTitle };
+  notesLoader?: { load; save };
+  events?: { emit: (event: string, data: unknown) => void };
+  services?: Record<string, unknown>;
+  config?: Record<string, unknown>;
+  featureId?: string;
+  projectPath?: string;
+  metadata?: Record<string, unknown>;
 }
 ```
 
@@ -653,8 +662,126 @@ interface ToolResult<TOutput> {
 }
 ```
 
-## Related Documentation
+## Domain tools
 
-- [Flows Package](./flows.md) — LangGraph flow architecture and patterns
-- [Shared Packages](./shared-packages.md) — Monorepo package overview
+The package ships pre-built tools organized by domain. Import them directly for use in agents and flows.
+
+### Feature tools
+
+CRUD operations on Kanban board features.
+
+```typescript
+import {
+  listFeatures,
+  getFeature,
+  createFeature,
+  updateFeature,
+  deleteFeature,
+  queryBoard,
+  getDependencies,
+  setDependencies,
+} from '@automaker/tools';
+```
+
+| Tool              | Input                                        | Description                                  |
+| ----------------- | -------------------------------------------- | -------------------------------------------- |
+| `listFeatures`    | `projectPath, status?, compact?`             | List features, optionally filter by status   |
+| `getFeature`      | `projectPath, featureId`                     | Get a single feature by ID                   |
+| `createFeature`   | `projectPath, feature`                       | Create a new feature                         |
+| `updateFeature`   | `projectPath, featureId, updates`            | Update feature fields                        |
+| `deleteFeature`   | `projectPath, featureId`                     | Delete a feature                             |
+| `queryBoard`      | `projectPath` + compound filters (see below) | Advanced board query with compound filtering |
+| `getDependencies` | `projectPath, featureId`                     | Get forward and reverse dependencies         |
+| `setDependencies` | `projectPath, featureId, dependencies`       | Set dependencies with circular detection     |
+
+#### queryBoard filters
+
+The `queryBoard` tool supports compound filtering to help agents find specific features:
+
+```typescript
+const result = await queryBoard(context, {
+  projectPath: '/path/to/project',
+  status: ['backlog', 'in_progress'], // Single status or array
+  epicId: 'epic-123', // Filter by parent epic
+  assignee: 'agent-name', // Filter by assignee (null = unassigned)
+  complexity: 'medium', // small | medium | large | architectural
+  isEpic: false, // Filter epics vs child features
+  isBlocked: true, // Only features with unsatisfied deps
+  hasDependencies: true, // Only features with any deps
+  updatedAfter: 1708300800000, // Timestamp filters
+  search: 'authentication', // Case-insensitive title/description search
+  limit: 20, // Max results (default: 50)
+});
+```
+
+Returns `{ features: CompactFeature[], total: number, filters: Record<string, unknown> }`.
+
+#### getDependencies output
+
+Returns both forward and reverse dependency relationships with satisfaction status:
+
+```typescript
+const result = await getDependencies(context, {
+  projectPath: '/path/to/project',
+  featureId: 'feature-123',
+});
+// result.data = {
+//   featureId: 'feature-123',
+//   dependsOn: [
+//     { featureId: 'feature-100', title: 'Setup types', status: 'done', satisfied: true }
+//   ],
+//   blockedBy: [
+//     { featureId: 'feature-200', title: 'Add UI', status: 'backlog', satisfied: false }
+//   ],
+//   allSatisfied: true,
+//   total: 2,
+// }
+```
+
+#### setDependencies validation
+
+The `setDependencies` tool validates before writing:
+
+- Checks for self-dependencies
+- Validates that all dependency feature IDs exist on the board
+- Detects circular dependencies via DFS traversal
+- Emits `feature:dependencies-updated` event on success
+
+### Notes tools
+
+Read and write notes tab content. Respects per-tab `agentRead` / `agentWrite` permissions.
+
+```typescript
+import { listTabs, readTab, writeTab } from '@automaker/tools';
+```
+
+| Tool       | Input                                | Description                                |
+| ---------- | ------------------------------------ | ------------------------------------------ |
+| `listTabs` | `projectPath, includeRestricted?`    | List tabs with permissions and word counts |
+| `readTab`  | `projectPath, tabId`                 | Read tab content (requires agentRead)      |
+| `writeTab` | `projectPath, tabId, content, mode?` | Write tab content (requires agentWrite)    |
+
+The `mode` parameter for `writeTab` accepts `"replace"` (default) or `"append"`.
+
+These tools require a `notesLoader` service in the `ToolContext`:
+
+```typescript
+interface ToolContext {
+  notesLoader?: {
+    load: (projectPath: string) => Promise<NotesWorkspace>;
+    save: (projectPath: string, workspace: NotesWorkspace) => Promise<void>;
+  };
+  events?: { emit: (event: string, data: unknown) => void };
+}
+```
+
+### Twitch tools
+
+Twitch chat interaction tools (see `libs/tools/src/domains/twitch/`).
+
+## Related documentation
+
+- [Notes Panel](./notes-panel) — AI editor features and agent integration
+- [Flows Package](./flows) — LangGraph flow architecture and patterns
+- [Shared Packages](./shared-packages) — Monorepo package overview
 - [Types Package](../libs/types/README.md) — Core TypeScript type definitions
