@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Label } from '@protolabs/ui/atoms';
 import { Switch } from '@protolabs/ui/atoms';
 import { Input } from '@protolabs/ui/atoms';
@@ -31,10 +31,11 @@ export function VoiceSettings() {
   const [downloading, setDownloading] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const client = getHttpApiClient();
+  const clientRef = useRef(getHttpApiClient());
 
   // Load settings and model status
   useEffect(() => {
+    const client = clientRef.current;
     const load = async () => {
       try {
         const [settingsRes, modelsRes] = await Promise.all([
@@ -55,26 +56,23 @@ export function VoiceSettings() {
       }
     };
     load();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
-  const saveSettings = useCallback(
-    async (updated: VoiceSettingsType) => {
-      setSettings(updated);
-      try {
-        await client.settings.updateGlobal({ voice: updated });
-      } catch {
-        // Silently fail — settings will be retried
-      }
-    },
-    [] // eslint-disable-line react-hooks/exhaustive-deps
-  );
+  const saveSettings = useCallback(async (updated: VoiceSettingsType) => {
+    setSettings(updated);
+    try {
+      await clientRef.current.settings.updateGlobal({ voice: updated });
+    } catch {
+      // Silently fail — settings will be retried
+    }
+  }, []);
 
   const handleDownload = async (size: string) => {
     setDownloading(size);
     try {
-      await client.voice.downloadModel(size);
+      await clientRef.current.voice.downloadModel(size);
       // Refresh model status
-      const modelsRes = await client.voice.getModels();
+      const modelsRes = await clientRef.current.voice.getModels();
       setModels(modelsRes.models);
     } catch {
       // Download failed
