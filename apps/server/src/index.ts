@@ -187,6 +187,7 @@ import { createNotesRoutes } from './routes/notes/index.js';
 import { shutdownLangfuse } from './lib/langfuse-singleton.js';
 import { initOTEL, shutdownOTEL } from './lib/otel-setup.js';
 import { AgentScoringService } from './services/agent-scoring-service.js';
+import { gitWorkflowService } from './services/git-workflow-service.js';
 
 const PORT = parseInt(process.env.PORT || '3008', 10);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -1147,6 +1148,7 @@ app.use(
     leadEngineerService,
     prFeedbackService,
     signalIntakeService,
+    gitWorkflowService,
     eventStreamBuffer,
     projectService,
     contentFlowService
