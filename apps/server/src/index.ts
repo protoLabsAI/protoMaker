@@ -163,6 +163,7 @@ import { createDiscordRoutes } from './routes/discord/index.js';
 import { createAvaRoutes } from './routes/ava/index.js';
 import { createLinearRoutes } from './routes/linear/index.js';
 import { createTwitchRoutes } from './routes/twitch.js';
+import { createVoiceRoutes } from './routes/voice/index.js';
 import { LinearAgentService } from './services/linear-agent-service.js';
 import { LinearAgentRouter } from './services/linear-agent-router.js';
 import { MAX_SYSTEM_CONCURRENCY } from '@automaker/types';
@@ -372,6 +373,10 @@ const mcpTestService = new MCPTestService(settingsService);
 const featureHealthService = new FeatureHealthService(featureLoader, autoModeService);
 const beadsService = new BeadsService('bd', events);
 const discordService = getDiscordService();
+
+// Initialize Voice Service for local speech-to-text (lazy — no model loaded at startup)
+import { VoiceService } from './services/voice-service.js';
+const voiceService = new VoiceService(events, settingsService, join(DATA_DIR, 'models'));
 
 // Initialize Twitch Service for chat integration (only loads if TWITCH_ENABLED=true)
 import { TwitchService } from './services/twitch/twitch-service.js';
@@ -1132,6 +1137,7 @@ app.use(
 app.use('/api/chat', createChatRoutes());
 app.use('/api/notes', createNotesRoutes());
 app.use('/api/twitch', createTwitchRoutes(twitchService, events, featureLoader));
+app.use('/api/voice', createVoiceRoutes(voiceService, events));
 
 // Create HTTP server
 const server = createServer(app);

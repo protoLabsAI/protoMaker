@@ -430,6 +430,8 @@ async function startStaticServer(): Promise<void> {
           '.woff2': 'font/woff2',
           '.ttf': 'font/ttf',
           '.eot': 'application/vnd.ms-fontobject',
+          '.wasm': 'application/wasm',
+          '.onnx': 'application/octet-stream',
         };
 
         response.writeHead(200, {

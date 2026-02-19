@@ -2850,6 +2850,60 @@ export class HttpApiClient implements ElectronAPI {
     healthDashboard: (projectPath?: string) =>
       this.post('/api/system/health-dashboard', { projectPath }),
   };
+
+  // Voice API
+  voice = {
+    transcribe: (pcmBuffer: ArrayBuffer) =>
+      this.postBinary<{ text: string; isWakeWord: boolean; command?: string }>(
+        '/api/voice/transcribe',
+        pcmBuffer
+      ),
+    getModels: () =>
+      this.get<{
+        models: Array<{ size: string; downloaded: boolean; bytes: number; expectedBytes: number }>;
+      }>('/api/voice/models'),
+    downloadModel: (size: string) =>
+      this.post<{ success: boolean; path: string }>('/api/voice/models/download', { size }),
+  };
+
+  private async postBinary<T>(endpoint: string, data: ArrayBuffer): Promise<T> {
+    await waitForApiKeyInit();
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/octet-stream',
+    };
+    const apiKey = getApiKey();
+    if (apiKey) {
+      headers['X-API-Key'] = apiKey;
+    } else {
+      const sessionToken = getSessionToken();
+      if (sessionToken) {
+        headers['X-Session-Token'] = sessionToken;
+      }
+    }
+    const response = await fetch(`${this.serverUrl}${endpoint}`, {
+      method: 'POST',
+      headers,
+      credentials: 'include',
+      body: data,
+    });
+    if (response.status === 401 || response.status === 403) {
+      handleUnauthorized();
+      throw new Error('Unauthorized');
+    }
+    if (!response.ok) {
+      let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+      try {
+        const errorData = await response.json();
+        if (errorData.error) {
+          errorMessage = errorData.error;
+        }
+      } catch {
+        // If parsing JSON fails, use status text
+      }
+      throw new Error(errorMessage);
+    }
+    return response.json();
+  }
 }
 
 // Singleton instance
