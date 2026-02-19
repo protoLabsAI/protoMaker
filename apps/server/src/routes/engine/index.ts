@@ -222,7 +222,7 @@ export function createEngineRoutes(
         return;
       }
 
-      const { type, service, featureId, since, until, limit } = _req.body as {
+      const { type, service, featureId, since, until, limit } = (_req.body ?? {}) as {
         type?: string;
         service?: string;
         featureId?: string;

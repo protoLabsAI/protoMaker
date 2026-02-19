@@ -186,14 +186,23 @@ export function useEventHistory(filter?: {
   since?: number;
   until?: number;
   limit?: number;
+  _timeRangeMs?: number;
 }) {
   return useQuery({
     queryKey: queryKeys.engine.eventsHistory(filter),
     queryFn: async () => {
       const api = getHttpApiClient();
-      return api.engine.eventsHistory(filter);
+      // Compute `since` at fetch time so the window doesn't drift
+      const actualFilter = filter ? { ...filter } : undefined;
+      if (actualFilter?._timeRangeMs) {
+        actualFilter.since = Date.now() - actualFilter._timeRangeMs;
+        delete actualFilter._timeRangeMs;
+      }
+      return api.engine.eventsHistory(actualFilter);
     },
+    enabled: !!filter,
     staleTime: EVENT_HISTORY_STALE_TIME,
+    refetchInterval: EVENT_HISTORY_STALE_TIME,
     refetchOnWindowFocus: false,
     retry: 1,
   });

@@ -82,13 +82,16 @@ export function EventsTab() {
   const pausedRef = useRef(paused);
   pausedRef.current = paused;
 
-  // Build server-side query filter for history
+  // Build server-side query filter for history.
+  // timeRange is used as a key but `since` is computed at fetch time (inside queryFn)
+  // to avoid the window drifting due to useMemo capturing Date.now() once.
   const historyFilter = useMemo(() => {
     if (!showHistory) return undefined;
     const f: Record<string, unknown> = { limit: 500 };
     if (filter) f.service = filter;
     if (featureIdFilter) f.featureId = featureIdFilter;
-    if (timeRange > 0) f.since = Date.now() - timeRange;
+    // Store timeRange as a signal; useEventHistory computes `since` at fetch time
+    if (timeRange > 0) f._timeRangeMs = timeRange;
     return f;
   }, [showHistory, filter, featureIdFilter, timeRange]);
 
@@ -150,12 +153,14 @@ export function EventsTab() {
       base = base.filter((e) => e.service === filter);
     }
 
-    // If showing history, append server-side events not already present
+    // If showing history, merge server-side events with live events.
+    // Dedup uses type + closest-second timestamp since client and server
+    // timestamps may differ by a few ms for the same event.
     if (showHistory && historyData?.events) {
-      const liveTimestamps = new Set(base.map((e) => `${e.type}-${e.timestamp}`));
+      const liveKeys = new Set(base.map((e) => `${e.type}-${Math.floor(e.timestamp / 1000)}`));
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const serverEvents: StreamEvent[] = (historyData.events as any[])
-        .filter((e) => !liveTimestamps.has(`${e.type}-${e.timestamp}`))
+        .filter((e) => !liveKeys.has(`${e.type}-${Math.floor(e.timestamp / 1000)}`))
         .map((e) => ({
           type: e.type,
           service: e.service,
@@ -166,11 +171,15 @@ export function EventsTab() {
       base = [...base, ...serverEvents];
     }
 
+    // Sort newest first after merge
+    base.sort((a, b) => b.timestamp - a.timestamp);
+
     return base;
   }, [events, filter, featureIdFilter, timeRange, showHistory, historyData]);
 
   const activeServices = [...new Set(events.map((e) => e.service))].sort();
-  const totalCount = showHistory ? (historyData?.total ?? events.length) : events.length;
+  // Total reflects merged display set to avoid N > total confusion
+  const totalCount = displayEvents.length;
 
   return (
     <div className="h-full flex flex-col">
