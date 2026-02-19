@@ -163,7 +163,7 @@ const EVENT_HISTORY_STALE_TIME = 30 * 1000; // 30 seconds
  */
 export function useEngineStatus(projectPath?: string) {
   return useQuery({
-    queryKey: queryKeys.engine.status(),
+    queryKey: queryKeys.engine.status(projectPath),
     queryFn: async () => {
       const api = getHttpApiClient();
       return api.engine.status(projectPath);

@@ -311,7 +311,7 @@ export const queryKeys = {
   // ============================================
   engine: {
     /** Real-time engine service status */
-    status: () => ['engine', 'status'] as const,
+    status: (projectPath?: string) => ['engine', 'status', projectPath] as const,
     /** Per-service detail views */
     autoModeDetail: () => ['engine', 'auto-mode', 'detail'] as const,
     prFeedbackDetail: () => ['engine', 'pr-feedback', 'detail'] as const,
