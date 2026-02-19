@@ -10,3 +10,4 @@ export { ProjectSelectorWithOptions } from './project-selector-with-options';
 export { SidebarFooter } from './sidebar-footer';
 export { ThemeToggleButton } from './theme-toggle-button';
 export { MobileSidebarToggle } from './mobile-sidebar-toggle';
+export { QuickActionsBar } from './quick-actions-bar';

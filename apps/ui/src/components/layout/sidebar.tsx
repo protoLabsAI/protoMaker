@@ -16,7 +16,9 @@ import { CreateSpecDialog } from '@/components/views/spec-view/dialogs';
 
 // Local imports from subfolder
 import {
+  AutomakerLogo,
   CollapseToggleButton,
+  QuickActionsBar,
   SidebarHeader,
   SidebarNavigation,
   SidebarFooter,
@@ -313,6 +315,19 @@ export function Sidebar() {
             onExpand={toggleSidebar}
           />
 
+          {sidebarOpen && (
+            <QuickActionsBar
+              onBugReport={() =>
+                getElectronAPI().openExternalLink(
+                  'https://github.com/proto-labs-ai/automaker/issues'
+                )
+              }
+              onDocs={() => getElectronAPI().openExternalLink('https://protolabs.studio/docs')}
+              onNewProject={() => setShowNewProjectModal(true)}
+              onOpenFolder={handleOpenFolder}
+            />
+          )}
+
           <SidebarNavigation
             currentProject={currentProject}
             sidebarOpen={sidebarOpen}
@@ -328,6 +343,13 @@ export function Sidebar() {
           navigate={navigate}
           shortcuts={{ settings: shortcuts.settings }}
         />
+
+        {sidebarOpen && (
+          <div className="shrink-0 border-t border-border/40 px-4 py-3">
+            <AutomakerLogo sidebarOpen={sidebarOpen} navigate={navigate} />
+          </div>
+        )}
+
         <TrashDialog
           open={showTrashDialog}
           onOpenChange={setShowTrashDialog}
