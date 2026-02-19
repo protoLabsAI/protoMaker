@@ -179,6 +179,10 @@ function getServiceStatus(
 const SERVICE_TO_GRAPH_MAP: Partial<Record<EngineServiceId, string>> = {
   'auto-mode': 'coordinator-flow',
   'project-planning': 'project-planning',
+  'agent-execution': 'content-creation',
+  'pr-feedback': 'antagonistic-review',
+  'signal-sources': 'research-flow',
+  triage: 'review-flow',
 };
 
 export function useFlowGraphData(
