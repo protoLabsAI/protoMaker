@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="protoLabs Icon">
+  <defs>
+    <linearGradient id="brand-gradient" x1="0" y1="0" x2="256" y2="256" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#c4b5fd" />
+      <stop offset="100%" stop-color="#7c3aed" />
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.25" />
+    </filter>
+  </defs>
+  <rect x="16" y="16" width="224" height="224" rx="56" fill="url(#brand-gradient)" />
+  <path d="M128 52 L196 128 L128 204 L60 128 Z" fill="#FFFFFF" filter="url(#shadow)" />
+</svg>
