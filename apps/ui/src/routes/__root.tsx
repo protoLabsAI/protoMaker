@@ -38,6 +38,7 @@ import { SandboxRejectionScreen } from '@/components/dialogs/sandbox-rejection-s
 import { LoadingState } from '@protolabs/ui/molecules';
 import { useProjectSettingsLoader } from '@/hooks/use-project-settings-loader';
 import { useIsCompact } from '@/hooks/use-media-query';
+import { BottomPanel } from '@/components/layout/bottom-panel';
 import type { Project } from '@/lib/electron';
 
 const logger = createLogger('RootLayout');
@@ -834,7 +835,10 @@ function RootLayoutContent() {
         )}
         <Sidebar />
         <div className="flex-1 flex flex-col overflow-hidden">
-          <Outlet />
+          <div className="flex-1 overflow-hidden">
+            <Outlet />
+          </div>
+          <BottomPanel />
         </div>
         <ChatSidebar />
         <ChatModal />
