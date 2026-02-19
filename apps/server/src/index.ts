@@ -664,17 +664,30 @@ const linearAgentRouter = new LinearAgentRouter(
 linearAgentRouter.start();
 
 // Initialize Project Planning Service — LangGraph flow for Linear-native project planning
-const { ProjectPlanningService } = await import('./services/project-planning-service.js');
-const { createLLMProjectPlanningConfig } = await import('./services/project-planning-executors.js');
-const planningFlowConfig = createLLMProjectPlanningConfig();
-const projectPlanningService = new ProjectPlanningService(
-  events,
-  linearAgentService,
-  REPO_ROOT,
-  planningFlowConfig,
-  settingsService
-);
-projectPlanningService.start();
+// Wrapped in try-catch: ChatAnthropic throws if ANTHROPIC_API_KEY is missing,
+// which crashes the entire server. Planning is non-essential for basic operation.
+let projectPlanningService: InstanceType<
+  Awaited<typeof import('./services/project-planning-service.js')>['ProjectPlanningService']
+> | null = null;
+try {
+  const { ProjectPlanningService } = await import('./services/project-planning-service.js');
+  const { createLLMProjectPlanningConfig } =
+    await import('./services/project-planning-executors.js');
+  const planningFlowConfig = createLLMProjectPlanningConfig();
+  projectPlanningService = new ProjectPlanningService(
+    events,
+    linearAgentService,
+    REPO_ROOT,
+    planningFlowConfig,
+    settingsService
+  );
+  projectPlanningService.start();
+} catch (err) {
+  logger.warn(
+    'Project planning service unavailable:',
+    err instanceof Error ? err.message : String(err)
+  );
+}
 
 // Initialize Graphite sync scheduler (now registered as maintenance:graphite-sync task)
 const graphiteSyncScheduler = new GraphiteSyncScheduler(
@@ -1112,7 +1125,10 @@ app.use('/api/analytics', createAnalyticsRoutes());
 const { createLeadEngineerRoutes } = await import('./routes/lead-engineer/index.js');
 app.use('/api/lead-engineer', createLeadEngineerRoutes(leadEngineerService));
 app.use('/api/langfuse', createLangfuseRoutes());
-app.use('/api/flows', createFlowsRoutes(antagonisticReviewService, projectPlanningService));
+app.use(
+  '/api/flows',
+  createFlowsRoutes(antagonisticReviewService, projectPlanningService ?? undefined)
+);
 app.use('/api/chat', createChatRoutes());
 app.use('/api/notes', createNotesRoutes());
 app.use('/api/twitch', createTwitchRoutes(twitchService, events, featureLoader));

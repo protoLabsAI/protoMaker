@@ -34,6 +34,7 @@ process.on('uncaughtException', (err) => {
  */
 
 import path from 'path';
+import fs from 'fs';
 import { spawn, execSync, ChildProcess } from 'child_process';
 import crypto from 'crypto';
 import http, { Server } from 'http';
@@ -63,6 +64,38 @@ import {
 
 const logger = createLogger('Electron');
 const serverLogger = createLogger('Server');
+
+/**
+ * File-based diagnostic logger for the Electron main process.
+ * The regular logger uses stdout which is a broken pipe when
+ * launched from Finder. This writes diagnostics directly to a file
+ * so we can debug startup issues in packaged builds.
+ */
+let diagLogPath: string | null = null;
+function diagLog(msg: string): void {
+  const line = `[${new Date().toISOString()}] ${msg}\n`;
+  if (!diagLogPath) {
+    // Before app is ready, buffer to a temp location
+    const fallback = path.join(
+      process.env.HOME || '/tmp',
+      'Library/Application Support/Automaker/electron-diag.log'
+    );
+    try {
+      fs.mkdirSync(path.dirname(fallback), { recursive: true });
+      fs.appendFileSync(fallback, line);
+    } catch {
+      // Can't write diagnostics — nothing we can do
+    }
+    return;
+  }
+  try {
+    fs.appendFileSync(diagLogPath, line);
+  } catch {
+    // Can't write diagnostics
+  }
+}
+
+// diagLog is only usable after app.whenReady sets diagLogPath
 
 // Development environment
 const isDev = !app.isPackaged;
@@ -94,22 +127,27 @@ let serverPort = DEFAULT_SERVER_PORT;
 let staticPort = DEFAULT_STATIC_PORT;
 
 /**
- * Check if a port is available
+ * Check if a port is available by actively probing for a listener.
+ *
+ * Why not net.createServer().listen()? On macOS, SO_REUSEADDR allows
+ * binding to 127.0.0.1:PORT even when 0.0.0.0:PORT is already taken.
+ * This makes bind-based checks unreliable. Instead, we try to connect
+ * — if something accepts the connection, the port is in use.
  */
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise((resolve) => {
-    const server = net.createServer();
-    server.once('error', () => {
-      resolve(false);
+    const client = net.createConnection({ port, host: '127.0.0.1' });
+    client.once('connect', () => {
+      client.end();
+      resolve(false); // something is listening — port is NOT available
     });
-    server.once('listening', () => {
-      server.close(() => {
-        resolve(true);
-      });
+    client.once('error', () => {
+      resolve(true); // nothing listening — port IS available
     });
-    // Use Node's default binding semantics (matches most dev servers)
-    // This avoids false-positives when a port is taken on IPv6/dual-stack.
-    server.listen(port);
+    client.setTimeout(500, () => {
+      client.destroy();
+      resolve(true); // timeout = nothing listening
+    });
   });
 }
 
@@ -545,32 +583,61 @@ async function startServer(): Promise<void> {
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 
+  diagLog(`[SERVER] Spawned server process PID: ${serverProcess.pid}`);
+  diagLog(`[SERVER] Command: ${command} ${args.join(' ')}`);
+  diagLog(`[SERVER] CWD: ${serverRoot}`);
+  diagLog(`[SERVER] env.PORT: ${env.PORT}`);
+  diagLog(`[SERVER] env.AUTOMAKER_API_KEY: ${env.AUTOMAKER_API_KEY?.substring(0, 8)}...`);
+
+  // Track server process exit for waitForServer fail-fast
+  let serverExitCode: number | null = null;
+
   serverProcess.stdout?.on('data', (data) => {
     serverLogger.info(data.toString().trim());
   });
 
   serverProcess.stderr?.on('data', (data) => {
-    serverLogger.error(data.toString().trim());
+    const msg = data.toString().trim();
+    serverLogger.error(msg);
+    diagLog(`[SERVER:STDERR] ${msg}`);
   });
 
   serverProcess.on('close', (code) => {
+    serverExitCode = code;
+    diagLog(`[SERVER] Process exited with code ${code}`);
     serverLogger.info('Process exited with code', code);
     serverProcess = null;
   });
 
   serverProcess.on('error', (err) => {
+    serverExitCode = -1;
+    diagLog(`[SERVER] Process error: ${err.message}`);
     serverLogger.error('Failed to start server process:', err);
     serverProcess = null;
   });
 
-  await waitForServer();
+  diagLog('[SERVER] Waiting for server to be ready...');
+  await waitForServer(() => serverExitCode);
+  diagLog('[SERVER] Server is ready');
 }
 
 /**
  * Wait for server to be available
  */
-async function waitForServer(maxAttempts = 30): Promise<void> {
+async function waitForServer(getExitCode?: () => number | null, maxAttempts = 30): Promise<void> {
+  // Give the server process a moment to actually start and bind its port.
+  // Without this delay, the health check can accidentally succeed against a
+  // DIFFERENT server (e.g. dev server) that's already running on the same port.
+  await new Promise((r) => setTimeout(r, 2000));
+
   for (let i = 0; i < maxAttempts; i++) {
+    // If the server process died, fail fast instead of polling for 15 seconds
+    const exitCode = getExitCode?.();
+    if (exitCode !== null && exitCode !== undefined) {
+      diagLog(`[HEALTH] Server process already exited with code ${exitCode}`);
+      throw new Error(`Server process exited with code ${exitCode}`);
+    }
+
     try {
       await new Promise<void>((resolve, reject) => {
         const req = http.get(`http://localhost:${serverPort}/api/health`, (res) => {
@@ -586,13 +653,20 @@ async function waitForServer(maxAttempts = 30): Promise<void> {
           reject(new Error('Timeout'));
         });
       });
+      diagLog(`[HEALTH] Server ready after ${i + 1} attempt(s) on port ${serverPort}`);
       logger.info('Server is ready');
       return;
-    } catch {
+    } catch (err) {
+      if (i % 5 === 4) {
+        diagLog(
+          `[HEALTH] Attempt ${i + 1}/${maxAttempts} failed: ${err instanceof Error ? err.message : String(err)}`
+        );
+      }
       await new Promise((r) => setTimeout(r, 500));
     }
   }
 
+  diagLog(`[HEALTH] Server failed to start after ${maxAttempts} attempts on port ${serverPort}`);
   throw new Error('Server failed to start');
 }
 
@@ -646,6 +720,18 @@ function createWindow(): void {
   if (isDev && process.env.OPEN_DEVTOOLS === 'true') {
     mainWindow.webContents.openDevTools();
   }
+
+  // Always register Cmd/Ctrl+Shift+I to toggle DevTools (works in packaged builds too)
+  mainWindow.webContents.on('before-input-event', (_event, input) => {
+    if (
+      input.type === 'keyDown' &&
+      input.shift &&
+      (input.meta || input.control) &&
+      input.key.toLowerCase() === 'i'
+    ) {
+      mainWindow?.webContents.toggleDevTools();
+    }
+  });
 
   // Save window bounds on close, resize, and move
   mainWindow.on('close', () => {
@@ -723,6 +809,16 @@ app.whenReady().then(async () => {
   // This must be done before any file operations
   setElectronUserDataPath(userDataPathToUse);
 
+  // Set diagnostic log path now that userData is resolved
+  diagLogPath = path.join(userDataPathToUse, 'electron-diag.log');
+  // Truncate on each launch to keep it fresh
+  try {
+    fs.writeFileSync(diagLogPath, `=== Electron started at ${new Date().toISOString()} ===\n`);
+  } catch {
+    // ignore
+  }
+  diagLog(`userData: ${userDataPathToUse}`);
+
   // In development mode, allow access to the entire project root (for source files, node_modules, etc.)
   // In production, only allow access to the built app directory and resources
   if (isDev) {
@@ -769,7 +865,7 @@ app.whenReady().then(async () => {
 
       // Wait for external server to be ready
       logger.info('Waiting for external server...');
-      await waitForServer(60); // Give Docker container more time to start
+      await waitForServer(undefined, 60); // Give Docker container more time to start
       logger.info('External server is ready');
 
       // In external server mode, we don't set an API key here.
@@ -780,15 +876,22 @@ app.whenReady().then(async () => {
     } else {
       // Generate or load API key for CSRF protection (before starting server)
       ensureApiKey();
+      diagLog(`[AUTH] API key: ${apiKey?.substring(0, 8)}... (length: ${apiKey?.length})`);
 
       // Find available ports (prevents conflicts with other apps using same ports)
       serverPort = await findAvailablePort(DEFAULT_SERVER_PORT);
+      diagLog(`[PORT] Selected server port: ${serverPort} (default was ${DEFAULT_SERVER_PORT})`);
       if (serverPort !== DEFAULT_SERVER_PORT) {
         logger.info('Default server port', DEFAULT_SERVER_PORT, 'in use, using port', serverPort);
       }
     }
 
     staticPort = await findAvailablePort(DEFAULT_STATIC_PORT);
+    // Avoid collision: if staticPort landed on the same port as serverPort, bump it
+    if (staticPort === serverPort) {
+      staticPort = await findAvailablePort(staticPort + 1);
+    }
+    diagLog(`[PORT] Selected static port: ${staticPort} (default was ${DEFAULT_STATIC_PORT})`);
     if (staticPort !== DEFAULT_STATIC_PORT) {
       logger.info('Default static port', DEFAULT_STATIC_PORT, 'in use, using port', staticPort);
     }
@@ -1002,15 +1105,19 @@ ipcMain.handle('ping', async () => {
 
 // Get server URL for HTTP client
 ipcMain.handle('server:getUrl', async () => {
-  return `http://localhost:${serverPort}`;
+  const url = `http://localhost:${serverPort}`;
+  diagLog(`[IPC] server:getUrl → ${url}`);
+  return url;
 });
 
 // Get API key for authentication
 // Returns null in external server mode to trigger session-based auth
 ipcMain.handle('auth:getApiKey', () => {
   if (isExternalServerMode) {
+    diagLog('[IPC] auth:getApiKey → null (external server mode)');
     return null;
   }
+  diagLog(`[IPC] auth:getApiKey → ${apiKey?.substring(0, 8)}...`);
   return apiKey;
 });
 
