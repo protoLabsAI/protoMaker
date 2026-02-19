@@ -29,7 +29,7 @@ export interface ChannelRoutingConfig {
   devChannel: string;
   /** Channel for infrastructure issues (agent_failure, health_check) */
   infraChannel: string;
-  /** Channel for strategic issues (sla_breach, board_anomaly, crew_escalation, human_mention) */
+  /** Channel for strategic issues (sla_breach, board_anomaly, lead_engineer_escalation, human_mention) */
   strategicChannel: string;
 }
 
@@ -150,7 +150,7 @@ export class DiscordChannelEscalation implements EscalationChannel {
     if (
       source === EscalationSource.sla_breach ||
       source === EscalationSource.board_anomaly ||
-      source === EscalationSource.crew_escalation ||
+      source === EscalationSource.lead_engineer_escalation ||
       source === EscalationSource.human_mention
     ) {
       return this.config.strategicChannel;
@@ -269,10 +269,10 @@ export class DiscordChannelEscalation implements EscalationChannel {
         items.push('- Update automation rules if needed');
         break;
 
-      case EscalationSource.crew_escalation:
-        items.push('- Review crew member escalation details');
-        items.push('- Provide guidance or unblock crew member');
-        items.push('- Adjust crew configuration if needed');
+      case EscalationSource.lead_engineer_escalation:
+        items.push('- Review Lead Engineer escalation details');
+        items.push('- Provide guidance or unblock Lead Engineer');
+        items.push('- Adjust project configuration if needed');
         break;
 
       case EscalationSource.human_mention:

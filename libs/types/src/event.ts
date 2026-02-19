@@ -249,11 +249,6 @@ export type EventType =
   | 'feature:permanently-blocked'
   | 'issue:created'
   | 'issue:triage-completed'
-  // Crew loop events (unified crew member scheduling)
-  | 'crew:check-started'
-  | 'crew:check-completed'
-  | 'crew:escalation-started'
-  | 'crew:escalation-completed'
   // Escalation router events (signal routing to channels)
   | 'escalation:signal-received'
   | 'escalation:signal-routed'

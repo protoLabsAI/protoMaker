@@ -952,8 +952,6 @@ specGenerationMonitor.startMonitoring();
   void codexModelCacheService.getModels().catch((err) => {
     logger.error('Failed to bootstrap Codex model cache:', err);
   });
-
-  // Health monitoring timer replaced by Frank crew loop (on-demand checks)
 })();
 
 // Run stale validation cleanup every hour to prevent memory leaks from crashed validations

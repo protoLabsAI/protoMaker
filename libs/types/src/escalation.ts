@@ -33,8 +33,8 @@ export enum EscalationSource {
   ci_failure = 'ci_failure',
   /** Health check failure or degradation */
   health_check = 'health_check',
-  /** Crew member escalation */
-  crew_escalation = 'crew_escalation',
+  /** Lead Engineer escalation */
+  lead_engineer_escalation = 'lead_engineer_escalation',
   /** SLA breach detected */
   sla_breach = 'sla_breach',
   /** Board state anomaly detected */

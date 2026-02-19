@@ -250,9 +250,6 @@ export type {
   DiscordIntegrationConfig,
   ProjectIntegrations,
   IntegrationEventMapping,
-  // Crew loop types
-  CrewMemberConfig,
-  CrewLoopSettings,
   // Trust boundary types
   PRDCategory,
   PRDComplexity,
@@ -299,8 +296,6 @@ export {
   DEFAULT_DISCORD_SETTINGS,
   // Ceremony defaults
   DEFAULT_CEREMONY_SETTINGS,
-  // Crew loop defaults
-  DEFAULT_CREW_LOOP_SETTINGS,
   // Trust boundary defaults
   DEFAULT_TRUST_BOUNDARY_CONFIG,
   // Integration config defaults

@@ -133,10 +133,6 @@ function modelLabel(model?: string): string {
   return model.charAt(0).toUpperCase() + model.slice(1);
 }
 
-function isCrewMember(name: string): boolean {
-  return ['pr-maintainer', 'board-janitor'].includes(name);
-}
-
 function anchor(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9-]/g, '-');
 }
@@ -164,8 +160,7 @@ function generateOrgTree(): string {
     }
     const label = parts.join(', ');
     const teamSuffix = node?.team ? ` — ${node.team}` : '';
-    const crewSuffix = isCrewMember(name) ? ' [Crew]' : '';
-    return `${label}${crewSuffix}${teamSuffix}`;
+    return `${label}${teamSuffix}`;
   }
 
   // Josh (root)
@@ -203,11 +198,10 @@ function generateAgentSection(name: string, reportsToName: string): string {
   const dn = tmpl.displayName;
   const node = ORG_HIERARCHY.find((n) => n.name === name);
   const reportsTo = displayName(reportsToName);
-  const isCrew = isCrewMember(name);
   const hasReports = node && node.reports.length > 0;
 
   let section = `## ${dn} {#${anchor(name)}}\n\n`;
-  section += `**Type:** AI${isCrew ? ' (Crew Loop)' : ''}\n`;
+  section += `**Type:** AI\n`;
   section += `**Role:** ${tmpl.role}\n`;
   section += `**Model:** ${modelLabel(tmpl.model)}\n`;
   section += `**Trust Level:** ${tmpl.trustLevel ?? 1} (${trustLabel(tmpl.trustLevel)})\n`;
@@ -265,8 +259,7 @@ function generateRolesDoc(): string {
     const tmpl = findTemplate(name);
     if (!tmpl) continue;
     const dn = tmpl.displayName;
-    const crew = isCrewMember(name) ? ' (Crew)' : '';
-    doc += `| [${dn}](#${anchor(name)})${crew} | ${tmpl.role} | ${modelLabel(tmpl.model)} | ${tmpl.trustLevel ?? 1} (${trustLabel(tmpl.trustLevel)}) | ${displayName(reportsTo)} | ${capabilitySummary(tmpl)} | ${exposureSummary(tmpl)} |\n`;
+    doc += `| [${dn}](#${anchor(name)}) | ${tmpl.role} | ${modelLabel(tmpl.model)} | ${tmpl.trustLevel ?? 1} (${trustLabel(tmpl.trustLevel)}) | ${displayName(reportsTo)} | ${capabilitySummary(tmpl)} | ${exposureSummary(tmpl)} |\n`;
   }
 
   doc += `\n`;

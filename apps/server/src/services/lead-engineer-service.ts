@@ -1526,7 +1526,7 @@ export class LeadEngineerService {
 
       case 'escalate_llm': {
         this.events.emit('escalation:signal-received', {
-          source: 'crew_escalation',
+          source: 'lead_engineer_escalation',
           severity: 'high',
           type: 'lead_engineer_escalation',
           context: {

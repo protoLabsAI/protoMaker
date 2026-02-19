@@ -54,7 +54,7 @@ function sourceToLabel(source: EscalationSource): string {
     agent_failure: 'source:agent-failure',
     ci_failure: 'source:ci-failure',
     health_check: 'source:health-check',
-    crew_escalation: 'source:crew-escalation',
+    lead_engineer_escalation: 'source:lead-engineer-escalation',
     sla_breach: 'source:sla-breach',
     board_anomaly: 'source:board-anomaly',
     human_mention: 'source:human-mention',
