@@ -21,7 +21,7 @@ const OUTPUT = resolve(DATA_DIR, 'changelog.json');
 
 const CHANGELOG_HTML = resolve(__dirname, '../changelog/index.html');
 const STATS_JSON = resolve(DATA_DIR, 'stats.json');
-const GITHUB_REPO = 'proto-labs-ai/automaker';
+const GITHUB_REPO = 'proto-labs-ai/protoMaker';
 
 function run(cmd) {
   return execSync(cmd, { cwd: ROOT, encoding: 'utf-8', maxBuffer: 50 * 1024 * 1024 }).trim();

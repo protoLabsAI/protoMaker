@@ -8,7 +8,7 @@ jobs:
   sync:
     runs-on: self-hosted
     if: >
-      github.repository == 'proto-labs-ai/automaker' &&
+      github.repository == 'proto-labs-ai/protoMaker' &&
       github.event.pull_request.merged == true
     timeout-minutes: 5
     steps:

@@ -13,7 +13,7 @@ on:
 jobs:
   changelog:
     runs-on: self-hosted
-    if: github.repository == 'proto-labs-ai/automaker'
+    if: github.repository == 'proto-labs-ai/protoMaker'
     timeout-minutes: 10
 
     steps:

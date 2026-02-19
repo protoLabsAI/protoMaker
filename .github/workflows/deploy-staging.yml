@@ -9,7 +9,7 @@ on:
 jobs:
   deploy:
     runs-on: self-hosted
-    if: github.repository == 'proto-labs-ai/automaker'
+    if: github.repository == 'proto-labs-ai/protoMaker'
     timeout-minutes: 15
     concurrency:
       group: staging-deploy
