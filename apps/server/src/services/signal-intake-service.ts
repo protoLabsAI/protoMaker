@@ -39,8 +39,28 @@ interface ClassificationResult {
   reason: string;
 }
 
+interface SignalCounts {
+  linear: number;
+  github: number;
+  discord: number;
+  mcp: number;
+}
+
+export interface SignalIntakeStatus {
+  active: boolean;
+  signalCounts: SignalCounts;
+  lastSignalAt: string | null;
+}
+
 export class SignalIntakeService {
   private processedSignals = new Set<string>();
+  private signalCounts: SignalCounts = {
+    linear: 0,
+    github: 0,
+    discord: 0,
+    mcp: 0,
+  };
+  private lastSignalAt: string | null = null;
 
   constructor(
     private events: EventEmitter,
@@ -57,6 +77,34 @@ export class SignalIntakeService {
         void this.handleSignal(payload as SignalPayload);
       }
     });
+  }
+
+  /**
+   * Get current signal intake status
+   */
+  public getStatus(): SignalIntakeStatus {
+    return {
+      active: true,
+      signalCounts: { ...this.signalCounts },
+      lastSignalAt: this.lastSignalAt,
+    };
+  }
+
+  /**
+   * Increment signal count by source
+   */
+  private incrementSignalCount(source: string): void {
+    // Normalize source to known categories
+    if (source === 'linear') {
+      this.signalCounts.linear++;
+    } else if (source === 'github') {
+      this.signalCounts.github++;
+    } else if (source === 'discord') {
+      this.signalCounts.discord++;
+    } else if (source.startsWith('mcp')) {
+      this.signalCounts.mcp++;
+    }
+    // Unknown sources are silently ignored
   }
 
   /**
@@ -148,6 +196,10 @@ export class SignalIntakeService {
       const entries = [...this.processedSignals];
       this.processedSignals = new Set(entries.slice(-500));
     }
+
+    // Track signal receipt
+    this.lastSignalAt = signal.timestamp;
+    this.incrementSignalCount(signal.source);
 
     try {
       // Extract title from first line, description from full content
