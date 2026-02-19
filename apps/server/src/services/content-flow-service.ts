@@ -380,6 +380,40 @@ export class ContentFlowService {
   }
 
   /**
+   * Get execution state for all active flows
+   *
+   * Returns metadata about all running content flows including
+   * progress, current node, and review scores.
+   */
+  getExecutionState(): {
+    activeFlows: Array<{
+      runId: string;
+      status: string;
+      progress: number;
+      currentNode?: string;
+      reviewScores?: ContentFlowStatus['reviewScores'];
+      createdAt: number;
+    }>;
+    totalActive: number;
+  } {
+    const activeFlows = Array.from(this.activeRuns.values())
+      .filter((flow) => flow.status === 'running' || flow.status === 'interrupted')
+      .map((flow) => ({
+        runId: flow.runId,
+        status: flow.status,
+        progress: flow.progress,
+        currentNode: flow.currentNode,
+        reviewScores: flow.reviewScores,
+        createdAt: flow.createdAt,
+      }));
+
+    return {
+      activeFlows,
+      totalActive: activeFlows.length,
+    };
+  }
+
+  /**
    * Resume a flow with HITL review.
    *
    * Only works when the flow was started with enableHITL=true and is

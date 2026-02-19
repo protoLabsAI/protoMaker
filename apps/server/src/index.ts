@@ -97,6 +97,7 @@ import { CodexModelCacheService } from './services/codex-model-cache-service.js'
 import { createGitHubRoutes } from './routes/github/index.js';
 import { createContextRoutes } from './routes/context/index.js';
 import { createContentRoutes } from './routes/content/index.js';
+import { contentFlowService } from './services/content-flow-service.js';
 import { createFlowsRoutes } from './routes/flows/index.js';
 import { createBacklogPlanRoutes } from './routes/backlog-plan/index.js';
 import { cleanupStaleValidations } from './routes/github/routes/validation-common.js';
@@ -1145,7 +1146,8 @@ app.use(
     leadEngineerService,
     prFeedbackService,
     eventStreamBuffer,
-    projectService
+    projectService,
+    contentFlowService
   )
 );
 app.use('/api/langfuse', createLangfuseRoutes());
