@@ -59,6 +59,58 @@ function categorize(message) {
  * Clean up commit message for public display.
  * Strips conventional commit prefixes and PR number suffix.
  */
+/**
+ * Filter out internal entries that shouldn't appear on the public changelog.
+ * Only app-facing changes belong here — not strategy, agent personas, or internal plumbing.
+ */
+const EXCLUDE_PATTERNS = [
+  // Internal agent persona setup (not user-facing features)
+  /\b(?:jon|cindi|frank|kai|sam|ralph)\b/i,
+  /\bmatt\b.*(?:prompt|persona|frontend.engineer)/i,
+  // Content & marketing internals
+  /content.pipe/i,
+  /antagonistic.review/i,
+  /\bhitl\b/i,
+  /\bgtm\b/i,
+  /brand.(?:bible|cas|align|doc|positioning)/i,
+  /copilotkit/i,
+  // Internal orchestration systems
+  /\bcrews?\b/i,
+  /signal.(?:intake|rout|accum)/i,
+  /\bescalat/i,
+  /\bbriefing\b/i,
+  /chief.of.staff/i,
+  /lead.engineer/i,
+  /\bbeads\b/i,
+  /(?:agent|role|prompt).(?:template|registry)/i,
+  // Linear internals
+  /linear.*(?:webhook|agent|intake|bridge|integration|pipeline|bearer|protocol)/i,
+  // Discord internals
+  /discord.*(?:bot|mcp|provision)/i,
+  // Internal plumbing
+  /authority.agent/i,
+  /\.automaker.*(?:project|untrack)/i,
+  /\.beads/i,
+  // Internal docs that aren't user-facing
+  /CLAUDE\.md/i,
+  /orchestrator.prompt/i,
+];
+
+// Exceptions — titles matching these patterns are KEPT even if they match an exclude
+const KEEP_PATTERNS = [/ava.anywhere/i, /ava.presence/i, /ava.*sidebar/i, /ava.*chat/i];
+
+function shouldExclude(title) {
+  // Check keep list first — exceptions override exclusions
+  for (const keep of KEEP_PATTERNS) {
+    if (keep.test(title)) return false;
+  }
+  // Check exclusion patterns
+  for (const pattern of EXCLUDE_PATTERNS) {
+    if (pattern.test(title)) return true;
+  }
+  return false;
+}
+
 function cleanTitle(message) {
   let title = message;
 
@@ -111,6 +163,9 @@ function parseCommits() {
     const prNumber = parseInt(prMatch[1], 10);
     const category = categorize(message);
     const title = cleanTitle(message);
+
+    // Filter out internal entries
+    if (shouldExclude(title) || shouldExclude(message)) continue;
 
     entries.push({
       hash: hash.substring(0, 8),
