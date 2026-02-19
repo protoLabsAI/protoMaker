@@ -79,18 +79,24 @@ function getServiceStatus(
   if (!engineStatus) return { status: 'idle', throughput: 0 };
 
   switch (serviceId) {
-    case 'signal-sources':
+    case 'signal-sources': {
+      // TODO: Wire real signal counts once SignalIntakeService exposes metrics
+      const isActive = engineStatus.signalIntake?.active ?? false;
       return {
-        status: engineStatus.signalIntake?.active ? 'active' : 'idle',
-        throughput: 0,
-        statusLine: 'Linear, GitHub, Discord, MCP',
+        status: isActive ? 'active' : 'idle',
+        throughput: 0, // TODO: Show real signal count when available
+        statusLine: isActive ? 'Monitoring sources' : 'Linear, GitHub, Discord, MCP',
       };
-    case 'triage':
+    }
+    case 'triage': {
+      // TODO: Wire ops/gtm routing counts once available
+      const isActive = engineStatus.signalIntake?.active ?? false;
       return {
-        status: engineStatus.signalIntake?.active ? 'active' : 'idle',
-        throughput: 0,
-        statusLine: 'Ava classifies: Ops vs GTM',
+        status: isActive ? 'active' : 'idle',
+        throughput: 0, // TODO: Show signal processing rate when available
+        statusLine: isActive ? 'Classifying signals' : 'Ava classifies: Ops vs GTM',
       };
+    }
     case 'project-planning': {
       const activePRDs = engineStatus.projectLifecycle?.activePRDs ?? 0;
       return {
@@ -99,12 +105,14 @@ function getServiceStatus(
         statusLine: 'SPARC PRD + Antagonistic Review',
       };
     }
-    case 'decomposition':
+    case 'decomposition': {
+      const activeProjects = engineStatus.projectLifecycle?.activeProjects ?? 0;
       return {
-        status: 'idle',
-        throughput: 0,
+        status: activeProjects > 0 ? 'active' : 'idle',
+        throughput: activeProjects,
         statusLine: 'Milestones \u2192 Epics \u2192 Features',
       };
+    }
     case 'launch':
       return {
         status: engineStatus.autoMode?.running ? 'active' : 'idle',
@@ -136,12 +144,17 @@ function getServiceStatus(
         statusLine: agents.length > 0 ? `${agents.length} running` : undefined,
       };
     }
-    case 'git-workflow':
+    case 'git-workflow': {
+      // TODO: Wire real active workflow count once GitWorkflowService exposes metrics
+      // For now, infer activity from PR feedback tracking
+      const trackedPRs = engineStatus.prFeedback?.trackedPRs ?? 0;
       return {
-        status: 'idle',
-        throughput: 0,
-        statusLine: 'Commit → Push → PR → Merge',
+        status: trackedPRs > 0 ? 'active' : 'idle',
+        throughput: trackedPRs,
+        statusLine:
+          trackedPRs > 0 ? `${trackedPRs} workflows active` : 'Commit → Push → PR → Merge',
       };
+    }
     case 'pr-feedback': {
       const pf = engineStatus.prFeedback;
       const tracked = pf?.trackedPRs ?? 0;
@@ -166,7 +179,7 @@ function getServiceStatus(
       return {
         status: 'idle',
         throughput: 0,
-        statusLine: 'Retro, metrics, knowledge update',
+        statusLine: 'Coming soon: Retro, metrics, knowledge update',
       };
     default:
       return { status: 'idle', throughput: 0 };
