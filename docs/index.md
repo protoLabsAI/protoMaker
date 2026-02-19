@@ -33,15 +33,3 @@ features:
     details: View the source. Learn the methodology. Build with it. No vendor lock-in.
     link: https://github.com/proto-labs-ai
 ---
-
-## Quick Links
-
-| Service | URL                                               | Description              |
-| ------- | ------------------------------------------------- | ------------------------ |
-| GitHub  | [proto-labs-ai](https://github.com/proto-labs-ai) | Source code, issues, PRs |
-| X       | [@protoLabsAI](https://x.com/protoLabsAI)         | Updates and threads      |
-| Twitch  | [protoLabsTV](https://twitch.tv/protoLabsTV)      | Live building sessions   |
-
----
-
-<small>Built with <a href="https://protolabs.studio">protoLabs</a> — the source-available AI-native development studio.</small>

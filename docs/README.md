@@ -1,13 +1,5 @@
 # protoLabs Studio Documentation
 
-## Quick Links
-
-| Service | URL                                               | Description              |
-| ------- | ------------------------------------------------- | ------------------------ |
-| GitHub  | [proto-labs-ai](https://github.com/proto-labs-ai) | Source code, issues, PRs |
-| X       | [@protoLabsAI](https://x.com/protoLabsAI)         | Updates and threads      |
-| Twitch  | [protoLabsTV](https://twitch.tv/protoLabsTV)      | Live building sessions   |
-
 ## Getting Started
 
 | Document                                                               | Description                      |
