@@ -70,7 +70,13 @@ export function ChatInput({
           className="flex-1 resize-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none disabled:opacity-50"
         />
         {isStreaming && onStop ? (
-          <Button variant="ghost" size="icon" className="size-8 shrink-0" onClick={onStop}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-8 shrink-0"
+            onClick={onStop}
+            aria-label="Stop generating"
+          >
             <Square className="size-4" />
           </Button>
         ) : (
@@ -80,6 +86,7 @@ export function ChatInput({
             className="size-8 shrink-0"
             onClick={onSubmit}
             disabled={!canSubmit}
+            aria-label="Send message"
           >
             <Send className="size-4" />
           </Button>

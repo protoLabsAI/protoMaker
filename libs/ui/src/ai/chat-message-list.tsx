@@ -101,6 +101,7 @@ export function ChatMessageList({
             size="icon"
             className="size-8 rounded-full shadow-md"
             onClick={() => scrollToBottom()}
+            aria-label="Scroll to bottom"
           >
             <ArrowDown className="size-4" />
           </Button>
