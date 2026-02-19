@@ -3,7 +3,6 @@ import { useEffect, useState, useCallback, useDeferredValue, useRef } from 'reac
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { createLogger } from '@automaker/utils/logger';
-import { Sidebar } from '@/components/layout/sidebar';
 import { ProjectSwitcher } from '@/components/layout/project-switcher';
 import { ChatSidebar } from '@/components/views/chat/chat-sidebar';
 import { ChatModal, useChatModalShortcut } from '@/components/layout/chat-modal';
@@ -170,8 +169,6 @@ function RootLayoutContent() {
     skipSandboxWarning,
     setSkipSandboxWarning,
     fetchCodexModels,
-    sidebarOpen: _sidebarOpen,
-    toggleSidebar: _toggleSidebar,
   } = useAppStore();
   const { setupComplete, codexCliStatus } = useSetupStore();
   const navigate = useNavigate();
@@ -840,7 +837,6 @@ function RootLayoutContent() {
           />
         )}
         {showProjectSwitcher && <ProjectSwitcher />}
-        <Sidebar />
         <div className="flex-1 flex flex-col overflow-hidden">
           <Outlet />
         </div>

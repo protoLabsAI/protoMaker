@@ -12,6 +12,7 @@ import { NewProjectModal } from '@/components/dialogs/new-project-modal';
 import { OnboardingDialog } from '@/components/layout/sidebar/dialogs';
 import { useProjectCreation } from '@/components/layout/sidebar/hooks';
 import { SIDEBAR_FEATURE_FLAGS } from '@/components/layout/sidebar/constants';
+import { AvaPresenceButton } from '@/components/layout/sidebar/components/ava-presence-button';
 import type { Project } from '@/lib/electron';
 import { getElectronAPI } from '@/lib/electron';
 import { initializeProject, hasAppSpec, hasAutomakerDir } from '@/lib/project-init';
@@ -401,6 +402,9 @@ export function ProjectSwitcher() {
             </>
           )}
         </div>
+
+        {/* Ava presence button */}
+        <AvaPresenceButton sidebarOpen={false} />
 
         {/* Wiki and Bug Report Buttons at the very bottom */}
         <div className="p-2 border-t border-border/40 space-y-2">
