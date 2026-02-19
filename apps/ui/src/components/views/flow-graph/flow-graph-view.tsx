@@ -54,9 +54,9 @@ export function FlowGraphView({ onFeatureClick }: FlowGraphViewProps) {
         />
       </ReactFlowProvider>
 
-      {/* Legend popup near controls (bottom-left) */}
+      {/* Legend popup to the right of controls, near bottom */}
       {showLegend && (
-        <div className="absolute bottom-14 left-4 z-10">
+        <div className="absolute bottom-4 left-16 z-10">
           <FlowGraphLegend />
         </div>
       )}
