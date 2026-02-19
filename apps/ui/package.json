@@ -165,8 +165,8 @@
     "vite-plugin-electron-renderer": "0.14.6"
   },
   "build": {
-    "appId": "com.automaker.app",
-    "productName": "Automaker",
+    "appId": "studio.protolabs.app",
+    "productName": "protoLabs.studio",
     "artifactName": "${productName}-${version}-${arch}.${ext}",
     "npmRebuild": false,
     "publish": {
