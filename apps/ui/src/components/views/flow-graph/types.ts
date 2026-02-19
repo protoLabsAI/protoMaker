@@ -28,12 +28,18 @@ export interface ServiceNodeData {
 }
 
 export type EngineServiceId =
+  | 'signal-sources'
+  | 'triage'
+  | 'project-planning'
+  | 'decomposition'
+  | 'launch'
   | 'signal-intake'
   | 'auto-mode'
   | 'agent-execution'
   | 'git-workflow'
   | 'pr-feedback'
-  | 'lead-engineer-rules';
+  | 'lead-engineer-rules'
+  | 'reflection';
 
 export interface EngineServiceNodeData {
   label: string;
@@ -79,15 +85,7 @@ export interface AgentNodeData {
   [key: string]: unknown;
 }
 
-export type PipelineStageId =
-  | 'backlog'
-  | 'in_progress'
-  | 'review'
-  | 'merge'
-  | 'test'
-  | 'verify'
-  | 'done'
-  | 'blocked';
+export type PipelineStageId = 'backlog' | 'in_progress' | 'review' | 'done' | 'blocked';
 
 export type PipelineStageStatus = 'idle' | 'active' | 'blocked' | 'error';
 

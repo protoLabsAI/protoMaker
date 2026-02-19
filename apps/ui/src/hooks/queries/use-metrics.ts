@@ -161,12 +161,12 @@ const EVENT_HISTORY_STALE_TIME = 30 * 1000; // 30 seconds
 /**
  * Fetch real-time engine status (all services: signal intake, auto-mode, agent execution, etc.)
  */
-export function useEngineStatus() {
+export function useEngineStatus(projectPath?: string) {
   return useQuery({
     queryKey: queryKeys.engine.status(),
     queryFn: async () => {
       const api = getHttpApiClient();
-      return api.engine.status();
+      return api.engine.status(projectPath);
     },
     staleTime: ENGINE_STATUS_STALE_TIME,
     refetchInterval: ENGINE_STATUS_STALE_TIME,

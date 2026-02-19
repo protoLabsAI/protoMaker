@@ -8,16 +8,7 @@
 import { memo } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import { motion } from 'motion/react';
-import {
-  Inbox,
-  Play,
-  Eye,
-  GitMerge,
-  FlaskConical,
-  ShieldCheck,
-  CheckCircle2,
-  AlertTriangle,
-} from 'lucide-react';
+import { Inbox, Play, Eye, CheckCircle2, AlertTriangle } from 'lucide-react';
 import type { PipelineStageNodeData, PipelineStageId } from '../types';
 import { cn } from '@/lib/utils';
 
@@ -26,9 +17,6 @@ const STAGE_ICONS: Record<PipelineStageId, typeof Inbox> = {
   backlog: Inbox,
   in_progress: Play,
   review: Eye,
-  merge: GitMerge,
-  test: FlaskConical,
-  verify: ShieldCheck,
   done: CheckCircle2,
   blocked: AlertTriangle,
 };

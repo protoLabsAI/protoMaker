@@ -65,6 +65,11 @@ interface EngineStatusResponse {
       actionsTaken?: number;
     }>;
   };
+  projectLifecycle?: {
+    totalProjects?: number;
+    activeProjects?: number;
+    activePRDs?: number;
+  };
 }
 
 function getServiceStatus(
@@ -74,6 +79,38 @@ function getServiceStatus(
   if (!engineStatus) return { status: 'idle', throughput: 0 };
 
   switch (serviceId) {
+    case 'signal-sources':
+      return {
+        status: engineStatus.signalIntake?.active ? 'active' : 'idle',
+        throughput: 0,
+        statusLine: 'Linear, GitHub, Discord, MCP',
+      };
+    case 'triage':
+      return {
+        status: engineStatus.signalIntake?.active ? 'active' : 'idle',
+        throughput: 0,
+        statusLine: 'Ava classifies: Ops vs GTM',
+      };
+    case 'project-planning': {
+      const activePRDs = engineStatus.projectLifecycle?.activePRDs ?? 0;
+      return {
+        status: activePRDs > 0 ? 'active' : 'idle',
+        throughput: activePRDs,
+        statusLine: 'SPARC PRD + Antagonistic Review',
+      };
+    }
+    case 'decomposition':
+      return {
+        status: 'idle',
+        throughput: 0,
+        statusLine: 'Milestones \u2192 Epics \u2192 Features',
+      };
+    case 'launch':
+      return {
+        status: engineStatus.autoMode?.running ? 'active' : 'idle',
+        throughput: 0,
+        statusLine: 'Activate auto-mode + Lead Engineer',
+      };
     case 'signal-intake':
       return {
         status: engineStatus.signalIntake?.active ? 'active' : 'idle',
@@ -125,6 +162,12 @@ function getServiceStatus(
         statusLine: running ? `${sessions} active sessions` : 'Subscribes to all events',
       };
     }
+    case 'reflection':
+      return {
+        status: 'idle',
+        throughput: 0,
+        statusLine: 'Retro, metrics, knowledge update',
+      };
     default:
       return { status: 'idle', throughput: 0 };
   }
@@ -137,7 +180,7 @@ export function useFlowGraphData() {
 
   const { data: runningAgentsData } = useRunningAgents();
   const { data: integrationStatus } = useIntegrationStatus(projectPath);
-  const { data: engineStatusData } = useEngineStatus();
+  const { data: engineStatusData } = useEngineStatus(projectPath);
   const { stageAggregates } = usePipelineTracker();
 
   const engineStatus = engineStatusData as EngineStatusResponse | undefined;

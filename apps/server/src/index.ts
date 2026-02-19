@@ -1140,7 +1140,13 @@ const { createLeadEngineerRoutes } = await import('./routes/lead-engineer/index.
 app.use('/api/lead-engineer', createLeadEngineerRoutes(leadEngineerService));
 app.use(
   '/api/engine',
-  createEngineRoutes(autoModeService, leadEngineerService, prFeedbackService, eventStreamBuffer)
+  createEngineRoutes(
+    autoModeService,
+    leadEngineerService,
+    prFeedbackService,
+    eventStreamBuffer,
+    projectService
+  )
 );
 app.use('/api/langfuse', createLangfuseRoutes());
 app.use(

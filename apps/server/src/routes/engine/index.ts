@@ -13,6 +13,7 @@ import { createLogger } from '@automaker/utils';
 import type { AutoModeService } from '../../services/auto-mode-service.js';
 import type { LeadEngineerService } from '../../services/lead-engineer-service.js';
 import type { PRFeedbackService } from '../../services/pr-feedback-service.js';
+import type { ProjectService } from '../../services/project-service.js';
 import type { EventStreamBuffer } from '../../lib/event-stream-buffer.js';
 
 const logger = createLogger('EngineRoutes');
@@ -21,7 +22,8 @@ export function createEngineRoutes(
   autoModeService: AutoModeService,
   leadEngineerService: LeadEngineerService | undefined,
   prFeedbackService: PRFeedbackService,
-  eventStreamBuffer?: EventStreamBuffer
+  eventStreamBuffer?: EventStreamBuffer,
+  projectService?: ProjectService
 ): Router {
   const router = Router();
 
@@ -29,8 +31,10 @@ export function createEngineRoutes(
    * POST /api/engine/status
    * Returns real-time status of all engine services.
    */
-  router.post('/status', async (_req: Request, res: Response) => {
+  router.post('/status', async (req: Request, res: Response) => {
     try {
+      const { projectPath } = (req.body ?? {}) as { projectPath?: string };
+
       // Auto-mode status
       const autoModeStatus = autoModeService.getStatus();
       const runningAgents = await autoModeService.getRunningAgents();
@@ -44,6 +48,32 @@ export function createEngineRoutes(
       const remediationActive = trackedPRs.filter(
         (pr) => pr.reviewState === 'changes_requested'
       ).length;
+
+      // Project lifecycle (optional — requires projectPath)
+      let projectLifecycle: {
+        totalProjects: number;
+        activeProjects: number;
+        activePRDs: number;
+      } | null = null;
+
+      if (projectService && projectPath) {
+        try {
+          const slugs = await projectService.listProjects(projectPath);
+          const projects = (
+            await Promise.all(slugs.map((s) => projectService.getProject(projectPath, s)))
+          ).filter(Boolean);
+          const active = projects.filter((p) => p && p.status !== 'completed');
+          projectLifecycle = {
+            totalProjects: projects.length,
+            activeProjects: active.length,
+            activePRDs: active.filter(
+              (p) => p && (p.status === 'drafting' || p.status === 'reviewing')
+            ).length,
+          };
+        } catch {
+          // Project dir may not exist — that's fine
+        }
+      }
 
       res.json({
         success: true,
@@ -92,6 +122,7 @@ export function createEngineRoutes(
             actionsTaken: s.actionsTaken,
           })),
         },
+        projectLifecycle,
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
