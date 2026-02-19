@@ -319,6 +319,8 @@ export const queryKeys = {
     /** Server-side event history buffer */
     eventsHistory: (filter?: Record<string, unknown>) =>
       ['engine', 'events', 'history', filter] as const,
+    /** LangGraph flow definitions */
+    flows: (graphId?: string) => ['engine', 'flows', graphId] as const,
   },
 
   // ============================================

@@ -173,7 +173,17 @@ function getServiceStatus(
   }
 }
 
-export function useFlowGraphData() {
+/**
+ * Map engine service IDs to their associated LangGraph flow IDs
+ */
+const SERVICE_TO_GRAPH_MAP: Partial<Record<EngineServiceId, string>> = {
+  'auto-mode': 'coordinator-flow',
+  'project-planning': 'project-planning',
+};
+
+export function useFlowGraphData(
+  onNodeClick?: (serviceId: EngineServiceId, graphId: string) => void
+) {
   const currentProject = useAppStore((s) => s.currentProject);
   const features = useAppStore((s) => s.features);
   const projectPath = currentProject?.path;
@@ -210,12 +220,15 @@ export function useFlowGraphData() {
     // 1. Engine service nodes
     for (const svc of ENGINE_SERVICES) {
       const { status, throughput, statusLine } = getServiceStatus(svc.serviceId, engineStatus);
+      const graphId = SERVICE_TO_GRAPH_MAP[svc.serviceId];
       const data: EngineServiceNodeData = {
         label: svc.label,
         serviceId: svc.serviceId,
         status,
         throughput,
         statusLine,
+        graphId,
+        onNodeClick,
       };
       result.push({
         id: svc.nodeId,

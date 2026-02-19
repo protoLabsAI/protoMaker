@@ -2865,6 +2865,7 @@ export class HttpApiClient implements ElectronAPI {
       until?: number;
       limit?: number;
     }) => this.post('/api/engine/events/history', filter ?? {}),
+    flows: (graphId?: string) => this.post('/api/engine/flows', { graphId }),
   };
 
   // Voice API
