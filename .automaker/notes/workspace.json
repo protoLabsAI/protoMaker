@@ -10,12 +10,12 @@
       "name": "Notes",
       "content": "<p>test</p>",
       "permissions": {
-        "agentRead": true,
+        "agentRead": false,
         "agentWrite": true
       },
       "metadata": {
         "createdAt": 1771448161228,
-        "updatedAt": 1771453604141,
+        "updatedAt": 1771480210111,
         "wordCount": 1,
         "characterCount": 4
       }
