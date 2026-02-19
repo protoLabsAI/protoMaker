@@ -164,6 +164,19 @@ export class PRFeedbackService {
         }
       }
 
+      // Track PRs when features enter review status (catches manually-created PRs,
+      // epic workflow PRs, and MCP-created PRs that bypass auto_mode_git_workflow events)
+      if (type === 'feature:status-changed') {
+        const data = payload as Record<string, unknown>;
+        if (
+          data.newStatus === 'review' &&
+          data.featureId &&
+          !this.trackedPRs.has(data.featureId as string)
+        ) {
+          void this.trackFeatureInReview(data);
+        }
+      }
+
       // Listen for CI failures from webhook
       if (type === 'pr:ci-failure') {
         const data = payload as {
@@ -276,6 +289,42 @@ export class PRFeedbackService {
     });
 
     logger.info(`Tracking PR #${prNumber} for feature ${featureId}`);
+  }
+
+  /**
+   * Track a feature that entered review status with an existing PR.
+   * This catches PRs created outside of auto-mode (manual, epic workflow, MCP).
+   */
+  private async trackFeatureInReview(data: Record<string, unknown>): Promise<void> {
+    const featureId = data.featureId as string;
+    const projectPath = data.projectPath as string;
+
+    if (!featureId || !projectPath) return;
+
+    try {
+      const feature = await this.featureLoader.get(projectPath, featureId);
+      if (!feature || !feature.prNumber || !feature.prUrl) {
+        logger.debug(`Feature ${featureId} entered review but has no PR info — skipping tracking`);
+        return;
+      }
+
+      this.trackedPRs.set(featureId, {
+        featureId,
+        projectPath,
+        prNumber: feature.prNumber,
+        prUrl: feature.prUrl,
+        branchName: feature.branchName || '',
+        lastCheckedAt: 0,
+        reviewState: 'pending',
+        iterationCount: feature.prIterationCount || 0,
+      });
+
+      logger.info(
+        `Tracking PR #${feature.prNumber} for feature ${featureId} (entered review via status change)`
+      );
+    } catch (error) {
+      logger.error(`Failed to track feature ${featureId} entering review:`, error);
+    }
   }
 
   /**

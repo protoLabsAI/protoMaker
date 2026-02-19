@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 235
-  referenced: 118
-  successfulFeatures: 118
+  loaded: 255
+  referenced: 133
+  successfulFeatures: 133
 ---
 # gotchas
 
@@ -185,3 +185,13 @@ usageStats:
 - **Situation:** After renaming EscalationSource enum value, build failed with 'does not provide an export named' errors even though dist/index.d.ts was correct. Rebuilding individual packages didn't help.
 - **Root cause:** tsup caches bundled config files with timestamps. When types change, the cache isn't invalidated automatically, causing tsc to read stale .d.ts files from previous bundles.
 - **How to avoid:** Clearing cache solves the problem instantly vs full rebuilds taking 90+ seconds. Risk: may lose other tsup optimizations briefly, but they rebuild automatically.
+
+#### [Gotcha] activeWorkflows counter must decrement in all exit paths, including early returns when no changes exist (2026-02-19)
+- **Situation:** Git workflow operations increment activeWorkflows counter at start. If operation returns early without changes, must still decrement or counter drifts
+- **Root cause:** Counter represents currently-executing workflows. If incremented but never decremented (due to early exit), counter becomes permanently inflated and status reports incorrect active workflow count
+- **How to avoid:** Requires careful counter management at every exit point, but accurately reflects true active state
+
+#### [Gotcha] Build process returned exit code 1 despite successful compilation, making it unclear if changes broke anything (2026-02-19)
+- **Situation:** npm run build output showed warnings about circular dependencies and exit code 1, but actual build artifacts were generated
+- **Root cause:** Circular dependency warnings in the build system cause non-zero exit code even when compilation succeeds. This is a pre-existing project configuration issue, not caused by the changes
+- **How to avoid:** Had to verify via git diff and manual code inspection rather than relying on build exit code as success signal

@@ -1884,3 +1884,250 @@ usageStats:
 - **Problem solved:** Feature requirement was narrowly scoped to add one field to health check response
 - **Why this works:** Least invasive change reduces risk of introducing bugs, minimizes testing surface area, and aligns with single responsibility principle
 - **Trade-offs:** Quick, low-risk implementation vs opportunity to improve response structure; easy to verify vs harder to extend later
+
+### Separate graph definitions from execution state tracking via two distinct structures: static graph-registry.ts and dynamic ContentFlowService.executionState (2026-02-19)
+- **Context:** Needed to expose both LangGraph topology definitions and runtime flow execution state through single /api/engine/flows endpoint
+- **Why:** Decoupling static metadata from dynamic runtime state prevents tight coupling between graph definitions and execution tracking. Allows graph definitions to be versioned/cached independently from execution state which changes frequently. Enables different services to own different concerns (graph structure vs flow lifecycle).
+- **Rejected:** Alternative of embedding execution data directly in graph definitions would require updating graph objects at runtime, conflating two orthogonal concerns and making caching/versioning problematic
+- **Trade-offs:** Easier to scale (graph definitions are static/cacheable) and maintain separation of concerns. Harder initially to understand that execution state comes from different source than definitions. Requires calling two systems (registry + service) to get complete picture.
+- **Breaking if changed:** If execution state and definitions are merged, any change to graph structure would invalidate cached execution data. Removing the separation would require re-architecture when adding flow types with different execution tracking needs (project planning, antagonistic review flows).
+
+#### [Gotcha] 7 distinct LangGraph topology types (linear, linear-hitl, parallel-fanout, conditional-routing, multi-stage-hitl, complex-parallel, loop) required explicit enumeration rather than inferring from edge patterns (2026-02-19)
+- **Situation:** Initially assumed topology type could be derived from graph structure (number of branches, loop detection, etc.), but realized topologies represent semantic intent and constraints, not just structure
+- **Root cause:** Two graphs with identical structure can have different semantics: a simple linear graph could be topology='linear' or topology='linear-hitl' depending on whether human interrupts are part of the contract. Topology is a design decision, not a computed property. Explicit enumeration forces documentation of design intent.
+- **How to avoid:** Explicit enumeration adds maintenance burden (new topologies require registry updates) but provides clarity and allows topology-aware validation/routing. Alternative of inferring topology automatically would be cheaper but ambiguous.
+
+#### [Gotcha] ContentFlowService.getExecutionState() filters for running/interrupted flows only, not completed flows, creating implicit contract about what execution state represents (2026-02-19)
+- **Situation:** getExecutionState() called by API endpoint to populate executionState response, but method intentionally excludes completed flows
+- **Root cause:** Execution state is meant to represent current workload/health (active flows), not historical record. Completed flows don't affect current system capacity or decision-making. This keeps execution state lightweight and fast to compute.
+- **How to avoid:** Faster/smaller execution state responses. Cannot use /api/engine/flows to audit completed flows - requires separate history endpoint. Implicit contract could confuse consumers who expect all flows.
+
+### Graph metadata fields (id, name, description, topology, nodes, edges, entryPoint, features, useCase) are required and validated at test time, not at definition time (2026-02-19)
+- **Context:** Test 4 in implementation validates each graph has all required fields, catching missing fields late rather than at graph creation
+- **Why:** Runtime validation catches errors after developer ships code, not preventing them. Could be caught at type level instead, but TypeScript doesn't have sealed object literal types that prevent missing properties.
+- **Rejected:** Could use TypeScript interfaces to make fields required, but wouldn't catch cases where values are undefined/null or omitted
+- **Trade-offs:** Test-time validation is cheaper (no TypeScript complexity) but catches errors later. Type-level validation would be earlier but adds complexity to graph registry initialization.
+- **Breaking if changed:** If test 4 is removed/skipped, invalid graphs (missing entryPoint, empty nodes, etc.) could be exposed through API, causing execution failures. If fields become optional, callers must handle undefined values.
+
+#### [Pattern] Type-discriminated unions for node data (FlowNodeData with discriminator union of specific node data types) (2026-02-19)
+- **Problem solved:** Different node types (process, decision, HITL, start/end) have different data structures and validation rules
+- **Why this works:** Allows type-safe extraction of node-specific data while remaining flexible. React Flow doesn't enforce data shapes, so discriminated unions provide compile-time safety without runtime overhead
+- **Trade-offs:** Slightly more verbose type definitions upfront, but eliminates entire classes of runtime errors in node components
+
+#### [Pattern] Node registry pattern: exported nodeTypes map keyed by kebab-case string IDs, separate from component definitions (2026-02-19)
+- **Problem solved:** React Flow requires nodeTypes as a Map<string, ComponentType> passed to the canvas at initialization
+- **Why this works:** Decouples component file organization from the runtime registry. Allows adding/removing nodes without modifying canvas initialization code. Registry lives in index.ts barrel file, making it the single source of truth
+- **Trade-offs:** One additional file (index.ts) per component directory, but enables modular component discovery and lazy loading
+
+#### [Pattern] Service-to-Graph mapping managed in frontend via SERVICE_TO_GRAPH_MAP rather than requiring backend configuration (2026-02-19)
+- **Problem solved:** Need to associate engine services (auto-mode, project-planning) with their LangGraph flow definitions without backend coordination
+- **Why this works:** Allows frontend to control which services expose flow visualization without backend deployment. Reduces coupling between engine service layer and graph definition layer. Makes feature extension trivial - just add a mapping entry.
+- **Trade-offs:** Easier: frontend-only changes for new service integrations. Harder: frontend becomes source of truth for service-graph relationships, could diverge from actual backend capabilities if not kept in sync.
+
+### Separate hooks for flow definition (static graph) vs flow execution (dynamic state) rather than single combined hook (2026-02-19)
+- **Context:** FlowDetailPanel needs both LangGraph topology (rarely changes, 5min cache) and real-time execution state (WebSocket updates)
+- **Why:** Different cache strategies and subscription patterns. Definition is mostly static - good for React Query caching. Execution is dynamic - needs WebSocket subscriptions. Separating them avoids mixing concerns and allows independent optimization.
+- **Rejected:** Single useFlowData hook combining both. Would force unnecessary re-fetches when execution updates, or overly aggressive caching that misses definition changes.
+- **Trade-offs:** Easier: clean separation of concerns, independent caching. Harder: component must compose two hooks, slightly more complex initialization.
+- **Breaking if changed:** Combining these into one hook would break the cache invalidation strategy - definition updates would get lost among execution updates.
+
+### Data structures use optional graphId in node data and optional onNodeClick callback rather than enforcing them everywhere (2026-02-19)
+- **Context:** EngineServiceNode needed to support both regular flow visualization (no detail panel) and detailed flow exploration (with detail panel)
+- **Why:** Makes the component work in multiple contexts - existing flow graph view doesn't need detail panel, but can opt-in by providing graphId and callback. Avoids breaking changes to existing components.
+- **Rejected:** Required graphId and onNodeClick. Would force all consumers to provide these even if not using detail panel.
+- **Trade-offs:** Easier: backward compatible, works in multiple contexts. Harder: optional properties add type uncertainty, harder to enforce that both must be provided together.
+- **Breaking if changed:** Making these required would break the existing flow graph view that doesn't have detail panel integration.
+
+#### [Gotcha] Graph registry node IDs can drift from actual implementation without enforcement mechanism (2026-02-19)
+- **Situation:** coordinator-flow graph registry had 5 mismatched node IDs and was missing a 6th node that actually exists in the implementation
+- **Root cause:** Registry is manually maintained separate from the actual graph definition, creating a source-of-truth problem where changes to one aren't automatically reflected in the other
+- **How to avoid:** Manual registry allows flexibility for documentation/description fields but sacrifices consistency guarantees; automatic generation would guarantee sync but lose custom metadata
+
+### Conditional routing encoded in edge definitions rather than as explicit decision nodes (2026-02-19)
+- **Context:** coordinator-flow has parallel vs sequential execution modes with different routing, but edges have string conditions ('parallel or sequential') rather than decision nodes
+- **Why:** Keeps logical flow simpler and avoids node proliferation; conditions likely evaluated at execution time by the framework
+- **Rejected:** Could have explicit decision nodes that evaluate conditions, but would add complexity to registry representation
+- **Trade-offs:** Simpler registry representation but makes it harder to visualize true execution paths statically; requires runtime knowledge to understand actual flow
+- **Breaking if changed:** Graph analysis/visualization tools that don't understand condition semantics would show all edges as possible, hiding actual routing logic
+
+#### [Gotcha] Node type assignment based on return type, not semantic purpose (2026-02-19)
+- **Situation:** sequential_analysis node changed from 'processor' to 'fanout' type because it returns Send[] (multiple outputs), not because of its role
+- **Root cause:** Framework uses return type to determine node type for parallel/delegation semantics
+- **How to avoid:** Type system is consistent with framework implementation but can be confusing when node name doesn't match type (a 'sequential' node is type 'fanout')
+
+### Implemented in-memory signal counters that reset on server restart rather than persisting to database (2026-02-19)
+- **Context:** SignalIntakeService tracks signal counts by source (linear, github, discord, mcp) and last signal timestamp
+- **Why:** Observability metrics have different lifecycle requirements than audit logs. Transient metrics allow detection of current system health without storage overhead. Matches typical observability patterns (like Prometheus metrics) where state is ephemeral
+- **Rejected:** Persisting to database would add latency to signal handling, require schema migrations, and create audit log bloat for data that's only useful for current operational awareness
+- **Trade-offs:** Simpler implementation and faster signal processing vs losing historical signal patterns across restarts. Users cannot query 'how many signals did we receive yesterday'
+- **Breaking if changed:** If consumers start depending on signal counts surviving server restarts, this design will fail. Would require migration to persistent storage
+
+#### [Gotcha] Signal deduplication Set capped at 1000 entries to prevent unbounded memory growth (2026-02-19)
+- **Situation:** The service maintains a `processedSignals` Set to avoid double-processing. Without a cap, this Set grows indefinitely with the number of unique signal IDs processed
+- **Root cause:** Long-running servers would eventually exhaust memory. 1000 entries is sufficient for duplicate detection within typical signal processing windows (seconds to minutes) while staying bounded
+- **How to avoid:** Memory-safe at cost of potential duplicates if same signal ID reappears after 1000 other signals. Acceptable because reappearance within that window is extremely unlikely in normal operation
+
+#### [Pattern] Service method `incrementSignalCount()` silently ignores unknown signal sources instead of throwing (2026-02-19)
+- **Problem solved:** Signal sources are extensible (linear, github, discord, mcp); new sources might be added in future without updating this method
+- **Why this works:** Forward compatibility. New signal sources can be added elsewhere in codebase without requiring simultaneous updates to signal-intake-service. Prevents cascading failures from unknown sources
+- **Trade-offs:** Silently dropping unknown sources is harder to debug (source data lost silently) vs explicit error makes bugs visible. Trade debugging visibility for architectural flexibility
+
+#### [Gotcha] Graph registry definition drift - manual registry can diverge from actual flow implementations (2026-02-19)
+- **Situation:** Registry had 10 nodes for antagonistic-review, 10 for project-planning, 15 for content-creation but actual implementations had 12, 11, and 21 respectively
+- **Root cause:** Single source of truth principle violated - registry was maintained separately from actual LangGraph definitions in source files
+- **How to avoid:** Manual registry provides explicit control and documentation but requires discipline to keep in sync; auto-generation would be safer but adds build complexity
+
+#### [Pattern] HITL (Human-In-The-Loop) retry pattern with increment nodes - each HITL node preceded by retry counter increments (2026-02-19)
+- **Problem solved:** Content creation flow uses distributed HITL nodes (research_hitl, outline_hitl, final_review_hitl) with preceding increment nodes to track retry attempts
+- **Why this works:** Separates concern of HITL approval from retry logic management; allows centralized retry counting without embedding retry semantics in HITL nodes
+- **Trade-offs:** Adds more nodes (+3 increment nodes) but achieves cleaner separation of concerns; increment nodes are deterministic processors that don't require human input
+
+### Final consolidation node pattern - all graphs route through explicit terminal nodes (done/complete) before reaching END (2026-02-19)
+- **Context:** All three graphs added final processor nodes: antagonistic-review.done, project-planning.done, content-creation.complete
+- **Why:** Provides single exit point for logging, cleanup, and result aggregation; prevents multiple independent paths reaching END state
+- **Rejected:** Direct edges to END would be simpler but loses ability to standardize exit behavior and track completion
+- **Trade-offs:** One additional node per graph adds complexity but centralizes completion logic; easier to instrument and debug exit behavior
+- **Breaking if changed:** Removing terminal nodes requires refactoring all completion paths; breaks any middleware expecting final consolidation step
+
+### Interrupt-loop marked as conceptual pattern rather than fully implemented graph (2026-02-19)
+- **Context:** Interrupt-loop graph exists but is explicitly marked in description as demonstrating loop+interrupt primitives, not production flow
+- **Why:** Prevents API consumers from expecting complete node/edge coverage or using it as template for real workflows
+- **Rejected:** Could remove it entirely but useful for documentation of pattern support; could implement it fully but out of scope
+- **Trade-offs:** Keeps reference implementation visible but flags it as non-executable; documentation reader must recognize 'conceptual' marker
+- **Breaking if changed:** Removing conceptual marker causes API consumers to expect full graph definition; renaming requires updating discovery code
+
+#### [Pattern] Singleton service instance injected through factory function dependency injection pattern (2026-02-19)
+- **Problem solved:** GitWorkflowService needed to be wired from server initialization through route factory to provide real-time status
+- **Why this works:** Maintains single source of truth for workflow state across all route handlers while preserving encapsulation. Factory function pattern allows services to be passed without polluting global scope or requiring context propagation
+- **Trade-offs:** Requires explicit wiring in three places (service file, route factory signature, server init) but provides clear dependency graph and testability
+
+#### [Pattern] Operation tracking with ring buffer (FIFO, max 10) instead of unbounded array (2026-02-19)
+- **Problem solved:** Need to track recent git operations (commit, push, PR, merge) with success/failure outcomes for observability
+- **Why this works:** Prevents unbounded memory growth in long-running server. 10 operations provides meaningful history for debugging workflow issues while staying memory-efficient. FIFO ensures oldest operations drop automatically
+- **Trade-offs:** Lost visibility into operations beyond last 10, but acceptable for real-time monitoring use case
+
+#### [Pattern] RecentOperation interface captures operation type, featureId, timestamp, and success state with optional error, rather than just success boolean (2026-02-19)
+- **Problem solved:** Tracking git workflow operations (commit, push, PR create, merge) for observability and debugging
+- **Why this works:** Optional error field allows capturing root cause of failures without null-checking. FeatureId provides correlation context. Timestamp (ISO string) enables analysis of operation timing and ordering without relying on client-side sorting
+- **Trade-offs:** Slightly larger objects but rich context for debugging. ISO timestamp slightly larger than epoch number but unambiguous across timezones
+
+#### [Gotcha] Orphaned type definitions in TypeScript union types can persist indefinitely without causing compilation errors if handlers exist for them, even when no code path actually uses that type value. (2026-02-19)
+- **Situation:** The 'signal-intake' EngineServiceId existed in the type union and had a case handler in the status function and an icon mapping, but zero nodes in the flow graph actually emitted this value. It went unnoticed until explicit cleanup.
+- **Root cause:** TypeScript only validates that values conform to the union type at call sites - it doesn't warn about unused union members. This allowed dead code to accumulate in the handler logic.
+- **How to avoid:** Removing orphaned types makes the codebase cleaner but requires manual auditing since TypeScript won't flag them automatically. The alternative of keeping dead code keeps the type definition exhaustive-checked but creates maintenance burden.
+
+#### [Pattern] Separation of concerns between EngineServiceId (typed flow graph nodes) and event classification strings (untyped WebSocket event styling) prevents over-coupling of the type system. (2026-02-19)
+- **Problem solved:** The codebase maintains 'signal-intake' as an untyped string for event classification in event-stream-panel.tsx and events-tab.tsx, separate from the typed EngineServiceId union. This allows the event system to reference SignalIntakeService without coupling it to the flow graph's type system.
+- **Why this works:** The event classification system doesn't need type safety since it's just mapping event prefixes to visual styles. Keeping it as magic strings decouples two independent systems that happen to reference the same service. If the EngineServiceId type changes, event classification continues working.
+- **Trade-offs:** Easier to evolve the flow graph type system independently, but harder to discover all references to 'signal-intake' across the codebase without grepping. The type system doesn't enforce consistency.
+
+#### [Pattern] SERVICE_TO_GRAPH_MAP uses Partial<Record<EngineServiceId, string>> to maintain optional mappings between engine services and graph flows (2026-02-19)
+- **Problem solved:** Need to selectively enable flow detail panel for certain nodes while keeping others non-interactive
+- **Why this works:** Partial<Record<T>> allows sparse mapping where only mapped services get graphId passed through, undefined for unmapped ones. This is cleaner than conditional logic in component render
+- **Trade-offs:** Enables declarative mapping at cost of runtime lookup. Undefined values become falsy for click handlers, making it implicit rather than explicit disable logic
+
+### Semantic mapping of services to flows based on conceptual workflow pattern rather than 1:1 service-to-flow coupling (2026-02-19)
+- **Context:** 11 total engine services but only 6 have meaningful associated LangGraph flows for visualization
+- **Why:** 5 services (decomposition, launch, git-workflow, lead-engineer-rules, reflection) represent infrastructure/utility operations not modeled as graphs. Mapping non-existent flows would cause runtime errors or require null checks everywhere
+- **Rejected:** Alternative: Create placeholder graphs for all 11 services - adds graph definition overhead for non-graphable operations. Or: Put conditional logic in click handlers checking if graph exists
+- **Trade-offs:** Clean mapping file at cost of incomplete coverage. Consumers must handle undefined graphId gracefully (which they do - undefined means no click handler attached)
+- **Breaking if changed:** If a new service needs a flow visualization added later, both SERVICE_TO_GRAPH_MAP and the actual LangGraph definition must be created together. Missing either breaks the feature
+
+### Used proxy data (prFeedback.trackedPRs) for git-workflow status instead of waiting for direct GitWorkflowService metrics (2026-02-19)
+- **Context:** Backend service doesn't expose git workflow metrics yet, but UI needs to show real activity state
+- **Why:** Unblocks UI development and provides meaningful signal using available data. trackedPRs is a strong indicator of active workflow since PR feedback tracking only happens when workflows exist
+- **Rejected:** Hardcoding 'idle' status or waiting for backend metrics implementation would leave stale UI
+- **Trade-offs:** Gains immediate real data but creates implicit coupling - if PR tracking logic changes, workflow status breaks silently. Requires TODO and future refactoring
+- **Breaking if changed:** If prFeedback.trackedPRs semantics change (e.g., tracks closed PRs), statusLine becomes misleading without code change
+
+#### [Gotcha] Optional chaining with nullish coalescing (?? operator) needed because engineStatus fields may be undefined or explicitly false (2026-02-19)
+- **Situation:** Early in implementation, engineStatus structure may have missing fields or falsy values
+- **Root cause:** Prevents false 'idle' states when field is undefined vs explicitly false. Handles both missing data (undefined) and intentional idle state (false) correctly
+- **How to avoid:** More verbose syntax but bulletproofs against incomplete backend responses during development
+
+### Decomposition wired directly to projectLifecycle.activeProjects count as throughput metric (2026-02-19)
+- **Context:** Decomposition represents work breakdown into projects; need to show volume of active work
+- **Why:** activeProjects is a first-class count in engine status, directly represents the scope of decomposition work. No proxy needed
+- **Rejected:** Using derived metrics or flags would lose the quantitative signal that activeProjects provides
+- **Trade-offs:** Simple and direct, but creates hard dependency on projectLifecycle field - if field name changes, entire logic breaks
+- **Breaking if changed:** Removing or renaming projectLifecycle.activeProjects would require fallback logic or hardcoded 'idle' state
+
+#### [Pattern] TODO comments marking both the limitation (backend doesn't expose X) and the desired future state (when SignalIntakeService exposes metrics) (2026-02-19)
+- **Problem solved:** Multiple features partially wired with proxy data pending backend implementation
+- **Why this works:** Creates discoverable trail for developers. Specific about what's needed (metrics exposure) from which service, reducing ambiguity for follow-up work
+- **Trade-offs:** Adds code noise but prevents knowledge loss about partial implementation state
+
+### Use synthetic placeholder work items for initial HTTP hydration instead of raw aggregate data (2026-02-19)
+- **Context:** Pipeline stages needed to display correct feature counts on page load before WebSocket events arrive
+- **Why:** Synthetic items maintain the existing pipeline data structure (array of work items) rather than creating a parallel data model. This allows the same rendering logic to work for both initial load and real-time updates without conditional rendering branches
+- **Rejected:** Alternative: Store aggregate counts separately and render stages differently during hydration phase. This would require dual rendering logic and state models
+- **Trade-offs:** Easier: Unified rendering path. Harder: Must track which items are synthetic and remove them when real events arrive, requiring stage-level state management
+- **Breaking if changed:** If changed to raw aggregates, UI rendering code would need branches for 'hydrated state' vs 'real state' rendering, creating maintenance burden
+
+#### [Gotcha] Synthetic items must be removed when the first real WebSocket event arrives for that stage, not on every event (2026-02-19)
+- **Situation:** Without this, duplicate counts occur: synthetic item (showing 5 items) + real events (adding items one by one) = over-counting
+- **Root cause:** HTTP hydration returns aggregated counts while WebSocket sends individual events. Removing on first event prevents this double-counting while maintaining real-time accuracy for subsequent events
+- **How to avoid:** Requires stage-level flag to track 'has received real event', adding complexity. Prevents the simpler approach of just appending all events
+
+### Add featureLoader as explicit parameter to createEngineRoutes instead of accessing it from closure (2026-02-19)
+- **Context:** New pipeline-state endpoint needed access to feature data that wasn't originally part of route parameters
+- **Why:** Makes dependencies explicit in function signature. Easier to mock in tests. Prevents hidden coupling to outer scope. Clearer what the routes module actually depends on
+- **Rejected:** Alternative: Access featureLoader from module-level variable or through dependency injection at engine routes level
+- **Trade-offs:** Requires changing call site in server index.ts (1 line change). Gains: Testability, explicit dependencies, easier to refactor
+- **Breaking if changed:** If this parameter is removed, pipeline-state endpoint loses access to feature data and will fail at runtime
+
+#### [Gotcha] Graph registry definitions can drift from actual implementation when node IDs and edge connections change during development (2026-02-19)
+- **Situation:** The graph-registry.ts file had 5 incorrect node IDs and was missing the 6th node entirely, while the actual coordinator-flow.ts had the correct implementation
+- **Root cause:** Declarative graph registries are separate from implementation code, making them prone to synchronization drift. When developers refactor node names or add nodes, the registry isn't automatically updated
+- **How to avoid:** Trade-off between declarative clarity (registry as source of truth) vs tight coupling (auto-generate from code). Current approach requires manual verification but maintains readable declarations
+
+### Conditional routing in coordinator-flow uses fanout pattern where fan_out node branches to research_delegate OR analyze_delegate based on execution mode (parallel vs sequential) (2026-02-19)
+- **Context:** The flow needs to support two execution strategies: parallel research+analysis vs sequential analysis-only
+- **Why:** Fanout pattern with conditional edges allows single orchestration point that can route to different worker pipelines without duplicating coordinator logic. More maintainable than separate coordinator implementations
+- **Rejected:** Separate coordinator flows for each mode would duplicate business logic and require caller to know which flow to invoke
+- **Trade-offs:** Single flow is more maintainable but adds conditional logic complexity. Node graph becomes 2D instead of linear, requiring careful edge documentation
+- **Breaking if changed:** Removing conditional edges or collapsing branches would force callers to handle routing logic instead of coordinator handling it transparently
+
+#### [Pattern] Node type mismatch between declaration and implementation: sequential_analysis declared as 'processor' in registry but actually returns Send[] (fanout behavior) (2026-02-19)
+- **Problem solved:** The node executes conditional logic that produces multiple outputs to different downstream nodes based on mode
+- **Why this works:** Node type in registry should reflect what the node actually does. Processor type means single output; fanout means multiple outputs. Sequential_analysis produces variable outputs (either goes to analyze_delegate or completes)
+- **Trade-offs:** Accurate type declarations make graph topology self-documenting but require developers to understand node type semantics when writing implementations
+
+#### [Pattern] Service injection into route factories via function parameters rather than global/singleton initialization (2026-02-19)
+- **Problem solved:** SignalIntakeService needed to be accessible in engine routes without modifying the service itself or creating circular dependencies
+- **Why this works:** Allows multiple route handlers to share the same service instance while maintaining loose coupling. Route factory functions accept all dependencies as parameters, making dependency graphs explicit and testable.
+- **Trade-offs:** Requires passing services through multiple function call layers (index.ts → createEngineRoutes → route handlers), but gains explicitness and testability
+
+### Use event listener pattern for passive signal counting rather than explicit method calls or database queries (2026-02-19)
+- **Context:** SignalIntakeService needed to track real-time signal counts by source without modifying every place signals are emitted
+- **Why:** The application already has an event system (signal:received events). Hooking into existing events means signal tracking happens automatically as a side effect, requiring no coordination logic.
+- **Rejected:** Explicit increment calls at each signal source would create coupling; database queries would add I/O overhead
+- **Trade-offs:** Easier maintenance and zero latency, but harder to debug if events aren't being emitted as expected. Counts exist only in memory and reset on restart.
+- **Breaking if changed:** If the event system changes or the signal:received event stops being emitted, the counts would freeze
+
+### In-memory state for signal counts rather than persistent storage (2026-02-19)
+- **Context:** SignalIntakeService tracks `signalCounts` and `lastSignalAt` in memory without database backing
+- **Why:** The feature spec only requires 'real status' - current session counts. In-memory tracking is simpler, has zero I/O latency, and matches the pattern of the original hardcoded data (which was also stateless per session).
+- **Rejected:** Persisting to database would add complexity and I/O overhead for data that's primarily useful within a session
+- **Trade-offs:** Simpler code and faster responses, but counts reset when the server restarts and can't be queried across multiple instances in a clustered deployment
+- **Breaking if changed:** If the requirement changes to 'total signals ever received' or 'persist counts across restarts', the entire storage strategy would need to change
+
+#### [Pattern] Graph registry entries must exactly mirror source file node definitions - maintaining a separate registry requires verification against source of truth (2026-02-19)
+- **Problem solved:** Graph registry in graph-registry.ts was out of sync with actual graph definitions in libs/flows/src/, causing missing nodes in the registry
+- **Why this works:** Decoupling registry from source files allows runtime introspection and documentation, but creates sync liability. Manual verification against source ensures consistency.
+- **Trade-offs:** Easier: Manual control over registry structure. Harder: Maintaining two sources of truth; requires discipline to keep in sync
+
+#### [Pattern] HITL (human-in-the-loop) nodes use conditional edge routing with fixed outcomes (approved/revise/failed/done) rather than generic edges (2026-02-19)
+- **Problem solved:** Three graphs (antagonistic-review, project-planning, content-creation) all follow same pattern: HITL nodes with conditional exit routes
+- **Why this works:** HITL represents a decision point with discrete outcomes. Using conditional edges makes the decision tree explicit and allows different paths based on human judgment without ambiguity.
+- **Trade-offs:** Easier: Clear visual representation of decision workflows. Harder: More edges to maintain; each HITL adds 3-4 outbound edges
+
+#### [Pattern] Retry counter nodes (increment_*_retry) always loop back to phase start, creating cyclic patterns within linear graphs (2026-02-19)
+- **Problem solved:** content-creation graph has 6 HITL nodes paired with 3 retry counters that route back to start of their respective phases (research, outline, final_review)
+- **Why this works:** Allows bounded retries without escaping the workflow entirely. Retry counter increments a counter, then conditionally loops back or exits based on retry limit.
+- **Trade-offs:** Easier: Scope retries to specific phases. Harder: More complex graph with cycles; requires counter state management
+
+#### [Gotcha] Multi-line node object definitions in TypeScript arrays are not counted by simple grep patterns - requires parsing complete node structures (2026-02-19)
+- **Situation:** Attempting to count nodes with grep -c '{ id:' missed nodes that spanned multiple lines; manual verification showed all 21 nodes present
+- **Root cause:** Grep with single-line patterns can't match objects that break across lines. Node objects use multi-line formatting for readability.
+- **How to avoid:** Easier: Multi-line formatting is more readable. Harder: Can't use simple text counting; requires reading actual content or AST parsing

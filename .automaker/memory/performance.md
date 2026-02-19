@@ -84,3 +84,8 @@ usageStats:
 - **Situation:** Some atoms (textarea, skeleton, spinner, label, kbd) have 11-12 story exports. Textarea has 12 stories in single file
 - **Root cause:** Keeping variant stories together makes it obvious all variants exist and interact together. Splitting across files spreads them through filesystem making coverage less obvious. Single file per component matches the component file organization principle
 - **How to avoid:** Larger file size (few KB each) with better coherence vs smaller files scattered across directory. Storybook loads all stories anyway so no real performance impact
+
+#### [Pattern] Use React Query with refetchOnWindowFocus: false for one-time hydration data (2026-02-19)
+- **Problem solved:** Pipeline state hydration should happen once on mount, then rely on WebSocket for real-time updates
+- **Why this works:** Prevents unnecessary re-fetches when user returns to window after switching tabs. Caching + WebSocket pattern is more efficient than polling. Setting refetchOnWindowFocus to false explicitly signals this is hydration, not live data
+- **Trade-offs:** Gains: Automatic caching, deduplication if hook called multiple times. Loses: Doesn't automatically refetch if user manually refreshes data (but WebSocket updates are faster anyway)

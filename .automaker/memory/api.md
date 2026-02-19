@@ -5,9 +5,9 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 54
-  referenced: 31
-  successfulFeatures: 31
+  loaded: 63
+  referenced: 37
+  successfulFeatures: 37
 ---
 # api
 
@@ -402,3 +402,46 @@ usageStats:
 - **Rejected:** Could have renamed timestamp to serverTime, but would be a breaking change for existing consumers
 - **Trade-offs:** Response payload slightly larger with duplicate similar fields; clearer backward compatibility vs potential consumer confusion about two timestamp fields
 - **Breaking if changed:** If either timestamp or serverTime field is removed, API consumers relying on either field would break
+
+#### [Pattern] Graph definitions include dual metadata: structural (nodes, edges, entryPoint) and semantic (features, useCase) (2026-02-19)
+- **Problem solved:** Single /api/engine/flows endpoint needed to serve both system consumers (need exact node/edge structure) and human consumers (need to understand purpose)
+- **Why this works:** Structural metadata (nodes, edges) enables programmatic graph traversal and execution planning. Semantic metadata (features=['sequential', 'stateful', 'checkpointing'], useCase) enables discovery and appropriate routing decisions. Separating them allows different clients to use different subsets.
+- **Trade-offs:** More verbose schema but enables both programmatic routing and human discovery. Adds validation burden to ensure features list stays in sync with actual graph capabilities.
+
+#### [Gotcha] WebSocket event subscriptions use apiClient.subscribeToEvents((type, payload) => {}) pattern, not traditional .on(eventName) pub/sub (2026-02-19)
+- **Situation:** Implementing real-time node highlighting required subscribing to feature:progress events for currentNode and completedNodes updates
+- **Root cause:** This is the established pattern in the codebase's event system. The subscribeToEvents handler receives all events with type discrimination, allowing single listener for multiple event types.
+- **How to avoid:** Easier: single unified event listener. Harder: must manually type-guard the payload based on event type string.
+
+### Exported `SignalIntakeStatus` TypeScript interface as part of service API contract (2026-02-19)
+- **Context:** Engine routes consume service status and return it via HTTP API; route consumers need type safety
+- **Why:** Named interface at service layer allows API consumers to import and type-check against the contract without re-declaring shape. Reduces version skew between service and consumers
+- **Rejected:** Inline type in route handler (e.g., `{ active: boolean; ... }`) would scatter type definition across codebase; anonymous object types don't provide a single source of truth
+- **Trade-offs:** Adds one extra export from service module, but eliminates need for separate DTO/API types in route layer. Single schema definition vs multiple scattered definitions
+- **Breaking if changed:** If interface is removed or shape changes without version, all consumers importing it will have compilation errors (good for catching breaking changes early)
+
+### GitWorkflowStatus interface exposes both activeWorkflows (counter) and recentOperations (array) separately instead of aggregated metrics (2026-02-19)
+- **Context:** Engine status endpoint needs to report workflow state to frontend. Could expose raw components or pre-computed statistics
+- **Why:** Separating data model from presentation allows frontend to compute different statistics (e.g., success rate, most common operation) without round-tripping. Raw operation records provide full context including error messages
+- **Rejected:** Pre-computed success rate/failure rate (inflexible if frontend needs different metrics), or operation-only without active count (loses real-time workflow visibility)
+- **Trade-offs:** Frontend has more responsibility for data interpretation, but gains flexibility. Slightly larger JSON payload but includes error details necessary for debugging
+- **Breaking if changed:** Removing recentOperations array loses error context from failed operations. Removing activeWorkflows loses visibility into how many workflows are currently executing
+
+### Require removal of type definitions in three distinct locations (type union, status handler case, icon mapping) when deprecating an EngineServiceId, rather than consolidating into a single definition. (2026-02-19)
+- **Context:** Removing 'signal-intake' required changes in types.ts, use-flow-graph-data.ts, and engine-service-node.tsx. Each location independently references the EngineServiceId without centralizing the definition.
+- **Why:** Each location serves a different concern: the type definition validates the domain, the status handler implements service-specific logic, the icon mapping provides UI presentation. Separating them allows each concern to evolve independently.
+- **Rejected:** Could have created a centralized ServiceRegistry constant that maps EngineServiceId to handlers and icons, requiring only one place to update. This would be DRY but loses the benefit of local, concern-specific logic.
+- **Trade-offs:** More files to update during deprecation (higher maintenance cost) but each file remains focused and easier to understand. Centralization would reduce sync points but increase coupling between unrelated concerns.
+- **Breaking if changed:** If any of the three locations is missed during removal, TypeScript won't catch it as a sync issue. The icon mapping missing 'signal-intake' wouldn't cause a compile error - it would just fail at runtime when rendering. The separate locations require manual discipline to keep in sync.
+
+### Add projectPath as optional parameter to usePipelineTracker hook instead of deriving it from context (2026-02-19)
+- **Context:** Hook needed to accept projectPath while maintaining backward compatibility with code that didn't pass it
+- **Why:** Makes data dependency explicit in the hook signature. Prevents the hook from implicitly reading context where it might not exist. Follows React best practice of explicit over implicit dependencies
+- **Rejected:** Alternative: Always read projectPath from currentProject context. This creates hidden dependency and makes the hook less testable
+- **Trade-offs:** Slightly more verbose at call sites (one additional parameter). Gains: explicit dependency, easier testing, clearer data flow
+- **Breaking if changed:** If removed, hook loses ability to fetch data without relying on context, making it untestable in isolation
+
+#### [Gotcha] Response shape must exactly match the previous hardcoded data structure, even with new real data source (2026-02-19)
+- **Situation:** The service returns `SignalIntakeStatus` interface, but the API response still maps to the original shape clients expect
+- **Root cause:** Backwards compatibility. Changing the response shape would break existing clients consuming `/api/engine/status`. The summary notes 'Existing API shape preserved (backwards compatible)'
+- **How to avoid:** The interface wraps data in a specific shape, requiring careful field mapping even though the underlying data structure changed

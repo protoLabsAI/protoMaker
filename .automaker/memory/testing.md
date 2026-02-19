@@ -5,9 +5,9 @@ relevantTo: [testing]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 25
-  referenced: 16
-  successfulFeatures: 16
+  loaded: 28
+  referenced: 19
+  successfulFeatures: 19
 ---
 # testing
 
@@ -573,3 +573,59 @@ usageStats:
 - **Situation:** Unable to run full Playwright tests or start dev server due to missing @napi-rs/whisper dependency in voice-service.ts
 - **Root cause:** Build blockers unrelated to feature implementation should not prevent verification. Pattern matching on TypeScript source can confirm field additions without runtime execution
 - **How to avoid:** Static verification confirms code correctness but cannot test actual API response behavior, runtime type coercion, or integration
+
+#### [Gotcha] Vitest requires vi.mock() declarations to be placed BEFORE imports in the same file, not in global setup or beforeEach hooks. Conditional mocks with try/catch inside the mock factory allow graceful fallback when native modules are unavailable. (2026-02-19)
+- **Situation:** Tests were failing because node-pty (a native C++ module) wasn't compiled in CI environments. Multiple attempts to mock at test suite level or in setup files didn't work until mocks were moved before imports.
+- **Root cause:** Vitest's hoisting mechanism processes mock declarations at module load time, before any imports are executed. This allows the mock to intercept module resolution before the actual require() happens. Async factory functions in vi.mock() can conditionally return real or mocked implementations.
+- **How to avoid:** Must repeat mock declarations in each test file (vs centralized setup) but gains per-file control and ensures module resolution works correctly; Async factories add slight overhead but enable conditional real/mock switching
+
+#### [Pattern] Use describe.skipIf(!isNodePtyAvailable) combined with require.resolve('node-pty') try/catch to create conditionally-executed test suites that gracefully skip (not fail) when optional native dependencies are unavailable. (2026-02-19)
+- **Problem solved:** Need tests to either run fully (when dependency exists) or skip with clear indication (when dependency missing), rather than failing mysteriously in CI where native modules aren't compiled.
+- **Why this works:** This pattern solves the environment-agnostic testing problem: dev machines have node-pty built, but CI/Docker often don't. skipIf provides signal (clear skip message) vs silent failure. require.resolve() is safer than require() because it just checks availability without triggering side effects.
+- **Trade-offs:** Skipped tests reduce coverage metrics but prevent false failures; require.resolve() adds startup time cost (minimal) but prevents hard crashes; Must maintain the flag separately from suite declaration (minor code duplication)
+
+### Chose conditional async mock factory (try importing actual, catch to return mock) over static mock objects. This allows real module to be used when available while providing fallback without test code changes. (2026-02-19)
+- **Context:** Could either: 1) always return static mock regardless of availability, 2) check availability before test runs and conditionally load mocks, or 3) try/catch inside the mock factory to detect at import time.
+- **Why:** Approach #3 means tests automatically use real node-pty when it exists (maximizing test coverage) and fallback when it doesn't (minimizing CI failures). The try/catch inside the async factory lets Vitest's module resolution handle both cases transparently.
+- **Rejected:** Static mocks - lose real module testing when available; Pre-test checks - require separate mock file loading logic; Environment variables - unreliable in different CI systems
+- **Trade-offs:** Async factory is slightly slower at import time but eliminates need for environment detection; Creates runtime polymorphism of the mock (real vs fake) which is slightly harder to debug but more flexible
+- **Breaking if changed:** Removing the try/catch inside the factory means the mock will fail if node-pty isn't available. Removing the async factory means require.resolve() check fails to coordinate with actual imports.
+
+#### [Gotcha] Pre-existing build failures can mask verification of intended changes (2026-02-19)
+- **Situation:** Build verification failed due to unrelated voice-service.ts missing dependency, making it impossible to validate graph-registry changes through compilation
+- **Root cause:** Single build command tests entire codebase; isolated failures in unrelated modules prevent verification of specific changes
+- **How to avoid:** Full-build validation is comprehensive but brittle; breaking changes in one module prevent verification elsewhere. Switched to syntax checking instead of compilation
+
+#### [Gotcha] Verification test created as standalone TypeScript file rather than integrated into test suite due to service dependency complexity (2026-02-19)
+- **Situation:** SignalIntakeService requires mocking EventEmitter and FeatureLoader. Integration test skipped due to authentication requirement on API endpoint
+- **Root cause:** Service has abstract dependencies (event system, feature creation) that need mocking but don't integrate with test infrastructure. Unit test in isolation confirms shape contract, avoiding false confidence from mocked infrastructure
+- **How to avoid:** Standalone test validates implementation detail (getStatus() returns correct shape) but misses API surface integration. Full integration requires running server with auth
+
+#### [Gotcha] Registry verification requires importing TypeScript module in Node.js context, not direct JSON parsing (2026-02-19)
+- **Situation:** Initial attempt to verify registry used JSON parsing, but needed to actually require() the TypeScript file to validate against getAllGraphs() function
+- **Root cause:** Registry is programmatic TypeScript not static JSON; validation must execute the actual data structure construction logic
+- **How to avoid:** Requires Node.js runtime and TypeScript compilation but catches real integration issues; static validation would be faster but miss semantic errors
+
+### Verification via simple file content existence check rather than integration testing with actual component mounting (2026-02-19)
+- **Context:** Need to verify 6 specific mappings were added correctly without full E2E flow graph component test
+- **Why:** File content verification catches typos and confirms mappings exist. Component integration testing would require mocking LangGraph, data loading, React rendering which is overkill for this simple data structure change. Tests are ephemeral - just verifying syntax
+- **Rejected:** Alternative: Full Playwright test mounting FlowGraph component - requires complex setup. Or: Manual code review only - no automated verification
+- **Trade-offs:** Fast verification catches obvious errors (misspellings) but won't catch if component click handler logic broke. Would be caught immediately in UI testing phase
+- **Breaking if changed:** If verification test removed in future, simple typos in SERVICE_TO_GRAPH_MAP could slip through to production causing undefined graphId at runtime
+
+#### [Gotcha] Graph topology verification requires comparing both node names AND edge connections - testing only node existence misses wiring errors (2026-02-19)
+- **Situation:** All 6 nodes existed but had wrong IDs (fan_out instead of fanout_research), and all edges had to be reverified after node ID corrections
+- **Root cause:** A node can exist but be unreachable or wrongly connected, causing silent failures where paths don't execute. Node existence alone doesn't validate topology
+- **How to avoid:** Comprehensive graph topology tests require more assertions but catch wiring errors that only manifest at runtime in production flows
+
+#### [Gotcha] Cannot fully verify real-time behavior without running dev server, but implementation was verified via TypeScript compilation and code inspection (2026-02-19)
+- **Situation:** Created a Playwright test to verify endpoint behavior but couldn't execute it since dev server isn't running
+- **Root cause:** The implementation logic can be verified through static analysis (code inspection, TypeScript compilation), but runtime behavior like event emission and count increments requires a running application
+- **How to avoid:** Static verification provides confidence in the wiring logic but not the actual runtime behavior. The test was created and then deleted per instructions.
+
+### Verification done by counting nodes in source files and comparing to registry rather than automated type checking (2026-02-19)
+- **Context:** Build process had unrelated failures (voice-service); TypeScript compilation couldn't verify graph-registry changes in isolation
+- **Why:** Source files are the single source of truth. Manual counting against source is reliable and unambiguous, even when full build fails.
+- **Rejected:** Relying on full build pass (too fragile to unrelated issues); runtime graph validation (requires deployment)
+- **Trade-offs:** Easier: Isolate verification from unrelated build failures. Harder: Manual verification is slower and not automated
+- **Breaking if changed:** Without comparison to source files, registry could diverge from actual graphs; automated tests need to validate registry matches source

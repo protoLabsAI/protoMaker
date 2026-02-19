@@ -336,3 +336,42 @@ usageStats:
 - **Rejected:** Alternative: Generic 'import theme and apply' without listing options. Would force users to browse source code to discover available themes.
 - **Trade-offs:** Longer documentation initially, but reduces friction for new users and showcases package variety. Small maintenance burden if new themes added (must update enumeration).
 - **Breaking if changed:** If theme enumeration becomes stale (new theme added but not documented), users miss it and may not use it. Creates false sense that only documented themes exist.
+
+#### [Pattern] Dual-handle architecture for decision nodes: Target handle at top, dual source handles (bottom + left/right) to support multi-branch flows (2026-02-19)
+- **Problem solved:** Decision nodes in flow graphs need to route to multiple downstream paths based on conditions
+- **Why this works:** Allows edges from decision node to visually branch in different directions (left/right) while maintaining top-target/bottom-source convention for linear flow. Root handle on bottom for direct next, left/right for conditional branches
+- **Trade-offs:** More complex handle configuration but enables cleaner visual layout. Requires edge routing logic to interpret handle positions
+
+### Using OKLCh color space (oklch) for edge colors instead of Tailwind semantic names (2026-02-19)
+- **Context:** Edge component needed consistent, non-theme-dependent colors that remain readable regardless of context
+- **Why:** OKLCh provides perceptually uniform color space and allows precise control of conditional vs standard edge differentiation. Semantic Tailwind colors can drift with theme changes
+- **Rejected:** Direct Tailwind classes (e.g., 'stroke-orange-500') would require className props and dynamic Tailwind generation, or hardcoded color extraction
+- **Trade-offs:** More precise color control and theme-independent, but harder to audit colors visually. OKLCh values are not human-readable
+- **Breaking if changed:** Switching to Tailwind classes requires refactoring edge styling logic and may expose theme dependency issues in production
+
+#### [Gotcha] EdgeLabelRenderer requires absolute positioning with translate to center labels on edge paths, plus 'nodrag nopan' classes to prevent interaction conflicts (2026-02-19)
+- **Situation:** Edge labels need to render at calculated midpoints on bezier curves without interfering with pan/zoom behavior
+- **Root cause:** EdgeLabelRenderer renders into a separate portal layer (not React Flow canvas). Absolute positioning with translate(-50%, -50%) centers the label, then translate(labelX, labelY) positions it. nodrag/nopan classes prevent the label from being dragged/panned unintentionally
+- **How to avoid:** Portal-based labels are interactive and styleable but require careful coordinate calculation and DOM event handling
+
+### Using OKLCh colors directly in style objects instead of CSS variables, despite having Tailwind classes for labels (2026-02-19)
+- **Context:** Edge stroke colors need to be dynamic (conditional vs standard) but not themeable
+- **Why:** Inline OKLCh values in style prop are evaluated at render time based on edge data. Keeps color logic colocated with the conditional check. CSS variables would require theme context or SCSS generation
+- **Rejected:** Using className with ternary operator for Tailwind color classes requires mapping conditional states to class names, losing precision
+- **Trade-offs:** Inline styles are not extracted to CSS/theme config but remain simple and data-driven. Consistent with how label badge styling handles conditional theming via className
+- **Breaking if changed:** Extracting stroke colors to Tailwind requires either CSS variable architecture or dynamic class generation, increasing complexity
+
+#### [Gotcha] React Flow Handle placement is position-relative to node bounds, not absolute canvas coordinates. Top/bottom positions place handles at horizontal center (2026-02-19)
+- **Situation:** Creating node components with specific handle positions for top-target and bottom-source pattern
+- **Root cause:** React Flow internally manages handle positions within node bounds using CSS positioning. 'top' position centers horizontally and aligns to node top edge. This is framework convention, not implemented in component
+- **How to avoid:** No manual position control but integrates cleanly with React Flow's drag/zoom system
+
+#### [Pattern] Dagre hierarchical layout with specific tuning (TB orientation, ranksep=80, nodesep=40) for LangGraph visualization (2026-02-19)
+- **Problem solved:** React Flow canvas needed automatic layout for complex flow graphs without manual positioning
+- **Why this works:** Dagre provides deterministic hierarchical layout suitable for directed acyclic graphs (typical LangGraph structure). Tuned spacing prevents node overlap and makes execution flow visually clear top-to-bottom.
+- **Trade-offs:** Easier: automatic consistent layouts. Harder: layout is deterministic but may not be optimal for all graph shapes. Large graphs may overflow viewport.
+
+#### [Pattern] Dynamic statusLine text changes based on active state (e.g., 'Monitoring sources' vs 'Linear, GitHub, Discord, MCP') (2026-02-19)
+- **Problem solved:** Need to distinguish between placeholder descriptions and actual activity states in flow graph UI
+- **Why this works:** Tells user whether node is actively processing data vs showing static description. Improves perceived liveness of the system without backend metrics
+- **Trade-offs:** Adds complexity to switch logic and increases text maintenance burden, but significantly improves UX clarity

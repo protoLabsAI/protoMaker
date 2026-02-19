@@ -165,12 +165,15 @@ export function createUpdateHandler(
         }
       }
 
-      // Emit feature:status-changed so CompletionDetectorService can cascade
-      // epic → milestone → project completion checks, and LedgerService can record metrics
+      // Emit feature:status-changed so downstream services can react:
+      // - CompletionDetectorService: cascade epic → milestone → project completion checks
+      // - LedgerService: record metrics
+      // - AutoModeService: stop zombie agents on done/verified
+      // - PRFeedbackService: start tracking PRs on review
       if (
         newStatus &&
         previousStatus !== newStatus &&
-        (newStatus === 'done' || newStatus === 'verified') &&
+        (newStatus === 'done' || newStatus === 'verified' || newStatus === 'review') &&
         events
       ) {
         events.emit('feature:status-changed', {
