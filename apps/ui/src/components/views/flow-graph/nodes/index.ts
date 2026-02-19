@@ -12,6 +12,10 @@ import { IntegrationNode } from './integration-node';
 import { FeatureNode } from './feature-node';
 import { AgentNode } from './agent-node';
 import { PipelineStageNode } from './pipeline-stage-node';
+import { FlowProcessNode } from './flow-process-node';
+import { FlowDecisionNode } from './flow-decision-node';
+import { FlowHitlNode } from './flow-hitl-node';
+import { FlowStartEndNode } from './flow-start-end-node';
 
 export { OrchestratorNode } from './orchestrator-node';
 export { ServiceNode } from './service-node';
@@ -20,6 +24,10 @@ export { IntegrationNode } from './integration-node';
 export { FeatureNode } from './feature-node';
 export { AgentNode } from './agent-node';
 export { PipelineStageNode } from './pipeline-stage-node';
+export { FlowProcessNode } from './flow-process-node';
+export { FlowDecisionNode } from './flow-decision-node';
+export { FlowHitlNode } from './flow-hitl-node';
+export { FlowStartEndNode } from './flow-start-end-node';
 
 export const nodeTypes: NodeTypes = {
   orchestrator: OrchestratorNode,
@@ -29,4 +37,8 @@ export const nodeTypes: NodeTypes = {
   feature: FeatureNode,
   agent: AgentNode,
   'pipeline-stage': PipelineStageNode,
+  'flow-process': FlowProcessNode,
+  'flow-decision': FlowDecisionNode,
+  'flow-hitl': FlowHitlNode,
+  'flow-start-end': FlowStartEndNode,
 };
