@@ -1,0 +1,88 @@
+{
+  "lastUpdated": "2026-02-19T08:00:00.000Z",
+  "milestones": [
+    {
+      "status": "completed",
+      "title": "Core Engine",
+      "description": "Autonomous agent execution with git worktree isolation, dependency-aware scheduling, and model escalation.",
+      "items": [
+        "Kanban board with feature lifecycle management",
+        "AI agent execution in isolated git worktrees",
+        "Auto-mode with dependency resolution and topological ordering",
+        "Model hierarchy: Haiku for small tasks, Sonnet for standard, Opus for architectural",
+        "Auto-escalation on failure (retry with more capable model)",
+        "CI pipeline: build, test, format, audit, auto-merge"
+      ]
+    },
+    {
+      "status": "completed",
+      "title": "Lead Engineer & Signal Routing",
+      "description": "Event-driven orchestration with fast-path rules, signal classification, and per-feature state machine.",
+      "items": [
+        "Lead Engineer state machine (INTAKE > PLAN > EXECUTE > REVIEW > MERGE > DONE)",
+        "Signal intake and classification (ops vs GTM routing)",
+        "Fast-path rules engine (pure functions, no LLM for routine decisions)",
+        "Escalation pipeline with HITL gates",
+        "Antagonistic review for PRD quality"
+      ]
+    },
+    {
+      "status": "completed",
+      "title": "Observability & Metrics",
+      "description": "Full cost tracking, time-series analytics, and transparent per-feature economics.",
+      "items": [
+        "Langfuse OTEL tracing on every API call",
+        "Metrics ledger with per-feature cost tracking ($0.56 avg/feature)",
+        "Time-series dashboard (cost, throughput, cycle time, PR velocity)",
+        "GitHub PR enrichment (commit counts, review timing)",
+        "Impact reports with historical comparison"
+      ]
+    },
+    {
+      "status": "completed",
+      "title": "Desktop App",
+      "description": "Electron build for macOS with auto-updater, IPC testing, and CI workflows.",
+      "items": [
+        "macOS DMG builds (x64 + arm64)",
+        "Auto-updater with version tag CI workflow",
+        "Playwright + IPC test infrastructure",
+        "Server lifecycle management in Electron"
+      ]
+    },
+    {
+      "status": "in-progress",
+      "title": "Public Launch Infrastructure",
+      "description": "Changelog, roadmap, and stats pages. Content pipeline. Media blitz preparation.",
+      "items": [
+        "Public changelog with 690+ PR entries",
+        "Public roadmap page",
+        "Stats data pipeline (git + ledger)",
+        "Blog post drafts: \"I Stopped Coding\" + \"SaaS Is Dead\"",
+        "Twitter/X content strategy and calendar"
+      ]
+    },
+    {
+      "status": "planned",
+      "title": "Command Bar & Quick Actions",
+      "description": "Keyboard-driven command palette for the desktop and web app.",
+      "items": [
+        "Cmd+K command bar with fuzzy search",
+        "Feature quick-create from command bar",
+        "Agent launch shortcuts",
+        "Navigation between board, terminal, settings"
+      ]
+    },
+    {
+      "status": "planned",
+      "title": "Community & Open Source",
+      "description": "Public repo, create-protolab CLI, and $49 lifetime Pro tier.",
+      "items": [
+        "GitHub repo public access",
+        "create-protolab npx CLI for scaffolding new projects",
+        "$49 lifetime Pro: methodology guide, agent templates, prompt library",
+        "Discord community",
+        "setupLab consulting offering"
+      ]
+    }
+  ]
+}

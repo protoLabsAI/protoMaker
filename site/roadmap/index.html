@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Roadmap — protoLabs</title>
+    <meta
+      name="description"
+      content="Where protoLabs is headed. Completed milestones, current focus, and what's planned next."
+    />
+    <meta property="og:title" content="Roadmap — protoLabs" />
+    <meta
+      property="og:description"
+      content="Where protoLabs is headed. Completed milestones, current focus, and what's planned next."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://roadmap.protolabs.studio" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@protoLabsAI" />
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#9670;</text></svg>"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <script
+      defer
+      src="https://umami.proto-labs.ai/script.js"
+      data-website-id="roadmap-protolabs-studio"
+    ></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Geist', 'system-ui', 'sans-serif'],
+              mono: ['Geist Mono', 'monospace'],
+            },
+            colors: {
+              surface: { 0: '#09090b', 1: '#111113', 2: '#18181b', 3: '#222225' },
+              accent: { DEFAULT: '#a78bfa', dim: '#7c5cbf' },
+              muted: '#71717a',
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        background-color: #09090b;
+        color: #fafafa;
+        font-family: 'Geist', system-ui, sans-serif;
+      }
+      .gradient-text {
+        background: linear-gradient(135deg, #a78bfa 0%, #818cf8 50%, #6366f1 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+      a:focus-visible,
+      button:focus-visible {
+        outline: 2px solid #a78bfa;
+        outline-offset: 2px;
+      }
+      .skip-link {
+        position: absolute;
+        top: -100%;
+        left: 16px;
+        z-index: 100;
+        padding: 8px 16px;
+        background: #a78bfa;
+        color: #fff;
+        border-radius: 0 0 8px 8px;
+        font-size: 14px;
+        font-weight: 500;
+        text-decoration: none;
+        transition: top 0.2s;
+      }
+      .skip-link:focus {
+        top: 0;
+      }
+      .milestone-line {
+        position: absolute;
+        left: 15px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: linear-gradient(to bottom, #4ade80 0%, #a78bfa 60%, #27272a 100%);
+      }
+      .status-completed {
+        background: rgba(74, 222, 128, 0.15);
+        color: #4ade80;
+        border-color: rgba(74, 222, 128, 0.3);
+      }
+      .status-in-progress {
+        background: rgba(167, 139, 250, 0.15);
+        color: #a78bfa;
+        border-color: rgba(167, 139, 250, 0.3);
+      }
+      .status-planned {
+        background: rgba(113, 113, 122, 0.15);
+        color: #a1a1aa;
+        border-color: rgba(113, 113, 122, 0.3);
+      }
+      .dot-completed {
+        background: #4ade80;
+        box-shadow: 0 0 8px rgba(74, 222, 128, 0.4);
+      }
+      .dot-in-progress {
+        background: #a78bfa;
+        box-shadow: 0 0 8px rgba(167, 139, 250, 0.4);
+        animation: pulse-dot 2s ease-in-out infinite;
+      }
+      .dot-planned {
+        background: #3f3f46;
+        border: 2px solid #52525b;
+      }
+      @keyframes pulse-dot {
+        0%,
+        100% {
+          box-shadow: 0 0 8px rgba(167, 139, 250, 0.4);
+        }
+        50% {
+          box-shadow: 0 0 16px rgba(167, 139, 250, 0.7);
+        }
+      }
+    </style>
+  </head>
+  <body class="antialiased">
+    <a href="#main" class="skip-link">Skip to content</a>
+
+    <!-- Nav -->
+    <nav class="fixed top-0 w-full z-50 border-b border-white/5 bg-surface-0/80 backdrop-blur-xl">
+      <div class="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
+        <a
+          href="https://protolabs.studio"
+          class="flex items-center gap-2 text-white font-semibold tracking-tight"
+        >
+          <span class="text-accent text-lg">&#9670;</span>
+          <span>proto<span class="text-accent">Labs</span></span>
+        </a>
+        <div class="flex items-center gap-6 text-sm text-muted">
+          <a href="https://protolabs.studio" class="hover:text-white transition-colors">Home</a>
+          <a
+            href="https://docs.protolabs.studio"
+            target="_blank"
+            rel="noopener"
+            class="hover:text-white transition-colors"
+            >Docs</a
+          >
+          <a href="https://changelog.protolabs.studio" class="hover:text-white transition-colors"
+            >Changelog</a
+          >
+          <span class="text-white font-medium">Roadmap</span>
+          <a
+            href="https://x.com/protoLabsAI"
+            target="_blank"
+            rel="noopener"
+            class="hover:text-white transition-colors"
+            >Twitter</a
+          >
+        </div>
+      </div>
+    </nav>
+
+    <main id="main" class="pt-24 pb-20">
+      <!-- Hero -->
+      <section class="max-w-5xl mx-auto px-6 mb-16">
+        <h1 class="text-4xl md:text-5xl font-bold tracking-tight mb-4">
+          <span class="gradient-text">Roadmap</span>
+        </h1>
+        <p class="text-lg text-zinc-400 max-w-2xl mb-8">
+          Where protoLabs is headed. Everything here was planned, decomposed, and shipped by AI
+          agents — orchestrated by one human architect.
+        </p>
+
+        <!-- Progress summary -->
+        <div class="flex flex-wrap gap-4 mb-4">
+          <div
+            class="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-white/5 bg-surface-1"
+          >
+            <div class="w-2.5 h-2.5 rounded-full dot-completed"></div>
+            <span class="text-sm text-zinc-300" id="count-completed">4</span>
+            <span class="text-sm text-muted">completed</span>
+          </div>
+          <div
+            class="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-white/5 bg-surface-1"
+          >
+            <div class="w-2.5 h-2.5 rounded-full dot-in-progress"></div>
+            <span class="text-sm text-zinc-300" id="count-in-progress"
+              >1</span
+            >
+            <span class="text-sm text-muted">in progress</span>
+          </div>
+          <div
+            class="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-white/5 bg-surface-1"
+          >
+            <div class="w-2.5 h-2.5 rounded-full dot-planned"></div>
+            <span class="text-sm text-zinc-300" id="count-planned">2</span>
+            <span class="text-sm text-muted">planned</span>
+          </div>
+        </div>
+        <p class="text-xs text-zinc-600" id="last-updated">Last updated February 19, 2026</p>
+      </section>
+
+      <!-- Timeline -->
+      <section class="max-w-5xl mx-auto px-6">
+        <div class="relative pl-10">
+          <div class="milestone-line"></div>
+          <div id="roadmap-entries">
+            <!--ROADMAP_START-->
+            <div class="mb-8 relative">
+              <div class="absolute -left-10 top-4 w-[30px] h-[30px] rounded-full dot-completed flex items-center justify-center z-10">
+                <svg class="w-3.5 h-3.5 text-surface-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+              </div>
+              <div class="rounded-xl border border-green-500/20 bg-surface-1 p-6">
+                <div class="flex items-center gap-3 mb-2">
+                  <span class="status-completed inline-block px-2.5 py-0.5 rounded-md text-[11px] font-medium uppercase tracking-wider border">Shipped</span>
+                  <h3 class="text-lg font-semibold text-white">Core Engine</h3>
+                </div>
+                <p class="text-sm text-zinc-400 mb-4">Autonomous agent execution with git worktree isolation, dependency-aware scheduling, and model escalation.</p>
+                <ul class="space-y-1.5">
+                  <li class="flex items-start gap-2 text-sm text-zinc-400"><span class="text-green-500 mt-0.5">&#10003;</span>Kanban board with feature lifecycle management</li>
+                  <li class="flex items-start gap-2 text-sm text-zinc-400"><span class="text-green-500 mt-0.5">&#10003;</span>AI agent execution in isolated git worktrees</li>
+                  <li class="flex items-start gap-2 text-sm text-zinc-400"><span class="text-green-500 mt-0.5">&#10003;</span>Auto-mode with dependency resolution and topological ordering</li>
+                  <li class="flex items-start gap-2 text-sm text-zinc-400"><span class="text-green-500 mt-0.5">&#10003;</span>Model hierarchy: Haiku for small tasks, Sonnet for standard, Opus for architectural</li>
+                  <li class="flex items-start gap-2 text-sm text-zinc-400"><span class="text-green-500 mt-0.5">&#10003;</span>Auto-escalation on failure (retry with more capable model)</li>
+                  <li class="flex items-start gap-2 text-sm text-zinc-400"><span class="text-green-500 mt-0.5">&#10003;</span>CI pipeline: build, test, format, audit, auto-merge</li>
+                </ul>
+              </div>
+            </div>
+            <div class="mb-8 relative">
+              <div class="absolute -left-10 top-4 w-[30px] h-[30px] rounded-full dot-completed flex items-center justify-center z-10">
+                <svg class="w-3.5 h-3.5 text-surface-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+              </div>
+              <div class="rounded-xl border border-green-500/20 bg-surface-1 p-6">
+                <div class="flex items-center gap-3 mb-2">
+                  <span class="status-completed inline-block px-2.5 py-0.5 rounded-md text-[11px] font-medium uppercase tracking-wider border">Shipped</span>
+                  <h3 class="text-lg font-semibold text-white">Lead Engineer &amp; Signal Routing</h3>
+                </div>
+                <p class="text-sm text-zinc-400 mb-4">Event-driven orchestration with fast-path rules, signal classification, and per-feature state machine.</p>
+                <ul class="space-y-1.5">
+                  <li class="flex items-start gap-2 text-sm text-zinc-400"><span class="text-green-500 mt-0.5">&#10003;</span>Lead Engineer state machine (INTAKE &gt; PLAN &gt; EXECUTE &gt; REVIEW &gt; MERGE &gt; DONE)</li>
+                  <li class="flex items-start gap-2 text-sm text-zinc-400"><span class="text-green-500 mt-0.5">&#10003;</span>Signal intake and classification (ops vs GTM routing)</li>
+                  <li class="flex items-start gap-2 text-sm text-zinc-400"><span class="text-green-500 mt-0.5">&#10003;</span>Fast-path rules engine (pure functions, no LLM for routine decisions)</li>
+                  <li class="flex items-start gap-2 text-sm text-zinc-400"><span class="text-green-500 mt-0.5">&#10003;</span>Escalation pipeline with HITL gates</li>
+                  <li class="flex items-start gap-2 text-sm text-zinc-400"><span class="text-green-500 mt-0.5">&#10003;</span>Antagonistic review for PRD quality</li>
+                </ul>
+              </div>
+            </div>
+            <div class="mb-8 relative">
+              <div class="absolute -left-10 top-4 w-[30px] h-[30px] rounded-full dot-completed flex items-center justify-center z-10">
+                <svg class="w-3.5 h-3.5 text-surface-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+              </div>
+              <div class="rounded-xl border border-green-500/20 bg-surface-1 p-6">
+                <div class="flex items-center gap-3 mb-2">
+                  <span class="status-completed inline-block px-2.5 py-0.5 rounded-md text-[11px] font-medium uppercase tracking-wider border">Shipped</span>
+                  <h3 class="text-lg font-semibold text-white">Observability &amp; Metrics</h3>
+                </div>
+                <p class="text-sm text-zinc-400 mb-4">Full cost tracking, time-series analytics, and transparent per-feature economics.</p>
+                <ul class="space-y-1.5">
+                  <li class="flex items-start gap-2 text-sm text-zinc-400"><span class="text-green-500 mt-0.5">&#10003;</span>Langfuse OTEL tracing on every API call</li>
+                  <li class="flex items-start gap-2 text-sm text-zinc-400"><span class="text-green-500 mt-0.5">&#10003;</span>Metrics ledger with per-feature cost tracking ($0.56 avg/feature)</li>
+                  <li class="flex items-start gap-2 text-sm text-zinc-400"><span class="text-green-500 mt-0.5">&#10003;</span>Time-series dashboard (cost, throughput, cycle time, PR velocity)</li>
+                  <li class="flex items-start gap-2 text-sm text-zinc-400"><span class="text-green-500 mt-0.5">&#10003;</span>GitHub PR enrichment (commit counts, review timing)</li>
+                  <li class="flex items-start gap-2 text-sm text-zinc-400"><span class="text-green-500 mt-0.5">&#10003;</span>Impact reports with historical comparison</li>
+                </ul>
+              </div>
+            </div>
+            <div class="mb-8 relative">
+              <div class="absolute -left-10 top-4 w-[30px] h-[30px] rounded-full dot-completed flex items-center justify-center z-10">
+                <svg class="w-3.5 h-3.5 text-surface-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+              </div>
+              <div class="rounded-xl border border-green-500/20 bg-surface-1 p-6">
+                <div class="flex items-center gap-3 mb-2">
+                  <span class="status-completed inline-block px-2.5 py-0.5 rounded-md text-[11px] font-medium uppercase tracking-wider border">Shipped</span>
+                  <h3 class="text-lg font-semibold text-white">Desktop App</h3>
+                </div>
+                <p class="text-sm text-zinc-400 mb-4">Electron build for macOS with auto-updater, IPC testing, and CI workflows.</p>
+                <ul class="space-y-1.5">
+                  <li class="flex items-start gap-2 text-sm text-zinc-400"><span class="text-green-500 mt-0.5">&#10003;</span>macOS DMG builds (x64 + arm64)</li>
+                  <li class="flex items-start gap-2 text-sm text-zinc-400"><span class="text-green-500 mt-0.5">&#10003;</span>Auto-updater with version tag CI workflow</li>
+                  <li class="flex items-start gap-2 text-sm text-zinc-400"><span class="text-green-500 mt-0.5">&#10003;</span>Playwright + IPC test infrastructure</li>
+                  <li class="flex items-start gap-2 text-sm text-zinc-400"><span class="text-green-500 mt-0.5">&#10003;</span>Server lifecycle management in Electron</li>
+                </ul>
+              </div>
+            </div>
+            <div class="mb-8 relative">
+              <div class="absolute -left-10 top-4 w-[30px] h-[30px] rounded-full dot-in-progress flex items-center justify-center z-10">
+              </div>
+              <div class="rounded-xl border border-accent/20 bg-surface-1 p-6">
+                <div class="flex items-center gap-3 mb-2">
+                  <span class="status-in-progress inline-block px-2.5 py-0.5 rounded-md text-[11px] font-medium uppercase tracking-wider border">In Progress</span>
+                  <h3 class="text-lg font-semibold text-white">Public Launch Infrastructure</h3>
+                </div>
+                <p class="text-sm text-zinc-400 mb-4">Changelog, roadmap, and stats pages. Content pipeline. Media blitz preparation.</p>
+                <ul class="space-y-1.5">
+                  <li class="flex items-start gap-2 text-sm text-zinc-400"><span class="text-accent mt-0.5">&#9679;</span>Public changelog with 690+ PR entries</li>
+                  <li class="flex items-start gap-2 text-sm text-zinc-400"><span class="text-accent mt-0.5">&#9679;</span>Public roadmap page</li>
+                  <li class="flex items-start gap-2 text-sm text-zinc-400"><span class="text-accent mt-0.5">&#9679;</span>Stats data pipeline (git + ledger)</li>
+                  <li class="flex items-start gap-2 text-sm text-zinc-400"><span class="text-accent mt-0.5">&#9679;</span>Blog post drafts: &quot;I Stopped Coding&quot; + &quot;SaaS Is Dead&quot;</li>
+                  <li class="flex items-start gap-2 text-sm text-zinc-400"><span class="text-accent mt-0.5">&#9679;</span>Twitter/X content strategy and calendar</li>
+                </ul>
+              </div>
+            </div>
+            <div class="mb-8 relative">
+              <div class="absolute -left-10 top-4 w-[30px] h-[30px] rounded-full dot-planned flex items-center justify-center z-10">
+              </div>
+              <div class="rounded-xl border border-zinc-700/50 bg-surface-0 p-6">
+                <div class="flex items-center gap-3 mb-2">
+                  <span class="status-planned inline-block px-2.5 py-0.5 rounded-md text-[11px] font-medium uppercase tracking-wider border">Planned</span>
+                  <h3 class="text-lg font-semibold text-zinc-500">Command Bar &amp; Quick Actions</h3>
+                </div>
+                <p class="text-sm text-zinc-600 mb-4">Keyboard-driven command palette for the desktop and web app.</p>
+                <ul class="space-y-1.5">
+                  <li class="flex items-start gap-2 text-sm text-zinc-600"><span class="text-zinc-700 mt-0.5">&#9675;</span>Cmd+K command bar with fuzzy search</li>
+                  <li class="flex items-start gap-2 text-sm text-zinc-600"><span class="text-zinc-700 mt-0.5">&#9675;</span>Feature quick-create from command bar</li>
+                  <li class="flex items-start gap-2 text-sm text-zinc-600"><span class="text-zinc-700 mt-0.5">&#9675;</span>Agent launch shortcuts</li>
+                  <li class="flex items-start gap-2 text-sm text-zinc-600"><span class="text-zinc-700 mt-0.5">&#9675;</span>Navigation between board, terminal, settings</li>
+                </ul>
+              </div>
+            </div>
+            <div class="mb-8 relative">
+              <div class="absolute -left-10 top-4 w-[30px] h-[30px] rounded-full dot-planned flex items-center justify-center z-10">
+              </div>
+              <div class="rounded-xl border border-zinc-700/50 bg-surface-0 p-6">
+                <div class="flex items-center gap-3 mb-2">
+                  <span class="status-planned inline-block px-2.5 py-0.5 rounded-md text-[11px] font-medium uppercase tracking-wider border">Planned</span>
+                  <h3 class="text-lg font-semibold text-zinc-500">Community &amp; Open Source</h3>
+                </div>
+                <p class="text-sm text-zinc-600 mb-4">Public repo, create-protolab CLI, and $49 lifetime Pro tier.</p>
+                <ul class="space-y-1.5">
+                  <li class="flex items-start gap-2 text-sm text-zinc-600"><span class="text-zinc-700 mt-0.5">&#9675;</span>GitHub repo public access</li>
+                  <li class="flex items-start gap-2 text-sm text-zinc-600"><span class="text-zinc-700 mt-0.5">&#9675;</span>create-protolab npx CLI for scaffolding new projects</li>
+                  <li class="flex items-start gap-2 text-sm text-zinc-600"><span class="text-zinc-700 mt-0.5">&#9675;</span>$49 lifetime Pro: methodology guide, agent templates, prompt library</li>
+                  <li class="flex items-start gap-2 text-sm text-zinc-600"><span class="text-zinc-700 mt-0.5">&#9675;</span>Discord community</li>
+                  <li class="flex items-start gap-2 text-sm text-zinc-600"><span class="text-zinc-700 mt-0.5">&#9675;</span>setupLab consulting offering</li>
+                </ul>
+              </div>
+            </div>
+            <!--ROADMAP_END-->
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-white/5">
+      <div
+        class="max-w-5xl mx-auto px-6 py-10 flex flex-col md:flex-row items-center justify-between gap-4"
+      >
+        <div class="flex items-center gap-2 text-sm text-zinc-500">
+          <span class="text-accent">&#9670;</span>
+          <span>proto<span class="text-zinc-400">Labs</span></span>
+          <span class="text-zinc-700">&middot;</span>
+          <span>AI-native development agency</span>
+        </div>
+        <div class="flex items-center gap-5 text-sm text-zinc-500">
+          <a href="https://protolabs.studio" class="hover:text-zinc-300 transition-colors">Home</a>
+          <a
+            href="https://docs.protolabs.studio"
+            target="_blank"
+            rel="noopener"
+            class="hover:text-zinc-300 transition-colors"
+            >Docs</a
+          >
+          <a href="https://changelog.protolabs.studio" class="hover:text-zinc-300 transition-colors"
+            >Changelog</a
+          >
+          <a
+            href="https://x.com/protoLabsAI"
+            target="_blank"
+            rel="noopener"
+            class="hover:text-zinc-300 transition-colors"
+            >Twitter</a
+          >
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -66,7 +66,9 @@
     "changeset": "changeset",
     "changeset:version": "changeset version",
     "changeset:publish": "changeset publish",
-    "changeset:status": "changeset status"
+    "changeset:status": "changeset status",
+    "stats:generate": "node site/scripts/generate-stats.mjs && node site/scripts/generate-changelog.mjs && node site/scripts/generate-roadmap.mjs",
+    "stats:generate:full": "node site/scripts/generate-stats.mjs --with-ledger && node site/scripts/generate-changelog.mjs && node site/scripts/generate-roadmap.mjs"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,mts,cts,json,css,md,html,yml,yaml}": [

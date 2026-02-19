@@ -124,6 +124,7 @@ packages/mcp-server/package-lock.json
 data/.api-key
 data/credentials.json
 data/
+!site/data/
 .codex/
 packages/mcp-server/plugins/automaker/.env
 
