@@ -10,4 +10,3 @@ export { SidebarFooter } from './sidebar-footer';
 export { ThemeToggleButton } from './theme-toggle-button';
 export { MobileSidebarToggle } from './mobile-sidebar-toggle';
 export { QuickActionsBar } from './quick-actions-bar';
-export { AvaPresenceButton } from './ava-presence-button';

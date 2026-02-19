@@ -17,7 +17,6 @@ import { CreateSpecDialog } from '@/components/views/spec-view/dialogs';
 // Local imports from subfolder
 import {
   AutomakerLogo,
-  AvaPresenceButton,
   QuickActionsBar,
   SidebarHeader,
   SidebarNavigation,
@@ -315,9 +314,6 @@ export function Sidebar() {
           navigate={navigate}
           shortcuts={{ settings: shortcuts.settings }}
         />
-
-        {/* Ava presence button — toggles chat + shows voice state */}
-        <AvaPresenceButton sidebarOpen={sidebarOpen} />
 
         {sidebarOpen && (
           <div className="shrink-0 border-t border-border/40 px-4 py-3">
