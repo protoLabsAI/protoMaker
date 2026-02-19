@@ -2571,6 +2571,33 @@ export class HttpApiClient implements ElectronAPI {
     ): Promise<{ success: boolean }> => this.post('/api/notes/save', { projectPath, workspace }),
   };
 
+  // AI Editor API (streaming endpoints for notes panel AI features)
+  ai = {
+    /** Ghost text autocomplete — returns a ReadableStream of predicted text */
+    complete: (context: string, currentLine: string): Promise<Response> =>
+      fetch(`${this.serverUrl}/api/ai/complete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ context, currentLine }),
+      }),
+
+    /** Rewrite selected text — returns a ReadableStream of replacement HTML */
+    rewrite: (text: string, instruction: string, surroundingContext?: string): Promise<Response> =>
+      fetch(`${this.serverUrl}/api/ai/rewrite`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, instruction, surroundingContext }),
+      }),
+
+    /** Generate content from slash command — returns a ReadableStream of HTML */
+    generate: (command: string, context: string, selection?: string): Promise<Response> =>
+      fetch(`${this.serverUrl}/api/ai/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ command, context, selection }),
+      }),
+  };
+
   // Backlog Plan API
   backlogPlan = {
     generate: (

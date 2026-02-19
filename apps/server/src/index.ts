@@ -181,6 +181,7 @@ import { EventStreamBuffer } from './lib/event-stream-buffer.js';
 import { AntagonisticReviewService } from './services/antagonistic-review-service.js';
 import { createLangfuseRoutes } from './routes/langfuse/index.js';
 import { createChatRoutes } from './routes/chat/index.js';
+import { createAIRoutes } from './routes/ai/index.js';
 import { createNotesRoutes } from './routes/notes/index.js';
 import { shutdownLangfuse } from './lib/langfuse-singleton.js';
 import { initOTEL, shutdownOTEL } from './lib/otel-setup.js';
@@ -1148,6 +1149,7 @@ app.use(
   createFlowsRoutes(antagonisticReviewService, projectPlanningService ?? undefined)
 );
 app.use('/api/chat', createChatRoutes());
+app.use('/api/ai', createAIRoutes());
 app.use('/api/notes', createNotesRoutes());
 app.use('/api/twitch', createTwitchRoutes(twitchService, events, featureLoader));
 app.use('/api/voice', createVoiceRoutes(voiceService, events));
