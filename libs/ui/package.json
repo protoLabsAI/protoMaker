@@ -31,6 +31,11 @@
       "types": "./dist/lib/index.d.ts",
       "default": "./dist/lib/index.js"
     },
+    "./ai": {
+      "import": "./dist/ai/index.js",
+      "types": "./dist/ai/index.d.ts",
+      "default": "./dist/ai/index.js"
+    },
     "./themes.css": "./src/themes/themes.css"
   },
   "scripts": {
@@ -89,6 +94,7 @@
     "tailwind-merge": "3.4.0"
   },
   "peerDependencies": {
+    "ai": ">=4",
     "react": ">=19",
     "tailwindcss": ">=4"
   },

@@ -11,9 +11,8 @@ import { useLocation } from '@tanstack/react-router';
 import { MessageSquare, X, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@protolabs/ui/atoms';
-import { ChatMessageList } from './components/chat-message-list';
-import { ChatInput } from './components/chat-input';
-import { useChatModelSelection } from './components/chat-model-select';
+import { ChatMessageList, ChatInput } from '@protolabs/ui/ai';
+import { ChatModelSelect, useChatModelSelection } from './components/chat-model-select';
 import { useNotesStore } from '@/store/notes-store';
 import { useAppStore } from '@/store/app-store';
 
@@ -143,8 +142,14 @@ export function ChatSidebar({ className }: { className?: string }) {
         onSubmit={handleSubmit}
         onStop={stop}
         isStreaming={isStreaming}
-        modelAlias={modelAlias}
-        onModelChange={setModelAlias}
+        actions={
+          <>
+            <ChatModelSelect value={modelAlias} onValueChange={setModelAlias} />
+            <span className="text-[10px] text-muted-foreground">
+              {isStreaming ? 'Streaming...' : 'Enter to send'}
+            </span>
+          </>
+        }
       />
     </div>
   );

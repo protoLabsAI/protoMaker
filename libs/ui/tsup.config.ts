@@ -7,6 +7,7 @@ export default defineConfig({
     'src/molecules/index.ts',
     'src/organisms/index.ts',
     'src/lib/index.ts',
+    'src/ai/index.ts',
   ],
   format: ['esm'],
   dts: {
