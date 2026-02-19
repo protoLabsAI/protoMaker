@@ -2744,6 +2744,74 @@ const tools: Tool[] = [
     },
   },
 
+  // ========== Notes Workspace ==========
+  {
+    name: 'list_note_tabs',
+    description:
+      'List all note tabs in a project workspace. Returns tab names, permissions (agentRead/agentWrite), and word counts. Only tabs with agentRead enabled are shown by default.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        includeRestricted: {
+          type: 'boolean',
+          description: 'Include tabs where agentRead is false (default: false)',
+        },
+      },
+      required: ['projectPath'],
+    },
+  },
+  {
+    name: 'read_note_tab',
+    description:
+      'Read the content of a specific note tab. Requires agentRead permission on the tab. Returns HTML content, word count, and metadata.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        tabId: {
+          type: 'string',
+          description: 'The tab ID (UUID). Use list_note_tabs to discover tab IDs.',
+        },
+      },
+      required: ['projectPath', 'tabId'],
+    },
+  },
+  {
+    name: 'write_note_tab',
+    description:
+      'Write content to a specific note tab. Requires agentWrite permission on the tab. Supports replace (default) or append mode. Content should be TipTap-compatible HTML.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        tabId: {
+          type: 'string',
+          description: 'The tab ID (UUID). Use list_note_tabs to discover tab IDs.',
+        },
+        content: {
+          type: 'string',
+          description: 'HTML content to write. For rich text, use TipTap-compatible HTML tags.',
+        },
+        mode: {
+          type: 'string',
+          enum: ['replace', 'append'],
+          description: 'Write mode: replace (default) overwrites, append adds to end',
+        },
+      },
+      required: ['projectPath', 'tabId', 'content'],
+    },
+  },
+
   // Idea Processing
   {
     name: 'process_idea',
@@ -3870,6 +3938,27 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         projectPath: args.projectPath,
         title: args.title,
         description: args.description,
+      });
+
+    // Notes Workspace
+    case 'list_note_tabs':
+      return apiCall('/notes/list-tabs', {
+        projectPath: args.projectPath,
+        includeRestricted: args.includeRestricted,
+      });
+
+    case 'read_note_tab':
+      return apiCall('/notes/get-tab', {
+        projectPath: args.projectPath,
+        tabId: args.tabId,
+      });
+
+    case 'write_note_tab':
+      return apiCall('/notes/write-tab', {
+        projectPath: args.projectPath,
+        tabId: args.tabId,
+        content: args.content,
+        mode: args.mode,
       });
 
     default:

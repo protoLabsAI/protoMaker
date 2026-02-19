@@ -126,7 +126,10 @@ export function createNotesRoutes(): Router {
    */
   router.post('/list-tabs', async (req: Request, res: Response) => {
     try {
-      const { projectPath } = req.body as { projectPath: string };
+      const { projectPath, includeRestricted } = req.body as {
+        projectPath: string;
+        includeRestricted?: boolean;
+      };
       if (!projectPath) {
         res.status(400).json({ error: 'projectPath is required' });
         return;
@@ -141,6 +144,7 @@ export function createNotesRoutes(): Router {
       }> = workspace.tabOrder
         .map((id) => workspace.tabs[id])
         .filter(Boolean)
+        .filter((tab) => includeRestricted || tab.permissions.agentRead)
         .map((tab) => ({
           id: tab.id,
           name: tab.name,
@@ -151,6 +155,66 @@ export function createNotesRoutes(): Router {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       logger.error('Failed to list note tabs:', error);
+      res.status(500).json({ error: message });
+    }
+  });
+
+  /**
+   * POST /api/notes/write-tab
+   * Agent-oriented write: checks agentWrite permission, supports replace/append
+   */
+  router.post('/write-tab', async (req: Request, res: Response) => {
+    try {
+      const {
+        projectPath,
+        tabId,
+        content,
+        mode = 'replace',
+      } = req.body as {
+        projectPath: string;
+        tabId: string;
+        content: string;
+        mode?: 'replace' | 'append';
+      };
+      if (!projectPath || !tabId || content === undefined) {
+        res.status(400).json({ error: 'projectPath, tabId, and content are required' });
+        return;
+      }
+      validatePath(projectPath);
+      const workspace = await loadWorkspace(projectPath);
+      const tab = workspace.tabs[tabId];
+      if (!tab) {
+        res.status(404).json({ error: 'Tab not found' });
+        return;
+      }
+      if (!tab.permissions.agentWrite) {
+        res.status(403).json({ error: 'Agent does not have write permission for this tab' });
+        return;
+      }
+
+      const now = Date.now();
+      const newContent = mode === 'append' ? tab.content + content : content;
+      tab.content = newContent;
+      tab.metadata.updatedAt = now;
+      // Recalculate word/char counts
+      const plainText = newContent.replace(/<[^>]*>/g, '');
+      tab.metadata.wordCount = plainText.trim() ? plainText.trim().split(/\s+/).length : 0;
+      tab.metadata.characterCount = plainText.length;
+
+      await saveWorkspace(projectPath, workspace);
+      res.json({
+        success: true,
+        tab: {
+          id: tab.id,
+          name: tab.name,
+          wordCount: tab.metadata.wordCount,
+          characterCount: tab.metadata.characterCount,
+          updatedAt: now,
+        },
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('Failed to write note tab:', error);
       res.status(500).json({ error: message });
     }
   });
