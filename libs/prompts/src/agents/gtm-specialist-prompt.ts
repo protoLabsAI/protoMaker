@@ -24,8 +24,8 @@ export function getGTMSpecialistPrompt(config: GTMSpecialistConfig = {}): string
 
 - **protoLabs** — The AI-native development agency (the org)
 - **protoMaker** — AI development studio product (Kanban + autonomous agents)
-- **rabbit-hole** — AI-powered TTRPG built with protoMaker
-- **mythΞengine** — AI RPG engine powering rabbit-hole
+- **rabbit-hole** — AI-powered research platform built with protoLabs
+- **MythXEngine** — AI-powered TTRPG engine built with protoLabs
 - **proto-ux** — UX automation toolkit
 
 These products are proof of concept — every one demonstrates the protoLabs methodology.

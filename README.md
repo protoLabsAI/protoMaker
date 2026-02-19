@@ -11,8 +11,6 @@
 > **Learn more about Agentic Coding!**
 >
 > protoLabs.studio was built using AI and agentic coding techniques, leveraging tools like Cursor IDE and Claude Code CLI to orchestrate AI agents that implement complex functionality in days instead of weeks.
->
-> **Learn how:** Master these same techniques and workflows in the [Agentic Jumpstart course](https://agenticjumpstart.com/?utm=protomaker-gh).
 
 # protoLabs.studio
 
@@ -118,7 +116,7 @@ The future of software development is **swarm intelligence**—where multiple AI
 
 ## Community & Support
 
-Join the **Agentic Jumpstart** to connect with other builders exploring **agentic coding** and autonomous development workflows.
+Join the **protoLabs community** to connect with other builders exploring **agentic coding** and autonomous development workflows.
 
 In the Discord, you can:
 
@@ -128,7 +126,7 @@ In the Discord, you can:
 - 🚀 Show off projects built with AI agents
 - 🤝 Collaborate with other developers and contributors
 
-👉 **Join the Discord:** [Agentic Jumpstart Discord](https://discord.gg/jjem7aEDKU)
+👉 **Join the Discord:** [protoLabs Discord](https://discord.gg/jjem7aEDKU)
 
 ---
 
@@ -749,9 +747,9 @@ data/
 
 ### Community
 
-Join the **Agentic Jumpstart** Discord to connect with other builders exploring **agentic coding**:
+Join the **protoLabs** Discord to connect with other builders exploring **agentic coding**:
 
-👉 [Agentic Jumpstart Discord](https://discord.gg/jjem7aEDKU)
+👉 [protoLabs Discord](https://discord.gg/jjem7aEDKU)
 
 ## License
 

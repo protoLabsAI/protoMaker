@@ -4,19 +4,18 @@ This is the living brand bible for protoLabs. All agents, content, and external 
 
 ## Names & Domains
 
-| Name                           | What It Is                            | Usage                                                                                                        |
-| ------------------------------ | ------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| **protoLabs**                  | The AI-native development agency      | Always camelCase: "protoLabs" (not "ProtoLabs", "Protolabs", or "Proto Labs")                                |
-| **protoLabs.studio**           | Primary domain                        | Website, social bios, email                                                                                  |
-| ~~**protoMaker**~~             | RETIRED — now just protoLabs          | Was the product name. Consolidated into protoLabs. Do not use in new content.                                |
-| **proto-labs-ai**              | GitHub organization                   | `github.com/proto-labs-ai`                                                                                   |
-| **Automaker**                  | Internal codename / upstream origin   | Used in code (`@automaker/*` packages, `.automaker/` directory). NOT used in external marketing.             |
-| **create-protolab**            | npx CLI tool                          | Scaffolds new projects with protoLabs methodology                                                            |
-| **MythXEngine**                | AI-powered TTRPG engine               | Built with protoLabs. Portfolio proof of methodology.                                                        |
-| **SVGVal**                     | SVG validation toolkit                | Built with protoLabs. Portfolio proof of methodology.                                                        |
-| **rabbit-hole**                | AI-powered TTRPG (legacy name)        | Now MythXEngine. Built with protoLabs.                                                                       |
-| **Agentic Jumpstart**          | Community Discord / educational brand | Community-facing, not the agency brand                                                                       |
-| **intelligent product engine** | Product category / positioning term   | Describes the autonomous system architecture. NOT an acronym — always lowercase, always spelled out in full. |
+| Name                           | What It Is                          | Usage                                                                                                        |
+| ------------------------------ | ----------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| **protoLabs**                  | The AI-native development agency    | Always camelCase: "protoLabs" (not "ProtoLabs", "Protolabs", or "Proto Labs")                                |
+| **protoLabs.studio**           | Primary domain                      | Website, social bios, email                                                                                  |
+| ~~**protoMaker**~~             | RETIRED — now just protoLabs        | Was the product name. Consolidated into protoLabs. Do not use in new content.                                |
+| **proto-labs-ai**              | GitHub organization                 | `github.com/proto-labs-ai`                                                                                   |
+| **Automaker**                  | Internal codename / upstream origin | Used in code (`@automaker/*` packages, `.automaker/` directory). NOT used in external marketing.             |
+| **create-protolab**            | npx CLI tool                        | Scaffolds new projects with protoLabs methodology                                                            |
+| **MythXEngine**                | AI-powered TTRPG engine             | Built with protoLabs. Portfolio proof of methodology.                                                        |
+| **SVGVal**                     | SVG validation toolkit              | Built with protoLabs. Portfolio proof of methodology.                                                        |
+| **rabbit-hole**                | AI-powered research platform        | Built with protoLabs. Portfolio proof of methodology.                                                        |
+| **intelligent product engine** | Product category / positioning term | Describes the autonomous system architecture. NOT an acronym — always lowercase, always spelled out in full. |
 
 ### Naming Rules
 
