@@ -227,7 +227,10 @@ export function FlowDetailPanel({ graphId, featureId, onClose }: FlowDetailPanel
               <Controls />
 
               {/* Legend */}
-              <Panel position="top-right" className="bg-card/95 backdrop-blur-sm border border-border rounded-lg p-3 text-xs">
+              <Panel
+                position="top-right"
+                className="bg-card/95 backdrop-blur-sm border border-border rounded-lg p-3 text-xs"
+              >
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-full bg-violet-600 border-2 border-violet-400 shadow-[0_0_10px_rgba(139,92,246,0.5)]" />

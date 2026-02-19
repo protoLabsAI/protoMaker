@@ -7,12 +7,7 @@
  */
 
 import { memo } from 'react';
-import {
-  getSmoothStepPath,
-  EdgeLabelRenderer,
-  type EdgeProps,
-  BaseEdge,
-} from '@xyflow/react';
+import { getSmoothStepPath, EdgeLabelRenderer, type EdgeProps, BaseEdge } from '@xyflow/react';
 
 export interface FlowEdgeData {
   label?: string;

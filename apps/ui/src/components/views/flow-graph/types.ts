@@ -168,9 +168,17 @@ export type DelegationEdge = Edge & { type: 'delegation' };
 export type WorkflowEdge = Edge & { type: 'workflow' };
 export type IntegrationEdge = Edge & { type: 'integration' };
 export type PipelineEdge = Edge & { type: 'pipeline' };
-export type FlowEdgeType = Edge & { type: 'flow-edge'; data?: { label?: string; isConditional?: boolean } };
+export type FlowEdgeType = Edge & {
+  type: 'flow-edge';
+  data?: { label?: string; isConditional?: boolean };
+};
 
-export type FlowEdge = DelegationEdge | WorkflowEdge | IntegrationEdge | PipelineEdge | FlowEdgeType;
+export type FlowEdge =
+  | DelegationEdge
+  | WorkflowEdge
+  | IntegrationEdge
+  | PipelineEdge
+  | FlowEdgeType;
 
 // ============================================
 // Brand Constants

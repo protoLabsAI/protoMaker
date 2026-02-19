@@ -33,11 +33,7 @@ function FlowHitlNodeComponent({ data }: NodeProps & { data: FlowHitlNodeData })
         <span className="text-xs font-semibold text-red-900 truncate">{data.label}</span>
       </div>
 
-      <Handle
-        type="target"
-        position={Position.Top}
-        className="!bg-red-400 !w-2 !h-2 !border-0"
-      />
+      <Handle type="target" position={Position.Top} className="!bg-red-400 !w-2 !h-2 !border-0" />
       <Handle
         type="source"
         position={Position.Bottom}

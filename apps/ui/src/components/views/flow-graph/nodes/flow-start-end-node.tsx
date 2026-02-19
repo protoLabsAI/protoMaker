@@ -42,7 +42,11 @@ function FlowStartEndNodeComponent({ data }: NodeProps & { data: FlowStartEndNod
         />
       )}
       {!isStart && (
-        <Handle type="target" position={Position.Top} className="!bg-gray-400 !w-2 !h-2 !border-0" />
+        <Handle
+          type="target"
+          position={Position.Top}
+          className="!bg-gray-400 !w-2 !h-2 !border-0"
+        />
       )}
     </div>
   );
