@@ -14,3 +14,7 @@ export { ChatMessageList } from './chat-message-list.js';
 export { ChatInput } from './chat-input.js';
 
 export { SuggestionList, type SuggestionItem } from './suggestion.js';
+
+export { ReasoningPart, type ReasoningPartProps } from './reasoning-part.js';
+
+export { ToolInvocationPart, type ToolInvocationPartProps } from './tool-invocation-part.js';
