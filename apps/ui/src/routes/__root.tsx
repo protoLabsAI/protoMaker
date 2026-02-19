@@ -190,6 +190,7 @@ function RootLayoutContent() {
   const isLoginRoute = location.pathname === '/login';
   const isLoggedOutRoute = location.pathname === '/logged-out';
   const isDashboardRoute = location.pathname === '/dashboard';
+  const isChatOverlayRoute = location.pathname === '/chat-overlay';
   const _isBoardRoute = location.pathname === '/board';
   const isRootRoute = location.pathname === '/';
   const [autoOpenStatus, setAutoOpenStatus] = useState<AutoOpenStatus>(AUTO_OPEN_STATUS.idle);
@@ -744,6 +745,15 @@ function RootLayoutContent() {
   if (isLoginRoute || isLoggedOutRoute) {
     return (
       <main className="h-screen overflow-hidden" data-testid="app-container">
+        <Outlet />
+      </main>
+    );
+  }
+
+  // Chat overlay — chromeless, full window, no sidebar/project switcher
+  if (isChatOverlayRoute) {
+    return (
+      <main className="h-screen w-screen overflow-hidden" data-testid="app-container">
         <Outlet />
       </main>
     );

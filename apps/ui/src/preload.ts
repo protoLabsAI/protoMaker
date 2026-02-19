@@ -60,6 +60,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // App control
   quit: (): Promise<void> => ipcRenderer.invoke('app:quit'),
 
+  // Ava Anywhere overlay
+  toggleOverlay: (): Promise<void> => ipcRenderer.invoke('overlay:toggle'),
+  hideOverlay: (): Promise<void> => ipcRenderer.invoke('overlay:hide'),
+  showOverlay: (): Promise<void> => ipcRenderer.invoke('overlay:show'),
+
   // Auto-updater
   updater: {
     getState: (): Promise<{

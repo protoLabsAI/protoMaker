@@ -39,7 +39,7 @@ import { spawn, execSync, ChildProcess } from 'child_process';
 import crypto from 'crypto';
 import http, { Server } from 'http';
 import net from 'net';
-import { app, BrowserWindow, ipcMain, dialog, shell, screen } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, shell, screen, globalShortcut } from 'electron';
 import { createLogger } from '@automaker/utils/logger';
 import { initAutoUpdater } from './auto-updater';
 import {
@@ -112,6 +112,7 @@ if (isDev) {
 }
 
 let mainWindow: BrowserWindow | null = null;
+let overlayWindow: BrowserWindow | null = null;
 let serverProcess: ChildProcess | null = null;
 let staticServer: Server | null = null;
 
@@ -768,6 +769,117 @@ function createWindow(): void {
   });
 }
 
+// ============================================
+// Ava Anywhere — Global Chat Overlay
+// ============================================
+
+const OVERLAY_WIDTH = 420;
+const OVERLAY_HEIGHT = 600;
+
+/**
+ * Create the pre-warmed overlay window (hidden until shortcut activates it).
+ * On macOS, uses type: 'panel' for non-activating float behavior.
+ */
+function createOverlayWindow(): void {
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { width: screenWidth } = primaryDisplay.workArea;
+
+  const overlayOptions: Electron.BrowserWindowConstructorOptions = {
+    width: OVERLAY_WIDTH,
+    height: OVERLAY_HEIGHT,
+    x: Math.round(screenWidth / 2 - OVERLAY_WIDTH / 2),
+    y: 80, // Near top of screen, below menu bar
+    frame: false,
+    transparent: true,
+    resizable: true,
+    skipTaskbar: true,
+    alwaysOnTop: true,
+    show: false, // Pre-warmed: hidden until toggled
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+    backgroundColor: '#00000000', // Transparent for rounded corners
+    ...(process.platform === 'darwin' && {
+      type: 'panel' as const, // Non-activating on macOS
+      hasShadow: true,
+    }),
+  };
+
+  overlayWindow = new BrowserWindow(overlayOptions);
+
+  // Load the same app but with #overlay hash to route to /chat-overlay
+  const overlayUrl = VITE_DEV_SERVER_URL
+    ? `${VITE_DEV_SERVER_URL}#overlay`
+    : `http://localhost:${staticPort}#overlay`;
+
+  overlayWindow.loadURL(overlayUrl);
+
+  overlayWindow.on('blur', () => {
+    // Hide on focus loss (click outside)
+    if (overlayWindow && !overlayWindow.isDestroyed()) {
+      overlayWindow.hide();
+    }
+  });
+
+  overlayWindow.on('closed', () => {
+    overlayWindow = null;
+  });
+
+  // Prevent closing — just hide
+  overlayWindow.on('close', (e) => {
+    if (overlayWindow && !overlayWindow.isDestroyed()) {
+      e.preventDefault();
+      overlayWindow.hide();
+    }
+  });
+}
+
+/**
+ * Toggle overlay window visibility. Centers on current cursor screen.
+ */
+function toggleOverlay(): void {
+  if (!overlayWindow || overlayWindow.isDestroyed()) {
+    createOverlayWindow();
+    overlayWindow?.show();
+    overlayWindow?.focus();
+    return;
+  }
+
+  if (overlayWindow.isVisible()) {
+    overlayWindow.hide();
+  } else {
+    // Position near cursor's current screen
+    const cursorPoint = screen.getCursorScreenPoint();
+    const currentDisplay = screen.getDisplayNearestPoint(cursorPoint);
+    const { x: workX, width: workW } = currentDisplay.workArea;
+
+    overlayWindow.setPosition(Math.round(workX + workW / 2 - OVERLAY_WIDTH / 2), 80);
+    overlayWindow.show();
+    overlayWindow.focus();
+  }
+}
+
+/**
+ * Register the global shortcut for Ava Anywhere.
+ * Cmd+Shift+Space on macOS, Ctrl+Shift+Space on Windows/Linux.
+ */
+function registerOverlayShortcut(): void {
+  const accelerator =
+    process.platform === 'darwin' ? 'CommandOrControl+Shift+Space' : 'Ctrl+Shift+Space';
+
+  const registered = globalShortcut.register(accelerator, () => {
+    toggleOverlay();
+  });
+
+  if (registered) {
+    logger.info(`Global shortcut registered: ${accelerator}`);
+  } else {
+    logger.warn(`Failed to register global shortcut: ${accelerator}`);
+  }
+}
+
 // App lifecycle
 app.whenReady().then(async () => {
   // In production, use Automaker dir in appData for app isolation
@@ -909,6 +1021,10 @@ app.whenReady().then(async () => {
     // Create window
     createWindow();
 
+    // Pre-warm overlay window and register global shortcut
+    createOverlayWindow();
+    registerOverlayShortcut();
+
     // Initialize auto-updater (no-op in development)
     if (mainWindow) {
       initAutoUpdater(mainWindow);
@@ -964,6 +1080,15 @@ app.on('window-all-closed', () => {
 });
 
 app.on('before-quit', () => {
+  // Unregister global shortcuts
+  globalShortcut.unregisterAll();
+
+  // Destroy overlay window
+  if (overlayWindow && !overlayWindow.isDestroyed()) {
+    overlayWindow.destroy();
+    overlayWindow = null;
+  }
+
   if (serverProcess && serverProcess.pid) {
     logger.info('Stopping server...');
     if (process.platform === 'win32') {
@@ -991,6 +1116,25 @@ app.on('before-quit', () => {
 // ============================================
 // IPC Handlers - Only native features
 // ============================================
+
+// Overlay control
+ipcMain.handle('overlay:toggle', () => {
+  toggleOverlay();
+});
+
+ipcMain.handle('overlay:hide', () => {
+  if (overlayWindow && !overlayWindow.isDestroyed()) {
+    overlayWindow.hide();
+  }
+});
+
+ipcMain.handle('overlay:show', () => {
+  if (!overlayWindow || overlayWindow.isDestroyed()) {
+    createOverlayWindow();
+  }
+  overlayWindow?.show();
+  overlayWindow?.focus();
+});
 
 // Native file dialogs
 ipcMain.handle('dialog:openDirectory', async () => {
