@@ -31,6 +31,7 @@ interface ChatStoreState {
   sessions: ChatSession[];
   currentSessionId: string | null;
   historyOpen: boolean;
+  chatModalOpen: boolean;
 }
 
 interface ChatActions {
@@ -42,6 +43,7 @@ interface ChatActions {
   updateModel: (id: string, modelAlias: string) => void;
   setHistoryOpen: (open: boolean) => void;
   toggleHistory: () => void;
+  setChatModalOpen: (open: boolean) => void;
   getCurrentSession: () => ChatSession | null;
 }
 
@@ -79,6 +81,7 @@ export const useChatStore = create<ChatStoreState & ChatActions>()(
       sessions: [],
       currentSessionId: null,
       historyOpen: false,
+      chatModalOpen: false,
 
       createSession: (modelAlias = 'sonnet') => {
         const now = Date.now();
@@ -144,6 +147,7 @@ export const useChatStore = create<ChatStoreState & ChatActions>()(
 
       setHistoryOpen: (open) => set({ historyOpen: open }),
       toggleHistory: () => set({ historyOpen: !get().historyOpen }),
+      setChatModalOpen: (open) => set({ chatModalOpen: open }),
 
       getCurrentSession: () => {
         const state = get();

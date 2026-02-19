@@ -6,6 +6,7 @@ import { createLogger } from '@automaker/utils/logger';
 import { Sidebar } from '@/components/layout/sidebar';
 import { ProjectSwitcher } from '@/components/layout/project-switcher';
 import { ChatSidebar } from '@/components/views/chat/chat-sidebar';
+import { ChatModal, useChatModalShortcut } from '@/components/layout/chat-modal';
 import {
   FileBrowserProvider,
   useFileBrowser,
@@ -182,6 +183,9 @@ function RootLayoutContent() {
 
   // Load project settings when switching projects
   useProjectSettingsLoader();
+
+  // Global Cmd+K / Ctrl+K shortcut for the chat modal (web mode)
+  useChatModalShortcut();
 
   // Check if we're in compact mode (< 1240px) to hide project switcher
   const isCompact = useIsCompact();
@@ -841,6 +845,7 @@ function RootLayoutContent() {
           <Outlet />
         </div>
         <ChatSidebar />
+        <ChatModal />
         <Toaster richColors position="bottom-right" />
       </main>
       <SandboxRiskDialog
