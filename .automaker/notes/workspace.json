@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "activeTabId": "f35b89fb-3cc2-4e1f-8e58-98165c82df08",
+  "tabOrder": [
+    "f35b89fb-3cc2-4e1f-8e58-98165c82df08"
+  ],
+  "tabs": {
+    "f35b89fb-3cc2-4e1f-8e58-98165c82df08": {
+      "id": "f35b89fb-3cc2-4e1f-8e58-98165c82df08",
+      "name": "Notes",
+      "content": "<p>test</p>",
+      "permissions": {
+        "agentRead": true,
+        "agentWrite": true
+      },
+      "metadata": {
+        "createdAt": 1771448161228,
+        "updatedAt": 1771453604141,
+        "wordCount": 1,
+        "characterCount": 4
+      }
+    }
+  }
+}
