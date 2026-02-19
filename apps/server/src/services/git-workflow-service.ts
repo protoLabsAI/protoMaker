@@ -71,6 +71,25 @@ async function isGhCliAvailable(): Promise<boolean> {
 }
 
 /**
+ * Recent operation entry for status tracking
+ */
+interface RecentOperation {
+  type: 'commit' | 'push' | 'pr_create' | 'merge';
+  featureId: string;
+  timestamp: string;
+  success: boolean;
+  error?: string;
+}
+
+/**
+ * Git workflow service status
+ */
+export interface GitWorkflowStatus {
+  activeWorkflows: number;
+  recentOperations: RecentOperation[];
+}
+
+/**
  * Extract a clean title from feature description for commit message
  */
 function extractTitleFromDescription(description: string): string {
@@ -91,6 +110,43 @@ function extractTitleFromDescription(description: string): string {
 }
 
 export class GitWorkflowService {
+  private activeWorkflows = 0;
+  private recentOperations: RecentOperation[] = [];
+  private readonly MAX_RECENT_OPERATIONS = 10;
+
+  /**
+   * Get current status of the git workflow service
+   */
+  getStatus(): GitWorkflowStatus {
+    return {
+      activeWorkflows: this.activeWorkflows,
+      recentOperations: [...this.recentOperations],
+    };
+  }
+
+  /**
+   * Track a workflow operation
+   */
+  private trackOperation(
+    type: RecentOperation['type'],
+    featureId: string,
+    success: boolean,
+    error?: string
+  ): void {
+    this.recentOperations.unshift({
+      type,
+      featureId,
+      timestamp: new Date().toISOString(),
+      success,
+      error,
+    });
+
+    // Keep only the last N operations
+    if (this.recentOperations.length > this.MAX_RECENT_OPERATIONS) {
+      this.recentOperations = this.recentOperations.slice(0, this.MAX_RECENT_OPERATIONS);
+    }
+  }
+
   /**
    * Resolve effective git workflow settings for a feature.
    * Feature-level settings override global settings.
@@ -176,6 +232,9 @@ export class GitWorkflowService {
       return null;
     }
 
+    // Track active workflow
+    this.activeWorkflows++;
+
     const result: GitWorkflowResult = {
       commitHash: null,
       pushed: false,
@@ -207,6 +266,7 @@ export class GitWorkflowService {
         const unpushedHash = await this.getUnpushedCommitHash(workDir, branchName);
         if (!unpushedHash) {
           logger.info(`No changes to commit and no unpushed commits for feature ${featureId}`);
+          this.activeWorkflows--;
           return null;
         }
         // Agent pre-committed — format and amend, then continue pipeline
@@ -217,6 +277,7 @@ export class GitWorkflowService {
         commitHash = unpushedHash;
       }
       result.commitHash = commitHash;
+      this.trackOperation('commit', featureId, true);
       logger.info(`Committed changes for feature ${featureId}: ${commitHash}`);
 
       // Step 1.5: Restack with Graphite before pushing (if enabled)
@@ -259,10 +320,12 @@ export class GitWorkflowService {
           }
           result.pushed = pushed;
           if (pushed) {
+            this.trackOperation('push', featureId, true);
             logger.info(`Pushed branch ${branchName} to remote`);
           }
         } catch (pushError) {
           const errorMsg = pushError instanceof Error ? pushError.message : String(pushError);
+          this.trackOperation('push', featureId, false, errorMsg);
           logger.warn(`Failed to push branch ${branchName}: ${errorMsg}`);
           result.error = `Push failed: ${errorMsg}`;
           // Continue - commit succeeded, push failed
@@ -374,10 +437,12 @@ export class GitWorkflowService {
               result.prAlreadyExisted = prResult.prAlreadyExisted;
             }
             if (result.prUrl) {
+              this.trackOperation('pr_create', featureId, true);
               logger.info(`PR ${result.prAlreadyExisted ? 'exists' : 'created'}: ${result.prUrl}`);
             }
           } catch (prError) {
             const errorMsg = prError instanceof Error ? prError.message : String(prError);
+            this.trackOperation('pr_create', featureId, false, errorMsg);
             logger.warn(`Failed to create PR for branch ${branchName}: ${errorMsg}`);
             result.error = result.error
               ? `${result.error}; PR failed: ${errorMsg}`
@@ -467,6 +532,7 @@ export class GitWorkflowService {
               result.merged = true;
               result.mergeCommitSha = mergeResult.mergeCommitSha;
               result.prMergedAt = new Date().toISOString();
+              this.trackOperation('merge', featureId, true);
               logger.info(
                 `Successfully merged PR #${result.prNumber}${mergeResult.mergeCommitSha ? ` (commit: ${mergeResult.mergeCommitSha})` : ''}`
               );
@@ -484,6 +550,7 @@ export class GitWorkflowService {
               }
             } else {
               result.merged = false;
+              this.trackOperation('merge', featureId, false, mergeResult.error);
               logger.warn(`Failed to merge PR #${result.prNumber}: ${mergeResult.error}`);
 
               // Add merge error to result but don't fail the entire workflow
@@ -501,6 +568,7 @@ export class GitWorkflowService {
             }
           } catch (mergeError) {
             const errorMsg = mergeError instanceof Error ? mergeError.message : String(mergeError);
+            this.trackOperation('merge', featureId, false, errorMsg);
             logger.error(`Error during auto-merge for PR #${result.prNumber}: ${errorMsg}`);
             result.merged = false;
             result.error = result.error
@@ -510,11 +578,13 @@ export class GitWorkflowService {
         }
       }
 
+      this.activeWorkflows--;
       return result;
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       logger.error(`Git workflow failed for feature ${featureId}: ${errorMsg}`);
       result.error = errorMsg;
+      this.activeWorkflows--;
       return result;
     }
   }
