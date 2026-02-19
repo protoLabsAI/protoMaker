@@ -1,5 +1,5 @@
 /**
- * FlowGraphCanvas — React Flow canvas with Background, MiniMap, and a11y
+ * FlowGraphCanvas — React Flow canvas with Background, Controls, and a11y
  *
  * Uses controlled mode — nodes/edges are driven by props.
  * Draggable nodes use onNodesChange to handle position updates.
@@ -11,6 +11,7 @@ import {
   Background,
   BackgroundVariant,
   Controls,
+  ControlButton,
   useNodesState,
   useEdgesState,
   type Node,
@@ -19,6 +20,7 @@ import {
   type OnEdgesChange,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import { Info } from 'lucide-react';
 import { nodeTypes } from './nodes';
 import { edgeTypes } from './edges';
 
@@ -26,12 +28,16 @@ interface FlowGraphCanvasProps {
   nodes: Node[];
   edges: Edge[];
   onNodeClick?: (nodeId: string, nodeType: string, nodeData: Record<string, unknown>) => void;
+  showLegend?: boolean;
+  onToggleLegend?: () => void;
 }
 
 export function FlowGraphCanvas({
   nodes: externalNodes,
   edges: externalEdges,
   onNodeClick,
+  showLegend,
+  onToggleLegend,
 }: FlowGraphCanvasProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState(externalNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(externalEdges);
@@ -81,7 +87,11 @@ export function FlowGraphCanvas({
         <Controls
           showInteractive={false}
           className="!bg-card/90 !border-border/50 !rounded-lg !shadow-lg backdrop-blur-sm [&>button]:!bg-transparent [&>button]:!border-border/30 [&>button]:!text-foreground [&>button:hover]:!bg-accent"
-        />
+        >
+          <ControlButton onClick={onToggleLegend} title="Legend">
+            <Info className={`w-3.5 h-3.5 ${showLegend ? 'text-violet-400' : ''}`} />
+          </ControlButton>
+        </Controls>
       </ReactFlow>
     </div>
   );

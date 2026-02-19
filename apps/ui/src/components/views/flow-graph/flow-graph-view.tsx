@@ -1,19 +1,15 @@
 /**
  * FlowGraphView — Main view component
  *
- * Composes data hooks -> canvas + floating panels.
+ * Composes data hooks -> canvas + legend overlay.
  * Click any node to open a detail dialog.
+ * Floating panels (metrics, health, charts, events) have been moved to the global bottom panel.
  */
 
 import { useCallback, useState } from 'react';
 import { ReactFlowProvider } from '@xyflow/react';
 import { useFlowGraphData } from './hooks';
 import { FlowGraphCanvas } from './flow-graph-canvas';
-import { MetricsPanel } from './panels/metrics-panel';
-import { HealthPanel } from './panels/health-panel';
-import { ChartsPanel } from './panels/charts-panel';
-import { EventStreamPanel } from './panels/event-stream-panel';
-import { PanelToolbar } from './panels/panel-toolbar';
 import { FlowGraphLegend } from './flow-graph-legend';
 import { NodeDetailDialog, type SelectedNode } from './dialogs/node-detail-dialog';
 
@@ -22,15 +18,11 @@ export interface FlowGraphViewProps {
   onFeatureClick?: (featureId: string) => void;
 }
 
-export function FlowGraphView({ projectPath, onFeatureClick }: FlowGraphViewProps) {
+export function FlowGraphView({ onFeatureClick }: FlowGraphViewProps) {
   const { nodes, edges } = useFlowGraphData();
 
-  // Panel visibility state
-  const [showMetrics, setShowMetrics] = useState(true);
-  const [showHealth, setShowHealth] = useState(false);
-  const [showCharts, setShowCharts] = useState(false);
+  // Legend visibility
   const [showLegend, setShowLegend] = useState(false);
-  const [showEventStream, setShowEventStream] = useState(false);
 
   // Node detail dialog state
   const [selectedNode, setSelectedNode] = useState<SelectedNode | null>(null);
@@ -53,52 +45,18 @@ export function FlowGraphView({ projectPath, onFeatureClick }: FlowGraphViewProp
   return (
     <div className="relative w-full h-full overflow-hidden bg-background">
       <ReactFlowProvider>
-        <FlowGraphCanvas nodes={nodes} edges={edges} onNodeClick={handleNodeClick} />
+        <FlowGraphCanvas
+          nodes={nodes}
+          edges={edges}
+          onNodeClick={handleNodeClick}
+          showLegend={showLegend}
+          onToggleLegend={() => setShowLegend((v) => !v)}
+        />
       </ReactFlowProvider>
 
-      {/* Floating panel toolbar */}
-      <div className="absolute top-4 right-4 z-10">
-        <PanelToolbar
-          showMetrics={showMetrics}
-          showHealth={showHealth}
-          showCharts={showCharts}
-          showLegend={showLegend}
-          showEventStream={showEventStream}
-          onToggleMetrics={() => setShowMetrics((v) => !v)}
-          onToggleHealth={() => setShowHealth((v) => !v)}
-          onToggleCharts={() => setShowCharts((v) => !v)}
-          onToggleLegend={() => setShowLegend((v) => !v)}
-          onToggleEventStream={() => setShowEventStream((v) => !v)}
-        />
-      </div>
-
-      {/* Floating panels */}
-      {showMetrics && (
-        <div className="absolute top-16 right-4 z-10 w-72">
-          <MetricsPanel projectPath={projectPath} />
-        </div>
-      )}
-
-      {showHealth && (
-        <div className="absolute top-16 left-4 z-10 w-64">
-          <HealthPanel projectPath={projectPath} />
-        </div>
-      )}
-
-      {showCharts && (
-        <div className="absolute bottom-4 right-4 z-10 w-96">
-          <ChartsPanel projectPath={projectPath} />
-        </div>
-      )}
-
-      {showEventStream && (
-        <div className="absolute bottom-4 left-4 z-10 w-[600px]">
-          <EventStreamPanel onClose={() => setShowEventStream(false)} />
-        </div>
-      )}
-
-      {showLegend && !showEventStream && (
-        <div className="absolute bottom-4 left-4 z-10">
+      {/* Legend popup near controls (bottom-left) */}
+      {showLegend && (
+        <div className="absolute bottom-14 left-4 z-10">
           <FlowGraphLegend />
         </div>
       )}
