@@ -117,12 +117,12 @@ export const ENGINE_SERVICES: Array<{
     position: { x: 1100, y: 280 },
   },
 
-  // Reflection (bottom, y=680)
+  // Reflection (bottom, y=840)
   {
     nodeId: NODE_IDS.reflection,
     serviceId: 'reflection',
     label: 'Reflection Loop',
-    position: { x: 600, y: 680 },
+    position: { x: 600, y: 840 },
   },
 ];
 
@@ -137,7 +137,7 @@ export const INTEGRATION_POSITIONS: Record<string, { x: number; y: number }> = {
 };
 
 // Dynamic feature/agent zone starts below reflection
-export const DYNAMIC_ZONE_START_Y = 820;
+export const DYNAMIC_ZONE_START_Y = 1000;
 export const DYNAMIC_ZONE_CENTER_X = 600;
 
 // ============================================
@@ -314,7 +314,7 @@ export const PIPELINE_STAGES: Array<{
     nodeId: NODE_IDS.pipelineBlocked,
     stageId: 'blocked',
     label: 'Blocked',
-    position: { x: 600, y: 630 },
+    position: { x: 475, y: 660 },
   },
 ];
 
