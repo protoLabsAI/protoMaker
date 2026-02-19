@@ -4,7 +4,6 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { createLogger } from '@automaker/utils/logger';
 import { Sidebar } from '@/components/layout/sidebar';
-import { ProjectSwitcher } from '@/components/layout/project-switcher';
 import { ChatSidebar } from '@/components/views/chat/chat-sidebar';
 import { ChatModal, useChatModalShortcut } from '@/components/layout/chat-modal';
 import {
@@ -826,9 +825,6 @@ function RootLayoutContent() {
 
   // Show project switcher on all app pages (not on dashboard, setup, or login)
   // Also hide on compact screens (< 1240px) - the sidebar will show a logo instead
-  const showProjectSwitcher =
-    !isDashboardRoute && !isSetupRoute && !isLoginRoute && !isLoggedOutRoute && !isCompact;
-
   return (
     <>
       <main className="flex h-screen overflow-hidden" data-testid="app-container">
@@ -839,7 +835,6 @@ function RootLayoutContent() {
             aria-hidden="true"
           />
         )}
-        {showProjectSwitcher && <ProjectSwitcher />}
         <Sidebar />
         <div className="flex-1 flex flex-col overflow-hidden">
           <Outlet />
