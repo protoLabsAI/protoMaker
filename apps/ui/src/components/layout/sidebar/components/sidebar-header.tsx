@@ -41,24 +41,7 @@ export function SidebarHeader({
         isMac && isElectron() && 'pt-[10px]'
       )}
     >
-      {/* Mobile close button - only visible on mobile when sidebar is open */}
-      {sidebarOpen && onClose && (
-        <button
-          onClick={onClose}
-          className={cn(
-            'lg:hidden absolute top-3 right-3 z-10',
-            'flex items-center justify-center w-8 h-8 rounded-lg',
-            'bg-muted/50 hover:bg-muted',
-            'text-muted-foreground hover:text-foreground',
-            'transition-colors duration-200'
-          )}
-          aria-label="Close navigation"
-          data-testid="sidebar-mobile-close"
-        >
-          <X className="w-5 h-5" />
-        </button>
-      )}
-      {/* Mobile expand button - hamburger menu to expand sidebar when collapsed on mobile */}
+      {/* Expand button - hamburger menu when sidebar is collapsed */}
       {!sidebarOpen && onExpand && (
         <button
           onClick={onExpand}
@@ -69,109 +52,128 @@ export function SidebarHeader({
             'transition-colors duration-200'
           )}
           aria-label="Expand navigation"
-          data-testid="sidebar-mobile-expand"
+          data-testid="sidebar-expand"
         >
           <Menu className="w-5 h-5" />
         </button>
       )}
-      {/* Project name and icon display - entire element clickable on mobile */}
+      {/* Project switcher row with close button */}
       {currentProject && (
-        <Popover open={projectListOpen} onOpenChange={setProjectListOpen}>
-          <PopoverTrigger asChild>
-            <button
-              className={cn(
-                'flex items-center gap-3 px-4 pt-3 pb-1 w-full text-left',
-                'rounded-lg transition-colors duration-150',
-                !sidebarOpen && 'justify-center px-2',
-                'hover:bg-accent/50 cursor-pointer'
-              )}
-              title="Switch project"
-            >
-              {/* Project Icon */}
-              <div className="shrink-0">
-                {hasCustomIcon ? (
-                  <img
-                    src={getAuthenticatedImageUrl(
-                      currentProject.customIconPath!,
-                      currentProject.path
-                    )}
-                    alt={currentProject.name}
-                    className="w-8 h-8 rounded-lg object-cover ring-1 ring-border/50"
-                  />
-                ) : (
-                  <div className="w-8 h-8 rounded-lg bg-brand-500/10 border border-brand-500/20 flex items-center justify-center">
-                    <IconComponent className="w-5 h-5 text-brand-500" />
-                  </div>
+        <div className={cn('flex items-center', sidebarOpen ? 'px-2 pt-3 pb-1 gap-1' : 'pt-1')}>
+          <Popover open={projectListOpen} onOpenChange={setProjectListOpen}>
+            <PopoverTrigger asChild>
+              <button
+                className={cn(
+                  'flex items-center gap-3 text-left flex-1 min-w-0',
+                  'rounded-lg transition-colors duration-150',
+                  sidebarOpen ? 'px-2 py-1.5' : 'justify-center px-2 py-2',
+                  'hover:bg-accent/50 cursor-pointer'
                 )}
-              </div>
+                title="Switch project"
+              >
+                {/* Project Icon */}
+                <div className="shrink-0">
+                  {hasCustomIcon ? (
+                    <img
+                      src={getAuthenticatedImageUrl(
+                        currentProject.customIconPath!,
+                        currentProject.path
+                      )}
+                      alt={currentProject.name}
+                      className="w-8 h-8 rounded-lg object-cover ring-1 ring-border/50"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-lg bg-brand-500/10 border border-brand-500/20 flex items-center justify-center">
+                      <IconComponent className="w-5 h-5 text-brand-500" />
+                    </div>
+                  )}
+                </div>
 
-              {/* Project Name - only show when sidebar is open */}
-              {sidebarOpen && (
-                <>
-                  <div className="flex-1 min-w-0">
-                    <h2 className="text-sm font-semibold text-foreground truncate">
-                      {currentProject.name}
-                    </h2>
-                  </div>
-                  <ChevronsUpDown className="w-4 h-4 text-muted-foreground shrink-0" />
-                </>
-              )}
-            </button>
-          </PopoverTrigger>
-          <PopoverContent className="w-64 p-2" align="start" side="bottom" sideOffset={8}>
-            <div className="space-y-1">
-              <p className="text-xs font-medium text-muted-foreground px-2 py-1">Switch Project</p>
-              {projects.map((project) => {
-                const ProjectIcon =
-                  project.icon && project.icon in LucideIcons
-                    ? (LucideIcons as unknown as Record<string, LucideIcon>)[project.icon]
-                    : Folder;
-                const isActive = currentProject?.id === project.id;
+                {/* Project Name - only show when sidebar is open */}
+                {sidebarOpen && (
+                  <>
+                    <div className="flex-1 min-w-0">
+                      <h2 className="text-sm font-semibold text-foreground truncate">
+                        {currentProject.name}
+                      </h2>
+                    </div>
+                    <ChevronsUpDown className="w-4 h-4 text-muted-foreground shrink-0" />
+                  </>
+                )}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 p-2" align="start" side="bottom" sideOffset={8}>
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-muted-foreground px-2 py-1">
+                  Switch Project
+                </p>
+                {projects.map((project) => {
+                  const ProjectIcon =
+                    project.icon && project.icon in LucideIcons
+                      ? (LucideIcons as unknown as Record<string, LucideIcon>)[project.icon]
+                      : Folder;
+                  const isActive = currentProject?.id === project.id;
 
-                return (
-                  <button
-                    key={project.id}
-                    onClick={() => {
-                      setCurrentProject(project);
-                      setProjectListOpen(false);
-                    }}
-                    className={cn(
-                      'w-full flex items-center gap-3 px-2 py-2 rounded-lg text-left',
-                      'transition-colors duration-150',
-                      isActive
-                        ? 'bg-brand-500/10 text-brand-500'
-                        : 'hover:bg-accent text-foreground'
-                    )}
-                  >
-                    {project.customIconPath ? (
-                      <img
-                        src={getAuthenticatedImageUrl(project.customIconPath, project.path)}
-                        alt={project.name}
-                        className="w-6 h-6 rounded object-cover ring-1 ring-border/50"
-                      />
-                    ) : (
-                      <div
-                        className={cn(
-                          'w-6 h-6 rounded flex items-center justify-center',
-                          isActive ? 'bg-brand-500/20' : 'bg-muted'
-                        )}
-                      >
-                        <ProjectIcon
-                          className={cn(
-                            'w-4 h-4',
-                            isActive ? 'text-brand-500' : 'text-muted-foreground'
-                          )}
+                  return (
+                    <button
+                      key={project.id}
+                      onClick={() => {
+                        setCurrentProject(project);
+                        setProjectListOpen(false);
+                      }}
+                      className={cn(
+                        'w-full flex items-center gap-3 px-2 py-2 rounded-lg text-left',
+                        'transition-colors duration-150',
+                        isActive
+                          ? 'bg-brand-500/10 text-brand-500'
+                          : 'hover:bg-accent text-foreground'
+                      )}
+                    >
+                      {project.customIconPath ? (
+                        <img
+                          src={getAuthenticatedImageUrl(project.customIconPath, project.path)}
+                          alt={project.name}
+                          className="w-6 h-6 rounded object-cover ring-1 ring-border/50"
                         />
-                      </div>
-                    )}
-                    <span className="flex-1 text-sm truncate">{project.name}</span>
-                    {isActive && <Check className="w-4 h-4 text-brand-500" />}
-                  </button>
-                );
-              })}
-            </div>
-          </PopoverContent>
-        </Popover>
+                      ) : (
+                        <div
+                          className={cn(
+                            'w-6 h-6 rounded flex items-center justify-center',
+                            isActive ? 'bg-brand-500/20' : 'bg-muted'
+                          )}
+                        >
+                          <ProjectIcon
+                            className={cn(
+                              'w-4 h-4',
+                              isActive ? 'text-brand-500' : 'text-muted-foreground'
+                            )}
+                          />
+                        </div>
+                      )}
+                      <span className="flex-1 text-sm truncate">{project.name}</span>
+                      {isActive && <Check className="w-4 h-4 text-brand-500" />}
+                    </button>
+                  );
+                })}
+              </div>
+            </PopoverContent>
+          </Popover>
+          {/* Close sidebar button - visible when expanded */}
+          {sidebarOpen && onClose && (
+            <button
+              onClick={onClose}
+              className={cn(
+                'shrink-0 flex items-center justify-center w-8 h-8 rounded-lg',
+                'text-muted-foreground hover:text-foreground hover:bg-muted/50',
+                'transition-colors duration-150'
+              )}
+              aria-label="Close sidebar"
+              data-testid="sidebar-close"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       )}
     </div>
   );

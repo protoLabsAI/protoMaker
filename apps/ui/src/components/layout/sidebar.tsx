@@ -18,7 +18,6 @@ import { CreateSpecDialog } from '@/components/views/spec-view/dialogs';
 import {
   AutomakerLogo,
   AvaPresenceButton,
-  CollapseToggleButton,
   QuickActionsBar,
   SidebarHeader,
   SidebarNavigation,
@@ -26,7 +25,6 @@ import {
   MobileSidebarToggle,
 } from './sidebar/components';
 import { useIsCompact } from '@/hooks/use-media-query';
-import { PanelLeftClose } from 'lucide-react';
 import { TrashDialog, OnboardingDialog } from './sidebar/dialogs';
 import { SIDEBAR_FEATURE_FLAGS } from './sidebar/constants';
 import {
@@ -52,7 +50,6 @@ export function Sidebar() {
     projectHistory,
     upsertAndSetCurrentProject,
     toggleSidebar,
-    toggleMobileSidebarHidden,
     restoreTrashedProject,
     deleteTrashedProject,
     emptyTrash,
@@ -282,32 +279,6 @@ export function Sidebar() {
         )}
         data-testid="sidebar"
       >
-        <CollapseToggleButton
-          sidebarOpen={sidebarOpen}
-          toggleSidebar={toggleSidebar}
-          shortcut={shortcuts.toggleSidebar}
-        />
-
-        {/* Floating hide button on right edge - only visible on compact screens when sidebar is collapsed */}
-        {!sidebarOpen && isCompact && (
-          <button
-            onClick={toggleMobileSidebarHidden}
-            className={cn(
-              'absolute -right-6 top-1/2 -translate-y-1/2 z-40',
-              'flex items-center justify-center w-6 h-10 rounded-r-lg',
-              'bg-card/95 backdrop-blur-sm border border-l-0 border-border/80',
-              'text-muted-foreground hover:text-brand-500 hover:bg-accent/80',
-              'shadow-lg hover:shadow-xl hover:shadow-brand-500/10',
-              'transition-all duration-200',
-              'hover:w-8 active:scale-95'
-            )}
-            aria-label="Hide sidebar"
-            data-testid="sidebar-mobile-hide"
-          >
-            <PanelLeftClose className="w-3.5 h-3.5" />
-          </button>
-        )}
-
         <div className="flex-1 flex flex-col overflow-hidden">
           <SidebarHeader
             sidebarOpen={sidebarOpen}
