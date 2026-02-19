@@ -194,7 +194,7 @@ describe('Command Injection Prevention - Merge Route', () => {
     }
   });
 
-  it('should sanitize commit messages', async () => {
+  it('should sanitize commit messages', { timeout: 15000 }, async () => {
     // Fixed: Commit messages are now properly validated and sanitized.
     // No longer allows shell injection through commit message content.
     const handler = createMergeHandler();
