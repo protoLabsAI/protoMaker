@@ -2851,6 +2851,14 @@ export class HttpApiClient implements ElectronAPI {
       this.post('/api/system/health-dashboard', { projectPath }),
   };
 
+  // Engine API
+  engine = {
+    status: () => this.post('/api/engine/status', {}),
+    autoModeDetail: () => this.post('/api/engine/auto-mode/detail', {}),
+    prFeedbackDetail: () => this.post('/api/engine/pr-feedback/detail', {}),
+    leadEngineerDetail: () => this.post('/api/engine/lead-engineer/detail', {}),
+  };
+
   // Voice API
   voice = {
     transcribe: (pcmBuffer: ArrayBuffer) =>

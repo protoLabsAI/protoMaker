@@ -176,6 +176,7 @@ import { LinearIntakeBridge } from './services/linear-intake-bridge.js';
 import { createDeployRoutes } from './routes/deploy/index.js';
 import { createIntegrityRoutes } from './routes/integrity.js';
 import { createAnalyticsRoutes } from './routes/analytics.js';
+import { createEngineRoutes } from './routes/engine/index.js';
 import { AntagonisticReviewService } from './services/antagonistic-review-service.js';
 import { createLangfuseRoutes } from './routes/langfuse/index.js';
 import { createChatRoutes } from './routes/chat/index.js';
@@ -1129,6 +1130,7 @@ app.use('/api/analytics', createAnalyticsRoutes());
 // Lead Engineer routes (production-phase nerve center)
 const { createLeadEngineerRoutes } = await import('./routes/lead-engineer/index.js');
 app.use('/api/lead-engineer', createLeadEngineerRoutes(leadEngineerService));
+app.use('/api/engine', createEngineRoutes(autoModeService, leadEngineerService, prFeedbackService));
 app.use('/api/langfuse', createLangfuseRoutes());
 app.use(
   '/api/flows',

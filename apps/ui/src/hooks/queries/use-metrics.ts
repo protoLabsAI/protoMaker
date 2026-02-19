@@ -155,6 +155,25 @@ export function useCycleTimeDistribution(
   });
 }
 
+const ENGINE_STATUS_STALE_TIME = 10 * 1000; // 10 seconds
+
+/**
+ * Fetch real-time engine status (all services: signal intake, auto-mode, agent execution, etc.)
+ */
+export function useEngineStatus() {
+  return useQuery({
+    queryKey: queryKeys.engine.status(),
+    queryFn: async () => {
+      const api = getHttpApiClient();
+      return api.engine.status();
+    },
+    staleTime: ENGINE_STATUS_STALE_TIME,
+    refetchInterval: ENGINE_STATUS_STALE_TIME,
+    refetchOnWindowFocus: false,
+    retry: 2,
+  });
+}
+
 const INTEGRATION_STALE_TIME = 30 * 1000; // 30 seconds
 const SYSTEM_HEALTH_STALE_TIME = 15 * 1000; // 15 seconds
 const ACTIVITY_FEED_STALE_TIME = 10 * 1000; // 10 seconds

@@ -40,8 +40,8 @@ const EVENT_STAGE_MAP: Partial<Record<EventType, PipelineStageId>> = {
   'pr:ci-failure': 'test',
 
   // Verify - Ralph verification
-  'ralph:verification-started': 'verify',
-  'ralph:verification-completed': 'verify',
+  'ralph:verification_started': 'verify',
+  'ralph:verification_completed': 'verify',
   'ralph:verified': 'verify',
   'feature:verified': 'verify',
 
@@ -64,6 +64,7 @@ export interface StageAggregate {
   stageId: PipelineStageId;
   status: PipelineStageStatus;
   itemCount: number;
+  workItems: TrackedWorkItem[];
 }
 
 export interface UsePipelineTrackerResult {
@@ -177,7 +178,12 @@ export function usePipelineTracker(): UsePipelineTrackerResult {
       // If any items in this stage, mark as active
       if (stageId === 'blocked') {
         status = 'blocked';
-      } else if (items.some((item) => item.metadata?.lastEventType?.includes('error'))) {
+      } else if (
+        items.some((item) => {
+          const lastEvent = item.metadata?.lastEventType;
+          return typeof lastEvent === 'string' && lastEvent.includes('error');
+        })
+      ) {
         status = 'error';
       } else {
         status = 'active';
@@ -188,6 +194,7 @@ export function usePipelineTracker(): UsePipelineTrackerResult {
       stageId: stageId as PipelineStageId,
       status,
       itemCount,
+      workItems: items,
     };
   });
 

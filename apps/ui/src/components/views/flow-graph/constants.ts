@@ -1,23 +1,26 @@
 /**
  * Flow Graph Constants
  *
- * Static node positions and edge topology for the system flow graph.
- * Static nodes (Ava, services, integrations) use fixed positions.
- * Dynamic nodes (features, agents) use dagre layout below center.
+ * Real engine topology: left-to-right service flow with pipeline stages below.
+ * Services represent actual runtime components; integrations are external systems.
+ * Dynamic nodes (features, agents) attach to their current pipeline stage.
  */
 
-import type { FlowEdge, PipelineStageId } from './types';
+import type { FlowEdge, PipelineStageId, EngineServiceId } from './types';
 
 // ============================================
 // Static Node IDs
 // ============================================
 
 export const NODE_IDS = {
-  ava: 'ava',
-  // Services
-  autoMode: 'service-auto-mode',
-  leadEngineer: 'service-lead-engineer',
-  // Integrations
+  // Engine services (left-to-right flow)
+  signalIntake: 'engine-signal-intake',
+  autoMode: 'engine-auto-mode',
+  agentExecution: 'engine-agent-execution',
+  gitWorkflow: 'engine-git-workflow',
+  prFeedback: 'engine-pr-feedback',
+  leadEngineerRules: 'engine-lead-engineer-rules',
+  // Integrations (external systems)
   github: 'integration-github',
   linear: 'integration-linear',
   discord: 'integration-discord',
@@ -33,59 +36,142 @@ export const NODE_IDS = {
 } as const;
 
 // ============================================
-// Static Positions (manual layout)
+// Engine Service Definitions
 // ============================================
 
-const CENTER = { x: 600, y: 350 };
+export const ENGINE_SERVICES: Array<{
+  nodeId: string;
+  serviceId: EngineServiceId;
+  label: string;
+  position: { x: number; y: number };
+}> = [
+  {
+    nodeId: NODE_IDS.signalIntake,
+    serviceId: 'signal-intake',
+    label: 'Signal Intake',
+    position: { x: 100, y: 200 },
+  },
+  {
+    nodeId: NODE_IDS.autoMode,
+    serviceId: 'auto-mode',
+    label: 'Auto-Mode',
+    position: { x: 400, y: 200 },
+  },
+  {
+    nodeId: NODE_IDS.agentExecution,
+    serviceId: 'agent-execution',
+    label: 'Agent Execution',
+    position: { x: 700, y: 200 },
+  },
+  {
+    nodeId: NODE_IDS.gitWorkflow,
+    serviceId: 'git-workflow',
+    label: 'Git Workflow',
+    position: { x: 1000, y: 200 },
+  },
+  {
+    nodeId: NODE_IDS.prFeedback,
+    serviceId: 'pr-feedback',
+    label: 'PR Feedback',
+    position: { x: 1300, y: 200 },
+  },
+  {
+    nodeId: NODE_IDS.leadEngineerRules,
+    serviceId: 'lead-engineer-rules',
+    label: 'Lead Engineer',
+    position: { x: 700, y: 50 },
+  },
+];
 
-export const STATIC_POSITIONS: Record<string, { x: number; y: number }> = {
-  // Ava - center
-  [NODE_IDS.ava]: CENTER,
+// ============================================
+// Integration Node Positions
+// ============================================
 
-  // Services - flanking Ava (~180px from center)
-  [NODE_IDS.autoMode]: { x: CENTER.x - 250, y: CENTER.y + 130 },
-  [NODE_IDS.leadEngineer]: { x: CENTER.x + 250, y: CENTER.y + 130 },
-
-  // Integrations - top row
-  [NODE_IDS.github]: { x: CENTER.x - 350, y: CENTER.y - 300 },
-  [NODE_IDS.linear]: { x: CENTER.x, y: CENTER.y - 320 },
-  [NODE_IDS.discord]: { x: CENTER.x + 350, y: CENTER.y - 300 },
+export const INTEGRATION_POSITIONS: Record<string, { x: number; y: number }> = {
+  [NODE_IDS.github]: { x: 1150, y: 50 },
+  [NODE_IDS.linear]: { x: 1350, y: 50 },
+  [NODE_IDS.discord]: { x: 1550, y: 50 },
 };
 
-// Dynamic feature/agent zone starts below Ava
-export const DYNAMIC_ZONE_START_Y = CENTER.y + 350;
-export const DYNAMIC_ZONE_CENTER_X = CENTER.x;
+// Dynamic feature/agent zone starts below pipeline
+export const DYNAMIC_ZONE_START_Y = 750;
+export const DYNAMIC_ZONE_CENTER_X = 700;
 
 // ============================================
-// Static Edge Definitions
+// Static Edge Definitions (real service flow)
 // ============================================
 
 export const STATIC_EDGES: FlowEdge[] = [
-  // Ava -> Services (delegation)
-  { id: 'e-ava-auto-mode', source: NODE_IDS.ava, target: NODE_IDS.autoMode, type: 'delegation' },
+  // Main pipeline flow: left to right
   {
-    id: 'e-ava-lead-eng',
-    source: NODE_IDS.ava,
-    target: NODE_IDS.leadEngineer,
+    id: 'e-signal-automode',
+    source: NODE_IDS.signalIntake,
+    target: NODE_IDS.autoMode,
+    type: 'workflow',
+  },
+  {
+    id: 'e-automode-agent',
+    source: NODE_IDS.autoMode,
+    target: NODE_IDS.agentExecution,
+    type: 'workflow',
+  },
+  {
+    id: 'e-agent-git',
+    source: NODE_IDS.agentExecution,
+    target: NODE_IDS.gitWorkflow,
+    type: 'workflow',
+  },
+  {
+    id: 'e-git-prfeedback',
+    source: NODE_IDS.gitWorkflow,
+    target: NODE_IDS.prFeedback,
+    type: 'workflow',
+  },
+  // PR feedback remediation loop back to agent execution
+  {
+    id: 'e-prfeedback-agent',
+    source: NODE_IDS.prFeedback,
+    target: NODE_IDS.agentExecution,
+    type: 'workflow',
+    label: 'remediation',
+  },
+
+  // Lead Engineer subscribes to all events (shown connected to key services)
+  {
+    id: 'e-lead-automode',
+    source: NODE_IDS.leadEngineerRules,
+    target: NODE_IDS.autoMode,
+    type: 'delegation',
+  },
+  {
+    id: 'e-lead-agent',
+    source: NODE_IDS.leadEngineerRules,
+    target: NODE_IDS.agentExecution,
     type: 'delegation',
   },
 
-  // Services -> Integrations (integration edges)
+  // Integration edges: services -> external systems
   {
-    id: 'e-auto-mode-github',
-    source: NODE_IDS.autoMode,
+    id: 'e-git-github',
+    source: NODE_IDS.gitWorkflow,
     target: NODE_IDS.github,
     type: 'integration',
   },
   {
-    id: 'e-lead-eng-linear',
-    source: NODE_IDS.leadEngineer,
+    id: 'e-prfeedback-github',
+    source: NODE_IDS.prFeedback,
+    target: NODE_IDS.github,
+    type: 'integration',
+  },
+  {
+    id: 'e-signal-linear',
+    source: NODE_IDS.signalIntake,
     target: NODE_IDS.linear,
     type: 'integration',
   },
   {
-    id: 'e-lead-eng-discord',
-    source: NODE_IDS.leadEngineer,
+    id: 'e-lead-discord',
+    source: NODE_IDS.leadEngineerRules,
     target: NODE_IDS.discord,
     type: 'integration',
   },
@@ -105,49 +191,49 @@ export const PIPELINE_STAGES: Array<{
     nodeId: NODE_IDS.pipelineBacklog,
     stageId: 'backlog',
     label: 'Backlog',
-    position: { x: 100, y: 800 },
+    position: { x: 100, y: 450 },
   },
   {
     nodeId: NODE_IDS.pipelineInProgress,
     stageId: 'in_progress',
     label: 'In Progress',
-    position: { x: 350, y: 800 },
+    position: { x: 350, y: 450 },
   },
   {
     nodeId: NODE_IDS.pipelineReview,
     stageId: 'review',
     label: 'Review',
-    position: { x: 600, y: 800 },
+    position: { x: 600, y: 450 },
   },
   {
     nodeId: NODE_IDS.pipelineMerge,
     stageId: 'merge',
     label: 'Merge',
-    position: { x: 850, y: 800 },
+    position: { x: 850, y: 450 },
   },
   {
     nodeId: NODE_IDS.pipelineTest,
     stageId: 'test',
     label: 'Test',
-    position: { x: 1100, y: 800 },
+    position: { x: 1100, y: 450 },
   },
   {
     nodeId: NODE_IDS.pipelineVerify,
     stageId: 'verify',
     label: 'Verify',
-    position: { x: 1350, y: 800 },
+    position: { x: 1350, y: 450 },
   },
   {
     nodeId: NODE_IDS.pipelineDone,
     stageId: 'done',
     label: 'Done',
-    position: { x: 1600, y: 800 },
+    position: { x: 1600, y: 450 },
   },
   {
     nodeId: NODE_IDS.pipelineBlocked,
     stageId: 'blocked',
     label: 'Blocked',
-    position: { x: 600, y: 950 },
+    position: { x: 600, y: 600 },
   },
 ];
 
@@ -194,5 +280,33 @@ export const PIPELINE_EDGES: FlowEdge[] = [
     source: NODE_IDS.pipelineReview,
     target: NODE_IDS.pipelineBlocked,
     type: 'pipeline',
+  },
+];
+
+// Bridge edges: services -> pipeline stages
+export const BRIDGE_EDGES: FlowEdge[] = [
+  {
+    id: 'e-bridge-signal-backlog',
+    source: NODE_IDS.signalIntake,
+    target: NODE_IDS.pipelineBacklog,
+    type: 'workflow',
+  },
+  {
+    id: 'e-bridge-automode-progress',
+    source: NODE_IDS.autoMode,
+    target: NODE_IDS.pipelineInProgress,
+    type: 'workflow',
+  },
+  {
+    id: 'e-bridge-prfeedback-review',
+    source: NODE_IDS.prFeedback,
+    target: NODE_IDS.pipelineReview,
+    type: 'workflow',
+  },
+  {
+    id: 'e-bridge-git-merge',
+    source: NODE_IDS.gitWorkflow,
+    target: NODE_IDS.pipelineMerge,
+    type: 'workflow',
   },
 ];
