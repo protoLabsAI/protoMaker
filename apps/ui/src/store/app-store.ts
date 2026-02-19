@@ -568,6 +568,8 @@ export interface AppState {
   currentView: ViewMode;
   sidebarOpen: boolean;
   chatSidebarOpen: boolean;
+  bottomPanelOpen: boolean;
+  bottomPanelActiveTab: string;
   mobileSidebarHidden: boolean; // Completely hides sidebar on mobile
 
   // Agent Session state (per-project, keyed by project path)
@@ -997,6 +999,8 @@ export interface AppActions {
   setSidebarOpen: (open: boolean) => void;
   toggleChatSidebar: () => void;
   setChatSidebarOpen: (open: boolean) => void;
+  toggleBottomPanel: () => void;
+  setBottomPanelActiveTab: (tab: string) => void;
   toggleMobileSidebarHidden: () => void;
   setMobileSidebarHidden: (hidden: boolean) => void;
 
@@ -1406,6 +1410,8 @@ const initialState: AppState = {
   currentView: 'welcome',
   sidebarOpen: true,
   chatSidebarOpen: false,
+  bottomPanelOpen: false,
+  bottomPanelActiveTab: 'activity',
   mobileSidebarHidden: false, // Sidebar visible by default on mobile
   lastSelectedSessionByProject: {},
   theme: getStoredTheme() || 'studio-dark', // Use localStorage theme as initial value, fallback to 'studio-dark'
@@ -1867,6 +1873,8 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
   setSidebarOpen: (open) => set({ sidebarOpen: open }),
   toggleChatSidebar: () => set({ chatSidebarOpen: !get().chatSidebarOpen }),
   setChatSidebarOpen: (open) => set({ chatSidebarOpen: open }),
+  toggleBottomPanel: () => set({ bottomPanelOpen: !get().bottomPanelOpen }),
+  setBottomPanelActiveTab: (tab) => set({ bottomPanelActiveTab: tab }),
   toggleMobileSidebarHidden: () => set({ mobileSidebarHidden: !get().mobileSidebarHidden }),
   setMobileSidebarHidden: (hidden) => set({ mobileSidebarHidden: hidden }),
 

@@ -40,12 +40,12 @@ export function NotesTabBar({
 
   return (
     <div className="flex items-center gap-0.5 border-b border-border bg-muted/30 px-1">
-      <div className="flex flex-1 items-center gap-0.5 overflow-x-auto py-1">
+      <div className="flex items-center gap-0.5 overflow-x-auto py-1">
         {tabs.map((tab) => (
           <div
             key={tab.id}
             className={cn(
-              'group flex items-center gap-1 rounded-md px-2.5 py-1 text-xs transition-colors',
+              'group flex items-center gap-0.5 rounded-md px-2 py-1 text-xs transition-colors',
               'cursor-pointer select-none',
               tab.id === activeTabId
                 ? 'bg-background text-foreground shadow-sm'
@@ -71,7 +71,7 @@ export function NotesTabBar({
                 <span className="max-w-[120px] truncate">{tab.name}</span>
                 {tabs.length > 1 && (
                   <button
-                    className="ml-0.5 hidden rounded p-0.5 text-muted-foreground/50 hover:bg-muted hover:text-foreground group-hover:inline-flex"
+                    className="inline-flex rounded p-px text-muted-foreground/50 opacity-0 hover:bg-muted hover:text-foreground group-hover:opacity-100 transition-opacity"
                     onClick={(e) => {
                       e.stopPropagation();
                       onClose(tab.id);
@@ -84,16 +84,16 @@ export function NotesTabBar({
             )}
           </div>
         ))}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-6 shrink-0"
+          onClick={onAdd}
+          title="New tab"
+        >
+          <Plus className="size-3.5" />
+        </Button>
       </div>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="size-6 shrink-0"
-        onClick={onAdd}
-        title="New tab"
-      >
-        <Plus className="size-3.5" />
-      </Button>
     </div>
   );
 }
