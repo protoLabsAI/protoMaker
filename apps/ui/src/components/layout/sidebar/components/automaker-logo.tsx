@@ -46,7 +46,7 @@ export function AutomakerLogo({ sidebarOpen, navigate }: AutomakerLogoProps) {
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 256 256"
           role="img"
-          aria-label="Automaker Logo"
+          aria-label="protoLabs Logo"
           className="size-8 group-hover:rotate-12 transition-transform duration-300 ease-out"
         >
           <defs>
@@ -72,18 +72,11 @@ export function AutomakerLogo({ sidebarOpen, navigate }: AutomakerLogoProps) {
             </filter>
           </defs>
           <rect x="16" y="16" width="224" height="224" rx="56" fill="url(#bg-collapsed)" />
-          <g
-            fill="none"
-            stroke="#FFFFFF"
-            strokeWidth="20"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+          <path
+            d="M128 52 L196 128 L128 204 L60 128 Z"
+            fill="#FFFFFF"
             filter="url(#iconShadow-collapsed)"
-          >
-            <path d="M92 92 L52 128 L92 164" />
-            <path d="M144 72 L116 184" />
-            <path d="M164 92 L204 128 L164 164" />
-          </g>
+          />
         </svg>
         <span className="text-[0.625rem] text-muted-foreground leading-none font-medium">
           v{appVersion} {versionSuffix}
@@ -98,7 +91,7 @@ export function AutomakerLogo({ sidebarOpen, navigate }: AutomakerLogoProps) {
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 256 256"
               role="img"
-              aria-label="automaker"
+              aria-label="protoLabs"
               className="h-8 w-8 lg:h-[36.8px] lg:w-[36.8px] shrink-0 group-hover:rotate-12 transition-transform duration-300 ease-out"
             >
               <defs>
@@ -124,21 +117,14 @@ export function AutomakerLogo({ sidebarOpen, navigate }: AutomakerLogoProps) {
                 </filter>
               </defs>
               <rect x="16" y="16" width="224" height="224" rx="56" fill="url(#bg-expanded)" />
-              <g
-                fill="none"
-                stroke="#FFFFFF"
-                strokeWidth="20"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+              <path
+                d="M128 52 L196 128 L128 204 L60 128 Z"
+                fill="#FFFFFF"
                 filter="url(#iconShadow-expanded)"
-              >
-                <path d="M92 92 L52 128 L92 164" />
-                <path d="M144 72 L116 184" />
-                <path d="M164 92 L204 128 L164 164" />
-              </g>
+              />
             </svg>
             <span className="font-bold text-foreground text-xl lg:text-[1.7rem] tracking-tight leading-none translate-y-[-2px]">
-              automaker<span className="text-brand-500">.</span>
+              proto<span className="text-brand-400">Labs</span>
             </span>
           </div>
           <span className="text-[0.625rem] text-muted-foreground leading-none font-medium ml-9 lg:ml-[38.8px]">

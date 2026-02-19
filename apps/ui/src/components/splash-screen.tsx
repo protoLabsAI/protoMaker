@@ -202,12 +202,12 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
           }}
         />
 
-        {/* The logo */}
+        {/* The logo — diamond icon */}
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 256 256"
           role="img"
-          aria-label="Automaker Logo"
+          aria-label="protoLabs Logo"
           className="relative z-10"
           style={{
             width: 120,
@@ -238,22 +238,15 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
             </filter>
           </defs>
           <rect x="16" y="16" width="224" height="224" rx="56" fill="url(#splash-bg)" />
-          <g
-            fill="none"
-            stroke="#FFFFFF"
-            strokeWidth="20"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+          <path
+            d="M128 52 L196 128 L128 204 L60 128 Z"
+            fill="#FFFFFF"
             filter="url(#splash-shadow)"
-          >
-            <path d="M92 92 L52 128 L92 164" />
-            <path d="M144 72 L116 184" />
-            <path d="M164 92 L204 128 L164 164" />
-          </g>
+          />
         </svg>
       </div>
 
-      {/* Automaker text that fades in below the logo */}
+      {/* protoLabs text that fades in below the logo */}
       <div
         className="absolute flex items-center gap-1"
         style={{
@@ -274,7 +267,7 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
         }}
       >
         <span className="font-bold text-foreground text-4xl tracking-tight leading-none">
-          automaker<span className="text-brand-500">.</span>
+          proto<span className="text-brand-400">Labs</span>
         </span>
       </div>
     </div>

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 80" role="img" aria-label="protoLabs Logo">
+  <defs>
+    <linearGradient id="diamond-gradient" x1="0" y1="0" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#c4b5fd" />
+      <stop offset="100%" stop-color="#7c3aed" />
+    </linearGradient>
+  </defs>
+  <!-- Diamond on rounded-square background -->
+  <rect x="4" y="12" width="56" height="56" rx="14" fill="url(#diamond-gradient)" />
+  <path d="M32 22 L52 40 L32 58 L12 40 Z" fill="#FFFFFF" />
+  <!-- proto text -->
+  <text x="72" y="52" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-weight="700" font-size="36" fill="#FFFFFF" letter-spacing="-0.02em">proto</text>
+  <!-- Labs text -->
+  <text x="174" y="52" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-weight="700" font-size="36" fill="#a78bfa" letter-spacing="-0.02em">Labs</text>
+</svg>

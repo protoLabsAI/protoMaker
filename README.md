@@ -1,20 +1,20 @@
 <p align="center">
-  <img src="apps/ui/public/readme_logo.svg" alt="protoLabs Studio Logo" height="80" />
+  <img src="apps/ui/public/readme_logo.svg" alt="protoLabs.studio Logo" height="80" />
 </p>
 
 > **[!NOTE]**
 >
-> **protoLabs Studio** is a fork of [Automaker](https://github.com/AutoMaker-Org/automaker) by Proto Labs AI, evolved to support **multi-agent swarm management** across teams and projects. We're grateful to the original Automaker team for the foundation that made this possible.
+> **[protoLabs.studio](https://protolabs.studio)** is a fork of [Automaker](https://github.com/AutoMaker-Org/automaker) by Proto Labs AI, evolved to support **multi-agent swarm management** across teams and projects. We're grateful to the original Automaker team for the foundation that made this possible.
 
 > **[!TIP]**
 >
 > **Learn more about Agentic Coding!**
 >
-> protoLabs Studio was built using AI and agentic coding techniques, leveraging tools like Cursor IDE and Claude Code CLI to orchestrate AI agents that implement complex functionality in days instead of weeks.
+> protoLabs.studio was built using AI and agentic coding techniques, leveraging tools like Cursor IDE and Claude Code CLI to orchestrate AI agents that implement complex functionality in days instead of weeks.
 >
 > **Learn how:** Master these same techniques and workflows in the [Agentic Jumpstart course](https://agenticjumpstart.com/?utm=protomaker-gh).
 
-# protoLabs Studio
+# protoLabs.studio
 
 _made with [automaker](https://github.com/AutoMaker-Org/automaker)_
 
@@ -23,7 +23,7 @@ _made with [automaker](https://github.com/AutoMaker-Org/automaker)_
 <details open>
 <summary><h2>Table of Contents</h2></summary>
 
-- [What Makes protoLabs Studio Different?](#what-makes-protolabs-studio-different)
+- [What Makes protoLabs.studio Different?](#what-makes-protolabsstudio-different)
   - [The Workflow](#the-workflow)
   - [Powered by Claude Agent SDK](#powered-by-claude-agent-sdk)
   - [Why This Matters](#why-this-matters)
@@ -64,22 +64,22 @@ _made with [automaker](https://github.com/AutoMaker-Org/automaker)_
 
 </details>
 
-protoLabs Studio is an **autonomous AI development studio** that transforms how teams build software at scale. Instead of manually writing code, you orchestrate **swarms of AI agents** across multiple projects, teams, and communication channels. Agents collaborate through Linear (planning) and Discord (communication), working together like an agile development team—but fully autonomous.
+protoLabs.studio is an **autonomous AI development studio** that transforms how teams build software at scale. Instead of manually writing code, you orchestrate **swarms of AI agents** across multiple projects, teams, and communication channels. Agents collaborate through Linear (planning) and Discord (communication), working together like an agile development team—but fully autonomous.
 
-Built with React, Vite, Electron, Express, and powered by Claude Agent SDK, protoLabs Studio provides enterprise-grade workflow orchestration for managing multiple AI agents through a desktop application (or web browser), with features like real-time streaming, git worktree isolation, Linear project sync, Discord thread management, and cross-team collaboration.
+Built with React, Vite, Electron, Express, and powered by Claude Agent SDK, protoLabs.studio provides enterprise-grade workflow orchestration for managing multiple AI agents through a desktop application (or web browser), with features like real-time streaming, git worktree isolation, Linear project sync, Discord thread management, and cross-team collaboration.
 
-![protoLabs Studio UI](https://i.imgur.com/jdwKydM.png)
+![protoLabs.studio UI](https://i.imgur.com/jdwKydM.png)
 
-## What Makes protoLabs Studio Different?
+## What Makes protoLabs.studio Different?
 
-Traditional development tools help you write code. **protoLabs Studio orchestrates swarms of AI agents** across your entire organization. Think of it as having multiple AI development teams working simultaneously—you define projects in Linear, agents implement features autonomously, and teams collaborate through Discord threads. It's **swarm management, agile style.**
+Traditional development tools help you write code. **protoLabs.studio orchestrates swarms of AI agents** across your entire organization. Think of it as having multiple AI development teams working simultaneously—you define projects in Linear, agents implement features autonomously, and teams collaborate through Discord threads. It's **swarm management, agile style.**
 
 ### The Evolution from Automaker
 
-protoLabs Studio extends the original Automaker concept with:
+protoLabs.studio extends the original Automaker concept with:
 
 - **Multi-project orchestration**: Manage agents across multiple codebases simultaneously
-- **Linear integration**: Planning and project management in Linear, execution in protoLabs Studio
+- **Linear integration**: Planning and project management in Linear, execution in protoLabs.studio
 - **Discord collaboration**: Real-time updates, threaded discussions, and team communication
 - **Swarm intelligence**: Agents can collaborate across teams and projects
 - **Enterprise scale**: Built for organizations with multiple products and teams
@@ -87,7 +87,7 @@ protoLabs Studio extends the original Automaker concept with:
 ### The Workflow
 
 1. **Plan in Linear** - Create issues and projects in Linear for your team's work
-2. **Sync to protoLabs Studio** - Features automatically sync to the protoLabs Studio board
+2. **Sync to protoLabs.studio** - Features automatically sync to the protoLabs.studio board
 3. **Agents Execute** - AI agents pick up features and implement them autonomously
 4. **Collaborate in Discord** - Watch real-time updates, discuss progress in threads
 5. **Ship at Scale** - Multiple agents working across multiple projects simultaneously
@@ -95,18 +95,18 @@ protoLabs Studio extends the original Automaker concept with:
 ### Core Workflow
 
 1. **Add Features** - Describe features you want built (with text, images, or screenshots)
-2. **Move to "In Progress"** - protoLabs Studio automatically assigns an AI agent to implement the feature
+2. **Move to "In Progress"** - protoLabs.studio automatically assigns an AI agent to implement the feature
 3. **Watch It Build** - See real-time progress as the agent writes code, runs tests, and makes changes
 4. **Review & Verify** - Review the changes, run tests, and approve when ready
 5. **Ship Faster** - Build entire applications in days, not weeks
 
 ### Powered by Claude Agent SDK
 
-protoLabs Studio leverages the [Claude Agent SDK](https://www.npmjs.com/package/@anthropic-ai/claude-agent-sdk) to give AI agents full access to your codebase. Agents can read files, write code, execute commands, run tests, and make git commits—all while working in isolated git worktrees to keep your main branch safe. The SDK provides autonomous AI agents that can use tools, make decisions, and complete complex multi-step tasks without constant human intervention.
+protoLabs.studio leverages the [Claude Agent SDK](https://www.npmjs.com/package/@anthropic-ai/claude-agent-sdk) to give AI agents full access to your codebase. Agents can read files, write code, execute commands, run tests, and make git commits—all while working in isolated git worktrees to keep your main branch safe. The SDK provides autonomous AI agents that can use tools, make decisions, and complete complex multi-step tasks without constant human intervention.
 
 ### Integrated with Linear & Discord via MCP
 
-protoLabs Studio uses the [Model Context Protocol (MCP)](https://modelcontextprotocol.io) to integrate with:
+protoLabs.studio uses the [Model Context Protocol (MCP)](https://modelcontextprotocol.io) to integrate with:
 
 - **Linear**: Project management, issue tracking, roadmap planning
 - **Discord**: Real-time communication, threaded discussions, team updates
@@ -114,7 +114,7 @@ protoLabs Studio uses the [Model Context Protocol (MCP)](https://modelcontextpro
 
 ### Why This Matters
 
-The future of software development is **swarm intelligence**—where multiple AI agents collaborate like an agile team, coordinating through shared context and communication channels. protoLabs Studio brings this future to your organization today, letting you scale from a single agent to a full AI development team working across multiple projects simultaneously. You focus on strategy and architecture; the swarm handles implementation.
+The future of software development is **swarm intelligence**—where multiple AI agents collaborate like an agile team, coordinating through shared context and communication channels. protoLabs.studio brings this future to your organization today, letting you scale from a single agent to a full AI development team working across multiple projects simultaneously. You focus on strategy and architecture; the swarm handles implementation.
 
 ## Community & Support
 
@@ -124,7 +124,7 @@ In the Discord, you can:
 
 - 💬 Discuss agentic coding patterns and best practices
 - 🧠 Share ideas for AI-driven development workflows
-- 🛠️ Get help setting up or extending protoLabs Studio
+- 🛠️ Get help setting up or extending protoLabs.studio
 - 🚀 Show off projects built with AI agents
 - 🤝 Collaborate with other developers and contributors
 
@@ -138,7 +138,7 @@ In the Discord, you can:
 
 - **Node.js 22+** (required: >=22.0.0 <23.0.0)
 - **npm** (comes with Node.js)
-- **[Claude Code CLI](https://code.claude.com/docs/en/overview)** - Install and authenticate with your Anthropic subscription. protoLabs Studio integrates with your authenticated Claude Code CLI to access Claude models.
+- **[Claude Code CLI](https://code.claude.com/docs/en/overview)** - Install and authenticate with your Anthropic subscription. protoLabs.studio integrates with your authenticated Claude Code CLI to access Claude models.
 
 ### Quick Start
 
@@ -150,14 +150,14 @@ cd protolabs-studio
 # 2. Install dependencies
 npm install
 
-# 3. Start protoLabs Studio
+# 3. Start protoLabs.studio
 npm run dev
 # Choose between:
 #   1. Web Application (browser at localhost:3007)
 #   2. Desktop Application (Electron - recommended)
 ```
 
-**Authentication:** protoLabs Studio integrates with your authenticated Claude Code CLI. Make sure you have [installed and authenticated](https://code.claude.com/docs/en/quickstart) the Claude Code CLI before running protoLabs Studio. Your CLI credentials will be detected automatically.
+**Authentication:** protoLabs.studio integrates with your authenticated Claude Code CLI. Make sure you have [installed and authenticated](https://code.claude.com/docs/en/quickstart) the Claude Code CLI before running protoLabs.studio. Your CLI credentials will be detected automatically.
 
 **For Development:** `npm run dev` starts the development server with Vite live reload and hot module replacement for fast refresh and instant updates as you make changes.
 
@@ -165,7 +165,7 @@ npm run dev
 
 ### Development Mode
 
-Start protoLabs Studio in development mode:
+Start protoLabs.studio in development mode:
 
 ```bash
 npm run dev
@@ -286,7 +286,7 @@ sudo yum localinstall ./Automaker-<version>-x86_64.rpm
 
 #### Docker Deployment
 
-Docker provides the most secure way to run protoLabs Studio by isolating it from your host filesystem.
+Docker provides the most secure way to run protoLabs.studio by isolating it from your host filesystem.
 
 ```bash
 # Build and run with Docker Compose
@@ -304,7 +304,7 @@ docker-compose down
 
 ##### Authentication
 
-protoLabs Studio integrates with your authenticated Claude Code CLI. To use CLI authentication in Docker, mount your Claude CLI config directory (see [Claude CLI Authentication](#claude-cli-authentication) below).
+protoLabs.studio integrates with your authenticated Claude Code CLI. To use CLI authentication in Docker, mount your Claude CLI config directory (see [Claude CLI Authentication](#claude-cli-authentication) below).
 
 ##### Working with Projects (Host Directory Access)
 
@@ -439,11 +439,11 @@ npm run lint
 
 ### Authentication Setup
 
-protoLabs Studio integrates with your authenticated Claude Code CLI and uses your Anthropic subscription.
+protoLabs.studio integrates with your authenticated Claude Code CLI and uses your Anthropic subscription.
 
 Install and authenticate the Claude Code CLI following the [official quickstart guide](https://code.claude.com/docs/en/quickstart).
 
-Once authenticated, protoLabs Studio will automatically detect and use your CLI credentials. No additional configuration needed!
+Once authenticated, protoLabs.studio will automatically detect and use your CLI credentials. No additional configuration needed!
 
 ## Features
 
@@ -500,7 +500,7 @@ Once authenticated, protoLabs Studio will automatically detect and use your CLI 
 
 ### Claude Code Integration
 
-protoLabs Studio includes a Claude Code plugin and MCP server for programmatic control directly from your terminal.
+protoLabs.studio includes a Claude Code plugin and MCP server for programmatic control directly from your terminal.
 
 - 🔌 **MCP Server** - 32 tools for managing features, agents, and orchestration
 - ⚡ **Slash Commands** - `/board`, `/auto-mode`, `/orchestrate`, `/context`, `/create-project`
@@ -514,7 +514,7 @@ protoLabs Studio includes a Claude Code plugin and MCP server for programmatic c
 claude plugin marketplace add https://github.com/proto-labs-ai/protolabs-studio/tree/main/packages/mcp-server/plugins
 claude plugin install automaker
 
-# 2. Start protoLabs Studio (in a separate terminal)
+# 2. Start protoLabs.studio (in a separate terminal)
 git clone https://github.com/proto-labs-ai/protolabs-studio.git && cd protolabs-studio
 npm install && npm run dev:web
 
@@ -591,7 +591,7 @@ claude
 
 ## Available Views
 
-protoLabs Studio provides several specialized views accessible via the sidebar or keyboard shortcuts:
+protoLabs.studio provides several specialized views accessible via the sidebar or keyboard shortcuts:
 
 | View               | Shortcut | Description                                                                                      |
 | ------------------ | -------- | ------------------------------------------------------------------------------------------------ |
@@ -622,7 +622,7 @@ All shortcuts are customizable in Settings. Default shortcuts:
 
 ### Monorepo Structure
 
-protoLabs Studio is built as an npm workspace monorepo with two main applications and seven shared packages:
+protoLabs.studio is built as an npm workspace monorepo with two main applications and seven shared packages:
 
 ```text
 protolabs-studio/
@@ -667,7 +667,7 @@ protolabs-studio/
 
 ### Data Storage
 
-protoLabs Studio uses a file-based storage system (no database required):
+protoLabs.studio uses a file-based storage system (no database required):
 
 #### Per-Project Data
 
@@ -716,7 +716,7 @@ data/
 >
 > We have reviewed this codebase for security vulnerabilities, but you assume all risk when running this software. You should review the code yourself before running it.
 >
-> **We do not recommend running protoLabs Studio directly on your local computer** due to the risk of AI agents having access to your entire file system. Please sandbox this application using Docker or a virtual machine.
+> **We do not recommend running protoLabs.studio directly on your local computer** due to the risk of AI agents having access to your entire file system. Please sandbox this application using Docker or a virtual machine.
 >
 > **[Read the full disclaimer](./DISCLAIMER.md)**
 
@@ -726,7 +726,7 @@ data/
 
 ### Documentation
 
-- [Contributing Guide](./CONTRIBUTING.md) - How to contribute to protoLabs Studio
+- [Contributing Guide](./CONTRIBUTING.md) - How to contribute to protoLabs.studio
 - [Project Documentation](./docs/) - Architecture guides, patterns, and developer docs
 - [Shared Packages Guide](./docs/llm-shared-packages.md) - Using monorepo packages
 

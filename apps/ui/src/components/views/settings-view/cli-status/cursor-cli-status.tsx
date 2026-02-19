@@ -374,7 +374,7 @@ export function CursorCliStatus({ status, isChecking, onRefresh }: CursorCliStat
               <div className="flex-1">
                 <p className="text-sm font-medium text-amber-400">Cursor CLI Not Detected</p>
                 <p className="text-xs text-amber-400/70 mt-1">
-                  Install Cursor CLI to use Cursor models in AutoMaker.
+                  Install Cursor CLI to use Cursor models in protoLabs.studio.
                 </p>
               </div>
             </div>

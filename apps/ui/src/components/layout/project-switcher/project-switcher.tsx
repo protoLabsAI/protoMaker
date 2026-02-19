@@ -277,7 +277,7 @@ export function ProjectSwitcher() {
         )}
         data-testid="project-switcher"
       >
-        {/* Automaker Logo and Version */}
+        {/* protoLabs Logo and Version */}
         <div className="flex flex-col items-center pt-3 pb-2 px-2">
           <button
             onClick={() => navigate({ to: '/dashboard' })}
@@ -288,7 +288,7 @@ export function ProjectSwitcher() {
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 256 256"
               role="img"
-              aria-label="Automaker Logo"
+              aria-label="protoLabs Logo"
               className="size-10 group-hover:rotate-12 transition-transform duration-300 ease-out"
             >
               <defs>
@@ -305,17 +305,7 @@ export function ProjectSwitcher() {
                 </linearGradient>
               </defs>
               <rect x="16" y="16" width="224" height="224" rx="56" fill="url(#bg-switcher)" />
-              <g
-                fill="none"
-                stroke="#FFFFFF"
-                strokeWidth="20"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M92 92 L52 128 L92 164" />
-                <path d="M144 72 L116 184" />
-                <path d="M164 92 L204 128 L164 164" />
-              </g>
+              <path d="M128 52 L196 128 L128 204 L60 128 Z" fill="#FFFFFF" />
             </svg>
             <span className="text-[0.625rem] text-muted-foreground leading-none font-medium">
               v{appVersion} {versionSuffix}
