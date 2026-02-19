@@ -1,15 +1,15 @@
 {
   "summary": {
-    "totalEntries": 693,
+    "totalEntries": 546,
     "categories": {
-      "feature": 445,
-      "improvement": 20,
-      "fix": 159,
-      "infrastructure": 28,
-      "docs": 41
+      "infrastructure": 25,
+      "fix": 137,
+      "improvement": 19,
+      "feature": 341,
+      "docs": 24
     },
     "firstDate": "2026-01-09T20:11:59.000Z",
-    "latestDate": "2026-02-19T08:45:16.000Z"
+    "latestDate": "2026-02-19T09:54:55.000Z"
   },
   "months": [
     {
@@ -17,20 +17,52 @@
       "label": "February 2026",
       "entries": [
         {
+          "hash": "21e05a5d",
+          "date": "2026-02-19T01:54:55-08:00",
+          "title": "Remove redundant quick links from docs homepage",
+          "prNumber": 817,
+          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/817",
+          "category": "infrastructure"
+        },
+        {
+          "hash": "915c604d",
+          "date": "2026-02-19T01:41:53-08:00",
+          "title": "Bottom panel store state + notes tab polish",
+          "prNumber": 814,
+          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/814",
+          "category": "fix"
+        },
+        {
+          "hash": "60f37f35",
+          "date": "2026-02-19T01:07:27-08:00",
+          "title": "Remove Ava presence button from sidebar",
+          "prNumber": 813,
+          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/813",
+          "category": "improvement"
+        },
+        {
+          "hash": "e2e54d6f",
+          "date": "2026-02-19T01:00:37-08:00",
+          "title": "Public changelog, roadmap, and stats pages",
+          "prNumber": 812,
+          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/812",
+          "category": "feature"
+        },
+        {
+          "hash": "a1d992f9",
+          "date": "2026-02-19T00:59:29-08:00",
+          "title": "Polish bottom panel — chat trigger, close button, panel icon",
+          "prNumber": 811,
+          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/811",
+          "category": "feature"
+        },
+        {
           "hash": "8516ace4",
           "date": "2026-02-19T00:45:16-08:00",
           "title": "Consolidate analytics floating panels into global bottom panel",
           "prNumber": 810,
           "prUrl": "https://github.com/proto-labs-ai/automaker/pull/810",
           "category": "feature"
-        },
-        {
-          "hash": "c809b959",
-          "date": "2026-02-18T23:13:30-08:00",
-          "title": "Remove dead crew loop code and rename crew_escalation",
-          "prNumber": 806,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/806",
-          "category": "improvement"
         },
         {
           "hash": "27238002",
@@ -233,28 +265,12 @@
           "category": "feature"
         },
         {
-          "hash": "f7c04a19",
-          "date": "2026-02-18T10:01:44-08:00",
-          "title": "Remove crew loop references from all documentation",
-          "prNumber": 783,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/783",
-          "category": "docs"
-        },
-        {
           "hash": "fcb5b254",
           "date": "2026-02-18T09:58:47-08:00",
           "title": "Add IPC channel and preload API tests for Electron",
           "prNumber": 782,
           "prUrl": "https://github.com/proto-labs-ai/automaker/pull/782",
           "category": "infrastructure"
-        },
-        {
-          "hash": "7d3e0013",
-          "date": "2026-02-18T09:45:03-08:00",
-          "title": "Remove crew nodes from flow graph dashboard",
-          "prNumber": 781,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/781",
-          "category": "feature"
         },
         {
           "hash": "ff1202a5",
@@ -273,36 +289,12 @@
           "category": "fix"
         },
         {
-          "hash": "fed7c80b",
-          "date": "2026-02-18T09:01:00-08:00",
-          "title": "Replace Crew Loop System with Lead Engineer State Machine in CLAUDE.md",
-          "prNumber": 778,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/778",
-          "category": "docs"
-        },
-        {
-          "hash": "ba301ee0",
-          "date": "2026-02-18T03:48:52-08:00",
-          "title": "Signal routing",
-          "prNumber": 777,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/777",
-          "category": "feature"
-        },
-        {
           "hash": "effa460d",
           "date": "2026-02-18T03:45:45-08:00",
           "title": "Clean dead code",
           "prNumber": 776,
           "prUrl": "https://github.com/proto-labs-ai/automaker/pull/776",
           "category": "improvement"
-        },
-        {
-          "hash": "5d9fd16e",
-          "date": "2026-02-18T03:45:29-08:00",
-          "title": "Lead Engineer state machine",
-          "prNumber": 775,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/775",
-          "category": "feature"
         },
         {
           "hash": "442cbdaa",
@@ -449,14 +441,6 @@
           "category": "fix"
         },
         {
-          "hash": "8d3aed53",
-          "date": "2026-02-18T00:14:55-08:00",
-          "title": "Add Lead Engineer session persistence and auto-restart",
-          "prNumber": 748,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/748",
-          "category": "feature"
-        },
-        {
           "hash": "86ab3bd9",
           "date": "2026-02-18T00:05:08-08:00",
           "title": "Make post-completion workflow detect all uncommitted changes",
@@ -521,27 +505,11 @@
           "category": "infrastructure"
         },
         {
-          "hash": "1d59e2d7",
-          "date": "2026-02-17T22:45:59-08:00",
-          "title": "Replace CopilotKit with Vercel AI SDK v6",
-          "prNumber": 737,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/737",
-          "category": "feature"
-        },
-        {
           "hash": "b9a149dd",
           "date": "2026-02-17T22:29:51-08:00",
           "title": "Wire project completion to reflection output",
           "prNumber": 739,
           "prUrl": "https://github.com/proto-labs-ai/automaker/pull/739",
-          "category": "feature"
-        },
-        {
-          "hash": "dbd1383c",
-          "date": "2026-02-17T22:25:56-08:00",
-          "title": "Wire signal intake bridge + process_idea MCP handler",
-          "prNumber": 738,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/738",
           "category": "feature"
         },
         {
@@ -559,14 +527,6 @@
           "prNumber": 735,
           "prUrl": "https://github.com/proto-labs-ai/automaker/pull/735",
           "category": "improvement"
-        },
-        {
-          "hash": "58bea950",
-          "date": "2026-02-17T20:59:16-08:00",
-          "title": "Idea pipeline display + route-aware CopilotKit context",
-          "prNumber": 733,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/733",
-          "category": "fix"
         },
         {
           "hash": "4800e60f",
@@ -753,14 +713,6 @@
           "category": "fix"
         },
         {
-          "hash": "177f48b8",
-          "date": "2026-02-17T16:21:14-08:00",
-          "title": "Scope CopilotKit CSS in cascade layer to fix invisible dialogs",
-          "prNumber": 707,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/707",
-          "category": "fix"
-        },
-        {
           "hash": "c94a8b6a",
           "date": "2026-02-17T16:20:56-08:00",
           "title": "Add shadcn design kit and update agent memory",
@@ -817,27 +769,11 @@
           "category": "feature"
         },
         {
-          "hash": "db9015bb",
-          "date": "2026-02-17T14:25:14-08:00",
-          "title": "Wire flow graph to real data and add crew status tests",
-          "prNumber": 701,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/701",
-          "category": "fix"
-        },
-        {
           "hash": "5f425b46",
           "date": "2026-02-17T14:05:58-08:00",
           "title": "Add Umami analytics ID to consulting page",
           "prNumber": 699,
           "prUrl": "https://github.com/proto-labs-ai/automaker/pull/699",
-          "category": "fix"
-        },
-        {
-          "hash": "6007d6e2",
-          "date": "2026-02-17T13:41:29-08:00",
-          "title": "Crew status API response shape mismatch causing TypeError crash",
-          "prNumber": 698,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/698",
           "category": "fix"
         },
         {
@@ -889,14 +825,6 @@
           "category": "improvement"
         },
         {
-          "hash": "22f640b2",
-          "date": "2026-02-17T11:08:35-08:00",
-          "title": "Enhance reflection loop with Linear integration and complexity tracking",
-          "prNumber": 693,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/693",
-          "category": "feature"
-        },
-        {
           "hash": "cdbf940e",
           "date": "2026-02-17T11:08:10-08:00",
           "title": "Complete git workflow pipeline when agent pre-commits",
@@ -937,36 +865,12 @@
           "category": "docs"
         },
         {
-          "hash": "8ef5283d",
-          "date": "2026-02-17T10:29:05-08:00",
-          "title": "Add agent-browser access to Matt's frontend engineer prompt",
-          "prNumber": 685,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/685",
-          "category": "feature"
-        },
-        {
-          "hash": "4fbb29b0",
-          "date": "2026-02-17T10:17:54-08:00",
-          "title": "Enforce Linear-first workflow in orchestrator prompts",
-          "prNumber": 684,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/684",
-          "category": "feature"
-        },
-        {
           "hash": "1052acc1",
           "date": "2026-02-17T10:15:29-08:00",
           "title": "Merge duplicate peerDependencies in libs/tools",
           "prNumber": 683,
           "prUrl": "https://github.com/proto-labs-ai/automaker/pull/683",
           "category": "fix"
-        },
-        {
-          "hash": "a2fc4fbb",
-          "date": "2026-02-17T10:01:24-08:00",
-          "title": "Wire lead engineer into PR lifecycle events",
-          "prNumber": 682,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/682",
-          "category": "feature"
         },
         {
           "hash": "2aa57f3e",
@@ -985,22 +889,6 @@
           "category": "fix"
         },
         {
-          "hash": "87ae7be3",
-          "date": "2026-02-17T09:35:28-08:00",
-          "title": "Wire remaining linear pipeline gaps",
-          "prNumber": 679,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/679",
-          "category": "fix"
-        },
-        {
-          "hash": "8316d6e3",
-          "date": "2026-02-17T09:31:16-08:00",
-          "title": "Fix model selection, add tools, move controls into sidebar",
-          "prNumber": 678,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/678",
-          "category": "feature"
-        },
-        {
           "hash": "a640b052",
           "date": "2026-02-17T09:13:38-08:00",
           "title": "Add AUTOMAKER_PROJECT_PATH to Docker compose env",
@@ -1017,68 +905,12 @@
           "category": "fix"
         },
         {
-          "hash": "815f8823",
-          "date": "2026-02-17T08:51:44-08:00",
-          "title": "Add Linear intake bridge for one-way issue transfer",
-          "prNumber": 675,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/675",
-          "category": "feature"
-        },
-        {
-          "hash": "ee9208ba",
-          "date": "2026-02-17T08:34:10-08:00",
-          "title": "Remove stale references to deleted authority agents",
-          "prNumber": 674,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/674",
-          "category": "docs"
-        },
-        {
-          "hash": "60963a46",
-          "date": "2026-02-17T03:13:40-08:00",
-          "title": "Clean up authority agents, wire escalation pipeline, remove dead code",
-          "prNumber": 673,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/673",
-          "category": "improvement"
-        },
-        {
-          "hash": "97d631d4",
-          "date": "2026-02-17T02:11:47-08:00",
-          "title": "Use raw body for Linear webhook signature verification",
-          "prNumber": 672,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/672",
-          "category": "fix"
-        },
-        {
-          "hash": "9a589834",
-          "date": "2026-02-17T01:34:43-08:00",
-          "title": "Wire up Linear integration — Bearer auth, Docker env, status check",
-          "prNumber": 669,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/669",
-          "category": "fix"
-        },
-        {
           "hash": "3ff830c0",
           "date": "2026-02-17T01:20:49-08:00",
           "title": "Add Pencil design tool integration and landing page mockup",
           "prNumber": 671,
           "prUrl": "https://github.com/proto-labs-ai/automaker/pull/671",
           "category": "feature"
-        },
-        {
-          "hash": "38c547bf",
-          "date": "2026-02-17T00:33:33-08:00",
-          "title": "Correct Josh's bio and positioning in brand bible",
-          "prNumber": 670,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/670",
-          "category": "fix"
-        },
-        {
-          "hash": "60f6ba56",
-          "date": "2026-02-16T22:30:21-08:00",
-          "title": "Replace deprecated model in antagonistic review",
-          "prNumber": 668,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/668",
-          "category": "fix"
         },
         {
           "hash": "929e2810",
@@ -1102,14 +934,6 @@
           "title": "Fix MCP tool count (32→112), org chart, and agent roster",
           "prNumber": 666,
           "prUrl": "https://github.com/proto-labs-ai/automaker/pull/666",
-          "category": "docs"
-        },
-        {
-          "hash": "471d7582",
-          "date": "2026-02-16T18:54:26-08:00",
-          "title": "Rewrite CopilotKit, CI/CD, providers, and UI architecture docs for accuracy",
-          "prNumber": 664,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/664",
           "category": "docs"
         },
         {
@@ -1137,14 +961,6 @@
           "category": "fix"
         },
         {
-          "hash": "dc72ad81",
-          "date": "2026-02-16T17:56:12-08:00",
-          "title": "Correct auth headers, crew member table, and Infisical status",
-          "prNumber": 660,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/660",
-          "category": "fix"
-        },
-        {
           "hash": "f4aff7e6",
           "date": "2026-02-16T17:52:32-08:00",
           "title": "Fix stale references and audit findings across 8 doc files",
@@ -1159,14 +975,6 @@
           "prNumber": 657,
           "prUrl": "https://github.com/proto-labs-ai/automaker/pull/657",
           "category": "fix"
-        },
-        {
-          "hash": "62e081bd",
-          "date": "2026-02-16T17:47:48-08:00",
-          "title": "Fix brand casing and stale content across protolabs docs",
-          "prNumber": 658,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/658",
-          "category": "docs"
         },
         {
           "hash": "f3d5834d",
@@ -1185,27 +993,11 @@
           "category": "infrastructure"
         },
         {
-          "hash": "4b4fc021",
-          "date": "2026-02-16T14:45:32-08:00",
-          "title": "Replace internal role title in signal intake mockup",
-          "prNumber": 654,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/654",
-          "category": "fix"
-        },
-        {
           "hash": "2bc0e058",
           "date": "2026-02-16T14:31:54-08:00",
           "title": "Update infra docs for staging hardening, docs isolation, and landing page",
           "prNumber": 653,
           "prUrl": "https://github.com/proto-labs-ai/automaker/pull/653",
-          "category": "docs"
-        },
-        {
-          "hash": "9bf77e1c",
-          "date": "2026-02-16T14:20:49-08:00",
-          "title": "DRY brand docs — cross-reference design system and frontend philosophy",
-          "prNumber": 652,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/652",
           "category": "docs"
         },
         {
@@ -1254,14 +1046,6 @@
           "title": "Staging hardening for production readiness",
           "prNumber": 646,
           "prUrl": "https://github.com/proto-labs-ai/automaker/pull/646",
-          "category": "feature"
-        },
-        {
-          "hash": "f4fd5698",
-          "date": "2026-02-16T11:29:57-08:00",
-          "title": "Add Lead Engineer service for production phase orchestration",
-          "prNumber": 645,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/645",
           "category": "feature"
         },
         {
@@ -1369,14 +1153,6 @@
           "category": "feature"
         },
         {
-          "hash": "4c6638f5",
-          "date": "2026-02-15T21:42:38-08:00",
-          "title": "Add cross-review, consensus, consolidation & HITL gate nodes",
-          "prNumber": 620,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/620",
-          "category": "feature"
-        },
-        {
           "hash": "cc258a7d",
           "date": "2026-02-15T21:42:35-08:00",
           "title": "Implement Ava research tree with parallel subordinate fan-out",
@@ -1406,14 +1182,6 @@
           "title": "Add @automaker/tools package with defineSharedTool factory",
           "prNumber": 614,
           "prUrl": "https://github.com/proto-labs-ai/automaker/pull/614",
-          "category": "feature"
-        },
-        {
-          "hash": "09903fbd",
-          "date": "2026-02-15T21:26:12-08:00",
-          "title": "Implement Jon research tree with parallel GTM fan-out",
-          "prNumber": 617,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/617",
           "category": "feature"
         },
         {
@@ -1486,14 +1254,6 @@
           "title": "Migrate all libs to tsup build system",
           "prNumber": 603,
           "prUrl": "https://github.com/proto-labs-ai/automaker/pull/603",
-          "category": "feature"
-        },
-        {
-          "hash": "f704da5a",
-          "date": "2026-02-15T17:12:48-08:00",
-          "title": "Wire trust boundary as HITL gate for planning flow",
-          "prNumber": 600,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/600",
           "category": "feature"
         },
         {
@@ -1697,83 +1457,11 @@
           "category": "fix"
         },
         {
-          "hash": "28409cb6",
-          "date": "2026-02-15T09:30:49-08:00",
-          "title": "Add agent memory from CopilotKit sessions 54-55",
-          "prNumber": 577,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/577",
-          "category": "infrastructure"
-        },
-        {
-          "hash": "4a869452",
-          "date": "2026-02-15T09:03:04-08:00",
-          "title": "Comprehensive Linear integration guide for V2 agent protocol",
-          "prNumber": 578,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/578",
-          "category": "docs"
-        },
-        {
-          "hash": "b49d644b",
-          "date": "2026-02-15T03:06:49-08:00",
-          "title": "Wire PhaseApprovalDialog to approve_phase HITL handler",
-          "prNumber": 576,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/576",
-          "category": "fix"
-        },
-        {
-          "hash": "efde0287",
-          "date": "2026-02-15T02:59:14-08:00",
-          "title": "Add phase approval dialog component",
-          "prNumber": 575,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/575",
-          "category": "feature"
-        },
-        {
-          "hash": "5916538f",
-          "date": "2026-02-15T02:55:50-08:00",
-          "title": "Add entity review wizard for HITL entity approval",
-          "prNumber": 574,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/574",
-          "category": "feature"
-        },
-        {
-          "hash": "63455c60",
-          "date": "2026-02-15T02:47:57-08:00",
-          "title": "Add error display with retry and stack trace",
-          "prNumber": 573,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/573",
-          "category": "feature"
-        },
-        {
-          "hash": "129c9faa",
-          "date": "2026-02-15T02:47:00-08:00",
-          "title": "Add Cmd+K/Ctrl+K keyboard shortcut to toggle CopilotKit sidebar",
-          "prNumber": 572,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/572",
-          "category": "feature"
-        },
-        {
-          "hash": "3e19767d",
-          "date": "2026-02-15T02:45:43-08:00",
-          "title": "Add useLangGraphInterrupt hook for HITL approval system",
-          "prNumber": 570,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/570",
-          "category": "feature"
-        },
-        {
           "hash": "59b71d83",
           "date": "2026-02-15T02:43:05-08:00",
           "title": "Handle resume after interrupt with edited PRD content",
           "prNumber": 571,
           "prUrl": "https://github.com/proto-labs-ai/automaker/pull/571",
-          "category": "feature"
-        },
-        {
-          "hash": "15c06f6a",
-          "date": "2026-02-15T02:29:30-08:00",
-          "title": "Add PRDEditorModal with TipTap rich text editor",
-          "prNumber": 569,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/569",
           "category": "feature"
         },
         {
@@ -1793,62 +1481,6 @@
           "category": "feature"
         },
         {
-          "hash": "a1dc41e5",
-          "date": "2026-02-15T02:00:40-08:00",
-          "title": "Add HITL interrupt() calls to content pipeline review gates",
-          "prNumber": 566,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/566",
-          "category": "feature"
-        },
-        {
-          "hash": "71355567",
-          "date": "2026-02-15T01:56:03-08:00",
-          "title": "Add workflow metadata endpoint and selector component",
-          "prNumber": 562,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/562",
-          "category": "feature"
-        },
-        {
-          "hash": "098660c1",
-          "date": "2026-02-15T01:54:54-08:00",
-          "title": "Linear Agent Integration V2 — full agent protocol, planning flow, and context-aware chat",
-          "prNumber": 565,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/565",
-          "category": "feature"
-        },
-        {
-          "hash": "33ee8587",
-          "date": "2026-02-15T01:47:33-08:00",
-          "title": "Add HITL interrupt payload discriminated union types",
-          "prNumber": 564,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/564",
-          "category": "feature"
-        },
-        {
-          "hash": "ae99c283",
-          "date": "2026-02-15T01:45:13-08:00",
-          "title": "Auto-inject project context via useAgentContext",
-          "prNumber": 563,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/563",
-          "category": "feature"
-        },
-        {
-          "hash": "06f3949c",
-          "date": "2026-02-15T01:36:08-08:00",
-          "title": "Register Kai in prompt registry",
-          "prNumber": 561,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/561",
-          "category": "fix"
-        },
-        {
-          "hash": "46c55cd1",
-          "date": "2026-02-15T01:28:04-08:00",
-          "title": "Add workflow selector for CopilotKit agents",
-          "prNumber": 560,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/560",
-          "category": "feature"
-        },
-        {
           "hash": "a371803e",
           "date": "2026-02-15T01:25:19-08:00",
           "title": "Fleet-wide agent prompt improvements",
@@ -1865,38 +1497,6 @@
           "category": "feature"
         },
         {
-          "hash": "a6155b2e",
-          "date": "2026-02-15T01:05:50-08:00",
-          "title": "Register antagonistic-review LangGraph agent in CopilotKit",
-          "prNumber": 557,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/557",
-          "category": "feature"
-        },
-        {
-          "hash": "9db80852",
-          "date": "2026-02-15T00:43:31-08:00",
-          "title": "Add CopilotKit state emission to content pipeline nodes",
-          "prNumber": 555,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/555",
-          "category": "feature"
-        },
-        {
-          "hash": "f097169a",
-          "date": "2026-02-15T00:40:59-08:00",
-          "title": "Register content-pipeline LangGraph flow as CopilotKit agent",
-          "prNumber": 556,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/556",
-          "category": "feature"
-        },
-        {
-          "hash": "b8e1ab02",
-          "date": "2026-02-15T00:29:22-08:00",
-          "title": "Add CopilotKit state annotations to content pipeline",
-          "prNumber": 554,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/554",
-          "category": "feature"
-        },
-        {
           "hash": "93228413",
           "date": "2026-02-15T00:22:55-08:00",
           "title": "Remove epic placeholder files from completed project",
@@ -1910,14 +1510,6 @@
           "title": "Add Context7 awareness to CLI skills and sub-agents",
           "prNumber": 551,
           "prUrl": "https://github.com/proto-labs-ai/automaker/pull/551",
-          "category": "feature"
-        },
-        {
-          "hash": "4f4b5d79",
-          "date": "2026-02-15T00:00:31-08:00",
-          "title": "Add Kai backend engineer persona",
-          "prNumber": 552,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/552",
           "category": "feature"
         },
         {
@@ -2033,70 +1625,6 @@
           "category": "fix"
         },
         {
-          "hash": "e3d41d49",
-          "date": "2026-02-14T21:22:45-08:00",
-          "title": "Switch UI to @copilotkitnext/react (AG-UI protocol)",
-          "prNumber": 536,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/536",
-          "category": "fix"
-        },
-        {
-          "hash": "c2e822d6",
-          "date": "2026-02-14T21:00:18-08:00",
-          "title": "Brand alignment & IA restructure",
-          "prNumber": 535,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/535",
-          "category": "docs"
-        },
-        {
-          "hash": "edd47853",
-          "date": "2026-02-14T20:49:18-08:00",
-          "title": "Add error boundary so CopilotKit can never crash the app",
-          "prNumber": 534,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/534",
-          "category": "fix"
-        },
-        {
-          "hash": "9cca639a",
-          "date": "2026-02-14T20:27:23-08:00",
-          "title": "Switch to @copilotkitnext/runtime Express-native endpoint",
-          "prNumber": 533,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/533",
-          "category": "fix"
-        },
-        {
-          "hash": "569ca809",
-          "date": "2026-02-14T20:12:25-08:00",
-          "title": "Fix Hono basePath mismatch and use /info for availability check",
-          "prNumber": 532,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/532",
-          "category": "fix"
-        },
-        {
-          "hash": "681f693d",
-          "date": "2026-02-14T20:02:32-08:00",
-          "title": "Pass auth headers and credentials to CopilotKit provider",
-          "prNumber": 531,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/531",
-          "category": "fix"
-        },
-        {
-          "hash": "312e2586",
-          "date": "2026-02-14T19:53:12-08:00",
-          "title": "Pass EmptyAdapter to prevent serviceAdapter null crash",
-          "prNumber": 530,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/530",
-          "category": "fix"
-        },
-        {
-          "hash": "f4239bca",
-          "date": "2026-02-14T19:37:14-08:00",
-          "title": "Copy server node_modules for non-hoisted deps + harden CopilotKit check",
-          "prNumber": 529,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/529",
-          "category": "fix"
-        },
-        {
           "hash": "4f57129c",
           "date": "2026-02-14T18:22:07-08:00",
           "title": "Upgrade Docker Compose v2.3.3→v2.29.1 and clean up stop logic",
@@ -2129,22 +1657,6 @@
           "category": "fix"
         },
         {
-          "hash": "25158234",
-          "date": "2026-02-14T17:34:07-08:00",
-          "title": "Register Ava as BuiltInAgent to fix Agent not found",
-          "prNumber": 523,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/523",
-          "category": "fix"
-        },
-        {
-          "hash": "24bf7128",
-          "date": "2026-02-14T17:34:03-08:00",
-          "title": "Align GTM docs and Jon prompt with $49 lifetime Pro strategy",
-          "prNumber": 524,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/524",
-          "category": "docs"
-        },
-        {
           "hash": "5b0c9298",
           "date": "2026-02-14T16:30:43-08:00",
           "title": "Centralize agent prompts, trim CLI, generate org docs",
@@ -2166,54 +1678,6 @@
           "title": "Extract FeatureStore, EventBus interfaces for hivemind",
           "prNumber": 521,
           "prUrl": "https://github.com/proto-labs-ai/automaker/pull/521",
-          "category": "feature"
-        },
-        {
-          "hash": "05c857ed",
-          "date": "2026-02-14T15:20:36-08:00",
-          "title": "Fresh state per instance — untrack .beads/ and .automaker/projects/",
-          "prNumber": 520,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/520",
-          "category": "docs"
-        },
-        {
-          "hash": "0cf4ee37",
-          "date": "2026-02-14T15:14:21-08:00",
-          "title": "Dynamic import CopilotKit to prevent crash when dep missing",
-          "prNumber": 519,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/519",
-          "category": "fix"
-        },
-        {
-          "hash": "b8c64168",
-          "date": "2026-02-14T14:57:07-08:00",
-          "title": "Add integration docs and E2E tests",
-          "prNumber": 518,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/518",
-          "category": "docs"
-        },
-        {
-          "hash": "13b21bad",
-          "date": "2026-02-14T14:55:03-08:00",
-          "title": "Parallel execution, sidebar state, workflow history",
-          "prNumber": 517,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/517",
-          "category": "feature"
-        },
-        {
-          "hash": "e77e4b23",
-          "date": "2026-02-14T14:54:46-08:00",
-          "title": "Add remaining UI features and graph resume logic",
-          "prNumber": 516,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/516",
-          "category": "feature"
-        },
-        {
-          "hash": "a6665acb",
-          "date": "2026-02-14T14:20:31-08:00",
-          "title": "CopilotKit global sidebar chat with LangGraph integration",
-          "prNumber": 513,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/513",
           "category": "feature"
         },
         {
@@ -2265,22 +1729,6 @@
           "category": "feature"
         },
         {
-          "hash": "233aa7e2",
-          "date": "2026-02-14T12:54:20-08:00",
-          "title": "Add mandatory initialization routine to Jon agent",
-          "prNumber": 508,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/508",
-          "category": "feature"
-        },
-        {
-          "hash": "c1dab548",
-          "date": "2026-02-14T12:45:28-08:00",
-          "title": "Jon agent V2 with brand bible and dynamic self-orientation",
-          "prNumber": 506,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/506",
-          "category": "feature"
-        },
-        {
           "hash": "a62497b6",
           "date": "2026-02-14T12:30:47-08:00",
           "title": "Make Linear calls best-effort in lifecycle launch/approve",
@@ -2295,14 +1743,6 @@
           "prNumber": 505,
           "prUrl": "https://github.com/proto-labs-ai/automaker/pull/505",
           "category": "feature"
-        },
-        {
-          "hash": "b600ef4f",
-          "date": "2026-02-14T12:04:34-08:00",
-          "title": "Disable crew loops in dev, cross-platform system health checks",
-          "prNumber": 504,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/504",
-          "category": "fix"
         },
         {
           "hash": "69e0a8f7",
@@ -2369,14 +1809,6 @@
           "category": "feature"
         },
         {
-          "hash": "c8eaad15",
-          "date": "2026-02-14T03:33:42-08:00",
-          "title": "GitHub to Linear status bridge",
-          "prNumber": 491,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/491",
-          "category": "feature"
-        },
-        {
           "hash": "966a1196",
           "date": "2026-02-14T03:31:28-08:00",
           "title": "Issue relations and dependency sync",
@@ -2425,44 +1857,12 @@
           "category": "feature"
         },
         {
-          "hash": "45353e63",
-          "date": "2026-02-14T02:27:19-08:00",
-          "title": "Add system-health crew member for host-level monitoring",
-          "prNumber": 475,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/475",
-          "category": "feature"
-        },
-        {
           "hash": "a308ceb5",
           "date": "2026-02-14T01:55:56-08:00",
           "title": "Add graph flow roadmap with architecture and migration plan",
           "prNumber": 474,
           "prUrl": "https://github.com/proto-labs-ai/automaker/pull/474",
           "category": "docs"
-        },
-        {
-          "hash": "4bcffa98",
-          "date": "2026-02-14T01:47:21-08:00",
-          "title": "Add Langfuse tracing to antagonistic review flow",
-          "prNumber": 473,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/473",
-          "category": "feature"
-        },
-        {
-          "hash": "e360ee3b",
-          "date": "2026-02-14T01:19:47-08:00",
-          "title": "MCP tool & adapter for antagonistic review flow",
-          "prNumber": 472,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/472",
-          "category": "feature"
-        },
-        {
-          "hash": "cf203776",
-          "date": "2026-02-14T01:10:51-08:00",
-          "title": "Antagonistic review flow Express endpoints",
-          "prNumber": 471,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/471",
-          "category": "feature"
         },
         {
           "hash": "5bfacd56",
@@ -2489,38 +1889,6 @@
           "category": "feature"
         },
         {
-          "hash": "d07b1679",
-          "date": "2026-02-14T00:26:35-08:00",
-          "title": "Add Sam skill, project plans, and gitignore runtime dirs",
-          "prNumber": 466,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/466",
-          "category": "infrastructure"
-        },
-        {
-          "hash": "d7a9ec76",
-          "date": "2026-02-14T00:15:06-08:00",
-          "title": "Core antagonistic review graph composition",
-          "prNumber": 465,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/465",
-          "category": "feature"
-        },
-        {
-          "hash": "1af907ad",
-          "date": "2026-02-14T00:06:05-08:00",
-          "title": "Update content pipeline docs for autonomous antagonistic review",
-          "prNumber": 464,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/464",
-          "category": "docs"
-        },
-        {
-          "hash": "aef5f6f2",
-          "date": "2026-02-13T23:51:26-08:00",
-          "title": "Add comprehensive antagonistic review pattern documentation",
-          "prNumber": 463,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/463",
-          "category": "docs"
-        },
-        {
           "hash": "23581358",
           "date": "2026-02-13T23:48:43-08:00",
           "title": "Add --ignore-path to prettier to fix silent worktree file skipping",
@@ -2529,43 +1897,11 @@
           "category": "fix"
         },
         {
-          "hash": "369bf7ad",
-          "date": "2026-02-13T23:41:11-08:00",
-          "title": "Antagonistic review core nodes — classify, ava, jon, consolidate",
-          "prNumber": 460,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/460",
-          "category": "feature"
-        },
-        {
-          "hash": "d3418d38",
-          "date": "2026-02-13T23:38:00-08:00",
-          "title": "Add antagonistic review validation to content flow test",
-          "prNumber": 461,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/461",
-          "category": "feature"
-        },
-        {
           "hash": "bdb4cc36",
           "date": "2026-02-13T23:20:39-08:00",
           "title": "Update ContentFlowService and MCP tools for autonomous mode",
           "prNumber": 459,
           "prUrl": "https://github.com/proto-labs-ai/automaker/pull/459",
-          "category": "feature"
-        },
-        {
-          "hash": "3d086432",
-          "date": "2026-02-13T23:02:17-08:00",
-          "title": "Add antagonistic review flow state schema and types",
-          "prNumber": 458,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/458",
-          "category": "feature"
-        },
-        {
-          "hash": "4778fe66",
-          "date": "2026-02-13T22:52:01-08:00",
-          "title": "Replace HITL gates with antagonistic review in content pipeline",
-          "prNumber": 457,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/457",
           "category": "feature"
         },
         {
@@ -2609,14 +1945,6 @@
           "category": "feature"
         },
         {
-          "hash": "03b91900",
-          "date": "2026-02-13T21:49:29-08:00",
-          "title": "Add antagonistic review primitive subgraph",
-          "prNumber": 451,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/451",
-          "category": "feature"
-        },
-        {
           "hash": "acb46558",
           "date": "2026-02-13T21:39:13-08:00",
           "title": "Add HTML entity unescaping to XML parser",
@@ -2657,27 +1985,11 @@
           "category": "fix"
         },
         {
-          "hash": "a3fd47fe",
-          "date": "2026-02-13T20:42:37-08:00",
-          "title": "Generate content brief on milestone completion for GTM",
-          "prNumber": 441,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/441",
-          "category": "feature"
-        },
-        {
           "hash": "c52a3547",
           "date": "2026-02-13T20:42:31-08:00",
           "title": "Add @changesets/cli for package versioning and changelogs",
           "prNumber": 440,
           "prUrl": "https://github.com/proto-labs-ai/automaker/pull/440",
-          "category": "feature"
-        },
-        {
-          "hash": "f3811eb5",
-          "date": "2026-02-13T20:01:30-08:00",
-          "title": "Add MCP tools for content pipeline flow execution",
-          "prNumber": 443,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/443",
           "category": "feature"
         },
         {
@@ -2687,14 +1999,6 @@
           "prNumber": 444,
           "prUrl": "https://github.com/proto-labs-ai/automaker/pull/444",
           "category": "docs"
-        },
-        {
-          "hash": "eb94c5ef",
-          "date": "2026-02-13T19:58:43-08:00",
-          "title": "Add Cindi content writing specialist template",
-          "prNumber": 445,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/445",
-          "category": "feature"
         },
         {
           "hash": "3cd30a03",
@@ -2737,14 +2041,6 @@
           "category": "feature"
         },
         {
-          "hash": "73703ec4",
-          "date": "2026-02-13T18:51:59-08:00",
-          "title": "Add signal router service for simplified signal intake",
-          "prNumber": 435,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/435",
-          "category": "feature"
-        },
-        {
           "hash": "1549cc59",
           "date": "2026-02-13T18:44:26-08:00",
           "title": "Add retro to improvement tickets in reflection loop",
@@ -2759,14 +2055,6 @@
           "prNumber": 424,
           "prUrl": "https://github.com/proto-labs-ai/automaker/pull/424",
           "category": "infrastructure"
-        },
-        {
-          "hash": "33ae16b4",
-          "date": "2026-02-13T18:37:13-08:00",
-          "title": "Add Signal Intake - Simplified keyword detection for Discord, GitHub, and Linear",
-          "prNumber": 436,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/436",
-          "category": "feature"
         },
         {
           "hash": "31415c8e",
@@ -2817,14 +2105,6 @@
           "category": "feature"
         },
         {
-          "hash": "0a17ea11",
-          "date": "2026-02-13T18:18:01-08:00",
-          "title": "Define prompt templates with local fallback",
-          "prNumber": 417,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/417",
-          "category": "feature"
-        },
-        {
           "hash": "8a2fec11",
           "date": "2026-02-13T18:06:58-08:00",
           "title": "Add ChangelogService for milestone/project completion",
@@ -2838,14 +2118,6 @@
           "title": "Implement research worker nodes",
           "prNumber": 418,
           "prUrl": "https://github.com/proto-labs-ai/automaker/pull/418",
-          "category": "feature"
-        },
-        {
-          "hash": "75bc6c31",
-          "date": "2026-02-13T18:03:01-08:00",
-          "title": "Add blog writing strategy prompts and antagonistic review",
-          "prNumber": 430,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/430",
           "category": "feature"
         },
         {
@@ -2897,59 +2169,11 @@
           "category": "infrastructure"
         },
         {
-          "hash": "8ad5bd10",
-          "date": "2026-02-13T17:43:15-08:00",
-          "title": "Implement antagonistic review pipeline service",
-          "prNumber": 414,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/414",
-          "category": "feature"
-        },
-        {
-          "hash": "f143e1c2",
-          "date": "2026-02-13T17:42:08-08:00",
-          "title": "Add antagonistic review pipeline integration",
-          "prNumber": 425,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/425",
-          "category": "feature"
-        },
-        {
-          "hash": "2f0c6aaf",
-          "date": "2026-02-13T17:34:15-08:00",
-          "title": "Add antagonistic review pipeline types",
-          "prNumber": 413,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/413",
-          "category": "feature"
-        },
-        {
           "hash": "bd4c0087",
           "date": "2026-02-13T16:32:54-08:00",
           "title": "Add feedback analytics service and pattern detection",
           "prNumber": 411,
           "prUrl": "https://github.com/proto-labs-ai/automaker/pull/411",
-          "category": "feature"
-        },
-        {
-          "hash": "9944662e",
-          "date": "2026-02-13T16:31:05-08:00",
-          "title": "Add escalation dashboard and PR feedback UI",
-          "prNumber": 412,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/412",
-          "category": "feature"
-        },
-        {
-          "hash": "4376a161",
-          "date": "2026-02-13T16:24:46-08:00",
-          "title": "Add severity awareness to PR Maintainer and Board Janitor crews",
-          "prNumber": 410,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/410",
-          "category": "feature"
-        },
-        {
-          "hash": "1785b7d2",
-          "date": "2026-02-13T16:12:51-08:00",
-          "title": "Split resolve_review_threads and add escalation MCP tools",
-          "prNumber": 409,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/409",
           "category": "feature"
         },
         {
@@ -2961,46 +2185,6 @@
           "category": "fix"
         },
         {
-          "hash": "b805456c",
-          "date": "2026-02-13T16:10:38-08:00",
-          "title": "Add Linear HITL agent session elicitation",
-          "prNumber": 407,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/407",
-          "category": "feature"
-        },
-        {
-          "hash": "498b61a2",
-          "date": "2026-02-13T16:10:23-08:00",
-          "title": "Add Linear SLA webhook handler and custom workflow states",
-          "prNumber": 406,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/406",
-          "category": "feature"
-        },
-        {
-          "hash": "8457a1ea",
-          "date": "2026-02-13T16:00:54-08:00",
-          "title": "Add Sam agent template and document new packages",
-          "prNumber": 400,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/400",
-          "category": "docs"
-        },
-        {
-          "hash": "9a491210",
-          "date": "2026-02-13T15:51:10-08:00",
-          "title": "Add Linear Comment webhook handling for HITL deepening",
-          "prNumber": 405,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/405",
-          "category": "feature"
-        },
-        {
-          "hash": "53d751b7",
-          "date": "2026-02-13T15:48:17-08:00",
-          "title": "Add denial audit trail and escalation for PR feedback",
-          "prNumber": 404,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/404",
-          "category": "feature"
-        },
-        {
           "hash": "0fae2954",
           "date": "2026-02-13T15:41:34-08:00",
           "title": "Add severity routing to PR feedback service",
@@ -3009,67 +2193,11 @@
           "category": "feature"
         },
         {
-          "hash": "0d9132a6",
-          "date": "2026-02-13T15:31:24-08:00",
-          "title": "Implement Beads and UI notification escalation channels",
-          "prNumber": 402,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/402",
-          "category": "feature"
-        },
-        {
-          "hash": "6edface2",
-          "date": "2026-02-13T15:27:51-08:00",
-          "title": "Add GitHub Issue escalation channel for code-level findings",
-          "prNumber": 401,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/401",
-          "category": "feature"
-        },
-        {
-          "hash": "7bcb24b1",
-          "date": "2026-02-13T15:25:08-08:00",
-          "title": "Add Linear issue escalation channel for critical/high signals",
-          "prNumber": 399,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/399",
-          "category": "feature"
-        },
-        {
-          "hash": "0350471f",
-          "date": "2026-02-13T15:17:05-08:00",
-          "title": "Add Discord channel escalation routing by source type",
-          "prNumber": 398,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/398",
-          "category": "feature"
-        },
-        {
-          "hash": "2f5ae663",
-          "date": "2026-02-13T15:16:24-08:00",
-          "title": "Add Discord DM escalation channel for emergency/critical alerts",
-          "prNumber": 397,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/397",
-          "category": "feature"
-        },
-        {
           "hash": "c5993b0b",
           "date": "2026-02-13T15:02:41-08:00",
           "title": "LangGraph Integration Foundation — all packages",
           "prNumber": 394,
           "prUrl": "https://github.com/proto-labs-ai/automaker/pull/394",
-          "category": "feature"
-        },
-        {
-          "hash": "c381baa8",
-          "date": "2026-02-13T14:44:14-08:00",
-          "title": "Implement Escalation Router Core",
-          "prNumber": 396,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/396",
-          "category": "feature"
-        },
-        {
-          "hash": "51df835b",
-          "date": "2026-02-13T14:28:06-08:00",
-          "title": "Add escalation router core types",
-          "prNumber": 395,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/395",
           "category": "feature"
         },
         {
@@ -3137,43 +2265,11 @@
           "category": "infrastructure"
         },
         {
-          "hash": "2aaa7f1b",
-          "date": "2026-02-13T13:01:38-08:00",
-          "title": "Add Linear integration guide and env var documentation",
-          "prNumber": 384,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/384",
-          "category": "docs"
-        },
-        {
-          "hash": "5ef553c5",
-          "date": "2026-02-13T13:01:24-08:00",
-          "title": "Add intelligent 3-tier routing to LinearAgentRouter",
-          "prNumber": 382,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/382",
-          "category": "feature"
-        },
-        {
           "hash": "ea645127",
           "date": "2026-02-13T12:48:18-08:00",
           "title": "Integrate AI feature classifier into approval bridge",
           "prNumber": 383,
           "prUrl": "https://github.com/proto-labs-ai/automaker/pull/383",
-          "category": "feature"
-        },
-        {
-          "hash": "8e38de0e",
-          "date": "2026-02-13T12:35:17-08:00",
-          "title": "Add bidirectional Linear sync integration tests",
-          "prNumber": 379,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/379",
-          "category": "infrastructure"
-        },
-        {
-          "hash": "8ab2f72d",
-          "date": "2026-02-13T12:35:04-08:00",
-          "title": "Wire Linear approval into CoS pipeline",
-          "prNumber": 378,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/378",
           "category": "feature"
         },
         {
@@ -3257,28 +2353,12 @@
           "category": "feature"
         },
         {
-          "hash": "57cddbec",
-          "date": "2026-02-13T10:55:35-08:00",
-          "title": "Extend Linear webhook handler for Issue and Project events",
-          "prNumber": 369,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/369",
-          "category": "feature"
-        },
-        {
           "hash": "6c0d8824",
           "date": "2026-02-13T10:43:14-08:00",
           "title": "Sync local and CI Node.js version, auto-format agent commits",
           "prNumber": 368,
           "prUrl": "https://github.com/proto-labs-ai/automaker/pull/368",
           "category": "fix"
-        },
-        {
-          "hash": "426b55d2",
-          "date": "2026-02-13T10:41:42-08:00",
-          "title": "Add LinearMCPClient for Linear GraphQL API integration",
-          "prNumber": 366,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/366",
-          "category": "feature"
         },
         {
           "hash": "8acfcf5c",
@@ -3577,14 +2657,6 @@
           "category": "infrastructure"
         },
         {
-          "hash": "d78fe097",
-          "date": "2026-02-12T15:43:08-08:00",
-          "title": "Frontend philosophy docs + Matt agent template",
-          "prNumber": 309,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/309",
-          "category": "feature"
-        },
-        {
           "hash": "893e9d66",
           "date": "2026-02-12T15:20:00-08:00",
           "title": "Throw on unregistered agent roles instead of defaulting to full permissions",
@@ -3673,27 +2745,11 @@
           "category": "feature"
         },
         {
-          "hash": "9bf25220",
-          "date": "2026-02-12T12:12:39-08:00",
-          "title": "Add agent template support to header and welcome message",
-          "prNumber": 296,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/296",
-          "category": "feature"
-        },
-        {
           "hash": "88fa9f15",
           "date": "2026-02-12T12:10:29-08:00",
           "title": "Wire agentConfig to useElectronAgent and server API",
           "prNumber": 294,
           "prUrl": "https://github.com/proto-labs-ai/automaker/pull/294",
-          "category": "feature"
-        },
-        {
-          "hash": "2be7fb51",
-          "date": "2026-02-12T12:07:36-08:00",
-          "title": "Add AgentSelector component for Role Registry integration",
-          "prNumber": 290,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/290",
           "category": "feature"
         },
         {
@@ -3761,43 +2817,11 @@
           "category": "fix"
         },
         {
-          "hash": "9e03e2fe",
-          "date": "2026-02-12T10:26:00-08:00",
-          "title": "Wire DiscordBotService to EventHookService",
-          "prNumber": 280,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/280",
-          "category": "feature"
-        },
-        {
           "hash": "71325402",
           "date": "2026-02-12T10:22:35-08:00",
           "title": "Add health_check_critical event hook trigger",
           "prNumber": 283,
           "prUrl": "https://github.com/proto-labs-ai/automaker/pull/283",
-          "category": "feature"
-        },
-        {
-          "hash": "d463d108",
-          "date": "2026-02-12T10:14:11-08:00",
-          "title": "Add systemPrompt to chief-of-staff and GTM specialist templates",
-          "prNumber": 281,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/281",
-          "category": "feature"
-        },
-        {
-          "hash": "6ab9bb7a",
-          "date": "2026-02-12T10:11:29-08:00",
-          "title": "Auto-spawn Frank on critical health events",
-          "prNumber": 279,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/279",
-          "category": "feature"
-        },
-        {
-          "hash": "457377be",
-          "date": "2026-02-12T10:07:35-08:00",
-          "title": "Replace stub DiscordService with DiscordBotService in AvaGateway",
-          "prNumber": 277,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/277",
           "category": "feature"
         },
         {
@@ -3857,27 +2881,11 @@
           "category": "feature"
         },
         {
-          "hash": "b85a6651",
-          "date": "2026-02-12T02:21:03-08:00",
-          "title": "Linear Agent Router",
-          "prNumber": 269,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/269",
-          "category": "feature"
-        },
-        {
           "hash": "26f8db33",
           "date": "2026-02-12T02:09:47-08:00",
           "title": "Implement HeadsdownService work execution with agent factory and executor",
           "prNumber": 270,
           "prUrl": "https://github.com/proto-labs-ai/automaker/pull/270",
-          "category": "feature"
-        },
-        {
-          "hash": "01a430c8",
-          "date": "2026-02-12T02:08:10-08:00",
-          "title": "Wire LinearMonitor OAuth integration with settings service",
-          "prNumber": 267,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/267",
           "category": "feature"
         },
         {
@@ -3887,14 +2895,6 @@
           "prNumber": 266,
           "prUrl": "https://github.com/proto-labs-ai/automaker/pull/266",
           "category": "fix"
-        },
-        {
-          "hash": "5c1b5464",
-          "date": "2026-02-12T02:00:22-08:00",
-          "title": "Implement Discord Monitor message fetching via DiscordBotService",
-          "prNumber": 268,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/268",
-          "category": "feature"
         },
         {
           "hash": "d9326bfe",
@@ -3913,22 +2913,6 @@
           "category": "docs"
         },
         {
-          "hash": "dbda4122",
-          "date": "2026-02-12T00:42:19-08:00",
-          "title": "Add multi-agent architecture section and Linear agent instructions",
-          "prNumber": 263,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/263",
-          "category": "docs"
-        },
-        {
-          "hash": "4a35e648",
-          "date": "2026-02-12T00:41:54-08:00",
-          "title": "Add Linear agent OAuth flow and webhook handler",
-          "prNumber": 262,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/262",
-          "category": "feature"
-        },
-        {
           "hash": "dddd811c",
           "date": "2026-02-12T00:25:42-08:00",
           "title": "Load root .env when server runs via npm workspace",
@@ -3937,27 +2921,11 @@
           "category": "fix"
         },
         {
-          "hash": "a157d634",
-          "date": "2026-02-12T00:14:28-08:00",
-          "title": "End-to-end testing & documentation for agent template system",
-          "prNumber": 260,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/260",
-          "category": "feature"
-        },
-        {
           "hash": "d2489f3f",
           "date": "2026-02-12T00:11:11-08:00",
           "title": "UI role selector with dynamic template registry",
           "prNumber": 259,
           "prUrl": "https://github.com/proto-labs-ai/automaker/pull/259",
-          "category": "feature"
-        },
-        {
-          "hash": "6ff55001",
-          "date": "2026-02-11T23:43:25-08:00",
-          "title": "Server integration & initialization for role registry",
-          "prNumber": 258,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/258",
           "category": "feature"
         },
         {
@@ -4001,14 +2969,6 @@
           "category": "feature"
         },
         {
-          "hash": "bb19eac4",
-          "date": "2026-02-11T23:03:30-08:00",
-          "title": "Add prompt registry adapter for unified role-to-prompt mapping",
-          "prNumber": 253,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/253",
-          "category": "feature"
-        },
-        {
           "hash": "aba313c3",
           "date": "2026-02-11T23:03:18-08:00",
           "title": "Migrate AgentDiscordRouter to use RoleRegistryService",
@@ -4039,22 +2999,6 @@
           "prNumber": 248,
           "prUrl": "https://github.com/proto-labs-ai/automaker/pull/248",
           "category": "fix"
-        },
-        {
-          "hash": "56d9a575",
-          "date": "2026-02-11T22:21:15-08:00",
-          "title": "Add Dynamic Role Registry and Ceremony System documentation",
-          "prNumber": 246,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/246",
-          "category": "docs"
-        },
-        {
-          "hash": "d0e5b11e",
-          "date": "2026-02-11T22:18:23-08:00",
-          "title": "Add Linear Agent Service for posting agent responses",
-          "prNumber": 247,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/247",
-          "category": "feature"
         },
         {
           "hash": "e9ced355",
@@ -4089,22 +3033,6 @@
           "category": "feature"
         },
         {
-          "hash": "c69c8a63",
-          "date": "2026-02-11T21:34:55-08:00",
-          "title": "Extract built-in agent templates to JSON files",
-          "prNumber": 241,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/241",
-          "category": "feature"
-        },
-        {
-          "hash": "77a98e36",
-          "date": "2026-02-11T21:31:28-08:00",
-          "title": "Add RoleRegistryService for agent template management",
-          "prNumber": 240,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/240",
-          "category": "feature"
-        },
-        {
           "hash": "bf06db58",
           "date": "2026-02-11T21:24:01-08:00",
           "title": "Remove residual goapAlwaysOn settings type",
@@ -4119,14 +3047,6 @@
           "prNumber": 239,
           "prUrl": "https://github.com/proto-labs-ai/automaker/pull/239",
           "category": "fix"
-        },
-        {
-          "hash": "ec01560d",
-          "date": "2026-02-11T21:13:39-08:00",
-          "title": "Add AgentTemplate Zod schema for dynamic role registry",
-          "prNumber": 237,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/237",
-          "category": "feature"
         },
         {
           "hash": "c4e26d39",
@@ -4153,43 +3073,11 @@
           "category": "feature"
         },
         {
-          "hash": "6ca832f4",
-          "date": "2026-02-11T19:46:17-08:00",
-          "title": "Add GTM specialist prompt template",
-          "prNumber": 232,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/232",
-          "category": "feature"
-        },
-        {
-          "hash": "1752506b",
-          "date": "2026-02-11T19:45:33-08:00",
-          "title": "Add gtm-specialist role and capabilities",
-          "prNumber": 233,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/233",
-          "category": "feature"
-        },
-        {
-          "hash": "8479167e",
-          "date": "2026-02-11T19:32:30-08:00",
-          "title": "Add Linear MCP provisioning to setup pipeline",
-          "prNumber": 231,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/231",
-          "category": "feature"
-        },
-        {
           "hash": "033cd6f4",
           "date": "2026-02-11T19:17:28-08:00",
           "title": "Add Linear MCP server to plugin for issue management",
           "prNumber": 230,
           "prUrl": "https://github.com/proto-labs-ai/automaker/pull/230",
-          "category": "feature"
-        },
-        {
-          "hash": "ddcc9424",
-          "date": "2026-02-11T18:36:04-08:00",
-          "title": "Beads-first workflow + auto-start agent hook",
-          "prNumber": 229,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/229",
           "category": "feature"
         },
         {
@@ -4231,22 +3119,6 @@
           "prNumber": 224,
           "prUrl": "https://github.com/proto-labs-ai/automaker/pull/224",
           "category": "fix"
-        },
-        {
-          "hash": "8a55aeea",
-          "date": "2026-02-11T14:57:12-08:00",
-          "title": "Add Discord DM HTTP API endpoints and MCP tools",
-          "prNumber": 223,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/223",
-          "category": "feature"
-        },
-        {
-          "hash": "719e68f9",
-          "date": "2026-02-11T13:32:50-08:00",
-          "title": "Add DM send/receive capability to DiscordBotService",
-          "prNumber": 222,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/222",
-          "category": "feature"
         },
         {
           "hash": "90302f68",
@@ -4697,14 +3569,6 @@
           "category": "feature"
         },
         {
-          "hash": "b98c29a1",
-          "date": "2026-02-10T12:43:18-08:00",
-          "title": "Git-track feature.json files and .automaker project data",
-          "prNumber": 163,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/163",
-          "category": "feature"
-        },
-        {
           "hash": "ec322ec4",
           "date": "2026-02-10T12:27:44-08:00",
           "title": "Consolidate Ava Gateway Phases 3-9",
@@ -4774,14 +3638,6 @@
           "title": "Enable MCP tool search optimization (auto:10)",
           "prNumber": 151,
           "prUrl": "https://github.com/proto-labs-ai/automaker/pull/151",
-          "category": "feature"
-        },
-        {
-          "hash": "87c6fb9f",
-          "date": "2026-02-10T02:40:55-08:00",
-          "title": "Beads REST API Bridge",
-          "prNumber": 149,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/149",
           "category": "feature"
         },
         {
@@ -4977,14 +3833,6 @@
           "category": "feature"
         },
         {
-          "hash": "3e4bf86a",
-          "date": "2026-02-06T19:09:26-08:00",
-          "title": "Initialize issue tracking and agent instructions",
-          "prNumber": 118,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/118",
-          "category": "infrastructure"
-        },
-        {
           "hash": "0bafc61a",
           "date": "2026-02-06T14:42:24-08:00",
           "title": "Add missing policy-engine lib and expand update guide",
@@ -5001,27 +3849,11 @@
           "category": "fix"
         },
         {
-          "hash": "e143bf90",
-          "date": "2026-02-06T14:30:00-08:00",
-          "title": "Wire briefing API into activation protocol",
-          "prNumber": 116,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/116",
-          "category": "feature"
-        },
-        {
           "hash": "246f1042",
           "date": "2026-02-06T14:19:20-08:00",
           "title": "Expand skill with bug/improvement tracking and autonomous ownership",
           "prNumber": 114,
           "prUrl": "https://github.com/proto-labs-ai/automaker/pull/114",
-          "category": "feature"
-        },
-        {
-          "hash": "21966c7c",
-          "date": "2026-02-06T14:06:23-08:00",
-          "title": "Add briefing digest API and MCP tool",
-          "prNumber": 113,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/113",
           "category": "feature"
         },
         {
@@ -5449,14 +4281,6 @@
           "category": "feature"
         },
         {
-          "hash": "fa0c2d44",
-          "date": "2026-02-04T16:55:22-08:00",
-          "title": "[Epic] Ralph Loops",
-          "prNumber": 18,
-          "prUrl": "https://github.com/proto-labs-ai/automaker/pull/18",
-          "category": "feature"
-        },
-        {
           "hash": "786c7aab",
           "date": "2026-02-04T15:11:08-08:00",
           "title": "Add self-learning and self-healing architecture proposal",
@@ -5569,5 +4393,5 @@
       ]
     }
   ],
-  "generatedAt": "2026-02-19T08:51:00.340Z"
+  "generatedAt": "2026-02-19T16:11:23.733Z"
 }

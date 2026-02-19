@@ -257,12 +257,12 @@
                     resolution and topological ordering
                   </li>
                   <li class="flex items-start gap-2 text-sm text-zinc-400">
-                    <span class="text-green-500 mt-0.5">&#10003;</span>Model hierarchy: Haiku for
-                    small tasks, Sonnet for standard, Opus for architectural
+                    <span class="text-green-500 mt-0.5">&#10003;</span>Tiered model selection
+                    policies based on task complexity
                   </li>
                   <li class="flex items-start gap-2 text-sm text-zinc-400">
                     <span class="text-green-500 mt-0.5">&#10003;</span>Auto-escalation on failure
-                    (retry with more capable model)
+                    with smarter model retry
                   </li>
                   <li class="flex items-start gap-2 text-sm text-zinc-400">
                     <span class="text-green-500 mt-0.5">&#10003;</span>CI pipeline: build, test,
@@ -291,34 +291,27 @@
                     class="status-completed inline-block px-2.5 py-0.5 rounded-md text-[11px] font-medium uppercase tracking-wider border"
                     >Shipped</span
                   >
-                  <h3 class="text-lg font-semibold text-white">
-                    Lead Engineer &amp; Signal Routing
-                  </h3>
+                  <h3 class="text-lg font-semibold text-white">Smart Orchestration</h3>
                 </div>
                 <p class="text-sm text-zinc-400 mb-4">
-                  Event-driven orchestration with fast-path rules, signal classification, and
-                  per-feature state machine.
+                  Event-driven feature lifecycle with automated decision-making and quality gates.
                 </p>
                 <ul class="space-y-1.5">
                   <li class="flex items-start gap-2 text-sm text-zinc-400">
-                    <span class="text-green-500 mt-0.5">&#10003;</span>Lead Engineer state machine
-                    (INTAKE &gt; PLAN &gt; EXECUTE &gt; REVIEW &gt; MERGE &gt; DONE)
+                    <span class="text-green-500 mt-0.5">&#10003;</span>Per-feature state machine
+                    (intake → plan → execute → review → merge → done)
                   </li>
                   <li class="flex items-start gap-2 text-sm text-zinc-400">
-                    <span class="text-green-500 mt-0.5">&#10003;</span>Signal intake and
-                    classification (ops vs GTM routing)
+                    <span class="text-green-500 mt-0.5">&#10003;</span>Fast-path rules engine for
+                    routine decisions without LLM calls
                   </li>
                   <li class="flex items-start gap-2 text-sm text-zinc-400">
-                    <span class="text-green-500 mt-0.5">&#10003;</span>Fast-path rules engine (pure
-                    functions, no LLM for routine decisions)
+                    <span class="text-green-500 mt-0.5">&#10003;</span>Automated PR review and merge
+                    pipeline
                   </li>
                   <li class="flex items-start gap-2 text-sm text-zinc-400">
-                    <span class="text-green-500 mt-0.5">&#10003;</span>Escalation pipeline with HITL
-                    gates
-                  </li>
-                  <li class="flex items-start gap-2 text-sm text-zinc-400">
-                    <span class="text-green-500 mt-0.5">&#10003;</span>Antagonistic review for PRD
-                    quality
+                    <span class="text-green-500 mt-0.5">&#10003;</span>Quality gates with automated
+                    feedback loops
                   </li>
                 </ul>
               </div>
@@ -350,20 +343,20 @@
                 </p>
                 <ul class="space-y-1.5">
                   <li class="flex items-start gap-2 text-sm text-zinc-400">
-                    <span class="text-green-500 mt-0.5">&#10003;</span>Langfuse OTEL tracing on
-                    every API call
+                    <span class="text-green-500 mt-0.5">&#10003;</span>OpenTelemetry tracing on
+                    every agent run
                   </li>
                   <li class="flex items-start gap-2 text-sm text-zinc-400">
-                    <span class="text-green-500 mt-0.5">&#10003;</span>Metrics ledger with
-                    per-feature cost tracking ($0.56 avg/feature)
+                    <span class="text-green-500 mt-0.5">&#10003;</span>Per-feature cost tracking and
+                    budget monitoring
                   </li>
                   <li class="flex items-start gap-2 text-sm text-zinc-400">
                     <span class="text-green-500 mt-0.5">&#10003;</span>Time-series dashboard (cost,
                     throughput, cycle time, PR velocity)
                   </li>
                   <li class="flex items-start gap-2 text-sm text-zinc-400">
-                    <span class="text-green-500 mt-0.5">&#10003;</span>GitHub PR enrichment (commit
-                    counts, review timing)
+                    <span class="text-green-500 mt-0.5">&#10003;</span>PR analytics enrichment
+                    (commit counts, review timing)
                   </li>
                   <li class="flex items-start gap-2 text-sm text-zinc-400">
                     <span class="text-green-500 mt-0.5">&#10003;</span>Impact reports with
@@ -395,7 +388,7 @@
                   <h3 class="text-lg font-semibold text-white">Desktop App</h3>
                 </div>
                 <p class="text-sm text-zinc-400 mb-4">
-                  Electron build for macOS with auto-updater, IPC testing, and CI workflows.
+                  Native macOS application with auto-updater and integrated server.
                 </p>
                 <ul class="space-y-1.5">
                   <li class="flex items-start gap-2 text-sm text-zinc-400">
@@ -407,12 +400,10 @@
                     CI workflow
                   </li>
                   <li class="flex items-start gap-2 text-sm text-zinc-400">
-                    <span class="text-green-500 mt-0.5">&#10003;</span>Playwright + IPC test
-                    infrastructure
+                    <span class="text-green-500 mt-0.5">&#10003;</span>E2E test infrastructure
                   </li>
                   <li class="flex items-start gap-2 text-sm text-zinc-400">
                     <span class="text-green-500 mt-0.5">&#10003;</span>Server lifecycle management
-                    in Electron
                   </li>
                 </ul>
               </div>
@@ -427,66 +418,24 @@
                     class="status-in-progress inline-block px-2.5 py-0.5 rounded-md text-[11px] font-medium uppercase tracking-wider border"
                     >In Progress</span
                   >
-                  <h3 class="text-lg font-semibold text-white">Public Launch Infrastructure</h3>
+                  <h3 class="text-lg font-semibold text-white">Public Launch</h3>
                 </div>
                 <p class="text-sm text-zinc-400 mb-4">
-                  Changelog, roadmap, and stats pages. Content pipeline. Media blitz preparation.
+                  Public changelog, roadmap, and project stats pages.
                 </p>
                 <ul class="space-y-1.5">
                   <li class="flex items-start gap-2 text-sm text-zinc-400">
-                    <span class="text-accent mt-0.5">&#9679;</span>Public changelog with 690+ PR
-                    entries
+                    <span class="text-accent mt-0.5">&#9679;</span>Public changelog with PR history
                   </li>
                   <li class="flex items-start gap-2 text-sm text-zinc-400">
                     <span class="text-accent mt-0.5">&#9679;</span>Public roadmap page
                   </li>
                   <li class="flex items-start gap-2 text-sm text-zinc-400">
                     <span class="text-accent mt-0.5">&#9679;</span>Stats data pipeline (git +
-                    ledger)
+                    metrics API)
                   </li>
                   <li class="flex items-start gap-2 text-sm text-zinc-400">
-                    <span class="text-accent mt-0.5">&#9679;</span>Blog post drafts: &quot;I Stopped
-                    Coding&quot; + &quot;SaaS Is Dead&quot;
-                  </li>
-                  <li class="flex items-start gap-2 text-sm text-zinc-400">
-                    <span class="text-accent mt-0.5">&#9679;</span>Twitter/X content strategy and
-                    calendar
-                  </li>
-                </ul>
-              </div>
-            </div>
-            <div class="mb-8 relative">
-              <div
-                class="absolute -left-10 top-4 w-[30px] h-[30px] rounded-full dot-planned flex items-center justify-center z-10"
-              ></div>
-              <div class="rounded-xl border border-zinc-700/50 bg-surface-0 p-6">
-                <div class="flex items-center gap-3 mb-2">
-                  <span
-                    class="status-planned inline-block px-2.5 py-0.5 rounded-md text-[11px] font-medium uppercase tracking-wider border"
-                    >Planned</span
-                  >
-                  <h3 class="text-lg font-semibold text-zinc-500">
-                    Command Bar &amp; Quick Actions
-                  </h3>
-                </div>
-                <p class="text-sm text-zinc-600 mb-4">
-                  Keyboard-driven command palette for the desktop and web app.
-                </p>
-                <ul class="space-y-1.5">
-                  <li class="flex items-start gap-2 text-sm text-zinc-600">
-                    <span class="text-zinc-700 mt-0.5">&#9675;</span>Cmd+K command bar with fuzzy
-                    search
-                  </li>
-                  <li class="flex items-start gap-2 text-sm text-zinc-600">
-                    <span class="text-zinc-700 mt-0.5">&#9675;</span>Feature quick-create from
-                    command bar
-                  </li>
-                  <li class="flex items-start gap-2 text-sm text-zinc-600">
-                    <span class="text-zinc-700 mt-0.5">&#9675;</span>Agent launch shortcuts
-                  </li>
-                  <li class="flex items-start gap-2 text-sm text-zinc-600">
-                    <span class="text-zinc-700 mt-0.5">&#9675;</span>Navigation between board,
-                    terminal, settings
+                    <span class="text-accent mt-0.5">&#9679;</span>Cloudflare Pages deployment
                   </li>
                 </ul>
               </div>
@@ -504,22 +453,22 @@
                   <h3 class="text-lg font-semibold text-zinc-500">Community &amp; Open Source</h3>
                 </div>
                 <p class="text-sm text-zinc-600 mb-4">
-                  Public repo, create-protolab CLI, and $49 lifetime Pro tier.
+                  Public repo, CLI scaffolding, and community resources.
                 </p>
                 <ul class="space-y-1.5">
                   <li class="flex items-start gap-2 text-sm text-zinc-600">
                     <span class="text-zinc-700 mt-0.5">&#9675;</span>GitHub repo public access
                   </li>
                   <li class="flex items-start gap-2 text-sm text-zinc-600">
-                    <span class="text-zinc-700 mt-0.5">&#9675;</span>create-protolab npx CLI for
+                    <span class="text-zinc-700 mt-0.5">&#9675;</span>create-protolab CLI for
                     scaffolding new projects
                   </li>
                   <li class="flex items-start gap-2 text-sm text-zinc-600">
-                    <span class="text-zinc-700 mt-0.5">&#9675;</span>$49 lifetime Pro: methodology
-                    guide, agent templates, prompt library
+                    <span class="text-zinc-700 mt-0.5">&#9675;</span>Methodology guide and prompt
+                    library
                   </li>
                   <li class="flex items-start gap-2 text-sm text-zinc-600">
-                    <span class="text-zinc-700 mt-0.5">&#9675;</span>Discord community
+                    <span class="text-zinc-700 mt-0.5">&#9675;</span>Community Discord
                   </li>
                   <li class="flex items-start gap-2 text-sm text-zinc-600">
                     <span class="text-zinc-700 mt-0.5">&#9675;</span>setupLab consulting offering

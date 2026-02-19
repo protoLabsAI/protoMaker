@@ -9,21 +9,20 @@
         "Kanban board with feature lifecycle management",
         "AI agent execution in isolated git worktrees",
         "Auto-mode with dependency resolution and topological ordering",
-        "Model hierarchy: Haiku for small tasks, Sonnet for standard, Opus for architectural",
-        "Auto-escalation on failure (retry with more capable model)",
+        "Tiered model selection policies based on task complexity",
+        "Auto-escalation on failure with smarter model retry",
         "CI pipeline: build, test, format, audit, auto-merge"
       ]
     },
     {
       "status": "completed",
-      "title": "Lead Engineer & Signal Routing",
-      "description": "Event-driven orchestration with fast-path rules, signal classification, and per-feature state machine.",
+      "title": "Smart Orchestration",
+      "description": "Event-driven feature lifecycle with automated decision-making and quality gates.",
       "items": [
-        "Lead Engineer state machine (INTAKE > PLAN > EXECUTE > REVIEW > MERGE > DONE)",
-        "Signal intake and classification (ops vs GTM routing)",
-        "Fast-path rules engine (pure functions, no LLM for routine decisions)",
-        "Escalation pipeline with HITL gates",
-        "Antagonistic review for PRD quality"
+        "Per-feature state machine (intake → plan → execute → review → merge → done)",
+        "Fast-path rules engine for routine decisions without LLM calls",
+        "Automated PR review and merge pipeline",
+        "Quality gates with automated feedback loops"
       ]
     },
     {
@@ -31,56 +30,44 @@
       "title": "Observability & Metrics",
       "description": "Full cost tracking, time-series analytics, and transparent per-feature economics.",
       "items": [
-        "Langfuse OTEL tracing on every API call",
-        "Metrics ledger with per-feature cost tracking ($0.56 avg/feature)",
+        "OpenTelemetry tracing on every agent run",
+        "Per-feature cost tracking and budget monitoring",
         "Time-series dashboard (cost, throughput, cycle time, PR velocity)",
-        "GitHub PR enrichment (commit counts, review timing)",
+        "PR analytics enrichment (commit counts, review timing)",
         "Impact reports with historical comparison"
       ]
     },
     {
       "status": "completed",
       "title": "Desktop App",
-      "description": "Electron build for macOS with auto-updater, IPC testing, and CI workflows.",
+      "description": "Native macOS application with auto-updater and integrated server.",
       "items": [
         "macOS DMG builds (x64 + arm64)",
         "Auto-updater with version tag CI workflow",
-        "Playwright + IPC test infrastructure",
-        "Server lifecycle management in Electron"
+        "E2E test infrastructure",
+        "Server lifecycle management"
       ]
     },
     {
       "status": "in-progress",
-      "title": "Public Launch Infrastructure",
-      "description": "Changelog, roadmap, and stats pages. Content pipeline. Media blitz preparation.",
+      "title": "Public Launch",
+      "description": "Public changelog, roadmap, and project stats pages.",
       "items": [
-        "Public changelog with 690+ PR entries",
+        "Public changelog with PR history",
         "Public roadmap page",
-        "Stats data pipeline (git + ledger)",
-        "Blog post drafts: \"I Stopped Coding\" + \"SaaS Is Dead\"",
-        "Twitter/X content strategy and calendar"
-      ]
-    },
-    {
-      "status": "planned",
-      "title": "Command Bar & Quick Actions",
-      "description": "Keyboard-driven command palette for the desktop and web app.",
-      "items": [
-        "Cmd+K command bar with fuzzy search",
-        "Feature quick-create from command bar",
-        "Agent launch shortcuts",
-        "Navigation between board, terminal, settings"
+        "Stats data pipeline (git + metrics API)",
+        "Cloudflare Pages deployment"
       ]
     },
     {
       "status": "planned",
       "title": "Community & Open Source",
-      "description": "Public repo, create-protolab CLI, and $49 lifetime Pro tier.",
+      "description": "Public repo, CLI scaffolding, and community resources.",
       "items": [
         "GitHub repo public access",
-        "create-protolab npx CLI for scaffolding new projects",
-        "$49 lifetime Pro: methodology guide, agent templates, prompt library",
-        "Discord community",
+        "create-protolab CLI for scaffolding new projects",
+        "Methodology guide and prompt library",
+        "Community Discord",
         "setupLab consulting offering"
       ]
     }
