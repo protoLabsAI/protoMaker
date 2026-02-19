@@ -56,12 +56,9 @@ function generateHtml(milestones) {
         : status === 'in-progress'
           ? 'bg-surface-1'
           : 'bg-surface-0';
-    const titleColor =
-      status === 'planned' ? 'text-zinc-500' : 'text-white';
-    const descColor =
-      status === 'planned' ? 'text-zinc-600' : 'text-zinc-400';
-    const itemColor =
-      status === 'planned' ? 'text-zinc-600' : 'text-zinc-400';
+    const titleColor = status === 'planned' ? 'text-zinc-500' : 'text-white';
+    const descColor = status === 'planned' ? 'text-zinc-600' : 'text-zinc-400';
+    const itemColor = status === 'planned' ? 'text-zinc-600' : 'text-zinc-400';
     const checkColor =
       status === 'completed'
         ? 'text-green-500'
@@ -69,11 +66,7 @@ function generateHtml(milestones) {
           ? 'text-accent'
           : 'text-zinc-700';
     const checkIcon =
-      status === 'completed'
-        ? '&#10003;'
-        : status === 'in-progress'
-          ? '&#9679;'
-          : '&#9675;';
+      status === 'completed' ? '&#10003;' : status === 'in-progress' ? '&#9679;' : '&#9675;';
 
     parts.push(`            <div class="mb-8 relative">`);
     parts.push(
@@ -85,9 +78,7 @@ function generateHtml(milestones) {
       );
     }
     parts.push(`              </div>`);
-    parts.push(
-      `              <div class="rounded-xl border ${borderColor} ${bgColor} p-6">`
-    );
+    parts.push(`              <div class="rounded-xl border ${borderColor} ${bgColor} p-6">`);
     parts.push(`                <div class="flex items-center gap-3 mb-2">`);
     parts.push(
       `                  <span class="${statusClass} inline-block px-2.5 py-0.5 rounded-md text-[11px] font-medium uppercase tracking-wider border">${statusLabel(status)}</span>`

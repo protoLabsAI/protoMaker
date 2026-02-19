@@ -89,9 +89,7 @@ function parseCommits() {
   // Get all commits with PR numbers in the message — these are squash-merged PRs
   // Format: hash|date|message
   const SEP = '|||';
-  const log = run(
-    `git log --grep='(#' --format='%H${SEP}%aI${SEP}%s'`
-  );
+  const log = run(`git log --grep='(#' --format='%H${SEP}%aI${SEP}%s'`);
 
   if (!log) return [];
 
@@ -172,7 +170,11 @@ function computeSummary(entries) {
 }
 
 function escapeHtml(str) {
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
 function formatDate(dateStr) {
@@ -194,7 +196,9 @@ function generateHtml(months) {
 
   for (const group of months) {
     parts.push(`          <div class="month-group mb-12">`);
-    parts.push(`            <h2 class="text-xl font-semibold text-white mb-6 sticky top-16 bg-surface-0/90 backdrop-blur-sm py-2 z-10">${escapeHtml(group.label)}<span class="text-sm font-normal text-muted ml-3">${group.entries.length} changes</span></h2>`);
+    parts.push(
+      `            <h2 class="text-xl font-semibold text-white mb-6 sticky top-16 bg-surface-0/90 backdrop-blur-sm py-2 z-10">${escapeHtml(group.label)}<span class="text-sm font-normal text-muted ml-3">${group.entries.length} changes</span></h2>`
+    );
     parts.push(`            <div class="relative pl-8">`);
     parts.push(`              <div class="timeline-line"></div>`);
 
@@ -203,11 +207,19 @@ function generateHtml(months) {
       const title = escapeHtml(entry.title);
       const date = formatDate(entry.date);
       parts.push(`              <div class="mb-4 relative" data-category="${cat}">`);
-      parts.push(`                <div class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"></div>`);
+      parts.push(
+        `                <div class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"></div>`
+      );
       parts.push(`                <div class="flex flex-wrap items-center gap-2">`);
-      parts.push(`                  <span class="category-${cat} inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider">${cat}</span>`);
-      parts.push(`                  <a href="${entry.prUrl}" target="_blank" rel="noopener" class="text-zinc-300 hover:text-white transition-colors">${title}</a>`);
-      parts.push(`                  <span class="text-xs text-zinc-600 font-mono">#${entry.prNumber}</span>`);
+      parts.push(
+        `                  <span class="category-${cat} inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider">${cat}</span>`
+      );
+      parts.push(
+        `                  <a href="${entry.prUrl}" target="_blank" rel="noopener" class="text-zinc-300 hover:text-white transition-colors">${title}</a>`
+      );
+      parts.push(
+        `                  <span class="text-xs text-zinc-600 font-mono">#${entry.prNumber}</span>`
+      );
       parts.push(`                  <span class="text-xs text-zinc-600">${date}</span>`);
       parts.push(`                </div>`);
       parts.push(`              </div>`);
@@ -248,7 +260,9 @@ function injectIntoHtml(months) {
   }
 
   writeFileSync(CHANGELOG_HTML, html);
-  console.log(`  Injected ${months.reduce((n, m) => n + m.entries.length, 0)} entries into ${CHANGELOG_HTML}`);
+  console.log(
+    `  Injected ${months.reduce((n, m) => n + m.entries.length, 0)} entries into ${CHANGELOG_HTML}`
+  );
 }
 
 function main() {

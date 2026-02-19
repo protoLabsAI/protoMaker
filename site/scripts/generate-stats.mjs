@@ -102,9 +102,7 @@ async function getLedgerStats() {
 function getFeatureCountFromBoard() {
   // Fallback: count feature directories in .automaker/features/
   try {
-    const output = run(
-      'ls -d .automaker/features/feature-*/ 2>/dev/null | wc -l'
-    );
+    const output = run('ls -d .automaker/features/feature-*/ 2>/dev/null | wc -l');
     return parseInt(output, 10) || 0;
   } catch {
     return 0;
@@ -115,14 +113,18 @@ async function main() {
   console.log('Generating stats...');
 
   const git = getGitStats();
-  console.log(`  Git: ${git.commitCount} commits, ${git.prCount} PRs, ${git.locCount.toLocaleString()} LOC`);
+  console.log(
+    `  Git: ${git.commitCount} commits, ${git.prCount} PRs, ${git.locCount.toLocaleString()} LOC`
+  );
 
   let ledger = null;
   if (withLedger) {
     console.log('  Fetching ledger stats from server...');
     ledger = await getLedgerStats();
     if (ledger) {
-      console.log(`  Ledger: ${ledger.featureCount} features, $${ledger.totalCost.toFixed(2)} total cost`);
+      console.log(
+        `  Ledger: ${ledger.featureCount} features, $${ledger.totalCost.toFixed(2)} total cost`
+      );
     }
   }
 
