@@ -31,7 +31,6 @@ const SERVICE_ICONS: Record<EngineServiceId, typeof Cog> = {
   'project-planning': FileText,
   decomposition: Network,
   launch: Rocket,
-  'signal-intake': Radio,
   'auto-mode': Cog,
   'agent-execution': Bot,
   'git-workflow': GitBranch,

@@ -33,7 +33,6 @@ export type EngineServiceId =
   | 'project-planning'
   | 'decomposition'
   | 'launch'
-  | 'signal-intake'
   | 'auto-mode'
   | 'agent-execution'
   | 'git-workflow'
