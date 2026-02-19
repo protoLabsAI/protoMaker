@@ -2744,6 +2744,91 @@ const tools: Tool[] = [
     },
   },
 
+  // ========== Board Query ==========
+  {
+    name: 'query_board',
+    description:
+      'Query features with compound filters. Supports filtering by status, epic, assignee, complexity, blocked state, dependencies, date range, and text search. Returns compact results to minimize context usage.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        status: {
+          oneOf: [
+            {
+              type: 'string',
+              enum: ['backlog', 'in_progress', 'review', 'done', 'blocked', 'verified'],
+            },
+            {
+              type: 'array',
+              items: {
+                type: 'string',
+                enum: ['backlog', 'in_progress', 'review', 'done', 'blocked', 'verified'],
+              },
+            },
+          ],
+          description: 'Filter by status (single or array)',
+        },
+        epicId: {
+          type: 'string',
+          description: 'Filter by parent epic ID',
+        },
+        assignee: {
+          type: ['string', 'null'],
+          description: 'Filter by assignee. Use null for unassigned features.',
+        },
+        complexity: {
+          type: 'string',
+          enum: ['small', 'medium', 'large', 'architectural'],
+          description: 'Filter by complexity level',
+        },
+        isEpic: {
+          type: 'boolean',
+          description: 'Filter for epic features only (true) or non-epic only (false)',
+        },
+        isBlocked: {
+          type: 'boolean',
+          description: 'Filter for blocked features (true) or non-blocked (false)',
+        },
+        hasDependencies: {
+          type: 'boolean',
+          description: 'Filter for features with dependencies (true) or without (false)',
+        },
+        search: {
+          type: 'string',
+          description: 'Text search in title and description',
+        },
+        limit: {
+          type: 'number',
+          description: 'Maximum results to return (default: 50)',
+        },
+      },
+      required: ['projectPath'],
+    },
+  },
+  {
+    name: 'get_feature_dependencies',
+    description:
+      'Get the full dependency information for a feature: what it depends on (with satisfaction status), what depends on it (reverse deps), and whether all dependencies are met.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        featureId: {
+          type: 'string',
+          description: 'The feature ID to get dependencies for',
+        },
+      },
+      required: ['projectPath', 'featureId'],
+    },
+  },
+
   // ========== Notes Workspace ==========
   {
     name: 'list_note_tabs',
@@ -3939,6 +4024,128 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         title: args.title,
         description: args.description,
       });
+
+    // Board Query
+    case 'query_board': {
+      const qResult = (await apiCall('/features/list', {
+        projectPath: args.projectPath,
+      })) as { features?: Array<Record<string, unknown>> };
+      let qFeatures = qResult.features || [];
+
+      if (args.status) {
+        const statuses = Array.isArray(args.status) ? args.status : [args.status];
+        qFeatures = qFeatures.filter((f) => statuses.includes(f.status as string));
+      }
+      if (args.epicId !== undefined) {
+        qFeatures = qFeatures.filter((f) => f.epicId === args.epicId);
+      }
+      if (args.assignee !== undefined) {
+        if (args.assignee === null) {
+          qFeatures = qFeatures.filter((f) => !f.assignee);
+        } else {
+          qFeatures = qFeatures.filter((f) => f.assignee === args.assignee);
+        }
+      }
+      if (args.complexity) {
+        qFeatures = qFeatures.filter((f) => f.complexity === args.complexity);
+      }
+      if (args.isEpic !== undefined) {
+        qFeatures = qFeatures.filter((f) => !!f.isEpic === args.isEpic);
+      }
+      if (args.isBlocked !== undefined) {
+        if (args.isBlocked) {
+          qFeatures = qFeatures.filter((f) => f.status === 'blocked');
+        } else {
+          qFeatures = qFeatures.filter((f) => f.status !== 'blocked');
+        }
+      }
+      if (args.hasDependencies !== undefined) {
+        if (args.hasDependencies) {
+          qFeatures = qFeatures.filter(
+            (f) => Array.isArray(f.dependencies) && (f.dependencies as string[]).length > 0
+          );
+        } else {
+          qFeatures = qFeatures.filter(
+            (f) => !Array.isArray(f.dependencies) || (f.dependencies as string[]).length === 0
+          );
+        }
+      }
+      if (args.search) {
+        const lower = (args.search as string).toLowerCase();
+        qFeatures = qFeatures.filter(
+          (f) =>
+            (f.title as string)?.toLowerCase().includes(lower) ||
+            (f.description as string)?.toLowerCase().includes(lower)
+        );
+      }
+
+      const qTotal = qFeatures.length;
+      const qLimit = (args.limit as number) || 50;
+      const qLimited = qFeatures.slice(0, qLimit);
+
+      return {
+        features: qLimited.map((f) => ({
+          id: f.id,
+          title: f.title,
+          status: f.status,
+          complexity: f.complexity,
+          branchName: f.branchName,
+          epicId: f.epicId,
+          isEpic: f.isEpic,
+          assignee: f.assignee,
+          dependencies: f.dependencies,
+          prNumber: f.prNumber,
+        })),
+        total: qTotal,
+        returned: qLimited.length,
+      };
+    }
+
+    case 'get_feature_dependencies': {
+      const depResult = (await apiCall('/features/list', {
+        projectPath: args.projectPath,
+      })) as { features?: Array<Record<string, unknown>> };
+      const depFeatures = depResult.features || [];
+      const depMap = new Map(depFeatures.map((f) => [f.id, f]));
+      const depTarget = depMap.get(args.featureId as string);
+
+      if (!depTarget) {
+        return { error: 'Feature not found' };
+      }
+
+      const satStatuses = ['done', 'completed', 'verified', 'review'];
+      const dependsOn = ((depTarget.dependencies as string[]) || []).map((depId: string) => {
+        const dep = depMap.get(depId);
+        return {
+          id: depId,
+          title: dep?.title,
+          status: dep?.status,
+          satisfied: dep ? satStatuses.includes(dep.status as string) : false,
+        };
+      });
+
+      const reverseDeps = depFeatures
+        .filter(
+          (f) =>
+            Array.isArray(f.dependencies) &&
+            (f.dependencies as string[]).includes(args.featureId as string)
+        )
+        .map((f) => ({
+          id: f.id,
+          title: f.title,
+          status: f.status,
+          satisfied: satStatuses.includes(f.status as string),
+        }));
+
+      return {
+        featureId: args.featureId,
+        featureTitle: depTarget.title,
+        dependsOn,
+        blockedBy: reverseDeps,
+        allSatisfied:
+          dependsOn.length === 0 || dependsOn.every((d: { satisfied: boolean }) => d.satisfied),
+      };
+    }
 
     // Notes Workspace
     case 'list_note_tabs':
