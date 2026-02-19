@@ -240,7 +240,7 @@ function ensureApiKey(): string {
 function getIconPath(): string | null {
   let iconFile: string;
   if (process.platform === 'win32') {
-    iconFile = 'icon.ico';
+    iconFile = 'favicon.ico';
   } else if (process.platform === 'darwin') {
     iconFile = 'logo_larger.png';
   } else {

@@ -234,7 +234,7 @@
           ]
         }
       ],
-      "icon": "public/icon.ico"
+      "icon": "public/favicon.ico"
     },
     "linux": {
       "target": [
