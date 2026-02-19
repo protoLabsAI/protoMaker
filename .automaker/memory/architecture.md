@@ -1855,3 +1855,27 @@ usageStats:
 - **Problem solved:** Writing component usage examples for README had choice between showing just basic button import vs. layered examples of increasing complexity
 - **Why this works:** Users of varying skill levels will read the README. Minimal example gets them running in < 5 minutes (acceptance criteria). Subsequent examples show variants, className overrides, cn() utility, custom themes for users who need more. Cognitive load increases gradually.
 - **Trade-offs:** Longer README, but serves broader audience. Benefits: Self-contained reference without needing to jump to Storybook. Cost: More content to maintain if component API changes.
+
+### Renamed EscalationSource.crew_escalation to lead_engineer_escalation to clarify that this enum value is actively used for Lead Engineer escalations, not legacy crew loop system. (2026-02-19)
+- **Context:** Crew loop system was removed years ago, but EscalationSource.crew_escalation remained and was actively used in escalation routing. Needed to clarify naming during dead code cleanup.
+- **Why:** The enum value is actively referenced in escalation-channels services (discord-channel-escalation, github-issue-channel). Renaming clarifies intent: this is for Lead Engineer, not crew. Prevents future confusion about what 'crew' means.
+- **Rejected:** Could have removed the enum value entirely and aliased to a different escalation type - but that would require more refactoring of escalation routing logic. Renaming is surgical and isolated.
+- **Trade-offs:** Rename requires updating 3 references across services. New name is clearer but slightly longer. Alternative of leaving 'crew_escalation' as-is would perpetuate confusion about the crew loop system.
+- **Breaking if changed:** Any external code (agents, plugins, integrations) that references EscalationSource.crew_escalation will fail at runtime. This is a breaking change but necessary for clarity. Services should fail fast with 'crew_escalation is not a valid enum value' rather than silently using wrong routing.
+
+#### [Pattern] When removing dead code systems, distinguish between dead types/configs (safe to delete) and dead but referenced enum values (must be renamed, not deleted, if still referenced). (2026-02-19)
+- **Problem solved:** Crew loop system removal left behind CrewLoopSettings type, CrewMemberConfig type, crewLoops settings field, and crew event types. But EscalationSource.crew_escalation was still actively used despite crew system being gone.
+- **Why this works:** Types are compile-time constraints - safe to delete if no imports reference them. But enum values are runtime identifiers - deleting an actively-used enum value causes runtime failures. Renaming makes the mismatch explicit.
+- **Trade-offs:** Renaming is more work than deleting (requires 3 reference updates). But it improves code clarity and prevents future confusion about what escalation types are used for.
+
+#### [Gotcha] npm workspace type resolution requires `npm install` at root after modifying shared packages. TypeScript doesn't auto-detect updated types in workspace dependencies even though source files were changed. (2026-02-19)
+- **Situation:** Modified `libs/types/src/escalation.ts` enum. Dependent package `@automaker/server` failed to resolve new enum value despite correct source changes. Build error: enum value not found.
+- **Root cause:** npm workspaces use symlinks to link packages. The symlink target's `dist/` contains the compiled JavaScript/TypeScript declarations. Modifying source doesn't update `dist/` until the package is rebuilt. Running `npm install` at root triggers workspace rebuild and re-links the packages.
+- **How to avoid:** Running full `npm install` is slower than targeted rebuild, but ensures all workspace symlinks are fresh and all dependent packages see consistent types. Prevents subtle version skew bugs.
+
+### Deleted entire `apps/server/src/services/crew-members/` directory as dead code cleanup, rather than marking functions as deprecated. (2026-02-19)
+- **Context:** Directory contained only a placeholder `index.ts` file with comment 'removed'. No active code referenced it. Escalation system uses `EscalationSource.crew_escalation` (now renamed), but the crew-members service never implemented actual crew loop logic.
+- **Why:** Hard deletion is appropriate for code that (1) has never been active, (2) is replaced by a different system (lead engineer escalations), and (3) has no external API contracts. Keeping deprecated code creates maintenance burden and confuses future developers about which escalation system is active.
+- **Rejected:** Could have marked with `@deprecated` and kept as a reference, but the code was never functional. Deprecation is for APIs that need gradual migration; this was orphaned code.
+- **Trade-offs:** Immediate cleanup removes future confusion about 'is crew loop still supported?' But loses history of the experiment in source. Git history preserves the deletion decision.
+- **Breaking if changed:** Any external code that imports from `apps/server/src/services/crew-members` will fail. Build-time check confirmed no imports exist in the codebase.
