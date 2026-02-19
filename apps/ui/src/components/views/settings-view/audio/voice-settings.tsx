@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Label } from '@protolabs/ui/atoms';
 import { Switch } from '@protolabs/ui/atoms';
 import { Input } from '@protolabs/ui/atoms';
@@ -67,6 +67,18 @@ export function VoiceSettings() {
     }
   }, []);
 
+  // Debounced save for text inputs (wake word)
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const debouncedSave = useMemo(
+    () => (updated: VoiceSettingsType) => {
+      setSettings(updated);
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = setTimeout(() => saveSettings(updated), 500);
+    },
+    [saveSettings]
+  );
+  useEffect(() => () => clearTimeout(debounceTimerRef.current), []);
+
   const handleDownload = async (size: string) => {
     setDownloading(size);
     try {
@@ -108,7 +120,7 @@ export function VoiceSettings() {
         <Label className="text-sm text-muted-foreground">Wake Word</Label>
         <Input
           value={settings.wakeWord}
-          onChange={(e) => saveSettings({ ...settings, wakeWord: e.target.value })}
+          onChange={(e) => debouncedSave({ ...settings, wakeWord: e.target.value })}
           placeholder="ava"
           className="max-w-48"
         />
@@ -125,7 +137,8 @@ export function VoiceSettings() {
         </div>
         <Slider
           value={[settings.sensitivity]}
-          onValueChange={([v]) => saveSettings({ ...settings, sensitivity: v })}
+          onValueChange={([v]) => setSettings((s) => ({ ...s, sensitivity: v }))}
+          onValueCommit={([v]) => saveSettings({ ...settings, sensitivity: v })}
           min={0.1}
           max={0.95}
           step={0.05}
