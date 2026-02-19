@@ -307,6 +307,18 @@ export const queryKeys = {
   },
 
   // ============================================
+  // Engine Status
+  // ============================================
+  engine: {
+    /** Real-time engine service status */
+    status: () => ['engine', 'status'] as const,
+    /** Per-service detail views */
+    autoModeDetail: () => ['engine', 'auto-mode', 'detail'] as const,
+    prFeedbackDetail: () => ['engine', 'pr-feedback', 'detail'] as const,
+    leadEngineerDetail: () => ['engine', 'lead-engineer', 'detail'] as const,
+  },
+
+  // ============================================
   // Integrations
   // ============================================
   integrations: {

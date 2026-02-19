@@ -1,57 +1,148 @@
 /**
- * useFlowGraphData — Main adapter hook
+ * useFlowGraphData — Main adapter hook for the engine observability dashboard.
  *
- * Transforms existing hooks + board store into React Flow nodes and edges.
- * Static nodes: Ava, services, integrations (fixed positions)
- * Dynamic nodes: features (from store), agents (from running agents)
+ * Builds React Flow nodes and edges from:
+ * 1. Engine service status (via /api/engine/status)
+ * 2. Pipeline tracker (WebSocket events mapped to stages)
+ * 3. Integration status
+ * 4. Running agents & active features from app store
  */
 
 import { useMemo } from 'react';
 import type { Node, Edge } from '@xyflow/react';
 import { useAppStore } from '@/store/app-store';
 import { useRunningAgents } from '@/hooks/queries/use-running-agents';
-import {
-  useIntegrationStatus,
-  useCapacityMetrics,
-  useSystemHealth,
-} from '@/hooks/queries/use-metrics';
+import { useIntegrationStatus, useEngineStatus } from '@/hooks/queries/use-metrics';
+import { usePipelineTracker } from './use-pipeline-tracker';
 import {
   NODE_IDS,
-  STATIC_POSITIONS,
+  ENGINE_SERVICES,
+  INTEGRATION_POSITIONS,
   STATIC_EDGES,
-  DYNAMIC_ZONE_START_Y,
-  DYNAMIC_ZONE_CENTER_X,
   PIPELINE_STAGES,
   PIPELINE_EDGES,
+  BRIDGE_EDGES,
+  DYNAMIC_ZONE_START_Y,
+  DYNAMIC_ZONE_CENTER_X,
 } from '../constants';
 import type {
-  OrchestratorNodeData,
-  ServiceNodeData,
+  EngineServiceNodeData,
+  EngineServiceId,
   IntegrationNodeData,
   FeatureNodeData,
   AgentNodeData,
   PipelineStageNodeData,
 } from '../types';
-import type { StageAggregate } from './use-pipeline-tracker';
 
-export interface UseFlowGraphDataOptions {
-  pipelineEnabled?: boolean;
-  stageAggregates?: StageAggregate[];
+/** Engine status response shape from /api/engine/status */
+interface EngineStatusResponse {
+  signalIntake?: { active?: boolean };
+  autoMode?: {
+    running?: boolean;
+    queueDepth?: number;
+    runningAgents?: number;
+    runningFeatures?: string[];
+  };
+  agentExecution?: {
+    activeAgents?: Array<{
+      featureId: string;
+      model?: string;
+      startTime?: number;
+      costUsd?: number;
+      title?: string;
+    }>;
+  };
+  gitWorkflow?: Record<string, unknown>;
+  prFeedback?: {
+    trackedPRs?: number;
+    remediationActive?: number;
+  };
+  leadEngineer?: {
+    running?: boolean;
+    sessions?: Array<{
+      projectPath?: string;
+      flowState?: string;
+      actionsTaken?: number;
+    }>;
+  };
 }
 
-export function useFlowGraphData(options: UseFlowGraphDataOptions = {}) {
-  const { pipelineEnabled = false, stageAggregates = [] } = options;
+function getServiceStatus(
+  serviceId: EngineServiceId,
+  engineStatus: EngineStatusResponse | undefined
+): { status: 'active' | 'idle' | 'error'; throughput: number; statusLine?: string } {
+  if (!engineStatus) return { status: 'idle', throughput: 0 };
+
+  switch (serviceId) {
+    case 'signal-intake':
+      return {
+        status: engineStatus.signalIntake?.active ? 'active' : 'idle',
+        throughput: 0,
+        statusLine: 'Classifies signals from GitHub, Linear, Discord',
+      };
+    case 'auto-mode': {
+      const am = engineStatus.autoMode;
+      const running = am?.running ?? false;
+      return {
+        status: running ? 'active' : 'idle',
+        throughput: am?.runningAgents ?? 0,
+        statusLine: running
+          ? `${am?.runningAgents ?? 0} agents, ${am?.queueDepth ?? 0} queued`
+          : undefined,
+      };
+    }
+    case 'agent-execution': {
+      const agents = engineStatus.agentExecution?.activeAgents ?? [];
+      return {
+        status: agents.length > 0 ? 'active' : 'idle',
+        throughput: agents.length,
+        statusLine: agents.length > 0 ? `${agents.length} running` : undefined,
+      };
+    }
+    case 'git-workflow':
+      return {
+        status: 'idle',
+        throughput: 0,
+        statusLine: 'Commit → Push → PR → Merge',
+      };
+    case 'pr-feedback': {
+      const pf = engineStatus.prFeedback;
+      const tracked = pf?.trackedPRs ?? 0;
+      const remediating = pf?.remediationActive ?? 0;
+      return {
+        status: remediating > 0 ? 'active' : tracked > 0 ? 'active' : 'idle',
+        throughput: tracked,
+        statusLine: tracked > 0 ? `${tracked} tracked, ${remediating} remediating` : undefined,
+      };
+    }
+    case 'lead-engineer-rules': {
+      const le = engineStatus.leadEngineer;
+      const running = le?.running ?? false;
+      const sessions = le?.sessions?.length ?? 0;
+      return {
+        status: running ? 'active' : 'idle',
+        throughput: sessions,
+        statusLine: running ? `${sessions} active sessions` : 'Subscribes to all events',
+      };
+    }
+    default:
+      return { status: 'idle', throughput: 0 };
+  }
+}
+
+export function useFlowGraphData() {
   const currentProject = useAppStore((s) => s.currentProject);
   const features = useAppStore((s) => s.features);
   const projectPath = currentProject?.path;
 
   const { data: runningAgentsData } = useRunningAgents();
   const { data: integrationStatus } = useIntegrationStatus(projectPath);
-  const { data: capacityData } = useCapacityMetrics(projectPath);
-  const { data: healthData } = useSystemHealth(projectPath);
+  const { data: engineStatusData } = useEngineStatus();
+  const { stageAggregates } = usePipelineTracker();
+
+  const engineStatus = engineStatusData as EngineStatusResponse | undefined;
 
   const allRunningAgents = runningAgentsData?.agents ?? [];
-  // Filter to current project to avoid node ID collisions across projects
   const runningAgents = useMemo(
     () =>
       projectPath
@@ -59,75 +150,40 @@ export function useFlowGraphData(options: UseFlowGraphDataOptions = {}) {
         : allRunningAgents,
     [allRunningAgents, projectPath]
   );
-  const agentCount = runningAgents.length;
 
-  // Active features: in_progress or waiting_approval (review)
+  // Active features: in_progress or review
   const activeFeatures = useMemo(
-    () => features.filter((f) => f.status === 'in_progress' || f.status === 'waiting_approval'),
+    () =>
+      features.filter((f) => {
+        const s = f.status as string;
+        return s === 'in_progress' || s === 'review';
+      }),
     [features]
   );
-
-  // Typed health dashboard response fields
-  const health = healthData as
-    | {
-        autoMode?: { isRunning?: boolean; runningCount?: number };
-        leadEngineer?: { running?: boolean; sessionCount?: number };
-      }
-    | undefined;
-  const autoModeRunning = health?.autoMode?.isRunning === true;
-  const leadEngineerRunning = health?.leadEngineer?.running === true;
-  const capacity = capacityData as { backlogSize?: number; maxConcurrency?: number } | undefined;
-  const queueDepth = capacity?.backlogSize ?? 0;
 
   const nodes = useMemo(() => {
     const result: Node[] = [];
 
-    // 1. Orchestrator (Ava)
-    const avaData: OrchestratorNodeData = {
-      label: 'Ava',
-      status: agentCount > 0 ? 'active' : 'idle',
-      agentCount,
-      featureCount: activeFeatures.length,
-      autoModeRunning,
-    };
-    result.push({
-      id: NODE_IDS.ava,
-      type: 'orchestrator',
-      position: STATIC_POSITIONS[NODE_IDS.ava],
-      data: avaData,
-      draggable: false,
-    });
+    // 1. Engine service nodes
+    for (const svc of ENGINE_SERVICES) {
+      const { status, throughput, statusLine } = getServiceStatus(svc.serviceId, engineStatus);
+      const data: EngineServiceNodeData = {
+        label: svc.label,
+        serviceId: svc.serviceId,
+        status,
+        throughput,
+        statusLine,
+      };
+      result.push({
+        id: svc.nodeId,
+        type: 'engine-service',
+        position: svc.position,
+        data,
+        draggable: false,
+      });
+    }
 
-    // 2. Service nodes
-    const autoModeData: ServiceNodeData = {
-      label: 'Auto-Mode',
-      serviceType: 'auto-mode',
-      running: autoModeRunning,
-      queueDepth,
-    };
-    result.push({
-      id: NODE_IDS.autoMode,
-      type: 'service',
-      position: STATIC_POSITIONS[NODE_IDS.autoMode],
-      data: autoModeData,
-      draggable: false,
-    });
-
-    const leadEngData: ServiceNodeData = {
-      label: 'Lead Engineer',
-      serviceType: 'lead-engineer',
-      running: leadEngineerRunning,
-      queueDepth: 0,
-    };
-    result.push({
-      id: NODE_IDS.leadEngineer,
-      type: 'service',
-      position: STATIC_POSITIONS[NODE_IDS.leadEngineer],
-      data: leadEngData,
-      draggable: false,
-    });
-
-    // 3. Integration nodes
+    // 2. Integration nodes
     const integrations = integrationStatus as
       | Record<string, { connected?: boolean; status?: string }>
       | undefined;
@@ -148,13 +204,31 @@ export function useFlowGraphData(options: UseFlowGraphDataOptions = {}) {
       result.push({
         id: intDef.id,
         type: 'integration',
-        position: STATIC_POSITIONS[intDef.id],
+        position: INTEGRATION_POSITIONS[intDef.id],
         data: intData,
         draggable: false,
       });
     }
 
-    // 4. Dynamic feature nodes
+    // 3. Pipeline stage nodes (always enabled)
+    for (const stage of PIPELINE_STAGES) {
+      const aggregate = stageAggregates.find((a) => a.stageId === stage.stageId);
+      const pipelineData: PipelineStageNodeData = {
+        stageId: stage.stageId,
+        label: stage.label,
+        status: aggregate?.status || 'idle',
+        workItems: aggregate?.workItems || [],
+      };
+      result.push({
+        id: stage.nodeId,
+        type: 'pipeline-stage',
+        position: stage.position,
+        data: pipelineData,
+        draggable: false,
+      });
+    }
+
+    // 4. Dynamic feature nodes (below pipeline)
     const featureSpacing = 200;
     const featureStartX =
       DYNAMIC_ZONE_CENTER_X - ((activeFeatures.length - 1) * featureSpacing) / 2;
@@ -205,40 +279,12 @@ export function useFlowGraphData(options: UseFlowGraphDataOptions = {}) {
       });
     });
 
-    // 6. Pipeline stage nodes (if enabled)
-    if (pipelineEnabled) {
-      for (const stage of PIPELINE_STAGES) {
-        const aggregate = stageAggregates.find((a) => a.stageId === stage.stageId);
-        const pipelineData: PipelineStageNodeData = {
-          stageId: stage.stageId,
-          label: stage.label,
-          status: aggregate?.status || 'idle',
-          workItems: aggregate?.workItems || [],
-        };
-        result.push({
-          id: stage.nodeId,
-          type: 'pipeline-stage',
-          position: stage.position,
-          data: pipelineData,
-          draggable: false,
-        });
-      }
-    }
-
     return result;
-  }, [
-    agentCount,
-    activeFeatures,
-    autoModeRunning,
-    leadEngineerRunning,
-    queueDepth,
-    integrationStatus,
-    runningAgents,
-  ]);
+  }, [engineStatus, integrationStatus, stageAggregates, activeFeatures, runningAgents]);
 
-  // Build edges: static + dynamic
+  // Build edges: static service flow + pipeline + bridge + dynamic
   const edges = useMemo(() => {
-    const result: Edge[] = [...STATIC_EDGES];
+    const result: Edge[] = [...STATIC_EDGES, ...PIPELINE_EDGES, ...BRIDGE_EDGES];
 
     // Auto-mode -> active features (workflow edges)
     for (const feature of activeFeatures) {
@@ -263,22 +309,8 @@ export function useFlowGraphData(options: UseFlowGraphDataOptions = {}) {
       }
     }
 
-    // Pipeline edges (if enabled)
-    if (pipelineEnabled) {
-      result.push(...PIPELINE_EDGES);
-
-      // Bridge edge: auto-mode service -> in_progress stage
-      result.push({
-        id: 'e-bridge-auto-pipeline',
-        source: NODE_IDS.autoMode,
-        target: NODE_IDS.pipelineInProgress,
-        type: 'workflow',
-        animated: true,
-      });
-    }
-
     return result;
-  }, [activeFeatures, runningAgents, nodes, pipelineEnabled]);
+  }, [activeFeatures, runningAgents, nodes]);
 
   return { nodes, edges };
 }

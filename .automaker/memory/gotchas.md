@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 233
-  referenced: 115
-  successfulFeatures: 115
+  loaded: 234
+  referenced: 117
+  successfulFeatures: 117
 ---
 # gotchas
 
@@ -180,3 +180,8 @@ usageStats:
 - **Situation:** Initial .npmignore excluded src/ globally, but package.json exports included ./src/themes/themes.css. Standard exclude patterns would have prevented themes from being packaged while still leaking other src/ files.
 - **Root cause:** npm's .npmignore matching is line-order dependent. Blacklist approach (exclude src/, then include src/themes/) fails because the first match wins. Whitelist approach (exclude *, then include dist/ and src/themes/) guarantees only intended paths are packaged.
 - **How to avoid:** Whitelist is more explicit but requires maintaining the include list as exports change. Easier to verify what's shipped (npm pack --dry-run shows exactly what publishes). Harder to onboard new developers who expect standard .gitignore semantics.
+
+#### [Gotcha] TypeScript build cache in tsup creates stale bundled config files that prevent type updates from being recognized. Clearing `tsup.config.bundled_*.mjs` files resolves phantom type errors. (2026-02-19)
+- **Situation:** After renaming EscalationSource enum value, build failed with 'does not provide an export named' errors even though dist/index.d.ts was correct. Rebuilding individual packages didn't help.
+- **Root cause:** tsup caches bundled config files with timestamps. When types change, the cache isn't invalidated automatically, causing tsc to read stale .d.ts files from previous bundles.
+- **How to avoid:** Clearing cache solves the problem instantly vs full rebuilds taking 90+ seconds. Risk: may lose other tsup optimizations briefly, but they rebuild automatically.

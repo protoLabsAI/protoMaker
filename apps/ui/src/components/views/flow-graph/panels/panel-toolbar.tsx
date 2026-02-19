@@ -2,7 +2,7 @@
  * PanelToolbar — Toggle buttons for floating panels
  */
 
-import { BarChart3, HeartPulse, LineChart, Info } from 'lucide-react';
+import { BarChart3, HeartPulse, LineChart, Info, Radio } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface PanelToolbarProps {
@@ -10,16 +10,19 @@ interface PanelToolbarProps {
   showHealth: boolean;
   showCharts: boolean;
   showLegend: boolean;
+  showEventStream: boolean;
   onToggleMetrics: () => void;
   onToggleHealth: () => void;
   onToggleCharts: () => void;
   onToggleLegend: () => void;
+  onToggleEventStream: () => void;
 }
 
 const buttons = [
   { key: 'metrics', icon: BarChart3, label: 'Metrics' },
   { key: 'health', icon: HeartPulse, label: 'Health' },
   { key: 'charts', icon: LineChart, label: 'Charts' },
+  { key: 'events', icon: Radio, label: 'Event Stream' },
   { key: 'legend', icon: Info, label: 'Legend' },
 ] as const;
 
@@ -28,21 +31,25 @@ export function PanelToolbar({
   showHealth,
   showCharts,
   showLegend,
+  showEventStream,
   onToggleMetrics,
   onToggleHealth,
   onToggleCharts,
   onToggleLegend,
+  onToggleEventStream,
 }: PanelToolbarProps) {
   const states: Record<string, boolean> = {
     metrics: showMetrics,
     health: showHealth,
     charts: showCharts,
+    events: showEventStream,
     legend: showLegend,
   };
   const toggles: Record<string, () => void> = {
     metrics: onToggleMetrics,
     health: onToggleHealth,
     charts: onToggleCharts,
+    events: onToggleEventStream,
     legend: onToggleLegend,
   };
 

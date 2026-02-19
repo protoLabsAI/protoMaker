@@ -12,6 +12,7 @@ import { FlowGraphCanvas } from './flow-graph-canvas';
 import { MetricsPanel } from './panels/metrics-panel';
 import { HealthPanel } from './panels/health-panel';
 import { ChartsPanel } from './panels/charts-panel';
+import { EventStreamPanel } from './panels/event-stream-panel';
 import { PanelToolbar } from './panels/panel-toolbar';
 import { FlowGraphLegend } from './flow-graph-legend';
 import { NodeDetailDialog, type SelectedNode } from './dialogs/node-detail-dialog';
@@ -29,6 +30,7 @@ export function FlowGraphView({ projectPath, onFeatureClick }: FlowGraphViewProp
   const [showHealth, setShowHealth] = useState(false);
   const [showCharts, setShowCharts] = useState(false);
   const [showLegend, setShowLegend] = useState(false);
+  const [showEventStream, setShowEventStream] = useState(false);
 
   // Node detail dialog state
   const [selectedNode, setSelectedNode] = useState<SelectedNode | null>(null);
@@ -61,10 +63,12 @@ export function FlowGraphView({ projectPath, onFeatureClick }: FlowGraphViewProp
           showHealth={showHealth}
           showCharts={showCharts}
           showLegend={showLegend}
+          showEventStream={showEventStream}
           onToggleMetrics={() => setShowMetrics((v) => !v)}
           onToggleHealth={() => setShowHealth((v) => !v)}
           onToggleCharts={() => setShowCharts((v) => !v)}
           onToggleLegend={() => setShowLegend((v) => !v)}
+          onToggleEventStream={() => setShowEventStream((v) => !v)}
         />
       </div>
 
@@ -87,7 +91,13 @@ export function FlowGraphView({ projectPath, onFeatureClick }: FlowGraphViewProp
         </div>
       )}
 
-      {showLegend && (
+      {showEventStream && (
+        <div className="absolute bottom-4 left-4 z-10 w-[600px]">
+          <EventStreamPanel onClose={() => setShowEventStream(false)} />
+        </div>
+      )}
+
+      {showLegend && !showEventStream && (
         <div className="absolute bottom-4 left-4 z-10">
           <FlowGraphLegend />
         </div>

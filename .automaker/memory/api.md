@@ -390,3 +390,8 @@ usageStats:
 - **Problem solved:** Agent created 25 story files without manual review of each one. Quality variance between files was minimal.
 - **Why this works:** Each story follows identical structure: (1) import Component, (2) define Meta with autodocs tag, (3) export Default with template, (4) export variant stories using CSF3. This regularity allows agents to generate valid code without human validation.
 - **Trade-offs:** Consistency is high (all stories follow same pattern) but individual stories may lack sophistication (e.g., complex interaction demos). Trade-off is acceptable for coverage—sophisticated stories can be added later.
+
+#### [Pattern] Enum-based escalation routing: `EscalationSource` enum value determines which service/channel handles the signal. Renaming source types (crew_escalation → lead_engineer_escalation) is safe because routing logic reads the enum, not string literals. (2026-02-19)
+- **Problem solved:** Three different files (lead-engineer-service, discord-channel-escalation, github-issue-channel) reference the same escalation source value to route signals. Needed to rename without breaking escalation flow.
+- **Why this works:** Enum-based routing decouples the semantic name (what caused the escalation) from the routing implementation (which service handles it). The name can change (reflects business logic evolution) while routing stays intact because consumers compare enum values, not strings.
+- **Trade-offs:** Requires coordinating the rename across 3+ files for consistency. But enum-based approach forces all references to be type-checked, preventing accidental mismatches that would happen with string literals.

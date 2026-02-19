@@ -1,0 +1,31 @@
+{
+  "name": "protoLabs.studio",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:22",
+  "features": {
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "forwardPorts": [3007, 3008],
+  "portsAttributes": {
+    "3007": { "label": "UI (Vite)", "onAutoForward": "notify" },
+    "3008": { "label": "API Server", "onAutoForward": "silent" }
+  },
+  "postCreateCommand": "npm install && npm run build:packages",
+  "remoteEnv": {
+    "ANTHROPIC_API_KEY": "${localEnv:ANTHROPIC_API_KEY}",
+    "AUTOMAKER_AUTO_LOGIN": "true"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "bradlc.vscode-tailwindcss",
+        "ms-playwright.playwright"
+      ],
+      "settings": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.formatOnSave": true
+      }
+    }
+  }
+}

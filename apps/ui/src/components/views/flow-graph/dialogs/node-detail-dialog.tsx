@@ -6,7 +6,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import { Brain, Cog, Plug, FileCode, Bot } from 'lucide-react';
+import { Brain, Cog, Plug, FileCode, Bot, Activity } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -19,6 +19,7 @@ import { AgentOutputModal } from '@/components/views/board-view/dialogs/agent-ou
 import {
   OrchestratorSection,
   ServiceSection,
+  EngineServiceSection,
   IntegrationSection,
   FeatureSection,
   AgentSection,
@@ -26,6 +27,7 @@ import {
 import type {
   OrchestratorNodeData,
   ServiceNodeData,
+  EngineServiceNodeData,
   IntegrationNodeData,
   FeatureNodeData,
   AgentNodeData,
@@ -46,6 +48,7 @@ interface NodeDetailDialogProps {
 const NODE_TYPE_ICONS: Record<string, typeof Brain> = {
   orchestrator: Brain,
   service: Cog,
+  'engine-service': Activity,
   integration: Plug,
   feature: FileCode,
   agent: Bot,
@@ -62,6 +65,7 @@ function getNodeSubtitle(nodeType: string): string {
   const subtitles: Record<string, string> = {
     orchestrator: 'Orchestrator',
     service: 'Service',
+    'engine-service': 'Engine Service',
     integration: 'Integration',
     feature: 'Feature',
     agent: 'Running Agent',
@@ -112,6 +116,9 @@ export function NodeDetailDialog({ open, onOpenChange, node }: NodeDetailDialogP
             )}
             {node.nodeType === 'service' && (
               <ServiceSection data={node.nodeData as ServiceNodeData} />
+            )}
+            {node.nodeType === 'engine-service' && (
+              <EngineServiceSection data={node.nodeData as EngineServiceNodeData} />
             )}
             {node.nodeType === 'integration' && (
               <IntegrationSection data={node.nodeData as IntegrationNodeData} />

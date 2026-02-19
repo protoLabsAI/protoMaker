@@ -3,12 +3,12 @@
  */
 
 import { motion } from 'motion/react';
-import { Brain, Cog, Github, FileCode, Bot } from 'lucide-react';
+import { Cog, Github, FileCode, Bot, Layers } from 'lucide-react';
 
 const NODE_LEGEND = [
-  { icon: Brain, label: 'Orchestrator', color: 'text-violet-400' },
-  { icon: Cog, label: 'Service', color: 'text-blue-400' },
+  { icon: Cog, label: 'Engine Service', color: 'text-violet-400' },
   { icon: Github, label: 'Integration', color: 'text-zinc-400' },
+  { icon: Layers, label: 'Pipeline Stage', color: 'text-blue-400' },
   { icon: FileCode, label: 'Feature', color: 'text-amber-400' },
   { icon: Bot, label: 'Agent', color: 'text-violet-400' },
 ];
@@ -46,6 +46,22 @@ const EDGE_LEGEND = [
     render: () => (
       <svg width="28" height="8" className="shrink-0">
         <line x1="0" y1="4" x2="28" y2="4" stroke="oklch(0.7 0.17 155 / 0.5)" strokeWidth="1" />
+      </svg>
+    ),
+  },
+  {
+    label: 'Pipeline',
+    render: () => (
+      <svg width="28" height="8" className="shrink-0">
+        <line
+          x1="0"
+          y1="4"
+          x2="28"
+          y2="4"
+          stroke="oklch(0.65 0.15 250 / 0.4)"
+          strokeWidth="1"
+          strokeDasharray="2 2"
+        />
       </svg>
     ),
   },

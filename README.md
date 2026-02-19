@@ -384,6 +384,23 @@ services:
 
 The Docker image supports both AMD64 and ARM64 architectures. The GitHub CLI and Claude CLI are automatically downloaded for the correct architecture during build.
 
+#### Dev Containers / GitHub Codespaces
+
+The repo includes a [Dev Container](https://containers.dev/) config for a one-click development environment. Works with VS Code, Cursor, JetBrains, and GitHub Codespaces.
+
+```bash
+# Open in VS Code with the Dev Containers extension
+code .
+# → Command Palette → "Dev Containers: Reopen in Container"
+
+# Or launch directly on GitHub Codespaces
+# → repo page → Code → Codespaces → "Create codespace on main"
+```
+
+The container provides Node.js 22, GitHub CLI, forwarded ports (3007/3008), and runs `npm install && build:packages` automatically on creation. Set `ANTHROPIC_API_KEY` in your host environment or Codespaces secrets — it's passed through automatically.
+
+See [docs/dev/dev-containers.md](docs/dev/dev-containers.md) for full setup details.
+
 ### Testing
 
 #### End-to-End Tests (Playwright)

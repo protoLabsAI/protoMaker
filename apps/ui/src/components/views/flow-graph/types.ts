@@ -27,6 +27,25 @@ export interface ServiceNodeData {
   [key: string]: unknown;
 }
 
+export type EngineServiceId =
+  | 'signal-intake'
+  | 'auto-mode'
+  | 'agent-execution'
+  | 'git-workflow'
+  | 'pr-feedback'
+  | 'lead-engineer-rules';
+
+export interface EngineServiceNodeData {
+  label: string;
+  serviceId: EngineServiceId;
+  status: 'active' | 'idle' | 'error';
+  /** Number of items being processed / in queue */
+  throughput: number;
+  /** Short status line shown below the label */
+  statusLine?: string;
+  [key: string]: unknown;
+}
+
 export interface IntegrationNodeData {
   label: string;
   integrationType: 'github' | 'linear' | 'discord';
@@ -94,6 +113,7 @@ export interface PipelineStageNodeData {
 
 export type OrchestratorNode = Node<OrchestratorNodeData, 'orchestrator'>;
 export type ServiceNode = Node<ServiceNodeData, 'service'>;
+export type EngineServiceNode = Node<EngineServiceNodeData, 'engine-service'>;
 export type IntegrationNode = Node<IntegrationNodeData, 'integration'>;
 export type FeatureNode = Node<FeatureNodeData, 'feature'>;
 export type AgentNode = Node<AgentNodeData, 'agent'>;
@@ -102,6 +122,7 @@ export type PipelineStageNode = Node<PipelineStageNodeData, 'pipeline-stage'>;
 export type FlowNode =
   | OrchestratorNode
   | ServiceNode
+  | EngineServiceNode
   | IntegrationNode
   | FeatureNode
   | AgentNode
@@ -141,6 +162,7 @@ export const FLOW_COLORS = {
 export const NODE_DIMENSIONS = {
   orchestrator: { width: 320, height: 160 },
   service: { width: 200, height: 100 },
+  'engine-service': { width: 220, height: 110 },
   integration: { width: 160, height: 80 },
   feature: { width: 180, height: 80 },
   agent: { width: 160, height: 70 },
