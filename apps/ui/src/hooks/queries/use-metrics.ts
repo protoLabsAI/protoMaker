@@ -156,6 +156,7 @@ export function useCycleTimeDistribution(
 }
 
 const ENGINE_STATUS_STALE_TIME = 10 * 1000; // 10 seconds
+const EVENT_HISTORY_STALE_TIME = 30 * 1000; // 30 seconds
 
 /**
  * Fetch real-time engine status (all services: signal intake, auto-mode, agent execution, etc.)
@@ -171,6 +172,30 @@ export function useEngineStatus() {
     refetchInterval: ENGINE_STATUS_STALE_TIME,
     refetchOnWindowFocus: false,
     retry: 2,
+  });
+}
+
+/**
+ * Fetch server-side event history from the ring buffer.
+ * Used for scroll-back and filtered queries beyond the 200-event WebSocket buffer.
+ */
+export function useEventHistory(filter?: {
+  type?: string;
+  service?: string;
+  featureId?: string;
+  since?: number;
+  until?: number;
+  limit?: number;
+}) {
+  return useQuery({
+    queryKey: queryKeys.engine.eventsHistory(filter),
+    queryFn: async () => {
+      const api = getHttpApiClient();
+      return api.engine.eventsHistory(filter);
+    },
+    staleTime: EVENT_HISTORY_STALE_TIME,
+    refetchOnWindowFocus: false,
+    retry: 1,
   });
 }
 

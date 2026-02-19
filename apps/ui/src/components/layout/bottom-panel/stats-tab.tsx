@@ -1,6 +1,10 @@
 import { useAppStore, type Feature } from '@/store/app-store';
-import { useCapacityMetrics, useLedgerAggregate } from '@/hooks/queries/use-metrics';
-import { DollarSign, Zap, TrendingUp, Clock } from 'lucide-react';
+import {
+  useCapacityMetrics,
+  useLedgerAggregate,
+  useEngineStatus,
+} from '@/hooks/queries/use-metrics';
+import { DollarSign, Zap, TrendingUp, Clock, GitPullRequest, Timer } from 'lucide-react';
 
 function StatCard({ label, value, color }: { label: string; value: number; color?: string }) {
   return (
@@ -39,6 +43,8 @@ export function StatsTab() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: capacity } = useCapacityMetrics(currentProject?.path) as { data: any };
   const { data: ledger } = useLedgerAggregate(currentProject?.path);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: engineStatus } = useEngineStatus() as { data: any };
 
   const backlog = features.filter((f: Feature) => (f.status as string) === 'backlog').length;
   const inProgress = features.filter(
@@ -57,6 +63,36 @@ export function StatsTab() {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const l = ledger as Record<string, any> | undefined;
+
+  // Budget tracking data
+  const prFeedback = engineStatus?.prFeedback;
+  const totalPrIterations =
+    prFeedback?.prs?.reduce(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (sum: number, pr: any) => sum + (pr.iterationCount ?? 0),
+      0
+    ) ?? 0;
+  const trackedPrCount = prFeedback?.trackedPRs ?? 0;
+
+  // Active cost: sum of costUsd for in-progress features
+  const activeCost = features
+    .filter(
+      (f: Feature) => (f.status as string) === 'in_progress' || (f.status as string) === 'running'
+    )
+    .reduce((sum: number, f: Feature) => sum + ((f as { costUsd?: number }).costUsd ?? 0), 0);
+
+  // Avg agent time: compute from features with both startedAt and completedAt
+  const completedWithTimes = features.filter((f: Feature) => {
+    const fe = f as { startedAt?: string; completedAt?: string };
+    return fe.startedAt && fe.completedAt;
+  });
+  const avgAgentTimeMs =
+    completedWithTimes.length > 0
+      ? completedWithTimes.reduce((sum: number, f: Feature) => {
+          const fe = f as { startedAt?: string; completedAt?: string };
+          return sum + (new Date(fe.completedAt!).getTime() - new Date(fe.startedAt!).getTime());
+        }, 0) / completedWithTimes.length
+      : 0;
 
   return (
     <div className="px-3 py-2 h-full overflow-y-auto">
@@ -98,7 +134,7 @@ export function StatsTab() {
       </div>
 
       {/* Utilization bar */}
-      <div>
+      <div className="mb-3">
         <div className="flex items-center justify-between mb-1">
           <span className="text-xs text-muted-foreground">Utilization</span>
           <span className="text-xs font-semibold tabular-nums">
@@ -117,6 +153,33 @@ export function StatsTab() {
                     ? 'var(--chart-3)'
                     : 'var(--primary)',
             }}
+          />
+        </div>
+      </div>
+
+      {/* Budget Tracking */}
+      <div>
+        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">
+          Budget Tracking
+        </p>
+        <div className="grid grid-cols-3 gap-2">
+          <KpiCard
+            icon={GitPullRequest}
+            label="PR Iterations"
+            value={trackedPrCount > 0 ? `${totalPrIterations} / ${trackedPrCount} PRs` : 'No PRs'}
+            color="text-emerald-400"
+          />
+          <KpiCard
+            icon={DollarSign}
+            label="Active Cost"
+            value={activeCost > 0 ? `$${activeCost.toFixed(2)}` : '$0.00'}
+            color="text-amber-400"
+          />
+          <KpiCard
+            icon={Timer}
+            label="Avg Agent Time"
+            value={avgAgentTimeMs > 0 ? `${Math.round(avgAgentTimeMs / 60000)}m` : '--'}
+            color="text-blue-400"
           />
         </div>
       </div>

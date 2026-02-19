@@ -316,6 +316,9 @@ export const queryKeys = {
     autoModeDetail: () => ['engine', 'auto-mode', 'detail'] as const,
     prFeedbackDetail: () => ['engine', 'pr-feedback', 'detail'] as const,
     leadEngineerDetail: () => ['engine', 'lead-engineer', 'detail'] as const,
+    /** Server-side event history buffer */
+    eventsHistory: (filter?: Record<string, unknown>) =>
+      ['engine', 'events', 'history', filter] as const,
   },
 
   // ============================================

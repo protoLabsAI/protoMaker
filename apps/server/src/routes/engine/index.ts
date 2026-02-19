@@ -4,6 +4,7 @@
  * Real-time status of all engine services for the observability dashboard.
  *
  * POST /api/engine/status — Aggregated status of all services
+ * POST /api/engine/events/history — Query buffered event history
  */
 
 import { Router } from 'express';
@@ -12,13 +13,15 @@ import { createLogger } from '@automaker/utils';
 import type { AutoModeService } from '../../services/auto-mode-service.js';
 import type { LeadEngineerService } from '../../services/lead-engineer-service.js';
 import type { PRFeedbackService } from '../../services/pr-feedback-service.js';
+import type { EventStreamBuffer } from '../../lib/event-stream-buffer.js';
 
 const logger = createLogger('EngineRoutes');
 
 export function createEngineRoutes(
   autoModeService: AutoModeService,
   leadEngineerService: LeadEngineerService | undefined,
-  prFeedbackService: PRFeedbackService
+  prFeedbackService: PRFeedbackService,
+  eventStreamBuffer?: EventStreamBuffer
 ): Router {
   const router = Router();
 
@@ -205,6 +208,47 @@ export function createEngineRoutes(
     } catch (error) {
       logger.error('Failed to get lead engineer detail:', error);
       res.status(500).json({ success: false, error: 'Failed to get lead engineer detail' });
+    }
+  });
+
+  /**
+   * POST /api/engine/events/history
+   * Query server-side event ring buffer with filters.
+   */
+  router.post('/events/history', (_req: Request, res: Response) => {
+    try {
+      if (!eventStreamBuffer) {
+        res.json({ success: true, events: [], total: 0 });
+        return;
+      }
+
+      const { type, service, featureId, since, until, limit } = _req.body as {
+        type?: string;
+        service?: string;
+        featureId?: string;
+        since?: number;
+        until?: number;
+        limit?: number;
+      };
+
+      const result = eventStreamBuffer.query({
+        type,
+        service,
+        featureId,
+        since,
+        until,
+        limit: limit ?? 200,
+      });
+
+      res.json({
+        success: true,
+        events: result.events,
+        total: result.total,
+        bufferSize: eventStreamBuffer.size,
+      });
+    } catch (error) {
+      logger.error('Failed to query event history:', error);
+      res.status(500).json({ success: false, error: 'Failed to query event history' });
     }
   });
 

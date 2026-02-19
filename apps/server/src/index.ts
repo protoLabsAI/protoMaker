@@ -177,6 +177,7 @@ import { createDeployRoutes } from './routes/deploy/index.js';
 import { createIntegrityRoutes } from './routes/integrity.js';
 import { createAnalyticsRoutes } from './routes/analytics.js';
 import { createEngineRoutes } from './routes/engine/index.js';
+import { EventStreamBuffer } from './lib/event-stream-buffer.js';
 import { AntagonisticReviewService } from './services/antagonistic-review-service.js';
 import { createLangfuseRoutes } from './routes/langfuse/index.js';
 import { createChatRoutes } from './routes/chat/index.js';
@@ -467,6 +468,12 @@ featureLoader.setIntegrityWatchdog(integrityWatchdogService);
 
 // Initialize Event History Service
 const eventHistoryService = getEventHistoryService();
+
+// Initialize Event Stream Buffer (ring buffer for engine observability dashboard)
+const eventStreamBuffer = new EventStreamBuffer(1000);
+events.subscribe((type, payload) => {
+  eventStreamBuffer.push(type, payload);
+});
 
 // Initialize Briefing Cursor Service
 const briefingCursorService = getBriefingCursorService(DATA_DIR);
@@ -1128,7 +1135,10 @@ app.use('/api/analytics', createAnalyticsRoutes());
 // Lead Engineer routes (production-phase nerve center)
 const { createLeadEngineerRoutes } = await import('./routes/lead-engineer/index.js');
 app.use('/api/lead-engineer', createLeadEngineerRoutes(leadEngineerService));
-app.use('/api/engine', createEngineRoutes(autoModeService, leadEngineerService, prFeedbackService));
+app.use(
+  '/api/engine',
+  createEngineRoutes(autoModeService, leadEngineerService, prFeedbackService, eventStreamBuffer)
+);
 app.use('/api/langfuse', createLangfuseRoutes());
 app.use(
   '/api/flows',

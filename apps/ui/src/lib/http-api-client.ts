@@ -2857,6 +2857,14 @@ export class HttpApiClient implements ElectronAPI {
     autoModeDetail: () => this.post('/api/engine/auto-mode/detail', {}),
     prFeedbackDetail: () => this.post('/api/engine/pr-feedback/detail', {}),
     leadEngineerDetail: () => this.post('/api/engine/lead-engineer/detail', {}),
+    eventsHistory: (filter?: {
+      type?: string;
+      service?: string;
+      featureId?: string;
+      since?: number;
+      until?: number;
+      limit?: number;
+    }) => this.post('/api/engine/events/history', filter ?? {}),
   };
 
   // Voice API
