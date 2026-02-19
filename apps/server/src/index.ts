@@ -1148,7 +1148,8 @@ app.use(
     prFeedbackService,
     eventStreamBuffer,
     projectService,
-    contentFlowService
+    contentFlowService,
+    featureLoader
   )
 );
 app.use('/api/langfuse', createLangfuseRoutes());

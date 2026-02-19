@@ -195,7 +195,7 @@ export function useFlowGraphData(
   const { data: runningAgentsData } = useRunningAgents();
   const { data: integrationStatus } = useIntegrationStatus(projectPath);
   const { data: engineStatusData } = useEngineStatus(projectPath);
-  const { stageAggregates } = usePipelineTracker();
+  const { stageAggregates } = usePipelineTracker({ projectPath });
 
   const engineStatus = engineStatusData as EngineStatusResponse | undefined;
 
