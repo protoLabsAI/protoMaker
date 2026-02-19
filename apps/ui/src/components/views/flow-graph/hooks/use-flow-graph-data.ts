@@ -111,12 +111,6 @@ function getServiceStatus(
         throughput: 0,
         statusLine: 'Activate auto-mode + Lead Engineer',
       };
-    case 'signal-intake':
-      return {
-        status: engineStatus.signalIntake?.active ? 'active' : 'idle',
-        throughput: 0,
-        statusLine: 'Classifies signals from GitHub, Linear, Discord',
-      };
     case 'auto-mode': {
       const am = engineStatus.autoMode;
       const running = am?.running ?? false;
