@@ -2578,6 +2578,7 @@ export class HttpApiClient implements ElectronAPI {
       fetch(`${this.serverUrl}/api/ai/complete`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ context, currentLine }),
       }),
 
@@ -2586,6 +2587,7 @@ export class HttpApiClient implements ElectronAPI {
       fetch(`${this.serverUrl}/api/ai/rewrite`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ text, instruction, surroundingContext }),
       }),
 
@@ -2594,6 +2596,7 @@ export class HttpApiClient implements ElectronAPI {
       fetch(`${this.serverUrl}/api/ai/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ command, context, selection }),
       }),
   };
