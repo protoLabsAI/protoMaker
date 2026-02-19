@@ -4,6 +4,7 @@ import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import type { Editor } from '@tiptap/react';
 import { GhostText } from './extensions/ghost-text';
+import { AIBubbleMenu } from './ai-bubble-menu';
 import { getHttpApiClient } from '@/lib/http-api-client';
 
 interface TiptapEditorProps {
@@ -91,6 +92,7 @@ export function TiptapEditor({ content, onUpdate, onEditorReady }: TiptapEditorP
   return (
     <div className="flex-1 overflow-y-auto">
       <EditorContent editor={editor} className="h-full" />
+      {editor && <AIBubbleMenu editor={editor} />}
     </div>
   );
 }
