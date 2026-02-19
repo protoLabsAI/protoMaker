@@ -19,6 +19,7 @@ import type { ContentFlowService } from '../../services/content-flow-service.js'
 import type { SignalIntakeService } from '../../services/signal-intake-service.js';
 import type { GitWorkflowService } from '../../services/git-workflow-service.js';
 import { getAllGraphs, getGraph } from '../../lib/graph-registry.js';
+import type { FeatureLoader } from '../../services/feature-loader.js';
 
 const logger = createLogger('EngineRoutes');
 
@@ -30,7 +31,8 @@ export function createEngineRoutes(
   gitWorkflowService: GitWorkflowService,
   eventStreamBuffer?: EventStreamBuffer,
   projectService?: ProjectService,
-  contentFlowService?: ContentFlowService
+  contentFlowService?: ContentFlowService,
+  featureLoader?: FeatureLoader
 ): Router {
   const router = Router();
 
@@ -340,6 +342,62 @@ export function createEngineRoutes(
       res.status(500).json({
         success: false,
         error: 'Failed to get flow definitions',
+      });
+    }
+  });
+
+  /**
+   * POST /api/engine/pipeline-state
+   * Returns current feature counts by status for pipeline hydration.
+   */
+  router.post('/pipeline-state', async (req: Request, res: Response) => {
+    try {
+      const { projectPath } = (req.body ?? {}) as { projectPath?: string };
+
+      if (!projectPath) {
+        res.status(400).json({
+          success: false,
+          error: 'projectPath is required',
+        });
+        return;
+      }
+
+      if (!featureLoader) {
+        res.status(503).json({
+          success: false,
+          error: 'FeatureLoader not available',
+        });
+        return;
+      }
+
+      // Load all features and count by status
+      const features = await featureLoader.getAll(projectPath);
+      const countsByStatus: Record<string, number> = {
+        backlog: 0,
+        in_progress: 0,
+        review: 0,
+        done: 0,
+        blocked: 0,
+      };
+
+      for (const feature of features) {
+        const status = feature.status || 'backlog';
+        if (status in countsByStatus) {
+          countsByStatus[status]++;
+        }
+      }
+
+      res.json({
+        success: true,
+        countsByStatus,
+        totalFeatures: features.length,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      logger.error('Failed to get pipeline state:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to get pipeline state',
       });
     }
   });

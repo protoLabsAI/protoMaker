@@ -6,8 +6,10 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { createLogger } from '@automaker/utils/logger';
+import { STALE_TIMES } from '@/lib/query-client';
 import type { EventType } from '@automaker/types';
 import type { PipelineStageId, TrackedWorkItem, PipelineStageStatus } from '../types';
 
@@ -67,12 +69,64 @@ export interface UsePipelineTrackerResult {
   stageAggregates: StageAggregate[];
   workItems: TrackedWorkItem[];
   isConnected: boolean;
+  isLoading: boolean;
 }
 
-export function usePipelineTracker(): UsePipelineTrackerResult {
+export interface UsePipelineTrackerProps {
+  projectPath?: string;
+}
+
+export function usePipelineTracker(props?: UsePipelineTrackerProps): UsePipelineTrackerResult {
+  const { projectPath } = props ?? {};
   const [workItems, setWorkItems] = useState<Map<string, TrackedWorkItem>>(new Map());
   const [isConnected, setIsConnected] = useState(false);
   const expiryTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
+
+  // Fetch initial pipeline state with React Query
+  const { data: initialState, isLoading } = useQuery({
+    queryKey: ['engine', 'pipeline-state', projectPath],
+    queryFn: async () => {
+      if (!projectPath) return null;
+      const api = getHttpApiClient();
+      return api.engine.pipelineState(projectPath);
+    },
+    enabled: !!projectPath,
+    staleTime: STALE_TIMES.DEFAULT,
+    refetchOnWindowFocus: false, // Only hydrate once, then rely on WebSocket
+  });
+
+  // Hydrate initial work items from HTTP response
+  useEffect(() => {
+    if (!initialState?.success || !initialState.countsByStatus) return;
+
+    logger.debug('Hydrating initial pipeline state:', initialState);
+
+    setWorkItems((prev) => {
+      const next = new Map(prev);
+
+      // Create synthetic work items for initial counts
+      // These will be replaced/updated by actual WebSocket events
+      Object.entries(initialState.countsByStatus).forEach(([status, count]) => {
+        if (count > 0) {
+          const stageId = status as PipelineStageId;
+          // Create a single aggregate item per stage for initial display
+          const itemId = `initial-${stageId}`;
+          next.set(itemId, {
+            id: itemId,
+            title: `${count} item${count > 1 ? 's' : ''}`,
+            status: stageId,
+            metadata: {
+              lastEventType: 'feature:created',
+              lastEventTime: Date.now(),
+              isInitial: true,
+            },
+          });
+        }
+      });
+
+      return next;
+    });
+  }, [initialState]);
 
   // Track work items based on incoming events
   const handleEvent = useCallback((type: EventType, payload: any) => {
@@ -91,6 +145,13 @@ export function usePipelineTracker(): UsePipelineTrackerResult {
     setWorkItems((prev) => {
       const next = new Map(prev);
 
+      // Remove initial synthetic items for this stage when first real event arrives
+      for (const [key, item] of next.entries()) {
+        if (item.metadata?.isInitial && item.status === stageId) {
+          next.delete(key);
+        }
+      }
+
       // Update or create work item
       const existing = next.get(itemId);
       const item: TrackedWorkItem = {
@@ -102,6 +163,7 @@ export function usePipelineTracker(): UsePipelineTrackerResult {
           lastEventType: type,
           lastEventTime: Date.now(),
           ...existing?.metadata,
+          isInitial: false,
         },
       };
 
@@ -195,5 +257,6 @@ export function usePipelineTracker(): UsePipelineTrackerResult {
     stageAggregates,
     workItems: Array.from(workItems.values()),
     isConnected,
+    isLoading,
   };
 }

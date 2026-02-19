@@ -2893,6 +2893,15 @@ export class HttpApiClient implements ElectronAPI {
       limit?: number;
     }) => this.post('/api/engine/events/history', filter ?? {}),
     flows: (graphId?: string) => this.post('/api/engine/flows', { graphId }),
+    pipelineState: (
+      projectPath: string
+    ): Promise<{
+      success: boolean;
+      countsByStatus?: Record<string, number>;
+      totalFeatures?: number;
+      timestamp?: string;
+      error?: string;
+    }> => this.post('/api/engine/pipeline-state', { projectPath }),
   };
 
   // Voice API
