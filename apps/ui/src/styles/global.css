@@ -750,3 +750,11 @@
   pointer-events: none;
   height: 0;
 }
+
+/* Ghost text autocomplete */
+.ghost-text-suggestion {
+  color: var(--muted-foreground);
+  opacity: 0.5;
+  pointer-events: none;
+  user-select: none;
+}
