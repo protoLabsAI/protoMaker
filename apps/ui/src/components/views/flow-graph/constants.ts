@@ -1,9 +1,13 @@
 /**
  * Flow Graph Constants
  *
- * Real engine topology: left-to-right service flow with pipeline stages below.
- * Services represent actual runtime components; integrations are external systems.
- * Dynamic nodes (features, agents) attach to their current pipeline stage.
+ * Full idea-to-production pipeline with 3 horizontal lanes:
+ *   Lane 1 (top):    Pre-production — signal intake, triage, planning, decomposition, launch
+ *   Lane 2 (middle): Production engine — lead engineer, auto-mode, agent execution, git, PR
+ *   Lane 3 (bottom): Feature pipeline stages — backlog, in progress, review, done, blocked
+ *
+ * Integrations (GitHub, Linear, Discord) sit in a right sidebar.
+ * Reflection node at the bottom completes the feedback loop.
  */
 
 import type { FlowEdge, PipelineStageId, EngineServiceId } from './types';
@@ -13,24 +17,28 @@ import type { FlowEdge, PipelineStageId, EngineServiceId } from './types';
 // ============================================
 
 export const NODE_IDS = {
-  // Engine services (left-to-right flow)
-  signalIntake: 'engine-signal-intake',
+  // Pre-production pipeline (Lane 1)
+  signalSources: 'engine-signal-sources',
+  triage: 'engine-triage',
+  projectPlanning: 'engine-project-planning',
+  decomposition: 'engine-decomposition',
+  launch: 'engine-launch',
+  // Production engine (Lane 2)
+  leadEngineerRules: 'engine-lead-engineer-rules',
   autoMode: 'engine-auto-mode',
   agentExecution: 'engine-agent-execution',
   gitWorkflow: 'engine-git-workflow',
   prFeedback: 'engine-pr-feedback',
-  leadEngineerRules: 'engine-lead-engineer-rules',
-  // Integrations (external systems)
+  // Reflection (bottom)
+  reflection: 'engine-reflection',
+  // Integrations (right sidebar)
   github: 'integration-github',
   linear: 'integration-linear',
   discord: 'integration-discord',
-  // Pipeline stages
+  // Pipeline stages (Lane 3)
   pipelineBacklog: 'pipeline-backlog',
   pipelineInProgress: 'pipeline-in-progress',
   pipelineReview: 'pipeline-review',
-  pipelineMerge: 'pipeline-merge',
-  pipelineTest: 'pipeline-test',
-  pipelineVerify: 'pipeline-verify',
   pipelineDone: 'pipeline-done',
   pipelineBlocked: 'pipeline-blocked',
 } as const;
@@ -45,69 +53,138 @@ export const ENGINE_SERVICES: Array<{
   label: string;
   position: { x: number; y: number };
 }> = [
+  // Lane 1: Pre-production pipeline (y=50)
   {
-    nodeId: NODE_IDS.signalIntake,
-    serviceId: 'signal-intake',
-    label: 'Signal Intake',
-    position: { x: 100, y: 200 },
+    nodeId: NODE_IDS.signalSources,
+    serviceId: 'signal-sources',
+    label: 'Signal Sources',
+    position: { x: 100, y: 50 },
+  },
+  {
+    nodeId: NODE_IDS.triage,
+    serviceId: 'triage',
+    label: 'Triage & Routing',
+    position: { x: 350, y: 50 },
+  },
+  {
+    nodeId: NODE_IDS.projectPlanning,
+    serviceId: 'project-planning',
+    label: 'Project Planning',
+    position: { x: 600, y: 50 },
+  },
+  {
+    nodeId: NODE_IDS.decomposition,
+    serviceId: 'decomposition',
+    label: 'Decomposition',
+    position: { x: 850, y: 50 },
+  },
+  {
+    nodeId: NODE_IDS.launch,
+    serviceId: 'launch',
+    label: 'Launch',
+    position: { x: 1100, y: 50 },
+  },
+
+  // Lane 2: Production engine (y=280)
+  {
+    nodeId: NODE_IDS.leadEngineerRules,
+    serviceId: 'lead-engineer-rules',
+    label: 'Lead Engineer',
+    position: { x: 100, y: 280 },
   },
   {
     nodeId: NODE_IDS.autoMode,
     serviceId: 'auto-mode',
     label: 'Auto-Mode',
-    position: { x: 400, y: 200 },
+    position: { x: 350, y: 280 },
   },
   {
     nodeId: NODE_IDS.agentExecution,
     serviceId: 'agent-execution',
     label: 'Agent Execution',
-    position: { x: 700, y: 200 },
+    position: { x: 600, y: 280 },
   },
   {
     nodeId: NODE_IDS.gitWorkflow,
     serviceId: 'git-workflow',
     label: 'Git Workflow',
-    position: { x: 1000, y: 200 },
+    position: { x: 850, y: 280 },
   },
   {
     nodeId: NODE_IDS.prFeedback,
     serviceId: 'pr-feedback',
-    label: 'PR Feedback',
-    position: { x: 1300, y: 200 },
+    label: 'PR Pipeline',
+    position: { x: 1100, y: 280 },
   },
+
+  // Reflection (bottom, y=680)
   {
-    nodeId: NODE_IDS.leadEngineerRules,
-    serviceId: 'lead-engineer-rules',
-    label: 'Lead Engineer',
-    position: { x: 700, y: 50 },
+    nodeId: NODE_IDS.reflection,
+    serviceId: 'reflection',
+    label: 'Reflection Loop',
+    position: { x: 600, y: 680 },
   },
 ];
 
 // ============================================
-// Integration Node Positions
+// Integration Node Positions (right sidebar)
 // ============================================
 
 export const INTEGRATION_POSITIONS: Record<string, { x: number; y: number }> = {
-  [NODE_IDS.github]: { x: 1150, y: 50 },
-  [NODE_IDS.linear]: { x: 1350, y: 50 },
-  [NODE_IDS.discord]: { x: 1550, y: 50 },
+  [NODE_IDS.github]: { x: 1400, y: 50 },
+  [NODE_IDS.linear]: { x: 1400, y: 170 },
+  [NODE_IDS.discord]: { x: 1400, y: 290 },
 };
 
-// Dynamic feature/agent zone starts below pipeline
-export const DYNAMIC_ZONE_START_Y = 750;
-export const DYNAMIC_ZONE_CENTER_X = 700;
+// Dynamic feature/agent zone starts below reflection
+export const DYNAMIC_ZONE_START_Y = 820;
+export const DYNAMIC_ZONE_CENTER_X = 600;
 
 // ============================================
-// Static Edge Definitions (real service flow)
+// Static Edge Definitions
 // ============================================
 
 export const STATIC_EDGES: FlowEdge[] = [
-  // Main pipeline flow: left to right
+  // --- Lane 1: Pre-production flow (left to right) ---
   {
-    id: 'e-signal-automode',
-    source: NODE_IDS.signalIntake,
+    id: 'e-sources-triage',
+    source: NODE_IDS.signalSources,
+    target: NODE_IDS.triage,
+    type: 'workflow',
+  },
+  {
+    id: 'e-triage-planning',
+    source: NODE_IDS.triage,
+    target: NODE_IDS.projectPlanning,
+    type: 'workflow',
+  },
+  {
+    id: 'e-planning-decomp',
+    source: NODE_IDS.projectPlanning,
+    target: NODE_IDS.decomposition,
+    type: 'workflow',
+  },
+  {
+    id: 'e-decomp-launch',
+    source: NODE_IDS.decomposition,
+    target: NODE_IDS.launch,
+    type: 'workflow',
+  },
+
+  // --- Cross-lane: Pre-production -> Production ---
+  {
+    id: 'e-launch-automode',
+    source: NODE_IDS.launch,
     target: NODE_IDS.autoMode,
     type: 'workflow',
+  },
+
+  // --- Lane 2: Production engine flow (left to right) ---
+  {
+    id: 'e-lead-automode',
+    source: NODE_IDS.leadEngineerRules,
+    target: NODE_IDS.autoMode,
+    type: 'delegation',
   },
   {
     id: 'e-automode-agent',
@@ -135,14 +212,7 @@ export const STATIC_EDGES: FlowEdge[] = [
     type: 'workflow',
     label: 'remediation',
   },
-
-  // Lead Engineer subscribes to all events (shown connected to key services)
-  {
-    id: 'e-lead-automode',
-    source: NODE_IDS.leadEngineerRules,
-    target: NODE_IDS.autoMode,
-    type: 'delegation',
-  },
+  // Lead Engineer delegates to agent execution
   {
     id: 'e-lead-agent',
     source: NODE_IDS.leadEngineerRules,
@@ -150,7 +220,27 @@ export const STATIC_EDGES: FlowEdge[] = [
     type: 'delegation',
   },
 
-  // Integration edges: services -> external systems
+  // --- Integration edges ---
+  // Inbound: integrations feed into signal sources
+  {
+    id: 'e-linear-sources',
+    source: NODE_IDS.linear,
+    target: NODE_IDS.signalSources,
+    type: 'integration',
+  },
+  {
+    id: 'e-github-sources',
+    source: NODE_IDS.github,
+    target: NODE_IDS.signalSources,
+    type: 'integration',
+  },
+  {
+    id: 'e-discord-sources',
+    source: NODE_IDS.discord,
+    target: NODE_IDS.signalSources,
+    type: 'integration',
+  },
+  // Outbound: services push to integrations
   {
     id: 'e-git-github',
     source: NODE_IDS.gitWorkflow,
@@ -164,21 +254,30 @@ export const STATIC_EDGES: FlowEdge[] = [
     type: 'integration',
   },
   {
-    id: 'e-signal-linear',
-    source: NODE_IDS.signalIntake,
-    target: NODE_IDS.linear,
-    type: 'integration',
-  },
-  {
     id: 'e-lead-discord',
     source: NODE_IDS.leadEngineerRules,
     target: NODE_IDS.discord,
     type: 'integration',
   },
+
+  // --- Reflection loop ---
+  {
+    id: 'e-done-reflection',
+    source: NODE_IDS.pipelineDone,
+    target: NODE_IDS.reflection,
+    type: 'workflow',
+  },
+  {
+    id: 'e-reflection-sources',
+    source: NODE_IDS.reflection,
+    target: NODE_IDS.signalSources,
+    type: 'workflow',
+    label: 'feedback',
+  },
 ];
 
 // ============================================
-// Pipeline Stages
+// Pipeline Stages (Lane 3, y=510)
 // ============================================
 
 export const PIPELINE_STAGES: Array<{
@@ -191,49 +290,31 @@ export const PIPELINE_STAGES: Array<{
     nodeId: NODE_IDS.pipelineBacklog,
     stageId: 'backlog',
     label: 'Backlog',
-    position: { x: 100, y: 450 },
+    position: { x: 100, y: 510 },
   },
   {
     nodeId: NODE_IDS.pipelineInProgress,
     stageId: 'in_progress',
     label: 'In Progress',
-    position: { x: 350, y: 450 },
+    position: { x: 350, y: 510 },
   },
   {
     nodeId: NODE_IDS.pipelineReview,
     stageId: 'review',
     label: 'Review',
-    position: { x: 600, y: 450 },
-  },
-  {
-    nodeId: NODE_IDS.pipelineMerge,
-    stageId: 'merge',
-    label: 'Merge',
-    position: { x: 850, y: 450 },
-  },
-  {
-    nodeId: NODE_IDS.pipelineTest,
-    stageId: 'test',
-    label: 'Test',
-    position: { x: 1100, y: 450 },
-  },
-  {
-    nodeId: NODE_IDS.pipelineVerify,
-    stageId: 'verify',
-    label: 'Verify',
-    position: { x: 1350, y: 450 },
+    position: { x: 600, y: 510 },
   },
   {
     nodeId: NODE_IDS.pipelineDone,
     stageId: 'done',
     label: 'Done',
-    position: { x: 1600, y: 450 },
+    position: { x: 850, y: 510 },
   },
   {
     nodeId: NODE_IDS.pipelineBlocked,
     stageId: 'blocked',
     label: 'Blocked',
-    position: { x: 600, y: 600 },
+    position: { x: 600, y: 630 },
   },
 ];
 
@@ -252,26 +333,8 @@ export const PIPELINE_EDGES: FlowEdge[] = [
     type: 'pipeline',
   },
   {
-    id: 'e-pipe-review-merge',
+    id: 'e-pipe-review-done',
     source: NODE_IDS.pipelineReview,
-    target: NODE_IDS.pipelineMerge,
-    type: 'pipeline',
-  },
-  {
-    id: 'e-pipe-merge-test',
-    source: NODE_IDS.pipelineMerge,
-    target: NODE_IDS.pipelineTest,
-    type: 'pipeline',
-  },
-  {
-    id: 'e-pipe-test-verify',
-    source: NODE_IDS.pipelineTest,
-    target: NODE_IDS.pipelineVerify,
-    type: 'pipeline',
-  },
-  {
-    id: 'e-pipe-verify-done',
-    source: NODE_IDS.pipelineVerify,
     target: NODE_IDS.pipelineDone,
     type: 'pipeline',
   },
@@ -283,11 +346,11 @@ export const PIPELINE_EDGES: FlowEdge[] = [
   },
 ];
 
-// Bridge edges: services -> pipeline stages
+// Bridge edges: production services -> pipeline stages
 export const BRIDGE_EDGES: FlowEdge[] = [
   {
-    id: 'e-bridge-signal-backlog',
-    source: NODE_IDS.signalIntake,
+    id: 'e-bridge-launch-backlog',
+    source: NODE_IDS.launch,
     target: NODE_IDS.pipelineBacklog,
     type: 'workflow',
   },
@@ -304,9 +367,9 @@ export const BRIDGE_EDGES: FlowEdge[] = [
     type: 'workflow',
   },
   {
-    id: 'e-bridge-git-merge',
+    id: 'e-bridge-git-done',
     source: NODE_IDS.gitWorkflow,
-    target: NODE_IDS.pipelineMerge,
+    target: NODE_IDS.pipelineDone,
     type: 'workflow',
   },
 ];

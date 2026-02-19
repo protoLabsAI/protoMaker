@@ -1879,3 +1879,8 @@ usageStats:
 - **Rejected:** Could have marked with `@deprecated` and kept as a reference, but the code was never functional. Deprecation is for APIs that need gradual migration; this was orphaned code.
 - **Trade-offs:** Immediate cleanup removes future confusion about 'is crew loop still supported?' But loses history of the experiment in source. Git history preserves the deletion decision.
 - **Breaking if changed:** Any external code that imports from `apps/server/src/services/crew-members` will fail. Build-time check confirmed no imports exist in the codebase.
+
+#### [Pattern] Minimal surgical change: single field addition to response object rather than refactoring health endpoint structure (2026-02-19)
+- **Problem solved:** Feature requirement was narrowly scoped to add one field to health check response
+- **Why this works:** Least invasive change reduces risk of introducing bugs, minimizes testing surface area, and aligns with single responsibility principle
+- **Trade-offs:** Quick, low-risk implementation vs opportunity to improve response structure; easy to verify vs harder to extend later

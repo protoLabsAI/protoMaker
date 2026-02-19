@@ -2,23 +2,42 @@
  * Engine Service Node — Unified service node for the real engine topology.
  *
  * Shows: service name, status indicator, throughput counter, status line.
- * Used for: signal-intake, auto-mode, agent-execution, git-workflow, pr-feedback, lead-engineer-rules
+ * Used for all EngineServiceId values across pre-production, production, and reflection lanes.
  */
 
 import { memo } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import { motion } from 'motion/react';
-import { Radio, Cog, Bot, GitBranch, MessageSquare, BotMessageSquare } from 'lucide-react';
+import {
+  Antenna,
+  Route,
+  FileText,
+  Network,
+  Rocket,
+  Radio,
+  Cog,
+  Bot,
+  GitBranch,
+  MessageSquare,
+  BotMessageSquare,
+  RefreshCw,
+} from 'lucide-react';
 import type { EngineServiceNodeData, EngineServiceId } from '../types';
 import { cn } from '@/lib/utils';
 
 const SERVICE_ICONS: Record<EngineServiceId, typeof Cog> = {
+  'signal-sources': Antenna,
+  triage: Route,
+  'project-planning': FileText,
+  decomposition: Network,
+  launch: Rocket,
   'signal-intake': Radio,
   'auto-mode': Cog,
   'agent-execution': Bot,
   'git-workflow': GitBranch,
   'pr-feedback': MessageSquare,
   'lead-engineer-rules': BotMessageSquare,
+  reflection: RefreshCw,
 };
 
 function getStatusColor(status: EngineServiceNodeData['status']) {

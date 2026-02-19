@@ -31,21 +31,17 @@ const EVENT_STAGE_MAP: Partial<Record<EventType, PipelineStageId>> = {
   'pr:feedback-received': 'review',
   'pr:changes-requested': 'review',
 
-  // Merge - PR approved and merging
-  'pr:approved': 'merge',
-  'github:pr:approved': 'merge',
+  // Review also covers merge approval and CI checks
+  'pr:approved': 'review',
+  'github:pr:approved': 'review',
+  'github:pr:checks-updated': 'review',
+  'pr:ci-failure': 'review',
 
-  // Test - CI checks running
-  'github:pr:checks-updated': 'test',
-  'pr:ci-failure': 'test',
-
-  // Verify - Ralph verification
-  'ralph:verification_started': 'verify',
-  'ralph:verification_completed': 'verify',
-  'ralph:verified': 'verify',
-  'feature:verified': 'verify',
-
-  // Done - completed
+  // Done - completed (includes verification)
+  'ralph:verification_started': 'done',
+  'ralph:verification_completed': 'done',
+  'ralph:verified': 'done',
+  'feature:verified': 'done',
   'feature:completed': 'done',
   'feature:pr-merged': 'done',
   'project:completed': 'done',
@@ -163,9 +159,6 @@ export function usePipelineTracker(): UsePipelineTrackerResult {
     'backlog',
     'in_progress',
     'review',
-    'merge',
-    'test',
-    'verify',
     'done',
     'blocked',
   ].map((stageId) => {

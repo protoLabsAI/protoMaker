@@ -2853,7 +2853,7 @@ export class HttpApiClient implements ElectronAPI {
 
   // Engine API
   engine = {
-    status: () => this.post('/api/engine/status', {}),
+    status: (projectPath?: string) => this.post('/api/engine/status', { projectPath }),
     autoModeDetail: () => this.post('/api/engine/auto-mode/detail', {}),
     prFeedbackDetail: () => this.post('/api/engine/pr-feedback/detail', {}),
     leadEngineerDetail: () => this.post('/api/engine/lead-engineer/detail', {}),

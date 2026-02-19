@@ -568,3 +568,8 @@ usageStats:
 - **Situation:** Feature requirement specified 'Playwright verification required' but this milestone is purely documentation with no runtime functionality
 - **Root cause:** Playwright tests verify user-facing behavior and interaction. Documentation has no runtime behavior — it's static content. Verification shifts to: file existence, no build errors, no unintended file changes, correct formatting.
 - **How to avoid:** Simpler verification process for documentation features means faster turnaround. Risk: Could merge malformed docs. Mitigation: Visual review in PR and build gate ensures no syntax errors.
+
+#### [Gotcha] Direct code verification via static analysis was used as workaround when server build failed due to pre-existing unrelated dependencies (2026-02-19)
+- **Situation:** Unable to run full Playwright tests or start dev server due to missing @napi-rs/whisper dependency in voice-service.ts
+- **Root cause:** Build blockers unrelated to feature implementation should not prevent verification. Pattern matching on TypeScript source can confirm field additions without runtime execution
+- **How to avoid:** Static verification confirms code correctness but cannot test actual API response behavior, runtime type coercion, or integration

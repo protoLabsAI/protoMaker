@@ -5,9 +5,9 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 53
-  referenced: 30
-  successfulFeatures: 30
+  loaded: 54
+  referenced: 31
+  successfulFeatures: 31
 ---
 # api
 
@@ -395,3 +395,10 @@ usageStats:
 - **Problem solved:** Three different files (lead-engineer-service, discord-channel-escalation, github-issue-channel) reference the same escalation source value to route signals. Needed to rename without breaking escalation flow.
 - **Why this works:** Enum-based routing decouples the semantic name (what caused the escalation) from the routing implementation (which service handles it). The name can change (reflects business logic evolution) while routing stays intact because consumers compare enum values, not strings.
 - **Trade-offs:** Requires coordinating the rename across 3+ files for consistency. But enum-based approach forces all references to be type-checked, preventing accidental mismatches that would happen with string literals.
+
+### Added serverTime field alongside existing timestamp field rather than replacing it (2026-02-19)
+- **Context:** Health endpoint already had a timestamp field returning ISO 8601 format; feature explicitly requested serverTime field addition
+- **Why:** Explicit requirement to add field implies maintaining backward compatibility and not modifying existing fields. Clients consuming timestamp field should not break
+- **Rejected:** Could have renamed timestamp to serverTime, but would be a breaking change for existing consumers
+- **Trade-offs:** Response payload slightly larger with duplicate similar fields; clearer backward compatibility vs potential consumer confusion about two timestamp fields
+- **Breaking if changed:** If either timestamp or serverTime field is removed, API consumers relying on either field would break
