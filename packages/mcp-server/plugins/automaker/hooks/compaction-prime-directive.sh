@@ -21,7 +21,6 @@ cat << 'PRIME_DIRECTIVE'
 
 ### Automation Hooks (Active)
 These run automatically — don't duplicate their work:
-- **Stop hook** — Checks board when you finish. Continues if work remains (one continuation per turn).
 - **Safety guard** — Blocks dangerous bash: rm -rf /, force push main, git reset --hard, git checkout ., git clean -f.
 - **Auto-format** — Prettier runs on every Edit/Write. No manual formatting.
 - **Plugin update reminder** — Alerts when plugin files change.
