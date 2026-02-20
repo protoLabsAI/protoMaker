@@ -101,7 +101,7 @@ function getServiceStatus(
       return {
         status: isActive ? 'active' : 'idle',
         throughput: 0, // TODO: Show signal processing rate when available
-        statusLine: isActive ? 'Classifying signals' : 'Ava classifies: Ops vs GTM',
+        statusLine: isActive ? 'Classifying signals' : 'Route signals: Ops vs GTM',
       };
     }
     case 'project-planning': {
@@ -126,7 +126,7 @@ function getServiceStatus(
       return {
         status: engineStatus.autoMode?.running ? 'active' : 'idle',
         throughput: 0,
-        statusLine: 'Activate auto-mode + Lead Engineer',
+        statusLine: 'Queue features + start agents',
       };
     case 'auto-mode': {
       const am = engineStatus.autoMode;
@@ -190,7 +190,7 @@ function getServiceStatus(
             ? `${activeFlows} running, ${pendingDrafts} pending review`
             : pendingDrafts > 0
               ? `${pendingDrafts} drafts pending review`
-              : 'Jon \u2192 Cindi \u2192 Review \u2192 Notes',
+              : 'Research \u2192 Draft \u2192 Review \u2192 Publish',
       };
     }
     case 'reflection':
