@@ -1010,7 +1010,7 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
       currentView: isCurrent ? 'welcome' : get().currentView,
     });
 
-    persistEffectiveThemeForProject(nextCurrentProject, get().theme);
+    persistEffectiveThemeForProject(nextCurrentProject, useThemeStore.getState().theme);
   },
 
   restoreTrashedProject: (projectId) => {
@@ -1029,7 +1029,7 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
         currentProject: samePathProject,
         currentView: 'board',
       });
-      persistEffectiveThemeForProject(samePathProject, get().theme);
+      persistEffectiveThemeForProject(samePathProject, useThemeStore.getState().theme);
       return;
     }
 
@@ -1047,7 +1047,7 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
       currentProject: restoredProject,
       currentView: 'board',
     });
-    persistEffectiveThemeForProject(restoredProject, get().theme);
+    persistEffectiveThemeForProject(restoredProject, useThemeStore.getState().theme);
   },
 
   deleteTrashedProject: (projectId) => {
@@ -1067,7 +1067,7 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
 
   setCurrentProject: (project) => {
     set({ currentProject: project });
-    persistEffectiveThemeForProject(project, get().theme);
+    persistEffectiveThemeForProject(project, useThemeStore.getState().theme);
     if (project) {
       set({ currentView: 'board' });
       // Add to project history (MRU order)
@@ -1158,7 +1158,7 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
         projectHistoryIndex: newIndex,
         currentView: 'board',
       });
-      persistEffectiveThemeForProject(targetProject, get().theme);
+      persistEffectiveThemeForProject(targetProject, useThemeStore.getState().theme);
     }
   },
 
@@ -1192,7 +1192,7 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
         projectHistoryIndex: newIndex,
         currentView: 'board',
       });
-      persistEffectiveThemeForProject(targetProject, get().theme);
+      persistEffectiveThemeForProject(targetProject, useThemeStore.getState().theme);
     }
   },
 
@@ -1312,23 +1312,26 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
           theme: updatedTheme,
         },
       });
-      persistEffectiveThemeForProject({ ...currentProject, theme: updatedTheme }, get().theme);
+      persistEffectiveThemeForProject(
+        { ...currentProject, theme: updatedTheme },
+        useThemeStore.getState().theme
+      );
     }
   },
 
   getEffectiveTheme: () => {
     // If preview theme is set, use it (for hover preview)
-    const previewTheme = get().previewTheme;
+    const previewTheme = useThemeStore.getState().previewTheme;
     if (previewTheme) {
-      return previewTheme;
+      return previewTheme as ThemeMode;
     }
     const currentProject = get().currentProject;
     // If current project has a theme set, use it
     if (currentProject?.theme) {
       return currentProject.theme as ThemeMode;
     }
-    // Otherwise fall back to global theme
-    return get().theme;
+    // Otherwise fall back to global theme from theme-store
+    return useThemeStore.getState().theme;
   },
 
   setPreviewTheme: (...args) => useThemeStore.getState().setPreviewTheme(...args),
