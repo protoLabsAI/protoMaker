@@ -9,7 +9,7 @@ set -e
 # ============================================================================
 # CONFIGURATION & CONSTANTS
 # ============================================================================
-export $(grep -v '^#' .env | xargs)
+if [ -f .env ]; then set -a; source .env; set +a; fi
 APP_NAME="Automaker"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 HISTORY_FILE="${HOME}/.automaker_launcher_history"
@@ -1091,7 +1091,7 @@ fi
 # Execute the appropriate command
 case $MODE in
     web)
-        export $(grep -v '^#' .env | xargs) 
+        if [ -f .env ]; then set -a; source .env; set +a; fi 
         export TEST_PORT="$WEB_PORT"
         export VITE_SERVER_URL="http://${APP_HOST}:$SERVER_PORT"
         export PORT="$SERVER_PORT"
