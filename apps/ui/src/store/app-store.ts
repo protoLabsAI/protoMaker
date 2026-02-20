@@ -68,6 +68,7 @@ import { useTerminalStore } from './terminal-store';
 import { useAIModelsStore } from './ai-models-store';
 import { useWorktreeStore } from './worktree-store';
 import { useThemeStore, getEffectiveFont, persistEffectiveThemeForProject } from './theme-store';
+import { usePipelineStore } from './pipeline-store';
 
 const logger = createLogger('AppStore');
 
@@ -79,6 +80,7 @@ export { useTerminalStore } from './terminal-store';
 export { useAIModelsStore } from './ai-models-store';
 export { useWorktreeStore } from './worktree-store';
 export { useThemeStore } from './theme-store';
+export { usePipelineStore } from './pipeline-store';
 
 // Types re-exported from ./types.ts: ViewMode, ThemeMode, THEME_STORAGE_KEY,
 // FONT_SANS_STORAGE_KEY, FONT_MONO_STORAGE_KEY, MAX_INIT_OUTPUT_LINES,
@@ -2008,104 +2010,13 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
   setCodexModels: (...args) => useAIModelsStore.getState().setCodexModels(...args),
   fetchOpencodeModels: (...args) => useAIModelsStore.getState().fetchOpencodeModels(...args),
 
-  // Pipeline actions
-  setPipelineConfig: (projectPath, config) => {
-    set({
-      pipelineConfigByProject: {
-        ...get().pipelineConfigByProject,
-        [projectPath]: config,
-      },
-    });
-  },
-
-  getPipelineConfig: (projectPath) => {
-    return get().pipelineConfigByProject[projectPath] || null;
-  },
-
-  addPipelineStep: (projectPath, step) => {
-    const config = get().pipelineConfigByProject[projectPath] || { version: 1, steps: [] };
-    const now = new Date().toISOString();
-    const newStep: PipelineStep = {
-      ...step,
-      id: `step_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 8)}`,
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    const newSteps = [...config.steps, newStep].sort((a, b) => a.order - b.order);
-    newSteps.forEach((s, index) => {
-      s.order = index;
-    });
-
-    set({
-      pipelineConfigByProject: {
-        ...get().pipelineConfigByProject,
-        [projectPath]: { ...config, steps: newSteps },
-      },
-    });
-
-    return newStep;
-  },
-
-  updatePipelineStep: (projectPath, stepId, updates) => {
-    const config = get().pipelineConfigByProject[projectPath];
-    if (!config) return;
-
-    const stepIndex = config.steps.findIndex((s) => s.id === stepId);
-    if (stepIndex === -1) return;
-
-    const updatedSteps = [...config.steps];
-    updatedSteps[stepIndex] = {
-      ...updatedSteps[stepIndex],
-      ...updates,
-      updatedAt: new Date().toISOString(),
-    };
-
-    set({
-      pipelineConfigByProject: {
-        ...get().pipelineConfigByProject,
-        [projectPath]: { ...config, steps: updatedSteps },
-      },
-    });
-  },
-
-  deletePipelineStep: (projectPath, stepId) => {
-    const config = get().pipelineConfigByProject[projectPath];
-    if (!config) return;
-
-    const newSteps = config.steps.filter((s) => s.id !== stepId);
-    newSteps.forEach((s, index) => {
-      s.order = index;
-    });
-
-    set({
-      pipelineConfigByProject: {
-        ...get().pipelineConfigByProject,
-        [projectPath]: { ...config, steps: newSteps },
-      },
-    });
-  },
-
-  reorderPipelineSteps: (projectPath, stepIds) => {
-    const config = get().pipelineConfigByProject[projectPath];
-    if (!config) return;
-
-    const stepMap = new Map(config.steps.map((s) => [s.id, s]));
-    const reorderedSteps = stepIds
-      .map((id, index) => {
-        const step = stepMap.get(id);
-        if (!step) return null;
-        return { ...step, order: index, updatedAt: new Date().toISOString() };
-      })
-      .filter((s): s is PipelineStep => s !== null);
-
-    set({
-      pipelineConfigByProject: {
-        ...get().pipelineConfigByProject,
-        [projectPath]: { ...config, steps: reorderedSteps },
-      },
-    });
-  },
+  // Pipeline actions — forwarded to usePipelineStore
+  setPipelineConfig: (...args) => usePipelineStore.getState().setPipelineConfig(...args),
+  getPipelineConfig: (...args) => usePipelineStore.getState().getPipelineConfig(...args),
+  addPipelineStep: (...args) => usePipelineStore.getState().addPipelineStep(...args),
+  updatePipelineStep: (...args) => usePipelineStore.getState().updatePipelineStep(...args),
+  deletePipelineStep: (...args) => usePipelineStore.getState().deletePipelineStep(...args),
+  reorderPipelineSteps: (...args) => usePipelineStore.getState().reorderPipelineSteps(...args),
 
   // Worktree Panel Visibility actions — forwarded to useWorktreeStore
   setWorktreePanelVisible: (...args) =>
@@ -2250,5 +2161,12 @@ useThemeStore.subscribe((themeState) => {
     fontFamilySans: themeState.fontFamilySans,
     fontFamilyMono: themeState.fontFamilyMono,
     boardBackgroundByProject: themeState.boardBackgroundByProject,
+  });
+});
+
+// Sync pipeline store state back to app-store for backward compatibility.
+usePipelineStore.subscribe((pipelineState) => {
+  useAppStore.setState({
+    pipelineConfigByProject: pipelineState.pipelineConfigByProject,
   });
 });
