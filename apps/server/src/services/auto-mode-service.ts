@@ -119,49 +119,8 @@ async function getCurrentBranch(projectPath: string): Promise<string | null> {
 
 // PlanningMode type is imported from @automaker/types
 
-/**
- * Determine the appropriate model for a feature based on complexity and failure count.
- *
- * Model hierarchy:
- * - opus: Architectural work, or features that have failed 2+ times
- * - sonnet: Standard feature implementation (default)
- * - haiku: Small/trivial tasks
- *
- * @param feature - The feature to get model for
- * @returns The model ID to use (can be overridden by feature.model)
- */
-function getModelForFeature(feature: {
-  model?: string;
-  complexity?: string;
-  failureCount?: number;
-}): string {
-  // If feature explicitly specifies a model, use it
-  if (feature.model) {
-    return resolveModelString(feature.model, DEFAULT_MODELS.autoMode);
-  }
-
-  // Escalate to opus for architectural work
-  if (feature.complexity === 'architectural') {
-    logger.info('Using opus for architectural feature');
-    return DEFAULT_MODELS.claude; // opus
-  }
-
-  // Escalate to opus after multiple failures
-  const failureThreshold = 2;
-  if (feature.failureCount && feature.failureCount >= failureThreshold) {
-    logger.info(`Escalating to opus after ${feature.failureCount} failures`);
-    return DEFAULT_MODELS.claude; // opus
-  }
-
-  // Use haiku for trivial/small tasks
-  if (feature.complexity === 'small') {
-    logger.info('Using haiku for small feature');
-    return DEFAULT_MODELS.trivial; // haiku
-  }
-
-  // Default to sonnet for standard feature work
-  return DEFAULT_MODELS.autoMode; // sonnet
-}
+// Model selection for features is handled by AutoModeService.getModelForFeature() class method
+// which reads the user-configured agentExecutionModel from settings.
 
 /**
  * Complexity-to-turns mapping.
@@ -507,6 +466,61 @@ export class AutoModeService {
    */
   setLeadEngineerService(service: any): void {
     this.leadEngineerService = service;
+  }
+
+  /**
+   * Determine the appropriate model for a feature based on complexity, failure count,
+   * and user-configured agentExecutionModel setting.
+   *
+   * Priority order:
+   * 1. Feature explicitly specifies a model → use it
+   * 2. Failure escalation (2+ failures) → opus
+   * 3. Architectural complexity → opus
+   * 4. User-configured agentExecutionModel from settings
+   * 5. Complexity-based fallback (small → haiku, default → sonnet)
+   */
+  private async getModelForFeature(
+    feature: { model?: string; complexity?: string; failureCount?: number },
+    projectPath?: string
+  ): Promise<string> {
+    // 1. Feature explicitly specifies a model → use it (highest priority)
+    if (feature.model) {
+      return resolveModelString(feature.model, DEFAULT_MODELS.autoMode);
+    }
+
+    // 2. Escalate to opus after multiple failures (safety net)
+    if (feature.failureCount && feature.failureCount >= 2) {
+      logger.info(`Escalating to opus after ${feature.failureCount} failures`);
+      return DEFAULT_MODELS.claude; // opus
+    }
+
+    // 3. Architectural complexity always gets opus
+    if (feature.complexity === 'architectural') {
+      logger.info('Using opus for architectural feature');
+      return DEFAULT_MODELS.claude; // opus
+    }
+
+    // 4. Read user's configured agent execution model from settings
+    try {
+      const { phaseModel } = await getPhaseModelWithOverrides(
+        'agentExecutionModel',
+        this.settingsService,
+        projectPath
+      );
+      if (phaseModel?.model) {
+        return resolveModelString(phaseModel.model, DEFAULT_MODELS.autoMode);
+      }
+    } catch (err) {
+      logger.warn(`Failed to read agentExecutionModel setting, using fallback: ${err}`);
+    }
+
+    // 5. Fallback: complexity-based (only if no setting configured)
+    if (feature.complexity === 'small') {
+      logger.info('Using haiku for small feature');
+      return DEFAULT_MODELS.trivial; // haiku
+    }
+
+    return DEFAULT_MODELS.autoMode; // sonnet
   }
 
   /**
@@ -1108,7 +1122,7 @@ export class AutoModeService {
           // Delegate to Lead Engineer if available, otherwise use legacy executeFeature
           const executionPromise = this.leadEngineerService
             ? this.leadEngineerService.process(projectPath, nextFeature.id, {
-                model: getModelForFeature(nextFeature),
+                model: await this.getModelForFeature(nextFeature, projectPath),
               } as any) // Cast to any since state machine will build full ExecuteOptions internally
             : this.executeFeature(
                 projectPath,
@@ -1762,7 +1776,7 @@ export class AutoModeService {
       );
 
       // Get model based on feature complexity and failure count
-      const model = getModelForFeature(feature);
+      const model = await this.getModelForFeature(feature, projectPath);
       const maxTurns = getTurnsForFeature(feature);
       const provider = ProviderFactory.getProviderNameForModel(model);
       logger.info(
@@ -2408,7 +2422,7 @@ export class AutoModeService {
       );
 
       // Get model based on feature complexity and failure count
-      const model = getModelForFeature(feature);
+      const model = await this.getModelForFeature(feature, projectPath);
 
       // Run the agent for this pipeline step
       await this.runAgent(
@@ -2806,7 +2820,7 @@ Complete the pipeline step instructions above. Review the previous work and appl
       validateWorkingDirectory(workDir);
 
       // Get model and provider for this feature
-      const model = getModelForFeature(feature);
+      const model = await this.getModelForFeature(feature, projectPath);
       const provider = ProviderFactory.getProviderNameForModel(model);
 
       // Update running feature with worktree info and model
@@ -3102,7 +3116,9 @@ ${prompt}
 Address the follow-up instructions above. Review the previous work and make the requested changes or fixes.`;
 
     // Get model based on feature complexity and failure count
-    const model = feature ? getModelForFeature(feature) : DEFAULT_MODELS.autoMode;
+    const model = feature
+      ? await this.getModelForFeature(feature, projectPath)
+      : DEFAULT_MODELS.autoMode;
     const provider = ProviderFactory.getProviderNameForModel(model);
     logger.info(`Follow-up for feature ${featureId} using model: ${model}, provider: ${provider}`);
 

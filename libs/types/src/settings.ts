@@ -1008,6 +1008,10 @@ export interface PhaseModelConfig {
   // Ceremony tasks - retrospectives and milestone announcements
   /** Model for generating project retrospectives and ceremony content */
   ceremonyModel: PhaseModelEntry;
+
+  // Agent execution - the model that implements features in worktrees
+  /** Model for agent feature execution (auto-mode and manual agent launches) */
+  agentExecutionModel: PhaseModelEntry;
 }
 
 /** Keys of PhaseModelConfig for type-safe access */
@@ -1983,6 +1987,9 @@ export const DEFAULT_PHASE_MODELS: PhaseModelConfig = {
 
   // Ceremony - use capable model for retrospectives and announcements
   ceremonyModel: { model: 'claude-sonnet' },
+
+  // Agent execution - default to sonnet for reliable feature implementation
+  agentExecutionModel: { model: 'claude-sonnet' },
 };
 
 /** Current version of the global settings schema */

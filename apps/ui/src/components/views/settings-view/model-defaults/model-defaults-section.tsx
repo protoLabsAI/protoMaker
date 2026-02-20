@@ -14,6 +14,14 @@ interface PhaseConfig {
   description: string;
 }
 
+const AGENT_TASKS: PhaseConfig[] = [
+  {
+    key: 'agentExecutionModel',
+    label: 'Agent Execution',
+    description: 'Model used when agents implement features (auto-mode)',
+  },
+];
+
 const QUICK_TASKS: PhaseConfig[] = [
   {
     key: 'enhancementModel',
@@ -171,6 +179,13 @@ export function ModelDefaultsSection() {
 
       {/* Content */}
       <div className="p-6 space-y-8">
+        {/* Agent Execution */}
+        <PhaseGroup
+          title="Agent Execution"
+          subtitle="The model that implements features in worktrees"
+          phases={AGENT_TASKS}
+        />
+
         {/* Quick Tasks */}
         <PhaseGroup
           title="Quick Tasks"
