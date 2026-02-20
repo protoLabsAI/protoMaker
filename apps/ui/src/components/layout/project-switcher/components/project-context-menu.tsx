@@ -4,6 +4,7 @@ import { Edit2, Trash2, Palette, ChevronRight, Moon, Sun, Monitor } from 'lucide
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { type ThemeMode, useAppStore } from '@/store/app-store';
+import { useThemeStore } from '@/store/theme-store';
 import { ConfirmDialog } from '@protolabs/ui/molecules';
 import type { Project } from '@/lib/electron';
 import {
@@ -190,13 +191,8 @@ export function ProjectContextMenu({
   onEdit,
 }: ProjectContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
-  const {
-    moveProjectToTrash,
-    theme: globalTheme,
-    setTheme,
-    setProjectTheme,
-    setPreviewTheme,
-  } = useAppStore();
+  const { moveProjectToTrash, setProjectTheme } = useAppStore();
+  const { theme: globalTheme, setTheme, setPreviewTheme } = useThemeStore();
   const [showRemoveDialog, setShowRemoveDialog] = useState(false);
   const [showThemeSubmenu, setShowThemeSubmenu] = useState(false);
   const [, setRemoveConfirmed] = useState(false);
