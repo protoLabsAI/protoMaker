@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback, useState, forwardRef, useImperativeHandle } from 'react';
 import { useAppStore } from '@/store/app-store';
+import { useTerminalStore } from '@/store/terminal-store';
 import { getTerminalTheme, getTerminalFontFamily } from '@/config/terminal-themes';
 
 // Types for dynamically imported xterm modules
@@ -61,8 +62,8 @@ export const XtermLogViewer = forwardRef<XtermLogViewerRef, XtermLogViewerProps>
     // Get theme and font settings from store
     const getEffectiveTheme = useAppStore((state) => state.getEffectiveTheme);
     const effectiveTheme = getEffectiveTheme();
-    const terminalFontFamily = useAppStore((state) => state.terminalState.fontFamily);
-    const terminalFontSize = useAppStore((state) => state.terminalState.defaultFontSize);
+    const terminalFontFamily = useTerminalStore((state) => state.terminalState.fontFamily);
+    const terminalFontSize = useTerminalStore((state) => state.terminalState.defaultFontSize);
 
     // Use prop if provided, otherwise use store value, fallback to 13
     const effectiveFontSize = fontSize ?? terminalFontSize ?? 13;
@@ -112,7 +113,7 @@ export const XtermLogViewer = forwardRef<XtermLogViewerRef, XtermLogViewerProps>
         const terminalTheme = getTerminalTheme(resolvedTheme);
 
         // Get font settings from store at initialization time
-        const terminalState = useAppStore.getState().terminalState;
+        const terminalState = useTerminalStore.getState().terminalState;
         const fontFamily = getTerminalFontFamily(terminalState.fontFamily);
         const initFontSize = fontSize ?? terminalState.defaultFontSize ?? 13;
 

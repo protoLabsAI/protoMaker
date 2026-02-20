@@ -45,7 +45,7 @@ import {
 } from '../hooks/use-available-terminals';
 import { getEditorIcon } from '@/components/icons/editor-icons';
 import { getTerminalIcon } from '@/components/icons/terminal-icons';
-import { useAppStore } from '@/store/app-store';
+import { useTerminalStore } from '@/store/terminal-store';
 
 interface WorktreeActionsDropdownProps {
   worktree: WorktreeInfo;
@@ -145,7 +145,7 @@ export function WorktreeActionsDropdown({
   const effectiveDefaultTerminal = useEffectiveDefaultTerminal(terminals);
 
   // Get the user's preferred mode for opening terminals (new tab vs split)
-  const openTerminalMode = useAppStore((s) => s.terminalState.openTerminalMode);
+  const openTerminalMode = useTerminalStore((s) => s.terminalState.openTerminalMode);
 
   // Get icon component for the effective terminal
   const DefaultTerminalIcon = effectiveDefaultTerminal

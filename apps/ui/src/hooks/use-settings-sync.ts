@@ -16,6 +16,7 @@ import { createLogger } from '@automaker/utils/logger';
 import { getHttpApiClient, waitForApiKeyInit } from '@/lib/http-api-client';
 import { setItem } from '@/lib/storage';
 import { useAppStore, type ThemeMode, THEME_STORAGE_KEY } from '@/store/app-store';
+import { useTerminalStore } from '@/store/terminal-store';
 import { useSetupStore } from '@/store/setup-store';
 import { useAuthStore } from '@/store/auth-store';
 import { waitForMigrationComplete, resetMigrationState } from './use-settings-migration';
@@ -110,10 +111,10 @@ function getSettingsFieldValue(
     return appState.currentProject?.id ?? null;
   }
   if (field === 'terminalFontFamily') {
-    return appState.terminalState.fontFamily;
+    return useTerminalStore.getState().terminalState.fontFamily;
   }
   if (field === 'openTerminalMode') {
-    return appState.terminalState.openTerminalMode;
+    return useTerminalStore.getState().terminalState.openTerminalMode;
   }
   if (field === 'autoModeByWorktree') {
     // Only persist settings (maxConcurrency), not runtime state (isRunning, runningTasks)
@@ -696,6 +697,25 @@ export async function refreshSettingsFromServer(): Promise<boolean> {
         },
       }),
     });
+
+    // Also hydrate terminal-store directly (app-store subscription only goes terminal→app)
+    if (serverSettings.terminalFontFamily || serverSettings.openTerminalMode) {
+      const currentTerminal = useTerminalStore.getState().terminalState;
+      useTerminalStore.setState({
+        terminalState: {
+          ...currentTerminal,
+          ...(serverSettings.terminalFontFamily && {
+            fontFamily: serverSettings.terminalFontFamily,
+          }),
+          ...(serverSettings.openTerminalMode && {
+            openTerminalMode: serverSettings.openTerminalMode,
+          }),
+        },
+      });
+    }
+    if (serverSettings.defaultTerminalId !== undefined) {
+      useTerminalStore.setState({ defaultTerminalId: serverSettings.defaultTerminalId ?? null });
+    }
 
     // Also refresh setup wizard state
     useSetupStore.setState({

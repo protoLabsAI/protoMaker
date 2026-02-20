@@ -27,6 +27,7 @@ import { createLogger } from '@automaker/utils/logger';
 import { getHttpApiClient, waitForApiKeyInit } from '@/lib/http-api-client';
 import { getItem, setItem } from '@/lib/storage';
 import { useAppStore, THEME_STORAGE_KEY } from '@/store/app-store';
+import { useTerminalStore } from '@/store/terminal-store';
 import { useSetupStore } from '@/store/setup-store';
 import {
   DEFAULT_OPENCODE_MODEL,
@@ -745,6 +746,17 @@ export function hydrateStoreFromSettings(settings: GlobalSettings): void {
     }),
   });
 
+  // Also hydrate terminal-store directly (app-store subscription only goes terminal→app)
+  if (settings.terminalFontFamily) {
+    const currentTerminal = useTerminalStore.getState().terminalState;
+    useTerminalStore.setState({
+      terminalState: { ...currentTerminal, fontFamily: settings.terminalFontFamily },
+    });
+  }
+  if (settings.defaultTerminalId !== undefined) {
+    useTerminalStore.setState({ defaultTerminalId: settings.defaultTerminalId ?? null });
+  }
+
   // Hydrate setup wizard state from global settings (API-backed)
   useSetupStore.setState({
     setupComplete: settings.setupComplete ?? false,
@@ -814,7 +826,7 @@ function buildSettingsUpdateFromStore(): Record<string, unknown> {
     worktreePanelCollapsed: state.worktreePanelCollapsed,
     lastProjectDir: state.lastProjectDir,
     recentFolders: state.recentFolders,
-    terminalFontFamily: state.terminalState.fontFamily,
+    terminalFontFamily: useTerminalStore.getState().terminalState.fontFamily,
   };
 }
 
