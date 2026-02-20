@@ -1939,7 +1939,7 @@ export class AutoModeService {
           completedAt,
           durationMs,
           costUsd: executionCostUsd,
-          model,
+          model: modelResult.model,
           success: true,
           trigger: isAutoMode ? (tempRunningFeature.retryCount > 0 ? 'retry' : 'auto') : 'manual',
         };
@@ -2851,7 +2851,7 @@ Complete the pipeline step instructions above. Review the previous work and appl
           title: feature.title || 'Resuming Pipeline',
           description: feature.description,
         },
-        model,
+        model: modelResult.model,
         provider,
       });
 
@@ -3163,7 +3163,7 @@ Address the follow-up instructions above. Review the previous work and make the 
           title: 'Follow-up',
           description: prompt.substring(0, 100),
         },
-        model,
+        model: modelResult.model,
         provider,
       });
 
@@ -3354,7 +3354,7 @@ Address the follow-up instructions above. Review the previous work and make the 
         passes: true,
         message: `Follow-up completed successfully${finalStatus === 'verified' ? ' - auto-verified' : ''}${gitInfo}`,
         projectPath,
-        model,
+        model: modelResult.model,
         provider,
       });
     } catch (error) {

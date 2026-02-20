@@ -63,29 +63,22 @@ export function createGetPRFeedbackHandler() {
 
       logger.debug(`PR #${prNumber} is for branch: ${branchName}`);
 
-      // Step 2: Find feature linked to this branch
+      // Step 2: Find feature linked to this branch (optional — manual PRs won't have one)
       const featureLink = await featureBranchLinkingService.getFeatureByBranch(
         projectPath,
         branchName
       );
 
-      if (!featureLink) {
+      let linkedFeatureId = featureLink?.featureId || '';
+
+      if (!linkedFeatureId) {
         // Try to find by PR number
         const featureLinkByPR = await featureBranchLinkingService.getFeatureByPR(
           projectPath,
           prNumber
         );
-
-        if (!featureLinkByPR) {
-          res.status(404).json({
-            success: false,
-            error: `No feature found linked to branch ${branchName} or PR #${prNumber}`,
-          });
-          return;
-        }
+        linkedFeatureId = featureLinkByPR?.featureId || '';
       }
-
-      const linkedFeatureId = featureLink?.featureId || '';
 
       // Step 3: Fetch PR issue-level comments using GraphQL
       const commentsCmd = `gh api graphql -f query='
