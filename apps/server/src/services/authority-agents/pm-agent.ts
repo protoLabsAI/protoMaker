@@ -11,7 +11,7 @@
  * Pipeline:
  *   1. CTO submits idea (often 1-2 sentences)
  *   2. PM transitions to pm_review, then research state
- *   3. PM researches codebase with read-only tools (haiku, cheap/fast)
+ *   3. PM researches codebase with read-only tools (sonnet)
  *   4. PM generates SPARC PRD from research findings (sonnet, structured writing)
  *   5. PRD posted to Discord for CTO review
  *   6. Auto-approved → ProjM picks up for decomposition
@@ -42,8 +42,8 @@ const logger = createLogger('PMAgent');
 /** How long to wait before processing a new idea (debounce) */
 const IDEA_PROCESSING_DELAY_MS = 2000;
 
-/** Model for codebase research (cheap/fast exploration) */
-const PM_RESEARCH_MODEL = resolveModelString('haiku');
+/** Model for codebase research (needs reasoning to understand architecture) */
+const PM_RESEARCH_MODEL = resolveModelString('sonnet');
 
 /** Model for SPARC PRD generation (structured writing) */
 const PM_PRD_MODEL = resolveModelString('sonnet');
@@ -280,7 +280,7 @@ export class PMAuthorityAgent {
   /**
    * Process an idea through the PM research + PRD pipeline:
    * 1. Transition idea → pm_review (submit proposal)
-   * 2. Transition → research state, explore codebase with haiku
+   * 2. Transition → research state, explore codebase with sonnet
    * 3. Generate SPARC PRD from research + original idea (sonnet)
    * 4. Update feature description with full PRD
    * 5. Emit authority:pm-prd-ready for Discord posting
@@ -370,14 +370,19 @@ export class PMAuthorityAgent {
           source: 'enhance' as const,
         });
 
+        // Step 5: Update feature to prd_ready and STOP — wait for user approval
         await this.featureLoader.update(projectPath, featureId, {
-          workItemState: 'pm_review',
+          workItemState: 'prd_ready',
           description: prdResult.prd,
           complexity: prdResult.complexity,
           descriptionHistory,
+          prdMetadata: {
+            generatedAt: new Date().toISOString(),
+            model: PM_RESEARCH_MODEL,
+          },
         });
 
-        // Step 5: Emit PRD ready for Discord posting
+        // Emit PRD ready for Discord posting
         this.events.emit('authority:pm-prd-ready', {
           projectPath,
           featureId,
@@ -387,16 +392,23 @@ export class PMAuthorityAgent {
           milestones: prdResult.milestones,
         });
 
-        // Step 6: Auto-approve with full PRD context
-        const review: PMReviewResult = {
-          verdict: 'approve',
-          feedback: 'PM researched codebase and generated SPARC PRD. Auto-approved.',
+        // Emit ideation:prd-generated so the UI shows the review dialog
+        this.events.emit('ideation:prd-generated', {
+          projectPath,
+          featureId,
+          title: feature.title,
           prd: prdResult.prd,
           complexity: prdResult.complexity,
           milestones: prdResult.milestones,
-        };
+          metadata: {
+            generatedAt: new Date().toISOString(),
+            model: PM_RESEARCH_MODEL,
+          },
+        });
 
-        await this.handleApproval(projectPath, featureId, feature, review, agent);
+        logger.info(
+          `PRD ready for review: "${feature.title}" (${featureId}) — waiting for user approval`
+        );
       } catch (error) {
         logger.error(`Failed to process idea ${featureId}:`, error);
         // Reset to 'idea' so the feature can be retried on next scan
@@ -413,7 +425,7 @@ export class PMAuthorityAgent {
 
   /**
    * Research the codebase to understand context for an idea.
-   * Uses haiku (cheap/fast) with read-only tools to explore project structure,
+   * Uses sonnet with read-only tools to explore project structure,
    * find relevant patterns, and identify existing code to build on.
    */
   private async researchCodebase(feature: Feature, projectPath: string): Promise<string> {

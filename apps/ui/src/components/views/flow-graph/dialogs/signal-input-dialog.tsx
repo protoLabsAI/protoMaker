@@ -15,8 +15,9 @@ import {
   DialogDescription,
 } from '@protolabs/ui/atoms';
 import { Button } from '@protolabs/ui/atoms';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { getHttpApiClient } from '@/lib/http-api-client';
+import { queryKeys } from '@/lib/query-keys';
 import { useAppStore, type ImageAttachment } from '@/store/app-store';
 import { toast } from 'sonner';
 import { ImageDropZone } from '@/components/shared/image-drop-zone';
@@ -39,6 +40,7 @@ interface SignalInputDialogProps {
 }
 
 export function SignalInputDialog({ open, onOpenChange }: SignalInputDialogProps) {
+  const queryClient = useQueryClient();
   const [content, setContent] = useState('');
   const [images, setImages] = useState<ImageAttachment[]>([]);
   const [files, setFiles] = useState<TextAttachment[]>([]);
@@ -68,8 +70,11 @@ export function SignalInputDialog({ open, onOpenChange }: SignalInputDialogProps
         files: signal.files,
       });
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       toast.success('Signal submitted for processing');
+      if (variables.projectPath) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.features.all(variables.projectPath) });
+      }
       reset();
       onOpenChange(false);
     },

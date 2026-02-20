@@ -1234,7 +1234,8 @@ app.use(
     projectService,
     contentFlowService,
     featureLoader,
-    pipelineCheckpointService
+    pipelineCheckpointService,
+    events
   )
 );
 app.use('/api/langfuse', createLangfuseRoutes());

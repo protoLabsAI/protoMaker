@@ -1726,13 +1726,13 @@ export function BoardView() {
         projectPath={currentProject.path}
         onApprove={async () => {
           if (!prdFeature) return;
-          const api = getElectronAPI();
-          await api.ideation.approvePRD(currentProject.path, prdFeature.id, 'approve');
+          const api = getHttpApiClient();
+          await api.engine.approvePrd(currentProject.path, prdFeature.id, 'approve');
         }}
         onReject={async () => {
           if (!prdFeature) return;
-          const api = getElectronAPI();
-          await api.ideation.approvePRD(currentProject.path, prdFeature.id, 'reject');
+          const api = getHttpApiClient();
+          await api.engine.approvePrd(currentProject.path, prdFeature.id, 'reject');
         }}
       />
 
