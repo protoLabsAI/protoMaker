@@ -287,6 +287,52 @@ const GRAPH_REGISTRY: GraphDefinition[] = [
     useCase: 'End-to-end content generation with quality gates',
   },
   {
+    id: 'unified-pipeline',
+    name: 'Unified Idea-to-Production Pipeline',
+    description:
+      'End-to-end pipeline from signal intake to production. Branches into ops (engineering) or gtm (content) with per-phase gates.',
+    topology: 'multi-stage-hitl',
+    nodes: [
+      {
+        id: 'triage',
+        type: 'decision',
+        description: 'Classify signal, route to ops or gtm branch',
+      },
+      { id: 'research', type: 'processor', description: 'Investigate feasibility, gather context' },
+      { id: 'spec', type: 'processor', description: 'Generate spec (PRD) or content brief' },
+      { id: 'spec_review', type: 'hitl', description: 'User reviews and approves/rejects/edits' },
+      {
+        id: 'design',
+        type: 'processor',
+        description: 'Architecture and structure planning (ops only)',
+      },
+      {
+        id: 'plan',
+        type: 'processor',
+        description: 'Break into executable tasks with dependencies (ops only)',
+      },
+      { id: 'execute', type: 'processor', description: 'Do the work (agent or content flow)' },
+      { id: 'verify', type: 'hitl', description: 'Quality checks, review, CI' },
+      { id: 'publish', type: 'processor', description: 'Ship it (PR merge or content export)' },
+    ],
+    edges: [
+      { from: 'triage', to: 'research' },
+      { from: 'research', to: 'spec' },
+      { from: 'spec', to: 'spec_review' },
+      { from: 'spec_review', to: 'design', condition: 'ops: approved' },
+      { from: 'spec_review', to: 'execute', condition: 'gtm: approved (skip design/plan)' },
+      { from: 'design', to: 'plan' },
+      { from: 'plan', to: 'execute' },
+      { from: 'execute', to: 'verify' },
+      { from: 'verify', to: 'publish', condition: 'approved' },
+      { from: 'verify', to: 'execute', condition: 'revise' },
+      { from: 'publish', to: 'END' },
+    ],
+    entryPoint: 'triage',
+    features: ['multi-phase', 'branch-routing', 'gate-system', 'langfuse-tracing', 'hitl'],
+    useCase: 'Unified signal-to-production pipeline with ops and gtm branches',
+  },
+  {
     id: 'interrupt-loop',
     name: 'Interrupt Loop',
     description:
