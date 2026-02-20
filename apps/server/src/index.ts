@@ -542,6 +542,47 @@ linearSyncService.start();
 const { ceremonyService } = await import('./services/ceremony-service.js');
 ceremonyService.initialize(events, settingsService, featureLoader, projectService, metricsService);
 
+// Listen for retro improvements and create Linear issues when configured
+events.subscribe(async (type, payload) => {
+  if (type !== 'retro:improvement:linear-sync') return;
+  try {
+    const p = payload as {
+      projectPath: string;
+      projectTitle: string;
+      title: string;
+      description: string;
+      priority: number;
+    };
+
+    // Check workflow settings for retro sync configuration
+    const { getWorkflowSettings } = await import('./lib/settings-helpers.js');
+    const workflowSettings = await getWorkflowSettings(p.projectPath, settingsService, '[Retro]');
+    if (!workflowSettings.retro.enabled) return;
+
+    // Get Linear team ID from project settings
+    const projectSettings = await settingsService.getProjectSettings(p.projectPath);
+    const teamId = projectSettings.integrations?.linear?.teamId;
+    if (!teamId) {
+      logger.warn('[Retro] No Linear teamId configured, skipping issue creation');
+      return;
+    }
+
+    const { LinearMCPClient } = await import('./services/linear-mcp-client.js');
+    const linearClient = new LinearMCPClient(settingsService, p.projectPath);
+    const result = await linearClient.createIssue({
+      title: p.title,
+      description: p.description,
+      teamId,
+      projectId: workflowSettings.retro.improvementLinearProjectId,
+      priority: p.priority ?? 3,
+    });
+
+    logger.info(`[Retro] Created Linear issue ${result.identifier}: ${p.title}`);
+  } catch (error) {
+    logger.warn('[Retro] Failed to create Linear issue for improvement:', error);
+  }
+});
+
 // Initialize Changelog Service for generating changelogs on milestone/project completion
 const { changelogService } = await import('./services/changelog-service.js');
 changelogService.initialize(events, settingsService, featureLoader, projectService);
@@ -567,6 +608,12 @@ const leadEngineerService = new LeadEngineerService(
 );
 const pipelineCheckpointService = new PipelineCheckpointService();
 leadEngineerService.setCheckpointService(pipelineCheckpointService);
+
+// Wire ContextFidelityService for shaping prior context on retries
+const { ContextFidelityService } = await import('./services/context-fidelity-service.js');
+const contextFidelityService = new ContextFidelityService();
+leadEngineerService.setContextFidelityService(contextFidelityService);
+
 await leadEngineerService.initialize();
 
 // Wire Lead Engineer service into auto-mode for delegated feature execution
@@ -672,6 +719,9 @@ leadEngineerService.setCodeRabbitResolver(codeRabbitResolverService);
 
 // Wire PR Feedback service to Lead Engineer for review state checking
 leadEngineerService.setPRFeedbackService(prFeedbackService);
+
+// Wire Lead Engineer to PRFeedbackService to prevent competing remediation
+prFeedbackService.setLeadEngineerService(leadEngineerService);
 
 // Initialize Event Hook Service for custom event triggers (with history storage)
 // Must be after DiscordBotService is created so it can use the real Discord client

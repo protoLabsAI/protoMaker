@@ -13,6 +13,7 @@ import * as v8 from 'node:v8';
 import { ProviderFactory } from '../providers/provider-factory.js';
 import { simpleQuery } from '../providers/simple-query-service.js';
 import { StreamObserver } from './stream-observer-service.js';
+import { getWorkflowSettings } from '../lib/settings-helpers.js';
 
 /**
  * Error thrown when stream observer detects an agent loop.
@@ -5128,8 +5129,14 @@ This mock response was generated because AUTOMAKER_MOCK_AGENT=true was set.
       }
     }, MEMORY_CHECK_MS);
 
-    // Stream observer for loop and stall detection
-    const streamObserver = new StreamObserver();
+    // Stream observer for loop and stall detection (can be disabled via workflow settings)
+    const workflowSettings = await getWorkflowSettings(
+      projectPath,
+      this.settingsService,
+      '[AutoMode]'
+    );
+    const loopDetectionEnabled = workflowSettings.pipeline.loopDetectionEnabled;
+    const streamObserver = loopDetectionEnabled ? new StreamObserver() : null;
     let loopDetected = false;
 
     // Wrap stream processing in try/finally to ensure timeout cleanup on any error/abort
@@ -5148,8 +5155,8 @@ This mock response was generated because AUTOMAKER_MOCK_AGENT=true was set.
               // Skip empty text
               if (!newText) continue;
 
-              // Feed text to stream observer for stall detection
-              streamObserver.onTextChunk(newText);
+              // Feed text to stream observer for stall detection (if enabled)
+              streamObserver?.onTextChunk(newText);
 
               // Note: Cursor-specific dedup (duplicate blocks, accumulated text) is now
               // handled in CursorProvider.deduplicateTextBlocks() for cleaner separation
@@ -5660,26 +5667,31 @@ After generating the revised spec, output:
                 });
               }
             } else if (block.type === 'tool_use') {
-              // Feed tool use to stream observer for loop detection
-              streamObserver.onToolUse(block.name || 'unknown', block.input);
+              // Feed tool use to stream observer for loop detection (if enabled)
+              if (streamObserver) {
+                streamObserver.onToolUse(block.name || 'unknown', block.input);
 
-              // Check if observer detected a loop or stall
-              const abortCheck = streamObserver.shouldAbort();
-              if (abortCheck.abort) {
-                logger.warn(
-                  `Stream observer triggered abort for ${featureId}: ${abortCheck.reason}`
-                );
-                loopDetected = true;
+                // Check if observer detected a loop or stall
+                const abortCheck = streamObserver.shouldAbort();
+                if (abortCheck.abort) {
+                  logger.warn(
+                    `Stream observer triggered abort for ${featureId}: ${abortCheck.reason}`
+                  );
+                  loopDetected = true;
 
-                // Emit loop detection event
-                this.events.emit('pipeline:loop-detected' as import('@automaker/types').EventType, {
-                  featureId,
-                  loopSignature: streamObserver.getLoopSignature() || 'unknown',
-                  actionTaken: 'abort_and_retry',
-                });
+                  // Emit loop detection event
+                  this.events.emit(
+                    'pipeline:loop-detected' as import('@automaker/types').EventType,
+                    {
+                      featureId,
+                      loopSignature: streamObserver.getLoopSignature() || 'unknown',
+                      actionTaken: 'abort_and_retry',
+                    }
+                  );
 
-                abortController.abort();
-                break streamLoop;
+                  abortController.abort();
+                  break streamLoop;
+                }
               }
 
               // Emit event for real-time UI
@@ -5770,7 +5782,7 @@ After generating the revised spec, output:
 
       // If loop was detected, throw a recognizable error for retry with recovery context
       if (loopDetected) {
-        const loopSig = streamObserver.getLoopSignature() || 'unknown';
+        const loopSig = streamObserver?.getLoopSignature() || 'unknown';
         throw new LoopDetectedError(
           `Agent loop detected (${loopSig}). Aborting for retry with recovery guidance.`,
           loopSig

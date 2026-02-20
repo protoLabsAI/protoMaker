@@ -76,7 +76,7 @@ export function createProjectsRoutes(
 
   // Mount lifecycle routes if service is available
   if (lifecycleService) {
-    router.use('/lifecycle', createLifecycleRoutes(lifecycleService, projectService));
+    router.use('/lifecycle', createLifecycleRoutes(lifecycleService, projectService, events));
   }
 
   return router;

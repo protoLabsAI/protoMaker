@@ -2,12 +2,13 @@
  * PRD Review Dialog — Review and approve/reject project PRDs
  * from the flow graph project-planning node.
  *
- * Shows PRD content (SPARC sections) with Approve and Request Changes actions.
+ * Shows PRD content (SPARC sections) rendered as markdown with
+ * Approve and Request Changes actions.
  * On Approve: calls lifecycle approve-prd which creates Linear tickets + features.
  */
 
-import { useState, useCallback } from 'react';
-import { CheckCircle, MessageSquare, Loader2 } from 'lucide-react';
+import { useState, useCallback, useMemo } from 'react';
+import { CheckCircle, MessageSquare, Loader2, ChevronDown, ChevronRight } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -18,6 +19,10 @@ import {
 import { Button } from '@protolabs/ui/atoms';
 import { Badge } from '@protolabs/ui/atoms';
 import { useMutation, useQuery } from '@tanstack/react-query';
+import Markdown from 'react-markdown';
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import Placeholder from '@tiptap/extension-placeholder';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { useAppStore } from '@/store/app-store';
 import { toast } from 'sonner';
@@ -28,18 +33,104 @@ interface PrdReviewDialogProps {
   projectSlug: string;
 }
 
-function PrdSection({ title, content }: { title: string; content: string }) {
+const SPARC_LABELS: Record<string, { label: string; color: string }> = {
+  situation: { label: 'Situation', color: 'text-blue-400' },
+  problem: { label: 'Problem', color: 'text-rose-400' },
+  approach: { label: 'Approach', color: 'text-emerald-400' },
+  results: { label: 'Results', color: 'text-amber-400' },
+};
+
+function PrdSection({
+  sectionKey,
+  content,
+  defaultOpen = true,
+}: {
+  sectionKey: string;
+  content: string;
+  defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  const meta = SPARC_LABELS[sectionKey] || { label: sectionKey, color: 'text-violet-400' };
+
   return (
-    <div className="space-y-1">
-      <h4 className="text-xs font-semibold text-violet-400 uppercase tracking-wider">{title}</h4>
-      <p className="text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed">{content}</p>
+    <div className="border border-border/20 rounded-lg overflow-hidden">
+      <button
+        type="button"
+        className="flex items-center gap-2 w-full px-3 py-2 text-left hover:bg-muted/30 transition-colors"
+        onClick={() => setOpen(!open)}
+      >
+        {open ? (
+          <ChevronDown className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+        ) : (
+          <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+        )}
+        <h4 className={`text-xs font-semibold uppercase tracking-wider ${meta.color}`}>
+          {meta.label}
+        </h4>
+      </button>
+      {open && (
+        <div className="px-3 pb-3 prose prose-sm prose-invert max-w-none prose-p:text-foreground/90 prose-headings:text-foreground prose-li:text-foreground/90 prose-strong:text-foreground prose-code:text-violet-300 prose-code:bg-muted/50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-pre:bg-muted/30 prose-pre:border prose-pre:border-border/20">
+          <Markdown>{content}</Markdown>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FeedbackEditor({
+  onSubmit,
+  isPending,
+}: {
+  onSubmit: (feedback: string) => void;
+  isPending: boolean;
+}) {
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      Placeholder.configure({
+        placeholder: 'Describe the changes needed... (supports markdown formatting)',
+      }),
+    ],
+    editorProps: {
+      attributes: {
+        class:
+          'min-h-[80px] max-h-[200px] overflow-y-auto px-3 py-2 text-sm text-foreground focus:outline-none',
+      },
+    },
+  });
+
+  const handleSubmit = useCallback(() => {
+    if (!editor) return;
+    const text = editor.getText().trim();
+    if (!text) {
+      toast.error('Please provide feedback before submitting');
+      return;
+    }
+    // Send as HTML for rich formatting
+    onSubmit(editor.getHTML());
+  }, [editor, onSubmit]);
+
+  return (
+    <div className="space-y-2 border-t border-border/30 pt-3">
+      <div className="rounded-lg border border-border bg-background overflow-hidden focus-within:ring-2 focus-within:ring-violet-500/50">
+        <EditorContent editor={editor} />
+      </div>
+      <div className="flex justify-end">
+        <Button size="sm" onClick={handleSubmit} disabled={isPending}>
+          {isPending ? (
+            <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+          ) : (
+            <MessageSquare className="w-3.5 h-3.5 mr-1.5" />
+          )}
+          Submit Feedback
+        </Button>
+      </div>
     </div>
   );
 }
 
 export function PrdReviewDialog({ open, onOpenChange, projectSlug }: PrdReviewDialogProps) {
   const [showFeedback, setShowFeedback] = useState(false);
-  const [feedback, setFeedback] = useState('');
   const projectPath = useAppStore((s) => s.currentProject?.path);
 
   const { data, isLoading } = useQuery({
@@ -75,19 +166,43 @@ export function PrdReviewDialog({ open, onOpenChange, projectSlug }: PrdReviewDi
     approveMutation.mutate();
   }, [approveMutation]);
 
-  const handleRequestChanges = useCallback(() => {
-    if (!feedback.trim()) {
-      setShowFeedback(true);
-      return;
-    }
-    toast.info('Feedback noted — PRD will be regenerated with your changes');
-    setFeedback('');
-    setShowFeedback(false);
-    onOpenChange(false);
-  }, [feedback, onOpenChange]);
+  const requestChangesMutation = useMutation({
+    mutationFn: async (fb: string) => {
+      const api = getHttpApiClient();
+      return api.lifecycle.requestChanges(projectPath || '', projectSlug, fb);
+    },
+    onSuccess: () => {
+      toast.success('Changes requested — feedback stored for PRD regeneration');
+      setShowFeedback(false);
+      onOpenChange(false);
+    },
+    onError: (error) => {
+      toast.error(
+        `Failed to request changes: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    },
+  });
+
+  const handleFeedbackSubmit = useCallback(
+    (feedback: string) => {
+      requestChangesMutation.mutate(feedback);
+    },
+    [requestChangesMutation]
+  );
 
   const project = data?.project;
   const prd = project?.prd;
+
+  // Build SPARC sections array for rendering
+  const sections = useMemo(() => {
+    if (!prd) return [];
+    return [
+      { key: 'situation', content: prd.situation },
+      { key: 'problem', content: prd.problem },
+      { key: 'approach', content: prd.approach },
+      { key: 'results', content: prd.results },
+    ].filter((s) => s.content);
+  }, [prd]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -109,7 +224,7 @@ export function PrdReviewDialog({ open, onOpenChange, projectSlug }: PrdReviewDi
           </div>
         </DialogHeader>
 
-        <div className="mt-3 space-y-4">
+        <div className="mt-3 space-y-3">
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
@@ -118,11 +233,12 @@ export function PrdReviewDialog({ open, onOpenChange, projectSlug }: PrdReviewDi
             <p className="text-sm text-muted-foreground py-4">No PRD found for this project.</p>
           ) : (
             <>
-              <PrdSection title="Situation" content={prd.situation} />
-              <PrdSection title="Problem" content={prd.problem} />
-              <PrdSection title="Approach" content={prd.approach} />
-              <PrdSection title="Results" content={prd.results} />
+              {/* SPARC sections with markdown rendering */}
+              {sections.map((s) => (
+                <PrdSection key={s.key} sectionKey={s.key} content={s.content} />
+              ))}
 
+              {/* Milestones */}
               {project?.milestones && project.milestones.length > 0 && (
                 <div className="space-y-2 border-t border-border/30 pt-3">
                   <h4 className="text-xs font-semibold text-violet-400 uppercase tracking-wider">
@@ -141,30 +257,25 @@ export function PrdReviewDialog({ open, onOpenChange, projectSlug }: PrdReviewDi
             </>
           )}
 
-          {/* Feedback input (shown on Request Changes) */}
+          {/* Feedback editor (shown on Request Changes) */}
           {showFeedback && (
-            <div className="space-y-2 border-t border-border/30 pt-3">
-              <textarea
-                className="w-full min-h-[80px] rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-violet-500/50 resize-y"
-                placeholder="Describe the changes needed..."
-                value={feedback}
-                onChange={(e) => setFeedback(e.target.value)}
-                autoFocus
-              />
-            </div>
+            <FeedbackEditor
+              onSubmit={handleFeedbackSubmit}
+              isPending={requestChangesMutation.isPending}
+            />
           )}
 
           {/* Action buttons */}
-          {prd && (
+          {prd && !showFeedback && (
             <div className="flex items-center justify-end gap-2 border-t border-border/30 pt-3">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handleRequestChanges}
+                onClick={() => setShowFeedback(true)}
                 disabled={approveMutation.isPending}
               >
                 <MessageSquare className="w-3.5 h-3.5 mr-1.5" />
-                {showFeedback ? 'Submit Feedback' : 'Request Changes'}
+                Request Changes
               </Button>
               <Button size="sm" onClick={handleApprove} disabled={approveMutation.isPending}>
                 {approveMutation.isPending ? (

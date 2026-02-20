@@ -139,6 +139,9 @@ export interface Project {
 
   /** Archive timestamp (set when project is archived after Linear handoff) */
   archivedAt?: string;
+
+  /** Feedback from last "request changes" review */
+  reviewFeedback?: string;
 }
 
 /**
@@ -363,6 +366,9 @@ export interface UpdateProjectInput {
 
   /** Update milestones (e.g., to persist linearMilestoneId) */
   milestones?: Milestone[];
+
+  /** Feedback from "request changes" review */
+  reviewFeedback?: string;
 }
 
 /**

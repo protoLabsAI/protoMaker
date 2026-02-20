@@ -15,10 +15,13 @@ import { createApprovePrdHandler } from './approve-prd.js';
 import { createLaunchHandler } from './launch.js';
 import { createStatusHandler } from './status.js';
 import { createCollectRelatedHandler } from './collect-related.js';
+import { createRequestChangesHandler } from './request-changes.js';
+import type { EventEmitter } from '../../../lib/events.js';
 
 export function createLifecycleRoutes(
   lifecycleService: ProjectLifecycleService,
-  projectService: ProjectService
+  projectService: ProjectService,
+  events?: EventEmitter
 ): Router {
   const router = Router();
 
@@ -61,6 +64,13 @@ export function createLifecycleRoutes(
     validatePathParams('projectPath'),
     validateSlugs('projectSlug'),
     createCollectRelatedHandler(lifecycleService)
+  );
+
+  router.post(
+    '/request-changes',
+    validatePathParams('projectPath'),
+    validateSlugs('projectSlug'),
+    createRequestChangesHandler(projectService, events)
   );
 
   return router;

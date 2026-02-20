@@ -2933,6 +2933,16 @@ export class HttpApiClient implements ElectronAPI {
       status?: string;
       error?: string;
     }> => this.post('/api/projects/lifecycle/status', { projectPath, projectSlug }),
+    requestChanges: (
+      projectPath: string,
+      projectSlug: string,
+      feedback: string
+    ): Promise<{ success: boolean; error?: string }> =>
+      this.post('/api/projects/lifecycle/request-changes', {
+        projectPath,
+        projectSlug,
+        feedback,
+      }),
   };
 
   // Engine API

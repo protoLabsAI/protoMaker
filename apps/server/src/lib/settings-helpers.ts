@@ -14,8 +14,9 @@ import type {
   PhaseModelKey,
   PhaseModelEntry,
   Credentials,
+  WorkflowSettings,
 } from '@automaker/types';
-import { DEFAULT_PHASE_MODELS } from '@automaker/types';
+import { DEFAULT_PHASE_MODELS, DEFAULT_WORKFLOW_SETTINGS } from '@automaker/types';
 import {
   mergeAutoModePrompts,
   mergeAgentPrompts,
@@ -748,5 +749,37 @@ export async function getAllProviderModels(
   } catch (error) {
     logger.error(`${logPrefix} Failed to get all provider models:`, error);
     return [];
+  }
+}
+
+/**
+ * Get workflow settings for a project, falling back to defaults.
+ */
+export async function getWorkflowSettings(
+  projectPath: string,
+  settingsService?: SettingsService | null,
+  logPrefix = '[WorkflowSettings]'
+): Promise<WorkflowSettings> {
+  if (!settingsService) {
+    return DEFAULT_WORKFLOW_SETTINGS;
+  }
+  try {
+    const projectSettings = await settingsService.getProjectSettings(projectPath);
+    if (projectSettings.workflow) {
+      // Deep merge with defaults to handle partially-set settings
+      return {
+        pipeline: { ...DEFAULT_WORKFLOW_SETTINGS.pipeline, ...projectSettings.workflow.pipeline },
+        retro: { ...DEFAULT_WORKFLOW_SETTINGS.retro, ...projectSettings.workflow.retro },
+        cleanup: { ...DEFAULT_WORKFLOW_SETTINGS.cleanup, ...projectSettings.workflow.cleanup },
+        signalIntake: {
+          ...DEFAULT_WORKFLOW_SETTINGS.signalIntake,
+          ...projectSettings.workflow.signalIntake,
+        },
+      };
+    }
+    return DEFAULT_WORKFLOW_SETTINGS;
+  } catch (error) {
+    logger.warn(`${logPrefix} Failed to read workflow settings, using defaults:`, error);
+    return DEFAULT_WORKFLOW_SETTINGS;
   }
 }
