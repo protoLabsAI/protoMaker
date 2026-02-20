@@ -13,7 +13,7 @@ import { LogViewer } from '@/components/shared/log-viewer';
 import { GitDiffPanel } from '@/components/shared/git-diff-panel';
 import { TaskProgressPanel } from '@/components/shared/task-progress-panel';
 import { Markdown } from '@protolabs/ui/molecules';
-import { useAppStore } from '@/store/app-store';
+import { useWorktreeStore } from '@/store/worktree-store';
 import { extractSummary } from '@/lib/log-parser';
 import { useAgentOutput } from '@/hooks/queries';
 import type { AutoModeEvent } from '@/types/electron';
@@ -78,7 +78,7 @@ export function AgentOutputModal({
   const effectiveViewMode = viewMode ?? (summary ? 'summary' : 'parsed');
   const scrollRef = useRef<HTMLDivElement>(null);
   const autoScrollRef = useRef(true);
-  const useWorktrees = useAppStore((state) => state.useWorktrees);
+  const useWorktrees = useWorktreeStore((state) => state.useWorktrees);
 
   // Auto-scroll to bottom when output changes
   useEffect(() => {

@@ -1,6 +1,6 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useAppStore } from '@/store/app-store';
+import { useWorktreeStore } from '@/store/worktree-store';
 import { useWorktrees as useWorktreesQuery } from '@/hooks/queries';
 import { queryKeys } from '@/lib/query-keys';
 import { pathsEqual } from '@/lib/utils';
@@ -19,11 +19,11 @@ export function useWorktrees({
 }: UseWorktreesOptions) {
   const queryClient = useQueryClient();
 
-  const currentWorktree = useAppStore((s) => s.getCurrentWorktree(projectPath));
-  const setCurrentWorktree = useAppStore((s) => s.setCurrentWorktree);
-  const setWorktreesInStore = useAppStore((s) => s.setWorktrees);
-  const setWorktreesLoading = useAppStore((s) => s.setWorktreesLoading);
-  const useWorktreesEnabled = useAppStore((s) => s.useWorktrees);
+  const currentWorktree = useWorktreeStore((s) => s.getCurrentWorktree(projectPath));
+  const setCurrentWorktree = useWorktreeStore((s) => s.setCurrentWorktree);
+  const setWorktreesInStore = useWorktreeStore((s) => s.setWorktrees);
+  const setWorktreesLoading = useWorktreeStore((s) => s.setWorktreesLoading);
+  const useWorktreesEnabled = useWorktreeStore((s) => s.useWorktrees);
 
   // Use the React Query hook
   const { data, isLoading, refetch } = useWorktreesQuery(projectPath);

@@ -23,6 +23,7 @@ import {
   BranchSwitchDropdown,
 } from './components';
 import { useAppStore } from '@/store/app-store';
+import { useWorktreeStore } from '@/store/worktree-store';
 import { ViewWorktreeChangesDialog, PushToRemoteDialog, MergeWorktreeDialog } from '../dialogs';
 import { ConfirmDialog } from '@protolabs/ui/molecules';
 import { Undo2 } from 'lucide-react';
@@ -98,7 +99,7 @@ export function WorktreePanel({
 
   // Auto-mode state management using the store
   // Use separate selectors to avoid creating new object references on each render
-  const autoModeByWorktree = useAppStore((state) => state.autoModeByWorktree);
+  const autoModeByWorktree = useWorktreeStore((state) => state.autoModeByWorktree);
   const currentProject = useAppStore((state) => state.currentProject);
 
   // Helper to generate worktree key for auto-mode (inlined to avoid selector issues)

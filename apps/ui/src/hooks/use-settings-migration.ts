@@ -28,7 +28,11 @@ import { getHttpApiClient, waitForApiKeyInit } from '@/lib/http-api-client';
 import { getItem, setItem } from '@/lib/storage';
 import { useAppStore, THEME_STORAGE_KEY } from '@/store/app-store';
 import { useTerminalStore } from '@/store/terminal-store';
+import { useThemeStore } from '@/store/theme-store';
+import { useWorktreeStore } from '@/store/worktree-store';
+import { useAIModelsStore } from '@/store/ai-models-store';
 import { useSetupStore } from '@/store/setup-store';
+import type { ThemeMode } from '@/store/types';
 import {
   DEFAULT_OPENCODE_MODEL,
   DEFAULT_MAX_CONCURRENCY,
@@ -746,7 +750,8 @@ export function hydrateStoreFromSettings(settings: GlobalSettings): void {
     }),
   });
 
-  // Also hydrate terminal-store directly (app-store subscription only goes terminal→app)
+  // Hydrate domain stores so consumers reading from them get fresh values
+  // (app-store subscriptions only go domain→app, not app→domain)
   if (settings.terminalFontFamily) {
     const currentTerminal = useTerminalStore.getState().terminalState;
     useTerminalStore.setState({
@@ -756,6 +761,36 @@ export function hydrateStoreFromSettings(settings: GlobalSettings): void {
   if (settings.defaultTerminalId !== undefined) {
     useTerminalStore.setState({ defaultTerminalId: settings.defaultTerminalId ?? null });
   }
+
+  useThemeStore.setState({
+    theme: settings.theme as unknown as ThemeMode,
+    fontFamilySans: settings.fontFamilySans ?? null,
+    fontFamilyMono: settings.fontFamilyMono ?? null,
+  });
+
+  useWorktreeStore.setState({
+    autoModeByWorktree: restoredAutoModeByWorktree,
+    maxConcurrency: settings.maxConcurrency ?? DEFAULT_MAX_CONCURRENCY,
+    useWorktrees: settings.useWorktrees ?? true,
+    worktreePanelCollapsed: settings.worktreePanelCollapsed ?? false,
+  });
+
+  useAIModelsStore.setState({
+    enhancementModel: settings.enhancementModel ?? 'claude-sonnet',
+    validationModel: settings.validationModel ?? 'claude-opus',
+    phaseModels: settings.phaseModels ?? current.phaseModels,
+    enabledCursorModels: allCursorModels,
+    cursorDefaultModel: sanitizedCursorDefaultModel,
+    enabledOpencodeModels: sanitizedEnabledOpencodeModels,
+    opencodeDefaultModel: sanitizedOpencodeDefaultModel,
+    enabledDynamicModelIds: sanitizedDynamicModelIds,
+    disabledProviders: settings.disabledProviders ?? [],
+    autoLoadClaudeMd: settings.autoLoadClaudeMd ?? false,
+    skipSandboxWarning: settings.skipSandboxWarning ?? false,
+    claudeApiProfiles: settings.claudeApiProfiles ?? [],
+    activeClaudeApiProfileId: settings.activeClaudeApiProfileId ?? null,
+    claudeCompatibleProviders: settings.claudeCompatibleProviders ?? [],
+  });
 
   // Hydrate setup wizard state from global settings (API-backed)
   useSetupStore.setState({

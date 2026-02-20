@@ -17,6 +17,9 @@ import { getHttpApiClient, waitForApiKeyInit } from '@/lib/http-api-client';
 import { setItem } from '@/lib/storage';
 import { useAppStore, type ThemeMode, THEME_STORAGE_KEY } from '@/store/app-store';
 import { useTerminalStore } from '@/store/terminal-store';
+import { useThemeStore } from '@/store/theme-store';
+import { useWorktreeStore } from '@/store/worktree-store';
+import { useAIModelsStore } from '@/store/ai-models-store';
 import { useSetupStore } from '@/store/setup-store';
 import { useAuthStore } from '@/store/auth-store';
 import { waitForMigrationComplete, resetMigrationState } from './use-settings-migration';
@@ -118,7 +121,7 @@ function getSettingsFieldValue(
   }
   if (field === 'autoModeByWorktree') {
     // Only persist settings (maxConcurrency), not runtime state (isRunning, runningTasks)
-    const autoModeByWorktree = appState.autoModeByWorktree;
+    const autoModeByWorktree = useWorktreeStore.getState().autoModeByWorktree;
     const persistedSettings: Record<string, { maxConcurrency: number; branchName: string | null }> =
       {};
     for (const [key, value] of Object.entries(autoModeByWorktree)) {
@@ -128,6 +131,15 @@ function getSettingsFieldValue(
       };
     }
     return persistedSettings;
+  }
+  if (field === 'theme') {
+    return useThemeStore.getState().theme;
+  }
+  if (field === 'useWorktrees') {
+    return useWorktreeStore.getState().useWorktrees;
+  }
+  if (field === 'disabledProviders') {
+    return useAIModelsStore.getState().disabledProviders;
   }
   return appState[field as keyof typeof appState];
 }
@@ -698,7 +710,8 @@ export async function refreshSettingsFromServer(): Promise<boolean> {
       }),
     });
 
-    // Also hydrate terminal-store directly (app-store subscription only goes terminal→app)
+    // Hydrate domain stores so consumers reading from them get fresh values
+    // (app-store subscriptions only go domain→app, not app→domain)
     if (serverSettings.terminalFontFamily || serverSettings.openTerminalMode) {
       const currentTerminal = useTerminalStore.getState().terminalState;
       useTerminalStore.setState({
@@ -716,6 +729,34 @@ export async function refreshSettingsFromServer(): Promise<boolean> {
     if (serverSettings.defaultTerminalId !== undefined) {
       useTerminalStore.setState({ defaultTerminalId: serverSettings.defaultTerminalId ?? null });
     }
+
+    useThemeStore.setState({
+      theme: serverSettings.theme as unknown as ThemeMode,
+      fontFamilySans: serverSettings.fontFamilySans ?? null,
+      fontFamilyMono: serverSettings.fontFamilyMono ?? null,
+    });
+
+    useWorktreeStore.setState({
+      autoModeByWorktree: restoredAutoModeByWorktree,
+      maxConcurrency: serverSettings.maxConcurrency,
+      useWorktrees: serverSettings.useWorktrees,
+      worktreePanelCollapsed: serverSettings.worktreePanelCollapsed ?? false,
+    });
+
+    useAIModelsStore.setState({
+      enhancementModel: serverSettings.enhancementModel,
+      validationModel: serverSettings.validationModel,
+      phaseModels: migratedPhaseModels ?? serverSettings.phaseModels,
+      enabledCursorModels: allCursorModels,
+      cursorDefaultModel: sanitizedCursorDefault,
+      enabledOpencodeModels: sanitizedEnabledOpencodeModels,
+      opencodeDefaultModel: sanitizedOpencodeDefaultModel,
+      enabledDynamicModelIds: sanitizedDynamicModelIds,
+      disabledProviders: serverSettings.disabledProviders ?? [],
+      autoLoadClaudeMd: serverSettings.autoLoadClaudeMd ?? false,
+      claudeApiProfiles: serverSettings.claudeApiProfiles ?? [],
+      activeClaudeApiProfileId: serverSettings.activeClaudeApiProfileId ?? null,
+    });
 
     // Also refresh setup wizard state
     useSetupStore.setState({

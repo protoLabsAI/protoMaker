@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
-import { useAppStore, defaultBackgroundSettings } from '@/store/app-store';
+import { useThemeStore } from '@/store/theme-store';
+import { defaultBackgroundSettings } from '@/store/types';
 import { getAuthenticatedImageUrl } from '@/lib/api-fetch';
 
 interface UseBoardBackgroundProps {
@@ -7,7 +8,7 @@ interface UseBoardBackgroundProps {
 }
 
 export function useBoardBackground({ currentProject }: UseBoardBackgroundProps) {
-  const boardBackgroundByProject = useAppStore((state) => state.boardBackgroundByProject);
+  const boardBackgroundByProject = useThemeStore((state) => state.boardBackgroundByProject);
 
   // Get background settings for current project
   const backgroundSettings = useMemo(() => {

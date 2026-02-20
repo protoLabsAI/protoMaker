@@ -1,6 +1,7 @@
 // @ts-nocheck -- Feature index signature causes property access type errors
 import { useMemo, useCallback } from 'react';
 import { Feature, useAppStore } from '@/store/app-store';
+import { useWorktreeStore } from '@/store/worktree-store';
 import {
   createFeatureMap,
   getBlockingDependenciesFromMap,
@@ -102,8 +103,8 @@ export function useBoardColumnFeatures({
         // (worktrees disabled or haven't loaded yet).
         // Show features assigned to primary worktree's branch.
         if (projectPath) {
-          const worktrees = useAppStore.getState().worktreesByProject[projectPath] ?? [];
-          const isWorktreesLoading = useAppStore.getState().getWorktreesLoading(projectPath);
+          const worktrees = useWorktreeStore.getState().worktreesByProject[projectPath] ?? [];
+          const isWorktreesLoading = useWorktreeStore.getState().getWorktreesLoading(projectPath);
 
           if (isWorktreesLoading) {
             // Worktrees are still loading - show ALL features to prevent disappearing
@@ -111,12 +112,12 @@ export function useBoardColumnFeatures({
           } else if (worktrees.length === 0) {
             // Worktrees finished loading but list is empty - feature disabled or failed load
             // Apply strict filtering: only show on primary branch
-            matchesWorktree = useAppStore
+            matchesWorktree = useWorktreeStore
               .getState()
               .isPrimaryWorktreeBranch(projectPath, featureBranch);
           } else {
             // Worktrees loaded successfully - apply normal filtering
-            matchesWorktree = useAppStore
+            matchesWorktree = useWorktreeStore
               .getState()
               .isPrimaryWorktreeBranch(projectPath, featureBranch);
           }

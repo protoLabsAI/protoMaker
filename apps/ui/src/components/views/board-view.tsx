@@ -28,6 +28,7 @@ class DialogAwarePointerSensor extends PointerSensor {
 }
 import { useAppStore, Feature } from '@/store/app-store';
 import { useTerminalStore } from '@/store/terminal-store';
+import { useWorktreeStore } from '@/store/worktree-store';
 import { getElectronAPI } from '@/lib/electron';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import type { BacklogPlanResult } from '@automaker/types';
@@ -89,58 +90,45 @@ import { queryKeys } from '@/lib/query-keys';
 import { useAutoModeQueryInvalidation } from '@/hooks/use-query-invalidation';
 
 // Stable empty array to avoid infinite loop in selector
-const EMPTY_WORKTREES: ReturnType<ReturnType<typeof useAppStore.getState>['getWorktrees']> = [];
+const EMPTY_WORKTREES: ReturnType<ReturnType<typeof useWorktreeStore.getState>['getWorktrees']> =
+  [];
 
 const logger = createLogger('Board');
 
 export function BoardView() {
   const {
     currentProject,
-    maxConcurrency: _legacyMaxConcurrency,
-    setMaxConcurrency: _legacySetMaxConcurrency,
     defaultSkipTests,
     specCreatingForProject,
     setSpecCreatingForProject,
     pendingPlanApproval,
     setPendingPlanApproval,
     updateFeature,
-    getCurrentWorktree,
-    setCurrentWorktree,
-    getWorktrees,
-    setWorktrees,
-    useWorktrees: _useWorktrees,
-    enableDependencyBlocking: _enableDependencyBlocking,
-    skipVerificationInAutoMode: _skipVerificationInAutoMode,
     planUseSelectedWorktreeBranch,
     addFeatureUseSelectedWorktreeBranch,
-    isPrimaryWorktreeBranch,
-    getPrimaryWorktreeBranch,
     setPipelineConfig,
   } = useAppStore(
     useShallow((state) => ({
       currentProject: state.currentProject,
-      maxConcurrency: state.maxConcurrency,
-      setMaxConcurrency: state.setMaxConcurrency,
       defaultSkipTests: state.defaultSkipTests,
       specCreatingForProject: state.specCreatingForProject,
       setSpecCreatingForProject: state.setSpecCreatingForProject,
       pendingPlanApproval: state.pendingPlanApproval,
       setPendingPlanApproval: state.setPendingPlanApproval,
       updateFeature: state.updateFeature,
-      getCurrentWorktree: state.getCurrentWorktree,
-      setCurrentWorktree: state.setCurrentWorktree,
-      getWorktrees: state.getWorktrees,
-      setWorktrees: state.setWorktrees,
-      useWorktrees: state.useWorktrees,
-      enableDependencyBlocking: state.enableDependencyBlocking,
-      skipVerificationInAutoMode: state.skipVerificationInAutoMode,
       planUseSelectedWorktreeBranch: state.planUseSelectedWorktreeBranch,
       addFeatureUseSelectedWorktreeBranch: state.addFeatureUseSelectedWorktreeBranch,
-      isPrimaryWorktreeBranch: state.isPrimaryWorktreeBranch,
-      getPrimaryWorktreeBranch: state.getPrimaryWorktreeBranch,
       setPipelineConfig: state.setPipelineConfig,
     }))
   );
+
+  // Worktree state from domain store
+  const getCurrentWorktree = useWorktreeStore((s) => s.getCurrentWorktree);
+  const setCurrentWorktree = useWorktreeStore((s) => s.setCurrentWorktree);
+  const getWorktrees = useWorktreeStore((s) => s.getWorktrees);
+  const setWorktrees = useWorktreeStore((s) => s.setWorktrees);
+  const isPrimaryWorktreeBranch = useWorktreeStore((s) => s.isPrimaryWorktreeBranch);
+  const getPrimaryWorktreeBranch = useWorktreeStore((s) => s.getPrimaryWorktreeBranch);
   // Fetch pipeline config via React Query
   const { data: pipelineConfig } = usePipelineConfig(currentProject?.path);
   const queryClient = useQueryClient();
@@ -148,13 +136,15 @@ export function BoardView() {
   // Subscribe to auto mode events for React Query cache invalidation
   useAutoModeQueryInvalidation(currentProject?.path);
   // Subscribe to worktreePanelVisibleByProject to trigger re-renders when it changes
-  const worktreePanelVisibleByProject = useAppStore((state) => state.worktreePanelVisibleByProject);
+  const worktreePanelVisibleByProject = useWorktreeStore(
+    (state) => state.worktreePanelVisibleByProject
+  );
   // Subscribe to showInitScriptIndicatorByProject to trigger re-renders when it changes
   const _showInitScriptIndicatorByProject = useTerminalStore(
     (state) => state.showInitScriptIndicatorByProject
   );
   const getShowInitScriptIndicator = useTerminalStore((state) => state.getShowInitScriptIndicator);
-  const getDefaultDeleteBranch = useAppStore((state) => state.getDefaultDeleteBranch);
+  const getDefaultDeleteBranch = useWorktreeStore((state) => state.getDefaultDeleteBranch);
   const _shortcuts = useKeyboardShortcutsConfig();
   const {
     features: hookFeatures,
@@ -507,7 +497,7 @@ export function BoardView() {
   // This needs to be before useBoardActions so we can pass currentWorktreeBranch
   const currentWorktreeInfo = currentProject ? getCurrentWorktree(currentProject.path) : null;
   const currentWorktreePath = currentWorktreeInfo?.path ?? null;
-  const worktreesByProject = useAppStore((s) => s.worktreesByProject);
+  const worktreesByProject = useWorktreeStore((s) => s.worktreesByProject);
   const worktrees = useMemo(
     () =>
       currentProject
@@ -536,7 +526,9 @@ export function BoardView() {
   // Get worktree-specific maxConcurrency from the hook
   const maxConcurrency = autoMode.maxConcurrency;
   // Get worktree-specific setter
-  const setMaxConcurrencyForWorktree = useAppStore((state) => state.setMaxConcurrencyForWorktree);
+  const setMaxConcurrencyForWorktree = useWorktreeStore(
+    (state) => state.setMaxConcurrencyForWorktree
+  );
 
   // Get the current branch from the selected worktree (not from store which may be stale)
   const currentWorktreeBranch = selectedWorktree?.branch ?? null;

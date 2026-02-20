@@ -1,7 +1,8 @@
 import { memo, useState, useCallback } from 'react';
 import { Palette } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useAppStore, type ThemeMode } from '@/store/app-store';
+import { useThemeStore } from '@/store/theme-store';
+import type { ThemeMode } from '@/store/types';
 import { darkThemes, lightThemes } from '@/config/theme-options';
 import { Popover, PopoverContent, PopoverTrigger } from '@protolabs/ui/atoms';
 import { useThemeTransition } from '@/lib/theme/transitions';
@@ -53,8 +54,8 @@ export const ThemeToggleButton = memo(function ThemeToggleButton({
 }: ThemeToggleButtonProps) {
   const [open, setOpen] = useState(false);
   const { transition } = useThemeTransition();
-  const theme = useAppStore((s) => s.theme);
-  const setTheme = useAppStore((s) => s.setTheme);
+  const theme = useThemeStore((s) => s.theme);
+  const setTheme = useThemeStore((s) => s.setTheme);
 
   // Curated theme names for filtering
   const curatedNames = new Set(curatedThemes.map((t) => t.name));

@@ -6,6 +6,7 @@ import { ConflictBadge } from './components/conflict-badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@protolabs/ui/atoms';
 import { UsagePopover } from '@/components/usage-popover';
 import { useAppStore } from '@/store/app-store';
+import { useWorktreeStore } from '@/store/worktree-store';
 import { useSetupStore } from '@/store/setup-store';
 import { useIsTablet } from '@/hooks/use-media-query';
 import { AutoModeSettingsPopover } from './dialogs/auto-mode-settings-popover';
@@ -93,8 +94,10 @@ export function BoardHeader({
   const codexAuthStatus = useSetupStore((state) => state.codexAuthStatus);
 
   // Worktree panel visibility (per-project)
-  const worktreePanelVisibleByProject = useAppStore((state) => state.worktreePanelVisibleByProject);
-  const setWorktreePanelVisible = useAppStore((state) => state.setWorktreePanelVisible);
+  const worktreePanelVisibleByProject = useWorktreeStore(
+    (state) => state.worktreePanelVisibleByProject
+  );
+  const setWorktreePanelVisible = useWorktreeStore((state) => state.setWorktreePanelVisible);
   const isWorktreePanelVisible = worktreePanelVisibleByProject[projectPath] ?? true;
 
   const handleWorktreePanelToggle = useCallback(

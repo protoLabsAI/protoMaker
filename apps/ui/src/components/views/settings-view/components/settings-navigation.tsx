@@ -6,7 +6,7 @@ import type { Project } from '@/lib/electron';
 import type { NavigationItem } from '../config/navigation';
 import { GLOBAL_NAV_GROUPS } from '../config/navigation';
 import type { SettingsViewId } from '../hooks/use-settings-view';
-import { useAppStore } from '@/store/app-store';
+import { useAIModelsStore } from '@/store/ai-models-store';
 import type { ModelProvider } from '@automaker/types';
 
 const PROVIDERS_DROPDOWN_KEY = 'settings-providers-dropdown-open';
@@ -83,7 +83,7 @@ function NavItemWithSubItems({
   activeSection: SettingsViewId;
   onNavigate: (sectionId: SettingsViewId) => void;
 }) {
-  const disabledProviders = useAppStore((state) => state.disabledProviders);
+  const disabledProviders = useAIModelsStore((state) => state.disabledProviders);
 
   const [isOpen, setIsOpen] = useState(() => {
     if (typeof window !== 'undefined') {

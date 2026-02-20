@@ -8,6 +8,7 @@ import {
   PlanningMode,
   useAppStore,
 } from '@/store/app-store';
+import { useWorktreeStore } from '@/store/worktree-store';
 import type { ReasoningEffort } from '@automaker/types';
 import { FeatureImagePath as DescriptionImagePath } from '@/components/views/board-view/components/description-image-dropzone';
 import { getElectronAPI } from '@/lib/electron';
@@ -87,13 +88,11 @@ export function useBoardActions({
     updateFeature,
     removeFeature,
     moveFeature,
-    useWorktrees,
     enableDependencyBlocking,
     skipVerificationInAutoMode,
-    isPrimaryWorktreeBranch,
-    getPrimaryWorktreeBranch,
-    getAutoModeState,
   } = useAppStore();
+  const { useWorktrees, isPrimaryWorktreeBranch, getPrimaryWorktreeBranch, getAutoModeState } =
+    useWorktreeStore();
   const autoMode = useAutoMode();
 
   // React Query mutations for feature operations
@@ -923,7 +922,7 @@ export function useBoardActions({
       return featureBranch === currentWorktreeBranch;
     });
 
-    const availableSlots = useAppStore.getState().maxConcurrency - runningAutoTasks.length;
+    const availableSlots = useWorktreeStore.getState().maxConcurrency - runningAutoTasks.length;
 
     if (availableSlots <= 0) {
       toast.error('Concurrency limit reached', {
