@@ -608,6 +608,12 @@ const leadEngineerService = new LeadEngineerService(
 );
 const pipelineCheckpointService = new PipelineCheckpointService();
 leadEngineerService.setCheckpointService(pipelineCheckpointService);
+
+// Wire ContextFidelityService for shaping prior context on retries
+const { ContextFidelityService } = await import('./services/context-fidelity-service.js');
+const contextFidelityService = new ContextFidelityService();
+leadEngineerService.setContextFidelityService(contextFidelityService);
+
 await leadEngineerService.initialize();
 
 // Wire Lead Engineer service into auto-mode for delegated feature execution

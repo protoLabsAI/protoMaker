@@ -15,7 +15,7 @@ import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
 import path from 'node:path';
 import { createLogger, atomicWriteJson, readJsonWithRecovery } from '@automaker/utils';
-import { getAutomakerDir } from '@automaker/platform';
+import { getAutomakerDir, getFeatureDir } from '@automaker/platform';
 import type {
   EventType,
   Feature,
@@ -44,6 +44,9 @@ import type { PRFeedbackService } from './pr-feedback-service.js';
 import { DEFAULT_RULES, evaluateRules } from './lead-engineer-rules.js';
 import { getWorkflowSettings } from '../lib/settings-helpers.js';
 import type { PipelineCheckpointService } from './pipeline-checkpoint-service.js';
+import type { ContextFidelityService } from './context-fidelity-service.js';
+import { simpleQuery } from '../providers/simple-query-service.js';
+import { resolveModelString } from '@automaker/model-resolver';
 
 const execAsync = promisify(exec);
 const logger = createLogger('LeadEngineerService');
@@ -67,6 +70,8 @@ export interface ProcessorServiceContext {
   featureLoader: FeatureLoader;
   autoModeService: AutoModeService;
   prFeedbackService?: PRFeedbackService;
+  checkpointService?: PipelineCheckpointService;
+  contextFidelityService?: ContextFidelityService;
 }
 
 // ────────────────────────── Feature State Machine ──────────────────────────
@@ -113,7 +118,9 @@ export interface StateContext {
   ciStatus?: 'pending' | 'passing' | 'failing';
   remediationAttempts: number;
   mergeRetryCount: number;
+  planRetryCount: number;
   escalationReason?: string;
+  reviewFeedback?: string;
 }
 
 /**
@@ -185,6 +192,12 @@ class IntakeProcessor implements StateProcessor {
     // Determine if PLAN phase is needed
     ctx.planRequired = this.requiresPlan(feature);
 
+    // Mark feature as in_progress on the board
+    await this.serviceContext.featureLoader.update(ctx.projectPath, ctx.feature.id, {
+      status: 'in_progress',
+    });
+    logger.info('[INTAKE] Feature status updated to in_progress');
+
     if (ctx.planRequired) {
       logger.info('[INTAKE] Feature requires PLAN phase');
       return {
@@ -248,41 +261,78 @@ class IntakeProcessor implements StateProcessor {
  * PLAN State: Agent researches codebase, produces plan. Factor-based antagonistic gate.
  */
 class PlanProcessor implements StateProcessor {
+  private readonly MAX_PLAN_RETRIES = 2;
+
   constructor(private _serviceContext: ProcessorServiceContext) {}
 
   async enter(ctx: StateContext): Promise<void> {
-    logger.info(`[PLAN] Starting planning phase for feature: ${ctx.feature.id}`);
+    logger.info(`[PLAN] Starting planning phase for feature: ${ctx.feature.id}`, {
+      planRetryCount: ctx.planRetryCount,
+    });
   }
 
   async process(ctx: StateContext): Promise<StateTransitionResult> {
-    logger.info('[PLAN] Running planning agent (stub - implementation pending)');
+    const { feature } = ctx;
 
-    // Placeholder plan output
-    ctx.planOutput = 'Placeholder plan output';
+    logger.info('[PLAN] Generating implementation plan via simpleQuery (haiku)', {
+      featureId: feature.id,
+      title: feature.title,
+    });
 
-    // Placeholder antagonistic gate (always approves for now)
-    const gateResult = await this.antagonisticGate(ctx);
+    try {
+      const result = await simpleQuery({
+        prompt: `Create a concise implementation plan for this feature.
 
-    if (!gateResult.approved) {
-      logger.warn('[PLAN] Plan rejected by antagonistic gate', {
-        reason: gateResult.reason,
+**Title:** ${feature.title || 'Untitled'}
+**Description:** ${feature.description || 'No description provided'}
+**Complexity:** ${feature.complexity || 'medium'}
+
+Produce a plan with:
+1. Key files to modify or create
+2. Implementation steps (ordered)
+3. Testing approach
+4. Risk areas or edge cases
+
+Keep it focused and actionable. If the feature description is too vague or unclear to plan, respond with "UNCLEAR:" followed by what's missing.`,
+        model: resolveModelString('haiku'),
+        cwd: ctx.projectPath,
+        systemPrompt:
+          'You are a senior software engineer creating implementation plans. Be concise and specific.',
+        maxTurns: 1,
+        allowedTools: [],
       });
 
-      if (gateResult.shouldRetry) {
+      ctx.planOutput = result.text;
+    } catch (err) {
+      logger.warn('[PLAN] simpleQuery failed, using feature description as plan', err);
+      ctx.planOutput = `Feature: ${feature.title}\n\n${feature.description || 'Implement as described.'}`;
+    }
+
+    // Validate plan quality
+    const gateResult = this.validatePlan(ctx);
+
+    if (!gateResult.approved) {
+      logger.warn('[PLAN] Plan validation failed', { reason: gateResult.reason });
+
+      if (gateResult.shouldRetry && ctx.planRetryCount < this.MAX_PLAN_RETRIES) {
+        ctx.planRetryCount++;
         return {
           nextState: 'PLAN',
           shouldContinue: true,
-          reason: 'Plan needs revision',
+          reason: `Plan needs revision: ${gateResult.reason}`,
           context: { gateReason: gateResult.reason },
         };
       }
 
+      ctx.escalationReason = `Plan rejected after ${ctx.planRetryCount} retries: ${gateResult.reason}`;
       return {
         nextState: 'ESCALATE',
         shouldContinue: false,
-        reason: 'Plan rejected, escalating',
+        reason: ctx.escalationReason,
       };
     }
+
+    logger.info(`[PLAN] Plan approved (${ctx.planOutput.length} chars)`);
 
     return {
       nextState: 'EXECUTE',
@@ -295,10 +345,27 @@ class PlanProcessor implements StateProcessor {
     logger.info('[PLAN] Planning phase completed');
   }
 
-  private async antagonisticGate(
-    _ctx: StateContext
-  ): Promise<{ approved: boolean; shouldRetry: boolean; reason?: string }> {
-    // Stub implementation - always approve
+  private validatePlan(ctx: StateContext): {
+    approved: boolean;
+    shouldRetry: boolean;
+    reason?: string;
+  } {
+    const plan = ctx.planOutput || '';
+
+    // Plan must be non-empty and substantive
+    if (plan.length < 100) {
+      return { approved: false, shouldRetry: true, reason: 'Plan too short (<100 chars)' };
+    }
+
+    // If LLM flagged the feature as unclear
+    if (plan.startsWith('UNCLEAR:')) {
+      return {
+        approved: false,
+        shouldRetry: false,
+        reason: `Feature requirements unclear: ${plan.slice(8).trim()}`,
+      };
+    }
+
     return { approved: true, shouldRetry: false };
   }
 }
@@ -343,6 +410,38 @@ class ExecuteProcessor implements StateProcessor {
         shouldContinue: false,
         reason: ctx.escalationReason,
       };
+    }
+
+    // Shape prior context via ContextFidelityService (if available)
+    if (
+      this.serviceContext.contextFidelityService &&
+      (ctx.retryCount > 0 || ctx.remediationAttempts > 0)
+    ) {
+      try {
+        const outputPath = path.join(
+          getFeatureDir(ctx.projectPath, ctx.feature.id),
+          'agent-output.md'
+        );
+        const fs = await import('node:fs/promises');
+        const priorOutput = await fs.readFile(outputPath, 'utf-8').catch(() => '');
+
+        if (priorOutput) {
+          const mode = this.serviceContext.contextFidelityService.resolveMode('EXECUTE', {
+            isRetry: ctx.retryCount > 0,
+            isRemediation: ctx.remediationAttempts > 0,
+            hasPlan: !!ctx.planOutput,
+          });
+          const shaped = await this.serviceContext.contextFidelityService.shape(priorOutput, mode);
+          if (shaped) {
+            ctx.planOutput =
+              (ctx.planOutput ? ctx.planOutput + '\n\n' : '') +
+              `## Prior Agent Output (${mode} mode)\n\n${shaped}`;
+          }
+          logger.info(`[EXECUTE] Shaped prior context (mode: ${mode}, ${shaped.length} chars)`);
+        }
+      } catch (err) {
+        logger.warn('[EXECUTE] Context fidelity shaping failed:', err);
+      }
     }
 
     logger.info('[EXECUTE] Launching agent via autoModeService.executeFeature()', {
@@ -423,9 +522,24 @@ class ExecuteProcessor implements StateProcessor {
         }
       });
 
+      // Build recovery context from plan output, review feedback, and context fidelity
+      const contextParts: string[] = [];
+      if (ctx.planOutput) {
+        contextParts.push(`## Implementation Plan\n\n${ctx.planOutput}`);
+      }
+      if (ctx.reviewFeedback) {
+        contextParts.push(
+          `## Review Feedback (Changes Requested)\n\nAddress these issues:\n\n${ctx.reviewFeedback}`
+        );
+      }
+      const recoveryContext = contextParts.length > 0 ? contextParts.join('\n\n') : undefined;
+
       // Start execution (bypasses lead engineer delegation — calls executeFeature directly)
       this.serviceContext.autoModeService
-        .executeFeature(ctx.projectPath, ctx.feature.id, true, false)
+        .executeFeature(ctx.projectPath, ctx.feature.id, true, false, undefined, {
+          recoveryContext,
+          retryCount: ctx.retryCount,
+        })
         .catch((err: unknown) => {
           clearTimeout(timeout);
           if (!timedOut && unsubscribe) {
@@ -472,8 +586,8 @@ class ReviewProcessor implements StateProcessor {
       };
     }
 
-    // Query PRFeedbackService for tracked PR state
-    const reviewState = this.getPRReviewState(ctx);
+    // Query PRFeedbackService for tracked PR state (falls back to gh CLI)
+    const reviewState = await this.getPRReviewState(ctx);
 
     logger.info('[REVIEW] PR status check', {
       featureId: ctx.feature.id,
@@ -512,6 +626,21 @@ class ReviewProcessor implements StateProcessor {
         };
       }
 
+      // Fetch review comments so the agent knows what to fix
+      try {
+        const { stdout } = await execAsync(
+          `gh pr view ${ctx.prNumber} --json reviews --jq '[.reviews[] | select(.state == "CHANGES_REQUESTED") | .body] | join("\\n---\\n")'`,
+          { cwd: ctx.projectPath, timeout: 15000 }
+        );
+        const feedback = stdout.trim();
+        if (feedback) {
+          ctx.reviewFeedback = feedback;
+          logger.info(`[REVIEW] Captured review feedback (${feedback.length} chars)`);
+        }
+      } catch (err) {
+        logger.warn('[REVIEW] Failed to fetch review comments:', err);
+      }
+
       ctx.remediationAttempts++;
       return {
         nextState: 'EXECUTE',
@@ -538,9 +667,35 @@ class ReviewProcessor implements StateProcessor {
     logger.info('[REVIEW] Review phase completed');
   }
 
-  private getPRReviewState(ctx: StateContext): string {
+  private async getPRReviewState(ctx: StateContext): Promise<string> {
     const trackedPR = this.getTrackedPR(ctx);
-    return trackedPR?.reviewState || 'pending';
+    if (trackedPR?.reviewState) return trackedPR.reviewState;
+
+    // Fallback: query gh CLI when PRFeedbackService hasn't tracked the PR yet
+    if (!ctx.prNumber) return 'pending';
+
+    try {
+      const { stdout } = await execAsync(
+        `gh pr view ${ctx.prNumber} --json reviewDecision,statusCheckRollup --jq '{decision: .reviewDecision, checks: [(.statusCheckRollup // [])[] | .conclusion]}'`,
+        { cwd: ctx.projectPath, timeout: 15000 }
+      );
+
+      const data = JSON.parse(stdout.trim());
+
+      if (data.decision === 'APPROVED') return 'approved';
+      if (data.decision === 'CHANGES_REQUESTED') return 'changes_requested';
+
+      // No review required + all checks pass → treat as approved (required_approving_review_count: 0)
+      const checks = (data.checks || []) as string[];
+      if (checks.length > 0 && checks.every((c: string) => c === 'SUCCESS')) {
+        return 'approved';
+      }
+
+      return 'pending';
+    } catch (err) {
+      logger.warn(`[REVIEW] gh CLI fallback failed for PR #${ctx.prNumber}:`, err);
+      return 'pending';
+    }
   }
 
   private getTrackedPR(ctx: StateContext) {
@@ -675,12 +830,33 @@ class DeployProcessor implements StateProcessor {
   async process(ctx: StateContext): Promise<StateTransitionResult> {
     // Reload feature to verify final status
     const fresh = await this.serviceContext.featureLoader.get(ctx.projectPath, ctx.feature.id);
+    if (fresh) ctx.feature = fresh;
+
     if (fresh && fresh.status !== 'done' && fresh.status !== 'verified') {
       await this.serviceContext.featureLoader.update(ctx.projectPath, ctx.feature.id, {
         status: 'done',
       });
       logger.info(`[DEPLOY] Updated feature status to done`);
     }
+
+    // Emit completion event (board janitor and other listeners use this)
+    this.serviceContext.events.emit('feature:completed' as EventType, {
+      featureId: ctx.feature.id,
+      projectPath: ctx.projectPath,
+      prNumber: ctx.prNumber,
+      source: 'lead_engineer_deploy',
+    });
+
+    // Checkpoint cleanup is handled by FeatureStateMachine post-loop (line ~1237)
+
+    // Log final cost summary
+    const finalCost = ctx.feature.costUsd || 0;
+    logger.info(`[DEPLOY] Feature ${ctx.feature.id} completed`, {
+      title: ctx.feature.title,
+      costUsd: finalCost,
+      retryCount: ctx.retryCount,
+      remediationAttempts: ctx.remediationAttempts,
+    });
 
     return {
       nextState: null,
@@ -883,6 +1059,7 @@ export class FeatureStateMachine {
       planRequired: false,
       remediationAttempts: 0,
       mergeRetryCount: 0,
+      planRetryCount: 0,
       // Merge any restored context from checkpoint
       ...resumeFromCheckpoint?.restoredContext,
     };
@@ -1117,6 +1294,7 @@ export class LeadEngineerService {
   private codeRabbitResolver?: CodeRabbitResolverService;
   private prFeedbackService?: PRFeedbackService;
   private checkpointService?: PipelineCheckpointService;
+  private contextFidelityService?: ContextFidelityService;
 
   constructor(
     private events: EventEmitter,
@@ -1133,6 +1311,13 @@ export class LeadEngineerService {
    */
   setCheckpointService(service: PipelineCheckpointService): void {
     this.checkpointService = service;
+  }
+
+  /**
+   * Set context fidelity service for shaping prior context on retries.
+   */
+  setContextFidelityService(service: ContextFidelityService): void {
+    this.contextFidelityService = service;
   }
 
   /**
@@ -1398,6 +1583,8 @@ export class LeadEngineerService {
         featureLoader: this.featureLoader,
         autoModeService: this.autoModeService,
         prFeedbackService: this.prFeedbackService,
+        checkpointService: this.checkpointService,
+        contextFidelityService: this.contextFidelityService,
       };
 
       // Read workflow settings to control pipeline features

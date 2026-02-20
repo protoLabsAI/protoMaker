@@ -281,9 +281,21 @@ export class SignalIntakeService {
     images?: string[];
     files?: string[];
   }): void {
+    // Enrich content with file and image references
+    let enrichedContent = params.content;
+
+    if (params.files && params.files.length > 0) {
+      enrichedContent += '\n\n## Attached Files\n' + params.files.map((f) => `- ${f}`).join('\n');
+    }
+
+    if (params.images && params.images.length > 0) {
+      enrichedContent +=
+        '\n\n## Attached Images\n' + params.images.map((img) => `- ${img}`).join('\n');
+    }
+
     const signal: SignalPayload = {
       source: params.source,
-      content: params.content,
+      content: enrichedContent,
       author: { id: 'ui-user', name: 'UI User' },
       channelContext: {
         projectPath: params.projectPath,
