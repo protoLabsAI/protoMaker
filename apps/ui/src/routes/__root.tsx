@@ -34,6 +34,7 @@ import { queryClient } from '@/lib/query-client';
 import { Toaster } from 'sonner';
 import { type ThemeOption, themeOptions } from '@/config/theme-options';
 import { SandboxRiskDialog } from '@/components/dialogs/sandbox-risk-dialog';
+import { HITLFormDialog } from '@/components/shared/hitl-form';
 import { SandboxRejectionScreen } from '@/components/dialogs/sandbox-rejection-screen';
 import { LoadingState } from '@protolabs/ui/molecules';
 import { useProjectSettingsLoader } from '@/hooks/use-project-settings-loader';
@@ -817,6 +818,7 @@ function RootLayoutContent() {
           onConfirm={handleSandboxConfirm}
           onDeny={handleSandboxDeny}
         />
+        <HITLFormDialog />
       </>
     );
   }
@@ -849,6 +851,7 @@ function RootLayoutContent() {
         onConfirm={handleSandboxConfirm}
         onDeny={handleSandboxDeny}
       />
+      <HITLFormDialog />
     </>
   );
 }

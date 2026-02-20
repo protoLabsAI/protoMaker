@@ -752,3 +752,13 @@ export {
 // Context fidelity types (per-stage context shaping)
 export type { ContextFidelityMode } from './context-fidelity.js';
 export { DEFAULT_STAGE_FIDELITY } from './context-fidelity.js';
+
+// HITL Form types (human-in-the-loop structured input)
+export type {
+  HITLFormCallerType,
+  HITLFormStatus,
+  HITLFormStep,
+  HITLFormRequestInput,
+  HITLFormRequest,
+  HITLFormRequestSummary,
+} from './hitl-form.js';

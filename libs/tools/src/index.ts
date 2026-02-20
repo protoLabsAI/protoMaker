@@ -16,3 +16,4 @@ export { toExpressRouter, type ExpressAdapterOptions } from './adapters/index.js
 export * from './domains/features/index.js';
 export * from './domains/notes/index.js';
 export * from './domains/twitch/index.js';
+export * from './domains/hitl/index.js';

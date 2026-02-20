@@ -113,6 +113,8 @@ import { getDevServerService } from './services/dev-server-service.js';
 import { eventHookService } from './services/event-hook-service.js';
 import { createNotificationsRoutes } from './routes/notifications/index.js';
 import { getNotificationService } from './services/notification-service.js';
+import { createHITLFormRoutes } from './routes/hitl-forms/index.js';
+import { HITLFormService } from './services/hitl-form-service.js';
 import { createEventHistoryRoutes } from './routes/event-history/index.js';
 import { getEventHistoryService } from './services/event-history-service.js';
 import { createBriefingRoutes } from './routes/briefing/index.js';
@@ -373,6 +375,11 @@ ledgerService.initialize();
 const archivalService = new ArchivalService(featureLoader, ledgerService, settingsService, events);
 archivalService.start();
 const autoModeService = new AutoModeService(events, settingsService);
+const hitlFormService = new HITLFormService({
+  events,
+  followUpFeature: (projectPath, featureId, prompt) =>
+    autoModeService.followUpFeature(projectPath, featureId, prompt, undefined, true),
+});
 const claudeUsageService = new ClaudeUsageService();
 const codexAppServerService = new CodexAppServerService();
 const codexModelCacheService = new CodexModelCacheService(DATA_DIR, codexAppServerService);
@@ -1218,6 +1225,7 @@ app.use(
 app.use('/api/pipeline', createPipelineRoutes(pipelineService));
 app.use('/api/metrics', createMetricsRoutes(metricsService, ledgerService));
 app.use('/api/notifications', createNotificationsRoutes(notificationService));
+app.use('/api/hitl-forms', createHITLFormRoutes(hitlFormService));
 app.use('/api/ralph', createRalphRoutes(ralphLoopService));
 app.use('/api/skills', createSkillsRoutes());
 app.use('/api/event-history', createEventHistoryRoutes(eventHistoryService, settingsService));
@@ -1766,6 +1774,7 @@ async function gracefulShutdown() {
   terminalService.cleanup();
   worktreeLifecycleService.shutdown();
   issueCreationService.shutdown();
+  hitlFormService.shutdown();
   linearAgentRouter.stop();
   agentDiscordRouter.stop();
   await twitchService.disconnect(); // Gracefully disconnect from Twitch chat

@@ -1,4 +1,5 @@
 import type { PipelinePhase } from './pipeline-phase.js';
+import type { HITLFormCallerType, HITLFormRequestSummary } from './hitl-form.js';
 
 /**
  * Event types for AutoMaker event system
@@ -329,6 +330,9 @@ export type EventType =
   | 'pipeline:gate-resolved'
   | 'pipeline:phase-skipped'
   | 'pipeline:trace-linked'
+  // HITL form events (human-in-the-loop structured input)
+  | 'hitl:form-requested'
+  | 'hitl:form-responded'
   // Server lifecycle events
   | 'server:shutdown';
 
@@ -563,6 +567,26 @@ export interface EventPayloadMap {
   };
   'lead-engineer:project-completing': { projectPath: string; projectSlug: string };
   'lead-engineer:project-completed': { projectPath: string; projectSlug: string };
+
+  // HITL form events
+  'hitl:form-requested': {
+    formId: string;
+    title: string;
+    callerType: HITLFormCallerType;
+    featureId?: string;
+    projectPath?: string;
+    stepCount: number;
+    expiresAt: string;
+  };
+  'hitl:form-responded': {
+    formId: string;
+    callerType: HITLFormCallerType;
+    featureId?: string;
+    projectPath?: string;
+    cancelled: boolean;
+    flowThreadId?: string;
+    response?: Record<string, unknown>[];
+  };
 
   // Pipeline state machine events
   'pipeline:state-entered': {

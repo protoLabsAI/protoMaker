@@ -597,7 +597,9 @@ type EventType =
   | 'dev-server:started'
   | 'dev-server:output'
   | 'dev-server:stopped'
-  | 'notification:created';
+  | 'notification:created'
+  | 'hitl:form-requested'
+  | 'hitl:form-responded';
 
 /**
  * Dev server log event payloads for WebSocket streaming
@@ -2703,6 +2705,48 @@ export class HttpApiClient implements ElectronAPI {
 
     onNotificationCreated: (callback: (notification: any) => void): (() => void) => {
       return this.subscribeToEvent('notification:created', callback as EventCallback);
+    },
+  };
+
+  // HITL Forms API - human-in-the-loop structured input
+  hitlForms = {
+    create: (input: {
+      title: string;
+      description?: string;
+      steps: Array<{
+        schema: Record<string, unknown>;
+        uiSchema?: Record<string, unknown>;
+        title?: string;
+        description?: string;
+      }>;
+      callerType: 'agent' | 'flow' | 'api';
+      featureId?: string;
+      projectPath?: string;
+      ttlSeconds?: number;
+    }): Promise<{ success: boolean; form?: any; error?: string }> =>
+      this.post('/api/hitl-forms/create', input),
+
+    get: (formId: string): Promise<{ success: boolean; form?: any; error?: string }> =>
+      this.post('/api/hitl-forms/get', { formId }),
+
+    list: (projectPath?: string): Promise<{ success: boolean; forms?: any[]; error?: string }> =>
+      this.post('/api/hitl-forms/list', { projectPath }),
+
+    submit: (
+      formId: string,
+      response: Record<string, unknown>[]
+    ): Promise<{ success: boolean; form?: any; error?: string }> =>
+      this.post('/api/hitl-forms/submit', { formId, response }),
+
+    cancel: (formId: string): Promise<{ success: boolean; form?: any; error?: string }> =>
+      this.post('/api/hitl-forms/cancel', { formId }),
+
+    onFormRequested: (callback: (payload: any) => void): (() => void) => {
+      return this.subscribeToEvent('hitl:form-requested', callback as EventCallback);
+    },
+
+    onFormResponded: (callback: (payload: any) => void): (() => void) => {
+      return this.subscribeToEvent('hitl:form-responded', callback as EventCallback);
     },
   };
 

@@ -7,6 +7,9 @@
 /* Scan shared UI component library for Tailwind class usage */
 @source "../../../../libs/ui/src";
 
+/* Scan RJSF shadcn theme for Tailwind class usage */
+@source "../../../node_modules/@rjsf/shadcn";
+
 /* Import theme definitions, custom variants, and CSS variable bridge from the UI package */
 @import '../../../../libs/ui/src/themes/base.css';
 
