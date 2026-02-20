@@ -143,7 +143,7 @@ test/*-test-*/
 labs/
 
 # Local project plans (not repo content)
-projects/
+/projects/
 
 # Large media files (render locally, don't commit)
 gource.mp4
