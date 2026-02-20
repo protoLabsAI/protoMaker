@@ -27,6 +27,9 @@ import { createLogger } from '@automaker/utils/logger';
 import { getHttpApiClient, waitForApiKeyInit } from '@/lib/http-api-client';
 import { getItem, setItem } from '@/lib/storage';
 import { useAppStore, THEME_STORAGE_KEY } from '@/store/app-store';
+import { useThemeStore } from '@/store/theme-store';
+import { useAIModelsStore } from '@/store/ai-models-store';
+import { useWorktreeStore } from '@/store/worktree-store';
 import { useTerminalStore } from '@/store/terminal-store';
 import { useThemeStore } from '@/store/theme-store';
 import { useWorktreeStore } from '@/store/worktree-store';
@@ -750,8 +753,37 @@ export function hydrateStoreFromSettings(settings: GlobalSettings): void {
     }),
   });
 
-  // Hydrate domain stores so consumers reading from them get fresh values
-  // (app-store subscriptions only go domain→app, not app→domain)
+  // Hydrate domain stores directly so consumers reading from them get correct values
+  useThemeStore.setState({
+    theme: settings.theme as unknown as import('@/store/app-store').ThemeMode,
+    fontFamilySans: settings.fontFamilySans ?? null,
+    fontFamilyMono: settings.fontFamilyMono ?? null,
+  });
+
+  useAIModelsStore.setState({
+    enhancementModel: settings.enhancementModel ?? 'claude-sonnet',
+    validationModel: settings.validationModel ?? 'claude-opus',
+    phaseModels: settings.phaseModels ?? current.phaseModels,
+    enabledCursorModels: allCursorModels,
+    cursorDefaultModel: sanitizedCursorDefaultModel,
+    enabledOpencodeModels: sanitizedEnabledOpencodeModels,
+    opencodeDefaultModel: sanitizedOpencodeDefaultModel,
+    enabledDynamicModelIds: sanitizedDynamicModelIds,
+    disabledProviders: settings.disabledProviders ?? [],
+    autoLoadClaudeMd: settings.autoLoadClaudeMd ?? false,
+    claudeApiProfiles: settings.claudeApiProfiles ?? [],
+    activeClaudeApiProfileId: settings.activeClaudeApiProfileId ?? null,
+    claudeCompatibleProviders: settings.claudeCompatibleProviders ?? [],
+  });
+
+  useWorktreeStore.setState({
+    maxConcurrency: settings.maxConcurrency ?? DEFAULT_MAX_CONCURRENCY,
+    autoModeByWorktree: restoredAutoModeByWorktree,
+    useWorktrees: settings.useWorktrees ?? true,
+    worktreePanelCollapsed: settings.worktreePanelCollapsed ?? false,
+  });
+
+  // Hydrate terminal-store directly
   if (settings.terminalFontFamily) {
     const currentTerminal = useTerminalStore.getState().terminalState;
     useTerminalStore.setState({
@@ -806,6 +838,10 @@ export function hydrateStoreFromSettings(settings: GlobalSettings): void {
  */
 function buildSettingsUpdateFromStore(): Record<string, unknown> {
   const state = useAppStore.getState();
+  const themeState = useThemeStore.getState();
+  const aiState = useAIModelsStore.getState();
+  const worktreeState = useWorktreeStore.getState();
+  const terminalState = useTerminalStore.getState();
   const setupState = useSetupStore.getState();
 
   // Only persist settings (maxConcurrency), not runtime state (isRunning, runningTasks)
@@ -813,7 +849,7 @@ function buildSettingsUpdateFromStore(): Record<string, unknown> {
     string,
     { maxConcurrency: number; branchName: string | null }
   > = {};
-  for (const [key, value] of Object.entries(state.autoModeByWorktree)) {
+  for (const [key, value] of Object.entries(worktreeState.autoModeByWorktree)) {
     persistedAutoModeByWorktree[key] = {
       maxConcurrency: value.maxConcurrency ?? DEFAULT_MAX_CONCURRENCY,
       branchName: value.branchName,
@@ -824,44 +860,56 @@ function buildSettingsUpdateFromStore(): Record<string, unknown> {
     setupComplete: setupState.setupComplete,
     isFirstRun: setupState.isFirstRun,
     skipClaudeSetup: setupState.skipClaudeSetup,
-    theme: state.theme,
+    // Theme store
+    theme: themeState.theme,
+    fontFamilySans: themeState.fontFamilySans,
+    fontFamilyMono: themeState.fontFamilyMono,
+    // AI models store
+    enhancementModel: aiState.enhancementModel,
+    validationModel: aiState.validationModel,
+    phaseModels: aiState.phaseModels,
+    enabledCursorModels: aiState.enabledCursorModels,
+    cursorDefaultModel: aiState.cursorDefaultModel,
+    enabledOpencodeModels: aiState.enabledOpencodeModels,
+    opencodeDefaultModel: aiState.opencodeDefaultModel,
+    enabledDynamicModelIds: aiState.enabledDynamicModelIds,
+    disabledProviders: aiState.disabledProviders,
+    autoLoadClaudeMd: aiState.autoLoadClaudeMd,
+    claudeApiProfiles: aiState.claudeApiProfiles,
+    activeClaudeApiProfileId: aiState.activeClaudeApiProfileId,
+    claudeCompatibleProviders: aiState.claudeCompatibleProviders,
+    // Worktree store
+    maxConcurrency: worktreeState.maxConcurrency,
+    autoModeByWorktree: persistedAutoModeByWorktree,
+    useWorktrees: worktreeState.useWorktrees,
+    worktreePanelCollapsed: worktreeState.worktreePanelCollapsed,
+    // Terminal store
+    terminalFontFamily: terminalState.terminalState.fontFamily,
+    defaultTerminalId: terminalState.defaultTerminalId,
+    // App store (remaining fields)
     sidebarOpen: state.sidebarOpen,
     chatHistoryOpen: state.chatHistoryOpen,
-    maxConcurrency: state.maxConcurrency,
-    autoModeByWorktree: persistedAutoModeByWorktree,
     defaultSkipTests: state.defaultSkipTests,
     enableDependencyBlocking: state.enableDependencyBlocking,
     skipVerificationInAutoMode: state.skipVerificationInAutoMode,
-    useWorktrees: state.useWorktrees,
     defaultPlanningMode: state.defaultPlanningMode,
     defaultRequirePlanApproval: state.defaultRequirePlanApproval,
     muteDoneSound: state.muteDoneSound,
     serverLogLevel: state.serverLogLevel,
     enableRequestLogging: state.enableRequestLogging,
-    enhancementModel: state.enhancementModel,
-    validationModel: state.validationModel,
-    phaseModels: state.phaseModels,
-    enabledDynamicModelIds: state.enabledDynamicModelIds,
-    disabledProviders: state.disabledProviders,
-    autoLoadClaudeMd: state.autoLoadClaudeMd,
     skipSandboxWarning: state.skipSandboxWarning,
     keyboardShortcuts: state.keyboardShortcuts,
     mcpServers: state.mcpServers,
     promptCustomization: state.promptCustomization,
     eventHooks: state.eventHooks,
-    claudeCompatibleProviders: state.claudeCompatibleProviders,
-    claudeApiProfiles: state.claudeApiProfiles,
-    activeClaudeApiProfileId: state.activeClaudeApiProfileId,
     projects: state.projects,
     trashedProjects: state.trashedProjects,
     currentProjectId: state.currentProject?.id ?? null,
     projectHistory: state.projectHistory,
     projectHistoryIndex: state.projectHistoryIndex,
     lastSelectedSessionByProject: state.lastSelectedSessionByProject,
-    worktreePanelCollapsed: state.worktreePanelCollapsed,
     lastProjectDir: state.lastProjectDir,
     recentFolders: state.recentFolders,
-    terminalFontFamily: useTerminalStore.getState().terminalState.fontFamily,
   };
 }
 

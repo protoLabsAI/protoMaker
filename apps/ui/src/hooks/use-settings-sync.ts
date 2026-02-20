@@ -16,6 +16,9 @@ import { createLogger } from '@automaker/utils/logger';
 import { getHttpApiClient, waitForApiKeyInit } from '@/lib/http-api-client';
 import { setItem } from '@/lib/storage';
 import { useAppStore, type ThemeMode, THEME_STORAGE_KEY } from '@/store/app-store';
+import { useThemeStore } from '@/store/theme-store';
+import { useAIModelsStore } from '@/store/ai-models-store';
+import { useWorktreeStore } from '@/store/worktree-store';
 import { useTerminalStore } from '@/store/terminal-store';
 import { useThemeStore } from '@/store/theme-store';
 import { useWorktreeStore } from '@/store/worktree-store';
@@ -95,21 +98,20 @@ const SETTINGS_FIELDS_TO_SYNC = [
 const SETUP_FIELDS_TO_SYNC = ['isFirstRun', 'setupComplete', 'skipClaudeSetup'] as const;
 
 /**
- * Helper to extract a settings field value from app state
+ * Helper to extract a settings field value from the appropriate domain store.
  *
- * Handles special cases where store fields don't map directly to settings:
- * - currentProjectId: Extract from currentProject?.id
- * - terminalFontFamily: Extract from terminalState.fontFamily
- * - Other fields: Direct access
- *
- * @param field The settings field to extract
- * @param appState Current app store state
- * @returns The value of the field in the app state
+ * Each field is read from its canonical domain store:
+ * - Theme fields → useThemeStore
+ * - AI model fields → useAIModelsStore
+ * - Worktree fields → useWorktreeStore
+ * - Terminal fields → useTerminalStore
+ * - All other fields → useAppStore
  */
 function getSettingsFieldValue(
   field: (typeof SETTINGS_FIELDS_TO_SYNC)[number],
   appState: ReturnType<typeof useAppStore.getState>
 ): unknown {
+  // Special mappings
   if (field === 'currentProjectId') {
     return appState.currentProject?.id ?? null;
   }
@@ -118,6 +120,44 @@ function getSettingsFieldValue(
   }
   if (field === 'openTerminalMode') {
     return useTerminalStore.getState().terminalState.openTerminalMode;
+  }
+  if (field === 'defaultTerminalId') {
+    return useTerminalStore.getState().defaultTerminalId;
+  }
+
+  // Theme store fields
+  if (field === 'theme' || field === 'fontFamilySans' || field === 'fontFamilyMono') {
+    const themeState = useThemeStore.getState();
+    return themeState[field as keyof typeof themeState];
+  }
+
+  // AI models store fields
+  if (
+    field === 'enhancementModel' ||
+    field === 'validationModel' ||
+    field === 'phaseModels' ||
+    field === 'enabledCursorModels' ||
+    field === 'cursorDefaultModel' ||
+    field === 'enabledOpencodeModels' ||
+    field === 'opencodeDefaultModel' ||
+    field === 'enabledDynamicModelIds' ||
+    field === 'disabledProviders' ||
+    field === 'autoLoadClaudeMd' ||
+    field === 'claudeApiProfiles' ||
+    field === 'activeClaudeApiProfileId'
+  ) {
+    const aiState = useAIModelsStore.getState();
+    return aiState[field as keyof typeof aiState];
+  }
+
+  // Worktree store fields
+  if (
+    field === 'maxConcurrency' ||
+    field === 'useWorktrees' ||
+    field === 'worktreePanelCollapsed'
+  ) {
+    const worktreeState = useWorktreeStore.getState();
+    return worktreeState[field as keyof typeof worktreeState];
   }
   if (field === 'autoModeByWorktree') {
     // Only persist settings (maxConcurrency), not runtime state (isRunning, runningTasks)
@@ -145,34 +185,89 @@ function getSettingsFieldValue(
 }
 
 /**
- * Helper to check if a settings field changed between states
+ * Helper to check if a settings field changed between snapshots.
  *
- * Compares field values between old and new state, handling special cases:
- * - currentProjectId: Compare currentProject?.id values
- * - terminalFontFamily: Compare terminalState.fontFamily values
- * - Other fields: Direct reference equality check
- *
- * @param field The settings field to check
- * @param newState New app store state
- * @param prevState Previous app store state
- * @returns true if the field value changed between states
+ * Uses snapshots from all domain stores for comparison.
  */
 function hasSettingsFieldChanged(
   field: (typeof SETTINGS_FIELDS_TO_SYNC)[number],
-  newState: ReturnType<typeof useAppStore.getState>,
-  prevState: ReturnType<typeof useAppStore.getState>
+  newSnap: SettingsSnapshot,
+  prevSnap: SettingsSnapshot
 ): boolean {
   if (field === 'currentProjectId') {
-    return newState.currentProject?.id !== prevState.currentProject?.id;
+    return newSnap.app.currentProject?.id !== prevSnap.app.currentProject?.id;
   }
   if (field === 'terminalFontFamily') {
-    return newState.terminalState.fontFamily !== prevState.terminalState.fontFamily;
+    return newSnap.terminal.terminalState.fontFamily !== prevSnap.terminal.terminalState.fontFamily;
   }
   if (field === 'openTerminalMode') {
-    return newState.terminalState.openTerminalMode !== prevState.terminalState.openTerminalMode;
+    return (
+      newSnap.terminal.terminalState.openTerminalMode !==
+      prevSnap.terminal.terminalState.openTerminalMode
+    );
   }
-  const key = field as keyof typeof newState;
-  return newState[key] !== prevState[key];
+  if (field === 'defaultTerminalId') {
+    return newSnap.terminal.defaultTerminalId !== prevSnap.terminal.defaultTerminalId;
+  }
+
+  // Theme store fields
+  if (field === 'theme' || field === 'fontFamilySans' || field === 'fontFamilyMono') {
+    const key = field as keyof typeof newSnap.theme;
+    return newSnap.theme[key] !== prevSnap.theme[key];
+  }
+
+  // AI models store fields
+  if (
+    field === 'enhancementModel' ||
+    field === 'validationModel' ||
+    field === 'phaseModels' ||
+    field === 'enabledCursorModels' ||
+    field === 'cursorDefaultModel' ||
+    field === 'enabledOpencodeModels' ||
+    field === 'opencodeDefaultModel' ||
+    field === 'enabledDynamicModelIds' ||
+    field === 'disabledProviders' ||
+    field === 'autoLoadClaudeMd' ||
+    field === 'claudeApiProfiles' ||
+    field === 'activeClaudeApiProfileId'
+  ) {
+    const key = field as keyof typeof newSnap.aiModels;
+    return newSnap.aiModels[key] !== prevSnap.aiModels[key];
+  }
+
+  // Worktree store fields
+  if (
+    field === 'maxConcurrency' ||
+    field === 'autoModeByWorktree' ||
+    field === 'useWorktrees' ||
+    field === 'worktreePanelCollapsed'
+  ) {
+    const key = field as keyof typeof newSnap.worktree;
+    return newSnap.worktree[key] !== prevSnap.worktree[key];
+  }
+
+  // App store fields
+  const key = field as keyof typeof newSnap.app;
+  return newSnap.app[key] !== prevSnap.app[key];
+}
+
+/** Snapshot of all domain stores for change detection */
+interface SettingsSnapshot {
+  app: ReturnType<typeof useAppStore.getState>;
+  theme: ReturnType<typeof useThemeStore.getState>;
+  aiModels: ReturnType<typeof useAIModelsStore.getState>;
+  worktree: ReturnType<typeof useWorktreeStore.getState>;
+  terminal: ReturnType<typeof useTerminalStore.getState>;
+}
+
+function takeSnapshot(): SettingsSnapshot {
+  return {
+    app: useAppStore.getState(),
+    theme: useThemeStore.getState(),
+    aiModels: useAIModelsStore.getState(),
+    worktree: useWorktreeStore.getState(),
+    terminal: useTerminalStore.getState(),
+  };
 }
 
 interface SettingsSyncState {
@@ -391,31 +486,25 @@ export function useSettingsSync(): SettingsSyncState {
     initializeSync();
   }, [authChecked, isAuthenticated, settingsLoaded]);
 
-  // Subscribe to store changes and sync to server
+  // Subscribe to ALL domain store changes and sync to server
   useEffect(() => {
     if (!state.loaded || !authChecked || !isAuthenticated || !settingsLoaded) return;
 
-    // Subscribe to app store changes
-    const unsubscribeApp = useAppStore.subscribe((newState, prevState) => {
-      const auth = useAuthStore.getState();
-      logger.debug('Store subscription fired:', {
-        prevProjects: prevState.projects?.length ?? 0,
-        newProjects: newState.projects?.length ?? 0,
-        authChecked: auth.authChecked,
-        isAuthenticated: auth.isAuthenticated,
-        settingsLoaded: auth.settingsLoaded,
-        loaded: state.loaded,
-      });
+    let prevSnapshot = takeSnapshot();
 
-      // Don't sync if settings not loaded yet
+    const handleStoreChange = () => {
+      const auth = useAuthStore.getState();
       if (!auth.settingsLoaded) {
         logger.debug('Store changed but settings not loaded, skipping sync');
         return;
       }
 
+      const newSnapshot = takeSnapshot();
+
       // If the current project changed, sync immediately so we can restore on next launch
-      if (newState.currentProject?.id !== prevState.currentProject?.id) {
+      if (newSnapshot.app.currentProject?.id !== prevSnapshot.app.currentProject?.id) {
         logger.debug('Current project changed, syncing immediately');
+        prevSnapshot = newSnapshot;
         syncNow();
         return;
       }
@@ -423,13 +512,12 @@ export function useSettingsSync(): SettingsSyncState {
       // If projects array changed (by reference, meaning content changed), sync immediately
       // This is critical - projects list changes must sync right away to prevent loss
       // when switching between Electron and web modes or closing the app
-      if (newState.projects !== prevState.projects) {
+      if (newSnapshot.app.projects !== prevSnapshot.app.projects) {
         logger.info('[PROJECTS_CHANGED] Projects array changed, syncing immediately', {
-          prevCount: prevState.projects?.length ?? 0,
-          newCount: newState.projects?.length ?? 0,
-          prevProjects: prevState.projects?.map((p) => p.name) ?? [],
-          newProjects: newState.projects?.map((p) => p.name) ?? [],
+          prevCount: prevSnapshot.app.projects?.length ?? 0,
+          newCount: newSnapshot.app.projects?.length ?? 0,
         });
+        prevSnapshot = newSnapshot;
         syncNow();
         return;
       }
@@ -438,7 +526,7 @@ export function useSettingsSync(): SettingsSyncState {
       let changed = false;
       for (const field of SETTINGS_FIELDS_TO_SYNC) {
         if (field === 'projects') continue; // Already handled above
-        if (hasSettingsFieldChanged(field, newState, prevState)) {
+        if (hasSettingsFieldChanged(field, newSnapshot, prevSnapshot)) {
           changed = true;
           break;
         }
@@ -446,9 +534,17 @@ export function useSettingsSync(): SettingsSyncState {
 
       if (changed) {
         logger.debug('Store changed, scheduling sync');
+        prevSnapshot = newSnapshot;
         scheduleSyncToServer();
       }
-    });
+    };
+
+    // Subscribe to all domain stores
+    const unsubscribeApp = useAppStore.subscribe(handleStoreChange);
+    const unsubscribeTheme = useThemeStore.subscribe(handleStoreChange);
+    const unsubscribeAI = useAIModelsStore.subscribe(handleStoreChange);
+    const unsubscribeWorktree = useWorktreeStore.subscribe(handleStoreChange);
+    const unsubscribeTerminal = useTerminalStore.subscribe(handleStoreChange);
 
     // Subscribe to setup store changes
     const unsubscribeSetup = useSetupStore.subscribe((newState, prevState) => {
@@ -469,6 +565,10 @@ export function useSettingsSync(): SettingsSyncState {
 
     return () => {
       unsubscribeApp();
+      unsubscribeTheme();
+      unsubscribeAI();
+      unsubscribeWorktree();
+      unsubscribeTerminal();
       unsubscribeSetup();
       if (syncTimeoutRef.current) {
         clearTimeout(syncTimeoutRef.current);
@@ -645,24 +745,19 @@ export async function refreshSettingsFromServer(): Promise<boolean> {
       }
     }
 
-    useAppStore.setState({
-      theme: serverSettings.theme as unknown as ThemeMode,
-      sidebarOpen: serverSettings.sidebarOpen,
-      chatHistoryOpen: serverSettings.chatHistoryOpen,
-      maxConcurrency: serverSettings.maxConcurrency,
-      autoModeByWorktree: restoredAutoModeByWorktree,
-      defaultSkipTests: serverSettings.defaultSkipTests,
-      enableDependencyBlocking: serverSettings.enableDependencyBlocking,
-      skipVerificationInAutoMode: serverSettings.skipVerificationInAutoMode,
-      useWorktrees: serverSettings.useWorktrees,
-      defaultPlanningMode: serverSettings.defaultPlanningMode,
-      defaultRequirePlanApproval: serverSettings.defaultRequirePlanApproval,
-      defaultFeatureModel: serverSettings.defaultFeatureModel
-        ? migratePhaseModelEntry(serverSettings.defaultFeatureModel)
-        : { model: 'claude-opus' },
-      muteDoneSound: serverSettings.muteDoneSound,
-      serverLogLevel: serverSettings.serverLogLevel ?? 'info',
-      enableRequestLogging: serverSettings.enableRequestLogging ?? true,
+    // Hydrate theme store
+    useThemeStore.setState({
+      theme: (serverSettings.theme as unknown as ThemeMode) ?? useThemeStore.getState().theme,
+      ...(serverSettings.fontFamilySans !== undefined && {
+        fontFamilySans: serverSettings.fontFamilySans,
+      }),
+      ...(serverSettings.fontFamilyMono !== undefined && {
+        fontFamilyMono: serverSettings.fontFamilyMono,
+      }),
+    });
+
+    // Hydrate AI models store
+    useAIModelsStore.setState({
       enhancementModel: serverSettings.enhancementModel,
       validationModel: serverSettings.validationModel,
       phaseModels: migratedPhaseModels ?? serverSettings.phaseModels,
@@ -673,45 +768,19 @@ export async function refreshSettingsFromServer(): Promise<boolean> {
       enabledDynamicModelIds: sanitizedDynamicModelIds,
       disabledProviders: serverSettings.disabledProviders ?? [],
       autoLoadClaudeMd: serverSettings.autoLoadClaudeMd ?? false,
-      keyboardShortcuts: {
-        ...currentAppState.keyboardShortcuts,
-        ...(serverSettings.keyboardShortcuts as unknown as Partial<
-          typeof currentAppState.keyboardShortcuts
-        >),
-      },
-      mcpServers: serverSettings.mcpServers,
-      defaultEditorCommand: serverSettings.defaultEditorCommand ?? null,
-      defaultTerminalId: serverSettings.defaultTerminalId ?? null,
-      promptCustomization: serverSettings.promptCustomization ?? {},
       claudeApiProfiles: serverSettings.claudeApiProfiles ?? [],
       activeClaudeApiProfileId: serverSettings.activeClaudeApiProfileId ?? null,
-      projects: serverSettings.projects,
-      trashedProjects: serverSettings.trashedProjects,
-      projectHistory: serverSettings.projectHistory,
-      projectHistoryIndex: serverSettings.projectHistoryIndex,
-      lastSelectedSessionByProject: serverSettings.lastSelectedSessionByProject,
-      // UI State (previously in localStorage)
-      worktreePanelCollapsed: serverSettings.worktreePanelCollapsed ?? false,
-      lastProjectDir: serverSettings.lastProjectDir ?? '',
-      recentFolders: serverSettings.recentFolders ?? [],
-      // Event hooks
-      eventHooks: serverSettings.eventHooks ?? [],
-      // Terminal settings (nested in terminalState)
-      ...((serverSettings.terminalFontFamily || serverSettings.openTerminalMode) && {
-        terminalState: {
-          ...currentAppState.terminalState,
-          ...(serverSettings.terminalFontFamily && {
-            fontFamily: serverSettings.terminalFontFamily,
-          }),
-          ...(serverSettings.openTerminalMode && {
-            openTerminalMode: serverSettings.openTerminalMode,
-          }),
-        },
-      }),
     });
 
-    // Hydrate domain stores so consumers reading from them get fresh values
-    // (app-store subscriptions only go domain→app, not app→domain)
+    // Hydrate worktree store
+    useWorktreeStore.setState({
+      maxConcurrency: serverSettings.maxConcurrency,
+      autoModeByWorktree: restoredAutoModeByWorktree,
+      useWorktrees: serverSettings.useWorktrees,
+      worktreePanelCollapsed: serverSettings.worktreePanelCollapsed ?? false,
+    });
+
+    // Hydrate terminal store
     if (serverSettings.terminalFontFamily || serverSettings.openTerminalMode) {
       const currentTerminal = useTerminalStore.getState().terminalState;
       useTerminalStore.setState({
@@ -730,19 +799,14 @@ export async function refreshSettingsFromServer(): Promise<boolean> {
       useTerminalStore.setState({ defaultTerminalId: serverSettings.defaultTerminalId ?? null });
     }
 
+    // Hydrate theme store
     useThemeStore.setState({
       theme: serverSettings.theme as unknown as ThemeMode,
       fontFamilySans: serverSettings.fontFamilySans ?? null,
       fontFamilyMono: serverSettings.fontFamilyMono ?? null,
     });
 
-    useWorktreeStore.setState({
-      autoModeByWorktree: restoredAutoModeByWorktree,
-      maxConcurrency: serverSettings.maxConcurrency,
-      useWorktrees: serverSettings.useWorktrees,
-      worktreePanelCollapsed: serverSettings.worktreePanelCollapsed ?? false,
-    });
-
+    // Hydrate AI models store
     useAIModelsStore.setState({
       enhancementModel: serverSettings.enhancementModel,
       validationModel: serverSettings.validationModel,
@@ -756,6 +820,40 @@ export async function refreshSettingsFromServer(): Promise<boolean> {
       autoLoadClaudeMd: serverSettings.autoLoadClaudeMd ?? false,
       claudeApiProfiles: serverSettings.claudeApiProfiles ?? [],
       activeClaudeApiProfileId: serverSettings.activeClaudeApiProfileId ?? null,
+    });
+
+    // Hydrate app store (only fields that remain in app-store)
+    useAppStore.setState({
+      sidebarOpen: serverSettings.sidebarOpen,
+      chatHistoryOpen: serverSettings.chatHistoryOpen,
+      defaultSkipTests: serverSettings.defaultSkipTests,
+      enableDependencyBlocking: serverSettings.enableDependencyBlocking,
+      skipVerificationInAutoMode: serverSettings.skipVerificationInAutoMode,
+      defaultPlanningMode: serverSettings.defaultPlanningMode,
+      defaultRequirePlanApproval: serverSettings.defaultRequirePlanApproval,
+      defaultFeatureModel: serverSettings.defaultFeatureModel
+        ? migratePhaseModelEntry(serverSettings.defaultFeatureModel)
+        : { model: 'claude-opus' },
+      muteDoneSound: serverSettings.muteDoneSound,
+      serverLogLevel: serverSettings.serverLogLevel ?? 'info',
+      enableRequestLogging: serverSettings.enableRequestLogging ?? true,
+      keyboardShortcuts: {
+        ...currentAppState.keyboardShortcuts,
+        ...(serverSettings.keyboardShortcuts as unknown as Partial<
+          typeof currentAppState.keyboardShortcuts
+        >),
+      },
+      mcpServers: serverSettings.mcpServers,
+      defaultEditorCommand: serverSettings.defaultEditorCommand ?? null,
+      promptCustomization: serverSettings.promptCustomization ?? {},
+      projects: serverSettings.projects,
+      trashedProjects: serverSettings.trashedProjects,
+      projectHistory: serverSettings.projectHistory,
+      projectHistoryIndex: serverSettings.projectHistoryIndex,
+      lastSelectedSessionByProject: serverSettings.lastSelectedSessionByProject,
+      lastProjectDir: serverSettings.lastProjectDir ?? '',
+      recentFolders: serverSettings.recentFolders ?? [],
+      eventHooks: serverSettings.eventHooks ?? [],
     });
 
     // Also refresh setup wizard state
