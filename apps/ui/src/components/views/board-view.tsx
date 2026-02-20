@@ -30,7 +30,6 @@ import { useAppStore, Feature } from '@/store/app-store';
 import { useWorktreeStore } from '@/store/worktree-store';
 import { usePipelineStore } from '@/store/pipeline-store';
 import { useTerminalStore } from '@/store/terminal-store';
-import { useWorktreeStore } from '@/store/worktree-store';
 import { getElectronAPI } from '@/lib/electron';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import type { BacklogPlanResult } from '@automaker/types';
@@ -131,6 +130,7 @@ export function BoardView() {
   const getPrimaryWorktreeBranch = useWorktreeStore((s) => s.getPrimaryWorktreeBranch);
   // Fetch pipeline config via React Query
   const { data: pipelineConfig } = usePipelineConfig(currentProject?.path);
+  const setPipelineConfig = usePipelineStore((s) => s.setPipelineConfig);
   const queryClient = useQueryClient();
 
   // Subscribe to auto mode events for React Query cache invalidation
