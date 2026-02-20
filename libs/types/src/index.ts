@@ -735,7 +735,3 @@ export type { PipelineCheckpoint, GoalGateResult } from './pipeline-checkpoint.j
 // Context fidelity types (per-stage context shaping)
 export type { ContextFidelityMode } from './context-fidelity.js';
 export { DEFAULT_STAGE_FIDELITY } from './context-fidelity.js';
-
-// State machine types (edge-based transition table)
-export type { TransitionContext, TransitionEdge, ProcessResult } from './state-machine.js';
-export { DEFAULT_TRANSITION_TABLE, resolveTransition } from './state-machine.js';
