@@ -110,7 +110,9 @@ function getServiceStatus(
       return {
         status: activeProjects > 0 ? 'active' : 'idle',
         throughput: activeProjects,
-        statusLine: 'Milestones \u2192 Epics \u2192 Features',
+        // Decomposition hierarchy: Projects → Milestones → Phases
+        // On the board, milestones become epics and phases become features
+        statusLine: 'Projects \u2192 Milestones \u2192 Features',
       };
     }
     case 'launch':
