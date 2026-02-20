@@ -210,6 +210,7 @@ export class PipelineOrchestrator {
     // Emit events
     this.events.emit('pipeline:phase-entered', {
       featureId,
+      projectPath,
       phase: 'TRIAGE',
       branch,
       timestamp: now,
@@ -217,6 +218,7 @@ export class PipelineOrchestrator {
 
     this.events.emit('pipeline:trace-linked', {
       featureId,
+      projectPath,
       traceId,
       phase: 'TRIAGE',
       spanId: pipelineState.phaseSpanIds?.TRIAGE,
@@ -262,6 +264,7 @@ export class PipelineOrchestrator {
 
     this.events.emit('pipeline:phase-completed', {
       featureId,
+      projectPath,
       phase: currentPhase,
       branch,
       durationMs,
@@ -300,13 +303,15 @@ export class PipelineOrchestrator {
     if (gateResult === 'hold') this.gateStats.holds++;
 
     if (gateResult === 'hold') {
-      // Hold at gate
+      // Hold at gate — persist which phase is gated for correct resolution
       const now = new Date().toISOString();
       pipelineState.awaitingGate = true;
+      pipelineState.awaitingGatePhase = nextPhase;
       await this.featureLoader.update(projectPath, featureId, { pipelineState });
 
       this.events.emit('pipeline:gate-waiting', {
         featureId,
+        projectPath,
         phase: nextPhase,
         branch,
         gateMode,
@@ -341,11 +346,14 @@ export class PipelineOrchestrator {
 
     const { pipelineState } = feature;
     const { branch, currentPhase } = pipelineState;
+    // Use stored gated phase (correct) instead of currentPhase (previous phase)
+    const gatePhase = pipelineState.awaitingGatePhase ?? this.getNextPhase(currentPhase, branch);
     const now = new Date().toISOString();
 
     this.events.emit('pipeline:gate-resolved', {
       featureId,
-      phase: currentPhase,
+      projectPath,
+      phase: gatePhase ?? currentPhase,
       branch,
       resolvedBy,
       action,
@@ -355,19 +363,20 @@ export class PipelineOrchestrator {
     if (action === 'reject') {
       // On reject, mark gate as not awaiting but don't advance
       pipelineState.awaitingGate = false;
+      pipelineState.awaitingGatePhase = null;
       await this.featureLoader.update(projectPath, featureId, { pipelineState });
-      logger.info(`Gate rejected for feature ${featureId} at ${currentPhase}`);
+      logger.info(`Gate rejected for feature ${featureId} at ${gatePhase ?? currentPhase}`);
       return true;
     }
 
     // Advance past the gate
     pipelineState.awaitingGate = false;
-    const nextPhase = this.getNextPhase(currentPhase, branch);
-    if (nextPhase) {
+    pipelineState.awaitingGatePhase = null;
+    if (gatePhase) {
       await this.enterPhase(
         projectPath,
         featureId,
-        nextPhase,
+        gatePhase,
         resolvedBy === 'user' ? 'user' : 'auto'
       );
     }
@@ -618,6 +627,7 @@ export class PipelineOrchestrator {
     // Emit events
     this.events.emit('pipeline:phase-entered', {
       featureId,
+      projectPath,
       phase,
       branch: pipelineState.branch,
       timestamp: now,

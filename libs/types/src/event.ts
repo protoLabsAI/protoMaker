@@ -1,3 +1,5 @@
+import type { PipelinePhase } from './pipeline-phase.js';
+
 /**
  * Event types for AutoMaker event system
  */
@@ -594,20 +596,23 @@ export interface EventPayloadMap {
   // Unified pipeline orchestrator events
   'pipeline:phase-entered': {
     featureId: string;
-    phase: string;
+    projectPath: string;
+    phase: PipelinePhase;
     branch: 'ops' | 'gtm';
     timestamp: string;
   };
   'pipeline:phase-completed': {
     featureId: string;
-    phase: string;
+    projectPath: string;
+    phase: PipelinePhase;
     branch: 'ops' | 'gtm';
     durationMs?: number;
     timestamp: string;
   };
   'pipeline:gate-waiting': {
     featureId: string;
-    phase: string;
+    projectPath: string;
+    phase: PipelinePhase;
     branch: 'ops' | 'gtm';
     gateMode: 'auto' | 'manual' | 'review';
     artifacts?: Record<string, unknown>;
@@ -615,7 +620,8 @@ export interface EventPayloadMap {
   };
   'pipeline:gate-resolved': {
     featureId: string;
-    phase: string;
+    projectPath: string;
+    phase: PipelinePhase;
     branch: 'ops' | 'gtm';
     resolvedBy: 'auto' | 'user' | 'system';
     action: 'advance' | 'reject';
@@ -623,15 +629,17 @@ export interface EventPayloadMap {
   };
   'pipeline:phase-skipped': {
     featureId: string;
-    phase: string;
+    projectPath: string;
+    phase: PipelinePhase;
     branch: 'ops' | 'gtm';
     reason: string;
     timestamp: string;
   };
   'pipeline:trace-linked': {
     featureId: string;
+    projectPath: string;
     traceId: string;
-    phase?: string;
+    phase?: PipelinePhase;
     spanId?: string;
     timestamp: string;
   };

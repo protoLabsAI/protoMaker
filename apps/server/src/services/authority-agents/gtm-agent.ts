@@ -506,9 +506,21 @@ Please produce a revised draft that addresses all the feedback.`;
    */
   async executePhase(projectPath: string, featureId: string, phase: PipelinePhase): Promise<void> {
     switch (phase) {
-      case 'RESEARCH':
-        this.events.emit('authority:gtm-signal-received', { projectPath, featureId });
+      case 'RESEARCH': {
+        const feature = await this.featureLoader.get(projectPath, featureId);
+        if (!feature) {
+          logger.warn(`[Pipeline] GTM RESEARCH: feature not found (${featureId})`);
+          return;
+        }
+        this.events.emit('authority:gtm-signal-received', {
+          projectPath,
+          title: feature.title ?? 'Untitled',
+          description: feature.description ?? '',
+          source: 'pipeline',
+          timestamp: new Date().toISOString(),
+        });
         break;
+      }
       case 'SPEC':
         // Cindi draft is triggered by research completion (existing flow)
         logger.info(`[Pipeline] GTM SPEC phase for ${featureId} — draft gen follows research`);

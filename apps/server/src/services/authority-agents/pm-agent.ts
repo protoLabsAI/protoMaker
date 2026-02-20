@@ -1493,9 +1493,22 @@ Generate a comprehensive SPARC PRD as JSON.`;
    */
   async executePhase(projectPath: string, featureId: string, phase: PipelinePhase): Promise<void> {
     switch (phase) {
-      case 'RESEARCH':
-        this.events.emit('authority:idea-injected', { projectPath, featureId });
+      case 'RESEARCH': {
+        const feature = await this.featureLoader.get(projectPath, featureId);
+        if (!feature) {
+          logger.warn(`[Pipeline] Feature ${featureId} not found for RESEARCH phase`);
+          return;
+        }
+        this.events.emit('authority:idea-injected', {
+          projectPath,
+          featureId,
+          title: feature.title || 'Untitled',
+          description: feature.description || '',
+          injectedBy: 'pipeline-orchestrator',
+          injectedAt: new Date().toISOString(),
+        });
         break;
+      }
       case 'SPEC':
         // PRD generation is triggered by research completion (existing flow)
         logger.info(

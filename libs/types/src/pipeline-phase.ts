@@ -71,6 +71,8 @@ export interface PipelineState {
   phaseHistory: PhaseTransition[];
   gateOverrides?: Partial<Record<PipelinePhase, GateMode>>;
   awaitingGate: boolean;
+  /** Phase pending gate resolution (set when awaitingGate is true) */
+  awaitingGatePhase?: PipelinePhase | null;
   gateArtifacts?: Record<string, unknown>;
   startedAt: string;
   /** Langfuse root trace ID for this entire pipeline run */
