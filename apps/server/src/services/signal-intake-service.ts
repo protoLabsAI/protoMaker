@@ -183,8 +183,13 @@ export class SignalIntakeService {
   }
 
   private async handleSignal(signal: SignalPayload): Promise<void> {
-    // Deduplicate by source + author ID (e.g., same Linear issue ID)
-    const dedupeKey = `${signal.source}:${signal.author.id}`;
+    // Deduplicate by source + unique identifier.
+    // For integration sources (Linear, GitHub), use author.id which is the issue/event ID.
+    // For UI/MCP sources, include timestamp to allow repeat submissions.
+    const isUserSource = signal.source.startsWith('ui:') || signal.source.startsWith('mcp:');
+    const dedupeKey = isUserSource
+      ? `${signal.source}:${signal.timestamp}`
+      : `${signal.source}:${signal.author.id}`;
     if (this.processedSignals.has(dedupeKey)) {
       logger.debug(`Skipping duplicate signal: ${dedupeKey}`);
       return;
