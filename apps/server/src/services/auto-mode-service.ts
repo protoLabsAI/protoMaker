@@ -472,6 +472,9 @@ export class AutoModeService {
    * Determine the appropriate model for a feature based on complexity, failure count,
    * and user-configured agentExecutionModel setting.
    *
+   * Returns both model string and optional providerId so callers can thread
+   * the provider through to runAgent() for explicit provider resolution.
+   *
    * Priority order:
    * 1. Feature explicitly specifies a model → use it
    * 2. Failure escalation (2+ failures) → opus
@@ -482,22 +485,22 @@ export class AutoModeService {
   private async getModelForFeature(
     feature: { model?: string; complexity?: string; failureCount?: number },
     projectPath?: string
-  ): Promise<string> {
+  ): Promise<{ model: string; providerId?: string }> {
     // 1. Feature explicitly specifies a model → use it (highest priority)
     if (feature.model) {
-      return resolveModelString(feature.model, DEFAULT_MODELS.autoMode);
+      return { model: resolveModelString(feature.model, DEFAULT_MODELS.autoMode) };
     }
 
     // 2. Escalate to opus after multiple failures (safety net)
     if (feature.failureCount && feature.failureCount >= 2) {
       logger.info(`Escalating to opus after ${feature.failureCount} failures`);
-      return DEFAULT_MODELS.claude; // opus
+      return { model: DEFAULT_MODELS.claude }; // opus
     }
 
     // 3. Architectural complexity always gets opus
     if (feature.complexity === 'architectural') {
       logger.info('Using opus for architectural feature');
-      return DEFAULT_MODELS.claude; // opus
+      return { model: DEFAULT_MODELS.claude }; // opus
     }
 
     // 4. Read user's configured agent execution model from settings
@@ -508,7 +511,10 @@ export class AutoModeService {
         projectPath
       );
       if (phaseModel?.model) {
-        return resolveModelString(phaseModel.model, DEFAULT_MODELS.autoMode);
+        return {
+          model: resolveModelString(phaseModel.model, DEFAULT_MODELS.autoMode),
+          providerId: phaseModel.providerId,
+        };
       }
     } catch (err) {
       logger.warn(`Failed to read agentExecutionModel setting, using fallback: ${err}`);
@@ -517,10 +523,10 @@ export class AutoModeService {
     // 5. Fallback: complexity-based (only if no setting configured)
     if (feature.complexity === 'small') {
       logger.info('Using haiku for small feature');
-      return DEFAULT_MODELS.trivial; // haiku
+      return { model: DEFAULT_MODELS.trivial }; // haiku
     }
 
-    return DEFAULT_MODELS.autoMode; // sonnet
+    return { model: DEFAULT_MODELS.autoMode }; // sonnet
   }
 
   /**
@@ -1120,9 +1126,10 @@ export class AutoModeService {
 
           // Start feature execution in background
           // Delegate to Lead Engineer if available, otherwise use legacy executeFeature
+          const featureModelResult = await this.getModelForFeature(nextFeature, projectPath);
           const executionPromise = this.leadEngineerService
             ? this.leadEngineerService.process(projectPath, nextFeature.id, {
-                model: await this.getModelForFeature(nextFeature, projectPath),
+                model: featureModelResult.model,
               } as any) // Cast to any since state machine will build full ExecuteOptions internally
             : this.executeFeature(
                 projectPath,
@@ -1776,15 +1783,15 @@ export class AutoModeService {
       );
 
       // Get model based on feature complexity and failure count
-      const model = await this.getModelForFeature(feature, projectPath);
+      const modelResult = await this.getModelForFeature(feature, projectPath);
       const maxTurns = getTurnsForFeature(feature);
-      const provider = ProviderFactory.getProviderNameForModel(model);
+      const provider = ProviderFactory.getProviderNameForModel(modelResult.model);
       logger.info(
-        `Executing feature ${featureId} with model: ${model}, maxTurns: ${maxTurns}, provider: ${provider} in ${workDir}`
+        `Executing feature ${featureId} with model: ${modelResult.model}, maxTurns: ${maxTurns}, provider: ${provider} in ${workDir}`
       );
 
       // Store model and provider in running feature for tracking
-      tempRunningFeature.model = model;
+      tempRunningFeature.model = modelResult.model;
       tempRunningFeature.provider = provider;
 
       // Sync and restack the branch before agent execution
@@ -1878,7 +1885,7 @@ export class AutoModeService {
         abortController,
         projectPath,
         imagePaths,
-        model,
+        modelResult.model,
         {
           projectPath,
           planningMode: feature.planningMode,
@@ -1889,6 +1896,7 @@ export class AutoModeService {
           branchName: feature.branchName ?? null,
           maxTurns,
           resume: resumeSessionId,
+          providerId: modelResult.providerId,
         }
       );
 
@@ -2422,7 +2430,7 @@ export class AutoModeService {
       );
 
       // Get model based on feature complexity and failure count
-      const model = await this.getModelForFeature(feature, projectPath);
+      const modelResult = await this.getModelForFeature(feature, projectPath);
 
       // Run the agent for this pipeline step
       await this.runAgent(
@@ -2432,7 +2440,7 @@ export class AutoModeService {
         abortController,
         projectPath,
         undefined, // no images for pipeline steps
-        model,
+        modelResult.model,
         {
           projectPath,
           planningMode: 'skip', // Pipeline steps don't need planning
@@ -2441,6 +2449,7 @@ export class AutoModeService {
           systemPrompt: contextFilesPrompt || undefined,
           autoLoadClaudeMd,
           thinkingLevel: feature.thinkingLevel,
+          providerId: modelResult.providerId,
         }
       );
 
@@ -2820,15 +2829,15 @@ Complete the pipeline step instructions above. Review the previous work and appl
       validateWorkingDirectory(workDir);
 
       // Get model and provider for this feature
-      const model = await this.getModelForFeature(feature, projectPath);
-      const provider = ProviderFactory.getProviderNameForModel(model);
+      const modelResult = await this.getModelForFeature(feature, projectPath);
+      const provider = ProviderFactory.getProviderNameForModel(modelResult.model);
 
       // Update running feature with worktree info and model
       const runningFeature = this.runningFeatures.get(featureId);
       if (runningFeature) {
         runningFeature.worktreePath = worktreePath;
         runningFeature.branchName = branchName ?? null;
-        runningFeature.model = model;
+        runningFeature.model = modelResult.model;
         runningFeature.provider = provider;
       }
 
@@ -3116,11 +3125,13 @@ ${prompt}
 Address the follow-up instructions above. Review the previous work and make the requested changes or fixes.`;
 
     // Get model based on feature complexity and failure count
-    const model = feature
+    const modelResult = feature
       ? await this.getModelForFeature(feature, projectPath)
-      : DEFAULT_MODELS.autoMode;
-    const provider = ProviderFactory.getProviderNameForModel(model);
-    logger.info(`Follow-up for feature ${featureId} using model: ${model}, provider: ${provider}`);
+      : { model: DEFAULT_MODELS.autoMode };
+    const provider = ProviderFactory.getProviderNameForModel(modelResult.model);
+    logger.info(
+      `Follow-up for feature ${featureId} using model: ${modelResult.model}, provider: ${provider}`
+    );
 
     const followUpRunningFeature: RunningFeature = {
       featureId,
@@ -3130,7 +3141,7 @@ Address the follow-up instructions above. Review the previous work and make the 
       abortController,
       isAutoMode: false,
       startTime: Date.now(),
-      model,
+      model: modelResult.model,
       provider,
       retryCount: 0,
       previousErrors: [],
@@ -3227,7 +3238,7 @@ Address the follow-up instructions above. Review the previous work and make the 
         abortController,
         projectPath,
         allImagePaths.length > 0 ? allImagePaths : imagePaths,
-        model,
+        modelResult.model,
         {
           projectPath,
           planningMode: 'skip', // Follow-ups don't require approval
@@ -3235,6 +3246,7 @@ Address the follow-up instructions above. Review the previous work and make the 
           systemPrompt: contextFilesPrompt || undefined,
           autoLoadClaudeMd,
           thinkingLevel: feature?.thinkingLevel,
+          providerId: modelResult.providerId,
         }
       );
 
@@ -4849,6 +4861,8 @@ You can use the Read tool to view these images at any time during implementation
       branchName?: string | null;
       maxTurns?: number;
       resume?: string;
+      /** Provider ID from PhaseModelEntry for explicit provider lookup */
+      providerId?: string;
     }
   ): Promise<void> {
     const finalProjectPath = options?.projectPath || projectPath;
@@ -5000,18 +5014,43 @@ This mock response was generated because AUTOMAKER_MOCK_AGENT=true was set.
     let claudeCompatibleProvider: import('@automaker/types').ClaudeCompatibleProvider | undefined;
     let providerResolvedModel: string | undefined;
     if (finalModel && this.settingsService) {
-      const providerResult = await getProviderByModelId(
-        finalModel,
-        this.settingsService,
-        '[AutoMode]'
-      );
-      if (providerResult.provider) {
-        claudeCompatibleProvider = providerResult.provider;
-        providerResolvedModel = providerResult.resolvedModel;
-        logger.info(
-          `[AutoMode] Using provider "${providerResult.provider.name}" for model "${finalModel}"` +
-            (providerResolvedModel ? ` -> resolved to "${providerResolvedModel}"` : '')
+      // If providerId is explicitly set (from agentExecutionModel phase setting),
+      // look up the provider directly instead of scanning by model string
+      if (options?.providerId) {
+        const globalSettings = await this.settingsService.getGlobalSettings();
+        const directProvider = globalSettings.claudeCompatibleProviders?.find(
+          (p) => p.id === options.providerId && p.enabled !== false
         );
+        if (directProvider) {
+          claudeCompatibleProvider = directProvider;
+          const modelConfig = directProvider.models?.find(
+            (m) => m.id === finalModel || m.id.toLowerCase() === finalModel.toLowerCase()
+          );
+          if (modelConfig?.mapsToClaudeModel) {
+            providerResolvedModel = resolveModelString(modelConfig.mapsToClaudeModel);
+          }
+          logger.info(
+            `[AutoMode] Using explicit provider "${directProvider.name}" (id: ${options.providerId}) for model "${finalModel}"` +
+              (providerResolvedModel ? ` -> resolved to "${providerResolvedModel}"` : '')
+          );
+        }
+      }
+
+      // Fallback: scan all providers by model ID
+      if (!claudeCompatibleProvider) {
+        const providerResult = await getProviderByModelId(
+          finalModel,
+          this.settingsService,
+          '[AutoMode]'
+        );
+        if (providerResult.provider) {
+          claudeCompatibleProvider = providerResult.provider;
+          providerResolvedModel = providerResult.resolvedModel;
+          logger.info(
+            `[AutoMode] Using provider "${providerResult.provider.name}" for model "${finalModel}"` +
+              (providerResolvedModel ? ` -> resolved to "${providerResolvedModel}"` : '')
+          );
+        }
       }
     }
 
