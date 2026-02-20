@@ -253,6 +253,7 @@ export class SignalIntakeService {
         description,
         injectedBy: `signal:${signal.source}`,
         injectedAt: new Date().toISOString(),
+        autoApprove: signal.channelContext?.autoApprove as boolean | undefined,
       });
 
       // Emit routing event for observability
@@ -285,6 +286,7 @@ export class SignalIntakeService {
     projectPath?: string;
     images?: string[];
     files?: string[];
+    autoApprove?: boolean;
   }): void {
     // Enrich content with file and image references
     let enrichedContent = params.content;
@@ -306,6 +308,7 @@ export class SignalIntakeService {
         projectPath: params.projectPath,
         images: params.images,
         files: params.files,
+        autoApprove: params.autoApprove,
       },
       timestamp: new Date().toISOString(),
     };

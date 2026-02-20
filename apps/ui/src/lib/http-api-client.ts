@@ -2975,6 +2975,7 @@ export class HttpApiClient implements ElectronAPI {
       source?: string;
       images?: string[];
       files?: string[];
+      autoApprove?: boolean;
     }): Promise<{ success: boolean; message?: string; error?: string }> =>
       this.post('/api/engine/signal/submit', params),
     approvePrd: (

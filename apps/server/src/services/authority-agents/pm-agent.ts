@@ -60,6 +60,7 @@ interface IdeaInjectedPayload {
   description: string;
   injectedBy: string;
   injectedAt: string;
+  autoApprove?: boolean;
 }
 
 /** Result of an AI-powered PRD review */
@@ -258,7 +259,7 @@ export class PMAuthorityAgent {
 
     // Delay slightly to allow for any rapid-fire injections
     setTimeout(() => {
-      void this.processIdea(idea.projectPath, idea.featureId);
+      void this.processIdea(idea.projectPath, idea.featureId, idea.autoApprove);
     }, IDEA_PROCESSING_DELAY_MS);
   }
 
@@ -291,7 +292,11 @@ export class PMAuthorityAgent {
    * 5. Emit authority:pm-prd-ready for Discord posting
    * 6. Auto-approve → handleApproval()
    */
-  private async processIdea(projectPath: string, featureId: string): Promise<void> {
+  private async processIdea(
+    projectPath: string,
+    featureId: string,
+    autoApproveOverride?: boolean
+  ): Promise<void> {
     return withProcessingGuard(this.state, featureId, async () => {
       try {
         const agent = this.state.getAgent(projectPath);
@@ -375,13 +380,13 @@ export class PMAuthorityAgent {
           source: 'enhance' as const,
         });
 
-        // Step 5: Check if auto-approve is enabled
+        // Step 5: Check if auto-approve is enabled (per-signal override > global setting)
         const workflowSettings = await getWorkflowSettings(
           projectPath,
           this.settingsService,
           '[PMAgent]'
         );
-        const autoApprove = workflowSettings.signalIntake.autoApprovePRD;
+        const autoApprove = autoApproveOverride ?? workflowSettings.signalIntake.autoApprovePRD;
 
         // Update feature with PRD content
         await this.featureLoader.update(projectPath, featureId, {

@@ -6,7 +6,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import { Send, Loader2, Paperclip, X } from 'lucide-react';
+import { Send, Loader2, Paperclip, X, Zap } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -45,6 +45,7 @@ export function SignalInputDialog({ open, onOpenChange }: SignalInputDialogProps
   const [images, setImages] = useState<ImageAttachment[]>([]);
   const [files, setFiles] = useState<TextAttachment[]>([]);
   const [showImageUpload, setShowImageUpload] = useState(false);
+  const [autoApprove, setAutoApprove] = useState(false);
   const projectPath = useAppStore((s) => s.currentProject?.path);
 
   const reset = useCallback(() => {
@@ -60,6 +61,7 @@ export function SignalInputDialog({ open, onOpenChange }: SignalInputDialogProps
       projectPath?: string;
       images?: string[];
       files?: string[];
+      autoApprove?: boolean;
     }) => {
       const api = getHttpApiClient();
       return api.engine.signalSubmit({
@@ -68,6 +70,7 @@ export function SignalInputDialog({ open, onOpenChange }: SignalInputDialogProps
         source: 'ui:flow-graph',
         images: signal.images,
         files: signal.files,
+        autoApprove: signal.autoApprove,
       });
     },
     onSuccess: (_data, variables) => {
@@ -92,8 +95,9 @@ export function SignalInputDialog({ open, onOpenChange }: SignalInputDialogProps
       projectPath: projectPath || undefined,
       images: images.length > 0 ? images.map((img) => img.data) : undefined,
       files: files.length > 0 ? files.map((f) => `--- ${f.name} ---\n${f.content}`) : undefined,
+      autoApprove: autoApprove || undefined,
     });
-  }, [content, projectPath, images, files, submitMutation]);
+  }, [content, projectPath, images, files, autoApprove, submitMutation]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -209,6 +213,19 @@ export function SignalInputDialog({ open, onOpenChange }: SignalInputDialogProps
               </p>
             </div>
             <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setAutoApprove((v) => !v)}
+                className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded transition-colors ${
+                  autoApprove
+                    ? 'bg-violet-500/20 text-violet-400'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+                title="Auto-approve PRD and skip manual review"
+              >
+                <Zap className="w-3 h-3" />
+                Auto
+              </button>
               <p className="text-[10px] text-muted-foreground">Cmd+Enter</p>
               <Button
                 size="sm"
