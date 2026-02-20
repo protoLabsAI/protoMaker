@@ -1,5 +1,5 @@
 import { memo, useMemo, useState } from 'react';
-import { Feature } from '@/store/app-store';
+import { Feature } from '@/store/types';
 import { useAgentOutput } from '@/hooks/queries';
 import { ChevronDown, ChevronRight, FileCode, Activity, Clock, DollarSign } from 'lucide-react';
 import { cn } from '@/lib/utils';

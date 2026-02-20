@@ -3,7 +3,7 @@
  * Each theme provides colors for xterm.js terminal emulator
  */
 
-import type { ThemeMode } from '@/store/app-store';
+import type { ThemeMode } from '@/store/types';
 import {
   UI_MONO_FONT_OPTIONS,
   DEFAULT_FONT_VALUE,

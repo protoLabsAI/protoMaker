@@ -1,5 +1,5 @@
 import { useRef, useCallback, useEffect } from 'react';
-import type { ThemeMode } from '@/store/app-store';
+import type { ThemeMode } from '@/store/types';
 
 interface UseThemePreviewProps {
   setPreviewTheme: (theme: ThemeMode | null) => void;

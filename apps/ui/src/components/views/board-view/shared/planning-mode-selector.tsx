@@ -16,12 +16,12 @@ import { Label } from '@protolabs/ui/atoms';
 import { Button } from '@protolabs/ui/atoms';
 import { Checkbox } from '@protolabs/ui/atoms';
 import { cn } from '@/lib/utils';
-import type { PlanSpec } from '@/store/app-store';
+import type { PlanSpec } from '@/store/types';
 
 export type PlanningMode = 'skip' | 'lite' | 'spec' | 'full';
 
 // Re-export for backwards compatibility
-export type { ParsedTask, PlanSpec } from '@/store/app-store';
+export type { ParsedTask, PlanSpec } from '@/store/types';
 
 interface PlanningModeSelectorProps {
   mode: PlanningMode;

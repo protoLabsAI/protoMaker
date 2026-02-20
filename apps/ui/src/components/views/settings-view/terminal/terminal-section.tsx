@@ -12,7 +12,7 @@ import {
   SplitSquareHorizontal,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useAppStore } from '@/store/app-store';
+import { useTerminalStore } from '@/store/terminal-store';
 import { toast } from 'sonner';
 import { TERMINAL_FONT_OPTIONS } from '@/config/terminal-themes';
 import { DEFAULT_FONT_VALUE } from '@/config/ui-font-options';
@@ -31,7 +31,7 @@ export function TerminalSection() {
     defaultTerminalId,
     setDefaultTerminalId,
     setOpenTerminalMode,
-  } = useAppStore();
+  } = useTerminalStore();
 
   const {
     defaultRunScript,

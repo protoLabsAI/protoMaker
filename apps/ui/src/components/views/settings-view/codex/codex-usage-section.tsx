@@ -10,7 +10,7 @@ import {
 } from '@/lib/codex-usage-format';
 import { useSetupStore } from '@/store/setup-store';
 import { useCodexUsage } from '@/hooks/queries';
-import type { CodexRateLimitWindow } from '@/store/app-store';
+import type { CodexRateLimitWindow } from '@/store/types';
 
 const CODEX_USAGE_TITLE = 'Codex Usage';
 const CODEX_USAGE_SUBTITLE = 'Shows usage limits reported by the Codex CLI.';

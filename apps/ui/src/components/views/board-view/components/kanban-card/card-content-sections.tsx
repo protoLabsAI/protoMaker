@@ -1,6 +1,6 @@
 // @ts-nocheck -- Feature index signature causes property access type errors
 import { memo } from 'react';
-import { Feature } from '@/store/app-store';
+import { Feature } from '@/store/types';
 import { GitBranch, GitPullRequest, ExternalLink } from 'lucide-react';
 
 interface CardContentSectionsProps {

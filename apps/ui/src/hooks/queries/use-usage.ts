@@ -9,7 +9,7 @@ import { useQuery } from '@tanstack/react-query';
 import { getElectronAPI } from '@/lib/electron';
 import { queryKeys } from '@/lib/query-keys';
 import { STALE_TIMES } from '@/lib/query-client';
-import type { ClaudeUsage, CodexUsage } from '@/store/app-store';
+import type { ClaudeUsage, CodexUsage } from '@/store/types';
 
 /** Polling interval for usage data (60 seconds) */
 const USAGE_POLLING_INTERVAL = 60 * 1000;

@@ -1,112 +1,71 @@
 /**
- * Terminal Store - State management for integrated terminal
+ * Terminal Store — Zustand store owning all terminal-related state and actions.
+ *
+ * Extracted from app-store.ts so the terminal subsystem has a single,
+ * self-contained module that is easier to reason about and test independently.
  */
 
 import { create } from 'zustand';
 import { DEFAULT_FONT_VALUE } from '@/config/ui-font-options';
+import { createLogger } from '@automaker/utils/logger';
+import type {
+  TerminalPanelContent,
+  TerminalTab,
+  TerminalState,
+  PersistedTerminalPanel,
+  PersistedTerminalTab,
+  PersistedTerminalState,
+  InitScriptState,
+} from './types';
+import { MAX_INIT_OUTPUT_LINES } from './types';
 
-// ============================================================================
-// Types
-// ============================================================================
+const logger = createLogger('TerminalStore');
 
-export type TerminalPanelContent =
-  | { type: 'terminal'; sessionId: string; size?: number; fontSize?: number; branchName?: string }
-  | {
-      type: 'split';
-      id: string; // Stable ID for React key stability
-      direction: 'horizontal' | 'vertical';
-      panels: TerminalPanelContent[];
-      size?: number;
-    };
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
-// Terminal tab - each tab has its own layout
-export interface TerminalTab {
-  id: string;
-  name: string;
-  layout: TerminalPanelContent | null;
-}
-
-export interface TerminalState {
-  isUnlocked: boolean;
-  authToken: string | null;
-  tabs: TerminalTab[];
-  activeTabId: string | null;
-  activeSessionId: string | null;
-  maximizedSessionId: string | null; // Session ID of the maximized terminal pane (null if none)
-  defaultFontSize: number; // Default font size for new terminals
-  defaultRunScript: string; // Script to run when a new terminal is created (e.g., "claude" to start Claude Code)
-  screenReaderMode: boolean; // Enable screen reader accessibility mode
-  fontFamily: string; // Font family for terminal text
-  scrollbackLines: number; // Number of lines to keep in scrollback buffer
-  lineHeight: number; // Line height multiplier for terminal text
-  maxSessions: number; // Maximum concurrent terminal sessions (server setting)
-  lastActiveProjectPath: string | null; // Last project path to detect route changes vs project switches
-  openTerminalMode: 'newTab' | 'split'; // How to open terminals from "Open in Terminal" action
-}
-
-// Persisted terminal layout - now includes sessionIds for reconnection
-// Used to restore terminal layout structure when switching projects
-export type PersistedTerminalPanel =
-  | { type: 'terminal'; size?: number; fontSize?: number; sessionId?: string; branchName?: string }
-  | {
-      type: 'split';
-      id?: string; // Optional for backwards compatibility with older persisted layouts
-      direction: 'horizontal' | 'vertical';
-      panels: PersistedTerminalPanel[];
-      size?: number;
-    };
-
-// Helper to generate unique split IDs
+/** Generate a stable, unique ID for split nodes (used as React keys). */
 const generateSplitId = () => `split-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-export interface PersistedTerminalTab {
-  id: string;
-  name: string;
-  layout: PersistedTerminalPanel | null;
-}
+// ---------------------------------------------------------------------------
+// State
+// ---------------------------------------------------------------------------
 
-export interface PersistedTerminalState {
-  tabs: PersistedTerminalTab[];
-  activeTabIndex: number; // Use index instead of ID since IDs are regenerated
-  defaultFontSize: number;
-  defaultRunScript?: string; // Optional to support existing persisted data
-  screenReaderMode?: boolean; // Optional to support existing persisted data
-  fontFamily?: string; // Optional to support existing persisted data
-  scrollbackLines?: number; // Optional to support existing persisted data
-  lineHeight?: number; // Optional to support existing persisted data
-}
-
-// Persisted terminal settings - stored globally (not per-project)
-export interface PersistedTerminalSettings {
-  defaultFontSize: number;
-  defaultRunScript: string;
-  screenReaderMode: boolean;
-  fontFamily: string;
-  scrollbackLines: number;
-  lineHeight: number;
-  maxSessions: number;
-  openTerminalMode: 'newTab' | 'split';
-}
-
-// ============================================================================
-// State Interface
-// ============================================================================
-
-interface TerminalStoreState {
+export interface TerminalStoreState {
+  /** Core terminal runtime state (auth, tabs, layout, preferences). */
   terminalState: TerminalState;
-  // Terminal layout persistence (per-project, keyed by project path)
-  // Stores the tab/split structure so it can be restored when switching projects
+
+  /** Per-project persisted terminal layouts, keyed by project path. */
   terminalLayoutByProject: Record<string, PersistedTerminalState>;
+
+  /** Default external terminal ID for "Open In Terminal" action (null = integrated). */
+  defaultTerminalId: string | null;
+
+  /** Per-project init-script execution state, keyed by "projectPath::branch". */
+  initScriptState: Record<string, InitScriptState>;
+
+  /** Per-project visibility of the floating init-script indicator panel. */
+  showInitScriptIndicatorByProject: Record<string, boolean>;
+
+  /** Per-project auto-dismiss preference for the init-script indicator. */
+  autoDismissInitScriptIndicatorByProject: Record<string, boolean>;
 }
 
-// ============================================================================
-// Actions Interface
-// ============================================================================
+// ---------------------------------------------------------------------------
+// Actions
+// ---------------------------------------------------------------------------
 
-interface TerminalActions {
+export interface TerminalStoreActions {
+  // Terminal configuration
+  setDefaultTerminalId: (terminalId: string | null) => void;
+
+  // Terminal auth & session
   setTerminalUnlocked: (unlocked: boolean, token?: string) => void;
   setActiveTerminalSession: (sessionId: string | null) => void;
   toggleTerminalMaximized: (sessionId: string) => void;
+
+  // Terminal layout manipulation
   addTerminalToLayout: (
     sessionId: string,
     direction?: 'horizontal' | 'vertical',
@@ -114,7 +73,10 @@ interface TerminalActions {
     branchName?: string
   ) => void;
   removeTerminalFromLayout: (sessionId: string) => void;
-  clearTerminalState: (keepAuth?: boolean) => void;
+  swapTerminals: (sessionId1: string, sessionId2: string) => void;
+  clearTerminalState: () => void;
+
+  // Terminal panel settings
   setTerminalPanelFontSize: (sessionId: string, fontSize: number) => void;
   setTerminalDefaultFontSize: (fontSize: number) => void;
   setTerminalDefaultRunScript: (script: string) => void;
@@ -125,12 +87,14 @@ interface TerminalActions {
   setTerminalMaxSessions: (maxSessions: number) => void;
   setTerminalLastActiveProjectPath: (projectPath: string | null) => void;
   setOpenTerminalMode: (mode: 'newTab' | 'split') => void;
+
+  // Tab management
   addTerminalTab: (name?: string) => string;
   removeTerminalTab: (tabId: string) => void;
   setActiveTerminalTab: (tabId: string) => void;
-  renameTerminalTab: (tabId: string, newName: string) => void;
-  reorderTerminalTabs: (oldIndex: number, newIndex: number) => void;
-  moveTerminalToTab: (sessionId: string, targetTabId: string) => void;
+  renameTerminalTab: (tabId: string, name: string) => void;
+  reorderTerminalTabs: (fromTabId: string, toTabId: string) => void;
+  moveTerminalToTab: (sessionId: string, targetTabId: string | 'new') => void;
   addTerminalToTab: (
     sessionId: string,
     tabId: string,
@@ -139,20 +103,43 @@ interface TerminalActions {
   ) => void;
   setTerminalTabLayout: (
     tabId: string,
-    layout: TerminalPanelContent | null,
-    activeSessionId?: string | null
+    layout: TerminalPanelContent,
+    activeSessionId?: string
   ) => void;
   updateTerminalPanelSizes: (tabId: string, panelKeys: string[], sizes: number[]) => void;
+
+  // Layout persistence
   saveTerminalLayout: (projectPath: string) => void;
-  getPersistedTerminalLayout: (projectPath: string) => PersistedTerminalState | undefined;
+  getPersistedTerminalLayout: (projectPath: string) => PersistedTerminalState | null;
   clearPersistedTerminalLayout: (projectPath: string) => void;
+
+  // Init Script Indicator Visibility (per-project)
+  setShowInitScriptIndicator: (projectPath: string, visible: boolean) => void;
+  getShowInitScriptIndicator: (projectPath: string) => boolean;
+
+  // Auto-dismiss Init Script Indicator (per-project)
+  setAutoDismissInitScriptIndicator: (projectPath: string, autoDismiss: boolean) => void;
+  getAutoDismissInitScriptIndicator: (projectPath: string) => boolean;
+
+  // Init Script State (keyed by projectPath::branch)
+  setInitScriptState: (
+    projectPath: string,
+    branch: string,
+    state: Partial<InitScriptState>
+  ) => void;
+  appendInitScriptOutput: (projectPath: string, branch: string, content: string) => void;
+  clearInitScriptState: (projectPath: string, branch: string) => void;
+  getInitScriptState: (projectPath: string, branch: string) => InitScriptState | null;
+  getInitScriptStatesForProject: (
+    projectPath: string
+  ) => Array<{ key: string; state: InitScriptState }>;
 }
 
-// ============================================================================
-// Initial State
-// ============================================================================
+// ---------------------------------------------------------------------------
+// Initial state
+// ---------------------------------------------------------------------------
 
-const initialState: TerminalStoreState = {
+const initialTerminalState: TerminalStoreState = {
   terminalState: {
     isUnlocked: false,
     authToken: null,
@@ -171,14 +158,66 @@ const initialState: TerminalStoreState = {
     openTerminalMode: 'newTab',
   },
   terminalLayoutByProject: {},
+  defaultTerminalId: null,
+  initScriptState: {},
+  showInitScriptIndicatorByProject: {},
+  autoDismissInitScriptIndicatorByProject: {},
 };
 
-// ============================================================================
-// Store
-// ============================================================================
+// ---------------------------------------------------------------------------
+// Shared layout helpers
+// ---------------------------------------------------------------------------
 
-export const useTerminalStore = create<TerminalStoreState & TerminalActions>((set, get) => ({
-  ...initialState,
+/** Find the first terminal session ID by depth-first traversal. */
+function findFirstTerminal(node: TerminalPanelContent | null): string | null {
+  if (!node) return null;
+  if (node.type === 'terminal') return node.sessionId;
+  for (const panel of node.panels) {
+    const found = findFirstTerminal(panel);
+    if (found) return found;
+  }
+  return null;
+}
+
+/**
+ * Remove a terminal from a layout tree and collapse single-child splits.
+ * Returns null when the entire subtree has been removed.
+ */
+function removeAndCollapse(
+  node: TerminalPanelContent,
+  sessionId: string
+): TerminalPanelContent | null {
+  if (node.type === 'terminal') {
+    return node.sessionId === sessionId ? null : node;
+  }
+  const newPanels: TerminalPanelContent[] = [];
+  for (const panel of node.panels) {
+    const result = removeAndCollapse(panel, sessionId);
+    if (result !== null) newPanels.push(result);
+  }
+  if (newPanels.length === 0) return null;
+  if (newPanels.length === 1) return newPanels[0];
+  // Normalize sizes to sum to 100%
+  const totalSize = newPanels.reduce((sum, p) => sum + (p.size || 0), 0);
+  const normalizedPanels =
+    totalSize > 0
+      ? newPanels.map((p) => ({ ...p, size: ((p.size || 0) / totalSize) * 100 }))
+      : newPanels.map((p) => ({ ...p, size: 100 / newPanels.length }));
+  return { ...node, panels: normalizedPanels };
+}
+
+// ---------------------------------------------------------------------------
+// Store
+// ---------------------------------------------------------------------------
+
+export const useTerminalStore = create<TerminalStoreState & TerminalStoreActions>()((set, get) => ({
+  ...initialTerminalState,
+
+  // ----- Terminal configuration -----
+
+  setDefaultTerminalId: (terminalId) => set({ defaultTerminalId: terminalId }),
+
+  // ----- Terminal auth & session -----
 
   setTerminalUnlocked: (unlocked, token) => {
     set({
@@ -211,6 +250,8 @@ export const useTerminalStore = create<TerminalStoreState & TerminalActions>((se
       },
     });
   },
+
+  // ----- Terminal layout manipulation -----
 
   addTerminalToLayout: (sessionId, direction = 'horizontal', targetSessionId, branchName) => {
     const current = get().terminalState;
@@ -330,40 +371,9 @@ export const useTerminalStore = create<TerminalStoreState & TerminalActions>((se
     const current = get().terminalState;
     if (current.tabs.length === 0) return;
 
-    // Find which tab contains this session
-    const findFirstTerminal = (node: TerminalPanelContent | null): string | null => {
-      if (!node) return null;
-      if (node.type === 'terminal') return node.sessionId;
-      for (const panel of node.panels) {
-        const found = findFirstTerminal(panel);
-        if (found) return found;
-      }
-      return null;
-    };
-
-    const removeAndCollapse = (node: TerminalPanelContent): TerminalPanelContent | null => {
-      if (node.type === 'terminal') {
-        return node.sessionId === sessionId ? null : node;
-      }
-      const newPanels: TerminalPanelContent[] = [];
-      for (const panel of node.panels) {
-        const result = removeAndCollapse(panel);
-        if (result !== null) newPanels.push(result);
-      }
-      if (newPanels.length === 0) return null;
-      if (newPanels.length === 1) return newPanels[0];
-      // Normalize sizes to sum to 100%
-      const totalSize = newPanels.reduce((sum, p) => sum + (p.size || 0), 0);
-      const normalizedPanels =
-        totalSize > 0
-          ? newPanels.map((p) => ({ ...p, size: ((p.size || 0) / totalSize) * 100 }))
-          : newPanels.map((p) => ({ ...p, size: 100 / newPanels.length }));
-      return { ...node, panels: normalizedPanels };
-    };
-
     let newTabs = current.tabs.map((tab) => {
       if (!tab.layout) return tab;
-      const newLayout = removeAndCollapse(tab.layout);
+      const newLayout = removeAndCollapse(tab.layout, sessionId);
       return { ...tab, layout: newLayout };
     });
 
@@ -381,195 +391,198 @@ export const useTerminalStore = create<TerminalStoreState & TerminalActions>((se
       ? findFirstTerminal(newTabs.find((t) => t.id === newActiveTabId)?.layout || null)
       : null;
 
-    // Clear maximized if it was the removed session
-    const newMaximizedSessionId =
-      current.maximizedSessionId === sessionId ? null : current.maximizedSessionId;
-
     set({
       terminalState: {
         ...current,
         tabs: newTabs,
         activeTabId: newActiveTabId,
         activeSessionId: newActiveSessionId,
-        maximizedSessionId: newMaximizedSessionId,
       },
     });
   },
 
-  clearTerminalState: (keepAuth = false) => {
+  swapTerminals: (sessionId1, sessionId2) => {
+    const current = get().terminalState;
+    if (current.tabs.length === 0) return;
+
+    const swapInLayout = (node: TerminalPanelContent): TerminalPanelContent => {
+      if (node.type === 'terminal') {
+        if (node.sessionId === sessionId1) return { ...node, sessionId: sessionId2 };
+        if (node.sessionId === sessionId2) return { ...node, sessionId: sessionId1 };
+        return node;
+      }
+      return { ...node, panels: node.panels.map(swapInLayout) };
+    };
+
+    const newTabs = current.tabs.map((tab) => ({
+      ...tab,
+      layout: tab.layout ? swapInLayout(tab.layout) : null,
+    }));
+
+    set({
+      terminalState: { ...current, tabs: newTabs },
+    });
+  },
+
+  clearTerminalState: () => {
     const current = get().terminalState;
     set({
       terminalState: {
-        ...current,
-        isUnlocked: keepAuth ? current.isUnlocked : false,
-        authToken: keepAuth ? current.authToken : null,
+        // Preserve auth state - user shouldn't need to re-authenticate
+        isUnlocked: current.isUnlocked,
+        authToken: current.authToken,
+        // Clear session-specific state only
         tabs: [],
         activeTabId: null,
         activeSessionId: null,
         maximizedSessionId: null,
+        // Preserve user preferences - these should persist across projects
+        defaultFontSize: current.defaultFontSize,
+        defaultRunScript: current.defaultRunScript,
+        screenReaderMode: current.screenReaderMode,
+        fontFamily: current.fontFamily,
+        scrollbackLines: current.scrollbackLines,
+        lineHeight: current.lineHeight,
+        maxSessions: current.maxSessions,
+        // Preserve lastActiveProjectPath - it will be updated separately when needed
+        lastActiveProjectPath: current.lastActiveProjectPath,
+        // Preserve openTerminalMode - user preference
+        openTerminalMode: current.openTerminalMode,
       },
     });
   },
 
+  // ----- Terminal panel settings -----
+
   setTerminalPanelFontSize: (sessionId, fontSize) => {
     const current = get().terminalState;
+    const clampedSize = Math.max(8, Math.min(32, fontSize));
+
     const updateFontSize = (node: TerminalPanelContent): TerminalPanelContent => {
       if (node.type === 'terminal') {
-        return node.sessionId === sessionId ? { ...node, fontSize } : node;
+        if (node.sessionId === sessionId) {
+          return { ...node, fontSize: clampedSize };
+        }
+        return node;
       }
       return { ...node, panels: node.panels.map(updateFontSize) };
     };
 
-    const newTabs = current.tabs.map((tab) =>
-      tab.layout ? { ...tab, layout: updateFontSize(tab.layout) } : tab
-    );
+    const newTabs = current.tabs.map((tab) => {
+      if (!tab.layout) return tab;
+      return { ...tab, layout: updateFontSize(tab.layout) };
+    });
 
     set({
-      terminalState: {
-        ...current,
-        tabs: newTabs,
-      },
+      terminalState: { ...current, tabs: newTabs },
     });
   },
 
   setTerminalDefaultFontSize: (fontSize) => {
+    const current = get().terminalState;
+    const clampedSize = Math.max(8, Math.min(32, fontSize));
     set({
-      terminalState: {
-        ...get().terminalState,
-        defaultFontSize: fontSize,
-      },
+      terminalState: { ...current, defaultFontSize: clampedSize },
     });
   },
 
   setTerminalDefaultRunScript: (script) => {
+    const current = get().terminalState;
     set({
-      terminalState: {
-        ...get().terminalState,
-        defaultRunScript: script,
-      },
+      terminalState: { ...current, defaultRunScript: script },
     });
   },
 
   setTerminalScreenReaderMode: (enabled) => {
+    const current = get().terminalState;
     set({
-      terminalState: {
-        ...get().terminalState,
-        screenReaderMode: enabled,
-      },
+      terminalState: { ...current, screenReaderMode: enabled },
     });
   },
 
   setTerminalFontFamily: (fontFamily) => {
+    const current = get().terminalState;
     set({
-      terminalState: {
-        ...get().terminalState,
-        fontFamily,
-      },
+      terminalState: { ...current, fontFamily },
     });
   },
 
   setTerminalScrollbackLines: (lines) => {
-    // Clamp to reasonable values (1000-50000)
-    const clampedLines = Math.max(1000, Math.min(50000, lines));
+    const current = get().terminalState;
+    // Clamp to reasonable range: 1000 - 100000 lines
+    const clampedLines = Math.max(1000, Math.min(100000, lines));
     set({
-      terminalState: {
-        ...get().terminalState,
-        scrollbackLines: clampedLines,
-      },
+      terminalState: { ...current, scrollbackLines: clampedLines },
     });
   },
 
   setTerminalLineHeight: (lineHeight) => {
-    // Clamp to reasonable values (0.5-2.0)
-    const clampedLineHeight = Math.max(0.5, Math.min(2.0, lineHeight));
+    const current = get().terminalState;
+    // Clamp to reasonable range: 1.0 - 2.0
+    const clampedHeight = Math.max(1.0, Math.min(2.0, lineHeight));
     set({
-      terminalState: {
-        ...get().terminalState,
-        lineHeight: clampedLineHeight,
-      },
+      terminalState: { ...current, lineHeight: clampedHeight },
     });
   },
 
   setTerminalMaxSessions: (maxSessions) => {
+    const current = get().terminalState;
+    // Clamp to reasonable range: 1 - 500
+    const clampedMax = Math.max(1, Math.min(500, maxSessions));
     set({
-      terminalState: {
-        ...get().terminalState,
-        maxSessions,
-      },
+      terminalState: { ...current, maxSessions: clampedMax },
     });
   },
 
   setTerminalLastActiveProjectPath: (projectPath) => {
+    const current = get().terminalState;
     set({
-      terminalState: {
-        ...get().terminalState,
-        lastActiveProjectPath: projectPath,
-      },
+      terminalState: { ...current, lastActiveProjectPath: projectPath },
     });
   },
 
   setOpenTerminalMode: (mode) => {
+    const current = get().terminalState;
     set({
-      terminalState: {
-        ...get().terminalState,
-        openTerminalMode: mode,
-      },
+      terminalState: { ...current, openTerminalMode: mode },
     });
   },
 
+  // ----- Tab management -----
+
   addTerminalTab: (name) => {
     const current = get().terminalState;
-    const tabCount = current.tabs.length;
     const newTabId = `tab-${Date.now()}`;
-    const tabName = name || `Terminal ${tabCount + 1}`;
-
+    const tabNumber = current.tabs.length + 1;
+    const newTab: TerminalTab = {
+      id: newTabId,
+      name: name || `Terminal ${tabNumber}`,
+      layout: null,
+    };
     set({
       terminalState: {
         ...current,
-        tabs: [
-          ...current.tabs,
-          {
-            id: newTabId,
-            name: tabName,
-            layout: null,
-          },
-        ],
+        tabs: [...current.tabs, newTab],
         activeTabId: newTabId,
       },
     });
-
     return newTabId;
   },
 
   removeTerminalTab: (tabId) => {
     const current = get().terminalState;
-    const tabIndex = current.tabs.findIndex((t) => t.id === tabId);
-    if (tabIndex === -1) return;
-
     const newTabs = current.tabs.filter((t) => t.id !== tabId);
     let newActiveTabId = current.activeTabId;
     let newActiveSessionId = current.activeSessionId;
 
-    // If we're removing the active tab, switch to another tab
-    if (current.activeTabId === tabId && newTabs.length > 0) {
-      // Try to activate the next tab, or fall back to the previous one
-      const nextTab = newTabs[Math.min(tabIndex, newTabs.length - 1)];
-      newActiveTabId = nextTab.id;
-
-      // Find the first terminal in the new active tab
-      const findFirstTerminal = (node: TerminalPanelContent | null): string | null => {
-        if (!node) return null;
-        if (node.type === 'terminal') return node.sessionId;
-        for (const panel of node.panels) {
-          const found = findFirstTerminal(panel);
-          if (found) return found;
-        }
-        return null;
-      };
-      newActiveSessionId = findFirstTerminal(nextTab.layout);
-    } else if (newTabs.length === 0) {
-      newActiveTabId = null;
-      newActiveSessionId = null;
+    if (current.activeTabId === tabId) {
+      newActiveTabId = newTabs.length > 0 ? newTabs[0].id : null;
+      if (newActiveTabId) {
+        const newActiveTab = newTabs.find((t) => t.id === newActiveTabId);
+        newActiveSessionId = newActiveTab?.layout ? findFirstTerminal(newActiveTab.layout) : null;
+      } else {
+        newActiveSessionId = null;
+      }
     }
 
     set({
@@ -587,132 +600,157 @@ export const useTerminalStore = create<TerminalStoreState & TerminalActions>((se
     const tab = current.tabs.find((t) => t.id === tabId);
     if (!tab) return;
 
-    // Find the first terminal in this tab to set as active
-    const findFirstTerminal = (node: TerminalPanelContent | null): string | null => {
-      if (!node) return null;
-      if (node.type === 'terminal') return node.sessionId;
-      for (const panel of node.panels) {
-        const found = findFirstTerminal(panel);
-        if (found) return found;
-      }
-      return null;
-    };
-
-    const newActiveSessionId = findFirstTerminal(tab.layout);
+    let newActiveSessionId = current.activeSessionId;
+    if (tab.layout) {
+      newActiveSessionId = findFirstTerminal(tab.layout);
+    }
 
     set({
       terminalState: {
         ...current,
         activeTabId: tabId,
         activeSessionId: newActiveSessionId,
+        // Clear maximized state when switching tabs - the maximized terminal
+        // belongs to the previous tab and shouldn't persist across tab switches
+        maximizedSessionId: null,
       },
     });
   },
 
-  renameTerminalTab: (tabId, newName) => {
+  renameTerminalTab: (tabId, name) => {
     const current = get().terminalState;
+    const newTabs = current.tabs.map((t) => (t.id === tabId ? { ...t, name } : t));
     set({
-      terminalState: {
-        ...current,
-        tabs: current.tabs.map((tab) => (tab.id === tabId ? { ...tab, name: newName } : tab)),
-      },
+      terminalState: { ...current, tabs: newTabs },
     });
   },
 
-  reorderTerminalTabs: (oldIndex, newIndex) => {
+  reorderTerminalTabs: (fromTabId, toTabId) => {
     const current = get().terminalState;
+    const fromIndex = current.tabs.findIndex((t) => t.id === fromTabId);
+    const toIndex = current.tabs.findIndex((t) => t.id === toTabId);
+
+    if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) {
+      return;
+    }
+
+    // Reorder tabs by moving fromIndex to toIndex
     const newTabs = [...current.tabs];
-    const [movedTab] = newTabs.splice(oldIndex, 1);
-    newTabs.splice(newIndex, 0, movedTab);
+    const [movedTab] = newTabs.splice(fromIndex, 1);
+    newTabs.splice(toIndex, 0, movedTab);
 
     set({
-      terminalState: {
-        ...current,
-        tabs: newTabs,
-      },
+      terminalState: { ...current, tabs: newTabs },
     });
   },
 
   moveTerminalToTab: (sessionId, targetTabId) => {
     const current = get().terminalState;
 
-    // Find the terminal panel in the current layout
-    const findAndRemove = (
-      node: TerminalPanelContent,
-      targetSessionId: string
-    ): {
-      found: TerminalPanelContent | null;
-      remaining: TerminalPanelContent | null;
-    } => {
+    let sourceTabId: string | null = null;
+    let originalTerminalNode: (TerminalPanelContent & { type: 'terminal' }) | null = null;
+
+    const findTerminal = (
+      node: TerminalPanelContent
+    ): (TerminalPanelContent & { type: 'terminal' }) | null => {
       if (node.type === 'terminal') {
-        if (node.sessionId === targetSessionId) {
-          return { found: node, remaining: null };
-        }
-        return { found: null, remaining: node };
+        return node.sessionId === sessionId ? node : null;
       }
+      for (const panel of node.panels) {
+        const found = findTerminal(panel);
+        if (found) return found;
+      }
+      return null;
+    };
 
-      const results = node.panels.map((p) => findAndRemove(p, targetSessionId));
-      const found = results.find((r) => r.found !== null);
-
-      if (found) {
-        const remainingPanels = results
-          .map((r) => r.remaining)
-          .filter((r): r is TerminalPanelContent => r !== null);
-
-        if (remainingPanels.length === 0) {
-          return { found: found.found, remaining: null };
+    for (const tab of current.tabs) {
+      if (tab.layout) {
+        const found = findTerminal(tab.layout);
+        if (found) {
+          sourceTabId = tab.id;
+          originalTerminalNode = found;
+          break;
         }
-        if (remainingPanels.length === 1) {
-          return { found: found.found, remaining: remainingPanels[0] };
-        }
+      }
+    }
+    if (!sourceTabId || !originalTerminalNode) return;
+    if (sourceTabId === targetTabId) return;
 
-        return {
-          found: found.found,
-          remaining: { ...node, panels: remainingPanels },
+    const sourceTab = current.tabs.find((t) => t.id === sourceTabId);
+    if (!sourceTab?.layout) return;
+
+    const newSourceLayout = removeAndCollapse(sourceTab.layout, sessionId);
+
+    let finalTargetTabId = targetTabId;
+    let newTabs = current.tabs;
+
+    if (targetTabId === 'new') {
+      const newTabId = `tab-${Date.now()}`;
+      const sourceWillBeRemoved = !newSourceLayout;
+      const tabName = sourceWillBeRemoved ? sourceTab.name : `Terminal ${current.tabs.length + 1}`;
+      newTabs = [
+        ...current.tabs,
+        {
+          id: newTabId,
+          name: tabName,
+          layout: {
+            type: 'terminal',
+            sessionId,
+            size: 100,
+            fontSize: originalTerminalNode.fontSize,
+          },
+        },
+      ];
+      finalTargetTabId = newTabId;
+    } else {
+      const targetTab = current.tabs.find((t) => t.id === targetTabId);
+      if (!targetTab) return;
+
+      const terminalNode: TerminalPanelContent = {
+        type: 'terminal',
+        sessionId,
+        size: 50,
+        fontSize: originalTerminalNode.fontSize,
+      };
+      let newTargetLayout: TerminalPanelContent;
+
+      if (!targetTab.layout) {
+        newTargetLayout = {
+          type: 'terminal',
+          sessionId,
+          size: 100,
+          fontSize: originalTerminalNode.fontSize,
+        };
+      } else if (targetTab.layout.type === 'terminal') {
+        newTargetLayout = {
+          type: 'split',
+          id: generateSplitId(),
+          direction: 'horizontal',
+          panels: [{ ...targetTab.layout, size: 50 }, terminalNode],
+        };
+      } else {
+        newTargetLayout = {
+          ...targetTab.layout,
+          panels: [...targetTab.layout.panels, terminalNode],
         };
       }
 
-      return { found: null, remaining: node };
-    };
+      newTabs = current.tabs.map((t) =>
+        t.id === targetTabId ? { ...t, layout: newTargetLayout } : t
+      );
+    }
 
-    let terminalPanel: TerminalPanelContent | null = null;
-    const newTabs = current.tabs.map((tab) => {
-      if (!tab.layout) return tab;
-
-      const result = findAndRemove(tab.layout, sessionId);
-      if (result.found) {
-        terminalPanel = result.found;
-      }
-
-      return { ...tab, layout: result.remaining };
-    });
-
-    if (!terminalPanel) return; // Terminal not found
-
-    // Add the terminal to the target tab
-    const finalTabs = newTabs.map((tab) => {
-      if (tab.id !== targetTabId) return tab;
-
-      if (!tab.layout) {
-        return { ...tab, layout: terminalPanel };
-      }
-
-      // Add to the tab's layout (default horizontal split)
-      const newLayout: TerminalPanelContent = {
-        type: 'split',
-        id: generateSplitId(),
-        direction: 'horizontal',
-        panels: [tab.layout, terminalPanel as TerminalPanelContent],
-      };
-
-      return { ...tab, layout: newLayout };
-    });
+    if (!newSourceLayout) {
+      newTabs = newTabs.filter((t) => t.id !== sourceTabId);
+    } else {
+      newTabs = newTabs.map((t) => (t.id === sourceTabId ? { ...t, layout: newSourceLayout } : t));
+    }
 
     set({
       terminalState: {
         ...current,
-        tabs: finalTabs.filter((tab) => tab.layout !== null),
-        activeTabId: targetTabId,
+        tabs: newTabs,
+        activeTabId: finalTargetTabId,
         activeSessionId: sessionId,
       },
     });
@@ -723,14 +761,14 @@ export const useTerminalStore = create<TerminalStoreState & TerminalActions>((se
     const tab = current.tabs.find((t) => t.id === tabId);
     if (!tab) return;
 
-    const newTerminal: TerminalPanelContent = {
+    const terminalNode: TerminalPanelContent = {
       type: 'terminal',
       sessionId,
       size: 50,
       branchName,
     };
-
     let newLayout: TerminalPanelContent;
+
     if (!tab.layout) {
       newLayout = { type: 'terminal', sessionId, size: 100, branchName };
     } else if (tab.layout.type === 'terminal') {
@@ -738,30 +776,34 @@ export const useTerminalStore = create<TerminalStoreState & TerminalActions>((se
         type: 'split',
         id: generateSplitId(),
         direction,
-        panels: [{ ...tab.layout, size: 50 }, newTerminal],
-      };
-    } else if (tab.layout.direction === direction) {
-      const newSize = 100 / (tab.layout.panels.length + 1);
-      newLayout = {
-        ...tab.layout,
-        panels: [
-          ...tab.layout.panels.map((p) => ({ ...p, size: newSize })),
-          { ...newTerminal, size: newSize },
-        ],
+        panels: [{ ...tab.layout, size: 50 }, terminalNode],
       };
     } else {
-      newLayout = {
-        type: 'split',
-        id: generateSplitId(),
-        direction,
-        panels: [{ ...tab.layout, size: 50 }, newTerminal],
-      };
+      if (tab.layout.direction === direction) {
+        const newSize = 100 / (tab.layout.panels.length + 1);
+        newLayout = {
+          ...tab.layout,
+          panels: [
+            ...tab.layout.panels.map((p) => ({ ...p, size: newSize })),
+            { ...terminalNode, size: newSize },
+          ],
+        };
+      } else {
+        newLayout = {
+          type: 'split',
+          id: generateSplitId(),
+          direction,
+          panels: [{ ...tab.layout, size: 50 }, terminalNode],
+        };
+      }
     }
+
+    const newTabs = current.tabs.map((t) => (t.id === tabId ? { ...t, layout: newLayout } : t));
 
     set({
       terminalState: {
         ...current,
-        tabs: current.tabs.map((t) => (t.id === tabId ? { ...t, layout: newLayout } : t)),
+        tabs: newTabs,
         activeTabId: tabId,
         activeSessionId: sessionId,
       },
@@ -770,30 +812,17 @@ export const useTerminalStore = create<TerminalStoreState & TerminalActions>((se
 
   setTerminalTabLayout: (tabId, layout, activeSessionId) => {
     const current = get().terminalState;
-    const newTabs = current.tabs.map((tab) => (tab.id === tabId ? { ...tab, layout } : tab));
+    const tab = current.tabs.find((t) => t.id === tabId);
+    if (!tab) return;
 
-    // Find first terminal if activeSessionId not provided
-    const findFirstTerminal = (node: TerminalPanelContent | null): string | null => {
-      if (!node) return null;
-      if (node.type === 'terminal') return node.sessionId;
-      for (const panel of node.panels) {
-        const found = findFirstTerminal(panel);
-        if (found) return found;
-      }
-      return null;
-    };
-
-    const newActiveSessionId =
-      activeSessionId !== undefined
-        ? activeSessionId
-        : tabId === current.activeTabId
-          ? findFirstTerminal(layout)
-          : current.activeSessionId;
+    const newTabs = current.tabs.map((t) => (t.id === tabId ? { ...t, layout } : t));
+    const newActiveSessionId = activeSessionId || findFirstTerminal(layout);
 
     set({
       terminalState: {
         ...current,
         tabs: newTabs,
+        activeTabId: tabId,
         activeSessionId: newActiveSessionId,
       },
     });
@@ -804,75 +833,89 @@ export const useTerminalStore = create<TerminalStoreState & TerminalActions>((se
     const tab = current.tabs.find((t) => t.id === tabId);
     if (!tab || !tab.layout) return;
 
-    const updateSizes = (node: TerminalPanelContent, path: string): TerminalPanelContent => {
-      const currentKey =
-        node.type === 'terminal' ? `terminal-${node.sessionId}` : `split-${node.id}`;
+    // Create a map of panel key to new size
+    const sizeMap = new Map<string, number>();
+    panelKeys.forEach((key, index) => {
+      sizeMap.set(key, sizes[index]);
+    });
 
-      const pathWithCurrent = path ? `${path}.${currentKey}` : currentKey;
-
-      // Check if this node's size should be updated
-      const sizeIndex = panelKeys.indexOf(pathWithCurrent);
-      if (sizeIndex !== -1) {
-        return { ...node, size: sizes[sizeIndex] };
-      }
-
-      // Recurse for splits
-      if (node.type === 'split') {
-        return {
-          ...node,
-          panels: node.panels.map((panel) => updateSizes(panel, pathWithCurrent)),
-        };
-      }
-
-      return node;
+    // Helper to generate panel key (matches getPanelKey in terminal-view.tsx)
+    const getPanelKey = (panel: TerminalPanelContent): string => {
+      if (panel.type === 'terminal') return panel.sessionId;
+      const childKeys = panel.panels.map(getPanelKey).join('-');
+      return `split-${panel.direction}-${childKeys}`;
     };
 
-    const newLayout = updateSizes(tab.layout, '');
+    // Recursively update sizes in the layout
+    const updateSizes = (panel: TerminalPanelContent): TerminalPanelContent => {
+      const key = getPanelKey(panel);
+      const newSize = sizeMap.get(key);
+
+      if (panel.type === 'terminal') {
+        return newSize !== undefined ? { ...panel, size: newSize } : panel;
+      }
+
+      return {
+        ...panel,
+        size: newSize !== undefined ? newSize : panel.size,
+        panels: panel.panels.map(updateSizes),
+      };
+    };
+
+    const updatedLayout = updateSizes(tab.layout);
+
+    const newTabs = current.tabs.map((t) => (t.id === tabId ? { ...t, layout: updatedLayout } : t));
 
     set({
-      terminalState: {
-        ...current,
-        tabs: current.tabs.map((t) => (t.id === tabId ? { ...t, layout: newLayout } : t)),
-      },
+      terminalState: { ...current, tabs: newTabs },
     });
   },
 
+  // ----- Layout persistence -----
+
+  // Convert runtime layout to persisted format (preserves sessionIds for reconnection)
   saveTerminalLayout: (projectPath) => {
     const current = get().terminalState;
+    if (current.tabs.length === 0) {
+      // Nothing to save, clear any existing layout
+      const next = { ...get().terminalLayoutByProject };
+      delete next[projectPath];
+      set({ terminalLayoutByProject: next });
+      return;
+    }
 
-    // Convert runtime layout to persisted format (strip sessionIds from active terminals)
-    const convertToPersistedPanel = (node: TerminalPanelContent): PersistedTerminalPanel => {
-      if (node.type === 'terminal') {
+    // Convert TerminalPanelContent to PersistedTerminalPanel
+    // Now preserves sessionId so we can reconnect when switching back
+    const persistPanel = (panel: TerminalPanelContent): PersistedTerminalPanel => {
+      if (panel.type === 'terminal') {
         return {
           type: 'terminal',
-          size: node.size,
-          fontSize: node.fontSize,
-          sessionId: node.sessionId, // Keep sessionId for reconnection
-          branchName: node.branchName,
+          size: panel.size,
+          fontSize: panel.fontSize,
+          sessionId: panel.sessionId, // Preserve for reconnection
+          branchName: panel.branchName, // Preserve branch name for display
         };
       }
       return {
         type: 'split',
-        id: node.id,
-        direction: node.direction,
-        panels: node.panels.map(convertToPersistedPanel),
-        size: node.size,
+        id: panel.id, // Preserve stable ID
+        direction: panel.direction,
+        panels: panel.panels.map(persistPanel),
+        size: panel.size,
       };
     };
 
     const persistedTabs: PersistedTerminalTab[] = current.tabs.map((tab) => ({
       id: tab.id,
       name: tab.name,
-      layout: tab.layout ? convertToPersistedPanel(tab.layout) : null,
+      layout: tab.layout ? persistPanel(tab.layout) : null,
     }));
 
-    const activeTabIndex = current.activeTabId
-      ? current.tabs.findIndex((t) => t.id === current.activeTabId)
-      : 0;
+    const activeTabIndex = current.tabs.findIndex((t) => t.id === current.activeTabId);
 
-    const persistedState: PersistedTerminalState = {
+    const persisted: PersistedTerminalState = {
       tabs: persistedTabs,
-      activeTabIndex: Math.max(0, activeTabIndex),
+      activeTabIndex: activeTabIndex >= 0 ? activeTabIndex : 0,
       defaultFontSize: current.defaultFontSize,
       defaultRunScript: current.defaultRunScript,
       screenReaderMode: current.screenReaderMode,
@@ -884,18 +927,108 @@ export const useTerminalStore = create<TerminalStoreState & TerminalActions>((se
     set({
       terminalLayoutByProject: {
         ...get().terminalLayoutByProject,
-        [projectPath]: persistedState,
+        [projectPath]: persisted,
       },
     });
   },
 
   getPersistedTerminalLayout: (projectPath) => {
-    return get().terminalLayoutByProject[projectPath];
+    return get().terminalLayoutByProject[projectPath] || null;
   },
 
   clearPersistedTerminalLayout: (projectPath) => {
-    const layouts = { ...get().terminalLayoutByProject };
-    delete layouts[projectPath];
-    set({ terminalLayoutByProject: layouts });
+    const next = { ...get().terminalLayoutByProject };
+    delete next[projectPath];
+    set({ terminalLayoutByProject: next });
+  },
+
+  // ----- Init Script Indicator Visibility (per-project) -----
+
+  setShowInitScriptIndicator: (projectPath, visible) => {
+    set({
+      showInitScriptIndicatorByProject: {
+        ...get().showInitScriptIndicatorByProject,
+        [projectPath]: visible,
+      },
+    });
+  },
+
+  getShowInitScriptIndicator: (projectPath) => {
+    // Default to true (visible) if not set
+    return get().showInitScriptIndicatorByProject[projectPath] ?? true;
+  },
+
+  // ----- Auto-dismiss Init Script Indicator (per-project) -----
+
+  setAutoDismissInitScriptIndicator: (projectPath, autoDismiss) => {
+    set({
+      autoDismissInitScriptIndicatorByProject: {
+        ...get().autoDismissInitScriptIndicatorByProject,
+        [projectPath]: autoDismiss,
+      },
+    });
+  },
+
+  getAutoDismissInitScriptIndicator: (projectPath) => {
+    // Default to true (auto-dismiss enabled) if not set
+    return get().autoDismissInitScriptIndicatorByProject[projectPath] ?? true;
+  },
+
+  // ----- Init Script State (keyed by "projectPath::branch") -----
+
+  setInitScriptState: (projectPath, branch, state) => {
+    const key = `${projectPath}::${branch}`;
+    const current = get().initScriptState[key] || {
+      status: 'idle',
+      branch,
+      output: [],
+    };
+    set({
+      initScriptState: {
+        ...get().initScriptState,
+        [key]: { ...current, ...state },
+      },
+    });
+  },
+
+  appendInitScriptOutput: (projectPath, branch, content) => {
+    const key = `${projectPath}::${branch}`;
+    // Initialize state if absent to avoid dropping output due to event-order races
+    const current = get().initScriptState[key] || {
+      status: 'idle' as const,
+      branch,
+      output: [],
+    };
+    // Append new content and enforce fixed-size buffer to prevent memory bloat
+    const newOutput = [...current.output, content].slice(-MAX_INIT_OUTPUT_LINES);
+    set({
+      initScriptState: {
+        ...get().initScriptState,
+        [key]: {
+          ...current,
+          output: newOutput,
+        },
+      },
+    });
+  },
+
+  clearInitScriptState: (projectPath, branch) => {
+    const key = `${projectPath}::${branch}`;
+
+    const { [key]: _, ...rest } = get().initScriptState;
+    set({ initScriptState: rest });
+  },
+
+  getInitScriptState: (projectPath, branch) => {
+    const key = `${projectPath}::${branch}`;
+    return get().initScriptState[key] || null;
+  },
+
+  getInitScriptStatesForProject: (projectPath) => {
+    const prefix = `${projectPath}::`;
+    const states = get().initScriptState;
+    return Object.entries(states)
+      .filter(([key]) => key.startsWith(prefix))
+      .map(([key, state]) => ({ key, state }));
   },
 }));

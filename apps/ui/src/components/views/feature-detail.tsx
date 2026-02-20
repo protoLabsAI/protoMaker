@@ -13,7 +13,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { Feature } from '@/store/app-store';
+import type { Feature } from '@/store/types';
 import { useAuthorityEvents } from '@/hooks/use-authority-events';
 
 interface FeatureDetailProps {

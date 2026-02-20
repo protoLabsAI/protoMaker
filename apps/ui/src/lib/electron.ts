@@ -1,6 +1,6 @@
 // Type definitions for Electron IPC API
 import type { SessionListItem, Message } from '@/types/electron';
-import type { ClaudeUsageResponse, CodexUsageResponse } from '@/store/app-store';
+import type { ClaudeUsageResponse, CodexUsageResponse } from '@/store/types';
 import type {
   IssueValidationVerdict,
   IssueValidationConfidence,
@@ -101,7 +101,7 @@ import type {
 import { getHttpApiClient, getServerUrlSync } from './http-api-client';
 
 // Feature type - Import from app-store
-import type { Feature } from '@/store/app-store';
+import type { Feature } from '@/store/types';
 
 // Running Agent type
 export interface RunningAgent {

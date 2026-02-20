@@ -4,7 +4,7 @@ import {
   useKeyboardShortcutsConfig,
   KeyboardShortcut,
 } from '@/hooks/use-keyboard-shortcuts';
-import { Feature } from '@/store/app-store';
+import { Feature } from '@/store/types';
 
 interface UseBoardKeyboardShortcutsProps {
   features: Feature[];

@@ -15,7 +15,7 @@ import {
   ImagePreviewMap,
 } from '@/components/views/board-view/components/description-image-dropzone';
 import { MessageSquare } from 'lucide-react';
-import { Feature } from '@/store/app-store';
+import { Feature } from '@/store/types';
 import { EnhanceWithAI, EnhancementHistoryButton, type BaseHistoryEntry } from '../shared';
 
 /**

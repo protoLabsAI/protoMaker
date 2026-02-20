@@ -2,7 +2,8 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { Terminal, Check, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { Spinner } from '@protolabs/ui/atoms';
 import { cn } from '@/lib/utils';
-import { useAppStore, type InitScriptState } from '@/store/app-store';
+import { useTerminalStore } from '@/store/terminal-store';
+import type { InitScriptState } from '@/store/types';
 import { AnsiOutput } from '@/components/shared/ansi-output';
 
 interface InitScriptIndicatorProps {
@@ -139,9 +140,11 @@ function SingleIndicator({
 }
 
 export function InitScriptIndicator({ projectPath }: InitScriptIndicatorProps) {
-  const getInitScriptStatesForProject = useAppStore((s) => s.getInitScriptStatesForProject);
-  const clearInitScriptState = useAppStore((s) => s.clearInitScriptState);
-  const getAutoDismissInitScriptIndicator = useAppStore((s) => s.getAutoDismissInitScriptIndicator);
+  const getInitScriptStatesForProject = useTerminalStore((s) => s.getInitScriptStatesForProject);
+  const clearInitScriptState = useTerminalStore((s) => s.clearInitScriptState);
+  const getAutoDismissInitScriptIndicator = useTerminalStore(
+    (s) => s.getAutoDismissInitScriptIndicator
+  );
   const [dismissedKeys, setDismissedKeys] = useState<Set<string>>(new Set());
 
   // Get auto-dismiss setting

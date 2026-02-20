@@ -1,5 +1,5 @@
 import { memo, useEffect, useState, useMemo } from 'react';
-import { Feature, ThinkingLevel, ParsedTask } from '@/store/app-store';
+import { Feature, ThinkingLevel, ParsedTask } from '@/store/types';
 import type { ReasoningEffort } from '@automaker/types';
 import { getProviderFromModel } from '@/lib/utils';
 import { parseAgentContext, formatModelName, DEFAULT_MODEL } from '@/lib/agent-context-parser';

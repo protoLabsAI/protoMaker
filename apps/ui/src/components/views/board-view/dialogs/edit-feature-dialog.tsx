@@ -25,7 +25,7 @@ import { GitBranch, Cpu, FolderKanban, Settings2 } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
 import { toast } from 'sonner';
 import { cn, modelSupportsThinking } from '@/lib/utils';
-import { Feature, ModelAlias, ThinkingLevel, PlanningMode } from '@/store/app-store';
+import { Feature, ModelAlias, ThinkingLevel, PlanningMode } from '@/store/types';
 import type { ReasoningEffort, PhaseModelEntry, DescriptionHistoryEntry } from '@automaker/types';
 import { migrateModelId } from '@automaker/types';
 import {

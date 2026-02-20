@@ -10,7 +10,7 @@ import {
 } from '@protolabs/ui/atoms';
 import { Button } from '@protolabs/ui/atoms';
 import { ArrowDown, ArrowUp, Link2, X } from 'lucide-react';
-import type { Feature } from '@/store/app-store';
+import type { Feature } from '@/store/types';
 import { cn } from '@/lib/utils';
 
 export type DependencyLinkType = 'parent' | 'child';

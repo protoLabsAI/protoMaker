@@ -30,7 +30,7 @@ import type {
 } from './electron';
 import type { EventHistoryFilter } from '@automaker/types';
 import type { Message, SessionListItem } from '@/types/electron';
-import type { Feature, ClaudeUsageResponse, CodexUsageResponse } from '@/store/app-store';
+import type { Feature, ClaudeUsageResponse, CodexUsageResponse } from '@/store/types';
 import type { WorktreeAPI, GitAPI, ModelDefinition, ProviderStatus } from '@/types/electron';
 import type { ModelId, ThinkingLevel, ReasoningEffort } from '@automaker/types';
 import { getGlobalFileBrowser } from '@/contexts/file-browser-context';

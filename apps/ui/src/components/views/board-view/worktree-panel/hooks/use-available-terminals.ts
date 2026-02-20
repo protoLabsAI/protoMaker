@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { createLogger } from '@automaker/utils/logger';
 import { getElectronAPI } from '@/lib/electron';
-import { useAppStore } from '@/store/app-store';
+import { useTerminalStore } from '@/store/terminal-store';
 import type { TerminalInfo } from '@automaker/types';
 
 const logger = createLogger('AvailableTerminals');
@@ -79,7 +79,7 @@ export function useAvailableTerminals() {
  * Falls back to: user preference > first available external terminal
  */
 export function useEffectiveDefaultTerminal(terminals: TerminalInfo[]): TerminalInfo | null {
-  const defaultTerminalId = useAppStore((s) => s.defaultTerminalId);
+  const defaultTerminalId = useTerminalStore((s) => s.defaultTerminalId);
 
   return useMemo(() => {
     // If user hasn't set a preference (null/undefined), they prefer integrated terminal

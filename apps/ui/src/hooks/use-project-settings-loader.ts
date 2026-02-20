@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useAppStore } from '@/store/app-store';
+import { useTerminalStore } from '@/store/terminal-store';
 import { useProjectSettings } from '@/hooks/queries';
 
 /**
@@ -20,9 +21,9 @@ export function useProjectSettingsLoader() {
   const setCardBorderOpacity = useAppStore((state) => state.setCardBorderOpacity);
   const setHideScrollbar = useAppStore((state) => state.setHideScrollbar);
   const setWorktreePanelVisible = useAppStore((state) => state.setWorktreePanelVisible);
-  const setShowInitScriptIndicator = useAppStore((state) => state.setShowInitScriptIndicator);
+  const setShowInitScriptIndicator = useTerminalStore((state) => state.setShowInitScriptIndicator);
   const setDefaultDeleteBranch = useAppStore((state) => state.setDefaultDeleteBranch);
-  const setAutoDismissInitScriptIndicator = useAppStore(
+  const setAutoDismissInitScriptIndicator = useTerminalStore(
     (state) => state.setAutoDismissInitScriptIndicator
   );
   const setCurrentProject = useAppStore((state) => state.setCurrentProject);

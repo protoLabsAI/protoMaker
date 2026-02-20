@@ -1,66 +1,25 @@
-/**
- * Worktree Store - State management for git worktree isolation
- */
-
 import { create } from 'zustand';
 import { DEFAULT_MAX_CONCURRENCY } from '@automaker/types';
+import type { AutoModeActivity } from './types';
 
-// ============================================================================
-// Types
-// ============================================================================
-
-/** State for worktree init script execution */
-export interface InitScriptState {
-  status: 'idle' | 'running' | 'success' | 'failed';
-  branch: string;
-  output: string[];
-  error?: string;
-}
-
-/** Activity log entry for auto mode operations */
-export interface AutoModeActivity {
-  id: string;
-  featureId: string;
-  timestamp: Date;
-  type:
-    | 'start'
-    | 'progress'
-    | 'tool'
-    | 'complete'
-    | 'error'
-    | 'planning'
-    | 'action'
-    | 'verification';
-  message: string;
-  tool?: string;
-  passes?: boolean;
-  phase?: 'planning' | 'action' | 'verification';
-  errorType?: 'authentication' | 'execution';
-}
-
-// ============================================================================
-// State Interface
-// ============================================================================
-
-interface WorktreeStoreState {
+interface WorktreeState {
   // Auto Mode (per-worktree state, keyed by "${projectId}::${branchName ?? '__main__'}")
   autoModeByWorktree: Record<
     string,
     {
       isRunning: boolean;
-      runningTasks: string[]; // Feature IDs being worked on
-      branchName: string | null; // null = main worktree
-      maxConcurrency?: number; // Maximum concurrent features for this worktree (defaults to 3)
+      runningTasks: string[];
+      branchName: string | null;
+      maxConcurrency?: number;
     }
   >;
   autoModeActivityLog: AutoModeActivity[];
-  maxConcurrency: number; // Legacy: Maximum number of concurrent agent tasks (deprecated, use per-worktree maxConcurrency)
+  maxConcurrency: number; // Legacy
 
   // Worktree Settings
-  useWorktrees: boolean; // Whether to use git worktree isolation for features (default: true)
+  useWorktrees: boolean;
 
   // User-managed Worktrees (per-project)
-  // projectPath -> { path: worktreePath or null for main, branch: branch name }
   currentWorktreeByProject: Record<string, { path: string | null; branch: string }>;
   worktreesByProject: Record<
     string,
@@ -72,57 +31,30 @@ interface WorktreeStoreState {
       changedFilesCount?: number;
     }>
   >;
-  // Track loading state for worktrees per project
   worktreesLoadingByProject: Record<string, boolean>;
 
-  // Worktree Panel Visibility (per-project, keyed by project path)
-  // Whether the worktree panel row is visible (default: true)
+  // Worktree Panel Visibility (per-project)
   worktreePanelVisibleByProject: Record<string, boolean>;
 
-  // Init Script Indicator Visibility (per-project, keyed by project path)
-  // Whether to show the floating init script indicator panel (default: true)
-  showInitScriptIndicatorByProject: Record<string, boolean>;
-
-  // Default Delete Branch With Worktree (per-project, keyed by project path)
-  // Whether to default the "delete branch" checkbox when deleting a worktree (default: false)
+  // Default Delete Branch With Worktree (per-project)
   defaultDeleteBranchByProject: Record<string, boolean>;
 
-  // Auto-dismiss Init Script Indicator (per-project, keyed by project path)
-  // Whether to auto-dismiss the indicator after completion (default: true)
-  autoDismissInitScriptIndicatorByProject: Record<string, boolean>;
-
-  // Use Worktrees Override (per-project, keyed by project path)
-  // undefined = use global setting, true/false = project-specific override
+  // Use Worktrees Override (per-project)
   useWorktreesByProject: Record<string, boolean | undefined>;
 
-  // Init Script State (keyed by "projectPath::branch" to support concurrent scripts)
-  initScriptState: Record<string, InitScriptState>;
-
   // UI State
-  /** Whether worktree panel is collapsed in board view */
   worktreePanelCollapsed: boolean;
 }
 
-// ============================================================================
-// Actions Interface
-// ============================================================================
-
 interface WorktreeActions {
   // Auto Mode actions (per-worktree)
-  /** Helper to generate worktree key from projectId and branchName */
-  getWorktreeKey: (projectId: string, branchName: string | null) => string;
-  setAutoModeState: (
+  setAutoModeRunning: (
     projectId: string,
     branchName: string | null,
     running: boolean,
     maxConcurrency?: number,
     runningTasks?: string[]
-  ) => {
-    isRunning: boolean;
-    runningTasks: string[];
-    branchName: string | null;
-    maxConcurrency?: number;
-  };
+  ) => void;
   addRunningTask: (projectId: string, branchName: string | null, taskId: string) => void;
   removeRunningTask: (projectId: string, branchName: string | null, taskId: string) => void;
   clearRunningTasks: (projectId: string, branchName: string | null) => void;
@@ -135,9 +67,10 @@ interface WorktreeActions {
     branchName: string | null;
     maxConcurrency?: number;
   };
+  getWorktreeKey: (projectId: string, branchName: string | null) => string;
   addAutoModeActivity: (activity: Omit<AutoModeActivity, 'id' | 'timestamp'>) => void;
   clearAutoModeActivity: () => void;
-  setMaxConcurrency: (max: number) => void; // Legacy: kept for backward compatibility
+  setMaxConcurrency: (max: number) => void;
   getMaxConcurrencyForWorktree: (projectId: string, branchName: string | null) => number;
   setMaxConcurrencyForWorktree: (
     projectId: string,
@@ -175,106 +108,69 @@ interface WorktreeActions {
   setWorktreePanelVisible: (projectPath: string, visible: boolean) => void;
   getWorktreePanelVisible: (projectPath: string) => boolean;
 
-  // Init Script Indicator Visibility actions (per-project)
-  setShowInitScriptIndicator: (projectPath: string, visible: boolean) => void;
-  getShowInitScriptIndicator: (projectPath: string) => boolean;
-
   // Default Delete Branch actions (per-project)
   setDefaultDeleteBranch: (projectPath: string, deleteBranch: boolean) => void;
   getDefaultDeleteBranch: (projectPath: string) => boolean;
 
-  // Auto-dismiss Init Script Indicator actions (per-project)
-  setAutoDismissInitScriptIndicator: (projectPath: string, autoDismiss: boolean) => void;
-  getAutoDismissInitScriptIndicator: (projectPath: string) => boolean;
-
   // Use Worktrees Override actions (per-project)
-  setProjectUseWorktrees: (projectPath: string, useWorktrees: boolean | null) => void; // null = use global
-  getProjectUseWorktrees: (projectPath: string) => boolean | undefined; // undefined = using global
-  getEffectiveUseWorktrees: (projectPath: string) => boolean; // Returns actual value (project or global fallback)
+  setProjectUseWorktrees: (projectPath: string, useWorktrees: boolean | null) => void;
+  getProjectUseWorktrees: (projectPath: string) => boolean | undefined;
+  getEffectiveUseWorktrees: (projectPath: string) => boolean;
 
   // UI State actions
   setWorktreePanelCollapsed: (collapsed: boolean) => void;
-
-  // Init Script State actions (keyed by "projectPath::branch" to support concurrent scripts)
-  setInitScriptState: (
-    projectPath: string,
-    branch: string,
-    state: Partial<InitScriptState>
-  ) => void;
-  appendInitScriptOutput: (projectPath: string, branch: string, content: string) => void;
-  clearInitScriptState: (projectPath: string, branch: string) => void;
-  getInitScriptState: (projectPath: string, branch: string) => InitScriptState | null;
-  getInitScriptStatesForProject: (
-    projectPath: string
-  ) => Array<{ key: string; state: InitScriptState }>;
 }
 
-// ============================================================================
-// Constants
-// ============================================================================
-
-const MAX_INIT_OUTPUT_LINES = 1000; // Maximum lines to keep in init script output buffer
-
-// ============================================================================
-// Initial State
-// ============================================================================
-
-const initialState: WorktreeStoreState = {
+const initialState: WorktreeState = {
   autoModeByWorktree: {},
   autoModeActivityLog: [],
-  maxConcurrency: DEFAULT_MAX_CONCURRENCY, // Default concurrent agents
-  useWorktrees: true, // Default to enabled (git worktree isolation)
+  maxConcurrency: DEFAULT_MAX_CONCURRENCY,
+  useWorktrees: true,
   currentWorktreeByProject: {},
   worktreesByProject: {},
-  worktreesLoadingByProject: {}, // Track loading state per project (default=true via getter)
+  worktreesLoadingByProject: {},
   worktreePanelVisibleByProject: {},
-  showInitScriptIndicatorByProject: {},
   defaultDeleteBranchByProject: {},
-  autoDismissInitScriptIndicatorByProject: {},
   useWorktreesByProject: {},
-  initScriptState: {},
   worktreePanelCollapsed: false,
 };
 
-// ============================================================================
-// Store
-// ============================================================================
-
-export const useWorktreeStore = create<WorktreeStoreState & WorktreeActions>()((set, get) => ({
+export const useWorktreeStore = create<WorktreeState & WorktreeActions>()((set, get) => ({
   ...initialState,
 
   // Auto Mode actions (per-worktree)
   getWorktreeKey: (projectId, branchName) => {
-    // Normalize 'main' to null so it matches the main worktree key
-    // The backend sometimes sends 'main' while the UI uses null for the main worktree
     const normalizedBranch = branchName === 'main' ? null : branchName;
     return `${projectId}::${normalizedBranch ?? '__main__'}`;
   },
 
-  setAutoModeState: (projectId, branchName, running, maxConcurrency, runningTasks) => {
+  setAutoModeRunning: (
+    projectId: string,
+    branchName: string | null,
+    running: boolean,
+    maxConcurrency?: number,
+    runningTasks?: string[]
+  ) => {
     const worktreeKey = get().getWorktreeKey(projectId, branchName);
     const current = get().autoModeByWorktree;
     const worktreeState = current[worktreeKey] || {
       isRunning: false,
       runningTasks: [],
       branchName,
+      maxConcurrency: maxConcurrency ?? DEFAULT_MAX_CONCURRENCY,
     };
-
-    const newState = {
-      isRunning: running,
-      runningTasks: runningTasks ?? worktreeState.runningTasks,
-      branchName,
-      maxConcurrency: maxConcurrency ?? worktreeState.maxConcurrency,
-    };
-
     set({
       autoModeByWorktree: {
         ...current,
-        [worktreeKey]: newState,
+        [worktreeKey]: {
+          ...worktreeState,
+          isRunning: running,
+          branchName,
+          maxConcurrency: maxConcurrency ?? worktreeState.maxConcurrency ?? DEFAULT_MAX_CONCURRENCY,
+          runningTasks: runningTasks ?? worktreeState.runningTasks,
+        },
       },
     });
-
-    return newState;
   },
 
   addRunningTask: (projectId, branchName, taskId) => {
@@ -285,7 +181,6 @@ export const useWorktreeStore = create<WorktreeStoreState & WorktreeActions>()((
       runningTasks: [],
       branchName,
     };
-
     if (!worktreeState.runningTasks.includes(taskId)) {
       set({
         autoModeByWorktree: {
@@ -293,6 +188,7 @@ export const useWorktreeStore = create<WorktreeStoreState & WorktreeActions>()((
           [worktreeKey]: {
             ...worktreeState,
             runningTasks: [...worktreeState.runningTasks, taskId],
+            branchName,
           },
         },
       });
@@ -307,13 +203,13 @@ export const useWorktreeStore = create<WorktreeStoreState & WorktreeActions>()((
       runningTasks: [],
       branchName,
     };
-
     set({
       autoModeByWorktree: {
         ...current,
         [worktreeKey]: {
           ...worktreeState,
-          runningTasks: worktreeState.runningTasks.filter((t) => t !== taskId),
+          runningTasks: worktreeState.runningTasks.filter((id) => id !== taskId),
+          branchName,
         },
       },
     });
@@ -327,14 +223,10 @@ export const useWorktreeStore = create<WorktreeStoreState & WorktreeActions>()((
       runningTasks: [],
       branchName,
     };
-
     set({
       autoModeByWorktree: {
         ...current,
-        [worktreeKey]: {
-          ...worktreeState,
-          runningTasks: [],
-        },
+        [worktreeKey]: { ...worktreeState, runningTasks: [], branchName },
       },
     });
   },
@@ -347,6 +239,7 @@ export const useWorktreeStore = create<WorktreeStoreState & WorktreeActions>()((
         isRunning: false,
         runningTasks: [],
         branchName,
+        maxConcurrency: DEFAULT_MAX_CONCURRENCY,
       }
     );
   },
@@ -364,8 +257,8 @@ export const useWorktreeStore = create<WorktreeStoreState & WorktreeActions>()((
       isRunning: false,
       runningTasks: [],
       branchName,
+      maxConcurrency: DEFAULT_MAX_CONCURRENCY,
     };
-
     set({
       autoModeByWorktree: {
         ...current,
@@ -382,8 +275,8 @@ export const useWorktreeStore = create<WorktreeStoreState & WorktreeActions>()((
       timestamp: new Date(),
     };
 
-    // Keep only last 1000 activities to prevent unbounded growth
-    const updatedLog = [...get().autoModeActivityLog, newActivity].slice(-1000);
+    const currentLog = get().autoModeActivityLog;
+    const updatedLog = [...currentLog, newActivity].slice(-100);
 
     set({ autoModeActivityLog: updatedLog });
   },
@@ -426,7 +319,7 @@ export const useWorktreeStore = create<WorktreeStoreState & WorktreeActions>()((
   },
 
   getWorktreesLoading: (projectPath) => {
-    return get().worktreesLoadingByProject[projectPath] ?? true; // Default to loading=true for safety
+    return get().worktreesLoadingByProject[projectPath] ?? true;
   },
 
   getCurrentWorktree: (projectPath) => {
@@ -460,23 +353,7 @@ export const useWorktreeStore = create<WorktreeStoreState & WorktreeActions>()((
   },
 
   getWorktreePanelVisible: (projectPath) => {
-    // Default to true (visible) if not set
     return get().worktreePanelVisibleByProject[projectPath] ?? true;
-  },
-
-  // Init Script Indicator Visibility actions (per-project)
-  setShowInitScriptIndicator: (projectPath, visible) => {
-    set({
-      showInitScriptIndicatorByProject: {
-        ...get().showInitScriptIndicatorByProject,
-        [projectPath]: visible,
-      },
-    });
-  },
-
-  getShowInitScriptIndicator: (projectPath) => {
-    // Default to true (visible) if not set
-    return get().showInitScriptIndicatorByProject[projectPath] ?? true;
   },
 
   // Default Delete Branch actions (per-project)
@@ -490,23 +367,7 @@ export const useWorktreeStore = create<WorktreeStoreState & WorktreeActions>()((
   },
 
   getDefaultDeleteBranch: (projectPath) => {
-    // Default to false (don't delete branch) if not set
     return get().defaultDeleteBranchByProject[projectPath] ?? false;
-  },
-
-  // Auto-dismiss Init Script Indicator actions (per-project)
-  setAutoDismissInitScriptIndicator: (projectPath, autoDismiss) => {
-    set({
-      autoDismissInitScriptIndicatorByProject: {
-        ...get().autoDismissInitScriptIndicatorByProject,
-        [projectPath]: autoDismiss,
-      },
-    });
-  },
-
-  getAutoDismissInitScriptIndicator: (projectPath) => {
-    // Default to true (auto-dismiss enabled) if not set
-    return get().autoDismissInitScriptIndicatorByProject[projectPath] ?? true;
   },
 
   // Use Worktrees Override actions (per-project)
@@ -521,12 +382,10 @@ export const useWorktreeStore = create<WorktreeStoreState & WorktreeActions>()((
   },
 
   getProjectUseWorktrees: (projectPath) => {
-    // Returns undefined if using global setting, true/false if project-specific
     return get().useWorktreesByProject[projectPath];
   },
 
   getEffectiveUseWorktrees: (projectPath) => {
-    // Returns the actual value to use (project override or global fallback)
     const projectSetting = get().useWorktreesByProject[projectPath];
     if (projectSetting !== undefined) {
       return projectSetting;
@@ -536,64 +395,4 @@ export const useWorktreeStore = create<WorktreeStoreState & WorktreeActions>()((
 
   // UI State actions
   setWorktreePanelCollapsed: (collapsed) => set({ worktreePanelCollapsed: collapsed }),
-
-  // Init Script State actions (keyed by "projectPath::branch")
-  setInitScriptState: (projectPath, branch, state) => {
-    const key = `${projectPath}::${branch}`;
-    const current = get().initScriptState[key] || {
-      status: 'idle',
-      branch,
-      output: [],
-    };
-    set({
-      initScriptState: {
-        ...get().initScriptState,
-        [key]: { ...current, ...state },
-      },
-    });
-  },
-
-  appendInitScriptOutput: (projectPath, branch, content) => {
-    const key = `${projectPath}::${branch}`;
-    // Initialize state if absent to avoid dropping output due to event-order races
-    const current = get().initScriptState[key] || {
-      status: 'idle' as const,
-      branch,
-      output: [],
-    };
-    // Append new content and enforce fixed-size buffer to prevent memory bloat
-    const newOutput = [...current.output, content].slice(-MAX_INIT_OUTPUT_LINES);
-    set({
-      initScriptState: {
-        ...get().initScriptState,
-        [key]: {
-          ...current,
-          output: newOutput,
-        },
-      },
-    });
-  },
-
-  clearInitScriptState: (projectPath, branch) => {
-    const key = `${projectPath}::${branch}`;
-
-    const { [key]: _, ...rest } = get().initScriptState;
-    set({ initScriptState: rest });
-  },
-
-  getInitScriptState: (projectPath, branch) => {
-    const key = `${projectPath}::${branch}`;
-    return get().initScriptState[key] || null;
-  },
-
-  getInitScriptStatesForProject: (projectPath) => {
-    const prefix = `${projectPath}::`;
-    const states = get().initScriptState;
-    return Object.entries(states)
-      .filter(([key]) => key.startsWith(prefix))
-      .map(([key, state]) => ({ key, state }));
-  },
 }));
-
-// Export types for convenience
-export type WorktreeStore = typeof useWorktreeStore;

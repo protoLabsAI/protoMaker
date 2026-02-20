@@ -5,7 +5,7 @@ import { memo, useCallback, useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@protolabs/ui/atoms';
 import { AlertCircle, Lock, Hand, Sparkles, FileText } from 'lucide-react';
-import type { Feature } from '@/store/app-store';
+import type { Feature } from '@/store/types';
 import { RowActions, type RowActionHandlers } from './row-actions';
 import { getColumnWidth, getColumnAlign } from './list-header';
 
