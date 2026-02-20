@@ -6,7 +6,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import { Send, Loader2, Paperclip, X, Zap, Globe } from 'lucide-react';
+import { Send, Loader2, Paperclip, X, Zap, Globe, ImagePlus } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -194,56 +194,54 @@ export function SignalInputDialog({ open, onOpenChange }: SignalInputDialogProps
           )}
 
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-0.5">
               <Button
                 variant="ghost"
-                size="sm"
-                className="h-7 px-2 text-xs"
+                size="icon"
+                className={`h-7 w-7 ${showImageUpload ? 'text-violet-400' : ''}`}
                 onClick={() => setShowImageUpload((v) => !v)}
+                title={showImageUpload ? 'Hide images' : 'Add images'}
               >
-                {showImageUpload ? 'Hide images' : 'Add images'}
+                <ImagePlus className="w-3.5 h-3.5" />
               </Button>
               <Button
                 variant="ghost"
-                size="sm"
-                className="h-7 px-2 text-xs"
+                size="icon"
+                className="h-7 w-7"
                 onClick={handleFileAttach}
+                title="Attach file"
               >
-                <Paperclip className="w-3 h-3 mr-1" />
-                Attach file
+                <Paperclip className="w-3.5 h-3.5" />
               </Button>
-              <p className="text-[10px] text-muted-foreground ml-1">
-                {projectPath ? projectPath.split('/').pop() : 'No project'}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => setWebResearch((v) => !v)}
-                className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded transition-colors ${
+                className={`h-7 w-7 flex items-center justify-center rounded-md transition-colors ${
                   webResearch
                     ? 'bg-blue-500/20 text-blue-400'
-                    : 'text-muted-foreground hover:text-foreground'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-accent'
                 }`}
-                title="Force web research (WebSearch + WebFetch) during PM research phase"
+                title="Web research during PM phase"
               >
-                <Globe className="w-3 h-3" />
-                Web
+                <Globe className="w-3.5 h-3.5" />
               </button>
               <button
                 type="button"
                 onClick={() => setAutoApprove((v) => !v)}
-                className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded transition-colors ${
+                className={`h-7 w-7 flex items-center justify-center rounded-md transition-colors ${
                   autoApprove
                     ? 'bg-violet-500/20 text-violet-400'
-                    : 'text-muted-foreground hover:text-foreground'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-accent'
                 }`}
-                title="Auto-approve PRD and skip manual review"
+                title="Auto-approve PRD"
               >
-                <Zap className="w-3 h-3" />
-                Auto
+                <Zap className="w-3.5 h-3.5" />
               </button>
-              <p className="text-[10px] text-muted-foreground">Cmd+Enter</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <kbd className="text-[10px] text-muted-foreground">
+                {navigator.platform?.includes('Mac') ? '⌘' : 'Ctrl'}+Enter
+              </kbd>
               <Button
                 size="sm"
                 onClick={handleSubmit}
