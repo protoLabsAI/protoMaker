@@ -6,7 +6,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import { Send, Loader2, Paperclip, X, Zap, Globe, ImagePlus } from 'lucide-react';
+import { Send, Loader2, Paperclip, X, Zap, Globe, ImagePlus, PenTool } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -47,6 +47,7 @@ export function SignalInputDialog({ open, onOpenChange }: SignalInputDialogProps
   const [showImageUpload, setShowImageUpload] = useState(false);
   const [autoApprove, setAutoApprove] = useState(false);
   const [webResearch, setWebResearch] = useState(false);
+  const [contentMode, setContentMode] = useState(false);
   const projectPath = useAppStore((s) => s.currentProject?.path);
 
   const reset = useCallback(() => {
@@ -69,7 +70,7 @@ export function SignalInputDialog({ open, onOpenChange }: SignalInputDialogProps
       return api.engine.signalSubmit({
         content: signal.content,
         projectPath: signal.projectPath,
-        source: 'ui:flow-graph',
+        source: contentMode ? 'ui:content' : 'ui:flow-graph',
         images: signal.images,
         files: signal.files,
         autoApprove: signal.autoApprove,
@@ -77,7 +78,7 @@ export function SignalInputDialog({ open, onOpenChange }: SignalInputDialogProps
       });
     },
     onSuccess: (_data, variables) => {
-      toast.success('Signal submitted for processing');
+      toast.success(contentMode ? 'Content idea submitted' : 'Signal submitted for processing');
       if (variables.projectPath) {
         queryClient.invalidateQueries({ queryKey: queryKeys.features.all(variables.projectPath) });
       }
@@ -236,6 +237,18 @@ export function SignalInputDialog({ open, onOpenChange }: SignalInputDialogProps
                 title="Auto-approve PRD"
               >
                 <Zap className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setContentMode((v) => !v)}
+                className={`h-7 w-7 flex items-center justify-center rounded-md transition-colors ${
+                  contentMode
+                    ? 'bg-emerald-500/20 text-emerald-400'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                }`}
+                title="Content creation mode"
+              >
+                <PenTool className="w-3.5 h-3.5" />
               </button>
             </div>
             <div className="flex items-center gap-2">

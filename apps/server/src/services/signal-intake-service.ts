@@ -178,6 +178,11 @@ export class SignalIntakeService {
       return { category: 'ops', reason: 'Discord message defaults to Ops (no GTM channel found)' };
     }
 
+    // UI content creation toggle → always GTM
+    if (signal.source === 'ui:content') {
+      return { category: 'gtm', reason: 'Content creation signal from UI' };
+    }
+
     // Default: all other signals → Ops
     return { category: 'ops', reason: 'Default classification: Ops' };
   }
@@ -219,9 +224,16 @@ export class SignalIntakeService {
         `Processing signal from ${signal.source}: "${title}" (${classification.category} - ${classification.reason})`
       );
 
-      // GTM signals: log and park (manual handling for now)
+      // GTM signals: route to GTM Authority Agent for content creation
       if (classification.category === 'gtm') {
-        logger.info(`GTM signal parked for manual handling: "${title}" (source: ${signal.source})`);
+        logger.info(`GTM signal routed: "${title}" (source: ${signal.source})`);
+        this.events.emit('authority:gtm-signal-received', {
+          projectPath: this.defaultProjectPath,
+          title,
+          description,
+          source: signal.source,
+          timestamp: signal.timestamp,
+        });
         this.events.emit('signal:routed', {
           projectPath: this.defaultProjectPath,
           title,

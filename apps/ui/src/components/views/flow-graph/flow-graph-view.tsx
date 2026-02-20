@@ -6,7 +6,7 @@
  * Floating panels (metrics, health, charts, events) have been moved to the global bottom panel.
  */
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ReactFlowProvider } from '@xyflow/react';
 import { useFlowGraphData } from './hooks';
 import { FlowGraphCanvas } from './flow-graph-canvas';
@@ -14,6 +14,8 @@ import { FlowGraphLegend } from './flow-graph-legend';
 import { NodeDetailDialog, type SelectedNode } from './dialogs/node-detail-dialog';
 import { SignalInputDialog } from './dialogs/signal-input-dialog';
 import { PrdReviewDialog } from './dialogs/prd-review-dialog';
+import { ContentReviewDialog } from './dialogs/content-review-dialog';
+import { getHttpApiClient } from '@/lib/http-api-client';
 
 export interface FlowGraphViewProps {
   projectPath?: string;
@@ -34,6 +36,32 @@ export function FlowGraphView({ onFeatureClick }: FlowGraphViewProps) {
   const [signalDialogOpen, setSignalDialogOpen] = useState(false);
   const [prdDialogOpen, setPrdDialogOpen] = useState(false);
   const [prdProjectSlug, setPrdProjectSlug] = useState('');
+
+  // Content review dialog state (driven by WebSocket events)
+  const [contentReviewOpen, setContentReviewOpen] = useState(false);
+  const [contentReviewData, setContentReviewData] = useState<{
+    contentId: string;
+    title: string;
+    draft: string;
+    strategy: string;
+  } | null>(null);
+
+  // Subscribe to content:draft-ready WebSocket events
+  useEffect(() => {
+    const api = getHttpApiClient();
+    const unsub = api.subscribeToEvents((type: string, payload: any) => {
+      if (type === 'content:draft-ready') {
+        setContentReviewData({
+          contentId: payload.contentId,
+          title: payload.title,
+          draft: payload.draft,
+          strategy: JSON.stringify(payload.strategy, null, 2),
+        });
+        setContentReviewOpen(true);
+      }
+    });
+    return () => unsub();
+  }, []);
 
   const handleNodeClick = useCallback(
     (nodeId: string, nodeType: string, nodeData: Record<string, unknown>) => {
@@ -94,6 +122,18 @@ export function FlowGraphView({ onFeatureClick }: FlowGraphViewProps) {
         onOpenChange={setPrdDialogOpen}
         projectSlug={prdProjectSlug}
       />
+
+      {/* Content review dialog (auto-opens via WebSocket) */}
+      {contentReviewData && (
+        <ContentReviewDialog
+          open={contentReviewOpen}
+          onOpenChange={setContentReviewOpen}
+          contentId={contentReviewData.contentId}
+          title={contentReviewData.title}
+          draft={contentReviewData.draft}
+          strategy={contentReviewData.strategy}
+        />
+      )}
     </div>
   );
 }

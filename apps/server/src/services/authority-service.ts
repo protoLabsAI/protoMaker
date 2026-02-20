@@ -103,6 +103,7 @@ const DEFAULT_TRUST_BY_ROLE: Record<AuthorityRole, TrustLevel> = {
   'project-manager': 1,
   'engineering-manager': 1,
   'principal-engineer': 2,
+  'gtm-authority': 1,
 };
 
 /** Maximum risk level each trust level can handle without requiring approval */

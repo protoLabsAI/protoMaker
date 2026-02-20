@@ -2985,6 +2985,20 @@ export class HttpApiClient implements ElectronAPI {
       decision: 'approve' | 'reject'
     ): Promise<{ success: boolean; decision?: string; error?: string }> =>
       this.post('/api/engine/signal/approve-prd', { projectPath, featureId, decision }),
+    contentReview: (
+      projectPath: string,
+      contentId: string,
+      decision: 'approve' | 'reject',
+      editedContent?: string,
+      tabName?: string
+    ): Promise<{ success: boolean; tabId?: string; error?: string }> =>
+      this.post('/api/engine/content/review', {
+        projectPath,
+        contentId,
+        decision,
+        editedContent,
+        tabName,
+      }),
     pipelineCheckpoints: (
       projectPath: string,
       featureId?: string

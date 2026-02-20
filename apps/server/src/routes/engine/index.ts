@@ -22,6 +22,8 @@ import { getAllGraphs, getGraph } from '../../lib/graph-registry.js';
 import type { FeatureLoader } from '../../services/feature-loader.js';
 import type { PipelineCheckpointService } from '../../services/pipeline-checkpoint-service.js';
 import type { EventEmitter } from '../../lib/events.js';
+import { getNotesWorkspacePath, ensureNotesDir, secureFs } from '@automaker/platform';
+import type { NotesWorkspace } from '@automaker/types';
 
 const logger = createLogger('EngineRoutes');
 
@@ -564,6 +566,115 @@ export function createEngineRoutes(
         success: false,
         error: 'Failed to process PRD decision',
       });
+    }
+  });
+
+  /**
+   * POST /api/engine/content/review
+   * Approve or reject a GTM content draft.
+   * On approve: creates a notes tab with the draft content.
+   */
+  router.post('/content/review', async (req: Request, res: Response) => {
+    try {
+      const { projectPath, contentId, decision, editedContent, tabName } = (req.body ?? {}) as {
+        projectPath?: string;
+        contentId?: string;
+        decision?: 'approve' | 'reject';
+        editedContent?: string;
+        tabName?: string;
+      };
+
+      if (!projectPath || !contentId || !decision) {
+        res.status(400).json({
+          success: false,
+          error: 'projectPath, contentId, and decision (approve|reject) are required',
+        });
+        return;
+      }
+
+      if (!events) {
+        res.status(503).json({ success: false, error: 'Event emitter not available' });
+        return;
+      }
+
+      if (decision === 'reject') {
+        events.emit('content:draft-rejected', {
+          projectPath,
+          contentId,
+          timestamp: new Date().toISOString(),
+        });
+        res.json({ success: true });
+        return;
+      }
+
+      // Approve: create a notes tab with the draft content
+      const draftContent = editedContent || '';
+      const name = tabName || 'Content Draft';
+
+      // Load existing workspace
+      const filePath = getNotesWorkspacePath(projectPath);
+      let workspace: NotesWorkspace;
+      try {
+        const raw = await secureFs.readFile(filePath, 'utf-8');
+        workspace = JSON.parse(raw as string) as NotesWorkspace;
+      } catch {
+        // Create default workspace if none exists
+        const defaultTabId = crypto.randomUUID();
+        const now = Date.now();
+        workspace = {
+          version: 1,
+          activeTabId: defaultTabId,
+          tabOrder: [defaultTabId],
+          tabs: {
+            [defaultTabId]: {
+              id: defaultTabId,
+              name: 'Notes',
+              content: '',
+              permissions: { agentRead: true, agentWrite: true },
+              metadata: { createdAt: now, updatedAt: now, wordCount: 0, characterCount: 0 },
+            },
+          },
+        };
+      }
+
+      // Create new tab with draft content wrapped in a div for TipTap
+      const tabId = crypto.randomUUID();
+      const now = Date.now();
+      const htmlContent = `<div>${draftContent.replace(/\n/g, '<br>')}</div>`;
+      const plainText = draftContent.replace(/<[^>]*>/g, '');
+
+      workspace.tabs[tabId] = {
+        id: tabId,
+        name,
+        content: htmlContent,
+        permissions: { agentRead: true, agentWrite: true },
+        metadata: {
+          createdAt: now,
+          updatedAt: now,
+          wordCount: plainText.trim() ? plainText.trim().split(/\s+/).length : 0,
+          characterCount: plainText.length,
+        },
+      };
+      workspace.tabOrder.push(tabId);
+      workspace.activeTabId = tabId;
+
+      // Save workspace
+      await ensureNotesDir(projectPath);
+      await secureFs.writeFile(filePath, JSON.stringify(workspace, null, 2), 'utf-8');
+
+      events.emit('content:draft-approved', {
+        projectPath,
+        contentId,
+        tabId,
+        timestamp: new Date().toISOString(),
+      });
+
+      logger.info(`Content draft approved and saved to notes tab: ${tabId}`);
+
+      res.json({ success: true, tabId });
+    } catch (error) {
+      logger.error('Failed to process content review:', error);
+      res.status(500).json({ success: false, error: 'Failed to process content review' });
     }
   });
 

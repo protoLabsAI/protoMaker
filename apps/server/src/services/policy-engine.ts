@@ -66,6 +66,10 @@ export const DEFAULT_PERMISSION_MATRIX: PermissionMatrix = {
     allowedActions: ['modify_architecture', 'approve_work', 'block_release'],
     maxRisk: 'high',
   },
+  GTM: {
+    allowedActions: ['create_work'],
+    maxRisk: 'low',
+  },
 };
 
 export const DEFAULT_STATUS_TRANSITIONS: StatusTransitionGuard[] = [
