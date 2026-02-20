@@ -3,7 +3,7 @@ import { RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Spinner } from '@protolabs/ui/atoms';
 import { getElectronAPI } from '@/lib/electron';
-import { useAppStore } from '@/store/app-store';
+import { useAIModelsStore } from '@/store/ai-models-store';
 import { AnthropicIcon, OpenAIIcon } from '@/components/shared/provider-icon';
 
 interface MobileUsageBarProps {
@@ -104,8 +104,8 @@ function UsageItem({
 }
 
 export function MobileUsageBar({ showClaudeUsage, showCodexUsage }: MobileUsageBarProps) {
-  const { claudeUsage, claudeUsageLastUpdated, setClaudeUsage } = useAppStore();
-  const { codexUsage, codexUsageLastUpdated, setCodexUsage } = useAppStore();
+  const { claudeUsage, claudeUsageLastUpdated, setClaudeUsage } = useAIModelsStore();
+  const { codexUsage, codexUsageLastUpdated, setCodexUsage } = useAIModelsStore();
   const [isClaudeLoading, setIsClaudeLoading] = useState(false);
   const [isCodexLoading, setIsCodexLoading] = useState(false);
 

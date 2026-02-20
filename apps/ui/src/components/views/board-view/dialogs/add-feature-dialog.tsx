@@ -28,6 +28,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { modelSupportsThinking } from '@/lib/utils';
 import { useAppStore, ThinkingLevel, FeatureImage, PlanningMode, Feature } from '@/store/app-store';
+import { useWorktreeStore } from '@/store/worktree-store';
 import type { ReasoningEffort, PhaseModelEntry, AgentModel } from '@automaker/types';
 import { supportsReasoningEffort, isClaudeModel } from '@automaker/types';
 import {
@@ -187,8 +188,8 @@ export function AddFeatureDialog({
   const [childDependencies, setChildDependencies] = useState<string[]>([]);
 
   // Get defaults from store
-  const { defaultPlanningMode, defaultRequirePlanApproval, useWorktrees, defaultFeatureModel } =
-    useAppStore();
+  const { defaultPlanningMode, defaultRequirePlanApproval, defaultFeatureModel } = useAppStore();
+  const useWorktrees = useWorktreeStore((s) => s.useWorktrees);
 
   // Track previous open state to detect when dialog opens
   const wasOpenRef = useRef(false);

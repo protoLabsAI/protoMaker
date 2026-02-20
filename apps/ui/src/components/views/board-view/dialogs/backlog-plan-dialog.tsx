@@ -24,7 +24,7 @@ import type {
   PhaseModelEntry,
 } from '@automaker/types';
 import { ModelOverrideTrigger } from '@/components/shared/model-override-trigger';
-import { useAppStore } from '@/store/app-store';
+import { useAIModelsStore } from '@/store/ai-models-store';
 
 /**
  * Normalize PhaseModelEntry or string to PhaseModelEntry
@@ -70,7 +70,7 @@ export function BacklogPlanDialog({
   const [selectedChanges, setSelectedChanges] = useState<Set<number>>(new Set());
   const [modelOverride, setModelOverride] = useState<PhaseModelEntry | null>(null);
 
-  const { phaseModels } = useAppStore();
+  const { phaseModels } = useAIModelsStore();
 
   // Set mode based on whether we have a pending result
   useEffect(() => {

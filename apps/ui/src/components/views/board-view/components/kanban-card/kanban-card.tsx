@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { Card, CardContent } from '@protolabs/ui/atoms';
 import { Checkbox } from '@protolabs/ui/atoms';
 import { Feature, useAppStore } from '@/store/app-store';
+import { useWorktreeStore } from '@/store/worktree-store';
 import { useShallow } from 'zustand/react/shallow';
 import { CardBadges, PriorityBadges } from './card-badges';
 import { CardHeaderSection } from './card-header';
@@ -107,9 +108,9 @@ export const KanbanCard = memo(function KanbanCard({
   onToggleSelect,
   selectionTarget = null,
 }: KanbanCardProps) {
-  const { useWorktrees, currentProject } = useAppStore(
+  const useWorktreesEnabled = useWorktreeStore((state) => state.useWorktrees);
+  const { currentProject } = useAppStore(
     useShallow((state) => ({
-      useWorktrees: state.useWorktrees,
       currentProject: state.currentProject,
     }))
   );
@@ -257,7 +258,7 @@ export const KanbanCard = memo(function KanbanCard({
 
       <CardContent className="px-3 pt-0 pb-0">
         {/* Content Sections */}
-        <CardContentSections feature={feature} useWorktrees={useWorktrees} />
+        <CardContentSections feature={feature} useWorktrees={useWorktreesEnabled} />
 
         {/* Agent Routing Suggestion */}
         <AgentSuggestion feature={feature} projectPath={currentProject?.path ?? ''} />

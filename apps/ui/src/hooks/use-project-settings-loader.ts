@@ -1,5 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useAppStore } from '@/store/app-store';
+import { useThemeStore } from '@/store/theme-store';
+import { useWorktreeStore } from '@/store/worktree-store';
 import { useTerminalStore } from '@/store/terminal-store';
 import { useProjectSettings } from '@/hooks/queries';
 
@@ -12,17 +14,17 @@ import { useProjectSettings } from '@/hooks/queries';
  */
 export function useProjectSettingsLoader() {
   const currentProject = useAppStore((state) => state.currentProject);
-  const setBoardBackground = useAppStore((state) => state.setBoardBackground);
-  const setCardOpacity = useAppStore((state) => state.setCardOpacity);
-  const setColumnOpacity = useAppStore((state) => state.setColumnOpacity);
-  const setColumnBorderEnabled = useAppStore((state) => state.setColumnBorderEnabled);
-  const setCardGlassmorphism = useAppStore((state) => state.setCardGlassmorphism);
-  const setCardBorderEnabled = useAppStore((state) => state.setCardBorderEnabled);
-  const setCardBorderOpacity = useAppStore((state) => state.setCardBorderOpacity);
-  const setHideScrollbar = useAppStore((state) => state.setHideScrollbar);
-  const setWorktreePanelVisible = useAppStore((state) => state.setWorktreePanelVisible);
+  const setBoardBackground = useThemeStore((state) => state.setBoardBackground);
+  const setCardOpacity = useThemeStore((state) => state.setCardOpacity);
+  const setColumnOpacity = useThemeStore((state) => state.setColumnOpacity);
+  const setColumnBorderEnabled = useThemeStore((state) => state.setColumnBorderEnabled);
+  const setCardGlassmorphism = useThemeStore((state) => state.setCardGlassmorphism);
+  const setCardBorderEnabled = useThemeStore((state) => state.setCardBorderEnabled);
+  const setCardBorderOpacity = useThemeStore((state) => state.setCardBorderOpacity);
+  const setHideScrollbar = useThemeStore((state) => state.setHideScrollbar);
+  const setWorktreePanelVisible = useWorktreeStore((state) => state.setWorktreePanelVisible);
   const setShowInitScriptIndicator = useTerminalStore((state) => state.setShowInitScriptIndicator);
-  const setDefaultDeleteBranch = useAppStore((state) => state.setDefaultDeleteBranch);
+  const setDefaultDeleteBranch = useWorktreeStore((state) => state.setDefaultDeleteBranch);
   const setAutoDismissInitScriptIndicator = useTerminalStore(
     (state) => state.setAutoDismissInitScriptIndicator
   );
