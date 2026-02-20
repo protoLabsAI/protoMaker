@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useAppStore } from '@/store/app-store';
+import { useAIModelsStore } from '@/store/ai-models-store';
 import { Button } from '@protolabs/ui/atoms';
 import {
   Dialog,
@@ -56,7 +57,8 @@ export function ProjectBulkReplaceDialog({
   onOpenChange,
   project,
 }: ProjectBulkReplaceDialogProps) {
-  const { phaseModels, setProjectPhaseModelOverride, claudeCompatibleProviders } = useAppStore();
+  const { setProjectPhaseModelOverride } = useAppStore();
+  const { phaseModels, claudeCompatibleProviders } = useAIModelsStore();
   const [selectedProvider, setSelectedProvider] = useState<string>('anthropic');
 
   // Get project-level overrides

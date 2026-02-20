@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAppStore } from '@/store/app-store';
+import { useAIModelsStore } from '@/store/ai-models-store';
 import { Button } from '@protolabs/ui/atoms';
 import { Workflow, RotateCcw, Globe, Check, Replace } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -97,7 +98,8 @@ function PhaseOverrideItem({
   globalValue: PhaseModelEntry;
   projectOverride?: PhaseModelEntry;
 }) {
-  const { setProjectPhaseModelOverride, claudeCompatibleProviders } = useAppStore();
+  const { setProjectPhaseModelOverride } = useAppStore();
+  const { claudeCompatibleProviders } = useAIModelsStore();
 
   const hasOverride = !!projectOverride;
   const effectiveValue = projectOverride || globalValue;
@@ -203,7 +205,7 @@ function PhaseGroup({
   phases: PhaseConfig[];
   project: Project;
 }) {
-  const { phaseModels } = useAppStore();
+  const { phaseModels } = useAIModelsStore();
   const projectOverrides = project.phaseModelOverrides || {};
 
   return (
@@ -228,8 +230,8 @@ function PhaseGroup({
 }
 
 export function ProjectModelsSection({ project }: ProjectModelsSectionProps) {
-  const { clearAllProjectPhaseModelOverrides, disabledProviders, claudeCompatibleProviders } =
-    useAppStore();
+  const { clearAllProjectPhaseModelOverrides } = useAppStore();
+  const { disabledProviders, claudeCompatibleProviders } = useAIModelsStore();
   const [showBulkReplace, setShowBulkReplace] = useState(false);
 
   // Count how many overrides are set

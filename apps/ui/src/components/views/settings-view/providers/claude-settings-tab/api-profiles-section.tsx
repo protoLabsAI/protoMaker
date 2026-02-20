@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useAppStore } from '@/store/app-store';
+import { useAIModelsStore } from '@/store/ai-models-store';
 import { Button } from '@protolabs/ui/atoms';
 import { Input } from '@protolabs/ui/atoms';
 import { Label } from '@protolabs/ui/atoms';
@@ -125,7 +125,7 @@ export function ApiProfilesSection() {
     updateClaudeCompatibleProvider,
     deleteClaudeCompatibleProvider,
     toggleClaudeCompatibleProviderEnabled,
-  } = useAppStore();
+  } = useAIModelsStore();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProviderId, setEditingProviderId] = useState<string | null>(null);

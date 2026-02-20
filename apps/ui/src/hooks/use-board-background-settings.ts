@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { useAppStore } from '@/store/app-store';
+import { useThemeStore } from '@/store/theme-store';
 import { useUpdateProjectSettings } from '@/hooks/mutations';
 
 /**
@@ -11,7 +11,7 @@ import { useUpdateProjectSettings } from '@/hooks/mutations';
  * - persistSettings directly to save to server on commit
  */
 export function useBoardBackgroundSettings() {
-  const store = useAppStore();
+  const store = useThemeStore();
 
   // Get the mutation without a fixed project path - we'll pass it with each call
   const updateProjectSettings = useUpdateProjectSettings();

@@ -3,6 +3,7 @@ import { Button } from '@protolabs/ui/atoms';
 import { ArrowRight, ArrowLeft, Check, Moon, Sun } from 'lucide-react';
 import { darkThemes, lightThemes } from '@/config/theme-options';
 import { useAppStore } from '@/store/app-store';
+import { useThemeStore } from '@/store/theme-store';
 import { cn } from '@/lib/utils';
 
 interface ThemeStepProps {
@@ -11,7 +12,8 @@ interface ThemeStepProps {
 }
 
 export function ThemeStep({ onNext, onBack }: ThemeStepProps) {
-  const { theme, setTheme, setPreviewTheme, currentProject, setProjectTheme } = useAppStore();
+  const { theme, setTheme, setPreviewTheme } = useThemeStore();
+  const { currentProject, setProjectTheme } = useAppStore();
   const [activeTab, setActiveTab] = useState<'dark' | 'light'>('dark');
 
   const handleThemeHover = (themeValue: string) => {

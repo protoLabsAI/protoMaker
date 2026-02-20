@@ -10,6 +10,7 @@ import {
 } from '@/config/ui-font-options';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store/app-store';
+import { useThemeStore } from '@/store/theme-store';
 import { FontSelector } from '@/components/shared';
 import type { Project } from '@/lib/electron';
 
@@ -22,10 +23,8 @@ export function ProjectThemeSection({ project }: ProjectThemeSectionProps) {
     theme: globalTheme,
     fontFamilySans: globalFontSans,
     fontFamilyMono: globalFontMono,
-    setProjectTheme,
-    setProjectFontSans,
-    setProjectFontMono,
-  } = useAppStore();
+  } = useThemeStore();
+  const { setProjectTheme, setProjectFontSans, setProjectFontMono } = useAppStore();
 
   // Theme state
   const projectTheme = project.theme as Theme | undefined;

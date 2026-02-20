@@ -16,7 +16,9 @@ import { Slider } from '@protolabs/ui/atoms';
 import { Label } from '@protolabs/ui/atoms';
 import { Checkbox } from '@protolabs/ui/atoms';
 import { cn } from '@/lib/utils';
-import { useAppStore, defaultBackgroundSettings } from '@/store/app-store';
+import { useAppStore } from '@/store/app-store';
+import { useThemeStore } from '@/store/theme-store';
+import { defaultBackgroundSettings } from '@/store/types';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { getAuthenticatedImageUrl } from '@/lib/api-fetch';
 import { useBoardBackgroundSettings } from '@/hooks/use-board-background-settings';
@@ -34,7 +36,8 @@ interface BoardBackgroundModalProps {
 }
 
 export function BoardBackgroundModal({ open, onOpenChange }: BoardBackgroundModalProps) {
-  const { currentProject, boardBackgroundByProject } = useAppStore();
+  const { currentProject } = useAppStore();
+  const { boardBackgroundByProject } = useThemeStore();
   const {
     setBoardBackground,
     setCardOpacity,
