@@ -3,7 +3,6 @@ import { create } from 'zustand';
 import type { Project, TrashedProject } from '@/lib/electron';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { createLogger } from '@automaker/utils/logger';
-import { setItem } from '@/lib/storage';
 import {
   UI_SANS_FONT_OPTIONS,
   UI_MONO_FONT_OPTIONS,
@@ -42,11 +41,6 @@ import {
   getStoredFontSans,
   getStoredFontMono,
   DEFAULT_KEYBOARD_SHORTCUTS,
-  defaultBackgroundSettings,
-  MAX_INIT_OUTPUT_LINES,
-  THEME_STORAGE_KEY,
-  FONT_SANS_STORAGE_KEY,
-  FONT_MONO_STORAGE_KEY,
 } from './types';
 import type {
   ViewMode,
@@ -73,6 +67,7 @@ import type {
 import { useTerminalStore } from './terminal-store';
 import { useAIModelsStore } from './ai-models-store';
 import { useWorktreeStore } from './worktree-store';
+import { useThemeStore, getEffectiveFont, persistEffectiveThemeForProject } from './theme-store';
 
 const logger = createLogger('AppStore');
 
@@ -83,73 +78,14 @@ export * from './types';
 export { useTerminalStore } from './terminal-store';
 export { useAIModelsStore } from './ai-models-store';
 export { useWorktreeStore } from './worktree-store';
+export { useThemeStore } from './theme-store';
 
 // Types re-exported from ./types.ts: ViewMode, ThemeMode, THEME_STORAGE_KEY,
 // FONT_SANS_STORAGE_KEY, FONT_MONO_STORAGE_KEY, MAX_INIT_OUTPUT_LINES,
 // getStoredTheme, getStoredFontSans, getStoredFontMono
 
-/**
- * Helper to get effective font value with validation
- * Returns the font to use (project override -> global -> null for default)
- * @param projectFont - The project-specific font override
- * @param globalFont - The global font setting
- * @param fontOptions - The list of valid font options for validation
- */
-function getEffectiveFont(
-  projectFont: string | undefined,
-  globalFont: string | null,
-  fontOptions: readonly { value: string; label: string }[]
-): string | null {
-  const isValidFont = (font: string | null | undefined): boolean => {
-    if (!font || font === DEFAULT_FONT_VALUE) return true;
-    return fontOptions.some((opt) => opt.value === font);
-  };
-
-  if (projectFont) {
-    if (!isValidFont(projectFont)) return null; // Fallback to default if font not in list
-    return projectFont === DEFAULT_FONT_VALUE ? null : projectFont;
-  }
-  if (!isValidFont(globalFont)) return null; // Fallback to default if font not in list
-  return globalFont === DEFAULT_FONT_VALUE ? null : globalFont;
-}
-
-/**
- * Save theme to localStorage for immediate persistence
- * This is used as a fallback when server settings can't be loaded
- */
-function saveThemeToStorage(theme: ThemeMode): void {
-  setItem(THEME_STORAGE_KEY, theme);
-}
-
-/**
- * Save fonts to localStorage for immediate persistence
- * This is used as a fallback when server settings can't be loaded
- */
-function saveFontSansToStorage(fontFamily: string | null): void {
-  if (fontFamily) {
-    setItem(FONT_SANS_STORAGE_KEY, fontFamily);
-  } else {
-    // Remove from storage if null (using default)
-    localStorage.removeItem(FONT_SANS_STORAGE_KEY);
-  }
-}
-
-function saveFontMonoToStorage(fontFamily: string | null): void {
-  if (fontFamily) {
-    setItem(FONT_MONO_STORAGE_KEY, fontFamily);
-  } else {
-    // Remove from storage if null (using default)
-    localStorage.removeItem(FONT_MONO_STORAGE_KEY);
-  }
-}
-
-function persistEffectiveThemeForProject(project: Project | null, fallbackTheme: ThemeMode): void {
-  const projectTheme = project?.theme as ThemeMode | undefined;
-  const themeToStore = projectTheme ?? fallbackTheme;
-  saveThemeToStorage(themeToStore);
-}
-
-// Types re-exported from ./types.ts: BoardViewMode, ApiKeys
+// Helper functions (getEffectiveFont, saveThemeToStorage, saveFontSansToStorage,
+// saveFontMonoToStorage, persistEffectiveThemeForProject) moved to ./theme-store.ts
 
 // Types re-exported from ./types.ts: ShortcutKey, parseShortcut, formatShortcut,
 // KeyboardShortcuts, DEFAULT_KEYBOARD_SHORTCUTS
@@ -1354,12 +1290,8 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
   toggleMobileSidebarHidden: () => set({ mobileSidebarHidden: !get().mobileSidebarHidden }),
   setMobileSidebarHidden: (hidden) => set({ mobileSidebarHidden: hidden }),
 
-  // Theme actions
-  setTheme: (theme) => {
-    // Save to localStorage for fallback when server settings aren't available
-    saveThemeToStorage(theme);
-    set({ theme });
-  },
+  // Theme actions — setTheme/setPreviewTheme forwarded to useThemeStore
+  setTheme: (...args) => useThemeStore.getState().setTheme(...args),
 
   setProjectTheme: (projectId, theme) => {
     // Update the project's theme property
@@ -1397,20 +1329,11 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
     return get().theme;
   },
 
-  setPreviewTheme: (theme) => set({ previewTheme: theme }),
+  setPreviewTheme: (...args) => useThemeStore.getState().setPreviewTheme(...args),
 
-  // Font actions (global + per-project override)
-  setFontSans: (fontFamily) => {
-    // Save to localStorage for fallback when server settings aren't available
-    saveFontSansToStorage(fontFamily);
-    set({ fontFamilySans: fontFamily });
-  },
-
-  setFontMono: (fontFamily) => {
-    // Save to localStorage for fallback when server settings aren't available
-    saveFontMonoToStorage(fontFamily);
-    set({ fontFamilyMono: fontFamily });
-  },
+  // Font actions — global setters forwarded to useThemeStore
+  setFontSans: (...args) => useThemeStore.getState().setFontSans(...args),
+  setFontMono: (...args) => useThemeStore.getState().setFontMono(...args),
 
   setProjectFontSans: (projectId, fontFamily) => {
     // Update the project's fontFamilySans property
@@ -2003,149 +1926,17 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
     return get().lastSelectedSessionByProject[projectPath] || null;
   },
 
-  // Board Background actions
-  setBoardBackground: (projectPath, imagePath) => {
-    const current = get().boardBackgroundByProject;
-    const existing = current[projectPath] || {
-      imagePath: null,
-      cardOpacity: 100,
-      columnOpacity: 100,
-      columnBorderEnabled: true,
-      cardGlassmorphism: true,
-      cardBorderEnabled: true,
-      cardBorderOpacity: 100,
-      hideScrollbar: false,
-    };
-    set({
-      boardBackgroundByProject: {
-        ...current,
-        [projectPath]: {
-          ...existing,
-          imagePath,
-          // Update imageVersion timestamp to bust browser cache when image changes
-          imageVersion: imagePath ? Date.now() : undefined,
-        },
-      },
-    });
-  },
-
-  setCardOpacity: (projectPath, opacity) => {
-    const current = get().boardBackgroundByProject;
-    const existing = current[projectPath] || defaultBackgroundSettings;
-    set({
-      boardBackgroundByProject: {
-        ...current,
-        [projectPath]: {
-          ...existing,
-          cardOpacity: opacity,
-        },
-      },
-    });
-  },
-
-  setColumnOpacity: (projectPath, opacity) => {
-    const current = get().boardBackgroundByProject;
-    const existing = current[projectPath] || defaultBackgroundSettings;
-    set({
-      boardBackgroundByProject: {
-        ...current,
-        [projectPath]: {
-          ...existing,
-          columnOpacity: opacity,
-        },
-      },
-    });
-  },
-
-  getBoardBackground: (projectPath) => {
-    const settings = get().boardBackgroundByProject[projectPath];
-    return settings || defaultBackgroundSettings;
-  },
-
-  setColumnBorderEnabled: (projectPath, enabled) => {
-    const current = get().boardBackgroundByProject;
-    const existing = current[projectPath] || defaultBackgroundSettings;
-    set({
-      boardBackgroundByProject: {
-        ...current,
-        [projectPath]: {
-          ...existing,
-          columnBorderEnabled: enabled,
-        },
-      },
-    });
-  },
-
-  setCardGlassmorphism: (projectPath, enabled) => {
-    const current = get().boardBackgroundByProject;
-    const existing = current[projectPath] || defaultBackgroundSettings;
-    set({
-      boardBackgroundByProject: {
-        ...current,
-        [projectPath]: {
-          ...existing,
-          cardGlassmorphism: enabled,
-        },
-      },
-    });
-  },
-
-  setCardBorderEnabled: (projectPath, enabled) => {
-    const current = get().boardBackgroundByProject;
-    const existing = current[projectPath] || defaultBackgroundSettings;
-    set({
-      boardBackgroundByProject: {
-        ...current,
-        [projectPath]: {
-          ...existing,
-          cardBorderEnabled: enabled,
-        },
-      },
-    });
-  },
-
-  setCardBorderOpacity: (projectPath, opacity) => {
-    const current = get().boardBackgroundByProject;
-    const existing = current[projectPath] || defaultBackgroundSettings;
-    set({
-      boardBackgroundByProject: {
-        ...current,
-        [projectPath]: {
-          ...existing,
-          cardBorderOpacity: opacity,
-        },
-      },
-    });
-  },
-
-  setHideScrollbar: (projectPath, hide) => {
-    const current = get().boardBackgroundByProject;
-    const existing = current[projectPath] || defaultBackgroundSettings;
-    set({
-      boardBackgroundByProject: {
-        ...current,
-        [projectPath]: {
-          ...existing,
-          hideScrollbar: hide,
-        },
-      },
-    });
-  },
-
-  clearBoardBackground: (projectPath) => {
-    const current = get().boardBackgroundByProject;
-    const existing = current[projectPath] || defaultBackgroundSettings;
-    set({
-      boardBackgroundByProject: {
-        ...current,
-        [projectPath]: {
-          ...existing,
-          imagePath: null, // Only clear the image, preserve other settings
-          imageVersion: undefined, // Clear version when clearing image
-        },
-      },
-    });
-  },
+  // Board Background actions — forwarded to useThemeStore
+  setBoardBackground: (...args) => useThemeStore.getState().setBoardBackground(...args),
+  setCardOpacity: (...args) => useThemeStore.getState().setCardOpacity(...args),
+  setColumnOpacity: (...args) => useThemeStore.getState().setColumnOpacity(...args),
+  getBoardBackground: (...args) => useThemeStore.getState().getBoardBackground(...args),
+  setColumnBorderEnabled: (...args) => useThemeStore.getState().setColumnBorderEnabled(...args),
+  setCardGlassmorphism: (...args) => useThemeStore.getState().setCardGlassmorphism(...args),
+  setCardBorderEnabled: (...args) => useThemeStore.getState().setCardBorderEnabled(...args),
+  setCardBorderOpacity: (...args) => useThemeStore.getState().setCardBorderOpacity(...args),
+  setHideScrollbar: (...args) => useThemeStore.getState().setHideScrollbar(...args),
+  clearBoardBackground: (...args) => useThemeStore.getState().clearBoardBackground(...args),
 
   // Terminal actions — forwarded to useTerminalStore
   setTerminalUnlocked: (...args) => useTerminalStore.getState().setTerminalUnlocked(...args),
@@ -2446,5 +2237,18 @@ useWorktreeStore.subscribe((worktreeState) => {
     defaultDeleteBranchByProject: worktreeState.defaultDeleteBranchByProject,
     useWorktreesByProject: worktreeState.useWorktreesByProject,
     worktreePanelCollapsed: worktreeState.worktreePanelCollapsed,
+  });
+});
+
+// Sync theme store state back to app-store for backward compatibility.
+// This ensures useAppStore(s => s.theme) etc. continues to work while
+// consumers are being migrated to useThemeStore directly.
+useThemeStore.subscribe((themeState) => {
+  useAppStore.setState({
+    theme: themeState.theme,
+    previewTheme: themeState.previewTheme,
+    fontFamilySans: themeState.fontFamilySans,
+    fontFamilyMono: themeState.fontFamilyMono,
+    boardBackgroundByProject: themeState.boardBackgroundByProject,
   });
 });
