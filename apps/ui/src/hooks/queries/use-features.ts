@@ -10,7 +10,7 @@ import { useQuery } from '@tanstack/react-query';
 import { getElectronAPI } from '@/lib/electron';
 import { queryKeys } from '@/lib/query-keys';
 import { STALE_TIMES } from '@/lib/query-client';
-import type { Feature } from '@/store/app-store';
+import type { Feature } from '@/store/types';
 
 const FEATURES_REFETCH_ON_FOCUS = false;
 const FEATURES_REFETCH_ON_RECONNECT = false;

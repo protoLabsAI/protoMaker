@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { createLogger } from '@automaker/utils/logger';
-import type { ImageAttachment, TextFileAttachment } from '@/store/app-store';
+import type { ImageAttachment, TextFileAttachment } from '@/store/types';
 
 const logger = createLogger('MessageQueue');
 

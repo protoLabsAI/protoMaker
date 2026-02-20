@@ -11,7 +11,7 @@ import { Button } from '@protolabs/ui/atoms';
 import { Checkbox } from '@protolabs/ui/atoms';
 import { Label } from '@protolabs/ui/atoms';
 import { AlertCircle } from 'lucide-react';
-import { Feature, ModelAlias, ThinkingLevel, PlanningMode } from '@/store/app-store';
+import { Feature, ModelAlias, ThinkingLevel, PlanningMode } from '@/store/types';
 import { TestingTabContent, PrioritySelect, PlanningModeSelect, WorkModeSelector } from '../shared';
 import type { WorkMode } from '../shared';
 import { PhaseModelSelector } from '@/components/views/settings-view/model-defaults/phase-model-selector';

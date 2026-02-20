@@ -1,6 +1,6 @@
 import { Plus, FolderOpen, Recycle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { formatShortcut } from '@/store/app-store';
+import { formatShortcut } from '@/store/types';
 import type { TrashedProject } from '@/lib/electron';
 
 interface ProjectActionsProps {

@@ -13,7 +13,7 @@ import { Button } from '@protolabs/ui/atoms';
 import { Textarea } from '@protolabs/ui/atoms';
 import { Markdown } from '@protolabs/ui/molecules';
 import { Label } from '@protolabs/ui/atoms';
-import { Feature } from '@/store/app-store';
+import { Feature } from '@/store/types';
 import { Check, RefreshCw, Edit2, Eye } from 'lucide-react';
 import { Spinner } from '@protolabs/ui/atoms';
 

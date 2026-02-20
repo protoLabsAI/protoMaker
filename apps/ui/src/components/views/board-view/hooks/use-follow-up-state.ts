@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Feature } from '@/store/app-store';
+import { Feature } from '@/store/types';
 import {
   FeatureImagePath as DescriptionImagePath,
   ImagePreviewMap,

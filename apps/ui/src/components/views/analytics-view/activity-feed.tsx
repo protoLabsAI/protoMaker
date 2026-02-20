@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@protolabs/ui/atoms';
 import { History } from 'lucide-react';
-import type { Feature } from '@/store/app-store';
+import type { Feature } from '@/store/types';
 
 interface ActivityFeedProps {
   features: Feature[];

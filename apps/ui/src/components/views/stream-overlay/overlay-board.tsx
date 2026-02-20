@@ -5,7 +5,7 @@
  * Optimized for 1920x1080 OBS browser source.
  */
 
-import type { Feature } from '@/store/app-store';
+import type { Feature } from '@/store/types';
 
 interface OverlayBoardProps {
   features: Feature[];

@@ -16,12 +16,9 @@ import {
 } from 'lucide-react';
 import { Spinner } from '@protolabs/ui/atoms';
 import { getServerUrlSync } from '@/lib/http-api-client';
-import {
-  useAppStore,
-  type TerminalPanelContent,
-  type TerminalTab,
-  type PersistedTerminalPanel,
-} from '@/store/app-store';
+import { useAppStore } from '@/store/app-store';
+import { useTerminalStore } from '@/store/terminal-store';
+import type { TerminalPanelContent, TerminalTab, PersistedTerminalPanel } from '@/store/types';
 import { Button } from '@protolabs/ui/atoms';
 import { Input } from '@protolabs/ui/atoms';
 import { Label } from '@protolabs/ui/atoms';
@@ -223,6 +220,7 @@ interface TerminalViewProps {
 }
 
 export function TerminalView({ initialCwd, initialBranch, initialMode, nonce }: TerminalViewProps) {
+  const { currentProject } = useAppStore();
   const {
     terminalState,
     setTerminalUnlocked,
@@ -230,7 +228,6 @@ export function TerminalView({ initialCwd, initialBranch, initialMode, nonce }: 
     removeTerminalFromLayout,
     setActiveTerminalSession,
     swapTerminals,
-    currentProject,
     addTerminalTab,
     removeTerminalTab,
     setActiveTerminalTab,
@@ -249,7 +246,7 @@ export function TerminalView({ initialCwd, initialBranch, initialMode, nonce }: 
     setTerminalScrollbackLines,
     setTerminalScreenReaderMode,
     updateTerminalPanelSizes,
-  } = useAppStore();
+  } = useTerminalStore();
 
   const navigate = useNavigate();
 
@@ -293,7 +290,7 @@ export function TerminalView({ initialCwd, initialBranch, initialMode, nonce }: 
   }, [serverSessionInfo]);
 
   // Get the default run script from terminal settings
-  const defaultRunScript = useAppStore((state) => state.terminalState.defaultRunScript);
+  const defaultRunScript = useTerminalStore((state) => state.terminalState.defaultRunScript);
 
   const serverUrl = import.meta.env.VITE_SERVER_URL || getServerUrlSync();
 
@@ -585,7 +582,7 @@ export function TerminalView({ initialCwd, initialBranch, initialMode, nonce }: 
           if (initialMode === 'tab') {
             // Create in a new tab (tab name uses default "Terminal N" naming)
             const newTabId = addTerminalTab();
-            const { addTerminalToTab } = useAppStore.getState();
+            const { addTerminalToTab } = useTerminalStore.getState();
             // Pass branch name for display in terminal panel header
             addTerminalToTab(data.data.id, newTabId, 'horizontal', initialBranch);
           } else {
@@ -651,7 +648,7 @@ export function TerminalView({ initialCwd, initialBranch, initialMode, nonce }: 
   useEffect(() => {
     const currentPath = currentProject?.path || null;
     // Read lastActiveProjectPath directly from store to avoid dependency issues
-    const prevPath = useAppStore.getState().terminalState.lastActiveProjectPath;
+    const prevPath = useTerminalStore.getState().terminalState.lastActiveProjectPath;
 
     // Skip if no change - this now correctly handles route changes within the same project
     // because lastActiveProjectPath persists in the store across component unmount/remount
@@ -664,13 +661,13 @@ export function TerminalView({ initialCwd, initialBranch, initialMode, nonce }: 
 
     // Save layout for previous project (if there was one and has terminals)
     // BUT don't save if we were mid-restore for that project (would save incomplete state)
-    const currentTabs = useAppStore.getState().terminalState.tabs;
+    const currentTabs = useTerminalStore.getState().terminalState.tabs;
     if (prevPath && currentTabs.length > 0 && restoringProjectPathRef.current !== prevPath) {
       saveTerminalLayout(prevPath);
     }
 
     // Update the stored project path
-    useAppStore.getState().setTerminalLastActiveProjectPath(currentPath);
+    useTerminalStore.getState().setTerminalLastActiveProjectPath(currentPath);
 
     // Helper to kill sessions and clear state
     const killAndClear = async () => {
@@ -718,7 +715,7 @@ export function TerminalView({ initialCwd, initialBranch, initialMode, nonce }: 
       try {
         const headers: Record<string, string> = {};
         // Get fresh auth token from store
-        const authToken = useAppStore.getState().terminalState.authToken;
+        const authToken = useTerminalStore.getState().terminalState.authToken;
         if (authToken) {
           headers['X-Terminal-Token'] = authToken;
         }
@@ -825,7 +822,7 @@ export function TerminalView({ initialCwd, initialBranch, initialMode, nonce }: 
           if (savedTab.layout) {
             const rebuiltLayout = await rebuildLayout(savedTab.layout);
             if (rebuiltLayout) {
-              const { setTerminalTabLayout } = useAppStore.getState();
+              const { setTerminalTabLayout } = useTerminalStore.getState();
               setTerminalTabLayout(newTabId, rebuiltLayout);
             }
           }
@@ -833,8 +830,8 @@ export function TerminalView({ initialCwd, initialBranch, initialMode, nonce }: 
 
         // Set active tab based on saved index
         if (savedLayout.tabs.length > 0) {
-          const { setActiveTerminalTab } = useAppStore.getState();
-          const newTabs = useAppStore.getState().terminalState.tabs;
+          const { setActiveTerminalTab } = useTerminalStore.getState();
+          const newTabs = useTerminalStore.getState().terminalState.tabs;
           if (newTabs.length > savedLayout.activeTabIndex) {
             setActiveTerminalTab(newTabs[savedLayout.activeTabIndex].id);
           }
@@ -1012,7 +1009,7 @@ export function TerminalView({ initialCwd, initialBranch, initialMode, nonce }: 
 
       if (data.success) {
         // Add to the newly created tab
-        const { addTerminalToTab } = useAppStore.getState();
+        const { addTerminalToTab } = useTerminalStore.getState();
         addTerminalToTab(data.data.id, tabId);
         // Mark this session as new for running initial command
         if (defaultRunScript) {
@@ -1022,7 +1019,7 @@ export function TerminalView({ initialCwd, initialBranch, initialMode, nonce }: 
         fetchServerSettings();
       } else {
         // Remove the empty tab that was created
-        const { removeTerminalTab } = useAppStore.getState();
+        const { removeTerminalTab } = useTerminalStore.getState();
         removeTerminalTab(tabId);
 
         // Handle session limit error with a helpful toast
@@ -1041,7 +1038,7 @@ export function TerminalView({ initialCwd, initialBranch, initialMode, nonce }: 
     } catch (err) {
       logger.error('Create session error:', err);
       // Remove the empty tab on error
-      const { removeTerminalTab } = useAppStore.getState();
+      const { removeTerminalTab } = useTerminalStore.getState();
       removeTerminalTab(tabId);
       toast.error('Failed to create terminal', {
         description: 'Could not connect to server',

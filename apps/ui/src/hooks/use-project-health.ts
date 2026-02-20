@@ -14,7 +14,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getElectronAPI } from '@/lib/electron';
 import { queryKeys } from '@/lib/query-keys';
 import type { AutoModeEvent } from '@/types/electron';
-import type { Feature } from '@/store/app-store';
+import type { Feature } from '@/store/types';
 
 const POLL_INTERVAL = 30000; // 30 seconds
 

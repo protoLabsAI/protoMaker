@@ -1,4 +1,4 @@
-import { type CodexPlanType } from '@/store/app-store';
+import { type CodexPlanType } from '@/store/types';
 
 const WINDOW_DEFAULT_LABEL = 'Usage window';
 const RESET_LABEL = 'Resets';

@@ -10,7 +10,7 @@ import {
 import { Button } from '@protolabs/ui/atoms';
 import { Card, CardHeader, CardTitle, CardDescription } from '@protolabs/ui/atoms';
 import { ArchiveRestore, Trash2 } from 'lucide-react';
-import { Feature } from '@/store/app-store';
+import { Feature } from '@/store/types';
 
 interface CompletedFeaturesModalProps {
   open: boolean;

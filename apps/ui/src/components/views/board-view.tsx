@@ -27,6 +27,7 @@ class DialogAwarePointerSensor extends PointerSensor {
   ];
 }
 import { useAppStore, Feature } from '@/store/app-store';
+import { useTerminalStore } from '@/store/terminal-store';
 import { getElectronAPI } from '@/lib/electron';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import type { BacklogPlanResult } from '@automaker/types';
@@ -149,10 +150,10 @@ export function BoardView() {
   // Subscribe to worktreePanelVisibleByProject to trigger re-renders when it changes
   const worktreePanelVisibleByProject = useAppStore((state) => state.worktreePanelVisibleByProject);
   // Subscribe to showInitScriptIndicatorByProject to trigger re-renders when it changes
-  const _showInitScriptIndicatorByProject = useAppStore(
+  const _showInitScriptIndicatorByProject = useTerminalStore(
     (state) => state.showInitScriptIndicatorByProject
   );
-  const getShowInitScriptIndicator = useAppStore((state) => state.getShowInitScriptIndicator);
+  const getShowInitScriptIndicator = useTerminalStore((state) => state.getShowInitScriptIndicator);
   const getDefaultDeleteBranch = useAppStore((state) => state.getDefaultDeleteBranch);
   const _shortcuts = useKeyboardShortcutsConfig();
   const {

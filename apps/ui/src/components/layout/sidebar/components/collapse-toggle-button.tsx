@@ -1,6 +1,6 @@
 import { PanelLeft, PanelLeftClose } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { formatShortcut } from '@/store/app-store';
+import { formatShortcut } from '@/store/types';
 import { useIsCompact } from '@/hooks/use-media-query';
 
 interface CollapseToggleButtonProps {

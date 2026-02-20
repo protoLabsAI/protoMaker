@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useAppStore } from '@/store/app-store';
+import { useTerminalStore } from '@/store/terminal-store';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { pathsEqual } from '@/lib/utils';
 
@@ -30,8 +30,8 @@ interface InitScriptCompletedPayload {
  * Should be used in a component that's always mounted (e.g., board-view).
  */
 export function useInitScriptEvents(projectPath: string | null) {
-  const setInitScriptState = useAppStore((s) => s.setInitScriptState);
-  const appendInitScriptOutput = useAppStore((s) => s.appendInitScriptOutput);
+  const setInitScriptState = useTerminalStore((s) => s.setInitScriptState);
+  const appendInitScriptOutput = useTerminalStore((s) => s.appendInitScriptOutput);
 
   useEffect(() => {
     if (!projectPath) return;

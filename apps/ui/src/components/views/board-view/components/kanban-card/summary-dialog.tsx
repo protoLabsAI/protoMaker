@@ -1,5 +1,5 @@
 // @ts-nocheck -- Feature index signature causes property access type errors
-import { Feature } from '@/store/app-store';
+import { Feature } from '@/store/types';
 import { AgentTaskInfo } from '@/lib/agent-context-parser';
 import {
   Dialog,

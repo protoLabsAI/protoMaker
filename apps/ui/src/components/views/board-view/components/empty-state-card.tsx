@@ -2,7 +2,7 @@ import { memo } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@protolabs/ui/atoms';
 import { Kbd } from '@protolabs/ui/atoms';
-import { formatShortcut } from '@/store/app-store';
+import { formatShortcut } from '@/store/types';
 import { getEmptyStateConfig, type EmptyStateConfig } from '../constants';
 import { Lightbulb, Play, Clock, CheckCircle2, Sparkles, Wand2 } from 'lucide-react';
 

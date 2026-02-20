@@ -4,19 +4,15 @@ import type { Project, TrashedProject } from '@/lib/electron';
 import { getElectronAPI } from '@/lib/electron';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { createLogger } from '@automaker/utils/logger';
-import { setItem, getItem } from '@/lib/storage';
+import { setItem } from '@/lib/storage';
 import {
   UI_SANS_FONT_OPTIONS,
   UI_MONO_FONT_OPTIONS,
   DEFAULT_FONT_VALUE,
 } from '@/config/ui-font-options';
 import type {
-  Feature as BaseFeature,
-  FeatureImagePath,
-  FeatureTextFilePath,
   ModelAlias,
   PlanningMode,
-  ThinkingLevel,
   ModelProvider,
   CursorModelId,
   CodexModelId,
@@ -25,7 +21,6 @@ import type {
   PhaseModelKey,
   PhaseModelEntry,
   MCPServerConfig,
-  FeatureStatusWithPipeline,
   PipelineConfig,
   PipelineStep,
   PromptCustomization,
@@ -43,79 +38,54 @@ import {
   DEFAULT_OPENCODE_MODEL,
   DEFAULT_MAX_CONCURRENCY,
 } from '@automaker/types';
+import {
+  getStoredTheme,
+  getStoredFontSans,
+  getStoredFontMono,
+  DEFAULT_KEYBOARD_SHORTCUTS,
+  defaultBackgroundSettings,
+  MAX_INIT_OUTPUT_LINES,
+  THEME_STORAGE_KEY,
+  FONT_SANS_STORAGE_KEY,
+  FONT_MONO_STORAGE_KEY,
+} from './types';
+import type {
+  ViewMode,
+  ThemeMode,
+  BoardViewMode,
+  ApiKeys,
+  KeyboardShortcuts,
+  ChatMessage,
+  ChatSession,
+  Feature,
+  ProjectAnalysis,
+  TerminalPanelContent,
+  TerminalTab,
+  TerminalState,
+  PersistedTerminalPanel,
+  PersistedTerminalTab,
+  PersistedTerminalState,
+  InitScriptState,
+  ClaudeUsage,
+  CodexUsage,
+  AutoModeActivity,
+} from './types';
+
+import { useTerminalStore } from './terminal-store';
 
 const logger = createLogger('AppStore');
 const OPENCODE_BEDROCK_PROVIDER_ID = 'amazon-bedrock';
 const OPENCODE_BEDROCK_MODEL_PREFIX = `${OPENCODE_BEDROCK_PROVIDER_ID}/`;
 
-// Re-export types for convenience
-export type {
-  ModelAlias,
-  PlanningMode,
-  ThinkingLevel,
-  ModelProvider,
-  ServerLogLevel,
-  FeatureTextFilePath,
-  FeatureImagePath,
-};
+// All types, interfaces, constants, and utility functions are defined in ./types.ts.
+// Re-export everything for backward compatibility — existing consumers can keep
+// importing from '@/store/app-store' without changes.
+export * from './types';
+export { useTerminalStore } from './terminal-store';
 
-export type ViewMode =
-  | 'welcome'
-  | 'setup'
-  | 'spec'
-  | 'board'
-  | 'agent'
-  | 'settings'
-  | 'interview'
-  | 'context'
-  | 'terminal'
-  | 'ideation';
-
-export type ThemeMode =
-  // Special modes
-  | 'system'
-  // Curated themes
-  | 'studio-dark'
-  | 'studio-light'
-  // Community presets
-  | 'nord'
-  | 'catppuccin'
-  | 'dracula'
-  | 'monokai';
-
-// LocalStorage keys for persistence (fallback when server settings aren't available)
-export const THEME_STORAGE_KEY = 'automaker:theme';
-export const FONT_SANS_STORAGE_KEY = 'automaker:font-sans';
-export const FONT_MONO_STORAGE_KEY = 'automaker:font-mono';
-
-// Maximum number of output lines to keep in init script state (prevents unbounded memory growth)
-export const MAX_INIT_OUTPUT_LINES = 500;
-
-/**
- * Get the theme from localStorage as a fallback
- * Used before server settings are loaded (e.g., on login/setup pages)
- */
-export function getStoredTheme(): ThemeMode | null {
-  const stored = getItem(THEME_STORAGE_KEY);
-  if (stored) return stored as ThemeMode;
-
-  // Backwards compatibility: older versions stored theme inside the Zustand persist blob.
-  // We intentionally keep reading it as a fallback so users don't get a "default theme flash"
-  // on login/logged-out pages if THEME_STORAGE_KEY hasn't been written yet.
-  try {
-    const legacy = getItem('automaker-storage');
-    if (!legacy) return null;
-    const parsed = JSON.parse(legacy) as { state?: { theme?: unknown } } | { theme?: unknown };
-    const theme = (parsed as any)?.state?.theme ?? (parsed as any)?.theme;
-    if (typeof theme === 'string' && theme.length > 0) {
-      return theme as ThemeMode;
-    }
-  } catch {
-    // Ignore legacy parse errors
-  }
-
-  return null;
-}
+// Types re-exported from ./types.ts: ViewMode, ThemeMode, THEME_STORAGE_KEY,
+// FONT_SANS_STORAGE_KEY, FONT_MONO_STORAGE_KEY, MAX_INIT_OUTPUT_LINES,
+// getStoredTheme, getStoredFontSans, getStoredFontMono
 
 /**
  * Helper to get effective font value with validation
@@ -151,18 +121,6 @@ function saveThemeToStorage(theme: ThemeMode): void {
 }
 
 /**
- * Get fonts from localStorage as a fallback
- * Used before server settings are loaded (e.g., on login/setup pages)
- */
-export function getStoredFontSans(): string | null {
-  return getItem(FONT_SANS_STORAGE_KEY);
-}
-
-export function getStoredFontMono(): string | null {
-  return getItem(FONT_MONO_STORAGE_KEY);
-}
-
-/**
  * Save fonts to localStorage for immediate persistence
  * This is used as a fallback when server settings can't be loaded
  */
@@ -190,371 +148,20 @@ function persistEffectiveThemeForProject(project: Project | null, fallbackTheme:
   saveThemeToStorage(themeToStore);
 }
 
-export type BoardViewMode = 'kanban' | 'graph';
+// Types re-exported from ./types.ts: BoardViewMode, ApiKeys
 
-export interface ApiKeys {
-  anthropic: string;
-  google: string;
-  openai: string;
-}
+// Types re-exported from ./types.ts: ShortcutKey, parseShortcut, formatShortcut,
+// KeyboardShortcuts, DEFAULT_KEYBOARD_SHORTCUTS
 
-// Keyboard Shortcut with optional modifiers
-export interface ShortcutKey {
-  key: string; // The main key (e.g., "K", "N", "1")
-  shift?: boolean; // Shift key modifier
-  cmdCtrl?: boolean; // Cmd on Mac, Ctrl on Windows/Linux
-  alt?: boolean; // Alt/Option key modifier
-}
+// Types re-exported from ./types.ts: ImageAttachment, TextFileAttachment,
+// ChatMessage, ChatSession
 
-// Helper to parse shortcut string to ShortcutKey object
-export function parseShortcut(shortcut: string | undefined | null): ShortcutKey {
-  if (!shortcut) return { key: '' };
-  const parts = shortcut.split('+').map((p) => p.trim());
-  const result: ShortcutKey = { key: parts[parts.length - 1] };
+// Types re-exported from ./types.ts: FeatureImage, ClaudeModel, Feature,
+// ParsedTask, PlanSpec, FileTreeNode, ProjectAnalysis
 
-  // Normalize common OS-specific modifiers (Cmd/Ctrl/Win/Super symbols) into cmdCtrl
-  for (let i = 0; i < parts.length - 1; i++) {
-    const modifier = parts[i].toLowerCase();
-    if (modifier === 'shift') result.shift = true;
-    else if (
-      modifier === 'cmd' ||
-      modifier === 'ctrl' ||
-      modifier === 'win' ||
-      modifier === 'super' ||
-      modifier === '⌘' ||
-      modifier === '^' ||
-      modifier === '⊞' ||
-      modifier === '◆'
-    )
-      result.cmdCtrl = true;
-    else if (modifier === 'alt' || modifier === 'opt' || modifier === 'option' || modifier === '⌥')
-      result.alt = true;
-  }
-
-  return result;
-}
-
-// Helper to format ShortcutKey to display string
-export function formatShortcut(shortcut: string | undefined | null, forDisplay = false): string {
-  if (!shortcut) return '';
-  const parsed = parseShortcut(shortcut);
-  const parts: string[] = [];
-
-  // Prefer User-Agent Client Hints when available; fall back to legacy
-  const platform: 'darwin' | 'win32' | 'linux' = (() => {
-    if (typeof navigator === 'undefined') return 'linux';
-
-    const uaPlatform = (
-      navigator as Navigator & { userAgentData?: { platform?: string } }
-    ).userAgentData?.platform?.toLowerCase?.();
-    const legacyPlatform = navigator.platform?.toLowerCase?.();
-    const platformString = uaPlatform || legacyPlatform || '';
-
-    if (platformString.includes('mac')) return 'darwin';
-    if (platformString.includes('win')) return 'win32';
-    return 'linux';
-  })();
-
-  // Primary modifier - OS-specific
-  if (parsed.cmdCtrl) {
-    if (forDisplay) {
-      parts.push(platform === 'darwin' ? '⌘' : platform === 'win32' ? '⊞' : '◆');
-    } else {
-      parts.push(platform === 'darwin' ? 'Cmd' : platform === 'win32' ? 'Win' : 'Super');
-    }
-  }
-
-  // Alt/Option
-  if (parsed.alt) {
-    parts.push(
-      forDisplay ? (platform === 'darwin' ? '⌥' : 'Alt') : platform === 'darwin' ? 'Opt' : 'Alt'
-    );
-  }
-
-  // Shift
-  if (parsed.shift) {
-    parts.push(forDisplay ? '⇧' : 'Shift');
-  }
-
-  parts.push(parsed.key.toUpperCase());
-
-  // Add spacing when displaying symbols
-  return parts.join(forDisplay ? ' ' : '+');
-}
-
-// Keyboard Shortcuts - stored as strings like "K", "Shift+N", "Cmd+K"
-export interface KeyboardShortcuts {
-  // Navigation shortcuts
-  board: string;
-  graph: string;
-  agent: string;
-  spec: string;
-  context: string;
-  memory: string;
-  settings: string;
-  projectSettings: string;
-  terminal: string;
-  ideation: string;
-  notes: string;
-  notifications: string;
-  githubIssues: string;
-  githubPrs: string;
-
-  // UI shortcuts
-  toggleSidebar: string;
-
-  // Action shortcuts
-  addFeature: string;
-  addContextFile: string;
-  startNext: string;
-  newSession: string;
-  openProject: string;
-  projectPicker: string;
-  cyclePrevProject: string;
-  cycleNextProject: string;
-
-  // Terminal shortcuts
-  splitTerminalRight: string;
-  splitTerminalDown: string;
-  closeTerminal: string;
-  newTerminalTab: string;
-}
-
-// Default keyboard shortcuts
-export const DEFAULT_KEYBOARD_SHORTCUTS: KeyboardShortcuts = {
-  // Navigation
-  board: 'K',
-  graph: 'H',
-  agent: 'A',
-  spec: 'D',
-  context: 'C',
-  memory: 'Y',
-  settings: 'S',
-  projectSettings: 'Shift+S',
-  terminal: 'T',
-  ideation: 'I',
-  notes: 'W',
-  notifications: 'X',
-  githubIssues: 'G',
-  githubPrs: 'R',
-
-  // UI
-  toggleSidebar: '`',
-
-  // Actions
-  // Note: Some shortcuts share the same key (e.g., "N" for addFeature, newSession)
-  // This is intentional as they are context-specific and only active in their respective views
-  addFeature: 'N', // Only active in board view
-  addContextFile: 'N', // Only active in context view
-  startNext: 'G', // Only active in board view
-  newSession: 'N', // Only active in agent view
-  openProject: 'O', // Global shortcut
-  projectPicker: 'P', // Global shortcut
-  cyclePrevProject: 'Q', // Global shortcut
-  cycleNextProject: 'E', // Global shortcut
-
-  // Terminal shortcuts (only active in terminal view)
-  // Using Alt modifier to avoid conflicts with both terminal signals AND browser shortcuts
-  splitTerminalRight: 'Alt+D',
-  splitTerminalDown: 'Alt+S',
-  closeTerminal: 'Alt+W',
-  newTerminalTab: 'Alt+T',
-};
-
-export interface ImageAttachment {
-  id?: string; // Optional - may not be present in messages loaded from server
-  data: string; // base64 encoded image data
-  mimeType: string; // e.g., "image/png", "image/jpeg"
-  filename: string;
-  size?: number; // file size in bytes - optional for messages from server
-}
-
-export interface TextFileAttachment {
-  id: string;
-  content: string; // text content of the file
-  mimeType: string; // e.g., "text/plain", "text/markdown"
-  filename: string;
-  size: number; // file size in bytes
-}
-
-export interface ChatMessage {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: Date;
-  images?: ImageAttachment[];
-  textFiles?: TextFileAttachment[];
-}
-
-export interface ChatSession {
-  id: string;
-  title: string;
-  projectId: string;
-  messages: ChatMessage[];
-  createdAt: Date;
-  updatedAt: Date;
-  archived: boolean;
-}
-
-// UI-specific: base64-encoded images (not in shared types)
-export interface FeatureImage {
-  id: string;
-  data: string; // base64 encoded
-  mimeType: string;
-  filename: string;
-  size: number;
-}
-
-// Available models for feature execution
-export type ClaudeModel = 'opus' | 'sonnet' | 'haiku';
-
-export interface Feature extends Omit<
-  BaseFeature,
-  'steps' | 'imagePaths' | 'textFilePaths' | 'status' | 'planSpec'
-> {
-  id: string;
-  title?: string;
-  titleGenerating?: boolean;
-  category: string;
-  description: string;
-  steps: string[]; // Required in UI (not optional)
-  status: FeatureStatusWithPipeline;
-  images?: FeatureImage[]; // UI-specific base64 images
-  imagePaths?: FeatureImagePath[]; // Stricter type than base (no string | union)
-  textFilePaths?: FeatureTextFilePath[]; // Text file attachments for context
-  justFinishedAt?: string; // UI-specific: ISO timestamp when agent just finished
-  prUrl?: string; // UI-specific: Pull request URL
-  planSpec?: PlanSpec; // Explicit planSpec type to override BaseFeature's index signature
-}
-
-// Parsed task from spec (for spec and full planning modes)
-export interface ParsedTask {
-  id: string; // e.g., "T001"
-  description: string; // e.g., "Create user model"
-  filePath?: string; // e.g., "src/models/user.ts"
-  phase?: string; // e.g., "Phase 1: Foundation" (for full mode)
-  status: 'pending' | 'in_progress' | 'completed' | 'failed';
-}
-
-// PlanSpec status for feature planning/specification
-export interface PlanSpec {
-  status: 'pending' | 'generating' | 'generated' | 'approved' | 'rejected';
-  content?: string; // The actual spec/plan markdown content
-  version: number;
-  generatedAt?: string; // ISO timestamp
-  approvedAt?: string; // ISO timestamp
-  reviewedByUser: boolean; // True if user has seen the spec
-  tasksCompleted?: number;
-  tasksTotal?: number;
-  currentTaskId?: string; // ID of the task currently being worked on
-  tasks?: ParsedTask[]; // Parsed tasks from the spec
-}
-
-// File tree node for project analysis
-export interface FileTreeNode {
-  name: string;
-  path: string;
-  isDirectory: boolean;
-  extension?: string;
-  children?: FileTreeNode[];
-}
-
-// Project analysis result
-export interface ProjectAnalysis {
-  fileTree: FileTreeNode[];
-  totalFiles: number;
-  totalDirectories: number;
-  filesByExtension: Record<string, number>;
-  analyzedAt: string;
-}
-
-// Terminal panel layout types (recursive for splits)
-export type TerminalPanelContent =
-  | { type: 'terminal'; sessionId: string; size?: number; fontSize?: number; branchName?: string }
-  | {
-      type: 'split';
-      id: string; // Stable ID for React key stability
-      direction: 'horizontal' | 'vertical';
-      panels: TerminalPanelContent[];
-      size?: number;
-    };
-
-// Terminal tab - each tab has its own layout
-export interface TerminalTab {
-  id: string;
-  name: string;
-  layout: TerminalPanelContent | null;
-}
-
-export interface TerminalState {
-  isUnlocked: boolean;
-  authToken: string | null;
-  tabs: TerminalTab[];
-  activeTabId: string | null;
-  activeSessionId: string | null;
-  maximizedSessionId: string | null; // Session ID of the maximized terminal pane (null if none)
-  defaultFontSize: number; // Default font size for new terminals
-  defaultRunScript: string; // Script to run when a new terminal is created (e.g., "claude" to start Claude Code)
-  screenReaderMode: boolean; // Enable screen reader accessibility mode
-  fontFamily: string; // Font family for terminal text
-  scrollbackLines: number; // Number of lines to keep in scrollback buffer
-  lineHeight: number; // Line height multiplier for terminal text
-  maxSessions: number; // Maximum concurrent terminal sessions (server setting)
-  lastActiveProjectPath: string | null; // Last project path to detect route changes vs project switches
-  openTerminalMode: 'newTab' | 'split'; // How to open terminals from "Open in Terminal" action
-}
-
-// Persisted terminal layout - now includes sessionIds for reconnection
-// Used to restore terminal layout structure when switching projects
-export type PersistedTerminalPanel =
-  | { type: 'terminal'; size?: number; fontSize?: number; sessionId?: string; branchName?: string }
-  | {
-      type: 'split';
-      id?: string; // Optional for backwards compatibility with older persisted layouts
-      direction: 'horizontal' | 'vertical';
-      panels: PersistedTerminalPanel[];
-      size?: number;
-    };
-
-// Helper to generate unique split IDs
-const generateSplitId = () => `split-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
-export interface PersistedTerminalTab {
-  id: string;
-  name: string;
-  layout: PersistedTerminalPanel | null;
-}
-
-export interface PersistedTerminalState {
-  tabs: PersistedTerminalTab[];
-  activeTabIndex: number; // Use index instead of ID since IDs are regenerated
-  defaultFontSize: number;
-  defaultRunScript?: string; // Optional to support existing persisted data
-  screenReaderMode?: boolean; // Optional to support existing persisted data
-  fontFamily?: string; // Optional to support existing persisted data
-  scrollbackLines?: number; // Optional to support existing persisted data
-  lineHeight?: number; // Optional to support existing persisted data
-}
-
-// Persisted terminal settings - stored globally (not per-project)
-export interface PersistedTerminalSettings {
-  defaultFontSize: number;
-  defaultRunScript: string;
-  screenReaderMode: boolean;
-  fontFamily: string;
-  scrollbackLines: number;
-  lineHeight: number;
-  maxSessions: number;
-  openTerminalMode: 'newTab' | 'split';
-}
-
-/** State for worktree init script execution */
-export interface InitScriptState {
-  status: 'idle' | 'running' | 'success' | 'failed';
-  branch: string;
-  output: string[];
-  error?: string;
-}
+// Types re-exported from ./types.ts: TerminalPanelContent, TerminalTab,
+// TerminalState, PersistedTerminalPanel, PersistedTerminalTab,
+// PersistedTerminalState, PersistedTerminalSettings, InitScriptState
 
 export interface AppState {
   // Project state
@@ -837,141 +444,9 @@ export interface AppState {
   initScriptState: Record<string, InitScriptState>;
 }
 
-// Claude Usage interface matching the server response
-export type ClaudeUsage = {
-  sessionTokensUsed: number;
-  sessionLimit: number;
-  sessionPercentage: number;
-  sessionResetTime: string;
-  sessionResetText: string;
-
-  weeklyTokensUsed: number;
-  weeklyLimit: number;
-  weeklyPercentage: number;
-  weeklyResetTime: string;
-  weeklyResetText: string;
-
-  sonnetWeeklyTokensUsed: number;
-  sonnetWeeklyPercentage: number;
-  sonnetResetText: string;
-
-  costUsed: number | null;
-  costLimit: number | null;
-  costCurrency: string | null;
-
-  lastUpdated: string;
-  userTimezone: string;
-};
-
-// Response type for Claude usage API (can be success or error)
-export type ClaudeUsageResponse = ClaudeUsage | { error: string; message?: string };
-
-// Codex Usage types
-export type CodexPlanType =
-  | 'free'
-  | 'plus'
-  | 'pro'
-  | 'team'
-  | 'business'
-  | 'enterprise'
-  | 'edu'
-  | 'unknown';
-
-export interface CodexRateLimitWindow {
-  limit: number;
-  used: number;
-  remaining: number;
-  usedPercent: number; // Percentage used (0-100)
-  windowDurationMins: number; // Duration in minutes
-  resetsAt: number; // Unix timestamp in seconds
-}
-
-export interface CodexUsage {
-  rateLimits: {
-    primary?: CodexRateLimitWindow;
-    secondary?: CodexRateLimitWindow;
-    planType?: CodexPlanType;
-  } | null;
-  lastUpdated: string;
-}
-
-// Response type for Codex usage API (can be success or error)
-export type CodexUsageResponse = CodexUsage | { error: string; message?: string };
-
-/**
- * Check if Claude usage is at its limit (any of: session >= 100%, weekly >= 100%, OR cost >= limit)
- * Returns true if any limit is reached, meaning auto mode should pause feature pickup.
- */
-export function isClaudeUsageAtLimit(claudeUsage: ClaudeUsage | null): boolean {
-  if (!claudeUsage) {
-    // No usage data available - don't block
-    return false;
-  }
-
-  // Check session limit (5-hour window)
-  if (claudeUsage.sessionPercentage >= 100) {
-    return true;
-  }
-
-  // Check weekly limit
-  if (claudeUsage.weeklyPercentage >= 100) {
-    return true;
-  }
-
-  // Check cost limit (if configured)
-  if (
-    claudeUsage.costLimit !== null &&
-    claudeUsage.costLimit > 0 &&
-    claudeUsage.costUsed !== null &&
-    claudeUsage.costUsed >= claudeUsage.costLimit
-  ) {
-    return true;
-  }
-
-  return false;
-}
-
-// Default background settings for board backgrounds
-export const defaultBackgroundSettings: {
-  imagePath: string | null;
-  imageVersion?: number;
-  cardOpacity: number;
-  columnOpacity: number;
-  columnBorderEnabled: boolean;
-  cardGlassmorphism: boolean;
-  cardBorderEnabled: boolean;
-  cardBorderOpacity: number;
-  hideScrollbar: boolean;
-} = {
-  imagePath: null,
-  cardOpacity: 100,
-  columnOpacity: 100,
-  columnBorderEnabled: true,
-  cardGlassmorphism: true,
-  cardBorderEnabled: true,
-  cardBorderOpacity: 100,
-  hideScrollbar: false,
-};
-
-export interface AutoModeActivity {
-  id: string;
-  featureId: string;
-  timestamp: Date;
-  type:
-    | 'start'
-    | 'progress'
-    | 'tool'
-    | 'complete'
-    | 'error'
-    | 'planning'
-    | 'action'
-    | 'verification';
-  message: string;
-  tool?: string;
-  passes?: boolean;
-  phase?: 'planning' | 'action' | 'verification';
-  errorType?: 'authentication' | 'execution';
-}
+// Types re-exported from ./types.ts: ClaudeUsage, ClaudeUsageResponse,
+// CodexPlanType, CodexRateLimitWindow, CodexUsage, CodexUsageResponse,
+// isClaudeUsageAtLimit, defaultBackgroundSettings, AutoModeActivity
 
 export interface AppActions {
   // Project actions
@@ -2710,7 +2185,8 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
   // Editor Configuration actions
   setDefaultEditorCommand: (command) => set({ defaultEditorCommand: command }),
   // Terminal Configuration actions
-  setDefaultTerminalId: (terminalId) => set({ defaultTerminalId: terminalId }),
+  setDefaultTerminalId: (terminalId) =>
+    useTerminalStore.getState().setDefaultTerminalId(terminalId),
   // Prompt Customization actions
   setPromptCustomization: async (customization) => {
     set({ promptCustomization: customization });
@@ -3039,799 +2515,48 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
     });
   },
 
-  // Terminal actions
-  setTerminalUnlocked: (unlocked, token) => {
-    set({
-      terminalState: {
-        ...get().terminalState,
-        isUnlocked: unlocked,
-        authToken: token || null,
-      },
-    });
-  },
-
-  setActiveTerminalSession: (sessionId) => {
-    set({
-      terminalState: {
-        ...get().terminalState,
-        activeSessionId: sessionId,
-      },
-    });
-  },
-
-  toggleTerminalMaximized: (sessionId) => {
-    const current = get().terminalState;
-    const newMaximized = current.maximizedSessionId === sessionId ? null : sessionId;
-    set({
-      terminalState: {
-        ...current,
-        maximizedSessionId: newMaximized,
-        // Also set as active when maximizing
-        activeSessionId: newMaximized ?? current.activeSessionId,
-      },
-    });
-  },
-
-  addTerminalToLayout: (sessionId, direction = 'horizontal', targetSessionId, branchName) => {
-    const current = get().terminalState;
-    const newTerminal: TerminalPanelContent = {
-      type: 'terminal',
-      sessionId,
-      size: 50,
-      branchName,
-    };
-
-    // If no tabs, create first tab
-    if (current.tabs.length === 0) {
-      const newTabId = `tab-${Date.now()}`;
-      set({
-        terminalState: {
-          ...current,
-          tabs: [
-            {
-              id: newTabId,
-              name: 'Terminal 1',
-              layout: { type: 'terminal', sessionId, size: 100, branchName },
-            },
-          ],
-          activeTabId: newTabId,
-          activeSessionId: sessionId,
-        },
-      });
-      return;
-    }
-
-    // Add to active tab's layout
-    const activeTab = current.tabs.find((t) => t.id === current.activeTabId);
-    if (!activeTab) return;
-
-    // If targetSessionId is provided, find and split that specific terminal
-    const splitTargetTerminal = (
-      node: TerminalPanelContent,
-      targetId: string,
-      targetDirection: 'horizontal' | 'vertical'
-    ): TerminalPanelContent => {
-      if (node.type === 'terminal') {
-        if (node.sessionId === targetId) {
-          // Found the target - split it
-          return {
-            type: 'split',
-            id: generateSplitId(),
-            direction: targetDirection,
-            panels: [{ ...node, size: 50 }, newTerminal],
-          };
-        }
-        // Not the target, return unchanged
-        return node;
-      }
-      // It's a split - recurse into panels
-      return {
-        ...node,
-        panels: node.panels.map((p) => splitTargetTerminal(p, targetId, targetDirection)),
-      };
-    };
-
-    // Legacy behavior: add to root layout (when no targetSessionId)
-    const addToRootLayout = (
-      node: TerminalPanelContent,
-      targetDirection: 'horizontal' | 'vertical'
-    ): TerminalPanelContent => {
-      if (node.type === 'terminal') {
-        return {
-          type: 'split',
-          id: generateSplitId(),
-          direction: targetDirection,
-          panels: [{ ...node, size: 50 }, newTerminal],
-        };
-      }
-      // If same direction, add to existing split
-      if (node.direction === targetDirection) {
-        const newSize = 100 / (node.panels.length + 1);
-        return {
-          ...node,
-          panels: [
-            ...node.panels.map((p) => ({ ...p, size: newSize })),
-            { ...newTerminal, size: newSize },
-          ],
-        };
-      }
-      // Different direction, wrap in new split
-      return {
-        type: 'split',
-        id: generateSplitId(),
-        direction: targetDirection,
-        panels: [{ ...node, size: 50 }, newTerminal],
-      };
-    };
-
-    let newLayout: TerminalPanelContent;
-    if (!activeTab.layout) {
-      newLayout = { type: 'terminal', sessionId, size: 100, branchName };
-    } else if (targetSessionId) {
-      newLayout = splitTargetTerminal(activeTab.layout, targetSessionId, direction);
-    } else {
-      newLayout = addToRootLayout(activeTab.layout, direction);
-    }
-
-    const newTabs = current.tabs.map((t) =>
-      t.id === current.activeTabId ? { ...t, layout: newLayout } : t
-    );
-
-    set({
-      terminalState: {
-        ...current,
-        tabs: newTabs,
-        activeSessionId: sessionId,
-      },
-    });
-  },
-
-  removeTerminalFromLayout: (sessionId) => {
-    const current = get().terminalState;
-    if (current.tabs.length === 0) return;
-
-    // Find which tab contains this session
-    const findFirstTerminal = (node: TerminalPanelContent | null): string | null => {
-      if (!node) return null;
-      if (node.type === 'terminal') return node.sessionId;
-      for (const panel of node.panels) {
-        const found = findFirstTerminal(panel);
-        if (found) return found;
-      }
-      return null;
-    };
-
-    const removeAndCollapse = (node: TerminalPanelContent): TerminalPanelContent | null => {
-      if (node.type === 'terminal') {
-        return node.sessionId === sessionId ? null : node;
-      }
-      const newPanels: TerminalPanelContent[] = [];
-      for (const panel of node.panels) {
-        const result = removeAndCollapse(panel);
-        if (result !== null) newPanels.push(result);
-      }
-      if (newPanels.length === 0) return null;
-      if (newPanels.length === 1) return newPanels[0];
-      // Normalize sizes to sum to 100%
-      const totalSize = newPanels.reduce((sum, p) => sum + (p.size || 0), 0);
-      const normalizedPanels =
-        totalSize > 0
-          ? newPanels.map((p) => ({ ...p, size: ((p.size || 0) / totalSize) * 100 }))
-          : newPanels.map((p) => ({ ...p, size: 100 / newPanels.length }));
-      return { ...node, panels: normalizedPanels };
-    };
-
-    let newTabs = current.tabs.map((tab) => {
-      if (!tab.layout) return tab;
-      const newLayout = removeAndCollapse(tab.layout);
-      return { ...tab, layout: newLayout };
-    });
-
-    // Remove empty tabs
-    newTabs = newTabs.filter((tab) => tab.layout !== null);
-
-    // Determine new active session
-    const newActiveTabId =
-      newTabs.length > 0
-        ? current.activeTabId && newTabs.find((t) => t.id === current.activeTabId)
-          ? current.activeTabId
-          : newTabs[0].id
-        : null;
-    const newActiveSessionId = newActiveTabId
-      ? findFirstTerminal(newTabs.find((t) => t.id === newActiveTabId)?.layout || null)
-      : null;
-
-    set({
-      terminalState: {
-        ...current,
-        tabs: newTabs,
-        activeTabId: newActiveTabId,
-        activeSessionId: newActiveSessionId,
-      },
-    });
-  },
-
-  swapTerminals: (sessionId1, sessionId2) => {
-    const current = get().terminalState;
-    if (current.tabs.length === 0) return;
-
-    const swapInLayout = (node: TerminalPanelContent): TerminalPanelContent => {
-      if (node.type === 'terminal') {
-        if (node.sessionId === sessionId1) return { ...node, sessionId: sessionId2 };
-        if (node.sessionId === sessionId2) return { ...node, sessionId: sessionId1 };
-        return node;
-      }
-      return { ...node, panels: node.panels.map(swapInLayout) };
-    };
-
-    const newTabs = current.tabs.map((tab) => ({
-      ...tab,
-      layout: tab.layout ? swapInLayout(tab.layout) : null,
-    }));
-
-    set({
-      terminalState: { ...current, tabs: newTabs },
-    });
-  },
-
-  clearTerminalState: () => {
-    const current = get().terminalState;
-    set({
-      terminalState: {
-        // Preserve auth state - user shouldn't need to re-authenticate
-        isUnlocked: current.isUnlocked,
-        authToken: current.authToken,
-        // Clear session-specific state only
-        tabs: [],
-        activeTabId: null,
-        activeSessionId: null,
-        maximizedSessionId: null,
-        // Preserve user preferences - these should persist across projects
-        defaultFontSize: current.defaultFontSize,
-        defaultRunScript: current.defaultRunScript,
-        screenReaderMode: current.screenReaderMode,
-        fontFamily: current.fontFamily,
-        scrollbackLines: current.scrollbackLines,
-        lineHeight: current.lineHeight,
-        maxSessions: current.maxSessions,
-        // Preserve lastActiveProjectPath - it will be updated separately when needed
-        lastActiveProjectPath: current.lastActiveProjectPath,
-        // Preserve openTerminalMode - user preference
-        openTerminalMode: current.openTerminalMode,
-      },
-    });
-  },
-
-  setTerminalPanelFontSize: (sessionId, fontSize) => {
-    const current = get().terminalState;
-    const clampedSize = Math.max(8, Math.min(32, fontSize));
-
-    const updateFontSize = (node: TerminalPanelContent): TerminalPanelContent => {
-      if (node.type === 'terminal') {
-        if (node.sessionId === sessionId) {
-          return { ...node, fontSize: clampedSize };
-        }
-        return node;
-      }
-      return { ...node, panels: node.panels.map(updateFontSize) };
-    };
-
-    const newTabs = current.tabs.map((tab) => {
-      if (!tab.layout) return tab;
-      return { ...tab, layout: updateFontSize(tab.layout) };
-    });
-
-    set({
-      terminalState: { ...current, tabs: newTabs },
-    });
-  },
-
-  setTerminalDefaultFontSize: (fontSize) => {
-    const current = get().terminalState;
-    const clampedSize = Math.max(8, Math.min(32, fontSize));
-    set({
-      terminalState: { ...current, defaultFontSize: clampedSize },
-    });
-  },
-
-  setTerminalDefaultRunScript: (script) => {
-    const current = get().terminalState;
-    set({
-      terminalState: { ...current, defaultRunScript: script },
-    });
-  },
-
-  setTerminalScreenReaderMode: (enabled) => {
-    const current = get().terminalState;
-    set({
-      terminalState: { ...current, screenReaderMode: enabled },
-    });
-  },
-
-  setTerminalFontFamily: (fontFamily) => {
-    const current = get().terminalState;
-    set({
-      terminalState: { ...current, fontFamily },
-    });
-  },
-
-  setTerminalScrollbackLines: (lines) => {
-    const current = get().terminalState;
-    // Clamp to reasonable range: 1000 - 100000 lines
-    const clampedLines = Math.max(1000, Math.min(100000, lines));
-    set({
-      terminalState: { ...current, scrollbackLines: clampedLines },
-    });
-  },
-
-  setTerminalLineHeight: (lineHeight) => {
-    const current = get().terminalState;
-    // Clamp to reasonable range: 1.0 - 2.0
-    const clampedHeight = Math.max(1.0, Math.min(2.0, lineHeight));
-    set({
-      terminalState: { ...current, lineHeight: clampedHeight },
-    });
-  },
-
-  setTerminalMaxSessions: (maxSessions) => {
-    const current = get().terminalState;
-    // Clamp to reasonable range: 1 - 500
-    const clampedMax = Math.max(1, Math.min(500, maxSessions));
-    set({
-      terminalState: { ...current, maxSessions: clampedMax },
-    });
-  },
-
-  setTerminalLastActiveProjectPath: (projectPath) => {
-    const current = get().terminalState;
-    set({
-      terminalState: { ...current, lastActiveProjectPath: projectPath },
-    });
-  },
-
-  setOpenTerminalMode: (mode) => {
-    const current = get().terminalState;
-    set({
-      terminalState: { ...current, openTerminalMode: mode },
-    });
-  },
-
-  addTerminalTab: (name) => {
-    const current = get().terminalState;
-    const newTabId = `tab-${Date.now()}`;
-    const tabNumber = current.tabs.length + 1;
-    const newTab: TerminalTab = {
-      id: newTabId,
-      name: name || `Terminal ${tabNumber}`,
-      layout: null,
-    };
-    set({
-      terminalState: {
-        ...current,
-        tabs: [...current.tabs, newTab],
-        activeTabId: newTabId,
-      },
-    });
-    return newTabId;
-  },
-
-  removeTerminalTab: (tabId) => {
-    const current = get().terminalState;
-    const newTabs = current.tabs.filter((t) => t.id !== tabId);
-    let newActiveTabId = current.activeTabId;
-    let newActiveSessionId = current.activeSessionId;
-
-    if (current.activeTabId === tabId) {
-      newActiveTabId = newTabs.length > 0 ? newTabs[0].id : null;
-      if (newActiveTabId) {
-        const newActiveTab = newTabs.find((t) => t.id === newActiveTabId);
-        const findFirst = (node: TerminalPanelContent): string | null => {
-          if (node.type === 'terminal') return node.sessionId;
-          for (const p of node.panels) {
-            const f = findFirst(p);
-            if (f) return f;
-          }
-          return null;
-        };
-        newActiveSessionId = newActiveTab?.layout ? findFirst(newActiveTab.layout) : null;
-      } else {
-        newActiveSessionId = null;
-      }
-    }
-
-    set({
-      terminalState: {
-        ...current,
-        tabs: newTabs,
-        activeTabId: newActiveTabId,
-        activeSessionId: newActiveSessionId,
-      },
-    });
-  },
-
-  setActiveTerminalTab: (tabId) => {
-    const current = get().terminalState;
-    const tab = current.tabs.find((t) => t.id === tabId);
-    if (!tab) return;
-
-    let newActiveSessionId = current.activeSessionId;
-    if (tab.layout) {
-      const findFirst = (node: TerminalPanelContent): string | null => {
-        if (node.type === 'terminal') return node.sessionId;
-        for (const p of node.panels) {
-          const f = findFirst(p);
-          if (f) return f;
-        }
-        return null;
-      };
-      newActiveSessionId = findFirst(tab.layout);
-    }
-
-    set({
-      terminalState: {
-        ...current,
-        activeTabId: tabId,
-        activeSessionId: newActiveSessionId,
-        // Clear maximized state when switching tabs - the maximized terminal
-        // belongs to the previous tab and shouldn't persist across tab switches
-        maximizedSessionId: null,
-      },
-    });
-  },
-
-  renameTerminalTab: (tabId, name) => {
-    const current = get().terminalState;
-    const newTabs = current.tabs.map((t) => (t.id === tabId ? { ...t, name } : t));
-    set({
-      terminalState: { ...current, tabs: newTabs },
-    });
-  },
-
-  reorderTerminalTabs: (fromTabId, toTabId) => {
-    const current = get().terminalState;
-    const fromIndex = current.tabs.findIndex((t) => t.id === fromTabId);
-    const toIndex = current.tabs.findIndex((t) => t.id === toTabId);
-
-    if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) {
-      return;
-    }
-
-    // Reorder tabs by moving fromIndex to toIndex
-    const newTabs = [...current.tabs];
-    const [movedTab] = newTabs.splice(fromIndex, 1);
-    newTabs.splice(toIndex, 0, movedTab);
-
-    set({
-      terminalState: { ...current, tabs: newTabs },
-    });
-  },
-
-  moveTerminalToTab: (sessionId, targetTabId) => {
-    const current = get().terminalState;
-
-    let sourceTabId: string | null = null;
-    let originalTerminalNode: (TerminalPanelContent & { type: 'terminal' }) | null = null;
-
-    const findTerminal = (
-      node: TerminalPanelContent
-    ): (TerminalPanelContent & { type: 'terminal' }) | null => {
-      if (node.type === 'terminal') {
-        return node.sessionId === sessionId ? node : null;
-      }
-      for (const panel of node.panels) {
-        const found = findTerminal(panel);
-        if (found) return found;
-      }
-      return null;
-    };
-
-    for (const tab of current.tabs) {
-      if (tab.layout) {
-        const found = findTerminal(tab.layout);
-        if (found) {
-          sourceTabId = tab.id;
-          originalTerminalNode = found;
-          break;
-        }
-      }
-    }
-    if (!sourceTabId || !originalTerminalNode) return;
-    if (sourceTabId === targetTabId) return;
-
-    const sourceTab = current.tabs.find((t) => t.id === sourceTabId);
-    if (!sourceTab?.layout) return;
-
-    const removeAndCollapse = (node: TerminalPanelContent): TerminalPanelContent | null => {
-      if (node.type === 'terminal') {
-        return node.sessionId === sessionId ? null : node;
-      }
-      const newPanels: TerminalPanelContent[] = [];
-      for (const panel of node.panels) {
-        const result = removeAndCollapse(panel);
-        if (result !== null) newPanels.push(result);
-      }
-      if (newPanels.length === 0) return null;
-      if (newPanels.length === 1) return newPanels[0];
-      // Normalize sizes to sum to 100%
-      const totalSize = newPanels.reduce((sum, p) => sum + (p.size || 0), 0);
-      const normalizedPanels =
-        totalSize > 0
-          ? newPanels.map((p) => ({ ...p, size: ((p.size || 0) / totalSize) * 100 }))
-          : newPanels.map((p) => ({ ...p, size: 100 / newPanels.length }));
-      return { ...node, panels: normalizedPanels };
-    };
-
-    const newSourceLayout = removeAndCollapse(sourceTab.layout);
-
-    let finalTargetTabId = targetTabId;
-    let newTabs = current.tabs;
-
-    if (targetTabId === 'new') {
-      const newTabId = `tab-${Date.now()}`;
-      const sourceWillBeRemoved = !newSourceLayout;
-      const tabName = sourceWillBeRemoved ? sourceTab.name : `Terminal ${current.tabs.length + 1}`;
-      newTabs = [
-        ...current.tabs,
-        {
-          id: newTabId,
-          name: tabName,
-          layout: {
-            type: 'terminal',
-            sessionId,
-            size: 100,
-            fontSize: originalTerminalNode.fontSize,
-          },
-        },
-      ];
-      finalTargetTabId = newTabId;
-    } else {
-      const targetTab = current.tabs.find((t) => t.id === targetTabId);
-      if (!targetTab) return;
-
-      const terminalNode: TerminalPanelContent = {
-        type: 'terminal',
-        sessionId,
-        size: 50,
-        fontSize: originalTerminalNode.fontSize,
-      };
-      let newTargetLayout: TerminalPanelContent;
-
-      if (!targetTab.layout) {
-        newTargetLayout = {
-          type: 'terminal',
-          sessionId,
-          size: 100,
-          fontSize: originalTerminalNode.fontSize,
-        };
-      } else if (targetTab.layout.type === 'terminal') {
-        newTargetLayout = {
-          type: 'split',
-          id: generateSplitId(),
-          direction: 'horizontal',
-          panels: [{ ...targetTab.layout, size: 50 }, terminalNode],
-        };
-      } else {
-        newTargetLayout = {
-          ...targetTab.layout,
-          panels: [...targetTab.layout.panels, terminalNode],
-        };
-      }
-
-      newTabs = current.tabs.map((t) =>
-        t.id === targetTabId ? { ...t, layout: newTargetLayout } : t
-      );
-    }
-
-    if (!newSourceLayout) {
-      newTabs = newTabs.filter((t) => t.id !== sourceTabId);
-    } else {
-      newTabs = newTabs.map((t) => (t.id === sourceTabId ? { ...t, layout: newSourceLayout } : t));
-    }
-
-    set({
-      terminalState: {
-        ...current,
-        tabs: newTabs,
-        activeTabId: finalTargetTabId,
-        activeSessionId: sessionId,
-      },
-    });
-  },
-
-  addTerminalToTab: (sessionId, tabId, direction = 'horizontal', branchName) => {
-    const current = get().terminalState;
-    const tab = current.tabs.find((t) => t.id === tabId);
-    if (!tab) return;
-
-    const terminalNode: TerminalPanelContent = {
-      type: 'terminal',
-      sessionId,
-      size: 50,
-      branchName,
-    };
-    let newLayout: TerminalPanelContent;
-
-    if (!tab.layout) {
-      newLayout = { type: 'terminal', sessionId, size: 100, branchName };
-    } else if (tab.layout.type === 'terminal') {
-      newLayout = {
-        type: 'split',
-        id: generateSplitId(),
-        direction,
-        panels: [{ ...tab.layout, size: 50 }, terminalNode],
-      };
-    } else {
-      if (tab.layout.direction === direction) {
-        const newSize = 100 / (tab.layout.panels.length + 1);
-        newLayout = {
-          ...tab.layout,
-          panels: [
-            ...tab.layout.panels.map((p) => ({ ...p, size: newSize })),
-            { ...terminalNode, size: newSize },
-          ],
-        };
-      } else {
-        newLayout = {
-          type: 'split',
-          id: generateSplitId(),
-          direction,
-          panels: [{ ...tab.layout, size: 50 }, terminalNode],
-        };
-      }
-    }
-
-    const newTabs = current.tabs.map((t) => (t.id === tabId ? { ...t, layout: newLayout } : t));
-
-    set({
-      terminalState: {
-        ...current,
-        tabs: newTabs,
-        activeTabId: tabId,
-        activeSessionId: sessionId,
-      },
-    });
-  },
-
-  setTerminalTabLayout: (tabId, layout, activeSessionId) => {
-    const current = get().terminalState;
-    const tab = current.tabs.find((t) => t.id === tabId);
-    if (!tab) return;
-
-    const newTabs = current.tabs.map((t) => (t.id === tabId ? { ...t, layout } : t));
-
-    // Find first terminal in layout if no activeSessionId provided
-    const findFirst = (node: TerminalPanelContent): string | null => {
-      if (node.type === 'terminal') return node.sessionId;
-      for (const p of node.panels) {
-        const found = findFirst(p);
-        if (found) return found;
-      }
-      return null;
-    };
-
-    const newActiveSessionId = activeSessionId || findFirst(layout);
-
-    set({
-      terminalState: {
-        ...current,
-        tabs: newTabs,
-        activeTabId: tabId,
-        activeSessionId: newActiveSessionId,
-      },
-    });
-  },
-
-  updateTerminalPanelSizes: (tabId, panelKeys, sizes) => {
-    const current = get().terminalState;
-    const tab = current.tabs.find((t) => t.id === tabId);
-    if (!tab || !tab.layout) return;
-
-    // Create a map of panel key to new size
-    const sizeMap = new Map<string, number>();
-    panelKeys.forEach((key, index) => {
-      sizeMap.set(key, sizes[index]);
-    });
-
-    // Helper to generate panel key (matches getPanelKey in terminal-view.tsx)
-    const getPanelKey = (panel: TerminalPanelContent): string => {
-      if (panel.type === 'terminal') return panel.sessionId;
-      const childKeys = panel.panels.map(getPanelKey).join('-');
-      return `split-${panel.direction}-${childKeys}`;
-    };
-
-    // Recursively update sizes in the layout
-    const updateSizes = (panel: TerminalPanelContent): TerminalPanelContent => {
-      const key = getPanelKey(panel);
-      const newSize = sizeMap.get(key);
-
-      if (panel.type === 'terminal') {
-        return newSize !== undefined ? { ...panel, size: newSize } : panel;
-      }
-
-      return {
-        ...panel,
-        size: newSize !== undefined ? newSize : panel.size,
-        panels: panel.panels.map(updateSizes),
-      };
-    };
-
-    const updatedLayout = updateSizes(tab.layout);
-
-    const newTabs = current.tabs.map((t) => (t.id === tabId ? { ...t, layout: updatedLayout } : t));
-
-    set({
-      terminalState: { ...current, tabs: newTabs },
-    });
-  },
-
-  // Convert runtime layout to persisted format (preserves sessionIds for reconnection)
-  saveTerminalLayout: (projectPath) => {
-    const current = get().terminalState;
-    if (current.tabs.length === 0) {
-      // Nothing to save, clear any existing layout
-      const next = { ...get().terminalLayoutByProject };
-      delete next[projectPath];
-      set({ terminalLayoutByProject: next });
-      return;
-    }
-
-    // Convert TerminalPanelContent to PersistedTerminalPanel
-    // Now preserves sessionId so we can reconnect when switching back
-    const persistPanel = (panel: TerminalPanelContent): PersistedTerminalPanel => {
-      if (panel.type === 'terminal') {
-        return {
-          type: 'terminal',
-          size: panel.size,
-          fontSize: panel.fontSize,
-          sessionId: panel.sessionId, // Preserve for reconnection
-          branchName: panel.branchName, // Preserve branch name for display
-        };
-      }
-      return {
-        type: 'split',
-        id: panel.id, // Preserve stable ID
-        direction: panel.direction,
-        panels: panel.panels.map(persistPanel),
-        size: panel.size,
-      };
-    };
-
-    const persistedTabs: PersistedTerminalTab[] = current.tabs.map((tab) => ({
-      id: tab.id,
-      name: tab.name,
-      layout: tab.layout ? persistPanel(tab.layout) : null,
-    }));
-
-    const activeTabIndex = current.tabs.findIndex((t) => t.id === current.activeTabId);
-
-    const persisted: PersistedTerminalState = {
-      tabs: persistedTabs,
-      activeTabIndex: activeTabIndex >= 0 ? activeTabIndex : 0,
-      defaultFontSize: current.defaultFontSize,
-      defaultRunScript: current.defaultRunScript,
-      screenReaderMode: current.screenReaderMode,
-      fontFamily: current.fontFamily,
-      scrollbackLines: current.scrollbackLines,
-      lineHeight: current.lineHeight,
-    };
-
-    set({
-      terminalLayoutByProject: {
-        ...get().terminalLayoutByProject,
-        [projectPath]: persisted,
-      },
-    });
-  },
-
-  getPersistedTerminalLayout: (projectPath) => {
-    return get().terminalLayoutByProject[projectPath] || null;
-  },
-
-  clearPersistedTerminalLayout: (projectPath) => {
-    const next = { ...get().terminalLayoutByProject };
-    delete next[projectPath];
-    set({ terminalLayoutByProject: next });
-  },
+  // Terminal actions — forwarded to useTerminalStore
+  setTerminalUnlocked: (...args) => useTerminalStore.getState().setTerminalUnlocked(...args),
+  setActiveTerminalSession: (...args) =>
+    useTerminalStore.getState().setActiveTerminalSession(...args),
+  toggleTerminalMaximized: (...args) =>
+    useTerminalStore.getState().toggleTerminalMaximized(...args),
+  addTerminalToLayout: (...args) => useTerminalStore.getState().addTerminalToLayout(...args),
+  removeTerminalFromLayout: (...args) =>
+    useTerminalStore.getState().removeTerminalFromLayout(...args),
+  swapTerminals: (...args) => useTerminalStore.getState().swapTerminals(...args),
+  clearTerminalState: () => useTerminalStore.getState().clearTerminalState(),
+  setTerminalPanelFontSize: (...args) =>
+    useTerminalStore.getState().setTerminalPanelFontSize(...args),
+  setTerminalDefaultFontSize: (...args) =>
+    useTerminalStore.getState().setTerminalDefaultFontSize(...args),
+  setTerminalDefaultRunScript: (...args) =>
+    useTerminalStore.getState().setTerminalDefaultRunScript(...args),
+  setTerminalScreenReaderMode: (...args) =>
+    useTerminalStore.getState().setTerminalScreenReaderMode(...args),
+  setTerminalFontFamily: (...args) => useTerminalStore.getState().setTerminalFontFamily(...args),
+  setTerminalScrollbackLines: (...args) =>
+    useTerminalStore.getState().setTerminalScrollbackLines(...args),
+  setTerminalLineHeight: (...args) => useTerminalStore.getState().setTerminalLineHeight(...args),
+  setTerminalMaxSessions: (...args) => useTerminalStore.getState().setTerminalMaxSessions(...args),
+  setTerminalLastActiveProjectPath: (...args) =>
+    useTerminalStore.getState().setTerminalLastActiveProjectPath(...args),
+  setOpenTerminalMode: (...args) => useTerminalStore.getState().setOpenTerminalMode(...args),
+  addTerminalTab: (...args) => useTerminalStore.getState().addTerminalTab(...args),
+  removeTerminalTab: (...args) => useTerminalStore.getState().removeTerminalTab(...args),
+  setActiveTerminalTab: (...args) => useTerminalStore.getState().setActiveTerminalTab(...args),
+  renameTerminalTab: (...args) => useTerminalStore.getState().renameTerminalTab(...args),
+  reorderTerminalTabs: (...args) => useTerminalStore.getState().reorderTerminalTabs(...args),
+  moveTerminalToTab: (...args) => useTerminalStore.getState().moveTerminalToTab(...args),
+  addTerminalToTab: (...args) => useTerminalStore.getState().addTerminalToTab(...args),
+  setTerminalTabLayout: (...args) => useTerminalStore.getState().setTerminalTabLayout(...args),
+  updateTerminalPanelSizes: (...args) =>
+    useTerminalStore.getState().updateTerminalPanelSizes(...args),
+  saveTerminalLayout: (...args) => useTerminalStore.getState().saveTerminalLayout(...args),
+  getPersistedTerminalLayout: (...args) =>
+    useTerminalStore.getState().getPersistedTerminalLayout(...args),
+  clearPersistedTerminalLayout: (...args) =>
+    useTerminalStore.getState().clearPersistedTerminalLayout(...args),
 
   // Spec Creation actions
   setSpecCreatingForProject: (projectPath) => {
@@ -4103,20 +2828,11 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
     return get().worktreePanelVisibleByProject[projectPath] ?? true;
   },
 
-  // Init Script Indicator Visibility actions (per-project)
-  setShowInitScriptIndicator: (projectPath, visible) => {
-    set({
-      showInitScriptIndicatorByProject: {
-        ...get().showInitScriptIndicatorByProject,
-        [projectPath]: visible,
-      },
-    });
-  },
-
-  getShowInitScriptIndicator: (projectPath) => {
-    // Default to true (visible) if not set
-    return get().showInitScriptIndicatorByProject[projectPath] ?? true;
-  },
+  // Init Script Indicator Visibility actions — forwarded to useTerminalStore
+  setShowInitScriptIndicator: (...args) =>
+    useTerminalStore.getState().setShowInitScriptIndicator(...args),
+  getShowInitScriptIndicator: (...args) =>
+    useTerminalStore.getState().getShowInitScriptIndicator(...args),
 
   // Default Delete Branch actions (per-project)
   setDefaultDeleteBranch: (projectPath, deleteBranch) => {
@@ -4133,20 +2849,11 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
     return get().defaultDeleteBranchByProject[projectPath] ?? false;
   },
 
-  // Auto-dismiss Init Script Indicator actions (per-project)
-  setAutoDismissInitScriptIndicator: (projectPath, autoDismiss) => {
-    set({
-      autoDismissInitScriptIndicatorByProject: {
-        ...get().autoDismissInitScriptIndicatorByProject,
-        [projectPath]: autoDismiss,
-      },
-    });
-  },
-
-  getAutoDismissInitScriptIndicator: (projectPath) => {
-    // Default to true (auto-dismiss enabled) if not set
-    return get().autoDismissInitScriptIndicatorByProject[projectPath] ?? true;
-  },
+  // Auto-dismiss Init Script Indicator actions — forwarded to useTerminalStore
+  setAutoDismissInitScriptIndicator: (...args) =>
+    useTerminalStore.getState().setAutoDismissInitScriptIndicator(...args),
+  getAutoDismissInitScriptIndicator: (...args) =>
+    useTerminalStore.getState().getAutoDismissInitScriptIndicator(...args),
 
   // Use Worktrees Override actions (per-project)
   setProjectUseWorktrees: (projectPath, useWorktrees) => {
@@ -4186,63 +2893,28 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
     set({ recentFolders: updated });
   },
 
-  // Init Script State actions (keyed by "projectPath::branch")
-  setInitScriptState: (projectPath, branch, state) => {
-    const key = `${projectPath}::${branch}`;
-    const current = get().initScriptState[key] || {
-      status: 'idle',
-      branch,
-      output: [],
-    };
-    set({
-      initScriptState: {
-        ...get().initScriptState,
-        [key]: { ...current, ...state },
-      },
-    });
-  },
-
-  appendInitScriptOutput: (projectPath, branch, content) => {
-    const key = `${projectPath}::${branch}`;
-    // Initialize state if absent to avoid dropping output due to event-order races
-    const current = get().initScriptState[key] || {
-      status: 'idle' as const,
-      branch,
-      output: [],
-    };
-    // Append new content and enforce fixed-size buffer to prevent memory bloat
-    const newOutput = [...current.output, content].slice(-MAX_INIT_OUTPUT_LINES);
-    set({
-      initScriptState: {
-        ...get().initScriptState,
-        [key]: {
-          ...current,
-          output: newOutput,
-        },
-      },
-    });
-  },
-
-  clearInitScriptState: (projectPath, branch) => {
-    const key = `${projectPath}::${branch}`;
-
-    const { [key]: _, ...rest } = get().initScriptState;
-    set({ initScriptState: rest });
-  },
-
-  getInitScriptState: (projectPath, branch) => {
-    const key = `${projectPath}::${branch}`;
-    return get().initScriptState[key] || null;
-  },
-
-  getInitScriptStatesForProject: (projectPath) => {
-    const prefix = `${projectPath}::`;
-    const states = get().initScriptState;
-    return Object.entries(states)
-      .filter(([key]) => key.startsWith(prefix))
-      .map(([key, state]) => ({ key, state }));
-  },
+  // Init Script State actions — forwarded to useTerminalStore
+  setInitScriptState: (...args) => useTerminalStore.getState().setInitScriptState(...args),
+  appendInitScriptOutput: (...args) => useTerminalStore.getState().appendInitScriptOutput(...args),
+  clearInitScriptState: (...args) => useTerminalStore.getState().clearInitScriptState(...args),
+  getInitScriptState: (...args) => useTerminalStore.getState().getInitScriptState(...args),
+  getInitScriptStatesForProject: (...args) =>
+    useTerminalStore.getState().getInitScriptStatesForProject(...args),
 
   // Reset
   reset: () => set(initialState),
 }));
+
+// Sync terminal store state back to app-store for backward compatibility.
+// This ensures useAppStore(s => s.terminalState) continues to work while
+// consumers are being migrated to useTerminalStore directly.
+useTerminalStore.subscribe((terminalState) => {
+  useAppStore.setState({
+    terminalState: terminalState.terminalState,
+    terminalLayoutByProject: terminalState.terminalLayoutByProject,
+    defaultTerminalId: terminalState.defaultTerminalId,
+    initScriptState: terminalState.initScriptState,
+    showInitScriptIndicatorByProject: terminalState.showInitScriptIndicatorByProject,
+    autoDismissInitScriptIndicatorByProject: terminalState.autoDismissInitScriptIndicatorByProject,
+  });
+});

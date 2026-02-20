@@ -1,5 +1,5 @@
 import type { Dispatch, SetStateAction } from 'react';
-import type { ApiKeys } from '@/store/app-store';
+import type { ApiKeys } from '@/store/types';
 
 export type ProviderKey = 'anthropic' | 'google' | 'openai';
 

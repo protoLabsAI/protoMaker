@@ -1,6 +1,6 @@
 import type { NavigateOptions } from '@tanstack/react-router';
 import { cn } from '@/lib/utils';
-import { formatShortcut } from '@/store/app-store';
+import { formatShortcut } from '@/store/types';
 import { Settings } from 'lucide-react';
 import { ThemeToggleButton } from './theme-toggle-button';
 

@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
 import { apiGet, apiPut, apiDelete } from '@/lib/api-fetch';
 import { toast } from 'sonner';
 import { useAppStore } from '@/store/app-store';
+import { useTerminalStore } from '@/store/terminal-store';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import type { Project } from '@/lib/electron';
 
@@ -36,12 +37,16 @@ export function WorktreePreferencesSection({ project }: WorktreePreferencesSecti
   const globalUseWorktrees = useAppStore((s) => s.useWorktrees);
   const getProjectUseWorktrees = useAppStore((s) => s.getProjectUseWorktrees);
   const setProjectUseWorktrees = useAppStore((s) => s.setProjectUseWorktrees);
-  const getShowInitScriptIndicator = useAppStore((s) => s.getShowInitScriptIndicator);
-  const setShowInitScriptIndicator = useAppStore((s) => s.setShowInitScriptIndicator);
+  const getShowInitScriptIndicator = useTerminalStore((s) => s.getShowInitScriptIndicator);
+  const setShowInitScriptIndicator = useTerminalStore((s) => s.setShowInitScriptIndicator);
   const getDefaultDeleteBranch = useAppStore((s) => s.getDefaultDeleteBranch);
   const setDefaultDeleteBranch = useAppStore((s) => s.setDefaultDeleteBranch);
-  const getAutoDismissInitScriptIndicator = useAppStore((s) => s.getAutoDismissInitScriptIndicator);
-  const setAutoDismissInitScriptIndicator = useAppStore((s) => s.setAutoDismissInitScriptIndicator);
+  const getAutoDismissInitScriptIndicator = useTerminalStore(
+    (s) => s.getAutoDismissInitScriptIndicator
+  );
+  const setAutoDismissInitScriptIndicator = useTerminalStore(
+    (s) => s.setAutoDismissInitScriptIndicator
+  );
 
   // Get effective worktrees setting (project override or global fallback)
   const projectUseWorktrees = getProjectUseWorktrees(project.path);

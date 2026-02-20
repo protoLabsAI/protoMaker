@@ -1,4 +1,4 @@
-import type { Feature } from '@/store/app-store';
+import type { Feature } from '@/store/types';
 import type { PipelineConfig, FeatureStatusWithPipeline } from '@automaker/types';
 
 export type ColumnId = Feature['status'];

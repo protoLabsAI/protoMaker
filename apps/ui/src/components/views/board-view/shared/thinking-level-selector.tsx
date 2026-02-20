@@ -1,7 +1,7 @@
 import { Label } from '@protolabs/ui/atoms';
 import { Brain } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { ThinkingLevel } from '@/store/app-store';
+import { ThinkingLevel } from '@/store/types';
 import { THINKING_LEVELS, THINKING_LEVEL_LABELS } from './model-constants';
 
 interface ThinkingLevelSelectorProps {

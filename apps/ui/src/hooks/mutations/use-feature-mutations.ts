@@ -9,7 +9,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { getElectronAPI } from '@/lib/electron';
 import { queryKeys } from '@/lib/query-keys';
 import { toast } from 'sonner';
-import type { Feature } from '@/store/app-store';
+import type { Feature } from '@/store/types';
 
 /**
  * Create a new feature

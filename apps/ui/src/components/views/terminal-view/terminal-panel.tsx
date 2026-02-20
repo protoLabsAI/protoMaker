@@ -33,7 +33,9 @@ import { Input } from '@protolabs/ui/atoms';
 import { Switch } from '@protolabs/ui/atoms';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@protolabs/ui/atoms';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
-import { useAppStore, DEFAULT_KEYBOARD_SHORTCUTS, type KeyboardShortcuts } from '@/store/app-store';
+import { useAppStore } from '@/store/app-store';
+import { useTerminalStore } from '@/store/terminal-store';
+import { DEFAULT_KEYBOARD_SHORTCUTS, type KeyboardShortcuts } from '@/store/types';
 import { useShallow } from 'zustand/react/shallow';
 import { matchesShortcutWithCode } from '@/hooks/use-keyboard-shortcuts';
 import {
@@ -161,7 +163,7 @@ export function TerminalPanel({
 
   // Get terminal settings from store - grouped with shallow comparison to reduce re-renders
   const { defaultRunScript, screenReaderMode, fontFamily, scrollbackLines, lineHeight } =
-    useAppStore(
+    useTerminalStore(
       useShallow((state) => ({
         defaultRunScript: state.terminalState.defaultRunScript,
         screenReaderMode: state.terminalState.screenReaderMode,
@@ -172,11 +174,15 @@ export function TerminalPanel({
     );
 
   // Action setters are stable references, can use individual selectors
-  const setTerminalDefaultRunScript = useAppStore((state) => state.setTerminalDefaultRunScript);
-  const setTerminalScreenReaderMode = useAppStore((state) => state.setTerminalScreenReaderMode);
-  const setTerminalFontFamily = useAppStore((state) => state.setTerminalFontFamily);
-  const setTerminalScrollbackLines = useAppStore((state) => state.setTerminalScrollbackLines);
-  const setTerminalLineHeight = useAppStore((state) => state.setTerminalLineHeight);
+  const setTerminalDefaultRunScript = useTerminalStore(
+    (state) => state.setTerminalDefaultRunScript
+  );
+  const setTerminalScreenReaderMode = useTerminalStore(
+    (state) => state.setTerminalScreenReaderMode
+  );
+  const setTerminalFontFamily = useTerminalStore((state) => state.setTerminalFontFamily);
+  const setTerminalScrollbackLines = useTerminalStore((state) => state.setTerminalScrollbackLines);
+  const setTerminalLineHeight = useTerminalStore((state) => state.setTerminalLineHeight);
 
   // Detect platform on mount
   useEffect(() => {
@@ -569,7 +575,7 @@ export function TerminalPanel({
       const terminalTheme = getTerminalTheme(themeRef.current);
 
       // Get settings from store (read at initialization time)
-      const terminalSettings = useAppStore.getState().terminalState;
+      const terminalSettings = useTerminalStore.getState().terminalState;
       const screenReaderEnabled = terminalSettings.screenReaderMode;
       const terminalFontFamily = getTerminalFontFamily(terminalSettings.fontFamily);
       const terminalScrollback = terminalSettings.scrollbackLines || 5000;

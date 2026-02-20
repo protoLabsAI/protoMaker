@@ -24,7 +24,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@protolabs/ui/atoms';
-import type { Feature } from '@/store/app-store';
+import type { Feature } from '@/store/types';
 
 /**
  * Action handler types for row actions

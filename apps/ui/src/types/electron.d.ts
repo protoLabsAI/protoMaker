@@ -2,7 +2,7 @@
  * Electron API type definitions
  */
 
-import type { ClaudeUsageResponse, CodexUsageResponse } from '@/store/app-store';
+import type { ClaudeUsageResponse, CodexUsageResponse } from '@/store/types';
 
 export interface ImageAttachment {
   id?: string; // Optional - may not be present in messages loaded from server

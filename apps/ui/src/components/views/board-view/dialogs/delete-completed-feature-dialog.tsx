@@ -8,7 +8,7 @@ import {
 } from '@protolabs/ui/atoms';
 import { Button } from '@protolabs/ui/atoms';
 import { Trash2 } from 'lucide-react';
-import { Feature } from '@/store/app-store';
+import { Feature } from '@/store/types';
 
 interface DeleteCompletedFeatureDialogProps {
   feature: Feature | null;

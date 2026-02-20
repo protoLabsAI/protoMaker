@@ -1,6 +1,6 @@
 import type { NavigateOptions } from '@tanstack/react-router';
 import { cn } from '@/lib/utils';
-import { formatShortcut } from '@/store/app-store';
+import { formatShortcut } from '@/store/types';
 import type { NavSection } from '../types';
 import type { Project } from '@/lib/electron';
 import { Spinner } from '@protolabs/ui/atoms';
