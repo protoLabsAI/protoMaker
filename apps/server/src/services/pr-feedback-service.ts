@@ -100,6 +100,7 @@ export class PRFeedbackService {
   private readonly events: EventEmitter;
   private readonly featureLoader: FeatureLoader;
   private autoModeService: AutoModeService | null = null;
+  private leadEngineerService: { isFeatureActive(featureId: string): boolean } | null = null;
 
   /** PRs we're actively monitoring, keyed by featureId */
   private trackedPRs = new Map<string, TrackedPR>();
@@ -123,6 +124,10 @@ export class PRFeedbackService {
    */
   setAutoModeService(service: AutoModeService): void {
     this.autoModeService = service;
+  }
+
+  setLeadEngineerService(service: { isFeatureActive(featureId: string): boolean }): void {
+    this.leadEngineerService = service;
   }
 
   initialize(): void {
@@ -642,6 +647,15 @@ export class PRFeedbackService {
 
           // Auto-restart dev agent with feedback if AutoModeService is available
           if (this.autoModeService) {
+            // Guard: if the LE state machine is actively processing this feature,
+            // defer remediation to it — ReviewProcessor handles changes_requested internally.
+            if (this.leadEngineerService?.isFeatureActive(featureId)) {
+              logger.info(
+                `Feature ${featureId} is managed by Lead Engineer state machine, skipping PRFeedbackService remediation`
+              );
+              return;
+            }
+
             // Concurrency guard: check if remediation is already in progress
             if (this.remediatingFeatures.has(featureId)) {
               logger.info(
@@ -1951,6 +1965,14 @@ After making your decisions, implement the accepted fixes.`;
 
       // Restart agent with CI fix prompt
       if (this.autoModeService) {
+        // Guard: if LE state machine is actively processing this feature, defer to it
+        if (this.leadEngineerService?.isFeatureActive(featureId)) {
+          logger.info(
+            `Feature ${featureId} is managed by Lead Engineer state machine, skipping CI remediation`
+          );
+          return;
+        }
+
         void this.autoModeService.executeFeature(pr.projectPath, featureId, true, true, undefined, {
           continuationPrompt,
           retryCount: ciIterationCount,
@@ -2153,6 +2175,14 @@ This is CI fix iteration ${iteration}.`;
    */
   getTrackedPRs(): TrackedPR[] {
     return Array.from(this.trackedPRs.values());
+  }
+
+  /**
+   * Check if a feature is currently under remediation by PRFeedbackService.
+   * Used by ReviewProcessor to avoid launching a competing remediation agent.
+   */
+  isFeatureRemediating(featureId: string): boolean {
+    return this.remediatingFeatures.has(featureId);
   }
 
   /**

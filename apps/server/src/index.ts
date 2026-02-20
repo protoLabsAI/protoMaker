@@ -720,6 +720,9 @@ leadEngineerService.setCodeRabbitResolver(codeRabbitResolverService);
 // Wire PR Feedback service to Lead Engineer for review state checking
 leadEngineerService.setPRFeedbackService(prFeedbackService);
 
+// Wire Lead Engineer to PRFeedbackService to prevent competing remediation
+prFeedbackService.setLeadEngineerService(leadEngineerService);
+
 // Initialize Event Hook Service for custom event triggers (with history storage)
 // Must be after DiscordBotService is created so it can use the real Discord client
 eventHookService.initialize(

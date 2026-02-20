@@ -605,6 +605,20 @@ class ReviewProcessor implements StateProcessor {
     }
 
     if (reviewState === 'changes_requested') {
+      // Concurrency guard: if PRFeedbackService is already remediating this feature,
+      // defer to it — wait and re-check instead of launching a competing agent.
+      if (this.serviceContext.prFeedbackService?.isFeatureRemediating(ctx.feature.id)) {
+        logger.info('[REVIEW] PRFeedbackService is already remediating this feature, deferring', {
+          featureId: ctx.feature.id,
+        });
+        await new Promise((r) => setTimeout(r, REVIEW_POLL_DELAY_MS));
+        return {
+          nextState: 'REVIEW',
+          shouldContinue: true,
+          reason: 'Deferring to PRFeedbackService remediation',
+        };
+      }
+
       // Check remediation budget
       if (ctx.remediationAttempts >= MAX_TOTAL_REMEDIATION_CYCLES) {
         ctx.escalationReason = `Max remediation cycles exceeded (${MAX_TOTAL_REMEDIATION_CYCLES})`;
@@ -1287,6 +1301,9 @@ export class LeadEngineerService {
   private refreshIntervals = new Map<string, ReturnType<typeof setInterval>>();
   private supervisorIntervals = new Map<string, ReturnType<typeof setInterval>>();
 
+  /** Features currently being processed through the LE state machine */
+  private activeFeatures = new Set<string>();
+
   private discordBotService?: {
     sendToChannel(channelId: string, content: string): Promise<boolean>;
   };
@@ -1535,6 +1552,14 @@ export class LeadEngineerService {
   }
 
   /**
+   * Check if a feature is actively being processed by the LE state machine.
+   * Used by PRFeedbackService to avoid launching competing remediation agents.
+   */
+  isFeatureActive(featureId: string): boolean {
+    return this.activeFeatures.has(featureId);
+  }
+
+  /**
    * Process a feature through the state machine.
    * This method is called by AutoModeService instead of the monolithic executeFeature().
    * Delegates to the FeatureStateMachine which handles all state transitions,
@@ -1551,6 +1576,7 @@ export class LeadEngineerService {
       model: options.model,
     });
 
+    this.activeFeatures.add(featureId);
     try {
       // Load the feature
       const feature = await this.featureLoader.get(projectPath, featureId);
@@ -1628,6 +1654,8 @@ export class LeadEngineerService {
         error: error instanceof Error ? error.message : String(error),
       });
       throw error;
+    } finally {
+      this.activeFeatures.delete(featureId);
     }
   }
 
