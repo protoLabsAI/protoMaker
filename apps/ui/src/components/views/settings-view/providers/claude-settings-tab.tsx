@@ -1,5 +1,6 @@
 // @ts-nocheck -- store type narrowing issues pending refactor
 import { useAppStore } from '@/store/app-store';
+import { useAIModelsStore } from '@/store/ai-models-store';
 import { useSetupStore } from '@/store/setup-store';
 import { useCliStatus } from '../hooks/use-cli-status';
 import { ClaudeCliStatus } from '../cli-status/claude-cli-status';
@@ -12,7 +13,8 @@ import { ProviderToggle } from './provider-toggle';
 import { Info } from 'lucide-react';
 
 export function ClaudeSettingsTab() {
-  const { apiKeys, autoLoadClaudeMd, setAutoLoadClaudeMd } = useAppStore();
+  const { apiKeys } = useAppStore();
+  const { autoLoadClaudeMd, setAutoLoadClaudeMd } = useAIModelsStore();
   const { claudeAuthStatus } = useSetupStore();
 
   // Use CLI status hook

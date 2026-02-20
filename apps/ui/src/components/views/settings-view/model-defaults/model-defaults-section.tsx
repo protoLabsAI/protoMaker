@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Workflow, RotateCcw, Replace } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useAppStore } from '@/store/app-store';
+import { useAIModelsStore } from '@/store/ai-models-store';
 import { Button } from '@protolabs/ui/atoms';
 import { PhaseModelSelector } from './phase-model-selector';
 import { BulkReplaceDialog } from './bulk-replace-dialog';
@@ -90,7 +90,7 @@ function PhaseGroup({
   subtitle: string;
   phases: PhaseConfig[];
 }) {
-  const { phaseModels, setPhaseModel } = useAppStore();
+  const { phaseModels, setPhaseModel } = useAIModelsStore();
 
   return (
     <div className="space-y-4">
@@ -114,7 +114,7 @@ function PhaseGroup({
 }
 
 export function ModelDefaultsSection() {
-  const { resetPhaseModels, claudeCompatibleProviders } = useAppStore();
+  const { resetPhaseModels, claudeCompatibleProviders } = useAIModelsStore();
   const [showBulkReplace, setShowBulkReplace] = useState(false);
 
   // Check if there are any enabled ClaudeCompatibleProviders

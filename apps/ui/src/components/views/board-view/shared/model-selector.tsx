@@ -4,7 +4,7 @@ import { Badge } from '@protolabs/ui/atoms';
 import { Brain, AlertTriangle } from 'lucide-react';
 import { AnthropicIcon, CursorIcon, OpenAIIcon } from '@/components/shared/provider-icon';
 import { cn } from '@/lib/utils';
-import { useAppStore } from '@/store/app-store';
+import { useAIModelsStore } from '@/store/ai-models-store';
 import { useSetupStore } from '@/store/setup-store';
 import { getModelProvider } from '@automaker/types';
 import type { ModelProvider } from '@automaker/types';
@@ -31,7 +31,7 @@ export function ModelSelector({
     codexModelsError,
     fetchCodexModels,
     disabledProviders,
-  } = useAppStore();
+  } = useAIModelsStore();
   const { cursorCliStatus, codexCliStatus } = useSetupStore();
 
   const selectedProvider = getModelProvider(selectedModel);

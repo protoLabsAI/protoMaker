@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
-import { useAppStore } from '@/store/app-store';
+import { useAIModelsStore } from '@/store/ai-models-store';
 import { useIsMobile } from '@/hooks/use-media-query';
 import type {
   ModelAlias,
@@ -178,7 +178,7 @@ export function PhaseModelSelector({
     fetchOpencodeModels,
     disabledProviders,
     claudeCompatibleProviders,
-  } = useAppStore();
+  } = useAIModelsStore();
 
   // Detect mobile devices to use inline expansion instead of nested popovers
   const isMobile = useIsMobile();

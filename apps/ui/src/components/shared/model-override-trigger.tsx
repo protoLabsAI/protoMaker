@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { cn } from '@/lib/utils';
-import { useAppStore } from '@/store/app-store';
+import { useAIModelsStore } from '@/store/ai-models-store';
 import type { ModelAlias, CursorModelId, PhaseModelKey, PhaseModelEntry } from '@automaker/types';
 import { PhaseModelSelector } from '@/components/views/settings-view/model-defaults/phase-model-selector';
 
@@ -40,7 +40,7 @@ export function ModelOverrideTrigger({
   isOverridden = false,
   className,
 }: ModelOverrideTriggerProps) {
-  const { phaseModels } = useAppStore();
+  const { phaseModels } = useAIModelsStore();
 
   const handleChange = (entry: PhaseModelEntry) => {
     // If the new entry matches the global default, clear the override

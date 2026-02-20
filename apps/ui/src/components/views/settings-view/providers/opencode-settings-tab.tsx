@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { useAppStore } from '@/store/app-store';
+import { useAIModelsStore } from '@/store/ai-models-store';
 import { OpencodeCliStatus, OpencodeCliStatusSkeleton } from '../cli-status/opencode-cli-status';
 import { OpencodeModelConfiguration } from './opencode-model-configuration';
 import { ProviderToggle } from './provider-toggle';
@@ -20,7 +20,7 @@ export function OpencodeSettingsTab() {
     toggleOpencodeModel,
     enabledDynamicModelIds,
     toggleDynamicModel,
-  } = useAppStore();
+  } = useAIModelsStore();
 
   const [isSaving, setIsSaving] = useState(false);
 

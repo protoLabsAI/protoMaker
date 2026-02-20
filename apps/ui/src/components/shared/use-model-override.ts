@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
-import { useAppStore } from '@/store/app-store';
+import { useAIModelsStore } from '@/store/ai-models-store';
 import type { ModelId, PhaseModelKey, PhaseModelEntry } from '@automaker/types';
 import { DEFAULT_PHASE_MODELS } from '@automaker/types';
 
@@ -65,7 +65,7 @@ export function useModelOverride({
   phase,
   initialOverride = null,
 }: UseModelOverrideOptions): UseModelOverrideResult {
-  const { phaseModels } = useAppStore();
+  const { phaseModels } = useAIModelsStore();
   const [override, setOverrideState] = useState<PhaseModelEntry | null>(
     initialOverride ? normalizeEntry(initialOverride) : null
   );

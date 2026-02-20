@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useAppStore } from '@/store/app-store';
+import { useAIModelsStore } from '@/store/ai-models-store';
 import { Button } from '@protolabs/ui/atoms';
 import {
   Dialog,
@@ -50,7 +50,7 @@ const CLAUDE_MODEL_DISPLAY: Record<ClaudeModelAlias, string> = {
 };
 
 export function BulkReplaceDialog({ open, onOpenChange }: BulkReplaceDialogProps) {
-  const { phaseModels, setPhaseModel, claudeCompatibleProviders } = useAppStore();
+  const { phaseModels, setPhaseModel, claudeCompatibleProviders } = useAIModelsStore();
   const [selectedProvider, setSelectedProvider] = useState<string>('anthropic');
 
   // Get enabled providers

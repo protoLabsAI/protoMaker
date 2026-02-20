@@ -8,7 +8,7 @@ import {
   DEFAULT_FONT_VALUE,
 } from '@/config/ui-font-options';
 import { cn } from '@/lib/utils';
-import { useAppStore } from '@/store/app-store';
+import { useThemeStore } from '@/store/theme-store';
 import { FontSelector } from '@/components/shared';
 import type { Theme } from '../shared/types';
 
@@ -18,7 +18,7 @@ interface AppearanceSectionProps {
 }
 
 export function AppearanceSection({ effectiveTheme, onThemeChange }: AppearanceSectionProps) {
-  const { fontFamilySans, fontFamilyMono, setFontSans, setFontMono } = useAppStore();
+  const { fontFamilySans, fontFamilyMono, setFontSans, setFontMono } = useThemeStore();
 
   // Determine if current theme is light or dark
   const isLightTheme = lightThemes.some((t) => t.value === effectiveTheme);

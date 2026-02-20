@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { useAppStore } from '@/store/app-store';
+import { useAIModelsStore } from '@/store/ai-models-store';
 import { useSetupStore } from '@/store/setup-store';
 import { CodexCliStatus } from '../cli-status/codex-cli-status';
 import { CodexSettings } from '../codex/codex-settings';
@@ -25,7 +25,7 @@ export function CodexSettingsTab() {
     setCodexEnableImages,
     setCodexDefaultModel,
     toggleCodexModel,
-  } = useAppStore();
+  } = useAIModelsStore();
 
   const {
     codexAuthStatus,

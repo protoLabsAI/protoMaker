@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { useAppStore } from '@/store/app-store';
+import { useAIModelsStore } from '@/store/ai-models-store';
 import type { CursorModelId } from '@automaker/types';
 import {
   CursorCliStatus,
@@ -16,13 +17,9 @@ import { ProviderToggle } from './provider-toggle';
 
 export function CursorSettingsTab() {
   // Global settings from store
-  const {
-    enabledCursorModels,
-    cursorDefaultModel,
-    setCursorDefaultModel,
-    toggleCursorModel,
-    currentProject,
-  } = useAppStore();
+  const { currentProject } = useAppStore();
+  const { enabledCursorModels, cursorDefaultModel, setCursorDefaultModel, toggleCursorModel } =
+    useAIModelsStore();
 
   // Custom hooks for data fetching
   const { status, isLoading, loadData } = useCursorStatus();

@@ -1,4 +1,4 @@
-import { useAppStore } from '@/store/app-store';
+import { useAIModelsStore } from '@/store/ai-models-store';
 import type { ModelProvider } from '@automaker/types';
 import { Switch } from '@protolabs/ui/atoms';
 import { Label } from '@protolabs/ui/atoms';
@@ -10,7 +10,7 @@ interface ProviderToggleProps {
 }
 
 export function ProviderToggle({ provider, providerLabel }: ProviderToggleProps) {
-  const { disabledProviders, toggleProviderDisabled } = useAppStore();
+  const { disabledProviders, toggleProviderDisabled } = useAIModelsStore();
   const isDisabled = disabledProviders.includes(provider);
 
   return (

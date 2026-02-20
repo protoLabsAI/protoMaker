@@ -1,12 +1,15 @@
 import { useAppStore } from '@/store/app-store';
+import { useThemeStore } from '@/store/theme-store';
 import { useThemePreview } from './use-theme-preview';
 
 /**
  * Hook that manages project theme state and preview handlers
  */
 export function useProjectTheme() {
-  // Get theme-related values from store
-  const { theme: globalTheme, setTheme, setProjectTheme, setPreviewTheme } = useAppStore();
+  // Get theme-related values from theme store
+  const { theme: globalTheme, setTheme, setPreviewTheme } = useThemeStore();
+  // Project-specific theme setter stays on app-store (cross-domain)
+  const { setProjectTheme } = useAppStore();
 
   // Get debounced preview handlers
   const { handlePreviewEnter, handlePreviewLeave } = useThemePreview({ setPreviewTheme });
