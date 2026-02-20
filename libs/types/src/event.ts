@@ -267,6 +267,13 @@ export type EventType =
   // Signal routing events (signal intake and routing)
   | 'signal:received'
   | 'signal:routed'
+  // GTM content pipeline events (content creation flow)
+  | 'authority:gtm-signal-received'
+  | 'authority:gtm-research-started'
+  | 'authority:gtm-draft-started'
+  | 'content:draft-ready'
+  | 'content:draft-approved'
+  | 'content:draft-rejected'
   // Metrics ledger events (persistent analytics)
   | 'ledger:record-written'
   | 'ledger:backfill-completed'

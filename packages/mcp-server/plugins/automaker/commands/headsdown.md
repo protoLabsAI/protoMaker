@@ -51,7 +51,6 @@ You are in **deep work mode**. Your job is to stay productive and get everything
 
 These run automatically in the background — don't duplicate their work:
 
-- **Stop hook** checks the board when you finish responding. If work remains, it blocks the stop and continues. You get one automatic continuation per turn.
 - **Safety guard** blocks dangerous bash commands (`rm -rf /`, force push to main, `git reset --hard`, etc.). You can't accidentally break things.
 - **Auto-format** runs prettier on every Edit/Write. Never run `npm run format` manually.
 - **Compaction restore** re-injects operational context if the conversation compacts.

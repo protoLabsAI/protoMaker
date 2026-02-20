@@ -18,7 +18,7 @@
  * AgentRoleName - Short role codes for policy engine permission matrix
  * Maps to AuthorityRole: CTO=cto, PM=product-manager, ProjM=project-manager, etc.
  */
-export type AgentRoleName = 'CTO' | 'PM' | 'ProjM' | 'EM' | 'PE';
+export type AgentRoleName = 'CTO' | 'PM' | 'ProjM' | 'EM' | 'PE' | 'GTM';
 
 /**
  * PolicyAction - Actions evaluated by the policy engine
@@ -181,7 +181,8 @@ export type AuthorityRole =
   | 'product-manager'
   | 'project-manager'
   | 'engineering-manager'
-  | 'principal-engineer';
+  | 'principal-engineer'
+  | 'gtm-authority';
 
 /**
  * PolicyActionType - All actions that can be controlled by policies
@@ -362,6 +363,7 @@ export const ROLE_NAME_TO_AUTHORITY: Record<AgentRoleName, AuthorityRole> = {
   ProjM: 'project-manager',
   EM: 'engineering-manager',
   PE: 'principal-engineer',
+  GTM: 'gtm-authority',
 };
 
 /**
@@ -373,4 +375,5 @@ export const AUTHORITY_TO_ROLE_NAME: Record<AuthorityRole, AgentRoleName> = {
   'project-manager': 'ProjM',
   'engineering-manager': 'EM',
   'principal-engineer': 'PE',
+  'gtm-authority': 'GTM',
 };

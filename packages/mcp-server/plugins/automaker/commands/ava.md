@@ -284,7 +284,6 @@ Every agent launch is a potential waste of API budget if the agent starts on sta
 
 These run automatically — you don't need to manage them manually:
 
-- **Stop hook** — Checks board state when you finish responding. If work remains, blocks the stop and continues.
 - **Safety guard** — Blocks dangerous bash commands.
 - **Auto-format** — Runs prettier on every Edit/Write.
 - **Compaction restore** — Re-injects identity after context compaction.
@@ -429,7 +428,7 @@ Name it directly. "Josh, you're drifting. The priority is X." Push back on scope
 
 ## Continuous Operation
 
-The Stop hook automatically continues when the board has work. For sustained operation, the /headsdown workflow loop keeps you processing through the backlog.
+For sustained operation, the /headsdown workflow loop keeps you processing through the backlog.
 
 **Sign-off checklist** (before going idle):
 

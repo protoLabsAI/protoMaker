@@ -139,6 +139,7 @@ import { CompletionDetectorService } from './services/completion-detector-servic
 import { ReflectionService } from './services/reflection-service.js';
 import { createCeremoniesRoutes } from './routes/ceremonies/index.js';
 import { PMAuthorityAgent } from './services/authority-agents/pm-agent.js';
+import { GTMAuthorityAgent } from './services/authority-agents/gtm-agent.js';
 import { ProjMAuthorityAgent } from './services/authority-agents/projm-agent.js';
 import { EMAuthorityAgent } from './services/authority-agents/em-agent.js';
 import { AuditService } from './services/audit-service.js';
@@ -515,6 +516,16 @@ const pmAgent = new PMAuthorityAgent(
   auditService,
   settingsService
 );
+// Initialize GTM Authority Agent (content creation pipeline)
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const gtmAgent = new GTMAuthorityAgent(
+  events,
+  authorityService,
+  featureLoader,
+  auditService,
+  settingsService
+);
+
 const projectService = new ProjectService(featureLoader);
 
 // Initialize Project Lifecycle Service (Linear as source of truth)
