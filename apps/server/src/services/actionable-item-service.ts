@@ -67,6 +67,15 @@ async function readJsonFile<T>(filePath: string, defaultValue: T): Promise<T> {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
       return defaultValue;
     }
+    if (error instanceof SyntaxError) {
+      logger.error(`Invalid JSON in ${filePath}, backing up and using default:`, error);
+      try {
+        await secureFs.rename(filePath, `${filePath}.corrupted.${Date.now()}`);
+      } catch {
+        // Ignore backup errors
+      }
+      return defaultValue;
+    }
     logger.error(`Error reading ${filePath}:`, error);
     return defaultValue;
   }

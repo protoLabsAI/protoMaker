@@ -163,7 +163,7 @@ export const useActionableItemsStore = create<ActionableItemsState & ActionableI
 
     markAllAsRead: () =>
       set((state) => ({
-        items: state.items.map((i) => ({ ...i, read: true })),
+        items: state.items.map((i) => (i.status === 'pending' ? { ...i, read: true } : i)),
         unreadCount: 0,
       })),
 
