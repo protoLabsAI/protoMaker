@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 // Note: persist middleware removed - settings now sync via API (use-settings-sync.ts)
 import type { Project, TrashedProject } from '@/lib/electron';
-import { getElectronAPI } from '@/lib/electron';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { createLogger } from '@automaker/utils/logger';
 import { setItem } from '@/lib/storage';
@@ -72,16 +71,16 @@ import type {
 } from './types';
 
 import { useTerminalStore } from './terminal-store';
+import { useAIModelsStore } from './ai-models-store';
 
 const logger = createLogger('AppStore');
-const OPENCODE_BEDROCK_PROVIDER_ID = 'amazon-bedrock';
-const OPENCODE_BEDROCK_MODEL_PREFIX = `${OPENCODE_BEDROCK_PROVIDER_ID}/`;
 
 // All types, interfaces, constants, and utility functions are defined in ./types.ts.
 // Re-export everything for backward compatibility — existing consumers can keep
 // importing from '@/store/app-store' without changes.
 export * from './types';
 export { useTerminalStore } from './terminal-store';
+export { useAIModelsStore } from './ai-models-store';
 
 // Types re-exported from ./types.ts: ViewMode, ThemeMode, THEME_STORAGE_KEY,
 // FONT_SANS_STORAGE_KEY, FONT_MONO_STORAGE_KEY, MAX_INIT_OUTPUT_LINES,
@@ -2021,166 +2020,42 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
   setServerLogLevel: (level) => set({ serverLogLevel: level }),
   setEnableRequestLogging: (enabled) => set({ enableRequestLogging: enabled }),
 
-  // Enhancement Model actions
-  setEnhancementModel: (model) => set({ enhancementModel: model }),
-
-  // Validation Model actions
-  setValidationModel: (model) => set({ validationModel: model }),
-
-  // Phase Model actions
-  setPhaseModel: async (phase, entry) => {
-    set((state) => ({
-      phaseModels: {
-        ...state.phaseModels,
-        [phase]: entry,
-      },
-    }));
-    // Sync to server settings file
-    const { syncSettingsToServer } = await import('@/hooks/use-settings-migration');
-    await syncSettingsToServer();
-  },
-  setPhaseModels: async (models) => {
-    set((state) => ({
-      phaseModels: {
-        ...state.phaseModels,
-        ...models,
-      },
-    }));
-    // Sync to server settings file
-    const { syncSettingsToServer } = await import('@/hooks/use-settings-migration');
-    await syncSettingsToServer();
-  },
-  resetPhaseModels: async () => {
-    set({ phaseModels: DEFAULT_PHASE_MODELS });
-    // Sync to server settings file
-    const { syncSettingsToServer } = await import('@/hooks/use-settings-migration');
-    await syncSettingsToServer();
-  },
-  toggleFavoriteModel: (modelId) => {
-    const current = get().favoriteModels;
-    if (current.includes(modelId)) {
-      set({ favoriteModels: current.filter((id) => id !== modelId) });
-    } else {
-      set({ favoriteModels: [...current, modelId] });
-    }
-  },
-
-  // Cursor CLI Settings actions
-  setEnabledCursorModels: (models) => set({ enabledCursorModels: models }),
-  setCursorDefaultModel: (model) => set({ cursorDefaultModel: model }),
-  toggleCursorModel: (model, enabled) =>
-    set((state) => ({
-      enabledCursorModels: enabled
-        ? [...state.enabledCursorModels, model]
-        : state.enabledCursorModels.filter((m) => m !== model),
-    })),
-
-  // Codex CLI Settings actions
-  setEnabledCodexModels: (models) => set({ enabledCodexModels: models }),
-  setCodexDefaultModel: (model) => set({ codexDefaultModel: model }),
-  toggleCodexModel: (model, enabled) =>
-    set((state) => ({
-      enabledCodexModels: enabled
-        ? [...state.enabledCodexModels, model]
-        : state.enabledCodexModels.filter((m) => m !== model),
-    })),
-  setCodexAutoLoadAgents: async (enabled) => {
-    set({ codexAutoLoadAgents: enabled });
-    const { syncSettingsToServer } = await import('@/hooks/use-settings-migration');
-    await syncSettingsToServer();
-  },
-  setCodexSandboxMode: async (mode) => {
-    set({ codexSandboxMode: mode });
-    const { syncSettingsToServer } = await import('@/hooks/use-settings-migration');
-    await syncSettingsToServer();
-  },
-  setCodexApprovalPolicy: async (policy) => {
-    set({ codexApprovalPolicy: policy });
-    const { syncSettingsToServer } = await import('@/hooks/use-settings-migration');
-    await syncSettingsToServer();
-  },
-  setCodexEnableWebSearch: async (enabled) => {
-    set({ codexEnableWebSearch: enabled });
-    const { syncSettingsToServer } = await import('@/hooks/use-settings-migration');
-    await syncSettingsToServer();
-  },
-  setCodexEnableImages: async (enabled) => {
-    set({ codexEnableImages: enabled });
-    const { syncSettingsToServer } = await import('@/hooks/use-settings-migration');
-    await syncSettingsToServer();
-  },
-
-  // OpenCode CLI Settings actions
-  setEnabledOpencodeModels: (models) => set({ enabledOpencodeModels: models }),
-  setOpencodeDefaultModel: (model) => set({ opencodeDefaultModel: model }),
-  toggleOpencodeModel: (model, enabled) =>
-    set((state) => ({
-      enabledOpencodeModels: enabled
-        ? [...state.enabledOpencodeModels, model]
-        : state.enabledOpencodeModels.filter((m) => m !== model),
-    })),
-  setDynamicOpencodeModels: (models) => {
-    // Dynamic models depend on CLI authentication state and are re-discovered each session.
-    // Persist enabled model IDs, but do not auto-enable new models.
-    const filteredModels = models.filter(
-      (model) =>
-        model.provider !== OPENCODE_BEDROCK_PROVIDER_ID &&
-        !model.id.startsWith(OPENCODE_BEDROCK_MODEL_PREFIX)
-    );
-    const currentEnabled = get().enabledDynamicModelIds;
-    const newModelIds = filteredModels.map((m) => m.id);
-    const filteredEnabled = currentEnabled.filter((modelId) => newModelIds.includes(modelId));
-
-    const nextEnabled = currentEnabled.length === 0 ? [] : filteredEnabled;
-    set({ dynamicOpencodeModels: filteredModels, enabledDynamicModelIds: nextEnabled });
-  },
-  setEnabledDynamicModelIds: (ids) => set({ enabledDynamicModelIds: ids }),
-  toggleDynamicModel: (modelId, enabled) =>
-    set((state) => ({
-      enabledDynamicModelIds: enabled
-        ? [...state.enabledDynamicModelIds, modelId]
-        : state.enabledDynamicModelIds.filter((id) => id !== modelId),
-    })),
-  setCachedOpencodeProviders: (providers) =>
-    set({
-      cachedOpencodeProviders: providers.filter(
-        (provider) => provider.id !== OPENCODE_BEDROCK_PROVIDER_ID
-      ),
-    }),
-
-  // Provider Visibility Settings actions
-  setDisabledProviders: (providers) => set({ disabledProviders: providers }),
-  toggleProviderDisabled: (provider, disabled) =>
-    set((state) => ({
-      disabledProviders: disabled
-        ? [...state.disabledProviders, provider]
-        : state.disabledProviders.filter((p) => p !== provider),
-    })),
-  isProviderDisabled: (provider) => get().disabledProviders.includes(provider),
-
-  // Claude Agent SDK Settings actions
-  setAutoLoadClaudeMd: async (enabled) => {
-    const previous = get().autoLoadClaudeMd;
-    set({ autoLoadClaudeMd: enabled });
-    // Sync to server settings file
-    const { syncSettingsToServer } = await import('@/hooks/use-settings-migration');
-    const ok = await syncSettingsToServer();
-    if (!ok) {
-      logger.error('Failed to sync autoLoadClaudeMd setting to server - reverting');
-      set({ autoLoadClaudeMd: previous });
-    }
-  },
-  setSkipSandboxWarning: async (skip) => {
-    const previous = get().skipSandboxWarning;
-    set({ skipSandboxWarning: skip });
-    // Sync to server settings file
-    const { syncSettingsToServer } = await import('@/hooks/use-settings-migration');
-    const ok = await syncSettingsToServer();
-    if (!ok) {
-      logger.error('Failed to sync skipSandboxWarning setting to server - reverting');
-      set({ skipSandboxWarning: previous });
-    }
-  },
+  // AI Model actions — forwarded to useAIModelsStore
+  setEnhancementModel: (...args) => useAIModelsStore.getState().setEnhancementModel(...args),
+  setValidationModel: (...args) => useAIModelsStore.getState().setValidationModel(...args),
+  setPhaseModel: (...args) => useAIModelsStore.getState().setPhaseModel(...args),
+  setPhaseModels: (...args) => useAIModelsStore.getState().setPhaseModels(...args),
+  resetPhaseModels: () => useAIModelsStore.getState().resetPhaseModels(),
+  toggleFavoriteModel: (...args) => useAIModelsStore.getState().toggleFavoriteModel(...args),
+  setEnabledCursorModels: (...args) => useAIModelsStore.getState().setEnabledCursorModels(...args),
+  setCursorDefaultModel: (...args) => useAIModelsStore.getState().setCursorDefaultModel(...args),
+  toggleCursorModel: (...args) => useAIModelsStore.getState().toggleCursorModel(...args),
+  setEnabledCodexModels: (...args) => useAIModelsStore.getState().setEnabledCodexModels(...args),
+  setCodexDefaultModel: (...args) => useAIModelsStore.getState().setCodexDefaultModel(...args),
+  toggleCodexModel: (...args) => useAIModelsStore.getState().toggleCodexModel(...args),
+  setCodexAutoLoadAgents: (...args) => useAIModelsStore.getState().setCodexAutoLoadAgents(...args),
+  setCodexSandboxMode: (...args) => useAIModelsStore.getState().setCodexSandboxMode(...args),
+  setCodexApprovalPolicy: (...args) => useAIModelsStore.getState().setCodexApprovalPolicy(...args),
+  setCodexEnableWebSearch: (...args) =>
+    useAIModelsStore.getState().setCodexEnableWebSearch(...args),
+  setCodexEnableImages: (...args) => useAIModelsStore.getState().setCodexEnableImages(...args),
+  setEnabledOpencodeModels: (...args) =>
+    useAIModelsStore.getState().setEnabledOpencodeModels(...args),
+  setOpencodeDefaultModel: (...args) =>
+    useAIModelsStore.getState().setOpencodeDefaultModel(...args),
+  toggleOpencodeModel: (...args) => useAIModelsStore.getState().toggleOpencodeModel(...args),
+  setDynamicOpencodeModels: (...args) =>
+    useAIModelsStore.getState().setDynamicOpencodeModels(...args),
+  setEnabledDynamicModelIds: (...args) =>
+    useAIModelsStore.getState().setEnabledDynamicModelIds(...args),
+  toggleDynamicModel: (...args) => useAIModelsStore.getState().toggleDynamicModel(...args),
+  setCachedOpencodeProviders: (...args) =>
+    useAIModelsStore.getState().setCachedOpencodeProviders(...args),
+  setDisabledProviders: (...args) => useAIModelsStore.getState().setDisabledProviders(...args),
+  toggleProviderDisabled: (...args) => useAIModelsStore.getState().toggleProviderDisabled(...args),
+  isProviderDisabled: (...args) => useAIModelsStore.getState().isProviderDisabled(...args),
+  setAutoLoadClaudeMd: (...args) => useAIModelsStore.getState().setAutoLoadClaudeMd(...args),
+  setSkipSandboxWarning: (...args) => useAIModelsStore.getState().setSkipSandboxWarning(...args),
 
   // Editor Configuration actions
   setDefaultEditorCommand: (command) => set({ defaultEditorCommand: command }),
@@ -2198,90 +2073,38 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
   // Event Hook actions
   setEventHooks: (hooks) => set({ eventHooks: hooks }),
 
-  // Claude-Compatible Provider actions (new system)
-  addClaudeCompatibleProvider: async (provider) => {
-    set({ claudeCompatibleProviders: [...get().claudeCompatibleProviders, provider] });
-    // Sync immediately to persist provider
-    const { syncSettingsToServer } = await import('@/hooks/use-settings-migration');
-    await syncSettingsToServer();
-  },
+  // Claude-Compatible Provider actions — forwarded to useAIModelsStore
+  addClaudeCompatibleProvider: (...args) =>
+    useAIModelsStore.getState().addClaudeCompatibleProvider(...args),
+  updateClaudeCompatibleProvider: (...args) =>
+    useAIModelsStore.getState().updateClaudeCompatibleProvider(...args),
+  deleteClaudeCompatibleProvider: (...args) =>
+    useAIModelsStore.getState().deleteClaudeCompatibleProvider(...args),
+  setClaudeCompatibleProviders: (...args) =>
+    useAIModelsStore.getState().setClaudeCompatibleProviders(...args),
+  toggleClaudeCompatibleProviderEnabled: (...args) =>
+    useAIModelsStore.getState().toggleClaudeCompatibleProviderEnabled(...args),
 
-  updateClaudeCompatibleProvider: async (id, updates) => {
-    set({
-      claudeCompatibleProviders: get().claudeCompatibleProviders.map((p) =>
-        p.id === id ? { ...p, ...updates } : p
-      ),
-    });
-    // Sync immediately to persist changes
-    const { syncSettingsToServer } = await import('@/hooks/use-settings-migration');
-    await syncSettingsToServer();
-  },
+  // Claude API Profile actions — forwarded to useAIModelsStore
+  // (except deleteClaudeApiProfile which has cross-domain project cleanup)
+  addClaudeApiProfile: (...args) => useAIModelsStore.getState().addClaudeApiProfile(...args),
+  updateClaudeApiProfile: (...args) => useAIModelsStore.getState().updateClaudeApiProfile(...args),
 
-  deleteClaudeCompatibleProvider: async (id) => {
-    set({
-      claudeCompatibleProviders: get().claudeCompatibleProviders.filter((p) => p.id !== id),
-    });
-    // Sync immediately to persist deletion
-    const { syncSettingsToServer } = await import('@/hooks/use-settings-migration');
-    await syncSettingsToServer();
-  },
-
-  setClaudeCompatibleProviders: async (providers) => {
-    set({ claudeCompatibleProviders: providers });
-    // Sync immediately to persist providers
-    const { syncSettingsToServer } = await import('@/hooks/use-settings-migration');
-    await syncSettingsToServer();
-  },
-
-  toggleClaudeCompatibleProviderEnabled: async (id) => {
-    set({
-      claudeCompatibleProviders: get().claudeCompatibleProviders.map((p) =>
-        p.id === id ? { ...p, enabled: p.enabled === false ? true : false } : p
-      ),
-    });
-    // Sync immediately to persist change
-    const { syncSettingsToServer } = await import('@/hooks/use-settings-migration');
-    await syncSettingsToServer();
-  },
-
-  // Claude API Profile actions (deprecated - kept for backward compatibility)
-  addClaudeApiProfile: async (profile) => {
-    set({ claudeApiProfiles: [...get().claudeApiProfiles, profile] });
-    // Sync immediately to persist profile
-    const { syncSettingsToServer } = await import('@/hooks/use-settings-migration');
-    await syncSettingsToServer();
-  },
-
-  updateClaudeApiProfile: async (id, updates) => {
-    set({
-      claudeApiProfiles: get().claudeApiProfiles.map((p) =>
-        p.id === id ? { ...p, ...updates } : p
-      ),
-    });
-    // Sync immediately to persist changes
-    const { syncSettingsToServer } = await import('@/hooks/use-settings-migration');
-    await syncSettingsToServer();
-  },
-
+  // deleteClaudeApiProfile keeps full implementation (cross-domain: reads projects + currentProject)
   deleteClaudeApiProfile: async (id) => {
-    const currentActiveId = get().activeClaudeApiProfileId;
     const projects = get().projects;
-
-    // Find projects that have per-project override referencing the deleted profile
     const affectedProjects = projects.filter((p) => p.activeClaudeApiProfileId === id);
 
-    // Update state: remove profile and clear references
+    // Delegate profile state cleanup to AI models store
+    await useAIModelsStore.getState().deleteClaudeApiProfile(id);
+
+    // Handle project cleanup (cross-domain)
     set({
-      claudeApiProfiles: get().claudeApiProfiles.filter((p) => p.id !== id),
-      // Clear global active if the deleted profile was active
-      activeClaudeApiProfileId: currentActiveId === id ? null : currentActiveId,
-      // Clear per-project overrides that reference the deleted profile
       projects: projects.map((p) =>
         p.activeClaudeApiProfileId === id ? { ...p, activeClaudeApiProfileId: undefined } : p
       ),
     });
 
-    // Also update currentProject if it was using the deleted profile
     const currentProject = get().currentProject;
     if (currentProject?.activeClaudeApiProfileId === id) {
       set({
@@ -2289,7 +2112,7 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
       });
     }
 
-    // Persist per-project changes to server (use __USE_GLOBAL__ marker)
+    // Persist per-project changes to server
     const httpClient = getHttpApiClient();
     await Promise.all(
       affectedProjects.map((project) =>
@@ -2300,25 +2123,11 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
           })
       )
     );
-
-    // Sync global settings to persist deletion
-    const { syncSettingsToServer } = await import('@/hooks/use-settings-migration');
-    await syncSettingsToServer();
   },
 
-  setActiveClaudeApiProfile: async (id) => {
-    set({ activeClaudeApiProfileId: id });
-    // Sync immediately to persist active profile change
-    const { syncSettingsToServer } = await import('@/hooks/use-settings-migration');
-    await syncSettingsToServer();
-  },
-
-  setClaudeApiProfiles: async (profiles) => {
-    set({ claudeApiProfiles: profiles });
-    // Sync immediately to persist profiles
-    const { syncSettingsToServer } = await import('@/hooks/use-settings-migration');
-    await syncSettingsToServer();
-  },
+  setActiveClaudeApiProfile: (...args) =>
+    useAIModelsStore.getState().setActiveClaudeApiProfile(...args),
+  setClaudeApiProfiles: (...args) => useAIModelsStore.getState().setClaudeApiProfiles(...args),
 
   // MCP Server actions
   addMCPServer: (server) => {
@@ -2574,145 +2383,16 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
   // Plan Approval actions
   setPendingPlanApproval: (approval) => set({ pendingPlanApproval: approval }),
 
-  // Claude Usage Tracking actions
-  setClaudeRefreshInterval: (interval: number) => set({ claudeRefreshInterval: interval }),
-  setClaudeUsageLastUpdated: (timestamp: number) => set({ claudeUsageLastUpdated: timestamp }),
-  setClaudeUsage: (usage: ClaudeUsage | null) =>
-    set({
-      claudeUsage: usage,
-      claudeUsageLastUpdated: usage ? Date.now() : null,
-    }),
-
-  // Codex Usage Tracking actions
-  setCodexUsage: (usage: CodexUsage | null) =>
-    set({
-      codexUsage: usage,
-      codexUsageLastUpdated: usage ? Date.now() : null,
-    }),
-
-  // Codex Models actions
-  fetchCodexModels: async (forceRefresh = false) => {
-    const FAILURE_COOLDOWN_MS = 30 * 1000; // 30 seconds
-    const SUCCESS_CACHE_MS = 5 * 60 * 1000; // 5 minutes
-
-    const { codexModelsLastFetched, codexModelsLoading, codexModelsLastFailedAt } = get();
-
-    // Skip if already loading
-    if (codexModelsLoading) return;
-
-    // Skip if recently failed and not forcing refresh
-    if (
-      !forceRefresh &&
-      codexModelsLastFailedAt &&
-      Date.now() - codexModelsLastFailedAt < FAILURE_COOLDOWN_MS
-    ) {
-      return;
-    }
-
-    // Skip if recently fetched successfully and not forcing refresh
-    if (
-      !forceRefresh &&
-      codexModelsLastFetched &&
-      Date.now() - codexModelsLastFetched < SUCCESS_CACHE_MS
-    ) {
-      return;
-    }
-
-    set({ codexModelsLoading: true, codexModelsError: null });
-
-    try {
-      const api = getElectronAPI();
-      if (!api.codex) {
-        throw new Error('Codex API not available');
-      }
-
-      const result = await api.codex.getModels(forceRefresh);
-
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to fetch Codex models');
-      }
-
-      set({
-        codexModels: result.models || [],
-        codexModelsLastFetched: Date.now(),
-        codexModelsLoading: false,
-        codexModelsError: null,
-        codexModelsLastFailedAt: null, // Clear failure on success
-      });
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      set({
-        codexModelsError: errorMessage,
-        codexModelsLoading: false,
-        codexModelsLastFailedAt: Date.now(), // Record failure time for cooldown
-      });
-    }
-  },
-
-  setCodexModels: (models) =>
-    set({
-      codexModels: models,
-      codexModelsLastFetched: Date.now(),
-    }),
-
-  // OpenCode Models actions
-  fetchOpencodeModels: async (forceRefresh = false) => {
-    const FAILURE_COOLDOWN_MS = 30 * 1000; // 30 seconds
-    const SUCCESS_CACHE_MS = 5 * 60 * 1000; // 5 minutes
-
-    const { opencodeModelsLastFetched, opencodeModelsLoading, opencodeModelsLastFailedAt } = get();
-
-    // Skip if already loading
-    if (opencodeModelsLoading) return;
-
-    // Skip if recently failed and not forcing refresh
-    if (
-      !forceRefresh &&
-      opencodeModelsLastFailedAt &&
-      Date.now() - opencodeModelsLastFailedAt < FAILURE_COOLDOWN_MS
-    ) {
-      return;
-    }
-
-    // Skip if recently fetched successfully and not forcing refresh
-    if (
-      !forceRefresh &&
-      opencodeModelsLastFetched &&
-      Date.now() - opencodeModelsLastFetched < SUCCESS_CACHE_MS
-    ) {
-      return;
-    }
-
-    set({ opencodeModelsLoading: true, opencodeModelsError: null });
-
-    try {
-      const api = getElectronAPI();
-      if (!api.setup) {
-        throw new Error('Setup API not available');
-      }
-
-      const result = await api.setup.getOpencodeModels(forceRefresh);
-
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to fetch OpenCode models');
-      }
-
-      set({
-        dynamicOpencodeModels: result.models || [],
-        opencodeModelsLastFetched: Date.now(),
-        opencodeModelsLoading: false,
-        opencodeModelsError: null,
-        opencodeModelsLastFailedAt: null, // Clear failure on success
-      });
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      set({
-        opencodeModelsError: errorMessage,
-        opencodeModelsLoading: false,
-        opencodeModelsLastFailedAt: Date.now(), // Record failure time for cooldown
-      });
-    }
-  },
+  // Claude/Codex Usage + Model Fetching actions — forwarded to useAIModelsStore
+  setClaudeRefreshInterval: (...args) =>
+    useAIModelsStore.getState().setClaudeRefreshInterval(...args),
+  setClaudeUsageLastUpdated: (...args) =>
+    useAIModelsStore.getState().setClaudeUsageLastUpdated(...args),
+  setClaudeUsage: (...args) => useAIModelsStore.getState().setClaudeUsage(...args),
+  setCodexUsage: (...args) => useAIModelsStore.getState().setCodexUsage(...args),
+  fetchCodexModels: (...args) => useAIModelsStore.getState().fetchCodexModels(...args),
+  setCodexModels: (...args) => useAIModelsStore.getState().setCodexModels(...args),
+  fetchOpencodeModels: (...args) => useAIModelsStore.getState().fetchOpencodeModels(...args),
 
   // Pipeline actions
   setPipelineConfig: (projectPath, config) => {
@@ -2916,5 +2596,51 @@ useTerminalStore.subscribe((terminalState) => {
     initScriptState: terminalState.initScriptState,
     showInitScriptIndicatorByProject: terminalState.showInitScriptIndicatorByProject,
     autoDismissInitScriptIndicatorByProject: terminalState.autoDismissInitScriptIndicatorByProject,
+  });
+});
+
+// Sync AI models store state back to app-store for backward compatibility.
+// This ensures useAppStore(s => s.phaseModels) etc. continues to work while
+// consumers are being migrated to useAIModelsStore directly.
+useAIModelsStore.subscribe((aiModelsState) => {
+  useAppStore.setState({
+    enhancementModel: aiModelsState.enhancementModel,
+    validationModel: aiModelsState.validationModel,
+    phaseModels: aiModelsState.phaseModels,
+    favoriteModels: aiModelsState.favoriteModels,
+    enabledCursorModels: aiModelsState.enabledCursorModels,
+    cursorDefaultModel: aiModelsState.cursorDefaultModel,
+    enabledCodexModels: aiModelsState.enabledCodexModels,
+    codexDefaultModel: aiModelsState.codexDefaultModel,
+    codexAutoLoadAgents: aiModelsState.codexAutoLoadAgents,
+    codexSandboxMode: aiModelsState.codexSandboxMode,
+    codexApprovalPolicy: aiModelsState.codexApprovalPolicy,
+    codexEnableWebSearch: aiModelsState.codexEnableWebSearch,
+    codexEnableImages: aiModelsState.codexEnableImages,
+    enabledOpencodeModels: aiModelsState.enabledOpencodeModels,
+    opencodeDefaultModel: aiModelsState.opencodeDefaultModel,
+    dynamicOpencodeModels: aiModelsState.dynamicOpencodeModels,
+    enabledDynamicModelIds: aiModelsState.enabledDynamicModelIds,
+    cachedOpencodeProviders: aiModelsState.cachedOpencodeProviders,
+    opencodeModelsLoading: aiModelsState.opencodeModelsLoading,
+    opencodeModelsError: aiModelsState.opencodeModelsError,
+    opencodeModelsLastFetched: aiModelsState.opencodeModelsLastFetched,
+    opencodeModelsLastFailedAt: aiModelsState.opencodeModelsLastFailedAt,
+    disabledProviders: aiModelsState.disabledProviders,
+    autoLoadClaudeMd: aiModelsState.autoLoadClaudeMd,
+    skipSandboxWarning: aiModelsState.skipSandboxWarning,
+    claudeCompatibleProviders: aiModelsState.claudeCompatibleProviders,
+    claudeApiProfiles: aiModelsState.claudeApiProfiles,
+    activeClaudeApiProfileId: aiModelsState.activeClaudeApiProfileId,
+    claudeRefreshInterval: aiModelsState.claudeRefreshInterval,
+    claudeUsage: aiModelsState.claudeUsage,
+    claudeUsageLastUpdated: aiModelsState.claudeUsageLastUpdated,
+    codexUsage: aiModelsState.codexUsage,
+    codexUsageLastUpdated: aiModelsState.codexUsageLastUpdated,
+    codexModels: aiModelsState.codexModels,
+    codexModelsLoading: aiModelsState.codexModelsLoading,
+    codexModelsError: aiModelsState.codexModelsError,
+    codexModelsLastFetched: aiModelsState.codexModelsLastFetched,
+    codexModelsLastFailedAt: aiModelsState.codexModelsLastFailedAt,
   });
 });
