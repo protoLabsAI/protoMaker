@@ -50,6 +50,9 @@ const PM_RESEARCH_MODEL = resolveModelString('sonnet');
 /** Model for SPARC PRD generation (structured writing) */
 const PM_PRD_MODEL = resolveModelString('sonnet');
 
+/** Model for idea triage (quick 1-turn classification) */
+const PM_TRIAGE_MODEL = resolveModelString('opus');
+
 /** Valid complexity values for runtime validation */
 const VALID_COMPLEXITIES = new Set(['small', 'medium', 'large', 'architectural']);
 
@@ -61,6 +64,15 @@ interface IdeaInjectedPayload {
   injectedBy: string;
   injectedAt: string;
   autoApprove?: boolean;
+  webResearch?: boolean;
+}
+
+/** Result of Opus idea triage */
+interface TriageResult {
+  needsWebResearch: boolean;
+  searchQueries: string[];
+  focusAreas: string[];
+  reasoning: string;
 }
 
 /** Result of an AI-powered PRD review */
@@ -259,7 +271,7 @@ export class PMAuthorityAgent {
 
     // Delay slightly to allow for any rapid-fire injections
     setTimeout(() => {
-      void this.processIdea(idea.projectPath, idea.featureId, idea.autoApprove);
+      void this.processIdea(idea.projectPath, idea.featureId, idea.autoApprove, idea.webResearch);
     }, IDEA_PROCESSING_DELAY_MS);
   }
 
@@ -295,7 +307,8 @@ export class PMAuthorityAgent {
   private async processIdea(
     projectPath: string,
     featureId: string,
-    autoApproveOverride?: boolean
+    autoApproveOverride?: boolean,
+    webResearchOverride?: boolean
   ): Promise<void> {
     return withProcessingGuard(this.state, featureId, async () => {
       try {
@@ -365,8 +378,24 @@ export class PMAuthorityAgent {
           agentId: agent.id,
         });
 
-        logger.info(`Researching codebase for idea: "${feature.title}"`);
-        const researchSummary = await this.researchCodebase(feature, projectPath);
+        // Opus triage: decide if web research is needed (skipped if per-signal override is set)
+        let triage: TriageResult | undefined;
+        if (webResearchOverride) {
+          logger.info(`Web research forced by per-signal override for: "${feature.title}"`);
+          triage = {
+            needsWebResearch: true,
+            searchQueries: [],
+            focusAreas: [],
+            reasoning: 'Per-signal override',
+          };
+        } else {
+          triage = await this.triageIdea(feature, projectPath);
+        }
+
+        logger.info(
+          `Researching codebase for idea: "${feature.title}"${triage?.needsWebResearch ? ' (with web research)' : ''}`
+        );
+        const researchSummary = await this.researchCodebase(feature, projectPath, triage);
 
         // Step 3: Generate SPARC PRD from research + original idea
         logger.info(`Generating SPARC PRD for idea: "${feature.title}"`);
@@ -450,11 +479,109 @@ export class PMAuthorityAgent {
   }
 
   /**
+   * Triage an idea with Opus to decide if web research is needed.
+   * Quick 1-turn classification — no tools, minimal cost.
+   * Falls back to { needsWebResearch: false } on any failure.
+   */
+  private async triageIdea(feature: Feature, projectPath: string): Promise<TriageResult> {
+    const title = feature.title || 'Untitled';
+    const description = feature.description || '';
+
+    const systemPrompt = `You are a senior PM triaging a feature idea to decide if web research is needed.
+
+Evaluate whether the idea requires EXTERNAL context that can't be found in the codebase:
+- Competitor analysis or market positioning
+- Unfamiliar third-party libraries, APIs, or services
+- Integration patterns with external systems (payment providers, auth services, etc.)
+- Industry best practices or standards the team may not know
+- Technology evaluation or comparison
+
+If the idea is purely internal codebase work (refactoring, UI changes, bug fixes, extending existing patterns), web research is NOT needed.
+
+You MUST respond with valid JSON:
+{
+  "needsWebResearch": boolean,
+  "searchQueries": ["suggested search query 1", "..."],
+  "focusAreas": ["what to look for in web results"],
+  "reasoning": "brief explanation of your decision"
+}
+
+Keep searchQueries to 3-5 max. Only include them if needsWebResearch is true.`;
+
+    const prompt = `Triage this feature idea:
+
+**Title:** ${title}
+
+**Description:**
+${description}
+
+Should we research the web for external context, or is codebase-only research sufficient?`;
+
+    try {
+      const result = await simpleQuery({
+        prompt,
+        systemPrompt,
+        model: PM_TRIAGE_MODEL,
+        cwd: projectPath,
+        maxTurns: 1,
+        allowedTools: [],
+      });
+
+      const jsonMatch = result.text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        logger.warn('Triage did not return valid JSON, defaulting to no web research');
+        return {
+          needsWebResearch: false,
+          searchQueries: [],
+          focusAreas: [],
+          reasoning: 'Triage parse failure',
+        };
+      }
+
+      const parsed = JSON.parse(jsonMatch[0]) as TriageResult;
+
+      if (typeof parsed.needsWebResearch !== 'boolean') {
+        logger.warn('Triage missing needsWebResearch field, defaulting to false');
+        return {
+          needsWebResearch: false,
+          searchQueries: [],
+          focusAreas: [],
+          reasoning: 'Invalid triage response',
+        };
+      }
+
+      logger.info(
+        `Triage result for "${title}": webResearch=${parsed.needsWebResearch} — ${parsed.reasoning}`
+      );
+
+      return {
+        needsWebResearch: parsed.needsWebResearch,
+        searchQueries: Array.isArray(parsed.searchQueries) ? parsed.searchQueries : [],
+        focusAreas: Array.isArray(parsed.focusAreas) ? parsed.focusAreas : [],
+        reasoning: parsed.reasoning || '',
+      };
+    } catch (error) {
+      logger.error('Idea triage failed, defaulting to no web research:', error);
+      return {
+        needsWebResearch: false,
+        searchQueries: [],
+        focusAreas: [],
+        reasoning: 'Triage error',
+      };
+    }
+  }
+
+  /**
    * Research the codebase to understand context for an idea.
    * Uses sonnet with read-only tools to explore project structure,
    * find relevant patterns, and identify existing code to build on.
+   * Optionally includes WebSearch/WebFetch tools based on triage results.
    */
-  private async researchCodebase(feature: Feature, projectPath: string): Promise<string> {
+  private async researchCodebase(
+    feature: Feature,
+    projectPath: string,
+    triage?: TriageResult
+  ): Promise<string> {
     const title = feature.title || 'Untitled';
     const description = feature.description || '';
 
@@ -487,6 +614,26 @@ Be thorough but efficient. Focus on understanding:
 
 Provide a structured research summary at the end.`;
 
+    // Conditionally enhance with web research instructions
+    const useWebResearch = triage?.needsWebResearch === true;
+    const webInstructions = useWebResearch
+      ? `\n\n## Web Research
+You also have access to WebSearch and WebFetch tools. Use them to:
+- Research external libraries, APIs, or integrations mentioned in the idea
+- Find official documentation for unfamiliar technologies
+- Look up best practices or common patterns for the approach
+- Gather competitive/market context if relevant
+
+${triage.searchQueries.length > 0 ? `Suggested search queries:\n${triage.searchQueries.map((q) => `- "${q}"`).join('\n')}` : ''}
+${triage.focusAreas.length > 0 ? `\nFocus areas:\n${triage.focusAreas.map((a) => `- ${a}`).join('\n')}` : ''}`
+      : '';
+
+    const fullSystemPrompt = systemPrompt + webInstructions;
+
+    const allowedTools = useWebResearch
+      ? ['Read', 'Glob', 'Grep', 'WebSearch', 'WebFetch']
+      : ['Read', 'Glob', 'Grep'];
+
     const prompt = `Research the codebase for this feature idea:
 
 **Title:** ${title}
@@ -499,12 +646,12 @@ Explore the project structure and relevant code, then provide a structured resea
     try {
       const result = await streamingQuery({
         prompt,
-        systemPrompt,
+        systemPrompt: fullSystemPrompt,
         model: PM_RESEARCH_MODEL,
         cwd: projectPath,
         maxTurns: 30,
-        allowedTools: ['Read', 'Glob', 'Grep'],
-        readOnly: true,
+        allowedTools,
+        readOnly: !useWebResearch,
       });
 
       if (result.text && result.text.length > 50) {

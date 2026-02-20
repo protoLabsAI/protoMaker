@@ -412,13 +412,15 @@ export function createEngineRoutes(
    */
   router.post('/signal/submit', async (req: Request, res: Response) => {
     try {
-      const { projectPath, content, source, images, files, autoApprove } = (req.body ?? {}) as {
+      const { projectPath, content, source, images, files, autoApprove, webResearch } = (req.body ??
+        {}) as {
         projectPath?: string;
         content?: string;
         source?: string;
         images?: string[];
         files?: string[];
         autoApprove?: boolean;
+        webResearch?: boolean;
       };
 
       if (!content) {
@@ -437,6 +439,7 @@ export function createEngineRoutes(
         images,
         files,
         autoApprove,
+        webResearch,
       });
 
       res.json({

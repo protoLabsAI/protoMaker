@@ -254,6 +254,7 @@ export class SignalIntakeService {
         injectedBy: `signal:${signal.source}`,
         injectedAt: new Date().toISOString(),
         autoApprove: signal.channelContext?.autoApprove as boolean | undefined,
+        webResearch: signal.channelContext?.webResearch as boolean | undefined,
       });
 
       // Emit routing event for observability
@@ -287,6 +288,7 @@ export class SignalIntakeService {
     images?: string[];
     files?: string[];
     autoApprove?: boolean;
+    webResearch?: boolean;
   }): void {
     // Enrich content with file and image references
     let enrichedContent = params.content;
@@ -309,6 +311,7 @@ export class SignalIntakeService {
         images: params.images,
         files: params.files,
         autoApprove: params.autoApprove,
+        webResearch: params.webResearch,
       },
       timestamp: new Date().toISOString(),
     };
