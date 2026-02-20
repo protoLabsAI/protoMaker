@@ -21,7 +21,7 @@
  * are subject to policy checks and approval workflows.
  */
 
-import type { Feature } from '@automaker/types';
+import type { Feature, PipelinePhase } from '@automaker/types';
 import type { AuthorityAgent } from '@automaker/types';
 import { createLogger, loadContextFiles } from '@automaker/utils';
 import { resolveModelString } from '@automaker/model-resolver';
@@ -36,6 +36,7 @@ import {
   initializeAgent,
   withProcessingGuard,
   type AgentState,
+  type PhaseProcessor,
 } from './agent-utils.js';
 import { getWorkflowSettings } from '../../lib/settings-helpers.js';
 
@@ -1484,5 +1485,29 @@ Generate a comprehensive SPARC PRD as JSON.`;
    */
   getAgent(projectPath: string): AuthorityAgent | null {
     return this.state.getAgent(projectPath);
+  }
+
+  /**
+   * PhaseProcessor implementation — orchestrator calls this during active dispatch.
+   * Maps pipeline phases to existing PM agent methods.
+   */
+  async executePhase(projectPath: string, featureId: string, phase: PipelinePhase): Promise<void> {
+    switch (phase) {
+      case 'RESEARCH':
+        this.events.emit('authority:idea-injected', { projectPath, featureId });
+        break;
+      case 'SPEC':
+        // PRD generation is triggered by research completion (existing flow)
+        logger.info(
+          `[Pipeline] SPEC phase for ${featureId} — PRD gen triggered by research completion`
+        );
+        break;
+      case 'SPEC_REVIEW':
+        // Gate waiting — orchestrator handles this
+        logger.info(`[Pipeline] SPEC_REVIEW phase for ${featureId} — awaiting user review`);
+        break;
+      default:
+        logger.warn(`[Pipeline] PM agent has no handler for phase ${phase}`);
+    }
   }
 }

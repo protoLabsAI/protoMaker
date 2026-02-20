@@ -10,6 +10,7 @@
  * Reflection node at the bottom completes the feedback loop.
  */
 
+import type { PipelinePhase } from '@automaker/types';
 import type { FlowEdge, PipelineStageId, EngineServiceId } from './types';
 
 // ============================================
@@ -29,6 +30,8 @@ export const NODE_IDS = {
   agentExecution: 'engine-agent-execution',
   gitWorkflow: 'engine-git-workflow',
   prFeedback: 'engine-pr-feedback',
+  // GTM content pipeline (branches from triage)
+  contentPipeline: 'engine-content-pipeline',
   // Reflection (bottom)
   reflection: 'engine-reflection',
   // Integrations (right sidebar)
@@ -117,6 +120,14 @@ export const ENGINE_SERVICES: Array<{
     position: { x: 1100, y: 280 },
   },
 
+  // GTM branch (above Lane 1, forking from triage)
+  {
+    nodeId: NODE_IDS.contentPipeline,
+    serviceId: 'content-pipeline',
+    label: 'Content Pipeline',
+    position: { x: 475, y: -70 },
+  },
+
   // Reflection (bottom, y=840)
   {
     nodeId: NODE_IDS.reflection,
@@ -169,6 +180,15 @@ export const STATIC_EDGES: FlowEdge[] = [
     source: NODE_IDS.decomposition,
     target: NODE_IDS.launch,
     type: 'workflow',
+  },
+
+  // --- GTM branch: triage -> content pipeline ---
+  {
+    id: 'e-triage-content',
+    source: NODE_IDS.triage,
+    target: NODE_IDS.contentPipeline,
+    type: 'workflow',
+    label: 'gtm',
   },
 
   // --- Cross-lane: Pre-production -> Production ---
@@ -373,3 +393,23 @@ export const BRIDGE_EDGES: FlowEdge[] = [
     type: 'workflow',
   },
 ];
+
+// ============================================
+// Pipeline Phase → Engine Service Node Mapping
+// ============================================
+
+/** Maps unified pipeline phases to the engine service node they correspond to */
+export const PIPELINE_PHASE_TO_SERVICE: Record<
+  PipelinePhase,
+  { ops: EngineServiceId; gtm: EngineServiceId }
+> = {
+  TRIAGE: { ops: 'triage', gtm: 'triage' },
+  RESEARCH: { ops: 'signal-sources', gtm: 'content-pipeline' },
+  SPEC: { ops: 'project-planning', gtm: 'content-pipeline' },
+  SPEC_REVIEW: { ops: 'project-planning', gtm: 'content-pipeline' },
+  DESIGN: { ops: 'decomposition', gtm: 'decomposition' },
+  PLAN: { ops: 'launch', gtm: 'launch' },
+  EXECUTE: { ops: 'agent-execution', gtm: 'content-pipeline' },
+  VERIFY: { ops: 'pr-feedback', gtm: 'content-pipeline' },
+  PUBLISH: { ops: 'git-workflow', gtm: 'content-pipeline' },
+};

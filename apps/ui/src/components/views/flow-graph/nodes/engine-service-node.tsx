@@ -21,6 +21,7 @@ import {
   MessageSquare,
   BotMessageSquare,
   RefreshCw,
+  PenTool,
 } from 'lucide-react';
 import type { EngineServiceNodeData, EngineServiceId } from '../types';
 import { cn } from '@/lib/utils';
@@ -37,6 +38,7 @@ const SERVICE_ICONS: Record<EngineServiceId, typeof Cog> = {
   'pr-feedback': MessageSquare,
   'lead-engineer-rules': BotMessageSquare,
   reflection: RefreshCw,
+  'content-pipeline': PenTool,
 };
 
 function getStatusColor(status: EngineServiceNodeData['status']) {
@@ -74,6 +76,7 @@ function EngineServiceNodeComponent({ data }: NodeProps & { data: EngineServiceN
   const colors = getStatusColor(data.status);
   const isActive = data.status === 'active';
   const hasAssociatedFlow = !!data.graphId;
+  const pipelineHighlight = data.pipelineHighlight as 'processing' | 'gate-waiting' | undefined;
 
   const handleClick = () => {
     if (hasAssociatedFlow && data.onNodeClick) {
@@ -83,6 +86,24 @@ function EngineServiceNodeComponent({ data }: NodeProps & { data: EngineServiceN
 
   return (
     <div className="relative">
+      {/* Pipeline phase highlight ring */}
+      {pipelineHighlight && (
+        <motion.div
+          className={cn(
+            'absolute -inset-2 rounded-xl border-2',
+            pipelineHighlight === 'processing' ? 'border-violet-400/60' : 'border-amber-400/60'
+          )}
+          animate={{
+            scale: [1, 1.03, 1],
+            opacity: [0.5, 1, 0.5],
+          }}
+          transition={{
+            duration: pipelineHighlight === 'gate-waiting' ? 1.5 : 2,
+            repeat: Infinity,
+            ease: 'easeInOut',
+          }}
+        />
+      )}
       {/* Breathing glow when active */}
       {isActive && (
         <motion.div

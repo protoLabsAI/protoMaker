@@ -11,7 +11,7 @@ import { Badge } from '@protolabs/ui/atoms';
 import { Button } from '@protolabs/ui/atoms';
 import { scrubPii } from '@/lib/scrub-pii';
 import { formatCostUsd } from '@/lib/format';
-import { getLangfuseTraceUrl } from '@/lib/langfuse-url';
+import { getLangfuseTraceUrl, getLangfuseSpanUrl } from '@/lib/langfuse-url';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { queryKeys } from '@/lib/query-keys';
 import type {
@@ -128,6 +128,23 @@ export function EngineServiceSection({ data }: { data: EngineServiceNodeData }) 
         </SectionRow>
         {data.throughput > 0 && <SectionRow label="Active Items">{data.throughput}</SectionRow>}
         {data.statusLine && <SectionRow label="Info">{data.statusLine}</SectionRow>}
+        {data.pipelineTraceId && (
+          <SectionRow label="Pipeline Trace">
+            <a
+              href={
+                data.pipelineSpanId
+                  ? getLangfuseSpanUrl(data.pipelineTraceId, data.pipelineSpanId)
+                  : getLangfuseTraceUrl(data.pipelineTraceId)
+              }
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-xs text-violet-400 hover:text-violet-300 transition-colors"
+            >
+              <ExternalLink className="w-3 h-3" />
+              View in Langfuse
+            </a>
+          </SectionRow>
+        )}
       </div>
 
       {/* Per-service detail panel */}

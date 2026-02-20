@@ -8,9 +8,13 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { ReactFlowProvider } from '@xyflow/react';
-import { useFlowGraphData } from './hooks';
+import { useQuery } from '@tanstack/react-query';
+import { useFlowGraphData, usePipelineProgress } from './hooks';
 import { FlowGraphCanvas } from './flow-graph-canvas';
 import { FlowGraphLegend } from './flow-graph-legend';
+import { PipelineProgressBar } from './pipeline-progress-bar';
+import { PipelineEventLog } from './pipeline-event-log';
+import { PipelineAnalytics } from './pipeline-analytics';
 import { NodeDetailDialog, type SelectedNode } from './dialogs/node-detail-dialog';
 import { SignalInputDialog } from './dialogs/signal-input-dialog';
 import { PrdReviewDialog } from './dialogs/prd-review-dialog';
@@ -24,6 +28,7 @@ export interface FlowGraphViewProps {
 
 export function FlowGraphView({ onFeatureClick }: FlowGraphViewProps) {
   const { nodes, edges } = useFlowGraphData();
+  const pipeline = usePipelineProgress();
 
   // Legend visibility
   const [showLegend, setShowLegend] = useState(false);
@@ -45,6 +50,30 @@ export function FlowGraphView({ onFeatureClick }: FlowGraphViewProps) {
     draft: string;
     strategy: string;
   } | null>(null);
+
+  // Load pending drafts on mount (survives page refresh)
+  const { data: pendingDraftsData } = useQuery({
+    queryKey: ['content-drafts'],
+    queryFn: async () => {
+      const api = getHttpApiClient();
+      return api.engine.contentDrafts();
+    },
+    refetchOnWindowFocus: false,
+  });
+
+  // Populate dialog from pending drafts on load
+  useEffect(() => {
+    if (pendingDraftsData?.drafts?.length && !contentReviewData) {
+      const mostRecent = pendingDraftsData.drafts[pendingDraftsData.drafts.length - 1];
+      setContentReviewData({
+        contentId: mostRecent.contentId,
+        title: mostRecent.title,
+        draft: mostRecent.draft,
+        strategy: JSON.stringify(mostRecent.strategy, null, 2),
+      });
+      setContentReviewOpen(true);
+    }
+  }, [pendingDraftsData, contentReviewData]);
 
   // Subscribe to content:draft-ready WebSocket events
   useEffect(() => {
@@ -93,6 +122,19 @@ export function FlowGraphView({ onFeatureClick }: FlowGraphViewProps) {
 
   return (
     <div className="relative w-full h-full overflow-hidden bg-background">
+      {/* Pipeline progress overlay (top bar) */}
+      {pipeline.active && pipeline.pipelineState && pipeline.branch && (
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex flex-col gap-1.5">
+          <PipelineProgressBar
+            pipelineState={pipeline.pipelineState}
+            branch={pipeline.branch}
+            onResolveGate={pipeline.resolveGate}
+          />
+          <PipelineEventLog events={pipeline.recentEvents} />
+          <PipelineAnalytics />
+        </div>
+      )}
+
       <ReactFlowProvider>
         <FlowGraphCanvas
           nodes={nodes}

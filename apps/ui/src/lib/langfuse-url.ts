@@ -14,3 +14,10 @@ const LANGFUSE_PROJECT_ID = import.meta.env.VITE_LANGFUSE_PROJECT_ID || 'cmlo396
 export function getLangfuseTraceUrl(traceId: string): string {
   return `${LANGFUSE_BASE_URL}/project/${LANGFUSE_PROJECT_ID}/traces/${traceId}`;
 }
+
+/**
+ * Get a Langfuse URL that deep-links to a specific span within a trace.
+ */
+export function getLangfuseSpanUrl(traceId: string, spanId: string): string {
+  return `${LANGFUSE_BASE_URL}/project/${LANGFUSE_PROJECT_ID}/traces/${traceId}?observation=${spanId}`;
+}

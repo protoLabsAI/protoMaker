@@ -732,6 +732,23 @@ export type { NoteTab, NoteTabPermissions, NotesWorkspace } from './notes.js';
 // Pipeline checkpoint types (crash recovery and goal gates)
 export type { PipelineCheckpoint, GoalGateResult } from './pipeline-checkpoint.js';
 
+// Unified pipeline phase types (idea-to-production orchestration)
+export type {
+  PipelinePhase,
+  PipelineBranch,
+  GateMode,
+  PhaseGateResult,
+  PhaseTransition,
+  PipelineState,
+  PipelineGateConfig,
+} from './pipeline-phase.js';
+export {
+  PIPELINE_PHASES,
+  GTM_SKIP_PHASES,
+  DEFAULT_PIPELINE_GATES,
+  PIPELINE_TO_WORK_ITEM_STATE,
+} from './pipeline-phase.js';
+
 // Context fidelity types (per-stage context shaping)
 export type { ContextFidelityMode } from './context-fidelity.js';
 export { DEFAULT_STAGE_FIDELITY } from './context-fidelity.js';

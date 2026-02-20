@@ -8,7 +8,7 @@
  * - Event listener registration
  */
 
-import type { AuthorityAgent, AuthorityRole } from '@automaker/types';
+import type { AuthorityAgent, AuthorityRole, PipelinePhase } from '@automaker/types';
 import { createLogger } from '@automaker/utils';
 
 const logger = createLogger('AgentUtils');
@@ -283,4 +283,16 @@ export async function initializeAgent(
   }
 
   return agent;
+}
+
+/**
+ * Interface for authority agents that can process unified pipeline phases.
+ *
+ * Agents implementing this interface can be called directly by the
+ * PipelineOrchestrator during active orchestration (M4).
+ * If an agent doesn't implement this, the orchestrator falls back
+ * to emitting the traditional event for that phase.
+ */
+export interface PhaseProcessor {
+  executePhase(projectPath: string, featureId: string, phase: PipelinePhase): Promise<void>;
 }

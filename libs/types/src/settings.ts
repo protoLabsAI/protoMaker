@@ -15,6 +15,7 @@ import type { PromptCustomization } from './prompts.js';
 import type { CodexSandboxMode, CodexApprovalPolicy } from './codex.js';
 import type { ReasoningEffort } from './provider.js';
 import type { PolicyConfig } from './policy.js';
+import type { PipelineGateConfig } from './pipeline-phase.js';
 
 // Re-export ModelAlias for convenience
 export type { ModelAlias };
@@ -2283,6 +2284,8 @@ export const DEFAULT_TRUST_BOUNDARY_CONFIG: TrustBoundaryConfig = {
  * retro feedback, cleanup, and signal intake behavior.
  */
 export interface WorkflowSettings {
+  /** Per-branch gate configuration for the unified pipeline phases */
+  gates?: PipelineGateConfig;
   pipeline: {
     /** Enable goal gate validation on state transitions (default: true) */
     goalGatesEnabled: boolean;

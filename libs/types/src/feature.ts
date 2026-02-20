@@ -8,6 +8,7 @@ import type { FeatureRalphConfig } from './ralph.js';
 import type { AgentRole } from './agent-roles.js';
 import type { WorkItemState } from './authority.js';
 import type { ReviewThreadFeedback, PendingFeedback } from './coderabbit.js';
+import type { PipelineState } from './pipeline-phase.js';
 
 /**
  * A single entry in the description history
@@ -278,6 +279,13 @@ export interface Feature {
    * Only used when authority system is enabled.
    */
   workItemState?: WorkItemState;
+  /**
+   * Unified pipeline state for idea-to-production tracking.
+   * When present, this feature is being tracked through the 9-phase pipeline
+   * (TRIAGE → RESEARCH → SPEC → SPEC_REVIEW → DESIGN → PLAN → EXECUTE → VERIFY → PUBLISH).
+   * Features without pipelineState work via the existing event-driven agents.
+   */
+  pipelineState?: PipelineState;
   /**
    * PRD metadata for ideation-to-PM flow.
    * Populated when a suggestion is submitted to PM Agent for PRD generation.

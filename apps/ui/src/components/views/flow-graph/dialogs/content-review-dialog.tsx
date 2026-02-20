@@ -3,11 +3,19 @@
  *
  * Shows strategy brief (collapsible) + markdown draft.
  * On approve: saves to Notes tab and navigates to /notes.
+ * On request changes: sends feedback for re-drafting.
  * On reject: closes dialog.
  */
 
 import { useState, useCallback } from 'react';
-import { CheckCircle, X, Loader2, ChevronDown, ChevronRight } from 'lucide-react';
+import {
+  CheckCircle,
+  X,
+  Loader2,
+  ChevronDown,
+  ChevronRight,
+  MessageSquarePlus,
+} from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -115,6 +123,8 @@ export function ContentReviewDialog({
 }: ContentReviewDialogProps) {
   const projectPath = useAppStore((s) => s.currentProject?.path);
   const navigate = useNavigate();
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [feedback, setFeedback] = useState('');
 
   const approveMutation = useMutation({
     mutationFn: async () => {
@@ -149,6 +159,31 @@ export function ContentReviewDialog({
     },
   });
 
+  const requestChangesMutation = useMutation({
+    mutationFn: async () => {
+      const api = getHttpApiClient();
+      return api.engine.contentReview(
+        projectPath || '',
+        contentId,
+        'request_changes',
+        undefined,
+        undefined,
+        feedback
+      );
+    },
+    onSuccess: () => {
+      toast.success('Changes requested — reprocessing...');
+      setShowFeedback(false);
+      setFeedback('');
+      onOpenChange(false);
+    },
+    onError: (error) => {
+      toast.error(
+        `Failed to request changes: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    },
+  });
+
   const handleApprove = useCallback(() => {
     approveMutation.mutate();
   }, [approveMutation]);
@@ -157,7 +192,16 @@ export function ContentReviewDialog({
     rejectMutation.mutate();
   }, [rejectMutation]);
 
-  const isPending = approveMutation.isPending || rejectMutation.isPending;
+  const handleRequestChanges = useCallback(() => {
+    if (!feedback.trim()) {
+      toast.error('Please provide feedback for the revision');
+      return;
+    }
+    requestChangesMutation.mutate();
+  }, [requestChangesMutation, feedback]);
+
+  const isPending =
+    approveMutation.isPending || rejectMutation.isPending || requestChangesMutation.isPending;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -176,21 +220,69 @@ export function ContentReviewDialog({
             <Markdown>{draft}</Markdown>
           </div>
 
+          {/* Feedback textarea (shown when request changes is selected) */}
+          {showFeedback && (
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-muted-foreground" htmlFor="feedback-input">
+                What changes would you like?
+              </label>
+              <textarea
+                id="feedback-input"
+                className="w-full h-24 rounded-lg border border-border/30 bg-muted/20 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-violet-500/50"
+                placeholder="Describe the changes you'd like to see..."
+                value={feedback}
+                onChange={(e) => setFeedback(e.target.value)}
+              />
+              <div className="flex items-center justify-end gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setShowFeedback(false);
+                    setFeedback('');
+                  }}
+                  disabled={isPending}
+                >
+                  Cancel
+                </Button>
+                <Button size="sm" onClick={handleRequestChanges} disabled={isPending}>
+                  {requestChangesMutation.isPending ? (
+                    <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                  ) : (
+                    <MessageSquarePlus className="w-3.5 h-3.5 mr-1.5" />
+                  )}
+                  Submit Feedback
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* Action buttons */}
-          <div className="flex items-center justify-end gap-2 border-t border-border/30 pt-3">
-            <Button variant="outline" size="sm" onClick={handleReject} disabled={isPending}>
-              <X className="w-3.5 h-3.5 mr-1.5" />
-              Reject
-            </Button>
-            <Button size="sm" onClick={handleApprove} disabled={isPending}>
-              {approveMutation.isPending ? (
-                <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-              ) : (
-                <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
-              )}
-              Approve & Edit in Notes
-            </Button>
-          </div>
+          {!showFeedback && (
+            <div className="flex items-center justify-end gap-2 border-t border-border/30 pt-3">
+              <Button variant="outline" size="sm" onClick={handleReject} disabled={isPending}>
+                <X className="w-3.5 h-3.5 mr-1.5" />
+                Reject
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowFeedback(true)}
+                disabled={isPending}
+              >
+                <MessageSquarePlus className="w-3.5 h-3.5 mr-1.5" />
+                Request Changes
+              </Button>
+              <Button size="sm" onClick={handleApprove} disabled={isPending}>
+                {approveMutation.isPending ? (
+                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                ) : (
+                  <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
+                )}
+                Approve & Edit in Notes
+              </Button>
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>

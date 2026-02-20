@@ -38,7 +38,8 @@ export type EngineServiceId =
   | 'git-workflow'
   | 'pr-feedback'
   | 'lead-engineer-rules'
-  | 'reflection';
+  | 'reflection'
+  | 'content-pipeline';
 
 export interface EngineServiceNodeData {
   label: string;
@@ -52,6 +53,12 @@ export interface EngineServiceNodeData {
   graphId?: string;
   /** Click handler for opening flow detail view */
   onNodeClick?: (serviceId: EngineServiceId, graphId: string) => void;
+  /** Active pipeline phase highlighting: 'processing' | 'gate-waiting' */
+  pipelineHighlight?: 'processing' | 'gate-waiting';
+  /** Langfuse trace ID for the active pipeline (for deep-linking) */
+  pipelineTraceId?: string;
+  /** Langfuse span ID for this service's pipeline phase */
+  pipelineSpanId?: string;
   [key: string]: unknown;
 }
 

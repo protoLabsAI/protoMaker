@@ -19,6 +19,8 @@ const logger = createLogger('AgentScoringService');
 export class AgentScoringService {
   private events: EventEmitter;
   private featureLoader: FeatureLoader;
+  /** Cache featureId → projectPath for pipeline scoring */
+  private featureProjectMap = new Map<string, string>();
 
   constructor(events: EventEmitter, featureLoader: FeatureLoader) {
     this.events = events;
@@ -42,6 +44,33 @@ export class AgentScoringService {
             data.oldStatus,
             data.newStatus
           );
+        }
+      }
+
+      // Track pipeline feature → projectPath mapping
+      if (type === 'pipeline:phase-entered') {
+        const data = payload as { featureId?: string; projectPath?: string };
+        if (data.featureId && data.projectPath) {
+          this.featureProjectMap.set(data.featureId, data.projectPath);
+        }
+      }
+
+      // Pipeline phase scoring
+      if (type === 'pipeline:phase-completed') {
+        const data = payload as {
+          featureId?: string;
+          phase?: string;
+          durationMs?: number;
+        };
+        if (data.featureId) {
+          void this.scorePipelinePhase(data.featureId, data.phase, data.durationMs);
+        }
+      }
+
+      if (type === 'pipeline:gate-waiting') {
+        const data = payload as { featureId?: string; phase?: string };
+        if (data.featureId) {
+          void this.scorePipelineGateHeld(data.featureId, data.phase);
         }
       }
     });
@@ -118,6 +147,77 @@ export class AgentScoringService {
 
     langfuse.createScore({ traceId, name: 'agent.quality', value: quality, comment });
     logger.debug(`Scored agent.quality=${quality.toFixed(2)} for trace ${traceId}`);
+  }
+
+  private async scorePipelinePhase(
+    featureId: string,
+    phase?: string,
+    durationMs?: number
+  ): Promise<void> {
+    try {
+      const langfuse = getLangfuseInstance();
+      if (!langfuse.isAvailable()) return;
+
+      const projectPath = this.findProjectPath(featureId);
+      if (!projectPath) return;
+
+      const feature = await this.featureLoader.get(projectPath, featureId);
+      const traceId = feature?.pipelineState?.traceId;
+      if (!traceId) return;
+
+      langfuse.createScore({
+        traceId,
+        name: 'pipeline.phase.success',
+        value: 1.0,
+        comment: `Phase ${phase} completed${durationMs ? ` in ${Math.round(durationMs / 1000)}s` : ''}`,
+      });
+
+      // Score pipeline completion when PUBLISH phase completes
+      if (phase === 'PUBLISH') {
+        langfuse.createScore({
+          traceId,
+          name: 'pipeline.success',
+          value: 1.0,
+          comment: 'Full pipeline completed successfully',
+        });
+      }
+
+      await langfuse.flush();
+    } catch (error) {
+      logger.error(`Failed to score pipeline phase for ${featureId}:`, error);
+    }
+  }
+
+  private async scorePipelineGateHeld(featureId: string, phase?: string): Promise<void> {
+    try {
+      const langfuse = getLangfuseInstance();
+      if (!langfuse.isAvailable()) return;
+
+      const projectPath = this.findProjectPath(featureId);
+      if (!projectPath) return;
+
+      const feature = await this.featureLoader.get(projectPath, featureId);
+      const traceId = feature?.pipelineState?.traceId;
+      if (!traceId) return;
+
+      langfuse.createScore({
+        traceId,
+        name: 'pipeline.gate.held',
+        value: 0.5,
+        comment: `Gate held at ${phase} — human review required`,
+      });
+
+      await langfuse.flush();
+    } catch (error) {
+      logger.error(`Failed to score pipeline gate for ${featureId}:`, error);
+    }
+  }
+
+  /**
+   * Find the project path for a feature from the pipeline event cache.
+   */
+  private findProjectPath(featureId: string): string | null {
+    return this.featureProjectMap.get(featureId) ?? null;
   }
 
   private getDefaultMaxTurns(complexity?: string): number {

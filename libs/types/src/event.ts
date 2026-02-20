@@ -274,6 +274,7 @@ export type EventType =
   | 'content:draft-ready'
   | 'content:draft-approved'
   | 'content:draft-rejected'
+  | 'content:changes-requested'
   // Metrics ledger events (persistent analytics)
   | 'ledger:record-written'
   | 'ledger:backfill-completed'
@@ -319,6 +320,13 @@ export type EventType =
   | 'pipeline:checkpoint-saved'
   | 'pipeline:loop-detected'
   | 'pipeline:supervisor-action'
+  // Unified pipeline orchestrator events (idea-to-production phases)
+  | 'pipeline:phase-entered'
+  | 'pipeline:phase-completed'
+  | 'pipeline:gate-waiting'
+  | 'pipeline:gate-resolved'
+  | 'pipeline:phase-skipped'
+  | 'pipeline:trace-linked'
   // Server lifecycle events
   | 'server:shutdown';
 
@@ -581,6 +589,51 @@ export interface EventPayloadMap {
     featureId: string;
     action: string;
     reason: string;
+  };
+
+  // Unified pipeline orchestrator events
+  'pipeline:phase-entered': {
+    featureId: string;
+    phase: string;
+    branch: 'ops' | 'gtm';
+    timestamp: string;
+  };
+  'pipeline:phase-completed': {
+    featureId: string;
+    phase: string;
+    branch: 'ops' | 'gtm';
+    durationMs?: number;
+    timestamp: string;
+  };
+  'pipeline:gate-waiting': {
+    featureId: string;
+    phase: string;
+    branch: 'ops' | 'gtm';
+    gateMode: 'auto' | 'manual' | 'review';
+    artifacts?: Record<string, unknown>;
+    timestamp: string;
+  };
+  'pipeline:gate-resolved': {
+    featureId: string;
+    phase: string;
+    branch: 'ops' | 'gtm';
+    resolvedBy: 'auto' | 'user' | 'system';
+    action: 'advance' | 'reject';
+    timestamp: string;
+  };
+  'pipeline:phase-skipped': {
+    featureId: string;
+    phase: string;
+    branch: 'ops' | 'gtm';
+    reason: string;
+    timestamp: string;
+  };
+  'pipeline:trace-linked': {
+    featureId: string;
+    traceId: string;
+    phase?: string;
+    spanId?: string;
+    timestamp: string;
   };
 }
 

@@ -6,7 +6,17 @@
  */
 
 import { useState, useCallback } from 'react';
-import { Send, Loader2, Paperclip, X, Zap, Globe, ImagePlus, PenTool } from 'lucide-react';
+import {
+  Send,
+  Loader2,
+  Paperclip,
+  X,
+  Zap,
+  Globe,
+  ImagePlus,
+  PenTool,
+  SlidersHorizontal,
+} from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -34,6 +44,15 @@ interface TextAttachment {
   size: number;
 }
 
+type PipelineMode = 'auto' | 'step-by-step' | 'research-only' | 'execute-only';
+
+const PIPELINE_MODE_LABELS: Record<PipelineMode, string> = {
+  auto: 'Auto',
+  'step-by-step': 'Step-by-step',
+  'research-only': 'Research only',
+  'execute-only': 'Execute only',
+};
+
 interface SignalInputDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -48,6 +67,7 @@ export function SignalInputDialog({ open, onOpenChange }: SignalInputDialogProps
   const [autoApprove, setAutoApprove] = useState(false);
   const [webResearch, setWebResearch] = useState(false);
   const [contentMode, setContentMode] = useState(false);
+  const [pipelineMode, setPipelineMode] = useState<PipelineMode>('auto');
   const projectPath = useAppStore((s) => s.currentProject?.path);
 
   const reset = useCallback(() => {
@@ -65,6 +85,7 @@ export function SignalInputDialog({ open, onOpenChange }: SignalInputDialogProps
       files?: string[];
       autoApprove?: boolean;
       webResearch?: boolean;
+      pipelineMode?: PipelineMode;
     }) => {
       const api = getHttpApiClient();
       return api.engine.signalSubmit({
@@ -75,6 +96,7 @@ export function SignalInputDialog({ open, onOpenChange }: SignalInputDialogProps
         files: signal.files,
         autoApprove: signal.autoApprove,
         webResearch: signal.webResearch,
+        pipelineMode: signal.pipelineMode,
       });
     },
     onSuccess: (_data, variables) => {
@@ -101,8 +123,9 @@ export function SignalInputDialog({ open, onOpenChange }: SignalInputDialogProps
       files: files.length > 0 ? files.map((f) => `--- ${f.name} ---\n${f.content}`) : undefined,
       autoApprove: autoApprove || undefined,
       webResearch: webResearch || undefined,
+      pipelineMode: pipelineMode !== 'auto' ? pipelineMode : undefined,
     });
-  }, [content, projectPath, images, files, autoApprove, webResearch, submitMutation]);
+  }, [content, projectPath, images, files, autoApprove, webResearch, pipelineMode, submitMutation]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -250,6 +273,21 @@ export function SignalInputDialog({ open, onOpenChange }: SignalInputDialogProps
               >
                 <PenTool className="w-3.5 h-3.5" />
               </button>
+              <div className="flex items-center gap-1 ml-1 pl-1 border-l border-border/40">
+                <SlidersHorizontal className="w-3 h-3 text-muted-foreground" />
+                <select
+                  value={pipelineMode}
+                  onChange={(e) => setPipelineMode(e.target.value as PipelineMode)}
+                  className="h-6 text-[10px] rounded border border-border/50 bg-background px-1 text-foreground"
+                  title="Pipeline mode"
+                >
+                  {(Object.keys(PIPELINE_MODE_LABELS) as PipelineMode[]).map((mode) => (
+                    <option key={mode} value={mode}>
+                      {PIPELINE_MODE_LABELS[mode]}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <kbd className="text-[10px] text-muted-foreground">

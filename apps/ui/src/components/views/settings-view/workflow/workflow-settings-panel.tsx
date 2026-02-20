@@ -13,8 +13,17 @@ import { Loader2, Save } from 'lucide-react';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { useAppStore } from '@/store/app-store';
 import { toast } from 'sonner';
-import type { WorkflowSettings } from '@automaker/types';
-import { DEFAULT_WORKFLOW_SETTINGS } from '@automaker/types';
+import type {
+  WorkflowSettings,
+  PipelinePhase,
+  GateMode,
+  PipelineGateConfig,
+} from '@automaker/types';
+import {
+  DEFAULT_WORKFLOW_SETTINGS,
+  DEFAULT_PIPELINE_GATES,
+  PIPELINE_PHASES,
+} from '@automaker/types';
 
 function ToggleRow({
   label,
@@ -95,6 +104,75 @@ function SectionHeader({ title }: { title: string }) {
     <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 mt-4 first:mt-0">
       {title}
     </h3>
+  );
+}
+
+const PHASE_LABELS: Record<PipelinePhase, string> = {
+  TRIAGE: 'Triage',
+  RESEARCH: 'Research',
+  SPEC: 'Spec',
+  SPEC_REVIEW: 'Spec Review',
+  DESIGN: 'Design',
+  PLAN: 'Plan',
+  EXECUTE: 'Execute',
+  VERIFY: 'Verify',
+  PUBLISH: 'Publish',
+};
+
+const GATE_MODES: GateMode[] = ['auto', 'manual', 'review'];
+
+function GateSelect({ value, onChange }: { value: GateMode; onChange: (v: GateMode) => void }) {
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value as GateMode)}
+      className="rounded border border-border bg-background px-1.5 py-0.5 text-xs"
+    >
+      {GATE_MODES.map((mode) => (
+        <option key={mode} value={mode}>
+          {mode}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+function PipelineGatesGrid({
+  gates,
+  onChange,
+}: {
+  gates: PipelineGateConfig;
+  onChange: (gates: PipelineGateConfig) => void;
+}) {
+  const updateGate = (branch: 'ops' | 'gtm', phase: PipelinePhase, mode: GateMode) => {
+    onChange({
+      ...gates,
+      [branch]: {
+        ...gates[branch],
+        [phase]: mode,
+      },
+    });
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="grid grid-cols-[1fr_80px_80px] gap-1 text-[10px] text-muted-foreground font-medium">
+        <span>Phase</span>
+        <span className="text-center">Ops</span>
+        <span className="text-center">GTM</span>
+      </div>
+      {PIPELINE_PHASES.map((phase) => (
+        <div key={phase} className="grid grid-cols-[1fr_80px_80px] gap-1 items-center">
+          <span className="text-xs">{PHASE_LABELS[phase]}</span>
+          <div className="flex justify-center">
+            <GateSelect value={gates.ops[phase]} onChange={(v) => updateGate('ops', phase, v)} />
+          </div>
+          <div className="flex justify-center">
+            <GateSelect value={gates.gtm[phase]} onChange={(v) => updateGate('gtm', phase, v)} />
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -271,7 +349,7 @@ export function WorkflowSettingsPanel() {
           />
         </div>
 
-        <div className="pt-3">
+        <div className="py-3">
           <SectionHeader title="Signal Intake" />
           <ToggleRow
             label="Auto Research"
@@ -284,6 +362,21 @@ export function WorkflowSettingsPanel() {
             description="Skip manual review and auto-approve PRDs for decomposition"
             checked={localSettings.signalIntake.autoApprovePRD}
             onChange={(v) => update('signalIntake', 'autoApprovePRD', v)}
+          />
+        </div>
+
+        <div className="pt-3">
+          <SectionHeader title="Pipeline Gates" />
+          <p className="text-xs text-muted-foreground mb-3">
+            Control how each pipeline phase transition is handled. Auto proceeds immediately, manual
+            always pauses, review auto-proceeds if clean.
+          </p>
+          <PipelineGatesGrid
+            gates={localSettings.gates ?? DEFAULT_PIPELINE_GATES}
+            onChange={(gates) => {
+              setLocalSettings((prev) => ({ ...prev, gates }));
+              setIsDirty(true);
+            }}
           />
         </div>
       </div>

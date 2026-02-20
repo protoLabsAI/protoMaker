@@ -22,8 +22,11 @@ import { getAllGraphs, getGraph } from '../../lib/graph-registry.js';
 import type { FeatureLoader } from '../../services/feature-loader.js';
 import type { PipelineCheckpointService } from '../../services/pipeline-checkpoint-service.js';
 import type { EventEmitter } from '../../lib/events.js';
+import type { GTMAuthorityAgent } from '../../services/authority-agents/gtm-agent.js';
+import type { PipelineOrchestrator } from '../../services/pipeline-orchestrator.js';
 import { getNotesWorkspacePath, ensureNotesDir, secureFs } from '@automaker/platform';
-import type { NotesWorkspace } from '@automaker/types';
+import type { NotesWorkspace, PipelinePhase } from '@automaker/types';
+import { PIPELINE_PHASES } from '@automaker/types';
 
 const logger = createLogger('EngineRoutes');
 
@@ -38,7 +41,9 @@ export function createEngineRoutes(
   contentFlowService?: ContentFlowService,
   featureLoader?: FeatureLoader,
   pipelineCheckpointService?: PipelineCheckpointService,
-  events?: EventEmitter
+  events?: EventEmitter,
+  gtmAgent?: GTMAuthorityAgent,
+  pipelineOrchestrator?: PipelineOrchestrator
 ): Router {
   const router = Router();
 
@@ -146,6 +151,11 @@ export function createEngineRoutes(
           })),
         },
         projectLifecycle,
+        contentPipeline: {
+          activeFlows: contentFlowService ? contentFlowService.getExecutionState().totalActive : 0,
+          pendingDrafts: gtmAgent ? gtmAgent.getPendingDraftCount() : 0,
+          completedToday: 0,
+        },
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
@@ -570,30 +580,54 @@ export function createEngineRoutes(
   });
 
   /**
+   * GET /api/engine/content/drafts
+   * Returns all pending content drafts (survives page refresh).
+   */
+  router.get('/content/drafts', (_req: Request, res: Response) => {
+    const drafts = gtmAgent ? gtmAgent.getPendingDrafts() : [];
+    res.json({ success: true, drafts });
+  });
+
+  /**
    * POST /api/engine/content/review
-   * Approve or reject a GTM content draft.
+   * Approve, reject, or request changes on a GTM content draft.
    * On approve: creates a notes tab with the draft content.
+   * On request_changes: re-processes with feedback.
    */
   router.post('/content/review', async (req: Request, res: Response) => {
     try {
-      const { projectPath, contentId, decision, editedContent, tabName } = (req.body ?? {}) as {
+      const { projectPath, contentId, decision, editedContent, tabName, feedback } = (req.body ??
+        {}) as {
         projectPath?: string;
         contentId?: string;
-        decision?: 'approve' | 'reject';
+        decision?: 'approve' | 'reject' | 'request_changes';
         editedContent?: string;
         tabName?: string;
+        feedback?: string;
       };
 
       if (!projectPath || !contentId || !decision) {
         res.status(400).json({
           success: false,
-          error: 'projectPath, contentId, and decision (approve|reject) are required',
+          error:
+            'projectPath, contentId, and decision (approve|reject|request_changes) are required',
         });
         return;
       }
 
       if (!events) {
         res.status(503).json({ success: false, error: 'Event emitter not available' });
+        return;
+      }
+
+      if (decision === 'request_changes') {
+        events.emit('content:changes-requested', {
+          projectPath,
+          contentId,
+          feedback: feedback || '',
+          timestamp: new Date().toISOString(),
+        });
+        res.json({ success: true });
         return;
       }
 
@@ -675,6 +709,199 @@ export function createEngineRoutes(
     } catch (error) {
       logger.error('Failed to process content review:', error);
       res.status(500).json({ success: false, error: 'Failed to process content review' });
+    }
+  });
+
+  // ===========================================================================
+  // Unified Pipeline Orchestrator Routes
+  // ===========================================================================
+
+  /**
+   * POST /api/engine/pipeline/status
+   * Get pipeline state for a feature.
+   */
+  router.post('/pipeline/status', async (req: Request, res: Response) => {
+    try {
+      const { projectPath, featureId } = (req.body ?? {}) as {
+        projectPath?: string;
+        featureId?: string;
+      };
+
+      if (!projectPath || !featureId) {
+        res.status(400).json({
+          success: false,
+          error: 'projectPath and featureId are required',
+        });
+        return;
+      }
+
+      if (!pipelineOrchestrator) {
+        res.status(503).json({
+          success: false,
+          error: 'PipelineOrchestrator not available',
+        });
+        return;
+      }
+
+      const state = await pipelineOrchestrator.getStatus(projectPath, featureId);
+      res.json({
+        success: true,
+        pipelineState: state,
+        activePipelines: pipelineOrchestrator.getActivePipelines().size,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      logger.error('Failed to get pipeline status:', error);
+      res.status(500).json({ success: false, error: 'Failed to get pipeline status' });
+    }
+  });
+
+  /**
+   * POST /api/engine/pipeline/gate/resolve
+   * User resolves a gate (advance or reject).
+   */
+  router.post('/pipeline/gate/resolve', async (req: Request, res: Response) => {
+    try {
+      const { projectPath, featureId, action } = (req.body ?? {}) as {
+        projectPath?: string;
+        featureId?: string;
+        action?: 'advance' | 'reject';
+      };
+
+      if (!projectPath || !featureId || !action) {
+        res.status(400).json({
+          success: false,
+          error: 'projectPath, featureId, and action (advance|reject) are required',
+        });
+        return;
+      }
+
+      if (!pipelineOrchestrator) {
+        res.status(503).json({
+          success: false,
+          error: 'PipelineOrchestrator not available',
+        });
+        return;
+      }
+
+      const resolved = await pipelineOrchestrator.resolveGate(
+        projectPath,
+        featureId,
+        action,
+        'user'
+      );
+      if (!resolved) {
+        res.status(409).json({
+          success: false,
+          error: 'Feature is not awaiting a gate resolution',
+        });
+        return;
+      }
+
+      const state = await pipelineOrchestrator.getStatus(projectPath, featureId);
+      res.json({
+        success: true,
+        action,
+        pipelineState: state,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      logger.error('Failed to resolve pipeline gate:', error);
+      res.status(500).json({ success: false, error: 'Failed to resolve pipeline gate' });
+    }
+  });
+
+  /**
+   * POST /api/engine/pipeline/override
+   * Jump a feature to a specific phase manually.
+   */
+  router.post('/pipeline/override', async (req: Request, res: Response) => {
+    try {
+      const { projectPath, featureId, targetPhase } = (req.body ?? {}) as {
+        projectPath?: string;
+        featureId?: string;
+        targetPhase?: string;
+      };
+
+      if (!projectPath || !featureId || !targetPhase) {
+        res.status(400).json({
+          success: false,
+          error: 'projectPath, featureId, and targetPhase are required',
+        });
+        return;
+      }
+
+      if (!PIPELINE_PHASES.includes(targetPhase as PipelinePhase)) {
+        res.status(400).json({
+          success: false,
+          error: `Invalid phase: ${targetPhase}. Valid phases: ${PIPELINE_PHASES.join(', ')}`,
+        });
+        return;
+      }
+
+      if (!pipelineOrchestrator) {
+        res.status(503).json({
+          success: false,
+          error: 'PipelineOrchestrator not available',
+        });
+        return;
+      }
+
+      const overridden = await pipelineOrchestrator.overridePhase(
+        projectPath,
+        featureId,
+        targetPhase as PipelinePhase
+      );
+
+      if (!overridden) {
+        res.status(409).json({
+          success: false,
+          error: 'Feature has no pipeline state to override',
+        });
+        return;
+      }
+
+      const state = await pipelineOrchestrator.getStatus(projectPath, featureId);
+      res.json({
+        success: true,
+        targetPhase,
+        pipelineState: state,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      logger.error('Failed to override pipeline phase:', error);
+      res.status(500).json({ success: false, error: 'Failed to override pipeline phase' });
+    }
+  });
+
+  /**
+   * POST /api/engine/pipeline/analytics
+   * Returns aggregated pipeline health metrics.
+   */
+  router.post('/pipeline/analytics', async (_req: Request, res: Response) => {
+    try {
+      if (!pipelineOrchestrator) {
+        res.json({
+          success: true,
+          activePipelines: 0,
+          completedToday: 0,
+          avgDurationMinutes: 0,
+          gateHoldRate: 0,
+          phaseBreakdown: [],
+        });
+        return;
+      }
+
+      const analytics = pipelineOrchestrator.getAnalytics();
+
+      res.json({
+        success: true,
+        ...analytics,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      logger.error('Failed to get pipeline analytics:', error);
+      res.status(500).json({ success: false, error: 'Failed to get pipeline analytics' });
     }
   });
 

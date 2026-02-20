@@ -2977,6 +2977,7 @@ export class HttpApiClient implements ElectronAPI {
       files?: string[];
       autoApprove?: boolean;
       webResearch?: boolean;
+      pipelineMode?: string;
     }): Promise<{ success: boolean; message?: string; error?: string }> =>
       this.post('/api/engine/signal/submit', params),
     approvePrd: (
@@ -2985,12 +2986,27 @@ export class HttpApiClient implements ElectronAPI {
       decision: 'approve' | 'reject'
     ): Promise<{ success: boolean; decision?: string; error?: string }> =>
       this.post('/api/engine/signal/approve-prd', { projectPath, featureId, decision }),
+    contentDrafts: (): Promise<{
+      success: boolean;
+      drafts: Array<{
+        contentId: string;
+        title: string;
+        draft: string;
+        strategy: Record<string, unknown>;
+        source: string;
+        projectPath: string;
+        status: string;
+        createdAt: string;
+        version: number;
+      }>;
+    }> => this.get('/api/engine/content/drafts'),
     contentReview: (
       projectPath: string,
       contentId: string,
-      decision: 'approve' | 'reject',
+      decision: 'approve' | 'reject' | 'request_changes',
       editedContent?: string,
-      tabName?: string
+      tabName?: string,
+      feedback?: string
     ): Promise<{ success: boolean; tabId?: string; error?: string }> =>
       this.post('/api/engine/content/review', {
         projectPath,
@@ -2998,6 +3014,7 @@ export class HttpApiClient implements ElectronAPI {
         decision,
         editedContent,
         tabName,
+        feedback,
       }),
     pipelineCheckpoints: (
       projectPath: string,
@@ -3033,6 +3050,29 @@ export class HttpApiClient implements ElectronAPI {
       total?: number;
       error?: string;
     }> => this.post('/api/engine/pipeline-checkpoints', { projectPath, featureId }),
+    /** Get unified pipeline state for a feature */
+    pipelineStatus: (
+      projectPath: string,
+      featureId: string
+    ): Promise<{
+      success: boolean;
+      pipelineState?: import('@automaker/types').PipelineState;
+      error?: string;
+    }> => this.post('/api/engine/pipeline/status', { projectPath, featureId }),
+    /** Resolve a pipeline gate (advance or reject) */
+    pipelineGateResolve: (
+      projectPath: string,
+      featureId: string,
+      action: 'advance' | 'reject'
+    ): Promise<{ success: boolean; error?: string }> =>
+      this.post('/api/engine/pipeline/gate/resolve', { projectPath, featureId, action }),
+    /** Override pipeline phase (jump to a specific phase) */
+    pipelineOverride: (
+      projectPath: string,
+      featureId: string,
+      targetPhase: string
+    ): Promise<{ success: boolean; error?: string }> =>
+      this.post('/api/engine/pipeline/override', { projectPath, featureId, targetPhase }),
   };
 
   // Voice API

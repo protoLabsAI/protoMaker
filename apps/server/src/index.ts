@@ -190,6 +190,7 @@ import { shutdownLangfuse } from './lib/langfuse-singleton.js';
 import { initOTEL, shutdownOTEL } from './lib/otel-setup.js';
 import { AgentScoringService } from './services/agent-scoring-service.js';
 import { gitWorkflowService } from './services/git-workflow-service.js';
+import { PipelineOrchestrator } from './services/pipeline-orchestrator.js';
 
 const PORT = parseInt(process.env.PORT || '3008', 10);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -490,6 +491,9 @@ integrationService.initialize(events, settingsService, featureLoader);
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const signalIntakeService = new SignalIntakeService(events, featureLoader, REPO_ROOT);
 
+// Initialize Pipeline Orchestrator — unified phase tracking across ops + gtm branches
+const pipelineOrchestrator = new PipelineOrchestrator(events, featureLoader, settingsService);
+
 // Initialize Docs Update Detector — creates docs update features after milestones
 import { DocsUpdateDetector } from './services/docs-update-detector.js';
 const docsUpdateDetector = new DocsUpdateDetector(events, featureLoader, REPO_ROOT);
@@ -517,13 +521,13 @@ const pmAgent = new PMAuthorityAgent(
   settingsService
 );
 // Initialize GTM Authority Agent (content creation pipeline)
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const gtmAgent = new GTMAuthorityAgent(
   events,
   authorityService,
   featureLoader,
   auditService,
-  settingsService
+  settingsService,
+  contentFlowService
 );
 
 const projectService = new ProjectService(featureLoader);
@@ -637,6 +641,10 @@ await leadEngineerService.initialize();
 autoModeService.setLeadEngineerService(leadEngineerService);
 
 const projmAgent = new ProjMAuthorityAgent(events, authorityService, featureLoader, projectService);
+
+// Wire phase processors for active pipeline orchestration
+pipelineOrchestrator.setProcessors({ ops: pmAgent, gtm: gtmAgent, projm: projmAgent });
+
 const emAgent = new EMAuthorityAgent(
   events,
   authorityService,
@@ -1252,7 +1260,9 @@ app.use(
     contentFlowService,
     featureLoader,
     pipelineCheckpointService,
-    events
+    events,
+    gtmAgent,
+    pipelineOrchestrator
   )
 );
 app.use('/api/langfuse', createLangfuseRoutes());
@@ -1747,6 +1757,7 @@ async function gracefulShutdown() {
 
   clearInterval(driftCheckInterval);
   leadEngineerService.destroy();
+  pipelineOrchestrator.destroy();
   approvalBridge.stop();
   intakeBridge.stop();
   await autoModeService.shutdown();

@@ -18,7 +18,7 @@
  * All actions go through AuthorityService.submitProposal().
  */
 
-import type { Feature, Milestone, MilestoneStatus } from '@automaker/types';
+import type { Feature, Milestone, MilestoneStatus, PipelinePhase } from '@automaker/types';
 import type { AuthorityAgent } from '@automaker/types';
 import { createLogger } from '@automaker/utils';
 import type { EventEmitter } from '../../lib/events.js';
@@ -32,6 +32,7 @@ import {
   initializeAgent,
   withProcessingGuard,
   type AgentState,
+  type PhaseProcessor,
 } from './agent-utils.js';
 
 const logger = createLogger('ProjMAgent');
@@ -684,5 +685,21 @@ Decompose this milestone into implementable phases.`;
 
   getAgent(projectPath: string): AuthorityAgent | null {
     return this.state.getAgent(projectPath);
+  }
+
+  /**
+   * PhaseProcessor implementation — orchestrator calls this during active dispatch.
+   */
+  async executePhase(projectPath: string, featureId: string, phase: PipelinePhase): Promise<void> {
+    switch (phase) {
+      case 'DESIGN':
+        this.events.emit('authority:pm-review-approved', { projectPath, featureId });
+        break;
+      case 'PLAN':
+        logger.info(`[Pipeline] PLAN phase for ${featureId} — decomposition follows design`);
+        break;
+      default:
+        logger.warn(`[Pipeline] ProjM agent has no handler for phase ${phase}`);
+    }
   }
 }
