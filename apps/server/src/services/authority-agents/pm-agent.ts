@@ -370,14 +370,19 @@ export class PMAuthorityAgent {
           source: 'enhance' as const,
         });
 
+        // Step 5: Update feature to prd_ready and STOP — wait for user approval
         await this.featureLoader.update(projectPath, featureId, {
-          workItemState: 'pm_review',
+          workItemState: 'prd_ready',
           description: prdResult.prd,
           complexity: prdResult.complexity,
           descriptionHistory,
+          prdMetadata: {
+            generatedAt: new Date().toISOString(),
+            model: PM_RESEARCH_MODEL,
+          },
         });
 
-        // Step 5: Emit PRD ready for Discord posting
+        // Emit PRD ready for Discord posting
         this.events.emit('authority:pm-prd-ready', {
           projectPath,
           featureId,
@@ -387,16 +392,23 @@ export class PMAuthorityAgent {
           milestones: prdResult.milestones,
         });
 
-        // Step 6: Auto-approve with full PRD context
-        const review: PMReviewResult = {
-          verdict: 'approve',
-          feedback: 'PM researched codebase and generated SPARC PRD. Auto-approved.',
+        // Emit ideation:prd-generated so the UI shows the review dialog
+        this.events.emit('ideation:prd-generated', {
+          projectPath,
+          featureId,
+          title: feature.title,
           prd: prdResult.prd,
           complexity: prdResult.complexity,
           milestones: prdResult.milestones,
-        };
+          metadata: {
+            generatedAt: new Date().toISOString(),
+            model: PM_RESEARCH_MODEL,
+          },
+        });
 
-        await this.handleApproval(projectPath, featureId, feature, review, agent);
+        logger.info(
+          `PRD ready for review: "${feature.title}" (${featureId}) — waiting for user approval`
+        );
       } catch (error) {
         logger.error(`Failed to process idea ${featureId}:`, error);
         // Reset to 'idea' so the feature can be retried on next scan

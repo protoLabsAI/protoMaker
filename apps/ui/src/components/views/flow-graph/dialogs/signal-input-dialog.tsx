@@ -70,10 +70,10 @@ export function SignalInputDialog({ open, onOpenChange }: SignalInputDialogProps
         files: signal.files,
       });
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       toast.success('Signal submitted for processing');
-      if (projectPath) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.features.all(projectPath) });
+      if (variables.projectPath) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.features.all(variables.projectPath) });
       }
       reset();
       onOpenChange(false);
