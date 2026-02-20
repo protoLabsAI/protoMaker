@@ -2965,6 +2965,19 @@ export class HttpApiClient implements ElectronAPI {
     ): Promise<{
       success: boolean;
       countsByStatus?: Record<string, number>;
+      featuresByStatus?: Record<
+        string,
+        Array<{
+          id: string;
+          title: string;
+          status: string;
+          branchName?: string;
+          createdAt?: string;
+          complexity?: string;
+          lastTraceId?: string;
+          costUsd?: number;
+        }>
+      >;
       totalFeatures?: number;
       timestamp?: string;
       error?: string;

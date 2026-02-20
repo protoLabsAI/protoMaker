@@ -386,7 +386,7 @@ export function createEngineRoutes(
         return;
       }
 
-      // Load all features and count by status
+      // Load all features — count and group by status
       const features = await featureLoader.getAll(projectPath);
       const countsByStatus: Record<string, number> = {
         backlog: 0,
@@ -395,17 +395,42 @@ export function createEngineRoutes(
         done: 0,
         blocked: 0,
       };
+      const featuresByStatus: Record<
+        string,
+        Array<{
+          id: string;
+          title: string;
+          status: string;
+          branchName?: string;
+          createdAt?: string;
+          complexity?: string;
+          lastTraceId?: string;
+          costUsd?: number;
+        }>
+      > = {};
 
       for (const feature of features) {
         const status = feature.status || 'backlog';
         if (status in countsByStatus) {
           countsByStatus[status]++;
+          if (!featuresByStatus[status]) featuresByStatus[status] = [];
+          featuresByStatus[status].push({
+            id: feature.id,
+            title: feature.title || feature.id,
+            status,
+            branchName: feature.branchName,
+            createdAt: feature.createdAt,
+            complexity: feature.complexity,
+            lastTraceId: feature.lastTraceId,
+            costUsd: feature.costUsd,
+          });
         }
       }
 
       res.json({
         success: true,
         countsByStatus,
+        featuresByStatus,
         totalFeatures: features.length,
         timestamp: new Date().toISOString(),
       });

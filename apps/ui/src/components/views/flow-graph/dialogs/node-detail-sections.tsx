@@ -5,7 +5,7 @@
  * existing hooks and the node's data prop.
  */
 
-import { ExternalLink, Clock, DollarSign, Square, FileText } from 'lucide-react';
+import { ExternalLink, Clock, DollarSign, Square, FileText, GitBranch, Signal } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { Badge } from '@protolabs/ui/atoms';
 import { Button } from '@protolabs/ui/atoms';
@@ -14,6 +14,7 @@ import { formatCostUsd } from '@/lib/format';
 import { getLangfuseTraceUrl, getLangfuseSpanUrl } from '@/lib/langfuse-url';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { queryKeys } from '@/lib/query-keys';
+import { useEngineStatus } from '@/hooks/queries/use-metrics';
 import type {
   OrchestratorNodeData,
   ServiceNodeData,
@@ -57,6 +58,21 @@ function formatDuration(ms: number): string {
   if (ms < 3_600_000) return `${Math.round(ms / 60_000)}m`;
   return `${(ms / 3_600_000).toFixed(1)}h`;
 }
+
+function formatTimeAgo(dateStr: string): string {
+  const ms = Date.now() - new Date(dateStr).getTime();
+  if (ms < 60_000) return 'just now';
+  if (ms < 3_600_000) return `${Math.round(ms / 60_000)}m ago`;
+  if (ms < 86_400_000) return `${Math.round(ms / 3_600_000)}h ago`;
+  return `${Math.round(ms / 86_400_000)}d ago`;
+}
+
+const COMPLEXITY_COLORS: Record<string, string> = {
+  small: 'text-emerald-400',
+  medium: 'text-amber-400',
+  large: 'text-orange-400',
+  architectural: 'text-red-400',
+};
 
 // ============================================
 // Orchestrator Section
@@ -151,6 +167,8 @@ export function EngineServiceSection({ data }: { data: EngineServiceNodeData }) 
       {data.serviceId === 'auto-mode' && <AutoModeDetailPanel />}
       {data.serviceId === 'pr-feedback' && <PRFeedbackDetailPanel />}
       {data.serviceId === 'lead-engineer-rules' && <LeadEngineerDetailPanel />}
+      {data.serviceId === 'signal-sources' && <SignalSourcesDetailPanel />}
+      {data.serviceId === 'git-workflow' && <GitWorkflowDetailPanel />}
     </div>
   );
 }
@@ -360,6 +378,106 @@ function LeadEngineerDetailPanel() {
   );
 }
 
+function SignalSourcesDetailPanel() {
+  const { data: engineStatus } = useEngineStatus() as {
+    data?: {
+      signalIntake?: {
+        signalCounts?: Record<string, number>;
+        lastSignalAt?: string | null;
+      };
+    };
+  };
+
+  const signalCounts = engineStatus?.signalIntake?.signalCounts;
+  const lastSignalAt = engineStatus?.signalIntake?.lastSignalAt;
+  const totalSignals = signalCounts
+    ? Object.values(signalCounts).reduce((sum, n) => sum + n, 0)
+    : 0;
+
+  return (
+    <div className="border-t border-border/30 pt-2 space-y-2">
+      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+        Signal History
+      </p>
+      {totalSignals === 0 ? (
+        <p className="text-xs text-muted-foreground">No signals received yet</p>
+      ) : (
+        <>
+          <div className="flex flex-wrap gap-2">
+            {signalCounts &&
+              Object.entries(signalCounts)
+                .filter(([, count]) => count > 0)
+                .map(([source, count]) => (
+                  <Badge key={source} variant="outline" className="text-[10px]">
+                    <Signal className="w-2.5 h-2.5 mr-1" />
+                    {source}: {count}
+                  </Badge>
+                ))}
+          </div>
+          {lastSignalAt && (
+            <p className="text-[10px] text-muted-foreground">
+              Last signal: {formatTimeAgo(lastSignalAt)}
+            </p>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+function GitWorkflowDetailPanel() {
+  const { data: engineStatus } = useEngineStatus() as {
+    data?: {
+      gitWorkflow?: {
+        activeWorkflows?: number;
+        recentOperations?: Array<{
+          type: string;
+          featureId?: string;
+          timestamp: string;
+          success?: boolean;
+        }>;
+      };
+    };
+  };
+
+  const activeWorkflows = engineStatus?.gitWorkflow?.activeWorkflows ?? 0;
+  const recentOps = engineStatus?.gitWorkflow?.recentOperations ?? [];
+
+  return (
+    <div className="border-t border-border/30 pt-2 space-y-2">
+      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+        Git Operations
+      </p>
+      <SectionRow label="Active Workflows">{activeWorkflows}</SectionRow>
+      {recentOps.length === 0 ? (
+        <p className="text-xs text-muted-foreground">No recent operations</p>
+      ) : (
+        <div className="space-y-1">
+          {recentOps.slice(0, 5).map((op, i) => (
+            <div
+              key={i}
+              className="text-xs flex items-center justify-between p-1.5 rounded bg-muted/30"
+            >
+              <span className="flex items-center gap-1.5">
+                <GitBranch className="w-3 h-3 text-muted-foreground" />
+                <span className="font-medium">{op.type}</span>
+                {op.success === false && (
+                  <Badge variant="destructive" className="text-[9px] px-1 py-0">
+                    failed
+                  </Badge>
+                )}
+              </span>
+              <span className="text-muted-foreground text-[10px]">
+                {formatTimeAgo(op.timestamp)}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ============================================
 // Integration Section
 // ============================================
@@ -505,6 +623,8 @@ export function AgentSection({ data, onStop, onViewLogs, isStopping }: AgentSect
 // ============================================
 
 export function PipelineStageSection({ data }: { data: PipelineStageNodeData }) {
+  const hasRealItems = data.workItems.some((item) => !item.metadata?.isInitial);
+
   return (
     <div className="space-y-3">
       <div className="space-y-1">
@@ -524,29 +644,50 @@ export function PipelineStageSection({ data }: { data: PipelineStageNodeData }) 
             {data.status}
           </Badge>
         </SectionRow>
-        <SectionRow label="Work Items">{data.workItems.length}</SectionRow>
+        <SectionRow label="Features">{data.workItems.length}</SectionRow>
       </div>
 
-      {/* Work items list */}
+      {/* Feature cards */}
       {data.workItems.length > 0 && (
         <div className="border-t border-border/30 pt-2 space-y-1.5">
           <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-            Items
+            {hasRealItems ? 'Features' : 'Items'}
           </p>
-          {data.workItems.slice(0, 5).map((item) => (
-            <div
-              key={item.id}
-              className="text-xs p-1.5 rounded bg-muted/30 flex items-center justify-between"
-            >
-              <span className="truncate max-w-[180px]">{item.title}</span>
-              <Badge variant="outline" className="text-[10px] ml-2">
-                {item.status}
-              </Badge>
-            </div>
-          ))}
-          {data.workItems.length > 5 && (
-            <p className="text-[10px] text-muted-foreground">+{data.workItems.length - 5} more</p>
-          )}
+          <div className="max-h-64 overflow-y-auto space-y-1.5 pr-0.5">
+            {data.workItems.map((item) => (
+              <div key={item.id} className="text-xs space-y-1 p-2 rounded-lg bg-muted/30">
+                <p className="font-medium truncate" title={item.title}>
+                  {item.title}
+                </p>
+                <div className="flex flex-wrap items-center gap-2 text-muted-foreground">
+                  {item.metadata?.complexity && (
+                    <span
+                      className={`text-[10px] font-medium ${COMPLEXITY_COLORS[item.metadata.complexity] || ''}`}
+                    >
+                      {item.metadata.complexity}
+                    </span>
+                  )}
+                  {item.metadata?.branchName && (
+                    <code className="text-[10px] bg-muted px-1 py-0.5 rounded truncate max-w-[140px]">
+                      {item.metadata.branchName}
+                    </code>
+                  )}
+                  {typeof item.metadata?.costUsd === 'number' && item.metadata.costUsd > 0 && (
+                    <span className="text-emerald-400 text-[10px]">
+                      {formatCostUsd(item.metadata.costUsd)}
+                    </span>
+                  )}
+                  {item.metadata?.createdAt && (
+                    <span className="text-[10px]">
+                      <Clock className="w-2.5 h-2.5 inline mr-0.5" />
+                      {formatTimeAgo(item.metadata.createdAt)}
+                    </span>
+                  )}
+                </div>
+                {item.metadata?.lastTraceId && <TraceLink traceId={item.metadata.lastTraceId} />}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

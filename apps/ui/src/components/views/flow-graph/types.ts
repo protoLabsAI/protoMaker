@@ -104,7 +104,17 @@ export interface TrackedWorkItem {
   title: string;
   status: PipelineStageId;
   progress?: number;
-  metadata?: Record<string, unknown>;
+  metadata?: {
+    branchName?: string;
+    createdAt?: string;
+    complexity?: string;
+    lastTraceId?: string;
+    costUsd?: number;
+    lastEventType?: string;
+    lastEventTime?: number;
+    isInitial?: boolean;
+    [key: string]: unknown;
+  };
 }
 
 export interface PipelineStageNodeData {

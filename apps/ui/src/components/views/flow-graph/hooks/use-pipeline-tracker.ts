@@ -104,12 +104,35 @@ export function usePipelineTracker(props?: UsePipelineTrackerProps): UsePipeline
     setWorkItems((prev) => {
       const next = new Map(prev);
 
-      // Create synthetic work items for initial counts
-      // These will be replaced/updated by actual WebSocket events
+      // If server returned feature lists, create individual work items
+      if (initialState.featuresByStatus) {
+        Object.entries(initialState.featuresByStatus).forEach(([status, features]) => {
+          const stageId = status as PipelineStageId;
+          for (const feature of features) {
+            next.set(feature.id, {
+              id: feature.id,
+              title: feature.title,
+              status: stageId,
+              metadata: {
+                branchName: feature.branchName,
+                createdAt: feature.createdAt,
+                complexity: feature.complexity,
+                lastTraceId: feature.lastTraceId,
+                costUsd: feature.costUsd,
+                lastEventType: 'feature:created',
+                lastEventTime: Date.now(),
+                isInitial: true,
+              },
+            });
+          }
+        });
+        return next;
+      }
+
+      // Fallback: synthetic aggregate items when featuresByStatus is absent
       Object.entries(initialState.countsByStatus).forEach(([status, count]) => {
         if (count > 0) {
           const stageId = status as PipelineStageId;
-          // Create a single aggregate item per stage for initial display
           const itemId = `initial-${stageId}`;
           next.set(itemId, {
             id: itemId,
