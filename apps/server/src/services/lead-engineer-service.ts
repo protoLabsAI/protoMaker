@@ -30,6 +30,7 @@ import type {
   ExecuteOptions,
   AgentRole,
   GoalGateResult,
+  WorkflowSettings,
 } from '@automaker/types';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
@@ -41,6 +42,7 @@ import type { MetricsService } from './metrics-service.js';
 import type { CodeRabbitResolverService } from './coderabbit-resolver-service.js';
 import type { PRFeedbackService } from './pr-feedback-service.js';
 import { DEFAULT_RULES, evaluateRules } from './lead-engineer-rules.js';
+import { getWorkflowSettings } from '../lib/settings-helpers.js';
 import type { PipelineCheckpointService } from './pipeline-checkpoint-service.js';
 
 const execAsync = promisify(exec);
@@ -1262,16 +1264,26 @@ export class LeadEngineerService {
     this.refreshIntervals.set(projectPath, interval);
 
     // Set up supervisor interval — checks agent runtime and cost every 30s
-    const supervisorInterval = setInterval(() => {
-      try {
-        const s = this.sessions.get(projectPath);
-        if (!s || s.flowState !== 'running') return;
-        this.supervisorCheck(s);
-      } catch (err) {
-        logger.error(`Supervisor check failed for ${projectSlug}:`, err);
-      }
-    }, SUPERVISOR_CHECK_MS);
-    this.supervisorIntervals.set(projectPath, supervisorInterval);
+    // Respects workflow settings: can be disabled and thresholds configured
+    const workflowSettings = await getWorkflowSettings(
+      projectPath,
+      this.settingsService,
+      '[LeadEngineer]'
+    );
+    if (workflowSettings.pipeline.supervisorEnabled) {
+      const supervisorInterval = setInterval(() => {
+        try {
+          const s = this.sessions.get(projectPath);
+          if (!s || s.flowState !== 'running') return;
+          this.supervisorCheck(s, workflowSettings);
+        } catch (err) {
+          logger.error(`Supervisor check failed for ${projectSlug}:`, err);
+        }
+      }, SUPERVISOR_CHECK_MS);
+      this.supervisorIntervals.set(projectPath, supervisorInterval);
+    } else {
+      logger.info(`[LeadEngineer] Supervisor disabled for ${projectSlug} via workflow settings`);
+    }
 
     // Save session to disk
     await this.saveSession(session);
@@ -1388,10 +1400,20 @@ export class LeadEngineerService {
         prFeedbackService: this.prFeedbackService,
       };
 
+      // Read workflow settings to control pipeline features
+      const workflowSettings = await getWorkflowSettings(
+        projectPath,
+        this.settingsService,
+        '[LeadEngineer]'
+      );
+
       // Create state machine with checkpoint and event support
       const stateMachine = new FeatureStateMachine(serviceContext, {
-        checkpointService: this.checkpointService,
+        checkpointService: workflowSettings.pipeline.checkpointEnabled
+          ? this.checkpointService
+          : undefined,
         events: this.events,
+        goalGatesEnabled: workflowSettings.pipeline.goalGatesEnabled,
       });
       const result = await stateMachine.processFeature(
         feature,
@@ -1586,19 +1608,27 @@ export class LeadEngineerService {
 
   /**
    * Supervisor check: evaluate agent runtime and cost, take corrective action.
+   * Uses configurable thresholds from WorkflowSettings when provided.
    */
-  private supervisorCheck(session: LeadEngineerSession): void {
+  private supervisorCheck(session: LeadEngineerSession, settings?: WorkflowSettings): void {
     const now = Date.now();
+
+    // Use settings thresholds or fall back to hardcoded constants
+    const abortCostUsd = settings?.pipeline.maxAgentCostUsd ?? SUPERVISOR_ABORT_COST_USD;
+    const warnCostUsd = abortCostUsd * 0.53; // ~53% of abort threshold as warning
+    const warnRuntimeMs =
+      (settings?.pipeline.maxAgentRuntimeMinutes ?? SUPERVISOR_WARN_RUNTIME_MS / 60000) * 60000;
+    const abortRuntimeMs = warnRuntimeMs * 2; // abort at 2x the warning threshold
 
     for (const agent of session.worldState.agents) {
       const runtimeMs = now - new Date(agent.startTime).getTime();
       const feature = session.worldState.features[agent.featureId];
       const costUsd = feature?.costUsd ?? 0;
 
-      // Cost abort ($15+)
-      if (costUsd >= SUPERVISOR_ABORT_COST_USD) {
+      // Cost abort
+      if (costUsd >= abortCostUsd) {
         logger.warn(
-          `[Supervisor] Aborting ${agent.featureId}: cost $${costUsd.toFixed(2)} exceeds limit`
+          `[Supervisor] Aborting ${agent.featureId}: cost $${costUsd.toFixed(2)} exceeds limit ($${abortCostUsd})`
         );
         this.executeAction(session, {
           type: 'abort_and_resume',
@@ -1608,8 +1638,8 @@ export class LeadEngineerService {
         continue;
       }
 
-      // Runtime abort (90min+)
-      if (runtimeMs >= SUPERVISOR_ABORT_RUNTIME_MS) {
+      // Runtime abort
+      if (runtimeMs >= abortRuntimeMs) {
         const minutes = Math.round(runtimeMs / 60000);
         logger.warn(`[Supervisor] Aborting ${agent.featureId}: running ${minutes}min`);
         this.executeAction(session, {
@@ -1620,18 +1650,18 @@ export class LeadEngineerService {
         continue;
       }
 
-      // Cost warning ($8+)
-      if (costUsd >= SUPERVISOR_WARN_COST_USD) {
+      // Cost warning
+      if (costUsd >= warnCostUsd) {
         logger.info(`[Supervisor] Warning: ${agent.featureId} cost $${costUsd.toFixed(2)}`);
         this.events.emit('pipeline:supervisor-action' as EventType, {
           featureId: agent.featureId,
           action: 'cost_warning',
-          reason: `Agent cost $${costUsd.toFixed(2)} approaching limit`,
+          reason: `Agent cost $${costUsd.toFixed(2)} approaching limit ($${abortCostUsd})`,
         });
       }
 
-      // Runtime warning (45min+)
-      if (runtimeMs >= SUPERVISOR_WARN_RUNTIME_MS) {
+      // Runtime warning
+      if (runtimeMs >= warnRuntimeMs) {
         const minutes = Math.round(runtimeMs / 60000);
         logger.info(`[Supervisor] Warning: ${agent.featureId} running ${minutes}min`);
         this.events.emit('pipeline:supervisor-action' as EventType, {

@@ -203,6 +203,7 @@ export type EventType =
   // Project completion events
   | 'project:completed'
   | 'project:reflection:complete'
+  | 'project:prd:changes-requested'
   // CoS intake events
   | 'cos:prd-submitted'
   // PR feedback loop events (EM dev lifecycle)
@@ -517,6 +518,11 @@ export interface EventPayloadMap {
   // Milestone/project lifecycle
   'milestone:completed': { milestone?: string; projectPath?: string };
   'project:completed': { project?: string; projectPath?: string };
+  'project:prd:changes-requested': {
+    projectSlug: string;
+    projectPath: string;
+    feedback: string;
+  };
 
   // Lead Engineer events
   'lead-engineer:started': { projectPath: string; projectSlug: string };
