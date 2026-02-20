@@ -2307,6 +2307,8 @@ export interface WorkflowSettings {
     defaultCategory: 'ops' | 'gtm';
     /** Whether to auto-trigger research on new signals (default: false) */
     autoResearch: boolean;
+    /** Whether to auto-approve PRDs without user review (default: false) */
+    autoApprovePRD: boolean;
   };
 }
 
@@ -2330,6 +2332,7 @@ export const DEFAULT_WORKFLOW_SETTINGS: WorkflowSettings = {
   signalIntake: {
     defaultCategory: 'ops',
     autoResearch: false,
+    autoApprovePRD: false,
   },
 };
 

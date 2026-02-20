@@ -279,6 +279,12 @@ export function WorkflowSettingsPanel() {
             checked={localSettings.signalIntake.autoResearch}
             onChange={(v) => update('signalIntake', 'autoResearch', v)}
           />
+          <ToggleRow
+            label="Auto-Approve PRDs"
+            description="Skip manual review and auto-approve PRDs for decomposition"
+            checked={localSettings.signalIntake.autoApprovePRD}
+            onChange={(v) => update('signalIntake', 'autoApprovePRD', v)}
+          />
         </div>
       </div>
     </div>

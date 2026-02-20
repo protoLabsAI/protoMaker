@@ -508,7 +508,13 @@ const auditService = new AuditService(events);
 auditService.initialize(authorityService);
 
 // Initialize Authority Agents (AI executives) - pass auditService for decision tracking
-const pmAgent = new PMAuthorityAgent(events, authorityService, featureLoader, auditService);
+const pmAgent = new PMAuthorityAgent(
+  events,
+  authorityService,
+  featureLoader,
+  auditService,
+  settingsService
+);
 const projectService = new ProjectService(featureLoader);
 
 // Initialize Project Lifecycle Service (Linear as source of truth)

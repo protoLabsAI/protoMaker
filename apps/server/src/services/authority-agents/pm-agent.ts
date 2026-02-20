@@ -29,6 +29,7 @@ import type { EventEmitter } from '../../lib/events.js';
 import type { AuthorityService } from '../authority-service.js';
 import type { FeatureLoader } from '../feature-loader.js';
 import type { AuditService } from '../audit-service.js';
+import type { SettingsService } from '../settings-service.js';
 import { simpleQuery, streamingQuery } from '../../providers/simple-query-service.js';
 import {
   createAgentState,
@@ -36,6 +37,7 @@ import {
   withProcessingGuard,
   type AgentState,
 } from './agent-utils.js';
+import { getWorkflowSettings } from '../../lib/settings-helpers.js';
 
 const logger = createLogger('PMAgent');
 
@@ -78,6 +80,7 @@ export class PMAuthorityAgent {
   private readonly authorityService: AuthorityService;
   private readonly featureLoader: FeatureLoader;
   private readonly auditService: AuditService | null;
+  private readonly settingsService: SettingsService | null;
 
   /** Agent state (agents, initialization, processing tracking) */
   private readonly state: AgentState;
@@ -89,12 +92,14 @@ export class PMAuthorityAgent {
     events: EventEmitter,
     authorityService: AuthorityService,
     featureLoader: FeatureLoader,
-    auditService?: AuditService
+    auditService?: AuditService,
+    settingsService?: SettingsService
   ) {
     this.events = events;
     this.authorityService = authorityService;
     this.featureLoader = featureLoader;
     this.auditService = auditService || null;
+    this.settingsService = settingsService || null;
     this.state = createAgentState();
 
     // Register the global idea listener once
@@ -370,9 +375,17 @@ export class PMAuthorityAgent {
           source: 'enhance' as const,
         });
 
-        // Step 5: Update feature to prd_ready and STOP — wait for user approval
+        // Step 5: Check if auto-approve is enabled
+        const workflowSettings = await getWorkflowSettings(
+          projectPath,
+          this.settingsService,
+          '[PMAgent]'
+        );
+        const autoApprove = workflowSettings.signalIntake.autoApprovePRD;
+
+        // Update feature with PRD content
         await this.featureLoader.update(projectPath, featureId, {
-          workItemState: 'prd_ready',
+          workItemState: autoApprove ? 'approved' : 'prd_ready',
           description: prdResult.prd,
           complexity: prdResult.complexity,
           descriptionHistory,
@@ -392,23 +405,31 @@ export class PMAuthorityAgent {
           milestones: prdResult.milestones,
         });
 
-        // Emit ideation:prd-generated so the UI shows the review dialog
-        this.events.emit('ideation:prd-generated', {
-          projectPath,
-          featureId,
-          title: feature.title,
-          prd: prdResult.prd,
-          complexity: prdResult.complexity,
-          milestones: prdResult.milestones,
-          metadata: {
-            generatedAt: new Date().toISOString(),
-            model: PM_RESEARCH_MODEL,
-          },
-        });
+        if (autoApprove) {
+          // Auto-approve: trigger decomposition directly
+          logger.info(
+            `PRD auto-approved for "${feature.title}" (${featureId}) — triggering decomposition`
+          );
+          this.events.emit('ideation:prd-approved', { projectPath, featureId });
+        } else {
+          // Manual review: emit event so the UI shows the review dialog
+          this.events.emit('ideation:prd-generated', {
+            projectPath,
+            featureId,
+            title: feature.title,
+            prd: prdResult.prd,
+            complexity: prdResult.complexity,
+            milestones: prdResult.milestones,
+            metadata: {
+              generatedAt: new Date().toISOString(),
+              model: PM_RESEARCH_MODEL,
+            },
+          });
 
-        logger.info(
-          `PRD ready for review: "${feature.title}" (${featureId}) — waiting for user approval`
-        );
+          logger.info(
+            `PRD ready for review: "${feature.title}" (${featureId}) — waiting for user approval`
+          );
+        }
       } catch (error) {
         logger.error(`Failed to process idea ${featureId}:`, error);
         // Reset to 'idea' so the feature can be retried on next scan
