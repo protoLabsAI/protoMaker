@@ -407,6 +407,23 @@ export type { EditorInfo } from './editor.js';
 export type { NotificationType, Notification, NotificationsFile } from './notification.js';
 export { NOTIFICATIONS_VERSION, DEFAULT_NOTIFICATIONS_FILE } from './notification.js';
 
+// ActionableItem types (unified user attention system)
+export type {
+  ActionableItemActionType,
+  ActionableItemPriority,
+  ActionableItemStatus,
+  ActionPayload,
+  ActionableItem,
+  ActionableItemsFile,
+  CreateActionableItemInput,
+} from './actionable-item.js';
+export {
+  ACTIONABLE_ITEMS_VERSION,
+  DEFAULT_ACTIONABLE_ITEMS_FILE,
+  PRIORITY_SCORE,
+  getEffectivePriority,
+} from './actionable-item.js';
+
 // Event history types
 export type {
   StoredEvent,
