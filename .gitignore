@@ -28,6 +28,7 @@ docs/.vitepress/cache/
 .automaker/context/context-metadata.json
 .automaker/worktrees/
 .automaker/worktree-init.sh
+.automaker/prd-output.json
 
 # Feature data is runtime-managed by the server — never git-track
 .automaker/features/

@@ -89,7 +89,8 @@ automaker/
     ├── tools/        # Unified tool definition and registry system
     ├── flows/        # LangGraph state graph primitives & flow orchestration
     ├── llm-providers/# Multi-provider LLM abstraction layer
-    └── observability/# Langfuse tracing, prompt versioning & cost tracking
+    ├── observability/# Langfuse tracing, prompt versioning & cost tracking
+    └── ui/           # Shared UI components (@protolabs/ui) — atoms, molecules, theme
 ```
 
 ### Package Dependency Chain
@@ -101,9 +102,9 @@ Packages can only depend on packages above them:
     ↓
 @automaker/utils, @automaker/prompts, @automaker/platform, @automaker/model-resolver, @automaker/dependency-resolver, @automaker/spec-parser, @automaker/tools, @automaker/flows, @automaker/llm-providers, @automaker/observability
     ↓
-@automaker/git-utils
+@automaker/git-utils, @protolabs/ui
     ↓
-@automaker/server, @automaker/ui
+@automaker/server, @automaker/ui (apps)
 ```
 
 ### Key Technologies
