@@ -1941,6 +1941,15 @@ export interface ProjectSettings {
    * @see TwitchSettings
    */
   twitch?: import('./twitch.js').TwitchSettings;
+
+  // Workflow Settings (per-project)
+  /**
+   * Pipeline hardening and workflow behavior settings.
+   * Controls goal gates, checkpointing, loop detection, supervisor,
+   * retro feedback, cleanup, and signal intake.
+   * @see WorkflowSettings
+   */
+  workflow?: WorkflowSettings;
 }
 
 /**
@@ -2259,6 +2268,69 @@ export const DEFAULT_TRUST_BOUNDARY_CONFIG: TrustBoundaryConfig = {
     minEstimatedCost: undefined,
   },
   riskAutoApproveThreshold: 'low',
+};
+
+/**
+ * WorkflowSettings — Configuration for pipeline hardening features.
+ * Controls goal gates, checkpointing, loop detection, supervisor,
+ * retro feedback, cleanup, and signal intake behavior.
+ */
+export interface WorkflowSettings {
+  pipeline: {
+    /** Enable goal gate validation on state transitions (default: true) */
+    goalGatesEnabled: boolean;
+    /** Enable checkpoint persistence for crash recovery (default: true) */
+    checkpointEnabled: boolean;
+    /** Enable stream observer loop detection (default: true) */
+    loopDetectionEnabled: boolean;
+    /** Enable supervisor interval for stuck agent detection (default: true) */
+    supervisorEnabled: boolean;
+    /** Max agent runtime in minutes before supervisor warning (default: 45) */
+    maxAgentRuntimeMinutes: number;
+    /** Max agent cost in USD before supervisor abort (default: 15) */
+    maxAgentCostUsd: number;
+  };
+  retro: {
+    /** Enable automatic retrospective generation on project completion (default: true) */
+    enabled: boolean;
+    /** Linear project ID for routing improvement items (optional) */
+    improvementLinearProjectId?: string;
+  };
+  cleanup: {
+    /** Enable automatic cleanup of stale worktrees/features (default: true) */
+    autoCleanupEnabled: boolean;
+    /** Hours before orphaned in-progress features are reset (default: 4) */
+    staleThresholdHours: number;
+  };
+  signalIntake: {
+    /** Default category for unclassified signals (default: 'ops') */
+    defaultCategory: 'ops' | 'gtm';
+    /** Whether to auto-trigger research on new signals (default: false) */
+    autoResearch: boolean;
+  };
+}
+
+/** Default workflow settings */
+export const DEFAULT_WORKFLOW_SETTINGS: WorkflowSettings = {
+  pipeline: {
+    goalGatesEnabled: true,
+    checkpointEnabled: true,
+    loopDetectionEnabled: true,
+    supervisorEnabled: true,
+    maxAgentRuntimeMinutes: 45,
+    maxAgentCostUsd: 15,
+  },
+  retro: {
+    enabled: true,
+  },
+  cleanup: {
+    autoCleanupEnabled: true,
+    staleThresholdHours: 4,
+  },
+  signalIntake: {
+    defaultCategory: 'ops',
+    autoResearch: false,
+  },
 };
 
 /** Default project settings (empty - all settings are optional and fall back to global) */

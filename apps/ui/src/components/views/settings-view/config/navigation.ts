@@ -18,6 +18,7 @@ import {
   Webhook,
   MessageCircle,
   Activity,
+  Cog,
 } from 'lucide-react';
 import {
   AnthropicIcon,
@@ -83,7 +84,10 @@ export const GLOBAL_NAV_GROUPS: NavigationGroup[] = [
   },
   {
     label: 'System',
-    items: [{ id: 'health', label: 'Health', icon: Activity }],
+    items: [
+      { id: 'health', label: 'Health', icon: Activity },
+      { id: 'workflow', label: 'Workflow', icon: Cog },
+    ],
   },
   {
     label: 'Advanced',

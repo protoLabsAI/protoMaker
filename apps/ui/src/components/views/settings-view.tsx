@@ -28,6 +28,7 @@ import {
 import { MCPServersSection } from './settings-view/mcp-servers';
 import { PromptCustomizationSection } from './settings-view/prompts';
 import { EventHooksSection } from './settings-view/event-hooks';
+import { WorkflowSettingsPanel } from './settings-view/workflow/workflow-settings-panel';
 import { ImportExportDialog } from './settings-view/components/import-export-dialog';
 import type { Theme } from './settings-view/shared/types';
 
@@ -189,6 +190,8 @@ export function SettingsView() {
         );
       case 'health':
         return <HealthSection />;
+      case 'workflow':
+        return <WorkflowSettingsPanel />;
       case 'developer':
         return <DeveloperSection />;
       default:

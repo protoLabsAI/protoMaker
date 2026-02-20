@@ -20,6 +20,7 @@ import type { SignalIntakeService } from '../../services/signal-intake-service.j
 import type { GitWorkflowService } from '../../services/git-workflow-service.js';
 import { getAllGraphs, getGraph } from '../../lib/graph-registry.js';
 import type { FeatureLoader } from '../../services/feature-loader.js';
+import type { PipelineCheckpointService } from '../../services/pipeline-checkpoint-service.js';
 
 const logger = createLogger('EngineRoutes');
 
@@ -32,7 +33,8 @@ export function createEngineRoutes(
   eventStreamBuffer?: EventStreamBuffer,
   projectService?: ProjectService,
   contentFlowService?: ContentFlowService,
-  featureLoader?: FeatureLoader
+  featureLoader?: FeatureLoader,
+  pipelineCheckpointService?: PipelineCheckpointService
 ): Router {
   const router = Router();
 
@@ -398,6 +400,105 @@ export function createEngineRoutes(
       res.status(500).json({
         success: false,
         error: 'Failed to get pipeline state',
+      });
+    }
+  });
+
+  /**
+   * POST /api/engine/signal/submit
+   * Submit a signal for intake processing (ideas, bugs, feature requests).
+   */
+  router.post('/signal/submit', async (req: Request, res: Response) => {
+    try {
+      const { projectPath, content, source, images, files } = (req.body ?? {}) as {
+        projectPath?: string;
+        content?: string;
+        source?: string;
+        images?: string[];
+        files?: string[];
+      };
+
+      if (!content) {
+        res.status(400).json({
+          success: false,
+          error: 'content is required',
+        });
+        return;
+      }
+
+      // Emit signal:received event for SignalIntakeService to pick up
+      signalIntakeService.submitSignal({
+        source: source || 'ui:flow-graph',
+        content,
+        projectPath: projectPath || undefined,
+        images,
+        files,
+      });
+
+      res.json({
+        success: true,
+        message: 'Signal submitted for processing',
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      logger.error('Failed to submit signal:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to submit signal',
+      });
+    }
+  });
+
+  /**
+   * POST /api/engine/pipeline-checkpoints
+   * Returns active pipeline checkpoints for crash recovery visibility.
+   */
+  router.post('/pipeline-checkpoints', async (req: Request, res: Response) => {
+    try {
+      const { projectPath, featureId } = (req.body ?? {}) as {
+        projectPath?: string;
+        featureId?: string;
+      };
+
+      if (!pipelineCheckpointService) {
+        res.status(503).json({
+          success: false,
+          error: 'PipelineCheckpointService not available',
+        });
+        return;
+      }
+
+      // If specific feature requested, return just that checkpoint
+      if (featureId && projectPath) {
+        const checkpoint = await pipelineCheckpointService.load(projectPath, featureId);
+        res.json({
+          success: true,
+          checkpoint: checkpoint ?? null,
+        });
+        return;
+      }
+
+      // List all checkpoints across known project
+      if (!projectPath) {
+        res.status(400).json({
+          success: false,
+          error: 'projectPath is required',
+        });
+        return;
+      }
+
+      const checkpoints = await pipelineCheckpointService.listAll(projectPath);
+      res.json({
+        success: true,
+        checkpoints,
+        total: checkpoints.length,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      logger.error('Failed to get pipeline checkpoints:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to get pipeline checkpoints',
       });
     }
   });

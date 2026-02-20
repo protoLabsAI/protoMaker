@@ -186,7 +186,7 @@ export const staleReview: LeadFastPathRule = {
  */
 export const stuckAgent: LeadFastPathRule = {
   name: 'stuckAgent',
-  description: 'Agent running >2h → send wrap-up message',
+  description: 'Agent running >2h → abort and resume with wrap-up guidance',
   triggers: ['lead-engineer:rule-evaluated'],
 
   evaluate(worldState): LeadRuleAction[] {
@@ -198,9 +198,9 @@ export const stuckAgent: LeadFastPathRule = {
       if (age > STUCK_AGENT_MS) {
         const hours = Math.round((age / (60 * 60 * 1000)) * 10) / 10;
         actions.push({
-          type: 'send_agent_message',
+          type: 'abort_and_resume',
           featureId: agent.featureId,
-          message: `You have been running for ${hours}h. Please wrap up your current work, commit changes, and create a PR. If you are stuck, describe what's blocking you.`,
+          resumePrompt: `You were running for ${hours}h and were stopped by the supervisor. Please wrap up your current work efficiently: commit changes, create a PR, and finish. If you are stuck, try a simpler approach.`,
         });
       }
     }

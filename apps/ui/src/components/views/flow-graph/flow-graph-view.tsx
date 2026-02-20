@@ -12,6 +12,8 @@ import { useFlowGraphData } from './hooks';
 import { FlowGraphCanvas } from './flow-graph-canvas';
 import { FlowGraphLegend } from './flow-graph-legend';
 import { NodeDetailDialog, type SelectedNode } from './dialogs/node-detail-dialog';
+import { SignalInputDialog } from './dialogs/signal-input-dialog';
+import { PrdReviewDialog } from './dialogs/prd-review-dialog';
 
 export interface FlowGraphViewProps {
   projectPath?: string;
@@ -28,8 +30,27 @@ export function FlowGraphView({ onFeatureClick }: FlowGraphViewProps) {
   const [selectedNode, setSelectedNode] = useState<SelectedNode | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
+  // Specialized dialogs for specific engine services
+  const [signalDialogOpen, setSignalDialogOpen] = useState(false);
+  const [prdDialogOpen, setPrdDialogOpen] = useState(false);
+  const [prdProjectSlug, setPrdProjectSlug] = useState('');
+
   const handleNodeClick = useCallback(
     (nodeId: string, nodeType: string, nodeData: Record<string, unknown>) => {
+      // Intercept clicks on specific engine-service nodes
+      if (nodeType === 'engine-service') {
+        const serviceId = nodeData.serviceId as string;
+        if (serviceId === 'signal-sources') {
+          setSignalDialogOpen(true);
+          return;
+        }
+        if (serviceId === 'project-planning' && nodeData.activeProjectSlug) {
+          setPrdProjectSlug(nodeData.activeProjectSlug as string);
+          setPrdDialogOpen(true);
+          return;
+        }
+      }
+
       setSelectedNode({ nodeId, nodeType, nodeData });
       setDialogOpen(true);
 
@@ -63,6 +84,16 @@ export function FlowGraphView({ onFeatureClick }: FlowGraphViewProps) {
 
       {/* Node detail dialog */}
       <NodeDetailDialog open={dialogOpen} onOpenChange={setDialogOpen} node={selectedNode} />
+
+      {/* Signal input dialog */}
+      <SignalInputDialog open={signalDialogOpen} onOpenChange={setSignalDialogOpen} />
+
+      {/* PRD review dialog */}
+      <PrdReviewDialog
+        open={prdDialogOpen}
+        onOpenChange={setPrdDialogOpen}
+        projectSlug={prdProjectSlug}
+      />
     </div>
   );
 }

@@ -243,6 +243,11 @@ export type EventType =
   | 'ceremony:triggered'
   // Retro improvement events (reflection loop: REFLECT → REPEAT)
   | 'retro:improvements:created'
+  | 'retro:improvement:linear-sync'
+  // Docs update detector events
+  | 'docs:update-needed'
+  // Settings change events
+  | 'settings:workflow-changed'
   // Feature lifecycle events
   | 'feature:status-changed'
   // Issue management events (failure-to-issue pipeline)
@@ -300,6 +305,12 @@ export type EventType =
   | 'voice:wake-word-detected'
   | 'voice:command-received'
   | 'voice:model-download-progress'
+  // Pipeline state machine events (goal gates, checkpoints, loop detection, supervisor)
+  | 'pipeline:state-entered'
+  | 'pipeline:goal-gate-evaluated'
+  | 'pipeline:checkpoint-saved'
+  | 'pipeline:loop-detected'
+  | 'pipeline:supervisor-action'
   // Server lifecycle events
   | 'server:shutdown';
 
@@ -529,6 +540,35 @@ export interface EventPayloadMap {
   };
   'lead-engineer:project-completing': { projectPath: string; projectSlug: string };
   'lead-engineer:project-completed': { projectPath: string; projectSlug: string };
+
+  // Pipeline state machine events
+  'pipeline:state-entered': {
+    featureId: string;
+    state: string;
+    fromState: string | null;
+    timestamp: string;
+  };
+  'pipeline:goal-gate-evaluated': {
+    featureId: string;
+    gateId: string;
+    passed: boolean;
+    reason: string;
+  };
+  'pipeline:checkpoint-saved': {
+    featureId: string;
+    state: string;
+    checkpointId: string;
+  };
+  'pipeline:loop-detected': {
+    featureId: string;
+    loopSignature: string;
+    actionTaken: string;
+  };
+  'pipeline:supervisor-action': {
+    featureId: string;
+    action: string;
+    reason: string;
+  };
 }
 
 /**

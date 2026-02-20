@@ -110,6 +110,7 @@ export type LeadRuleAction =
   | { type: 'restart_auto_mode'; projectPath: string; maxConcurrency?: number }
   | { type: 'stop_agent'; featureId: string }
   | { type: 'send_agent_message'; featureId: string; message: string }
+  | { type: 'abort_and_resume'; featureId: string; resumePrompt: string }
   | { type: 'post_discord'; channelId: string; message: string }
   | { type: 'log'; level: 'info' | 'warn' | 'error'; message: string }
   | { type: 'escalate_llm'; reason: string; context: Record<string, unknown> }

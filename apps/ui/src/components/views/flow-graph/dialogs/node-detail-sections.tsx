@@ -21,7 +21,9 @@ import type {
   IntegrationNodeData,
   FeatureNodeData,
   AgentNodeData,
+  PipelineStageNodeData,
 } from '../types';
+import { PipelineMonitor } from './pipeline-monitor';
 
 // ============================================
 // Shared helpers
@@ -477,6 +479,67 @@ export function AgentSection({ data, onStop, onViewLogs, isStopping }: AgentSect
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+// ============================================
+// Pipeline Stage Section
+// ============================================
+
+export function PipelineStageSection({ data }: { data: PipelineStageNodeData }) {
+  return (
+    <div className="space-y-3">
+      <div className="space-y-1">
+        <SectionRow label="Stage">
+          <Badge variant="outline">{data.stageId}</Badge>
+        </SectionRow>
+        <SectionRow label="Status">
+          <Badge
+            variant={
+              data.status === 'active'
+                ? 'default'
+                : data.status === 'blocked'
+                  ? 'destructive'
+                  : 'secondary'
+            }
+          >
+            {data.status}
+          </Badge>
+        </SectionRow>
+        <SectionRow label="Work Items">{data.workItems.length}</SectionRow>
+      </div>
+
+      {/* Work items list */}
+      {data.workItems.length > 0 && (
+        <div className="border-t border-border/30 pt-2 space-y-1.5">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+            Items
+          </p>
+          {data.workItems.slice(0, 5).map((item) => (
+            <div
+              key={item.id}
+              className="text-xs p-1.5 rounded bg-muted/30 flex items-center justify-between"
+            >
+              <span className="truncate max-w-[180px]">{item.title}</span>
+              <Badge variant="outline" className="text-[10px] ml-2">
+                {item.status}
+              </Badge>
+            </div>
+          ))}
+          {data.workItems.length > 5 && (
+            <p className="text-[10px] text-muted-foreground">+{data.workItems.length - 5} more</p>
+          )}
+        </div>
+      )}
+
+      {/* Pipeline monitor for each active work item */}
+      {data.workItems
+        .filter((item) => item.status === 'in_progress')
+        .slice(0, 3)
+        .map((item) => (
+          <PipelineMonitor key={item.id} featureId={item.id} />
+        ))}
     </div>
   );
 }

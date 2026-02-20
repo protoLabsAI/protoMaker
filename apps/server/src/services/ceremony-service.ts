@@ -1608,6 +1608,18 @@ Return ONLY the JSON array, no other text.`;
           totalImprovements: improvements.length,
         });
 
+        // Emit individual improvement events for Linear sync pickup
+        for (const improvement of improvements) {
+          this.emitter.emit('retro:improvement:linear-sync', {
+            projectPath,
+            projectTitle,
+            title: `[Retro] ${improvement.title}`,
+            description: `${improvement.description}\n\nSource: Retrospective for ${projectTitle}\nType: ${improvement.type}\nCategory: ${improvement.category || 'general'}`,
+            priority: improvement.priority,
+            labels: ['retro-improvement', improvement.category].filter(Boolean),
+          });
+        }
+
         logger.info(
           `Emitted retro:improvements:created event: ${createdBeadsItems.length} Beads items, ${createdFeatureIds.length} features`
         );

@@ -6,7 +6,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import { Brain, Cog, Plug, FileCode, Bot, Activity } from 'lucide-react';
+import { Brain, Cog, Plug, FileCode, Bot, Activity, Layers } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -23,6 +23,7 @@ import {
   IntegrationSection,
   FeatureSection,
   AgentSection,
+  PipelineStageSection,
 } from './node-detail-sections';
 import type {
   OrchestratorNodeData,
@@ -31,6 +32,7 @@ import type {
   IntegrationNodeData,
   FeatureNodeData,
   AgentNodeData,
+  PipelineStageNodeData,
 } from '../types';
 
 export interface SelectedNode {
@@ -52,6 +54,7 @@ const NODE_TYPE_ICONS: Record<string, typeof Brain> = {
   integration: Plug,
   feature: FileCode,
   agent: Bot,
+  'pipeline-stage': Layers,
 };
 
 function getNodeTitle(node: SelectedNode): string {
@@ -69,6 +72,7 @@ function getNodeSubtitle(nodeType: string): string {
     integration: 'Integration',
     feature: 'Feature',
     agent: 'Running Agent',
+    'pipeline-stage': 'Pipeline Stage',
   };
   return subtitles[nodeType] || 'Node';
 }
@@ -133,6 +137,9 @@ export function NodeDetailDialog({ open, onOpenChange, node }: NodeDetailDialogP
                 onViewLogs={() => setShowLogsModal(true)}
                 isStopping={stopFeature.isPending}
               />
+            )}
+            {node.nodeType === 'pipeline-stage' && (
+              <PipelineStageSection data={node.nodeData as PipelineStageNodeData} />
             )}
           </div>
         </DialogContent>

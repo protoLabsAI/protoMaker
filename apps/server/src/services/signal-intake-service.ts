@@ -269,4 +269,29 @@ export class SignalIntakeService {
       logger.error(`Failed to process signal from ${signal.source}:`, error);
     }
   }
+
+  /**
+   * Public method for submitting signals from the UI or API.
+   * Emits signal:received so the standard processing pipeline handles it.
+   */
+  public submitSignal(params: {
+    source: string;
+    content: string;
+    projectPath?: string;
+    images?: string[];
+    files?: string[];
+  }): void {
+    const signal: SignalPayload = {
+      source: params.source,
+      content: params.content,
+      author: { id: 'ui-user', name: 'UI User' },
+      channelContext: {
+        projectPath: params.projectPath,
+        images: params.images,
+        files: params.files,
+      },
+      timestamp: new Date().toISOString(),
+    };
+    this.events.emit('signal:received', signal);
+  }
 }

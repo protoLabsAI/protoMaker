@@ -150,8 +150,9 @@ import { AgentFactoryService } from './services/agent-factory-service.js';
 import { DynamicAgentExecutor } from './services/dynamic-agent-executor.js';
 import { createAgentManagementRoutes } from './routes/agents/index.js';
 import { registerBuiltInTemplates } from './services/built-in-templates.js';
-// import { ReconciliationService } from './services/reconciliation-service.js'; // TODO: Re-enable when implemented
-// import { GitHubStateChecker } from './services/github-state-checker.js'; // TODO: Re-enable when implemented
+import { ReconciliationService } from './services/reconciliation-service.js';
+import { GitHubStateChecker } from './services/github-state-checker.js';
+import { PipelineCheckpointService } from './services/pipeline-checkpoint-service.js';
 import { ProjectService } from './services/project-service.js';
 import { getSpecGenerationMonitor } from './services/spec-generation-monitor.js';
 import { registerMaintenanceTasks } from './services/maintenance-tasks.js';
@@ -488,6 +489,11 @@ integrationService.initialize(events, settingsService, featureLoader);
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const signalIntakeService = new SignalIntakeService(events, featureLoader, REPO_ROOT);
 
+// Initialize Docs Update Detector — creates docs update features after milestones
+import { DocsUpdateDetector } from './services/docs-update-detector.js';
+const docsUpdateDetector = new DocsUpdateDetector(events, featureLoader, REPO_ROOT);
+docsUpdateDetector.start();
+
 // Initialize Authority Service for trust-based policy enforcement
 const authorityService = new AuthorityService(events);
 
@@ -559,6 +565,8 @@ const leadEngineerService = new LeadEngineerService(
   settingsService,
   metricsService
 );
+const pipelineCheckpointService = new PipelineCheckpointService();
+leadEngineerService.setCheckpointService(pipelineCheckpointService);
 await leadEngineerService.initialize();
 
 // Wire Lead Engineer service into auto-mode for delegated feature execution
@@ -615,6 +623,29 @@ const worktreeLifecycleService = new WorktreeLifecycleService(events, featureLoa
   }));
 });
 worktreeLifecycleService.initialize();
+
+// Initialize drift detection and reconciliation services
+const githubStateChecker = new GitHubStateChecker(featureLoader, events);
+githubStateChecker.registerProject(REPO_ROOT);
+const reconciliationService = new ReconciliationService(events, featureLoader, autoModeService);
+
+// Periodic drift detection: check every 5 minutes, reconcile any drifts found
+const DRIFT_CHECK_INTERVAL_MS = 5 * 60 * 1000;
+const driftCheckInterval = setInterval(async () => {
+  try {
+    const drifts = await githubStateChecker.checkAllProjects();
+    for (const drift of drifts) {
+      await reconciliationService.reconcile(drift);
+    }
+  } catch (err) {
+    logger.warn('Drift detection cycle failed:', err);
+  }
+}, DRIFT_CHECK_INTERVAL_MS);
+
+// Prune phantom worktrees on startup
+worktreeLifecycleService.prunePhantomWorktrees(REPO_ROOT).catch((err: unknown) => {
+  logger.warn('Failed to prune phantom worktrees on startup:', err);
+});
 
 // Initialize Discord Bot Service for CTO /idea command
 // Only connects if DISCORD_BOT_TOKEN is set in environment
@@ -1069,7 +1100,7 @@ app.use('/api/running-agents', createRunningAgentsRoutes(autoModeService));
 app.use('/api/workspace', createWorkspaceRoutes());
 app.use('/api/templates', createTemplatesRoutes());
 app.use('/api/terminal', createTerminalRoutes());
-app.use('/api/settings', createSettingsRoutes(settingsService));
+app.use('/api/settings', createSettingsRoutes(settingsService, events));
 app.use('/api/claude', createClaudeRoutes(claudeUsageService));
 app.use('/api/codex', createCodexRoutes(codexUsageService, codexModelCacheService));
 app.use('/api/github', createGitHubRoutes(events, settingsService));
@@ -1152,7 +1183,8 @@ app.use(
     eventStreamBuffer,
     projectService,
     contentFlowService,
-    featureLoader
+    featureLoader,
+    pipelineCheckpointService
   )
 );
 app.use('/api/langfuse', createLangfuseRoutes());
@@ -1645,6 +1677,7 @@ async function gracefulShutdown() {
     logger.warn('[SHUTDOWN] Failed to write clean shutdown marker:', err);
   }
 
+  clearInterval(driftCheckInterval);
   leadEngineerService.destroy();
   approvalBridge.stop();
   intakeBridge.stop();

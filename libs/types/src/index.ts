@@ -269,6 +269,8 @@ export type {
   // Voice activation types
   WhisperModelSize,
   VoiceSettings,
+  // Workflow settings types
+  WorkflowSettings,
 } from './settings.js';
 export {
   DEFAULT_KEYBOARD_SHORTCUTS,
@@ -298,6 +300,8 @@ export {
   DEFAULT_CEREMONY_SETTINGS,
   // Trust boundary defaults
   DEFAULT_TRUST_BOUNDARY_CONFIG,
+  // Workflow settings defaults
+  DEFAULT_WORKFLOW_SETTINGS,
   // Integration config defaults
   DEFAULT_LINEAR_INTEGRATION,
   DEFAULT_DISCORD_INTEGRATION,
@@ -724,3 +728,14 @@ export { DEFAULT_TWITCH_SETTINGS } from './twitch.js';
 
 // Notes types (Tiptap-based project notes workspace)
 export type { NoteTab, NoteTabPermissions, NotesWorkspace } from './notes.js';
+
+// Pipeline checkpoint types (crash recovery and goal gates)
+export type { PipelineCheckpoint, GoalGateResult } from './pipeline-checkpoint.js';
+
+// Context fidelity types (per-stage context shaping)
+export type { ContextFidelityMode } from './context-fidelity.js';
+export { DEFAULT_STAGE_FIDELITY } from './context-fidelity.js';
+
+// State machine types (edge-based transition table)
+export type { TransitionContext, TransitionEdge, ProcessResult } from './state-machine.js';
+export { DEFAULT_TRANSITION_TABLE, resolveTransition } from './state-machine.js';

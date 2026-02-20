@@ -24,6 +24,8 @@ import { createUpdateProjectHandler } from './routes/update-project.js';
 import { createMigrateHandler } from './routes/migrate.js';
 import { createStatusHandler } from './routes/status.js';
 import { createDiscoverAgentsHandler } from './routes/discover-agents.js';
+import { createGetWorkflowHandler, createUpdateWorkflowHandler } from './routes/workflow.js';
+import type { EventEmitter } from '../../lib/events.js';
 
 /**
  * Create settings router with all endpoints
@@ -41,11 +43,17 @@ import { createDiscoverAgentsHandler } from './routes/discover-agents.js';
  * - PUT /project - Update project settings
  * - POST /migrate - Migrate settings from localStorage
  * - POST /agents/discover - Discover filesystem agents from .claude/agents/ (read-only)
+ * - POST /workflow - Get workflow settings
+ * - PUT /workflow - Update workflow settings
  *
  * @param settingsService - Instance of SettingsService for file I/O
+ * @param events - Optional event emitter for settings change events
  * @returns Express Router configured with all settings endpoints
  */
-export function createSettingsRoutes(settingsService: SettingsService): Router {
+export function createSettingsRoutes(
+  settingsService: SettingsService,
+  events?: EventEmitter
+): Router {
   const router = Router();
 
   // Status endpoint (check if migration needed)
@@ -76,6 +84,18 @@ export function createSettingsRoutes(settingsService: SettingsService): Router {
 
   // Filesystem agents discovery (read-only)
   router.post('/agents/discover', createDiscoverAgentsHandler());
+
+  // Workflow settings (pipeline, retro, cleanup, signal intake)
+  router.post(
+    '/workflow',
+    validatePathParams('projectPath'),
+    createGetWorkflowHandler(settingsService)
+  );
+  router.put(
+    '/workflow',
+    validatePathParams('projectPath'),
+    createUpdateWorkflowHandler(settingsService, events)
+  );
 
   return router;
 }
