@@ -72,6 +72,7 @@ import type {
 
 import { useTerminalStore } from './terminal-store';
 import { useAIModelsStore } from './ai-models-store';
+import { useWorktreeStore } from './worktree-store';
 
 const logger = createLogger('AppStore');
 
@@ -81,6 +82,7 @@ const logger = createLogger('AppStore');
 export * from './types';
 export { useTerminalStore } from './terminal-store';
 export { useAIModelsStore } from './ai-models-store';
+export { useWorktreeStore } from './worktree-store';
 
 // Types re-exported from ./types.ts: ViewMode, ThemeMode, THEME_STORAGE_KEY,
 // FONT_SANS_STORAGE_KEY, FONT_MONO_STORAGE_KEY, MAX_INIT_OUTPUT_LINES,
@@ -1735,155 +1737,20 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
 
   toggleChatHistory: () => set({ chatHistoryOpen: !get().chatHistoryOpen }),
 
-  // Auto Mode actions (per-worktree)
-  getWorktreeKey: (projectId, branchName) => {
-    // Normalize 'main' to null so it matches the main worktree key
-    // The backend sometimes sends 'main' while the UI uses null for the main worktree
-    const normalizedBranch = branchName === 'main' ? null : branchName;
-    return `${projectId}::${normalizedBranch ?? '__main__'}`;
-  },
-
-  setAutoModeRunning: (
-    projectId: string,
-    branchName: string | null,
-    running: boolean,
-    maxConcurrency?: number,
-    runningTasks?: string[]
-  ) => {
-    const worktreeKey = get().getWorktreeKey(projectId, branchName);
-    const current = get().autoModeByWorktree;
-    const worktreeState = current[worktreeKey] || {
-      isRunning: false,
-      runningTasks: [],
-      branchName,
-      maxConcurrency: maxConcurrency ?? DEFAULT_MAX_CONCURRENCY,
-    };
-    set({
-      autoModeByWorktree: {
-        ...current,
-        [worktreeKey]: {
-          ...worktreeState,
-          isRunning: running,
-          branchName,
-          maxConcurrency: maxConcurrency ?? worktreeState.maxConcurrency ?? DEFAULT_MAX_CONCURRENCY,
-          runningTasks: runningTasks ?? worktreeState.runningTasks,
-        },
-      },
-    });
-  },
-
-  addRunningTask: (projectId, branchName, taskId) => {
-    const worktreeKey = get().getWorktreeKey(projectId, branchName);
-    const current = get().autoModeByWorktree;
-    const worktreeState = current[worktreeKey] || {
-      isRunning: false,
-      runningTasks: [],
-      branchName,
-    };
-    if (!worktreeState.runningTasks.includes(taskId)) {
-      set({
-        autoModeByWorktree: {
-          ...current,
-          [worktreeKey]: {
-            ...worktreeState,
-            runningTasks: [...worktreeState.runningTasks, taskId],
-            branchName,
-          },
-        },
-      });
-    }
-  },
-
-  removeRunningTask: (projectId, branchName, taskId) => {
-    const worktreeKey = get().getWorktreeKey(projectId, branchName);
-    const current = get().autoModeByWorktree;
-    const worktreeState = current[worktreeKey] || {
-      isRunning: false,
-      runningTasks: [],
-      branchName,
-    };
-    set({
-      autoModeByWorktree: {
-        ...current,
-        [worktreeKey]: {
-          ...worktreeState,
-          runningTasks: worktreeState.runningTasks.filter((id) => id !== taskId),
-          branchName,
-        },
-      },
-    });
-  },
-
-  clearRunningTasks: (projectId, branchName) => {
-    const worktreeKey = get().getWorktreeKey(projectId, branchName);
-    const current = get().autoModeByWorktree;
-    const worktreeState = current[worktreeKey] || {
-      isRunning: false,
-      runningTasks: [],
-      branchName,
-    };
-    set({
-      autoModeByWorktree: {
-        ...current,
-        [worktreeKey]: { ...worktreeState, runningTasks: [], branchName },
-      },
-    });
-  },
-
-  getAutoModeState: (projectId, branchName) => {
-    const worktreeKey = get().getWorktreeKey(projectId, branchName);
-    const worktreeState = get().autoModeByWorktree[worktreeKey];
-    return (
-      worktreeState || {
-        isRunning: false,
-        runningTasks: [],
-        branchName,
-        maxConcurrency: DEFAULT_MAX_CONCURRENCY,
-      }
-    );
-  },
-
-  getMaxConcurrencyForWorktree: (projectId, branchName) => {
-    const worktreeKey = get().getWorktreeKey(projectId, branchName);
-    const worktreeState = get().autoModeByWorktree[worktreeKey];
-    return worktreeState?.maxConcurrency ?? DEFAULT_MAX_CONCURRENCY;
-  },
-
-  setMaxConcurrencyForWorktree: (projectId, branchName, maxConcurrency) => {
-    const worktreeKey = get().getWorktreeKey(projectId, branchName);
-    const current = get().autoModeByWorktree;
-    const worktreeState = current[worktreeKey] || {
-      isRunning: false,
-      runningTasks: [],
-      branchName,
-      maxConcurrency: DEFAULT_MAX_CONCURRENCY,
-    };
-    set({
-      autoModeByWorktree: {
-        ...current,
-        [worktreeKey]: { ...worktreeState, maxConcurrency, branchName },
-      },
-    });
-  },
-
-  addAutoModeActivity: (activity) => {
-    const id = `activity-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    const newActivity: AutoModeActivity = {
-      ...activity,
-      id,
-      timestamp: new Date(),
-    };
-
-    // Keep only the last 100 activities to avoid memory issues
-    const currentLog = get().autoModeActivityLog;
-    const updatedLog = [...currentLog, newActivity].slice(-100);
-
-    set({ autoModeActivityLog: updatedLog });
-  },
-
-  clearAutoModeActivity: () => set({ autoModeActivityLog: [] }),
-
-  setMaxConcurrency: (max) => set({ maxConcurrency: max }),
+  // Auto Mode actions — forwarded to useWorktreeStore
+  getWorktreeKey: (...args) => useWorktreeStore.getState().getWorktreeKey(...args),
+  setAutoModeRunning: (...args) => useWorktreeStore.getState().setAutoModeRunning(...args),
+  addRunningTask: (...args) => useWorktreeStore.getState().addRunningTask(...args),
+  removeRunningTask: (...args) => useWorktreeStore.getState().removeRunningTask(...args),
+  clearRunningTasks: (...args) => useWorktreeStore.getState().clearRunningTasks(...args),
+  getAutoModeState: (...args) => useWorktreeStore.getState().getAutoModeState(...args),
+  getMaxConcurrencyForWorktree: (...args) =>
+    useWorktreeStore.getState().getMaxConcurrencyForWorktree(...args),
+  setMaxConcurrencyForWorktree: (...args) =>
+    useWorktreeStore.getState().setMaxConcurrencyForWorktree(...args),
+  addAutoModeActivity: (...args) => useWorktreeStore.getState().addAutoModeActivity(...args),
+  clearAutoModeActivity: () => useWorktreeStore.getState().clearAutoModeActivity(),
+  setMaxConcurrency: (...args) => useWorktreeStore.getState().setMaxConcurrency(...args),
 
   // Kanban Card Settings actions
   setBoardViewMode: (mode) => set({ boardViewMode: mode }),
@@ -1933,62 +1800,18 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
     }
   },
 
-  // Worktree Settings actions
-  setUseWorktrees: (enabled) => set({ useWorktrees: enabled }),
-
-  setCurrentWorktree: (projectPath, worktreePath, branch) => {
-    const current = get().currentWorktreeByProject;
-    set({
-      currentWorktreeByProject: {
-        ...current,
-        [projectPath]: { path: worktreePath, branch },
-      },
-    });
-  },
-
-  setWorktrees: (projectPath, worktrees) => {
-    const current = get().worktreesByProject;
-    set({
-      worktreesByProject: {
-        ...current,
-        [projectPath]: worktrees,
-      },
-    });
-  },
-
-  setWorktreesLoading: (projectPath, isLoading) => {
-    const current = get().worktreesLoadingByProject;
-    set({
-      worktreesLoadingByProject: {
-        ...current,
-        [projectPath]: isLoading,
-      },
-    });
-  },
-
-  getWorktreesLoading: (projectPath) => {
-    return get().worktreesLoadingByProject[projectPath] ?? true; // Default to loading=true for safety
-  },
-
-  getCurrentWorktree: (projectPath) => {
-    return get().currentWorktreeByProject[projectPath] ?? null;
-  },
-
-  getWorktrees: (projectPath) => {
-    return get().worktreesByProject[projectPath] ?? [];
-  },
-
-  isPrimaryWorktreeBranch: (projectPath, branchName) => {
-    const worktrees = get().worktreesByProject[projectPath] ?? [];
-    const primary = worktrees.find((w) => w.isMain);
-    return primary?.branch === branchName;
-  },
-
-  getPrimaryWorktreeBranch: (projectPath) => {
-    const worktrees = get().worktreesByProject[projectPath] ?? [];
-    const primary = worktrees.find((w) => w.isMain);
-    return primary?.branch ?? null;
-  },
+  // Worktree Settings actions — forwarded to useWorktreeStore
+  setUseWorktrees: (...args) => useWorktreeStore.getState().setUseWorktrees(...args),
+  setCurrentWorktree: (...args) => useWorktreeStore.getState().setCurrentWorktree(...args),
+  setWorktrees: (...args) => useWorktreeStore.getState().setWorktrees(...args),
+  setWorktreesLoading: (...args) => useWorktreeStore.getState().setWorktreesLoading(...args),
+  getWorktreesLoading: (...args) => useWorktreeStore.getState().getWorktreesLoading(...args),
+  getCurrentWorktree: (...args) => useWorktreeStore.getState().getCurrentWorktree(...args),
+  getWorktrees: (...args) => useWorktreeStore.getState().getWorktrees(...args),
+  isPrimaryWorktreeBranch: (...args) =>
+    useWorktreeStore.getState().isPrimaryWorktreeBranch(...args),
+  getPrimaryWorktreeBranch: (...args) =>
+    useWorktreeStore.getState().getPrimaryWorktreeBranch(...args),
 
   // Keyboard Shortcuts actions
   setKeyboardShortcut: (key, value) => {
@@ -2493,20 +2316,11 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
     });
   },
 
-  // Worktree Panel Visibility actions (per-project)
-  setWorktreePanelVisible: (projectPath, visible) => {
-    set({
-      worktreePanelVisibleByProject: {
-        ...get().worktreePanelVisibleByProject,
-        [projectPath]: visible,
-      },
-    });
-  },
-
-  getWorktreePanelVisible: (projectPath) => {
-    // Default to true (visible) if not set
-    return get().worktreePanelVisibleByProject[projectPath] ?? true;
-  },
+  // Worktree Panel Visibility actions — forwarded to useWorktreeStore
+  setWorktreePanelVisible: (...args) =>
+    useWorktreeStore.getState().setWorktreePanelVisible(...args),
+  getWorktreePanelVisible: (...args) =>
+    useWorktreeStore.getState().getWorktreePanelVisible(...args),
 
   // Init Script Indicator Visibility actions — forwarded to useTerminalStore
   setShowInitScriptIndicator: (...args) =>
@@ -2514,20 +2328,9 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
   getShowInitScriptIndicator: (...args) =>
     useTerminalStore.getState().getShowInitScriptIndicator(...args),
 
-  // Default Delete Branch actions (per-project)
-  setDefaultDeleteBranch: (projectPath, deleteBranch) => {
-    set({
-      defaultDeleteBranchByProject: {
-        ...get().defaultDeleteBranchByProject,
-        [projectPath]: deleteBranch,
-      },
-    });
-  },
-
-  getDefaultDeleteBranch: (projectPath) => {
-    // Default to false (don't delete branch) if not set
-    return get().defaultDeleteBranchByProject[projectPath] ?? false;
-  },
+  // Default Delete Branch actions — forwarded to useWorktreeStore
+  setDefaultDeleteBranch: (...args) => useWorktreeStore.getState().setDefaultDeleteBranch(...args),
+  getDefaultDeleteBranch: (...args) => useWorktreeStore.getState().getDefaultDeleteBranch(...args),
 
   // Auto-dismiss Init Script Indicator actions — forwarded to useTerminalStore
   setAutoDismissInitScriptIndicator: (...args) =>
@@ -2535,33 +2338,15 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
   getAutoDismissInitScriptIndicator: (...args) =>
     useTerminalStore.getState().getAutoDismissInitScriptIndicator(...args),
 
-  // Use Worktrees Override actions (per-project)
-  setProjectUseWorktrees: (projectPath, useWorktrees) => {
-    const newValue = useWorktrees === null ? undefined : useWorktrees;
-    set({
-      useWorktreesByProject: {
-        ...get().useWorktreesByProject,
-        [projectPath]: newValue,
-      },
-    });
-  },
-
-  getProjectUseWorktrees: (projectPath) => {
-    // Returns undefined if using global setting, true/false if project-specific
-    return get().useWorktreesByProject[projectPath];
-  },
-
-  getEffectiveUseWorktrees: (projectPath) => {
-    // Returns the actual value to use (project override or global fallback)
-    const projectSetting = get().useWorktreesByProject[projectPath];
-    if (projectSetting !== undefined) {
-      return projectSetting;
-    }
-    return get().useWorktrees;
-  },
+  // Use Worktrees Override actions — forwarded to useWorktreeStore
+  setProjectUseWorktrees: (...args) => useWorktreeStore.getState().setProjectUseWorktrees(...args),
+  getProjectUseWorktrees: (...args) => useWorktreeStore.getState().getProjectUseWorktrees(...args),
+  getEffectiveUseWorktrees: (...args) =>
+    useWorktreeStore.getState().getEffectiveUseWorktrees(...args),
 
   // UI State actions (previously in localStorage, now synced via API)
-  setWorktreePanelCollapsed: (collapsed) => set({ worktreePanelCollapsed: collapsed }),
+  setWorktreePanelCollapsed: (...args) =>
+    useWorktreeStore.getState().setWorktreePanelCollapsed(...args),
   setLastProjectDir: (dir) => set({ lastProjectDir: dir }),
   setRecentFolders: (folders) => set({ recentFolders: folders }),
   addRecentFolder: (folder) => {
@@ -2642,5 +2427,24 @@ useAIModelsStore.subscribe((aiModelsState) => {
     codexModelsError: aiModelsState.codexModelsError,
     codexModelsLastFetched: aiModelsState.codexModelsLastFetched,
     codexModelsLastFailedAt: aiModelsState.codexModelsLastFailedAt,
+  });
+});
+
+// Sync worktree store state back to app-store for backward compatibility.
+// This ensures useAppStore(s => s.autoModeByWorktree) etc. continues to work while
+// consumers are being migrated to useWorktreeStore directly.
+useWorktreeStore.subscribe((worktreeState) => {
+  useAppStore.setState({
+    autoModeByWorktree: worktreeState.autoModeByWorktree,
+    autoModeActivityLog: worktreeState.autoModeActivityLog,
+    maxConcurrency: worktreeState.maxConcurrency,
+    useWorktrees: worktreeState.useWorktrees,
+    currentWorktreeByProject: worktreeState.currentWorktreeByProject,
+    worktreesByProject: worktreeState.worktreesByProject,
+    worktreesLoadingByProject: worktreeState.worktreesLoadingByProject,
+    worktreePanelVisibleByProject: worktreeState.worktreePanelVisibleByProject,
+    defaultDeleteBranchByProject: worktreeState.defaultDeleteBranchByProject,
+    useWorktreesByProject: worktreeState.useWorktreesByProject,
+    worktreePanelCollapsed: worktreeState.worktreePanelCollapsed,
   });
 });
