@@ -8,6 +8,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAppStore } from '@/store/app-store';
+import { useWorktreeStore } from '@/store/worktree-store';
 import { getElectronAPI } from '@/lib/electron';
 import { toast } from 'sonner';
 import { createLogger } from '@automaker/utils/logger';
@@ -85,7 +86,7 @@ export function useBoardFeatures({ currentProject }: UseBoardFeaturesProps) {
     const api = getElectronAPI();
     if (!api?.autoMode || !currentProject) return;
 
-    const { removeRunningTask } = useAppStore.getState();
+    const { removeRunningTask } = useWorktreeStore.getState();
     const projectId = currentProject.id;
     const projectPath = currentProject.path;
 

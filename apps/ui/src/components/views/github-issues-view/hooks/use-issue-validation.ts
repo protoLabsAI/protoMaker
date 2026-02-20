@@ -11,6 +11,7 @@ import {
 } from '@/lib/electron';
 import type { LinkedPRInfo, PhaseModelEntry, ModelId } from '@automaker/types';
 import { useAppStore } from '@/store/app-store';
+import { useAIModelsStore } from '@/store/ai-models-store';
 import { toast } from 'sonner';
 import { isValidationStale } from '../utils';
 import { useValidateIssue, useMarkValidationViewed } from '@/hooks/mutations';
@@ -30,7 +31,8 @@ export function useIssueValidation({
   onValidationResultChange,
   onShowValidationDialogChange,
 }: UseIssueValidationOptions) {
-  const { currentProject, phaseModels, muteDoneSound } = useAppStore();
+  const { currentProject, muteDoneSound } = useAppStore();
+  const { phaseModels } = useAIModelsStore();
   const [validatingIssues, setValidatingIssues] = useState<Set<number>>(new Set());
   const [cachedValidations, setCachedValidations] = useState<Map<number, StoredValidation>>(
     new Map()

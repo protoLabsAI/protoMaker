@@ -27,6 +27,7 @@ class DialogAwarePointerSensor extends PointerSensor {
   ];
 }
 import { useAppStore, Feature } from '@/store/app-store';
+import { useWorktreeStore } from '@/store/worktree-store';
 import { useTerminalStore } from '@/store/terminal-store';
 import { useWorktreeStore } from '@/store/worktree-store';
 import { getElectronAPI } from '@/lib/electron';

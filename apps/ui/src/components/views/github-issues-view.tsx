@@ -5,6 +5,7 @@ import { CircleDot, RefreshCw, SearchX } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { getElectronAPI, GitHubIssue, IssueValidationResult } from '@/lib/electron';
 import { useAppStore } from '@/store/app-store';
+import { useWorktreeStore } from '@/store/worktree-store';
 import { Button } from '@protolabs/ui/atoms';
 import { ConfirmDialog } from '@protolabs/ui/molecules';
 import { LoadingState } from '@protolabs/ui/molecules';
@@ -37,7 +38,8 @@ export function GitHubIssuesView() {
   // Filter state
   const [filterState, setFilterState] = useState<IssuesFilterState>(DEFAULT_ISSUES_FILTER_STATE);
 
-  const { currentProject, getCurrentWorktree, worktreesByProject } = useAppStore();
+  const { currentProject } = useAppStore();
+  const { getCurrentWorktree, worktreesByProject } = useWorktreeStore();
   const queryClient = useQueryClient();
 
   // Model override for validation

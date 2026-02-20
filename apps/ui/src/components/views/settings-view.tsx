@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useSearch } from '@tanstack/react-router';
 import { useAppStore } from '@/store/app-store';
+import { useThemeStore } from '@/store/theme-store';
+import { useWorktreeStore } from '@/store/worktree-store';
 
 import { useSettingsView, type SettingsViewId } from './settings-view/hooks';
 import { NAV_ITEMS } from './settings-view/config/navigation';
@@ -37,8 +39,6 @@ const LG_BREAKPOINT = 1024;
 
 export function SettingsView() {
   const {
-    theme,
-    setTheme,
     defaultSkipTests,
     setDefaultSkipTests,
     enableDependencyBlocking,
@@ -47,8 +47,6 @@ export function SettingsView() {
     setSkipVerificationInAutoMode,
     enableAiCommitMessages,
     setEnableAiCommitMessages,
-    useWorktrees,
-    setUseWorktrees,
     muteDoneSound,
     setMuteDoneSound,
     currentProject,
@@ -63,6 +61,8 @@ export function SettingsView() {
     skipSandboxWarning,
     setSkipSandboxWarning,
   } = useAppStore();
+  const { theme, setTheme } = useThemeStore();
+  const { useWorktrees, setUseWorktrees } = useWorktreeStore();
 
   // Global theme (project-specific themes are managed in Project Settings)
   const globalTheme = theme as Theme;

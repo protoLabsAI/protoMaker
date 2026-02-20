@@ -3,6 +3,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { createLogger } from '@automaker/utils/logger';
 import { DEFAULT_MAX_CONCURRENCY } from '@automaker/types';
 import { useAppStore } from '@/store/app-store';
+import { useWorktreeStore } from '@/store/worktree-store';
 import { getElectronAPI } from '@/lib/electron';
 import type { AutoModeEvent } from '@/types/electron';
 import type { WorktreeInfo } from '@/components/views/board-view/worktree-panel/types';
@@ -65,29 +66,30 @@ function isPlanApprovalEvent(
  * @param worktree - Optional worktree info. If not provided, uses main worktree (branchName = null)
  */
 export function useAutoMode(worktree?: WorktreeInfo) {
+  const { currentProject, projects, setPendingPlanApproval } = useAppStore(
+    useShallow((state) => ({
+      currentProject: state.currentProject,
+      projects: state.projects,
+      setPendingPlanApproval: state.setPendingPlanApproval,
+    }))
+  );
   const {
     autoModeByWorktree,
     setAutoModeRunning,
     addRunningTask,
     removeRunningTask,
-    currentProject,
     addAutoModeActivity,
-    projects,
-    setPendingPlanApproval,
     getWorktreeKey,
     getMaxConcurrencyForWorktree,
     setMaxConcurrencyForWorktree,
     isPrimaryWorktreeBranch,
-  } = useAppStore(
+  } = useWorktreeStore(
     useShallow((state) => ({
       autoModeByWorktree: state.autoModeByWorktree,
       setAutoModeRunning: state.setAutoModeRunning,
       addRunningTask: state.addRunningTask,
       removeRunningTask: state.removeRunningTask,
-      currentProject: state.currentProject,
       addAutoModeActivity: state.addAutoModeActivity,
-      projects: state.projects,
-      setPendingPlanApproval: state.setPendingPlanApproval,
       getWorktreeKey: state.getWorktreeKey,
       getMaxConcurrencyForWorktree: state.getMaxConcurrencyForWorktree,
       setMaxConcurrencyForWorktree: state.setMaxConcurrencyForWorktree,
