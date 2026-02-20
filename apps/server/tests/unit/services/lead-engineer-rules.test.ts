@@ -285,17 +285,17 @@ describe('staleReview', () => {
 // ────────────────────────── stuckAgent ──────────────────────────
 
 describe('stuckAgent', () => {
-  it('sends wrap-up message to agent running >2h', () => {
+  it('aborts and resumes agent running >2h', () => {
     const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
     const ws = createMockWorldState({
       agents: [{ featureId: 'f1', startTime: threeHoursAgo }],
     });
     const actions = stuckAgent.evaluate(ws, 'lead-engineer:rule-evaluated', {});
     expect(actions).toHaveLength(1);
-    expect(actions[0].type).toBe('send_agent_message');
-    if (actions[0].type === 'send_agent_message') {
+    expect(actions[0].type).toBe('abort_and_resume');
+    if (actions[0].type === 'abort_and_resume') {
       expect(actions[0].featureId).toBe('f1');
-      expect(actions[0].message).toContain('wrap up');
+      expect(actions[0].resumePrompt).toContain('wrap up');
     }
   });
 
