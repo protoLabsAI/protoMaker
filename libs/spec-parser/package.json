@@ -33,7 +33,7 @@
   },
   "dependencies": {
     "@automaker/types": "1.0.0",
-    "fast-xml-parser": "^5.3.4"
+    "fast-xml-parser": "^5.3.7"
   },
   "devDependencies": {
     "@types/node": "22.19.3",

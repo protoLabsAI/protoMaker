@@ -101,6 +101,12 @@
     "undici": "6.23.0",
     "lodash-es": "4.17.23",
     "prismjs": "1.30.0",
-    "langsmith": "0.4.12"
+    "langsmith": "0.4.12",
+    "fast-xml-parser": "5.3.7",
+    "eslint": "9.39.2",
+    "@typescript-eslint/utils": "8.50.0",
+    "@typescript-eslint/eslint-plugin": "8.50.0",
+    "@typescript-eslint/parser": "8.50.0",
+    "@typescript-eslint/typescript-estree": "8.50.0"
   }
 }
