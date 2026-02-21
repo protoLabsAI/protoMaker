@@ -82,6 +82,13 @@ export function usePipelineTracker(props?: UsePipelineTrackerProps): UsePipeline
   const [isConnected, setIsConnected] = useState(false);
   const expiryTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
+  // Clear work items when project changes
+  useEffect(() => {
+    setWorkItems(new Map());
+    expiryTimers.current.forEach((timer) => clearTimeout(timer));
+    expiryTimers.current.clear();
+  }, [projectPath]);
+
   // Fetch initial pipeline state with React Query
   const { data: initialState, isLoading } = useQuery({
     queryKey: ['engine', 'pipeline-state', projectPath],
@@ -101,8 +108,8 @@ export function usePipelineTracker(props?: UsePipelineTrackerProps): UsePipeline
 
     logger.debug('Hydrating initial pipeline state:', initialState);
 
-    setWorkItems((prev) => {
-      const next = new Map(prev);
+    setWorkItems(() => {
+      const next = new Map<string, TrackedWorkItem>();
 
       // If server returned feature lists, create individual work items
       if (initialState.featuresByStatus) {
