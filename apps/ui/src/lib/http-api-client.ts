@@ -3143,7 +3143,7 @@ export class HttpApiClient implements ElectronAPI {
       projectSlug: string,
       updates: Record<string, unknown>
     ): Promise<{ success: boolean; error?: string }> =>
-      this.post('/api/projects/update', { projectPath, projectSlug, ...updates }),
+      this.post('/api/projects/update', { projectPath, projectSlug, updates }),
   };
 
   // Engine API

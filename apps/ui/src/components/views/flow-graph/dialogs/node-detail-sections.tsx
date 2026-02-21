@@ -861,12 +861,12 @@ function DecompositionDetailPanel() {
   );
 }
 
-type ProjectDetail = {
+interface ProjectDetail {
   slug: string;
   title: string;
   status: string;
   milestones?: Array<{ title: string; phases: Array<{ title: string; status?: string }> }>;
-};
+}
 
 // ============================================
 // Integration Section
