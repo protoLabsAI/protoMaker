@@ -476,10 +476,10 @@ small (haiku) → medium (sonnet) → large (sonnet) → architectural (opus)
 ## Invocation
 
 ```bash
-# Start heads down mode for current project
-/headsdown /home/josh/dev/ava
+# Start heads down mode for a specific project
+/headsdown /path/to/project
 
-# Or with auto-detection
+# Or with auto-detection (uses current working directory)
 /headsdown .
 ```
 
