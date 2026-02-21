@@ -2802,17 +2802,13 @@ export class HttpApiClient implements ElectronAPI {
       this.post('/api/actionable-items/dismiss', { projectPath, itemId }),
 
     onItemCreated: (callback: (item: ActionableItem) => void): (() => void) => {
-      return this.subscribeToEvent(
-        'actionable-item:created',
-        callback as EventCallback
-      );
+      return this.subscribeToEvent('actionable-item:created', callback as EventCallback);
     },
 
-    onItemStatusChanged: (callback: (data: { itemId: string; status: ActionableItemStatus }) => void): (() => void) => {
-      return this.subscribeToEvent(
-        'actionable-item:status-changed',
-        callback as EventCallback
-      );
+    onItemStatusChanged: (
+      callback: (data: { itemId: string; status: ActionableItemStatus }) => void
+    ): (() => void) => {
+      return this.subscribeToEvent('actionable-item:status-changed', callback as EventCallback);
     },
   };
 

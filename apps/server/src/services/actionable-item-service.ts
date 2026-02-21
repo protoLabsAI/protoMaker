@@ -124,11 +124,7 @@ export class ActionableItemService {
     let hasExpiredItems = false;
 
     for (const item of file.items) {
-      if (
-        item.status === 'pending' &&
-        item.expiresAt &&
-        new Date(item.expiresAt).getTime() < now
-      ) {
+      if (item.status === 'pending' && item.expiresAt && new Date(item.expiresAt).getTime() < now) {
         item.status = 'expired';
         hasExpiredItems = true;
       }
@@ -218,17 +214,22 @@ export class ActionableItemService {
    * @returns Promise resolving to the created actionable item
    */
   async createActionableItem(input: CreateActionableItemInput): Promise<ActionableItem> {
-    const { projectPath, actionType, priority, title, message, expiresAt, actionPayload, category } =
-      input;
+    const {
+      projectPath,
+      actionType,
+      priority,
+      title,
+      message,
+      expiresAt,
+      actionPayload,
+      category,
+    } = input;
 
     // Ensure automaker directory exists
     await ensureAutomakerDir(projectPath);
 
     const itemsPath = getActionableItemsPath(projectPath);
-    const file = await readJsonFile<ActionableItemsFile>(
-      itemsPath,
-      DEFAULT_ACTIONABLE_ITEMS_FILE
-    );
+    const file = await readJsonFile<ActionableItemsFile>(itemsPath, DEFAULT_ACTIONABLE_ITEMS_FILE);
 
     const item: ActionableItem = {
       id: randomUUID(),
@@ -272,10 +273,7 @@ export class ActionableItemService {
     status: ActionableItemStatus
   ): Promise<ActionableItem | null> {
     const itemsPath = getActionableItemsPath(projectPath);
-    const file = await readJsonFile<ActionableItemsFile>(
-      itemsPath,
-      DEFAULT_ACTIONABLE_ITEMS_FILE
-    );
+    const file = await readJsonFile<ActionableItemsFile>(itemsPath, DEFAULT_ACTIONABLE_ITEMS_FILE);
 
     const item = file.items.find((i) => i.id === itemId);
     if (!item) {
@@ -310,10 +308,7 @@ export class ActionableItemService {
    */
   async markAsRead(projectPath: string, itemId: string): Promise<ActionableItem | null> {
     const itemsPath = getActionableItemsPath(projectPath);
-    const file = await readJsonFile<ActionableItemsFile>(
-      itemsPath,
-      DEFAULT_ACTIONABLE_ITEMS_FILE
-    );
+    const file = await readJsonFile<ActionableItemsFile>(itemsPath, DEFAULT_ACTIONABLE_ITEMS_FILE);
 
     const item = file.items.find((i) => i.id === itemId);
     if (!item) {
@@ -335,10 +330,7 @@ export class ActionableItemService {
    */
   async markAllAsRead(projectPath: string): Promise<number> {
     const itemsPath = getActionableItemsPath(projectPath);
-    const file = await readJsonFile<ActionableItemsFile>(
-      itemsPath,
-      DEFAULT_ACTIONABLE_ITEMS_FILE
-    );
+    const file = await readJsonFile<ActionableItemsFile>(itemsPath, DEFAULT_ACTIONABLE_ITEMS_FILE);
 
     let count = 0;
     for (const item of file.items) {
@@ -370,10 +362,7 @@ export class ActionableItemService {
     snoozedUntil: string
   ): Promise<ActionableItem | null> {
     const itemsPath = getActionableItemsPath(projectPath);
-    const file = await readJsonFile<ActionableItemsFile>(
-      itemsPath,
-      DEFAULT_ACTIONABLE_ITEMS_FILE
-    );
+    const file = await readJsonFile<ActionableItemsFile>(itemsPath, DEFAULT_ACTIONABLE_ITEMS_FILE);
 
     const item = file.items.find((i) => i.id === itemId);
     if (!item) {
@@ -414,10 +403,7 @@ export class ActionableItemService {
    */
   async dismissAll(projectPath: string): Promise<number> {
     const itemsPath = getActionableItemsPath(projectPath);
-    const file = await readJsonFile<ActionableItemsFile>(
-      itemsPath,
-      DEFAULT_ACTIONABLE_ITEMS_FILE
-    );
+    const file = await readJsonFile<ActionableItemsFile>(itemsPath, DEFAULT_ACTIONABLE_ITEMS_FILE);
 
     let count = 0;
     for (const item of file.items) {
@@ -444,10 +430,7 @@ export class ActionableItemService {
    */
   async getItemById(projectPath: string, itemId: string): Promise<ActionableItem | null> {
     const itemsPath = getActionableItemsPath(projectPath);
-    const file = await readJsonFile<ActionableItemsFile>(
-      itemsPath,
-      DEFAULT_ACTIONABLE_ITEMS_FILE
-    );
+    const file = await readJsonFile<ActionableItemsFile>(itemsPath, DEFAULT_ACTIONABLE_ITEMS_FILE);
 
     return file.items.find((item) => item.id === itemId) || null;
   }

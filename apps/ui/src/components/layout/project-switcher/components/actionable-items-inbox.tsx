@@ -22,7 +22,11 @@ import { useLoadActionableItems, useActionableItemEvents } from '@/hooks/use-act
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { Button } from '@protolabs/ui/atoms';
 import { Popover, PopoverContent, PopoverTrigger } from '@protolabs/ui/atoms';
-import type { ActionableItem, ActionableItemActionType, ActionableItemPriority } from '@automaker/types';
+import type {
+  ActionableItem,
+  ActionableItemActionType,
+  ActionableItemPriority,
+} from '@automaker/types';
 import { getEffectivePriority } from '@automaker/types';
 import { cn } from '@/lib/utils';
 
@@ -153,9 +157,7 @@ export function ActionableItemsInbox({ projectPath }: ActionableItemsInboxProps)
         <div className="flex items-center justify-between px-4 py-3 border-b">
           <h4 className="font-medium text-sm">Inbox</h4>
           {pendingItems.length > 0 && (
-            <span className="text-xs text-muted-foreground">
-              {pendingItems.length} pending
-            </span>
+            <span className="text-xs text-muted-foreground">{pendingItems.length} pending</span>
           )}
         </div>
 
@@ -203,7 +205,9 @@ export function ActionableItemsInbox({ projectPath }: ActionableItemsInboxProps)
                           snoozed
                         </span>
                       )}
-                      <span className="text-[10px] text-muted-foreground/70">{item.actionType}</span>
+                      <span className="text-[10px] text-muted-foreground/70">
+                        {item.actionType}
+                      </span>
                     </div>
                   </div>
                   <div className="flex-shrink-0">

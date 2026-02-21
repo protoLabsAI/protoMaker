@@ -34,7 +34,11 @@ export function createActionableItemsRoutes(service: ActionableItemService): Rou
 
   router.post('/list', validatePathParams('projectPath'), createListHandler(service));
   router.post('/create', validatePathParams('projectPath'), createCreateHandler(service));
-  router.post('/update-status', validatePathParams('projectPath'), createUpdateStatusHandler(service));
+  router.post(
+    '/update-status',
+    validatePathParams('projectPath'),
+    createUpdateStatusHandler(service)
+  );
   router.post('/mark-read', validatePathParams('projectPath'), createMarkReadHandler(service));
   router.post('/snooze', validatePathParams('projectPath'), createSnoozeHandler(service));
   router.post('/dismiss', validatePathParams('projectPath'), createDismissHandler(service));
