@@ -1,0 +1,130 @@
+import { useCallback, useEffect, useState } from 'react';
+import { Plug, RefreshCw } from 'lucide-react';
+import { Button, Spinner } from '@protolabs/ui/atoms';
+import { apiFetch } from '@/lib/api-fetch';
+import type { IntegrationSummary } from '@automaker/types';
+import { IntegrationCard } from './integration-card';
+import { IntegrationConfigDialog } from './integration-config-dialog';
+
+const CATEGORY_LABELS: Record<string, string> = {
+  communication: 'Communication',
+  'project-mgmt': 'Project Management',
+  'source-control': 'Source Control',
+  streaming: 'Streaming',
+  'ai-provider': 'AI Providers',
+  tooling: 'Tooling',
+  observability: 'Observability',
+};
+
+export function IntegrationsSection() {
+  const [integrations, setIntegrations] = useState<IntegrationSummary[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [configDialogId, setConfigDialogId] = useState<string | null>(null);
+
+  const fetchIntegrations = useCallback(async () => {
+    try {
+      const res = await apiFetch('/api/integrations/registry/list', 'POST', { body: {} });
+      const data = await res.json();
+      setIntegrations(data.integrations ?? []);
+    } catch (error) {
+      console.error('Failed to fetch integrations:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      await fetchIntegrations();
+      setLoading(false);
+    })();
+  }, [fetchIntegrations]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchIntegrations();
+    setRefreshing(false);
+  };
+
+  const handleToggle = async (id: string, enabled: boolean) => {
+    try {
+      await apiFetch('/api/integrations/registry/toggle', 'POST', {
+        body: { id, enabled },
+      });
+      // Optimistic update
+      setIntegrations((prev) => prev.map((i) => (i.id === id ? { ...i, enabled } : i)));
+    } catch (error) {
+      console.error('Failed to toggle integration:', error);
+      // Revert on failure
+      await fetchIntegrations();
+    }
+  };
+
+  // Group by category
+  const grouped = integrations.reduce<Record<string, IntegrationSummary[]>>((acc, integration) => {
+    const cat = integration.category;
+    if (!acc[cat]) acc[cat] = [];
+    acc[cat].push(integration);
+    return acc;
+  }, {});
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Plug className="w-5 h-5 text-zinc-500" />
+          <h2 className="text-lg font-semibold">Integrations</h2>
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleRefresh}
+          disabled={refreshing}
+          className="gap-1.5"
+        >
+          <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
+      </div>
+
+      <p className="text-sm text-zinc-500">
+        Manage external connections for Discord, Linear, GitHub, and more.
+      </p>
+
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <Spinner />
+        </div>
+      ) : (
+        <div className="space-y-8">
+          {Object.entries(grouped).map(([category, items]) => (
+            <div key={category} className="space-y-3">
+              <h3 className="text-xs font-medium text-zinc-500 uppercase tracking-wider">
+                {CATEGORY_LABELS[category] ?? category}
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {items.map((integration) => (
+                  <IntegrationCard
+                    key={integration.id}
+                    integration={integration}
+                    onToggle={handleToggle}
+                    onConfigure={setConfigDialogId}
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <IntegrationConfigDialog
+        integrationId={configDialogId}
+        open={configDialogId !== null}
+        onOpenChange={(open) => {
+          if (!open) setConfigDialogId(null);
+        }}
+        onSaved={fetchIntegrations}
+      />
+    </div>
+  );
+}

@@ -7,10 +7,14 @@ import { createLogger } from '@automaker/utils';
 import type { SettingsService } from '../../services/settings-service.js';
 import type { ProjectIntegrations } from '@automaker/types';
 import { integrationService } from '../../services/integration-service.js';
+import type { IntegrationRegistryService } from '../../services/integration-registry-service.js';
 
 const logger = createLogger('IntegrationRoutes');
 
-export function createIntegrationRoutes(settingsService: SettingsService): Router {
+export function createIntegrationRoutes(
+  settingsService: SettingsService,
+  integrationRegistryService?: IntegrationRegistryService
+): Router {
   const router = Router();
 
   /**
@@ -192,6 +196,103 @@ export function createIntegrationRoutes(settingsService: SettingsService): Route
       res.status(500).json({ error: 'Failed to get integration status' });
     }
   });
+
+  // ---------------------------------------------------------------------------
+  // Registry endpoints (unified integration management)
+  // ---------------------------------------------------------------------------
+
+  if (integrationRegistryService) {
+    /**
+     * POST /api/integrations/registry/list
+     * List all registered integrations with health summaries
+     */
+    router.post('/registry/list', async (req: Request, res: Response) => {
+      try {
+        const { category } = req.body;
+        const integrations = await integrationRegistryService.listSummaries(category);
+        res.json({ integrations });
+      } catch (error) {
+        logger.error('Failed to list integrations:', error);
+        res.status(500).json({ error: 'Failed to list integrations' });
+      }
+    });
+
+    /**
+     * POST /api/integrations/registry/get
+     * Get a single integration descriptor with health
+     */
+    router.post('/registry/get', async (req: Request, res: Response) => {
+      try {
+        const { id } = req.body;
+        if (!id) {
+          res.status(400).json({ error: 'id is required' });
+          return;
+        }
+
+        const integration = integrationRegistryService.get(id);
+        if (!integration) {
+          res.status(404).json({ error: `Integration "${id}" not found` });
+          return;
+        }
+
+        const health = integration.hasHealthCheck
+          ? await integrationRegistryService.checkHealth(id)
+          : undefined;
+
+        res.json({ integration, health });
+      } catch (error) {
+        logger.error('Failed to get integration:', error);
+        res.status(500).json({ error: 'Failed to get integration' });
+      }
+    });
+
+    /**
+     * POST /api/integrations/registry/health
+     * Run health checks (single integration or all)
+     */
+    router.post('/registry/health', async (req: Request, res: Response) => {
+      try {
+        const { id } = req.body;
+
+        if (id) {
+          const health = await integrationRegistryService.checkHealth(id);
+          res.json({ health: [health] });
+        } else {
+          const health = await integrationRegistryService.checkAllHealth();
+          res.json({ health });
+        }
+      } catch (error) {
+        logger.error('Failed to check integration health:', error);
+        res.status(500).json({ error: 'Failed to check integration health' });
+      }
+    });
+
+    /**
+     * POST /api/integrations/registry/toggle
+     * Enable or disable an integration
+     */
+    router.post('/registry/toggle', async (req: Request, res: Response) => {
+      try {
+        const { id, enabled } = req.body;
+
+        if (!id || typeof enabled !== 'boolean') {
+          res.status(400).json({ error: 'id (string) and enabled (boolean) are required' });
+          return;
+        }
+
+        const result = integrationRegistryService.setEnabled(id, enabled);
+        if (!result.success) {
+          res.status(400).json({ error: result.error });
+          return;
+        }
+
+        res.json({ success: true });
+      } catch (error) {
+        logger.error('Failed to toggle integration:', error);
+        res.status(500).json({ error: 'Failed to toggle integration' });
+      }
+    });
+  }
 
   return router;
 }

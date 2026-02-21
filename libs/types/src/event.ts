@@ -110,6 +110,10 @@ export type EventType =
   // Integration events
   | 'integration:linear'
   | 'integration:discord'
+  // Integration registry events (unified integration management)
+  | 'integration:registered'
+  | 'integration:unregistered'
+  | 'integration:toggled'
   // Project orchestration events
   | 'project:scaffolded'
   | 'project:deleted'

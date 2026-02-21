@@ -761,6 +761,22 @@ export {
 export type { ContextFidelityMode } from './context-fidelity.js';
 export { DEFAULT_STAGE_FIDELITY } from './context-fidelity.js';
 
+// Integration registry types (unified external connection management)
+export {
+  IntegrationCategory,
+  IntegrationScope,
+  IntegrationHealthStatus,
+  ConfigFieldType,
+  ConfigFieldSchema,
+  IntegrationDescriptorSchema,
+} from './integration.js';
+export type {
+  IntegrationHealth,
+  ConfigField,
+  IntegrationDescriptor,
+  IntegrationSummary,
+} from './integration.js';
+
 // HITL Form types (human-in-the-loop structured input)
 export type {
   HITLFormCallerType,

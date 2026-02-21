@@ -152,6 +152,8 @@ import { PRFeedbackService } from './services/pr-feedback-service.js';
 import { WorktreeLifecycleService } from './services/worktree-lifecycle-service.js';
 import { DiscordBotService } from './services/discord-bot-service.js';
 import { RoleRegistryService } from './services/role-registry-service.js';
+import { IntegrationRegistryService } from './services/integration-registry-service.js';
+import { registerBuiltInIntegrations, wireHealthChecks } from './services/built-in-integrations.js';
 import { AgentFactoryService } from './services/agent-factory-service.js';
 import { DynamicAgentExecutor } from './services/dynamic-agent-executor.js';
 import { createAgentManagementRoutes } from './routes/agents/index.js';
@@ -439,6 +441,15 @@ try {
   logger.error('Failed to register built-in templates — registry will be empty:', error);
 }
 
+// Initialize Integration Registry (unified external connection management)
+const integrationRegistryService = new IntegrationRegistryService(events);
+try {
+  const integrationCount = registerBuiltInIntegrations(integrationRegistryService);
+  logger.info(`Integration registry ready with ${integrationCount} built-in integrations`);
+} catch (error) {
+  logger.error('Failed to register built-in integrations:', error);
+}
+
 // Initialize Agent Factory and Dynamic Executor (uses registry for template resolution)
 const agentFactoryService = new AgentFactoryService(roleRegistryService, events);
 const dynamicAgentExecutor = new DynamicAgentExecutor(events);
@@ -506,6 +517,9 @@ const briefingCursorService = getBriefingCursorService(DATA_DIR);
 
 // Initialize Integration Service for Linear, Discord, and other external integrations
 integrationService.initialize(events, settingsService, featureLoader);
+
+// Wire integration health checks now that integrationService is initialized
+wireHealthChecks(integrationRegistryService);
 
 // Initialize Signal Intake Service — bridges external signals to PM Agent pipeline
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -1206,7 +1220,11 @@ app.use('/api/content', createContentRoutes());
 app.use('/api/backlog-plan', createBacklogPlanRoutes(events, settingsService));
 app.use('/api/beads', createBeadsRoutes(beadsService));
 app.use('/api/mcp', createMCPRoutes(mcpTestService));
-app.use('/api/integrations', authMiddleware, createIntegrationRoutes(settingsService));
+app.use(
+  '/api/integrations',
+  authMiddleware,
+  createIntegrationRoutes(settingsService, integrationRegistryService)
+);
 app.use('/api/system', authMiddleware, createDashboardRoutes(autoModeService, leadEngineerService));
 app.use(
   '/api/authority',

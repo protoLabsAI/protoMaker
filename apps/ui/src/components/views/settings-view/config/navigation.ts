@@ -16,7 +16,6 @@ import {
   GitBranch,
   Code2,
   Webhook,
-  MessageCircle,
   Activity,
   Cog,
 } from 'lucide-react';
@@ -72,7 +71,7 @@ export const GLOBAL_NAV_GROUPS: NavigationGroup[] = [
       { id: 'keyboard', label: 'Keyboard Shortcuts', icon: Settings2 },
       { id: 'audio', label: 'Audio', icon: Volume2 },
       { id: 'event-hooks', label: 'Event Hooks', icon: Webhook },
-      { id: 'discord', label: 'Discord', icon: MessageCircle },
+      { id: 'integrations', label: 'Integrations', icon: Plug },
     ],
   },
   {
