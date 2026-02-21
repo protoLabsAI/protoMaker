@@ -11,20 +11,12 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import type {
-  EventBus,
-  EventCallback,
-  EventType,
-  Feature,
-  PipelineGateConfig,
-} from '@automaker/types';
+import type { EventBus, EventCallback, EventType } from '@automaker/types';
 import {
   DEFAULT_PIPELINE_GATES,
   GTM_SKIP_PHASES,
   PIPELINE_PHASES,
   type GateMode,
-  type PhaseGateResult,
-  type PhaseTransition,
   type PipelineBranch,
   type PipelinePhase,
   type PipelineState,
