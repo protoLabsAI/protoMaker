@@ -63,6 +63,10 @@ PM Agent generates a SPARC PRD (Situation, Problem, Approach, Results, Constrain
 
 **First human gate.** The pipeline holds here (`awaitingGate: true`). CTO reviews the PRD and approves or requests changes. On approval, emits `authority:pm-review-approved` and transitions to `approved`.
 
+The PRD approval endpoint (`/api/engine/signal/approve-prd`) bridges directly to `pipelineOrchestrator.resolveGate()`, so approving the PRD also advances the pipeline gate in a single action. Rejecting the PRD resets the feature to `idea` state and rejects the gate.
+
+If a HITL form is pending for the feature (e.g., clarification questions), clicking the gated node in the flow graph or the amber gate indicator in the progress bar opens the HITL form dialog directly.
+
 ### Phase 5: DESIGN (ops only)
 
 **Gate:** auto | **Agent:** ProjM Agent | **workItemState:** `approved`
@@ -136,6 +140,8 @@ When a gate holds, the feature's `pipelineState` records:
 ```
 
 Gate resolution emits `pipeline:gate-resolved` and advances to the next phase.
+
+**Duplicate event guard:** Multiple events can map to the same phase completion (e.g., both `authority:pm-prd-ready` and `ideation:prd-generated` map to SPEC completed). The orchestrator's `handlePhaseEvent` checks `!pipelineState.awaitingGate` before calling `advancePhase`, preventing duplicate gate holds from redundant events.
 
 ## Authority agents
 
@@ -302,24 +308,42 @@ Escalations route through `EscalationRouter` to Discord channels.
 
 Every pipeline run creates a Langfuse trace (UUID). Each phase creates a span within the trace. Stored in `pipelineState.traceId` and `pipelineState.phaseSpanIds`.
 
+## Multi-pipeline UI
+
+The flow graph view tracks all concurrent pipelines, not just one. When multiple features have active pipeline states, a pill selector appears above the progress bar.
+
+**Components:**
+
+- `PipelinePillSelector` — horizontal row of chips, each showing feature title + status dot (violet=active, amber=gated, emerald=done). Auto-hides when ≤1 pipeline active.
+- `PipelineProgressBar` — unchanged, always shows the selected pipeline's 9-phase stepper.
+- `usePipelineProgress` hook — tracks a `Map<featureId, PipelineEntry>` internally. WebSocket events upsert by `featureId`. Exposes `pipelines` array + `selectedFeatureId` + `setSelectedFeatureId`.
+
+**Backward compatibility:** The hook still exposes `featureId`, `pipelineState`, `branch`, `awaitingGate` as convenience fields mirroring the selected pipeline, so existing consumers work unchanged.
+
+**Gate interaction:** Clicking the amber gate indicator on the progress bar or a gated pipeline-stage node opens the pending HITL form for the selected pipeline's feature (if one exists). The `Advance`/`Reject` buttons in the progress bar resolve the selected pipeline's gate.
+
 ## Key files
 
-| File                                                       | Purpose                           |
-| ---------------------------------------------------------- | --------------------------------- |
-| `libs/types/src/pipeline-phase.ts`                         | 9 phases, gate modes, transitions |
-| `libs/types/src/feature.ts`                                | Feature status, pipelineState     |
-| `libs/types/src/authority.ts`                              | WorkItemState (15 states)         |
-| `libs/types/src/lead-engineer.ts`                          | Lead Engineer types               |
-| `apps/server/src/services/pipeline-orchestrator.ts`        | Phase transitions and gates       |
-| `apps/server/src/services/signal-intake-service.ts`        | Signal classification             |
-| `apps/server/src/services/lead-engineer-service.ts`        | State machine                     |
-| `apps/server/src/services/lead-engineer-rules.ts`          | Fast-path rules                   |
-| `apps/server/src/services/auto-mode-service.ts`            | Auto-loop and execution           |
-| `apps/server/src/services/pr-feedback-service.ts`          | PR polling and remediation        |
-| `apps/server/src/services/hitl-form-service.ts`            | HITL form creation and responses  |
-| `apps/server/src/services/authority-agents/pm-agent.ts`    | PM (research + PRD + HITL)        |
-| `apps/server/src/services/authority-agents/projm-agent.ts` | ProjM (milestone planning)        |
-| `apps/server/src/services/authority-agents/em-agent.ts`    | EM (capacity + execution)         |
+| File                                                                     | Purpose                           |
+| ------------------------------------------------------------------------ | --------------------------------- |
+| `libs/types/src/pipeline-phase.ts`                                       | 9 phases, gate modes, transitions |
+| `libs/types/src/feature.ts`                                              | Feature status, pipelineState     |
+| `libs/types/src/authority.ts`                                            | WorkItemState (15 states)         |
+| `libs/types/src/lead-engineer.ts`                                        | Lead Engineer types               |
+| `apps/server/src/services/pipeline-orchestrator.ts`                      | Phase transitions and gates       |
+| `apps/server/src/services/signal-intake-service.ts`                      | Signal classification             |
+| `apps/server/src/services/lead-engineer-service.ts`                      | State machine                     |
+| `apps/server/src/services/lead-engineer-rules.ts`                        | Fast-path rules                   |
+| `apps/server/src/services/auto-mode-service.ts`                          | Auto-loop and execution           |
+| `apps/server/src/services/pr-feedback-service.ts`                        | PR polling and remediation        |
+| `apps/server/src/services/hitl-form-service.ts`                          | HITL form creation and responses  |
+| `apps/server/src/services/authority-agents/pm-agent.ts`                  | PM (research + PRD + HITL)        |
+| `apps/server/src/services/authority-agents/projm-agent.ts`               | ProjM (milestone planning)        |
+| `apps/server/src/services/authority-agents/em-agent.ts`                  | EM (capacity + execution)         |
+| `apps/ui/src/components/views/flow-graph/hooks/use-pipeline-progress.ts` | Multi-pipeline tracking hook      |
+| `apps/ui/src/components/views/flow-graph/pipeline-pill-selector.tsx`     | Pipeline selector UI              |
+| `apps/ui/src/components/views/flow-graph/pipeline-progress-bar.tsx`      | Phase stepper + gate button       |
+| `apps/ui/src/components/shared/hitl-form/hitl-form-dialog.tsx`           | HITL form dialog                  |
 
 ## Next steps
 
