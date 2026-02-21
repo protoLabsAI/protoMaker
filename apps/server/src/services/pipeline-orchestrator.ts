@@ -262,6 +262,7 @@ export class PipelineOrchestrator {
       branch,
       durationMs,
       timestamp: new Date().toISOString(),
+      pipelineState,
     });
 
     // Determine next phase
