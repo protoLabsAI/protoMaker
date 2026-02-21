@@ -21,7 +21,7 @@ function resolveIcon(iconName: string): LucideIcons.LucideIcon {
 
 interface IntegrationCardProps {
   integration: IntegrationSummary;
-  onToggle: (id: string, enabled: boolean) => void;
+  onToggle: (id: string, enabled: boolean) => Promise<void> | void;
   onConfigure: (id: string) => void;
 }
 
@@ -34,7 +34,7 @@ export function IntegrationCard({ integration, onToggle, onConfigure }: Integrat
   const handleToggle = async (checked: boolean) => {
     setToggling(true);
     try {
-      onToggle(integration.id, checked);
+      await onToggle(integration.id, checked);
     } finally {
       setToggling(false);
     }

@@ -39,6 +39,7 @@ export function IntegrationConfigDialog({
   const [values, setValues] = useState<Record<string, string | number | boolean>>({});
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [revealedSecrets, setRevealedSecrets] = useState<Set<string>>(new Set());
   const currentProject = useAppStore((s) => s.currentProject);
 
@@ -54,6 +55,7 @@ export function IntegrationConfigDialog({
         const res = await apiFetch('/api/integrations/registry/get', 'POST', {
           body: { id: integrationId },
         });
+        if (!res.ok) throw new Error(`Failed to load: ${res.status}`);
         const data = await res.json();
         setDescriptor(data.integration);
 
@@ -71,6 +73,7 @@ export function IntegrationConfigDialog({
             const settingsRes = await apiFetch('/api/integrations/get', 'POST', {
               body: { projectPath: currentProject },
             });
+            if (!settingsRes.ok) throw new Error('settings unavailable');
             const settingsData = await settingsRes.json();
             const integrationSettings = settingsData.integrations?.[integrationId];
             if (integrationSettings) {
@@ -111,6 +114,7 @@ export function IntegrationConfigDialog({
     if (!descriptor || !currentProject) return;
 
     setSaving(true);
+    setSaveError(null);
     try {
       // Save via existing integrations/update endpoint
       const integrations: Record<string, Record<string, unknown>> = {};
@@ -123,14 +127,20 @@ export function IntegrationConfigDialog({
       }
       integrations[descriptor.id] = config;
 
-      await apiFetch('/api/integrations/update', 'POST', {
+      const res = await apiFetch('/api/integrations/update', 'POST', {
         body: { projectPath: currentProject, integrations },
       });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || `Save failed: ${res.status}`);
+      }
 
       onSaved?.();
       onOpenChange(false);
-    } catch (error) {
-      console.error('Failed to save integration config:', error);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to save configuration';
+      setSaveError(msg);
+      console.error('Failed to save integration config:', err);
     } finally {
       setSaving(false);
     }
@@ -182,6 +192,8 @@ export function IntegrationConfigDialog({
             ))}
           </div>
         )}
+
+        {saveError && <p className="text-sm text-red-600 dark:text-red-400">{saveError}</p>}
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
@@ -259,7 +271,10 @@ function FieldRenderer({
           <Input
             type="number"
             value={value !== undefined ? String(value) : ''}
-            onChange={(e) => onChange(Number(e.target.value))}
+            onChange={(e) => {
+              const num = Number(e.target.value);
+              if (!Number.isNaN(num)) onChange(num);
+            }}
             placeholder={field.placeholder}
           />
         </div>
