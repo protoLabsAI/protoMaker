@@ -18,6 +18,7 @@ import { getElectronAPI } from '@/lib/electron';
 import { initializeProject, hasAppSpec, hasAutomakerDir } from '@/lib/project-init';
 import { toast } from 'sonner';
 import { CreateSpecDialog } from '@/components/views/spec-view/dialogs';
+import { ProtoLabsReportDialog } from '@/components/shared/protolabs-report';
 import type { FeatureCount } from '@/components/views/spec-view/types';
 
 function getOSAbbreviation(os: string): string {
@@ -50,6 +51,10 @@ export function ProjectSwitcher() {
   );
   const [editDialogProject, setEditDialogProject] = useState<Project | null>(null);
 
+  // ProtoLabs report dialog state
+  const [showReportDialog, setShowReportDialog] = useState(false);
+  const [reportProjectPath, setReportProjectPath] = useState<string | null>(null);
+
   // Setup dialog state for opening existing projects
   const [showSetupDialog, setShowSetupDialog] = useState(false);
   const [setupProjectPath, setSetupProjectPath] = useState<string | null>(null);
@@ -81,6 +86,11 @@ export function ProjectSwitcher() {
   } = useProjectCreation({
     upsertAndSetCurrentProject,
   });
+
+  const handleRunReport = useCallback((path: string) => {
+    setReportProjectPath(path);
+    setShowReportDialog(true);
+  }, []);
 
   const handleContextMenu = (project: Project, event: React.MouseEvent) => {
     event.preventDefault();
@@ -174,6 +184,10 @@ export function ProjectSwitcher() {
         } else {
           toast.success('Project opened', {
             description: `Opened ${name}`,
+            action: {
+              label: 'Run Report',
+              onClick: () => handleRunReport(path),
+            },
           });
         }
 
@@ -448,6 +462,7 @@ export function ProjectSwitcher() {
           position={contextMenuPosition}
           onClose={handleCloseContextMenu}
           onEdit={handleEditProject}
+          onRunReport={handleRunReport}
         />
       )}
 
@@ -478,6 +493,15 @@ export function ProjectSwitcher() {
         onSkip={handleOnboardingSkip}
         onGenerateSpec={handleOnboardingSkip}
       />
+
+      {/* ProtoLabs Report Dialog */}
+      {reportProjectPath && (
+        <ProtoLabsReportDialog
+          open={showReportDialog}
+          onOpenChange={setShowReportDialog}
+          projectPath={reportProjectPath}
+        />
+      )}
 
       {/* Setup Dialog for Open Project */}
       <CreateSpecDialog

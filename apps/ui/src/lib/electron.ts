@@ -15,6 +15,9 @@ import type {
   ReasoningEffort,
   GitHubComment,
   IssueCommentsResult,
+  RepoResearchResult,
+  GapAnalysisReport,
+  AlignmentProposal,
 } from '@automaker/types';
 import { DEFAULT_MAX_CONCURRENCY } from '@automaker/types';
 import { getJSON, setJSON, removeItem } from './storage';
@@ -684,6 +687,46 @@ export interface ElectronAPI {
   // Setup API surface is implemented by the main process and mirrored by HttpApiClient.
   // Keep this intentionally loose to avoid tight coupling between front-end and server types.
   setup?: any;
+  // SetupLab pipeline (repo research, gap analysis, report generation, alignment proposals)
+  setupLab?: {
+    research: (projectPath: string) => Promise<{
+      success: boolean;
+      research?: RepoResearchResult;
+      error?: string;
+    }>;
+    gapAnalysis: (
+      projectPath: string,
+      research: RepoResearchResult,
+      skipChecks?: string[]
+    ) => Promise<{
+      success: boolean;
+      report?: GapAnalysisReport;
+      error?: string;
+    }>;
+    report: (
+      projectPath: string,
+      research: RepoResearchResult,
+      report: GapAnalysisReport
+    ) => Promise<{
+      success: boolean;
+      outputPath?: string;
+      error?: string;
+    }>;
+    openReport: (reportPath: string) => Promise<{
+      success: boolean;
+      error?: string;
+    }>;
+    propose: (
+      projectPath: string,
+      gapAnalysis: GapAnalysisReport,
+      autoCreate?: boolean
+    ) => Promise<{
+      success: boolean;
+      proposal?: AlignmentProposal;
+      featuresCreated?: number;
+      error?: string;
+    }>;
+  };
   agent?: {
     start: (
       sessionId: string,

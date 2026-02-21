@@ -1,6 +1,15 @@
 import { useEffect, useRef, useState, memo, useCallback, useMemo } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { Edit2, Trash2, Palette, ChevronRight, Moon, Sun, Monitor } from 'lucide-react';
+import {
+  Edit2,
+  Trash2,
+  Palette,
+  ChevronRight,
+  Moon,
+  Sun,
+  Monitor,
+  FlaskConical,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { type ThemeMode, useAppStore } from '@/store/app-store';
@@ -167,6 +176,8 @@ interface ProjectContextMenuProps {
   onClose: () => void;
   /** Callback when user selects "Edit Name & Icon" option */
   onEdit: (project: Project) => void;
+  /** Callback when user selects "ProtoLabs Report" option */
+  onRunReport?: (projectPath: string) => void;
 }
 
 /**
@@ -189,6 +200,7 @@ export function ProjectContextMenu({
   position,
   onClose,
   onEdit,
+  onRunReport,
 }: ProjectContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const { moveProjectToTrash, setProjectTheme } = useAppStore();
@@ -478,6 +490,25 @@ export function ProjectContextMenu({
                 </div>
               )}
             </div>
+
+            {onRunReport && (
+              <button
+                onClick={() => {
+                  onRunReport(project.path);
+                  onClose();
+                }}
+                className={cn(
+                  'w-full flex items-center gap-2 px-3 py-2 rounded-md',
+                  'text-sm font-medium text-left',
+                  'hover:bg-accent transition-colors',
+                  'focus:outline-none focus:bg-accent'
+                )}
+                data-testid="run-report-button"
+              >
+                <FlaskConical className="w-4 h-4" />
+                <span>ProtoLabs Report</span>
+              </button>
+            )}
 
             <button
               onClick={handleRemove}

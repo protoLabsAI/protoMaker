@@ -35,6 +35,9 @@ import type {
   ActionableItemActionType,
   ActionableItemPriority,
   CreateActionableItemInput,
+  RepoResearchResult,
+  GapAnalysisReport,
+  AlignmentProposal,
 } from '@automaker/types';
 import type { Message, SessionListItem } from '@/types/electron';
 import type { Feature, ClaudeUsageResponse, CodexUsageResponse } from '@/store/types';
@@ -1747,6 +1750,55 @@ export class HttpApiClient implements ElectronAPI {
     onAuthProgress: (callback: (progress: unknown) => void) => {
       return this.subscribeToEvent('agent:stream', callback);
     },
+  };
+
+  // SetupLab Pipeline API (repo research, gap analysis, report generation)
+  setupLab = {
+    research: (
+      projectPath: string
+    ): Promise<{
+      success: boolean;
+      research?: RepoResearchResult;
+      error?: string;
+    }> => this.post('/api/setup/research', { projectPath }),
+
+    gapAnalysis: (
+      projectPath: string,
+      research: RepoResearchResult,
+      skipChecks?: string[]
+    ): Promise<{
+      success: boolean;
+      report?: GapAnalysisReport;
+      error?: string;
+    }> => this.post('/api/setup/gap-analysis', { projectPath, research, skipChecks }),
+
+    report: (
+      projectPath: string,
+      research: RepoResearchResult,
+      gapReport: GapAnalysisReport
+    ): Promise<{
+      success: boolean;
+      outputPath?: string;
+      error?: string;
+    }> => this.post('/api/setup/report', { projectPath, research, report: gapReport }),
+
+    openReport: (
+      reportPath: string
+    ): Promise<{
+      success: boolean;
+      error?: string;
+    }> => this.post('/api/setup/open-report', { reportPath }),
+
+    propose: (
+      projectPath: string,
+      gapAnalysis: GapAnalysisReport,
+      autoCreate?: boolean
+    ): Promise<{
+      success: boolean;
+      proposal?: AlignmentProposal;
+      featuresCreated?: number;
+      error?: string;
+    }> => this.post('/api/setup/propose', { projectPath, gapAnalysis, autoCreate }),
   };
 
   // Features API
