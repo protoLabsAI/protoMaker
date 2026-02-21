@@ -125,8 +125,17 @@ export class ArchivalService {
     for (const feature of completedFeatures) {
       if (this.aborted) break;
 
-      // Check retention period
-      const completedAt = feature.completedAt ? new Date(feature.completedAt).getTime() : undefined;
+      // Check retention period — use completedAt, fall back to last status transition timestamp
+      let completedAt = feature.completedAt ? new Date(feature.completedAt).getTime() : undefined;
+      if (!completedAt) {
+        // Fall back to the timestamp of the last status transition to done/verified
+        const lastDoneTransition = feature.statusHistory
+          ?.filter((t) => t.to === 'done' || t.to === 'verified')
+          .pop();
+        if (lastDoneTransition?.timestamp) {
+          completedAt = new Date(lastDoneTransition.timestamp).getTime();
+        }
+      }
       if (!completedAt || now - completedAt < retentionMs) continue;
 
       // Skip epics with active children
