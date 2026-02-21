@@ -5,13 +5,14 @@
  * Single-step forms render directly. Multi-step forms use the wizard wrapper.
  */
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  Textarea,
 } from '@protolabs/ui/atoms';
 import { Button } from '@protolabs/ui/atoms';
 import { Loader2, Send } from 'lucide-react';
@@ -25,6 +26,7 @@ export function HITLFormDialog() {
   const { activeForm, isDialogOpen, isSubmitting, stepData, closeDialog, setSubmitting } =
     useHITLFormStore();
   const submitRef = useRef<(() => void) | null>(null);
+  const [additionalContext, setAdditionalContext] = useState('');
 
   const isSingleStep = activeForm && activeForm.steps.length === 1;
 
@@ -60,12 +62,22 @@ export function HITLFormDialog() {
     async (allData: Record<string, unknown>[]) => {
       if (!activeForm) return;
 
+      // Merge additional context into submission if provided
+      const payload = additionalContext.trim()
+        ? allData.map((step, i) =>
+            i === allData.length - 1
+              ? { ...step, additionalContext: additionalContext.trim() }
+              : step
+          )
+        : allData;
+
       setSubmitting(true);
       try {
         const api = getHttpApiClient();
-        const result = await api.hitlForms.submit(activeForm.id, allData);
+        const result = await api.hitlForms.submit(activeForm.id, payload);
         if (result.success) {
           toast.success('Form submitted');
+          setAdditionalContext('');
           closeDialog();
           useHITLFormStore.getState().removePendingForm(activeForm.id);
         } else {
@@ -77,7 +89,7 @@ export function HITLFormDialog() {
         setSubmitting(false);
       }
     },
-    [activeForm, closeDialog, setSubmitting]
+    [activeForm, additionalContext, closeDialog, setSubmitting]
   );
 
   const handleSingleStepSubmit = useCallback(
@@ -96,6 +108,7 @@ export function HITLFormDialog() {
     } catch {
       // Best-effort cancel
     }
+    setAdditionalContext('');
     closeDialog();
     useHITLFormStore.getState().removePendingForm(activeForm.id);
   }, [activeForm, closeDialog]);
@@ -113,7 +126,12 @@ export function HITLFormDialog() {
 
   return (
     <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+      <DialogContent
+        className="max-w-lg max-h-[85vh] overflow-y-auto"
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+        showCloseButton={false}
+      >
         <DialogHeader>
           <DialogTitle>{activeForm.title}</DialogTitle>
           {activeForm.description && (
@@ -129,6 +147,18 @@ export function HITLFormDialog() {
               onSubmit={handleSingleStepSubmit}
               submitRef={submitRef}
             />
+            <details className="group">
+              <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground select-none">
+                Add additional context
+              </summary>
+              <Textarea
+                className="mt-2"
+                placeholder="Provide any extra details, constraints, or preferences..."
+                value={additionalContext}
+                onChange={(e) => setAdditionalContext(e.target.value)}
+                rows={3}
+              />
+            </details>
             <div className="flex justify-between pt-2 border-t">
               <Button variant="ghost" size="sm" onClick={handleCancel} disabled={isSubmitting}>
                 Cancel

@@ -578,6 +578,12 @@ export function createEngineRoutes(
 
       if (decision === 'approve') {
         events.emit('ideation:prd-approved', { projectPath, featureId });
+
+        // Also resolve the pipeline gate if the feature is awaiting one at SPEC_REVIEW
+        if (pipelineOrchestrator) {
+          await pipelineOrchestrator.resolveGate(projectPath, featureId, 'advance', 'user');
+        }
+
         logger.info(`PRD approved for feature ${featureId}`);
       } else {
         // Reset to idea state so user can re-submit
@@ -586,6 +592,12 @@ export function createEngineRoutes(
             workItemState: 'idea',
           });
         }
+
+        // Also reject the pipeline gate if awaiting
+        if (pipelineOrchestrator) {
+          await pipelineOrchestrator.resolveGate(projectPath, featureId, 'reject', 'user');
+        }
+
         logger.info(`PRD rejected for feature ${featureId}, reset to idea state`);
       }
 

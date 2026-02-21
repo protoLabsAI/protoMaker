@@ -13,6 +13,7 @@ import { useFlowGraphData, usePipelineProgress } from './hooks';
 import { FlowGraphCanvas } from './flow-graph-canvas';
 import { FlowGraphLegend } from './flow-graph-legend';
 import { PipelineProgressBar } from './pipeline-progress-bar';
+import { PipelinePillSelector } from './pipeline-pill-selector';
 import { PipelineEventLog } from './pipeline-event-log';
 import { PipelineAnalytics } from './pipeline-analytics';
 import { NodeDetailDialog, type SelectedNode } from './dialogs/node-detail-dialog';
@@ -20,6 +21,7 @@ import { SignalInputDialog } from './dialogs/signal-input-dialog';
 import { PrdReviewDialog } from './dialogs/prd-review-dialog';
 import { ContentReviewDialog } from './dialogs/content-review-dialog';
 import { getHttpApiClient } from '@/lib/http-api-client';
+import { useHITLFormStore } from '@/store/hitl-form-store';
 
 export interface FlowGraphViewProps {
   projectPath?: string;
@@ -118,6 +120,16 @@ export function FlowGraphView({ onFeatureClick }: FlowGraphViewProps) {
     return () => unsub();
   }, []);
 
+  /** Open pending HITL form for the active pipeline feature (if any) */
+  const handleGateClick = useCallback(() => {
+    if (!pipeline.featureId) return;
+    const { pendingForms, openForm } = useHITLFormStore.getState();
+    const form = pendingForms.find((f) => f.featureId === pipeline.featureId);
+    if (form) {
+      openForm(form);
+    }
+  }, [pipeline.featureId]);
+
   const handleNodeClick = useCallback(
     (nodeId: string, nodeType: string, nodeData: Record<string, unknown>) => {
       // Intercept clicks on specific engine-service nodes
@@ -125,6 +137,16 @@ export function FlowGraphView({ onFeatureClick }: FlowGraphViewProps) {
         const serviceId = nodeData.serviceId as string;
         if (serviceId === 'signal-sources') {
           setSignalDialogOpen(true);
+          return;
+        }
+      }
+
+      // Intercept clicks on gated pipeline-stage nodes — open HITL form if one exists
+      if (nodeType === 'pipeline-stage' && nodeData.status === 'blocked' && pipeline.featureId) {
+        const { pendingForms, openForm } = useHITLFormStore.getState();
+        const form = pendingForms.find((f) => f.featureId === pipeline.featureId);
+        if (form) {
+          openForm(form);
           return;
         }
       }
@@ -138,7 +160,7 @@ export function FlowGraphView({ onFeatureClick }: FlowGraphViewProps) {
         onFeatureClick(featureId);
       }
     },
-    [onFeatureClick]
+    [onFeatureClick, pipeline.featureId]
   );
 
   return (
@@ -148,11 +170,17 @@ export function FlowGraphView({ onFeatureClick }: FlowGraphViewProps) {
     >
       {/* Pipeline progress overlay (top bar) */}
       {pipeline.active && pipeline.pipelineState && pipeline.branch && (
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex flex-col gap-1.5">
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-1.5">
+          <PipelinePillSelector
+            pipelines={pipeline.pipelines}
+            selectedFeatureId={pipeline.selectedFeatureId}
+            onSelect={pipeline.setSelectedFeatureId}
+          />
           <PipelineProgressBar
             pipelineState={pipeline.pipelineState}
             branch={pipeline.branch}
             onResolveGate={pipeline.resolveGate}
+            onGateClick={handleGateClick}
           />
           <PipelineEventLog events={pipeline.recentEvents} />
           <PipelineAnalytics />

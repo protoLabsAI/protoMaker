@@ -569,8 +569,11 @@ export class PipelineOrchestrator {
         );
       }
     } else if (mapping.action === 'completed') {
-      // Phase completed — try to advance
-      if (feature.pipelineState.currentPhase === mapping.phase) {
+      // Phase completed — try to advance (skip if already awaiting a gate)
+      if (
+        feature.pipelineState.currentPhase === mapping.phase &&
+        !feature.pipelineState.awaitingGate
+      ) {
         await this.advancePhase(projectPath, featureId);
       }
     }

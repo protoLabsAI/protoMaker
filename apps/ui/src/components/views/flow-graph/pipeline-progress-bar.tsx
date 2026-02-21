@@ -24,6 +24,8 @@ interface PipelineProgressBarProps {
   pipelineState: PipelineState;
   branch: PipelineBranch;
   onResolveGate?: (action: 'advance' | 'reject') => void;
+  /** Called when the gate-waiting indicator is clicked (e.g. to open a HITL form) */
+  onGateClick?: () => void;
 }
 
 type PhaseStatus = 'completed' | 'current' | 'gate-waiting' | 'skipped' | 'future';
@@ -79,11 +81,13 @@ function PhaseIndicator({
   status,
   traceId,
   spanId,
+  onClick,
 }: {
   phase: PipelinePhase;
   status: PhaseStatus;
   traceId?: string;
   spanId?: string;
+  onClick?: () => void;
 }) {
   const hasLangfuseLink = traceId && (status === 'completed' || status === 'current');
   const url =
@@ -111,13 +115,15 @@ function PhaseIndicator({
           </motion.div>
         )}
         {status === 'gate-waiting' && (
-          <motion.div
-            className="w-6 h-6 rounded-full bg-amber-500/30 border-2 border-amber-400 flex items-center justify-center"
+          <motion.button
+            type="button"
+            onClick={onClick}
+            className="w-6 h-6 rounded-full bg-amber-500/30 border-2 border-amber-400 flex items-center justify-center cursor-pointer hover:bg-amber-500/50 transition-colors"
             animate={{ scale: [1, 1.1, 1] }}
             transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
           >
             <Hand className="w-3 h-3 text-amber-300" />
-          </motion.div>
+          </motion.button>
         )}
         {status === 'skipped' && (
           <div className="w-6 h-6 rounded-full border border-dashed border-zinc-600 flex items-center justify-center">
@@ -163,6 +169,7 @@ function PipelineProgressBarComponent({
   pipelineState,
   branch,
   onResolveGate,
+  onGateClick,
 }: PipelineProgressBarProps) {
   const visiblePhases = PIPELINE_PHASES;
 
@@ -192,6 +199,7 @@ function PipelineProgressBarComponent({
               status={status}
               traceId={pipelineState.traceId}
               spanId={spanId}
+              onClick={status === 'gate-waiting' ? onGateClick : undefined}
             />
             {!isLast && (
               <ChevronRight

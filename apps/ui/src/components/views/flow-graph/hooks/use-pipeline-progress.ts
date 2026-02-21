@@ -1,37 +1,26 @@
 /**
- * usePipelineProgress — Tracks unified pipeline state for the active project.
+ * usePipelineProgress — Tracks ALL active pipeline states for the current project.
  *
- * Fetches pipeline state for features with active pipelines and subscribes
- * to pipeline:* WebSocket events for real-time updates.
+ * Hydrates from the features store, then keeps each pipeline up-to-date via
+ * pipeline:* WebSocket events keyed by featureId.
+ *
+ * Exposes a `selectedFeatureId` + setter so the UI can focus on one pipeline
+ * while still showing all active pipelines in a selector.
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import type {
-  PipelinePhase,
-  PipelineBranch,
-  PipelineState,
-  PhaseTransition,
-} from '@automaker/types';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import type { PipelinePhase, PipelineBranch, PipelineState } from '@automaker/types';
 import { useAppStore } from '@/store/app-store';
 import { getHttpApiClient } from '@/lib/http-api-client';
 
-export interface PipelineProgressData {
-  /** Whether any feature has an active pipeline */
-  active: boolean;
-  /** The feature ID with the active pipeline (most recent) */
-  featureId: string | null;
-  /** Current pipeline state */
-  pipelineState: PipelineState | null;
-  /** Convenience: current phase */
-  currentPhase: PipelinePhase | null;
-  /** Convenience: pipeline branch */
-  branch: PipelineBranch | null;
-  /** Whether a gate is currently waiting for user action */
+/** Data for a single tracked pipeline */
+export interface PipelineEntry {
+  featureId: string;
+  featureTitle: string;
+  pipelineState: PipelineState;
+  currentPhase: PipelinePhase;
+  branch: PipelineBranch;
   awaitingGate: boolean;
-  /** Recent pipeline events for the event log */
-  recentEvents: PipelineEvent[];
-  /** Resolve a gate (advance or reject) */
-  resolveGate: (action: 'advance' | 'reject') => Promise<void>;
 }
 
 export interface PipelineEvent {
@@ -39,6 +28,31 @@ export interface PipelineEvent {
   phase: PipelinePhase;
   timestamp: string;
   detail?: string;
+  featureId?: string;
+}
+
+export interface PipelineProgressData {
+  /** All tracked pipelines (active first, then completed) */
+  pipelines: PipelineEntry[];
+  /** The currently selected pipeline (for progress bar / gate actions) */
+  selected: PipelineEntry | null;
+  /** ID of the currently selected pipeline feature */
+  selectedFeatureId: string | null;
+  /** Switch the focused pipeline */
+  setSelectedFeatureId: (id: string | null) => void;
+
+  // Convenience — mirrors `selected` fields for backward compat
+  active: boolean;
+  featureId: string | null;
+  pipelineState: PipelineState | null;
+  currentPhase: PipelinePhase | null;
+  branch: PipelineBranch | null;
+  awaitingGate: boolean;
+
+  /** Recent pipeline events (all pipelines) */
+  recentEvents: PipelineEvent[];
+  /** Resolve a gate on the currently selected pipeline */
+  resolveGate: (action: 'advance' | 'reject') => Promise<void>;
 }
 
 const MAX_EVENTS = 50;
@@ -48,35 +62,40 @@ export function usePipelineProgress(): PipelineProgressData {
   const features = useAppStore((s) => s.features);
   const projectPath = currentProject?.path;
 
-  const [pipelineState, setPipelineState] = useState<PipelineState | null>(null);
-  const [activeFeatureId, setActiveFeatureId] = useState<string | null>(null);
+  // Map of featureId → { pipelineState, featureTitle }
+  const [pipelineMap, setPipelineMap] = useState<
+    Map<string, { pipelineState: PipelineState; featureTitle: string }>
+  >(new Map());
+  const [selectedFeatureId, setSelectedFeatureId] = useState<string | null>(null);
   const [recentEvents, setRecentEvents] = useState<PipelineEvent[]>([]);
   const projectPathRef = useRef(projectPath);
   projectPathRef.current = projectPath;
 
-  // Find the most recent feature with a pipeline
+  // Hydrate from features store — collect ALL features with pipeline state
   useEffect(() => {
-    const pipelineFeature = features.find((f) => {
-      const ps = f.pipelineState as PipelineState | undefined;
-      return ps && ps.currentPhase !== 'PUBLISH';
-    });
-    if (pipelineFeature) {
-      setActiveFeatureId(pipelineFeature.id);
-      setPipelineState(pipelineFeature.pipelineState as PipelineState);
-    } else {
-      // Check for any feature with pipeline state (including completed ones)
-      const anyPipeline = features.find((f) => f.pipelineState);
-      if (anyPipeline) {
-        setActiveFeatureId(anyPipeline.id);
-        setPipelineState(anyPipeline.pipelineState as PipelineState);
-      } else {
-        setActiveFeatureId(null);
-        setPipelineState(null);
+    const newMap = new Map<string, { pipelineState: PipelineState; featureTitle: string }>();
+    for (const f of features) {
+      if (f.pipelineState) {
+        newMap.set(f.id, {
+          pipelineState: f.pipelineState as PipelineState,
+          featureTitle: f.title || f.id.slice(0, 8),
+        });
       }
     }
+    setPipelineMap(newMap);
+
+    // Auto-select: prefer first active (non-PUBLISH) pipeline, fall back to any
+    setSelectedFeatureId((prev) => {
+      if (prev && newMap.has(prev)) return prev;
+      for (const [id, { pipelineState }] of newMap) {
+        if (pipelineState.currentPhase !== 'PUBLISH') return id;
+      }
+      const firstKey = newMap.keys().next().value;
+      return firstKey ?? null;
+    });
   }, [features]);
 
-  // Subscribe to pipeline WebSocket events
+  // Subscribe to pipeline WebSocket events — upsert by featureId
   useEffect(() => {
     const api = getHttpApiClient();
     const unsubscribe = api.subscribeToEvents((type: string, payload: any) => {
@@ -85,7 +104,7 @@ export function usePipelineProgress(): PipelineProgressData {
       const phase = payload?.phase as PipelinePhase | undefined;
       const featureId = payload?.featureId as string | undefined;
 
-      // Add to recent events
+      // Add to recent events with featureId
       if (phase) {
         setRecentEvents((prev) => {
           const event: PipelineEvent = {
@@ -93,36 +112,82 @@ export function usePipelineProgress(): PipelineProgressData {
             phase,
             timestamp: new Date().toISOString(),
             detail: payload?.reason || payload?.action,
+            featureId,
           };
           return [event, ...prev].slice(0, MAX_EVENTS);
         });
       }
 
-      // Update pipeline state from event payload
+      // Upsert pipeline state by featureId
       if (payload?.pipelineState && featureId) {
-        setPipelineState(payload.pipelineState as PipelineState);
-        setActiveFeatureId(featureId);
+        setPipelineMap((prev) => {
+          const next = new Map(prev);
+          const existing = prev.get(featureId);
+          next.set(featureId, {
+            pipelineState: payload.pipelineState as PipelineState,
+            featureTitle: existing?.featureTitle || featureId.slice(0, 8),
+          });
+          return next;
+        });
+
+        // Auto-select if nothing is selected
+        setSelectedFeatureId((prev) => prev ?? featureId);
       }
     });
     return () => unsubscribe();
   }, []);
 
+  // Build pipelines array — active (non-PUBLISH) first, then completed
+  const pipelines = useMemo<PipelineEntry[]>(() => {
+    const active: PipelineEntry[] = [];
+    const completed: PipelineEntry[] = [];
+    for (const [featureId, { pipelineState, featureTitle }] of pipelineMap) {
+      const entry: PipelineEntry = {
+        featureId,
+        featureTitle,
+        pipelineState,
+        currentPhase: pipelineState.currentPhase,
+        branch: pipelineState.branch,
+        awaitingGate: pipelineState.awaitingGate ?? false,
+      };
+      if (pipelineState.currentPhase === 'PUBLISH') {
+        completed.push(entry);
+      } else {
+        active.push(entry);
+      }
+    }
+    return [...active, ...completed];
+  }, [pipelineMap]);
+
+  const selected = useMemo(
+    () => pipelines.find((p) => p.featureId === selectedFeatureId) ?? pipelines[0] ?? null,
+    [pipelines, selectedFeatureId]
+  );
+
   const resolveGate = useCallback(
     async (action: 'advance' | 'reject') => {
-      if (!projectPathRef.current || !activeFeatureId) return;
+      const fid = selected?.featureId;
+      if (!projectPathRef.current || !fid) return;
       const api = getHttpApiClient();
-      await api.engine.pipelineGateResolve(projectPathRef.current, activeFeatureId, action);
+      await api.engine.pipelineGateResolve(projectPathRef.current, fid, action);
     },
-    [activeFeatureId]
+    [selected?.featureId]
   );
 
   return {
-    active: pipelineState !== null,
-    featureId: activeFeatureId,
-    pipelineState,
-    currentPhase: pipelineState?.currentPhase ?? null,
-    branch: pipelineState?.branch ?? null,
-    awaitingGate: pipelineState?.awaitingGate ?? false,
+    pipelines,
+    selected,
+    selectedFeatureId: selected?.featureId ?? null,
+    setSelectedFeatureId,
+
+    // Backward-compat convenience fields (from selected pipeline)
+    active: selected !== null,
+    featureId: selected?.featureId ?? null,
+    pipelineState: selected?.pipelineState ?? null,
+    currentPhase: selected?.currentPhase ?? null,
+    branch: selected?.branch ?? null,
+    awaitingGate: selected?.awaitingGate ?? false,
+
     recentEvents,
     resolveGate,
   };

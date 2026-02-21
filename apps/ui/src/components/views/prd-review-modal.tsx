@@ -13,14 +13,16 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  Textarea,
 } from '@protolabs/ui/atoms';
 import { Button } from '@protolabs/ui/atoms';
 import { Markdown } from '@protolabs/ui/molecules';
 import { Spinner } from '@protolabs/ui/atoms';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@protolabs/ui/atoms';
-import { ChevronDown, CheckCircle, XCircle } from 'lucide-react';
+import { ChevronDown, CheckCircle, XCircle, Pencil, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Feature } from '@automaker/types';
+import { getHttpApiClient } from '@/lib/http-api-client';
 
 interface PRDReviewModalProps {
   open: boolean;
@@ -35,13 +37,16 @@ export function PRDReviewModal({
   open,
   onOpenChange,
   feature,
-  projectPath: _projectPath,
+  projectPath,
   onApprove,
   onReject,
 }: PRDReviewModalProps) {
   const [isApproving, setIsApproving] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
   const [showOriginalSuggestion, setShowOriginalSuggestion] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedDescription, setEditedDescription] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   if (!feature) return null;
 
@@ -73,8 +78,39 @@ export function PRDReviewModal({
     }
   };
 
+  const handleEdit = () => {
+    setEditedDescription(feature.description || '');
+    setIsEditing(true);
+  };
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const api = getHttpApiClient();
+      await api.features.update(
+        projectPath,
+        feature.id,
+        { description: editedDescription },
+        'edit'
+      );
+      feature.description = editedDescription;
+      setIsEditing(false);
+      toast.success('PRD updated');
+    } catch (error) {
+      console.error('Save PRD error:', error);
+      toast.error('Failed to save PRD');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditedDescription('');
+  };
+
   const originalSuggestion = feature.prdMetadata?.originalSuggestion;
-  const isLoading = isApproving || isRejecting;
+  const isLoading = isApproving || isRejecting || isSaving;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -89,9 +125,43 @@ export function PRDReviewModal({
 
         <div className="flex-1 overflow-y-auto space-y-4 py-4">
           {/* PRD Content */}
-          <div className="prose prose-sm dark:prose-invert max-w-none">
-            <Markdown>{feature.description || ''}</Markdown>
-          </div>
+          {isEditing ? (
+            <div className="flex flex-col gap-2">
+              <Textarea
+                value={editedDescription}
+                onChange={(e) => setEditedDescription(e.target.value)}
+                className="min-h-[300px] font-mono text-sm"
+                placeholder="PRD content..."
+              />
+              <div className="flex items-center gap-2 justify-end">
+                <button
+                  type="button"
+                  onClick={handleCancelEdit}
+                  className="text-sm text-muted-foreground hover:text-foreground"
+                  disabled={isSaving}
+                >
+                  Cancel edit
+                </button>
+                <Button size="sm" onClick={handleSave} disabled={isSaving} className="gap-1.5">
+                  {isSaving ? (
+                    <>
+                      <Spinner size="sm" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-3.5 h-3.5" />
+                      Save
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="prose prose-sm dark:prose-invert max-w-none">
+              <Markdown>{feature.description || ''}</Markdown>
+            </div>
+          )}
 
           {/* Original Suggestion (collapsible) */}
           {originalSuggestion && (
@@ -137,10 +207,16 @@ export function PRDReviewModal({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
             Close
           </Button>
+          {!isEditing && (
+            <Button variant="outline" onClick={handleEdit} disabled={isLoading} className="gap-2">
+              <Pencil className="w-4 h-4" />
+              Edit
+            </Button>
+          )}
           <Button
             variant="destructive"
             onClick={handleReject}
-            disabled={isLoading}
+            disabled={isLoading || isEditing}
             className="gap-2"
           >
             {isRejecting ? (
@@ -155,7 +231,7 @@ export function PRDReviewModal({
               </>
             )}
           </Button>
-          <Button onClick={handleApprove} disabled={isLoading} className="gap-2">
+          <Button onClick={handleApprove} disabled={isLoading || isEditing} className="gap-2">
             {isApproving ? (
               <>
                 <Spinner size="sm" />
