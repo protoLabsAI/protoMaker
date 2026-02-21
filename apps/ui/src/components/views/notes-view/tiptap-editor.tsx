@@ -13,6 +13,7 @@ import {
 import { SlashCommandList, type SlashCommandListRef } from './slash-command-list';
 import { AIBubbleMenu } from './ai-bubble-menu';
 import { getHttpApiClient } from '@/lib/http-api-client';
+import { useAppStore } from '@/store/app-store';
 
 interface TiptapEditorProps {
   content: string;
@@ -68,6 +69,15 @@ async function readFullStream(response: Response): Promise<string> {
 
 export function TiptapEditor({ content, onUpdate, onEditorReady }: TiptapEditorProps) {
   const editorRef = useRef<Editor | null>(null);
+  const appSpec = useAppStore((s) => s.appSpec);
+  const currentProject = useAppStore((s) => s.currentProject);
+
+  const getProjectContext = useCallback(() => {
+    const parts: string[] = [];
+    if (currentProject?.name) parts.push(`Project: ${currentProject.name}`);
+    if (appSpec) parts.push(appSpec.slice(0, 500));
+    return parts.length > 0 ? parts.join('\n') : null;
+  }, [appSpec, currentProject]);
 
   // Handle AI slash commands via custom event
   useEffect(() => {
@@ -100,9 +110,19 @@ export function TiptapEditor({ content, onUpdate, onEditorReady }: TiptapEditorP
   const ghostTextExtension = useMemo(
     () =>
       GhostText.configure({
-        fetchCompletion: async (context: string, currentLine: string) => {
+        minDocLength: 100,
+        getProjectContext,
+        fetchCompletion: async (
+          context: string,
+          currentLine: string,
+          projectContext?: string | null
+        ) => {
           try {
-            const response = await getHttpApiClient().ai.complete(context, currentLine);
+            const response = await getHttpApiClient().ai.complete(
+              context,
+              currentLine,
+              projectContext
+            );
             if (!response.ok) return null;
             const text = await readStream(response);
             return text || null;
@@ -111,7 +131,7 @@ export function TiptapEditor({ content, onUpdate, onEditorReady }: TiptapEditorP
           }
         },
       }),
-    []
+    [getProjectContext]
   );
 
   const slashCommandsExtension = useMemo(

@@ -21,8 +21,16 @@ interface GhostTextState {
 }
 
 export interface GhostTextOptions {
-  /** Function that fetches a completion given context and current line */
-  fetchCompletion: (context: string, currentLine: string) => Promise<string | null>;
+  /** Function that fetches a completion given context, current line, and optional project context */
+  fetchCompletion: (
+    context: string,
+    currentLine: string,
+    projectContext?: string | null
+  ) => Promise<string | null>;
+  /** Minimum total document chars before autocomplete activates (default: 100) */
+  minDocLength?: number;
+  /** Callback returning project context string for domain-aware predictions */
+  getProjectContext?: () => string | null;
 }
 
 export const GhostText = Extension.create<GhostTextOptions>({
@@ -35,7 +43,7 @@ export const GhostText = Extension.create<GhostTextOptions>({
   },
 
   addProseMirrorPlugins() {
-    const { fetchCompletion } = this.options;
+    const { fetchCompletion, minDocLength = 100, getProjectContext } = this.options;
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;
     let abortController: AbortController | null = null;
 
@@ -114,13 +122,20 @@ export const GhostText = Extension.create<GhostTextOptions>({
               // Don't trigger on empty lines
               if (!currentLine.trim()) return;
 
+              // Don't trigger until the document has enough content
+              const totalDocLength = doc.textContent.length;
+              if (totalDocLength < minDocLength) return;
+
               // Get preceding context (up to ~2000 chars before current block)
               const contextStart = Math.max(0, blockStart - 2000);
               const context = doc.textBetween(contextStart, blockStart, '\n', '');
 
+              // Get project context for domain-aware predictions
+              const projectContext = getProjectContext?.() ?? null;
+
               try {
                 abortController = new AbortController();
-                const suggestion = await fetchCompletion(context, currentLine);
+                const suggestion = await fetchCompletion(context, currentLine, projectContext);
 
                 // Verify editor state hasn't changed while we were fetching
                 if (editorView.state.selection.head !== pos) return;

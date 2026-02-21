@@ -2653,12 +2653,20 @@ export class HttpApiClient implements ElectronAPI {
   // AI Editor API (streaming endpoints for notes panel AI features)
   ai = {
     /** Ghost text autocomplete — returns a ReadableStream of predicted text */
-    complete: (context: string, currentLine: string): Promise<Response> =>
+    complete: (
+      context: string,
+      currentLine: string,
+      projectContext?: string | null
+    ): Promise<Response> =>
       fetch(`${this.serverUrl}/api/ai/complete`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ context, currentLine }),
+        body: JSON.stringify({
+          context,
+          currentLine,
+          projectContext: projectContext || undefined,
+        }),
       }),
 
     /** Rewrite selected text — returns a ReadableStream of replacement HTML */
@@ -2678,6 +2686,26 @@ export class HttpApiClient implements ElectronAPI {
         credentials: 'include',
         body: JSON.stringify({ command, context, selection }),
       }),
+  };
+
+  // Content Pipeline API — route text to Jon/Cindi for content creation
+  contentPipeline = {
+    create: (
+      projectPath: string,
+      topic: string,
+      contentConfig?: { format?: string; tone?: string; audience?: string }
+    ): Promise<{ success: boolean; runId?: string; error?: string }> =>
+      this.post('/api/content/create', { projectPath, topic, contentConfig }),
+  };
+
+  // Authority Pipeline API — route ideas to the PM agent
+  authorityPipeline = {
+    injectIdea: (
+      projectPath: string,
+      title: string,
+      description: string
+    ): Promise<{ success: boolean; feature?: unknown; message?: string; error?: string }> =>
+      this.post('/api/authority/inject-idea', { projectPath, title, description }),
   };
 
   // Backlog Plan API

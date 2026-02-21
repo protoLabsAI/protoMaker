@@ -39,9 +39,10 @@ export function createAIRoutes(): Router {
    */
   router.post('/complete', async (req: Request, res: Response) => {
     try {
-      const { context, currentLine } = req.body as {
+      const { context, currentLine, projectContext } = req.body as {
         context?: string;
         currentLine?: string;
+        projectContext?: string;
       };
 
       if (!currentLine && !context) {
@@ -56,8 +57,16 @@ export function createAIRoutes(): Router {
       // Limit context to last ~2000 chars to keep latency low
       const trimmedContext = contextText.slice(-2000);
 
+      // Optionally include project context for domain-aware predictions
+      const projectHint = projectContext
+        ? `\n- Use the project context to make relevant predictions that fit the project domain`
+        : '';
+      const projectSection = projectContext
+        ? `Project context:\n${stripHtml(projectContext).slice(0, 500)}\n\n`
+        : '';
+
       logger.debug(
-        `AI complete: context=${trimmedContext.length}chars, line="${lineText.slice(0, 50)}"`
+        `AI complete: context=${trimmedContext.length}chars, line="${lineText.slice(0, 50)}", projectContext=${projectContext ? 'yes' : 'no'}`
       );
 
       const result = streamText({
@@ -68,13 +77,13 @@ export function createAIRoutes(): Router {
 - Match the tone, style, and vocabulary of the existing text
 - Keep predictions concise and natural
 - Do not include any formatting, markdown, or HTML
-- If the context is too ambiguous, output nothing`,
+- If the context is too ambiguous, output nothing${projectHint}`,
         messages: [
           {
             role: 'user',
             content: trimmedContext
-              ? `Preceding text:\n${trimmedContext}\n\nCurrent line being typed:\n${lineText}\n\nContinue naturally:`
-              : `Current line being typed:\n${lineText}\n\nContinue naturally:`,
+              ? `${projectSection}Preceding text:\n${trimmedContext}\n\nCurrent line being typed:\n${lineText}\n\nContinue naturally:`
+              : `${projectSection}Current line being typed:\n${lineText}\n\nContinue naturally:`,
           },
         ],
         maxOutputTokens: 60,

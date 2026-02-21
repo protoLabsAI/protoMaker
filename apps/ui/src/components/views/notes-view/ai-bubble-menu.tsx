@@ -7,8 +7,22 @@
 
 import { useState, useCallback } from 'react';
 import { BubbleMenu, type Editor } from '@tiptap/react';
-import { Wand2, Shrink, SpellCheck, Briefcase, Expand, Loader2, SendHorizonal } from 'lucide-react';
+import {
+  Wand2,
+  Shrink,
+  SpellCheck,
+  Briefcase,
+  Expand,
+  Loader2,
+  SendHorizonal,
+  FileText,
+  Megaphone,
+  BookOpen,
+  Lightbulb,
+} from 'lucide-react';
+import { toast } from 'sonner';
 import { getHttpApiClient } from '@/lib/http-api-client';
+import { useAppStore } from '@/store/app-store';
 
 interface AIBubbleMenuProps {
   editor: Editor;
@@ -30,6 +44,13 @@ const PRESET_ACTIONS = [
     instruction: 'Rewrite in a professional tone',
   },
   { id: 'expand', label: 'Expand', icon: Expand, instruction: 'Expand with more detail' },
+] as const;
+
+const PIPELINE_ACTIONS = [
+  { id: 'blog', label: 'Blog Post', icon: FileText, format: 'guide', tone: 'conversational' },
+  { id: 'social', label: 'Social', icon: Megaphone, format: 'guide', tone: 'conversational' },
+  { id: 'docs', label: 'Docs', icon: BookOpen, format: 'reference', tone: 'technical' },
+  { id: 'idea', label: 'Idea', icon: Lightbulb },
 ] as const;
 
 export function AIBubbleMenu({ editor }: AIBubbleMenuProps) {
@@ -110,6 +131,46 @@ export function AIBubbleMenu({ editor }: AIBubbleMenuProps) {
     [handleCustomSubmit]
   );
 
+  const handleSendToPipeline = useCallback(
+    async (action: (typeof PIPELINE_ACTIONS)[number]) => {
+      const { from, to } = editor.state.selection;
+      const selectedText = editor.state.doc.textBetween(from, to, ' ');
+      if (!selectedText.trim()) return;
+
+      const projectPath = useAppStore.getState().currentProject?.path;
+      if (!projectPath) {
+        toast.error('No project selected');
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        const client = getHttpApiClient();
+        if (action.id === 'idea') {
+          await client.authorityPipeline.injectIdea(
+            projectPath,
+            selectedText.slice(0, 100),
+            selectedText
+          );
+        } else {
+          await client.contentPipeline.create(projectPath, selectedText, {
+            format: 'format' in action ? action.format : undefined,
+            tone: 'tone' in action ? action.tone : undefined,
+            audience: 'intermediate',
+          });
+        }
+        const label = action.id === 'idea' ? 'Idea pipeline' : `${action.label} pipeline`;
+        toast.success(`Sent to ${label}`);
+        editor.commands.setTextSelection(to);
+      } catch {
+        toast.error('Failed to send to pipeline');
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [editor]
+  );
+
   return (
     <BubbleMenu
       editor={editor}
@@ -167,6 +228,23 @@ export function AIBubbleMenu({ editor }: AIBubbleMenuProps) {
               <SendHorizonal className="size-3" />
             )}
           </button>
+        </div>
+
+        {/* Send to pipeline */}
+        <div className="flex items-center gap-0.5 border-t border-border pt-1">
+          <span className="px-2 text-[10px] text-muted-foreground/60">Send to</span>
+          {PIPELINE_ACTIONS.map((action) => (
+            <button
+              key={action.id}
+              onClick={() => handleSendToPipeline(action)}
+              disabled={isLoading}
+              className="flex items-center gap-1 rounded px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground disabled:opacity-50"
+              title={`Send to ${action.label} pipeline`}
+            >
+              <action.icon className="size-3" />
+              <span>{action.label}</span>
+            </button>
+          ))}
         </div>
       </div>
     </BubbleMenu>
