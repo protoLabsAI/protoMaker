@@ -61,6 +61,7 @@ export function FlowGraphCanvas({
   return (
     <div className="w-full h-full">
       <ReactFlow
+        data-testid="flow-graph-canvas"
         nodes={nodes}
         edges={edges}
         onNodesChange={onNodesChange as OnNodesChange<Node>}
@@ -88,7 +89,11 @@ export function FlowGraphCanvas({
           showInteractive={false}
           className="!bg-card/90 !border-border/50 !rounded-lg !shadow-lg backdrop-blur-sm [&>button]:!bg-transparent [&>button]:!border-border/30 [&>button]:!text-foreground [&>button:hover]:!bg-accent"
         >
-          <ControlButton onClick={onToggleLegend} title="Legend">
+          <ControlButton
+            onClick={onToggleLegend}
+            title="Legend"
+            data-testid="flow-graph-legend-toggle"
+          >
             <Info className={`w-3.5 h-3.5 ${showLegend ? 'text-violet-400' : ''}`} />
           </ControlButton>
         </Controls>

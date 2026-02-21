@@ -121,7 +121,10 @@ export function FlowGraphView({ onFeatureClick }: FlowGraphViewProps) {
   );
 
   return (
-    <div className="relative w-full h-full overflow-hidden bg-background">
+    <div
+      className="relative w-full h-full overflow-hidden bg-background"
+      data-testid="flow-graph-view"
+    >
       {/* Pipeline progress overlay (top bar) */}
       {pipeline.active && pipeline.pipelineState && pipeline.branch && (
         <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex flex-col gap-1.5">
