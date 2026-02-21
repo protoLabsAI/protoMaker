@@ -147,18 +147,6 @@ export function HITLFormDialog() {
               onSubmit={handleSingleStepSubmit}
               submitRef={submitRef}
             />
-            <details className="group">
-              <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground select-none">
-                Add additional context
-              </summary>
-              <Textarea
-                className="mt-2"
-                placeholder="Provide any extra details, constraints, or preferences..."
-                value={additionalContext}
-                onChange={(e) => setAdditionalContext(e.target.value)}
-                rows={3}
-              />
-            </details>
             <div className="flex justify-between pt-2 border-t">
               <Button variant="ghost" size="sm" onClick={handleCancel} disabled={isSubmitting}>
                 Cancel
