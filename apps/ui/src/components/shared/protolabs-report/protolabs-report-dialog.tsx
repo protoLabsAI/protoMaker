@@ -64,6 +64,7 @@ export function ProtoLabsReportDialog({
   const runPipeline = useCallback(
     async (startFrom?: PipelineStep) => {
       const api = getElectronAPI();
+      let currentStep: PipelineStep = startFrom ?? 'researching';
       setError(null);
       setFailedStep(null);
 
@@ -71,6 +72,7 @@ export function ProtoLabsReportDialog({
         // Step 1: Research
         let researchResult = research;
         if (!startFrom || startFrom === 'researching') {
+          currentStep = 'researching';
           setStep('researching');
           const res = await api.setupLab.research(projectPath);
           if (!res.success || !res.research) {
@@ -83,6 +85,7 @@ export function ProtoLabsReportDialog({
         // Step 2: Gap Analysis
         let gapResult = gapReport;
         if (!startFrom || startFrom === 'researching' || startFrom === 'analyzing') {
+          currentStep = 'analyzing';
           setStep('analyzing');
           const res = await api.setupLab.gapAnalysis(projectPath, researchResult!);
           if (!res.success || !res.report) {
@@ -93,6 +96,7 @@ export function ProtoLabsReportDialog({
         }
 
         // Step 3: Generate Report
+        currentStep = 'generating';
         setStep('generating');
         const reportRes = await api.setupLab.report(projectPath, researchResult!, gapResult!);
         if (!reportRes.success || !reportRes.outputPath) {
@@ -105,11 +109,11 @@ export function ProtoLabsReportDialog({
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Unknown error';
         setError(message);
-        setFailedStep(step);
+        setFailedStep(currentStep);
         setStep('error');
       }
     },
-    [projectPath, research, gapReport, step]
+    [projectPath, research, gapReport]
   );
 
   const handleRetry = useCallback(() => {
