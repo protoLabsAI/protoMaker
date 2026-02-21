@@ -31,6 +31,13 @@ interface PrdReviewDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   projectSlug: string;
+  /** Inline PRD data from WebSocket (skips project fetch when provided) */
+  prdData?: {
+    featureId: string;
+    title: string;
+    prd: string;
+    milestones?: Array<{ title: string; phases: unknown[] }>;
+  } | null;
 }
 
 const SPARC_LABELS: Record<string, { label: string; color: string }> = {
@@ -129,9 +136,28 @@ function FeedbackEditor({
   );
 }
 
-export function PrdReviewDialog({ open, onOpenChange, projectSlug }: PrdReviewDialogProps) {
+/** Parse SPARC sections from raw PRD markdown text */
+function parseSPARCSections(prdText: string): Array<{ key: string; content: string }> {
+  const sections: Array<{ key: string; content: string }> = [];
+  for (const key of Object.keys(SPARC_LABELS)) {
+    const regex = new RegExp(`##\\s*${key}\\s*\\n([\\s\\S]*?)(?=\\n##|$)`, 'i');
+    const match = prdText.match(regex);
+    if (match) sections.push({ key, content: match[1].trim() });
+  }
+  return sections;
+}
+
+export function PrdReviewDialog({
+  open,
+  onOpenChange,
+  projectSlug,
+  prdData,
+}: PrdReviewDialogProps) {
   const [showFeedback, setShowFeedback] = useState(false);
   const projectPath = useAppStore((s) => s.currentProject?.path);
+
+  // Inline mode: PRD data provided directly (from WebSocket event)
+  const isInlineMode = !!prdData?.prd;
 
   const { data, isLoading } = useQuery({
     queryKey: ['project', projectPath, projectSlug],
@@ -139,20 +165,28 @@ export function PrdReviewDialog({ open, onOpenChange, projectSlug }: PrdReviewDi
       const api = getHttpApiClient();
       return api.lifecycle.getProject(projectPath || '', projectSlug);
     },
-    enabled: open && !!projectPath && !!projectSlug,
+    enabled: open && !!projectPath && !!projectSlug && !isInlineMode,
     staleTime: 10000,
   });
 
+  // Project-slug mode: approve via lifecycle (creates features from milestones)
   const approveMutation = useMutation({
     mutationFn: async () => {
       const api = getHttpApiClient();
+      if (isInlineMode) {
+        return api.engine.approvePrd(projectPath || '', prdData!.featureId, 'approve');
+      }
       return api.lifecycle.approvePrd(projectPath || '', projectSlug, {
         createEpics: true,
         setupDependencies: true,
       });
     },
     onSuccess: () => {
-      toast.success('PRD approved — creating features and Linear tickets');
+      toast.success(
+        isInlineMode
+          ? 'PRD approved — pipeline advancing'
+          : 'PRD approved — creating features and Linear tickets'
+      );
       onOpenChange(false);
     },
     onError: (error) => {
@@ -169,10 +203,17 @@ export function PrdReviewDialog({ open, onOpenChange, projectSlug }: PrdReviewDi
   const requestChangesMutation = useMutation({
     mutationFn: async (fb: string) => {
       const api = getHttpApiClient();
+      if (isInlineMode) {
+        return api.engine.approvePrd(projectPath || '', prdData!.featureId, 'reject');
+      }
       return api.lifecycle.requestChanges(projectPath || '', projectSlug, fb);
     },
     onSuccess: () => {
-      toast.success('Changes requested — feedback stored for PRD regeneration');
+      toast.success(
+        isInlineMode
+          ? 'PRD rejected — feedback sent to pipeline'
+          : 'Changes requested — feedback stored for PRD regeneration'
+      );
       setShowFeedback(false);
       onOpenChange(false);
     },
@@ -193,8 +234,11 @@ export function PrdReviewDialog({ open, onOpenChange, projectSlug }: PrdReviewDi
   const project = data?.project;
   const prd = project?.prd;
 
-  // Build SPARC sections array for rendering
+  // Build SPARC sections: from inline PRD text or from project query
   const sections = useMemo(() => {
+    if (isInlineMode) {
+      return parseSPARCSections(prdData!.prd);
+    }
     if (!prd) return [];
     return [
       { key: 'situation', content: prd.situation },
@@ -202,7 +246,11 @@ export function PrdReviewDialog({ open, onOpenChange, projectSlug }: PrdReviewDi
       { key: 'approach', content: prd.approach },
       { key: 'results', content: prd.results },
     ].filter((s) => s.content);
-  }, [prd]);
+  }, [prd, isInlineMode, prdData]);
+
+  const hasPrd = isInlineMode || !!prd;
+  const title = isInlineMode ? prdData!.title : project?.title || projectSlug;
+  const milestones = isInlineMode ? prdData!.milestones : project?.milestones;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -210,7 +258,7 @@ export function PrdReviewDialog({ open, onOpenChange, projectSlug }: PrdReviewDi
         <DialogHeader>
           <div className="flex items-center justify-between">
             <div>
-              <DialogTitle>{project?.title || projectSlug}</DialogTitle>
+              <DialogTitle>{title}</DialogTitle>
               <DialogDescription>Review the PRD before approving</DialogDescription>
             </div>
             {project?.status && (
@@ -225,11 +273,11 @@ export function PrdReviewDialog({ open, onOpenChange, projectSlug }: PrdReviewDi
         </DialogHeader>
 
         <div className="mt-3 space-y-3">
-          {isLoading ? (
+          {!isInlineMode && isLoading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
             </div>
-          ) : !prd ? (
+          ) : !hasPrd ? (
             <p className="text-sm text-muted-foreground py-4">No PRD found for this project.</p>
           ) : (
             <>
@@ -239,12 +287,12 @@ export function PrdReviewDialog({ open, onOpenChange, projectSlug }: PrdReviewDi
               ))}
 
               {/* Milestones */}
-              {project?.milestones && project.milestones.length > 0 && (
+              {milestones && milestones.length > 0 && (
                 <div className="space-y-2 border-t border-border/30 pt-3">
                   <h4 className="text-xs font-semibold text-violet-400 uppercase tracking-wider">
                     Milestones
                   </h4>
-                  {project.milestones.map((ms, i) => (
+                  {milestones.map((ms: any, i: number) => (
                     <div key={i} className="text-sm p-2 rounded bg-muted/30">
                       <span className="font-medium">{ms.title}</span>
                       <span className="text-muted-foreground ml-2">
@@ -266,7 +314,7 @@ export function PrdReviewDialog({ open, onOpenChange, projectSlug }: PrdReviewDi
           )}
 
           {/* Action buttons */}
-          {prd && !showFeedback && (
+          {hasPrd && !showFeedback && (
             <div className="flex items-center justify-end gap-2 border-t border-border/30 pt-3">
               <Button
                 variant="outline"

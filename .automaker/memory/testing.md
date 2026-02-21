@@ -5,9 +5,9 @@ relevantTo: [testing]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 30
-  referenced: 21
-  successfulFeatures: 21
+  loaded: 31
+  referenced: 22
+  successfulFeatures: 22
 ---
 # testing
 
@@ -694,3 +694,25 @@ usageStats:
 - **Rejected:** Shorter timeout (3-5s) - fails intermittently in CI; longer timeout (30s+) - unacceptable feedback delay
 - **Trade-offs:** Slightly longer local test time vs reliable CI execution across varying resource conditions
 - **Breaking if changed:** Too-short timeout causes environment-dependent flakiness; too-long timeout defeats purpose of fast smoke test
+
+#### [Pattern] Minimal test ID strategy: added only 3 strategic test IDs (view, canvas, legend-toggle) rather than exhaustive IDs on every element, supplementing with React Flow framework CSS class selectors (.react-flow__node, .react-flow__controls) for element discovery (2026-02-21)
+- **Problem solved:** Testing React Flow visualization component required selecting multiple elements without over-instrumenting the codebase
+- **Why this works:** Reduces refactoring burden when components change - framework classes are maintained upstream; test IDs only for top-level behavior entry points that are unlikely to change
+- **Trade-offs:** Faster to maintain but requires knowledge of framework internals; CSS class selectors will break if React Flow changes class names
+
+#### [Gotcha] Proactive console error filtering for ResizeObserver and WebSocket warnings - these are library-internal warnings that aren't actual test failures but will cause test failures if unfiltered (2026-02-21)
+- **Situation:** Complex visualization components (React Flow) and real-time features emit non-fatal warnings that pollute test output and can fail entire test suite
+- **Root cause:** Many UI libraries emit warnings that are safe to ignore (ResizeObserver internals, WebSocket reconnection attempts); filtering them prevents false positive test failures and cleaner failure analysis
+- **How to avoid:** Must maintain whitelist of safe warnings - removing items risks missing real issues; adding items risks hiding real problems
+
+#### [Pattern] Separated API contract verification test into dedicated file (engine-status-verification.spec.ts) instead of inline with UI smoke test - different test lifecycle, failure modes, and dependencies (2026-02-21)
+- **Problem solved:** Feature involved both UI rendering verification and API contract validation; both critical but different concerns
+- **Why this works:** API tests don't depend on browser rendering, Playwright, or UI element presence - can fail independently; isolated files enable independent CI/CD decisions (run API tests without Playwright browsers)
+- **Trade-offs:** More files to maintain; clearer responsibility boundaries and faster debugging when one fails
+
+### Scope constraint on smoke test: render verification only, no interaction testing; used short 10-second timeout for CI speed over comprehensive behavior coverage (2026-02-21)
+- **Context:** Need to verify React Flow component renders without errors, but also maintain fast CI feedback loops
+- **Why:** Smoke test should fail fast on basic rendering issues; detailed interaction tests can live separately and run less frequently; 10s timeout catches render hangs without waiting for full stale-while-revalidate caches
+- **Rejected:** Comprehensive interaction tests (too slow for every CI run, can mask simple render failures under interaction complexity); 30s+ timeouts (delays CI feedback)
+- **Trade-offs:** Doesn't catch behavioral bugs (only structural rendering); enables rapid iteration feedback at cost of coverage depth
+- **Breaking if changed:** If scope expands to interactions, test time increases and CI becomes slower; if timeout is removed, hanging components won't be caught quickly

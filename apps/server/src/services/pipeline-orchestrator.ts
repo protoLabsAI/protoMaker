@@ -214,6 +214,7 @@ export class PipelineOrchestrator {
       phase: 'TRIAGE',
       branch,
       timestamp: now,
+      pipelineState,
     });
 
     this.events.emit('pipeline:trace-linked', {
@@ -316,6 +317,7 @@ export class PipelineOrchestrator {
         branch,
         gateMode,
         timestamp: now,
+        pipelineState,
       });
 
       logger.info(
@@ -358,6 +360,7 @@ export class PipelineOrchestrator {
       resolvedBy,
       action,
       timestamp: now,
+      pipelineState,
     });
 
     if (action === 'reject') {
@@ -631,6 +634,7 @@ export class PipelineOrchestrator {
       phase,
       branch: pipelineState.branch,
       timestamp: now,
+      pipelineState,
     });
 
     logger.info(`Feature ${featureId} entered phase ${phase} (${pipelineState.branch})`, {

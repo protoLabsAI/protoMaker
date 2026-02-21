@@ -375,3 +375,8 @@ usageStats:
 - **Problem solved:** Need to distinguish between placeholder descriptions and actual activity states in flow graph UI
 - **Why this works:** Tells user whether node is actively processing data vs showing static description. Improves perceived liveness of the system without backend metrics
 - **Trade-offs:** Adds complexity to switch logic and increases text maintenance burden, but significantly improves UX clarity
+
+#### [Pattern] Using framework-provided CSS classes (.react-flow__node, .react-flow__controls) for test selectors instead of custom test IDs (2026-02-21)
+- **Problem solved:** Testing React Flow components without modifying the library
+- **Why this works:** Avoids adding test IDs to third-party library code. Framework CSS classes are part of public API contract and stable across versions. Reduces friction of testing external components.
+- **Trade-offs:** Test coupling to CSS class names (lower stability than test IDs) vs avoiding library modification

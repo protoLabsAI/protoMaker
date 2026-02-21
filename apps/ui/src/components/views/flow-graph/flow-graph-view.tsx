@@ -42,6 +42,14 @@ export function FlowGraphView({ onFeatureClick }: FlowGraphViewProps) {
   const [prdDialogOpen, setPrdDialogOpen] = useState(false);
   const [prdProjectSlug, setPrdProjectSlug] = useState('');
 
+  // PRD review state — data-driven (from WebSocket) or slug-driven (from click)
+  const [prdReviewData, setPrdReviewData] = useState<{
+    featureId: string;
+    title: string;
+    prd: string;
+    milestones?: Array<{ title: string; phases: unknown[] }>;
+  } | null>(null);
+
   // Content review dialog state (driven by WebSocket events)
   const [contentReviewOpen, setContentReviewOpen] = useState(false);
   const [contentReviewData, setContentReviewData] = useState<{
@@ -92,6 +100,24 @@ export function FlowGraphView({ onFeatureClick }: FlowGraphViewProps) {
     return () => unsub();
   }, []);
 
+  // Subscribe to ideation:prd-generated WebSocket events (auto-open PRD review)
+  useEffect(() => {
+    const api = getHttpApiClient();
+    const unsub = api.subscribeToEvents((type: string, payload: any) => {
+      if (type === 'ideation:prd-generated' && payload.prd) {
+        setPrdReviewData({
+          featureId: payload.featureId,
+          title: payload.title,
+          prd: payload.prd,
+          milestones: payload.milestones,
+        });
+        setPrdProjectSlug('');
+        setPrdDialogOpen(true);
+      }
+    });
+    return () => unsub();
+  }, []);
+
   const handleNodeClick = useCallback(
     (nodeId: string, nodeType: string, nodeData: Record<string, unknown>) => {
       // Intercept clicks on specific engine-service nodes
@@ -99,11 +125,6 @@ export function FlowGraphView({ onFeatureClick }: FlowGraphViewProps) {
         const serviceId = nodeData.serviceId as string;
         if (serviceId === 'signal-sources') {
           setSignalDialogOpen(true);
-          return;
-        }
-        if (serviceId === 'project-planning' && nodeData.activeProjectSlug) {
-          setPrdProjectSlug(nodeData.activeProjectSlug as string);
-          setPrdDialogOpen(true);
           return;
         }
       }
@@ -166,6 +187,7 @@ export function FlowGraphView({ onFeatureClick }: FlowGraphViewProps) {
         open={prdDialogOpen}
         onOpenChange={setPrdDialogOpen}
         projectSlug={prdProjectSlug}
+        prdData={prdReviewData}
       />
 
       {/* Content review dialog (auto-opens via WebSocket) */}
