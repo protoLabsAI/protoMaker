@@ -295,9 +295,11 @@ export function PrdReviewDialog({
                   {milestones.map((ms: any, i: number) => (
                     <div key={i} className="text-sm p-2 rounded bg-muted/30">
                       <span className="font-medium">{ms.title}</span>
-                      <span className="text-muted-foreground ml-2">
-                        ({ms.phases.length} phase{ms.phases.length !== 1 ? 's' : ''})
-                      </span>
+                      {ms.phases?.length > 0 && (
+                        <span className="text-muted-foreground ml-2">
+                          ({ms.phases.length} phase{ms.phases.length !== 1 ? 's' : ''})
+                        </span>
+                      )}
                     </div>
                   ))}
                 </div>
