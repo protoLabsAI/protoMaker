@@ -217,8 +217,10 @@ export interface DocumentResult {
 export interface CreateProjectOptions {
   /** Project name */
   name: string;
-  /** Project description (markdown) */
+  /** Short project description (max 255 chars). Shown in project list views. */
   description?: string;
+  /** Long-form project content (markdown). Shown on project detail page. */
+  content?: string;
   /** Team IDs to associate with the project */
   teamIds: string[];
 }
@@ -669,18 +671,25 @@ export class LinearMCPClient {
    * @throws {LinearAPIError} On API errors
    */
   async createProject(options: CreateProjectOptions): Promise<CreateProjectResult> {
-    const { name, description, teamIds } = options;
+    const { name, description, content, teamIds } = options;
+
+    // Linear's `description` field has a 255-char limit.
+    // Long content goes in the `content` field (rendered on project detail page).
+    const shortDescription =
+      description && description.length > 255 ? description.substring(0, 252) + '...' : description;
 
     const mutation = `
       mutation CreateProject(
         $name: String!
         $description: String
+        $content: String
         $teamIds: [String!]!
       ) {
         projectCreate(
           input: {
             name: $name
             description: $description
+            content: $content
             teamIds: $teamIds
           }
         ) {
@@ -695,7 +704,8 @@ export class LinearMCPClient {
 
     const variables = {
       name,
-      description,
+      description: shortDescription,
+      content,
       teamIds,
     };
 
