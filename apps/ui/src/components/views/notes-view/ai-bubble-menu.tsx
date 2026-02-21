@@ -80,6 +80,7 @@ export function AIBubbleMenu({ editor }: AIBubbleMenuProps) {
         );
 
         if (!response.ok) {
+          toast.error('AI rewrite failed');
           setIsLoading(false);
           return;
         }
@@ -106,7 +107,7 @@ export function AIBubbleMenu({ editor }: AIBubbleMenuProps) {
           editor.chain().focus().insertContentAt({ from, to }, result.trim()).run();
         }
       } catch {
-        // Silently handle errors
+        toast.error('AI rewrite failed');
       } finally {
         setIsLoading(false);
         setCustomPrompt('');

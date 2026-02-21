@@ -2648,6 +2648,39 @@ export class HttpApiClient implements ElectronAPI {
       projectPath: string,
       workspace: import('@automaker/types').NotesWorkspace
     ): Promise<{ success: boolean }> => this.post('/api/notes/save', { projectPath, workspace }),
+
+    createTab: (
+      projectPath: string,
+      name?: string,
+      content?: string
+    ): Promise<{ success: boolean; tab: Record<string, unknown>; workspaceVersion: number }> =>
+      this.post('/api/notes/create-tab', { projectPath, name, content }),
+
+    deleteTab: (
+      projectPath: string,
+      tabId: string
+    ): Promise<{ success: boolean; deletedTabId: string; workspaceVersion: number }> =>
+      this.post('/api/notes/delete-tab', { projectPath, tabId }),
+
+    renameTab: (
+      projectPath: string,
+      tabId: string,
+      name: string
+    ): Promise<{ success: boolean; tab: Record<string, unknown>; workspaceVersion: number }> =>
+      this.post('/api/notes/rename-tab', { projectPath, tabId, name }),
+
+    updateTabPermissions: (
+      projectPath: string,
+      tabId: string,
+      permissions: Partial<import('@automaker/types').NoteTabPermissions>
+    ): Promise<{ success: boolean; tab: Record<string, unknown>; workspaceVersion: number }> =>
+      this.post('/api/notes/update-tab-permissions', { projectPath, tabId, permissions }),
+
+    reorderTabs: (
+      projectPath: string,
+      tabOrder: string[]
+    ): Promise<{ success: boolean; tabOrder: string[]; workspaceVersion: number }> =>
+      this.post('/api/notes/reorder-tabs', { projectPath, tabOrder }),
   };
 
   // AI Editor API (streaming endpoints for notes panel AI features)

@@ -2975,6 +2975,123 @@ const tools: Tool[] = [
     },
   },
 
+  {
+    name: 'create_note_tab',
+    description: 'Create a new note tab in the workspace. Returns the created tab with its ID.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        name: {
+          type: 'string',
+          description: 'Tab name (defaults to "Tab N")',
+        },
+        content: {
+          type: 'string',
+          description: 'Initial HTML content (defaults to empty)',
+        },
+        permissions: {
+          type: 'object',
+          description: 'Tab permissions',
+          properties: {
+            agentRead: { type: 'boolean', description: 'Allow agent to read this tab' },
+            agentWrite: { type: 'boolean', description: 'Allow agent to write to this tab' },
+          },
+        },
+      },
+      required: ['projectPath'],
+    },
+  },
+  {
+    name: 'delete_note_tab',
+    description: 'Delete a note tab from the workspace. Cannot delete the last remaining tab.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        tabId: {
+          type: 'string',
+          description: 'The tab ID (UUID) to delete',
+        },
+      },
+      required: ['projectPath', 'tabId'],
+    },
+  },
+  {
+    name: 'rename_note_tab',
+    description: 'Rename a note tab.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        tabId: {
+          type: 'string',
+          description: 'The tab ID (UUID) to rename',
+        },
+        name: {
+          type: 'string',
+          description: 'New name for the tab',
+        },
+      },
+      required: ['projectPath', 'tabId', 'name'],
+    },
+  },
+  {
+    name: 'update_note_tab_permissions',
+    description:
+      'Update agent read/write permissions for a note tab. Use agentWrite: false to lock a tab from agent edits.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        tabId: {
+          type: 'string',
+          description: 'The tab ID (UUID)',
+        },
+        agentRead: {
+          type: 'boolean',
+          description: 'Whether agents can read this tab',
+        },
+        agentWrite: {
+          type: 'boolean',
+          description: 'Whether agents can write to this tab',
+        },
+      },
+      required: ['projectPath', 'tabId'],
+    },
+  },
+  {
+    name: 'reorder_note_tabs',
+    description: 'Reorder note tabs. Provide the complete tab ID array in the desired order.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        tabOrder: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Complete array of tab IDs in desired order',
+        },
+      },
+      required: ['projectPath', 'tabOrder'],
+    },
+  },
+
   // Idea Processing
   {
     name: 'process_idea',
@@ -4261,6 +4378,44 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         tabId: args.tabId,
         content: args.content,
         mode: args.mode,
+      });
+
+    case 'create_note_tab':
+      return apiCall('/notes/create-tab', {
+        projectPath: args.projectPath,
+        name: args.name,
+        content: args.content,
+        permissions: args.permissions,
+      });
+
+    case 'delete_note_tab':
+      return apiCall('/notes/delete-tab', {
+        projectPath: args.projectPath,
+        tabId: args.tabId,
+      });
+
+    case 'rename_note_tab':
+      return apiCall('/notes/rename-tab', {
+        projectPath: args.projectPath,
+        tabId: args.tabId,
+        name: args.name,
+      });
+
+    case 'update_note_tab_permissions': {
+      const permissions: Record<string, boolean> = {};
+      if (args.agentRead !== undefined) permissions.agentRead = args.agentRead as boolean;
+      if (args.agentWrite !== undefined) permissions.agentWrite = args.agentWrite as boolean;
+      return apiCall('/notes/update-tab-permissions', {
+        projectPath: args.projectPath,
+        tabId: args.tabId,
+        permissions,
+      });
+    }
+
+    case 'reorder_note_tabs':
+      return apiCall('/notes/reorder-tabs', {
+        projectPath: args.projectPath,
+        tabOrder: args.tabOrder,
       });
 
     default:

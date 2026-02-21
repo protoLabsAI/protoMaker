@@ -3,7 +3,7 @@
  */
 
 import type { z } from 'zod';
-import type { Feature, FeatureStatus, NotesWorkspace, NoteTab } from '@automaker/types';
+import type { Feature, FeatureStatus } from '@automaker/types';
 
 /**
  * Tool execution context - dependency injection container
@@ -27,12 +27,6 @@ export interface ToolContext {
       title: string,
       excludeId?: string
     ) => Promise<Feature | null>;
-  };
-
-  // Notes workspace services
-  notesLoader?: {
-    load: (projectPath: string) => Promise<NotesWorkspace>;
-    save: (projectPath: string, workspace: NotesWorkspace) => Promise<void>;
   };
 
   events?: {

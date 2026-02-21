@@ -311,6 +311,12 @@ export type EventType =
   | 'lead-engineer:rule-evaluated'
   | 'lead-engineer:project-completing'
   | 'lead-engineer:project-completed'
+  // Notes workspace events (agent-initiated tab mutations)
+  | 'notes:tab-created'
+  | 'notes:tab-deleted'
+  | 'notes:tab-renamed'
+  | 'notes:tab-updated'
+  | 'notes:tab-permissions-changed'
   // Twitch integration events
   | 'twitch:connection'
   | 'twitch:suggestion:updated'
