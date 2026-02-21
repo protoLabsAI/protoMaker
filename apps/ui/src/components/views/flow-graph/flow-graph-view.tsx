@@ -122,13 +122,14 @@ export function FlowGraphView({ onFeatureClick }: FlowGraphViewProps) {
 
   /** Open pending HITL form for the active pipeline feature (if any) */
   const handleGateClick = useCallback(() => {
-    if (!pipeline.featureId) return;
+    const fid = pipeline.selected?.featureId;
+    if (!fid) return;
     const { pendingForms, openForm } = useHITLFormStore.getState();
-    const form = pendingForms.find((f) => f.featureId === pipeline.featureId);
+    const form = pendingForms.find((f) => f.featureId === fid);
     if (form) {
       openForm(form);
     }
-  }, [pipeline.featureId]);
+  }, [pipeline.selected?.featureId]);
 
   const handleNodeClick = useCallback(
     (nodeId: string, nodeType: string, nodeData: Record<string, unknown>) => {
@@ -142,9 +143,13 @@ export function FlowGraphView({ onFeatureClick }: FlowGraphViewProps) {
       }
 
       // Intercept clicks on gated pipeline-stage nodes — open HITL form if one exists
-      if (nodeType === 'pipeline-stage' && nodeData.status === 'blocked' && pipeline.featureId) {
+      if (
+        nodeType === 'pipeline-stage' &&
+        nodeData.status === 'blocked' &&
+        pipeline.selected?.featureId
+      ) {
         const { pendingForms, openForm } = useHITLFormStore.getState();
-        const form = pendingForms.find((f) => f.featureId === pipeline.featureId);
+        const form = pendingForms.find((f) => f.featureId === pipeline.selected!.featureId);
         if (form) {
           openForm(form);
           return;
@@ -160,7 +165,7 @@ export function FlowGraphView({ onFeatureClick }: FlowGraphViewProps) {
         onFeatureClick(featureId);
       }
     },
-    [onFeatureClick, pipeline.featureId]
+    [onFeatureClick, pipeline.selected?.featureId]
   );
 
   return (
@@ -169,7 +174,7 @@ export function FlowGraphView({ onFeatureClick }: FlowGraphViewProps) {
       data-testid="flow-graph-view"
     >
       {/* Pipeline progress overlay (top bar) */}
-      {pipeline.active && pipeline.pipelineState && pipeline.branch && (
+      {pipeline.selected && (
         <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-1.5">
           <PipelinePillSelector
             pipelines={pipeline.pipelines}
@@ -177,8 +182,8 @@ export function FlowGraphView({ onFeatureClick }: FlowGraphViewProps) {
             onSelect={pipeline.setSelectedFeatureId}
           />
           <PipelineProgressBar
-            pipelineState={pipeline.pipelineState}
-            branch={pipeline.branch}
+            pipelineState={pipeline.selected.pipelineState}
+            branch={pipeline.selected.branch}
             onResolveGate={pipeline.resolveGate}
             onGateClick={handleGateClick}
           />

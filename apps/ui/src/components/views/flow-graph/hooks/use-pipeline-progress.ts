@@ -40,15 +40,6 @@ export interface PipelineProgressData {
   selectedFeatureId: string | null;
   /** Switch the focused pipeline */
   setSelectedFeatureId: (id: string | null) => void;
-
-  // Convenience — mirrors `selected` fields for backward compat
-  active: boolean;
-  featureId: string | null;
-  pipelineState: PipelineState | null;
-  currentPhase: PipelinePhase | null;
-  branch: PipelineBranch | null;
-  awaitingGate: boolean;
-
   /** Recent pipeline events (all pipelines) */
   recentEvents: PipelineEvent[];
   /** Resolve a gate on the currently selected pipeline */
@@ -179,15 +170,6 @@ export function usePipelineProgress(): PipelineProgressData {
     selected,
     selectedFeatureId: selected?.featureId ?? null,
     setSelectedFeatureId,
-
-    // Backward-compat convenience fields (from selected pipeline)
-    active: selected !== null,
-    featureId: selected?.featureId ?? null,
-    pipelineState: selected?.pipelineState ?? null,
-    currentPhase: selected?.currentPhase ?? null,
-    branch: selected?.branch ?? null,
-    awaitingGate: selected?.awaitingGate ?? false,
-
     recentEvents,
     resolveGate,
   };

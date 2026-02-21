@@ -232,7 +232,11 @@ export function useFlowGraphData(
   const engineStatus = engineStatusData as EngineStatusResponse | undefined;
 
   // Pipeline progress overlay
-  const { currentPhase, branch, awaitingGate, pipelineState } = usePipelineProgress();
+  const { selected: selectedPipeline } = usePipelineProgress();
+  const currentPhase = selectedPipeline?.currentPhase ?? null;
+  const branch = selectedPipeline?.branch ?? null;
+  const awaitingGate = selectedPipeline?.awaitingGate ?? false;
+  const pipelineState = selectedPipeline?.pipelineState ?? null;
 
   // Determine which service node should be highlighted by the pipeline
   const highlightedServiceId = useMemo(() => {

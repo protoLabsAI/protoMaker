@@ -2,6 +2,16 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Philosophy: Greenfield-First
+
+This is a greenfield codebase. We are building the future, not maintaining the past.
+
+- **No backward compatibility.** When changing an interface, update ALL consumers immediately. Never add compat shims, deprecated aliases, re-exports, or `// legacy` comments. Old code dies the moment new code lands.
+- **No mockups or stubs.** Build the real thing or don't build it. No placeholder implementations, fake data, or TODO-driven development.
+- **No deprecation cycles.** If something is wrong, replace it. Don't mark it deprecated and hope someone cleans it up later.
+- **No shortcuts.** Do it right the first time. If that means touching 10 files to propagate a type change, touch 10 files.
+- **Do things correctly or not at all.** Every line of code should be production-quality from day one.
+
 ## Planning & Approach
 
 - When creating plans, start with the minimal viable scope. Do NOT propose multi-phase plans unless explicitly asked. Default to the smallest, lowest-risk approach first.
