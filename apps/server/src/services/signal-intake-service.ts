@@ -225,17 +225,18 @@ export class SignalIntakeService {
       );
 
       // GTM signals: route to GTM Authority Agent for content creation
+      const projectPath = signal.channelContext?.projectPath || this.defaultProjectPath;
       if (classification.category === 'gtm') {
         logger.info(`GTM signal routed: "${title}" (source: ${signal.source})`);
         this.events.emit('authority:gtm-signal-received', {
-          projectPath: this.defaultProjectPath,
+          projectPath,
           title,
           description,
           source: signal.source,
           timestamp: signal.timestamp,
         });
         this.events.emit('signal:routed', {
-          projectPath: this.defaultProjectPath,
+          projectPath,
           title,
           description,
           category: 'gtm',
@@ -248,7 +249,7 @@ export class SignalIntakeService {
 
       // Ops signals: route to Lead Engineer state machine
       // Create feature with idea state
-      const feature = await this.featureLoader.create(this.defaultProjectPath, {
+      const feature = await this.featureLoader.create(projectPath, {
         title: `[${signal.source}] ${title}`,
         description,
         status: 'backlog',
@@ -259,7 +260,7 @@ export class SignalIntakeService {
 
       // Trigger PM Agent pipeline
       this.events.emit('authority:idea-injected', {
-        projectPath: this.defaultProjectPath,
+        projectPath,
         featureId: feature.id,
         title,
         description,
@@ -271,7 +272,7 @@ export class SignalIntakeService {
 
       // Emit routing event for observability
       this.events.emit('signal:routed', {
-        projectPath: this.defaultProjectPath,
+        projectPath,
         featureId: feature.id,
         title,
         description,
