@@ -46,6 +46,7 @@ export function PRDReviewModal({
   const [showOriginalSuggestion, setShowOriginalSuggestion] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editedDescription, setEditedDescription] = useState('');
+  const [savedDescription, setSavedDescription] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
   if (!feature) return null;
@@ -79,7 +80,7 @@ export function PRDReviewModal({
   };
 
   const handleEdit = () => {
-    setEditedDescription(feature.description || '');
+    setEditedDescription(savedDescription ?? feature.description ?? '');
     setIsEditing(true);
   };
 
@@ -93,7 +94,9 @@ export function PRDReviewModal({
         { description: editedDescription },
         'edit'
       );
-      feature.description = editedDescription;
+      // Keep editedDescription as the saved value so preview shows updated text
+      // without mutating the feature prop (store will pick up the change on next refresh)
+      setSavedDescription(editedDescription);
       setIsEditing(false);
       toast.success('PRD updated');
     } catch (error) {
@@ -159,7 +162,7 @@ export function PRDReviewModal({
             </div>
           ) : (
             <div className="prose prose-sm dark:prose-invert max-w-none">
-              <Markdown>{feature.description || ''}</Markdown>
+              <Markdown>{savedDescription ?? feature.description ?? ''}</Markdown>
             </div>
           )}
 
