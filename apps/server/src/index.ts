@@ -115,6 +115,8 @@ import { createNotificationsRoutes } from './routes/notifications/index.js';
 import { getNotificationService } from './services/notification-service.js';
 import { createHITLFormRoutes } from './routes/hitl-forms/index.js';
 import { HITLFormService } from './services/hitl-form-service.js';
+import { createActionableItemsRoutes } from './routes/actionable-items/index.js';
+import { getActionableItemService } from './services/actionable-item-service.js';
 import { createEventHistoryRoutes } from './routes/event-history/index.js';
 import { getEventHistoryService } from './services/event-history-service.js';
 import { createBriefingRoutes } from './routes/briefing/index.js';
@@ -471,6 +473,10 @@ devServerService.setEventEmitter(events);
 // Initialize Notification Service with event emitter for real-time updates
 const notificationService = getNotificationService();
 notificationService.setEventEmitter(events);
+
+// Initialize Actionable Items Service with event emitter
+const actionableItemService = getActionableItemService();
+actionableItemService.setEventEmitter(events);
 
 // Initialize Data Integrity Watchdog Service
 const { getDataIntegrityWatchdogService } =
@@ -1226,6 +1232,7 @@ app.use('/api/pipeline', createPipelineRoutes(pipelineService));
 app.use('/api/metrics', createMetricsRoutes(metricsService, ledgerService));
 app.use('/api/notifications', createNotificationsRoutes(notificationService));
 app.use('/api/hitl-forms', createHITLFormRoutes(hitlFormService));
+app.use('/api/actionable-items', createActionableItemsRoutes(actionableItemService));
 app.use('/api/ralph', createRalphRoutes(ralphLoopService));
 app.use('/api/skills', createSkillsRoutes());
 app.use('/api/event-history', createEventHistoryRoutes(eventHistoryService, settingsService));

@@ -53,6 +53,10 @@ export type EventType =
   | 'skill:created'
   | 'memory:learning'
   | 'notification:created'
+  // Actionable item events (unified user attention system)
+  | 'actionable-item:created'
+  | 'actionable-item:status-changed'
+  | 'actionable-item:snoozed'
   | 'health:check-completed'
   | 'health:issue-detected'
   | 'health:issue-remediated'

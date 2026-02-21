@@ -28,7 +28,14 @@ import type {
   NotificationsAPI,
   EventHistoryAPI,
 } from './electron';
-import type { EventHistoryFilter } from '@automaker/types';
+import type {
+  EventHistoryFilter,
+  ActionableItem,
+  ActionableItemStatus,
+  ActionableItemActionType,
+  ActionableItemPriority,
+  CreateActionableItemInput,
+} from '@automaker/types';
 import type { Message, SessionListItem } from '@/types/electron';
 import type { Feature, ClaudeUsageResponse, CodexUsageResponse } from '@/store/types';
 import type { WorktreeAPI, GitAPI, ModelDefinition, ProviderStatus } from '@/types/electron';
@@ -2747,6 +2754,61 @@ export class HttpApiClient implements ElectronAPI {
 
     onFormResponded: (callback: (payload: any) => void): (() => void) => {
       return this.subscribeToEvent('hitl:form-responded', callback as EventCallback);
+    },
+  };
+
+  // Actionable Items API - unified inbox for HITL forms, approvals, notifications, gates
+  actionableItems = {
+    list: (
+      projectPath: string,
+      options?: { includeActed?: boolean; includeDismissed?: boolean; includeExpired?: boolean }
+    ): Promise<{
+      success: boolean;
+      items: ActionableItem[];
+      pendingCount: number;
+      unreadCount: number;
+    }> => this.post('/api/actionable-items/list', { projectPath, ...options }),
+
+    create: (
+      projectPath: string,
+      input: Omit<CreateActionableItemInput, 'projectPath'>
+    ): Promise<{ success: boolean; item: ActionableItem }> =>
+      this.post('/api/actionable-items/create', { projectPath, ...input }),
+
+    updateStatus: (
+      projectPath: string,
+      itemId: string,
+      status: ActionableItemStatus
+    ): Promise<{ success: boolean; item: ActionableItem }> =>
+      this.post('/api/actionable-items/update-status', { projectPath, itemId, status }),
+
+    markRead: (
+      projectPath: string,
+      itemId?: string
+    ): Promise<{ success: boolean; item?: ActionableItem; count?: number }> =>
+      this.post('/api/actionable-items/mark-read', { projectPath, itemId }),
+
+    snooze: (
+      projectPath: string,
+      itemId: string,
+      snoozedUntil: string
+    ): Promise<{ success: boolean; item: ActionableItem }> =>
+      this.post('/api/actionable-items/snooze', { projectPath, itemId, snoozedUntil }),
+
+    dismiss: (
+      projectPath: string,
+      itemId?: string
+    ): Promise<{ success: boolean; dismissed?: boolean; count?: number }> =>
+      this.post('/api/actionable-items/dismiss', { projectPath, itemId }),
+
+    onItemCreated: (callback: (item: ActionableItem) => void): (() => void) => {
+      return this.subscribeToEvent('actionable-item:created', callback as EventCallback);
+    },
+
+    onItemStatusChanged: (
+      callback: (data: { itemId: string; status: ActionableItemStatus }) => void
+    ): (() => void) => {
+      return this.subscribeToEvent('actionable-item:status-changed', callback as EventCallback);
     },
   };
 
