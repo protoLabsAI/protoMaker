@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import type { Editor } from '@tiptap/react';
 import {
   Bold,
@@ -13,6 +14,12 @@ import {
   CodeSquare,
   Eye,
   EyeOff,
+  Undo2,
+  Redo2,
+  Underline as UnderlineIcon,
+  Highlighter,
+  Link as LinkIcon,
+  ListTodo,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@protolabs/ui/atoms';
@@ -29,11 +36,13 @@ function ToolbarButton({
   active,
   onClick,
   title,
+  shortcut,
   children,
 }: {
   active?: boolean;
   onClick: () => void;
   title: string;
+  shortcut?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -48,7 +57,10 @@ function ToolbarButton({
           {children}
         </Button>
       </TooltipTrigger>
-      <TooltipContent side="bottom">{title}</TooltipContent>
+      <TooltipContent side="bottom">
+        <span>{title}</span>
+        {shortcut && <kbd className="ml-1.5 text-[10px] text-muted-foreground">{shortcut}</kbd>}
+      </TooltipContent>
     </Tooltip>
   );
 }
@@ -56,13 +68,42 @@ function ToolbarButton({
 export function NotesToolbar({ editor, permissions, onToggleAgentRead }: NotesToolbarProps) {
   if (!editor) return null;
 
+  const handleLinkToggle = useCallback(() => {
+    if (editor.isActive('link')) {
+      editor.chain().focus().unsetLink().run();
+      return;
+    }
+    const url = window.prompt('URL');
+    if (url) {
+      editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+    }
+  }, [editor]);
+
   return (
     <TooltipProvider delayDuration={300}>
       <div className="flex items-center gap-0.5 border-b border-border px-2 py-1">
         <ToolbarButton
+          onClick={() => editor.chain().focus().undo().run()}
+          title="Undo"
+          shortcut="⌘Z"
+        >
+          <Undo2 className="size-3.5" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().redo().run()}
+          title="Redo"
+          shortcut="⇧⌘Z"
+        >
+          <Redo2 className="size-3.5" />
+        </ToolbarButton>
+
+        <div className="mx-1 h-4 w-px bg-border" />
+
+        <ToolbarButton
           active={editor.isActive('bold')}
           onClick={() => editor.chain().focus().toggleBold().run()}
           title="Bold"
+          shortcut="⌘B"
         >
           <Bold className="size-3.5" />
         </ToolbarButton>
@@ -70,6 +111,7 @@ export function NotesToolbar({ editor, permissions, onToggleAgentRead }: NotesTo
           active={editor.isActive('italic')}
           onClick={() => editor.chain().focus().toggleItalic().run()}
           title="Italic"
+          shortcut="⌘I"
         >
           <Italic className="size-3.5" />
         </ToolbarButton>
@@ -77,15 +119,41 @@ export function NotesToolbar({ editor, permissions, onToggleAgentRead }: NotesTo
           active={editor.isActive('strike')}
           onClick={() => editor.chain().focus().toggleStrike().run()}
           title="Strikethrough"
+          shortcut="⌘⇧S"
         >
           <Strikethrough className="size-3.5" />
+        </ToolbarButton>
+        <ToolbarButton
+          active={editor.isActive('underline')}
+          onClick={() => editor.chain().focus().toggleUnderline().run()}
+          title="Underline"
+          shortcut="⌘U"
+        >
+          <UnderlineIcon className="size-3.5" />
         </ToolbarButton>
         <ToolbarButton
           active={editor.isActive('code')}
           onClick={() => editor.chain().focus().toggleCode().run()}
           title="Inline code"
+          shortcut="⌘E"
         >
           <Code className="size-3.5" />
+        </ToolbarButton>
+        <ToolbarButton
+          active={editor.isActive('highlight')}
+          onClick={() => editor.chain().focus().toggleHighlight().run()}
+          title="Highlight"
+          shortcut="⌘⇧H"
+        >
+          <Highlighter className="size-3.5" />
+        </ToolbarButton>
+        <ToolbarButton
+          active={editor.isActive('link')}
+          onClick={handleLinkToggle}
+          title="Link"
+          shortcut="⌘K"
+        >
+          <LinkIcon className="size-3.5" />
         </ToolbarButton>
 
         <div className="mx-1 h-4 w-px bg-border" />
@@ -127,6 +195,13 @@ export function NotesToolbar({ editor, permissions, onToggleAgentRead }: NotesTo
           title="Ordered list"
         >
           <ListOrdered className="size-3.5" />
+        </ToolbarButton>
+        <ToolbarButton
+          active={editor.isActive('taskList')}
+          onClick={() => editor.chain().focus().toggleTaskList().run()}
+          title="Task list"
+        >
+          <ListTodo className="size-3.5" />
         </ToolbarButton>
         <ToolbarButton
           active={editor.isActive('blockquote')}

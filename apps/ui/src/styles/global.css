@@ -745,6 +745,46 @@
   color: var(--muted-foreground);
 }
 
+/* Links */
+.ProseMirror a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.ProseMirror a:hover {
+  opacity: 0.8;
+}
+
+/* Highlight */
+.ProseMirror mark {
+  background-color: oklch(0.85 0.15 85);
+  border-radius: 2px;
+  padding: 1px 2px;
+}
+
+/* Task list */
+.ProseMirror ul[data-type='taskList'] {
+  list-style: none;
+  padding-left: 0;
+}
+.ProseMirror ul[data-type='taskList'] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5em;
+}
+.ProseMirror ul[data-type='taskList'] li > label {
+  flex-shrink: 0;
+  margin-top: 0.25em;
+}
+.ProseMirror ul[data-type='taskList'] li > label input[type='checkbox'] {
+  accent-color: var(--primary);
+}
+.ProseMirror ul[data-type='taskList'] li[data-checked='true'] > div > p {
+  text-decoration: line-through;
+  color: var(--muted-foreground);
+}
+
 /* Placeholder */
 .ProseMirror p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
@@ -757,7 +797,8 @@
 /* Ghost text autocomplete */
 .ghost-text-suggestion {
   color: var(--muted-foreground);
-  opacity: 0.5;
+  opacity: 0.4;
   pointer-events: none;
   user-select: none;
+  font-style: italic;
 }

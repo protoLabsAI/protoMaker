@@ -2,8 +2,14 @@ import { useEffect, useMemo, useCallback, useRef } from 'react';
 import { useEditor, EditorContent, type ReactRenderer } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
+import Link from '@tiptap/extension-link';
+import Underline from '@tiptap/extension-underline';
+import Highlight from '@tiptap/extension-highlight';
+import TaskList from '@tiptap/extension-task-list';
+import TaskItem from '@tiptap/extension-task-item';
 import type { Editor } from '@tiptap/react';
 import tippy, { type Instance as TippyInstance } from 'tippy.js';
+import { toast } from 'sonner';
 import { GhostText } from './extensions/ghost-text';
 import {
   SlashCommands,
@@ -92,14 +98,17 @@ export function TiptapEditor({ content, onUpdate, onEditorReady }: TiptapEditorP
 
       try {
         const response = await getHttpApiClient().ai.generate(detail.command, contextBefore);
-        if (!response.ok) return;
+        if (!response.ok) {
+          toast.error('AI generation failed');
+          return;
+        }
 
         const html = await readFullStream(response);
         if (html.trim()) {
           currentEditor.commands.insertContent(html.trim());
         }
       } catch {
-        // Silently handle errors
+        toast.error('AI generation failed');
       }
     };
 
@@ -228,6 +237,14 @@ export function TiptapEditor({ content, onUpdate, onEditorReady }: TiptapEditorP
       Placeholder.configure({
         placeholder: 'Type / for commands...',
       }),
+      Link.configure({
+        openOnClick: false,
+        HTMLAttributes: { class: 'notes-link' },
+      }),
+      Underline,
+      Highlight.configure({ multicolor: false }),
+      TaskList,
+      TaskItem.configure({ nested: true }),
       ghostTextExtension,
       slashCommandsExtension,
     ],
