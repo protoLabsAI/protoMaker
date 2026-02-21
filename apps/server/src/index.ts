@@ -117,6 +117,7 @@ import { createHITLFormRoutes } from './routes/hitl-forms/index.js';
 import { HITLFormService } from './services/hitl-form-service.js';
 import { createActionableItemsRoutes } from './routes/actionable-items/index.js';
 import { getActionableItemService } from './services/actionable-item-service.js';
+import { ActionableItemBridgeService } from './services/actionable-item-bridge-service.js';
 import { createEventHistoryRoutes } from './routes/event-history/index.js';
 import { getEventHistoryService } from './services/event-history-service.js';
 import { createBriefingRoutes } from './routes/briefing/index.js';
@@ -477,6 +478,12 @@ notificationService.setEventEmitter(events);
 // Initialize Actionable Items Service with event emitter
 const actionableItemService = getActionableItemService();
 actionableItemService.setEventEmitter(events);
+
+// Initialize Actionable Item Bridge — auto-creates items from HITL forms, notifications, escalations, pipeline gates
+const actionableItemBridge = new ActionableItemBridgeService({
+  actionableItemService,
+  events,
+});
 
 // Initialize Data Integrity Watchdog Service
 const { getDataIntegrityWatchdogService } =
@@ -1782,6 +1789,7 @@ async function gracefulShutdown() {
   worktreeLifecycleService.shutdown();
   issueCreationService.shutdown();
   hitlFormService.shutdown();
+  actionableItemBridge.shutdown();
   linearAgentRouter.stop();
   agentDiscordRouter.stop();
   await twitchService.disconnect(); // Gracefully disconnect from Twitch chat
