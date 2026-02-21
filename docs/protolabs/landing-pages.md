@@ -38,7 +38,7 @@ colors: {
 }
 ```
 
-See `docs/protolabs/brand.md` for full brand guidelines.
+See `docs/internal/brand.md` for full brand guidelines.
 
 ## Sites
 

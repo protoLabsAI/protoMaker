@@ -12,10 +12,7 @@ protoLabs methodology. Scan any repo, analyze gaps, propose alignment, and execu
 
 ## Guides
 
-- [Brand Identity](./brand.md) — Brand bible: naming, voice, team, content strategy, revenue model
 - [Agency Overview](./agency-overview.md) — How the full-loop automation system works
 - [Agency Architecture](./agency-architecture.md) — System architecture, component inventory, data flow
-- [Agency PRD](./agency-prd.md) — Full-loop automation PRD with implementation status
-- [Design System](./design-system.md) — Visual identity: surfaces, typography, components, animations
 - [Setup Pipeline](./setup-pipeline.md) — Technical reference for the 5-phase `/setuplab` pipeline
 - [CI/CD Setup](./ci-cd-setup.md) — GitHub Actions and branch protection setup

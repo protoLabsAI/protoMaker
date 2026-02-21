@@ -2,7 +2,7 @@
 
 Gold standard decisions for frontend engineering across protoLabs projects. These guidelines apply to automaker and serve as the template for all future proto lab setups.
 
-> **Brand visual identity** — For the canonical color palette, typography, and component specs as they appear on the landing page and marketing properties, see [`design-system.md`](../protolabs/design-system.md). This document covers the _implementation_ of those design decisions in the UI app's OKLch token system.
+> **Brand visual identity** — For the canonical color palette, typography, and component specs as they appear on the landing page and marketing properties, see [`design-system.md`](../internal/design-system.md). This document covers the _implementation_ of those design decisions in the UI app's OKLch token system.
 
 ## Design tokens
 

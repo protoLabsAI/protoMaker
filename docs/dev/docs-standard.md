@@ -203,5 +203,5 @@ Auto-generates sidebar items from directory contents:
 
 ## Related
 
-- [Docs Site](./docs-site) — VitePress setup, deployment, and adding pages
-- [Docs Site Decision](./docs-site-decision) — ADR: Why VitePress was chosen
+- [Docs Site](../internal/docs-site) — VitePress setup, deployment, and adding pages
+- [Docs Site Decision](../internal/docs-site-decision) — ADR: Why VitePress was chosen

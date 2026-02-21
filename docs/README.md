@@ -89,15 +89,9 @@ DevOps documentation in [`docs/infra/`](./infra/):
 | [Issue Management](./dev/issue-management.md)             | Automated failure-to-issue pipeline                  |
 | [Feature Status System](./dev/feature-status-system.md)   | 6-status feature lifecycle                           |
 | [Testing Patterns](./dev/testing-patterns.md)             | Test patterns and anti-patterns                      |
-| [Gotchas](./dev/gotchas.md)                               | Common pitfalls and operational hazards              |
-| [Adding Team Members](./dev/adding-team-members.md)       | Onboarding new team members                          |
 | [Clean Code](./dev/clean-code.md)                         | Code quality standards and patterns                  |
-| [Folder Pattern](./dev/folder-pattern.md)                 | Directory structure conventions                      |
-| [Add Cursor Model](./dev/add-new-cursor-model.md)         | Adding new Cursor model support                      |
 | [Release](./dev/release.md)                               | Release process and Electron builds                  |
 | [Terminal](./dev/terminal.md)                             | Terminal feature documentation                       |
-| [Docs Site](./dev/docs-site.md)                           | VitePress docs site setup and deployment             |
-| [Docs Site Decision](./dev/docs-site-decision.md)         | ADR: Why VitePress was chosen                        |
 | [Docs Standard](./dev/docs-standard.md)                   | IA rules, content guidelines, maintenance            |
 
 ## protoLabs
@@ -105,16 +99,24 @@ DevOps documentation in [`docs/infra/`](./infra/):
 | Document                                                            | Description                                         |
 | ------------------------------------------------------------------- | --------------------------------------------------- |
 | [Overview](./protolabs/index.md)                                    | protoLabs methodology and guides                    |
-| [Brand Identity](./protolabs/brand.md)                              | Brand bible: naming, voice, team, content strategy  |
-| [Design System](./protolabs/design-system.md)                       | Visual identity: surfaces, typography, components   |
 | [Agency Overview](./protolabs/agency-overview.md)                   | How the full-loop automation system works           |
 | [Agency Architecture](./protolabs/agency-architecture.md)           | System architecture, component inventory, data flow |
-| [Agency PRD](./protolabs/agency-prd.md)                             | Full-loop automation PRD with implementation status |
 | [Setup Pipeline](./protolabs/setup-pipeline.md)                     | 5-phase protoLabs setup pipeline                    |
 | [CI/CD Setup](./protolabs/ci-cd-setup.md)                           | CI/CD pipeline setup for protoLabs                  |
-| [Flow Builder Agent Spec](./protolabs/flow-builder-agent-spec.md)   | Agent spec for LangGraph flow generation            |
 | [Flow Development Pattern](./protolabs/flow-development-pattern.md) | 5-layer flow development pattern                    |
-| [Graph Flow Roadmap](./protolabs/graph-flow-roadmap.md)             | LangGraph migration roadmap and status              |
+
+## Internal
+
+| Document                                                   | Description                               |
+| ---------------------------------------------------------- | ----------------------------------------- |
+| [Brand Identity](./internal/brand.md)                      | Brand bible: naming, voice, team, content |
+| [Design System](./internal/design-system.md)               | Visual identity: surfaces, typography     |
+| [Gotchas](./internal/gotchas.md)                           | Operational hazards and common pitfalls   |
+| [Adding Team Members](./internal/adding-team-members.md)   | Onboarding new agent personas             |
+| [Folder Pattern](./internal/folder-pattern.md)             | Directory structure conventions           |
+| [Docs Site](./internal/docs-site.md)                       | VitePress setup and deployment            |
+| [Docs Site Decision](./internal/docs-site-decision.md)     | ADR: why VitePress was chosen             |
+| [Adding Cursor Models](./internal/add-new-cursor-model.md) | Adding new model support                  |
 
 ## Legal
 

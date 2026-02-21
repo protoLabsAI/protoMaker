@@ -3,7 +3,7 @@
 > **Status**: APPROVED
 > **Date**: 2026-02-18
 > **Authors**: Josh, Ava
-> **Supersedes**: adding-team-members.md (partially)
+> **Supersedes**: internal/adding-team-members.md (partially)
 
 This document defines the Automaker engine architecture. It is the source of truth for how signals flow through the system, how agents are organized, and how work gets done.
 

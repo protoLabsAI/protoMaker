@@ -2,7 +2,7 @@
 
 > Auto-generated from `built-in-templates.ts`. Run `npx tsx scripts/generate-org-docs.ts` to update.
 >
-> Last generated: 2026-02-14
+> Last generated: 2026-02-21
 
 ## Organization Chart
 
@@ -38,7 +38,7 @@ Josh Mabry (CEO, Human)
 | [Linear Specialist](#linear-specialist)     | linear-specialist   | Sonnet | 2 (Conditional) | Ava Loveland | Read-only                     | Internal     |
 | [PR Maintainer](#pr-maintainer)             | pr-maintainer       | Haiku  | 2 (Conditional) | Ava Loveland | Bash, Edit, Commit, PR        | Internal     |
 | [Board Janitor](#board-janitor)             | board-janitor       | Haiku  | 1 (Assisted)    | Ava Loveland | Read-only                     | Internal     |
-| [Jon](#jon)                                 | gtm-specialist      | Sonnet | 1 (Assisted)    | Josh Mabry   | Edit                          | CLI, Discord |
+| [Jon](#jon)                                 | gtm-specialist      | Sonnet | 1 (Assisted)    | Josh Mabry   | Bash, Edit                    | CLI, Discord |
 
 ## Josh Mabry {#josh}
 
@@ -53,7 +53,7 @@ Technical architecture decisions, product vision, hands-on coding. The goal is t
 ### Direct Reports
 
 - [Ava Loveland](#ava) — Autonomous operator with full authority
-- [Jon](#jon) — Handles go-to-market strategy, content creation, and growth initiatives
+- [Jon](#jon) — GTM Specialist — content strategy, brand positioning, social media, competitive research, and launch execution
 
 ---
 
@@ -81,7 +81,7 @@ Autonomous operator with full authority. Manages operations, coordinates agents,
 - [Backend Engineer](#backend-engineer) — Implements server-side features, APIs, services, and database logic
 - [Product Manager](#product-manager) — Manages requirements, priorities, roadmap, and stakeholder communication
 - [Engineering Manager](#engineering-manager) — Oversees engineering execution, code review, team coordination, and technical decisions
-- [Linear Specialist](#linear-specialist) — Owns all Linear workspace operations: project management, sprint planning, issue lifecycle, initiative tracking, and protoLabs board synchronization
+- [Linear Specialist](#linear-specialist) — Owns all Linear workspace operations: project management, sprint planning, issue lifecycle, initiative tracking, and Automaker board synchronization
 - [PR Maintainer](#pr-maintainer) — Handles PR pipeline mechanics: auto-merge enablement, CodeRabbit thread resolution, format fixing in worktrees, branch rebasing, and PR creation from orphaned worktrees
 - [Board Janitor](#board-janitor) — Maintains board consistency: moves merged-PR features to done, resets stale in-progress features, repairs dependency chains
 
@@ -223,13 +223,13 @@ Oversees engineering execution, code review, team coordination, and technical de
 
 ### Description
 
-Owns all Linear workspace operations: project management, sprint planning, issue lifecycle, initiative tracking, and protoLabs board synchronization.
+Owns all Linear workspace operations: project management, sprint planning, issue lifecycle, initiative tracking, and Automaker board synchronization.
 
 ---
 
 ## PR Maintainer {#pr-maintainer}
 
-**Type:** AI (Agent Template)
+**Type:** AI
 **Role:** pr-maintainer
 **Model:** Haiku
 **Trust Level:** 2 (Conditional)
@@ -246,7 +246,7 @@ Handles PR pipeline mechanics: auto-merge enablement, CodeRabbit thread resoluti
 
 ## Board Janitor {#board-janitor}
 
-**Type:** AI (Agent Template)
+**Type:** AI
 **Role:** board-janitor
 **Model:** Haiku
 **Trust Level:** 1 (Assisted)
@@ -269,14 +269,20 @@ Maintains board consistency: moves merged-PR features to done, resets stale in-p
 **Trust Level:** 1 (Assisted)
 **Reports to:** Josh Mabry
 **Exposure:** CLI, Discord
-**Capabilities:** Edit
-**Tags:** marketing, content, growth
+**Capabilities:** Bash, Edit
+**Tags:** marketing, content, growth, gtm, brand
 
 ### Description
 
-Handles go-to-market strategy, content creation, and growth initiatives.
+GTM Specialist — content strategy, brand positioning, social media, competitive research, and launch execution.
 
 ---
+
+## Unassigned Templates
+
+These templates exist in the registry but are not placed in the org hierarchy:
+
+- **Kai** (kai) — Backend engineer. Implements Express routes, services, API design, error handling, and server-side features. Reports to Ava.
 
 ## Adding a New Team Member
 

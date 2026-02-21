@@ -14,19 +14,18 @@ The system has three layers:
 
 ```text
 Josh Mabry (CEO, Human)
-├── Ava Loveland, Opus, Trust=3 — Chief of Staff
-│   ├── Matt, Sonnet, Trust=2 — Frontend Engineer
-│   ├── Sam, Sonnet, Trust=2 — AI Agent Engineer
-│   ├── Kai, Sonnet, Trust=2 — Backend Engineer
-│   ├── Frank, Sonnet, Trust=2 — DevOps Engineer
-│   ├── Cindi, Sonnet, Trust=2 — Content Writer
-│   ├── Backend Engineer, Sonnet, Trust=2 — Generic Implementation
-│   ├── Product Manager, Sonnet, Trust=1 — Planning
-│   ├── Engineering Manager, Sonnet, Trust=1 — Coordination
-│   ├── Linear Specialist, Sonnet, Trust=2 — Linear Ops
+├── Ava Loveland, Opus, Trust=3 — Engineering
+│   ├── Matt, Sonnet, Trust=2
+│   ├── Sam, Sonnet, Trust=2
+│   ├── Frank, Sonnet, Trust=2
+│   ├── Cindi, Sonnet, Trust=2
+│   ├── Backend Engineer, Sonnet, Trust=2
+│   ├── Product Manager, Sonnet, Trust=1
+│   ├── Engineering Manager, Sonnet, Trust=1
+│   ├── Linear Specialist, Sonnet, Trust=2
 │   ├── PR Maintainer, Haiku, Trust=2
 │   └── Board Janitor, Haiku, Trust=1
-└── Jon, Sonnet, Trust=1 — GTM Specialist
+└── Jon, Sonnet, Trust=1 — Go-to-Market
 ```
 
 > **Source of truth:** `docs/authority/roles.md` is auto-generated from `built-in-templates.ts` via `scripts/generate-org-docs.ts`. This org chart should match that file. Run `npx tsx scripts/generate-org-docs.ts` to regenerate roles.md.
