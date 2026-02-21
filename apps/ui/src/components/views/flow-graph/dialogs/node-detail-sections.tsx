@@ -165,10 +165,16 @@ export function EngineServiceSection({ data }: { data: EngineServiceNodeData }) 
 
       {/* Per-service detail panel */}
       {data.serviceId === 'auto-mode' && <AutoModeDetailPanel />}
+      {data.serviceId === 'agent-execution' && <AgentExecutionDetailPanel />}
       {data.serviceId === 'pr-feedback' && <PRFeedbackDetailPanel />}
       {data.serviceId === 'lead-engineer-rules' && <LeadEngineerDetailPanel />}
       {data.serviceId === 'signal-sources' && <SignalSourcesDetailPanel />}
+      {data.serviceId === 'triage' && <TriageDetailPanel />}
       {data.serviceId === 'git-workflow' && <GitWorkflowDetailPanel />}
+      {data.serviceId === 'launch' && <LaunchDetailPanel />}
+      {data.serviceId === 'content-pipeline' && <ContentPipelineDetailPanel />}
+      {data.serviceId === 'project-planning' && <ProjectPlanningDetailPanel />}
+      {data.serviceId === 'decomposition' && <DecompositionDetailPanel />}
     </div>
   );
 }
@@ -473,6 +479,281 @@ function GitWorkflowDetailPanel() {
             </div>
           ))}
         </div>
+      )}
+    </div>
+  );
+}
+
+function AgentExecutionDetailPanel() {
+  const { data, isLoading } = useQuery({
+    queryKey: queryKeys.engine.autoModeDetail(),
+    queryFn: async () => {
+      const api = getHttpApiClient();
+      return api.engine.autoModeDetail();
+    },
+    staleTime: 5000,
+  });
+
+  if (isLoading) return <p className="text-xs text-muted-foreground">Loading...</p>;
+
+  const detail = data as
+    | {
+        agents?: Array<{
+          featureId: string;
+          title?: string;
+          model?: string;
+          duration?: number;
+          costUsd?: number;
+          branchName?: string;
+          projectName?: string;
+        }>;
+      }
+    | undefined;
+
+  const agents = detail?.agents ?? [];
+
+  return (
+    <div className="border-t border-border/30 pt-2 space-y-2">
+      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+        Active Agents
+      </p>
+      {agents.length === 0 ? (
+        <p className="text-xs text-muted-foreground">No agents running</p>
+      ) : (
+        <div className="max-h-48 overflow-y-auto space-y-1.5 pr-0.5">
+          {agents.map((agent) => (
+            <div key={agent.featureId} className="text-xs space-y-0.5 p-2 rounded-lg bg-muted/30">
+              <p className="font-medium truncate">{agent.title || agent.featureId}</p>
+              <div className="flex flex-wrap items-center gap-2 text-muted-foreground">
+                {agent.model && (
+                  <Badge variant="outline" className="text-[10px]">
+                    {agent.model}
+                  </Badge>
+                )}
+                {typeof agent.duration === 'number' && (
+                  <span className="tabular-nums text-[10px]">{formatDuration(agent.duration)}</span>
+                )}
+                {typeof agent.costUsd === 'number' && agent.costUsd > 0 && (
+                  <span className="text-emerald-400 text-[10px]">
+                    {formatCostUsd(agent.costUsd)}
+                  </span>
+                )}
+              </div>
+              {agent.branchName && (
+                <code className="text-[10px] bg-muted px-1 py-0.5 rounded truncate block max-w-[200px]">
+                  {agent.branchName}
+                </code>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TriageDetailPanel() {
+  const { data: engineStatus } = useEngineStatus() as {
+    data?: {
+      signalIntake?: {
+        signalCounts?: Record<string, number>;
+        lastSignalAt?: string | null;
+      };
+    };
+  };
+
+  const signalCounts = engineStatus?.signalIntake?.signalCounts;
+  const totalSignals = signalCounts
+    ? Object.values(signalCounts).reduce((sum, n) => sum + n, 0)
+    : 0;
+
+  return (
+    <div className="border-t border-border/30 pt-2 space-y-2">
+      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+        Signal Classification
+      </p>
+      {totalSignals === 0 ? (
+        <p className="text-xs text-muted-foreground">No signals classified yet</p>
+      ) : (
+        <>
+          <SectionRow label="Total Classified">{totalSignals}</SectionRow>
+          <div className="space-y-1">
+            {signalCounts &&
+              Object.entries(signalCounts)
+                .filter(([, count]) => count > 0)
+                .map(([source, count]) => (
+                  <div
+                    key={source}
+                    className="text-xs flex items-center justify-between p-1.5 rounded bg-muted/30"
+                  >
+                    <span className="capitalize">{source}</span>
+                    <span className="tabular-nums font-medium">{count}</span>
+                  </div>
+                ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function LaunchDetailPanel() {
+  const { data: engineStatus } = useEngineStatus() as {
+    data?: {
+      autoMode?: {
+        running?: boolean;
+        runningAgents?: number;
+        queueDepth?: number;
+        runningFeatures?: string[];
+      };
+    };
+  };
+
+  const am = engineStatus?.autoMode;
+
+  return (
+    <div className="border-t border-border/30 pt-2 space-y-2">
+      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+        Launch Queue
+      </p>
+      <SectionRow label="Auto-Mode">
+        <Badge variant={am?.running ? 'default' : 'secondary'}>
+          {am?.running ? 'Running' : 'Stopped'}
+        </Badge>
+      </SectionRow>
+      <SectionRow label="Agents Active">{am?.runningAgents ?? 0}</SectionRow>
+      <SectionRow label="Queued">{am?.queueDepth ?? 0}</SectionRow>
+      {am?.runningFeatures && am.runningFeatures.length > 0 && (
+        <div className="space-y-1">
+          <p className="text-[10px] text-muted-foreground font-medium">In Flight:</p>
+          {am.runningFeatures.map((fId) => (
+            <div key={fId} className="text-[10px] p-1 rounded bg-muted/30 truncate">
+              {fId}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ContentPipelineDetailPanel() {
+  const { data: engineStatus } = useEngineStatus() as {
+    data?: {
+      contentPipeline?: {
+        activeFlows?: number;
+        pendingDrafts?: number;
+        completedToday?: number;
+      };
+    };
+  };
+
+  const { data: draftsData } = useQuery({
+    queryKey: ['engine', 'content', 'drafts'],
+    queryFn: async () => {
+      const api = getHttpApiClient();
+      return api.engine.contentDrafts();
+    },
+    staleTime: 10000,
+  });
+
+  const cp = engineStatus?.contentPipeline;
+  const drafts =
+    (
+      draftsData as {
+        drafts?: Array<{ contentId: string; title: string; status: string; createdAt: string }>;
+      }
+    )?.drafts ?? [];
+
+  return (
+    <div className="border-t border-border/30 pt-2 space-y-2">
+      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+        Content Pipeline
+      </p>
+      <SectionRow label="Active Flows">{cp?.activeFlows ?? 0}</SectionRow>
+      <SectionRow label="Pending Review">{cp?.pendingDrafts ?? 0}</SectionRow>
+      {drafts.length > 0 && (
+        <div className="space-y-1.5">
+          <p className="text-[10px] text-muted-foreground font-medium">Drafts:</p>
+          {drafts.slice(0, 5).map((draft) => (
+            <div key={draft.contentId} className="text-xs p-2 rounded-lg bg-muted/30 space-y-0.5">
+              <p className="font-medium truncate">{draft.title}</p>
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Badge variant="outline" className="text-[10px]">
+                  {draft.status}
+                </Badge>
+                <span className="text-[10px]">{formatTimeAgo(draft.createdAt)}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      {drafts.length === 0 && (cp?.activeFlows ?? 0) === 0 && (
+        <p className="text-xs text-muted-foreground">No active content flows</p>
+      )}
+    </div>
+  );
+}
+
+function ProjectPlanningDetailPanel() {
+  const { data: engineStatus } = useEngineStatus() as {
+    data?: {
+      projectLifecycle?: {
+        totalProjects?: number;
+        activeProjects?: number;
+        activePRDs?: number;
+      };
+    };
+  };
+
+  const pl = engineStatus?.projectLifecycle;
+
+  return (
+    <div className="border-t border-border/30 pt-2 space-y-2">
+      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+        Project Planning
+      </p>
+      {!pl ? (
+        <p className="text-xs text-muted-foreground">No project data available</p>
+      ) : (
+        <>
+          <SectionRow label="Total Projects">{pl.totalProjects ?? 0}</SectionRow>
+          <SectionRow label="Active">{pl.activeProjects ?? 0}</SectionRow>
+          <SectionRow label="PRDs In Progress">{pl.activePRDs ?? 0}</SectionRow>
+        </>
+      )}
+    </div>
+  );
+}
+
+function DecompositionDetailPanel() {
+  const { data: engineStatus } = useEngineStatus() as {
+    data?: {
+      projectLifecycle?: {
+        totalProjects?: number;
+        activeProjects?: number;
+        activePRDs?: number;
+      };
+    };
+  };
+
+  const pl = engineStatus?.projectLifecycle;
+
+  return (
+    <div className="border-t border-border/30 pt-2 space-y-2">
+      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+        Decomposition
+      </p>
+      {!pl ? (
+        <p className="text-xs text-muted-foreground">No project data available</p>
+      ) : (
+        <>
+          <SectionRow label="Active Projects">{pl.activeProjects ?? 0}</SectionRow>
+          <SectionRow label="Total Projects">{pl.totalProjects ?? 0}</SectionRow>
+          <p className="text-[10px] text-muted-foreground mt-1">
+            Projects are decomposed into milestones (epics) and phases (features) on the board.
+          </p>
+        </>
       )}
     </div>
   );
