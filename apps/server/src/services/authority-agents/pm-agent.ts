@@ -75,6 +75,13 @@ interface TriageResult {
   searchQueries: string[];
   focusAreas: string[];
   reasoning: string;
+  needsClarification: boolean;
+  clarifyingQuestions?: Array<{
+    key: string;
+    question: string;
+    type: 'text' | 'select' | 'multiselect';
+    options?: string[];
+  }>;
 }
 
 /** Result of an AI-powered PRD review */
@@ -392,15 +399,71 @@ export class PMAuthorityAgent {
             searchQueries: [],
             focusAreas: [],
             reasoning: 'Per-signal override',
+            needsClarification: false,
           };
         } else {
           triage = await this.triageIdea(feature, projectPath);
         }
 
+        // Ask user for clarification if triage says it's needed
+        let clarificationContext = '';
+        if (
+          triage?.needsClarification &&
+          triage.clarifyingQuestions?.length &&
+          this.hitlFormService
+        ) {
+          const { schema, uiSchema } = this.convertQuestionsToSchema(triage.clarifyingQuestions);
+          const form = this.hitlFormService.create({
+            title: `Clarifying Questions: ${feature.title}`,
+            description: 'The PM Agent needs a few details before researching your idea.',
+            steps: [{ schema, uiSchema, title: 'Details', description: triage.reasoning }],
+            callerType: 'api',
+            featureId,
+            projectPath,
+            ttlSeconds: 600,
+          });
+
+          logger.info(`HITL form created for idea clarification: ${form.id}`);
+          const response = await this.waitForFormResponse(form.id, 600_000);
+
+          if (response?.[0]) {
+            clarificationContext = Object.entries(response[0])
+              .map(([key, value]) => {
+                const q = triage!.clarifyingQuestions!.find((cq) => cq.key === key);
+                return `- **${q?.question || key}**: ${value}`;
+              })
+              .join('\n');
+            logger.info(
+              `User provided clarification for ${featureId}: ${Object.keys(response[0]).length} answers`
+            );
+          } else {
+            logger.info(
+              `No clarification received for ${featureId}, proceeding with original idea`
+            );
+          }
+        }
+
+        // Inject clarification answers into feature description before research
+        if (clarificationContext) {
+          const updatedFeature = await this.featureLoader.get(projectPath, featureId);
+          if (updatedFeature) {
+            await this.featureLoader.update(projectPath, featureId, {
+              description:
+                (updatedFeature.description || '') +
+                '\n\n## User Clarifications\n' +
+                clarificationContext,
+            });
+          }
+        }
+
         logger.info(
           `Researching codebase for idea: "${feature.title}"${triage?.needsWebResearch ? ' (with web research)' : ''}`
         );
-        const researchSummary = await this.researchCodebase(feature, projectPath, triage);
+        // Re-fetch feature to pick up any clarification enrichment
+        const enrichedFeature = clarificationContext
+          ? (await this.featureLoader.get(projectPath, featureId)) || feature
+          : feature;
+        const researchSummary = await this.researchCodebase(enrichedFeature, projectPath, triage);
 
         // Signal research phase complete so pipeline advances RESEARCH → SPEC
         this.events.emit('authority:pm-research-completed', {
@@ -492,6 +555,69 @@ export class PMAuthorityAgent {
   }
 
   /**
+   * Wait for a HITL form response by listening for the hitl:form-responded event.
+   * Returns the response data array, or null on timeout/cancellation.
+   */
+  private waitForFormResponse(
+    formId: string,
+    timeoutMs: number
+  ): Promise<Record<string, unknown>[] | null> {
+    return new Promise((resolve) => {
+      let settled = false;
+      const unsub = this.events.subscribe((type, payload) => {
+        if (settled) return;
+        const p = payload as {
+          formId: string;
+          cancelled: boolean;
+          response?: Record<string, unknown>[];
+        };
+        if (type === 'hitl:form-responded' && p.formId === formId) {
+          settled = true;
+          unsub();
+          resolve(p.cancelled ? null : (p.response ?? null));
+        }
+      });
+      setTimeout(() => {
+        if (!settled) {
+          settled = true;
+          unsub();
+          resolve(null);
+        }
+      }, timeoutMs);
+    });
+  }
+
+  /**
+   * Convert triage clarifying questions into JSON Schema + uiSchema for a HITL form.
+   */
+  private convertQuestionsToSchema(questions: NonNullable<TriageResult['clarifyingQuestions']>): {
+    schema: Record<string, unknown>;
+    uiSchema: Record<string, unknown>;
+  } {
+    const properties: Record<string, unknown> = {};
+    const required: string[] = [];
+    for (const q of questions) {
+      if (q.type === 'select' && q.options?.length) {
+        properties[q.key] = { type: 'string', title: q.question, enum: q.options };
+      } else if (q.type === 'multiselect' && q.options?.length) {
+        properties[q.key] = {
+          type: 'array',
+          title: q.question,
+          items: { type: 'string', enum: q.options },
+          uniqueItems: true,
+        };
+      } else {
+        properties[q.key] = { type: 'string', title: q.question };
+      }
+      required.push(q.key);
+    }
+    return {
+      schema: { type: 'object', properties, required },
+      uiSchema: { 'ui:order': questions.map((q) => q.key) },
+    };
+  }
+
+  /**
    * Triage an idea with Opus to decide if web research is needed.
    * Quick 1-turn classification — no tools, minimal cost.
    * Falls back to { needsWebResearch: false } on any failure.
@@ -500,8 +626,9 @@ export class PMAuthorityAgent {
     const title = feature.title || 'Untitled';
     const description = feature.description || '';
 
-    const systemPrompt = `You are a senior PM triaging a feature idea to decide if web research is needed.
+    const systemPrompt = `You are a senior PM triaging a feature idea to decide if web research is needed AND if the idea is too vague and needs user clarification before proceeding.
 
+## Web Research Decision
 Evaluate whether the idea requires EXTERNAL context that can't be found in the codebase:
 - Competitor analysis or market positioning
 - Unfamiliar third-party libraries, APIs, or services
@@ -511,15 +638,40 @@ Evaluate whether the idea requires EXTERNAL context that can't be found in the c
 
 If the idea is purely internal codebase work (refactoring, UI changes, bug fixes, extending existing patterns), web research is NOT needed.
 
+## Clarification Decision
+Evaluate whether the idea is too vague to produce a high-quality PRD. Ask clarifying questions when:
+- Key implementation details are ambiguous (e.g. "add dark mode" — toggle location? persist preference? which components?)
+- Multiple valid approaches exist and user intent is unclear
+- Scope boundaries are undefined (what's in vs out?)
+- Critical UX decisions haven't been specified
+
+Do NOT ask questions when:
+- The idea is clear and specific enough to research and spec
+- Questions would be trivial or obvious from codebase research
+- The idea is a simple bug fix or well-understood pattern
+
+Keep questions to 2-4 max. Each should unlock a meaningful decision.
+
 You MUST respond with valid JSON:
 {
   "needsWebResearch": boolean,
   "searchQueries": ["suggested search query 1", "..."],
   "focusAreas": ["what to look for in web results"],
-  "reasoning": "brief explanation of your decision"
+  "reasoning": "brief explanation of your decision",
+  "needsClarification": boolean,
+  "clarifyingQuestions": [
+    {
+      "key": "shortCamelCaseKey",
+      "question": "Clear question for the user?",
+      "type": "select" | "text" | "multiselect",
+      "options": ["Option A", "Option B", "Option C"]
+    }
+  ]
 }
 
-Keep searchQueries to 3-5 max. Only include them if needsWebResearch is true.`;
+Keep searchQueries to 3-5 max. Only include them if needsWebResearch is true.
+Only include clarifyingQuestions if needsClarification is true.
+Use "select" when there are clear finite options, "text" for open-ended answers, "multiselect" when multiple options can apply.`;
 
     const prompt = `Triage this feature idea:
 
@@ -548,6 +700,7 @@ Should we research the web for external context, or is codebase-only research su
           searchQueries: [],
           focusAreas: [],
           reasoning: 'Triage parse failure',
+          needsClarification: false,
         };
       }
 
@@ -560,11 +713,12 @@ Should we research the web for external context, or is codebase-only research su
           searchQueries: [],
           focusAreas: [],
           reasoning: 'Invalid triage response',
+          needsClarification: false,
         };
       }
 
       logger.info(
-        `Triage result for "${title}": webResearch=${parsed.needsWebResearch} — ${parsed.reasoning}`
+        `Triage result for "${title}": webResearch=${parsed.needsWebResearch}, clarification=${parsed.needsClarification ?? false} — ${parsed.reasoning}`
       );
 
       return {
@@ -572,6 +726,10 @@ Should we research the web for external context, or is codebase-only research su
         searchQueries: Array.isArray(parsed.searchQueries) ? parsed.searchQueries : [],
         focusAreas: Array.isArray(parsed.focusAreas) ? parsed.focusAreas : [],
         reasoning: parsed.reasoning || '',
+        needsClarification: parsed.needsClarification === true,
+        clarifyingQuestions: Array.isArray(parsed.clarifyingQuestions)
+          ? parsed.clarifyingQuestions
+          : undefined,
       };
     } catch (error) {
       logger.error('Idea triage failed, defaulting to no web research:', error);
@@ -580,6 +738,7 @@ Should we research the web for external context, or is codebase-only research su
         searchQueries: [],
         focusAreas: [],
         reasoning: 'Triage error',
+        needsClarification: false,
       };
     }
   }

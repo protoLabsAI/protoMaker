@@ -27,6 +27,7 @@ interface SignalPayload {
     state?: string;
     labels?: string[];
     projectId?: string;
+    projectPath?: string;
     [key: string]: unknown;
   };
   timestamp: string;
