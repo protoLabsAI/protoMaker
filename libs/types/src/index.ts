@@ -709,15 +709,6 @@ export type {
   TimeGroupBy,
 } from './metrics.js';
 
-// CopilotKit / AG-UI Protocol types (HITL approval system)
-export type {
-  InterruptPayload,
-  PRDReviewInterrupt,
-  EntityReviewInterrupt,
-  PhaseApprovalInterrupt,
-  GenericInterrupt,
-} from './copilotkit.js';
-
 // Lead Engineer types (production-phase nerve center)
 export { FeatureState } from './lead-engineer.js';
 export type {

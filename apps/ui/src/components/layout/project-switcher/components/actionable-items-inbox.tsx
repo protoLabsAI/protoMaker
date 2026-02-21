@@ -18,6 +18,7 @@ import {
   CircleDot,
 } from 'lucide-react';
 import { useActionableItemsStore } from '@/store/actionable-items-store';
+import { useHITLFormStore } from '@/store/hitl-form-store';
 import { useLoadActionableItems, useActionableItemEvents } from '@/hooks/use-actionable-items';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { Button } from '@protolabs/ui/atoms';
@@ -29,6 +30,7 @@ import type {
 } from '@automaker/types';
 import { getEffectivePriority } from '@automaker/types';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 function formatRelativeTime(date: Date): string {
   const now = new Date();
@@ -108,15 +110,29 @@ export function ActionableItemsInbox({ projectPath }: ActionableItemsInboxProps)
     [projectPath, dismissItem]
   );
 
+  const openForm = useHITLFormStore((s) => s.openForm);
+
   const handleItemClick = useCallback(
-    (item: ActionableItem) => {
+    async (item: ActionableItem) => {
       handleMarkAsRead(item.id);
-      // TODO: Route to appropriate action based on item.actionType
-      // hitl_form → open HITL form dialog
-      // approval → navigate to feature
-      // escalation → navigate to escalation view
+
+      if (item.actionType === 'hitl_form' && item.actionPayload?.formId) {
+        try {
+          const api = getHttpApiClient();
+          const res = await api.hitlForms.get(item.actionPayload.formId as string);
+          if (res.success && res.form) {
+            openForm(res.form);
+            setPopoverOpen(false);
+          } else {
+            toast.error('Form not found or expired');
+          }
+        } catch {
+          toast.error('Failed to load form');
+        }
+      }
+      // Future: approval → navigate to feature, escalation → navigate to escalation view
     },
-    [handleMarkAsRead]
+    [handleMarkAsRead, openForm, setPopoverOpen]
   );
 
   // Show pending items sorted by effective priority

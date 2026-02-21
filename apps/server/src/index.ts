@@ -538,7 +538,8 @@ const pmAgent = new PMAuthorityAgent(
   authorityService,
   featureLoader,
   auditService,
-  settingsService
+  settingsService,
+  hitlFormService
 );
 // Initialize GTM Authority Agent (content creation pipeline)
 const gtmAgent = new GTMAuthorityAgent(
@@ -547,7 +548,8 @@ const gtmAgent = new GTMAuthorityAgent(
   featureLoader,
   auditService,
   settingsService,
-  contentFlowService
+  contentFlowService,
+  hitlFormService
 );
 
 const projectService = new ProjectService(featureLoader);

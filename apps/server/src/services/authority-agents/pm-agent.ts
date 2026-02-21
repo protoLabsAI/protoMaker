@@ -30,6 +30,7 @@ import type { AuthorityService } from '../authority-service.js';
 import type { FeatureLoader } from '../feature-loader.js';
 import type { AuditService } from '../audit-service.js';
 import type { SettingsService } from '../settings-service.js';
+import type { HITLFormService } from '../hitl-form-service.js';
 import { simpleQuery, streamingQuery } from '../../providers/simple-query-service.js';
 import {
   createAgentState,
@@ -95,6 +96,7 @@ export class PMAuthorityAgent {
   private readonly featureLoader: FeatureLoader;
   private readonly auditService: AuditService | null;
   private readonly settingsService: SettingsService | null;
+  private readonly hitlFormService: HITLFormService | null;
 
   /** Agent state (agents, initialization, processing tracking) */
   private readonly state: AgentState;
@@ -107,13 +109,15 @@ export class PMAuthorityAgent {
     authorityService: AuthorityService,
     featureLoader: FeatureLoader,
     auditService?: AuditService,
-    settingsService?: SettingsService
+    settingsService?: SettingsService,
+    hitlFormService?: HITLFormService
   ) {
     this.events = events;
     this.authorityService = authorityService;
     this.featureLoader = featureLoader;
     this.auditService = auditService || null;
     this.settingsService = settingsService || null;
+    this.hitlFormService = hitlFormService || null;
     this.state = createAgentState();
 
     // Register the global idea listener once

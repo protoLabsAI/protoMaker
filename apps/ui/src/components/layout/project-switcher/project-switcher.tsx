@@ -9,6 +9,7 @@ import { ProjectContextMenu } from './components/project-context-menu';
 import { EditProjectDialog } from './components/edit-project-dialog';
 import { NotificationBell } from './components/notification-bell';
 import { ActionableItemsInbox } from './components/actionable-items-inbox';
+import { HITLFormNotification } from '@/components/shared/hitl-form/hitl-form-notification';
 import { NewProjectModal } from '@/components/dialogs/new-project-modal';
 import { OnboardingDialog } from '@/components/layout/sidebar/dialogs';
 import { useProjectCreation } from '@/components/layout/sidebar/hooks';
@@ -330,6 +331,7 @@ export function ProjectSwitcher() {
           {/* Inbox & Notifications */}
           <div className="flex items-center justify-center gap-1 mt-2">
             <ActionableItemsInbox projectPath={currentProject?.path ?? null} />
+            <HITLFormNotification />
             <NotificationBell projectPath={currentProject?.path ?? null} />
           </div>
           <div className="w-full h-px bg-border mt-3" />

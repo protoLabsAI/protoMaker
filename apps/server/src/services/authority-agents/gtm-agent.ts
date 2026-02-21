@@ -29,6 +29,7 @@ import type { FeatureLoader } from '../feature-loader.js';
 import type { AuditService } from '../audit-service.js';
 import type { SettingsService } from '../settings-service.js';
 import type { ContentFlowService } from '../content-flow-service.js';
+import type { HITLFormService } from '../hitl-form-service.js';
 import { simpleQuery } from '../../providers/simple-query-service.js';
 import {
   createAgentState,
@@ -77,6 +78,7 @@ export class GTMAuthorityAgent {
   private readonly auditService: AuditService | null;
   private readonly settingsService: SettingsService | null;
   private readonly contentFlowService: ContentFlowService | null;
+  private readonly hitlFormService: HITLFormService | null;
   private readonly state: AgentState;
   private listenerRegistered = false;
   private readonly pendingDrafts: Map<string, ContentDraft> = new Map();
@@ -87,7 +89,8 @@ export class GTMAuthorityAgent {
     featureLoader: FeatureLoader,
     auditService?: AuditService,
     settingsService?: SettingsService,
-    contentFlowService?: ContentFlowService
+    contentFlowService?: ContentFlowService,
+    hitlFormService?: HITLFormService
   ) {
     this.events = events;
     this.authorityService = authorityService;
@@ -95,6 +98,7 @@ export class GTMAuthorityAgent {
     this.auditService = auditService || null;
     this.settingsService = settingsService || null;
     this.contentFlowService = contentFlowService || null;
+    this.hitlFormService = hitlFormService || null;
     this.state = createAgentState();
 
     this.registerEventListener();
