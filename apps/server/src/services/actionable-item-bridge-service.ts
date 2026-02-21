@@ -92,8 +92,13 @@ export class ActionableItemBridgeService {
       title: string;
       message: string;
       featureId?: string;
-      projectPath: string;
+      projectPath?: string;
     };
+
+    if (!data.projectPath) {
+      logger.warn('Notification created without projectPath, skipping bridge');
+      return;
+    }
 
     // Map notification types to actionable item priority and type
     let priority: 'low' | 'medium' | 'high' | 'urgent' = 'low';
@@ -175,12 +180,17 @@ export class ActionableItemBridgeService {
   private async handlePipelineGate(payload: unknown) {
     const data = payload as {
       featureId: string;
-      projectPath: string;
+      projectPath?: string;
       phase: string;
       branch: string;
       gateMode: string;
       timestamp: string;
     };
+
+    if (!data.projectPath) {
+      logger.warn('Pipeline gate without projectPath, skipping bridge');
+      return;
+    }
 
     try {
       await this.actionableItemService.createActionableItem({
