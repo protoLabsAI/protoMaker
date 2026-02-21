@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 256
-  referenced: 133
-  successfulFeatures: 133
+  loaded: 258
+  referenced: 135
+  successfulFeatures: 135
 ---
 # gotchas
 
@@ -195,3 +195,8 @@ usageStats:
 - **Situation:** npm run build output showed warnings about circular dependencies and exit code 1, but actual build artifacts were generated
 - **Root cause:** Circular dependency warnings in the build system cause non-zero exit code even when compilation succeeds. This is a pre-existing project configuration issue, not caused by the changes
 - **How to avoid:** Had to verify via git diff and manual code inspection rather than relying on build exit code as success signal
+
+#### [Gotcha] React Flow library generates ResizeObserver warnings and WebSocket environment errors that must be explicitly filtered from console assertions to prevent false test failures (2026-02-21)
+- **Situation:** Naive approach of capturing all console.error() calls causes tests to fail on library-generated warnings unrelated to application code
+- **Root cause:** React Flow uses ResizeObserver for internal layout calculations which triggers warnings in test/CI sandboxes. WebSocket connections in test environments generate spurious errors. Capturing all errors assumes application should be warning-free, but third-party libraries may not comply.
+- **How to avoid:** Must maintain list of known warnings (fragile to library updates) but prevents flaky tests; adds cognitive load to test interpretation

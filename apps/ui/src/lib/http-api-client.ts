@@ -3049,6 +3049,21 @@ export class HttpApiClient implements ElectronAPI {
         projectSlug,
         feedback,
       }),
+    listProjects: (
+      projectPath: string
+    ): Promise<{ success: boolean; projects?: string[]; error?: string }> =>
+      this.post('/api/projects/list', { projectPath }),
+    deleteProject: (
+      projectPath: string,
+      projectSlug: string
+    ): Promise<{ success: boolean; error?: string }> =>
+      this.post('/api/projects/delete', { projectPath, projectSlug }),
+    updateProject: (
+      projectPath: string,
+      projectSlug: string,
+      updates: Record<string, unknown>
+    ): Promise<{ success: boolean; error?: string }> =>
+      this.post('/api/projects/update', { projectPath, projectSlug, ...updates }),
   };
 
   // Engine API

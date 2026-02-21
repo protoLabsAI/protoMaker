@@ -343,6 +343,14 @@ export const queryKeys = {
   },
 
   // ============================================
+  // Projects
+  // ============================================
+  projects: {
+    /** All projects for a project path */
+    list: (projectPath: string) => ['projects', 'list', projectPath] as const,
+  },
+
+  // ============================================
   // Activity Feed
   // ============================================
   activity: {

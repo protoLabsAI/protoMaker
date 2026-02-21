@@ -5,9 +5,9 @@ relevantTo: [testing]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 28
-  referenced: 19
-  successfulFeatures: 19
+  loaded: 30
+  referenced: 21
+  successfulFeatures: 21
 ---
 # testing
 
@@ -629,3 +629,68 @@ usageStats:
 - **Rejected:** Relying on full build pass (too fragile to unrelated issues); runtime graph validation (requires deployment)
 - **Trade-offs:** Easier: Isolate verification from unrelated build failures. Harder: Manual verification is slower and not automated
 - **Breaking if changed:** Without comparison to source files, registry could diverge from actual graphs; automated tests need to validate registry matches source
+
+### Used waitForLoadState('load') instead of 'networkidle' for test synchronization in apps with persistent WebSocket connections (2026-02-21)
+- **Context:** E2E tests need reliable synchronization point; app maintains persistent WebSocket connections that never fully idle
+- **Why:** 'networkidle' assumes connections settle (traditional HTTP pattern), but WebSocket-enabled apps have continuous traffic. 'load' fires once and is predictable for these architectures.
+- **Rejected:** 'networkidle' - causes flaky tests in CI and unnecessary waits; 'custom wait for specific condition' - adds test-specific code complexity
+- **Trade-offs:** Faster, more reliable tests across CI environments but may miss slow async operations triggered after load event completes
+- **Breaking if changed:** Switching to 'networkidle' would cause test flakiness with persistent connections; removes architectural awareness from test strategy
+
+### Test IDs added only at component boundaries (3 total: flow-graph-view, flow-graph-canvas, flow-graph-legend-toggle) rather than on deeply nested elements (2026-02-21)
+- **Context:** Need queryable elements for testing without creating brittle selectors coupled to implementation details that change during refactoring
+- **Why:** Component boundaries are stable across internal refactoring; test IDs on deep DOM nodes break when child structure changes. Minimal set provides coverage for current smoke tests while remaining testable for future interactions.
+- **Rejected:** Deep-nested test IDs on individual SVG nodes or React Flow internals - would require test maintenance on every layout change; no test IDs - eliminates selector stability
+- **Trade-offs:** Fewer test IDs means simpler component code and less testing coupling, but limits granularity of future assertions (e.g., can't directly query individual graph nodes)
+- **Breaking if changed:** Removing test IDs breaks selectors immediately; placing IDs inside component implementations instead of at boundaries makes them invisible from test perspective
+
+#### [Pattern] Separated API endpoint verification tests from UI component smoke tests into distinct file structure (tests/api/ vs tests/views/), following existing scheduler-status pattern (2026-02-21)
+- **Problem solved:** Growing test suite needs logical organization; API contracts and UI rendering have independent failure modes and different diagnostic paths
+- **Why this works:** Decouples concerns - API failures shouldn't block UI tests and vice versa. Enables parallel execution in CI. Makes failure diagnosis faster (error in 'engine-status-verification' immediately indicates API contract issue, not rendering problem).
+- **Trade-offs:** More files to maintain but clearer separation of responsibility; easier to parallelize CI execution and diagnose failures
+
+#### [Pattern] Comprehensive type validation for API response structure (checking presence and types of nested properties like autoMode.running as boolean, agentExecution.activeAgents as array) in verification tests (2026-02-21)
+- **Problem solved:** API contracts are prone to subtle type changes (boolean vs string, number vs string) that don't cause immediate failures but break consumers
+- **Why this works:** Type mismatches propagate downstream to consuming components causing runtime errors. Catching these at API boundary (test) prevents invalid state. Pattern inherited from scheduler-status-verification pattern.
+- **Trade-offs:** More verbose assertions but catches semantic errors; requires discipline to maintain as API evolves
+
+### Scoped smoke tests to rendering verification only (component visible, React Flow canvas present, nodes rendered) rather than interaction tests, deliberately keeping scope minimal for CI stability (2026-02-21)
+- **Context:** Balancing comprehensive coverage against CI execution time, flakiness, and maintenance burden for complex visualization components
+- **Why:** Smoke tests are regression detection, not feature validation. Minimal scope means faster execution (<10s), fewer environmental dependencies, and less maintenance when layout/styling changes. Interaction tests would require more sophisticated wait strategies and are better suited to targeted feature tests.
+- **Rejected:** Full feature testing with interactions (node dragging, zooming) - would require complex synchronization and break on layout changes; no tests - leaves regression blind spot
+- **Trade-offs:** Fast, stable tests but limited coverage; couldn't catch interaction-specific bugs. Establishes foundation for future, more targeted tests.
+- **Breaking if changed:** Adding interaction tests to smoke test would increase CI time and flakiness; removing this test removes baseline regression detection for rendering
+
+#### [Gotcha] Using waitForLoadState('load') instead of 'networkidle' when app has persistent WebSocket connections (2026-02-21)
+- **Situation:** E2E tests for flow-graph with real-time WebSocket updates
+- **Root cause:** networkidle waits for zero network activity. With persistent WebSocket connections, this wait never completes and tests hang indefinitely. 'load' fires after DOM content loads, regardless of background connections.
+- **How to avoid:** Faster tests but less guarantee of stable state; must rely on explicit waits for specific UI elements instead
+
+#### [Gotcha] Proactive filtering of React Flow ResizeObserver and library warnings in console error detection (2026-02-21)
+- **Situation:** Smoke tests for React Flow visualization component
+- **Root cause:** React Flow emits ResizeObserver warnings that are not actual errors but would fail tests if treated as console errors. Must distinguish between library chattiness and real failures.
+- **How to avoid:** Requires knowledge of library internals vs cleaner error detection; more maintainable as library evolves
+
+#### [Pattern] Minimal test ID strategy: add only 3 test IDs at component boundaries (view-level and canvas-level) rather than throughout component tree (2026-02-21)
+- **Problem solved:** Balancing test maintainability with implementation flexibility
+- **Why this works:** Each test ID creates a contract between tests and components. Minimizing test IDs reduces refactoring burden if internal structure changes. Boundary IDs still enable future detailed testing by adding more IDs as needed.
+- **Trade-offs:** Less granular test control now vs lower coupling and maintenance cost; foundation for gradual test expansion
+
+### Layered verification approach: verify component rendering (flow-graph-view) → canvas rendering (flow-graph-canvas) → React Flow internals (.react-flow__node classes) (2026-02-21)
+- **Context:** Smoke test for complex visualization with multiple initialization layers
+- **Why:** Each layer represents a failure point: component mounting, React Flow initialization, or node rendering. Testing all three enables precise failure diagnostics without coupling to internal React Flow implementation.
+- **Rejected:** Single comprehensive test - harder to isolate which layer failed
+- **Trade-offs:** More test statements but better failure localization vs simpler but less diagnostic test
+- **Breaking if changed:** Removing any verification layer loses ability to distinguish between component vs React Flow vs rendering failures
+
+#### [Pattern] Smoke test scope limited to rendering verification (navigation, visibility, element presence) excluding interaction testing (2026-02-21)
+- **Problem solved:** CI/CD integration for fast feedback on basic functionality
+- **Why this works:** Smoke tests optimize for speed (<10s execution) and stability. Rendering tests are deterministic; interaction tests add timing complexity. Separate layers of testing: smoke (quick), functional (comprehensive), integration (full flow).
+- **Trade-offs:** Quick feedback on basic health vs shallow coverage; requires complementary interaction/integration tests
+
+### 10-second timeout for initial render to accommodate slower CI container environments (2026-02-21)
+- **Context:** Making smoke tests reliable across local development and containerized CI
+- **Why:** Containerized environments have variable resource contention. 10s is empirically safe for React mounting + React Flow initialization without being excessive. Prevents flaky tests in CI.
+- **Rejected:** Shorter timeout (3-5s) - fails intermittently in CI; longer timeout (30s+) - unacceptable feedback delay
+- **Trade-offs:** Slightly longer local test time vs reliable CI execution across varying resource conditions
+- **Breaking if changed:** Too-short timeout causes environment-dependent flakiness; too-long timeout defeats purpose of fast smoke test

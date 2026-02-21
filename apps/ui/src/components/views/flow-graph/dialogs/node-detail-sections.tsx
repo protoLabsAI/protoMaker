@@ -5,8 +5,18 @@
  * existing hooks and the node's data prop.
  */
 
-import { ExternalLink, Clock, DollarSign, Square, FileText, GitBranch, Signal } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import {
+  ExternalLink,
+  Clock,
+  DollarSign,
+  Square,
+  FileText,
+  GitBranch,
+  Signal,
+  Check,
+  Trash2,
+} from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Badge } from '@protolabs/ui/atoms';
 import { Button } from '@protolabs/ui/atoms';
 import { scrubPii } from '@/lib/scrub-pii';
@@ -15,6 +25,7 @@ import { getLangfuseTraceUrl, getLangfuseSpanUrl } from '@/lib/langfuse-url';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { queryKeys } from '@/lib/query-keys';
 import { useEngineStatus } from '@/hooks/queries/use-metrics';
+import { useAppStore } from '@/store/app-store';
 import type {
   OrchestratorNodeData,
   ServiceNodeData,
@@ -65,6 +76,12 @@ function formatTimeAgo(dateStr: string): string {
   if (ms < 3_600_000) return `${Math.round(ms / 60_000)}m ago`;
   if (ms < 86_400_000) return `${Math.round(ms / 3_600_000)}h ago`;
   return `${Math.round(ms / 86_400_000)}d ago`;
+}
+
+/** Engine status scoped to the current project — ensures cache hit with the parent flow graph. */
+function useProjectEngineStatus() {
+  const projectPath = useAppStore((s) => s.currentProject?.path);
+  return useEngineStatus(projectPath);
 }
 
 const COMPLEXITY_COLORS: Record<string, string> = {
@@ -385,7 +402,7 @@ function LeadEngineerDetailPanel() {
 }
 
 function SignalSourcesDetailPanel() {
-  const { data: engineStatus } = useEngineStatus() as {
+  const { data: engineStatus } = useProjectEngineStatus() as {
     data?: {
       signalIntake?: {
         signalCounts?: Record<string, number>;
@@ -432,7 +449,7 @@ function SignalSourcesDetailPanel() {
 }
 
 function GitWorkflowDetailPanel() {
-  const { data: engineStatus } = useEngineStatus() as {
+  const { data: engineStatus } = useProjectEngineStatus() as {
     data?: {
       gitWorkflow?: {
         activeWorkflows?: number;
@@ -553,7 +570,7 @@ function AgentExecutionDetailPanel() {
 }
 
 function TriageDetailPanel() {
-  const { data: engineStatus } = useEngineStatus() as {
+  const { data: engineStatus } = useProjectEngineStatus() as {
     data?: {
       signalIntake?: {
         signalCounts?: Record<string, number>;
@@ -598,7 +615,7 @@ function TriageDetailPanel() {
 }
 
 function LaunchDetailPanel() {
-  const { data: engineStatus } = useEngineStatus() as {
+  const { data: engineStatus } = useProjectEngineStatus() as {
     data?: {
       autoMode?: {
         running?: boolean;
@@ -638,7 +655,7 @@ function LaunchDetailPanel() {
 }
 
 function ContentPipelineDetailPanel() {
-  const { data: engineStatus } = useEngineStatus() as {
+  const { data: engineStatus } = useProjectEngineStatus() as {
     data?: {
       contentPipeline?: {
         activeFlows?: number;
@@ -696,7 +713,7 @@ function ContentPipelineDetailPanel() {
 }
 
 function ProjectPlanningDetailPanel() {
-  const { data: engineStatus } = useEngineStatus() as {
+  const { data: engineStatus } = useProjectEngineStatus() as {
     data?: {
       projectLifecycle?: {
         totalProjects?: number;
@@ -727,37 +744,129 @@ function ProjectPlanningDetailPanel() {
 }
 
 function DecompositionDetailPanel() {
-  const { data: engineStatus } = useEngineStatus() as {
-    data?: {
-      projectLifecycle?: {
-        totalProjects?: number;
-        activeProjects?: number;
-        activePRDs?: number;
-      };
-    };
-  };
+  const projectPath = useAppStore((s) => s.currentProject?.path);
+  const queryClient = useQueryClient();
 
-  const pl = engineStatus?.projectLifecycle;
+  const { data, isLoading } = useQuery({
+    queryKey: queryKeys.projects.list(projectPath ?? ''),
+    queryFn: async () => {
+      if (!projectPath) return { success: false, projects: [] as ProjectDetail[] };
+      const api = getHttpApiClient();
+      const listRes = await api.lifecycle.listProjects(projectPath);
+      if (!listRes.success || !listRes.projects?.length)
+        return { success: true, projects: [] as ProjectDetail[] };
+      const details = await Promise.all(
+        listRes.projects.map(async (slug) => {
+          const res = await api.lifecycle.getProject(projectPath, slug);
+          return res.project ?? { slug, title: slug, status: 'unknown', milestones: [] };
+        })
+      );
+      return { success: true, projects: details };
+    },
+    enabled: !!projectPath,
+    staleTime: 10000,
+  });
+
+  const completeMutation = useMutation({
+    mutationFn: async (slug: string) => {
+      const api = getHttpApiClient();
+      return api.lifecycle.updateProject(projectPath!, slug, { status: 'completed' });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.list(projectPath ?? '') });
+      queryClient.invalidateQueries({ queryKey: queryKeys.engine.status(projectPath) });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (slug: string) => {
+      const api = getHttpApiClient();
+      return api.lifecycle.deleteProject(projectPath!, slug);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.list(projectPath ?? '') });
+      queryClient.invalidateQueries({ queryKey: queryKeys.engine.status(projectPath) });
+    },
+  });
+
+  const projects = (data as { projects?: ProjectDetail[] })?.projects ?? [];
+
+  if (isLoading) return <p className="text-xs text-muted-foreground">Loading projects...</p>;
 
   return (
     <div className="border-t border-border/30 pt-2 space-y-2">
       <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-        Decomposition
+        Projects ({projects.length})
       </p>
-      {!pl ? (
-        <p className="text-xs text-muted-foreground">No project data available</p>
+      {projects.length === 0 ? (
+        <p className="text-xs text-muted-foreground">No projects found</p>
       ) : (
-        <>
-          <SectionRow label="Active Projects">{pl.activeProjects ?? 0}</SectionRow>
-          <SectionRow label="Total Projects">{pl.totalProjects ?? 0}</SectionRow>
-          <p className="text-[10px] text-muted-foreground mt-1">
-            Projects are decomposed into milestones (epics) and phases (features) on the board.
-          </p>
-        </>
+        <div className="max-h-64 overflow-y-auto space-y-1.5 pr-0.5">
+          {projects.map((project) => (
+            <div key={project.slug} className="text-xs p-2 rounded-lg bg-muted/30 space-y-1">
+              <div className="flex items-center justify-between gap-2">
+                <p className="font-medium truncate flex-1" title={project.title}>
+                  {project.title || project.slug}
+                </p>
+                <div className="flex items-center gap-1 shrink-0">
+                  {project.status !== 'completed' && (
+                    <button
+                      className="p-0.5 rounded hover:bg-emerald-500/20 text-muted-foreground hover:text-emerald-400 transition-colors disabled:opacity-50"
+                      title="Mark completed"
+                      disabled={completeMutation.isPending}
+                      onClick={() => completeMutation.mutate(project.slug)}
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                  <button
+                    className="p-0.5 rounded hover:bg-red-500/20 text-muted-foreground hover:text-red-400 transition-colors disabled:opacity-50"
+                    title="Delete project"
+                    disabled={deleteMutation.isPending}
+                    onClick={() => {
+                      if (confirm(`Delete project "${project.title || project.slug}"?`)) {
+                        deleteMutation.mutate(project.slug);
+                      }
+                    }}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Badge
+                  variant={
+                    project.status === 'active'
+                      ? 'default'
+                      : project.status === 'completed'
+                        ? 'secondary'
+                        : 'outline'
+                  }
+                  className="text-[10px]"
+                >
+                  {project.status}
+                </Badge>
+                {project.milestones && project.milestones.length > 0 && (
+                  <span className="text-[10px]">
+                    {project.milestones.length} milestone
+                    {project.milestones.length !== 1 ? 's' : ''}
+                  </span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );
 }
+
+type ProjectDetail = {
+  slug: string;
+  title: string;
+  status: string;
+  milestones?: Array<{ title: string; phases: Array<{ title: string; status?: string }> }>;
+};
 
 // ============================================
 // Integration Section
