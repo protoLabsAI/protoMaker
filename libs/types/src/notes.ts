@@ -18,6 +18,8 @@ export interface NoteTab {
 
 export interface NotesWorkspace {
   version: 1;
+  /** Monotonic counter incremented on every server-side mutation. Used for change detection. */
+  workspaceVersion?: number;
   activeTabId: string | null;
   tabOrder: string[];
   tabs: Record<string, NoteTab>;

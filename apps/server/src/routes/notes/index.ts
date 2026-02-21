@@ -7,7 +7,8 @@
 import { Router, type Request, type Response } from 'express';
 import { createLogger } from '@automaker/utils';
 import { getNotesWorkspacePath, ensureNotesDir, secureFs, validatePath } from '@automaker/platform';
-import type { NotesWorkspace, NoteTab } from '@automaker/types';
+import type { NotesWorkspace, NoteTab, NoteTabPermissions } from '@automaker/types';
+import type { EventEmitter } from '../../lib/events.js';
 
 const logger = createLogger('NotesRoutes');
 
@@ -16,6 +17,7 @@ function createDefaultWorkspace(): NotesWorkspace {
   const defaultTabId = crypto.randomUUID();
   return {
     version: 1,
+    workspaceVersion: 0,
     activeTabId: defaultTabId,
     tabOrder: [defaultTabId],
     tabs: {
@@ -46,7 +48,11 @@ async function saveWorkspace(projectPath: string, workspace: NotesWorkspace): Pr
   await secureFs.writeFile(filePath, JSON.stringify(workspace, null, 2), 'utf-8');
 }
 
-export function createNotesRoutes(): Router {
+function bumpVersion(workspace: NotesWorkspace): void {
+  workspace.workspaceVersion = (workspace.workspaceVersion ?? 0) + 1;
+}
+
+export function createNotesRoutes(events?: EventEmitter): Router {
   const router = Router();
 
   /**
@@ -110,6 +116,10 @@ export function createNotesRoutes(): Router {
       const tab = workspace.tabs[tabId];
       if (!tab) {
         res.status(404).json({ error: 'Tab not found' });
+        return;
+      }
+      if (!tab.permissions.agentRead) {
+        res.status(403).json({ error: 'Agent does not have read permission for this tab' });
         return;
       }
       res.json({ tab });
@@ -201,7 +211,13 @@ export function createNotesRoutes(): Router {
       tab.metadata.wordCount = plainText.trim() ? plainText.trim().split(/\s+/).length : 0;
       tab.metadata.characterCount = plainText.length;
 
+      bumpVersion(workspace);
       await saveWorkspace(projectPath, workspace);
+
+      if (events) {
+        events.emit('notes:tab-updated', { projectPath, tabId, name: tab.name });
+      }
+
       res.json({
         success: true,
         tab: {
@@ -211,10 +227,273 @@ export function createNotesRoutes(): Router {
           characterCount: tab.metadata.characterCount,
           updatedAt: now,
         },
+        workspaceVersion: workspace.workspaceVersion,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       logger.error('Failed to write note tab:', error);
+      res.status(500).json({ error: message });
+    }
+  });
+
+  /**
+   * POST /api/notes/create-tab
+   * Create a new note tab in the workspace
+   */
+  router.post('/create-tab', async (req: Request, res: Response) => {
+    try {
+      const { projectPath, name, content, permissions } = req.body as {
+        projectPath: string;
+        name?: string;
+        content?: string;
+        permissions?: Partial<NoteTabPermissions>;
+      };
+      if (!projectPath) {
+        res.status(400).json({ error: 'projectPath is required' });
+        return;
+      }
+      validatePath(projectPath);
+      const workspace = await loadWorkspace(projectPath);
+
+      const now = Date.now();
+      const tabId = crypto.randomUUID();
+      const tabName = name || `Tab ${Object.keys(workspace.tabs).length + 1}`;
+      const tabContent = content ?? '';
+      const plainText = tabContent.replace(/<[^>]*>/g, '');
+
+      const newTab: NoteTab = {
+        id: tabId,
+        name: tabName,
+        content: tabContent,
+        permissions: {
+          agentRead: permissions?.agentRead ?? true,
+          agentWrite: permissions?.agentWrite ?? true,
+        },
+        metadata: {
+          createdAt: now,
+          updatedAt: now,
+          wordCount: plainText.trim() ? plainText.trim().split(/\s+/).length : 0,
+          characterCount: plainText.length,
+        },
+      };
+
+      workspace.tabs[tabId] = newTab;
+      workspace.tabOrder.push(tabId);
+      bumpVersion(workspace);
+      await saveWorkspace(projectPath, workspace);
+
+      if (events) {
+        events.emit('notes:tab-created', { projectPath, tabId, name: tabName });
+      }
+
+      res.json({
+        success: true,
+        tab: {
+          id: newTab.id,
+          name: newTab.name,
+          permissions: newTab.permissions,
+          metadata: newTab.metadata,
+        },
+        workspaceVersion: workspace.workspaceVersion,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('Failed to create note tab:', error);
+      res.status(500).json({ error: message });
+    }
+  });
+
+  /**
+   * POST /api/notes/delete-tab
+   * Delete a note tab from the workspace
+   */
+  router.post('/delete-tab', async (req: Request, res: Response) => {
+    try {
+      const { projectPath, tabId } = req.body as { projectPath: string; tabId: string };
+      if (!projectPath || !tabId) {
+        res.status(400).json({ error: 'projectPath and tabId are required' });
+        return;
+      }
+      validatePath(projectPath);
+      const workspace = await loadWorkspace(projectPath);
+
+      if (!workspace.tabs[tabId]) {
+        res.status(404).json({ error: 'Tab not found' });
+        return;
+      }
+      if (workspace.tabOrder.length <= 1) {
+        res.status(400).json({ error: 'Cannot delete the last remaining tab' });
+        return;
+      }
+
+      delete workspace.tabs[tabId];
+      workspace.tabOrder = workspace.tabOrder.filter((id) => id !== tabId);
+
+      if (workspace.activeTabId === tabId) {
+        workspace.activeTabId = workspace.tabOrder[workspace.tabOrder.length - 1] ?? null;
+      }
+
+      bumpVersion(workspace);
+      await saveWorkspace(projectPath, workspace);
+
+      if (events) {
+        events.emit('notes:tab-deleted', { projectPath, tabId });
+      }
+
+      res.json({
+        success: true,
+        deletedTabId: tabId,
+        workspaceVersion: workspace.workspaceVersion,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('Failed to delete note tab:', error);
+      res.status(500).json({ error: message });
+    }
+  });
+
+  /**
+   * POST /api/notes/rename-tab
+   * Rename a note tab
+   */
+  router.post('/rename-tab', async (req: Request, res: Response) => {
+    try {
+      const { projectPath, tabId, name } = req.body as {
+        projectPath: string;
+        tabId: string;
+        name: string;
+      };
+      if (!projectPath || !tabId || !name) {
+        res.status(400).json({ error: 'projectPath, tabId, and name are required' });
+        return;
+      }
+      validatePath(projectPath);
+      const workspace = await loadWorkspace(projectPath);
+      const tab = workspace.tabs[tabId];
+      if (!tab) {
+        res.status(404).json({ error: 'Tab not found' });
+        return;
+      }
+
+      tab.name = name;
+      tab.metadata.updatedAt = Date.now();
+
+      bumpVersion(workspace);
+      await saveWorkspace(projectPath, workspace);
+
+      if (events) {
+        events.emit('notes:tab-renamed', { projectPath, tabId, name });
+      }
+
+      res.json({
+        success: true,
+        tab: { id: tab.id, name: tab.name, updatedAt: tab.metadata.updatedAt },
+        workspaceVersion: workspace.workspaceVersion,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('Failed to rename note tab:', error);
+      res.status(500).json({ error: message });
+    }
+  });
+
+  /**
+   * POST /api/notes/update-tab-permissions
+   * Update agent read/write permissions for a tab
+   */
+  router.post('/update-tab-permissions', async (req: Request, res: Response) => {
+    try {
+      const { projectPath, tabId, permissions } = req.body as {
+        projectPath: string;
+        tabId: string;
+        permissions: Partial<NoteTabPermissions>;
+      };
+      if (!projectPath || !tabId || !permissions) {
+        res.status(400).json({ error: 'projectPath, tabId, and permissions are required' });
+        return;
+      }
+      validatePath(projectPath);
+      const workspace = await loadWorkspace(projectPath);
+      const tab = workspace.tabs[tabId];
+      if (!tab) {
+        res.status(404).json({ error: 'Tab not found' });
+        return;
+      }
+
+      if (permissions.agentRead !== undefined) {
+        tab.permissions.agentRead = permissions.agentRead;
+      }
+      if (permissions.agentWrite !== undefined) {
+        tab.permissions.agentWrite = permissions.agentWrite;
+      }
+      tab.metadata.updatedAt = Date.now();
+
+      bumpVersion(workspace);
+      await saveWorkspace(projectPath, workspace);
+
+      if (events) {
+        events.emit('notes:tab-permissions-changed', {
+          projectPath,
+          tabId,
+          permissions: tab.permissions,
+        });
+      }
+
+      res.json({
+        success: true,
+        tab: { id: tab.id, name: tab.name, permissions: tab.permissions },
+        workspaceVersion: workspace.workspaceVersion,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('Failed to update tab permissions:', error);
+      res.status(500).json({ error: message });
+    }
+  });
+
+  /**
+   * POST /api/notes/reorder-tabs
+   * Reorder note tabs in the workspace
+   */
+  router.post('/reorder-tabs', async (req: Request, res: Response) => {
+    try {
+      const { projectPath, tabOrder } = req.body as {
+        projectPath: string;
+        tabOrder: string[];
+      };
+      if (!projectPath || !tabOrder || !Array.isArray(tabOrder)) {
+        res.status(400).json({ error: 'projectPath and tabOrder array are required' });
+        return;
+      }
+      validatePath(projectPath);
+      const workspace = await loadWorkspace(projectPath);
+
+      // Validate all IDs exist and no extra/missing IDs
+      const existingIds = new Set(Object.keys(workspace.tabs));
+      const newIds = new Set(tabOrder);
+      if (newIds.size !== existingIds.size) {
+        res.status(400).json({ error: 'tabOrder must contain exactly the same tab IDs' });
+        return;
+      }
+      for (const id of tabOrder) {
+        if (!existingIds.has(id)) {
+          res.status(400).json({ error: `Unknown tab ID: ${id}` });
+          return;
+        }
+      }
+
+      workspace.tabOrder = tabOrder;
+      bumpVersion(workspace);
+      await saveWorkspace(projectPath, workspace);
+
+      res.json({
+        success: true,
+        tabOrder: workspace.tabOrder,
+        workspaceVersion: workspace.workspaceVersion,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('Failed to reorder tabs:', error);
       res.status(500).json({ error: message });
     }
   });

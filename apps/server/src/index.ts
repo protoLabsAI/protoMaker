@@ -1296,7 +1296,7 @@ app.use(
 );
 app.use('/api/chat', createChatRoutes());
 app.use('/api/ai', createAIRoutes());
-app.use('/api/notes', createNotesRoutes());
+app.use('/api/notes', createNotesRoutes(events));
 app.use('/api/twitch', createTwitchRoutes(twitchService, events, featureLoader));
 app.use('/api/voice', createVoiceRoutes(voiceService, events));
 
