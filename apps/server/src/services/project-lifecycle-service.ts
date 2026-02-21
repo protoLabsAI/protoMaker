@@ -87,9 +87,12 @@ export class ProjectLifecycleService {
     }
 
     // Create Linear project
+    // Linear `description` has a 255-char limit; long content goes in `content`
     const result = await client.createProject({
       name: title,
-      description: ideaDescription,
+      description:
+        ideaDescription.length > 255 ? ideaDescription.substring(0, 252) + '...' : ideaDescription,
+      content: ideaDescription.length > 255 ? ideaDescription : undefined,
       teamIds: [teamId],
     });
 
