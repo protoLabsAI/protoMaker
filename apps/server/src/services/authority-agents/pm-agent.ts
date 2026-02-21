@@ -402,6 +402,14 @@ export class PMAuthorityAgent {
         );
         const researchSummary = await this.researchCodebase(feature, projectPath, triage);
 
+        // Signal research phase complete so pipeline advances RESEARCH → SPEC
+        this.events.emit('authority:pm-research-completed', {
+          projectPath,
+          featureId,
+          agentId: agent.id,
+          analysis: { complexity: 'medium' },
+        });
+
         // Step 3: Generate SPARC PRD from research + original idea
         logger.info(`Generating SPARC PRD for idea: "${feature.title}"`);
         const prdResult = await this.generateSPARCPRD(feature, researchSummary, projectPath);
