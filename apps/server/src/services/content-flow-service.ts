@@ -496,8 +496,10 @@ export class ContentFlowService {
     try {
       // Stream the resumed flow to track node transitions.
       // Same reducer-aware accumulation as executeFlow.
+      // Initialize from checkpointed state to preserve config and prior accumulations.
       const REDUCER_FIELDS = new Set(['researchResults', 'sections', 'reviewFeedback', 'outputs']);
-      let lastState: Record<string, unknown> = {};
+      const checkpoint = await flow.getState(threadConfig);
+      let lastState: Record<string, unknown> = (checkpoint.values as Record<string, unknown>) || {};
       const stream = await flow.stream(resumeState, threadConfig);
 
       for await (const update of stream) {
