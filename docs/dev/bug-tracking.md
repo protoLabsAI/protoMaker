@@ -81,8 +81,7 @@ The pipeline activates on three event types:
 | `apps/server/src/index.ts`                           | `bug:linear-sync` listener (Linear issue creation)                 |
 | `apps/server/src/lib/settings-helpers.ts`            | `getWorkflowSettings()` with bugs merge                            |
 
-## Discord Ceremony Delivery
+## Related Documentation
 
-The same PR also wired `integration:discord` events to `DiscordBotService`. CeremonyService, IntegrationService, and ChangelogService emit `integration:discord` events with `{ action: 'send_message', channelId, content }` payloads. A bridge listener in `index.ts` forwards these to `DiscordBotService.sendToChannel()`.
-
-This enables all ceremony types (epic kickoff, milestone standup, milestone retro, epic delivery, project retro) to automatically post to Discord when `ceremonySettings.enabled` is true and `ceremonySettings.discordChannelId` is configured.
+- [Issue Management & Triage](./issue-management.md) — GitHub issue creation, triage priority, team routing
+- [Agile Ceremony System](/agents/ceremonies) — Ceremony types and Discord delivery

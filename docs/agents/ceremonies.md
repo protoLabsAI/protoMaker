@@ -179,13 +179,43 @@ Posted when all milestones complete. Uses an LLM to generate a structured retros
 | `splitMessage()`              | private    | Chunk content for Discord's 2000-char limit       |
 | `emitDiscordEvent()`          | private    | Emit `integration:discord` event                  |
 
+## Discord Delivery
+
+CeremonyService doesn't call Discord directly. Instead, it emits `integration:discord` events via `emitDiscordEvent()`, and a bridge listener in `apps/server/src/index.ts` forwards them to `DiscordBotService.sendToChannel()`.
+
+```
+CeremonyService
+  │
+  └─ emitDiscordEvent(channelId, content)
+        │
+        ▼
+  events.emit('integration:discord', {
+    action: 'send_message',
+    channelId,
+    content
+  })
+        │
+        ▼
+  Bridge listener (index.ts)
+        │
+        ▼
+  DiscordBotService.sendToChannel(channelId, content)
+        │
+        ▼
+  Discord API
+```
+
+This bridge also serves `IntegrationService` and `ChangelogService` — any service that emits `integration:discord` events with `{ action: 'send_message', channelId, content }` payloads will be delivered to Discord.
+
+**Key file:** `apps/server/src/index.ts` — `integration:discord` subscriber (after `eventHookService.initialize()`)
+
 ## Prerequisites
 
 For ceremonies to work:
 
 1. **Ceremonies enabled** in `.automaker/settings.json` (`ceremonySettings.enabled: true`)
-2. **Discord integration enabled** in project settings (`integrations.discord.enabled: true`)
-3. **Discord channel ID set** in ceremony settings
+2. **Discord channel ID set** in ceremony settings (`ceremonySettings.discordChannelId`)
+3. **Discord bot running** — `DiscordBotService` must be initialized (requires `DISCORD_BOT_TOKEN`)
 4. **Project uses the project orchestration system** (milestones, phases)
 5. **Events emitted by ProjM agent** — ceremonies are event-driven, not polled
 

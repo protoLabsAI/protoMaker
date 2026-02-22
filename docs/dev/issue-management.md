@@ -112,6 +112,31 @@ interface Feature {
 | `issue:created`               | `{ featureId, projectPath, issueNumber, issueUrl, trigger, priority, team }` | GitHub issue created         |
 | `issue:triage-completed`      | `{ featureId, projectPath, priority, team, labels, reason }`                 | Triage classification done   |
 
+## Linear Bug Tracking
+
+In addition to GitHub issues, failures can be automatically routed to a Linear "Bugs" project with priority-based severity gating.
+
+When enabled, `IssueCreationService` emits a `bug:linear-sync` event after creating the GitHub issue. A listener in `index.ts` picks this up and creates a Linear issue via `LinearMCPClient`.
+
+**Configuration:** Add `workflow.bugs` to `.automaker/settings.json`:
+
+```json
+{
+  "workflow": {
+    "bugs": {
+      "enabled": true,
+      "linearProjectId": "<linear-project-id>",
+      "linearTeamId": "<linear-team-id>",
+      "minLinearPriority": 3
+    }
+  }
+}
+```
+
+Only bugs with priority at or above `minLinearPriority` (1=urgent through 4=low) are synced. Default threshold is 3 (medium), meaning P1/P2/P3 bugs create Linear issues while P4 (low) bugs only get GitHub issues.
+
+See [Bug Tracking Pipeline](./bug-tracking.md) for full configuration reference and priority mapping.
+
 ## Future: Phase 3 (Bidirectional Sync)
 
 Not yet implemented:
