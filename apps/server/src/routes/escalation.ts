@@ -97,11 +97,17 @@ export function createEscalationRoutes(escalationRouter: EscalationRouter): Rout
         return;
       }
 
-      // For now, we'll log the acknowledgment
-      // In the future, this could update the log entry or emit an event
-      logger.info(
-        `Signal ${signalId} acknowledged by ${acknowledgedBy}${notes ? `: ${notes}` : ''}`
+      const result = escalationRouter.acknowledgeSignal(
+        signalId,
+        acknowledgedBy,
+        notes,
+        req.body.clearDedup === true
       );
+
+      if (!result.success) {
+        res.status(404).json({ success: false, error: result.error });
+        return;
+      }
 
       res.json({
         success: true,

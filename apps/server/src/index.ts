@@ -687,7 +687,8 @@ const emAgent = new EMAuthorityAgent(
   featureLoader,
   autoModeService,
   auditService,
-  settingsService
+  settingsService,
+  hitlFormService
 );
 
 // Initialize Linear approval detection + bridge to CoS pipeline

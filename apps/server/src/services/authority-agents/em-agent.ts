@@ -23,6 +23,7 @@ import type { AutoModeService } from '../auto-mode-service.js';
 import { githubMergeService } from '../github-merge-service.js';
 import type { AuditService } from '../audit-service.js';
 import type { SettingsService } from '../settings-service.js';
+import type { HITLFormService } from '../hitl-form-service.js';
 import {
   createAgentState,
   initializeAgent,
@@ -50,6 +51,7 @@ export class EMAuthorityAgent {
   private readonly autoModeService: AutoModeService;
   private readonly auditService: AuditService;
   private readonly settingsService: SettingsService;
+  private readonly hitlFormService: HITLFormService | null;
 
   /** Agent state (agents, initialization, processing tracking, poll timers) */
   private readonly state: AgentState<EMCustomState>;
@@ -60,7 +62,8 @@ export class EMAuthorityAgent {
     featureLoader: FeatureLoader,
     autoModeService: AutoModeService,
     auditService: AuditService,
-    settingsService: SettingsService
+    settingsService: SettingsService,
+    hitlFormService?: HITLFormService
   ) {
     this.events = events;
     this.authorityService = authorityService;
@@ -68,6 +71,7 @@ export class EMAuthorityAgent {
     this.autoModeService = autoModeService;
     this.auditService = auditService;
     this.settingsService = settingsService;
+    this.hitlFormService = hitlFormService || null;
     this.state = createAgentState<EMCustomState>({
       pollTimers: new Map(),
     });
@@ -394,7 +398,15 @@ export class EMAuthorityAgent {
 
         if (assignDecision.verdict === 'require_approval') {
           logger.info(`Assignment requires approval for ${feature.id}`);
-          return;
+          const approved = await this.requestHITLApproval(
+            projectPath,
+            feature,
+            `Approve assigning "${feature.title}" (complexity: ${feature.complexity || 'medium'}) for agent execution?`
+          );
+          if (!approved) {
+            logger.info(`Assignment denied via HITL for ${feature.id}`);
+            return;
+          }
         }
 
         // Step 3: Propose transition ready → in_progress
@@ -417,7 +429,15 @@ export class EMAuthorityAgent {
 
         if (startDecision.verdict === 'require_approval') {
           logger.info(`Start transition requires approval for ${feature.id}`);
-          return;
+          const approved = await this.requestHITLApproval(
+            projectPath,
+            feature,
+            `Approve starting execution of "${feature.title}"?`
+          );
+          if (!approved) {
+            logger.info(`Start transition denied via HITL for ${feature.id}`);
+            return;
+          }
         }
 
         // Transition approved - update workItemState and trigger auto-mode
@@ -465,6 +485,87 @@ export class EMAuthorityAgent {
     if (wordCount > 300) return 'large';
     if (wordCount > 100) return 'medium';
     return 'small';
+  }
+
+  /**
+   * Request human approval via HITL form.
+   * Returns true if approved, false if denied or timed out.
+   */
+  private async requestHITLApproval(
+    projectPath: string,
+    feature: Feature,
+    question: string
+  ): Promise<boolean> {
+    if (!this.hitlFormService) {
+      logger.debug('No HITLFormService available, auto-denying approval request');
+      return false;
+    }
+
+    const form = this.hitlFormService.create({
+      title: `EM: Approve Feature Assignment`,
+      description: question,
+      steps: [
+        {
+          title: 'Decision',
+          description: `Feature: "${feature.title}" (${feature.id})`,
+          schema: {
+            type: 'object',
+            properties: {
+              decision: {
+                type: 'string',
+                title: 'Decision',
+                enum: ['approve', 'deny'],
+              },
+            },
+            required: ['decision'],
+          },
+          uiSchema: {
+            decision: { 'ui:widget': 'radio' },
+          },
+        },
+      ],
+      callerType: 'agent',
+      featureId: feature.id,
+      projectPath,
+      ttlSeconds: 300,
+    });
+
+    logger.info(`HITL approval form created: ${form.id} for feature ${feature.id}`);
+
+    const response = await this.waitForFormResponse(form.id, 300_000);
+    return response?.[0]?.decision === 'approve';
+  }
+
+  /**
+   * Wait for a HITL form response with timeout.
+   */
+  private waitForFormResponse(
+    formId: string,
+    timeoutMs: number
+  ): Promise<Record<string, unknown>[] | null> {
+    return new Promise((resolve) => {
+      let settled = false;
+      const unsub = this.events.subscribe((type, payload) => {
+        if (settled) return;
+        const p = payload as {
+          formId: string;
+          cancelled: boolean;
+          response?: Record<string, unknown>[];
+        };
+        if (type === 'hitl:form-responded' && p.formId === formId) {
+          settled = true;
+          unsub();
+          resolve(p.cancelled ? null : (p.response ?? null));
+        }
+      });
+      setTimeout(() => {
+        if (!settled) {
+          settled = true;
+          unsub();
+          resolve(null);
+        }
+      }, timeoutMs);
+    });
   }
 
   getAgent(projectPath: string): AuthorityAgent | null {

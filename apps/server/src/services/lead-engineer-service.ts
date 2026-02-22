@@ -2302,6 +2302,19 @@ export class LeadEngineerService {
             status: 'backlog',
           });
           logger.info(`Reset feature ${action.featureId}: ${action.reason}`);
+
+          this.events.emit('escalation:signal-received', {
+            source: 'lead_engineer',
+            severity: 'medium',
+            type: 'feature_reset',
+            context: {
+              featureId: action.featureId,
+              projectPath: session.projectPath,
+              reason: action.reason,
+            },
+            deduplicationKey: `reset_feature_${action.featureId}`,
+            timestamp: new Date().toISOString(),
+          });
         } catch (err) {
           logger.error(`Failed to reset feature ${action.featureId}:`, err);
         }
@@ -2429,6 +2442,19 @@ export class LeadEngineerService {
             featureId: action.featureId,
             action: 'abort_and_resume',
             reason: action.resumePrompt,
+          });
+
+          this.events.emit('escalation:signal-received', {
+            source: 'lead_engineer',
+            severity: 'medium',
+            type: 'agent_abort_and_resume',
+            context: {
+              featureId: action.featureId,
+              projectPath: session.projectPath,
+              resumePrompt: action.resumePrompt,
+            },
+            deduplicationKey: `abort_resume_${action.featureId}`,
+            timestamp: new Date().toISOString(),
           });
 
           logger.info(`Supervisor: resumed agent for ${action.featureId}`);

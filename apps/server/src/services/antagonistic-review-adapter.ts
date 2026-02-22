@@ -40,6 +40,8 @@ export interface ConsolidatedReview {
   totalDurationMs: number;
   totalCost?: number;
   traceId?: string;
+  threadId?: string;
+  hitlPending?: boolean;
   error?: string;
 }
 
@@ -62,11 +64,23 @@ export interface AdapterConfig {
 }
 
 /**
+ * Stored graph instance for HITL resume
+ */
+interface ActiveReview {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  graph: any;
+  traceId: string;
+  startTime: number;
+  prd: SPARCPrd;
+}
+
+/**
  * AntagonisticReviewAdapter - wraps flow execution with legacy interface
  */
 export class AntagonisticReviewAdapter {
   private config: AdapterConfig;
   private langfuse: LangfuseClient | null;
+  private activeReviews: Map<string, ActiveReview> = new Map();
 
   constructor(config: AdapterConfig = {}) {
     this.config = {
@@ -121,13 +135,52 @@ export class AntagonisticReviewAdapter {
         maxTokens: 8192,
       });
 
+      // Use thread ID for checkpointing (required for HITL resume)
+      const threadId = uuidv4();
+      const config = { configurable: { thread_id: threadId } };
+
       // Execute the flow with PRD state + injected models
-      const result = await graph.invoke({
-        prd,
-        hitlRequired: this.config.enableHITL,
-        smartModel,
-        fastModel: undefined,
-      });
+      const result = await graph.invoke(
+        {
+          prd,
+          hitlRequired: this.config.enableHITL,
+          smartModel,
+          fastModel: undefined,
+        },
+        config
+      );
+
+      // Check if graph paused at HITL interrupt
+      if (this.config.enableHITL) {
+        const snapshot = await graph.getState(config);
+        if (snapshot.next && snapshot.next.length > 0) {
+          // Graph interrupted — store for resume
+          this.activeReviews.set(threadId, { graph, traceId, startTime, prd });
+
+          const totalDurationMs = Date.now() - startTime;
+          const avaReview = this.extractAvaReview(result);
+          const jonReview = this.extractJonReview(result);
+          const resolution =
+            result.finalVerdict || result.consolidatedReview?.synthesizedReview || '';
+          const finalPRD = result.consolidatedPrd || this.extractFinalPRD(resolution, prd);
+
+          logger.info(
+            `Review paused for HITL at node(s): ${snapshot.next.join(', ')} (thread: ${threadId})`
+          );
+
+          return {
+            success: true,
+            avaReview,
+            jonReview,
+            resolution,
+            finalPRD,
+            totalDurationMs,
+            traceId,
+            threadId,
+            hitlPending: true,
+          };
+        }
+      }
 
       const totalDurationMs = Date.now() - startTime;
 
@@ -250,6 +303,95 @@ export class AntagonisticReviewAdapter {
         totalDurationMs,
         totalCost: 0,
         traceId,
+        error: errorMessage,
+      };
+    }
+  }
+
+  /**
+   * Resume a review that was paused for HITL input.
+   *
+   * @param threadId - Thread ID from the paused review
+   * @param feedback - Human feedback to inject into graph state
+   */
+  async resumeReview(threadId: string, feedback: string): Promise<ConsolidatedReview> {
+    const active = this.activeReviews.get(threadId);
+    if (!active) {
+      throw new Error(`No active review found for thread ${threadId}. It may have expired.`);
+    }
+
+    const { graph, traceId, startTime, prd } = active;
+    const config = { configurable: { thread_id: threadId } };
+
+    logger.info(`Resuming review for thread ${threadId} with HITL feedback`);
+
+    try {
+      // Inject HITL feedback into checkpoint state
+      await graph.updateState(config, { hitlFeedback: feedback });
+
+      // Resume execution from the interrupt point
+      const result = await graph.invoke(null, config);
+
+      const totalDurationMs = Date.now() - startTime;
+
+      // Clean up stored graph
+      this.activeReviews.delete(threadId);
+
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      const avaReview = this.extractAvaReview(result);
+      const jonReview = this.extractJonReview(result);
+      const resolution = result.finalVerdict || result.consolidatedReview?.synthesizedReview || '';
+      const finalPRD = result.consolidatedPrd || this.extractFinalPRD(resolution, prd);
+
+      // Flush Langfuse events
+      await this.langfuse?.flush();
+
+      logger.info(`Resumed review completed in ${totalDurationMs}ms (thread: ${threadId})`);
+
+      return {
+        success: true,
+        avaReview,
+        jonReview,
+        resolution,
+        finalPRD,
+        totalDurationMs,
+        traceId,
+        threadId,
+        hitlPending: false,
+      };
+    } catch (error) {
+      const totalDurationMs = Date.now() - startTime;
+      const errorMessage = error instanceof Error ? error.message : String(error);
+
+      // Clean up on failure
+      this.activeReviews.delete(threadId);
+
+      logger.error(`Resume failed for thread ${threadId}: ${errorMessage}`);
+
+      return {
+        success: false,
+        avaReview: {
+          success: false,
+          reviewer: 'ava',
+          verdict: '',
+          durationMs: 0,
+          error: errorMessage,
+        },
+        jonReview: {
+          success: false,
+          reviewer: 'jon',
+          verdict: '',
+          durationMs: 0,
+          error: errorMessage,
+        },
+        resolution: '',
+        totalDurationMs,
+        traceId,
+        threadId,
+        hitlPending: false,
         error: errorMessage,
       };
     }

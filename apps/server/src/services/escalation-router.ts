@@ -27,6 +27,10 @@ export interface EscalationLogEntry {
   routedTo: string[];
   deduplicated: boolean;
   rateLimited: string[];
+  acknowledged?: boolean;
+  acknowledgedBy?: string;
+  acknowledgedAt?: string;
+  acknowledgeNotes?: string;
 }
 
 /**
@@ -280,6 +284,53 @@ export class EscalationRouter {
     if (this.signalLog.length > this.MAX_LOG_ENTRIES) {
       this.signalLog = this.signalLog.slice(-this.MAX_LOG_ENTRIES);
     }
+  }
+
+  /**
+   * Acknowledge a signal by its deduplication key.
+   * Finds the most recent matching log entry and marks it acknowledged.
+   * Optionally clears the dedup window so the signal can re-fire.
+   */
+  acknowledgeSignal(
+    deduplicationKey: string,
+    acknowledgedBy: string,
+    notes?: string,
+    clearDedup = false
+  ): { success: boolean; error?: string } {
+    // Find the most recent log entry matching this key
+    const entry = [...this.signalLog]
+      .reverse()
+      .find((e) => e.signal.deduplicationKey === deduplicationKey);
+
+    if (!entry) {
+      return { success: false, error: `No signal found with key "${deduplicationKey}"` };
+    }
+
+    if (entry.acknowledged) {
+      return { success: false, error: `Signal already acknowledged by ${entry.acknowledgedBy}` };
+    }
+
+    entry.acknowledged = true;
+    entry.acknowledgedBy = acknowledgedBy;
+    entry.acknowledgedAt = new Date().toISOString();
+    entry.acknowledgeNotes = notes;
+
+    // Optionally clear dedup window so signal can re-fire if it recurs
+    if (clearDedup) {
+      this.recentSignals.delete(deduplicationKey);
+    }
+
+    logger.info(`Signal acknowledged: ${deduplicationKey} by ${acknowledgedBy}`);
+
+    if (this.events) {
+      this.events.emit('escalation:acknowledged', {
+        deduplicationKey,
+        acknowledgedBy,
+        notes,
+      });
+    }
+
+    return { success: true };
   }
 
   /**

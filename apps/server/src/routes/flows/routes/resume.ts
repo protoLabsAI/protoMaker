@@ -11,7 +11,7 @@ export interface ResumeRequest {
   hitlFeedback: string;
 }
 
-export function createResumeHandler(_reviewService: AntagonisticReviewService) {
+export function createResumeHandler(reviewService: AntagonisticReviewService) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
       const { threadId, hitlFeedback } = req.body as ResumeRequest;
@@ -27,13 +27,8 @@ export function createResumeHandler(_reviewService: AntagonisticReviewService) {
         return;
       }
 
-      // TODO: Implement resume logic when HITL (Human-in-the-Loop) support is added
-      // For now, return a placeholder response indicating the feature is not yet implemented
-      res.status(501).json({
-        success: false,
-        error:
-          'Resume functionality is not yet implemented. HITL interrupts are not currently supported.',
-      });
+      const result = await reviewService.resumeReview(threadId, hitlFeedback);
+      res.json(result);
     } catch (error) {
       logError(error, 'Resume antagonistic review flow failed');
       res.status(500).json({ success: false, error: getErrorMessage(error) });

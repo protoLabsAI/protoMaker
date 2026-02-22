@@ -46,6 +46,10 @@ export interface ConsolidatedReview {
   resolution: string;
   finalPRD?: SPARCPrd;
   totalDurationMs: number;
+  totalCost?: number;
+  traceId?: string;
+  threadId?: string;
+  hitlPending?: boolean;
   error?: string;
 }
 
@@ -268,6 +272,20 @@ export class AntagonisticReviewService {
         error: errorMessage,
       };
     }
+  }
+
+  /**
+   * Resume a review that was paused for HITL input
+   */
+  async resumeReview(threadId: string, hitlFeedback: string): Promise<ConsolidatedReview> {
+    await this.ensureInitialized();
+
+    if (!this.adapter) {
+      throw new Error('Flow adapter not available — cannot resume review');
+    }
+
+    logger.info(`Resuming review for thread ${threadId}`);
+    return this.adapter.resumeReview(threadId, hitlFeedback);
   }
 
   /**
