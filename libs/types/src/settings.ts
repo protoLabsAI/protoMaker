@@ -2320,6 +2320,18 @@ export interface WorkflowSettings {
     /** Whether to auto-approve PRDs without user review (default: false) */
     autoApprovePRD: boolean;
   };
+  bugs: {
+    /** Enable bug tracking pipeline (creates Linear issues from failures, default: false) */
+    enabled: boolean;
+    /** Linear project ID for the "Bugs" project */
+    linearProjectId?: string;
+    /** Linear team ID (falls back to integrations.linear.teamId) */
+    linearTeamId?: string;
+    /** Also create GitHub issues (existing behavior, default: true) */
+    createGithubIssues?: boolean;
+    /** Minimum severity to create Linear issue: 1=urgent, 2=high, 3=medium, 4=low (default: 3) */
+    minLinearPriority?: number;
+  };
 }
 
 /** Default workflow settings */
@@ -2343,6 +2355,11 @@ export const DEFAULT_WORKFLOW_SETTINGS: WorkflowSettings = {
     defaultCategory: 'ops',
     autoResearch: false,
     autoApprovePRD: false,
+  },
+  bugs: {
+    enabled: false,
+    createGithubIssues: true,
+    minLinearPriority: 3,
   },
 };
 

@@ -256,6 +256,8 @@ export type EventType =
   // Retro improvement events (reflection loop: REFLECT → REPEAT)
   | 'retro:improvements:created'
   | 'retro:improvement:linear-sync'
+  // Bug tracking pipeline events (failure → triage → Linear)
+  | 'bug:linear-sync'
   // Docs update detector events
   | 'docs:update-needed'
   // Settings change events

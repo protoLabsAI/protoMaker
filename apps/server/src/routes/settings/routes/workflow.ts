@@ -66,6 +66,7 @@ export function createUpdateWorkflowHandler(
         retro: { ...current.retro, ...workflow.retro },
         cleanup: { ...current.cleanup, ...workflow.cleanup },
         signalIntake: { ...current.signalIntake, ...workflow.signalIntake },
+        bugs: { ...current.bugs, ...workflow.bugs },
       };
 
       await settingsService.updateProjectSettings(projectPath, {

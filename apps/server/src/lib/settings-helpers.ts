@@ -775,6 +775,7 @@ export async function getWorkflowSettings(
           ...DEFAULT_WORKFLOW_SETTINGS.signalIntake,
           ...projectSettings.workflow.signalIntake,
         },
+        bugs: { ...DEFAULT_WORKFLOW_SETTINGS.bugs, ...projectSettings.workflow.bugs },
       };
     }
     return DEFAULT_WORKFLOW_SETTINGS;
