@@ -164,6 +164,8 @@ RUN mkdir -p /data /projects && chown automaker:automaker /data /projects
 # Configure git for mounted volumes and authentication
 # Use --system so it's not overwritten by mounted user .gitconfig
 RUN git config --system --add safe.directory '*' && \
+    # Rewrite SSH GitHub URLs to HTTPS so GH_TOKEN auth works in containers
+    git config --system url."https://github.com/".insteadOf "git@github.com:" && \
     # Use gh as credential helper (works with GH_TOKEN env var)
     git config --system credential.helper '!gh auth git-credential'
 

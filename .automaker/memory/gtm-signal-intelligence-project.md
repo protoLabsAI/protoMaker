@@ -1,3 +1,14 @@
+---
+tags: []
+summary: "relevantTo: []"
+relevantTo: []
+importance: 0.5
+relatedFiles: []
+usageStats:
+  loaded: 3
+  referenced: 3
+  successfulFeatures: 3
+---
 # GTM Signal Intelligence & Content Operations
 
 ## Status: ACTIVE — Linear project created, content pipeline running

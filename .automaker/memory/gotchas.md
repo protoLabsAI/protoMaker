@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 259
-  referenced: 136
-  successfulFeatures: 136
+  loaded: 271
+  referenced: 141
+  successfulFeatures: 141
 ---
 # gotchas
 
@@ -200,3 +200,15 @@ usageStats:
 - **Situation:** Naive approach of capturing all console.error() calls causes tests to fail on library-generated warnings unrelated to application code
 - **Root cause:** React Flow uses ResizeObserver for internal layout calculations which triggers warnings in test/CI sandboxes. WebSocket connections in test environments generate spurious errors. Capturing all errors assumes application should be warning-free, but third-party libraries may not comply.
 - **How to avoid:** Must maintain list of known warnings (fragile to library updates) but prevents flaky tests; adds cognitive load to test interpretation
+
+#### [Gotcha] File watcher detects MKV immediately when OBS creates it, but file is still being written. Solution: wait 5 seconds for file size stabilization before triggering remux. (2026-02-22)
+- **Situation:** `fs.watch()` fires on file creation event, but OBS output buffering means file is incomplete. Processing incomplete MKV causes corrupt MP4.
+- **Root cause:** Empirical 5-second threshold accounts for OBS buffer flush behavior. Avoids platform-specific file locking checks. Simple and reliable for this specific use case.
+- **How to avoid:** Automatic and reliable stabilization vs. 5-second artificial delay (non-critical since remux is fast relative to streaming duration).
+
+### Accepted pre-existing TypeScript build error in @automaker/platform package (p-limit import issue) as acceptable since feature only creates static HTML files (2026-02-22)
+- **Context:** Build verification encountered compilation error in unrelated package, but feature doesn't depend on it
+- **Why:** Feature has zero dependency on broken package, proceeding unblocks delivery, fixing unrelated errors is scope creep, static HTML files can be deployed regardless
+- **Rejected:** Fixing the build error (scope creep); blocking feature on unrelated issues
+- **Trade-offs:** Faster feature delivery; leaves technical debt in codebase; hides fragility in build system
+- **Breaking if changed:** If feature requirements change and now require the broken package, hidden debt becomes visible crisis; if someone tries to build entire monorepo, they hit the error and must debug it; if CI/CD fails on build, teams can't easily distinguish feature-related failures from pre-existing ones

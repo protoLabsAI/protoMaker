@@ -5,9 +5,9 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 66
-  referenced: 40
-  successfulFeatures: 40
+  loaded: 70
+  referenced: 41
+  successfulFeatures: 41
 ---
 # api
 
@@ -445,3 +445,15 @@ usageStats:
 - **Situation:** The service returns `SignalIntakeStatus` interface, but the API response still maps to the original shape clients expect
 - **Root cause:** Backwards compatibility. Changing the response shape would break existing clients consuming `/api/engine/status`. The summary notes 'Existing API shape preserved (backwards compatible)'
 - **How to avoid:** The interface wraps data in a specific shape, requiring careful field mapping even though the underlying data structure changed
+
+#### [Pattern] OpusClip requires video URLs, not file uploads. Solution: temporary routes (`POST /api/stream-pipeline/temp/:filename`) that serve MP4 to OpusClip, then auto-delete after download. (2026-02-22)
+- **Problem solved:** OpusClip REST API accepts `videoUrl` parameter only. Need secure, temporary access to MP4 without permanent hosting infrastructure.
+- **Why this works:** Temporary routes avoid external storage (S3/CDN), provide access control (auto-expiring), and enable cleanup. OpusClip can fetch from any URL.
+- **Trade-offs:** No external storage setup needed vs. requires timeout logic and cleanup handling if OpusClip fails to download (orphaned files).
+
+### Backward compatibility maintained for Twitch by keeping existing JSONL file persistence while simultaneously adding new `signal:received` event emission. (2026-02-22)
+- **Context:** Twitch service already persists data to JSONL files. Need to integrate with new signal monitoring pipeline without breaking existing integrations.
+- **Why:** Prevents breaking changes to any downstream code that depends on JSONL files. Allows gradual migration to signal-based pipeline. Reduces scope of this feature by not requiring migration of existing code.
+- **Rejected:** Replace JSONL with signals only - would break any code reading JSONL files; Migrate all data - would require separate data migration feature.
+- **Trade-offs:** Data duplication (same data in JSONL and as events) increases complexity and storage, but provides safe incremental migration path. Extra code paths in Twitch service to maintain both formats.
+- **Breaking if changed:** If JSONL persistence is removed, any downstream code parsing those files breaks. If signal emission is removed, signal pipeline has missing data. If formats diverge, they become out of sync.

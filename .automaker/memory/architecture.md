@@ -5,9 +5,9 @@ relevantTo: [architecture]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 16
-  referenced: 11
-  successfulFeatures: 11
+  loaded: 20
+  referenced: 13
+  successfulFeatures: 13
 ---
 # architecture
 
@@ -2131,3 +2131,126 @@ usageStats:
 - **Situation:** Attempting to count nodes with grep -c '{ id:' missed nodes that spanned multiple lines; manual verification showed all 21 nodes present
 - **Root cause:** Grep with single-line patterns can't match objects that break across lines. Node objects use multi-line formatting for readability.
 - **How to avoid:** Easier: Multi-line formatting is more readable. Harder: Can't use simple text counting; requires reading actual content or AST parsing
+
+### Using own design system (@protolabs/ui branded as 'Glyphkit') as portfolio/proof-of-concept rather than third-party UI kit (2026-02-22)
+- **Context:** Storybook deployment showcases design system to external users and potential clients
+- **Why:** Demonstrates protoLabs methodology with real implementation; provides credible proof of design system capabilities and their design tooling approach
+- **Rejected:** Use third-party design system, build separate demo system, or use generic component library
+- **Trade-offs:** Requires maintaining public-facing Storybook quality; ties design system releases to marketing cadence; but increases credibility and dog-food testing
+- **Breaking if changed:** If @protolabs/ui is removed or replaced, portfolio proof-of-concept disappears; existing links to Storybook become invalid
+
+### Cloudflare Pages + Wrangler deployment path vs GitHub Pages or simpler alternatives (2026-02-22)
+- **Context:** Static site deployment for design system documentation/reference
+- **Why:** Likely indicates existing Cloudflare infrastructure investment; provides direct integration with Cloudflare ecosystem; supports custom domain setup
+- **Rejected:** GitHub Pages (simpler, built-in), Vercel (feature-rich but third-party), Netlify (similar), S3 (requires more configuration)
+- **Trade-offs:** More setup steps and API token management required; fewer feature niceties than Vercel; but tighter Cloudflare integration and potentially better performance for existing Cloudflare customers
+- **Breaking if changed:** Requires valid Cloudflare API credentials and correct account configuration; changing hosts requires updating deployment workflow
+
+#### [Pattern] Explicit multi-step operational ceremony for infrastructure setup documented before automation enabled (2026-02-22)
+- **Problem solved:** Cloudflare Pages project creation and API credential configuration required before GitHub Actions can deploy
+- **Why this works:** Makes prerequisite setup explicit and prevents silent deployment failures; documents expected manual steps once; provides debugging path if automation fails
+- **Trade-offs:** Requires one-time manual setup and documentation overhead; but prevents mysterious deployment failures from missing credentials or misconfigured projects
+
+#### [Pattern] Dual operational paths: automated GitHub Actions deployment plus manual CLI commands in documentation (2026-02-22)
+- **Problem solved:** Users can trigger Storybook deployment either via git push (automated) or explicit commands (manual/testing)
+- **Why this works:** Enables debugging without committing, one-off deployments, testing in CI environment before enabling automation, and fallback if GitHub Actions fails
+- **Trade-offs:** More documentation to maintain; but significantly increases operational flexibility and debugging capability
+
+#### [Gotcha] Path-based workflow triggers (`libs/ui/**`) are tightly coupled to directory structure; refactoring library location silently disables deployments (2026-02-22)
+- **Situation:** Workflow only runs on pushes affecting `libs/ui/**` files, but this path pattern isn't validated or monitored
+- **Root cause:** Optimizes CI efficiency by avoiding expensive Storybook rebuilds for unrelated commits; but creates hidden brittle dependency
+- **How to avoid:** Saves CI costs and time; but creates risk of silent failures if library structure changes
+
+### Used awk/sed incremental extraction instead of loading entire 4,480-line file into memory for refactoring (2026-02-22)
+- **Context:** Refactoring monolithic index.ts with 127 tool definitions into domain modules
+- **Why:** Scales to files of arbitrary size; memory footprint remains constant regardless of file size; pattern generalizes across similar legacy code refactoring tasks
+- **Rejected:** In-memory string manipulation; line-by-line reading in high-level language with concatenation
+- **Trade-offs:** Slightly more complex shell commands, but enables processing of arbitrarily large files; approach can be reused for similar extraction patterns in codebase
+- **Breaking if changed:** If scaled to larger files with in-memory approach, hits memory limits causing script failures; refactoring process would become O(n) space instead of O(1)
+
+### Preserved handleTool() switch statement as centralized router in index.ts rather than distributing across domain modules (2026-02-22)
+- **Context:** Could have implemented factory pattern with self-registering modules or dynamic routing registry; instead kept 127-case switch as single source of truth
+- **Why:** Prevents silent discovery failures where tools are added to modules but not registered; enables grep-based verification that all 127 cases present; avoids circular dependencies between modules; maintains explicit dispatch visibility
+- **Rejected:** Distributed switch/case logic per domain module with factory registration; dynamic routing registry with module.register() callbacks
+- **Trade-offs:** Index.ts retains routing logic (not purely aggregation layer) but guarantees consistency; distributed approach appears more modular but creates hidden dependency risks where tool availability isn't guaranteed at runtime
+- **Breaking if changed:** If refactored to distributed registry pattern, developers could add tool definitions without registering in switch statement, causing runtime failures or features appearing unavailable despite being implemented
+
+### Organized tools into 13 semantic domain modules rather than optimizing module count or pure functional grouping (2026-02-22)
+- **Context:** Example: project-tools bundles Project Spec + Orchestration + Lifecycle (domains that share business concerns); could have been 4-5 large functional modules or 20+ granular feature modules
+- **Why:** 13 modules balances cognitive load against discoverability sweet spot; developers can reason about related business concerns together; aligns with team's ubiquitous language; moderate navigation overhead compared to extremes
+- **Rejected:** Fewer larger modules (4-5) organized by pure function type; granular feature-based split (20+ modules); arbitrary alphabetical distribution
+- **Trade-offs:** Requires navigating more files than 4-module approach, but maintains coherent domain reasoning vs. 20-module scattered complexity; some domains intentionally blur traditional architectural boundaries
+- **Breaking if changed:** If consolidated to fewer larger modules, finding related tools requires searching across unrelated code; if granularized to 20+ modules, cross-domain refactoring becomes scattered across many files making changes error-prone
+
+#### [Pattern] Used static spread operator aggregation for tool collection instead of dynamic registry or factory patterns (2026-02-22)
+- **Problem solved:** Index.ts imports 13 modules and combines arrays with `{...featureTools, ...agentTools, ...queueTools}` syntax
+- **Why this works:** All tool references visible at parse time enabling static analysis; build tools can perform tree-shaking; verification straightforward with grep (127 total tools always verifiable); avoids runtime reflection/magic that obscures tool availability
+- **Trade-offs:** Requires manual aggregation list in index.ts maintaining explicit visibility; dynamic approach would enable module independence at cost of losing build-time guarantees
+
+#### [Gotcha] Section marker-based extraction creates coupling between documentation comments and code organization - markers drifting from actual code cause silent tool misplacement (2026-02-22)
+- **Situation:** Used 30+ identified comment markers ('## Feature Management Tools', etc.) as section boundaries via grep/awk; relies on markers accurately reflecting actual tool grouping
+- **Root cause:** Pragmatic approach for legacy code where structure is unclear; safer than full AST parsing; avoids need to understand code semantics deeply; can be automated reliably
+- **How to avoid:** Section markers are fragile if documentation drifts but much safer than semantic transformation; won't catch drift until code review or feature testing reveals tools in wrong domain
+
+#### [Pattern] Session state persistence to filesystem (`.automaker/stream-sessions/{sessionId}.json`) after each state transition enables recovery from server restarts during long-running external async operations (OpusClip processing). (2026-02-22)
+- **Problem solved:** OpusClip processing can take hours and the polling loop might be interrupted by server crash. Without persistence, progress is lost and OpusClip job orphaned.
+- **Why this works:** Atomic state saves after each transition create checkpoints. On restart, service reloads all sessions and resumes polling exactly where it left off. This is simpler than database persistence for a single-server system with atomic per-session updates.
+- **Trade-offs:** Easy crash recovery and simplicity of file-based format vs. lack of queryability and concurrency limitations (but single-server architecture mitigates this).
+
+### State machine includes both automated steps (remux, OpusClip polling) and manual steps (Gling editing, TubeBuddy scheduling) as explicit state transitions. Manual steps must be advanced via API (`/api/stream-pipeline/sessions/advance`). (2026-02-22)
+- **Context:** Full YouTube Shorts workflow requires human intervention (video editing, metadata). Cannot be fully automated, but workflow should be visible and trackable as unified system.
+- **Why:** Unified state machine means single source of truth for workflow progress. UI/frontend can display complete journey from recording to published. Manual steps become explicit state transitions, making workflow status queryable.
+- **Rejected:** Separate tracking system for manual steps would require UI to reconcile two independent state systems. Skipping manual tracking loses visibility into why stream isn't published yet.
+- **Trade-offs:** Unified visibility and state tracking vs. requires explicit API calls to advance manual steps (users can't auto-complete these, system doesn't know when human work is done).
+- **Breaking if changed:** Removing manual steps from state machine loses workflow visibility. Users cannot query 'is this stream still being edited?' Users must track Gling/TubeBuddy outside the system.
+
+### StreamPipelineSettings stored in GlobalSettings (not ProjectSettings). Single configuration applies to all projects. (2026-02-22)
+- **Context:** Ambiguous whether settings are personal workflow (global) or per-project configuration. Josh has one Twitch channel and one OBS setup.
+- **Why:** Settings are tied to personal hardware/accounts (OBS output directory, Twitch channel, OpusClip credentials), not project-specific. Global scope avoids duplication if Josh adds new projects. Simpler configuration experience.
+- **Rejected:** ProjectSettings would support multiple Twitch channels per installation, but adds unnecessary complexity for Josh's current single-channel setup.
+- **Trade-offs:** Simpler configuration and setup vs. less flexible for future multi-channel scenarios (would require settings migration).
+- **Breaking if changed:** Changing to ProjectSettings requires updating initialization, UI, and settings queries to be project-aware.
+
+#### [Gotcha] MCP tool authentication requirement blocked automated content generation pipeline, forcing manual content creation as workaround (2026-02-22)
+- **Situation:** Feature required blog post generation; content pipeline tools (create_content, export_content) were available via MCP but required API authentication that wasn't accessible
+- **Root cause:** Chose manual HTML content creation to unblock feature rather than waiting for auth setup, maintaining delivery timeline
+- **How to avoid:** Manual content guaranteed quality and control but is higher effort per post; automated pipeline would enable rapid future posts but adds infrastructure dependency and requires solved authentication
+
+#### [Pattern] Used pure HTML with Tailwind CDN (script-based, no build step) instead of SSG/build system for site content (2026-02-22)
+- **Problem solved:** Needed static site content deployable to Cloudflare Pages without build infrastructure, maximizing portability and deployment speed
+- **Why this works:** Eliminates build tool dependency, allows content to be deployed without Node.js/npm at deployment time, reduces surface area for deployment failures, makes content portable across environments
+- **Trade-offs:** Simpler deployment and easier hand-off to non-technical users; harder to reuse component code, no shared templating between pages, duplicated HTML structure, no server-side capabilities
+
+#### [Pattern] Storybook built locally then copied to site/ as pre-built static artifact for deployment, rather than building it as part of site deployment (2026-02-22)
+- **Problem solved:** Design system documentation (Storybook) needed to be published alongside marketing site; both are static content but built independently
+- **Why this works:** Decouples design system build lifecycle from site build lifecycle, allows independent versioning, treats component documentation as a versioned release artifact, reduces runtime dependencies at deployment time
+- **Trade-offs:** Simpler site-only deployment (no npm/build tools needed); version skew possible if Storybook not rebuilt before deploy, larger repository size from static artifacts, build workflow requires manual step
+
+### Created comprehensive DEPLOYMENT.md with deployment instructions, social media announcement templates, and measurement checklist as formal part of feature delivery (2026-02-22)
+- **Context:** New content launch requires coordination across deployment, announcement, and measurement - traditionally handled via Slack/verbal instructions, creating friction and inconsistency
+- **Why:** Formalizes launch process making it repeatable and team-independent, enables anyone to conduct launch without institutional knowledge, reduces communication overhead, creates accountability trail
+- **Rejected:** Verbal Slack instructions; ad-hoc deployment process; deployment documentation in README or internal wiki
+- **Trade-offs:** Higher upfront documentation effort; enables consistent repeatable launches, reduces launch friction, becomes source of truth; requires maintenance if process changes
+- **Breaking if changed:** If deployment process changes without updating documentation, teams follow outdated instructions and launch fails; if documentation is lost or goes out of sync, it becomes a liability pointing teams in wrong direction
+
+#### [Pattern] Documented the unused content pipeline tools (create_content, review_content, export_content) in DEPLOYMENT.md as reference for future blog posts, even though they weren't used for this feature (2026-02-22)
+- **Problem solved:** MCP tools existed for automated content generation but had authentication barriers; feature was completed via manual creation
+- **Why this works:** Enables future blog posts to use pipeline without re-discovery effort, captures knowledge of existing infrastructure, reduces friction when authentication is eventually solved, serves as runbook for team
+- **Trade-offs:** Documentation overhead now for future benefit; prevents re-discovery work, enables self-service workflow, creates path to automation; increases maintenance burden if tools change
+
+#### [Pattern] Event-driven centralized signal classification: All monitors emit generic `signal:received` events which are then classified and routed by SignalIntakeService, rather than each monitor handling its own signal processing. (2026-02-22)
+- **Problem solved:** Multiple social platforms (Twitter, YouTube, Substack, RSS) each have different signal structures but need to feed into a single GTM pipeline.
+- **Why this works:** Centralizes routing logic in one place (SignalIntakeService.classifySignal), allowing new platforms to be added without modifying the router. Enables consistent signal processing pipeline regardless of source. Follows single responsibility principle.
+- **Trade-offs:** Adds one extra layer (monitor → event → SignalIntakeService → GTM) increasing latency slightly, but provides centralized location for business logic and easier to test signal classification independently.
+
+#### [Gotcha] Type package (`libs/types`) must be rebuilt independently before server compilation after adding new type exports, due to monorepo dependency chain. (2026-02-22)
+- **Situation:** Added new monitor config interfaces to `agent-roles.ts`, updated `index.ts` exports, but server TypeScript compilation still failed to see new types until `libs/types/dist` was regenerated.
+- **Root cause:** Server compilation depends on pre-built type definitions in `libs/types/dist`, not source files. Changes to source don't auto-propagate to dist without running build script.
+- **How to avoid:** Monorepo structure requires explicit build ordering vs single unified build simplicity. Caught early but requires developer awareness.
+
+### Integration registration (in BuiltInIntegrations) is decoupled from initialization wiring - integrations are registered but not connected to server startup sequence. (2026-02-22)
+- **Context:** New integrations (Twitter, YouTube, Substack, RSS) are defined and registered, but their initialization/startup is deferred to future features.
+- **Why:** Keeps this feature focused on core service implementation. Allows startup wiring to be implemented separately and potentially configured differently (e.g., conditionally enable platforms). Prevents circular dependencies.
+- **Rejected:** Wire initialization immediately - would expand scope; Skip registration - would require duplicate work later.
+- **Trade-offs:** Cleaner separation of concerns vs gap where integrations exist but don't run. Simpler current feature vs more work in future feature.
+- **Breaking if changed:** If initialization code assumes all registered integrations are initialized, it will have missing services. If startup wiring is never implemented, integrations register but never start.
