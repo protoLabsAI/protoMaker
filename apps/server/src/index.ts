@@ -640,6 +640,47 @@ events.subscribe(async (type, payload) => {
   }
 });
 
+// Listen for bug:linear-sync events and create Linear issues in the Bugs project
+events.subscribe(async (type, payload) => {
+  if (type !== 'bug:linear-sync') return;
+  try {
+    const p = payload as {
+      projectPath: string;
+      title: string;
+      description: string;
+      priority: number;
+      failureCategory: string;
+      featureId: string;
+    };
+
+    const { getWorkflowSettings } = await import('./lib/settings-helpers.js');
+    const workflowSettings = await getWorkflowSettings(p.projectPath, settingsService, '[Bugs]');
+    if (!workflowSettings.bugs.enabled || !workflowSettings.bugs.linearProjectId) return;
+
+    const projectSettings = await settingsService.getProjectSettings(p.projectPath);
+    const teamId =
+      workflowSettings.bugs.linearTeamId || projectSettings.integrations?.linear?.teamId;
+    if (!teamId) {
+      logger.warn('[Bugs] No Linear teamId configured, skipping bug issue creation');
+      return;
+    }
+
+    const { LinearMCPClient } = await import('./services/linear-mcp-client.js');
+    const linearClient = new LinearMCPClient(settingsService, p.projectPath);
+    const result = await linearClient.createIssue({
+      title: p.title,
+      description: p.description,
+      teamId,
+      projectId: workflowSettings.bugs.linearProjectId,
+      priority: p.priority ?? 3,
+    });
+
+    logger.info(`[Bugs] Created Linear issue ${result.identifier}: ${p.title}`);
+  } catch (error) {
+    logger.warn('[Bugs] Failed to create Linear issue for bug:', error);
+  }
+});
+
 // Initialize Changelog Service for generating changelogs on milestone/project completion
 const { changelogService } = await import('./services/changelog-service.js');
 changelogService.initialize(events, settingsService, featureLoader, projectService);
@@ -795,6 +836,20 @@ eventHookService.initialize(
   discordBotService
 );
 
+// Bridge integration:discord events to Discord bot service
+// CeremonyService, IntegrationService, and ChangelogService emit these events
+// with { action: 'send_message', channelId, content } payloads
+events.subscribe(async (type, payload) => {
+  if (type !== 'integration:discord') return;
+  const p = payload as { channelId?: string; content?: string; action?: string };
+  if (p.action !== 'send_message' || !p.channelId || !p.content) return;
+  try {
+    await discordBotService.sendToChannel(p.channelId, p.content);
+  } catch (error) {
+    logger.error('Failed to deliver integration:discord event:', error);
+  }
+});
+
 // Initialize Agent Discord Router for agent-to-Discord message routing
 // Must be imported after DiscordBotService is initialized
 const { AgentDiscordRouter } = await import('./services/agent-discord-router.js');
@@ -810,7 +865,12 @@ escalationRouter.registerChannel(new DiscordDMChannel(discordBotService, events)
 
 // Initialize Issue Management Pipeline (failure → triage → GitHub issue → Discord)
 const triageService = new TriageService(events);
-const issueCreationService = new IssueCreationService(events, featureLoader, triageService);
+const issueCreationService = new IssueCreationService(
+  events,
+  featureLoader,
+  triageService,
+  settingsService
+);
 issueCreationService.initialize();
 
 // Initialize Linear Agent Service and Router for Linear agent integration
