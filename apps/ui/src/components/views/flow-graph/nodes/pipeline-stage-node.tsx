@@ -132,6 +132,7 @@ function PipelineStageNodeComponent({ data }: NodeProps & { data: PipelineStageN
         <Handle
           type="target"
           position={Position.Top}
+          id="top"
           className="!bg-border !w-1.5 !h-1.5 !border-0"
         />
         <Handle
