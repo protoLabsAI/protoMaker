@@ -1,6 +1,6 @@
 {
   "name": "@automaker/flows",
-  "version": "1.0.0",
+  "version": "0.2.0",
   "type": "module",
   "description": "LangGraph state graph examples and patterns for AutoMaker",
   "main": "dist/index.js",
@@ -36,8 +36,8 @@
     "node": ">=22.0.0 <23.0.0"
   },
   "dependencies": {
-    "@automaker/types": "1.0.0",
-    "@automaker/utils": "1.0.0",
+    "@automaker/types": "0.2.0",
+    "@automaker/utils": "0.2.0",
     "@langchain/anthropic": "^0.3.10",
     "@langchain/core": "^0.3.33",
     "@langchain/langgraph": "^0.2.26"

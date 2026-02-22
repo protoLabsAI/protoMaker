@@ -1,6 +1,6 @@
 {
   "name": "@automaker/spec-parser",
-  "version": "1.0.0",
+  "version": "0.2.0",
   "type": "module",
   "description": "XML spec parser for AutoMaker - parses and generates app_spec.txt XML",
   "main": "dist/index.js",
@@ -32,7 +32,7 @@
     "node": ">=22.0.0 <23.0.0"
   },
   "dependencies": {
-    "@automaker/types": "1.0.0",
+    "@automaker/types": "0.2.0",
     "fast-xml-parser": "^5.3.7"
   },
   "devDependencies": {

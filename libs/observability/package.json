@@ -1,6 +1,6 @@
 {
   "name": "@automaker/observability",
-  "version": "1.0.0",
+  "version": "0.2.0",
   "type": "module",
   "description": "Observability and tracing utilities for AutoMaker",
   "main": "dist/index.js",
@@ -33,8 +33,8 @@
     "node": ">=22.0.0 <23.0.0"
   },
   "dependencies": {
-    "@automaker/types": "1.0.0",
-    "@automaker/utils": "1.0.0",
+    "@automaker/types": "0.2.0",
+    "@automaker/utils": "0.2.0",
     "langfuse": "^3.32.0",
     "zod": "^4.3.6"
   },

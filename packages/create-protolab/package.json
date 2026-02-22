@@ -1,6 +1,6 @@
 {
   "name": "create-protolab",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Scan any repo, compare against the ProtoLabs gold standard, and scaffold the full automation stack",
   "type": "module",
   "bin": {

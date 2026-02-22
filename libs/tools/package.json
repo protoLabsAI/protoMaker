@@ -1,6 +1,6 @@
 {
   "name": "@automaker/tools",
-  "version": "1.0.0",
+  "version": "0.2.0",
   "type": "module",
   "description": "Unified tool definition and registry system for AutoMaker",
   "main": "dist/index.js",
