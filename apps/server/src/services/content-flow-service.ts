@@ -261,14 +261,14 @@ export class ContentFlowService {
       };
     }
 
-    const finalContentReview = state.finalContentReview as
+    const finalReview = state.finalReview as
       | { percentage: number; passed: boolean; verdict: string }
       | undefined;
-    if (finalContentReview) {
+    if (finalReview) {
       reviewScores.content = {
-        percentage: finalContentReview.percentage,
-        passed: finalContentReview.passed,
-        verdict: finalContentReview.verdict,
+        percentage: finalReview.percentage,
+        passed: finalReview.passed,
+        verdict: finalReview.verdict,
       };
     }
 
@@ -305,8 +305,12 @@ export class ContentFlowService {
         ? { configurable: { thread_id: runId }, recursionLimit: 150 }
         : { recursionLimit: 150 };
 
-      // Stream the flow to get per-node updates
-      let lastState: Record<string, unknown> = {};
+      // Stream the flow to get per-node updates.
+      // Initialize with config so metadata can access topic/format.
+      // Fields with reducers (researchResults, sections, reviewFeedback, outputs)
+      // need array accumulation since stream deltas don't apply reducers.
+      const REDUCER_FIELDS = new Set(['researchResults', 'sections', 'reviewFeedback', 'outputs']);
+      let lastState: Record<string, unknown> = { config };
       const stream = await flow.stream({ config: config as never }, streamConfig);
 
       for await (const update of stream) {
@@ -314,7 +318,15 @@ export class ContentFlowService {
         const nodeName = Object.keys(update)[0];
         if (!nodeName) continue;
 
-        lastState = { ...lastState, ...update[nodeName] };
+        const nodeOutput = update[nodeName] as Record<string, unknown>;
+        for (const [key, value] of Object.entries(nodeOutput)) {
+          if (REDUCER_FIELDS.has(key) && Array.isArray(value)) {
+            const existing = lastState[key];
+            lastState[key] = Array.isArray(existing) ? [...existing, ...value] : value;
+          } else {
+            lastState[key] = value;
+          }
+        }
 
         // Update status based on the node that just completed
         const reviewingStatus = NODE_STATUS_MAP[nodeName];
@@ -482,7 +494,9 @@ export class ContentFlowService {
     const threadConfig = { configurable: { thread_id: runId } };
 
     try {
-      // Stream the resumed flow to track node transitions
+      // Stream the resumed flow to track node transitions.
+      // Same reducer-aware accumulation as executeFlow.
+      const REDUCER_FIELDS = new Set(['researchResults', 'sections', 'reviewFeedback', 'outputs']);
       let lastState: Record<string, unknown> = {};
       const stream = await flow.stream(resumeState, threadConfig);
 
@@ -490,7 +504,15 @@ export class ContentFlowService {
         const nodeName = Object.keys(update)[0];
         if (!nodeName) continue;
 
-        lastState = { ...lastState, ...update[nodeName] };
+        const nodeOutput = update[nodeName] as Record<string, unknown>;
+        for (const [key, value] of Object.entries(nodeOutput)) {
+          if (REDUCER_FIELDS.has(key) && Array.isArray(value)) {
+            const existing = lastState[key];
+            lastState[key] = Array.isArray(existing) ? [...existing, ...value] : value;
+          } else {
+            lastState[key] = value;
+          }
+        }
 
         const reviewingStatus = NODE_STATUS_MAP[nodeName];
         if (reviewingStatus) {
@@ -564,6 +586,7 @@ export class ContentFlowService {
     const outputs = finalState.outputs as
       | Array<{ success: boolean; format: string; content: string }>
       | undefined;
+    let contentWritten = false;
     if (outputs && outputs.length > 0) {
       for (const output of outputs) {
         if (output.success) {
@@ -573,8 +596,18 @@ export class ContentFlowService {
 
           await fs.writeFile(filepath, output.content, 'utf-8');
           logger.info(`Saved ${output.format} output to ${filepath}`);
+          contentWritten = true;
         }
       }
+    }
+
+    // Fallback: if output phase didn't produce files but assembledContent exists,
+    // write it directly as markdown. This handles cases where the graph completed
+    // via the 'failed' routing path (skipping fan_out_output) but content was assembled.
+    if (!contentWritten && typeof finalState.assembledContent === 'string') {
+      const fallbackPath = path.join(contentDir, 'content.md');
+      await fs.writeFile(fallbackPath, finalState.assembledContent, 'utf-8');
+      logger.info(`Saved assembled content fallback to ${fallbackPath}`);
     }
 
     // Save metadata including review scores
