@@ -1,8 +1,20 @@
 # GTM Signal Intelligence & Content Operations
 
-## Status: Ready to create in Linear (server was down during session)
+## Status: ACTIVE — Linear project created, content pipeline running
 
 ## Date: 2026-02-21
+
+## Social Handles
+- **Twitter/X**: @protoLabsAI (https://x.com/protoLabsAI)
+- **YouTube**: @protoLabsAI (https://www.youtube.com/@protoLabsAI)
+- **Domain**: protolabs.studio
+- **Glyphkit**: glyphkit.design → glyphkit.protolabs.studio
+- **Google Workspace**: Setting up (protolabs.studio domain)
+
+## Linear Project
+- URL: https://linear.app/protolabsai/project/gtm-signal-intelligence-and-content-operations-64cabf023337
+- ID: 76d33bc7-22d2-44d2-99ea-cc25a0797ad6
+- Issues: PRO-252 through PRO-257
 
 ## Research Completed
 - Codebase deep-research: Full audit of content pipeline, signal intake, monitors, event bus, MCP patterns, OAuth flows
