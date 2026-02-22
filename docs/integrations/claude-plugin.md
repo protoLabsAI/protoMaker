@@ -51,7 +51,7 @@ claude
 > /board
 ```
 
-That's it! You now have access to 112 MCP tools and slash commands for managing your Kanban board directly from Claude Code.
+That's it! You now have access to 120 MCP tools and slash commands for managing your Kanban board directly from Claude Code.
 
 ### What You Can Do
 
@@ -828,7 +828,7 @@ Wave 3: [UI Components] - parallel work
 
 ## MCP Tools Reference
 
-The MCP server exposes 112 tools organized by category. See `packages/mcp-server/src/index.ts` for the full definitions.
+The MCP server exposes 120 tools organized by category. See `packages/mcp-server/src/index.ts` for the full definitions.
 
 ### Feature Management (7 tools)
 
@@ -987,6 +987,19 @@ The MCP server exposes 112 tools organized by category. See `packages/mcp-server
 | `review_content`              | Approve/revise/reject at HITL gates  |
 | `export_content`              | Export final content to file formats |
 | `execute_antagonistic_review` | Run antagonistic quality review      |
+
+### Notes Management (8 tools)
+
+| Tool                          | Description                                    |
+| ----------------------------- | ---------------------------------------------- |
+| `list_note_tabs`              | List all note tabs with permissions and counts |
+| `read_note_tab`               | Read tab content (requires agentRead)          |
+| `write_note_tab`              | Write to a tab (requires agentWrite)           |
+| `create_note_tab`             | Create a new note tab                          |
+| `delete_note_tab`             | Delete a tab (not the last one)                |
+| `rename_note_tab`             | Rename a tab                                   |
+| `update_note_tab_permissions` | Update agentRead/agentWrite permissions        |
+| `reorder_note_tabs`           | Reorder tabs in the workspace                  |
 
 ### Reports (2 tools)
 
