@@ -5,9 +5,9 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 70
-  referenced: 41
-  successfulFeatures: 41
+  loaded: 73
+  referenced: 43
+  successfulFeatures: 43
 ---
 # api
 
@@ -457,3 +457,8 @@ usageStats:
 - **Rejected:** Replace JSONL with signals only - would break any code reading JSONL files; Migrate all data - would require separate data migration feature.
 - **Trade-offs:** Data duplication (same data in JSONL and as events) increases complexity and storage, but provides safe incremental migration path. Extra code paths in Twitch service to maintain both formats.
 - **Breaking if changed:** If JSONL persistence is removed, any downstream code parsing those files breaks. If signal emission is removed, signal pipeline has missing data. If formats diverge, they become out of sync.
+
+#### [Pattern] Created handler abstraction layer that calls /social/* endpoints even though those endpoints don't exist yet (2026-02-22)
+- **Problem solved:** Building MCP tools for social platforms but actual API layer not implemented; endpoints are placeholder
+- **Why this works:** Decouples tool definitions from endpoint implementation details. If endpoint paths/structure changes later, only handlers change not all 20 tools
+- **Trade-offs:** Added abstraction layer costs implementation time now but enables future flexibility. Creates false assumption that endpoints exist (incomplete feature)

@@ -121,6 +121,7 @@ export interface StateContext {
   planRetryCount: number;
   escalationReason?: string;
   reviewFeedback?: string;
+  siblingReflections?: string[];
 }
 
 /**
@@ -444,6 +445,42 @@ class ExecuteProcessor implements StateProcessor {
       }
     }
 
+    // Load reflections from completed sibling features for feed-forward context
+    try {
+      const allFeatures = await this.serviceContext.featureLoader.getAll(ctx.projectPath);
+      const siblings = allFeatures.filter(
+        (f) =>
+          f.id !== ctx.feature.id &&
+          (f.status === 'done' || f.status === 'verified') &&
+          (ctx.feature.epicId
+            ? f.epicId === ctx.feature.epicId
+            : f.projectSlug === ctx.feature.projectSlug)
+      );
+      const recent = siblings
+        .sort((a, b) => (b.completedAt || '').localeCompare(a.completedAt || ''))
+        .slice(0, 3);
+
+      const reflections: string[] = [];
+      const fs = await import('node:fs/promises');
+      for (const sib of recent) {
+        try {
+          const content = await fs.readFile(
+            path.join(getFeatureDir(ctx.projectPath, sib.id), 'reflection.md'),
+            'utf-8'
+          );
+          if (content.trim()) reflections.push(content.trim());
+        } catch {
+          /* no reflection yet */
+        }
+      }
+      if (reflections.length > 0) {
+        ctx.siblingReflections = reflections;
+        logger.info(`[EXECUTE] Loaded ${reflections.length} sibling reflections`);
+      }
+    } catch (err) {
+      logger.warn('[EXECUTE] Failed to load sibling reflections:', err);
+    }
+
     logger.info('[EXECUTE] Launching agent via autoModeService.executeFeature()', {
       featureId: ctx.feature.id,
       retryCount: ctx.retryCount,
@@ -522,7 +559,7 @@ class ExecuteProcessor implements StateProcessor {
         }
       });
 
-      // Build recovery context from plan output, review feedback, and context fidelity
+      // Build recovery context from plan output, review feedback, and sibling reflections
       const contextParts: string[] = [];
       if (ctx.planOutput) {
         contextParts.push(`## Implementation Plan\n\n${ctx.planOutput}`);
@@ -530,6 +567,11 @@ class ExecuteProcessor implements StateProcessor {
       if (ctx.reviewFeedback) {
         contextParts.push(
           `## Review Feedback (Changes Requested)\n\nAddress these issues:\n\n${ctx.reviewFeedback}`
+        );
+      }
+      if (ctx.siblingReflections && ctx.siblingReflections.length > 0) {
+        contextParts.push(
+          `## Learnings from Prior Features\n\nApply relevant lessons:\n\n${ctx.siblingReflections.join('\n\n---\n\n')}`
         );
       }
       const recoveryContext = contextParts.length > 0 ? contextParts.join('\n\n') : undefined;
@@ -872,6 +914,9 @@ class DeployProcessor implements StateProcessor {
       remediationAttempts: ctx.remediationAttempts,
     });
 
+    // Fire-and-forget reflection (non-blocking)
+    void this.generateReflection(ctx);
+
     return {
       nextState: null,
       shouldContinue: false,
@@ -881,6 +926,69 @@ class DeployProcessor implements StateProcessor {
 
   async exit(_ctx: StateContext): Promise<void> {
     logger.info('[DEPLOY] Deployment verification completed');
+  }
+
+  private async generateReflection(ctx: StateContext): Promise<void> {
+    try {
+      const featureDir = getFeatureDir(ctx.projectPath, ctx.feature.id);
+      const fs = await import('node:fs/promises');
+
+      // Read agent output tail for outcome context
+      let agentOutputTail = '';
+      try {
+        const full = await fs.readFile(path.join(featureDir, 'agent-output.md'), 'utf-8');
+        agentOutputTail = full.length > 2000 ? full.slice(-2000) : full;
+      } catch {
+        /* no output file */
+      }
+
+      const summary = [
+        `Feature: ${ctx.feature.title}`,
+        `Cost: $${(ctx.feature.costUsd || 0).toFixed(2)}`,
+        `Retries: ${ctx.retryCount} | Remediation cycles: ${ctx.remediationAttempts}`,
+        ctx.reviewFeedback ? `PR feedback received: ${ctx.reviewFeedback.slice(0, 500)}` : '',
+        `Execution history: ${JSON.stringify(
+          ctx.feature.executionHistory?.map((e) => ({
+            model: e.model,
+            success: e.success,
+            durationMs: e.durationMs,
+            costUsd: e.costUsd,
+          })) || []
+        )}`,
+        agentOutputTail ? `\nAgent output (tail):\n${agentOutputTail}` : '',
+      ]
+        .filter(Boolean)
+        .join('\n');
+
+      const result = await simpleQuery({
+        prompt: `You are a concise engineering retrospective analyst. Given this feature's execution data, write a brief reflection (under 200 words) covering:
+1. **Outcome**: What was built, success or partial success
+2. **Efficiency**: Cost/retry count reasonable? Wasted cycles?
+3. **Lessons**: 1-2 specific, actionable takeaways for the next feature
+4. **Pitfalls**: Anything the next agent should avoid
+Be specific. No generic advice.
+
+Feature Data:
+${summary}`,
+        model: 'haiku',
+        cwd: ctx.projectPath,
+        maxTurns: 1,
+        allowedTools: [],
+      });
+
+      const content = `# Reflection: ${ctx.feature.title}\n\n_Generated: ${new Date().toISOString()}_\n_Cost: $${(ctx.feature.costUsd || 0).toFixed(2)} | Retries: ${ctx.retryCount} | Remediation: ${ctx.remediationAttempts}_\n\n${result.text}\n`;
+      const reflectionPath = path.join(featureDir, 'reflection.md');
+      await fs.writeFile(reflectionPath, content, 'utf-8');
+
+      this.serviceContext.events.emit('feature:reflection:complete' as EventType, {
+        featureId: ctx.feature.id,
+        projectPath: ctx.projectPath,
+        reflectionPath,
+      });
+      logger.info(`[DEPLOY] Reflection generated for feature ${ctx.feature.id}`);
+    } catch (err) {
+      logger.warn(`[DEPLOY] Reflection generation failed:`, err);
+    }
   }
 }
 

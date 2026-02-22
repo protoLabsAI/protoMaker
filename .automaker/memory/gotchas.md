@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 274
-  referenced: 141
-  successfulFeatures: 141
+  loaded: 277
+  referenced: 143
+  successfulFeatures: 143
 ---
 # gotchas
 
@@ -212,3 +212,13 @@ usageStats:
 - **Rejected:** Fixing the build error (scope creep); blocking feature on unrelated issues
 - **Trade-offs:** Faster feature delivery; leaves technical debt in codebase; hides fragility in build system
 - **Breaking if changed:** If feature requirements change and now require the broken package, hidden debt becomes visible crisis; if someone tries to build entire monorepo, they hit the error and must debug it; if CI/CD fails on build, teams can't easily distinguish feature-related failures from pre-existing ones
+
+#### [Gotcha] Package build verification strategy shifted to isolated package builds when upstream platform package had pre-existing TypeScript errors, masking potential integration issues (2026-02-22)
+- **Situation:** npm run build:packages failed on platform package import errors unrelated to social tools feature
+- **Root cause:** Isolated build (libs/tools, apps/server) faster feedback and clear scope, but can't verify cross-package integration or type compatibility with platform package
+- **How to avoid:** Unblocked feature verification and identified that tools package itself compiles cleanly, but may have missed integration bugs with types package
+
+#### [Gotcha] TypeScript incremental compilation cache can report 'no exported member' errors even when types are correctly built and exported in dist files (2026-02-22)
+- **Situation:** SignalCounts type showed compilation error in server even though grep verified it was present in libs/types/dist/index.d.ts
+- **Root cause:** TypeScript's incremental cache stores stale references from previous compilation state; resolves on worktree merge or IDE restart
+- **How to avoid:** Delayed developer feedback but doesn't block builds; confusing to troubleshoot without understanding cache behavior

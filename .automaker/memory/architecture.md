@@ -2254,3 +2254,46 @@ usageStats:
 - **Rejected:** Wire initialization immediately - would expand scope; Skip registration - would require duplicate work later.
 - **Trade-offs:** Cleaner separation of concerns vs gap where integrations exist but don't run. Simpler current feature vs more work in future feature.
 - **Breaking if changed:** If initialization code assumes all registered integrations are initialized, it will have missing services. If startup wiring is never implemented, integrations register but never start.
+
+### Externalized SignalCounts type from signal-intake-service.ts to centralized @automaker/types/signal.ts package (2026-02-22)
+- **Context:** Type needed to be imported by both server services and tools domain packages, creating cross-package dependency
+- **Why:** Creating explicit contract in shared types package enforces compatibility and single source of truth. Alternative was duplicating type or using any
+- **Rejected:** Keep type local to SignalIntakeService; import in tools would require circular dependency or re-exporting from server package
+- **Trade-offs:** Easy cross-package reuse now, but changes to SignalCounts structure break both packages simultaneously - tightly couples them
+- **Breaking if changed:** Removing from @automaker/types breaks both server and tools package imports; changing field structure breaks both packages at same time
+
+#### [Pattern] Signal classification uses string prefix matching (twitter:, youtube:, substack:) to route to GTM category rather than enum-based dispatch (2026-02-22)
+- **Problem solved:** Multiple unrelated platforms need to be classified as marketing signals and routed to same queue
+- **Why this works:** Prefix pattern allows new sources to be added without modifying classification logic - new source just needs matching prefix. More extensible than hardcoded enum
+- **Trade-offs:** Gained extensibility and implicit namespacing, lost type-safety of enum classification. Prefix convention is implicit, not part of public contract
+
+### Routed all social media sources (Twitter, YouTube, Substack) to single GTM (marketing) signal category rather than platform-specific categories (2026-02-22)
+- **Context:** Multiple unrelated platforms with different APIs and interaction patterns need signal classification for routing
+- **Why:** Signal intelligence interpretation treats all three as marketing/communications channels. Simpler routing logic with less category overhead
+- **Rejected:** Platform-specific categories (twitter_category, youtube_category); more granular classification (content_distribution, community_engagement)
+- **Trade-offs:** Simpler classification logic and fewer signal queues, but groups diverse platforms together - masks different handling needs. Hard to un-group later
+- **Breaking if changed:** If future requirements need platform-specific signal handling (e.g., YouTube needs different rate limits than Twitter), classification refactoring required throughout signal pipeline
+
+#### [Pattern] Signal classification uses source prefix matching (twitter:, youtube:, substack:) rather than explicit switch statements for routing (2026-02-22)
+- **Problem solved:** New signal sources need to be added to SignalIntakeService classification; pattern enables extensibility
+- **Why this works:** Prefix-based routing decouples signal source additions from routing logic; new platforms require only new tool definitions and count tracking, not signal service modification
+- **Trade-offs:** More flexible and scalable but requires discipline to maintain naming conventions; harder to find all signal handlers via IDE search
+
+### Centralized SignalCounts type in @automaker/types package instead of keeping in signal-intake-service (2026-02-22)
+- **Context:** Multiple packages (tools, server) need to reference signal count structure; placed in shared types package
+- **Why:** Breaks circular dependency; prevents server package from exposing implementation details to tools package; establishes single source of truth
+- **Rejected:** Defining SignalCounts in server package - would require tools package to depend on server or duplicate the type
+- **Trade-offs:** Cleaner dependency graph but requires types package rebuild when signal structure changes; moved implementation concern to shared layer
+- **Breaking if changed:** If SignalCounts moves back to server, tools package cannot type its signal handling correctly
+
+#### [Pattern] Three-layer separation: tool definitions (social-tools.ts), API handlers (social-handlers.ts), signal routing (SignalIntakeService) (2026-02-22)
+- **Problem solved:** Social media tools need definitions, implementations, and classification logic across different modules
+- **Why this works:** Enables deferred implementation - tools defined before /social/* endpoints exist; handlers can call unimplemented endpoints; separates concerns for testability
+- **Trade-offs:** Adds abstraction layer and extra file; enables parallelized development (tool definitions before endpoint implementation); easier to test handlers independently
+
+### Exceeded minimum requirement (15-20) by implementing exactly 20 tools across 3 platforms with balanced distribution (7 Twitter, 8 YouTube, 6 Substack) (2026-02-22)
+- **Context:** Feature scope allowed 15-20 tools; team chose deliberate distribution across platforms rather than concentrating on single platform
+- **Why:** Comprehensive coverage across major social platforms; distribution ensures feature completeness; 20 is memorable boundary
+- **Rejected:** 15 tools concentrated on single platform (e.g., 15 Twitter tools); variable distribution
+- **Trade-offs:** Higher initial maintenance burden but more valuable feature surface; future social sources fit established pattern
+- **Breaking if changed:** If reduced below 7-8 per platform, some platform functionality becomes limited; API client code must support all tool paths
