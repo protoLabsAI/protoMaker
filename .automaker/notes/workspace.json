@@ -1,9 +1,10 @@
 {
   "version": 1,
-  "activeTabId": "f35b89fb-3cc2-4e1f-8e58-98165c82df08",
+  "activeTabId": "a69c769a-e33e-41fd-b6d2-1d7cd9996f2f",
   "tabOrder": [
     "f35b89fb-3cc2-4e1f-8e58-98165c82df08",
-    "38053e42-0e0d-4793-8c76-1a2eb8eb72a5"
+    "55f88e41-228e-4ce9-b3d3-4bb645404f53",
+    "a69c769a-e33e-41fd-b6d2-1d7cd9996f2f"
   ],
   "tabs": {
     "f35b89fb-3cc2-4e1f-8e58-98165c82df08": {
@@ -21,20 +22,36 @@
         "characterCount": 542
       }
     },
-    "38053e42-0e0d-4793-8c76-1a2eb8eb72a5": {
-      "id": "38053e42-0e0d-4793-8c76-1a2eb8eb72a5",
-      "name": "Tab 2",
-      "content": "<p>testing 1 23 4 5 testing testing 1 2 3</p>",
+    "55f88e41-228e-4ce9-b3d3-4bb645404f53": {
+      "id": "55f88e41-228e-4ce9-b3d3-4bb645404f53",
+      "name": "Ava",
+      "content": "<h2>Ava — Strategic Direction</h2><p>Josh writes priorities here. Ava reads on activation and appends status updates.</p><h3>Status — 2026-02-21</h3><p>Notes tools verified: list, read, create, write (append) all working. Jon tab created (id: a69c769a-e33e-41fd-b6d2-1d7cd9996f2f).</p>",
       "permissions": {
-        "agentRead": false,
+        "agentRead": true,
         "agentWrite": true
       },
       "metadata": {
-        "createdAt": 1771653138808,
-        "updatedAt": 1771653472651,
-        "wordCount": 10,
-        "characterCount": 38
+        "createdAt": 1771715814797,
+        "updatedAt": 1771716029965,
+        "wordCount": 31,
+        "characterCount": 253
+      }
+    },
+    "a69c769a-e33e-41fd-b6d2-1d7cd9996f2f": {
+      "id": "a69c769a-e33e-41fd-b6d2-1d7cd9996f2f",
+      "name": "Jon",
+      "content": "<h2>Jon — GTM Direction</h2><p>Strategic priorities, content calendar, and launch coordination notes. Josh and Ava leave direction here.</p><h3>Current Focus</h3><ul><li>Brand reveal content — draft tweets, announcement posts</li><li>Competitive research — AI dev tools landscape</li><li>Content pipeline — verify end-to-end flow works</li></ul>",
+      "permissions": {
+        "agentRead": true,
+        "agentWrite": true
+      },
+      "metadata": {
+        "createdAt": 1771716024584,
+        "updatedAt": 1771716024584,
+        "wordCount": 37,
+        "characterCount": 284
       }
     }
-  }
+  },
+  "workspaceVersion": 3
 }

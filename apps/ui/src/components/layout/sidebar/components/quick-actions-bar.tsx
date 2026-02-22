@@ -1,4 +1,4 @@
-import { Bug, BookOpen, Plus, FolderOpen } from 'lucide-react';
+import { Bug, BookOpen, Plus, FolderOpen, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface QuickActionsBarProps {
@@ -6,6 +6,7 @@ interface QuickActionsBarProps {
   onDocs: () => void;
   onNewProject: () => void;
   onOpenFolder: () => void;
+  onSettings: () => void;
 }
 
 const actions = [
@@ -13,6 +14,7 @@ const actions = [
   { key: 'docs', icon: BookOpen, label: 'Documentation', testId: 'quick-action-docs' },
   { key: 'new', icon: Plus, label: 'New Project', testId: 'quick-action-new' },
   { key: 'open', icon: FolderOpen, label: 'Open Folder', testId: 'quick-action-open' },
+  { key: 'settings', icon: Settings, label: 'Global Settings', testId: 'quick-action-settings' },
 ] as const;
 
 export function QuickActionsBar({
@@ -20,12 +22,14 @@ export function QuickActionsBar({
   onDocs,
   onNewProject,
   onOpenFolder,
+  onSettings,
 }: QuickActionsBarProps) {
   const handlers: Record<string, () => void> = {
     bug: onBugReport,
     docs: onDocs,
     new: onNewProject,
     open: onOpenFolder,
+    settings: onSettings,
   };
 
   return (

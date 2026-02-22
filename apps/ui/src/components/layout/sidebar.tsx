@@ -20,7 +20,6 @@ import {
   QuickActionsBar,
   SidebarHeader,
   SidebarNavigation,
-  SidebarFooter,
   MobileSidebarToggle,
 } from './sidebar/components';
 import { useIsCompact } from '@/hooks/use-media-query';
@@ -296,6 +295,7 @@ export function Sidebar() {
               onDocs={() => getElectronAPI().openExternalLink('https://protolabs.studio/docs')}
               onNewProject={() => setShowNewProjectModal(true)}
               onOpenFolder={handleOpenFolder}
+              onSettings={() => navigate({ to: '/settings' })}
             />
           )}
 
@@ -307,13 +307,6 @@ export function Sidebar() {
             navigate={navigate}
           />
         </div>
-
-        <SidebarFooter
-          sidebarOpen={sidebarOpen}
-          isActiveRoute={isActiveRoute}
-          navigate={navigate}
-          shortcuts={{ settings: shortcuts.settings }}
-        />
 
         {sidebarOpen && (
           <div className="shrink-0 border-t border-border/40 px-4 py-3">
