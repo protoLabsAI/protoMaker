@@ -295,11 +295,15 @@ export class ContentFlowService {
     if (!status) return;
 
     try {
-      const threadConfig = { configurable: { thread_id: runId } };
+      const isHITL = config.enableHITL === true;
+      // Only use thread_id config when HITL is enabled (requires checkpointer).
+      // Autonomous mode runs without a checkpointer to avoid serialization
+      // issues with ChatAnthropic model instances in state.
+      const streamConfig = isHITL ? { configurable: { thread_id: runId } } : undefined;
 
       // Stream the flow to get per-node updates
       let lastState: Record<string, unknown> = {};
-      const stream = await flow.stream({ config: config as never }, threadConfig);
+      const stream = await flow.stream({ config: config as never }, streamConfig);
 
       for await (const update of stream) {
         // Each update is { nodeName: nodeOutput }
@@ -333,36 +337,40 @@ export class ContentFlowService {
       }
 
       // Check if we hit an interrupt (only possible when enableHITL=true)
-      const interruptInfo = await flow.getState(threadConfig);
-      if (interruptInfo.next && interruptInfo.next.length > 0) {
-        const nextNode = interruptInfo.next[0];
-        status.status = 'interrupted';
-        status.currentNode = nextNode;
+      if (isHITL) {
+        const threadConfig = { configurable: { thread_id: runId } };
+        const interruptInfo = await flow.getState(threadConfig);
+        if (interruptInfo.next && interruptInfo.next.length > 0) {
+          const nextNode = interruptInfo.next[0];
+          status.status = 'interrupted';
+          status.currentNode = nextNode;
 
-        if (nextNode === 'research_hitl') {
-          status.hitlGatesPending = ['research_hitl'];
-          status.progress = 20;
-        } else if (nextNode === 'outline_hitl') {
-          status.hitlGatesPending = ['outline_hitl'];
-          status.progress = 40;
-        } else if (nextNode === 'final_review_hitl') {
-          status.hitlGatesPending = ['final_review_hitl'];
-          status.progress = 80;
+          if (nextNode === 'research_hitl') {
+            status.hitlGatesPending = ['research_hitl'];
+            status.progress = 20;
+          } else if (nextNode === 'outline_hitl') {
+            status.hitlGatesPending = ['outline_hitl'];
+            status.progress = 40;
+          } else if (nextNode === 'final_review_hitl') {
+            status.hitlGatesPending = ['final_review_hitl'];
+            status.progress = 80;
+          }
+
+          logger.info(`Flow ${runId} interrupted at ${nextNode}`);
+          this.emitStatus(status);
+          return;
         }
-
-        logger.info(`Flow ${runId} interrupted at ${nextNode}`);
-        this.emitStatus(status);
-      } else {
-        // Flow completed (autonomous or after all HITL gates passed)
-        status.status = 'completed';
-        status.progress = 100;
-        status.completedAt = Date.now();
-
-        await this.saveOutputs(runId, projectPath, lastState);
-        this.emitStatus(status);
-
-        logger.info(`Flow ${runId} completed with review scores:`, status.reviewScores);
       }
+
+      // Flow completed (autonomous or after all HITL gates passed)
+      status.status = 'completed';
+      status.progress = 100;
+      status.completedAt = Date.now();
+
+      await this.saveOutputs(runId, projectPath, lastState);
+      this.emitStatus(status);
+
+      logger.info(`Flow ${runId} completed with review scores:`, status.reviewScores);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
       logger.error(`Flow ${runId} execution error:`, error);
