@@ -804,6 +804,15 @@ export class GitWorkflowService {
       );
     }
 
+    // Auto-generate changeset from staged files
+    try {
+      await this.generateChangeset(workDir, feature, commitMessage);
+    } catch (csError) {
+      logger.warn(
+        `Changeset generation failed (non-fatal): ${csError instanceof Error ? csError.message : String(csError)}`
+      );
+    }
+
     // Create commit
     await execAsync(`git commit -m "${commitMessage.replace(/"/g, '\\"')}"`, {
       cwd: workDir,
@@ -817,6 +826,90 @@ export class GitWorkflowService {
     });
 
     return hashOutput.trim().substring(0, 8);
+  }
+
+  /**
+   * Auto-generate a changeset file from staged files before committing.
+   * Maps touched directories to package names and creates a .changeset/*.md file.
+   */
+  private async generateChangeset(
+    workDir: string,
+    feature: Feature,
+    commitMessage: string
+  ): Promise<void> {
+    // Get staged files
+    const { stdout: stagedFiles } = await execAsync(
+      'git diff --cached --name-only --diff-filter=ACMR',
+      { cwd: workDir, env: execEnv }
+    );
+
+    const files = stagedFiles.trim().split('\n').filter(Boolean);
+    if (files.length === 0) return;
+
+    // Map directory prefixes to package names
+    const DIR_TO_PACKAGE: Record<string, string> = {
+      'libs/types/': '@automaker/types',
+      'libs/utils/': '@automaker/utils',
+      'libs/platform/': '@automaker/platform',
+      'libs/prompts/': '@automaker/prompts',
+      'libs/tools/': '@automaker/tools',
+      'libs/model-resolver/': '@automaker/model-resolver',
+      'libs/dependency-resolver/': '@automaker/dependency-resolver',
+      'libs/spec-parser/': '@automaker/spec-parser',
+      'libs/flows/': '@automaker/flows',
+      'libs/llm-providers/': '@automaker/llm-providers',
+      'libs/observability/': '@automaker/observability',
+      'libs/git-utils/': '@automaker/git-utils',
+      'libs/ui/': '@protolabs/ui',
+    };
+
+    // Detect which packages were touched
+    const touchedPackages = new Set<string>();
+    for (const file of files) {
+      for (const [prefix, pkgName] of Object.entries(DIR_TO_PACKAGE)) {
+        if (file.startsWith(prefix)) {
+          touchedPackages.add(pkgName);
+        }
+      }
+    }
+
+    // Skip if no publishable packages were touched (e.g. only apps/ changes)
+    if (touchedPackages.size === 0) return;
+
+    // Extract summary from commit message (first line only)
+    const summary = commitMessage
+      .split('\n')[0]
+      .replace(/^feat:\s*/i, '')
+      .trim();
+
+    // Generate changeset ID (matches changesets CLI format)
+    const id = `auto-${feature.id.slice(-8)}-${Date.now().toString(36)}`;
+
+    // Build changeset content
+    const lines = ['---'];
+    for (const pkg of touchedPackages) {
+      lines.push(`'${pkg}': minor`);
+    }
+    lines.push('---');
+    lines.push('');
+    lines.push(summary);
+    lines.push('');
+
+    // Write changeset file
+    const fs = await import('fs/promises');
+    const path = await import('path');
+    const changesetDir = path.join(workDir, '.changeset');
+
+    // Ensure .changeset/ directory exists (it may not exist in worktrees)
+    await fs.mkdir(changesetDir, { recursive: true });
+    await fs.writeFile(path.join(changesetDir, `${id}.md`), lines.join('\n'));
+
+    // Stage the changeset file
+    await execAsync(`git add ".changeset/${id}.md"`, { cwd: workDir, env: execEnv });
+
+    logger.info(
+      `Auto-generated changeset ${id} for ${touchedPackages.size} package(s): ${[...touchedPackages].join(', ')}`
+    );
   }
 
   /**
