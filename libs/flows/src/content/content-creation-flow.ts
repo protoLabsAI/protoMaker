@@ -13,7 +13,14 @@
  * - Configurable via ContentConfig
  */
 
-import { StateGraph, Annotation, Send, Command, interrupt } from '@langchain/langgraph';
+import {
+  StateGraph,
+  Annotation,
+  Send,
+  Command,
+  interrupt,
+  MemorySaver,
+} from '@langchain/langgraph';
 import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { createLogger } from '@automaker/utils';
 import { LangfuseClient } from '@automaker/observability';
@@ -1162,15 +1169,18 @@ export function createContentCreationFlow(options?: ContentCreationFlowOptions) 
   g.addEdge('output_delegate', 'complete');
   g.setFinishPoint('complete');
 
+  const checkpointer = new MemorySaver();
+
   // When HITL is enabled, compile with interruptBefore on HITL gate nodes
   // so the graph pauses and waits for user input via resolve()
   if (enableHITL) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return (graph as any).compile({
+      checkpointer,
       interruptBefore: ['research_hitl', 'outline_hitl', 'final_review_hitl'],
     });
   }
 
   // Default: compile without interrupts — runs end-to-end autonomously
-  return graph.compile();
+  return graph.compile({ checkpointer });
 }
