@@ -469,6 +469,19 @@ export class AutoModeService {
   }
 
   /**
+   * Wire up the Feature Health service for periodic health sweeps in auto-mode.
+   * When set, the auto-loop runs board audits every ~100s and escalates issues.
+   */
+  private featureHealthService: import('./feature-health-service.js').FeatureHealthService | null =
+    null;
+
+  setFeatureHealthService(
+    service: import('./feature-health-service.js').FeatureHealthService
+  ): void {
+    this.featureHealthService = service;
+  }
+
+  /**
    * Determine the appropriate model for a feature based on complexity, failure count,
    * and user-configured agentExecutionModel setting.
    *
@@ -979,6 +992,39 @@ export class AutoModeService {
       logger.debug(
         `[AutoLoop] 💓 Heartbeat - Iteration ${iterationCount} for ${worktreeDesc} in ${projectPath}`
       );
+
+      // Periodic health sweep (every ~100 seconds at 2s interval)
+      if (iterationCount % 50 === 0 && this.featureHealthService) {
+        try {
+          const report = await this.featureHealthService.audit(projectPath, true);
+          if (report.issues.length > 0) {
+            logger.warn(
+              `[AutoLoop] Health sweep found ${report.issues.length} issues, fixed ${report.fixed.length}`
+            );
+            for (const issue of report.issues) {
+              this.events.emit(
+                'escalation:signal-received' as import('@automaker/types').EventType,
+                {
+                  source: 'auto_mode_health_sweep',
+                  severity: issue.type === 'stale_gate' ? 'medium' : 'low',
+                  type: issue.type,
+                  context: {
+                    featureId: issue.featureId,
+                    featureTitle: issue.featureTitle,
+                    message: issue.message,
+                    fix: issue.fix,
+                    projectPath,
+                  },
+                  deduplicationKey: `health_${issue.type}_${issue.featureId}`,
+                  timestamp: new Date().toISOString(),
+                }
+              );
+            }
+          }
+        } catch (err) {
+          logger.warn('[AutoLoop] Health sweep failed:', err);
+        }
+      }
 
       // Early heap check — prevent any work when memory is critical
       const earlyHeapUsage = this.getHeapUsagePercent();

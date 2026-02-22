@@ -73,6 +73,8 @@ export interface PipelineState {
   awaitingGate: boolean;
   /** Phase pending gate resolution (set when awaitingGate is true) */
   awaitingGatePhase?: PipelinePhase | null;
+  /** ISO timestamp when gate hold began (set alongside awaitingGate=true) */
+  gateWaitingSince?: string;
   gateArtifacts?: Record<string, unknown>;
   startedAt: string;
   /** Langfuse root trace ID for this entire pipeline run */

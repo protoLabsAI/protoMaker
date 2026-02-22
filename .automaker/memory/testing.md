@@ -716,3 +716,8 @@ usageStats:
 - **Rejected:** Comprehensive interaction tests (too slow for every CI run, can mask simple render failures under interaction complexity); 30s+ timeouts (delays CI feedback)
 - **Trade-offs:** Doesn't catch behavioral bugs (only structural rendering); enables rapid iteration feedback at cost of coverage depth
 - **Breaking if changed:** If scope expands to interactions, test time increases and CI becomes slower; if timeout is removed, hanging components won't be caught quickly
+
+#### [Gotcha] Pre-existing build error in @automaker/platform (p-limit import) prevented full server build, but feature code verified independently using `node -c` syntax checking showed no errors. (2026-02-22)
+- **Situation:** Feature implementation complete but unable to run `npm run build:server` to verify integration due to unrelated package error.
+- **Root cause:** Isolated syntax verification (node -c) can validate code independently of build system. Prevents false negative where feature appears broken when only build infrastructure has issues.
+- **How to avoid:** Isolated verification provides confidence but doesn't catch runtime type errors or integration issues. Full build still needed for deployment.

@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 278
-  referenced: 143
-  successfulFeatures: 143
+  loaded: 281
+  referenced: 144
+  successfulFeatures: 144
 ---
 # gotchas
 
@@ -222,3 +222,8 @@ usageStats:
 - **Situation:** SignalCounts type showed compilation error in server even though grep verified it was present in libs/types/dist/index.d.ts
 - **Root cause:** TypeScript's incremental cache stores stale references from previous compilation state; resolves on worktree merge or IDE restart
 - **How to avoid:** Delayed developer feedback but doesn't block builds; confusing to troubleshoot without understanding cache behavior
+
+#### [Gotcha] Map iteration in TypeScript requires Array.from() wrapper to avoid downlevelIteration TypeScript compiler errors, particularly when iterating over Map entries for token scopes. (2026-02-22)
+- **Situation:** Using `for (const [key, value] of map.entries())` directly causes compilation failures in certain TypeScript configurations.
+- **Root cause:** TypeScript downlevelIteration flag affects how iterators are compiled; older target compatibility (ES2015) requires explicit iterator protocol. Array.from() forces concrete array creation.
+- **How to avoid:** Array.from() adds minor performance overhead (creates array copy) but ensures consistent compilation across configurations.

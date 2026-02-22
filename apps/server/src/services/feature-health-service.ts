@@ -28,6 +28,7 @@ export interface HealthIssue {
     | 'merged_not_done'
     | 'epic_children_done'
     | 'stale_running'
+    | 'stale_gate'
     | 'dangling_dependency';
   featureId: string;
   featureTitle: string;
@@ -68,6 +69,7 @@ export class FeatureHealthService {
     issues.push(...this.checkDanglingDependencies(features, featureMap));
     issues.push(...this.checkEpicChildrenDone(features, featureMap));
     issues.push(...(await this.checkStaleRunning(features, projectPath)));
+    issues.push(...this.checkStaleGates(features));
     issues.push(...(await this.checkMergedNotDone(features, projectPath)));
 
     // Auto-fix if requested
@@ -232,6 +234,42 @@ export class FeatureHealthService {
   }
 
   /**
+   * Features stuck awaiting a pipeline gate for longer than the timeout threshold.
+   */
+  private checkStaleGates(features: Feature[]): HealthIssue[] {
+    const GATE_TIMEOUT_MS = 60 * 60 * 1000; // 1 hour
+    const now = Date.now();
+    const issues: HealthIssue[] = [];
+
+    for (const feature of features) {
+      const ps = feature.pipelineState;
+      if (!ps?.awaitingGate) continue;
+
+      // Use gateWaitingSince if available, fall back to last phaseHistory timestamp
+      let gateStartMs: number | null = null;
+      if (ps.gateWaitingSince) {
+        gateStartMs = new Date(ps.gateWaitingSince).getTime();
+      } else if (ps.phaseHistory?.length) {
+        const last = ps.phaseHistory[ps.phaseHistory.length - 1];
+        gateStartMs = new Date(last.timestamp).getTime();
+      }
+
+      if (gateStartMs && now - gateStartMs > GATE_TIMEOUT_MS) {
+        const waitHours = ((now - gateStartMs) / (1000 * 60 * 60)).toFixed(1);
+        issues.push({
+          type: 'stale_gate',
+          featureId: feature.id,
+          featureTitle: feature.title ?? feature.id,
+          message: `Feature awaiting ${ps.awaitingGatePhase ?? 'unknown'} gate for ${waitHours}h`,
+          autoFixable: true,
+          fix: 'Move to blocked status',
+        });
+      }
+    }
+    return issues;
+  }
+
+  /**
    * Features with branches that are merged to main (or their epic branch) but not marked done.
    * Uses execFileAsync with argument arrays to prevent command injection.
    */
@@ -383,6 +421,10 @@ export class FeatureHealthService {
 
       case 'stale_running':
         await this.featureLoader.update(projectPath, issue.featureId, { status: 'backlog' });
+        break;
+
+      case 'stale_gate':
+        await this.featureLoader.update(projectPath, issue.featureId, { status: 'blocked' });
         break;
 
       case 'merged_not_done':

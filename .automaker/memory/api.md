@@ -5,9 +5,9 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 74
-  referenced: 43
-  successfulFeatures: 43
+  loaded: 77
+  referenced: 44
+  successfulFeatures: 44
 ---
 # api
 
@@ -462,3 +462,10 @@ usageStats:
 - **Problem solved:** Building MCP tools for social platforms but actual API layer not implemented; endpoints are placeholder
 - **Why this works:** Decouples tool definitions from endpoint implementation details. If endpoint paths/structure changes later, only handlers change not all 20 tools
 - **Trade-offs:** Added abstraction layer costs implementation time now but enables future flexibility. Creates false assumption that endpoints exist (incomplete feature)
+
+### Signal classification for Google Calendar events uses keyword matching on event title to route to 'gtm' (marketing keywords) or 'ops' (engineering keywords, default). (2026-02-22)
+- **Context:** Need to automatically classify calendar events without explicit API metadata or requiring manual tagging.
+- **Why:** Event titles are always available without additional API calls. Keywords like 'sprint', 'campaign', 'deployment' are reliable signals of domain.
+- **Rejected:** Metadata from calendar description (requires extra API call); explicit labels (manual work); event type/attendee analysis (fragile).
+- **Trade-offs:** Simple and fast, but fragile—depends on consistent naming conventions. Poorly named events (e.g., 'Meeting') default to 'ops' incorrectly.
+- **Breaking if changed:** Removing keyword routing requires alternative classification mechanism or manual event tagging. Changing keyword set changes business routing behavior.

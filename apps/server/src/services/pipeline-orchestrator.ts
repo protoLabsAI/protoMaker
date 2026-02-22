@@ -301,6 +301,7 @@ export class PipelineOrchestrator {
       const now = new Date().toISOString();
       pipelineState.awaitingGate = true;
       pipelineState.awaitingGatePhase = nextPhase;
+      pipelineState.gateWaitingSince = now;
       await this.featureLoader.update(projectPath, featureId, { pipelineState });
 
       this.events.emit('pipeline:gate-waiting', {
@@ -360,6 +361,7 @@ export class PipelineOrchestrator {
       // On reject, mark gate as not awaiting but don't advance
       pipelineState.awaitingGate = false;
       pipelineState.awaitingGatePhase = null;
+      pipelineState.gateWaitingSince = undefined;
       await this.featureLoader.update(projectPath, featureId, { pipelineState });
       logger.info(`Gate rejected for feature ${featureId} at ${gatePhase ?? currentPhase}`);
       return true;
@@ -368,6 +370,7 @@ export class PipelineOrchestrator {
     // Advance past the gate
     pipelineState.awaitingGate = false;
     pipelineState.awaitingGatePhase = null;
+    pipelineState.gateWaitingSince = undefined;
     if (gatePhase) {
       await this.enterPhase(
         projectPath,

@@ -539,6 +539,9 @@ const authorityService = new AuthorityService(events);
 // Wire authority service into auto-mode for policy-gated feature execution
 autoModeService.setAuthorityService(authorityService);
 
+// Wire feature health service into auto-mode for periodic health sweeps
+autoModeService.setFeatureHealthService(featureHealthService);
+
 // Wire integrity watchdog service into auto-mode for data integrity checks
 autoModeService.setIntegrityWatchdogService(integrityWatchdogService);
 

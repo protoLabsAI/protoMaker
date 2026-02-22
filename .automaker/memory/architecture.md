@@ -2297,3 +2297,18 @@ usageStats:
 - **Rejected:** 15 tools concentrated on single platform (e.g., 15 Twitter tools); variable distribution
 - **Trade-offs:** Higher initial maintenance burden but more valuable feature surface; future social sources fit established pattern
 - **Breaking if changed:** If reduced below 7-8 per platform, some platform functionality becomes limited; API client code must support all tool paths
+
+#### [Gotcha] Express Response and Fetch Response API have naming conflicts when using both frameworks. Resolved by aliasing Express Response as ExpressResponse in handler signatures. (2026-02-22)
+- **Situation:** When integrating OAuth handlers that use both Express request/response objects and fetch API calls, TypeScript/Node clash on Response type.
+- **Root cause:** Global Response type resolves to Fetch API Response by default in modern Node/TypeScript, breaking Express-specific properties. Aliasing forces correct type binding.
+- **How to avoid:** Aliasing adds clarity and maintains type safety, but developers must remember this pattern exists or face confusing type errors.
+
+#### [Pattern] OAuth callback routes mounted before auth middleware (mounted at `/api/google` before other middleware), allowing unauthenticated access to `/oauth/callback` endpoint. (2026-02-22)
+- **Problem solved:** OAuth flow requires the redirect_uri callback to be accessible without user authentication (provider initiates the callback, user not yet logged in).
+- **Why this works:** Auth middleware requires valid credentials; OAuth callback must execute before this check to receive and process the authorization code from provider.
+- **Trade-offs:** Simpler mounting but requires careful ordering of middleware initialization. Clear when other auth integrations exist.
+
+#### [Pattern] OAuth token storage follows existing Linear integration pattern: store accessToken, refreshToken, tokenExpiresAt, and scopes in `settings.integrations.{service}` per-project. (2026-02-22)
+- **Problem solved:** Multiple OAuth integrations needed; must decide on token storage structure and scope.
+- **Why this works:** Storing under `integrations.{service}` namespace keeps related data together, parallels existing patterns for maintainability, and scopes tokens to projects (multi-project support).
+- **Trade-offs:** Nested structure is slightly deeper but keeps settings organized. Per-project scoping prevents accidental cross-project token access.

@@ -191,6 +191,16 @@ The auto-mode orchestration loop **remains** — it handles:
 
 The Lead Engineer state machine is called **per feature** by the orchestration loop. The loop is the scheduler; the state machine is the executor.
 
+#### Health Sweep
+
+Every ~100 seconds (50 iterations at 2s interval), the auto-mode loop runs `FeatureHealthService.audit()` with auto-fix enabled. This catches:
+
+- **Stale running** — features marked `in_progress` with no active agent. Reset to `backlog`.
+- **Stale gates** — features awaiting a pipeline gate (e.g., SPEC_REVIEW) for >1 hour. Moved to `blocked`.
+- **Orphaned epic refs**, **dangling dependencies**, **merged-but-not-done** — structural drift on the board.
+
+Each detected issue emits an `escalation:signal-received` event with a deduplication key, so the escalation router and notification system can alert the user without flooding.
+
 ---
 
 ## Signal Routing
