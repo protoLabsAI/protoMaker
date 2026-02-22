@@ -127,5 +127,4 @@ export const orchestrationTools: Tool[] = [
       required: ['projectPath'],
     },
   },
-
 ];

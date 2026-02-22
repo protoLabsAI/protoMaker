@@ -387,5 +387,4 @@ export const projectTools: Tool[] = [
       required: ['projectPath', 'projectSlug', 'linearProjectId', 'issueIds'],
     },
   },
-
 ];

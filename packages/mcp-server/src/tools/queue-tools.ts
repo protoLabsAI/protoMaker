@@ -40,5 +40,4 @@ export const queueTools: Tool[] = [
       properties: {},
     },
   },
-
 ];

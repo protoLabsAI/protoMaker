@@ -168,5 +168,4 @@ export const contextTools: Tool[] = [
       required: ['projectPath', 'skillName'],
     },
   },
-
 ];

@@ -228,5 +228,4 @@ export const observabilityTools: Tool[] = [
       required: ['datasetName', 'traceId'],
     },
   },
-
 ];

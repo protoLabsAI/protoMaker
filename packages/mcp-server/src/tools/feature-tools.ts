@@ -1,6 +1,6 @@
 /**
  * Feature Management Tools
- * 
+ *
  * Tools for managing features on the Kanban board:
  * - list_features: List all features
  * - get_feature: Get feature details

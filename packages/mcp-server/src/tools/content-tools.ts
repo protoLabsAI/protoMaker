@@ -188,5 +188,4 @@ export const contentTools: Tool[] = [
       required: ['projectPath', 'prdTitle', 'prdDescription'],
     },
   },
-
 ];
