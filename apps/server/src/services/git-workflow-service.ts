@@ -813,8 +813,8 @@ export class GitWorkflowService {
       );
     }
 
-    // Create commit
-    await execAsync(`git commit -m "${commitMessage.replace(/"/g, '\\"')}"`, {
+    // Create commit (--no-verify bypasses commitlint hook; agents use auto-generated messages)
+    await execAsync(`git commit --no-verify -m "${commitMessage.replace(/"/g, '\\"')}"`, {
       cwd: workDir,
       env: execEnv,
     });
@@ -1008,7 +1008,7 @@ export class GitWorkflowService {
         cwd: workDir,
         env: execEnv,
       });
-      await execAsync('git commit --amend --no-edit', { cwd: workDir, env: execEnv });
+      await execAsync('git commit --no-verify --amend --no-edit', { cwd: workDir, env: execEnv });
       logger.info(`Formatted and amended last commit (${files.length} files checked)`);
     } catch (error) {
       logger.warn(

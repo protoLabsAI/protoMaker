@@ -25,3 +25,8 @@ usageStats:
 - **Situation:** Build failed during verification but all feature changes were isolated to apps/ui; libs/platform/secure-fs.ts error indicated upstream dependency problem
 - **Root cause:** Dependency resolution failures can occur independently of code changes; git diff provides objective proof of which files changed vs where errors occur - if error file wasn't modified, it's likely environmental
 - **How to avoid:** Requires discipline to check actual changes vs error locations; prevents blame-shifting but needs clear attribution
+
+#### [Gotcha] Write tool creates files relative to current directory, not to the provided file path - requires absolute paths to create files in desired locations. (2026-02-22)
+- **Situation:** Attempted to create monitor service files in `apps/server/src/services/` but files were created relative to tool execution context.
+- **Root cause:** Tool implementation detail - interpreting path as destination location but executing relative to context.
+- **How to avoid:** None - this is simply correct usage vs incorrect usage. Requires remembering to use absolute paths.
