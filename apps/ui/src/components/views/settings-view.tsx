@@ -203,7 +203,10 @@ export function SettingsView() {
   };
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden content-bg" data-testid="settings-view">
+    <div
+      className="flex-1 flex flex-col min-h-0 overflow-hidden content-bg"
+      data-testid="settings-view"
+    >
       {/* Header Section */}
       <SettingsHeader
         showNavigation={showNavigation}
@@ -212,7 +215,7 @@ export function SettingsView() {
       />
 
       {/* Content Area with Sidebar */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex min-h-0 overflow-hidden">
         {/* Side Navigation - Overlay on mobile, sidebar on desktop */}
         <SettingsNavigation
           navItems={NAV_ITEMS}
