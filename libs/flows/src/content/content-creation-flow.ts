@@ -189,7 +189,27 @@ Return ONLY a JSON array of strings, no markdown formatting. Example:
 ["query 1", "query 2", "query 3"]`;
 
   try {
+    const startTime = new Date();
     const response = await config.smartModel.invoke([{ role: 'user', content: prompt }]);
+    const endTime = new Date();
+
+    // Track generation in Langfuse
+    if (config.langfuseClient?.isAvailable() && state.traceId) {
+      config.langfuseClient.createGeneration({
+        traceId: state.traceId,
+        name: 'generate_queries',
+        model: 'claude-sonnet-4-5-20250929',
+        input: prompt,
+        output:
+          typeof response.content === 'string'
+            ? response.content
+            : JSON.stringify(response.content),
+        metadata: { phase: 'research', node: 'generate_queries' },
+        startTime,
+        endTime,
+      });
+    }
+
     const content =
       typeof response.content === 'string'
         ? response.content
@@ -313,7 +333,27 @@ Requirements:
 Return ONLY the JSON object, no markdown formatting.`;
 
   try {
+    const startTime = new Date();
     const response = await config.smartModel.invoke([{ role: 'user', content: prompt }]);
+    const endTime = new Date();
+
+    // Track generation in Langfuse
+    if (config.langfuseClient?.isAvailable() && state.traceId) {
+      config.langfuseClient.createGeneration({
+        traceId: state.traceId,
+        name: `research_delegate:${query.slice(0, 40)}`,
+        model: 'claude-sonnet-4-5-20250929',
+        input: prompt,
+        output:
+          typeof response.content === 'string'
+            ? response.content
+            : JSON.stringify(response.content),
+        metadata: { phase: 'research', node: 'research_delegate', query },
+        startTime,
+        endTime,
+      });
+    }
+
     const content =
       typeof response.content === 'string'
         ? response.content
@@ -580,7 +620,27 @@ Guidelines:
 Return ONLY the JSON, no markdown formatting.`;
 
   try {
+    const startTime = new Date();
     const response = await config.smartModel.invoke([{ role: 'user', content: prompt }]);
+    const endTime = new Date();
+
+    // Track generation in Langfuse
+    if (config.langfuseClient?.isAvailable() && state.traceId) {
+      config.langfuseClient.createGeneration({
+        traceId: state.traceId,
+        name: 'generate_outline',
+        model: 'claude-sonnet-4-5-20250929',
+        input: prompt,
+        output:
+          typeof response.content === 'string'
+            ? response.content
+            : JSON.stringify(response.content),
+        metadata: { phase: 'outline', node: 'generate_outline', topic: config.topic },
+        startTime,
+        endTime,
+      });
+    }
+
     const content =
       typeof response.content === 'string'
         ? response.content

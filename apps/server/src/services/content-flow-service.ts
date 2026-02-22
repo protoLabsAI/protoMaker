@@ -14,6 +14,7 @@ import type { BaseChatModel } from '@langchain/core/language_models/chat_models'
 import { ChatAnthropic } from '@langchain/anthropic';
 import { createContentCreationFlow } from '@automaker/flows';
 import type { EventEmitter } from '../lib/events.js';
+import { getLangfuseInstance } from '../lib/langfuse-singleton.js';
 
 const logger = createLogger('ContentFlowService');
 
@@ -62,6 +63,7 @@ interface ContentCreationConfig {
   outputFormats: Array<'markdown' | 'html' | 'pdf'>;
   smartModel: BaseChatModel;
   fastModel: BaseChatModel;
+  langfuseClient?: import('@automaker/observability').LangfuseClient;
   enableHITL?: boolean;
   maxRetries?: number;
 }
@@ -71,6 +73,7 @@ interface ContentCreationConfig {
  */
 export interface ContentFlowStatus {
   runId: string;
+  topic?: string;
   status:
     | 'running'
     | 'reviewing_research'
@@ -87,6 +90,7 @@ export interface ContentFlowStatus {
     content?: { percentage: number; passed: boolean; verdict: string };
   };
   hitlGatesPending: string[]; // Only populated when enableHITL=true
+  traceId?: string; // Langfuse trace ID for deep-linking
   error?: string;
   createdAt: number;
   completedAt?: number;
@@ -195,6 +199,24 @@ export class ContentFlowService {
 
     const { smartModel, fastModel } = this.createModels();
 
+    // Initialize Langfuse tracing
+    const langfuse = getLangfuseInstance();
+    let traceId: string | undefined;
+    if (langfuse.isAvailable()) {
+      traceId = `content-${runId}`;
+      langfuse.createTrace({
+        id: traceId,
+        name: `content:${topic.slice(0, 60)}`,
+        metadata: {
+          runId,
+          topic,
+          format: contentConfig?.format || 'guide',
+          audience: contentConfig?.audience || 'intermediate',
+        },
+        tags: ['content-pipeline', `format:${contentConfig?.format || 'guide'}`],
+      });
+    }
+
     const config: ContentCreationConfig = {
       topic,
       format: contentConfig?.format || 'guide',
@@ -203,15 +225,18 @@ export class ContentFlowService {
       outputFormats: contentConfig?.outputFormats || ['markdown'],
       smartModel,
       fastModel,
+      langfuseClient: langfuse.isAvailable() ? langfuse : undefined,
       enableHITL: contentConfig?.enableHITL || false,
       maxRetries: contentConfig?.maxRetries ?? 2,
     };
 
     const status: ContentFlowStatus = {
       runId,
+      topic,
       status: 'running',
       progress: 0,
       hitlGatesPending: [],
+      traceId,
       createdAt: Date.now(),
     };
 
@@ -307,11 +332,15 @@ export class ContentFlowService {
 
       // Stream the flow to get per-node updates.
       // Initialize with config so metadata can access topic/format.
+      // Pass traceId through to enable per-node Langfuse generation tracking.
       // Fields with reducers (researchResults, sections, reviewFeedback, outputs)
       // need array accumulation since stream deltas don't apply reducers.
       const REDUCER_FIELDS = new Set(['researchResults', 'sections', 'reviewFeedback', 'outputs']);
       let lastState: Record<string, unknown> = { config };
-      const stream = await flow.stream({ config: config as never }, streamConfig);
+      const stream = await flow.stream(
+        { config: config as never, traceId: status.traceId } as never,
+        streamConfig
+      );
 
       for await (const update of stream) {
         // Each update is { nodeName: nodeOutput }
@@ -383,6 +412,36 @@ export class ContentFlowService {
       status.progress = 100;
       status.completedAt = Date.now();
 
+      // Score the trace with review results
+      const langfuse = getLangfuseInstance();
+      if (langfuse.isAvailable() && status.traceId) {
+        if (status.reviewScores?.research) {
+          langfuse.createScore({
+            traceId: status.traceId,
+            name: 'research_quality',
+            value: status.reviewScores.research.percentage / 100,
+            comment: status.reviewScores.research.verdict,
+          });
+        }
+        if (status.reviewScores?.outline) {
+          langfuse.createScore({
+            traceId: status.traceId,
+            name: 'outline_quality',
+            value: status.reviewScores.outline.percentage / 100,
+            comment: status.reviewScores.outline.verdict,
+          });
+        }
+        if (status.reviewScores?.content) {
+          langfuse.createScore({
+            traceId: status.traceId,
+            name: 'content_quality',
+            value: status.reviewScores.content.percentage / 100,
+            comment: status.reviewScores.content.verdict,
+          });
+        }
+        await langfuse.flush();
+      }
+
       await this.saveOutputs(runId, projectPath, lastState);
       this.emitStatus(status);
 
@@ -415,24 +474,66 @@ export class ContentFlowService {
       status: string;
       progress: number;
       currentNode?: string;
+      topic?: string;
       reviewScores?: ContentFlowStatus['reviewScores'];
+      traceId?: string;
       createdAt: number;
+    }>;
+    recentFlows: Array<{
+      runId: string;
+      status: string;
+      progress: number;
+      topic?: string;
+      reviewScores?: ContentFlowStatus['reviewScores'];
+      traceId?: string;
+      createdAt: number;
+      completedAt?: number;
     }>;
     totalActive: number;
   } {
-    const activeFlows = Array.from(this.activeRuns.values())
-      .filter((flow) => flow.status === 'running' || flow.status === 'interrupted')
+    const allFlows = Array.from(this.activeRuns.values());
+
+    const activeFlows = allFlows
+      .filter(
+        (flow) =>
+          flow.status === 'running' ||
+          flow.status === 'interrupted' ||
+          flow.status.startsWith('reviewing_')
+      )
       .map((flow) => ({
         runId: flow.runId,
         status: flow.status,
         progress: flow.progress,
         currentNode: flow.currentNode,
+        topic: flow.topic,
         reviewScores: flow.reviewScores,
+        traceId: flow.traceId,
         createdAt: flow.createdAt,
+      }));
+
+    // Include recently completed/failed flows (last 10, within 24h)
+    const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
+    const recentFlows = allFlows
+      .filter(
+        (flow) =>
+          (flow.status === 'completed' || flow.status === 'failed') && flow.createdAt > oneDayAgo
+      )
+      .sort((a, b) => (b.completedAt ?? b.createdAt) - (a.completedAt ?? a.createdAt))
+      .slice(0, 10)
+      .map((flow) => ({
+        runId: flow.runId,
+        status: flow.status,
+        progress: flow.progress,
+        topic: flow.topic,
+        reviewScores: flow.reviewScores,
+        traceId: flow.traceId,
+        createdAt: flow.createdAt,
+        completedAt: flow.completedAt,
       }));
 
     return {
       activeFlows,
+      recentFlows,
       totalActive: activeFlows.length,
     };
   }
@@ -612,7 +713,7 @@ export class ContentFlowService {
       logger.info(`Saved assembled content fallback to ${fallbackPath}`);
     }
 
-    // Save metadata including review scores
+    // Save metadata including review scores and trace ID
     const status = this.activeRuns.get(runId);
     const flowConfig = finalState.config as { topic?: string; format?: string } | undefined;
     const metadata = {
@@ -622,6 +723,7 @@ export class ContentFlowService {
       status: 'completed',
       outputPath: contentDir,
       reviewScores: status?.reviewScores,
+      traceId: status?.traceId,
       createdAt: status?.createdAt || Date.now(),
       completedAt: Date.now(),
     };
