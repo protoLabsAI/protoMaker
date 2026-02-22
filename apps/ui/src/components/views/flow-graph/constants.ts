@@ -334,7 +334,7 @@ export const PIPELINE_STAGES: Array<{
     nodeId: NODE_IDS.pipelineBlocked,
     stageId: 'blocked',
     label: 'Blocked',
-    position: { x: 475, y: 660 },
+    position: { x: 600, y: 660 },
   },
 ];
 
@@ -361,6 +361,7 @@ export const PIPELINE_EDGES: FlowEdge[] = [
   {
     id: 'e-pipe-review-blocked',
     source: NODE_IDS.pipelineReview,
+    sourceHandle: 'bottom',
     target: NODE_IDS.pipelineBlocked,
     type: 'pipeline',
   },
