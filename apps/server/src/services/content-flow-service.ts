@@ -299,7 +299,11 @@ export class ContentFlowService {
       // Only use thread_id config when HITL is enabled (requires checkpointer).
       // Autonomous mode runs without a checkpointer to avoid serialization
       // issues with ChatAnthropic model instances in state.
-      const streamConfig = isHITL ? { configurable: { thread_id: runId } } : undefined;
+      // 7 phases × up to 7 parallel sections × subgraph nodes = easily 100+ node visits.
+      // Default recursionLimit of 25 is far too low for content generation.
+      const streamConfig = isHITL
+        ? { configurable: { thread_id: runId }, recursionLimit: 150 }
+        : { recursionLimit: 150 };
 
       // Stream the flow to get per-node updates
       let lastState: Record<string, unknown> = {};
