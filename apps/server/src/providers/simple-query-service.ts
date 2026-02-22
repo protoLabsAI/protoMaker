@@ -15,6 +15,7 @@
  */
 
 import { ProviderFactory } from './provider-factory.js';
+import { TracedProvider } from './traced-provider.js';
 import type {
   ThinkingLevel,
   ReasoningEffort,
@@ -67,6 +68,12 @@ export interface SimpleQueryOptions {
   claudeCompatibleProvider?: ClaudeCompatibleProvider;
   /** Credentials for resolving 'credentials' apiKeySource in Claude API profiles/providers */
   credentials?: Credentials;
+  /** Trace context for Langfuse enrichment (feature ID, role, tags) */
+  traceContext?: {
+    featureId?: string;
+    featureName?: string;
+    agentRole?: string;
+  };
 }
 
 /**
@@ -119,6 +126,11 @@ export async function simpleQuery(options: SimpleQueryOptions): Promise<SimpleQu
   const model = options.model || DEFAULT_MODEL;
   const provider = ProviderFactory.getProviderForModel(model);
   const bareModel = stripProviderPrefix(model);
+
+  // Enrich trace with feature context if provided
+  if (options.traceContext && provider instanceof TracedProvider) {
+    provider.setContext(options.traceContext);
+  }
 
   let responseText = '';
   let structuredOutput: Record<string, unknown> | undefined;
@@ -204,6 +216,11 @@ export async function streamingQuery(options: StreamingQueryOptions): Promise<Si
   const model = options.model || DEFAULT_MODEL;
   const provider = ProviderFactory.getProviderForModel(model);
   const bareModel = stripProviderPrefix(model);
+
+  // Enrich trace with feature context if provided
+  if (options.traceContext && provider instanceof TracedProvider) {
+    provider.setContext(options.traceContext);
+  }
 
   let responseText = '';
   let structuredOutput: Record<string, unknown> | undefined;

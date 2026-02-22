@@ -1,7 +1,7 @@
 /**
  * Graph Registry
  *
- * Registry of all 7 LangGraph topologies with JSON serialization.
+ * Registry of all LangGraph topologies with JSON serialization.
  * Each graph entry includes metadata, node structure, and edge configuration.
  */
 
@@ -331,6 +331,44 @@ const GRAPH_REGISTRY: GraphDefinition[] = [
     entryPoint: 'triage',
     features: ['multi-phase', 'branch-routing', 'gate-system', 'langfuse-tracing', 'hitl'],
     useCase: 'Unified signal-to-production pipeline with ops and gtm branches',
+  },
+  {
+    id: 'lead-engineer-reflection',
+    name: 'Lead Engineer Reflection',
+    description:
+      'Linear post-completion flow that generates a per-feature reflection and feeds learnings to sibling features',
+    topology: 'linear',
+    nodes: [
+      {
+        id: 'collect_execution_data',
+        type: 'processor',
+        description: 'Read agent output tail, execution history, cost, retries',
+      },
+      {
+        id: 'generate_reflection',
+        type: 'processor',
+        description: 'Haiku LLM call to produce structured reflection',
+      },
+      {
+        id: 'store_reflection',
+        type: 'processor',
+        description: 'Write reflection.md to feature directory',
+      },
+      {
+        id: 'emit_complete',
+        type: 'processor',
+        description: 'Emit feature:reflection:complete event',
+      },
+    ],
+    edges: [
+      { from: 'collect_execution_data', to: 'generate_reflection' },
+      { from: 'generate_reflection', to: 'store_reflection' },
+      { from: 'store_reflection', to: 'emit_complete' },
+      { from: 'emit_complete', to: 'END' },
+    ],
+    entryPoint: 'collect_execution_data',
+    features: ['sequential', 'fire-and-forget', 'langfuse-tracing'],
+    useCase: 'Post-completion reflection for per-feature learning loops',
   },
   {
     id: 'interrupt-loop',
