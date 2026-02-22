@@ -1,23 +1,23 @@
 import { useState } from 'react';
-import { Folder, LucideIcon, X, Menu, Check, ChevronsUpDown } from 'lucide-react';
+import { Folder, LucideIcon, Menu, Check, ChevronsUpDown } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
-import { cn, isMac } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { getAuthenticatedImageUrl } from '@/lib/api-fetch';
-import { isElectron, type Project } from '@/lib/electron';
+import type { Project } from '@/lib/electron';
 import { Popover, PopoverContent, PopoverTrigger } from '@protolabs/ui/atoms';
 import { useAppStore } from '@/store/app-store';
 
 interface SidebarHeaderProps {
   sidebarOpen: boolean;
+  contentReady: boolean;
   currentProject: Project | null;
-  onClose?: () => void;
   onExpand?: () => void;
 }
 
 export function SidebarHeader({
   sidebarOpen,
+  contentReady,
   currentProject,
-  onClose,
   onExpand,
 }: SidebarHeaderProps) {
   const [projectListOpen, setProjectListOpen] = useState(false);
@@ -34,13 +34,7 @@ export function SidebarHeader({
   const hasCustomIcon = !!currentProject?.customIconPath;
 
   return (
-    <div
-      className={cn(
-        'shrink-0 flex flex-col relative',
-        // Add padding on macOS Electron for traffic light buttons
-        isMac && isElectron() && 'pt-[10px]'
-      )}
-    >
+    <div className="shrink-0 flex flex-col relative">
       {/* Expand button - hamburger menu when sidebar is collapsed */}
       {!sidebarOpen && onExpand && (
         <button
@@ -57,7 +51,7 @@ export function SidebarHeader({
           <Menu className="w-5 h-5" />
         </button>
       )}
-      {/* Project switcher row with close button */}
+      {/* Project switcher row */}
       {currentProject && (
         <div className={cn('flex items-center', sidebarOpen ? 'px-2 pt-3 pb-1 gap-1' : 'pt-1')}>
           <Popover open={projectListOpen} onOpenChange={setProjectListOpen}>
@@ -91,14 +85,20 @@ export function SidebarHeader({
 
                 {/* Project Name - only show when sidebar is open */}
                 {sidebarOpen && (
-                  <>
+                  <div
+                    className={cn(
+                      'flex items-center gap-3 flex-1 min-w-0',
+                      'transition-opacity duration-200',
+                      contentReady ? 'opacity-100' : 'opacity-0'
+                    )}
+                  >
                     <div className="flex-1 min-w-0">
                       <h2 className="text-sm font-semibold text-foreground truncate">
                         {currentProject.name}
                       </h2>
                     </div>
                     <ChevronsUpDown className="w-4 h-4 text-muted-foreground shrink-0" />
-                  </>
+                  </div>
                 )}
               </button>
             </PopoverTrigger>
@@ -158,21 +158,6 @@ export function SidebarHeader({
               </div>
             </PopoverContent>
           </Popover>
-          {/* Close sidebar button - visible when expanded */}
-          {sidebarOpen && onClose && (
-            <button
-              onClick={onClose}
-              className={cn(
-                'shrink-0 flex items-center justify-center w-8 h-8 rounded-lg',
-                'text-muted-foreground hover:text-foreground hover:bg-muted/50',
-                'transition-colors duration-150'
-              )}
-              aria-label="Close sidebar"
-              data-testid="sidebar-close"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
         </div>
       )}
     </div>

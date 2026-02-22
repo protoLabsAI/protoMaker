@@ -1,13 +1,13 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { createLogger } from '@automaker/utils/logger';
 import { useNavigate, useLocation } from '@tanstack/react-router';
 
 const logger = createLogger('Sidebar');
-import { cn } from '@/lib/utils';
+import { cn, isMac } from '@/lib/utils';
 import { useAppStore } from '@/store/app-store';
 import { useNotificationsStore } from '@/store/notifications-store';
 import { useKeyboardShortcuts, useKeyboardShortcutsConfig } from '@/hooks/use-keyboard-shortcuts';
-import { getElectronAPI } from '@/lib/electron';
+import { getElectronAPI, isElectron } from '@/lib/electron';
 import { initializeProject, hasAppSpec, hasAutomakerDir } from '@/lib/project-init';
 import { toast } from 'sonner';
 import { DeleteProjectDialog } from '@/components/views/settings-view/components/delete-project-dialog';
@@ -59,6 +59,34 @@ export function Sidebar() {
   } = useAppStore();
 
   const isCompact = useIsCompact();
+
+  // Content fade: delay content appearance until sidebar width transition completes on open,
+  // and fade out content before collapsing on close.
+  const [contentReady, setContentReady] = useState(sidebarOpen);
+  const closingRef = useRef(false);
+
+  useEffect(() => {
+    if (sidebarOpen && !closingRef.current) {
+      // Opening: wait for width transition to finish, then fade in content
+      const timer = setTimeout(() => setContentReady(true), 300);
+      return () => clearTimeout(timer);
+    }
+  }, [sidebarOpen]);
+
+  const handleToggleSidebar = useCallback(() => {
+    if (sidebarOpen) {
+      // Closing: fade out content first, then collapse sidebar width
+      setContentReady(false);
+      closingRef.current = true;
+      setTimeout(() => {
+        toggleSidebar();
+        closingRef.current = false;
+      }, 150);
+    } else {
+      // Opening: expand width immediately (content fades in via useEffect)
+      toggleSidebar();
+    }
+  }, [sidebarOpen, toggleSidebar]);
 
   // Environment variable flags for hiding sidebar items
   const { hideTerminal, hideContext, hideSpecEditor } = SIDEBAR_FEATURE_FLAGS;
@@ -127,7 +155,7 @@ export function Sidebar() {
     specCreatingForProject !== null && specCreatingForProject === currentProject?.path;
 
   // Auto-collapse sidebar on small screens and update Electron window minWidth
-  useSidebarAutoCollapse({ sidebarOpen, toggleSidebar });
+  useSidebarAutoCollapse({ sidebarOpen, toggleSidebar: handleToggleSidebar });
 
   // Unviewed validations count
   const { count: unviewedValidationsCount } = useUnviewedValidations(currentProject);
@@ -226,7 +254,7 @@ export function Sidebar() {
     projects,
     projectHistory,
     navigate,
-    toggleSidebar,
+    toggleSidebar: handleToggleSidebar,
     handleOpenFolder,
     cyclePrevProject,
     cycleNextProject,
@@ -256,7 +284,7 @@ export function Sidebar() {
       {sidebarOpen && !shouldHideSidebar && (
         <div
           className="fixed inset-0 bg-black/50 z-20 lg:hidden"
-          onClick={toggleSidebar}
+          onClick={handleToggleSidebar}
           data-testid="sidebar-backdrop"
         />
       )}
@@ -277,31 +305,45 @@ export function Sidebar() {
         )}
         data-testid="sidebar"
       >
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div
+          className={cn(
+            'flex-1 flex flex-col overflow-hidden',
+            isMac && isElectron() && 'pt-[10px]'
+          )}
+        >
+          {sidebarOpen && (
+            <div
+              className={cn(
+                'transition-opacity duration-200',
+                contentReady ? 'opacity-100' : 'opacity-0'
+              )}
+            >
+              <QuickActionsBar
+                onBugReport={() =>
+                  getElectronAPI().openExternalLink(
+                    'https://github.com/proto-labs-ai/automaker/issues'
+                  )
+                }
+                onDocs={() => getElectronAPI().openExternalLink('https://protolabs.studio/docs')}
+                onNewProject={() => setShowNewProjectModal(true)}
+                onOpenFolder={handleOpenFolder}
+                onSettings={() => navigate({ to: '/settings' })}
+                onClose={handleToggleSidebar}
+              />
+            </div>
+          )}
+
           <SidebarHeader
             sidebarOpen={sidebarOpen}
+            contentReady={contentReady}
             currentProject={currentProject}
-            onClose={toggleSidebar}
-            onExpand={toggleSidebar}
+            onExpand={handleToggleSidebar}
           />
-
-          {sidebarOpen && (
-            <QuickActionsBar
-              onBugReport={() =>
-                getElectronAPI().openExternalLink(
-                  'https://github.com/proto-labs-ai/automaker/issues'
-                )
-              }
-              onDocs={() => getElectronAPI().openExternalLink('https://protolabs.studio/docs')}
-              onNewProject={() => setShowNewProjectModal(true)}
-              onOpenFolder={handleOpenFolder}
-              onSettings={() => navigate({ to: '/settings' })}
-            />
-          )}
 
           <SidebarNavigation
             currentProject={currentProject}
             sidebarOpen={sidebarOpen}
+            contentReady={contentReady}
             navSections={navSections}
             isActiveRoute={isActiveRoute}
             navigate={navigate}
@@ -309,7 +351,13 @@ export function Sidebar() {
         </div>
 
         {sidebarOpen && (
-          <div className="shrink-0 border-t border-border/40 px-4 py-3">
+          <div
+            className={cn(
+              'shrink-0 border-t border-border/40 px-4 py-3',
+              'transition-opacity duration-200',
+              contentReady ? 'opacity-100' : 'opacity-0'
+            )}
+          >
             <AutomakerLogo sidebarOpen={sidebarOpen} navigate={navigate} />
           </div>
         )}

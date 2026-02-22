@@ -8,6 +8,7 @@ import { Spinner } from '@protolabs/ui/atoms';
 interface SidebarNavigationProps {
   currentProject: Project | null;
   sidebarOpen: boolean;
+  contentReady: boolean;
   navSections: NavSection[];
   isActiveRoute: (id: string) => boolean;
   navigate: (opts: NavigateOptions) => void;
@@ -16,6 +17,7 @@ interface SidebarNavigationProps {
 export function SidebarNavigation({
   currentProject,
   sidebarOpen,
+  contentReady,
   navSections,
   isActiveRoute,
   navigate,
@@ -29,7 +31,13 @@ export function SidebarNavigation({
     >
       {!currentProject && sidebarOpen ? (
         // Placeholder when no project is selected (only in expanded state)
-        <div className="flex items-center justify-center h-full px-4">
+        <div
+          className={cn(
+            'flex items-center justify-center h-full px-4',
+            'transition-opacity duration-200',
+            contentReady ? 'opacity-100' : 'opacity-0'
+          )}
+        >
           <p className="text-muted-foreground text-sm text-center">
             <span className="block">Select or create a project above</span>
           </p>
@@ -40,7 +48,12 @@ export function SidebarNavigation({
           <div key={sectionIdx} className={sectionIdx > 0 && sidebarOpen ? 'mt-6' : ''}>
             {/* Section Label */}
             {section.label && sidebarOpen && (
-              <div className="px-3 mb-2">
+              <div
+                className={cn(
+                  'px-3 mb-2 transition-opacity duration-200',
+                  contentReady ? 'opacity-100' : 'opacity-0'
+                )}
+              >
                 <span className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-widest">
                   {section.label}
                 </span>
@@ -48,7 +61,12 @@ export function SidebarNavigation({
             )}
             {/* Separator for sections without label (visual separation) */}
             {!section.label && sectionIdx > 0 && sidebarOpen && (
-              <div className="h-px bg-border/40 mx-3 mb-4"></div>
+              <div
+                className={cn(
+                  'h-px bg-border/40 mx-3 mb-4 transition-opacity duration-200',
+                  contentReady ? 'opacity-100' : 'opacity-0'
+                )}
+              ></div>
             )}
             {(section.label || sectionIdx > 0) && !sidebarOpen && (
               <div className="h-px bg-border/30 mx-2 my-1.5"></div>
@@ -127,7 +145,9 @@ export function SidebarNavigation({
                     <span
                       className={cn(
                         'ml-3 font-medium text-sm flex-1 text-left',
-                        sidebarOpen ? 'block' : 'hidden'
+                        sidebarOpen ? 'block' : 'hidden',
+                        'transition-opacity duration-200',
+                        contentReady ? 'opacity-100' : 'opacity-0'
                       )}
                     >
                       {item.label}
@@ -139,7 +159,8 @@ export function SidebarNavigation({
                           'flex items-center justify-center',
                           'min-w-5 h-5 px-1.5 text-[10px] font-bold rounded-full',
                           'bg-primary text-primary-foreground shadow-sm',
-                          'animate-in fade-in zoom-in duration-200'
+                          'transition-opacity duration-200',
+                          contentReady ? 'opacity-100' : 'opacity-0'
                         )}
                         data-testid={`count-${item.id}`}
                       >
@@ -152,7 +173,8 @@ export function SidebarNavigation({
                           'flex items-center justify-center min-w-5 h-5 px-1.5 text-[10px] font-mono rounded-md transition-all duration-200',
                           isActive
                             ? 'bg-brand-500/20 text-brand-400'
-                            : 'bg-muted text-muted-foreground group-hover:bg-accent'
+                            : 'bg-muted text-muted-foreground group-hover:bg-accent',
+                          contentReady ? 'opacity-100' : 'opacity-0'
                         )}
                         data-testid={`shortcut-${item.id}`}
                       >
