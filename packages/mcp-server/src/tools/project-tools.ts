@@ -1,0 +1,391 @@
+/**
+ * Project Planning and Lifecycle Management Tools
+ */
+
+import { Tool } from '@modelcontextprotocol/sdk/types.js';
+
+export const projectTools: Tool[] = [
+  {
+    name: 'get_project_spec',
+    description:
+      'Get the project specification from .automaker/spec.md. This provides architectural context to agents.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+      },
+      required: ['projectPath'],
+    },
+  },
+  {
+    name: 'update_project_spec',
+    description:
+      'Update the project specification. This is shown to agents for architectural context.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        content: {
+          type: 'string',
+          description: 'New content for spec.md',
+        },
+      },
+      required: ['projectPath', 'content'],
+    },
+  },
+
+  {
+    name: 'list_projects',
+    description:
+      'List all project plans in a project. Returns project slugs that can be used with get_project.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+      },
+      required: ['projectPath'],
+    },
+  },
+  {
+    name: 'get_project',
+    description:
+      'Get detailed information about a project plan including milestones, phases, and PRD.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        projectSlug: {
+          type: 'string',
+          description: 'The project slug (from list_projects)',
+        },
+      },
+      required: ['projectPath', 'projectSlug'],
+    },
+  },
+  {
+    name: 'create_project',
+    description:
+      'Create a new project plan with milestones and phases. This scaffolds the project structure in .automaker/projects/.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        title: {
+          type: 'string',
+          description: 'Project title',
+        },
+        goal: {
+          type: 'string',
+          description: 'Project goal/objective',
+        },
+        prd: {
+          type: 'object',
+          description: 'SPARC PRD with situation, problem, approach, results, constraints',
+          properties: {
+            situation: { type: 'string' },
+            problem: { type: 'string' },
+            approach: { type: 'string' },
+            results: { type: 'string' },
+            constraints: { type: 'array', items: { type: 'string' } },
+          },
+        },
+        milestones: {
+          type: 'array',
+          description: 'Array of milestones, each with title, description, and phases',
+          items: {
+            type: 'object',
+            properties: {
+              title: { type: 'string' },
+              description: { type: 'string' },
+              phases: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    title: { type: 'string' },
+                    description: { type: 'string' },
+                    filesToModify: { type: 'array', items: { type: 'string' } },
+                    acceptanceCriteria: { type: 'array', items: { type: 'string' } },
+                    complexity: { type: 'string', enum: ['small', 'medium', 'large'] },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      required: ['projectPath', 'title', 'goal', 'milestones'],
+    },
+  },
+  {
+    name: 'update_project',
+    description: 'Update a project plan. Can update title, goal, status, or PRD.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        projectSlug: {
+          type: 'string',
+          description: 'The project slug to update',
+        },
+        title: {
+          type: 'string',
+          description: 'New title (optional)',
+        },
+        goal: {
+          type: 'string',
+          description: 'New goal (optional)',
+        },
+        status: {
+          type: 'string',
+          enum: [
+            'researching',
+            'drafting',
+            'reviewing',
+            'approved',
+            'scaffolded',
+            'active',
+            'completed',
+          ],
+          description: 'New status (optional)',
+        },
+      },
+      required: ['projectPath', 'projectSlug'],
+    },
+  },
+  {
+    name: 'delete_project',
+    description: 'Delete a project plan and all its files.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        projectSlug: {
+          type: 'string',
+          description: 'The project slug to delete',
+        },
+      },
+      required: ['projectPath', 'projectSlug'],
+    },
+  },
+  {
+    name: 'archive_project',
+    description:
+      'Archive a project after Linear handoff. Slims project.json to mapping data only (slug, title, linearProjectId, milestone/phase IDs) and deletes .md files and milestones/ directory. Use after sync_project_to_linear to complete the handoff.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        projectSlug: {
+          type: 'string',
+          description: 'The project slug to archive',
+        },
+      },
+      required: ['projectPath', 'projectSlug'],
+    },
+  },
+  {
+    name: 'create_project_features',
+    description:
+      'Create Kanban board features from a project plan. Converts phases to features with optional epic grouping.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        projectSlug: {
+          type: 'string',
+          description: 'The project slug to create features from',
+        },
+        createEpics: {
+          type: 'boolean',
+          default: true,
+          description: 'Create epic features for each milestone',
+        },
+        setupDependencies: {
+          type: 'boolean',
+          default: true,
+          description: 'Set up dependencies between features based on phase order',
+        },
+        initialStatus: {
+          type: 'string',
+          enum: ['backlog', 'in-progress'],
+          default: 'backlog',
+          description: 'Initial status for created features',
+        },
+      },
+      required: ['projectPath', 'projectSlug'],
+    },
+  },
+
+  {
+    name: 'initiate_project',
+    description:
+      'Start a new project lifecycle. Checks for duplicate Linear projects, creates a new Linear project with the idea description, and creates a local project cache. Returns duplicates if found (caller should confirm before proceeding).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        title: {
+          type: 'string',
+          description: 'Project title',
+        },
+        ideaDescription: {
+          type: 'string',
+          description: 'Idea description (markdown). Stored as Linear project description.',
+        },
+      },
+      required: ['projectPath', 'title', 'ideaDescription'],
+    },
+  },
+  {
+    name: 'generate_project_prd',
+    description:
+      'Check if a PRD exists for a project. If not, suggests generating one via the /plan-project skill or create_project tool. Returns existing PRD if available.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        projectSlug: {
+          type: 'string',
+          description: 'Project slug',
+        },
+        additionalContext: {
+          type: 'string',
+          description: 'Additional context for PRD generation (optional)',
+        },
+      },
+      required: ['projectPath', 'projectSlug'],
+    },
+  },
+  {
+    name: 'approve_project_prd',
+    description:
+      'Approve the PRD and create board features from project milestones. Syncs milestones to Linear. Call after the project has a PRD and milestones defined.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        projectSlug: {
+          type: 'string',
+          description: 'Project slug',
+        },
+        createEpics: {
+          type: 'boolean',
+          description: 'Create epic features for milestones (default: true)',
+        },
+        setupDependencies: {
+          type: 'boolean',
+          description: 'Set up dependencies between features (default: true)',
+        },
+      },
+      required: ['projectPath', 'projectSlug'],
+    },
+  },
+  {
+    name: 'launch_project',
+    description:
+      'Launch a project: sets Linear project status to "started" and starts auto-mode. Requires features to exist in backlog (call approve_project_prd first).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        projectSlug: {
+          type: 'string',
+          description: 'Project slug',
+        },
+        maxConcurrency: {
+          type: 'number',
+          description: 'Max concurrent agents (optional, uses system default)',
+        },
+      },
+      required: ['projectPath', 'projectSlug'],
+    },
+  },
+  {
+    name: 'get_lifecycle_status',
+    description:
+      'Get the current lifecycle phase and next actions for a project. Reads both Linear state and local board state to determine where the project is in the pipeline.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        projectSlug: {
+          type: 'string',
+          description: 'Project slug',
+        },
+      },
+      required: ['projectPath', 'projectSlug'],
+    },
+  },
+  {
+    name: 'collect_related_issues',
+    description:
+      'Move existing Linear issues into a project. Useful for gathering related work that was created before the project.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        projectSlug: {
+          type: 'string',
+          description: 'Project slug',
+        },
+        linearProjectId: {
+          type: 'string',
+          description: 'Linear project ID to add issues to',
+        },
+        issueIds: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Array of Linear issue IDs to add to the project',
+        },
+      },
+      required: ['projectPath', 'projectSlug', 'linearProjectId', 'issueIds'],
+    },
+  },
+
+];
