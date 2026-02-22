@@ -177,7 +177,7 @@ AVA receives escalations and decides: retry with different approach, assign to d
 
 #### DONE
 
-Terminal state. Feature is complete. Learnings stored in `.automaker/memory/`.
+Terminal state. Feature is complete. A per-feature reflection is generated (see [Per-Feature Reflection Loop](#per-feature-reflection-loop) below).
 
 ### Concurrency
 
@@ -326,6 +326,51 @@ Systems removed by this architecture:
 | Project planning flow        | Functional LangGraph flow. Used in full-path intake.                      |
 | Content pipeline (partial)   | Section-writer + antagonistic-reviewer are functional LLM nodes. Keep.    |
 | Context file loader          | Loads .automaker/context/ and memory into agent prompts.                  |
+
+---
+
+## Per-Feature Reflection Loop
+
+After each feature reaches DONE, the DeployProcessor generates a lightweight reflection. This creates a learning loop within a single project — each feature benefits from the last.
+
+### How It Works
+
+1. **Generate** — `DeployProcessor.generateReflection()` fires non-blocking after marking a feature done
+2. Reads the tail of `agent-output.md` (last 2000 chars) plus execution metadata (cost, retries, remediation cycles, review feedback, execution history)
+3. Calls `simpleQuery()` with **haiku** (maxTurns: 1, no tools) to produce a structured reflection under 200 words
+4. Writes result to `.automaker/features/{id}/reflection.md`
+5. Emits `feature:reflection:complete` event
+
+### Feed-Forward
+
+When the next feature enters EXECUTE, `ExecuteProcessor.process()` loads reflections from completed sibling features:
+
+- **Sibling matching**: same epicId (if in an epic) or same projectSlug (if standalone)
+- **Recency cap**: top 3 most recently completed siblings
+- **Injection point**: reflections are added to the `contextParts` array as "Learnings from Prior Features" and passed to the agent via `recoveryContext`
+
+### Storage
+
+Reflections are stored as files (not feature fields):
+
+```
+.automaker/features/{id}/reflection.md
+```
+
+Each reflection includes: title, timestamp, cost, retry/remediation counts, and the LLM-generated analysis.
+
+### Cost
+
+~$0.001 per reflection (haiku, single turn, no tools). Fire-and-forget — failure does not block the state machine.
+
+### Observability
+
+Reflection LLM calls are traced in Langfuse with:
+
+- Tag: `feature:{id}`, `role:reflection`
+- Metadata: `featureId`, `featureName`, `agentRole: 'reflection'`
+
+See [Langfuse Integration — Reflection Tracing](./langfuse-integration.md#reflection-tracing) for details.
 
 ---
 

@@ -974,6 +974,11 @@ ${summary}`,
         cwd: ctx.projectPath,
         maxTurns: 1,
         allowedTools: [],
+        traceContext: {
+          featureId: ctx.feature.id,
+          featureName: ctx.feature.title,
+          agentRole: 'reflection',
+        },
       });
 
       const content = `# Reflection: ${ctx.feature.title}\n\n_Generated: ${new Date().toISOString()}_\n_Cost: $${(ctx.feature.costUsd || 0).toFixed(2)} | Retries: ${ctx.retryCount} | Remediation: ${ctx.remediationAttempts}_\n\n${result.text}\n`;
