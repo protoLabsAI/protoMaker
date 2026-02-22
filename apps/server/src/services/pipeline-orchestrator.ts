@@ -599,6 +599,8 @@ export class PipelineOrchestrator {
     // Update state
     pipelineState.currentPhase = phase;
     pipelineState.awaitingGate = false;
+    pipelineState.awaitingGatePhase = null;
+    pipelineState.gateWaitingSince = undefined;
     pipelineState.phaseHistory.push({
       from: previousPhase,
       to: phase,

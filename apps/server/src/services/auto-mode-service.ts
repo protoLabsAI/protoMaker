@@ -1015,7 +1015,7 @@ export class AutoModeService {
                     fix: issue.fix,
                     projectPath,
                   },
-                  deduplicationKey: `health_${issue.type}_${issue.featureId}`,
+                  deduplicationKey: `health_${issue.type}_${issue.featureId}_${projectPath}`,
                   timestamp: new Date().toISOString(),
                 }
               );
