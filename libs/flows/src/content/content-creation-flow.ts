@@ -165,7 +165,7 @@ export type ContentCreationStateType = typeof ContentCreationState.State;
 // ============================================================================
 
 /**
- * Generate research queries based on topic
+ * Generate research queries based on topic using LLM
  */
 async function generateQueriesNode(
   state: ContentCreationStateType
@@ -174,15 +174,51 @@ async function generateQueriesNode(
 
   logger.info(`Generating research queries for topic: ${config.topic}`);
 
-  // Generate queries (in real implementation, this would use LLM)
-  const researchQueries = [
-    `Core concepts and fundamentals of ${config.topic}`,
-    `Best practices and common patterns for ${config.topic}`,
-    `Advanced techniques and edge cases in ${config.topic}`,
-  ];
+  const prompt = `You are a research strategist for a ${config.format} aimed at ${config.audience}-level readers.
 
+Topic: ${config.topic}
+
+Generate 4-6 specific, focused research queries that would help write a comprehensive ${config.format} on this topic. Each query should target a different angle:
+- Core concepts and fundamentals
+- Practical techniques and patterns
+- Real-world examples and case studies
+- Common pitfalls and how to avoid them
+- Advanced or emerging aspects
+
+Return ONLY a JSON array of strings, no markdown formatting. Example:
+["query 1", "query 2", "query 3"]`;
+
+  try {
+    const response = await config.smartModel.invoke([{ role: 'user', content: prompt }]);
+    const content =
+      typeof response.content === 'string'
+        ? response.content
+        : Array.isArray(response.content)
+          ? response.content
+              .filter((c) => (c as Record<string, unknown>).type === 'text')
+              .map((c) => ((c as Record<string, unknown>).text as string) || '')
+              .join('')
+          : String(response.content);
+
+    // Parse JSON array from response
+    const jsonMatch = content.match(/\[[\s\S]*\]/);
+    if (jsonMatch) {
+      const queries = JSON.parse(jsonMatch[0]) as string[];
+      logger.info(`Generated ${queries.length} research queries`);
+      return { researchQueries: queries };
+    }
+  } catch (error) {
+    logger.warn('Failed to generate queries via LLM, using fallback:', error);
+  }
+
+  // Fallback queries if LLM fails
   return {
-    researchQueries,
+    researchQueries: [
+      `Core concepts and fundamentals of ${config.topic}`,
+      `Best practices and common patterns for ${config.topic}`,
+      `Advanced techniques and real-world examples in ${config.topic}`,
+      `Common pitfalls and edge cases in ${config.topic}`,
+    ],
   };
 }
 
@@ -247,29 +283,77 @@ async function fanOutResearchNode(state: ContentCreationStateType) {
 }
 
 /**
- * Research delegate - executes a single research query
+ * Research delegate - executes a single research query using LLM
  */
 async function researchDelegateNode(
   state: ContentCreationStateType & { query: string }
 ): Promise<Partial<ContentCreationStateType>> {
-  const { query } = state;
+  const { query, config } = state;
 
   logger.info(`Researching: ${query}`);
 
-  // Mock research findings (in real implementation, would use tools/LLM)
-  const findings: ResearchFindings = {
-    facts: [`Fact 1 about ${query}`, `Fact 2 about ${query}`, `Fact 3 about ${query}`],
-    examples: [`Example 1 for ${query}`, `Example 2 for ${query}`],
-    references: [`Reference 1 for ${query}`, `Reference 2 for ${query}`],
-  };
+  const prompt = `You are a thorough researcher preparing material for a ${config.format} on "${config.topic}" for ${config.audience}-level readers.
 
-  const result: ResearchResult = {
-    query,
-    findings,
-  };
+Research query: ${query}
 
+Provide detailed, substantive research findings. Be specific — include real concepts, actual techniques, concrete examples, and credible references. Do NOT use placeholder text.
+
+Return your findings as JSON with this exact structure:
+{
+  "facts": ["fact1", "fact2", ...],
+  "examples": ["example1", "example2", ...],
+  "references": ["reference1", "reference2", ...]
+}
+
+Requirements:
+- facts: 5-8 specific, substantive facts with real detail (not "Fact about X")
+- examples: 3-5 concrete, illustrative examples with enough detail to be useful
+- references: 3-5 credible sources, methodologies, or frameworks that support the facts
+
+Return ONLY the JSON object, no markdown formatting.`;
+
+  try {
+    const response = await config.smartModel.invoke([{ role: 'user', content: prompt }]);
+    const content =
+      typeof response.content === 'string'
+        ? response.content
+        : Array.isArray(response.content)
+          ? response.content
+              .filter((c) => (c as Record<string, unknown>).type === 'text')
+              .map((c) => ((c as Record<string, unknown>).text as string) || '')
+              .join('')
+          : String(response.content);
+
+    // Parse JSON from response
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]) as ResearchFindings;
+      const findings: ResearchFindings = {
+        facts: parsed.facts || [],
+        examples: parsed.examples || [],
+        references: parsed.references || [],
+      };
+      logger.info(
+        `Research complete: ${findings.facts.length} facts, ${findings.examples.length} examples`
+      );
+      return { researchResults: [{ query, findings }] };
+    }
+  } catch (error) {
+    logger.warn(`Failed to research "${query}" via LLM:`, error);
+  }
+
+  // Fallback if LLM fails
   return {
-    researchResults: [result],
+    researchResults: [
+      {
+        query,
+        findings: {
+          facts: [`Research on "${query}" could not be completed`],
+          examples: [],
+          references: [],
+        },
+      },
+    ],
   };
 }
 
@@ -443,7 +527,7 @@ function routeAfterResearchReview(state: ContentCreationStateType): string {
 // ============================================================================
 
 /**
- * Generate content outline based on research
+ * Generate content outline based on research using LLM
  */
 async function generateOutlineNode(
   state: ContentCreationStateType
@@ -452,36 +536,108 @@ async function generateOutlineNode(
 
   logger.info('Generating content outline');
 
-  // Mock outline generation (in real implementation, would use LLM with research)
-  const outline: Outline = {
-    title: `Guide to ${config.topic}`,
-    sections: [
-      {
-        id: 'intro',
-        title: 'Introduction',
-        description: `Overview of ${config.topic}`,
-        includeCodeExamples: false,
-        targetLength: 200,
-      },
-      {
-        id: 'fundamentals',
-        title: 'Fundamentals',
-        description: `Core concepts and basics of ${config.topic}`,
-        includeCodeExamples: true,
-        targetLength: 500,
-      },
-      {
-        id: 'advanced',
-        title: 'Advanced Topics',
-        description: `Advanced techniques and patterns in ${config.topic}`,
-        includeCodeExamples: true,
-        targetLength: 600,
-      },
-    ],
-  };
+  // Compile research summaries
+  const researchSummary = researchResults
+    .map((r) => {
+      const f = r.findings;
+      return `**${r.query}**\n- Facts: ${f.facts.join('; ')}\n- Examples: ${f.examples.join('; ')}`;
+    })
+    .join('\n\n');
 
+  const prompt = `You are a content architect creating the outline for a ${config.format} aimed at ${config.audience}-level readers.
+
+Topic: ${config.topic}
+Tone: ${config.tone}
+Format: ${config.format}
+
+Research findings:
+${researchSummary}
+
+Create a detailed content outline with 4-7 sections. Each section should build on the previous one.
+
+Return ONLY a JSON object with this exact structure:
+{
+  "title": "The article title",
+  "sections": [
+    {
+      "id": "section-slug",
+      "title": "Section Title",
+      "description": "What this section covers and its key points",
+      "includeCodeExamples": true,
+      "targetLength": 500
+    }
+  ]
+}
+
+Guidelines:
+- Start with a compelling introduction that hooks the reader
+- Build from foundational concepts to advanced insights
+- End with a conclusion or actionable takeaways
+- includeCodeExamples: true for technical sections, false for narrative
+- targetLength: 150-300 for intro/conclusion, 400-800 for body sections
+- Total target: 2000-4000 words across all sections
+
+Return ONLY the JSON, no markdown formatting.`;
+
+  try {
+    const response = await config.smartModel.invoke([{ role: 'user', content: prompt }]);
+    const content =
+      typeof response.content === 'string'
+        ? response.content
+        : Array.isArray(response.content)
+          ? response.content
+              .filter((c) => (c as Record<string, unknown>).type === 'text')
+              .map((c) => ((c as Record<string, unknown>).text as string) || '')
+              .join('')
+          : String(response.content);
+
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]) as Outline;
+      if (parsed.title && parsed.sections?.length > 0) {
+        logger.info(`Generated outline: "${parsed.title}" with ${parsed.sections.length} sections`);
+        return { outline: parsed };
+      }
+    }
+  } catch (error) {
+    logger.warn('Failed to generate outline via LLM, using fallback:', error);
+  }
+
+  // Fallback outline if LLM fails
   return {
-    outline,
+    outline: {
+      title: `Guide to ${config.topic}`,
+      sections: [
+        {
+          id: 'intro',
+          title: 'Introduction',
+          description: `Overview of ${config.topic}`,
+          includeCodeExamples: false,
+          targetLength: 250,
+        },
+        {
+          id: 'core-concepts',
+          title: 'Core Concepts',
+          description: `Fundamental ideas behind ${config.topic}`,
+          includeCodeExamples: true,
+          targetLength: 600,
+        },
+        {
+          id: 'in-practice',
+          title: 'In Practice',
+          description: `Real-world application of ${config.topic}`,
+          includeCodeExamples: true,
+          targetLength: 600,
+        },
+        {
+          id: 'conclusion',
+          title: 'Conclusion',
+          description: `Key takeaways and next steps`,
+          includeCodeExamples: false,
+          targetLength: 250,
+        },
+      ],
+    },
   };
 }
 
