@@ -16,9 +16,9 @@ import {
   CardContent,
   CardFooter,
   CardAction,
-} from './card';
-import { Button } from './button';
-import { Badge } from './badge';
+  Button,
+  Badge,
+} from '@protolabs/ui/atoms';
 
 const meta = {
   title: 'UI/Card',

@@ -1,22 +1,24 @@
 import { useAppStore } from '@/store/app-store';
+import { useAIModelsStore } from '@/store/ai-models-store';
 import { useSetupStore } from '@/store/setup-store';
 import { Label } from '@protolabs/ui/atoms';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@protolabs/ui/atoms';
 import { Bot, Cloud, Server, Globe } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Project } from '@/lib/electron';
+import type { ClaudeApiProfile } from '@automaker/types';
 
 interface ProjectClaudeSectionProps {
   project: Project;
 }
 
 export function ProjectClaudeSection({ project }: ProjectClaudeSectionProps) {
+  const { setProjectClaudeApiProfile } = useAppStore();
   const {
     claudeApiProfiles,
     activeClaudeApiProfileId: globalActiveProfileId,
     disabledProviders,
-    setProjectClaudeApiProfile,
-  } = useAppStore();
+  } = useAIModelsStore();
   const { claudeAuthStatus } = useSetupStore();
 
   // Get project-level override from project
@@ -38,7 +40,7 @@ export function ProjectClaudeSection({ project }: ProjectClaudeSectionProps) {
 
   // Get global profile name for display
   const globalProfile = globalActiveProfileId
-    ? claudeApiProfiles.find((p) => p.id === globalActiveProfileId)
+    ? claudeApiProfiles.find((p: ClaudeApiProfile) => p.id === globalActiveProfileId)
     : null;
   const globalProfileName = globalProfile?.name || 'Direct Anthropic API';
 
@@ -71,7 +73,7 @@ export function ProjectClaudeSection({ project }: ProjectClaudeSectionProps) {
     if (selectValue === 'direct') {
       return 'Using direct Anthropic API (API key or Claude Max plan)';
     }
-    const selectedProfile = claudeApiProfiles.find((p) => p.id === selectValue);
+    const selectedProfile = claudeApiProfiles.find((p: ClaudeApiProfile) => p.id === selectValue);
     return `Using ${selectedProfile?.name || 'custom'} endpoint`;
   };
 
@@ -117,7 +119,7 @@ export function ProjectClaudeSection({ project }: ProjectClaudeSectionProps) {
                   <span>Direct Anthropic API</span>
                 </div>
               </SelectItem>
-              {claudeApiProfiles.map((profile) => (
+              {claudeApiProfiles.map((profile: ClaudeApiProfile) => (
                 <SelectItem key={profile.id} value={profile.id}>
                   <div className="flex items-center gap-2">
                     <Server className="w-4 h-4 text-muted-foreground" />

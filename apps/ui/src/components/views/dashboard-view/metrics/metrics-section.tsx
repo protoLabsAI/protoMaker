@@ -36,7 +36,9 @@ export function MetricsSection({ projectPath }: MetricsSectionProps) {
       // Invalidate on feature completion
       if (type === 'feature:completed') {
         queryClient.invalidateQueries({ queryKey: queryKeys.metrics.ledgerAggregate(projectPath) });
-        queryClient.invalidateQueries({ queryKey: queryKeys.metrics.timeSeries(projectPath) });
+        queryClient.invalidateQueries({
+          queryKey: ['metrics', 'ledger', 'timeSeries', projectPath],
+        });
         queryClient.invalidateQueries({
           queryKey: queryKeys.metrics.modelDistribution(projectPath),
         });

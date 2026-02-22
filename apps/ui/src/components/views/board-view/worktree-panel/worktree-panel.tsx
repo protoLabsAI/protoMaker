@@ -189,7 +189,7 @@ export function WorktreePanel({
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   useEffect(() => {
     intervalRef.current = setInterval(() => {
-      fetchWorktrees({ silent: true });
+      fetchWorktrees();
     }, 5000);
 
     return () => {
@@ -267,7 +267,7 @@ export function WorktreePanel({
           description: `Discarded changes in ${discardChangesWorktree.branch}`,
         });
         // Refresh worktrees to update the changes status
-        fetchWorktrees({ silent: true });
+        fetchWorktrees();
       } else {
         toast.error('Failed to discard changes', {
           description: result.error || 'Unknown error',
@@ -434,12 +434,7 @@ export function WorktreePanel({
               variant="ghost"
               size="sm"
               className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground shrink-0"
-              onClick={async () => {
-                const removedWorktrees = await fetchWorktrees();
-                if (removedWorktrees && removedWorktrees.length > 0 && onRemovedWorktrees) {
-                  onRemovedWorktrees(removedWorktrees);
-                }
-              }}
+              onClick={() => fetchWorktrees()}
               disabled={isLoading}
               title="Refresh worktrees"
             >
@@ -642,12 +637,7 @@ export function WorktreePanel({
               variant="ghost"
               size="sm"
               className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
-              onClick={async () => {
-                const removedWorktrees = await fetchWorktrees();
-                if (removedWorktrees && removedWorktrees.length > 0 && onRemovedWorktrees) {
-                  onRemovedWorktrees(removedWorktrees);
-                }
-              }}
+              onClick={() => fetchWorktrees()}
               disabled={isLoading}
               title="Refresh worktrees"
             >

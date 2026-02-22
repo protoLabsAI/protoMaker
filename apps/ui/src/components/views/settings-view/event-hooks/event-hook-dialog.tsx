@@ -31,7 +31,7 @@ interface EventHookDialogProps {
   onSave: (hook: EventHook) => void;
 }
 
-type ActionType = 'shell' | 'http';
+type ActionType = 'shell' | 'http' | 'discord';
 
 const TRIGGER_OPTIONS: EventHookTrigger[] = [
   'feature_created',

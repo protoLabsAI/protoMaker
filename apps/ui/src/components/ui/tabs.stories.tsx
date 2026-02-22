@@ -8,8 +8,17 @@
  */
 
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from './tabs';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './card';
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@protolabs/ui/atoms';
 import { Settings, User, Bell } from 'lucide-react';
 
 const meta = {

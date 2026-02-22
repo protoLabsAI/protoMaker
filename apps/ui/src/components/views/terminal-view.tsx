@@ -611,7 +611,7 @@ export function TerminalView({ initialCwd, initialBranch, initialMode, nonce }: 
             description: data.error || 'Unknown error',
           });
           // Reset the handled ref so the same cwd can be retried
-          initialCwdHandledRef.current = undefined;
+          initialCwdHandledRef.current = null;
         }
       } catch (err) {
         logger.error('Create terminal with cwd error:', err);
@@ -619,7 +619,7 @@ export function TerminalView({ initialCwd, initialBranch, initialMode, nonce }: 
           description: 'Could not connect to server',
         });
         // Reset the handled ref so the same cwd can be retried
-        initialCwdHandledRef.current = undefined;
+        initialCwdHandledRef.current = null;
       }
     };
 

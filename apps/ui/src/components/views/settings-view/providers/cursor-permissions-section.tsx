@@ -16,12 +16,9 @@ interface CursorPermissionsSectionProps {
   isSavingPermissions: boolean;
   copiedConfig: boolean;
   currentProject?: { path: string } | null;
-  onApplyProfile: (
-    profileId: 'strict' | 'development',
-    scope: 'global' | 'project'
-  ) => Promise<void>;
-  onCopyConfig: (profileId: 'strict' | 'development') => Promise<void>;
-  onLoadPermissions: () => Promise<void>;
+  onApplyProfile: (profileId: 'strict' | 'development', scope: 'global' | 'project') => void;
+  onCopyConfig: (profileId: 'strict' | 'development') => void;
+  onLoadPermissions: () => void;
 }
 
 export function CursorPermissionsSection({

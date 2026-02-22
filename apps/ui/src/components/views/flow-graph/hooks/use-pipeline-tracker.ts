@@ -137,7 +137,7 @@ export function usePipelineTracker(props?: UsePipelineTrackerProps): UsePipeline
       }
 
       // Fallback: synthetic aggregate items when featuresByStatus is absent
-      Object.entries(initialState.countsByStatus).forEach(([status, count]) => {
+      Object.entries(initialState.countsByStatus!).forEach(([status, count]) => {
         if (count > 0) {
           const stageId = status as PipelineStageId;
           const itemId = `initial-${stageId}`;

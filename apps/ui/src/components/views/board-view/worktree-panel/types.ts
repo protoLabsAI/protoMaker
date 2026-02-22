@@ -16,7 +16,9 @@ export interface WorktreeInfo {
 export interface BranchInfo {
   name: string;
   isCurrent: boolean;
-  isRemote: boolean;
+  isRemote?: boolean;
+  lastCommit?: string;
+  upstream?: string;
 }
 
 export interface GitRepoStatus {

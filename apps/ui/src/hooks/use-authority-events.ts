@@ -183,7 +183,7 @@ export function useAuthorityEvents(maxEvents: number = 50) {
 
     // Subscribe to each event type
     const unsubscribers = authorityEventTypes.map((eventType) => {
-      return api['subscribeToEvent'](eventType, (payload: any) => {
+      return (api as any).subscribeToEvent(eventType, (payload: any) => {
         addEvent(eventType, payload);
       });
     });

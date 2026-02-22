@@ -265,7 +265,7 @@ export function useAvailableEditors() {
       if (!result.success) {
         throw new Error(result.error || 'Failed to fetch editors');
       }
-      return result.editors ?? [];
+      return result.result?.editors ?? [];
     },
     staleTime: STALE_TIMES.CLI_STATUS,
     refetchOnWindowFocus: WORKTREE_REFETCH_ON_FOCUS,

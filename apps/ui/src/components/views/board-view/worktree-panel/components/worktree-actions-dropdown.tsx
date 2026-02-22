@@ -131,7 +131,9 @@ export function WorktreeActionsDropdown({
   const effectiveDefaultEditor = useEffectiveDefaultEditor(editors);
 
   // Get other editors (excluding the default) for the submenu
-  const otherEditors = editors.filter((e) => e.command !== effectiveDefaultEditor?.command);
+  const otherEditors = editors.filter(
+    (e: { command: string; name: string }) => e.command !== effectiveDefaultEditor?.command
+  );
 
   // Get icon component for the effective editor (avoid IIFE in JSX)
   const DefaultEditorIcon = effectiveDefaultEditor
@@ -328,7 +330,7 @@ export function WorktreeActionsDropdown({
             </div>
             <DropdownMenuSubContent>
               {/* Other editors */}
-              {otherEditors.map((editor) => {
+              {otherEditors.map((editor: { command: string; name: string }) => {
                 const EditorIcon = getEditorIcon(editor.command);
                 return (
                   <DropdownMenuItem

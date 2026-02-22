@@ -47,30 +47,26 @@ export function SystemTab({ projectPath }: SystemTabProps) {
   const agentCount = health?.agents?.count ?? 0;
   const maxAgents = 10; // Default max concurrent agents
 
-  // Calculate CPU percentage (approximate from microseconds)
-  // CPU usage is in microseconds, we need to convert to a percentage
-  // This is a rough approximation - in real systems you'd need to compare against total available CPU time
-  const cpuPercent = health?.cpu
-    ? Math.min(((health.cpu.user + health.cpu.system) / (health.uptime * 1000000)) * 100, 100)
-    : 0;
+  // CPU load percentage (server pre-computes this from load average / core count)
+  const cpuPercent = health?.cpu?.loadPercent ?? 0;
 
   // Crew loop flows - map crew status to flow format
   // crew.members is a Record<string, MemberStatus>, not an array
-  const crewFlows = health?.crew?.members
-    ? Object.values(health.crew.members).map(
-        (member: {
-          id: string;
-          displayName?: string;
-          running?: boolean;
-          enabled?: boolean;
-          lastCheck?: string;
-        }) => ({
-          name: member.displayName || member.id,
-          status: member.running ? 'active' : member.enabled ? 'idle' : 'error',
-          lastRun: member.lastCheck,
-          avgLatencyMs: undefined,
-        })
-      )
+  const crewFlows: Array<{
+    name: string;
+    status: 'active' | 'idle' | 'error';
+    lastRun?: string;
+    avgLatencyMs?: number;
+  }> = health?.crew?.members
+    ? Object.values(health.crew.members).map((member) => ({
+        name: member.displayName || member.id,
+        status: (member.running ? 'active' : member.enabled ? 'idle' : 'error') as
+          | 'active'
+          | 'idle'
+          | 'error',
+        lastRun: member.lastCheck,
+        avgLatencyMs: undefined,
+      }))
     : [];
 
   // Add auto-mode status as a flow
@@ -126,20 +122,20 @@ export function SystemTab({ projectPath }: SystemTabProps) {
         <div className="space-y-4">
           <CapacityBar
             label="Agent Slots"
-            current={capacity?.concurrency ?? 0}
+            current={capacity?.currentConcurrency ?? 0}
             max={capacity?.maxConcurrency ?? 3}
             color="var(--chart-1)"
           />
           <CapacityBar
             label="Active Worktrees"
-            current={capacity?.concurrency ?? 0}
+            current={capacity?.currentConcurrency ?? 0}
             max={capacity?.maxConcurrency ?? 3}
             color="var(--chart-4)"
           />
           <CapacityBar
             label="Queue Depth"
-            current={capacity?.backlog ?? 0}
-            max={Math.max(capacity?.backlog ?? 10, 10)}
+            current={capacity?.backlogSize ?? 0}
+            max={Math.max(capacity?.backlogSize ?? 10, 10)}
             color="var(--chart-3)"
           />
         </div>

@@ -8,7 +8,7 @@ import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
 import { getElectronAPI } from '@/lib/electron';
 import { queryKeys } from '@/lib/query-keys';
 import { STALE_TIMES } from '@/lib/query-client';
-import type { GitHubIssue, GitHubPR, GitHubComment, IssueValidation } from '@/lib/electron';
+import type { GitHubIssue, GitHubPR, GitHubComment, StoredValidation } from '@/lib/electron';
 
 interface GitHubIssuesResult {
   openIssues: GitHubIssue[];
@@ -90,7 +90,7 @@ export function useGitHubValidations(projectPath: string | undefined, issueNumbe
     queryKey: issueNumber
       ? queryKeys.github.validation(projectPath ?? '', issueNumber)
       : queryKeys.github.validations(projectPath ?? ''),
-    queryFn: async (): Promise<IssueValidation[]> => {
+    queryFn: async (): Promise<StoredValidation[]> => {
       if (!projectPath) throw new Error('No project path');
       const api = getElectronAPI();
       const result = await api.github.getValidations(projectPath, issueNumber);
@@ -121,10 +121,10 @@ export function useGitHubRemote(projectPath: string | undefined) {
         throw new Error(result.error || 'Failed to check remote');
       }
       return {
-        hasRemote: result.hasRemote ?? false,
+        hasRemote: result.hasGitHubRemote ?? false,
         owner: result.owner,
         repo: result.repo,
-        url: result.url,
+        url: result.remoteUrl,
       };
     },
     enabled: !!projectPath,

@@ -479,7 +479,7 @@ export function GitDiffPanel({
             <div className="flex flex-col items-center justify-center gap-2 py-8 text-muted-foreground">
               <AlertCircle className="w-5 h-5 text-amber-500" />
               <span className="text-sm">{error}</span>
-              <Button variant="ghost" size="sm" onClick={loadDiffs} className="mt-2">
+              <Button variant="ghost" size="sm" onClick={() => loadDiffs()} className="mt-2">
                 <RefreshCw className="w-4 h-4 mr-2" />
                 Retry
               </Button>
@@ -550,7 +550,12 @@ export function GitDiffPanel({
                     >
                       Collapse All
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={loadDiffs} className="text-xs h-7">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => loadDiffs()}
+                      className="text-xs h-7"
+                    >
                       <RefreshCw className="w-3 h-3 mr-1" />
                       Refresh
                     </Button>

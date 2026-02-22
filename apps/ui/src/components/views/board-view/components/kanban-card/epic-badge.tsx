@@ -30,7 +30,8 @@ export function EpicBadge({ feature, className }: EpicBadgeProps) {
   const epicTitle = epicFeature.title?.replace(/^\[Epic\]\s*/i, '') || 'Epic';
 
   // Use epic's color or default to a neutral color
-  const badgeColor = feature.epicColor || epicFeature.epicColor || '#6366f1';
+  const badgeColor =
+    (feature.epicColor as string) || (epicFeature.epicColor as string) || '#6366f1';
 
   return (
     <Badge

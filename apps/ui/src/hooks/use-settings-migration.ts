@@ -31,9 +31,6 @@ import { useThemeStore } from '@/store/theme-store';
 import { useAIModelsStore } from '@/store/ai-models-store';
 import { useWorktreeStore } from '@/store/worktree-store';
 import { useTerminalStore } from '@/store/terminal-store';
-import { useThemeStore } from '@/store/theme-store';
-import { useWorktreeStore } from '@/store/worktree-store';
-import { useAIModelsStore } from '@/store/ai-models-store';
 import { useSetupStore } from '@/store/setup-store';
 import type { ThemeMode } from '@/store/types';
 import {
@@ -45,6 +42,7 @@ import {
   migratePhaseModelEntry,
   type GlobalSettings,
   type CursorModelId,
+  type OpencodeModelId,
 } from '@automaker/types';
 
 const logger = createLogger('SettingsMigration');
@@ -603,13 +601,14 @@ export function useSettingsMigration(): MigrationState {
  */
 export function hydrateStoreFromSettings(settings: GlobalSettings): void {
   const current = useAppStore.getState();
+  const currentAIModels = useAIModelsStore.getState();
 
   // Migrate Cursor models to canonical format
   // IMPORTANT: Always use ALL available Cursor models to ensure new models are visible
   // Users who had old settings with a subset of models should still see all available models
   const allCursorModels = getAllCursorModelIds();
   const migratedCursorDefault = migrateCursorModelIds([
-    settings.cursorDefaultModel ?? current.cursorDefaultModel ?? 'cursor-auto',
+    settings.cursorDefaultModel ?? currentAIModels.cursorDefaultModel ?? 'cursor-auto',
   ])[0];
   const validCursorModelIds = new Set(allCursorModels);
   const sanitizedCursorDefaultModel = validCursorModelIds.has(migratedCursorDefault)
@@ -618,14 +617,18 @@ export function hydrateStoreFromSettings(settings: GlobalSettings): void {
 
   const validOpencodeModelIds = new Set(getAllOpencodeModelIds());
   const incomingEnabledOpencodeModels =
-    settings.enabledOpencodeModels ?? current.enabledOpencodeModels;
+    settings.enabledOpencodeModels ?? currentAIModels.enabledOpencodeModels;
   const sanitizedOpencodeDefaultModel = validOpencodeModelIds.has(
-    settings.opencodeDefaultModel ?? current.opencodeDefaultModel
+    settings.opencodeDefaultModel ?? currentAIModels.opencodeDefaultModel
   )
-    ? (settings.opencodeDefaultModel ?? current.opencodeDefaultModel)
+    ? (settings.opencodeDefaultModel ?? currentAIModels.opencodeDefaultModel)
     : DEFAULT_OPENCODE_MODEL;
-  const sanitizedEnabledOpencodeModels = Array.from(
-    new Set(incomingEnabledOpencodeModels.filter((modelId) => validOpencodeModelIds.has(modelId)))
+  const sanitizedEnabledOpencodeModels: OpencodeModelId[] = Array.from(
+    new Set(
+      incomingEnabledOpencodeModels.filter((modelId: OpencodeModelId) =>
+        validOpencodeModelIds.has(modelId)
+      )
+    )
   );
 
   if (!sanitizedEnabledOpencodeModels.includes(sanitizedOpencodeDefaultModel)) {
@@ -633,9 +636,9 @@ export function hydrateStoreFromSettings(settings: GlobalSettings): void {
   }
 
   const persistedDynamicModelIds =
-    settings.enabledDynamicModelIds ?? current.enabledDynamicModelIds;
+    settings.enabledDynamicModelIds ?? currentAIModels.enabledDynamicModelIds;
   const sanitizedDynamicModelIds = persistedDynamicModelIds.filter(
-    (modelId) => !modelId.startsWith('amazon-bedrock/')
+    (modelId: string) => !modelId.startsWith('amazon-bedrock/')
   );
 
   // Convert ProjectRef[] to Project[] (minimal data, features will be loaded separately)
@@ -678,8 +681,9 @@ export function hydrateStoreFromSettings(settings: GlobalSettings): void {
       maxConcurrency: number;
     }
   > = {};
-  if ((settings as Record<string, unknown>).autoModeByWorktree) {
-    const persistedSettings = (settings as Record<string, unknown>).autoModeByWorktree as Record<
+  if ((settings as unknown as Record<string, unknown>).autoModeByWorktree) {
+    const persistedSettings = (settings as unknown as Record<string, unknown>)
+      .autoModeByWorktree as Record<
       string,
       { maxConcurrency?: number; branchName?: string | null }
     >;
@@ -693,18 +697,15 @@ export function hydrateStoreFromSettings(settings: GlobalSettings): void {
     }
   }
 
+  // currentAIModels already captured above for model migration defaults
+
+  // Hydrate AppStore (only properties owned by AppState)
   useAppStore.setState({
-    theme: settings.theme as unknown as import('@/store/app-store').ThemeMode,
-    fontFamilySans: settings.fontFamilySans ?? null,
-    fontFamilyMono: settings.fontFamilyMono ?? null,
     sidebarOpen: settings.sidebarOpen ?? true,
     chatHistoryOpen: settings.chatHistoryOpen ?? false,
-    maxConcurrency: settings.maxConcurrency ?? DEFAULT_MAX_CONCURRENCY,
-    autoModeByWorktree: restoredAutoModeByWorktree,
     defaultSkipTests: settings.defaultSkipTests ?? true,
     enableDependencyBlocking: settings.enableDependencyBlocking ?? true,
     skipVerificationInAutoMode: settings.skipVerificationInAutoMode ?? false,
-    useWorktrees: settings.useWorktrees ?? true,
     defaultPlanningMode: settings.defaultPlanningMode ?? 'skip',
     defaultRequirePlanApproval: settings.defaultRequirePlanApproval ?? false,
     defaultFeatureModel: migratePhaseModelEntry(settings.defaultFeatureModel) ?? {
@@ -713,17 +714,6 @@ export function hydrateStoreFromSettings(settings: GlobalSettings): void {
     muteDoneSound: settings.muteDoneSound ?? false,
     serverLogLevel: settings.serverLogLevel ?? 'info',
     enableRequestLogging: settings.enableRequestLogging ?? true,
-    enhancementModel: settings.enhancementModel ?? 'claude-sonnet',
-    validationModel: settings.validationModel ?? 'claude-opus',
-    phaseModels: settings.phaseModels ?? current.phaseModels,
-    enabledCursorModels: allCursorModels, // Always use ALL cursor models
-    cursorDefaultModel: sanitizedCursorDefaultModel,
-    enabledOpencodeModels: sanitizedEnabledOpencodeModels,
-    opencodeDefaultModel: sanitizedOpencodeDefaultModel,
-    enabledDynamicModelIds: sanitizedDynamicModelIds,
-    disabledProviders: settings.disabledProviders ?? [],
-    autoLoadClaudeMd: settings.autoLoadClaudeMd ?? false,
-    skipSandboxWarning: settings.skipSandboxWarning ?? false,
     keyboardShortcuts: {
       ...current.keyboardShortcuts,
       ...(settings.keyboardShortcuts as unknown as Partial<typeof current.keyboardShortcuts>),
@@ -731,31 +721,19 @@ export function hydrateStoreFromSettings(settings: GlobalSettings): void {
     mcpServers: settings.mcpServers ?? [],
     promptCustomization: settings.promptCustomization ?? {},
     eventHooks: settings.eventHooks ?? [],
-    claudeCompatibleProviders: settings.claudeCompatibleProviders ?? [],
-    claudeApiProfiles: settings.claudeApiProfiles ?? [],
-    activeClaudeApiProfileId: settings.activeClaudeApiProfileId ?? null,
     projects,
     currentProject,
     trashedProjects: settings.trashedProjects ?? [],
     projectHistory: settings.projectHistory ?? [],
     projectHistoryIndex: settings.projectHistoryIndex ?? -1,
     lastSelectedSessionByProject: settings.lastSelectedSessionByProject ?? {},
-    // UI State
-    worktreePanelCollapsed: settings.worktreePanelCollapsed ?? false,
     lastProjectDir: settings.lastProjectDir ?? '',
     recentFolders: settings.recentFolders ?? [],
-    // Terminal font (nested in terminalState)
-    ...(settings.terminalFontFamily && {
-      terminalState: {
-        ...current.terminalState,
-        fontFamily: settings.terminalFontFamily,
-      },
-    }),
   });
 
-  // Hydrate domain stores directly so consumers reading from them get correct values
+  // Hydrate domain stores (each owns its respective state)
   useThemeStore.setState({
-    theme: settings.theme as unknown as import('@/store/app-store').ThemeMode,
+    theme: settings.theme as unknown as ThemeMode,
     fontFamilySans: settings.fontFamilySans ?? null,
     fontFamilyMono: settings.fontFamilyMono ?? null,
   });
@@ -763,7 +741,7 @@ export function hydrateStoreFromSettings(settings: GlobalSettings): void {
   useAIModelsStore.setState({
     enhancementModel: settings.enhancementModel ?? 'claude-sonnet',
     validationModel: settings.validationModel ?? 'claude-opus',
-    phaseModels: settings.phaseModels ?? current.phaseModels,
+    phaseModels: settings.phaseModels ?? currentAIModels.phaseModels,
     enabledCursorModels: allCursorModels,
     cursorDefaultModel: sanitizedCursorDefaultModel,
     enabledOpencodeModels: sanitizedEnabledOpencodeModels,
@@ -771,6 +749,7 @@ export function hydrateStoreFromSettings(settings: GlobalSettings): void {
     enabledDynamicModelIds: sanitizedDynamicModelIds,
     disabledProviders: settings.disabledProviders ?? [],
     autoLoadClaudeMd: settings.autoLoadClaudeMd ?? false,
+    skipSandboxWarning: settings.skipSandboxWarning ?? false,
     claudeApiProfiles: settings.claudeApiProfiles ?? [],
     activeClaudeApiProfileId: settings.activeClaudeApiProfileId ?? null,
     claudeCompatibleProviders: settings.claudeCompatibleProviders ?? [],
@@ -783,7 +762,7 @@ export function hydrateStoreFromSettings(settings: GlobalSettings): void {
     worktreePanelCollapsed: settings.worktreePanelCollapsed ?? false,
   });
 
-  // Hydrate terminal-store directly
+  // Hydrate terminal store
   if (settings.terminalFontFamily) {
     const currentTerminal = useTerminalStore.getState().terminalState;
     useTerminalStore.setState({
@@ -793,36 +772,6 @@ export function hydrateStoreFromSettings(settings: GlobalSettings): void {
   if (settings.defaultTerminalId !== undefined) {
     useTerminalStore.setState({ defaultTerminalId: settings.defaultTerminalId ?? null });
   }
-
-  useThemeStore.setState({
-    theme: settings.theme as unknown as ThemeMode,
-    fontFamilySans: settings.fontFamilySans ?? null,
-    fontFamilyMono: settings.fontFamilyMono ?? null,
-  });
-
-  useWorktreeStore.setState({
-    autoModeByWorktree: restoredAutoModeByWorktree,
-    maxConcurrency: settings.maxConcurrency ?? DEFAULT_MAX_CONCURRENCY,
-    useWorktrees: settings.useWorktrees ?? true,
-    worktreePanelCollapsed: settings.worktreePanelCollapsed ?? false,
-  });
-
-  useAIModelsStore.setState({
-    enhancementModel: settings.enhancementModel ?? 'claude-sonnet',
-    validationModel: settings.validationModel ?? 'claude-opus',
-    phaseModels: settings.phaseModels ?? current.phaseModels,
-    enabledCursorModels: allCursorModels,
-    cursorDefaultModel: sanitizedCursorDefaultModel,
-    enabledOpencodeModels: sanitizedEnabledOpencodeModels,
-    opencodeDefaultModel: sanitizedOpencodeDefaultModel,
-    enabledDynamicModelIds: sanitizedDynamicModelIds,
-    disabledProviders: settings.disabledProviders ?? [],
-    autoLoadClaudeMd: settings.autoLoadClaudeMd ?? false,
-    skipSandboxWarning: settings.skipSandboxWarning ?? false,
-    claudeApiProfiles: settings.claudeApiProfiles ?? [],
-    activeClaudeApiProfileId: settings.activeClaudeApiProfileId ?? null,
-    claudeCompatibleProviders: settings.claudeCompatibleProviders ?? [],
-  });
 
   // Hydrate setup wizard state from global settings (API-backed)
   useSetupStore.setState({
@@ -897,7 +846,7 @@ function buildSettingsUpdateFromStore(): Record<string, unknown> {
     muteDoneSound: state.muteDoneSound,
     serverLogLevel: state.serverLogLevel,
     enableRequestLogging: state.enableRequestLogging,
-    skipSandboxWarning: state.skipSandboxWarning,
+    skipSandboxWarning: aiState.skipSandboxWarning,
     keyboardShortcuts: state.keyboardShortcuts,
     mcpServers: state.mcpServers,
     promptCustomization: state.promptCustomization,

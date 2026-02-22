@@ -68,7 +68,7 @@ export function VoiceSettings() {
   }, []);
 
   // Debounced save for text inputs (wake word)
-  const debounceTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const debouncedSave = useMemo(
     () => (updated: VoiceSettingsType) => {
       setSettings(updated);

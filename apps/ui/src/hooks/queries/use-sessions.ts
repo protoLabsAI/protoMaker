@@ -74,7 +74,7 @@ export function useSessionQueue(sessionId: string | undefined) {
     queryFn: async () => {
       if (!sessionId) throw new Error('No session ID');
       const api = getElectronAPI();
-      const result = await api.agent.queueList(sessionId);
+      const result = await (api as any).agent.queueList(sessionId);
       if (!result.success) {
         throw new Error(result.error || 'Failed to fetch queue');
       }

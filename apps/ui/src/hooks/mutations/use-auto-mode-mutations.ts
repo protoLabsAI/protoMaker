@@ -339,7 +339,7 @@ export function useStartAutoMode(projectPath: string) {
   return useMutation({
     mutationFn: async (maxConcurrency?: number) => {
       const api = getElectronAPI();
-      const result = await api.autoMode.start(projectPath, maxConcurrency);
+      const result = await api.autoMode.start(projectPath, null, maxConcurrency);
       if (!result.success) {
         throw new Error(result.error || 'Failed to start auto mode');
       }

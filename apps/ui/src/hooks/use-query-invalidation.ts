@@ -150,14 +150,14 @@ export function useGitHubValidationQueryInvalidation(projectPath: string | undef
     }
 
     const unsubscribe = api.github.onValidationEvent((event: IssueValidationEvent) => {
-      if (event.type === 'validation_complete' || event.type === 'validation_error') {
+      if (event.type === 'issue_validation_complete' || event.type === 'issue_validation_error') {
         // Invalidate all validations for this project
         queryClient.invalidateQueries({
           queryKey: queryKeys.github.validations(projectPath),
         });
 
         // Also invalidate specific issue validation if we have the issue number
-        if ('issueNumber' in event && event.issueNumber) {
+        if (event.issueNumber) {
           queryClient.invalidateQueries({
             queryKey: queryKeys.github.validation(projectPath, event.issueNumber),
           });
@@ -181,7 +181,7 @@ export function useSessionQueryInvalidation(sessionId: string | undefined) {
     if (!sessionId) return;
 
     const api = getElectronAPI();
-    const unsubscribe = api.agent.onStream((event) => {
+    const unsubscribe = api.agent.onStream((event: any) => {
       // Only handle events for the current session
       if ('sessionId' in event && event.sessionId !== sessionId) return;
 

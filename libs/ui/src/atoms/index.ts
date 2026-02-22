@@ -1,6 +1,14 @@
 export { Button, buttonVariants } from './button.js';
 export { Badge, badgeVariants } from './badge.js';
-export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent } from './card.js';
+export {
+  Card,
+  CardHeader,
+  CardFooter,
+  CardTitle,
+  CardAction,
+  CardDescription,
+  CardContent,
+} from './card.js';
 export { Input } from './input.js';
 export { Label } from './label.js';
 export { Checkbox } from './checkbox.js';

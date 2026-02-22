@@ -55,11 +55,9 @@ export function AgentOutputModal({
   const [viewMode, setViewMode] = useState<ViewMode | null>(null);
 
   // Use React Query for initial output loading
-  const { data: initialOutput = '', isLoading } = useAgentOutput(
-    resolvedProjectPath,
-    featureId,
-    open && !!resolvedProjectPath
-  );
+  const { data: initialOutput = '', isLoading } = useAgentOutput(resolvedProjectPath, featureId, {
+    enabled: open && !!resolvedProjectPath,
+  });
 
   // Reset streamed content when modal opens or featureId changes
   useEffect(() => {

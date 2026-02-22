@@ -192,7 +192,7 @@ export const AgentInspector = memo(function AgentInspector({
               <div className="flex items-center gap-2 text-[10px]">
                 <span className="text-muted-foreground/60">Model:</span>
                 <span className="text-foreground font-medium">
-                  {formatModelName(feature.model ?? 'claude-sonnet-4-5-20250929')}
+                  {formatModelName((feature.model as string) ?? 'claude-sonnet-4-5-20250929')}
                 </span>
               </div>
 
