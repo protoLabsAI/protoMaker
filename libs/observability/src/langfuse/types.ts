@@ -90,6 +90,10 @@ export interface CreateTraceOptions {
   metadata?: Record<string, any>;
   /** Tags for filtering */
   tags?: string[];
+  /** Trace input (prompt, messages, etc.) */
+  input?: any;
+  /** Trace output (response, completion, etc.) */
+  output?: any;
 }
 
 /**

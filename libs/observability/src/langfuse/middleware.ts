@@ -235,6 +235,12 @@ export async function* wrapProviderWithTracing<T>(
 
     client.createGeneration(generationOptions);
 
+    // Update parent trace with I/O for visibility in Langfuse dashboard
+    client.updateTrace(traceId, {
+      input: options.input,
+      output: messages.length > 0 ? messages[messages.length - 1] : undefined,
+    });
+
     // Flush events to Langfuse
     await client.flush();
 
@@ -338,6 +344,12 @@ export async function completeTracingContext(
     metadata: generationMetadata,
     startTime: context.startTime,
     endTime,
+  });
+
+  // Update parent trace with I/O
+  client.updateTrace(context.traceId, {
+    input: options.input,
+    output: options.output,
   });
 
   await client.flush();

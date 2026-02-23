@@ -105,12 +105,31 @@ export class LangfuseClient {
         sessionId: options.sessionId,
         metadata: options.metadata,
         tags: options.tags,
+        input: options.input,
+        output: options.output,
       });
       logger.debug('Created trace in Langfuse', { traceId: options.id });
       return trace;
     } catch (error) {
       logger.error('Failed to create trace in Langfuse', error);
       return null;
+    }
+  }
+
+  /**
+   * Update an existing trace with new data (e.g., input/output after execution)
+   */
+  updateTrace(
+    traceId: string,
+    data: { input?: any; output?: any; metadata?: Record<string, any> }
+  ) {
+    if (!this.isAvailable()) return;
+    try {
+      const trace = this.client!.trace({ id: traceId });
+      trace.update(data);
+      logger.debug('Updated trace in Langfuse', { traceId });
+    } catch (error) {
+      logger.error('Failed to update trace in Langfuse', error);
     }
   }
 

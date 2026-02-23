@@ -26,6 +26,15 @@ declare module 'langfuse' {
     sessionId?: string;
     metadata?: Record<string, any>;
     tags?: string[];
+    input?: any;
+    output?: any;
+  }
+
+  export interface LangfuseTraceObject {
+    id: string;
+    update(body: Partial<LangfuseTraceBody>): void;
+    generation(body: Omit<LangfuseGenerationBody, 'traceId'> & { traceId?: string }): any;
+    span(body: any): any;
   }
 
   export interface LangfuseGenerationBody {
@@ -49,7 +58,7 @@ declare module 'langfuse' {
   export class Langfuse {
     constructor(options: LangfuseOptions);
     getPrompt(name: string, version?: number): Promise<LangfusePromptResponse | null>;
-    trace(body: LangfuseTraceBody): any;
+    trace(body: LangfuseTraceBody): LangfuseTraceObject;
     generation(body: LangfuseGenerationBody): any;
     flush(): Promise<void>;
     flushAsync(): Promise<void>;
