@@ -197,7 +197,7 @@ function getServiceStatus(
       return {
         status: 'idle',
         throughput: 0,
-        statusLine: 'Coming soon: Retro, metrics, knowledge update',
+        statusLine: 'Retro \u2192 Reflection \u2192 Knowledge synthesis',
       };
     default:
       return { status: 'idle', throughput: 0 };
