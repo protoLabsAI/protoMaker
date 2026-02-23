@@ -5,6 +5,7 @@
  * existing hooks and the node's data prop.
  */
 
+import { useState } from 'react';
 import {
   ExternalLink,
   Clock,
@@ -15,6 +16,8 @@ import {
   Signal,
   Check,
   Trash2,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Badge } from '@protolabs/ui/atoms';
@@ -36,6 +39,8 @@ import type {
   PipelineStageNodeData,
 } from '../types';
 import { PipelineMonitor } from './pipeline-monitor';
+import { TimelineVisualization } from './timeline-visualization';
+import type { PipelineState } from '@automaker/types';
 
 // ============================================
 // Shared helpers
@@ -1040,6 +1045,22 @@ interface AgentSectionProps {
 
 export function AgentSection({ data, onStop, onViewLogs, isStopping }: AgentSectionProps) {
   const elapsed = Date.now() - data.startTime;
+  const [timelineExpanded, setTimelineExpanded] = useState(false);
+
+  // Access pipeline state if available
+  const pipelineState = (data as AgentNodeData & { pipelineState?: PipelineState & {
+    phaseDurations?: Partial<Record<string, number>>;
+    toolExecutions?: Array<{
+      name: string;
+      icon?: string;
+      duration?: number;
+      phase?: string;
+      timestamp?: string;
+      success?: boolean;
+    }>;
+  }}).pipelineState;
+
+  const hasTimelineData = pipelineState?.phaseHistory && pipelineState.phaseHistory.length > 0;
 
   return (
     <div className="space-y-3">
@@ -1103,6 +1124,37 @@ export function AgentSection({ data, onStop, onViewLogs, isStopping }: AgentSect
               <Square className="w-3.5 h-3.5 mr-1.5" />
               Stop Agent
             </Button>
+          )}
+        </div>
+      )}
+
+      {/* Execution Timeline (expandable) */}
+      {hasTimelineData && (
+        <div className="border-t border-border/30 pt-2">
+          <button
+            onClick={() => setTimelineExpanded(!timelineExpanded)}
+            className="flex items-center justify-between w-full text-left group"
+          >
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold group-hover:text-foreground transition-colors">
+              Execution Timeline
+            </span>
+            {timelineExpanded ? (
+              <ChevronDown className="w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />
+            ) : (
+              <ChevronRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />
+            )}
+          </button>
+          {timelineExpanded && (
+            <div className="mt-2">
+              <TimelineVisualization
+                phaseDurations={pipelineState.phaseDurations as any}
+                toolExecutions={pipelineState.toolExecutions as any}
+                phaseHistory={pipelineState.phaseHistory}
+                phaseSpanIds={pipelineState.phaseSpanIds}
+                traceId={pipelineState.traceId}
+                gateWaitingSince={pipelineState.gateWaitingSince}
+              />
+            </div>
           )}
         </div>
       )}
