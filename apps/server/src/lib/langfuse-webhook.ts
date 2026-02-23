@@ -1,7 +1,7 @@
 /**
  * Langfuse Webhook Handler
  *
- * Provides types and signature verification for Langfuse webhooks.
+ * Provides signature verification for Langfuse webhooks.
  * Implements HMAC-SHA256 verification as per Langfuse webhook documentation.
  */
 
@@ -9,44 +9,6 @@ import { createHmac, timingSafeEqual } from 'crypto';
 import { createLogger } from '@automaker/utils';
 
 const logger = createLogger('LangfuseWebhook');
-
-/**
- * Langfuse prompt webhook payload structure.
- * Based on Langfuse webhook documentation.
- */
-export interface LangfusePromptWebhookPayload {
-  /** Event type identifier */
-  event: 'prompt.created' | 'prompt.updated' | 'prompt.deleted';
-  /** Timestamp of the event in ISO format */
-  timestamp: string;
-  /** Prompt data */
-  data: {
-    /** Unique prompt identifier */
-    id: string;
-    /** Prompt name */
-    name: string;
-    /** Prompt version number */
-    version: number;
-    /** Prompt type */
-    type: 'text' | 'chat';
-    /** Prompt content/template */
-    prompt: string | Record<string, unknown>;
-    /** Optional configuration */
-    config?: Record<string, unknown>;
-    /** Labels associated with the prompt */
-    labels?: string[];
-    /** Tags associated with the prompt */
-    tags?: string[];
-    /** Project identifier */
-    projectId: string;
-    /** Creation timestamp */
-    createdAt: string;
-    /** Last update timestamp */
-    updatedAt: string;
-    /** Optional metadata */
-    metadata?: Record<string, unknown>;
-  };
-}
 
 /**
  * Webhook signature verification result
@@ -112,53 +74,4 @@ export function verifyLangfuseWebhookSignature(
     logger.error('Webhook signature verification error:', error);
     return { isValid: false, error: 'Signature verification failed' };
   }
-}
-
-/**
- * Parses and validates Langfuse webhook payload.
- *
- * @param body - Parsed JSON body
- * @returns Typed payload if valid, null otherwise
- */
-export function parseLangfuseWebhookPayload(body: unknown): LangfusePromptWebhookPayload | null {
-  if (!body || typeof body !== 'object') {
-    return null;
-  }
-
-  const payload = body as Record<string, unknown>;
-
-  // Validate required fields
-  if (
-    !payload.event ||
-    typeof payload.event !== 'string' ||
-    !['prompt.created', 'prompt.updated', 'prompt.deleted'].includes(payload.event)
-  ) {
-    return null;
-  }
-
-  if (!payload.timestamp || typeof payload.timestamp !== 'string') {
-    return null;
-  }
-
-  if (!payload.data || typeof payload.data !== 'object') {
-    return null;
-  }
-
-  const data = payload.data as Record<string, unknown>;
-
-  // Validate data fields
-  if (
-    !data.id ||
-    typeof data.id !== 'string' ||
-    !data.name ||
-    typeof data.name !== 'string' ||
-    typeof data.version !== 'number' ||
-    !data.projectId ||
-    typeof data.projectId !== 'string'
-  ) {
-    return null;
-  }
-
-  // All validations passed, safe to cast
-  return payload as unknown as LangfusePromptWebhookPayload;
 }

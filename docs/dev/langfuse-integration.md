@@ -7,7 +7,7 @@ Server-side wiring that connects [`@automaker/observability`](./observability-pa
 ```
 ┌─────────────────────────────────────────────────────────┐
 │  @automaker/observability (library)                     │
-│  LangfuseClient · wrapProviderWithTracing · PromptCache │
+│  LangfuseClient · wrapProviderWithTracing               │
 └────────────────────┬────────────────────────────────────┘
                      │ imported by
 ┌────────────────────▼────────────────────────────────────┐
@@ -25,14 +25,15 @@ Server-side wiring that connects [`@automaker/observability`](./observability-pa
 │          │        scores: success, efficiency, quality   │
 │          │                                              │
 │          └──► Langfuse API proxy routes                 │
-│                   /api/langfuse/*  (6 endpoints)        │
+│                   /api/langfuse/*  (8 endpoints)        │
 └────────────────────┬────────────────────────────────────┘
                      │ exposed via
 ┌────────────────────▼────────────────────────────────────┐
-│  MCP Plugin (6 tools)                                   │
-│  langfuse_list_traces · langfuse_get_trace              │
-│  langfuse_get_costs   · langfuse_list_prompts           │
-│  langfuse_score_trace · langfuse_add_to_dataset         │
+│  MCP Plugin (7 tools)                                   │
+│  langfuse_list_traces  · langfuse_get_trace             │
+│  langfuse_get_costs    · langfuse_list_prompts          │
+│  langfuse_score_trace  · langfuse_add_to_dataset        │
+│  langfuse_list_datasets                                 │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -188,7 +189,7 @@ Scores are attached to traces via `feature.lastTraceId`. If a feature has no `la
 **File:** `apps/server/src/routes/langfuse/index.ts`
 **Mount point:** `app.use('/api/langfuse', createLangfuseRoutes())`
 
-Six POST endpoints that proxy to the Langfuse REST API using Basic Auth (`publicKey:secretKey`). All endpoints return `503` with `{ error: "Langfuse not configured" }` when credentials are missing.
+Eight POST endpoints that proxy to the Langfuse REST API using Basic Auth (`publicKey:secretKey`). All endpoints return `503` with `{ error: "Langfuse not configured" }` when credentials are missing.
 
 | Endpoint                            | Langfuse API                     | Description                                       |
 | ----------------------------------- | -------------------------------- | ------------------------------------------------- |
@@ -197,13 +198,15 @@ Six POST endpoints that proxy to the Langfuse REST API using Basic Auth (`public
 | `POST /api/langfuse/costs`          | `GET /api/public/observations`   | Get generations for cost analysis                 |
 | `POST /api/langfuse/prompts`        | `GET /api/public/v2/prompts`     | List managed prompts                              |
 | `POST /api/langfuse/scores`         | `POST /api/public/scores`        | Create a score on a trace                         |
+| `POST /api/langfuse/datasets`       | `GET /api/public/v2/datasets`    | List datasets                                     |
 | `POST /api/langfuse/datasets/items` | `POST /api/public/dataset-items` | Add trace to a dataset (auto-creates dataset)     |
+| `POST /api/langfuse/webhook/prompt` | —                                | Langfuse webhook receiver for prompt sync         |
 
 All routes use POST (Express 5 convention for routes that accept body parameters) even when the underlying Langfuse API is GET.
 
 ## MCP Tools
 
-Six MCP tools expose the Langfuse proxy routes to Claude Code and other MCP clients.
+Seven MCP tools expose the Langfuse proxy routes to Claude Code and other MCP clients.
 
 | Tool                      | Description                                               | Required Params            |
 | ------------------------- | --------------------------------------------------------- | -------------------------- |
@@ -212,6 +215,7 @@ Six MCP tools expose the Langfuse proxy routes to Claude Code and other MCP clie
 | `langfuse_get_costs`      | Get observations for cost analysis                        | —                          |
 | `langfuse_list_prompts`   | List managed prompts with versions/labels                 | —                          |
 | `langfuse_score_trace`    | Score a trace (name, value 0–1, optional comment)         | `traceId`, `name`, `value` |
+| `langfuse_list_datasets`  | List datasets with item counts                            | —                          |
 | `langfuse_add_to_dataset` | Add a trace to a named dataset (creates if missing)       | `datasetName`, `traceId`   |
 
 ### Example Usage

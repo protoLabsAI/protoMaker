@@ -128,18 +128,23 @@ export class PromptCITriggerService {
         action: promptPayload.action,
       };
 
-      // Use gh CLI to trigger repository_dispatch event
-      const payloadJson = JSON.stringify(clientPayload);
-      const triggerCmd = `gh api repos/{owner}/{repo}/dispatches -f event_type='langfuse-prompt-update' -f client_payload='${payloadJson}'`;
-
       logger.info(
         `Triggering CI for prompt update: ${promptPayload.name} v${promptPayload.version} (${promptPayload.action})`
       );
 
-      await execAsync(triggerCmd, {
-        cwd: workDir,
-        env: execEnv,
+      // Use gh CLI with --input stdin to avoid shell injection via prompt names
+      const requestBody = JSON.stringify({
+        event_type: 'langfuse-prompt-update',
+        client_payload: clientPayload,
       });
+
+      await execAsync(
+        `echo '${requestBody.replace(/'/g, "'\\''")}' | gh api repos/{owner}/{repo}/dispatches --input -`,
+        {
+          cwd: workDir,
+          env: execEnv,
+        }
+      );
 
       logger.info(`Successfully triggered CI for prompt: ${promptPayload.name}`);
       return {

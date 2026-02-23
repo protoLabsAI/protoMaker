@@ -11,6 +11,7 @@
 import type { RequestHandler, Request, Response } from 'express';
 import { createLogger } from '@automaker/utils';
 import { verifyLangfuseWebhookSignature } from '../../lib/langfuse-webhook.js';
+import { getPromptResolver } from '../../lib/langfuse-singleton.js';
 import type { PromptGitHubSyncService } from '../../services/prompt-github-sync-service.js';
 import { promptCITriggerService } from '../../services/prompt-ci-trigger-service.js';
 
@@ -104,6 +105,14 @@ async function processPromptVersionEvent(
       category,
       key,
     });
+
+    // Invalidate PromptResolver cache so the updated prompt is served immediately
+    try {
+      getPromptResolver().clearCache();
+      logger.debug('PromptResolver cache cleared after prompt sync');
+    } catch {
+      // Non-fatal — cache will expire naturally via TTL
+    }
 
     // Trigger CI workflow if enabled
     const ciResult = await promptCITriggerService.triggerCIAfterCommit(process.cwd(), {
