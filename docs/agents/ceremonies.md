@@ -100,9 +100,6 @@ project:completed ───→ CeremonyService.handleProjectCompleted()
                               → Impact report
                               → Reflection loop (memory synthesis)
                               → Improvement items (Beads/features)
-
-project:completed ───→ ReflectionService.handleProjectCompleted()
-                              → LLM reflection → reflection.md
                               → emit('project:reflection:complete')
 ```
 

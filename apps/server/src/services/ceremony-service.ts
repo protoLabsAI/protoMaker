@@ -119,6 +119,18 @@ export class CeremonyService {
   };
   private lastCeremonyAt: string | null = null;
 
+  /** Dedup guard: prevent duplicate project retros from manual ceremony triggers */
+  private processedProjects = new Set<string>();
+
+  /** Reflection observability state (absorbed from ReflectionService) */
+  private lastReflection: {
+    projectTitle: string;
+    projectSlug: string;
+    completedAt: string;
+  } | null = null;
+  private reflectionCount = 0;
+  private activeReflection: string | null = null;
+
   /**
    * Initialize the service with dependencies
    */
@@ -204,6 +216,23 @@ export class CeremonyService {
   } {
     const total = Object.values(this.ceremonyCounts).reduce((a, b) => a + b, 0);
     return { counts: { ...this.ceremonyCounts }, total, lastCeremonyAt: this.lastCeremonyAt };
+  }
+
+  /**
+   * Get reflection observability status (absorbed from ReflectionService)
+   */
+  getReflectionStatus(): {
+    active: boolean;
+    activeProject: string | null;
+    reflectionCount: number;
+    lastReflection: { projectTitle: string; projectSlug: string; completedAt: string } | null;
+  } {
+    return {
+      active: this.activeReflection !== null,
+      activeProject: this.activeReflection,
+      reflectionCount: this.reflectionCount,
+      lastReflection: this.lastReflection,
+    };
   }
 
   /**
@@ -528,13 +557,15 @@ Keep it concise, actionable, and focused on what makes this milestone interestin
    * Generate a retrospective using LLM based on all project features and post to Discord
    */
   private async handleProjectCompleted(payload: ProjectCompletedPayload): Promise<void> {
-    const {
-      projectPath,
-      projectTitle,
-      projectSlug: _projectSlug,
-      totalMilestones,
-      totalFeatures,
-    } = payload;
+    const { projectPath, projectTitle, projectSlug, totalMilestones, totalFeatures } = payload;
+
+    // Dedup guard: prevent duplicate retros from manual ceremony triggers
+    const dedupeKey = `${projectPath}:${projectSlug}`;
+    if (this.processedProjects.has(dedupeKey)) {
+      logger.debug(`Project retro already processed for ${projectSlug}, skipping`);
+      return;
+    }
+    this.processedProjects.add(dedupeKey);
 
     // Check if ceremonies are enabled
     const ceremonySettings = await this.getCeremonySettings(projectPath);
@@ -543,18 +574,21 @@ Keep it concise, actionable, and focused on what makes this milestone interestin
       return;
     }
 
+    this.activeReflection = projectTitle;
+
     try {
-      // Load all features across all milestones
+      // Load all features and filter to this project's features only
       const allFeatures = await this.featureLoader!.getAll(projectPath);
+      const projectFeatures = allFeatures.filter((f) => f.projectSlug === projectSlug);
 
       // Aggregate stats
-      const shipped = allFeatures.filter((f) => f.status === 'done' && f.prUrl);
-      const failed = allFeatures.filter((f) => (f.failureCount || 0) > 0);
-      const totalCost = allFeatures.reduce((sum, f) => sum + (f.costUsd || 0), 0);
+      const shipped = projectFeatures.filter((f) => f.status === 'done' && f.prUrl);
+      const failed = projectFeatures.filter((f) => (f.failureCount || 0) > 0);
+      const totalCost = projectFeatures.reduce((sum, f) => sum + (f.costUsd || 0), 0);
 
       // Group by milestone for cost breakdown
       const milestoneBreakdown = new Map<string, { featureCount: number; costUsd: number }>();
-      for (const feature of allFeatures) {
+      for (const feature of projectFeatures) {
         if (feature.milestoneSlug) {
           const existing = milestoneBreakdown.get(feature.milestoneSlug) || {
             featureCount: 0,
@@ -642,11 +676,26 @@ ${dataSummary}`;
 
       this.ceremonyCounts.projectRetro++;
       this.lastCeremonyAt = new Date().toISOString();
+      this.activeReflection = null;
+      this.reflectionCount++;
+      this.lastReflection = {
+        projectTitle,
+        projectSlug,
+        completedAt: new Date().toISOString(),
+      };
       logger.info(`Posted project retrospective with impact report for ${projectTitle}`);
+
+      // Emit reflection complete event (absorbed from ReflectionService)
+      this.emitter!.emit('project:reflection:complete', {
+        projectPath,
+        projectTitle,
+        projectSlug,
+      });
 
       // Extract and create improvement items (closes the REFLECT → REPEAT loop)
       await this.createImprovementItems(projectPath, projectTitle, retrospective, dataSummary);
     } catch (error) {
+      this.activeReflection = null;
       logger.error('Failed to generate project retrospective:', error);
     }
   }

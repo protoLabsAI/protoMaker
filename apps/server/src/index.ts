@@ -141,7 +141,8 @@ import { AuthorityService } from './services/authority-service.js';
 import { createAuthorityRoutes } from './routes/authority/index.js';
 import { createCosRoutes } from './routes/cos/index.js';
 import { CompletionDetectorService } from './services/completion-detector-service.js';
-import { ReflectionService } from './services/reflection-service.js';
+// ReflectionService removed — its responsibilities (dedup, LLM retro, reflection.md,
+// project:reflection:complete event) are now handled by CeremonyService
 import { createCeremoniesRoutes } from './routes/ceremonies/index.js';
 import { PMAuthorityAgent } from './services/authority-agents/pm-agent.js';
 import { GTMAuthorityAgent } from './services/authority-agents/gtm-agent.js';
@@ -692,8 +693,7 @@ changelogService.initialize(events, settingsService, featureLoader, projectServi
 const completionDetectorService = new CompletionDetectorService();
 completionDetectorService.initialize(events, featureLoader, projectService, settingsService);
 
-// Initialize Reflection Service — generates retrospective when projects complete
-const reflectionService = new ReflectionService(events, featureLoader);
+// ReflectionService removed — CeremonyService now owns all project reflection logic
 
 // Initialize Lead Engineer Service — production-phase nerve center
 const { LeadEngineerService } = await import('./services/lead-engineer-service.js');
@@ -1369,7 +1369,6 @@ app.use(
     gtmAgent,
     pipelineOrchestrator,
     ceremonyService,
-    reflectionService,
     completionDetectorService
   )
 );

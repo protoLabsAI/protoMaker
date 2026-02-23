@@ -25,7 +25,6 @@ import type { EventEmitter } from '../../lib/events.js';
 import type { GTMAuthorityAgent } from '../../services/authority-agents/gtm-agent.js';
 import type { PipelineOrchestrator } from '../../services/pipeline-orchestrator.js';
 import type { CeremonyService } from '../../services/ceremony-service.js';
-import type { ReflectionService } from '../../services/reflection-service.js';
 import type { CompletionDetectorService } from '../../services/completion-detector-service.js';
 import { getNotesWorkspacePath, ensureNotesDir, secureFs } from '@automaker/platform';
 import type { NotesWorkspace, PipelinePhase } from '@automaker/types';
@@ -48,7 +47,6 @@ export function createEngineRoutes(
   gtmAgent?: GTMAuthorityAgent,
   pipelineOrchestrator?: PipelineOrchestrator,
   ceremonyService?: CeremonyService,
-  reflectionService?: ReflectionService,
   completionDetectorService?: CompletionDetectorService
 ): Router {
   const router = Router();
@@ -174,7 +172,7 @@ export function createEngineRoutes(
             total: 0,
             lastCeremonyAt: null,
           },
-          reflections: reflectionService?.getStatus() ?? {
+          reflections: ceremonyService?.getReflectionStatus() ?? {
             active: false,
             activeProject: null,
             reflectionCount: 0,

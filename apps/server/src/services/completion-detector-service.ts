@@ -43,7 +43,8 @@ export class CompletionDetectorService {
   private settingsService: SettingsService | null = null;
   private unsubscribe: (() => void) | null = null;
 
-  /** Dedup guard: track milestones/projects we've already emitted completion for */
+  /** Dedup guard: track epics/milestones/projects we've already emitted completion for */
+  private emittedEpics = new Set<string>();
   private emittedMilestones = new Set<string>();
   private emittedProjects = new Set<string>();
 
@@ -91,6 +92,7 @@ export class CompletionDetectorService {
     this.featureLoader = null;
     this.projectService = null;
     this.settingsService = null;
+    this.emittedEpics.clear();
     this.emittedMilestones.clear();
     this.emittedProjects.clear();
   }
@@ -140,6 +142,9 @@ export class CompletionDetectorService {
    * Check if all children of an epic are done. If so, mark the epic done.
    */
   private async checkEpicCompletion(projectPath: string, epicId: string): Promise<void> {
+    const dedupeKey = `${projectPath}:${epicId}`;
+    if (this.emittedEpics.has(dedupeKey)) return;
+
     const allFeatures = await this.featureLoader!.getAll(projectPath);
     const children = allFeatures.filter((f) => f.epicId === epicId && f.id !== epicId);
 
@@ -151,6 +156,7 @@ export class CompletionDetectorService {
     const epic = allFeatures.find((f) => f.id === epicId);
     if (!epic || epic.status === 'done') return;
 
+    this.emittedEpics.add(dedupeKey);
     this.completionCounts.epics++;
     logger.info(`All children of epic "${epic.title}" are done — marking epic done`);
     await this.featureLoader!.update(projectPath, epicId, { status: 'done' });
