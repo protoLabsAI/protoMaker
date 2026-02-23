@@ -1,21 +1,229 @@
 {
   "summary": {
-    "totalEntries": 624,
+    "totalEntries": 650,
     "categories": {
-      "infrastructure": 29,
-      "feature": 378,
-      "fix": 165,
-      "docs": 26,
-      "improvement": 26
+      "feature": 386,
+      "fix": 176,
+      "infrastructure": 33,
+      "improvement": 27,
+      "docs": 28
     },
     "firstDate": "2026-01-09T20:11:59.000Z",
-    "latestDate": "2026-02-23T02:50:45.000Z"
+    "latestDate": "2026-02-23T21:24:35.000Z"
   },
   "months": [
     {
       "month": "2026-02",
       "label": "February 2026",
       "entries": [
+        {
+          "hash": "bf9c369e",
+          "date": "2026-02-23T13:24:35-08:00",
+          "title": "Add UserProfile settings and persona prompt overrides",
+          "prNumber": 954,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/954",
+          "category": "feature"
+        },
+        {
+          "hash": "102f7250",
+          "date": "2026-02-23T12:04:38-08:00",
+          "title": "Langfuse cleanup — remove type shadows, add datasets tool, fix cache leak (#943)",
+          "prNumber": 943,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/943",
+          "category": "fix"
+        },
+        {
+          "hash": "edf0607f",
+          "date": "2026-02-23T11:40:58-08:00",
+          "title": "Expose maintenance scheduler in settings",
+          "prNumber": 950,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/950",
+          "category": "feature"
+        },
+        {
+          "hash": "d7de4613",
+          "date": "2026-02-23T11:38:25-08:00",
+          "title": "Remove build-storybook CI workflow",
+          "prNumber": 952,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/952",
+          "category": "infrastructure"
+        },
+        {
+          "hash": "a4bb8640",
+          "date": "2026-02-23T11:34:54-08:00",
+          "title": "Safety hooks false-positive on branch names containing \"main\"",
+          "prNumber": 951,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/951",
+          "category": "fix"
+        },
+        {
+          "hash": "3e682200",
+          "date": "2026-02-23T11:33:00-08:00",
+          "title": "Add unit tests for HITLFormService",
+          "prNumber": 948,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/948",
+          "category": "infrastructure"
+        },
+        {
+          "hash": "7b385c97",
+          "date": "2026-02-23T11:28:03-08:00",
+          "title": "Remove unused type imports from inbox and http client",
+          "prNumber": 949,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/949",
+          "category": "fix"
+        },
+        {
+          "hash": "bfdcd08f",
+          "date": "2026-02-23T11:16:03-08:00",
+          "title": "Remove unused HITLFormStatus import",
+          "prNumber": 946,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/946",
+          "category": "fix"
+        },
+        {
+          "hash": "ef8ec52a",
+          "date": "2026-02-23T10:57:53-08:00",
+          "title": "Bump staging max agent concurrency from 6 to 8",
+          "prNumber": 944,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/944",
+          "category": "infrastructure"
+        },
+        {
+          "hash": "7303c098",
+          "date": "2026-02-23T10:21:53-08:00",
+          "title": "Langfuse cleanup — remove type shadows, add datasets tool, fix cache leak",
+          "prNumber": 943,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/943",
+          "category": "fix"
+        },
+        {
+          "hash": "54acf292",
+          "date": "2026-02-23T10:05:14-08:00",
+          "title": "Langfuse tracing audit - timing-safe signatures, CI trigger wiring",
+          "prNumber": 941,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/941",
+          "category": "fix"
+        },
+        {
+          "hash": "783a60c4",
+          "date": "2026-02-23T10:02:43-08:00",
+          "title": "Resolve lint-staged commander version conflict",
+          "prNumber": 940,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/940",
+          "category": "fix"
+        },
+        {
+          "hash": "c6e92e9c",
+          "date": "2026-02-23T09:50:36-08:00",
+          "title": "Consolidate /create-project into /plan-project, add marketplace.json",
+          "prNumber": 939,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/939",
+          "category": "improvement"
+        },
+        {
+          "hash": "5669148e",
+          "date": "2026-02-22T23:16:10-08:00",
+          "title": "Flow graph integration nodes showing offline for GitHub and Discord",
+          "prNumber": 937,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/937",
+          "category": "fix"
+        },
+        {
+          "hash": "ac737d06",
+          "date": "2026-02-22T23:10:36-08:00",
+          "title": "Populate Langfuse trace input/output fields",
+          "prNumber": 936,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/936",
+          "category": "fix"
+        },
+        {
+          "hash": "69dde0fb",
+          "date": "2026-02-22T23:10:19-08:00",
+          "title": "Harden reflection/ceremony pipeline — dedup guards, projectSlug filter, remove ReflectionService",
+          "prNumber": 935,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/935",
+          "category": "fix"
+        },
+        {
+          "hash": "77f96a32",
+          "date": "2026-02-22T21:44:05-08:00",
+          "title": "Add GitHub sync section to langfuse-prompts.md",
+          "prNumber": 934,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/934",
+          "category": "docs"
+        },
+        {
+          "hash": "b99b399e",
+          "date": "2026-02-22T21:36:55-08:00",
+          "title": "PromptCITriggerService for repository_dispatch on prompt changes",
+          "prNumber": 932,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/932",
+          "category": "feature"
+        },
+        {
+          "hash": "91991431",
+          "date": "2026-02-22T21:29:26-08:00",
+          "title": "Langfuse webhook types & HMAC signature verification",
+          "prNumber": 928,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/928",
+          "category": "feature"
+        },
+        {
+          "hash": "3d6a3dba",
+          "date": "2026-02-22T21:10:50-08:00",
+          "title": "Wire PromptGitHubSyncService into Langfuse webhook handler",
+          "prNumber": 931,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/931",
+          "category": "feature"
+        },
+        {
+          "hash": "41306214",
+          "date": "2026-02-22T20:53:58-08:00",
+          "title": "Add PromptGitHubSyncService for syncing prompts to GitHub",
+          "prNumber": 930,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/930",
+          "category": "feature"
+        },
+        {
+          "hash": "4286e8cf",
+          "date": "2026-02-22T20:42:32-08:00",
+          "title": "Add Langfuse webhook route handler for prompt sync",
+          "prNumber": 929,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/929",
+          "category": "feature"
+        },
+        {
+          "hash": "0c40eab0",
+          "date": "2026-02-22T20:21:09-08:00",
+          "title": "Three-layer Langfuse prompt resolution with seed script",
+          "prNumber": 925,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/925",
+          "category": "feature"
+        },
+        {
+          "hash": "894207fe",
+          "date": "2026-02-22T20:13:49-08:00",
+          "title": "Update roadmap, changelog, and stats for Feb 23",
+          "prNumber": 927,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/927",
+          "category": "infrastructure"
+        },
+        {
+          "hash": "7c9e723e",
+          "date": "2026-02-22T20:06:12-08:00",
+          "title": "Remove auto-mode idle self-termination that kills loop after 20s",
+          "prNumber": 926,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/926",
+          "category": "fix"
+        },
+        {
+          "hash": "8e786f41",
+          "date": "2026-02-22T19:54:30-08:00",
+          "title": "Pivot brand from source-available to open source community strategy",
+          "prNumber": 924,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/924",
+          "category": "docs"
+        },
         {
           "hash": "f916d306",
           "date": "2026-02-22T18:50:45-08:00",
@@ -5017,5 +5225,5 @@
       ]
     }
   ],
-  "generatedAt": "2026-02-23T03:55:27.165Z"
+  "generatedAt": "2026-02-23T23:54:00.528Z"
 }
