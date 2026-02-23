@@ -32,8 +32,6 @@ import type {
   EventHistoryFilter,
   ActionableItem,
   ActionableItemStatus,
-  ActionableItemActionType,
-  ActionableItemPriority,
   CreateActionableItemInput,
   RepoResearchResult,
   GapAnalysisReport,
