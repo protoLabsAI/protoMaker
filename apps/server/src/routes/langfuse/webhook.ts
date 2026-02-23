@@ -106,15 +106,12 @@ async function processPromptVersionEvent(
     });
 
     // Trigger CI workflow if enabled
-    const ciResult = await promptCITriggerService.triggerCIAfterCommit(
-      process.cwd(),
-      {
-        name: data.name,
-        version: data.version,
-        labels: data.labels,
-        action: event.replace('prompt-version.', ''),
-      }
-    );
+    const ciResult = await promptCITriggerService.triggerCIAfterCommit(process.cwd(), {
+      name: data.name,
+      version: data.version,
+      labels: data.labels,
+      action: event.replace('prompt-version.', ''),
+    });
     if (ciResult.success && !ciResult.skipped) {
       logger.info('CI trigger fired for prompt update', { name: data.name });
     } else if (!ciResult.success) {
