@@ -1,21 +1,29 @@
 {
   "summary": {
-    "totalEntries": 623,
+    "totalEntries": 624,
     "categories": {
+      "infrastructure": 29,
       "feature": 378,
       "fix": 165,
       "docs": 26,
-      "infrastructure": 28,
       "improvement": 26
     },
     "firstDate": "2026-01-09T20:11:59.000Z",
-    "latestDate": "2026-02-23T02:26:40.000Z"
+    "latestDate": "2026-02-23T02:50:45.000Z"
   },
   "months": [
     {
       "month": "2026-02",
       "label": "February 2026",
       "entries": [
+        {
+          "hash": "f916d306",
+          "date": "2026-02-22T18:50:45-08:00",
+          "title": "Update roadmap, changelog, and stats for Feb 22",
+          "prNumber": 923,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/923",
+          "category": "infrastructure"
+        },
         {
           "hash": "2e9e099c",
           "date": "2026-02-22T18:26:40-08:00",
@@ -5009,5 +5017,5 @@
       ]
     }
   ],
-  "generatedAt": "2026-02-23T02:33:40.152Z"
+  "generatedAt": "2026-02-23T03:55:27.165Z"
 }

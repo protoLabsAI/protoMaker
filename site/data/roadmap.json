@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-02-22T08:00:00.000Z",
+  "lastUpdated": "2026-02-23T04:00:00.000Z",
   "milestones": [
     {
       "status": "completed",
@@ -98,12 +98,12 @@
     {
       "status": "in-progress",
       "title": "Community & Open Source",
-      "description": "Public repo, CLI scaffolding, and community resources.",
+      "description": "Fully open source as the maintained successor to the original Automaker project. Public repo, community engagement, and developer resources.",
       "items": [
-        "GitHub repo public access",
+        "GitHub repo public access (MIT/Apache 2.0)",
         "create-protolab CLI for scaffolding new projects",
         "Methodology guide and prompt library",
-        "Community Discord",
+        "Community Discord and upstream engagement",
         "setupLab consulting offering"
       ]
     }
