@@ -33,6 +33,8 @@ export interface ApprovalContext {
   priority?: number;
   /** Team info */
   team?: { id: string; name: string };
+  /** Project info */
+  project?: { id: string; name: string };
   /** Labels */
   labels?: string[];
   /** Assignee info (if assigned to a user) */
@@ -151,6 +153,7 @@ export class LinearApprovalHandler {
       description?: string;
       priority?: number;
       team?: { id: string; name: string };
+      project?: { id: string; name: string };
       labels?: string[];
       assignee?: { id: string; name: string };
     }
@@ -168,6 +171,7 @@ export class LinearApprovalHandler {
         approvalState: stateName,
         priority: issueContext?.priority,
         team: issueContext?.team,
+        project: issueContext?.project,
         labels: issueContext?.labels,
         assignee: issueContext?.assignee,
         detectedAt: new Date().toISOString(),
@@ -195,6 +199,7 @@ export class LinearApprovalHandler {
         approvalState: stateName,
         priority: issueContext?.priority,
         team: issueContext?.team,
+        project: issueContext?.project,
         labels: issueContext?.labels,
         assignee: issueContext?.assignee,
         detectedAt: new Date().toISOString(),
@@ -222,6 +227,7 @@ export class LinearApprovalHandler {
         approvalState: stateName,
         priority: issueContext?.priority,
         team: issueContext?.team,
+        project: issueContext?.project,
         labels: issueContext?.labels,
         assignee: issueContext?.assignee,
         detectedAt: new Date().toISOString(),

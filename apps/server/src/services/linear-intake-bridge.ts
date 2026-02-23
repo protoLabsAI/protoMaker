@@ -9,7 +9,7 @@
  * issues that already have a feature on the board.
  */
 
-import { createLogger } from '@automaker/utils';
+import { createLogger, slugify } from '@automaker/utils';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { ApprovalContext } from './linear-approval-handler.js';
@@ -111,6 +111,7 @@ export class LinearIntakeBridge {
       status: 'backlog',
       complexity,
       linearIssueId: issueId,
+      ...(context.project?.name ? { projectSlug: slugify(context.project.name, 40) } : {}),
     });
 
     logger.info(`Created feature ${feature.id} from Linear issue ${identifier || issueId}`, {

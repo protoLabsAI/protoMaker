@@ -6,7 +6,7 @@
  * authority:pm-review-approved for ProjM to decompose.
  */
 
-import { createLogger } from '@automaker/utils';
+import { createLogger, slugify } from '@automaker/utils';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { ApprovalContext } from './linear-approval-handler.js';
@@ -170,6 +170,7 @@ export class LinearApprovalBridge {
       category: 'Linear Approvals',
       complexity,
       linearIssueId: issueId,
+      ...(context.project?.name ? { projectSlug: slugify(context.project.name, 40) } : {}),
     });
 
     logger.info(`Created epic feature ${feature.id} from approved issue ${issueId}`);

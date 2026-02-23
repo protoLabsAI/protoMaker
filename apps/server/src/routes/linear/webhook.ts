@@ -269,7 +269,13 @@ async function processWebhookEvent(
       await handleAgentSessionEvent(payload as LinearAgentSessionPayload, action, events);
       break;
     case 'Issue':
-      await handleIssueEvent(payload as LinearIssueWebhookPayload, action, events, featureLoader);
+      await handleIssueEvent(
+        payload as LinearIssueWebhookPayload,
+        action,
+        events,
+        featureLoader,
+        settingsService
+      );
       break;
     case 'Project':
       await handleProjectEvent(payload as LinearProjectWebhookPayload, action, events);
@@ -330,7 +336,8 @@ async function handleIssueEvent(
   payload: LinearIssueWebhookPayload,
   action: LinearWebhookAction,
   events: EventEmitter,
-  featureLoader: FeatureLoader
+  featureLoader: FeatureLoader,
+  settingsService: SettingsService
 ): Promise<void> {
   const { data } = payload;
 
@@ -350,7 +357,7 @@ async function handleIssueEvent(
       });
       break;
     case 'update':
-      await handleIssueUpdated(data, events, featureLoader);
+      await handleIssueUpdated(data, events, featureLoader, settingsService);
       break;
     case 'remove':
       logger.info(`Issue removed: ${data.id}`);
@@ -367,7 +374,8 @@ async function handleIssueEvent(
 async function handleIssueUpdated(
   data: LinearIssueWebhookPayload['data'],
   events: EventEmitter,
-  _featureLoader: FeatureLoader
+  _featureLoader: FeatureLoader,
+  settingsService: SettingsService
 ): Promise<void> {
   logger.info(`Issue updated: ${data.id}`, {
     title: data.title,
@@ -378,7 +386,9 @@ async function handleIssueUpdated(
 
   // Delegate to sync service for status, title, priority, and relation sync
   const stateName = data.state?.name || 'Unknown';
-  const projectPath =
+
+  // Resolve projectPath: check linearTeamRoutes mapping first, then fallback
+  const defaultPath =
     process.env.AUTOMAKER_PROJECT_PATH ||
     (() => {
       try {
@@ -390,6 +400,22 @@ async function handleIssueUpdated(
         return process.cwd();
       }
     })();
+
+  let projectPath = defaultPath;
+  if (data.team?.id) {
+    try {
+      const globalSettings = await settingsService.getGlobalSettings();
+      const mapped = globalSettings.linearTeamRoutes?.[data.team.id];
+      if (mapped) {
+        projectPath = mapped;
+        logger.info(`Routed team ${data.team.name} (${data.team.id}) to ${mapped}`);
+      }
+    } catch (err) {
+      logger.warn('Failed to resolve linearTeamRoutes, using default', {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
 
   await linearSyncService.onLinearIssueUpdated(data.id, stateName, projectPath, {
     title: data.title,
@@ -412,6 +438,7 @@ async function handleIssueUpdated(
       description: data.description,
       priority: data.priority,
       team: data.team,
+      project: data.project,
       assignee: data.assignee ? { id: data.assignee.id, name: data.assignee.name } : undefined,
     });
   }

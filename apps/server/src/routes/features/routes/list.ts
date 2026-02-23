@@ -12,6 +12,7 @@ interface ListRequest {
   projectPath: string;
   status?: FeatureStatus;
   compact?: boolean;
+  projectSlug?: string;
 }
 
 interface CompactFeature {
@@ -51,9 +52,9 @@ function toCompactFeature(feature: Feature): CompactFeature {
 export function createListHandler(featureLoader: FeatureLoader) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
-      const { projectPath, status, compact = false } = req.body as ListRequest;
+      const { projectPath, status, compact = false, projectSlug } = req.body as ListRequest;
 
-      debugLog('FeaturesAPI', '/list called', { projectPath, status, compact });
+      debugLog('FeaturesAPI', '/list called', { projectPath, status, compact, projectSlug });
 
       if (!projectPath) {
         res.status(400).json({ success: false, error: 'projectPath is required' });
@@ -65,6 +66,11 @@ export function createListHandler(featureLoader: FeatureLoader) {
       // Filter by status if provided
       if (status) {
         features = features.filter((f) => f.status === status);
+      }
+
+      // Filter by projectSlug if provided
+      if (projectSlug) {
+        features = features.filter((f) => f.projectSlug === projectSlug);
       }
 
       debugLog('FeaturesAPI', '/list returning', {

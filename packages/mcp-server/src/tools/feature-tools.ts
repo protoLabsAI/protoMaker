@@ -30,6 +30,11 @@ export const featureTools: Tool[] = [
           enum: ['backlog', 'in-progress', 'review', 'done'],
           description: 'Filter by status (optional)',
         },
+        projectSlug: {
+          type: 'string',
+          description:
+            'Filter features by project slug (optional). Only returns features whose projectSlug matches.',
+        },
       },
       required: ['projectPath'],
     },
