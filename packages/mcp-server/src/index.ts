@@ -1234,6 +1234,7 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       return apiCall('/langfuse/costs', {
         page: args.page,
         limit: args.limit,
+        type: args.type,
         model: args.model,
         fromStartTime: args.fromStartTime,
         toStartTime: args.toStartTime,
@@ -1245,6 +1246,7 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         limit: args.limit,
         name: args.name,
         label: args.label,
+        version: args.version,
       });
 
     case 'langfuse_score_trace':

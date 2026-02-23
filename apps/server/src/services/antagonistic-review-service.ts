@@ -309,6 +309,7 @@ export class AntagonisticReviewService {
       const result = await this.executor.execute(avaConfig, {
         prompt,
         abortController,
+        traceContext: { agentRole: 'ava-reviewer' },
       });
 
       const durationMs = Date.now() - startTime;
@@ -372,6 +373,7 @@ export class AntagonisticReviewService {
       const result = await this.executor.execute(jonConfig, {
         prompt,
         abortController,
+        traceContext: { agentRole: 'jon-reviewer' },
       });
 
       const durationMs = Date.now() - startTime;
@@ -434,6 +436,7 @@ export class AntagonisticReviewService {
       const result = await this.executor.execute(resolutionConfig, {
         prompt,
         abortController,
+        traceContext: { agentRole: 'ava-resolution' },
       });
 
       return {

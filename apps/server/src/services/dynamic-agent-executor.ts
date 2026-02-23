@@ -47,6 +47,12 @@ export interface ExecuteOptions {
   onText?: (text: string) => void;
   /** Callback for tool use events */
   onToolUse?: (tool: string, input: unknown) => void;
+  /** Trace context for Langfuse — enriches traces with feature/role metadata */
+  traceContext?: {
+    featureId?: string;
+    featureName?: string;
+    agentRole?: string;
+  };
 }
 
 export class DynamicAgentExecutor {
@@ -81,6 +87,11 @@ export class DynamicAgentExecutor {
     try {
       let output: string;
 
+      // Auto-derive traceContext from config when caller doesn't provide it
+      const traceContext = options.traceContext ?? {
+        agentRole: config.templateName,
+      };
+
       if (options.onText || options.onToolUse) {
         // Streaming execution
         const result = await streamingQuery({
@@ -93,6 +104,7 @@ export class DynamicAgentExecutor {
           abortController: options.abortController,
           onText: options.onText,
           onToolUse: options.onToolUse,
+          traceContext,
         });
         output = result.text;
       } else {
@@ -105,6 +117,7 @@ export class DynamicAgentExecutor {
           maxTurns: config.maxTurns,
           allowedTools,
           abortController: options.abortController,
+          traceContext,
         });
         output = result.text;
       }

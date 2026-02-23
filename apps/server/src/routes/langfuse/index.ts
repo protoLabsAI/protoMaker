@@ -83,25 +83,41 @@ export function createLangfuseRoutes(): Router {
     try {
       const { page, limit, name, tags, userId, sessionId, fromTimestamp, toTimestamp } = req.body;
 
-      const queryParams: Record<string, string | number | undefined> = {
+      const auth = getLangfuseAuth();
+      if (!auth) {
+        res.status(503).json({ error: 'Langfuse not configured' });
+        return;
+      }
+
+      // Build URL manually to support repeated tags params
+      const url = new URL(`${auth.baseUrl}/api/public/traces`);
+      const standardParams: Record<string, string | number | undefined> = {
         page: page ?? 1,
         limit: limit ?? 20,
       };
-      if (name) queryParams.name = name;
-      if (userId) queryParams.userId = userId;
-      if (sessionId) queryParams.sessionId = sessionId;
-      if (fromTimestamp) queryParams.fromTimestamp = fromTimestamp;
-      if (toTimestamp) queryParams.toTimestamp = toTimestamp;
+      if (name) standardParams.name = name;
+      if (userId) standardParams.userId = userId;
+      if (sessionId) standardParams.sessionId = sessionId;
+      if (fromTimestamp) standardParams.fromTimestamp = fromTimestamp;
+      if (toTimestamp) standardParams.toTimestamp = toTimestamp;
 
-      // Tags are passed as repeated query params
-      let path = '/api/public/traces';
-      if (tags && Array.isArray(tags) && tags.length > 0) {
-        const tagParams = tags.map((t: string) => `tags=${encodeURIComponent(t)}`).join('&');
-        path += `?${tagParams}`;
+      for (const [key, value] of Object.entries(standardParams)) {
+        if (value !== undefined && value !== null) {
+          url.searchParams.set(key, String(value));
+        }
       }
 
-      const result = await langfuseProxy('GET', path, queryParams);
-      res.status(result.status).json(result.data);
+      // Tags as repeated query params (tags=x&tags=y)
+      if (tags && Array.isArray(tags)) {
+        tags.forEach((t: string) => url.searchParams.append('tags', t));
+      }
+
+      const response = await fetch(url.toString(), {
+        method: 'GET',
+        headers: auth.headers,
+      });
+      const data = await response.json().catch(() => ({ error: 'Failed to parse response' }));
+      res.status(response.status).json(data);
     } catch (error) {
       logger.error('Failed to list traces:', error);
       res.status(500).json({ error: 'Failed to list traces' });
@@ -161,13 +177,14 @@ export function createLangfuseRoutes(): Router {
    */
   router.post('/prompts', async (req, res) => {
     try {
-      const { page, limit, name, label } = req.body;
+      const { page, limit, name, label, version } = req.body;
 
       const result = await langfuseProxy('GET', '/api/public/v2/prompts', {
         page: page ?? 1,
         limit: limit ?? 50,
         name,
         label,
+        version,
       });
       res.status(result.status).json(result.data);
     } catch (error) {
@@ -235,10 +252,16 @@ export function createLangfuseRoutes(): Router {
         return;
       }
 
-      // Ensure dataset exists first
-      await langfuseProxy('POST', '/api/public/v2/datasets', undefined, {
+      // Ensure dataset exists first (409 = already exists, which is fine)
+      const datasetResult = await langfuseProxy('POST', '/api/public/v2/datasets', undefined, {
         name: datasetName,
       });
+      if (!datasetResult.ok && datasetResult.status !== 409) {
+        res
+          .status(datasetResult.status)
+          .json({ error: 'Failed to create dataset', details: datasetResult.data });
+        return;
+      }
 
       // Add item to dataset
       const result = await langfuseProxy('POST', '/api/public/dataset-items', undefined, {
