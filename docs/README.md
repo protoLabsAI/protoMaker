@@ -55,6 +55,7 @@ DevOps documentation in [`docs/infra/`](./infra/):
 
 | Document                                             | Description                                      |
 | ---------------------------------------------------- | ------------------------------------------------ |
+| [Actionable Items](./server/actionable-items.md)     | HITL forms, inbox, notifications, browser alerts |
 | [Route Organization](./server/route-organization.md) | Express route structure and patterns             |
 | [Providers](./server/providers.md)                   | AI provider architecture (Claude, Cursor, Codex) |
 | [Utilities](./server/utilities.md)                   | Server utility functions reference               |
