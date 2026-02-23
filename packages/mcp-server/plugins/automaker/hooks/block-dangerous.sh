@@ -28,12 +28,15 @@ if echo "$COMMAND" | grep -qE 'find\s+/\s.*-delete'; then
   exit 2
 fi
 
-# Block force push to main/master
-if echo "$COMMAND" | grep -qE 'git\s+push\s+.*--force.*\s+(main|master)'; then
+# Block force push to main/master (but allow force push to feature/epic branches)
+# Match: git push --force origin main, git push -f origin master
+# Don't match: git push --force origin feat/maintenance-scheduler-settings
+if echo "$COMMAND" | grep -qE 'git\s+push\s+.*(-f|--force|--force-with-lease)\s+\S+\s+(main|master)\b'; then
   echo "Blocked: force push to main/master" >&2
   exit 2
 fi
-if echo "$COMMAND" | grep -qE 'git\s+push\s+-f\s+.*\s+(main|master)'; then
+# Also catch: git push origin main --force (flag after branch)
+if echo "$COMMAND" | grep -qE 'git\s+push\s+\S+\s+(main|master)\s+.*(-f|--force|--force-with-lease)'; then
   echo "Blocked: force push to main/master" >&2
   exit 2
 fi

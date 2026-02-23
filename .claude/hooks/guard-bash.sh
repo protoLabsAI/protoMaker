@@ -46,8 +46,9 @@ if echo "$STRIPPED" | grep -qE '(^[[:space:]]*|&&[[:space:]]*|\|\|[[:space:]]*|;
 fi
 
 # Guard: force push to main (catches --force, -f, --force-with-lease targeting main/master)
+# Uses word boundary \b to avoid matching "maintenance" or "mastering" etc.
 if echo "$STRIPPED" | grep -qE 'git[[:space:]]+push[[:space:]].*(-f|--force|--force-with-lease)' && \
-   echo "$STRIPPED" | grep -qE 'git[[:space:]]+push[[:space:]].*(main|master)'; then
+   echo "$STRIPPED" | grep -qE 'git[[:space:]]+push[[:space:]].*\b(main|master)\b'; then
   jq -n '{
     hookSpecificOutput: {
       hookEventName: "PreToolUse",
@@ -83,7 +84,7 @@ if echo "$STRIPPED" | grep -qE 'gh[[:space:]]+pr[[:space:]]+merge[[:space:]].*--
 fi
 
 # Guard: git push directly to main (non-force, but still bypasses PR workflow)
-if echo "$STRIPPED" | grep -qE 'git[[:space:]]+push[[:space:]]+(origin[[:space:]]+)?(main|master)[[:space:]]*$'; then
+if echo "$STRIPPED" | grep -qE 'git[[:space:]]+push[[:space:]]+(origin[[:space:]]+)?\b(main|master)\b[[:space:]]*$'; then
   jq -n '{
     hookSpecificOutput: {
       hookEventName: "PreToolUse",
