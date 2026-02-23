@@ -7,6 +7,8 @@
  * via getContentBase().
  */
 
+import type { UserProfile } from '@automaker/types';
+
 // ---------------------------------------------------------------------------
 // Team roster — who does what, delegation routing
 // ---------------------------------------------------------------------------
@@ -32,14 +34,22 @@ If a task falls outside your domain, hand it off — don't attempt it yourself.`
 // Brand identity — protoLabs vs Automaker naming
 // ---------------------------------------------------------------------------
 
-export const BRAND_IDENTITY = `## Brand Identity
+export function getBrandIdentity(profile?: UserProfile): string {
+  const agencyName = profile?.brand?.agencyName ?? 'protoLabs';
+  const productName = profile?.brand?.productName ?? 'protoMaker';
+  const internalCodename = profile?.brand?.internalCodename ?? 'Automaker';
 
-- **protoLabs** = the AI-native development agency (always camelCase)
-- **protoMaker** = the AI development studio product
-- **Automaker** = internal codename only — never in external-facing content, docs, or user-visible UI
+  return `## Brand Identity
+
+- **${agencyName}** = the AI-native development agency (always camelCase)
+- **${productName}** = the AI development studio product
+- **${internalCodename}** = internal codename only — never in external-facing content, docs, or user-visible UI
 
 In code: \`@automaker/*\` packages, \`.automaker/\` directories are fine (internal).
-In prose, docs, or anything a user/customer sees: use **protoLabs** / **protoMaker**.`;
+In prose, docs, or anything a user/customer sees: use **${agencyName}** / **${productName}**.`;
+}
+
+export const BRAND_IDENTITY = getBrandIdentity();
 
 // ---------------------------------------------------------------------------
 // Context7 — live library documentation lookup
@@ -151,10 +161,10 @@ import { createLogger } from '@automaker/utils';
 // ---------------------------------------------------------------------------
 
 /** Full shared base for engineering agents (Matt, Sam, Kai, Frank, generic roles). */
-export function getEngineeringBase(): string {
+export function getEngineeringBase(profile?: UserProfile): string {
   return [
     TEAM_ROSTER,
-    BRAND_IDENTITY,
+    getBrandIdentity(profile),
     CONTEXT7_GUIDE,
     WORKTREE_SAFETY,
     PORT_PROTECTION,
@@ -164,6 +174,6 @@ export function getEngineeringBase(): string {
 }
 
 /** Lighter shared base for content/GTM agents (Jon, Cindi). */
-export function getContentBase(): string {
-  return [TEAM_ROSTER, BRAND_IDENTITY, CONTEXT7_GUIDE].join('\n\n');
+export function getContentBase(profile?: UserProfile): string {
+  return [TEAM_ROSTER, getBrandIdentity(profile), CONTEXT7_GUIDE].join('\n\n');
 }

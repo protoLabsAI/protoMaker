@@ -5,9 +5,9 @@ relevantTo: [testing]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 39
-  referenced: 23
-  successfulFeatures: 23
+  loaded: 40
+  referenced: 24
+  successfulFeatures: 24
 ---
 # testing
 
@@ -738,3 +738,20 @@ usageStats:
 - **Situation:** No permanent unit tests written; verification was manual/temporary
 - **Root cause:** Quick validation of core logic before submitting feature. Permanent tests would require mocking gh CLI (complexity) and test fixtures.
 - **How to avoid:** Feature is verified to compile and core logic works, but lacks regression test coverage. If gh CLI invocation signature changes, it won't be caught by tests.
+
+### Zero-config acceptance criterion requires exact string-level identity to original, not just functional equivalence (2026-02-23)
+- **Context:** Verifying parameterization refactoring maintains complete backward compatibility
+- **Why:** String matching with .includes() checks proves the refactoring is truly transparent - every character matches original output. This prevents subtle value changes that functional testing might miss.
+- **Rejected:** Functional equivalence testing - weaker guarantee that doesn't catch value drift
+- **Trade-offs:** Easier: Absolute confidence in backward compatibility. Harder: Must exactly match all default values. Breaking: Even one character difference breaks the contract
+- **Breaking if changed:** If any default value is rounded, truncated, or reformatted differently, zero-config identity fails
+
+#### [Pattern] Used inline Node.js evaluation (--input-type=module --eval) for verification instead of formal test files (2026-02-23)
+- **Problem solved:** Rapidly verifying parameterization behavior during development
+- **Why this works:** Direct eval provides immediate feedback without test infrastructure setup - useful for verification-driven development where you're testing the actual running code, not test code.
+- **Trade-offs:** Easier: Fast feedback loop, direct code execution. Harder: Not repeatable, not part of CI/CD pipeline, not documented. Breaking: Inline tests vanish - they're not persistent verification
+
+#### [Pattern] Created temporary verification script to import and test the compiled/built output (not source TypeScript), then deleted it after verification (2026-02-23)
+- **Problem solved:** Needed to verify parameterization worked correctly after refactoring complex prompt templates
+- **Why this works:** Source TypeScript can have syntax that appears correct but fails at compilation. Testing against actual built output (npm run build artifacts) catches real-world issues. This is more realistic than testing source directly.
+- **Trade-offs:** Temporary script is more work but reveals actual deployment issues. Permanent tests would add maintenance burden for what is essentially verification, not feature validation.

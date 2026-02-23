@@ -5,7 +5,7 @@
  * These cannot be overwritten or unregistered via the API.
  */
 
-import type { AgentTemplate } from '@automaker/types';
+import type { AgentTemplate, UserProfile, CustomPrompt } from '@automaker/types';
 import { createLogger } from '@automaker/utils';
 import {
   getAvaPrompt,
@@ -23,246 +23,290 @@ import type { RoleRegistryService } from './role-registry-service.js';
 
 const logger = createLogger('BuiltInTemplates');
 
-export const BUILT_IN_TEMPLATES: AgentTemplate[] = [
-  {
-    name: 'pr-maintainer',
-    displayName: 'PR Maintainer',
-    description:
-      'Handles PR pipeline mechanics: auto-merge enablement, CodeRabbit thread resolution, format fixing in worktrees, branch rebasing, and PR creation from orphaned worktrees.',
-    role: 'pr-maintainer',
-    tier: 0,
-    model: 'haiku',
-    maxTurns: 50,
-    canUseBash: true,
-    canModifyFiles: true,
-    canCommit: true,
-    canCreatePRs: true,
-    trustLevel: 2,
-    exposure: { cli: false, discord: false },
-    tags: ['pr', 'pipeline', 'maintenance', 'formatting', 'coderabbit'],
-    systemPrompt: getPrMaintainerPrompt(),
-  },
-  {
-    name: 'board-janitor',
-    displayName: 'Board Janitor',
-    description:
-      'Maintains board consistency: moves merged-PR features to done, resets stale in-progress features, repairs dependency chains.',
-    role: 'board-janitor',
-    tier: 0,
-    model: 'haiku',
-    maxTurns: 30,
-    canUseBash: false,
-    canModifyFiles: false,
-    canCommit: false,
-    canCreatePRs: false,
-    trustLevel: 1,
-    exposure: { cli: false, discord: false },
-    tags: ['board', 'maintenance', 'cleanup', 'dependencies'],
-    systemPrompt: getBoardJanitorPrompt(),
-  },
-  {
-    name: 'backend-engineer',
-    displayName: 'Backend Engineer',
-    description: 'Implements server-side features, APIs, services, and database logic.',
-    role: 'backend-engineer',
-    tier: 0,
-    model: 'sonnet',
-    maxTurns: 100,
-    canUseBash: true,
-    canModifyFiles: true,
-    canCommit: true,
-    canCreatePRs: true,
-    trustLevel: 2,
-    exposure: { cli: false, discord: false },
-    tags: ['implementation', 'backend', 'api'],
-  },
-  {
-    name: 'matt',
-    displayName: 'Matt',
-    description:
-      'Frontend engineering specialist. Implements UI components, design systems, theming, and Storybook. Reports to Ava.',
-    role: 'frontend-engineer',
-    tier: 0,
-    model: 'sonnet',
-    maxTurns: 100,
-    canUseBash: true,
-    canModifyFiles: true,
-    canCommit: true,
-    canCreatePRs: true,
-    trustLevel: 2,
-    exposure: { cli: true, discord: true, allowedUsers: ['chukz'] },
-    tags: ['implementation', 'frontend', 'ui', 'design-system', 'storybook'],
-    systemPrompt: getMattPrompt(),
-  },
-  {
-    name: 'sam',
-    displayName: 'Sam',
-    description:
-      'AI agent engineer. Designs multi-agent flows, LangGraph state graphs, LLM provider integrations, and observability pipelines. Reports to Ava.',
-    role: 'backend-engineer',
-    tier: 0,
-    model: 'sonnet',
-    maxTurns: 100,
-    canUseBash: true,
-    canModifyFiles: true,
-    canCommit: true,
-    canCreatePRs: true,
-    trustLevel: 2,
-    exposure: { cli: true, discord: true, allowedUsers: ['chukz'] },
-    tags: ['implementation', 'ai-agents', 'langgraph', 'llm-providers', 'observability', 'flows'],
-    systemPrompt: getSamPrompt(),
-  },
-  {
-    name: 'kai',
-    displayName: 'Kai',
-    description:
-      'Backend engineer. Implements Express routes, services, API design, error handling, and server-side features. Reports to Ava.',
-    role: 'backend-engineer',
-    tier: 0,
-    model: 'sonnet',
-    maxTurns: 100,
-    canUseBash: true,
-    canModifyFiles: true,
-    canCommit: true,
-    canCreatePRs: true,
-    trustLevel: 2,
-    exposure: { cli: true, discord: true, allowedUsers: ['chukz'] },
-    tags: ['implementation', 'backend', 'api', 'express', 'services'],
-    systemPrompt: getKaiPrompt(),
-  },
-  {
-    name: 'frank',
-    displayName: 'Frank',
-    description: 'Manages infrastructure, CI/CD, deployments, monitoring, and system reliability.',
-    role: 'devops-engineer',
-    tier: 0,
-    model: 'sonnet',
-    maxTurns: 100,
-    canUseBash: true,
-    canModifyFiles: true,
-    canCommit: true,
-    canCreatePRs: true,
-    trustLevel: 2,
-    exposure: { cli: true, discord: true, allowedUsers: ['chukz'] },
-    tags: ['infrastructure', 'devops', 'ci-cd'],
-    systemPrompt: getFrankPrompt(),
-  },
-  {
-    name: 'product-manager',
-    displayName: 'Product Manager',
-    description: 'Manages requirements, priorities, roadmap, and stakeholder communication.',
-    role: 'product-manager',
-    tier: 0,
-    model: 'sonnet',
-    maxTurns: 50,
-    canUseBash: false,
-    canModifyFiles: false,
-    canCommit: false,
-    canCreatePRs: false,
-    trustLevel: 1,
-    exposure: { cli: false, discord: false },
-    tags: ['planning', 'product', 'requirements'],
-  },
-  {
-    name: 'engineering-manager',
-    displayName: 'Engineering Manager',
-    description:
-      'Oversees engineering execution, code review, team coordination, and technical decisions.',
-    role: 'engineering-manager',
-    tier: 0,
-    model: 'sonnet',
-    maxTurns: 50,
-    canUseBash: false,
-    canModifyFiles: false,
-    canCommit: false,
-    canCreatePRs: false,
-    trustLevel: 1,
-    exposure: { cli: false, discord: false },
-    tags: ['management', 'review', 'coordination'],
-  },
-  {
-    name: 'ava',
-    displayName: 'Ava Loveland',
-    description:
-      'Autonomous operator with full authority. Manages operations, coordinates agents, and drives execution.',
-    role: 'chief-of-staff',
-    tier: 0,
-    model: 'opus',
-    maxTurns: 200,
-    canUseBash: true,
-    canModifyFiles: true,
-    canCommit: true,
-    canCreatePRs: true,
-    canSpawnAgents: true,
-    allowedSubagentRoles: ['backend-engineer', 'frontend-engineer', 'devops-engineer'],
-    trustLevel: 3,
-    exposure: { cli: true, discord: true, allowedUsers: ['chukz'] },
-    tags: ['operations', 'leadership', 'autonomous'],
-    systemPrompt: getAvaPrompt(),
-  },
-  {
-    name: 'cindi',
-    displayName: 'Cindi',
-    description:
-      'Content writing specialist for protoLabs. Uses content pipeline flows to produce blog posts, technical docs, training data, and marketing content. Expert in SEO, antagonistic review, and multi-format output.',
-    role: 'content-writer',
-    tier: 0,
-    model: 'sonnet',
-    maxTurns: 100,
-    canUseBash: false,
-    canModifyFiles: true,
-    canCommit: true,
-    canCreatePRs: true,
-    trustLevel: 2,
-    exposure: { cli: true, discord: true, allowedUsers: ['chukz'] },
-    tags: ['content', 'writing', 'blog', 'documentation', 'seo', 'training-data'],
-    systemPrompt: getCindiPrompt(),
-  },
-  {
-    name: 'linear-specialist',
-    displayName: 'Linear Specialist',
-    description:
-      'Owns all Linear workspace operations: project management, sprint planning, issue lifecycle, initiative tracking, and Automaker board synchronization.',
-    role: 'linear-specialist',
-    tier: 0,
-    model: 'sonnet',
-    maxTurns: 100,
-    canUseBash: false,
-    canModifyFiles: false,
-    canCommit: false,
-    canCreatePRs: false,
-    trustLevel: 2,
-    exposure: { cli: false, discord: false },
-    tags: ['linear', 'project-management', 'sprint-planning', 'issues', 'initiatives'],
-    systemPrompt: getLinearSpecialistPrompt(),
-  },
-  {
-    name: 'jon',
-    displayName: 'Jon',
-    description:
-      'GTM Specialist — content strategy, brand positioning, social media, competitive research, and launch execution.',
-    role: 'gtm-specialist',
-    tier: 0,
-    model: 'sonnet',
-    maxTurns: 100,
-    canUseBash: true,
-    canModifyFiles: true,
-    canCommit: false,
-    canCreatePRs: false,
-    trustLevel: 1,
-    exposure: { cli: true, discord: true, allowedUsers: ['chukz', 'abdelly'] },
-    tags: ['marketing', 'content', 'growth', 'gtm', 'brand'],
-    systemPrompt: getJonPrompt(),
-  },
-];
+/**
+ * Resolve the effective system prompt for a persona, applying overrides if enabled.
+ */
+function resolvePersonaPrompt(
+  name: string,
+  generated: string,
+  overrides?: Record<string, CustomPrompt>
+): string {
+  const override = overrides?.[name];
+  if (override?.enabled && override.value) {
+    return override.value;
+  }
+  return generated;
+}
+
+/**
+ * Derive allowedUsers from user profile, falling back to current defaults.
+ */
+function deriveAllowedUsers(profile?: UserProfile): string[] {
+  const primary = profile?.discord?.username ?? 'chukz';
+  const additional = profile?.additionalAllowedUsers ?? [];
+  return [primary, ...additional];
+}
+
+export function buildTemplates(
+  userProfile?: UserProfile,
+  personaOverrides?: Record<string, CustomPrompt>
+): AgentTemplate[] {
+  const allowedUsers = deriveAllowedUsers(userProfile);
+  const promptConfig = { userProfile };
+
+  return [
+    {
+      name: 'pr-maintainer',
+      displayName: 'PR Maintainer',
+      description:
+        'Handles PR pipeline mechanics: auto-merge enablement, CodeRabbit thread resolution, format fixing in worktrees, branch rebasing, and PR creation from orphaned worktrees.',
+      role: 'pr-maintainer',
+      tier: 0,
+      model: 'haiku',
+      maxTurns: 50,
+      canUseBash: true,
+      canModifyFiles: true,
+      canCommit: true,
+      canCreatePRs: true,
+      trustLevel: 2,
+      exposure: { cli: false, discord: false },
+      tags: ['pr', 'pipeline', 'maintenance', 'formatting', 'coderabbit'],
+      systemPrompt: getPrMaintainerPrompt(),
+    },
+    {
+      name: 'board-janitor',
+      displayName: 'Board Janitor',
+      description:
+        'Maintains board consistency: moves merged-PR features to done, resets stale in-progress features, repairs dependency chains.',
+      role: 'board-janitor',
+      tier: 0,
+      model: 'haiku',
+      maxTurns: 30,
+      canUseBash: false,
+      canModifyFiles: false,
+      canCommit: false,
+      canCreatePRs: false,
+      trustLevel: 1,
+      exposure: { cli: false, discord: false },
+      tags: ['board', 'maintenance', 'cleanup', 'dependencies'],
+      systemPrompt: getBoardJanitorPrompt(),
+    },
+    {
+      name: 'backend-engineer',
+      displayName: 'Backend Engineer',
+      description: 'Implements server-side features, APIs, services, and database logic.',
+      role: 'backend-engineer',
+      tier: 0,
+      model: 'sonnet',
+      maxTurns: 100,
+      canUseBash: true,
+      canModifyFiles: true,
+      canCommit: true,
+      canCreatePRs: true,
+      trustLevel: 2,
+      exposure: { cli: false, discord: false },
+      tags: ['implementation', 'backend', 'api'],
+    },
+    {
+      name: 'matt',
+      displayName: 'Matt',
+      description:
+        'Frontend engineering specialist. Implements UI components, design systems, theming, and Storybook. Reports to Ava.',
+      role: 'frontend-engineer',
+      tier: 0,
+      model: 'sonnet',
+      maxTurns: 100,
+      canUseBash: true,
+      canModifyFiles: true,
+      canCommit: true,
+      canCreatePRs: true,
+      trustLevel: 2,
+      exposure: { cli: true, discord: true, allowedUsers },
+      tags: ['implementation', 'frontend', 'ui', 'design-system', 'storybook'],
+      systemPrompt: resolvePersonaPrompt('matt', getMattPrompt(promptConfig), personaOverrides),
+    },
+    {
+      name: 'sam',
+      displayName: 'Sam',
+      description:
+        'AI agent engineer. Designs multi-agent flows, LangGraph state graphs, LLM provider integrations, and observability pipelines. Reports to Ava.',
+      role: 'backend-engineer',
+      tier: 0,
+      model: 'sonnet',
+      maxTurns: 100,
+      canUseBash: true,
+      canModifyFiles: true,
+      canCommit: true,
+      canCreatePRs: true,
+      trustLevel: 2,
+      exposure: { cli: true, discord: true, allowedUsers },
+      tags: ['implementation', 'ai-agents', 'langgraph', 'llm-providers', 'observability', 'flows'],
+      systemPrompt: resolvePersonaPrompt('sam', getSamPrompt(promptConfig), personaOverrides),
+    },
+    {
+      name: 'kai',
+      displayName: 'Kai',
+      description:
+        'Backend engineer. Implements Express routes, services, API design, error handling, and server-side features. Reports to Ava.',
+      role: 'backend-engineer',
+      tier: 0,
+      model: 'sonnet',
+      maxTurns: 100,
+      canUseBash: true,
+      canModifyFiles: true,
+      canCommit: true,
+      canCreatePRs: true,
+      trustLevel: 2,
+      exposure: { cli: true, discord: true, allowedUsers },
+      tags: ['implementation', 'backend', 'api', 'express', 'services'],
+      systemPrompt: resolvePersonaPrompt('kai', getKaiPrompt(promptConfig), personaOverrides),
+    },
+    {
+      name: 'frank',
+      displayName: 'Frank',
+      description:
+        'Manages infrastructure, CI/CD, deployments, monitoring, and system reliability.',
+      role: 'devops-engineer',
+      tier: 0,
+      model: 'sonnet',
+      maxTurns: 100,
+      canUseBash: true,
+      canModifyFiles: true,
+      canCommit: true,
+      canCreatePRs: true,
+      trustLevel: 2,
+      exposure: { cli: true, discord: true, allowedUsers },
+      tags: ['infrastructure', 'devops', 'ci-cd'],
+      systemPrompt: resolvePersonaPrompt('frank', getFrankPrompt(promptConfig), personaOverrides),
+    },
+    {
+      name: 'product-manager',
+      displayName: 'Product Manager',
+      description: 'Manages requirements, priorities, roadmap, and stakeholder communication.',
+      role: 'product-manager',
+      tier: 0,
+      model: 'sonnet',
+      maxTurns: 50,
+      canUseBash: false,
+      canModifyFiles: false,
+      canCommit: false,
+      canCreatePRs: false,
+      trustLevel: 1,
+      exposure: { cli: false, discord: false },
+      tags: ['planning', 'product', 'requirements'],
+    },
+    {
+      name: 'engineering-manager',
+      displayName: 'Engineering Manager',
+      description:
+        'Oversees engineering execution, code review, team coordination, and technical decisions.',
+      role: 'engineering-manager',
+      tier: 0,
+      model: 'sonnet',
+      maxTurns: 50,
+      canUseBash: false,
+      canModifyFiles: false,
+      canCommit: false,
+      canCreatePRs: false,
+      trustLevel: 1,
+      exposure: { cli: false, discord: false },
+      tags: ['management', 'review', 'coordination'],
+    },
+    {
+      name: 'ava',
+      displayName: 'Ava Loveland',
+      description:
+        'Autonomous operator with full authority. Manages operations, coordinates agents, and drives execution.',
+      role: 'chief-of-staff',
+      tier: 0,
+      model: 'opus',
+      maxTurns: 200,
+      canUseBash: true,
+      canModifyFiles: true,
+      canCommit: true,
+      canCreatePRs: true,
+      canSpawnAgents: true,
+      allowedSubagentRoles: ['backend-engineer', 'frontend-engineer', 'devops-engineer'],
+      trustLevel: 3,
+      exposure: { cli: true, discord: true, allowedUsers },
+      tags: ['operations', 'leadership', 'autonomous'],
+      systemPrompt: resolvePersonaPrompt('ava', getAvaPrompt(promptConfig), personaOverrides),
+    },
+    {
+      name: 'cindi',
+      displayName: 'Cindi',
+      description:
+        'Content writing specialist for protoLabs. Uses content pipeline flows to produce blog posts, technical docs, training data, and marketing content. Expert in SEO, antagonistic review, and multi-format output.',
+      role: 'content-writer',
+      tier: 0,
+      model: 'sonnet',
+      maxTurns: 100,
+      canUseBash: false,
+      canModifyFiles: true,
+      canCommit: true,
+      canCreatePRs: true,
+      trustLevel: 2,
+      exposure: { cli: true, discord: true, allowedUsers },
+      tags: ['content', 'writing', 'blog', 'documentation', 'seo', 'training-data'],
+      systemPrompt: resolvePersonaPrompt('cindi', getCindiPrompt(promptConfig), personaOverrides),
+    },
+    {
+      name: 'linear-specialist',
+      displayName: 'Linear Specialist',
+      description:
+        'Owns all Linear workspace operations: project management, sprint planning, issue lifecycle, initiative tracking, and Automaker board synchronization.',
+      role: 'linear-specialist',
+      tier: 0,
+      model: 'sonnet',
+      maxTurns: 100,
+      canUseBash: false,
+      canModifyFiles: false,
+      canCommit: false,
+      canCreatePRs: false,
+      trustLevel: 2,
+      exposure: { cli: false, discord: false },
+      tags: ['linear', 'project-management', 'sprint-planning', 'issues', 'initiatives'],
+      systemPrompt: getLinearSpecialistPrompt(),
+    },
+    {
+      name: 'jon',
+      displayName: 'Jon',
+      description:
+        'GTM Specialist — content strategy, brand positioning, social media, competitive research, and launch execution.',
+      role: 'gtm-specialist',
+      tier: 0,
+      model: 'sonnet',
+      maxTurns: 100,
+      canUseBash: true,
+      canModifyFiles: true,
+      canCommit: false,
+      canCreatePRs: false,
+      trustLevel: 1,
+      exposure: {
+        cli: true,
+        discord: true,
+        allowedUsers: allowedUsers.includes('abdelly')
+          ? allowedUsers
+          : [...allowedUsers, 'abdelly'],
+      },
+      tags: ['marketing', 'content', 'growth', 'gtm', 'brand'],
+      systemPrompt: resolvePersonaPrompt('jon', getJonPrompt(promptConfig), personaOverrides),
+    },
+  ];
+}
 
 /**
  * Register all built-in templates. Returns count of successfully registered templates.
  */
-export function registerBuiltInTemplates(registry: RoleRegistryService): number {
+export function registerBuiltInTemplates(
+  registry: RoleRegistryService,
+  userProfile?: UserProfile,
+  personaOverrides?: Record<string, CustomPrompt>
+): number {
+  const templates = buildTemplates(userProfile, personaOverrides);
   let registered = 0;
 
-  for (const template of BUILT_IN_TEMPLATES) {
+  for (const template of templates) {
     const result = registry.register(template);
     if (result.success) {
       registered++;
@@ -271,6 +315,6 @@ export function registerBuiltInTemplates(registry: RoleRegistryService): number 
     }
   }
 
-  logger.info(`Registered ${registered}/${BUILT_IN_TEMPLATES.length} built-in templates`);
+  logger.info(`Registered ${registered}/${templates.length} built-in templates`);
   return registered;
 }

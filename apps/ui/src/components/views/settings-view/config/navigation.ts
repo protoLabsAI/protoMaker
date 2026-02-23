@@ -19,6 +19,8 @@ import {
   Activity,
   Cog,
   Timer,
+  UserCog,
+  Users,
 } from 'lucide-react';
 import {
   AnthropicIcon,
@@ -79,6 +81,7 @@ export const GLOBAL_NAV_GROUPS: NavigationGroup[] = [
     label: 'Account & Security',
     items: [
       { id: 'account', label: 'Account', icon: User },
+      { id: 'profile', label: 'User Profile', icon: UserCog },
       { id: 'security', label: 'Security', icon: Shield },
     ],
   },
@@ -86,6 +89,7 @@ export const GLOBAL_NAV_GROUPS: NavigationGroup[] = [
     label: 'System',
     items: [
       { id: 'health', label: 'Health', icon: Activity },
+      { id: 'personas', label: 'Personas', icon: Users },
       { id: 'workflow', label: 'Workflow', icon: Cog },
       { id: 'maintenance', label: 'Maintenance', icon: Timer },
     ],

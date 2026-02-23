@@ -31,6 +31,8 @@ import { MCPServersSection } from './settings-view/mcp-servers';
 import { PromptCustomizationSection } from './settings-view/prompts';
 import { EventHooksSection } from './settings-view/event-hooks';
 import { IntegrationsSection } from './settings-view/integrations';
+import { ProfileSection } from './settings-view/profile';
+import { PersonasSection } from './settings-view/personas';
 import { WorkflowSettingsPanel } from './settings-view/workflow/workflow-settings-panel';
 import { MaintenanceSection } from './settings-view/maintenance';
 import { ImportExportDialog } from './settings-view/components/import-export-dialog';
@@ -185,6 +187,10 @@ export function SettingsView() {
         );
       case 'account':
         return <AccountSection />;
+      case 'profile':
+        return <ProfileSection />;
+      case 'personas':
+        return <PersonasSection />;
       case 'security':
         return (
           <SecuritySection

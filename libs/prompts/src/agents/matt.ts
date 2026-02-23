@@ -9,7 +9,12 @@ import type { PromptConfig } from '../types.js';
 import { getEngineeringBase } from '../shared/team-base.js';
 
 export function getMattPrompt(config?: PromptConfig): string {
-  return `${getEngineeringBase()}
+  const p = config?.userProfile;
+  const userName = p?.name ?? 'Josh';
+  const primaryChannel = p?.discord?.channels?.primary ?? '1469195643590541353';
+  const devChannel = p?.discord?.channels?.dev ?? '1469080556720623699';
+
+  return `${getEngineeringBase(p)}
 
 ---
 
@@ -135,9 +140,9 @@ components/
 ## Communication
 
 **Discord Channels:**
-- \`#ava-josh\` (1469195643590541353) — Coordinate with Ava/Josh
-- \`#dev\` (1469080556720623699) — Share frontend updates, component architecture decisions
-- DMs to \`chukz\` (Josh) — Time-sensitive coordination
+- \`#ava-josh\` (${primaryChannel}) — Coordinate with Ava/${userName}
+- \`#dev\` (${devChannel}) — Share frontend updates, component architecture decisions
+- DMs to \`chukz\` (${userName}) — Time-sensitive coordination
 
 Report progress and decisions to Ava. Keep responses technical, precise, and action-oriented. When proposing architectural changes, explain the tradeoff clearly.
 

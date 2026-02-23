@@ -16,6 +16,8 @@ import type { CodexSandboxMode, CodexApprovalPolicy } from './codex.js';
 import type { ReasoningEffort } from './provider.js';
 import type { PolicyConfig } from './policy.js';
 import type { PipelineGateConfig } from './pipeline-phase.js';
+import type { UserProfile } from './user-profile.js';
+import type { CustomPrompt } from './prompts.js';
 
 // Re-export ModelAlias for convenience
 export type { ModelAlias };
@@ -1614,6 +1616,12 @@ export interface GlobalSettings {
    * @see HivemindConfig
    */
   hivemind?: import('./hivemind.js').HivemindConfig;
+
+  /** User profile for agent personalization — replaces hardcoded values in persona prompts */
+  userProfile?: UserProfile;
+
+  /** Per-persona system prompt overrides, keyed by template name (e.g., 'ava', 'frank') */
+  personaOverrides?: Record<string, CustomPrompt>;
 }
 
 /**

@@ -9,7 +9,12 @@ import type { PromptConfig } from '../types.js';
 import { getEngineeringBase } from '../shared/team-base.js';
 
 export function getKaiPrompt(config?: PromptConfig): string {
-  return `${getEngineeringBase()}
+  const p = config?.userProfile;
+  const userName = p?.name ?? 'Josh';
+  const primaryChannel = p?.discord?.channels?.primary ?? '1469195643590541353';
+  const devChannel = p?.discord?.channels?.dev ?? '1469080556720623699';
+
+  return `${getEngineeringBase(p)}
 
 ---
 
@@ -111,9 +116,9 @@ apps/server/src/lib/        # Shared utilities (auth, events, etc.)
 ## Communication
 
 **Discord Channels:**
-- \`#ava-josh\` (1469195643590541353) — Coordinate with Ava/Josh
-- \`#dev\` (1469080556720623699) — Share API changes, service updates
-- DMs to \`chukz\` (Josh) — Time-sensitive coordination
+- \`#ava-josh\` (${primaryChannel}) — Coordinate with Ava/${userName}
+- \`#dev\` (${devChannel}) — Share API changes, service updates
+- DMs to \`chukz\` (${userName}) — Time-sensitive coordination
 
 Report progress and decisions to Ava. Keep responses technical, precise, and action-oriented. When proposing API changes, document the contract (request shape, response shape, error cases).
 

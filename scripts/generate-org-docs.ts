@@ -2,7 +2,7 @@
 /**
  * Generate organization and team role documentation from built-in agent templates.
  *
- * Reads the BUILT_IN_TEMPLATES array and a hierarchy definition to produce:
+ * Reads the built-in agent templates and a hierarchy definition to produce:
  * - docs/authority/roles.md — Team roster with capabilities and descriptions
  * - Updates the org chart section in docs/authority/org-chart.md
  *
@@ -17,7 +17,9 @@ import { writeFileSync, readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import type { AgentTemplate } from '@automaker/types';
-import { BUILT_IN_TEMPLATES } from '../apps/server/src/services/built-in-templates.js';
+import { buildTemplates } from '../apps/server/src/services/built-in-templates.js';
+
+const BUILT_IN_TEMPLATES = buildTemplates();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -43,7 +45,7 @@ interface OrgNode {
 
 /**
  * Organizational hierarchy. Order matters — it determines display order.
- * Every template in BUILT_IN_TEMPLATES should appear in exactly one `reports` array.
+ * Every template from buildTemplates() should appear in exactly one `reports` array.
  */
 const ORG_HIERARCHY: OrgNode[] = [
   {

@@ -29,10 +29,13 @@ import { getBoardJanitorPrompt } from './agents/board-janitor.js';
 import { getFrankPrompt } from './agents/frank.js';
 import { getKaiPrompt } from './agents/kai.js';
 
+import type { UserProfile } from '@automaker/types';
+
 /** Base config that all prompt functions accept */
 export interface BasePromptConfig {
   projectPath: string;
   contextFiles?: string[];
+  userProfile?: UserProfile;
   [key: string]: unknown;
 }
 
@@ -160,13 +163,19 @@ registerPrompt('gtm-specialist', (config) =>
 
 // --- Register personified agent prompts ---
 
-registerPrompt('ava', () => getAvaPrompt());
-registerPrompt('matt', () => getMattPrompt());
-registerPrompt('sam', () => getSamPrompt());
-registerPrompt('cindi', () => getCindiPrompt());
-registerPrompt('jon', () => getJonPrompt());
-registerPrompt('linear-specialist', () => getLinearSpecialistPrompt());
-registerPrompt('pr-maintainer', () => getPrMaintainerPrompt());
-registerPrompt('board-janitor', () => getBoardJanitorPrompt());
-registerPrompt('frank', () => getFrankPrompt());
-registerPrompt('kai', () => getKaiPrompt());
+registerPrompt('ava', (config) => getAvaPrompt({ userProfile: config.userProfile }));
+registerPrompt('matt', (config) => getMattPrompt({ userProfile: config.userProfile }));
+registerPrompt('sam', (config) => getSamPrompt({ userProfile: config.userProfile }));
+registerPrompt('cindi', (config) => getCindiPrompt({ userProfile: config.userProfile }));
+registerPrompt('jon', (config) => getJonPrompt({ userProfile: config.userProfile }));
+registerPrompt('linear-specialist', (config) =>
+  getLinearSpecialistPrompt({ userProfile: config.userProfile })
+);
+registerPrompt('pr-maintainer', (config) =>
+  getPrMaintainerPrompt({ userProfile: config.userProfile })
+);
+registerPrompt('board-janitor', (config) =>
+  getBoardJanitorPrompt({ userProfile: config.userProfile })
+);
+registerPrompt('frank', (config) => getFrankPrompt({ userProfile: config.userProfile }));
+registerPrompt('kai', (config) => getKaiPrompt({ userProfile: config.userProfile }));

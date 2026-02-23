@@ -30,3 +30,8 @@ usageStats:
 - **Situation:** Attempted to create monitor service files in `apps/server/src/services/` but files were created relative to tool execution context.
 - **Root cause:** Tool implementation detail - interpreting path as destination location but executing relative to context.
 - **How to avoid:** None - this is simply correct usage vs incorrect usage. Requires remembering to use absolute paths.
+
+#### [Gotcha] Monorepo build verification failed on unrelated package (secure-fs.ts TypeScript error), making it unclear if this feature's package builds correctly without isolated testing (2026-02-23)
+- **Situation:** Running `npm run build:packages` for final verification
+- **Root cause:** Monorepo build orchestration includes all packages as a single operation. Pre-existing errors in other packages block the entire build, preventing clear signal on this feature's package health.
+- **How to avoid:** Easier: Discover build isolation issue. Harder: Can't verify full monorepo build status. Breaking: If build system requires all packages to succeed, this feature can't deploy until secure-fs is fixed

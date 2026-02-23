@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 293
-  referenced: 150
-  successfulFeatures: 150
+  loaded: 309
+  referenced: 158
+  successfulFeatures: 158
 ---
 # gotchas
 
@@ -248,7 +248,7 @@ usageStats:
 - **Root cause:** Package.json changes are not automatically synced to node_modules. When CI runs or developer checks out commit, they must run npm install. This is expected behavior but easy to miss if testing by reading files instead of building.
 - **How to avoid:** Easier: package.json is source of truth, dependency is managed. Harder: must remember npm install step before build after dependency changes.
 
-#### [Gotcha] Git worktrees have stale/missing remote references (origin/main) compared to parent repository, breaking standard local-vs-remote commit comparison (2026-02-23)
-- **Situation:** In worktree with fresh feature branch, 'git rev-list origin/main..HEAD' fails because origin/main ref doesn't exist or is outdated. Single-strategy detection fails entirely.
-- **Root cause:** Worktrees isolate git state; not all remote refs are pulled/updated. Developers expect origin/main to always exist when working with branches.
-- **How to avoid:** Requires multiple detection strategies instead of single authoritative check. More code, more resilient to incomplete distributed state.
+#### [Gotcha] When parameterizing prompts with many hardcoded values, the default values must EXACTLY match the original hardcoded values or the prompt behavior silently changes for existing callers (2026-02-23)
+- **Situation:** Extracted userName='Josh', agencyName='protoLabs', productName='protoMaker', githubOrg='proto-labs-ai' as defaults during refactoring
+- **Root cause:** Existing code calling getAvaPrompt() with no arguments must produce identical output. Any deviation in defaults breaks backward compatibility silently - no error, just different behavior.
+- **How to avoid:** Must preserve original strings exactly (including capitalization like 'protoLabs' vs 'protolabs'), making refactoring more tedious. Gain is backward compatibility, but at cost of stricter verification burden.

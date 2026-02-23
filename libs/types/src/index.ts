@@ -204,6 +204,9 @@ export type {
 } from './prompts.js';
 export { DEFAULT_PROMPT_CUSTOMIZATION } from './prompts.js';
 
+// User profile types (agent personalization)
+export type { UserProfile } from './user-profile.js';
+
 // Settings types and constants
 export type {
   ThemeMode,

@@ -5,7 +5,7 @@ relevantTo: [architecture]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 22
+  loaded: 23
   referenced: 13
   successfulFeatures: 13
 ---
@@ -2397,21 +2397,102 @@ usageStats:
 - **Why this works:** Consistent naming enables shell scripts and config loaders to auto-discover vars by prefix (e.g., grep -E '^LANGFUSE_' to find all Langfuse vars). Commented-out defaults in .env.example prevent accidental activation while documenting required vs optional. Inline defaults in CLAUDE.md serve as quick reference for developers.
 - **Trade-offs:** Easier: Config tooling can auto-discover and organize by prefix. Harder: env var names are longer; requires discipline across teams to maintain prefix naming
 
-### Multi-tier fallback strategy that assumes commits should be pushed when detection methods fail, rather than failing safely with null (2026-02-23)
-- **Context:** Fresh branches (never pushed to origin) fail git rev-list comparison because remote tracking branch doesn't exist. Original code caught exceptions and silently returned null, breaking the entire workflow.
-- **Why:** Errs on the side of action (false positive: might push unnecessarily) rather than silent failure (false negative: silently skips commits). Silent failures break autonomous agent workflows completely; unnecessary pushes are recoverable.
-- **Rejected:** Fail-safe approach (return null when uncertain) - this was the original behavior causing the bug. Safer in isolation but catastrophic when commits are lost silently.
-- **Trade-offs:** Trade certainty for robustness. Code complexity increases but robustness against distributed git state inconsistency improves. Risk of false positives (pushing when shouldn't) but prevents false negatives (silently skipping).
-- **Breaking if changed:** If callers depend on null strictly meaning 'no commits exist', this breaks that invariant. Now null only means 'truly no commits' - uncertain cases return hash with warn logs.
+#### [Gotcha] Barrel export pattern: must import from @automaker/utils, not @automaker/utils/logger (2026-02-23)
+- **Situation:** Three separate files required the same correction from @automaker/utils/logger to @automaker/utils for createLogger import
+- **Root cause:** Project uses barrel exports to centralize utility exports and allow internal module reorganization without breaking downstream code
+- **How to avoid:** Indirection abstracts internal structure but requires developers to know barrel export convention; enables painless internal reorganization
 
-#### [Pattern] Cascading detection strategies with decreasing certainty: remote branch compare → total commit count → HEAD existence check → last resort log inspection (2026-02-23)
-- **Problem solved:** Cannot rely on any single git operation succeeding in uncertain distributed state. Each fallback has different preconditions and reliability.
-- **Why this works:** Matches the actual state of git repositories: distributed, potentially incomplete, with missing refs. Each strategy trades certainty for availability.
-- **Trade-offs:** Increased complexity and multiple git invocations vs. guaranteed detection even with missing refs. Lines of code increase but success rate increases for edge cases.
+#### [Pattern] Empty interface placeholder with @typescript-eslint/no-empty-object-type eslint-disable and future TODO comment for phase-based implementation (2026-02-23)
+- **Problem solved:** GetPairRequest interface is empty with disable comment and 'Future: Add filtering/sampling parameters' - active sampling algorithm not yet implemented
+- **Why this works:** Maintains type-safe API contracts while explicitly signaling incomplete implementation. Enables incremental development without API breaking changes when active sampling is added later
+- **Trade-offs:** Less strict TypeScript validation initially but clear forward contract; eslint-disable is explicit intent marker; prevents premature API expansion
 
-### Use logging level semantics (info→warn, add debug) to signal decision confidence rather than adding error handling for uncertain outcomes (2026-02-23)
-- **Context:** Code encounters uncertain situations (origin/main missing, git command failures) but must continue. Can't throw errors without breaking workflow.
-- **Why:** Logging levels communicate severity to operators without exceptions. Warn level signals 'unexpected but handled' better than silent info logs that hide unusual behavior.
-- **Rejected:** Silently handling with info-level logs (original behavior) - makes root causes invisible. Throwing errors would break autonomous workflows.
-- **Trade-offs:** Increased log verbosity but makes problems discoverable in production. Operators can now see when fallback logic triggers.
-- **Breaking if changed:** If monitoring treats warn logs differently than info (alerts, metrics), this changes operational behavior. Intentional - makes silent failures visible.
+#### [Gotcha] When adding new optional properties to a Required<T> type, all resolution/configuration methods must explicitly include the new properties in their return objects. TypeScript won't warn about missing properties in object literals, allowing silent configuration failures. (2026-02-23)
+- **Situation:** Added salvageOnAbort and salvageOnAbortTypes to GitWorkflowSettings. Both DEFAULT_GIT_WORKFLOW_SETTINGS and resolveGitWorkflowSettings() needed updates or salvage options would be undefined at runtime despite type-checking.
+- **Root cause:** Type inference doesn't enforce completeness in object literals when used with Required<T>. Missing properties don't cause compile errors, only runtime behavior changes.
+- **How to avoid:** More boilerplate in resolution methods but prevents silent feature failures. Could use mapped types or const assertions to enforce completeness, but current approach is more explicit.
+
+#### [Pattern] Preserve error context outside try/catch scope by declaring variables in outer scope (workDir, errorInfo) to avoid type narrowing issues when accessing error details in finally blocks. Finally blocks can't access catch error directly without careful scope management. (2026-02-23)
+- **Problem solved:** executeFeature() needed to pass error type information to salvageUncommittedWork() in the finally block. Direct catch-block error references aren't accessible in finally without narrowing.
+- **Why this works:** TypeScript's control flow analysis restricts error access to catch blocks. Variables declared at function scope remain accessible in finally and avoid type guards.
+- **Trade-offs:** Slightly more verbose variable declarations but ensures type safety and preserves error context. Alternative of nested try would be less clean.
+
+#### [Gotcha] Git worktrees share the .git directory but have separate working directories, causing npm workspace package links to point to the main branch's node_modules instead of the feature branch's dist files. Build caches can make this hard to detect. (2026-02-23)
+- **Situation:** Feature branch code compiled correctly in isolation but failed in full monorepo build because type definitions linked to main branch version, not feature branch.
+- **Root cause:** Worktree efficiency relies on shared git metadata, but build tooling doesn't understand this shared state and resolves workspace links from the wrong reference point.
+- **How to avoid:** Worktrees are lightweight and efficient for context switching, but require understanding of their build quirks. Full clone would avoid this but adds disk/time overhead.
+
+#### [Pattern] Use best-effort error handling in finally blocks for recovery operations (don't rethrow salvage errors). Log failures as warnings but preserve the original abort signal. Catching and suppressing exceptions prevents masking why the agent actually failed. (2026-02-23)
+- **Problem solved:** Salvage workflow runs in finally block during error state. If salvage itself throws, the original abort reason gets lost.
+- **Why this works:** Users need to know they were aborted (original error), not that salvage recovery failed. Salvage is best-effort; its failures shouldn't become the primary error signal.
+- **Trade-offs:** Salvage failures are logged but invisible to user error handling. Cleaner error messaging but requires robust logging for debugging. Could emit events instead for visibility.
+
+### Make salvage workflow triggering configurable per-error-type via salvageOnAbortTypes array instead of simple boolean. Different error types have different recovery semantics and user expectations. (2026-02-23)
+- **Context:** Agent abort can happen for multiple reasons: agent cancellation, max_turns limit, detected infinite loop, etc. Not all warrant automatic salvage.
+- **Why:** max_turns aborts are often expected behavior (user's configured limit). Detected loops might indicate broken code worth discarding. Cancellations are unexpected and warrant salvage. Fine-grained control matches user intent better.
+- **Rejected:** Simple salvageOnAbort: boolean (too coarse; saves work for max_turns which is expected); always salvage (wastes resources on clearly broken code); never salvage (loses work from unexpected cancellations)
+- **Trade-offs:** More complex configuration but prevents unwanted salvages that consume resources or save bad code. Array approach is simpler than nested object config.
+- **Breaking if changed:** If salvageOnAbortTypes array doesn't include the actual error type, salvage won't trigger even if salvageOnAbort is true
+
+### Salvaged PRs are never auto-merged; they require manual review. Incomplete work from aborted agents shouldn't be merged automatically regardless of CI status. (2026-02-23)
+- **Context:** Agent was interrupted mid-feature. Salvaged work is preserved but potentially incomplete or in broken state.
+- **Why:** Auto-merge implies feature is complete and safe. Work interrupted by abort is by definition incomplete. Requiring manual review creates a safety gate and signals to team that work is partial.
+- **Rejected:** Creating commits only without PR (loses visibility, work might be forgotten); auto-merging with CI (completes unsafe incomplete work)
+- **Trade-offs:** Requires additional team action (PR review + merge) but prevents incomplete code from reaching main. Preserves code history and visibility.
+- **Breaking if changed:** If salvaged work auto-merges, incomplete/broken features leak into production. Requires explicit decision to merge incomplete work.
+
+#### [Pattern] Maintain dual API surface during refactoring: keep original constant export unchanged while introducing parameterized function, allowing existing code to remain unmodified (2026-02-23)
+- **Problem solved:** Converting BRAND_IDENTITY from constant to parameterized getBrandIdentity(profile) function while maintaining backward compatibility
+- **Why this works:** Allows incremental migration - existing code importing BRAND_IDENTITY works unchanged, new code can use getBrandIdentity(profile). Avoids coordinating breaking changes across entire codebase
+- **Trade-offs:** Both exports must be maintained and kept in sync. Requires documentation/deprecation markers. But enables zero-friction adoption for new functionality
+
+#### [Gotcha] Interface definitions kept inline in implementation file (team-base.ts) rather than centralized in @automaker/types, creating cognitive burden of discovering types exist before recognizing function signature requirements (2026-02-23)
+- **Situation:** UserProfile and BrandConfig types defined in team-base.ts but also exported from index.ts; external consumers must know types exist to properly use getBrandIdentity()
+- **Root cause:** Scope decision to keep feature self-contained. Avoids adding types to central types package for a single-feature use case. Reduces cross-package dependencies
+- **How to avoid:** Self-contained feature vs discoverable API contracts. Easier to delete feature if types are co-located, harder for consumers to find correct type imports
+
+#### [Gotcha] Worktree environments with shared monorepo node_modules cause TypeScript resolution to stale dist files when introducing new type exports (2026-02-23)
+- **Situation:** After building new UserProfile type in worktree, downstream packages couldn't resolve it despite successful build, because main repo's node_modules/@automaker/types/dist/ contained pre-branch dist without the new export
+- **Root cause:** Git worktrees share parent repo's node_modules for efficiency, but builds execute in worktree directory. TypeScript resolution follows node_modules search path which finds stale dist files from main branch before worktree's new exports are available
+- **How to avoid:** Efficient disk usage and single npm install vs requiring manual dist synchronization after introducing new type exports in worktree
+
+#### [Pattern] Centralized prompt registry pattern: BasePromptConfig passes userProfile through single registry to all persona agents rather than modifying each agent individually (2026-02-23)
+- **Problem solved:** 10 different personified agents (ava, matt, sam, cindi, jon, linear-specialist, pr-maintainer, board-janitor, frank, kai) needed userProfile access for future personalization
+- **Why this works:** Centralizing in registry means: (1) single definition of what agents receive, (2) consistent interface across all agents, (3) easy to add/remove features for all agents simultaneously, (4) future changes don't require touching 10 files
+- **Trade-offs:** More complex registry code vs single source of truth for what data agents can access; easier to maintain vs harder to trace data flow for individual agents
+
+#### [Gotcha] All 10 persona agents must be updated for type changes in centralized registry, not just explicit subset, to maintain consistent interface and prevent surprise gaps (2026-02-23)
+- **Situation:** Initial planning mentioned 7 agents but implementation discovered and updated all 10 for consistency
+- **Root cause:** Registry pattern creates shared contract - if only some agents updated, code that iterates all agents or checks agent type details encounters inconsistency. Future developer assumes all agents have userProfile access but some don't, causing subtle bugs
+- **How to avoid:** More changes + higher risk of missing an agent vs guarantees all agents have consistent capabilities
+
+### Asymmetric UserProfile interface: Frank has infra.stagingHost field, while Kai/Matt/Sam only have user/channel fields (2026-02-23)
+- **Context:** Parameterizing four engineering personas with different concerns
+- **Why:** Frank has infrastructure-specific responsibilities requiring staging host configuration. Other personas share identical parameterization needs (user name + Discord channels). This reflects actual separation of concerns in the domain.
+- **Rejected:** Unified interface with all fields available to all personas - would create coupling and confusion about which fields each persona uses
+- **Trade-offs:** Easier: Clear intent and minimal API surface. Harder: More complex type system. Breaking: Code assuming all personas accept infra config will fail.
+- **Breaking if changed:** If Frank's responsibilities change or others gain infrastructure concerns, the interface asymmetry breaks the assumption
+
+#### [Pattern] Parameterization scope decision: extract only the values with plausible overrides (staging host, user name, Discord channels) vs everything (2026-02-23)
+- **Problem solved:** Converting hardcoded values to configurable parameters
+- **Why this works:** These five values (Frank's stagingHost + shared userName/channels) represent the operational variation points teams actually customize per environment. Other prompt text is domain logic that shouldn't vary per user profile.
+- **Trade-offs:** Easier: Focused, minimal API. Harder: If new variation points emerge, must refactor again. Breaking: If parameterized value becomes non-optional in future
+
+### Parameterized user-specific values (userName, agencyName, productName, githubOrg) while keeping TEAM_ROSTER and BRAND_IDENTITY constants static in team-base.ts (2026-02-23)
+- **Context:** When refactoring persona prompts to accept configuration, needed to decide which values should be configurable vs remain as system constants
+- **Why:** TEAM_ROSTER and BRAND_IDENTITY document the actual team structure and organizational identity - these should not vary per configuration. Only user/profile-specific values should be overridable.
+- **Rejected:** Could have parameterized everything in team-base.ts to achieve maximum flexibility, or kept everything static to minimize changes
+- **Trade-offs:** Maintains clear separation between system constants (what the team is) and user configurations (what the user prefers to call things). Reduces surface area of configuration but adds architectural clarity.
+- **Breaking if changed:** If TEAM_ROSTER becomes parameterized, the system can no longer guarantee which team members' prompts will be invoked, affecting which AI personas are available. This breaks the semantic meaning of prompt selection.
+
+### Used hierarchical config structure (userProfile.name, userProfile.brand.agencyName) instead of flat parameter names at root level (2026-02-23)
+- **Context:** When designing PromptConfig interface, needed to choose between flat vs nested organization of user and brand parameters
+- **Why:** Hierarchical structure groups related values (all brand values under brand object, all user values under userProfile). This suggests future extensibility - can add userProfile.title, userProfile.email without polluting root. Also reflects conceptual hierarchy: a user has a brand identity.
+- **Rejected:** Flat structure with individual params: { userName, agencyName, productName, githubOrg } would be simpler initially but loses semantic grouping
+- **Trade-offs:** Slightly more verbose at call sites (userProfile.name vs just name), but self-documents that these values represent a user's profile, not global defaults. Easier to add more profile fields later without interface pollution.
+- **Breaking if changed:** If flattened, future additions of profile fields (title, email, etc.) would clutter the root config namespace. Renaming to nested structure later breaks all call sites.
+
+#### [Gotcha] Large template literal strings with many variable interpolations are high-risk during refactoring due to difficulty spotting syntax errors (2026-02-23)
+- **Situation:** Jon's prompt had 13 hardcoded references to parameterize within a large multi-line template literal
+- **Root cause:** Unclosed braces, missing $, or wrong interpolation syntax in large strings are easy to introduce and hard to spot visually. Template literals can easily become syntactically valid but semantically broken.
+- **How to avoid:** Comprehensive refactoring of entire prompt at once is faster but riskier. Breaking it into sections adds process overhead but catches errors earlier.

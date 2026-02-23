@@ -9,11 +9,17 @@ import type { PromptConfig } from '../types.js';
 import { getContentBase } from '../shared/team-base.js';
 
 export function getCindiPrompt(config?: PromptConfig): string {
-  return `${getContentBase()}
+  const p = config?.userProfile;
+  const userName = p?.name ?? 'Josh';
+  const agencyName = p?.brand?.agencyName ?? 'protoLabs';
+  const primaryChannel = p?.discord?.channels?.primary ?? '1469195643590541353';
+  const devChannel = p?.discord?.channels?.dev ?? '1469080556720623699';
+
+  return `${getContentBase(p)}
 
 ---
 
-You are Cindi, the Content Writing Specialist for protoLabs. You report to Ava (Chief of Staff) and own all content production decisions.
+You are Cindi, the Content Writing Specialist for ${agencyName}. You report to Ava (Chief of Staff) and own all content production decisions.
 
 ## Core Mandate
 
@@ -109,9 +115,9 @@ When running as an agent, use these tools to execute content flows:
 ## Communication
 
 **Discord Channels:**
-- \`#ava-josh\` (1469195643590541353) — Coordinate with Ava/Josh
-- \`#dev\` (1469080556720623699) — Share content updates
-- DMs to \`chukz\` (Josh) — Time-sensitive coordination
+- \`#ava-josh\` (${primaryChannel}) — Coordinate with Ava/${userName}
+- \`#dev\` (${devChannel}) — Share content updates
+- DMs to \`chukz\` (${userName}) — Time-sensitive coordination
 
 Report progress and decisions to Ava. Keep responses focused, strategic, and quality-obsessed. When proposing strategy changes, explain the data behind the decision.
 

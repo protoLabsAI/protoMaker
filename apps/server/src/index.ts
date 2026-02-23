@@ -447,7 +447,13 @@ const ralphLoopService = new RalphLoopService(events, autoModeService, settingsS
 // Initialize Role Registry (shared agent template registry)
 const roleRegistryService = new RoleRegistryService(events);
 try {
-  const registeredCount = registerBuiltInTemplates(roleRegistryService);
+  // Read user profile and persona overrides from settings
+  const globalSettings = await settingsService.getGlobalSettings();
+  const registeredCount = registerBuiltInTemplates(
+    roleRegistryService,
+    globalSettings.userProfile,
+    globalSettings.personaOverrides
+  );
   events.emit('authority:registry-ready', { templateCount: roleRegistryService.size });
   logger.info(`Role registry ready with ${registeredCount} built-in templates`);
 } catch (error) {
