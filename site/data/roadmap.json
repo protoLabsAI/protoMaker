@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-02-19T08:00:00.000Z",
+  "lastUpdated": "2026-02-22T08:00:00.000Z",
   "milestones": [
     {
       "status": "completed",
@@ -49,7 +49,7 @@
       ]
     },
     {
-      "status": "in-progress",
+      "status": "completed",
       "title": "Public Launch",
       "description": "Public changelog, roadmap, and project stats pages.",
       "items": [
@@ -60,7 +60,43 @@
       ]
     },
     {
-      "status": "planned",
+      "status": "completed",
+      "title": "Idea-to-Ship Pipeline",
+      "description": "Drop an idea, get a shipped feature. Automated research, planning, and decomposition with human-in-the-loop decision points.",
+      "items": [
+        "Signal intake with automated PM triage and Opus research",
+        "SPARC PRD generation with structured decomposition",
+        "Human-in-the-loop form system for decision gates",
+        "Auto-approve mode for fully hands-free operation",
+        "Unified pipeline from idea through deployment"
+      ]
+    },
+    {
+      "status": "completed",
+      "title": "Content Engine",
+      "description": "AI content creation pipeline with multi-stage quality gates, ceremony system, and analytics.",
+      "items": [
+        "Multi-stage content flow (research → outline → draft → review)",
+        "Antagonistic review for automated quality assurance",
+        "Ceremony system for project lifecycle milestones",
+        "Langfuse tracing and cost analytics integration",
+        "Reflection service for post-project knowledge synthesis"
+      ]
+    },
+    {
+      "status": "completed",
+      "title": "Engine Visualization",
+      "description": "Real-time flow graph showing every engine service, with rich detail panels and live metrics.",
+      "items": [
+        "Interactive flow graph with 3-lane engine topology",
+        "Rich detail panels with live data per service node",
+        "Reflection and ceremony observability",
+        "Stale feature detection and pipeline gate timeouts",
+        "Domain-specific Zustand stores for UI architecture"
+      ]
+    },
+    {
+      "status": "in-progress",
       "title": "Community & Open Source",
       "description": "Public repo, CLI scaffolding, and community resources.",
       "items": [
