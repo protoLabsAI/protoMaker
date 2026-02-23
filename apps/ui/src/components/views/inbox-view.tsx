@@ -30,7 +30,6 @@ import type {
   ActionableItem,
   ActionableItemActionType,
   ActionableItemPriority,
-  ActionableItemStatus,
 } from '@automaker/types';
 import { getEffectivePriority } from '@automaker/types';
 import { cn } from '@/lib/utils';
