@@ -518,7 +518,7 @@ Once authenticated, protoLabs.studio will automatically detect and use your CLI 
 protoLabs.studio includes a Claude Code plugin and MCP server for programmatic control directly from your terminal.
 
 - 🔌 **MCP Server** - 32 tools for managing features, agents, and orchestration
-- ⚡ **Slash Commands** - `/board`, `/auto-mode`, `/orchestrate`, `/context`, `/create-project`
+- ⚡ **Slash Commands** - `/board`, `/auto-mode`, `/orchestrate`, `/context`, `/plan-project`
 - 🤖 **Specialized Subagents** - Feature planner, code reviewer, codebase analyzer, PRD creator
 - 🔄 **Full API Access** - Create features, start agents, manage dependencies, project orchestration
 
@@ -537,18 +537,18 @@ npm install && npm run dev:web
 claude
 > /board                    # View your Kanban board
 > /auto-mode start          # Start autonomous processing
-> /create-project           # Full project orchestration
+> /plan-project             # Full project orchestration
 ```
 
 **Available Commands:**
 
-| Command           | Description                              |
-| ----------------- | ---------------------------------------- |
-| `/board`          | View and manage your Kanban board        |
-| `/auto-mode`      | Start/stop autonomous feature processing |
-| `/orchestrate`    | Manage feature dependencies              |
-| `/context`        | Manage AI agent context files            |
-| `/create-project` | Full project orchestration pipeline      |
+| Command         | Description                              |
+| --------------- | ---------------------------------------- |
+| `/board`        | View and manage your Kanban board        |
+| `/auto-mode`    | Start/stop autonomous feature processing |
+| `/orchestrate`  | Manage feature dependencies              |
+| `/context`      | Manage AI agent context files            |
+| `/plan-project` | Full project orchestration pipeline      |
 
 **MCP Tools (32 total):**
 

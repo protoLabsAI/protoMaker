@@ -129,5 +129,5 @@ Create:
 
 ### Next Steps
 
-Run create-project-features to create board features.
+Run /plan-project to create board features and launch.
 ```

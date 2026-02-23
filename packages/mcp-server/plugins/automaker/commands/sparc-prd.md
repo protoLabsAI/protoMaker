@@ -175,7 +175,7 @@ Write the PRD to: .automaker/projects/[slug]/prd.md
 PRD created! Next steps:
 1. Review and refine the PRD
 2. `/scaffold-project [slug]` to create project structure
-3. `/create-project-features [slug]` to create features on the board
+3. `/plan-project [slug]` to create features and launch the project
 ```
 
 ## PRD Quality Checklist

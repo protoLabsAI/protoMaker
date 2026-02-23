@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 285
-  referenced: 146
-  successfulFeatures: 146
+  loaded: 291
+  referenced: 150
+  successfulFeatures: 150
 ---
 # gotchas
 
@@ -237,3 +237,13 @@ usageStats:
 - **Situation:** Webhook responds with 200 immediately, then processes async. If sync fails later, only logs capture the error.
 - **Root cause:** Responding immediately is required for webhook reliability. But consequence is async errors can't be returned to caller.
 - **How to avoid:** Pro: Webhook won't timeout or crash. Con: Errors in sync service, GitHub API, or prompt retrieval don't propagate to caller; requires log monitoring to detect issues.
+
+#### [Gotcha] GitHub REST API requires base64 encoding of file content and SHA of existing file for updates to prevent conflicts (2026-02-23)
+- **Situation:** Updating files in GitHub without providing the correct SHA results in conflict errors, even though Octokit can fetch the current SHA.
+- **Root cause:** GitHub API design enforces optimistic locking via SHA - prevents blind overwrites when multiple clients modify simultaneously. Calling getContent() first ensures no race condition between check and write.
+- **How to avoid:** Requires two API calls for updates (getContent then createOrUpdateFileContents); improves data consistency at cost of latency
+
+#### [Gotcha] NPM dependency @octokit/rest was added to package.json in the original commit but not installed in node_modules. Build fails silently with unresolved import until npm install is run. (2026-02-23)
+- **Situation:** Commit a335a97f added @octokit/rest to package.json but repository state (node_modules) was stale. TypeScript compilation succeeds (type declarations available), but build toolchain fails on missing transitive dependencies.
+- **Root cause:** Package.json changes are not automatically synced to node_modules. When CI runs or developer checks out commit, they must run npm install. This is expected behavior but easy to miss if testing by reading files instead of building.
+- **How to avoid:** Easier: package.json is source of truth, dependency is managed. Harder: must remember npm install step before build after dependency changes.

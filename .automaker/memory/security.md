@@ -164,3 +164,20 @@ usageStats:
 - **Rejected:** Skipping signature verification entirely - leaves endpoint open to spoofed events. Using documented/verified header name per vendor docs would be more reliable.
 - **Trade-offs:** Pro: Prevents spoofed webhooks. Con: Incorrect header name means all webhooks fail verification silently (only logged, not returned to caller).
 - **Breaking if changed:** If header name is wrong, webhook signature check always fails. Events are silently dropped (logged but processed). Discovering this requires monitoring logs, not API feedback.
+
+### Missing GITHUB_TOKEN results in silent skip with warning log, not error/exception throw (2026-02-23)
+- **Context:** Service checks for GITHUB_TOKEN and returns {success: false, error: 'GITHUB_TOKEN not configured'} rather than throwing
+- **Why:** Graceful degradation - prompts can sync if token exists, skip if not. Prevents deployment failures if token is optional in some environments. Caller can check result.success to decide behavior.
+- **Rejected:** Throwing error on missing token - would require try/catch in all callers, would fail deployments where prompt sync is optional
+- **Trade-offs:** Caller must check result.success rather than catching exceptions - slightly more verbose but prevents silent failures. Server continues running even if prompts can't sync.
+- **Breaking if changed:** Changing to throw on missing token would require updating all callsites to handle exception. Current return-result pattern allows optional/degraded operation.
+
+#### [Gotcha] Environment variables split across TWO separate .env files with different purposes and locations: project root .env (dev server) vs plugin .env (MCP server). Each file sources different auth tokens and API keys for different systems. (2026-02-23)
+- **Situation:** CLAUDE.md memory states 'Two .env files are the ONLY sources of truth' but the implementation only updated apps/server/.env.example, not the plugin .env location
+- **Root cause:** Separation of concerns: dev server needs ANTHROPIC_API_KEY, DISCORD_TOKEN, LINEAR_API_TOKEN; plugin needs DISCORD_BOT_TOKEN, LINEAR_API_KEY, AUTOMAKER_API_KEY. Different authentication scopes and deployment contexts.
+- **How to avoid:** Easier: Clear separation of dev vs plugin concerns. Harder: Users must manage two .env files; secrets scattered across locations; plugin .env not documented in this feature
+
+#### [Gotcha] LANGFUSE_WEBHOOK_SECRET was added but there's no documented webhook verification logic in the codebase to validate this secret. Variable exists in .env.example but the consuming code (webhook handler) may not be implemented yet. (2026-02-23)
+- **Situation:** Feature added env var to docs but implementation feature itself may be incomplete - webhook verification is a security-critical path that cannot be assumed to exist just because the env var is documented
+- **Root cause:** Security principle: never document a secret variable without ensuring it's actually validated in code. Documenting LANGFUSE_WEBHOOK_SECRET without a webhook handler creates a false sense of security - developers will set it thinking they're protected, but if the handler doesn't verify it, the env var is useless.
+- **How to avoid:** If webhook verification code doesn't exist: developers waste time setting LANGFUSE_WEBHOOK_SECRET (false sense of security). If verification code exists but wasn't documented: this feature is incomplete.

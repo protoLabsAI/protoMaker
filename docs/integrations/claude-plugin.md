@@ -63,7 +63,7 @@ That's it! You now have access to 120 MCP tools and slash commands for managing 
 | `/context`         | Manage AI agent context files        |
 | `/groom`           | Review and organize the board        |
 | `/pr-review`       | Review and manage open pull requests |
-| `/create-project`  | Full project orchestration pipeline  |
+| `/plan-project`    | Full project orchestration pipeline  |
 | `/cleanup`         | Codebase maintenance and hygiene     |
 
 ---
@@ -595,54 +595,52 @@ Systematically review and organize open pull requests.
 3. Resolve #126 conflicts
 ```
 
-### /create-project
+### /plan-project
 
-Full project orchestration pipeline from research to implementation.
+Full project lifecycle from research to launch. Works with Linear as source of truth or standalone.
 
 ```bash
-/create-project           # Start project planning wizard
-/create-project [idea]    # Quick start with an idea
+/plan-project             # Start project planning wizard
+/plan-project [idea]      # Quick start with an idea
 ```
 
 **Workflow:**
 
-1. **Deep Research** - Analyzes codebase, identifies patterns
-2. **SPARC PRD** - Creates structured requirements document
-3. **Review** - User approves PRD
-4. **Scaffold** - Creates project directory structure
-5. **Create Features** - Generates Kanban board features with dependencies
+1. **Research** - Analyzes codebase, identifies patterns (optional)
+2. **Dedup** - Checks for duplicate projects in Linear
+3. **SPARC PRD** - Creates structured requirements document
+4. **Milestones** - Breaks into phases with sizing guidance
+5. **Features** - Creates board features with dependencies
+6. **Launch** - Starts auto-mode
+
+Supports resuming mid-stream — re-running picks up where you left off.
 
 **Example:**
 
 ```
-/create-project "Add real-time collaboration features"
+/plan-project "Add real-time collaboration features"
 
-## Phase 1: Deep Research
-📊 Analyzing codebase...
-✅ Found WebSocket infrastructure in place
-✅ Identified state management patterns (Zustand)
-⚠️ No existing real-time sync mechanism
+## Step 1: Research
+Analyzing codebase...
+Found WebSocket infrastructure in place
+Identified state management patterns (Zustand)
+No existing real-time sync mechanism
 
-## Phase 2: SPARC PRD
+## Step 2: SPARC PRD
 Creating requirements document...
 - Situation: Users want real-time collaboration
 - Problem: No sync mechanism for multi-user edits
 - Approach: WebSocket-based operational transforms
-...
 
 [User reviews and approves PRD]
 
-## Phase 3: Scaffolding
-Creating project structure in .automaker/projects/real-time-collab/
-
-## Phase 4: Feature Creation
+## Step 3: Feature Creation
 Created 12 features with dependencies:
 - [Epic] Real-time Sync Infrastructure
 - WebSocket event types
 - Operational transform service
-...
 
-Ready to start auto-mode!
+Launching auto-mode!
 ```
 
 ### /cleanup
@@ -1415,7 +1413,7 @@ The project orchestration system enables hierarchical project planning with a si
 ### The Orchestration Flow
 
 ```
-/create-project "Add user authentication"
+/plan-project "Add user authentication"
     │
     ├── 1. Deep Research (Explore agent)
     │   └── Analyze codebase, patterns, integration points
@@ -1596,7 +1594,7 @@ mcp__automaker__create_feature({
 | `/codebase-analyzer` | Haiku  | Quick pattern detection |
 | `/project-scaffold`  | Haiku  | Simple file operations  |
 | `/feature-factory`   | Haiku  | Straightforward parsing |
-| `/create-project`    | Sonnet | Complex orchestration   |
+| `/plan-project`      | Sonnet | Complex orchestration   |
 | `/sparc-prd`         | Sonnet | Sophisticated analysis  |
 | `/feature-planner`   | Sonnet | Architectural decisions |
 | `/agent-reviewer`    | Sonnet | Code quality judgment   |

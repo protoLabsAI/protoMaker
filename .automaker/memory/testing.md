@@ -728,3 +728,13 @@ usageStats:
 - **Rejected:** Minimal happy-path testing (misses edge cases), or testing only required fields (optional fields become untested and break silently)
 - **Trade-offs:** 12 parser tests vs 1-2 minimal tests adds maintenance burden but catches ~100% of payload shape violations. Each test documents one valid scenario.
 - **Breaking if changed:** Removing specific variant tests (e.g., chat type prompt test) leaves that code path untested, making future refactors risky
+
+#### [Gotcha] vi.mock('@octokit/rest') factory function must use proper 'function' syntax, not arrow function, to allow 'this' binding for constructor (2026-02-23)
+- **Situation:** Initial test mock used arrow function in vi.mock factory, causing Octokit constructor call to fail silently
+- **Root cause:** Octokit is a class constructor that uses 'this' context. vi.mock factory receives a 'this' binding that arrow functions don't preserve. Named function syntax or explicit 'this' binding required.
+- **How to avoid:** Proper function syntax is more verbose but ensures correct prototype chain and 'this' binding for class constructors
+
+#### [Gotcha] Service implementation verified with temporary Node.js script that loaded compiled JS and executed methods, but this approach won't work in automated CI (2026-02-23)
+- **Situation:** No permanent unit tests written; verification was manual/temporary
+- **Root cause:** Quick validation of core logic before submitting feature. Permanent tests would require mocking gh CLI (complexity) and test fixtures.
+- **How to avoid:** Feature is verified to compile and core logic works, but lacks regression test coverage. If gh CLI invocation signature changes, it won't be caught by tests.

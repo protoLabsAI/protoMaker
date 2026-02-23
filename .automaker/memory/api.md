@@ -5,9 +5,9 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 78
-  referenced: 45
-  successfulFeatures: 45
+  loaded: 80
+  referenced: 47
+  successfulFeatures: 47
 ---
 # api
 
@@ -484,3 +484,13 @@ usageStats:
 - **Problem solved:** Langfuse webhook receives all prompt version events. Implementation filters by presence of `LANGFUSE_WEBHOOK_LABEL` in prompt's labels array.
 - **Why this works:** Webhook may fire for many prompt versions (staging, dev, experimental). Only production prompts need syncing to GitHub. Label filtering is declarative (data-driven) not code-driven.
 - **Trade-offs:** Pro: Configurable at runtime via prompt labels in Langfuse UI. Con: Requires discipline to properly tag prompts; silent filtering if misconfigured (no error feedback).
+
+#### [Gotcha] Prompt name in Langfuse uses dot-notation (e.g., 'autoMode.planningLite') which maps to file path structure (prompts/autoMode/planningLite.txt). Parsing must handle this convention explicitly. (2026-02-23)
+- **Situation:** Webhook receives `event.data.name` as single string. Must convert to category/key structure for GitHub file path. Convention is not documented in webhook payload schema.
+- **Root cause:** Langfuse prompt naming is semantic and reflects app domain (category.feature). File structure mirrors this for maintainability. Parsing at webhook boundary makes sync logic cleaner and prevents string format assumptions from leaking into service.
+- **How to avoid:** Easier: single split on '.' is trivial and deterministic. Harder: convention is implicit - must discover by reading test data or integration docs. Risk: future prompts with dots in category/key name will break parser.
+
+#### [Gotcha] GitHub repository_dispatch requires exact event type string (e.g., 'langfuse-prompt-update') and CI must subscribe to that specific type (2026-02-23)
+- **Situation:** Repository dispatch event fires but CI workflow won't trigger unless workflow file has matching `on.repository_dispatch.types: ['langfuse-prompt-update']`
+- **Root cause:** GitHub's repository_dispatch filtering is strict - generic 'dispatch' events don't trigger workflow. Each event type must be explicitly listed in workflow definition.
+- **How to avoid:** Requires coordination between backend (event type) and CI config (workflow trigger). Typo in either breaks everything. Benefits: explicit intent, security (CI decides what events trigger it).

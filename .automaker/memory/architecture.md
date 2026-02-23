@@ -2326,3 +2326,73 @@ usageStats:
 - **Rejected:** Implementing full sync pipeline in this feature - creates coupling, makes feature harder to test, violates scope boundary
 - **Trade-offs:** Pro: Feature is focused, testable, ships faster. Con: Webhook is non-functional without sync service implementation; requires coordination between features.
 - **Breaking if changed:** Removing TODO without implementing sync service means webhooks are received but ignored. Calling the TODO without sync service implementation causes crashes.
+
+### GitHub API interaction uses @octokit/rest REST client instead of GitHub CLI (gh) wrapper (2026-02-23)
+- **Context:** Codebase has github-merge-service.ts using gh CLI. New prompt sync service needed to create/update files in GitHub.
+- **Why:** REST API provides direct control over file operations (SHA retrieval, base64 encoding, commit metadata). gh CLI is a CLI wrapper better suited for merge operations. REST API is more suitable for programmatic file manipulation with required metadata handling.
+- **Rejected:** Using gh CLI like github-merge-service.ts does - would require shell escaping, parsing JSON output, less direct control over commit metadata
+- **Trade-offs:** REST API requires GITHUB_TOKEN env var management (added dependency on auth layer); gh wraps auth but adds shell command overhead and parsing complexity
+- **Breaking if changed:** Switching to gh CLI would lose direct control over: SHA parameter for updates (no conflict errors), custom commit message formatting, base64 content encoding - would need alternate approaches to achieve same functionality
+
+#### [Pattern] Service provides both single (syncPrompt) and batch (syncPrompts) methods with aggregated error reporting (2026-02-23)
+- **Problem solved:** Need to sync prompts individually or in batch with summary results for monitoring/logging
+- **Why this works:** Batch method allows callers to sync multiple prompts and get aggregate success/failure count. Caller can process all prompts without stopping on first error, then handle failures together. Single method useful for individual updates.
+- **Trade-offs:** Code duplication minimized by having syncPrompts call syncPrompt in loop; adds small overhead for aggregation logic but provides better operational visibility
+
+#### [Pattern] File path derivation follows {category}/{key}.txt structure independent of prompt name/display-name (2026-02-23)
+- **Problem solved:** Prompt metadata includes category, key, name, version. Path must be deterministic and stable across renames.
+- **Why this works:** Using category + key ensures path stability - if prompt name/display changes, file path stays same. This allows rename operations without moving files. category and key are semantic identifiers, not display text.
+- **Trade-offs:** Path is opaque (autoMode/planningLite) but stable. Name is kept in file content/metadata for human readability.
+
+#### [Pattern] Service instantiation at server startup with deferred initialization pattern - service accepts env vars and gracefully degrades (null instance) when preconditions unmet (2026-02-23)
+- **Problem solved:** PromptGitHubSyncService requires GITHUB_TOKEN, GITHUB_REPO_OWNER, GITHUB_REPO_NAME. These may not be set in all environments (dev, staging, test). Webhook handler should not crash if credentials missing.
+- **Why this works:** Allows optional features to coexist in same codebase without conditional route registration or environment-specific builds. Service availability checked at call time, not startup time. Matches existing pattern in codebase for optional integrations.
+- **Trade-offs:** Easier: adds optional feature without code duplication or env-specific builds. Harder: requires defensive null checks at every call site. Risk: silent no-op if credentials misconfigured (false sense of working when actually disabled).
+
+### Webhook handler responds 200 OK immediately, processes sync asynchronously (fire-and-forget). Does not wait for GitHub API completion before returning response. (2026-02-23)
+- **Context:** Langfuse expects webhook responses within 5 seconds. GitHub API round-trip (create/update file, check for existing version, handle rate limiting) may exceed this timeout.
+- **Why:** Decouples webhook response latency from GitHub API latency. Prevents Langfuse from retrying webhook if sync takes >5s. Error logging allows debugging via server logs without blocking webhook client.
+- **Rejected:** Alternative: await full sync before responding (violates Langfuse's SLA). Alternative: queue job for background worker (adds dependency on job queue, not implemented in current architecture).
+- **Trade-offs:** Easier: simple async/await pattern, no new infrastructure. Harder: difficult to signal sync failure back to Langfuse. Risk: user has no feedback on whether sync succeeded.
+- **Breaking if changed:** If response timing requirement is removed and code changes to await syncService.syncPrompt(), webhook latency becomes subject to GitHub API variability. On network issues, webhook timeout errors will spike. Langfuse may interpret repeated timeouts as webhook endpoint failure and disable it.
+
+#### [Pattern] Service dependency injection through route factory function signature - service passed as parameter to createLangfuseRoutes(), then forwarded to handler. Not stored in closure or global state. (2026-02-23)
+- **Problem solved:** Server needs to pass PromptGitHubSyncService instance to webhook handler. Handler is nested inside route factory. Service is instantiated in index.ts, far from handler definition.
+- **Why this works:** Explicit dependency makes data flow visible. Route factory signature documents what services are required. Enables testing by injecting mock services. Avoids global state or service registry lookups.
+- **Trade-offs:** Easier: dependencies explicit and testable. Harder: requires thread dependency through multiple function signatures (index → createLangfuseRoutes → createWebhookHandler). Risk: if intermediate function forgets to pass parameter, type system catches it but integration breaks.
+
+### Created standalone PromptGitHubSyncService as a separate concern from prompt creation/update logic, exported as singleton for injection into existing workflows (2026-02-23)
+- **Context:** CI trigger for Langfuse prompt changes needed to be decoupled from the prompt sync workflow itself to avoid tight coupling
+- **Why:** Allows the service to be called opportunistically after commits without requiring changes to the core prompt sync flow. Singleton pattern reduces instantiation overhead and ensures consistent state. Separation of concerns means CI triggering can be enabled/disabled without refactoring prompt handling code.
+- **Rejected:** Inline CI trigger logic directly in prompt sync service - would create tight coupling and make disabling the feature require code changes rather than env var toggle
+- **Trade-offs:** One additional service class to maintain, but decoupling pays off if CI trigger logic grows or is reused elsewhere. Singleton is simpler than dependency injection but less testable.
+- **Breaking if changed:** If caller expects CI trigger to fire automatically on commit, they must explicitly call triggerCIAfterCommit() - implicit/automatic triggering would require architectural change
+
+#### [Gotcha] Used `LANGFUSE_SYNC_CI_TRIGGER` env var with strict equality check ('true' or '1' only) rather than truthy check (2026-02-23)
+- **Situation:** Accidental environment variable misconfiguration (e.g., LANGFUSE_SYNC_CI_TRIGGER=false string) could trigger unwanted CI runs if using JavaScript truthy logic
+- **Root cause:** Explicit string comparison prevents subtle bugs where env vars like 'false', '0', or misspelled values would be truthy in JavaScript. This is defensive programming for infrastructure code.
+- **How to avoid:** Slightly more verbose code, but eliminates entire class of environment-variable-related bugs. Worth the safety cost.
+
+#### [Pattern] Followed github-merge-service.ts pattern: promisified exec(), extended PATH for cross-platform gh CLI support, createLogger integration, no error throwing (returns error objects instead) (2026-02-23)
+- **Problem solved:** New service needed to invoke gh CLI (repository_dispatch), same as existing merge service that triggers CI for merges
+- **Why this works:** Consistency across codebase means developers already understand the pattern. Extended PATH ensures gh CLI works on macOS (homebrew installs to /usr/local/bin not always in default PATH). Returning error objects instead of throwing preserves caller's ability to decide error handling strategy.
+- **Trade-offs:** Tight coupling to gh CLI availability (though gracefully handled), but matches team conventions. If gh is ever removed from infrastructure, this service breaks alongside github-merge-service.
+
+### Stored prompt metadata (name, version, labels, action) in client_payload rather than as gh CLI query parameters or commit metadata (2026-02-23)
+- **Context:** CI workflow needs access to which prompt changed, what version, and what action triggered the update
+- **Why:** client_payload in repository_dispatch is the idiomatic GitHub way to pass context to triggered workflows. It's visible in workflow event data without parsing commit messages or metadata. Keeps prompt context with the event rather than scattered across git/CLI.
+- **Rejected:** Embedding data in commit message or push event metadata - would require parsing in CI workflow and is fragile if commit format changes
+- **Trade-offs:** Adds payload to every dispatch event (small), but makes workflow logic straightforward. If event payloads become very large in future, this could impact GitHub API limits.
+- **Breaking if changed:** CI workflows expecting data in commit message or git tags would need to be updated to read client_payload instead
+
+### Environment variables organized into logical sections (Required, Optional - API Keys, Optional - Security, Optional - Langfuse Integration, Optional - GitHub Sync, Optional - Debugging) in .env.example with clear comments explaining each variable's purpose and when it's needed. (2026-02-23)
+- **Context:** New Langfuse webhook and GitHub sync variables needed to be documented alongside existing 15+ env vars without creating confusion about which are truly required vs optional
+- **Why:** Section headers create a mental model for developers: required vars at top, then optional features grouped by subsystem (Langfuse, GitHub, Debugging). This prevents developers from activating integrations without realizing they need multiple related vars. Comments explain the WHY (observability, repository operations) not just the WHAT.
+- **Rejected:** Flat list of all vars with no sections - rejected because it obscures which vars are prerequisites for each feature (e.g., LANGFUSE_WEBHOOK_SECRET only matters if Langfuse integration is active)
+- **Trade-offs:** Easier: Developers understand feature prerequisites at a glance. Harder: .env.example becomes longer; requires discipline to maintain section organization when adding future vars. Breaking change risk if sections are reordered or merged.
+- **Breaking if changed:** If someone relies on .env.example line counts or section positions for parsing/validation, reorganizing sections would break their tooling. Parser scripts should be resilient to whitespace and comments.
+
+#### [Pattern] Environment variables use consistent naming convention: UPPERCASE_WITH_UNDERSCORES for all vars, with prefixes for features (LANGFUSE_*, GITHUB_*, VITE_*, AUTOMAKER_*) to indicate subsystem ownership. Defaults are inline in CLAUDE.md (e.g., 'default: langfuse-sync') and .env.example is commented-out reference only. (2026-02-23)
+- **Problem solved:** 15+ existing vars already follow this pattern; new vars needed to integrate without breaking naming conventions or tooling that parses env var names
+- **Why this works:** Consistent naming enables shell scripts and config loaders to auto-discover vars by prefix (e.g., grep -E '^LANGFUSE_' to find all Langfuse vars). Commented-out defaults in .env.example prevent accidental activation while documenting required vs optional. Inline defaults in CLAUDE.md serve as quick reference for developers.
+- **Trade-offs:** Easier: Config tooling can auto-discover and organize by prefix. Harder: env var names are longer; requires discipline across teams to maintain prefix naming
