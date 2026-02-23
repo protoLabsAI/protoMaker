@@ -16,6 +16,7 @@ import { PipelineProgressBar } from './pipeline-progress-bar';
 import { PipelinePillSelector } from './pipeline-pill-selector';
 import { PipelineEventLog } from './pipeline-event-log';
 import { PipelineAnalytics } from './pipeline-analytics';
+import { AgentAnalyticsPanel } from './agent-analytics-panel';
 import { NodeDetailDialog, type SelectedNode } from './dialogs/node-detail-dialog';
 import { SignalInputDialog } from './dialogs/signal-input-dialog';
 import { PrdReviewDialog } from './dialogs/prd-review-dialog';
@@ -34,6 +35,9 @@ export function FlowGraphView({ onFeatureClick }: FlowGraphViewProps) {
 
   // Legend visibility
   const [showLegend, setShowLegend] = useState(false);
+
+  // Agent analytics panel visibility
+  const [showAgentAnalytics, setShowAgentAnalytics] = useState(false);
 
   // Node detail dialog state
   const [selectedNode, setSelectedNode] = useState<SelectedNode | null>(null);
@@ -199,6 +203,8 @@ export function FlowGraphView({ onFeatureClick }: FlowGraphViewProps) {
           onNodeClick={handleNodeClick}
           showLegend={showLegend}
           onToggleLegend={() => setShowLegend((v) => !v)}
+          showAgentAnalytics={showAgentAnalytics}
+          onToggleAgentAnalytics={() => setShowAgentAnalytics((v) => !v)}
         />
       </ReactFlowProvider>
 
@@ -233,6 +239,11 @@ export function FlowGraphView({ onFeatureClick }: FlowGraphViewProps) {
           draft={contentReviewData.draft}
           strategy={contentReviewData.strategy}
         />
+      )}
+
+      {/* Agent Analytics Panel */}
+      {showAgentAnalytics && (
+        <AgentAnalyticsPanel onClose={() => setShowAgentAnalytics(false)} />
       )}
     </div>
   );

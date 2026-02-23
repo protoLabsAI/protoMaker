@@ -20,7 +20,7 @@ import {
   type OnEdgesChange,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Info } from 'lucide-react';
+import { Info, BarChart3 } from 'lucide-react';
 import { nodeTypes } from './nodes';
 import { edgeTypes } from './edges';
 
@@ -30,6 +30,8 @@ interface FlowGraphCanvasProps {
   onNodeClick?: (nodeId: string, nodeType: string, nodeData: Record<string, unknown>) => void;
   showLegend?: boolean;
   onToggleLegend?: () => void;
+  showAgentAnalytics?: boolean;
+  onToggleAgentAnalytics?: () => void;
 }
 
 export function FlowGraphCanvas({
@@ -38,6 +40,8 @@ export function FlowGraphCanvas({
   onNodeClick,
   showLegend,
   onToggleLegend,
+  showAgentAnalytics,
+  onToggleAgentAnalytics,
 }: FlowGraphCanvasProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState(externalNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(externalEdges);
@@ -95,6 +99,13 @@ export function FlowGraphCanvas({
             data-testid="flow-graph-legend-toggle"
           >
             <Info className={`w-3.5 h-3.5 ${showLegend ? 'text-violet-400' : ''}`} />
+          </ControlButton>
+          <ControlButton
+            onClick={onToggleAgentAnalytics}
+            title="Agent Analytics"
+            data-testid="flow-graph-analytics-toggle"
+          >
+            <BarChart3 className={`w-3.5 h-3.5 ${showAgentAnalytics ? 'text-violet-400' : ''}`} />
           </ControlButton>
         </Controls>
       </ReactFlow>

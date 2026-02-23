@@ -3231,6 +3231,12 @@ export class HttpApiClient implements ElectronAPI {
       this.post<SystemHealthResponse>('/api/system/health-dashboard', { projectPath }),
   };
 
+  // Analytics API
+  analytics = {
+    getAgentPerformance: (projectPath: string) =>
+      this.post('/api/analytics/agent-performance', { projectPath }),
+  };
+
   // Project Lifecycle API
   lifecycle = {
     getProject: (
