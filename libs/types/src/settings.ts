@@ -1196,6 +1196,29 @@ export interface ChatSessionRef {
 }
 
 /**
+ * MaintenanceTaskOverride - Per-task override for maintenance scheduler
+ */
+export interface MaintenanceTaskOverride {
+  /** Whether this task is enabled */
+  enabled?: boolean;
+  /** Custom cron expression override */
+  cronExpression?: string;
+}
+
+/**
+ * MaintenanceSettings - Controls for the maintenance scheduler
+ *
+ * Allows users to enable/disable maintenance tasks and adjust schedules
+ * without editing source code. Persisted in GlobalSettings.
+ */
+export interface MaintenanceSettings {
+  /** Master switch for all maintenance tasks (default: true) */
+  enabled: boolean;
+  /** Per-task overrides keyed by task ID */
+  tasks?: Record<string, MaintenanceTaskOverride>;
+}
+
+/**
  * GlobalSettings - User preferences and state stored globally in {DATA_DIR}/settings.json
  *
  * This is the main settings file that persists user preferences across sessions.
@@ -1576,6 +1599,13 @@ export interface GlobalSettings {
    * Defaults to os.hostname() at runtime if not set.
    */
   instanceId?: string;
+
+  /**
+   * Maintenance scheduler settings.
+   * Controls which maintenance tasks are enabled and their cron schedules.
+   * @see MaintenanceSettings
+   */
+  maintenance?: MaintenanceSettings;
 
   /**
    * Hivemind mesh configuration for multi-instance coordination.

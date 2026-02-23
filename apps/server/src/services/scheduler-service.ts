@@ -117,6 +117,7 @@ export interface SchedulerStatus {
   tasks: Array<{
     id: string;
     name: string;
+    cronExpression: string;
     enabled: boolean;
     lastRun?: string;
     nextRun?: string;
@@ -600,6 +601,45 @@ export class SchedulerService {
   }
 
   /**
+   * Update a task's cron schedule at runtime
+   */
+  async updateTaskSchedule(id: string, cronExpression: string): Promise<boolean> {
+    const task = this.tasks.get(id);
+    if (!task) {
+      return false;
+    }
+
+    // Validate new cron expression
+    const validation = validateCronExpression(cronExpression);
+    if (!validation.valid) {
+      throw new Error(`Invalid cron expression: ${validation.error}`);
+    }
+
+    // Update cron expression and re-parse
+    task.cronExpression = cronExpression;
+    const parsed = parseCronExpression(cronExpression);
+    this.parsedCrons.set(id, parsed);
+
+    // Recalculate next run if enabled
+    if (task.enabled) {
+      task.nextRun = getNextRunTime(cronExpression).toISOString();
+    }
+
+    logger.info(`Updated schedule for task "${task.name}" (${id}) to: ${cronExpression}`);
+
+    this.emitEvent('scheduler:task_updated', {
+      taskId: id,
+      name: task.name,
+      cronExpression,
+      nextRun: task.nextRun,
+    });
+
+    await this.saveTasks();
+
+    return true;
+  }
+
+  /**
    * Get a task by ID
    */
   getTask(id: string): ScheduledTask | undefined {
@@ -625,6 +665,7 @@ export class SchedulerService {
       tasks: tasks.map((t) => ({
         id: t.id,
         name: t.name,
+        cronExpression: t.cronExpression,
         enabled: t.enabled,
         lastRun: t.lastRun,
         nextRun: t.nextRun,

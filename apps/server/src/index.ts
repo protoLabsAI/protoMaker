@@ -1373,7 +1373,7 @@ app.use(
   '/api/projects',
   createProjectsRoutes(featureLoader, events, projectService, projectLifecycleService)
 );
-app.use('/api/scheduler', createSchedulerRoutes(schedulerService));
+app.use('/api/scheduler', createSchedulerRoutes(schedulerService, settingsService));
 app.use('/api/ava', createAvaRoutes(avaGatewayService));
 app.use('/api/discord', createDiscordRoutes(discordBotService));
 app.use(

@@ -211,6 +211,52 @@ export async function registerMaintenanceTasks(
   }
 
   logger.info(`Registered ${taskCount} maintenance tasks`);
+
+  // Apply settings overrides from GlobalSettings.maintenance
+  if (settingsService) {
+    try {
+      const globalSettings = await settingsService.getGlobalSettings();
+      const maintenanceSettings = globalSettings.maintenance;
+
+      if (maintenanceSettings) {
+        // Master switch: disable all tasks if maintenance.enabled === false
+        if (maintenanceSettings.enabled === false) {
+          logger.info('Maintenance scheduler disabled via settings — disabling all tasks');
+          for (const task of scheduler.getAllTasks()) {
+            if (task.id.startsWith('maintenance:')) {
+              await scheduler.disableTask(task.id);
+            }
+          }
+        }
+
+        // Per-task overrides
+        if (maintenanceSettings.tasks) {
+          for (const [taskId, override] of Object.entries(maintenanceSettings.tasks)) {
+            const task = scheduler.getTask(taskId);
+            if (!task) {
+              logger.warn(`Settings override for unknown task: ${taskId}`);
+              continue;
+            }
+
+            if (override.cronExpression) {
+              await scheduler.updateTaskSchedule(taskId, override.cronExpression);
+              logger.info(`Applied cron override for ${taskId}: ${override.cronExpression}`);
+            }
+
+            if (override.enabled === false) {
+              await scheduler.disableTask(taskId);
+              logger.info(`Disabled ${taskId} via settings override`);
+            } else if (override.enabled === true && maintenanceSettings.enabled !== false) {
+              await scheduler.enableTask(taskId);
+              logger.info(`Enabled ${taskId} via settings override`);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      logger.warn('Failed to apply maintenance settings overrides:', error);
+    }
+  }
 }
 
 /**

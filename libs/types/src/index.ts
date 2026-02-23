@@ -271,6 +271,9 @@ export type {
   VoiceSettings,
   // Workflow settings types
   WorkflowSettings,
+  // Maintenance scheduler types
+  MaintenanceTaskOverride,
+  MaintenanceSettings,
 } from './settings.js';
 export {
   DEFAULT_KEYBOARD_SHORTCUTS,

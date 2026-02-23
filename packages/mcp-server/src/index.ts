@@ -173,6 +173,7 @@ import { integrationTools } from './tools/integration-tools.js';
 import { workspaceTools } from './tools/workspace-tools.js';
 import { setupTools } from './tools/setup-tools.js';
 import { utilityTools } from './tools/utility-tools.js';
+import { schedulerTools } from './tools/scheduler-tools.js';
 
 // Aggregate all tools
 const tools: Tool[] = [
@@ -189,6 +190,7 @@ const tools: Tool[] = [
   ...workspaceTools,
   ...setupTools,
   ...utilityTools,
+  ...schedulerTools,
 ];
 
 // Tool implementations
@@ -1499,6 +1501,37 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         projectPath: args.projectPath,
         tabOrder: args.tabOrder,
       });
+
+    // Scheduler Management
+    case 'get_scheduler_status':
+      return apiCall('/scheduler/status', {}, 'GET');
+
+    case 'update_maintenance_task': {
+      const taskId = args.taskId as string;
+      const results: Record<string, unknown> = { taskId };
+
+      // Update cron schedule if provided
+      if (args.cronExpression) {
+        const scheduleResult = (await apiCall(`/scheduler/tasks/${taskId}/schedule`, {
+          cronExpression: args.cronExpression,
+        })) as { success?: boolean; error?: string };
+        results.scheduleUpdated = scheduleResult.success;
+        if (!scheduleResult.success) {
+          return { success: false, error: scheduleResult.error, taskId };
+        }
+      }
+
+      // Enable/disable if provided
+      if (args.enabled !== undefined) {
+        const endpoint = args.enabled ? 'enable' : 'disable';
+        const toggleResult = (await apiCall(`/scheduler/tasks/${taskId}/${endpoint}`, {})) as {
+          success?: boolean;
+        };
+        results.enabledUpdated = toggleResult.success;
+      }
+
+      return { success: true, ...results };
+    }
 
     default:
       throw new Error(`Unknown tool: ${name}`);

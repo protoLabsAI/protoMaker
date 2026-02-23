@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 300
-  referenced: 154
-  successfulFeatures: 154
+  loaded: 293
+  referenced: 150
+  successfulFeatures: 150
 ---
 # gotchas
 
@@ -247,3 +247,8 @@ usageStats:
 - **Situation:** Commit a335a97f added @octokit/rest to package.json but repository state (node_modules) was stale. TypeScript compilation succeeds (type declarations available), but build toolchain fails on missing transitive dependencies.
 - **Root cause:** Package.json changes are not automatically synced to node_modules. When CI runs or developer checks out commit, they must run npm install. This is expected behavior but easy to miss if testing by reading files instead of building.
 - **How to avoid:** Easier: package.json is source of truth, dependency is managed. Harder: must remember npm install step before build after dependency changes.
+
+#### [Gotcha] Git worktrees have stale/missing remote references (origin/main) compared to parent repository, breaking standard local-vs-remote commit comparison (2026-02-23)
+- **Situation:** In worktree with fresh feature branch, 'git rev-list origin/main..HEAD' fails because origin/main ref doesn't exist or is outdated. Single-strategy detection fails entirely.
+- **Root cause:** Worktrees isolate git state; not all remote refs are pulled/updated. Developers expect origin/main to always exist when working with branches.
+- **How to avoid:** Requires multiple detection strategies instead of single authoritative check. More code, more resilient to incomplete distributed state.

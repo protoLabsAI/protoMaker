@@ -32,6 +32,7 @@ import { PromptCustomizationSection } from './settings-view/prompts';
 import { EventHooksSection } from './settings-view/event-hooks';
 import { IntegrationsSection } from './settings-view/integrations';
 import { WorkflowSettingsPanel } from './settings-view/workflow/workflow-settings-panel';
+import { MaintenanceSection } from './settings-view/maintenance';
 import { ImportExportDialog } from './settings-view/components/import-export-dialog';
 import type { Theme } from './settings-view/shared/types';
 
@@ -195,6 +196,8 @@ export function SettingsView() {
         return <HealthSection />;
       case 'workflow':
         return <WorkflowSettingsPanel />;
+      case 'maintenance':
+        return <MaintenanceSection />;
       case 'developer':
         return <DeveloperSection />;
       default:
