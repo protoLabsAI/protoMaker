@@ -175,9 +175,7 @@ export class AnalyticsService {
     // Median
     const mid = Math.floor(sorted.length / 2);
     const median =
-      sorted.length % 2 === 0
-        ? Math.round((sorted[mid - 1] + sorted[mid]) / 2)
-        : sorted[mid];
+      sorted.length % 2 === 0 ? Math.round((sorted[mid - 1] + sorted[mid]) / 2) : sorted[mid];
 
     // P95 (95th percentile)
     const p95Index = Math.floor(sorted.length * 0.95);
