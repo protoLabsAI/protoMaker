@@ -20,10 +20,12 @@ Work enters through five channels, all routed by `SignalIntakeService`:
 | Source                     | Classification  | Path                           |
 | -------------------------- | --------------- | ------------------------------ |
 | Linear issue (engineering) | ops             | Full pipeline or intake bridge |
-| Linear issue (marketing)   | gtm             | GTM pipeline (parked)          |
+| Linear issue (marketing)   | gtm             | GTM pipeline (gated)           |
 | GitHub issue/PR event      | ops             | Lead Engineer state machine    |
 | MCP `create_feature`       | ops (fast path) | Direct to board, skip PM       |
 | MCP `process_idea`         | ops (full path) | PM Agent research + PRD        |
+
+**GTM gate:** The entire GTM branch is controlled by the `gtmEnabled` global setting (default: `false`). When disabled, `SignalIntakeService` forces all signals to ops, content API routes return 403, and the UI hides GTM-related nodes. Enable via settings to activate GTM routing.
 
 **Fast path** skips the PM pipeline — feature goes straight to the board and Lead Engineer picks it up. Use when you know exactly what needs building.
 

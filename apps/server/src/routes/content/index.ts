@@ -10,14 +10,29 @@
 import { Router, type Request, type Response } from 'express';
 import { contentFlowService } from '../../services/content-flow-service.js';
 import { createLogger } from '@automaker/utils';
+import type { SettingsService } from '../../services/settings-service.js';
 
 const logger = createLogger('ContentRoutes');
 
 /**
  * Create the content router
  */
-export function createContentRoutes(): Router {
+export function createContentRoutes(settingsService: SettingsService): Router {
   const router = Router();
+
+  // Gate: return 403 for all content routes when GTM pipeline is disabled
+  router.use(async (_req: Request, res: Response, next) => {
+    try {
+      const settings = await settingsService.getGlobalSettings();
+      if (!settings.gtmEnabled) {
+        res.status(403).json({ error: 'GTM pipeline is disabled' });
+        return;
+      }
+      next();
+    } catch {
+      next();
+    }
+  });
 
   /**
    * POST /api/content/create

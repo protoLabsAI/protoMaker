@@ -64,11 +64,11 @@ The Ops branch owns all code — from feature creation to production deployment.
 
 **Peer requests** create feature dependencies. If Matt needs an API endpoint, that spawns a Kai feature as a dependency. The Lead Engineer handles ordering.
 
-### GTM Branch (Parked)
+### GTM Branch (Gated)
 
 GTM handles go-to-market: market research, content creation, social media, competitive analysis, metrics. Agents: Jon (strategy) and Cindi (content).
 
-**Status: PARKED.** GTM signals are logged but handled manually for now. The architecture supports it — AVA classifies GTM signals and can route them once the machines are built.
+**Controlled by `gtmEnabled` setting** (default: `false`). When disabled, the `SignalIntakeService` forces all signals to ops classification, content API routes return 403, and the flow graph hides GTM nodes. Enable via global settings to activate the full GTM pipeline.
 
 ---
 

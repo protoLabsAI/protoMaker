@@ -1556,6 +1556,13 @@ export interface GlobalSettings {
    */
   useGraphFlows?: boolean;
 
+  /**
+   * Enable the GTM (Go-To-Market) content creation pipeline.
+   * When false, all signals are routed to ops and content endpoints are disabled.
+   * @default false
+   */
+  gtmEnabled?: boolean;
+
   // Hivemind Configuration
   /**
    * Unique identifier for this Automaker instance in a hivemind mesh.

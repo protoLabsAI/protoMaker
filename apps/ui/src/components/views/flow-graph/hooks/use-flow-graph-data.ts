@@ -38,6 +38,7 @@ import type {
 
 /** Engine status response shape from /api/engine/status */
 interface EngineStatusResponse {
+  gtmEnabled?: boolean;
   signalIntake?: { active?: boolean };
   autoMode?: {
     running?: boolean;
@@ -295,11 +296,16 @@ export function useFlowGraphData(
     [features]
   );
 
+  const gtmEnabled = engineStatus?.gtmEnabled ?? false;
+
   const nodes = useMemo(() => {
     const result: Node[] = [];
 
-    // 1. Engine service nodes
-    for (const svc of ENGINE_SERVICES) {
+    // 1. Engine service nodes (filter out content-pipeline when GTM is disabled)
+    const services = gtmEnabled
+      ? ENGINE_SERVICES
+      : ENGINE_SERVICES.filter((s) => s.serviceId !== 'content-pipeline');
+    for (const svc of services) {
       const { status, throughput, statusLine } = getServiceStatus(svc.serviceId, engineStatus);
       const graphId = SERVICE_TO_GRAPH_MAP[svc.serviceId];
       const pipelineHighlight =
@@ -487,11 +493,16 @@ export function useFlowGraphData(
     highlightedServiceId,
     awaitingGate,
     pipelineState,
+    gtmEnabled,
   ]);
 
   // Build edges: static service flow + pipeline + bridge + dynamic
   const edges = useMemo(() => {
-    const result: Edge[] = [...STATIC_EDGES, ...PIPELINE_EDGES, ...BRIDGE_EDGES];
+    // Filter out the GTM edge when content pipeline is disabled
+    const staticEdges = gtmEnabled
+      ? STATIC_EDGES
+      : STATIC_EDGES.filter((e) => e.id !== 'e-triage-content');
+    const result: Edge[] = [...staticEdges, ...PIPELINE_EDGES, ...BRIDGE_EDGES];
 
     // Auto-mode -> active features (workflow edges)
     for (const feature of activeFeatures) {
@@ -517,7 +528,7 @@ export function useFlowGraphData(
     }
 
     return result;
-  }, [activeFeatures, runningAgents, nodes]);
+  }, [activeFeatures, runningAgents, nodes, gtmEnabled]);
 
-  return { nodes, edges };
+  return { nodes, edges, gtmEnabled };
 }

@@ -10,6 +10,7 @@
 import { createLogger } from '@automaker/utils';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
+import type { SettingsService } from './settings-service.js';
 
 const logger = createLogger('SignalIntake');
 
@@ -66,7 +67,8 @@ export class SignalIntakeService {
   constructor(
     private events: EventEmitter,
     private featureLoader: FeatureLoader,
-    private defaultProjectPath: string
+    private defaultProjectPath: string,
+    private settingsService?: SettingsService
   ) {
     this.registerListener();
     logger.info(`Signal intake service initialized for ${defaultProjectPath}`);
@@ -109,9 +111,18 @@ export class SignalIntakeService {
   }
 
   /**
-   * Classify signal as Ops (engineering) or GTM (marketing)
+   * Classify signal as Ops (engineering) or GTM (marketing).
+   * When gtmEnabled is false in settings, all signals are forced to ops.
    */
-  private classifySignal(signal: SignalPayload): ClassificationResult {
+  private async classifySignal(signal: SignalPayload): Promise<ClassificationResult> {
+    // Gate: if GTM pipeline is disabled, force all signals to ops
+    if (this.settingsService) {
+      const settings = await this.settingsService.getGlobalSettings();
+      if (!settings.gtmEnabled) {
+        return { category: 'ops', reason: 'GTM pipeline disabled in settings' };
+      }
+    }
+
     const source = signal.source;
     const channelContext = signal.channelContext || {};
 
@@ -219,7 +230,7 @@ export class SignalIntakeService {
       const description = signal.content;
 
       // Classify signal as Ops or GTM
-      const classification = this.classifySignal(signal);
+      const classification = await this.classifySignal(signal);
 
       logger.info(
         `Processing signal from ${signal.source}: "${title}" (${classification.category} - ${classification.reason})`

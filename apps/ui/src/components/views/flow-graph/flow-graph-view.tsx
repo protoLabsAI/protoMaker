@@ -29,7 +29,7 @@ export interface FlowGraphViewProps {
 }
 
 export function FlowGraphView({ onFeatureClick }: FlowGraphViewProps) {
-  const { nodes, edges } = useFlowGraphData();
+  const { nodes, edges, gtmEnabled } = useFlowGraphData();
   const pipeline = usePipelineProgress();
 
   // Legend visibility
@@ -223,8 +223,8 @@ export function FlowGraphView({ onFeatureClick }: FlowGraphViewProps) {
         prdData={prdReviewData}
       />
 
-      {/* Content review dialog (auto-opens via WebSocket) */}
-      {contentReviewData && (
+      {/* Content review dialog (auto-opens via WebSocket, hidden when GTM disabled) */}
+      {gtmEnabled && contentReviewData && (
         <ContentReviewDialog
           open={contentReviewOpen}
           onOpenChange={setContentReviewOpen}

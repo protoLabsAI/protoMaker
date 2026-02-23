@@ -2,6 +2,17 @@
 
 Multi-format content generation pipeline at `libs/flows/src/content/`. Transforms research into content (guides, tutorials, reference docs) using a 7-phase LangGraph flow with autonomous antagonistic review, parallel processing, and Langfuse tracing.
 
+## GTM Gate
+
+The content pipeline is part of the GTM branch and is gated by the `gtmEnabled` global setting (default: `false`). When disabled:
+
+- All content API routes (`/api/content/*`) return 403
+- Engine content draft/review endpoints return empty or 403
+- The content pipeline node is hidden from the flow graph
+- Signals that would route to GTM are forced to ops
+
+Enable `gtmEnabled` in global settings to activate the content pipeline.
+
 ## Quick Start
 
 Start a content flow via MCP:

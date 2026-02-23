@@ -525,7 +525,12 @@ wireHealthChecks(integrationRegistryService);
 
 // Initialize Signal Intake Service — bridges external signals to PM Agent pipeline
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const signalIntakeService = new SignalIntakeService(events, featureLoader, REPO_ROOT);
+const signalIntakeService = new SignalIntakeService(
+  events,
+  featureLoader,
+  REPO_ROOT,
+  settingsService
+);
 
 // Initialize Pipeline Orchestrator — unified phase tracking across ops + gtm branches
 const pipelineOrchestrator = new PipelineOrchestrator(events, featureLoader, settingsService);
@@ -1298,7 +1303,7 @@ app.use('/api/claude', createClaudeRoutes(claudeUsageService));
 app.use('/api/codex', createCodexRoutes(codexUsageService, codexModelCacheService));
 app.use('/api/github', createGitHubRoutes(events, settingsService));
 app.use('/api/context', createContextRoutes(settingsService));
-app.use('/api/content', createContentRoutes());
+app.use('/api/content', createContentRoutes(settingsService));
 app.use('/api/backlog-plan', createBacklogPlanRoutes(events, settingsService));
 app.use('/api/beads', createBeadsRoutes(beadsService));
 app.use('/api/mcp', createMCPRoutes(mcpTestService));
@@ -1388,7 +1393,8 @@ app.use(
     gtmAgent,
     pipelineOrchestrator,
     ceremonyService,
-    completionDetectorService
+    completionDetectorService,
+    settingsService
   )
 );
 app.use('/api/langfuse', createLangfuseRoutes(promptGitHubSyncService));

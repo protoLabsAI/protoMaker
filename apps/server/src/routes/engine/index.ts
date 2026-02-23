@@ -26,6 +26,7 @@ import type { GTMAuthorityAgent } from '../../services/authority-agents/gtm-agen
 import type { PipelineOrchestrator } from '../../services/pipeline-orchestrator.js';
 import type { CeremonyService } from '../../services/ceremony-service.js';
 import type { CompletionDetectorService } from '../../services/completion-detector-service.js';
+import type { SettingsService } from '../../services/settings-service.js';
 import { getNotesWorkspacePath, ensureNotesDir, secureFs } from '@automaker/platform';
 import type { NotesWorkspace, PipelinePhase } from '@automaker/types';
 import { PIPELINE_PHASES } from '@automaker/types';
@@ -47,7 +48,8 @@ export function createEngineRoutes(
   gtmAgent?: GTMAuthorityAgent,
   pipelineOrchestrator?: PipelineOrchestrator,
   ceremonyService?: CeremonyService,
-  completionDetectorService?: CompletionDetectorService
+  completionDetectorService?: CompletionDetectorService,
+  settingsService?: SettingsService
 ): Router {
   const router = Router();
 
@@ -58,6 +60,17 @@ export function createEngineRoutes(
   router.post('/status', async (req: Request, res: Response) => {
     try {
       const { projectPath } = (req.body ?? {}) as { projectPath?: string };
+
+      // Resolve gtmEnabled setting for the response
+      let gtmEnabled = false;
+      if (settingsService) {
+        try {
+          const settings = await settingsService.getGlobalSettings();
+          gtmEnabled = settings.gtmEnabled ?? false;
+        } catch {
+          // Fall back to false if settings unavailable
+        }
+      }
 
       // Auto-mode status
       const autoModeStatus = autoModeService.getStatus();
@@ -184,6 +197,7 @@ export function createEngineRoutes(
             emittedProjects: 0,
           },
         },
+        gtmEnabled,
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
@@ -648,7 +662,15 @@ export function createEngineRoutes(
    * GET /api/engine/content/drafts
    * Returns all pending content drafts (survives page refresh).
    */
-  router.get('/content/drafts', (_req: Request, res: Response) => {
+  router.get('/content/drafts', async (_req: Request, res: Response) => {
+    // Gate: return empty when GTM pipeline is disabled
+    if (settingsService) {
+      const settings = await settingsService.getGlobalSettings();
+      if (!settings.gtmEnabled) {
+        res.json({ success: true, drafts: [] });
+        return;
+      }
+    }
     const drafts = gtmAgent ? gtmAgent.getPendingDrafts() : [];
     res.json({ success: true, drafts });
   });
@@ -660,6 +682,15 @@ export function createEngineRoutes(
    * On request_changes: re-processes with feedback.
    */
   router.post('/content/review', async (req: Request, res: Response) => {
+    // Gate: return 403 when GTM pipeline is disabled
+    if (settingsService) {
+      const settings = await settingsService.getGlobalSettings();
+      if (!settings.gtmEnabled) {
+        res.status(403).json({ success: false, error: 'GTM pipeline is disabled' });
+        return;
+      }
+    }
+
     try {
       const { projectPath, contentId, decision, editedContent, tabName, feedback } = (req.body ??
         {}) as {
