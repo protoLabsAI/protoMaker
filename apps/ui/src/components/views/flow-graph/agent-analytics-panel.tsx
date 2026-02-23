@@ -203,20 +203,14 @@ export function AgentAnalyticsPanel({ onClose }: AgentAnalyticsPanelProps) {
                   </p>
                   {retry.attempts.map((attempt, attemptIdx) => {
                     const prevAttempt = attemptIdx > 0 ? retry.attempts[attemptIdx - 1] : null;
-                    const isFaster =
-                      prevAttempt && attempt.durationMs < prevAttempt.durationMs;
+                    const isFaster = prevAttempt && attempt.durationMs < prevAttempt.durationMs;
                     return (
-                      <div
-                        key={attemptIdx}
-                        className="flex items-center justify-between text-xs"
-                      >
+                      <div key={attemptIdx} className="flex items-center justify-between text-xs">
                         <span className="text-muted-foreground">
                           Attempt {attempt.attemptNumber}:
                         </span>
                         <div className="flex items-center gap-2">
-                          <span className="tabular-nums">
-                            {formatDuration(attempt.durationMs)}
-                          </span>
+                          <span className="tabular-nums">{formatDuration(attempt.durationMs)}</span>
                           {isFaster && (
                             <span className="text-emerald-500 text-[10px]">✓ faster</span>
                           )}

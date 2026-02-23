@@ -242,9 +242,7 @@ export function FlowGraphView({ onFeatureClick }: FlowGraphViewProps) {
       )}
 
       {/* Agent Analytics Panel */}
-      {showAgentAnalytics && (
-        <AgentAnalyticsPanel onClose={() => setShowAgentAnalytics(false)} />
-      )}
+      {showAgentAnalytics && <AgentAnalyticsPanel onClose={() => setShowAgentAnalytics(false)} />}
     </div>
   );
 }
