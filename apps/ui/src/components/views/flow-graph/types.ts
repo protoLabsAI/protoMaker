@@ -82,6 +82,18 @@ export interface FeatureNodeData {
 
 export type AgentPhase = 'research' | 'plan' | 'code' | 'test';
 
+export interface ToolExecution {
+  name: string;
+  durationMs?: number;
+  success?: boolean;
+  timestamp: number;
+}
+
+export interface ActiveTool {
+  name: string;
+  startedAt: string;
+}
+
 export interface AgentNodeData {
   featureId: string;
   title: string;
@@ -94,10 +106,8 @@ export interface AgentNodeData {
   projectName?: string;
   branchName?: string;
   costUsd?: number;
-  phaseDurations?: Partial<Record<AgentPhase, number>>;
-  currentPhase?: AgentPhase;
-  activeTool?: { name: string; startedAt: string } | null;
-  progressPct?: number;
+  activeTool?: ActiveTool | null;
+  toolExecutions?: ToolExecution[];
   [key: string]: unknown;
 }
 

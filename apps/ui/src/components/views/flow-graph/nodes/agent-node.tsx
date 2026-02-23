@@ -7,8 +7,8 @@
 import { memo, useState, useEffect } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import { motion } from 'motion/react';
-import { Bot, Check, Play, Circle } from 'lucide-react';
-import type { AgentNodeData, AgentPhase } from '../types';
+import { Bot } from 'lucide-react';
+import type { AgentNodeData, ActiveTool } from '../types';
 import { cn } from '@/lib/utils';
 
 function getModelBadge(model?: string): { label: string; color: string } {
@@ -29,36 +29,15 @@ function formatDuration(startTime: number): string {
   return `${hours}h ${mins % 60}m`;
 }
 
-const PHASES: AgentPhase[] = ['research', 'plan', 'code', 'test'];
-const PHASE_LABELS: Record<AgentPhase, string> = {
-  research: 'Research',
-  plan: 'Plan',
-  code: 'Code',
-  test: 'Test',
-};
 
-function getPhaseStatus(
-  phase: AgentPhase,
-  currentPhase?: AgentPhase,
-  phaseDurations?: Partial<Record<AgentPhase, number>>
-): 'completed' | 'active' | 'pending' {
-  if (phaseDurations?.[phase] !== undefined) return 'completed';
-  if (currentPhase === phase) return 'active';
-  return 'pending';
-}
-
-function formatPhaseDuration(durationMs: number): string {
-  const seconds = Math.floor(durationMs / 1000);
-  if (seconds < 60) return `${seconds}s`;
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return `${mins}m ${secs}s`;
-}
 
 function AgentNodeComponent({ data }: NodeProps & { data: AgentNodeData }) {
   const badge = getModelBadge(data.model);
   const [duration, setDuration] = useState(formatDuration(data.startTime));
-  const [showToolBadge, setShowToolBadge] = useState(!!data.activeTool);
+  const [shouldFadeToolBadge, setShouldFadeToolBadge] = useState(false);
+  const [lastActiveTool, setLastActiveTool] = useState<ActiveTool | null | undefined>(
+    data.activeTool
+  );
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -67,18 +46,28 @@ function AgentNodeComponent({ data }: NodeProps & { data: AgentNodeData }) {
     return () => clearInterval(interval);
   }, [data.startTime]);
 
-  // Handle active tool badge fade-out
+  // Handle tool badge fade-out after completion
   useEffect(() => {
     if (data.activeTool) {
-      setShowToolBadge(true);
-    } else {
-      // Fade out after 2 seconds
-      const timer = setTimeout(() => {
-        setShowToolBadge(false);
-      }, 2000);
-      return () => clearTimeout(timer);
+      setLastActiveTool(data.activeTool);
+      setShouldFadeToolBadge(false);
+    } else if (lastActiveTool) {
+      // Tool just completed — trigger fade out
+      setShouldFadeToolBadge(true);
+      const fadeTimeout = setTimeout(() => {
+        setLastActiveTool(null);
+        setShouldFadeToolBadge(false);
+      }, 2000); // Fade duration
+      return () => clearTimeout(fadeTimeout);
     }
-  }, [data.activeTool]);
+  }, [data.activeTool, lastActiveTool]);
+
+  // Check if the last tool execution was a failure
+  const lastExecution = data.toolExecutions?.[data.toolExecutions.length - 1];
+  const isFailure = lastExecution?.success === false;
+
+  // Display tool badge if active or fading out
+  const displayTool = data.activeTool || (shouldFadeToolBadge && lastActiveTool);
 
   return (
     <motion.div
@@ -142,66 +131,30 @@ function AgentNodeComponent({ data }: NodeProps & { data: AgentNodeData }) {
             </span>
           </div>
           <p className="text-[10px] text-muted-foreground truncate">{data.title}</p>
-          <p className="text-[9px] tabular-nums text-muted-foreground mt-0.5">{duration}</p>
+          <p className="text-[10px] tabular-nums text-muted-foreground mt-0.5">{duration}</p>
 
-          {/* Phase timeline strip */}
-          <div className="mt-1 space-y-0.5">
-            {/* Phase indicators */}
-            <div className="flex items-center justify-between">
-              {PHASES.map((phase) => {
-                const status = getPhaseStatus(phase, data.currentPhase, data.phaseDurations);
-                const duration = data.phaseDurations?.[phase];
-                return (
-                  <div
-                    key={phase}
-                    className="flex flex-col items-center gap-0.5"
-                    title={
-                      duration
-                        ? `${PHASE_LABELS[phase]}: ${formatPhaseDuration(duration)}`
-                        : PHASE_LABELS[phase]
-                    }
-                  >
-                    <div className="relative">
-                      {status === 'completed' && <Check className="w-2.5 h-2.5 text-emerald-400" />}
-                      {status === 'active' && (
-                        <motion.div
-                          animate={{ scale: [1, 1.2, 1], opacity: [1, 0.6, 1] }}
-                          transition={{ duration: 1.5, repeat: Infinity }}
-                        >
-                          <Play className="w-2.5 h-2.5 text-blue-400 fill-blue-400" />
-                        </motion.div>
-                      )}
-                      {status === 'pending' && (
-                        <Circle className="w-2.5 h-2.5 text-muted-foreground/40" />
-                      )}
-                    </div>
-                    <span
-                      className={cn(
-                        'text-[7px] uppercase tracking-wider',
-                        status === 'completed' && 'text-emerald-400',
-                        status === 'active' && 'text-blue-400 font-medium',
-                        status === 'pending' && 'text-muted-foreground/40'
-                      )}
-                    >
-                      {PHASE_LABELS[phase]}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Active tool badge */}
-            {showToolBadge && data.activeTool && (
-              <motion.div
-                initial={{ opacity: 0, y: -5 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -5 }}
-                className="text-[8px] text-blue-400 truncate"
-              >
-                Running {data.activeTool.name}...
-              </motion.div>
-            )}
-          </div>
+          {/* Tool execution badge */}
+          {displayTool && (
+            <motion.div
+              initial={{ opacity: 0, y: -5 }}
+              animate={{
+                opacity: shouldFadeToolBadge ? 0 : 1,
+                y: 0,
+              }}
+              transition={{
+                opacity: { duration: shouldFadeToolBadge ? 2 : 0.3 },
+                y: { duration: 0.3 },
+              }}
+              className={cn(
+                'mt-1.5 text-[9px] px-1.5 py-0.5 rounded truncate',
+                isFailure
+                  ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                  : 'bg-blue-500/15 text-blue-400 border border-blue-500/20'
+              )}
+            >
+              {displayTool.name}
+            </motion.div>
+          )}
         </div>
       </div>
 
