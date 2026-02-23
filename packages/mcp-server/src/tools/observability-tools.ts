@@ -214,6 +214,18 @@ export const observabilityTools: Tool[] = [
     },
   },
   {
+    name: 'langfuse_list_datasets',
+    description:
+      'List all Langfuse datasets. Datasets are collections of traces used for evaluation and benchmarking.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        page: { type: 'number', description: 'Page number (default: 1)' },
+        limit: { type: 'number', description: 'Results per page (default: 50)' },
+      },
+    },
+  },
+  {
     name: 'langfuse_add_to_dataset',
     description:
       'Add a trace to a named dataset for evaluation. Creates the dataset if it does not exist.',

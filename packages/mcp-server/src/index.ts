@@ -1257,6 +1257,12 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         comment: args.comment,
       });
 
+    case 'langfuse_list_datasets':
+      return apiCall('/langfuse/datasets', {
+        page: args.page,
+        limit: args.limit,
+      });
+
     case 'langfuse_add_to_dataset':
       return apiCall('/langfuse/datasets/items', {
         datasetName: args.datasetName,

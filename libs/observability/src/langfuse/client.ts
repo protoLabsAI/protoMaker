@@ -74,14 +74,17 @@ export class LangfuseClient {
     }
 
     try {
-      // Langfuse SDK accepts (name, version, { label }) at runtime
-      const prompt = await (this.client as any).getPrompt(
+      const prompt = await this.client!.getPrompt(
         name,
         version,
         options?.label ? { label: options.label } : undefined
       );
       logger.debug(`Fetched prompt from Langfuse: ${name}`, { version, label: options?.label });
-      return prompt;
+      return {
+        prompt: prompt.prompt as string,
+        version: prompt.version,
+        config: prompt.config as Record<string, any> | undefined,
+      };
     } catch (error) {
       logger.error(`Failed to fetch prompt from Langfuse: ${name}`, error);
       return null;
@@ -208,8 +211,7 @@ export class LangfuseClient {
     }
 
     try {
-      // score() is available at runtime via mixin but not in TypeScript declarations
-      (this.client as any).score({
+      this.client!.score({
         traceId: options.traceId,
         name: options.name,
         value: options.value,

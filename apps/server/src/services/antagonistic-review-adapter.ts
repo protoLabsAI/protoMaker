@@ -188,7 +188,6 @@ export class AntagonisticReviewAdapter {
       if (graphSpan) {
         graphSpan.end({
           output: { success: !result.error, hasConsolidatedReview: !!result.consolidatedReview },
-          endTime: new Date(),
         });
       }
 

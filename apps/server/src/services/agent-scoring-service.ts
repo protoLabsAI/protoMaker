@@ -45,6 +45,10 @@ export class AgentScoringService {
             data.newStatus
           );
         }
+        // Evict from pipeline cache when features reach terminal states
+        if (data.featureId && (data.newStatus === 'done' || data.newStatus === 'verified')) {
+          this.featureProjectMap.delete(data.featureId);
+        }
       }
 
       // Track pipeline feature → projectPath mapping
