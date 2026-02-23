@@ -42,7 +42,7 @@ async function langfuseProxy(
   method: 'GET' | 'POST',
   path: string,
   queryParams?: Record<string, string | number | undefined>,
-  body?: unknown,
+  body?: unknown
 ): Promise<{ ok: boolean; status: number; data: unknown }> {
   const auth = getLangfuseAuth();
   if (!auth) {
