@@ -21,6 +21,7 @@ Evidence-based validation of approaches, technologies, and architectural decisio
 ### 1. Analyze Codebase Context
 
 Identify:
+
 - Existing patterns and conventions
 - Current technologies and versions
 - Architectural constraints
@@ -29,6 +30,7 @@ Identify:
 ### 2. Conduct Web Research
 
 Use WebSearch and WebFetch to find:
+
 - Industry best practices
 - Performance benchmarks and metrics
 - Scalability case studies

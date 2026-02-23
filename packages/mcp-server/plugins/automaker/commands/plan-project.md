@@ -141,11 +141,11 @@ Break the project into milestones and phases. Each phase should be:
 
 **Common project shapes:**
 
-| Type       | Milestones                                           |
-| ---------- | ---------------------------------------------------- |
+| Type       | Milestones                                          |
+| ---------- | --------------------------------------------------- |
 | API        | Types → Services → Routes → Tests → Docs            |
 | UI         | Design → Components → State → Integration → Polish  |
-| Full-Stack | Foundation → Backend → Frontend → Integration        |
+| Full-Stack | Foundation → Backend → Frontend → Integration       |
 | Refactor   | Analysis → New Implementation → Migration → Cleanup |
 
 ### Step 8: Create Features
