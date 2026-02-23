@@ -163,13 +163,15 @@ The reflection loop is what makes this a **learning system**, not just an execut
 
 ## The Revenue Model
 
-No SaaS, no subscriptions, no obligations. Indie maker, not startup.
+Open source first. Build the community, prove the tool, let revenue follow naturally.
 
-1. **Free tool**: protoLabs is source-available. Builds community trust and distribution.
-2. **$49 lifetime Pro**: Written tutorials, agent templates, prompt library, methodology guide. One-time payment, lifetime access.
-3. **Consulting (setupLab)**: Help organizations set up their own proto labs. Organic inbound from community trust, not outbound sales.
+protoLabs is the maintained successor to the original Automaker project. The original maintainers moved on — we picked it up, rebuilt it, and ship real products with it.
 
-The system is both the product and the factory that makes the product. Every project generates content and proves the methodology.
+1. **Open source tool**: protoLabs is fully open source. Community adoption is the growth engine.
+2. **Portfolio proof**: We use protoLabs to build our own products (MythXEngine, SVGVal, rabbit-hole). The tool proves itself through what it ships.
+3. **Consulting (setupLab)**: Help organizations set up their own autonomous dev pipeline. Organic inbound from community trust, not outbound sales.
+
+No paid tiers, no subscriptions, no paywalls. Everything is open. Trust compounds faster than revenue.
 
 ## What Makes This Different
 

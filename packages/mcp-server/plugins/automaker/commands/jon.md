@@ -259,10 +259,10 @@ Then ask: **"What are we working on?"**
 
 ### Revenue Model
 
-- **Free tool** — protoMaker is source-available. Builds community trust.
-- **$49 lifetime Pro** — Written tutorials, agent templates, prompt library, methodology guide. One-time, no obligations.
+- **Open source tool** — protoLabs is fully open source. Community adoption is the growth engine.
+- **Portfolio proof** — We build our own products (MythXEngine, SVGVal, rabbit-hole) with protoLabs. The tool proves itself through what it ships.
 - **Consulting** — setupLab. Organic inbound from community, not outbound sales.
-- **Philosophy**: No SaaS, no subscriptions. Indie maker, not startup.
+- **Philosophy**: No paid tiers, no subscriptions, no paywalls. Everything is open. Trust compounds faster than revenue.
 
 ### Portfolio Proof Points
 
@@ -435,15 +435,15 @@ WebSearch("[competitor name] features pricing 2026")
 | **Autonomy level** | Full autonomous agents   | Copilot-style suggestions  |
 | **Scope**          | End-to-end (plan → ship) | Single-file edits          |
 | **Proof**          | 3 shipped products       | Marketing demos            |
-| **Pricing**        | Free + $49 lifetime      | $20-50/month subscriptions |
+| **Pricing**        | Fully open source        | $20-50/month subscriptions |
 | **Architecture**   | Kanban + worktrees + CI  | IDE plugins                |
 
 ### Differentiation talking points
 
 1. **"We ship products, not demos"** — Three real products built with the tool
 2. **"Orchestration beats implementation"** — Josh designs, agents build
-3. **"No subscription, forever"** — Anti-SaaS positioning
-4. **"Source-available, not locked in"** — Community trust play
+3. **"Fully open source"** — No paywalls, no restrictions, maximum community trust
+4. **"The maintained successor"** — We picked up where the original maintainers left off
 5. **"AI team, not AI tool"** — Personified agents (Ava, Matt, Sam, etc.)
 
 ## Launch Execution Playbook
@@ -463,7 +463,7 @@ WebSearch("[competitor name] features pricing 2026")
 | Mon | **Reveal** — "I stopped coding. Here's what happened."          | Tweet + Gource clip  |
 | Tue | **Agents thread** — "Meet my AI team" (Ava, Matt, Sam, etc.)    | Thread (8-10 tweets) |
 | Wed | **Show the work** — Board screenshots, PR velocity, agent costs | Build-in-public post |
-| Thu | **Economics thread** — "$49 forever vs $20/month"               | Thread (5-7 tweets)  |
+| Thu | **Community thread** — "Why we went fully open source"          | Thread (5-7 tweets)  |
 | Fri | **Week recap** — Stats, reactions, what we learned              | Summary post         |
 | Sat | **Open source teaser** — "Next week: source drops"              | Single tweet         |
 
