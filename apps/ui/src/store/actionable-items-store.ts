@@ -20,6 +20,12 @@ interface ActionableItemsState {
   isLoading: boolean;
   error: string | null;
 
+  // Global (cross-project) items
+  globalItems: ActionableItem[];
+  globalPendingCount: number;
+  globalUnreadCount: number;
+  isGlobalLoading: boolean;
+
   // Popover state
   isPopoverOpen: boolean;
 
@@ -62,6 +68,11 @@ interface ActionableItemsActions {
   getItemsByCategory: () => Record<string, ActionableItem[]>;
   getUrgentCount: () => number;
 
+  // Global (cross-project) items
+  setGlobalItems: (items: ActionableItem[], pendingCount: number, unreadCount: number) => void;
+  setGlobalLoading: (loading: boolean) => void;
+  getGlobalUrgentCount: () => number;
+
   // Reset
   reset: () => void;
 }
@@ -76,6 +87,10 @@ const initialState: ActionableItemsState = {
   unreadCount: 0,
   isLoading: false,
   error: null,
+  globalItems: [],
+  globalPendingCount: 0,
+  globalUnreadCount: 0,
+  isGlobalLoading: false,
   isPopoverOpen: false,
   currentFilter: 'pending',
   currentCategory: null,
@@ -289,6 +304,27 @@ export const useActionableItemsStore = create<ActionableItemsState & ActionableI
           return timeRemaining > 0 && timeRemaining < 10 * 60 * 1000;
         }
 
+        return false;
+      }).length;
+    },
+
+    // Global (cross-project) items
+    setGlobalItems: (items, pendingCount, unreadCount) =>
+      set({ globalItems: items, globalPendingCount: pendingCount, globalUnreadCount: unreadCount }),
+
+    setGlobalLoading: (loading) => set({ isGlobalLoading: loading }),
+
+    getGlobalUrgentCount: () => {
+      const state = get();
+      return state.globalItems.filter((i) => {
+        if (i.status !== 'pending') return false;
+        if (i.priority === 'urgent') return true;
+        if (i.expiresAt) {
+          const now = new Date().getTime();
+          const expiresAt = new Date(i.expiresAt).getTime();
+          const timeRemaining = expiresAt - now;
+          return timeRemaining > 0 && timeRemaining < 10 * 60 * 1000;
+        }
         return false;
       }).length;
     },

@@ -10,6 +10,7 @@ import {
   Brain,
   Network,
   Bell,
+  Inbox,
   Settings,
   NotebookPen,
 } from 'lucide-react';
@@ -202,6 +203,11 @@ export function useNavigation({
     sections.push({
       label: '',
       items: [
+        {
+          id: 'inbox',
+          label: 'Inbox',
+          icon: Inbox,
+        },
         {
           id: 'notifications',
           label: 'Notifications',

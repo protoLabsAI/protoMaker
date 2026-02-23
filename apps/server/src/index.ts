@@ -22,6 +22,7 @@ dotenv.config({ path: resolve(__dirname, '../../../.env') });
 
 import { execSync } from 'node:child_process';
 import { access, unlink, writeFile } from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import express from 'express';
 import cors from 'cors';
@@ -386,6 +387,16 @@ const hitlFormService = new HITLFormService({
   events,
   followUpFeature: (projectPath, featureId, prompt) =>
     autoModeService.followUpFeature(projectPath, featureId, prompt, undefined, true),
+  getKnownProjectPaths: () => {
+    try {
+      const settingsPath = join(DATA_DIR, 'settings.json');
+      const raw = readFileSync(settingsPath, 'utf-8');
+      const settings = JSON.parse(raw);
+      return (settings?.projects ?? []).map((p: { path: string }) => p.path).filter(Boolean);
+    } catch {
+      return [];
+    }
+  },
 });
 const claudeUsageService = new ClaudeUsageService();
 const codexAppServerService = new CodexAppServerService();
@@ -1346,7 +1357,10 @@ app.use('/api/pipeline', createPipelineRoutes(pipelineService));
 app.use('/api/metrics', createMetricsRoutes(metricsService, ledgerService));
 app.use('/api/notifications', createNotificationsRoutes(notificationService));
 app.use('/api/hitl-forms', createHITLFormRoutes(hitlFormService));
-app.use('/api/actionable-items', createActionableItemsRoutes(actionableItemService));
+app.use(
+  '/api/actionable-items',
+  createActionableItemsRoutes(actionableItemService, settingsService)
+);
 app.use('/api/ralph', createRalphRoutes(ralphLoopService));
 app.use('/api/skills', createSkillsRoutes());
 app.use('/api/event-history', createEventHistoryRoutes(eventHistoryService, settingsService));

@@ -2975,6 +2975,17 @@ export class HttpApiClient implements ElectronAPI {
 
   // Actionable Items API - unified inbox for HITL forms, approvals, notifications, gates
   actionableItems = {
+    listGlobal: (options?: {
+      includeActed?: boolean;
+      includeDismissed?: boolean;
+      includeExpired?: boolean;
+    }): Promise<{
+      success: boolean;
+      items: ActionableItem[];
+      pendingCount: number;
+      unreadCount: number;
+    }> => this.post('/api/actionable-items/global', { ...options }),
+
     list: (
       projectPath: string,
       options?: { includeActed?: boolean; includeDismissed?: boolean; includeExpired?: boolean }

@@ -38,6 +38,7 @@ import { HITLFormDialog } from '@/components/shared/hitl-form';
 import { SandboxRejectionScreen } from '@/components/dialogs/sandbox-rejection-screen';
 import { LoadingState } from '@protolabs/ui/molecules';
 import { useProjectSettingsLoader } from '@/hooks/use-project-settings-loader';
+import { useBrowserNotifications } from '@/hooks/use-browser-notifications';
 import { useIsCompact } from '@/hooks/use-media-query';
 import { BottomPanel } from '@/components/layout/bottom-panel';
 import type { Project } from '@/lib/electron';
@@ -184,6 +185,9 @@ function RootLayoutContent() {
 
   // Load project settings when switching projects
   useProjectSettingsLoader();
+
+  // Browser notifications (title badge + Web Notification API)
+  useBrowserNotifications();
 
   // Global Cmd+K / Ctrl+K shortcut for the chat modal (web mode)
   useChatModalShortcut();

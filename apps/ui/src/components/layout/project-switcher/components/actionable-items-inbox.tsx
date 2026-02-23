@@ -6,6 +6,7 @@
  */
 
 import { useCallback } from 'react';
+import { useNavigate } from '@tanstack/react-router';
 import {
   Inbox,
   FileText,
@@ -86,6 +87,7 @@ interface ActionableItemsInboxProps {
 export function ActionableItemsInbox({ projectPath }: ActionableItemsInboxProps) {
   const { items, unreadCount, isPopoverOpen, setPopoverOpen, markAsRead, dismissItem } =
     useActionableItemsStore();
+  const navigate = useNavigate();
 
   useLoadActionableItems(projectPath);
   useActionableItemEvents(projectPath);
@@ -248,7 +250,15 @@ export function ActionableItemsInbox({ projectPath }: ActionableItemsInboxProps)
 
         {pendingItems.length > 5 && (
           <div className="border-t px-4 py-2">
-            <Button variant="ghost" size="sm" className="w-full text-xs">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full text-xs"
+              onClick={() => {
+                setPopoverOpen(false);
+                navigate({ to: '/inbox' });
+              }}
+            >
               View all {pendingItems.length} items
             </Button>
           </div>

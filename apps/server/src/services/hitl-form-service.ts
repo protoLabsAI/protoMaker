@@ -5,12 +5,16 @@
  * create form requests with JSON Schema definitions. The UI renders them
  * as dialogs. Responses route back to the original caller.
  *
- * Forms are transient — stored in-memory with a configurable TTL (default 1h).
- * A cleanup interval expires stale forms and purges old records.
+ * Forms are persisted to disk at {projectPath}/.automaker/hitl-forms.json
+ * using atomic writes (temp file → rename). The in-memory Map serves as a
+ * cache; disk is the source of truth on restart.
  */
 
 import { randomUUID } from 'node:crypto';
+import fs from 'fs/promises';
+import { join } from 'path';
 import { createLogger } from '@automaker/utils';
+import { ensureAutomakerDir } from '@automaker/platform';
 import type {
   HITLFormRequest,
   HITLFormRequestInput,
@@ -33,6 +37,8 @@ const PURGE_AGE_MS = 24 * 60 * 60 * 1000;
 export interface HITLFormServiceDeps {
   events: EventEmitter;
   followUpFeature: (projectPath: string, featureId: string, prompt: string) => Promise<void>;
+  /** Known project paths for loading persisted forms on startup */
+  getKnownProjectPaths?: () => string[];
 }
 
 export class HITLFormService {
@@ -40,11 +46,18 @@ export class HITLFormService {
   private cleanupTimer: ReturnType<typeof setInterval> | null = null;
   private events: EventEmitter;
   private followUpFeature: HITLFormServiceDeps['followUpFeature'];
+  private getKnownProjectPaths: () => string[];
 
   constructor(deps: HITLFormServiceDeps) {
     this.events = deps.events;
     this.followUpFeature = deps.followUpFeature;
+    this.getKnownProjectPaths = deps.getKnownProjectPaths ?? (() => []);
     this.cleanupTimer = setInterval(() => this.cleanup(), CLEANUP_INTERVAL_MS);
+
+    // Load persisted forms on startup (fire-and-forget)
+    this.loadPersistedForms().catch((err) =>
+      logger.error('Failed to load persisted HITL forms:', err)
+    );
   }
 
   /**
@@ -72,6 +85,7 @@ export class HITLFormService {
     };
 
     this.forms.set(form.id, form);
+    this.persistForm(form);
 
     this.events.emit('hitl:form-requested', {
       formId: form.id,
@@ -156,6 +170,7 @@ export class HITLFormService {
     form.status = 'submitted';
     form.respondedAt = new Date().toISOString();
     form.response = response;
+    this.persistForm(form);
 
     this.events.emit('hitl:form-responded', {
       formId: form.id,
@@ -190,6 +205,7 @@ export class HITLFormService {
 
     form.status = 'cancelled';
     form.respondedAt = new Date().toISOString();
+    this.persistForm(form);
 
     this.events.emit('hitl:form-responded', {
       formId: form.id,
@@ -217,6 +233,73 @@ export class HITLFormService {
     }
     this.forms.clear();
     logger.info('HITLFormService shut down');
+  }
+
+  // --- Disk persistence ---
+
+  private getStoragePath(projectPath: string): string {
+    return join(projectPath, '.automaker', 'hitl-forms.json');
+  }
+
+  private async loadFromDisk(projectPath: string): Promise<HITLFormRequest[]> {
+    try {
+      const content = await fs.readFile(this.getStoragePath(projectPath), 'utf-8');
+      const data = JSON.parse(content);
+      return Array.isArray(data) ? data : [];
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return [];
+      logger.error(`Failed to read HITL forms for ${projectPath}:`, error);
+      return [];
+    }
+  }
+
+  private async saveToDisk(projectPath: string, forms: HITLFormRequest[]): Promise<void> {
+    try {
+      await ensureAutomakerDir(projectPath);
+      const filePath = this.getStoragePath(projectPath);
+      const tempPath = `${filePath}.tmp.${Date.now()}`;
+      await fs.writeFile(tempPath, JSON.stringify(forms, null, 2), 'utf-8');
+      await fs.rename(tempPath, filePath);
+    } catch (error) {
+      logger.error(`Failed to persist HITL forms for ${projectPath}:`, error);
+    }
+  }
+
+  /** Persist a single form to its project's disk file */
+  private persistForm(form: HITLFormRequest): void {
+    if (!form.projectPath) return;
+
+    // Collect all forms for this project and save
+    const projectForms: HITLFormRequest[] = [];
+    for (const f of this.forms.values()) {
+      if (f.projectPath === form.projectPath) {
+        projectForms.push(f);
+      }
+    }
+    this.saveToDisk(form.projectPath, projectForms).catch((err) =>
+      logger.error(`Persist failed for project ${form.projectPath}:`, err)
+    );
+  }
+
+  /** Load persisted forms from all known projects on startup */
+  private async loadPersistedForms(): Promise<void> {
+    const projectPaths = this.getKnownProjectPaths();
+    let loaded = 0;
+
+    for (const projectPath of projectPaths) {
+      const forms = await this.loadFromDisk(projectPath);
+      for (const form of forms) {
+        // Only load pending forms that haven't expired
+        if (form.status === 'pending' && new Date(form.expiresAt) > new Date()) {
+          this.forms.set(form.id, form);
+          loaded++;
+        }
+      }
+    }
+
+    if (loaded > 0) {
+      logger.info(`Loaded ${loaded} persisted HITL form(s) from ${projectPaths.length} project(s)`);
+    }
   }
 
   // --- Private methods ---
@@ -277,19 +360,33 @@ export class HITLFormService {
     const purgeThreshold = new Date(now.getTime() - PURGE_AGE_MS);
     let expired = 0;
     let purged = 0;
+    const dirtyProjects = new Set<string>();
 
     for (const [id, form] of this.forms) {
       // Expire pending forms past TTL
       if (form.status === 'pending' && new Date(form.expiresAt) < now) {
         form.status = 'expired';
         expired++;
+        if (form.projectPath) dirtyProjects.add(form.projectPath);
       }
 
       // Purge old non-pending forms
       if (form.status !== 'pending' && new Date(form.createdAt) < purgeThreshold) {
         this.forms.delete(id);
         purged++;
+        if (form.projectPath) dirtyProjects.add(form.projectPath);
       }
+    }
+
+    // Persist changes to affected projects
+    for (const projectPath of dirtyProjects) {
+      const projectForms: HITLFormRequest[] = [];
+      for (const f of this.forms.values()) {
+        if (f.projectPath === projectPath) projectForms.push(f);
+      }
+      this.saveToDisk(projectPath, projectForms).catch((err) =>
+        logger.error(`Cleanup persist failed for ${projectPath}:`, err)
+      );
     }
 
     if (expired > 0 || purged > 0) {

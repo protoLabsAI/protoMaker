@@ -79,3 +79,33 @@ export function useLoadActionableItems(projectPath: string | null) {
     load();
   }, [projectPath, setItems, setPendingCount, setUnreadCount, setLoading, setError, reset]);
 }
+
+/**
+ * Load global (cross-project) actionable items.
+ * Fetches from all known projects and merges into a single list.
+ */
+export function useLoadGlobalActionableItems() {
+  const setGlobalItems = useActionableItemsStore((s) => s.setGlobalItems);
+  const setGlobalLoading = useActionableItemsStore((s) => s.setGlobalLoading);
+
+  useEffect(() => {
+    const load = async () => {
+      setGlobalLoading(true);
+
+      try {
+        const api = getHttpApiClient();
+        const result = await api.actionableItems.listGlobal();
+
+        if (result.success) {
+          setGlobalItems(result.items, result.pendingCount, result.unreadCount);
+        }
+      } catch {
+        // Silently fail for global — individual project loading is the primary path
+      } finally {
+        setGlobalLoading(false);
+      }
+    };
+
+    load();
+  }, [setGlobalItems, setGlobalLoading]);
+}

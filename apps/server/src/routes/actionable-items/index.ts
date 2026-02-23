@@ -15,6 +15,7 @@
 
 import { Router } from 'express';
 import type { ActionableItemService } from '../../services/actionable-item-service.js';
+import type { SettingsService } from '../../services/settings-service.js';
 import { validatePathParams } from '../../middleware/validate-paths.js';
 import { createListHandler } from './routes/list.js';
 import { createCreateHandler } from './routes/create.js';
@@ -22,14 +23,19 @@ import { createUpdateStatusHandler } from './routes/update-status.js';
 import { createMarkReadHandler } from './routes/mark-read.js';
 import { createSnoozeHandler } from './routes/snooze.js';
 import { createDismissHandler } from './routes/dismiss.js';
+import { createGlobalListHandler } from './routes/global.js';
 
 /**
  * Create ActionableItems router with all endpoints
  *
  * @param service - Instance of ActionableItemService
+ * @param settingsService - Instance of SettingsService (for cross-project global endpoint)
  * @returns Express Router configured with all actionable-items endpoints
  */
-export function createActionableItemsRoutes(service: ActionableItemService): Router {
+export function createActionableItemsRoutes(
+  service: ActionableItemService,
+  settingsService: SettingsService
+): Router {
   const router = Router();
 
   router.post('/list', validatePathParams('projectPath'), createListHandler(service));
@@ -42,6 +48,7 @@ export function createActionableItemsRoutes(service: ActionableItemService): Rou
   router.post('/mark-read', validatePathParams('projectPath'), createMarkReadHandler(service));
   router.post('/snooze', validatePathParams('projectPath'), createSnoozeHandler(service));
   router.post('/dismiss', validatePathParams('projectPath'), createDismissHandler(service));
+  router.post('/global', createGlobalListHandler(service, settingsService));
 
   return router;
 }

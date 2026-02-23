@@ -15,7 +15,7 @@ import {
   Textarea,
 } from '@protolabs/ui/atoms';
 import { Button } from '@protolabs/ui/atoms';
-import { Loader2, Send } from 'lucide-react';
+import { Loader2, Send, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useHITLFormStore } from '@/store/hitl-form-store';
 import { getHttpApiClient } from '@/lib/http-api-client';
@@ -23,8 +23,16 @@ import { HITLFormStepRenderer } from './hitl-form-step';
 import { HITLFormWizard } from './hitl-form-wizard';
 
 export function HITLFormDialog() {
-  const { activeForm, isDialogOpen, isSubmitting, stepData, closeDialog, setSubmitting } =
-    useHITLFormStore();
+  const {
+    activeForm,
+    isDialogOpen,
+    isSubmitting,
+    stepData,
+    closeDialog,
+    deferForm,
+    clearDraft,
+    setSubmitting,
+  } = useHITLFormStore();
   const submitRef = useRef<(() => void) | null>(null);
   const [additionalContext, setAdditionalContext] = useState('');
 
@@ -78,6 +86,7 @@ export function HITLFormDialog() {
         if (result.success) {
           toast.success('Form submitted');
           setAdditionalContext('');
+          clearDraft(activeForm.id);
           closeDialog();
           useHITLFormStore.getState().removePendingForm(activeForm.id);
         } else {
@@ -109,29 +118,31 @@ export function HITLFormDialog() {
       // Best-effort cancel
     }
     setAdditionalContext('');
+    clearDraft(activeForm.id);
     closeDialog();
     useHITLFormStore.getState().removePendingForm(activeForm.id);
-  }, [activeForm, closeDialog]);
+  }, [activeForm, closeDialog, clearDraft]);
+
+  /** Close dialog without cancelling — form stays pending on server */
+  const handleDefer = useCallback(() => {
+    setAdditionalContext('');
+    deferForm();
+  }, [deferForm]);
 
   const handleOpenChange = useCallback(
     (open: boolean) => {
       if (!open) {
-        handleCancel();
+        handleDefer();
       }
     },
-    [handleCancel]
+    [handleDefer]
   );
 
   if (!activeForm) return null;
 
   return (
     <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>
-      <DialogContent
-        className="max-w-lg max-h-[85vh] overflow-y-auto"
-        onInteractOutside={(e) => e.preventDefault()}
-        onEscapeKeyDown={(e) => e.preventDefault()}
-        showCloseButton={false}
-      >
+      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{activeForm.title}</DialogTitle>
           {activeForm.description && (
@@ -147,10 +158,23 @@ export function HITLFormDialog() {
               onSubmit={handleSingleStepSubmit}
               submitRef={submitRef}
             />
-            <div className="flex justify-between pt-2 border-t">
-              <Button variant="ghost" size="sm" onClick={handleCancel} disabled={isSubmitting}>
-                Cancel
-              </Button>
+            <div className="flex items-center justify-between pt-2 border-t">
+              <div className="flex items-center gap-1">
+                <Button variant="ghost" size="sm" onClick={handleDefer} disabled={isSubmitting}>
+                  Close
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleCancel}
+                  disabled={isSubmitting}
+                  className="text-destructive hover:text-destructive"
+                  title="Cancel this form permanently"
+                >
+                  <XCircle className="mr-1 h-3 w-3" />
+                  Cancel
+                </Button>
+              </div>
               <Button size="sm" onClick={() => submitRef.current?.()} disabled={isSubmitting}>
                 {isSubmitting ? (
                   <>

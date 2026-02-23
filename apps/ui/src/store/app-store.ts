@@ -114,6 +114,9 @@ export interface AppState {
   // Prompt Customization
   promptCustomization: PromptCustomization; // Custom prompts for Auto Mode, Agent, Backlog Plan, Enhancement
 
+  // Browser Notifications
+  browserNotificationsEnabled: boolean; // When true, show browser notifications for new actionable items (default: false)
+
   // Event Hooks
   eventHooks: EventHook[]; // Event hooks for custom commands or webhooks
 
@@ -268,6 +271,9 @@ export interface AppActions {
   // Prompt Customization actions
   setPromptCustomization: (customization: PromptCustomization) => Promise<void>;
 
+  // Browser Notification actions
+  setBrowserNotificationsEnabled: (enabled: boolean) => void;
+
   // Event Hook actions
   setEventHooks: (hooks: EventHook[]) => void;
 
@@ -364,6 +370,7 @@ const initialState: AppState = {
   enableSubagents: true, // Subagents enabled by default
   subagentsSources: ['user', 'project'] as Array<'user' | 'project'>, // Load from both sources by default
   promptCustomization: {}, // Empty by default - all prompts use built-in defaults
+  browserNotificationsEnabled: false, // Default to disabled (opt-in)
   eventHooks: [], // No event hooks configured by default
   projectAnalysis: null,
   isAnalyzing: false,
@@ -1177,6 +1184,9 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
     const { syncSettingsToServer } = await import('@/hooks/use-settings-migration');
     await syncSettingsToServer();
   },
+
+  // Browser Notification actions
+  setBrowserNotificationsEnabled: (enabled) => set({ browserNotificationsEnabled: enabled }),
 
   // Event Hook actions
   setEventHooks: (hooks) => set({ eventHooks: hooks }),
