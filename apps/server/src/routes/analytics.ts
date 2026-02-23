@@ -6,11 +6,13 @@
  * - POST /api/analytics/pr - Get metrics for specific PR
  * - POST /api/analytics/feature - Get metrics for specific feature
  * - POST /api/analytics/all - Get all analytics
+ * - POST /api/analytics/agent-performance - Get agent performance metrics
  */
 
 import { Router } from 'express';
 import { createLogger } from '@automaker/utils';
 import { FeedbackAnalyticsService } from '../services/feedback-analytics-service.js';
+import { AnalyticsService } from '../services/analytics-service.js';
 
 const logger = createLogger('AnalyticsRoutes');
 
@@ -151,6 +153,32 @@ export function createAnalyticsRoutes(): Router {
       logger.error('Failed to get feature analytics:', error);
       res.status(500).json({
         error: 'Failed to get feature analytics',
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+  });
+
+  /**
+   * POST /api/analytics/agent-performance
+   * Get agent performance metrics across all completed features
+   */
+  router.post('/agent-performance', async (req, res) => {
+    try {
+      const { projectPath } = req.body as { projectPath: string };
+
+      if (!projectPath) {
+        res.status(400).json({ error: 'projectPath is required' });
+        return;
+      }
+
+      const analyticsService = new AnalyticsService();
+      const performance = await analyticsService.getAgentPerformance(projectPath);
+
+      res.json(performance);
+    } catch (error) {
+      logger.error('Failed to get agent performance analytics:', error);
+      res.status(500).json({
+        error: 'Failed to get agent performance analytics',
         message: error instanceof Error ? error.message : String(error),
       });
     }
