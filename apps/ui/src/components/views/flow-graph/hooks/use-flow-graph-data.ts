@@ -357,7 +357,10 @@ export function useFlowGraphData(
           const existing = next.get(featureId) || {};
           next.set(featureId, {
             ...existing,
-            activeTool: completed || !toolName ? null : { name: toolName, startedAt: startedAt || new Date().toISOString() },
+            activeTool:
+              completed || !toolName
+                ? null
+                : { name: toolName, startedAt: startedAt || new Date().toISOString() },
           });
           return next;
         });

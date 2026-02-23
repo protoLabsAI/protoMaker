@@ -155,12 +155,14 @@ function AgentNodeComponent({ data }: NodeProps & { data: AgentNodeData }) {
                   <div
                     key={phase}
                     className="flex flex-col items-center gap-0.5"
-                    title={duration ? `${PHASE_LABELS[phase]}: ${formatPhaseDuration(duration)}` : PHASE_LABELS[phase]}
+                    title={
+                      duration
+                        ? `${PHASE_LABELS[phase]}: ${formatPhaseDuration(duration)}`
+                        : PHASE_LABELS[phase]
+                    }
                   >
                     <div className="relative">
-                      {status === 'completed' && (
-                        <Check className="w-2.5 h-2.5 text-emerald-400" />
-                      )}
+                      {status === 'completed' && <Check className="w-2.5 h-2.5 text-emerald-400" />}
                       {status === 'active' && (
                         <motion.div
                           animate={{ scale: [1, 1.2, 1], opacity: [1, 0.6, 1] }}
