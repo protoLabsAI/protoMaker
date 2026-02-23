@@ -8,7 +8,7 @@
  * 4. Running agents & active features from app store
  */
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import type { Node, Edge } from '@xyflow/react';
 import { useAppStore } from '@/store/app-store';
 import { useRunningAgents } from '@/hooks/queries/use-running-agents';
@@ -34,7 +34,9 @@ import type {
   FeatureNodeData,
   AgentNodeData,
   PipelineStageNodeData,
+  AgentPhase,
 } from '../types';
+import { getHttpApiClient } from '@/lib/http-api-client';
 
 /** Engine status response shape from /api/engine/status */
 interface EngineStatusResponse {
@@ -250,6 +252,14 @@ const SERVICE_TO_GRAPH_MAP: Partial<Record<EngineServiceId, string>> = {
   'content-pipeline': 'content-creation',
 };
 
+/** Agent phase data tracked per featureId */
+interface AgentPhaseData {
+  phaseDurations?: Partial<Record<AgentPhase, number>>;
+  currentPhase?: AgentPhase;
+  activeTool?: { name: string; startedAt: string } | null;
+  progressPct?: number;
+}
+
 export function useFlowGraphData(
   onNodeClick?: (serviceId: EngineServiceId, graphId: string) => void
 ) {
@@ -263,6 +273,9 @@ export function useFlowGraphData(
   const { stageAggregates } = usePipelineTracker({ projectPath });
 
   const engineStatus = engineStatusData as EngineStatusResponse | undefined;
+
+  // Track agent phase data by featureId
+  const [agentPhaseData, setAgentPhaseData] = useState<Map<string, AgentPhaseData>>(new Map());
 
   // Pipeline progress overlay
   const { selected: selectedPipeline } = usePipelineProgress();
@@ -297,6 +310,75 @@ export function useFlowGraphData(
   );
 
   const gtmEnabled = engineStatus?.gtmEnabled ?? false;
+
+  // Subscribe to agent phase events
+  useEffect(() => {
+    const api = getHttpApiClient();
+    const unsubscribe = api.subscribeToEvents((type: string, payload: any) => {
+      const featureId = payload?.featureId;
+      if (!featureId) return;
+
+      if (type === 'pipeline:phase-completed') {
+        const phase = payload?.phase as AgentPhase | undefined;
+        const duration = payload?.duration as number | undefined;
+        if (phase && duration !== undefined) {
+          setAgentPhaseData((prev) => {
+            const next = new Map(prev);
+            const existing = next.get(featureId) || {};
+            next.set(featureId, {
+              ...existing,
+              phaseDurations: {
+                ...(existing.phaseDurations || {}),
+                [phase]: duration,
+              },
+            });
+            return next;
+          });
+        }
+      } else if (type === 'pipeline:phase-entered') {
+        const phase = payload?.phase as AgentPhase | undefined;
+        if (phase) {
+          setAgentPhaseData((prev) => {
+            const next = new Map(prev);
+            const existing = next.get(featureId) || {};
+            next.set(featureId, {
+              ...existing,
+              currentPhase: phase,
+            });
+            return next;
+          });
+        }
+      } else if (type === 'feature:tool-use') {
+        const toolName = payload?.tool as string | undefined;
+        const startedAt = payload?.startedAt as string | undefined;
+        const completed = payload?.completed as boolean | undefined;
+        setAgentPhaseData((prev) => {
+          const next = new Map(prev);
+          const existing = next.get(featureId) || {};
+          next.set(featureId, {
+            ...existing,
+            activeTool: completed || !toolName ? null : { name: toolName, startedAt: startedAt || new Date().toISOString() },
+          });
+          return next;
+        });
+      } else if (type === 'feature:progress') {
+        const progress = payload?.progress as number | undefined;
+        if (progress !== undefined) {
+          setAgentPhaseData((prev) => {
+            const next = new Map(prev);
+            const existing = next.get(featureId) || {};
+            next.set(featureId, {
+              ...existing,
+              progressPct: progress,
+            });
+            return next;
+          });
+        }
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const nodes = useMemo(() => {
     const result: Node[] = [];
@@ -460,6 +542,7 @@ export function useFlowGraphData(
     // 5. Dynamic agent nodes (below their feature)
     runningAgents.forEach((agent) => {
       const parentFeatureNode = result.find((n) => n.id === `feature-${agent.featureId}`);
+      const phaseData = agentPhaseData.get(agent.featureId);
       const agentData: AgentNodeData = {
         featureId: agent.featureId,
         title: agent.title || 'Agent',
@@ -471,6 +554,11 @@ export function useFlowGraphData(
         projectName: agent.projectName,
         branchName: agent.branchName,
         costUsd: agent.costUsd,
+        // Merge phase data
+        phaseDurations: phaseData?.phaseDurations,
+        currentPhase: phaseData?.currentPhase,
+        activeTool: phaseData?.activeTool,
+        progressPct: phaseData?.progressPct,
       };
       result.push({
         id: `agent-${agent.featureId}`,
@@ -494,6 +582,7 @@ export function useFlowGraphData(
     awaitingGate,
     pipelineState,
     gtmEnabled,
+    agentPhaseData,
   ]);
 
   // Build edges: static service flow + pipeline + bridge + dynamic
