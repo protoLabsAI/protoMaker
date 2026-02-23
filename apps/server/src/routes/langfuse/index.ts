@@ -8,6 +8,7 @@
 
 import { Router } from 'express';
 import { createLogger } from '@automaker/utils';
+import { createWebhookHandler } from './webhook.js';
 
 const logger = createLogger('LangfuseRoutes');
 
@@ -276,6 +277,13 @@ export function createLangfuseRoutes(): Router {
       res.status(500).json({ error: 'Failed to add dataset item' });
     }
   });
+
+  /**
+   * POST /api/langfuse/webhook/prompt
+   * Receives Langfuse prompt-version webhooks
+   * Filters by label (default: 'production') and dispatches to sync service
+   */
+  router.post('/webhook/prompt', createWebhookHandler());
 
   return router;
 }
