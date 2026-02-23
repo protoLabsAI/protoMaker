@@ -221,7 +221,7 @@ Override for specific projects:
 {
   "version": 2,
   "autoMode": {
-    "maxConcurrency": 6,
+    "maxConcurrency": 8,
     "useWorktrees": true
   }
 }

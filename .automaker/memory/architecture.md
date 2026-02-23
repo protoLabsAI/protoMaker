@@ -2396,3 +2396,47 @@ usageStats:
 - **Problem solved:** 15+ existing vars already follow this pattern; new vars needed to integrate without breaking naming conventions or tooling that parses env var names
 - **Why this works:** Consistent naming enables shell scripts and config loaders to auto-discover vars by prefix (e.g., grep -E '^LANGFUSE_' to find all Langfuse vars). Commented-out defaults in .env.example prevent accidental activation while documenting required vs optional. Inline defaults in CLAUDE.md serve as quick reference for developers.
 - **Trade-offs:** Easier: Config tooling can auto-discover and organize by prefix. Harder: env var names are longer; requires discipline across teams to maintain prefix naming
+
+#### [Gotcha] Barrel export pattern: must import from @automaker/utils, not @automaker/utils/logger (2026-02-23)
+- **Situation:** Three separate files required the same correction from @automaker/utils/logger to @automaker/utils for createLogger import
+- **Root cause:** Project uses barrel exports to centralize utility exports and allow internal module reorganization without breaking downstream code
+- **How to avoid:** Indirection abstracts internal structure but requires developers to know barrel export convention; enables painless internal reorganization
+
+#### [Pattern] Empty interface placeholder with @typescript-eslint/no-empty-object-type eslint-disable and future TODO comment for phase-based implementation (2026-02-23)
+- **Problem solved:** GetPairRequest interface is empty with disable comment and 'Future: Add filtering/sampling parameters' - active sampling algorithm not yet implemented
+- **Why this works:** Maintains type-safe API contracts while explicitly signaling incomplete implementation. Enables incremental development without API breaking changes when active sampling is added later
+- **Trade-offs:** Less strict TypeScript validation initially but clear forward contract; eslint-disable is explicit intent marker; prevents premature API expansion
+
+#### [Gotcha] When adding new optional properties to a Required<T> type, all resolution/configuration methods must explicitly include the new properties in their return objects. TypeScript won't warn about missing properties in object literals, allowing silent configuration failures. (2026-02-23)
+- **Situation:** Added salvageOnAbort and salvageOnAbortTypes to GitWorkflowSettings. Both DEFAULT_GIT_WORKFLOW_SETTINGS and resolveGitWorkflowSettings() needed updates or salvage options would be undefined at runtime despite type-checking.
+- **Root cause:** Type inference doesn't enforce completeness in object literals when used with Required<T>. Missing properties don't cause compile errors, only runtime behavior changes.
+- **How to avoid:** More boilerplate in resolution methods but prevents silent feature failures. Could use mapped types or const assertions to enforce completeness, but current approach is more explicit.
+
+#### [Pattern] Preserve error context outside try/catch scope by declaring variables in outer scope (workDir, errorInfo) to avoid type narrowing issues when accessing error details in finally blocks. Finally blocks can't access catch error directly without careful scope management. (2026-02-23)
+- **Problem solved:** executeFeature() needed to pass error type information to salvageUncommittedWork() in the finally block. Direct catch-block error references aren't accessible in finally without narrowing.
+- **Why this works:** TypeScript's control flow analysis restricts error access to catch blocks. Variables declared at function scope remain accessible in finally and avoid type guards.
+- **Trade-offs:** Slightly more verbose variable declarations but ensures type safety and preserves error context. Alternative of nested try would be less clean.
+
+#### [Gotcha] Git worktrees share the .git directory but have separate working directories, causing npm workspace package links to point to the main branch's node_modules instead of the feature branch's dist files. Build caches can make this hard to detect. (2026-02-23)
+- **Situation:** Feature branch code compiled correctly in isolation but failed in full monorepo build because type definitions linked to main branch version, not feature branch.
+- **Root cause:** Worktree efficiency relies on shared git metadata, but build tooling doesn't understand this shared state and resolves workspace links from the wrong reference point.
+- **How to avoid:** Worktrees are lightweight and efficient for context switching, but require understanding of their build quirks. Full clone would avoid this but adds disk/time overhead.
+
+#### [Pattern] Use best-effort error handling in finally blocks for recovery operations (don't rethrow salvage errors). Log failures as warnings but preserve the original abort signal. Catching and suppressing exceptions prevents masking why the agent actually failed. (2026-02-23)
+- **Problem solved:** Salvage workflow runs in finally block during error state. If salvage itself throws, the original abort reason gets lost.
+- **Why this works:** Users need to know they were aborted (original error), not that salvage recovery failed. Salvage is best-effort; its failures shouldn't become the primary error signal.
+- **Trade-offs:** Salvage failures are logged but invisible to user error handling. Cleaner error messaging but requires robust logging for debugging. Could emit events instead for visibility.
+
+### Make salvage workflow triggering configurable per-error-type via salvageOnAbortTypes array instead of simple boolean. Different error types have different recovery semantics and user expectations. (2026-02-23)
+- **Context:** Agent abort can happen for multiple reasons: agent cancellation, max_turns limit, detected infinite loop, etc. Not all warrant automatic salvage.
+- **Why:** max_turns aborts are often expected behavior (user's configured limit). Detected loops might indicate broken code worth discarding. Cancellations are unexpected and warrant salvage. Fine-grained control matches user intent better.
+- **Rejected:** Simple salvageOnAbort: boolean (too coarse; saves work for max_turns which is expected); always salvage (wastes resources on clearly broken code); never salvage (loses work from unexpected cancellations)
+- **Trade-offs:** More complex configuration but prevents unwanted salvages that consume resources or save bad code. Array approach is simpler than nested object config.
+- **Breaking if changed:** If salvageOnAbortTypes array doesn't include the actual error type, salvage won't trigger even if salvageOnAbort is true
+
+### Salvaged PRs are never auto-merged; they require manual review. Incomplete work from aborted agents shouldn't be merged automatically regardless of CI status. (2026-02-23)
+- **Context:** Agent was interrupted mid-feature. Salvaged work is preserved but potentially incomplete or in broken state.
+- **Why:** Auto-merge implies feature is complete and safe. Work interrupted by abort is by definition incomplete. Requiring manual review creates a safety gate and signals to team that work is partial.
+- **Rejected:** Creating commits only without PR (loses visibility, work might be forgotten); auto-merging with CI (completes unsafe incomplete work)
+- **Trade-offs:** Requires additional team action (PR review + merge) but prevents incomplete code from reaching main. Preserves code history and visibility.
+- **Breaking if changed:** If salvaged work auto-merges, incomplete/broken features leak into production. Requires explicit decision to merge incomplete work.
