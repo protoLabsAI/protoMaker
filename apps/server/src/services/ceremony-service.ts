@@ -505,7 +505,7 @@ Keep it concise, actionable, and focused on what makes this milestone interestin
 
     // Check if ceremonies are enabled
     const ceremonySettings = await this.getCeremonySettings(projectPath);
-    if (!ceremonySettings?.enabled || !ceremonySettings?.enableMilestoneUpdates) {
+    if (!ceremonySettings?.enabled || !ceremonySettings?.enableProjectRetros) {
       logger.debug('Ceremonies disabled, skipping project retrospective');
       return;
     }
@@ -1187,6 +1187,7 @@ Keep it engaging, benefits-focused, and suitable for a technical audience.`;
 
     // Synthesize into project-level learning summary
     const learningSummary = await this.synthesizeLearningSummary(
+      projectPath,
       projectTitle,
       memoryEntries,
       model
@@ -1231,6 +1232,7 @@ Keep it engaging, benefits-focused, and suitable for a technical audience.`;
    * Synthesize memory entries into a project-level learning summary using LLM
    */
   private async synthesizeLearningSummary(
+    projectPath: string,
     projectTitle: string,
     memoryEntries: Array<{ filename: string; content: string }>,
     model: string
@@ -1262,7 +1264,7 @@ ${memoryContent}`;
     const result = await simpleQuery({
       prompt,
       model,
-      cwd: path.dirname(memoryEntries[0]?.filename || '.'),
+      cwd: projectPath,
       maxTurns: 1,
       allowedTools: [],
     });

@@ -263,8 +263,10 @@ export class CompletionDetectorService {
   private areMilestonePhasesDone(milestone: Milestone, allFeatures: Feature[]): boolean {
     if (!milestone.phases.length) return false;
 
+    // All phases must have a featureId — uncreated phases mean the milestone isn't done
+    if (!milestone.phases.every((p) => p.featureId)) return false;
+
     for (const phase of milestone.phases) {
-      if (!phase.featureId) continue;
       const feature = allFeatures.find((f) => f.id === phase.featureId);
       if (!feature || feature.status !== 'done') return false;
     }

@@ -5,9 +5,9 @@ relevantTo: [documentation]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 24
-  referenced: 16
-  successfulFeatures: 16
+  loaded: 30
+  referenced: 23
+  successfulFeatures: 23
 ---
 # documentation
 
@@ -41,3 +41,8 @@ usageStats:
 - **Rejected:** Treating modes as equally valid would lead users to always enable HITL unnecessarily
 - **Trade-offs:** Gained: clearer guidance, faster adoption; Lost: requires users to actively opt-in to HITL rather than being the default
 - **Breaking if changed:** If antagonistic review scoring becomes unreliable, this guidance breaks and HITL becomes necessary again
+
+#### [Pattern] Documentation split across README.md (command reference) and docs/getting-started/index.md (context + expected outcomes). Each audience gets minimal friction for their use case (2026-02-23)
+- **Problem solved:** Need to communicate new verification capability to two audiences: power users wanting quick commands vs new users needing context and confidence
+- **Why this works:** README users scan for commands; Getting Started users read sequentially. Different cognitive load and information needs. Single doc would be either too terse or too verbose for each audience
+- **Trade-offs:** Requires updates in two places (maintenance burden), but each location is optimized for its audience's workflow. Copy-paste readiness differs by audience

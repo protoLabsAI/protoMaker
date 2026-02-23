@@ -867,6 +867,103 @@ describe('CeremonyService', () => {
     });
   });
 
+  describe('project retro config gate', () => {
+    it('should skip project retro when enableProjectRetros is false', async () => {
+      const mockSettings: ProjectSettings = {
+        ceremonySettings: {
+          enabled: true,
+          enableMilestoneUpdates: true,
+          enableProjectRetros: false, // retros disabled
+        },
+        integrations: {
+          discord: {
+            enabled: true,
+            serverId: 'server-123',
+            channelId: 'channel-123',
+            webhookId: 'webhook-123',
+            webhookToken: 'token-123',
+          },
+        },
+      };
+
+      vi.mocked(mockSettingsService.getProjectSettings).mockResolvedValue(mockSettings);
+
+      const emitSpy = vi.spyOn(emitter, 'emit');
+
+      ceremonyService.initialize(
+        emitter,
+        mockSettingsService,
+        mockFeatureLoader,
+        mockProjectService
+      );
+
+      emitter.emit('project:completed', {
+        projectPath: '/test/path',
+        projectTitle: 'Test Project',
+        projectSlug: 'test-project',
+        totalMilestones: 2,
+        totalFeatures: 5,
+        totalCostUsd: 10.0,
+        failureCount: 1,
+        milestoneSummaries: [],
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Should NOT emit integration:discord for retro
+      const discordCalls = emitSpy.mock.calls.filter((call) => call[0] === 'integration:discord');
+      expect(discordCalls.length).toBe(0);
+    });
+
+    it('should pass config gate when enableProjectRetros is true even if enableMilestoneUpdates is false', async () => {
+      const mockSettings: ProjectSettings = {
+        ceremonySettings: {
+          enabled: true,
+          enableMilestoneUpdates: false, // milestone updates off
+          enableProjectRetros: true, // but retros on
+        },
+        integrations: {
+          discord: {
+            enabled: true,
+            serverId: 'server-123',
+            channelId: 'channel-123',
+            webhookId: 'webhook-123',
+            webhookToken: 'token-123',
+          },
+        },
+      };
+
+      const mockFeatures = [createTestFeature({ projectSlug: 'test-project' })];
+
+      vi.mocked(mockSettingsService.getProjectSettings).mockResolvedValue(mockSettings);
+      vi.mocked(mockFeatureLoader.getAll).mockResolvedValue(mockFeatures);
+
+      ceremonyService.initialize(
+        emitter,
+        mockSettingsService,
+        mockFeatureLoader,
+        mockProjectService
+      );
+
+      emitter.emit('project:completed', {
+        projectPath: '/test/path',
+        projectTitle: 'Test Project',
+        projectSlug: 'test-project',
+        totalMilestones: 1,
+        totalFeatures: 1,
+        totalCostUsd: 1.5,
+        failureCount: 0,
+        milestoneSummaries: [],
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // The config gate passed — featureLoader.getAll was called (happens after the gate)
+      // The retro may fail later due to unmocked LLM call, but the gate used enableProjectRetros
+      expect(mockFeatureLoader.getAll).toHaveBeenCalledWith('/test/path');
+    });
+  });
+
   describe('error handling', () => {
     it('should handle missing project gracefully', async () => {
       const mockSettings: ProjectSettings = {

@@ -25,3 +25,10 @@ usageStats:
 - **Problem solved:** OAuth tokens expire; must decide when to refresh to balance API calls against operation reliability.
 - **Why this works:** Proactive refresh prevents cascading failures where API calls fail mid-operation due to expired token. 5-minute buffer provides margin for network delays.
 - **Trade-offs:** Uses more token refresh API calls, but eliminates user-facing failures. Storage of refreshToken required (accepted complexity).
+
+### Implement proactive token refresh - check expiration and refresh if expiring within 5-minute buffer before each API call, rather than reactive refresh on 401 errors. (2026-02-22)
+- **Context:** OAuth tokens expire (Google tokens ~1 hour). Must refresh before expiration. Decision point: refresh proactively or on demand after failure.
+- **Why:** Proactive refresh prevents token expiration mid-API-call, ensuring API call succeeds on first try. 5-minute buffer provides safety margin without excessive refresh calls. User experience: no retry logic needed.
+- **Rejected:** Reactive refresh (on 401 error): Simpler code, but requires retry logic in every API call. Complicates error handling. Users see occasional failures.
+- **Trade-offs:** Proactive refresh has more refresh calls (wastes some quota) but eliminates failures. Reactive refresh saves quota but complicates code and user experience.
+- **Breaking if changed:** Removing buffer (0-minute) risks token expiring mid-API-call. Buffer too large (30+ minutes) causes excessive refresh overhead.

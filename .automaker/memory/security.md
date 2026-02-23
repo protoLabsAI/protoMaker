@@ -133,3 +133,8 @@ usageStats:
 - **Problem solved:** Monorepo packages without explicit directory path confuse npm tooling about where the source code actually lives
 - **Why this works:** npm audit, GitHub dependency tracking, and third-party supply-chain tools use repository.directory to map published packages back to source. Without it, tools report vulnerabilities against wrong path or fail to cross-reference.
 - **Trade-offs:** Explicit directory adds 1-2 lines to package.json but gives complete supply-chain visibility. Cost is negligible, benefit is infrastructure-level.
+
+#### [Pattern] OAuth CSRF protection using state parameter stored in in-memory JavaScript Map with 10-minute expiration. States auto-cleanup on each callback. Noted as single-instance solution; production multi-instance deployments require Redis or database. (2026-02-22)
+- **Problem solved:** CSRF attacks on OAuth redirect can trick users into authorizing attacker's client. State parameter prevents this by validating request source.
+- **Why this works:** State parameter is OAuth 2.0 standard (RFC 6749). In-memory Map is simplest implementation for single instance. 10-minute window is long enough for OAuth flow but short enough to prevent state reuse.
+- **Trade-offs:** In-memory state is fast and simple but loses state across process restarts and doesn't scale to multiple servers. Redis/database adds latency but enables horizontal scaling.

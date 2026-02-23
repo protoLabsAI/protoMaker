@@ -59,7 +59,7 @@ export class ReflectionService {
 
     try {
       const features = await this.featureLoader.getAll(projectPath);
-      const projectFeatures = features.filter((f) => f.projectSlug === projectSlug || f.epicId);
+      const projectFeatures = features.filter((f) => f.projectSlug === projectSlug);
 
       const summary = this.buildSummary(
         projectTitle,

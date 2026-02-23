@@ -6,8 +6,8 @@ importance: 0.7
 relatedFiles: []
 usageStats:
   loaded: 77
-  referenced: 44
-  successfulFeatures: 44
+  referenced: 45
+  successfulFeatures: 45
 ---
 # api
 
@@ -469,3 +469,8 @@ usageStats:
 - **Rejected:** Metadata from calendar description (requires extra API call); explicit labels (manual work); event type/attendee analysis (fragile).
 - **Trade-offs:** Simple and fast, but fragile—depends on consistent naming conventions. Poorly named events (e.g., 'Meeting') default to 'ops' incorrectly.
 - **Breaking if changed:** Removing keyword routing requires alternative classification mechanism or manual event tagging. Changing keyword set changes business routing behavior.
+
+#### [Pattern] Before changing a URL/endpoint, search codebase to verify the correct form is already established elsewhere. Use that precedent to ensure consistency. (2026-02-22)
+- **Problem solved:** Sidebar documentation URL was inconsistent. Search revealed project switcher and site pages already used correct URL `https://docs.protolabs.studio`, confirming this was the standard.
+- **Why this works:** Prevents introducing multiple URL variants of same endpoint. Establishes confidence that the new value is correct. Reduces risk of choosing wrong URL variant.
+- **Trade-offs:** Requires upfront search/verification work but prevents future inconsistency. Gives evidence that change is correct, not guesswork.
