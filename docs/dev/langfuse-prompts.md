@@ -167,6 +167,7 @@ LANGFUSE_SYNC_CI_TRIGGER=true       # Enable repository_dispatch after sync
 **GitHub Token Permissions:**
 
 Your `GITHUB_TOKEN` must have the following permissions:
+
 - `repo` scope (full control of private repositories)
   - Required for: reading files, creating commits, pushing to branches
 - For organization repositories: ensure the token has access to the organization
@@ -240,6 +241,7 @@ The dispatch event type is `langfuse-prompt-sync` and includes the prompt name, 
 **Symptoms:** Langfuse prompts are updated but no commits appear in GitHub.
 
 **Solutions:**
+
 - Verify webhook endpoint is publicly accessible
 - Check Langfuse webhook logs for delivery failures
 - Ensure `GITHUB_TOKEN` has not expired
@@ -251,6 +253,7 @@ The dispatch event type is `langfuse-prompt-sync` and includes the prompt name, 
 **Symptoms:** Webhook received but commit fails with authentication or permission errors.
 
 **Solutions:**
+
 - Verify `GITHUB_TOKEN` has `repo` scope
 - Check token hasn't been revoked or expired
 - Verify `GITHUB_REPO_OWNER` and `GITHUB_REPO_NAME` are set correctly
@@ -262,6 +265,7 @@ The dispatch event type is `langfuse-prompt-sync` and includes the prompt name, 
 **Symptoms:** Multiple versions of the same prompt, or unexpected prompt content.
 
 **Solutions:**
+
 - Ensure only one sync mechanism is active (webhook OR manual seed script)
 - Check for concurrent webhook processing (use queue if needed)
 - Verify `production` label is applied to correct prompt version
@@ -273,6 +277,7 @@ The dispatch event type is `langfuse-prompt-sync` and includes the prompt name, 
 **Symptoms:** Some prompts don't appear in GitHub or Langfuse after syncing.
 
 **Solutions:**
+
 - Verify prompt naming follows `{category}.{key}` convention
 - Check Langfuse dashboard for prompts with `production` label
 - Review sync script logs for errors or skipped prompts
@@ -284,6 +289,7 @@ The dispatch event type is `langfuse-prompt-sync` and includes the prompt name, 
 **Symptoms:** GitHub Actions workflow fails during prompt validation or sync.
 
 **Solutions:**
+
 - Check GitHub Actions logs for specific error messages
 - Verify all required secrets are configured correctly
 - Ensure Node.js version matches project requirements
@@ -293,16 +299,16 @@ The dispatch event type is `langfuse-prompt-sync` and includes the prompt name, 
 
 ## Files
 
-| File                                                        | Purpose                                                      |
-| ----------------------------------------------------------- | ------------------------------------------------------------ |
-| `apps/server/src/services/prompt-resolver.ts`               | Three-layer resolution service                               |
-| `apps/server/src/lib/settings-helpers.ts`                   | `getPromptCustomization()` — auto-discovers PromptResolver   |
-| `apps/server/src/lib/langfuse-singleton.ts`                 | Singleton factory for LangfuseClient and PromptResolver      |
-| `apps/server/src/lib/langfuse-webhook.ts`                   | Webhook types and HMAC-SHA256 signature verification         |
-| `apps/server/src/routes/langfuse/webhook.ts`                | Webhook route handler — filters by label, dispatches to sync |
-| `apps/server/src/services/prompt-github-sync-service.ts`    | Octokit-based GitHub sync (commit prompts to `prompts/`)     |
-| `apps/server/src/services/prompt-ci-trigger-service.ts`     | `repository_dispatch` trigger after prompt commits           |
-| `libs/observability/src/langfuse/client.ts`                 | `LangfuseClient.getPrompt()` with label support              |
-| `libs/observability/src/langfuse/cache.ts`                  | `PromptCache` for TTL-based caching                          |
-| `libs/observability/src/langfuse/versioning.ts`             | `getRawPrompt()`, `prefetchPrompts()`, label/version pinning |
-| `scripts/seed-langfuse-prompts.ts`                          | One-time script to push all prompts to Langfuse              |
+| File                                                     | Purpose                                                      |
+| -------------------------------------------------------- | ------------------------------------------------------------ |
+| `apps/server/src/services/prompt-resolver.ts`            | Three-layer resolution service                               |
+| `apps/server/src/lib/settings-helpers.ts`                | `getPromptCustomization()` — auto-discovers PromptResolver   |
+| `apps/server/src/lib/langfuse-singleton.ts`              | Singleton factory for LangfuseClient and PromptResolver      |
+| `apps/server/src/lib/langfuse-webhook.ts`                | Webhook types and HMAC-SHA256 signature verification         |
+| `apps/server/src/routes/langfuse/webhook.ts`             | Webhook route handler — filters by label, dispatches to sync |
+| `apps/server/src/services/prompt-github-sync-service.ts` | Octokit-based GitHub sync (commit prompts to `prompts/`)     |
+| `apps/server/src/services/prompt-ci-trigger-service.ts`  | `repository_dispatch` trigger after prompt commits           |
+| `libs/observability/src/langfuse/client.ts`              | `LangfuseClient.getPrompt()` with label support              |
+| `libs/observability/src/langfuse/cache.ts`               | `PromptCache` for TTL-based caching                          |
+| `libs/observability/src/langfuse/versioning.ts`          | `getRawPrompt()`, `prefetchPrompts()`, label/version pinning |
+| `scripts/seed-langfuse-prompts.ts`                       | One-time script to push all prompts to Langfuse              |
