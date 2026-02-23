@@ -4,26 +4,32 @@ protoLabs's Ceremony Service automates agile ceremonies — standups, milestone 
 
 ## Ceremony Types
 
-| Ceremony              | Trigger Event         | What It Posts                                                             | Setting                  |
-| --------------------- | --------------------- | ------------------------------------------------------------------------- | ------------------------ |
-| **Milestone Standup** | `milestone:started`   | Planned phases, complexity breakdown, progress                            | `enableStandups`         |
-| **Milestone Retro**   | `milestone:completed` | Features shipped, PRs, cost, duration, blockers, next steps               | `enableMilestoneUpdates` |
-| **Project Retro**     | `project:completed`   | LLM-generated retrospective (what went well/wrong, lessons, action items) | `enableProjectRetros`    |
-| **Board Groom**       | _(planned)_           | Stale features, blockers, queue health, recommended actions               | _(not yet implemented)_  |
-| **Doc Generation**    | _(planned)_           | Auto-generate/update docs when features complete                          | _(not yet implemented)_  |
+| Ceremony              | Trigger Event               | What It Posts                                                             | Setting                  |
+| --------------------- | --------------------------- | ------------------------------------------------------------------------- | ------------------------ |
+| **Epic Kickoff**      | `project:features:progress` | Planned phases, complexity breakdown, estimated scope                     | `enableEpicKickoff`      |
+| **Milestone Standup** | `milestone:started`         | Planned phases, complexity breakdown, progress                            | `enableStandups`         |
+| **Milestone Retro**   | `milestone:completed`       | Features shipped, PRs, cost, duration, blockers, next steps               | `enableMilestoneUpdates` |
+| **Epic Delivery**     | `feature:completed` (epic)  | Child features, PRs, cost, duration for the completed epic                | `enableEpicDelivery`     |
+| **Content Brief**     | `milestone:completed`       | LLM-generated GTM content brief for blog posts, tweets, case studies      | `enableContentBriefs`    |
+| **Project Retro**     | `project:completed`         | LLM-generated retrospective (what went well/wrong, lessons, action items) | `enableProjectRetros`    |
+| **Board Groom**       | _(planned)_                 | Stale features, blockers, queue health, recommended actions               | _(not yet implemented)_  |
 
 ## Configuration
 
-Ceremonies are configured per-project in `.automaker/settings.json`:
+Ceremonies are configured per-project via **Project Settings > Ceremonies** in the UI, or in `.automaker/settings.json`:
 
 ```json
 {
   "ceremonySettings": {
     "enabled": true,
     "discordChannelId": "<channel-id>",
+    "enableEpicKickoff": true,
     "enableStandups": true,
     "enableMilestoneUpdates": true,
+    "enableEpicDelivery": true,
     "enableProjectRetros": true,
+    "enableContentBriefs": true,
+    "contentBriefChannelId": "<gtm-channel-id>",
     "retroModel": {
       "model": "sonnet"
     }
@@ -33,54 +39,71 @@ Ceremonies are configured per-project in `.automaker/settings.json`:
 
 **Settings reference:**
 
-| Field                    | Type    | Default               | Description                           |
-| ------------------------ | ------- | --------------------- | ------------------------------------- |
-| `enabled`                | boolean | `false`               | Master toggle for all ceremonies      |
-| `discordChannelId`       | string  | —                     | Discord channel ID for ceremony posts |
-| `enableStandups`         | boolean | `true`                | Post standup when milestone starts    |
-| `enableMilestoneUpdates` | boolean | `true`                | Post retro when milestone completes   |
-| `enableProjectRetros`    | boolean | `true`                | Post LLM retro when project completes |
-| `retroModel`             | object  | `{ model: 'sonnet' }` | Model config for LLM-generated retros |
+| Field                        | Type    | Default               | Description                                      |
+| ---------------------------- | ------- | --------------------- | ------------------------------------------------ |
+| `enabled`                    | boolean | `false`               | Master toggle for all ceremonies                 |
+| `discordChannelId`           | string  | —                     | Discord channel ID override for ceremony posts   |
+| `enableEpicKickoff`          | boolean | `true`                | Post kickoff when epic is created                |
+| `enableStandups`             | boolean | `true`                | Post standup when milestone starts               |
+| `enableMilestoneUpdates`     | boolean | `true`                | Post retro when milestone completes              |
+| `enableEpicDelivery`         | boolean | `true`                | Post delivery announcement when epic completes   |
+| `enableProjectRetros`        | boolean | `true`                | Post LLM retro when project completes            |
+| `enableContentBriefs`        | boolean | `true`                | Generate GTM content brief on milestone complete |
+| `contentBriefChannelId`      | string  | —                     | Separate Discord channel for content briefs      |
+| `enableLinearProjectUpdates` | boolean | `false`               | Post standups/milestones to Linear project too   |
+| `retroModel`                 | object  | `{ model: 'sonnet' }` | Model config for LLM-generated retros            |
 
 **Type definition:** `libs/types/src/settings.ts` → `CeremonySettings`
 
 ## Event Flow
 
+### Completion Cascade (CompletionDetectorService)
+
+The cascade is driven by `CompletionDetectorService`, which reacts to feature status changes:
+
 ```
-ProjM Agent (projm-agent.ts)
+feature:status-changed (newStatus: 'done')
+  │  or
+auto-mode:event (type: 'auto_mode_feature_complete', passes: true)
   │
-  ├─ milestone starts ──→ emit('milestone:started', payload)
-  │                              │
-  │                              ▼
-  │                    CeremonyService.handleMilestoneStarted()
-  │                              │
-  │                              ▼
-  │                    generateMilestoneStandup()
-  │                              │
-  │                              ▼
-  │                    Discord: #dev channel
+  ├─ Epic check: all children done? → mark epic done
+  │     └─ emit('feature:completed', { isEpic: true })
   │
-  ├─ milestone done ───→ emit('milestone:completed', payload)
-  │                              │
-  │                              ▼
-  │                    CeremonyService.handleMilestoneCompleted()
-  │                              │
-  │                              ▼
-  │                    generateMilestoneCeremony()
-  │                              │
-  │                              ▼
-  │                    Discord: #dev channel
+  ├─ Milestone check: all phases done? → mark milestone completed
+  │     └─ emit('milestone:completed', payload)
   │
-  └─ project done ────→ emit('project:completed', payload)
-                                 │
-                                 ▼
-                       CeremonyService.handleProjectCompleted()
-                                 │
-                                 ▼
-                       LLM generates retrospective (simpleQuery)
-                                 │
-                                 ▼
-                       Discord: #dev channel
+  └─ Project check: all milestones done? → mark project completed
+        └─ emit('project:completed', payload)
+```
+
+Each level has deduplication guards to prevent double-firing.
+
+### Ceremony Service Event Handling
+
+```
+epic created ────────→ CeremonyService.handleEpicCreated()
+                              → Epic kickoff announcement
+
+milestone:started ───→ CeremonyService.handleMilestoneStarted()
+                              → Standup announcement
+
+milestone:completed ─→ CeremonyService.handleMilestoneCompleted()
+                              → Milestone retro
+                              → Content brief (separate channel)
+                              → Linear project update (optional)
+
+feature:completed ───→ CeremonyService.handleEpicCompleted()
+  (isEpic: true)             → Epic delivery announcement
+
+project:completed ───→ CeremonyService.handleProjectCompleted()
+                              → LLM retrospective
+                              → Impact report
+                              → Reflection loop (memory synthesis)
+                              → Improvement items (Beads/features)
+
+project:completed ───→ ReflectionService.handleProjectCompleted()
+                              → LLM reflection → reflection.md
+                              → emit('project:reflection:complete')
 ```
 
 ## Ceremony Content Examples
@@ -166,18 +189,20 @@ Posted when all milestones complete. Uses an LLM to generate a structured retros
 
 ### Key Methods
 
-| Method                        | Visibility | Purpose                                           |
-| ----------------------------- | ---------- | ------------------------------------------------- |
-| `initialize()`                | public     | Wire up dependencies and event subscriptions      |
-| `destroy()`                   | public     | Cleanup subscriptions                             |
-| `handleMilestoneStarted()`    | private    | Generate + post standup                           |
-| `handleMilestoneCompleted()`  | private    | Generate + post retro                             |
-| `handleProjectCompleted()`    | private    | Generate + post LLM retro                         |
-| `generateMilestoneStandup()`  | private    | Build standup content from project data           |
-| `generateMilestoneCeremony()` | private    | Build retro content with features, cost, duration |
-| `getCeremonySettings()`       | private    | Load config from project settings                 |
-| `splitMessage()`              | private    | Chunk content for Discord's 2000-char limit       |
-| `emitDiscordEvent()`          | private    | Emit `integration:discord` event                  |
+| Method                       | Visibility | Purpose                                           |
+| ---------------------------- | ---------- | ------------------------------------------------- |
+| `initialize()`               | public     | Wire up dependencies and event subscriptions      |
+| `destroy()`                  | public     | Cleanup subscriptions                             |
+| `handleEpicCreated()`        | private    | Generate + post epic kickoff                      |
+| `handleMilestoneStarted()`   | private    | Generate + post standup                           |
+| `handleMilestoneCompleted()` | private    | Generate + post retro + content brief             |
+| `handleEpicCompleted()`      | private    | Generate + post epic delivery announcement        |
+| `handleProjectCompleted()`   | private    | Generate + post LLM retro + reflection loop       |
+| `generateReflectionLoop()`   | private    | Synthesize agent memory into project learnings    |
+| `createImprovementItems()`   | private    | Extract action items from retro as Beads/features |
+| `getCeremonySettings()`      | private    | Load config from project settings                 |
+| `splitMessage()`             | private    | Chunk content for Discord's 2000-char limit       |
+| `emitDiscordEvent()`         | private    | Emit `integration:discord` event                  |
 
 ## Discord Delivery
 
@@ -209,15 +234,85 @@ This bridge also serves `IntegrationService` and `ChangelogService` — any serv
 
 **Key file:** `apps/server/src/index.ts` — `integration:discord` subscriber (after `eventHookService.initialize()`)
 
+## Manual Testing
+
+### Via MCP Tool
+
+Use the `trigger_ceremony` MCP tool for quick testing:
+
+```typescript
+// Milestone standup
+mcp__plugin_automaker_automaker__trigger_ceremony({
+  projectPath: '/path/to/project',
+  projectSlug: 'my-project',
+  milestoneSlug: 'foundation',
+  ceremonyType: 'standup',
+});
+
+// Milestone retro
+mcp__plugin_automaker_automaker__trigger_ceremony({
+  projectPath: '/path/to/project',
+  projectSlug: 'my-project',
+  milestoneSlug: 'foundation',
+  ceremonyType: 'retro',
+});
+
+// Project retro (no milestoneSlug needed)
+mcp__plugin_automaker_automaker__trigger_ceremony({
+  projectPath: '/path/to/project',
+  projectSlug: 'my-project',
+  ceremonyType: 'project-retro',
+});
+```
+
+### Via API
+
+```bash
+# Milestone retro
+curl -X POST http://localhost:3008/api/ceremonies/trigger \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: $AUTOMAKER_API_KEY" \
+  -d '{
+    "projectPath": "/path/to/project",
+    "projectSlug": "my-project",
+    "milestoneSlug": "foundation",
+    "ceremonyType": "retro"
+  }'
+
+# Project retro
+curl -X POST http://localhost:3008/api/ceremonies/trigger \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: $AUTOMAKER_API_KEY" \
+  -d '{
+    "projectPath": "/path/to/project",
+    "projectSlug": "my-project",
+    "ceremonyType": "project-retro"
+  }'
+```
+
+### Via UI
+
+Go to **Project Settings > Ceremonies** to enable/disable ceremony types and configure channels.
+
+### Testing Checklist
+
+1. Enable ceremonies in Project Settings > Ceremonies
+2. Set a Discord channel ID (or use project default)
+3. Trigger a standup — verify Discord message format
+4. Trigger a milestone retro — verify features, cost, PR links
+5. Trigger a project retro — verify LLM generates retrospective
+6. Check deduplication — trigger same ceremony twice, expect one post
+7. Disable a ceremony type — trigger again, expect skip
+
 ## Prerequisites
 
 For ceremonies to work:
 
-1. **Ceremonies enabled** in `.automaker/settings.json` (`ceremonySettings.enabled: true`)
-2. **Discord channel ID set** in ceremony settings (`ceremonySettings.discordChannelId`)
+1. **Ceremonies enabled** in project settings (`ceremonySettings.enabled: true`)
+2. **Discord integration configured** — either project-level or global Discord settings
 3. **Discord bot running** — `DiscordBotService` must be initialized (requires `DISCORD_BOT_TOKEN`)
 4. **Project uses the project orchestration system** (milestones, phases)
-5. **Events emitted by ProjM agent** — ceremonies are event-driven, not polled
+5. **Events emitted by completion cascade** — ceremonies are event-driven, not polled
 
 ## Planned Ceremonies
 
