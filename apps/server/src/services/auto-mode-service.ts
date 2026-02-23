@@ -1077,14 +1077,12 @@ export class AutoModeService {
               `[AutoLoop] No pending features available, ${projectRunningCount} still running, waiting...`
             );
           } else if (projectState.hasEmittedIdleEvent) {
-            // Already emitted idle event and still no work — stop the loop to prevent spam
-            logger.info(
-              `[AutoLoop] No pending features and idle already reported. Stopping loop for ${worktreeDesc}.`
-            );
-            projectState.isRunning = false;
-            break;
+            // Still idle — keep polling at reduced frequency so we pick up
+            // features that become unblocked when dependencies complete.
+            logger.debug(`[AutoLoop] Still idle for ${worktreeDesc}, polling again in 30s...`);
           }
-          await this.sleep(10000);
+          // Longer sleep when idle to reduce filesystem reads
+          await this.sleep(projectState.hasEmittedIdleEvent ? 30000 : 10000);
           continue;
         }
 
@@ -1462,12 +1460,12 @@ export class AutoModeService {
               `[AutoLoop] No pending features, ${runningCount} still running, waiting...`
             );
           } else if (this.hasEmittedIdleEvent) {
-            // Already emitted idle event and still no work — stop the loop to prevent spam
-            logger.info(`[AutoLoop] No pending features and idle already reported. Stopping loop.`);
-            this.autoLoopRunning = false;
-            break;
+            // Still idle — keep polling at reduced frequency so we pick up
+            // features that become unblocked when dependencies complete.
+            logger.debug(`[AutoLoop] Still idle, polling again in 30s...`);
           }
-          await this.sleep(10000);
+          // Longer sleep when idle to reduce filesystem reads
+          await this.sleep(this.hasEmittedIdleEvent ? 30000 : 10000);
           continue;
         }
 
