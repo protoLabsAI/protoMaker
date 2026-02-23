@@ -11,6 +11,7 @@
 import type { RequestHandler, Request, Response } from 'express';
 import { createHmac } from 'node:crypto';
 import { createLogger } from '@automaker/utils';
+import type { PromptGitHubSyncService } from '../../services/prompt-github-sync-service.js';
 
 const logger = createLogger('langfuse:webhook');
 
@@ -53,7 +54,8 @@ function verifyWebhookSignature(
  */
 async function processPromptVersionEvent(
   payload: LangfuseWebhookPayload,
-  targetLabel: string
+  targetLabel: string,
+  syncService: PromptGitHubSyncService | null
 ): Promise<void> {
   const { event, data } = payload;
 
@@ -75,20 +77,63 @@ async function processPromptVersionEvent(
     return;
   }
 
-  // TODO: Dispatch to sync service when implemented
-  // For now, just log that we would sync this prompt
-  logger.info(`Would sync prompt version to GitHub`, {
-    promptId: data.id,
+  // Check if sync service is available
+  if (!syncService || !syncService.isAvailable()) {
+    logger.warn('GitHub sync service not available, skipping prompt sync', {
+      promptId: data.id,
+      name: data.name,
+      version: data.version,
+    });
+    return;
+  }
+
+  // Parse prompt name into category.key format
+  // Expected format: "category.key" (e.g., "autoMode.planningLite")
+  const nameParts = data.name.split('.');
+  if (nameParts.length !== 2) {
+    logger.warn('Invalid prompt name format, expected category.key', {
+      promptId: data.id,
+      name: data.name,
+      version: data.version,
+    });
+    return;
+  }
+
+  const [category, key] = nameParts;
+
+  // Sync prompt to GitHub
+  const result = await syncService.syncPrompt({
+    category,
+    key,
+    content: data.prompt,
     name: data.name,
-    version: data.version,
-    label: targetLabel,
+    version: String(data.version),
   });
+
+  if (result.success) {
+    logger.info('Successfully synced prompt to GitHub', {
+      promptId: data.id,
+      name: data.name,
+      version: data.version,
+      category,
+      key,
+    });
+  } else {
+    logger.error('Failed to sync prompt to GitHub', {
+      promptId: data.id,
+      name: data.name,
+      version: data.version,
+      category,
+      key,
+      error: result.error,
+    });
+  }
 }
 
 /**
  * Create webhook handler for Langfuse prompt-version events
  */
-export function createWebhookHandler(): RequestHandler {
+export function createWebhookHandler(syncService: PromptGitHubSyncService | null): RequestHandler {
   return async (req: Request, res: Response) => {
     const webhookSecret = process.env.LANGFUSE_WEBHOOK_SECRET;
     const targetLabel = process.env.LANGFUSE_WEBHOOK_LABEL || 'production';
@@ -122,7 +167,7 @@ export function createWebhookHandler(): RequestHandler {
 
     // Process asynchronously after responding
     try {
-      await processPromptVersionEvent(payload, targetLabel);
+      await processPromptVersionEvent(payload, targetLabel, syncService);
     } catch (error) {
       // Log sync outcome without crashing on errors
       logger.error('Failed to process prompt-version webhook', {

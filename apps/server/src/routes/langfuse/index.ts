@@ -8,6 +8,7 @@
 
 import { Router } from 'express';
 import { createLogger } from '@automaker/utils';
+import type { PromptGitHubSyncService } from '../../services/prompt-github-sync-service.js';
 import { createWebhookHandler } from './webhook.js';
 
 const logger = createLogger('LangfuseRoutes');
@@ -72,7 +73,9 @@ async function langfuseProxy(
   return { ok: response.ok, status: response.status, data };
 }
 
-export function createLangfuseRoutes(): Router {
+export function createLangfuseRoutes(
+  promptGitHubSyncService: PromptGitHubSyncService | null
+): Router {
   const router = Router();
 
   /**
@@ -283,7 +286,7 @@ export function createLangfuseRoutes(): Router {
    * Receives Langfuse prompt-version webhooks
    * Filters by label (default: 'production') and dispatches to sync service
    */
-  router.post('/webhook/prompt', createWebhookHandler());
+  router.post('/webhook/prompt', createWebhookHandler(promptGitHubSyncService));
 
   return router;
 }

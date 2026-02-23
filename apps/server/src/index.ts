@@ -198,6 +198,7 @@ import { initOTEL, shutdownOTEL } from './lib/otel-setup.js';
 import { AgentScoringService } from './services/agent-scoring-service.js';
 import { gitWorkflowService } from './services/git-workflow-service.js';
 import { PipelineOrchestrator } from './services/pipeline-orchestrator.js';
+import { PromptGitHubSyncService } from './services/prompt-github-sync-service.js';
 
 const PORT = parseInt(process.env.PORT || '3008', 10);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -527,6 +528,24 @@ const signalIntakeService = new SignalIntakeService(events, featureLoader, REPO_
 
 // Initialize Pipeline Orchestrator — unified phase tracking across ops + gtm branches
 const pipelineOrchestrator = new PipelineOrchestrator(events, featureLoader, settingsService);
+
+// Initialize Prompt GitHub Sync Service — syncs Langfuse prompts to GitHub
+let promptGitHubSyncService: PromptGitHubSyncService | null = null;
+const githubToken = process.env.GITHUB_TOKEN;
+const githubRepoOwner = process.env.GITHUB_REPO_OWNER;
+const githubRepoName = process.env.GITHUB_REPO_NAME;
+
+if (githubToken && githubRepoOwner && githubRepoName) {
+  promptGitHubSyncService = new PromptGitHubSyncService({
+    owner: githubRepoOwner,
+    repo: githubRepoName,
+  });
+  logger.info('Prompt GitHub Sync Service initialized');
+} else {
+  logger.info(
+    'Prompt GitHub Sync Service disabled (missing GITHUB_TOKEN, GITHUB_REPO_OWNER, or GITHUB_REPO_NAME)'
+  );
+}
 
 // Initialize Docs Update Detector — creates docs update features after milestones
 import { DocsUpdateDetector } from './services/docs-update-detector.js';
@@ -1373,7 +1392,7 @@ app.use(
     completionDetectorService
   )
 );
-app.use('/api/langfuse', createLangfuseRoutes());
+app.use('/api/langfuse', createLangfuseRoutes(promptGitHubSyncService));
 app.use(
   '/api/flows',
   createFlowsRoutes(antagonisticReviewService, projectPlanningService ?? undefined)
