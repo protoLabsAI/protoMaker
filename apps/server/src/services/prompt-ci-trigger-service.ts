@@ -31,7 +31,7 @@ if (process.platform === 'win32') {
     '/opt/homebrew/bin',
     '/usr/local/bin',
     '/home/linuxbrew/.linuxbrew/bin',
-    `${process.env.HOME}/.local/bin`,
+    `${process.env.HOME}/.local/bin`
   );
 }
 
@@ -133,7 +133,7 @@ export class PromptCITriggerService {
       const triggerCmd = `gh api repos/{owner}/{repo}/dispatches -f event_type='langfuse-prompt-update' -f client_payload='${payloadJson}'`;
 
       logger.info(
-        `Triggering CI for prompt update: ${promptPayload.name} v${promptPayload.version} (${promptPayload.action})`,
+        `Triggering CI for prompt update: ${promptPayload.name} v${promptPayload.version} (${promptPayload.action})`
       );
 
       await execAsync(triggerCmd, {
@@ -166,7 +166,7 @@ export class PromptCITriggerService {
    */
   async triggerCIAfterCommit(
     workDir: string,
-    promptPayload: PromptPayload,
+    promptPayload: PromptPayload
   ): Promise<CITriggerResult> {
     logger.debug('Checking if CI trigger should fire after successful commit');
     return this.triggerCI(workDir, promptPayload);
