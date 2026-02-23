@@ -1081,8 +1081,12 @@ export class AutoModeService {
             // features that become unblocked when dependencies complete.
             logger.debug(`[AutoLoop] Still idle for ${worktreeDesc}, polling again in 30s...`);
           }
-          // Longer sleep when idle to reduce filesystem reads
-          await this.sleep(projectState.hasEmittedIdleEvent ? 30000 : 10000);
+          // Longer sleep when idle to reduce filesystem reads; pass abort signal
+          // so stopAutoLoopForProject() remains responsive even during 30s idle sleep
+          await this.sleep(
+            projectState.hasEmittedIdleEvent ? 30000 : 10000,
+            projectState.abortController.signal
+          );
           continue;
         }
 
@@ -1464,8 +1468,12 @@ export class AutoModeService {
             // features that become unblocked when dependencies complete.
             logger.debug(`[AutoLoop] Still idle, polling again in 30s...`);
           }
-          // Longer sleep when idle to reduce filesystem reads
-          await this.sleep(this.hasEmittedIdleEvent ? 30000 : 10000);
+          // Longer sleep when idle to reduce filesystem reads; pass abort signal
+          // so stopAutoLoop() remains responsive even during 30s idle sleep
+          await this.sleep(
+            this.hasEmittedIdleEvent ? 30000 : 10000,
+            this.autoLoopAbortController?.signal
+          );
           continue;
         }
 
