@@ -8,7 +8,7 @@
  * 4. Running agents & active features from app store
  */
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import type { Node, Edge } from '@xyflow/react';
 import { useAppStore } from '@/store/app-store';
 import { useRunningAgents } from '@/hooks/queries/use-running-agents';
@@ -34,7 +34,13 @@ import type {
   FeatureNodeData,
   AgentNodeData,
   PipelineStageNodeData,
+  ToolExecution,
 } from '../types';
+import { getHttpApiClient } from '@/lib/http-api-client';
+import { createLogger } from '@automaker/utils/logger';
+import type { EventType } from '@automaker/types';
+
+const logger = createLogger('FlowGraphData');
 
 /** Engine status response shape from /api/engine/status */
 interface EngineStatusResponse {
@@ -264,6 +270,127 @@ export function useFlowGraphData(
 
   const engineStatus = engineStatusData as EngineStatusResponse | undefined;
 
+  // Tool execution state for agent nodes
+  const [toolExecutionsByFeature, setToolExecutionsByFeature] = useState<
+    Map<string, { activeTool: { name: string; startedAt: string } | null; executions: ToolExecution[] }>
+  >(new Map());
+
+  // Debouncing: batch updates per featureId (max 1 per 500ms)
+  const pendingUpdates = useRef<Map<string, NodeJS.Timeout>>(new Map());
+  const toolUpdateQueue = useRef<
+    Map<
+      string,
+      {
+        activeTool: { name: string; startedAt: string } | null;
+        executions: ToolExecution[];
+      }
+    >
+  >(new Map());
+
+  const flushToolUpdate = useCallback((featureId: string) => {
+    const queued = toolUpdateQueue.current.get(featureId);
+    if (queued) {
+      setToolExecutionsByFeature((prev) => {
+        const next = new Map(prev);
+        next.set(featureId, queued);
+        return next;
+      });
+      toolUpdateQueue.current.delete(featureId);
+    }
+  }, []);
+
+  const scheduleToolUpdate = useCallback(
+    (
+      featureId: string,
+      update: {
+        activeTool: { name: string; startedAt: string } | null;
+        executions: ToolExecution[];
+      }
+    ) => {
+      // Update the queue
+      toolUpdateQueue.current.set(featureId, update);
+
+      // Clear existing timeout
+      const existingTimeout = pendingUpdates.current.get(featureId);
+      if (existingTimeout) {
+        clearTimeout(existingTimeout);
+      }
+
+      // Schedule flush after 500ms
+      const timeout = setTimeout(() => {
+        flushToolUpdate(featureId);
+        pendingUpdates.current.delete(featureId);
+      }, 500);
+
+      pendingUpdates.current.set(featureId, timeout);
+    },
+    [flushToolUpdate]
+  );
+
+  // WebSocket subscription for tool execution events
+  useEffect(() => {
+    const api = getHttpApiClient();
+
+    const unsubscribe = api.subscribeToEvents((type: EventType, payload: unknown) => {
+      if (type === 'feature:tool-use') {
+        const data = payload as {
+          featureId: string;
+          tool: { name: string; durationMs?: number; success?: boolean };
+        };
+
+        if (!data?.featureId || !data?.tool?.name) {
+          return;
+        }
+
+        const { featureId, tool } = data;
+        const timestamp = Date.now();
+
+        setToolExecutionsByFeature((prev) => {
+          const current = prev.get(featureId) || { activeTool: null, executions: [] };
+          const newExecutions = [...current.executions];
+
+          // Check if this is a completion event (has durationMs)
+          if (tool.durationMs !== undefined) {
+            // Tool completed — add to history if not duplicate
+            const isDuplicate = newExecutions.some(
+              (e) => e.name === tool.name && Math.abs(e.timestamp - timestamp) < 1000
+            );
+
+            if (!isDuplicate) {
+              newExecutions.push({
+                name: tool.name,
+                durationMs: tool.durationMs,
+                success: tool.success,
+                timestamp,
+              });
+            }
+
+            // Clear active tool badge
+            scheduleToolUpdate(featureId, {
+              activeTool: null,
+              executions: newExecutions,
+            });
+          } else {
+            // Tool started — set active tool badge
+            scheduleToolUpdate(featureId, {
+              activeTool: { name: tool.name, startedAt: new Date().toISOString() },
+              executions: newExecutions,
+            });
+          }
+
+          return prev;
+        });
+      }
+    });
+
+    return () => {
+      unsubscribe();
+      // Clear all pending timeouts on unmount
+      pendingUpdates.current.forEach((timeout) => clearTimeout(timeout));
+      pendingUpdates.current.clear();
+    };
+  }, [scheduleToolUpdate]);
+
   // Pipeline progress overlay
   const { selected: selectedPipeline } = usePipelineProgress();
   const currentPhase = selectedPipeline?.currentPhase ?? null;
@@ -460,6 +587,7 @@ export function useFlowGraphData(
     // 5. Dynamic agent nodes (below their feature)
     runningAgents.forEach((agent) => {
       const parentFeatureNode = result.find((n) => n.id === `feature-${agent.featureId}`);
+      const toolData = toolExecutionsByFeature.get(agent.featureId);
       const agentData: AgentNodeData = {
         featureId: agent.featureId,
         title: agent.title || 'Agent',
@@ -471,6 +599,8 @@ export function useFlowGraphData(
         projectName: agent.projectName,
         branchName: agent.branchName,
         costUsd: agent.costUsd,
+        activeTool: toolData?.activeTool || null,
+        toolExecutions: toolData?.executions || [],
       };
       result.push({
         id: `agent-${agent.featureId}`,
@@ -494,6 +624,7 @@ export function useFlowGraphData(
     awaitingGate,
     pipelineState,
     gtmEnabled,
+    toolExecutionsByFeature,
   ]);
 
   // Build edges: static service flow + pipeline + bridge + dynamic

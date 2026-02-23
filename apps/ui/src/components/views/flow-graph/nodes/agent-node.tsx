@@ -32,6 +32,8 @@ function formatDuration(startTime: number): string {
 function AgentNodeComponent({ data }: NodeProps & { data: AgentNodeData }) {
   const badge = getModelBadge(data.model);
   const [duration, setDuration] = useState(formatDuration(data.startTime));
+  const [shouldFadeToolBadge, setShouldFadeToolBadge] = useState(false);
+  const [lastActiveTool, setLastActiveTool] = useState(data.activeTool);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -39,6 +41,29 @@ function AgentNodeComponent({ data }: NodeProps & { data: AgentNodeData }) {
     }, 1000);
     return () => clearInterval(interval);
   }, [data.startTime]);
+
+  // Handle tool badge fade-out after completion
+  useEffect(() => {
+    if (data.activeTool) {
+      setLastActiveTool(data.activeTool);
+      setShouldFadeToolBadge(false);
+    } else if (lastActiveTool) {
+      // Tool just completed — trigger fade out
+      setShouldFadeToolBadge(true);
+      const fadeTimeout = setTimeout(() => {
+        setLastActiveTool(null);
+        setShouldFadeToolBadge(false);
+      }, 2000); // Fade duration
+      return () => clearTimeout(fadeTimeout);
+    }
+  }, [data.activeTool, lastActiveTool]);
+
+  // Check if the last tool execution was a failure
+  const lastExecution = data.toolExecutions?.[data.toolExecutions.length - 1];
+  const isFailure = lastExecution?.success === false;
+
+  // Display tool badge if active or fading out
+  const displayTool = data.activeTool || (shouldFadeToolBadge && lastActiveTool);
 
   return (
     <motion.div
@@ -103,6 +128,29 @@ function AgentNodeComponent({ data }: NodeProps & { data: AgentNodeData }) {
           </div>
           <p className="text-[10px] text-muted-foreground truncate">{data.title}</p>
           <p className="text-[10px] tabular-nums text-muted-foreground mt-0.5">{duration}</p>
+
+          {/* Tool execution badge */}
+          {displayTool && (
+            <motion.div
+              initial={{ opacity: 0, y: -5 }}
+              animate={{
+                opacity: shouldFadeToolBadge ? 0 : 1,
+                y: 0,
+              }}
+              transition={{
+                opacity: { duration: shouldFadeToolBadge ? 2 : 0.3 },
+                y: { duration: 0.3 },
+              }}
+              className={cn(
+                'mt-1.5 text-[9px] px-1.5 py-0.5 rounded truncate',
+                isFailure
+                  ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                  : 'bg-blue-500/15 text-blue-400 border border-blue-500/20'
+              )}
+            >
+              {displayTool.name}
+            </motion.div>
+          )}
         </div>
       </div>
 

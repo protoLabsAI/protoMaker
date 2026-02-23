@@ -80,6 +80,18 @@ export interface FeatureNodeData {
   [key: string]: unknown;
 }
 
+export interface ToolExecution {
+  name: string;
+  durationMs?: number;
+  success?: boolean;
+  timestamp: number;
+}
+
+export interface ActiveTool {
+  name: string;
+  startedAt: string;
+}
+
 export interface AgentNodeData {
   featureId: string;
   title: string;
@@ -92,6 +104,8 @@ export interface AgentNodeData {
   projectName?: string;
   branchName?: string;
   costUsd?: number;
+  activeTool?: ActiveTool | null;
+  toolExecutions?: ToolExecution[];
   [key: string]: unknown;
 }
 
