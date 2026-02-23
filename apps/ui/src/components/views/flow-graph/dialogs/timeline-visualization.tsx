@@ -68,7 +68,11 @@ function formatDuration(ms: number): string {
 
 function formatTimestamp(isoString: string): string {
   const date = new Date(isoString);
-  return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  return date.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
 }
 
 export function TimelineVisualization({
@@ -185,13 +189,12 @@ export function TimelineVisualization({
               {tools.length > 0 && (
                 <div className="ml-4 pl-3 border-l-2 border-border/30 space-y-1">
                   {tools.map((tool, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-center justify-between text-[11px] py-0.5"
-                    >
+                    <div key={idx} className="flex items-center justify-between text-[11px] py-0.5">
                       <div className="flex items-center gap-1.5 min-w-0 flex-1">
                         {tool.icon && <span className="shrink-0">{tool.icon}</span>}
-                        <span className={`truncate ${tool.success === false ? 'text-red-400' : 'text-muted-foreground'}`}>
+                        <span
+                          className={`truncate ${tool.success === false ? 'text-red-400' : 'text-muted-foreground'}`}
+                        >
                           {tool.name}
                         </span>
                         {tool.success === false && (

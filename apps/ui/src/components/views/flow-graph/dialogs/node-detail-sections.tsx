@@ -1048,17 +1048,21 @@ export function AgentSection({ data, onStop, onViewLogs, isStopping }: AgentSect
   const [timelineExpanded, setTimelineExpanded] = useState(false);
 
   // Access pipeline state if available
-  const pipelineState = (data as AgentNodeData & { pipelineState?: PipelineState & {
-    phaseDurations?: Partial<Record<string, number>>;
-    toolExecutions?: Array<{
-      name: string;
-      icon?: string;
-      duration?: number;
-      phase?: string;
-      timestamp?: string;
-      success?: boolean;
-    }>;
-  }}).pipelineState;
+  const pipelineState = (
+    data as AgentNodeData & {
+      pipelineState?: PipelineState & {
+        phaseDurations?: Partial<Record<string, number>>;
+        toolExecutions?: Array<{
+          name: string;
+          icon?: string;
+          duration?: number;
+          phase?: string;
+          timestamp?: string;
+          success?: boolean;
+        }>;
+      };
+    }
+  ).pipelineState;
 
   const hasTimelineData = pipelineState?.phaseHistory && pipelineState.phaseHistory.length > 0;
 
