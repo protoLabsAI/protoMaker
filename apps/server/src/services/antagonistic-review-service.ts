@@ -189,14 +189,20 @@ export class AntagonisticReviewService {
 
       try {
         // Stage 1: Ava reviews for operational feasibility
-        const avaReview = await this.executeAvaReview(prd, projectPath, abortController);
+        const avaReview = await this.executeAvaReview(prd, prdId, projectPath, abortController);
 
         if (!avaReview.success) {
           throw new Error(`Ava review failed: ${avaReview.error}`);
         }
 
         // Stage 2: Jon reviews for market value (with access to Ava's critique)
-        const jonReview = await this.executeJonReview(prd, avaReview, projectPath, abortController);
+        const jonReview = await this.executeJonReview(
+          prd,
+          avaReview,
+          prdId,
+          projectPath,
+          abortController
+        );
 
         if (!jonReview.success) {
           throw new Error(`Jon review failed: ${jonReview.error}`);
@@ -207,6 +213,7 @@ export class AntagonisticReviewService {
           prd,
           avaReview,
           jonReview,
+          prdId,
           projectPath,
           abortController
         );
@@ -293,6 +300,7 @@ export class AntagonisticReviewService {
    */
   private async executeAvaReview(
     prd: SPARCPrd,
+    prdId: string,
     projectPath: string,
     abortController: AbortController
   ): Promise<ReviewResult> {
@@ -309,6 +317,7 @@ export class AntagonisticReviewService {
       const result = await this.executor.execute(avaConfig, {
         prompt,
         abortController,
+        traceContext: { agentRole: 'ava-reviewer', featureId: prdId },
       });
 
       const durationMs = Date.now() - startTime;
@@ -356,6 +365,7 @@ export class AntagonisticReviewService {
   private async executeJonReview(
     prd: SPARCPrd,
     avaReview: ReviewResult,
+    prdId: string,
     projectPath: string,
     abortController: AbortController
   ): Promise<ReviewResult> {
@@ -372,6 +382,7 @@ export class AntagonisticReviewService {
       const result = await this.executor.execute(jonConfig, {
         prompt,
         abortController,
+        traceContext: { agentRole: 'jon-reviewer', featureId: prdId },
       });
 
       const durationMs = Date.now() - startTime;
@@ -420,6 +431,7 @@ export class AntagonisticReviewService {
     prd: SPARCPrd,
     avaReview: ReviewResult,
     jonReview: ReviewResult,
+    prdId: string,
     projectPath: string,
     abortController: AbortController
   ): Promise<{ success: boolean; output: string; error?: string }> {
@@ -434,6 +446,7 @@ export class AntagonisticReviewService {
       const result = await this.executor.execute(resolutionConfig, {
         prompt,
         abortController,
+        traceContext: { agentRole: 'ava-resolution', featureId: prdId },
       });
 
       return {

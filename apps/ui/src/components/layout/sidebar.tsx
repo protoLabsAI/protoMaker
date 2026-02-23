@@ -324,7 +324,7 @@ export function Sidebar() {
                     'https://github.com/proto-labs-ai/automaker/issues'
                   )
                 }
-                onDocs={() => getElectronAPI().openExternalLink('https://protolabs.studio/docs')}
+                onDocs={() => getElectronAPI().openExternalLink('https://docs.protolabs.studio')}
                 onNewProject={() => setShowNewProjectModal(true)}
                 onOpenFolder={handleOpenFolder}
                 onSettings={() => navigate({ to: '/settings' })}

@@ -164,12 +164,17 @@ export const observabilityTools: Tool[] = [
   {
     name: 'langfuse_get_costs',
     description:
-      'Get observations/generations for cost analysis. Filter by model, time range. Returns token usage and costs per generation.',
+      'Get observations/generations for cost analysis. Filter by type, model, time range. Returns token usage and costs per observation.',
     inputSchema: {
       type: 'object',
       properties: {
         page: { type: 'number', description: 'Page number (default: 1)' },
         limit: { type: 'number', description: 'Results per page (default: 50)' },
+        type: {
+          type: 'string',
+          enum: ['GENERATION', 'SPAN', 'EVENT'],
+          description: 'Observation type filter (default: GENERATION)',
+        },
         model: { type: 'string', description: 'Filter by model name' },
         fromStartTime: { type: 'string', description: 'Start date (ISO 8601)' },
         toStartTime: { type: 'string', description: 'End date (ISO 8601)' },
@@ -186,6 +191,7 @@ export const observabilityTools: Tool[] = [
         limit: { type: 'number', description: 'Results per page (default: 50)' },
         name: { type: 'string', description: 'Filter by prompt name' },
         label: { type: 'string', description: 'Filter by label (e.g., "production")' },
+        version: { type: 'number', description: 'Filter by specific version number' },
       },
     },
   },
