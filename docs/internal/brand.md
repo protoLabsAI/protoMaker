@@ -4,18 +4,18 @@ This is the living brand bible for protoLabs. All agents, content, and external 
 
 ## Names & Domains
 
-| Name                           | What It Is                          | Usage                                                                                                        |
-| ------------------------------ | ----------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| **protoLabs**                  | The AI-native development agency    | Always camelCase: "protoLabs" (not "ProtoLabs", "Protolabs", or "Proto Labs")                                |
-| **protoLabs.studio**           | Primary domain                      | Website, social bios, email                                                                                  |
-| ~~**protoMaker**~~             | RETIRED — now just protoLabs        | Was the product name. Consolidated into protoLabs. Do not use in new content.                                |
-| **proto-labs-ai**              | GitHub organization                 | `github.com/proto-labs-ai`                                                                                   |
-| **Automaker**                  | Internal codename / upstream origin | Used in code (`@automaker/*` packages, `.automaker/` directory). NOT used in external marketing.             |
-| **create-protolab**            | npx CLI tool                        | Scaffolds new projects with protoLabs methodology                                                            |
-| **MythXEngine**                | AI-powered TTRPG engine             | Built with protoLabs. Portfolio proof of methodology.                                                        |
-| **SVGVal**                     | SVG validation toolkit              | Built with protoLabs. Portfolio proof of methodology.                                                        |
-| **rabbit-hole**                | AI-powered research platform        | Built with protoLabs. Portfolio proof of methodology.                                                        |
-| **intelligent product engine** | Product category / positioning term | Describes the autonomous system architecture. NOT an acronym — always lowercase, always spelled out in full. |
+| Name                           | What It Is                          | Usage                                                                                                                                                               |
+| ------------------------------ | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **protoLabs**                  | The AI-native development agency    | Always camelCase: "protoLabs" (not "ProtoLabs", "Protolabs", or "Proto Labs")                                                                                       |
+| **protoLabs.studio**           | Primary domain                      | Website, social bios, email                                                                                                                                         |
+| ~~**protoMaker**~~             | RETIRED — now just protoLabs        | Was the product name. Consolidated into protoLabs. Do not use in new content.                                                                                       |
+| **proto-labs-ai**              | GitHub organization                 | `github.com/proto-labs-ai`                                                                                                                                          |
+| **Automaker**                  | Internal codename / upstream origin | Used in code (`@automaker/*` packages, `.automaker/` directory). NOT used in external marketing. We are the maintained successor of the original Automaker project. |
+| **create-protolab**            | npx CLI tool                        | Scaffolds new projects with protoLabs methodology                                                                                                                   |
+| **MythXEngine**                | AI-powered TTRPG engine             | Built with protoLabs. Portfolio proof of methodology.                                                                                                               |
+| **SVGVal**                     | SVG validation toolkit              | Built with protoLabs. Portfolio proof of methodology.                                                                                                               |
+| **rabbit-hole**                | AI-powered research platform        | Built with protoLabs. Portfolio proof of methodology.                                                                                                               |
+| **intelligent product engine** | Product category / positioning term | Describes the autonomous system architecture. NOT an acronym — always lowercase, always spelled out in full.                                                        |
 
 ### Naming Rules
 
@@ -103,11 +103,15 @@ Work -> AI generates content -> Schedule across platforms -> Josh engages with r
 
 ## Revenue Model
 
-**Philosophy: No SaaS, no subscriptions, no obligations.** Build cool things, share how, let people pay once for the knowledge. Indie maker, not startup.
+**Philosophy: Open source first. Build the community, prove the tool, let revenue follow naturally.**
 
-1. **Free tool** — protoLabs is source-available. Builds community trust and distribution.
-2. **$49 lifetime Pro** — Written tutorials, agent templates, prompt library, methodology guide. One-time payment, lifetime access. No recurring obligations on either side.
-3. **Consulting** — setupLab offering. Happens organically when people see the work and want help. Not outbound sales — inbound from community trust.
+protoLabs is the maintained successor to the original Automaker project. The original maintainers moved on — we picked it up, rebuilt it, and ship real products with it. That lineage gives us a built-in community and credibility that no cold-start marketing can match.
+
+1. **Open source tool** — protoLabs is fully open source. Community adoption is the growth engine.
+2. **Portfolio proof** — We use protoLabs to build our own products (MythXEngine, SVGVal, rabbit-hole). The tool proves itself through what it ships.
+3. **Consulting (organic)** — setupLab offering. Happens when people see the work and want help setting up their own autonomous dev pipeline. Inbound from community trust, never outbound sales.
+
+**What we don't do:** No paid tiers, no subscriptions, no paywalls on content or methodology. Everything is open. Trust compounds faster than revenue.
 
 ## Operating Principles
 
@@ -119,16 +123,17 @@ Work -> AI generates content -> Schedule across platforms -> Josh engages with r
 
 ## License
 
-Source-available under the Automaker License (FSL-style). NOT open source by OSI standards. Users can:
+Open source. License choice TBD (MIT or Apache 2.0). The goal is maximum community adoption — no restrictions beyond standard open source terms.
 
-- Use the tool internally
-- Build products USING the tool
-- View and learn from the source code
+## Community Strategy
 
-Users cannot:
+protoLabs is the maintained successor fork of the original Automaker project. The original maintainers have moved on. One of them has ~250K YouTube subscribers and remains in the community Discord.
 
-- Resell, redistribute, or sublicense the tool itself
-- Host it as SaaS for others
-- Extract and resell prompts or instructional content
+**The play:**
 
-License decision pending: evaluating Functional Source License (FSL) which auto-converts to Apache 2.0 after 2 years. See PRO-128 and PRO-159 in Linear.
+1. **Be the real successor** — actively maintain, improve, and ship with the tool
+2. **Build in the existing community** — engage in their Discord, contribute upstream context, be helpful
+3. **Prove it by using it** — every protoLabs project (MythXEngine, SVGVal, rabbit-hole) is built with the tool. No demos, only production use.
+4. **Let the community grow organically** — the work speaks. People who see autonomous agents shipping real PRs will want to try it.
+
+**What we don't do:** No growth hacking, no paid acquisition, no influencer campaigns. Build great software, share how, let people find it.

@@ -29,7 +29,7 @@ features:
   - title: Project Orchestration
     details: From PRD to shipped features. Define milestones, set dependencies, let auto-mode process the backlog.
     link: /protolabs/
-  - title: Source Available
-    details: View the source. Learn the methodology. Build with it. No vendor lock-in.
+  - title: Open Source
+    details: Fully open source. Learn the methodology. Build with it. No vendor lock-in.
     link: https://github.com/proto-labs-ai
 ---

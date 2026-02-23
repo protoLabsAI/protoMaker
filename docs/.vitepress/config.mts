@@ -141,8 +141,7 @@ export default defineConfig({
     },
 
     footer: {
-      message:
-        'Built by <a href="https://protolabs.studio">protoLabs</a> — Source available on GitHub',
+      message: 'Built by <a href="https://protolabs.studio">protoLabs</a> — Open source on GitHub',
       copyright: '© 2024-2026 protoLabs AI',
     },
   },
