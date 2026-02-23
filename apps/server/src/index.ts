@@ -371,8 +371,8 @@ const events: EventEmitter = createEventEmitter();
 // Create services
 // Note: settingsService is created first so it can be injected into other services
 const settingsService = new SettingsService(DATA_DIR);
-const agentService = new AgentService(DATA_DIR, events, settingsService);
 const featureLoader = new FeatureLoader();
+const agentService = new AgentService(DATA_DIR, events, settingsService, undefined, featureLoader);
 const metricsService = new MetricsService(featureLoader);
 
 // Metrics Ledger & Archival

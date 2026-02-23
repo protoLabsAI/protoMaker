@@ -81,6 +81,16 @@ export interface PipelineState {
   traceId?: string;
   /** Per-phase Langfuse span IDs for drill-down */
   phaseSpanIds?: Partial<Record<PipelinePhase, string>>;
+  /** Per-phase duration in milliseconds */
+  phaseDurations?: Partial<Record<PipelinePhase, number>>;
+  /** Tool execution history with timing and status */
+  toolExecutions?: Array<{
+    name: string;
+    durationMs: number;
+    success: boolean;
+    timestamp: string;
+    phase?: PipelinePhase;
+  }>;
 }
 
 /** Per-branch gate configuration for all phases */

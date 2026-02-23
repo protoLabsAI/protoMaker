@@ -6,7 +6,12 @@
 import path from 'path';
 import * as secureFs from '../lib/secure-fs.js';
 import type { EventEmitter } from '../lib/events.js';
-import type { ExecuteOptions, ThinkingLevel, ReasoningEffort } from '@automaker/types';
+import type {
+  ExecuteOptions,
+  ThinkingLevel,
+  ReasoningEffort,
+  PipelinePhase,
+} from '@automaker/types';
 import { stripProviderPrefix } from '@automaker/types';
 import {
   readImageAsBase64,
@@ -20,6 +25,7 @@ import { ProviderFactory } from '../providers/provider-factory.js';
 import { createChatOptions, validateWorkingDirectory } from '../lib/sdk-options.js';
 import type { SettingsService } from './settings-service.js';
 import type { RoleRegistryService } from './role-registry-service.js';
+import type { FeatureLoader } from './feature-loader.js';
 import {
   getAutoLoadClaudeMdSetting,
   filterClaudeMdFromContext,
@@ -63,6 +69,12 @@ interface Session {
   reasoningEffort?: ReasoningEffort; // Reasoning effort for Codex models
   sdkSessionId?: string; // Claude SDK session ID for conversation continuity
   promptQueue: QueuedPrompt[]; // Queue of prompts to auto-run after current task
+  featureContext?: {
+    projectPath: string;
+    featureId: string;
+    phase: PipelinePhase;
+  }; // Optional feature context for tool tracking
+  pendingTools?: Array<{ name: string; startTime: number }>; // Tools awaiting completion
 }
 
 interface SessionMetadata {
@@ -85,19 +97,22 @@ export class AgentService {
   private events: EventEmitter;
   private settingsService: SettingsService | null = null;
   private roleRegistryService: RoleRegistryService | null = null;
+  private featureLoader: FeatureLoader | null = null;
   private logger = createLogger('AgentService');
 
   constructor(
     dataDir: string,
     events: EventEmitter,
     settingsService?: SettingsService,
-    roleRegistryService?: RoleRegistryService
+    roleRegistryService?: RoleRegistryService,
+    featureLoader?: FeatureLoader
   ) {
     this.stateDir = path.join(dataDir, 'agent-sessions');
     this.metadataFile = path.join(dataDir, 'sessions-metadata.json');
     this.events = events;
     this.settingsService = settingsService ?? null;
     this.roleRegistryService = roleRegistryService ?? null;
+    this.featureLoader = featureLoader ?? null;
   }
 
   async initialize(): Promise<void> {
@@ -159,6 +174,7 @@ export class AgentService {
     thinkingLevel,
     reasoningEffort,
     role,
+    featureContext,
   }: {
     sessionId: string;
     message: string;
@@ -168,6 +184,11 @@ export class AgentService {
     thinkingLevel?: ThinkingLevel;
     reasoningEffort?: ReasoningEffort;
     role?: string;
+    featureContext?: {
+      projectPath: string;
+      featureId: string;
+      phase: PipelinePhase;
+    };
   }) {
     const session = this.sessions.get(sessionId);
     if (!session) {
@@ -191,6 +212,12 @@ export class AgentService {
     if (reasoningEffort !== undefined) {
       session.reasoningEffort = reasoningEffort;
     }
+    if (featureContext) {
+      session.featureContext = featureContext;
+    }
+
+    // Initialize tool tracking for this execution
+    session.pendingTools = [];
 
     // Validate vision support before processing images
     const effectiveModel = model || session.model;
@@ -520,6 +547,15 @@ export class AgentService {
                 };
                 toolUses.push(toolUse);
 
+                // Track tool execution start time
+                if (!session.pendingTools) {
+                  session.pendingTools = [];
+                }
+                session.pendingTools.push({
+                  name: toolUse.name,
+                  startTime: Date.now(),
+                });
+
                 this.emitAgentEvent(sessionId, {
                   type: 'tool_use',
                   tool: toolUse,
@@ -534,6 +570,9 @@ export class AgentService {
               responseText = msg.result;
             }
           }
+
+          // Process completed tools and persist to feature state if applicable
+          await this.processCompletedTools(session, true);
 
           this.emitAgentEvent(sessionId, {
             type: 'complete',
@@ -562,6 +601,9 @@ export class AgentService {
             type: errorInfo.type,
             message: errorInfo.message,
           });
+
+          // Process pending tools as failed
+          await this.processCompletedTools(session, false);
 
           // Mark session as no longer running so the UI and queue stay in sync
           session.isRunning = false;
@@ -605,12 +647,16 @@ export class AgentService {
       };
     } catch (error) {
       if (isAbortError(error)) {
+        await this.processCompletedTools(session, false);
         session.isRunning = false;
         session.abortController = null;
         return { success: false, aborted: true };
       }
 
       this.logger.error('Error:', error);
+
+      // Process pending tools as failed
+      await this.processCompletedTools(session, false);
 
       session.isRunning = false;
       session.abortController = null;
@@ -1015,5 +1061,66 @@ export class AgentService {
 
   private generateId(): string {
     return `msg_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+  }
+
+  /**
+   * Process completed tools and persist to feature state if applicable
+   */
+  private async processCompletedTools(session: Session, success: boolean): Promise<void> {
+    if (!session.pendingTools || session.pendingTools.length === 0) {
+      return;
+    }
+
+    const now = Date.now();
+    const timestamp = new Date().toISOString();
+
+    // Process each pending tool
+    for (const tool of session.pendingTools) {
+      const durationMs = now - tool.startTime;
+
+      // Persist to feature state if feature context is available
+      if (session.featureContext && this.featureLoader) {
+        try {
+          const { projectPath, featureId, phase } = session.featureContext;
+          const feature = await this.featureLoader.get(projectPath, featureId);
+
+          if (feature?.pipelineState) {
+            if (!feature.pipelineState.toolExecutions) {
+              feature.pipelineState.toolExecutions = [];
+            }
+
+            feature.pipelineState.toolExecutions.push({
+              name: tool.name,
+              durationMs,
+              success,
+              timestamp,
+              phase,
+            });
+
+            await this.featureLoader.update(projectPath, featureId, {
+              pipelineState: feature.pipelineState,
+            });
+
+            // Emit feature:tool-use event
+            this.events.emit('feature:tool-use', {
+              featureId,
+              projectPath,
+              phase,
+              tool: {
+                name: tool.name,
+                durationMs,
+                success,
+                timestamp,
+              },
+            });
+          }
+        } catch (error) {
+          this.logger.error('Failed to persist tool execution to feature state:', error);
+        }
+      }
+    }
+
+    // Clear pending tools
+    session.pendingTools = [];
   }
 }

@@ -255,6 +255,15 @@ export class PipelineOrchestrator {
       this.phaseDurations.set(currentPhase, existing);
     }
 
+    // Persist phase duration to feature state
+    if (durationMs !== undefined) {
+      if (!pipelineState.phaseDurations) {
+        pipelineState.phaseDurations = {};
+      }
+      pipelineState.phaseDurations[currentPhase] = durationMs;
+      await this.featureLoader.update(projectPath, featureId, { pipelineState });
+    }
+
     this.events.emit('pipeline:phase-completed', {
       featureId,
       projectPath,
