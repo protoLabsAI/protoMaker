@@ -4,7 +4,7 @@ Centralized prompt versioning and management via [Langfuse](https://langfuse.com
 
 ## Three-Layer Resolution
 
-```
+```text
 Request for prompt "autoMode.planningLite"
   │
   ├─ Layer 1: User Override (settings.json promptCustomization)
@@ -27,7 +27,7 @@ Request for prompt "autoMode.planningLite"
 
 ## Architecture
 
-```
+```text
 ┌─────────────────────────────────────────────────┐
 │  getPromptCustomization()                        │
 │  (apps/server/src/lib/settings-helpers.ts)       │
@@ -117,7 +117,7 @@ Langfuse provides a native MCP server at `{LANGFUSE_BASE_URL}/api/public/mcp` wi
 
 Use Langfuse labels for environment management:
 
-```
+```text
 staging  → Test changes before production
 production → Active in all server instances
 ```

@@ -12,7 +12,6 @@
 
 import { createLogger } from '@automaker/utils';
 import type { LangfuseClient } from '@automaker/observability';
-import { PromptCache } from '@automaker/observability';
 
 const logger = createLogger('PromptResolver');
 
@@ -40,18 +39,18 @@ export interface ResolvedCategory<T extends Record<string, string>> {
  * Layer 3: Hardcoded defaults from @automaker/prompts
  */
 export class PromptResolver {
-  private cache: PromptCache;
   private label: string;
+  private cacheTtlMs: number;
+  private maxCacheSize: number;
+  private resolvedCache = new Map<string, { result: ResolvedPrompt; expiresAt: number }>();
 
   constructor(
     private langfuseClient: LangfuseClient,
     options?: { label?: string; cacheTtlMs?: number; maxCacheSize?: number }
   ) {
     this.label = options?.label ?? 'production';
-    this.cache = new PromptCache({
-      defaultTtl: options?.cacheTtlMs ?? 5 * 60 * 1000, // 5 minutes
-      maxSize: options?.maxCacheSize ?? 200,
-    });
+    this.cacheTtlMs = options?.cacheTtlMs ?? 5 * 60 * 1000; // 5 minutes
+    this.maxCacheSize = options?.maxCacheSize ?? 200;
   }
 
   /**
@@ -78,8 +77,16 @@ export class PromptResolver {
       return { prompt: userOverride, source: 'user-override' };
     }
 
-    // Layer 2: Langfuse managed prompt
+    // Layer 2: Langfuse managed prompt (cached)
     if (this.langfuseClient.isAvailable()) {
+      const cacheKey = `${promptName}::${this.label}`;
+
+      // Check cache first
+      const cached = this.resolvedCache.get(cacheKey);
+      if (cached && Date.now() < cached.expiresAt) {
+        return cached.result;
+      }
+
       try {
         const langfusePrompt = await this.langfuseClient.getPrompt(promptName, undefined, {
           label: this.label,
@@ -87,11 +94,15 @@ export class PromptResolver {
 
         if (langfusePrompt) {
           logger.debug(`Resolved prompt from Langfuse: ${promptName} (v${langfusePrompt.version})`);
-          return {
+          const result: ResolvedPrompt = {
             prompt: langfusePrompt.prompt,
             source: 'langfuse',
             version: langfusePrompt.version,
           };
+
+          // Cache the result
+          this.cacheResult(cacheKey, result);
+          return result;
         }
       } catch (error) {
         // Graceful degradation — fall through to default
@@ -148,10 +159,28 @@ export class PromptResolver {
   }
 
   /**
+   * Store a resolved prompt in the cache, evicting oldest if full.
+   */
+  private cacheResult(key: string, result: ResolvedPrompt): void {
+    // Evict oldest entry if at capacity
+    if (this.resolvedCache.size >= this.maxCacheSize && !this.resolvedCache.has(key)) {
+      const oldestKey = this.resolvedCache.keys().next().value;
+      if (oldestKey !== undefined) {
+        this.resolvedCache.delete(oldestKey);
+      }
+    }
+
+    this.resolvedCache.set(key, {
+      result,
+      expiresAt: Date.now() + this.cacheTtlMs,
+    });
+  }
+
+  /**
    * Clear the internal prompt cache. Useful after updating prompts in Langfuse.
    */
   clearCache(): void {
-    this.cache.clear();
+    this.resolvedCache.clear();
     logger.info('Prompt cache cleared');
   }
 
@@ -159,6 +188,6 @@ export class PromptResolver {
    * Get cache statistics for monitoring.
    */
   getCacheStats(): { size: number } {
-    return { size: this.cache.size() };
+    return { size: this.resolvedCache.size };
   }
 }
