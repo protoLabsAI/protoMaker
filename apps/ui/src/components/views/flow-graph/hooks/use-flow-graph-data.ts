@@ -272,7 +272,10 @@ export function useFlowGraphData(
 
   // Tool execution state for agent nodes
   const [toolExecutionsByFeature, setToolExecutionsByFeature] = useState<
-    Map<string, { activeTool: { name: string; startedAt: string } | null; executions: ToolExecution[] }>
+    Map<
+      string,
+      { activeTool: { name: string; startedAt: string } | null; executions: ToolExecution[] }
+    >
   >(new Map());
 
   // Debouncing: batch updates per featureId (max 1 per 500ms)
