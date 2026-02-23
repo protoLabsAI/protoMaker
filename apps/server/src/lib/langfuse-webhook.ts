@@ -120,9 +120,7 @@ export function verifyLangfuseWebhookSignature(
  * @param body - Parsed JSON body
  * @returns Typed payload if valid, null otherwise
  */
-export function parseLangfuseWebhookPayload(
-  body: unknown
-): LangfusePromptWebhookPayload | null {
+export function parseLangfuseWebhookPayload(body: unknown): LangfusePromptWebhookPayload | null {
   if (!body || typeof body !== 'object') {
     return null;
   }
