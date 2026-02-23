@@ -287,6 +287,19 @@ langfuse_list_traces --tags '["feature:abc-123", "role:reflection"]'
 
 This uses the same `TracedProvider` path as agent execution — no separate tracing infrastructure. When Langfuse is not configured, the reflection runs identically without tracing.
 
+## Dual-Track Tracing Architecture
+
+Two independent tracing mechanisms coexist:
+
+| Track           | Mechanism                                     | Covers                           | Trace Source      |
+| --------------- | --------------------------------------------- | -------------------------------- | ----------------- |
+| **SDK Wrapper** | `TracedProvider` + `@automaker/observability` | Agent runs (Claude Agent SDK)    | Manual SDK        |
+| **OTEL**        | `@langfuse/otel` + `@opentelemetry/sdk-node`  | Chat UI (`/api/chat` via AI SDK) | Auto-instrumented |
+
+This is intentional: agent execution uses the Claude Agent SDK (traced via `TracedProvider`), while the chat UI uses Vercel AI SDK (auto-traced via OpenTelemetry spans). The two tracks produce separate Langfuse traces with different structures but both land in the same Langfuse project.
+
+**No double-counting risk** — agents and chat use different provider paths that don't overlap.
+
 ## Related Documentation
 
 - [Observability Package](./observability-package.md) — `@automaker/observability` library reference (client, middleware, prompt versioning)

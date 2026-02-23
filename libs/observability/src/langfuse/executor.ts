@@ -41,7 +41,7 @@ const logger = createLogger('LangfuseExecutor');
  * Variables are in the format {{VARIABLE_NAME}}
  */
 function injectVariables(template: string, variables: Record<string, string>): string {
-  return template.replace(/\{\{([A-Z_]+)\}\}/g, (match, varName) => {
+  return template.replace(/\{\{([A-Za-z_][A-Za-z0-9_]*)\}\}/g, (match, varName) => {
     const value = variables[varName];
     if (value === undefined) {
       logger.warn(`Variable ${varName} not found in context, keeping placeholder`);

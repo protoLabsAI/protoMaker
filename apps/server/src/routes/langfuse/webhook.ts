@@ -9,9 +9,10 @@
  */
 
 import type { RequestHandler, Request, Response } from 'express';
-import { createHmac } from 'node:crypto';
 import { createLogger } from '@automaker/utils';
+import { verifyLangfuseWebhookSignature } from '../../lib/langfuse-webhook.js';
 import type { PromptGitHubSyncService } from '../../services/prompt-github-sync-service.js';
+import { promptCITriggerService } from '../../services/prompt-ci-trigger-service.js';
 
 const logger = createLogger('langfuse:webhook');
 
@@ -31,21 +32,6 @@ interface LangfuseWebhookPayload {
     createdAt: string;
     updatedAt?: string;
   };
-}
-
-/**
- * Verify webhook signature from Langfuse
- */
-function verifyWebhookSignature(
-  body: string,
-  signature: string | undefined,
-  secret: string
-): boolean {
-  if (!signature) return false;
-  const hmac = createHmac('sha256', secret);
-  hmac.update(body);
-  const expected = hmac.digest('hex');
-  return signature === expected;
 }
 
 /**
@@ -118,6 +104,19 @@ async function processPromptVersionEvent(
       category,
       key,
     });
+
+    // Trigger CI workflow if enabled
+    const ciResult = await promptCITriggerService.triggerCIAfterCommit(process.cwd(), {
+      name: data.name,
+      version: data.version,
+      labels: data.labels,
+      action: event.replace('prompt-version.', ''),
+    });
+    if (ciResult.success && !ciResult.skipped) {
+      logger.info('CI trigger fired for prompt update', { name: data.name });
+    } else if (!ciResult.success) {
+      logger.warn('CI trigger failed', { name: data.name, error: ciResult.error });
+    }
   } else {
     logger.error('Failed to sync prompt to GitHub', {
       promptId: data.id,
@@ -136,7 +135,7 @@ async function processPromptVersionEvent(
 export function createWebhookHandler(syncService: PromptGitHubSyncService | null): RequestHandler {
   return async (req: Request, res: Response) => {
     const webhookSecret = process.env.LANGFUSE_WEBHOOK_SECRET;
-    const targetLabel = process.env.LANGFUSE_WEBHOOK_LABEL || 'production';
+    const targetLabel = process.env.LANGFUSE_SYNC_LABEL || 'production';
 
     // Verify signature if secret is configured
     if (webhookSecret) {
@@ -145,8 +144,9 @@ export function createWebhookHandler(syncService: PromptGitHubSyncService | null
         ? (req as any).rawBody.toString('utf-8')
         : JSON.stringify(req.body);
 
-      if (!verifyWebhookSignature(rawBody, signature, webhookSecret)) {
-        logger.warn('Invalid webhook signature');
+      const verification = verifyLangfuseWebhookSignature(rawBody, signature, webhookSecret);
+      if (!verification.isValid) {
+        logger.warn('Invalid webhook signature', { error: verification.error });
         res.status(401).json({ error: 'Invalid signature' });
         return;
       }
