@@ -340,22 +340,64 @@ export function useFlowGraphData(
     }
 
     // 2. Integration nodes
+    // Server returns different field names per integration:
+    //   discord: { connected, botOnline }
+    //   linear:  { connected, oauthValid }
+    //   github:  { authenticated }
     const integrations = integrationStatus as
-      | Record<string, { connected?: boolean; status?: string }>
+      | {
+          discord?: { connected?: boolean; botOnline?: boolean };
+          linear?: { connected?: boolean; oauthValid?: boolean };
+          github?: { authenticated?: boolean };
+        }
       | undefined;
-    const integrationDefs = [
-      { id: NODE_IDS.github, label: 'GitHub', type: 'github' as const, key: 'github' },
-      { id: NODE_IDS.linear, label: 'Linear', type: 'linear' as const, key: 'linear' },
-      { id: NODE_IDS.discord, label: 'Discord', type: 'discord' as const, key: 'discord' },
+
+    const integrationDefs: Array<{
+      id: string;
+      label: string;
+      type: 'github' | 'linear' | 'discord';
+      isConnected: () => boolean;
+      getStatus: () => string;
+    }> = [
+      {
+        id: NODE_IDS.github,
+        label: 'GitHub',
+        type: 'github',
+        isConnected: () => integrations?.github?.authenticated ?? false,
+        getStatus: () => (integrations?.github?.authenticated ? 'authenticated' : 'offline'),
+      },
+      {
+        id: NODE_IDS.linear,
+        label: 'Linear',
+        type: 'linear',
+        isConnected: () => integrations?.linear?.connected ?? false,
+        getStatus: () =>
+          integrations?.linear?.connected
+            ? integrations?.linear?.oauthValid
+              ? 'oauth'
+              : 'connected'
+            : 'offline',
+      },
+      {
+        id: NODE_IDS.discord,
+        label: 'Discord',
+        type: 'discord',
+        isConnected: () => integrations?.discord?.connected ?? false,
+        getStatus: () =>
+          integrations?.discord?.connected
+            ? integrations?.discord?.botOnline
+              ? 'bot online'
+              : 'connected'
+            : 'offline',
+      },
     ];
 
     for (const intDef of integrationDefs) {
-      const intStatus = integrations?.[intDef.key];
       const intData: IntegrationNodeData = {
         label: intDef.label,
         integrationType: intDef.type,
-        connected: intStatus?.connected ?? false,
-        status: intStatus?.status ?? 'unknown',
+        connected: intDef.isConnected(),
+        status: intDef.getStatus(),
       };
       result.push({
         id: intDef.id,
