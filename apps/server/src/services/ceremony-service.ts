@@ -108,6 +108,17 @@ export class CeremonyService {
   private linearProjectUpdateService: LinearProjectUpdateService | null = null;
   private unsubscribe: (() => void) | null = null;
 
+  /** Observability counters for engine status */
+  private ceremonyCounts = {
+    epicKickoff: 0,
+    standup: 0,
+    milestoneRetro: 0,
+    epicDelivery: 0,
+    contentBrief: 0,
+    projectRetro: 0,
+  };
+  private lastCeremonyAt: string | null = null;
+
   /**
    * Initialize the service with dependencies
    */
@@ -184,6 +195,18 @@ export class CeremonyService {
   }
 
   /**
+   * Get observability status for engine status API
+   */
+  getStatus(): {
+    counts: Record<string, number>;
+    total: number;
+    lastCeremonyAt: string | null;
+  } {
+    const total = Object.values(this.ceremonyCounts).reduce((a, b) => a + b, 0);
+    return { counts: { ...this.ceremonyCounts }, total, lastCeremonyAt: this.lastCeremonyAt };
+  }
+
+  /**
    * Handle epic creation event — post kickoff announcement with scope and complexity
    */
   private async handleEpicCreated(payload: EpicCreatedEventPayload): Promise<void> {
@@ -224,6 +247,8 @@ export class CeremonyService {
         );
       }
 
+      this.ceremonyCounts.epicKickoff++;
+      this.lastCeremonyAt = new Date().toISOString();
       logger.info(`Posted epic kickoff for ${project.title} - Epic: ${milestone.title}`);
     } catch (error) {
       logger.error('Failed to generate epic kickoff:', error);
@@ -275,6 +300,8 @@ export class CeremonyService {
         }
       }
 
+      this.ceremonyCounts.standup++;
+      this.lastCeremonyAt = new Date().toISOString();
       logger.info(
         `Posted milestone standup for ${projectTitle} - Milestone ${milestoneNumber}: ${milestoneTitle}`
       );
@@ -352,6 +379,8 @@ export class CeremonyService {
         );
       }
 
+      this.ceremonyCounts.milestoneRetro++;
+      this.lastCeremonyAt = new Date().toISOString();
       logger.info(
         `Posted milestone ceremony for ${projectTitle} - Milestone ${milestoneNumber}: ${milestoneTitle}`
       );
@@ -440,6 +469,8 @@ Keep it concise, actionable, and focused on what makes this milestone interestin
         );
       }
 
+      this.ceremonyCounts.contentBrief++;
+      this.lastCeremonyAt = new Date().toISOString();
       logger.info(`Posted content brief to GTM channel for milestone: ${milestoneTitle}`);
     } catch (error) {
       logger.error('Failed to generate milestone content brief:', error);
@@ -484,6 +515,8 @@ Keep it concise, actionable, and focused on what makes this milestone interestin
         );
       }
 
+      this.ceremonyCounts.epicDelivery++;
+      this.lastCeremonyAt = new Date().toISOString();
       logger.info(`Posted epic delivery announcement for "${featureTitle}"`);
     } catch (error) {
       logger.error('Failed to generate epic delivery announcement:', error);
@@ -607,6 +640,8 @@ ${dataSummary}`;
         );
       }
 
+      this.ceremonyCounts.projectRetro++;
+      this.lastCeremonyAt = new Date().toISOString();
       logger.info(`Posted project retrospective with impact report for ${projectTitle}`);
 
       // Extract and create improvement items (closes the REFLECT → REPEAT loop)

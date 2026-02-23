@@ -47,6 +47,9 @@ export class CompletionDetectorService {
   private emittedMilestones = new Set<string>();
   private emittedProjects = new Set<string>();
 
+  /** Observability counters for engine status API */
+  private completionCounts = { epics: 0, milestones: 0, projects: 0 };
+
   initialize(
     emitter: EventEmitter,
     featureLoader: FeatureLoader,
@@ -93,6 +96,21 @@ export class CompletionDetectorService {
   }
 
   /**
+   * Get observability status for engine status API
+   */
+  getStatus(): {
+    completionCounts: { epics: number; milestones: number; projects: number };
+    emittedMilestones: number;
+    emittedProjects: number;
+  } {
+    return {
+      completionCounts: { ...this.completionCounts },
+      emittedMilestones: this.emittedMilestones.size,
+      emittedProjects: this.emittedProjects.size,
+    };
+  }
+
+  /**
    * Core handler: a feature moved to "done". Check cascading completions.
    */
   private async onFeatureDone(projectPath: string, featureId: string): Promise<void> {
@@ -133,6 +151,7 @@ export class CompletionDetectorService {
     const epic = allFeatures.find((f) => f.id === epicId);
     if (!epic || epic.status === 'done') return;
 
+    this.completionCounts.epics++;
     logger.info(`All children of epic "${epic.title}" are done — marking epic done`);
     await this.featureLoader!.update(projectPath, epicId, { status: 'done' });
 
@@ -173,6 +192,7 @@ export class CompletionDetectorService {
     if (!allPhasesDone) return;
 
     // Mark milestone completed
+    this.completionCounts.milestones++;
     this.emittedMilestones.add(dedupeKey);
     milestone.status = 'completed';
     await this.projectService!.updateProject(projectPath, projectSlug, {
@@ -218,6 +238,7 @@ export class CompletionDetectorService {
     const allCompleted = project.milestones.every((m) => m.status === 'completed');
     if (!allCompleted) return;
 
+    this.completionCounts.projects++;
     this.emittedProjects.add(dedupeKey);
     await this.projectService!.updateProject(projectPath, projectSlug, {
       status: 'completed',

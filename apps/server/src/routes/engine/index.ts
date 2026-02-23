@@ -24,6 +24,9 @@ import type { PipelineCheckpointService } from '../../services/pipeline-checkpoi
 import type { EventEmitter } from '../../lib/events.js';
 import type { GTMAuthorityAgent } from '../../services/authority-agents/gtm-agent.js';
 import type { PipelineOrchestrator } from '../../services/pipeline-orchestrator.js';
+import type { CeremonyService } from '../../services/ceremony-service.js';
+import type { ReflectionService } from '../../services/reflection-service.js';
+import type { CompletionDetectorService } from '../../services/completion-detector-service.js';
 import { getNotesWorkspacePath, ensureNotesDir, secureFs } from '@automaker/platform';
 import type { NotesWorkspace, PipelinePhase } from '@automaker/types';
 import { PIPELINE_PHASES } from '@automaker/types';
@@ -43,7 +46,10 @@ export function createEngineRoutes(
   pipelineCheckpointService?: PipelineCheckpointService,
   events?: EventEmitter,
   gtmAgent?: GTMAuthorityAgent,
-  pipelineOrchestrator?: PipelineOrchestrator
+  pipelineOrchestrator?: PipelineOrchestrator,
+  ceremonyService?: CeremonyService,
+  reflectionService?: ReflectionService,
+  completionDetectorService?: CompletionDetectorService
 ): Router {
   const router = Router();
 
@@ -162,6 +168,24 @@ export function createEngineRoutes(
               totalActive: 0,
               pendingDrafts: gtmAgent ? gtmAgent.getPendingDraftCount() : 0,
             },
+        reflection: {
+          ceremonies: ceremonyService?.getStatus() ?? {
+            counts: {},
+            total: 0,
+            lastCeremonyAt: null,
+          },
+          reflections: reflectionService?.getStatus() ?? {
+            active: false,
+            activeProject: null,
+            reflectionCount: 0,
+            lastReflection: null,
+          },
+          completions: completionDetectorService?.getStatus() ?? {
+            completionCounts: { epics: 0, milestones: 0, projects: 0 },
+            emittedMilestones: 0,
+            emittedProjects: 0,
+          },
+        },
         timestamp: new Date().toISOString(),
       });
     } catch (error) {

@@ -31,12 +31,38 @@ interface ProjectCompletedPayload {
 export class ReflectionService {
   private processedProjects = new Set<string>();
 
+  /** Observability state for engine status API */
+  private lastReflection: {
+    projectTitle: string;
+    projectSlug: string;
+    completedAt: string;
+  } | null = null;
+  private reflectionCount = 0;
+  private activeReflection: string | null = null;
+
   constructor(
     private events: EventEmitter,
     private featureLoader: FeatureLoader
   ) {
     this.registerListener();
     logger.info('Reflection service initialized');
+  }
+
+  /**
+   * Get observability status for engine status API
+   */
+  getStatus(): {
+    active: boolean;
+    activeProject: string | null;
+    reflectionCount: number;
+    lastReflection: { projectTitle: string; projectSlug: string; completedAt: string } | null;
+  } {
+    return {
+      active: this.activeReflection !== null,
+      activeProject: this.activeReflection,
+      reflectionCount: this.reflectionCount,
+      lastReflection: this.lastReflection,
+    };
   }
 
   private registerListener(): void {
@@ -56,6 +82,7 @@ export class ReflectionService {
     this.processedProjects.add(key);
 
     logger.info(`Generating reflection for completed project: ${projectTitle}`);
+    this.activeReflection = projectTitle;
 
     try {
       const features = await this.featureLoader.getAll(projectPath);
@@ -100,6 +127,14 @@ ${summary}`,
 
       logger.info(`Reflection stored at ${reflectionPath}`);
 
+      this.activeReflection = null;
+      this.reflectionCount++;
+      this.lastReflection = {
+        projectTitle,
+        projectSlug,
+        completedAt: new Date().toISOString(),
+      };
+
       // Emit event
       this.events.emit('project:reflection:complete', {
         projectPath,
@@ -108,6 +143,7 @@ ${summary}`,
         reflectionPath,
       });
     } catch (error) {
+      this.activeReflection = null;
       logger.error(`Failed to generate reflection for ${projectTitle}:`, error);
     }
   }

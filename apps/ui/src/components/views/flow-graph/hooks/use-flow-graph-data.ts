@@ -77,6 +77,27 @@ interface EngineStatusResponse {
     pendingDrafts: number;
     completedToday: number;
   };
+  reflection?: {
+    ceremonies: {
+      total: number;
+      lastCeremonyAt: string | null;
+      counts: Record<string, number>;
+    };
+    reflections: {
+      active: boolean;
+      activeProject: string | null;
+      reflectionCount: number;
+      lastReflection: {
+        projectTitle: string;
+        completedAt: string;
+      } | null;
+    };
+    completions: {
+      completionCounts: { epics: number; milestones: number; projects: number };
+      emittedMilestones: number;
+      emittedProjects: number;
+    };
+  };
 }
 
 function getServiceStatus(
@@ -193,12 +214,23 @@ function getServiceStatus(
               : 'Research \u2192 Draft \u2192 Review \u2192 Publish',
       };
     }
-    case 'reflection':
+    case 'reflection': {
+      const r = engineStatus.reflection;
+      const totalCeremonies = r?.ceremonies?.total ?? 0;
+      const reflectionActive = r?.reflections?.active ?? false;
+      const completions = r?.completions?.completionCounts;
+      const totalCompletions =
+        (completions?.epics ?? 0) + (completions?.milestones ?? 0) + (completions?.projects ?? 0);
       return {
-        status: 'idle',
-        throughput: 0,
-        statusLine: 'Retro \u2192 Reflection \u2192 Knowledge synthesis',
+        status: reflectionActive ? 'active' : totalCeremonies > 0 ? 'active' : 'idle',
+        throughput: totalCeremonies + (r?.reflections?.reflectionCount ?? 0),
+        statusLine: reflectionActive
+          ? `Reflecting on ${r?.reflections?.activeProject}`
+          : totalCeremonies > 0
+            ? `${totalCeremonies} ceremonies, ${totalCompletions} completions`
+            : 'Retro \u2192 Reflection \u2192 Knowledge synthesis',
       };
+    }
     default:
       return { status: 'idle', throughput: 0 };
   }

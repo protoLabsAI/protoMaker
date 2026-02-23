@@ -693,7 +693,6 @@ const completionDetectorService = new CompletionDetectorService();
 completionDetectorService.initialize(events, featureLoader, projectService, settingsService);
 
 // Initialize Reflection Service — generates retrospective when projects complete
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const reflectionService = new ReflectionService(events, featureLoader);
 
 // Initialize Lead Engineer Service — production-phase nerve center
@@ -1368,7 +1367,10 @@ app.use(
     pipelineCheckpointService,
     events,
     gtmAgent,
-    pipelineOrchestrator
+    pipelineOrchestrator,
+    ceremonyService,
+    reflectionService,
+    completionDetectorService
   )
 );
 app.use('/api/langfuse', createLangfuseRoutes());
