@@ -314,6 +314,12 @@ mcp__automaker__create_feature({
 - `LANGFUSE_PUBLIC_KEY` - Langfuse public key (optional, enables observability)
 - `LANGFUSE_SECRET_KEY` - Langfuse secret key (optional, enables observability)
 - `LANGFUSE_BASE_URL` - Langfuse API URL (default: https://cloud.langfuse.com)
+- `LANGFUSE_WEBHOOK_SECRET` - Webhook secret for verifying Langfuse webhook payloads
+- `GITHUB_TOKEN` - GitHub personal access token for repository operations
+- `GITHUB_REPO_OWNER` - GitHub repository owner/organization name
+- `GITHUB_REPO_NAME` - GitHub repository name
+- `LANGFUSE_SYNC_LABEL` - Prompt label to filter webhook events (default: production)
+- `LANGFUSE_SYNC_CI_TRIGGER` - Enable repository_dispatch after prompt sync (true/1 to enable)
 
 ## MCP Server & Claude Code Plugin
 
