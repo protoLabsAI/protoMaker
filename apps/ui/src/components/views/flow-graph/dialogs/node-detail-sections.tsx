@@ -654,13 +654,30 @@ function LaunchDetailPanel() {
   );
 }
 
+interface ContentFlow {
+  runId: string;
+  status: string;
+  progress: number;
+  currentNode?: string;
+  topic?: string;
+  reviewScores?: {
+    research?: { percentage: number; passed: boolean };
+    outline?: { percentage: number; passed: boolean };
+    content?: { percentage: number; passed: boolean };
+  };
+  traceId?: string;
+  createdAt: number;
+  completedAt?: number;
+}
+
 function ContentPipelineDetailPanel() {
   const { data: engineStatus } = useProjectEngineStatus() as {
     data?: {
       contentPipeline?: {
-        activeFlows?: number;
+        activeFlows?: ContentFlow[];
+        recentFlows?: ContentFlow[];
+        totalActive?: number;
         pendingDrafts?: number;
-        completedToday?: number;
       };
     };
   };
@@ -675,6 +692,8 @@ function ContentPipelineDetailPanel() {
   });
 
   const cp = engineStatus?.contentPipeline;
+  const activeFlows = cp?.activeFlows ?? [];
+  const recentFlows = cp?.recentFlows ?? [];
   const drafts =
     (
       draftsData as {
@@ -687,8 +706,30 @@ function ContentPipelineDetailPanel() {
       <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
         Content Pipeline
       </p>
-      <SectionRow label="Active Flows">{cp?.activeFlows ?? 0}</SectionRow>
+      <SectionRow label="Active Flows">{cp?.totalActive ?? 0}</SectionRow>
       <SectionRow label="Pending Review">{cp?.pendingDrafts ?? 0}</SectionRow>
+
+      {/* Active content flows */}
+      {activeFlows.length > 0 && (
+        <div className="space-y-1.5">
+          <p className="text-[10px] text-muted-foreground font-medium">Active:</p>
+          {activeFlows.map((flow) => (
+            <ContentFlowCard key={flow.runId} flow={flow} />
+          ))}
+        </div>
+      )}
+
+      {/* Recently completed flows */}
+      {recentFlows.length > 0 && (
+        <div className="space-y-1.5">
+          <p className="text-[10px] text-muted-foreground font-medium">Recent:</p>
+          {recentFlows.slice(0, 5).map((flow) => (
+            <ContentFlowCard key={flow.runId} flow={flow} />
+          ))}
+        </div>
+      )}
+
+      {/* GTM drafts */}
       {drafts.length > 0 && (
         <div className="space-y-1.5">
           <p className="text-[10px] text-muted-foreground font-medium">Drafts:</p>
@@ -705,9 +746,70 @@ function ContentPipelineDetailPanel() {
           ))}
         </div>
       )}
-      {drafts.length === 0 && (cp?.activeFlows ?? 0) === 0 && (
+      {drafts.length === 0 && activeFlows.length === 0 && recentFlows.length === 0 && (
         <p className="text-xs text-muted-foreground">No active content flows</p>
       )}
+    </div>
+  );
+}
+
+function ContentFlowCard({ flow }: { flow: ContentFlow }) {
+  const statusColor =
+    flow.status === 'completed'
+      ? 'text-emerald-400'
+      : flow.status === 'failed'
+        ? 'text-red-400'
+        : 'text-blue-400';
+
+  return (
+    <div className="text-xs p-2 rounded-lg bg-muted/30 space-y-1">
+      <p className="font-medium truncate" title={flow.topic}>
+        {flow.topic || flow.runId}
+      </p>
+      <div className="flex items-center gap-2 text-muted-foreground">
+        <Badge variant="outline" className={`text-[10px] ${statusColor}`}>
+          {flow.currentNode || flow.status}
+        </Badge>
+        <span className="text-[10px] tabular-nums">{flow.progress}%</span>
+        <span className="text-[10px]">{formatTimeAgo(new Date(flow.createdAt).toISOString())}</span>
+      </div>
+      {/* Progress bar */}
+      {flow.status !== 'completed' && flow.status !== 'failed' && (
+        <div className="w-full h-1 bg-muted rounded-full overflow-hidden">
+          <div
+            className="h-full bg-violet-500 rounded-full transition-all duration-500"
+            style={{ width: `${flow.progress}%` }}
+          />
+        </div>
+      )}
+      {/* Review scores */}
+      {flow.reviewScores && (
+        <div className="flex items-center gap-2 text-[10px]">
+          {flow.reviewScores.research && (
+            <span
+              className={flow.reviewScores.research.passed ? 'text-emerald-400' : 'text-amber-400'}
+            >
+              R: {flow.reviewScores.research.percentage}%
+            </span>
+          )}
+          {flow.reviewScores.outline && (
+            <span
+              className={flow.reviewScores.outline.passed ? 'text-emerald-400' : 'text-amber-400'}
+            >
+              O: {flow.reviewScores.outline.percentage}%
+            </span>
+          )}
+          {flow.reviewScores.content && (
+            <span
+              className={flow.reviewScores.content.passed ? 'text-emerald-400' : 'text-amber-400'}
+            >
+              C: {flow.reviewScores.content.percentage}%
+            </span>
+          )}
+        </div>
+      )}
+      {/* Langfuse trace link */}
+      {flow.traceId && <TraceLink traceId={flow.traceId} />}
     </div>
   );
 }

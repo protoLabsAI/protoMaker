@@ -22,7 +22,7 @@ function PipelineEdgeComponent({
   sourcePosition,
   targetPosition,
   data,
-}: EdgeProps<PipelineEdgeData>) {
+}: EdgeProps) {
   const uid = useId();
   const gradientId = `pipeline-gradient-${uid}`;
   const pathId = `pipeline-path-${id}`;
@@ -38,7 +38,8 @@ function PipelineEdgeComponent({
   });
 
   // Edge is active when source is completed AND target is active
-  const isActive = data?.sourceCompleted && data?.targetActive;
+  const edgeData = data as PipelineEdgeData | undefined;
+  const isActive = edgeData?.sourceCompleted && edgeData?.targetActive;
 
   return (
     <g>

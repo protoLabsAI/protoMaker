@@ -563,7 +563,7 @@ const grayTheme: TerminalTheme = {
 };
 
 // Theme mapping
-const terminalThemes: Record<ThemeMode, TerminalTheme> = {
+const terminalThemes: Record<string, TerminalTheme> = {
   // Special
   system: darkTheme, // Will be resolved at runtime
   // Dark themes

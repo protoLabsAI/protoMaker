@@ -964,7 +964,7 @@ export function DashboardView() {
                   {showProjectActivity && (
                     <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-300">
                       {/* Project Health Card */}
-                      <ProjectHealthCard projectPath={currentProject.path} />
+                      <ProjectHealthCard />
 
                       {/* Event Feed */}
                       <EventFeed projectPath={currentProject.path} />

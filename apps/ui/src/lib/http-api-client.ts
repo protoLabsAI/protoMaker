@@ -92,6 +92,101 @@ export interface CycleTimeDistributionResponse {
   buckets: Array<{ label: string; minMs: number; maxMs: number; count: number }>;
 }
 
+/**
+ * Response from POST /api/system/health-dashboard
+ * Mirrors the JSON shape returned by apps/server/src/routes/dashboard.ts
+ */
+export interface SystemHealthResponse {
+  success: boolean;
+  memory: {
+    rss: number;
+    heapUsed: number;
+    heapTotal: number;
+    external: number;
+    systemUsed: number;
+    systemTotal: number;
+    usedPercent: number;
+  };
+  cpu: {
+    loadAvg1m: number;
+    cores: number;
+    loadPercent: number;
+  };
+  heap: {
+    used: number;
+    total: number;
+    percentage: number;
+  };
+  agents: {
+    count: number;
+    active: string[];
+  };
+  autoMode: {
+    isRunning: boolean;
+    runningCount: number;
+    runningFeatures: string[];
+  };
+  leadEngineer: {
+    running: boolean;
+    sessionCount: number;
+    sessions: Array<{
+      projectPath: string;
+      projectSlug: string;
+      flowState: string;
+      startedAt: string;
+    }>;
+  };
+  uptime: number;
+  timestamp: string;
+  /** Optional crew loop status (populated when crew loop is running) */
+  crew?: {
+    members: Record<
+      string,
+      {
+        id: string;
+        displayName?: string;
+        running?: boolean;
+        enabled?: boolean;
+        lastCheck?: string;
+      }
+    >;
+  };
+}
+
+/**
+ * Response from POST /api/integrations/status
+ * Mirrors the JSON shape returned by apps/server/src/routes/integrations/index.ts
+ */
+export interface IntegrationStatusResponse {
+  success: boolean;
+  discord: {
+    connected: boolean;
+    botOnline: boolean;
+  };
+  linear: {
+    connected: boolean;
+    oauthValid: boolean;
+  };
+  github: {
+    authenticated: boolean;
+  };
+}
+
+/**
+ * Response from POST /api/metrics/capacity
+ * Mirrors the CapacityMetrics interface in apps/server/src/services/metrics-service.ts
+ */
+export interface CapacityMetricsResponse {
+  currentConcurrency: number;
+  maxConcurrency: number;
+  backlogSize: number;
+  blockedCount: number;
+  reviewCount: number;
+  avgCompletionTimeMs: number;
+  estimatedBacklogTimeMs: number;
+  utilizationPercent: number;
+}
+
 // Cached server URL (set during initialization in Electron mode)
 let cachedServerUrl: string | null = null;
 
@@ -206,7 +301,7 @@ const getServerUrl = (): string => {
 
     // In web mode (not Electron), use relative URL to leverage Vite proxy
     // This avoids CORS issues since requests appear same-origin
-    if (!window.electron) {
+    if (!(window as any).electron) {
       return '';
     }
   }
@@ -609,7 +704,9 @@ type EventType =
   | 'dev-server:stopped'
   | 'notification:created'
   | 'hitl:form-requested'
-  | 'hitl:form-responded';
+  | 'hitl:form-responded'
+  | 'actionable-item:created'
+  | 'actionable-item:status-changed';
 
 /**
  * Dev server log event payloads for WebSocket streaming
@@ -2161,6 +2258,12 @@ export class HttpApiClient implements ElectronAPI {
         projectPath: string;
         projectName: string;
         isAutoMode: boolean;
+        startTime: number;
+        model?: string;
+        provider?: string;
+        title?: string;
+        description?: string;
+        branchName?: string;
       }>;
       totalCount?: number;
       error?: string;
@@ -3078,7 +3181,7 @@ export class HttpApiClient implements ElectronAPI {
   metrics = {
     summary: (projectPath: string) => this.post('/api/metrics/summary', { projectPath }),
     capacity: (projectPath: string, maxConcurrency?: number) =>
-      this.post('/api/metrics/capacity', { projectPath, maxConcurrency }),
+      this.post<CapacityMetricsResponse>('/api/metrics/capacity', { projectPath, maxConcurrency }),
     forecast: (projectPath: string, complexity?: string) =>
       this.post('/api/metrics/forecast', { projectPath, complexity }),
     // Ledger API (persistent time-series analytics)
@@ -3109,13 +3212,14 @@ export class HttpApiClient implements ElectronAPI {
 
   // Integrations API
   integrations = {
-    status: (projectPath: string) => this.post('/api/integrations/status', { projectPath }),
+    status: (projectPath: string) =>
+      this.post<IntegrationStatusResponse>('/api/integrations/status', { projectPath }),
   };
 
   // System API
   system = {
     healthDashboard: (projectPath?: string) =>
-      this.post('/api/system/health-dashboard', { projectPath }),
+      this.post<SystemHealthResponse>('/api/system/health-dashboard', { projectPath }),
   };
 
   // Project Lifecycle API

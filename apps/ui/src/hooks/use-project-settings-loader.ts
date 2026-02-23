@@ -102,7 +102,7 @@ export function useProjectSettingsLoader() {
     // These are stored directly on the project, so we need to update both
     // currentProject AND the projects array to keep them in sync
     // Type assertion needed because API returns Record<string, unknown>
-    const settingsWithExtras = settings as Record<string, unknown>;
+    const settingsWithExtras = settings as unknown as Record<string, unknown>;
     const activeClaudeApiProfileId = settingsWithExtras.activeClaudeApiProfileId as
       | string
       | null

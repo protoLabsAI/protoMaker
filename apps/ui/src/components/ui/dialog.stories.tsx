@@ -16,9 +16,9 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from './dialog';
-import { Button } from './button';
-import { Badge } from './badge';
+  Button,
+  Badge,
+} from '@protolabs/ui/atoms';
 import { useState } from 'react';
 
 const meta = {

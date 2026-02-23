@@ -193,7 +193,7 @@ export function ProtoLabsReportDialog({
             <div className="space-y-2">
               {STEPS.slice(0, -1).map((s, i) => {
                 const isActive = s.key === step;
-                const isDone = currentStepIndex > i || step === 'complete';
+                const isDone = currentStepIndex > i;
                 const isPending = currentStepIndex < i && step !== 'error';
 
                 return (

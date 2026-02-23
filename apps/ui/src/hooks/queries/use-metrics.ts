@@ -257,10 +257,13 @@ export function useActivityFeed(projectPath?: string, limit: number = 50) {
     queryKey: queryKeys.activity.feed(projectPath, limit),
     queryFn: async () => {
       const api = getHttpApiClient();
-      // Subscribe to events and aggregate them
-      // Get event history from the API client's event buffer
-      // The HTTP API client maintains a buffer of recent events via WebSocket
-      const eventHistory = api.getRecentEvents ? api.getRecentEvents(limit) : [];
+      // Get event history from the API client's event buffer.
+      // getRecentEvents is an optional runtime extension (not part of the base class).
+      const client = api as unknown as Record<string, unknown>;
+      const eventHistory =
+        typeof client.getRecentEvents === 'function'
+          ? (client.getRecentEvents(limit) as unknown[])
+          : [];
 
       return {
         success: true,

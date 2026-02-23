@@ -60,10 +60,10 @@ function timeAgo(isoDate: string): string {
 export function ActivityFeed({ features, isLoading }: ActivityFeedProps) {
   // Get features sorted by most recent activity
   const recentFeatures = features
-    .filter((f) => f.updatedAt || f.completedAt || f.startedAt)
+    .filter((f) => f.completedAt || f.startedAt)
     .sort((a, b) => {
-      const aDate = a.completedAt || a.updatedAt || a.startedAt || '';
-      const bDate = b.completedAt || b.updatedAt || b.startedAt || '';
+      const aDate = String(a.completedAt || a.startedAt || '');
+      const bDate = String(b.completedAt || b.startedAt || '');
       return new Date(bDate).getTime() - new Date(aDate).getTime();
     })
     .slice(0, 8);
@@ -88,7 +88,7 @@ export function ActivityFeed({ features, isLoading }: ActivityFeedProps) {
         ) : (
           <div className="space-y-2">
             {recentFeatures.map((feature) => {
-              const date = feature.completedAt || feature.updatedAt || feature.startedAt || '';
+              const date = String(feature.completedAt || feature.startedAt || '');
               return (
                 <div key={feature.id} className="flex items-start gap-2 text-sm py-1.5">
                   <span className="shrink-0 mt-0.5">{getStatusIcon(feature.status)}</span>

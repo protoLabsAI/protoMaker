@@ -143,6 +143,20 @@ export interface AppState {
   lastProjectDir: string;
   /** Recently accessed folders for quick access */
   recentFolders: string[];
+
+  // --- Domain store proxy properties ---
+  // These are convenience accessors that delegate to their respective domain stores.
+  // They allow components to destructure these from useAppStore() for backward compatibility.
+
+  /** Global theme (proxied from ThemeStore) */
+  theme: ThemeMode;
+  /** Global UI/sans font family (proxied from ThemeStore) */
+  fontFamilySans: string | null;
+  /** Global code/mono font family (proxied from ThemeStore) */
+  fontFamilyMono: string | null;
+
+  /** Skip sandbox warning dialog (proxied from AIModelsStore) */
+  skipSandboxWarning: boolean;
 }
 
 export interface AppActions {
@@ -298,6 +312,12 @@ export interface AppActions {
   setRecentFolders: (folders: string[]) => void;
   addRecentFolder: (folder: string) => void;
 
+  // --- Domain store proxy actions ---
+  /** Set skip sandbox warning (delegates to AIModelsStore) */
+  setSkipSandboxWarning: (skip: boolean) => Promise<void>;
+  /** Fetch Codex models (delegates to AIModelsStore) */
+  fetchCodexModels: (forceRefresh?: boolean) => Promise<void>;
+
   // Reset
   reset: () => void;
 }
@@ -355,6 +375,11 @@ const initialState: AppState = {
   // UI State (previously in localStorage, now synced via API)
   lastProjectDir: '',
   recentFolders: [],
+  // Domain store proxy defaults (real values come from domain stores, these are just type-satisfying defaults)
+  theme: 'studio-dark' as ThemeMode,
+  fontFamilySans: null,
+  fontFamilyMono: null,
+  skipSandboxWarning: false,
 };
 
 export const useAppStore = create<AppState & AppActions>()((set, get) => ({
@@ -1269,6 +1294,32 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
     set({ recentFolders: updated });
   },
 
+  // --- Domain store proxy actions ---
+  setSkipSandboxWarning: async (skip) => {
+    await useAIModelsStore.getState().setSkipSandboxWarning(skip);
+  },
+  fetchCodexModels: async (forceRefresh) => {
+    await useAIModelsStore.getState().fetchCodexModels(forceRefresh);
+  },
+
   // Reset
   reset: () => set(initialState),
 }));
+
+// Keep domain store proxy properties in sync.
+// When ThemeStore or AIModelsStore values change, update the corresponding
+// proxy fields in AppStore so components destructuring from useAppStore() get
+// reactive updates without needing to import domain stores directly.
+useThemeStore.subscribe((themeState) => {
+  useAppStore.setState({
+    theme: themeState.theme,
+    fontFamilySans: themeState.fontFamilySans,
+    fontFamilyMono: themeState.fontFamilyMono,
+  });
+});
+
+useAIModelsStore.subscribe((aiState) => {
+  useAppStore.setState({
+    skipSandboxWarning: aiState.skipSandboxWarning,
+  });
+});

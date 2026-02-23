@@ -27,6 +27,7 @@ export const Default: Story = {
 };
 
 export const WithOrb: Story = {
+  args: {} as any,
   render: () => (
     <div className="grid grid-cols-2 gap-4 w-[500px]">
       <GlowCard orb="top-right" orbColor="#8b5cf6" className="p-6">

@@ -198,9 +198,13 @@ export const AgentInfoPanel = memo(function AgentInfoPanel({
     return unsubscribe;
   }, [feature.id, shouldListenToEvents]);
 
+  // Cast properties once for use across render branches (index signature makes them `unknown`)
+  const featureModel = feature.model as string | undefined;
+  const featureSummary = feature.summary as string | undefined;
+
   // Model/Preset Info for Backlog Cards
   if (feature.status === 'backlog') {
-    const provider = getProviderFromModel(feature.model);
+    const provider = getProviderFromModel(featureModel);
     const isCodex = provider === 'codex';
     const isClaude = provider === 'claude';
 
@@ -209,10 +213,10 @@ export const AgentInfoPanel = memo(function AgentInfoPanel({
         <div className="flex items-center gap-2 text-[11px] flex-wrap">
           <div className="flex items-center gap-1 text-[var(--status-info)]">
             {(() => {
-              const ProviderIcon = getProviderIconForModel(feature.model);
+              const ProviderIcon = getProviderIconForModel(featureModel);
               return <ProviderIcon className="w-3 h-3" />;
             })()}
-            <span className="font-medium">{formatModelName(feature.model ?? DEFAULT_MODEL)}</span>
+            <span className="font-medium">{formatModelName(featureModel ?? DEFAULT_MODEL)}</span>
           </div>
           {isClaude && feature.thinkingLevel && feature.thinkingLevel !== 'none' ? (
             <div className="flex items-center gap-1 text-purple-400">
@@ -238,7 +242,7 @@ export const AgentInfoPanel = memo(function AgentInfoPanel({
   // Agent Info Panel for non-backlog cards
   // Show panel if we have agentInfo OR planSpec.tasks (for spec/full mode)
   // Note: hasPlanSpecTasks is already defined above and includes freshPlanSpec
-  if (feature.status !== 'backlog' && (agentInfo || hasPlanSpecTasks)) {
+  if (agentInfo || hasPlanSpecTasks) {
     return (
       <>
         <div className="mb-3 space-y-2 overflow-hidden">
@@ -246,10 +250,10 @@ export const AgentInfoPanel = memo(function AgentInfoPanel({
           <div className="flex items-center gap-2 text-[11px] flex-wrap">
             <div className="flex items-center gap-1 text-[var(--status-info)]">
               {(() => {
-                const ProviderIcon = getProviderIconForModel(feature.model);
+                const ProviderIcon = getProviderIconForModel(featureModel);
                 return <ProviderIcon className="w-3 h-3" />;
               })()}
-              <span className="font-medium">{formatModelName(feature.model ?? DEFAULT_MODEL)}</span>
+              <span className="font-medium">{formatModelName(featureModel ?? DEFAULT_MODEL)}</span>
             </div>
             {agentInfo?.currentPhase && (
               <div
@@ -327,7 +331,7 @@ export const AgentInfoPanel = memo(function AgentInfoPanel({
           {/* Summary for waiting_approval and verified */}
           {(feature.status === 'waiting_approval' || feature.status === 'verified') && (
             <>
-              {(feature.summary || summary || agentInfo?.summary) && (
+              {(featureSummary || summary || agentInfo?.summary) && (
                 <div className="space-y-1.5 pt-2 border-t border-border/30 overflow-hidden">
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-1 text-[10px] text-[var(--status-success)] min-w-0">
@@ -353,11 +357,11 @@ export const AgentInfoPanel = memo(function AgentInfoPanel({
                     onPointerDown={(e) => e.stopPropagation()}
                     onMouseDown={(e) => e.stopPropagation()}
                   >
-                    {feature.summary || summary || agentInfo?.summary}
+                    {featureSummary || summary || agentInfo?.summary}
                   </p>
                 </div>
               )}
-              {!feature.summary &&
+              {!featureSummary &&
                 !summary &&
                 !agentInfo?.summary &&
                 (agentInfo?.toolCallCount ?? 0) > 0 && (

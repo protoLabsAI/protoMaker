@@ -79,8 +79,8 @@ const REDUCED_CARD_OPACITY_PERCENT = 85;
 type VirtualListItem = { id: string };
 
 interface VirtualListState<Item extends VirtualListItem> {
-  contentRef: RefObject<HTMLDivElement>;
-  onScroll: (event: UIEvent<HTMLDivElement>) => void;
+  contentRef: RefObject<HTMLDivElement | null>;
+  onScroll: (event: React.UIEvent<HTMLDivElement>) => void;
   itemIds: string[];
   visibleItems: Item[];
   totalHeight: number;
@@ -180,7 +180,7 @@ function VirtualizedList<Item extends VirtualListItem>({
 
   const visibleItems = shouldVirtualize ? items.slice(startIndex, endIndex) : items;
 
-  const onScroll = useCallback((event: UIEvent<HTMLDivElement>) => {
+  const onScroll = useCallback((event: React.UIEvent<HTMLDivElement>) => {
     const target = event.currentTarget;
     if (scrollRafRef.current !== null) {
       cancelAnimationFrame(scrollRafRef.current);

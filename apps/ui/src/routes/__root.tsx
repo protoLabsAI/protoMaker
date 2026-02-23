@@ -692,7 +692,7 @@ function RootLayoutContent() {
     if (!isCodexAvailable) return;
 
     // Fetch models in the background
-    fetchCodexModels().catch((error) => {
+    fetchCodexModels().catch((error: unknown) => {
       logger.warn('Failed to bootstrap Codex models:', error);
     });
   }, [authChecked, isAuthenticated, codexCliStatus, fetchCodexModels]);

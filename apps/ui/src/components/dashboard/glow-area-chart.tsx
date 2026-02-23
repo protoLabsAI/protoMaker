@@ -104,7 +104,9 @@ export function GlowAreaChart({
                 fontSize: '12px',
                 backdropFilter: 'blur(8px)',
               }}
-              formatter={(v: number, name: string) => [formatValue ? formatValue(v) : v, name]}
+              formatter={
+                ((v: number, name: string) => [formatValue ? formatValue(v) : v, name]) as any
+              }
             />
             <Area
               type="monotone"

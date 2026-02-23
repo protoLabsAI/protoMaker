@@ -151,11 +151,17 @@ export function createEngineRoutes(
           })),
         },
         projectLifecycle,
-        contentPipeline: {
-          activeFlows: contentFlowService ? contentFlowService.getExecutionState().totalActive : 0,
-          pendingDrafts: gtmAgent ? gtmAgent.getPendingDraftCount() : 0,
-          completedToday: 0,
-        },
+        contentPipeline: contentFlowService
+          ? {
+              ...contentFlowService.getExecutionState(),
+              pendingDrafts: gtmAgent ? gtmAgent.getPendingDraftCount() : 0,
+            }
+          : {
+              activeFlows: [],
+              recentFlows: [],
+              totalActive: 0,
+              pendingDrafts: gtmAgent ? gtmAgent.getPendingDraftCount() : 0,
+            },
         timestamp: new Date().toISOString(),
       });
     } catch (error) {

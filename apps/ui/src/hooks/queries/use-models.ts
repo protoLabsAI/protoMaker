@@ -27,7 +27,7 @@ interface OpencodeModel {
   description: string;
   supportsTools: boolean;
   supportsVision: boolean;
-  tier: string;
+  tier: 'basic' | 'standard' | 'premium';
   default?: boolean;
 }
 

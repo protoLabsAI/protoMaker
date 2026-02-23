@@ -5,9 +5,9 @@ relevantTo: [architecture]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 25
-  referenced: 16
-  successfulFeatures: 16
+  loaded: 22
+  referenced: 13
+  successfulFeatures: 13
 ---
 # architecture
 
@@ -2312,37 +2312,3 @@ usageStats:
 - **Problem solved:** Multiple OAuth integrations needed; must decide on token storage structure and scope.
 - **Why this works:** Storing under `integrations.{service}` namespace keeps related data together, parallels existing patterns for maintainability, and scopes tokens to projects (multi-project support).
 - **Trade-offs:** Nested structure is slightly deeper but keeps settings organized. Per-project scoping prevents accidental cross-project token access.
-
-### Google OAuth routes mounted before auth middleware. All other routes mounted after and require authentication. OAuth callbacks must be accessible without auth to receive authorization code and state from Google. (2026-02-22)
-- **Context:** OAuth flow requires unauthenticated endpoint that Google can redirect to with code and state parameters. Standard auth middleware would block these requests.
-- **Why:** OAuth is a three-party protocol (client, server, Google) where Google's redirect is not in a user session context. Requiring auth would break the entire flow.
-- **Rejected:** Alternative: Add special bypass cases in auth middleware for OAuth routes. More complex, duplicates logic, easier to accidentally break by blocking OAuth.
-- **Trade-offs:** Pre-auth mounting limits auth middleware scope but makes OAuth flow simpler and harder to accidentally break. Post-auth mounting would require defensive coding in middleware.
-- **Breaking if changed:** If auth middleware is added universally as first middleware before this mounting, OAuth callbacks fail because they're unauthenticated. OAuth must stay pre-auth.
-
-### Store OAuth tokens in `settings.integrations.google` per-project (within .automaker/settings.json), following existing Linear/Discord integration pattern. Not global or database. (2026-02-22)
-- **Context:** Where to store OAuth tokens: global, per-project, or in database? Need to support multi-tenant, multi-project scenarios.
-- **Why:** Per-project storage aligns tokens with project access control. Following existing integration pattern (Linear, Discord) means consistent API surface across integrations. Settings file pattern allows offline access.
-- **Rejected:** Global tokens: Single token for all projects, breaks multi-tenancy. Database: Adds operational dependency, slower than file. Environment variables: Can't change without restart.
-- **Trade-offs:** Per-project file storage is simple and matches project isolation model. Trade-off: tokens not shared globally, requires per-project re-auth, project export includes tokens (security consideration).
-- **Breaking if changed:** Changing storage location requires migration of existing tokens. Sharing project shares its Google credentials (could be feature or bug depending on use case).
-
-#### [Gotcha] TypeScript's DTS builder fails to resolve default exports from CommonJS modules. Import as namespace with fallback: `import * as mod from 'pkg'; const fn = (mod as any).default || mod;` (2026-02-22)
-- **Situation:** p-limit import during tsup DTS generation for @automaker/platform. Error occurred in build phase, not runtime.
-- **Root cause:** CommonJS default exports don't generate proper TypeScript declarations when using `import default` syntax. Namespace import + runtime fallback handles both ESM and CJS scenarios.
-- **How to avoid:** Requires `as any` type assertion (loses type safety temporarily) but ensures build succeeds. Direct default imports are cleaner but fragile with older CommonJS packages.
-
-#### [Pattern] ESM/CJS module interop pattern for TypeScript DTS generation. When importing from older npm packages without proper ESM exports, use namespace import with .default fallback: 'import * as module from "pkg"; const fn = module.default || module;'. This ensures TypeScript can generate correct declaration files for both ESM and CommonJS consumers during the build process. (2026-02-22)
-- **Problem solved:** Direct import of p-limit in secure-fs.ts was causing TypeScript DTS generation failure during build, which blocked verification of the primary feature fix (docs URL change). The build would fail before any tests could run.
-- **Why this works:** Older npm packages predating ESM standardization don't properly export ESM modules or provide .default exports. TypeScript's DTS generator needs this fallback pattern to handle the runtime module system mismatch. Without it, the compiler can't determine what to export in the .d.ts file, causing build failure.
-- **Trade-offs:** Slightly more verbose code (requires an additional const declaration) but enables build success and ensures runtime compatibility across both module systems. Pattern is explicit about handling both ESM and CommonJS.
-
-#### [Pattern] ESM/CJS Interop Pattern: Use namespace import with .default fallback for legacy packages during TypeScript DTS generation (2026-02-23)
-- **Problem solved:** p-limit import failed TypeScript declaration generation, blocking build verification for entire feature
-- **Why this works:** Older npm packages (pre-ESM standardization) expose different module systems. TypeScript DTS generator needs compatible import syntax. Pattern: import * as module from 'pkg'; const fn = module.default || module;
-- **Trade-offs:** Slightly verbose import syntax enables TypeScript declaration generation; zero runtime behavior change; reusable for other legacy package imports
-
-#### [Pattern] Consistency verification pattern: Use grep to validate single-source-of-truth across distributed code locations (2026-02-23)
-- **Problem solved:** After fixing docs URL in sidebar, verified no other components had incorrect pattern via: grep -r 'protolabs\.studio/docs' across all UI source
-- **Why this works:** URL appeared in multiple components but sidebar was only outlier. Verification reveals codebase actually achieved consistency elsewhere - this was drift, not systemic issue. Pattern prevents silent regressions.
-- **Trade-offs:** One-time grep check vs. continuous enforcement (linting rule). Grep cheaper but manual; linting rule catches future drift automatically.

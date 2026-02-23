@@ -41,6 +41,8 @@ const PHASE_LABELS: Record<PhaseModelKey, string> = {
   projectAnalysisModel: 'Project Analysis',
   suggestionsModel: 'AI Suggestions',
   memoryExtractionModel: 'Memory Extraction',
+  ceremonyModel: 'Ceremonies & Retrospectives',
+  agentExecutionModel: 'Agent Execution',
 };
 
 const ALL_PHASES = Object.keys(PHASE_LABELS) as PhaseModelKey[];
@@ -89,7 +91,7 @@ export function ProjectBulkReplaceDialog({
   // Get the selected provider config (if custom)
   const selectedProviderConfig = useMemo(() => {
     if (selectedProvider === 'anthropic') return null;
-    return enabledProviders.find((p) => p.id === selectedProvider);
+    return enabledProviders.find((p) => p.id === selectedProvider) ?? null;
   }, [selectedProvider, enabledProviders]);
 
   // Get the Claude model alias from a PhaseModelEntry

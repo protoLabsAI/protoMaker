@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 287
-  referenced: 151
-  successfulFeatures: 151
+  loaded: 281
+  referenced: 144
+  successfulFeatures: 144
 ---
 # gotchas
 
@@ -227,18 +227,3 @@ usageStats:
 - **Situation:** Using `for (const [key, value] of map.entries())` directly causes compilation failures in certain TypeScript configurations.
 - **Root cause:** TypeScript downlevelIteration flag affects how iterators are compiled; older target compatibility (ES2015) requires explicit iterator protocol. Array.from() forces concrete array creation.
 - **How to avoid:** Array.from() adds minor performance overhead (creates array copy) but ensures consistent compilation across configurations.
-
-#### [Gotcha] Git worktrees share node_modules with main repository via symlinks. Symlinked packages (@automaker/types) resolve to main repo's version, not worktree-specific code. TypeScript type checking in worktree fails for new types not yet in main repo, even though code is correct. (2026-02-22)
-- **Situation:** New GoogleIntegrationConfig type created in worktree branch, but node_modules symlink points to main repo's @automaker/types which doesn't have it yet. TypeScript resolves old types instead of new ones.
-- **Root cause:** Monorepo structure uses symlinked dependencies to avoid duplication. Worktrees inherit this symlink pattern, causing version misalignment.
-- **How to avoid:** Monorepo symlinks save disk and keep dependencies in sync, but worktrees can't validate their own type changes until merged. Type errors disappear after merge automatically.
-
-#### [Gotcha] Type name collision: Both Express and Fetch API export `Response` type. Importing both causes type conflicts. Resolved with type alias: `import { type Response as ExpressResponse }`. (2026-02-22)
-- **Situation:** Google handlers use Express (Response from 'express') and fetch API (Response from global). Both defined as `Response` type.
-- **Root cause:** Common issue in Node.js when mixing different HTTP libraries. Express predates Fetch API standardization. Both communities used same obvious name.
-- **How to avoid:** Type alias solves name collision at import time. Alternative: import one with default, access other via namespace (more verbose).
-
-#### [Gotcha] Build fails with pre-existing TypeScript error in unrelated package (secure-fs.ts p-limit import) while documentation/tests pass, indicating architectural coupling or unresolved technical debt. (2026-02-22)
-- **Situation:** Changes only touch docs and test files (no changes to libs/platform), yet full build cannot complete due to existing errors elsewhere
-- **Root cause:** Likely indicates incomplete dependency resolution or stale package state in codebase; developer chose to proceed with verification tests working despite build failing
-- **How to avoid:** Faster feature delivery but signals codebase health issues; tests validate narrowly but don't guarantee full integration; harder for CI pipelines

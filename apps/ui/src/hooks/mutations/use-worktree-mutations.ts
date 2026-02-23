@@ -247,6 +247,7 @@ export function useMergeWorktree(projectPath: string) {
         projectPath,
         branchName,
         worktreePath,
+        undefined,
         options
       );
       if (!result.success) {

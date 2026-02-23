@@ -20,9 +20,6 @@ import { useThemeStore } from '@/store/theme-store';
 import { useAIModelsStore } from '@/store/ai-models-store';
 import { useWorktreeStore } from '@/store/worktree-store';
 import { useTerminalStore } from '@/store/terminal-store';
-import { useThemeStore } from '@/store/theme-store';
-import { useWorktreeStore } from '@/store/worktree-store';
-import { useAIModelsStore } from '@/store/ai-models-store';
 import { useSetupStore } from '@/store/setup-store';
 import { useAuthStore } from '@/store/auth-store';
 import { waitForMigrationComplete, resetMigrationState } from './use-settings-migration';
@@ -171,15 +168,6 @@ function getSettingsFieldValue(
       };
     }
     return persistedSettings;
-  }
-  if (field === 'theme') {
-    return useThemeStore.getState().theme;
-  }
-  if (field === 'useWorktrees') {
-    return useWorktreeStore.getState().useWorktrees;
-  }
-  if (field === 'disabledProviders') {
-    return useAIModelsStore.getState().disabledProviders;
   }
   return appState[field as keyof typeof appState];
 }
@@ -644,6 +632,7 @@ export async function refreshSettingsFromServer(): Promise<boolean> {
 
     const serverSettings = result.settings as unknown as GlobalSettings;
     const currentAppState = useAppStore.getState();
+    const currentAIState = useAIModelsStore.getState();
 
     // Cursor models - ALWAYS use ALL available models to ensure new models are visible
     const allCursorModels = getAllCursorModelIds();
@@ -679,9 +668,9 @@ export async function refreshSettingsFromServer(): Promise<boolean> {
     }
 
     const persistedDynamicModelIds =
-      serverSettings.enabledDynamicModelIds ?? currentAppState.enabledDynamicModelIds;
+      serverSettings.enabledDynamicModelIds ?? currentAIState.enabledDynamicModelIds;
     const sanitizedDynamicModelIds = persistedDynamicModelIds.filter(
-      (modelId) => !modelId.startsWith('amazon-bedrock/')
+      (modelId: string) => !modelId.startsWith('amazon-bedrock/')
     );
 
     // Migrate phase models to canonical format
@@ -712,6 +701,10 @@ export async function refreshSettingsFromServer(): Promise<boolean> {
             serverSettings.phaseModels.memoryExtractionModel
           ),
           commitMessageModel: migratePhaseModelEntry(serverSettings.phaseModels.commitMessageModel),
+          ceremonyModel: migratePhaseModelEntry(serverSettings.phaseModels.ceremonyModel),
+          agentExecutionModel: migratePhaseModelEntry(
+            serverSettings.phaseModels.agentExecutionModel
+          ),
         }
       : undefined;
 
@@ -798,29 +791,6 @@ export async function refreshSettingsFromServer(): Promise<boolean> {
     if (serverSettings.defaultTerminalId !== undefined) {
       useTerminalStore.setState({ defaultTerminalId: serverSettings.defaultTerminalId ?? null });
     }
-
-    // Hydrate theme store
-    useThemeStore.setState({
-      theme: serverSettings.theme as unknown as ThemeMode,
-      fontFamilySans: serverSettings.fontFamilySans ?? null,
-      fontFamilyMono: serverSettings.fontFamilyMono ?? null,
-    });
-
-    // Hydrate AI models store
-    useAIModelsStore.setState({
-      enhancementModel: serverSettings.enhancementModel,
-      validationModel: serverSettings.validationModel,
-      phaseModels: migratedPhaseModels ?? serverSettings.phaseModels,
-      enabledCursorModels: allCursorModels,
-      cursorDefaultModel: sanitizedCursorDefault,
-      enabledOpencodeModels: sanitizedEnabledOpencodeModels,
-      opencodeDefaultModel: sanitizedOpencodeDefaultModel,
-      enabledDynamicModelIds: sanitizedDynamicModelIds,
-      disabledProviders: serverSettings.disabledProviders ?? [],
-      autoLoadClaudeMd: serverSettings.autoLoadClaudeMd ?? false,
-      claudeApiProfiles: serverSettings.claudeApiProfiles ?? [],
-      activeClaudeApiProfileId: serverSettings.activeClaudeApiProfileId ?? null,
-    });
 
     // Hydrate app store (only fields that remain in app-store)
     useAppStore.setState({

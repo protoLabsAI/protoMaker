@@ -47,10 +47,10 @@ export function OverlayBoard({ features }: OverlayBoardProps) {
                   {feature.category && (
                     <div className="text-xs text-gray-400 mt-1 truncate">{feature.category}</div>
                   )}
-                  {feature.priority && feature.priority > 0 && (
+                  {typeof feature.priority === 'number' && feature.priority > 0 && (
                     <div className="mt-1 flex items-center gap-1">
                       <span className="text-xs text-yellow-500">
-                        {'★'.repeat(Math.min(feature.priority, 3))}
+                        {'★'.repeat(Math.min(feature.priority as number, 3))}
                       </span>
                     </div>
                   )}
