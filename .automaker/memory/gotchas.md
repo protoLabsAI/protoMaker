@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 281
-  referenced: 144
-  successfulFeatures: 144
+  loaded: 285
+  referenced: 146
+  successfulFeatures: 146
 ---
 # gotchas
 
@@ -227,3 +227,13 @@ usageStats:
 - **Situation:** Using `for (const [key, value] of map.entries())` directly causes compilation failures in certain TypeScript configurations.
 - **Root cause:** TypeScript downlevelIteration flag affects how iterators are compiled; older target compatibility (ES2015) requires explicit iterator protocol. Array.from() forces concrete array creation.
 - **How to avoid:** Array.from() adds minor performance overhead (creates array copy) but ensures consistent compilation across configurations.
+
+#### [Gotcha] Raw request body access via `(req as any).rawBody` is non-standard and depends on middleware configuration (2026-02-23)
+- **Situation:** Signature verification requires original request bytes, not parsed JSON. Implementation uses `(req as any).rawBody` which is added by a middleware, not Express built-in.
+- **Root cause:** Express doesn't preserve raw body after parsing. Custom middleware must capture it before JSON parsing. Type cast needed because TypeScript doesn't know about custom middleware properties.
+- **How to avoid:** Pro: Cryptographically secure signature verification. Con: Depends on middleware that may not exist in all environments (breaks silently if middleware missing).
+
+#### [Gotcha] Async processing errors are logged but don't affect webhook response status - silent failures possible (2026-02-23)
+- **Situation:** Webhook responds with 200 immediately, then processes async. If sync fails later, only logs capture the error.
+- **Root cause:** Responding immediately is required for webhook reliability. But consequence is async errors can't be returned to caller.
+- **How to avoid:** Pro: Webhook won't timeout or crash. Con: Errors in sync service, GitHub API, or prompt retrieval don't propagate to caller; requires log monitoring to detect issues.

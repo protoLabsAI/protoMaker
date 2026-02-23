@@ -721,3 +721,10 @@ usageStats:
 - **Situation:** Feature implementation complete but unable to run `npm run build:server` to verify integration due to unrelated package error.
 - **Root cause:** Isolated syntax verification (node -c) can validate code independently of build system. Prevents false negative where feature appears broken when only build infrastructure has issues.
 - **How to avoid:** Isolated verification provides confidence but doesn't catch runtime type errors or integration issues. Full build still needed for deployment.
+
+### Comprehensive payload parsing tests that mirror exact TypeScript interface structure (type 'text' vs 'chat', optional fields like config/labels/tags/metadata) (2026-02-23)
+- **Context:** Langfuse webhook payloads have complex nested structure with multiple optional fields and type variants
+- **Why:** Each variant (text prompt vs chat prompt) and optional field combination must be tested separately to catch breaking changes. Tests serve as executable specification of what payloads are accepted.
+- **Rejected:** Minimal happy-path testing (misses edge cases), or testing only required fields (optional fields become untested and break silently)
+- **Trade-offs:** 12 parser tests vs 1-2 minimal tests adds maintenance burden but catches ~100% of payload shape violations. Each test documents one valid scenario.
+- **Breaking if changed:** Removing specific variant tests (e.g., chat type prompt test) leaves that code path untested, making future refactors risky

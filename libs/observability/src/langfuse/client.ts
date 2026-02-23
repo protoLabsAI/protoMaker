@@ -56,12 +56,17 @@ export class LangfuseClient {
   }
 
   /**
-   * Get a prompt from Langfuse by name and optional version.
+   * Get a prompt from Langfuse by name and optional version/label.
    * Returns a Langfuse prompt object with `prompt`, `version`, and `config` properties.
+   *
+   * @param name - Prompt name in Langfuse
+   * @param version - Optional specific version number
+   * @param options - Optional settings (label for environment pinning, e.g. "production")
    */
   async getPrompt(
     name: string,
-    version?: number
+    version?: number,
+    options?: { label?: string }
   ): Promise<{ prompt: string; version: number; config?: Record<string, any> } | null> {
     if (!this.isAvailable()) {
       logger.debug(`Langfuse unavailable, cannot fetch prompt: ${name}`);
@@ -69,8 +74,13 @@ export class LangfuseClient {
     }
 
     try {
-      const prompt = await this.client!.getPrompt(name, version);
-      logger.debug(`Fetched prompt from Langfuse: ${name}`, { version });
+      // Langfuse SDK accepts (name, version, { label }) at runtime
+      const prompt = await (this.client as any).getPrompt(
+        name,
+        version,
+        options?.label ? { label: options.label } : undefined
+      );
+      logger.debug(`Fetched prompt from Langfuse: ${name}`, { version, label: options?.label });
       return prompt;
     } catch (error) {
       logger.error(`Failed to fetch prompt from Langfuse: ${name}`, error);

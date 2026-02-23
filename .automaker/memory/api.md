@@ -5,9 +5,9 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 77
-  referenced: 44
-  successfulFeatures: 44
+  loaded: 78
+  referenced: 45
+  successfulFeatures: 45
 ---
 # api
 
@@ -469,3 +469,18 @@ usageStats:
 - **Rejected:** Metadata from calendar description (requires extra API call); explicit labels (manual work); event type/attendee analysis (fragile).
 - **Trade-offs:** Simple and fast, but fragile—depends on consistent naming conventions. Poorly named events (e.g., 'Meeting') default to 'ops' incorrectly.
 - **Breaking if changed:** Removing keyword routing requires alternative classification mechanism or manual event tagging. Changing keyword set changes business routing behavior.
+
+#### [Pattern] Webhook payload validation via runtime parser function (parseLangfuseWebhookPayload) separate from TypeScript interface (2026-02-23)
+- **Problem solved:** TypeScript types don't exist at runtime. JSON from Langfuse could be any shape. Need to validate structure before processing.
+- **Why this works:** Decouples type definition (compile-time) from validation logic (runtime). Parser explicitly checks each field type and presence, returning null on any violation. Prevents invalid payloads from silently failing downstream.
+- **Trade-offs:** Adds ~30 lines of validation code but provides strong guarantees. Testable in isolation (12 dedicated tests). Makes validation rules explicit and auditable.
+
+#### [Gotcha] Langfuse webhook signature uses HMAC-SHA256 over raw body, not over stringified JSON or specific fields (2026-02-23)
+- **Situation:** Initial assumption was that signature might be over specific JSON fields or a canonical representation. Testing revealed Langfuse uses raw POST body bytes.
+- **Root cause:** Langfuse webhook implementation (external service) computes HMAC over the exact bytes sent in the HTTP body. Any preprocessing or field reordering breaks signature verification.
+- **How to avoid:** Using raw body is more robust but requires explicit buffer capture. Canonical representations would be fragile (JSON spec doesn't guarantee key ordering).
+
+#### [Pattern] Label-based filtering allows runtime control over which prompts trigger sync without code deployment (2026-02-23)
+- **Problem solved:** Langfuse webhook receives all prompt version events. Implementation filters by presence of `LANGFUSE_WEBHOOK_LABEL` in prompt's labels array.
+- **Why this works:** Webhook may fire for many prompt versions (staging, dev, experimental). Only production prompts need syncing to GitHub. Label filtering is declarative (data-driven) not code-driven.
+- **Trade-offs:** Pro: Configurable at runtime via prompt labels in Langfuse UI. Con: Requires discipline to properly tag prompts; silent filtering if misconfigured (no error feedback).

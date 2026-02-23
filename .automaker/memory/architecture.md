@@ -2312,3 +2312,17 @@ usageStats:
 - **Problem solved:** Multiple OAuth integrations needed; must decide on token storage structure and scope.
 - **Why this works:** Storing under `integrations.{service}` namespace keeps related data together, parallels existing patterns for maintainability, and scopes tokens to projects (multi-project support).
 - **Trade-offs:** Nested structure is slightly deeper but keeps settings organized. Per-project scoping prevents accidental cross-project token access.
+
+### Webhook handlers use 'respond immediately with 200, process async' pattern to avoid timeout violations (2026-02-23)
+- **Context:** Webhooks must complete within ~5 seconds per spec, but downstream operations (GitHub sync, Langfuse API calls) may take longer
+- **Why:** Returning 200 before processing signals to the sender that the webhook was received reliably. Processing async in background allows long operations without timeout risk. Sender retries on non-2xx, creating potential duplicates if we hold response.
+- **Rejected:** Synchronous processing (wait for all work to complete before responding) - would exceed webhook timeout and cause sender to retry, creating duplicate work
+- **Trade-offs:** Pro: Reliable delivery signal, no timeout crashes. Con: Async errors are logged but not returned to caller; must monitor logs for silent failures.
+- **Breaking if changed:** If changed to sync processing, webhook handler will timeout and crash under load during sync service operations
+
+### TODO placeholder defers sync service integration, intentionally stopping at webhook reception (2026-02-23)
+- **Context:** Webhook implementation receives and validates Langfuse events, but doesn't call downstream sync service. Feature scope explicitly stops here.
+- **Why:** Scope discipline per requirements - breaking work into independent features. Sync service is separate feature. Webhook feature is complete when 'receive and validate' done.
+- **Rejected:** Implementing full sync pipeline in this feature - creates coupling, makes feature harder to test, violates scope boundary
+- **Trade-offs:** Pro: Feature is focused, testable, ships faster. Con: Webhook is non-functional without sync service implementation; requires coordination between features.
+- **Breaking if changed:** Removing TODO without implementing sync service means webhooks are received but ignored. Calling the TODO without sync service implementation causes crashes.

@@ -138,3 +138,29 @@ usageStats:
 - **Problem solved:** CSRF attacks on OAuth redirect can trick users into authorizing attacker's client. State parameter prevents this by validating request source.
 - **Why this works:** State parameter is OAuth 2.0 standard (RFC 6749). In-memory Map is simplest implementation for single instance. 10-minute window is long enough for OAuth flow but short enough to prevent state reuse.
 - **Trade-offs:** In-memory state is fast and simple but loses state across process restarts and doesn't scale to multiple servers. Redis/database adds latency but enables horizontal scaling.
+
+#### [Gotcha] HMAC-SHA256 signature verification requires raw body access BEFORE Express JSON parsing middleware consumes the stream (2026-02-23)
+- **Situation:** Express middleware chain normally parses JSON automatically. Signature verification needs the original bytes to recompute HMAC. Without raw body, signature verification always fails.
+- **Root cause:** HMAC is computed over the exact byte sequence. Once parsed and re-stringified, whitespace/key ordering changes invalidate the hash. Must capture raw buffer at stream entry point.
+- **How to avoid:** Custom middleware adds complexity but is unavoidable for security. Adds minimal overhead (one stream capture per request). Alternative: require clients send signature in request body instead of header (weaker security posture).
+
+### Used crypto.timingSafeEqual() for HMAC comparison instead of simple string equality (2026-02-23)
+- **Context:** Comparing computed HMAC digest with provided signature in HTTP header
+- **Why:** Prevents timing attacks where attacker measures response latency to infer correct signature byte-by-byte. Standard equality (===) short-circuits early on mismatch, leaking information about correct prefix length.
+- **Rejected:** Simple === comparison (exploitable to timing attacks), or custom constant-time comparison logic (reinventing wheel, error-prone)
+- **Trade-offs:** timingSafeEqual() requires both inputs to be same length - forces digest comparison to fail fast if lengths differ, then safe comparison on valid-length pairs. Minimal performance impact for string comparison scale.
+- **Breaking if changed:** Switching to standard equality makes signature verification vulnerable to timing side-channel attacks that can recover the secret key
+
+### Webhook secret stored in environment variable (LANGFUSE_WEBHOOK_SECRET) loaded at runtime, not hardcoded (2026-02-23)
+- **Context:** Secret needed to verify HMAC signatures from Langfuse. Could be hardcoded, hardcoded-per-env, or env-var.
+- **Why:** Environment variable allows different secrets per deployment (dev/staging/prod) without code changes. Prevents accidental secret leakage in version control.
+- **Rejected:** Hardcoding secret (leaks in git history), or reading from secrets file at startup (requires file distribution, more complex deployment)
+- **Trade-offs:** Env var approach requires deploy process to inject secret - adds deployment step but is industry standard. If env var is missing, verification fails safely (returns 401).
+- **Breaking if changed:** Removing env var loading will cause HMAC verification to fail with undefined secret, rejecting all valid webhooks
+
+### Webhook signature verification uses HMAC-SHA256 with `x-langfuse-signature` header, but header name is assumed without documentation verification (2026-02-23)
+- **Context:** Signature verification prevents spoofed webhooks from external sources. Implementation follows Linear webhook pattern but Langfuse header name was not cross-referenced against official docs
+- **Why:** Pattern consistency with existing Linear webhook (uses same HMAC approach). Security requirement for webhook authenticity.
+- **Rejected:** Skipping signature verification entirely - leaves endpoint open to spoofed events. Using documented/verified header name per vendor docs would be more reliable.
+- **Trade-offs:** Pro: Prevents spoofed webhooks. Con: Incorrect header name means all webhooks fail verification silently (only logged, not returned to caller).
+- **Breaking if changed:** If header name is wrong, webhook signature check always fails. Events are silently dropped (logged but processed). Discovering this requires monitoring logs, not API feedback.
