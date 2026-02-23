@@ -19,7 +19,6 @@ import type {
   HITLFormRequest,
   HITLFormRequestInput,
   HITLFormRequestSummary,
-  HITLFormStatus,
 } from '@automaker/types';
 import type { EventEmitter } from '../lib/events.js';
 
