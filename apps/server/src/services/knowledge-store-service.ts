@@ -16,6 +16,7 @@ import type {
   KnowledgeSearchResult,
   KnowledgeChunk,
   KnowledgeStoreSettings,
+  RetrievalMode,
 } from '@protolabs-ai/types';
 import { EmbeddingService } from './embedding-service.js';
 import { KnowledgeIngestionService } from './knowledge-ingestion-service.js';
@@ -253,8 +254,8 @@ export class KnowledgeStoreService {
   }
 
   /**
-   * Search the knowledge store using hybrid retrieval (BM25 + cosine similarity with RRF)
-   * Falls back to pure BM25 if embeddings are unavailable.
+   * Search the knowledge store using triple-mode fusion (BM25 + direct cosine + HyPE cosine with RRF)
+   * Falls back to hybrid (BM25 + direct cosine) or pure BM25 if embeddings/HyPE unavailable.
    *
    * @param projectPath - Project path to search within
    * @param query - FTS5 query string (supports AND, OR, NOT, phrases)
@@ -265,7 +266,7 @@ export class KnowledgeStoreService {
     projectPath: string,
     query: string,
     opts: KnowledgeSearchOptions = {}
-  ): Promise<{ results: KnowledgeSearchResult[]; retrieval_mode: 'hybrid' | 'bm25' }> {
+  ): Promise<{ results: KnowledgeSearchResult[]; retrieval_mode: RetrievalMode }> {
     if (!this.db || !this.projectPath) {
       throw new Error('Knowledge store not initialized');
     }
@@ -283,7 +284,7 @@ export class KnowledgeStoreService {
     // Determine if we can use hybrid retrieval
     const canUseHybrid = this.settings.hybridRetrieval && this.embeddingService.isReady();
 
-    let retrievalMode: 'hybrid' | 'bm25' = 'bm25';
+    let retrievalMode: RetrievalMode = 'bm25';
 
     // Step 1: Run BM25 FTS5 search to get top-50 candidates
     const candidateLimit = canUseHybrid ? 50 : maxResults;
@@ -335,7 +336,7 @@ export class KnowledgeStoreService {
       score: number;
     }>;
 
-    // Step 2: If hybrid retrieval is enabled, compute RRF merge
+    // Step 2: If hybrid retrieval is enabled, compute RRF merge (triple-mode fusion if HyPE available)
     let rankedRows = rows;
 
     if (canUseHybrid && rows.length > 0) {
@@ -344,7 +345,7 @@ export class KnowledgeStoreService {
         const queryEmbedding = await this.embeddingService.embed(query);
 
         if (queryEmbedding) {
-          // Load embeddings for candidates
+          // Load direct embeddings for candidates
           const chunkIds = rows.map((r) => r.id);
           const placeholders = chunkIds.map(() => '?').join(', ');
           const embeddingSql = `
@@ -358,7 +359,7 @@ export class KnowledgeStoreService {
             embedding: Buffer;
           }>;
 
-          // Build a map of chunk_id -> embedding
+          // Build a map of chunk_id -> direct embedding
           const embeddingMap = new Map<string, Float32Array>();
           for (const row of embeddingRows) {
             // Convert Buffer to Float32Array
@@ -370,18 +371,58 @@ export class KnowledgeStoreService {
             embeddingMap.set(row.chunk_id, floatArray);
           }
 
-          // Compute cosine similarity for chunks with embeddings
-          const cosineSimilarities = new Map<string, number>();
+          // Load HyPE embeddings for candidates (from chunks table)
+          const hypeEmbeddingSql = `
+            SELECT id, hype_embeddings
+            FROM chunks
+            WHERE id IN (${placeholders}) AND hype_embeddings IS NOT NULL
+          `;
+
+          const hypeEmbeddingRows = this.db.prepare(hypeEmbeddingSql).all(...chunkIds) as Array<{
+            id: string;
+            hype_embeddings: Buffer;
+          }>;
+
+          // Build a map of chunk_id -> HyPE embedding
+          const hypeEmbeddingMap = new Map<string, Float32Array>();
+          for (const row of hypeEmbeddingRows) {
+            // Convert Buffer to Float32Array
+            const floatArray = new Float32Array(
+              row.hype_embeddings.buffer,
+              row.hype_embeddings.byteOffset,
+              row.hype_embeddings.byteLength / Float32Array.BYTES_PER_ELEMENT
+            );
+            hypeEmbeddingMap.set(row.id, floatArray);
+          }
+
+          // Compute cosine similarity for direct embeddings
+          const directCosineSimilarities = new Map<string, number>();
           for (const row of rows) {
             const embedding = embeddingMap.get(row.id);
             if (embedding) {
               const similarity = this.embeddingService.cosineSimilarity(queryEmbedding, embedding);
-              cosineSimilarities.set(row.id, similarity);
+              directCosineSimilarities.set(row.id, similarity);
             }
           }
 
-          // Only proceed with hybrid if we have embeddings
-          if (cosineSimilarities.size > 0) {
+          // Compute cosine similarity for HyPE embeddings
+          const hypeCosineSimilarities = new Map<string, number>();
+          for (const row of rows) {
+            const hypeEmbedding = hypeEmbeddingMap.get(row.id);
+            if (hypeEmbedding) {
+              const similarity = this.embeddingService.cosineSimilarity(
+                queryEmbedding,
+                hypeEmbedding
+              );
+              hypeCosineSimilarities.set(row.id, similarity);
+            }
+          }
+
+          // Determine retrieval mode based on available embeddings
+          const hasDirectEmbeddings = directCosineSimilarities.size > 0;
+          const hasHypeEmbeddings = hypeCosineSimilarities.size > 0;
+
+          if (hasDirectEmbeddings || hasHypeEmbeddings) {
             // Step 3: Rank by BM25 (ascending order - lower score is better)
             const bm25Ranked = [...rows].sort((a, b) => a.score - b.score);
             const bm25RankMap = new Map<string, number>();
@@ -389,42 +430,75 @@ export class KnowledgeStoreService {
               bm25RankMap.set(row.id, index + 1);
             });
 
-            // Step 4: Rank by cosine similarity (descending - higher is better)
-            const cosineRanked = [...rows]
-              .filter((r) => cosineSimilarities.has(r.id))
+            // Step 4: Rank by direct cosine similarity (descending - higher is better)
+            const directCosineRanked = [...rows]
+              .filter((r) => directCosineSimilarities.has(r.id))
               .sort((a, b) => {
-                const simA = cosineSimilarities.get(a.id) || 0;
-                const simB = cosineSimilarities.get(b.id) || 0;
+                const simA = directCosineSimilarities.get(a.id) || 0;
+                const simB = directCosineSimilarities.get(b.id) || 0;
                 return simB - simA;
               });
-            const cosineRankMap = new Map<string, number>();
-            cosineRanked.forEach((row, index) => {
-              cosineRankMap.set(row.id, index + 1);
+            const directCosineRankMap = new Map<string, number>();
+            directCosineRanked.forEach((row, index) => {
+              directCosineRankMap.set(row.id, index + 1);
             });
 
-            // Step 5: RRF merge with k=60
+            // Step 5: Rank by HyPE cosine similarity (descending - higher is better)
+            const hypeRanked = [...rows]
+              .filter((r) => hypeCosineSimilarities.has(r.id))
+              .sort((a, b) => {
+                const simA = hypeCosineSimilarities.get(a.id) || 0;
+                const simB = hypeCosineSimilarities.get(b.id) || 0;
+                return simB - simA;
+              });
+            const hypeRankMap = new Map<string, number>();
+            hypeRanked.forEach((row, index) => {
+              hypeRankMap.set(row.id, index + 1);
+            });
+
+            // Step 6: RRF merge with k=60, equal weights for all three modes
             const k = 60;
             const rrfScores = new Map<string, number>();
 
             for (const row of rows) {
               const bm25Rank = bm25RankMap.get(row.id) || rows.length + 1;
-              const cosineRank = cosineRankMap.get(row.id) || rows.length + 1;
+              const directCosineRank = directCosineRankMap.get(row.id) || rows.length + 1;
+              const hypeRank = hypeRankMap.get(row.id) || rows.length + 1;
 
-              const rrfScore = 1 / (k + bm25Rank) + 1 / (k + cosineRank);
+              let rrfScore = 1 / (k + bm25Rank);
+
+              // Add direct cosine if available
+              if (hasDirectEmbeddings) {
+                rrfScore += 1 / (k + directCosineRank);
+              }
+
+              // Add HyPE cosine if available
+              if (hasHypeEmbeddings) {
+                rrfScore += 1 / (k + hypeRank);
+              }
+
               rrfScores.set(row.id, rrfScore);
             }
 
-            // Step 6: Sort by RRF score (higher is better)
+            // Step 7: Sort by RRF score (higher is better)
             rankedRows = [...rows].sort((a, b) => {
               const scoreA = rrfScores.get(a.id) || 0;
               const scoreB = rrfScores.get(b.id) || 0;
               return scoreB - scoreA;
             });
 
-            retrievalMode = 'hybrid';
-            logger.info(
-              `Hybrid retrieval: ${cosineSimilarities.size}/${rows.length} chunks with embeddings`
-            );
+            // Set retrieval mode based on what was used
+            if (hasHypeEmbeddings) {
+              retrievalMode = 'hybrid_hype';
+              logger.info(
+                `Triple-mode retrieval: ${directCosineSimilarities.size} direct, ${hypeCosineSimilarities.size} HyPE embeddings`
+              );
+            } else {
+              retrievalMode = 'hybrid';
+              logger.info(
+                `Hybrid retrieval: ${directCosineSimilarities.size}/${rows.length} chunks with direct embeddings`
+              );
+            }
           } else {
             logger.debug('No embeddings found for candidates, falling back to BM25');
           }
@@ -500,6 +574,9 @@ export class KnowledgeStoreService {
       this.db.prepare(updateSql).run(...chunkIds);
       logger.debug(`Updated usage tracking for ${chunkIds.length} chunks`);
     }
+
+    // Log top-5 results for evaluation (append-only, rotate at 10k entries)
+    void this.logEvaluation(projectPath, query, results.slice(0, 5), retrievalMode);
 
     return { results, retrieval_mode: retrievalMode };
   }
@@ -830,5 +907,147 @@ export class KnowledgeStoreService {
     });
 
     return results;
+  }
+
+  /**
+   * Log evaluation data for offline analysis.
+   * Appends to .automaker/knowledge-eval.jsonl with rotation at 10k entries.
+   *
+   * @param projectPath - Project path
+   * @param query - Search query
+   * @param topResults - Top-5 results to log
+   * @param retrievalMode - Retrieval mode used
+   */
+  private async logEvaluation(
+    projectPath: string,
+    query: string,
+    topResults: KnowledgeSearchResult[],
+    retrievalMode: RetrievalMode
+  ): Promise<void> {
+    try {
+      const automakerDir = path.join(projectPath, '.automaker');
+      const evalLogPath = path.join(automakerDir, 'knowledge-eval.jsonl');
+
+      // Ensure directory exists
+      if (!fs.existsSync(automakerDir)) {
+        fs.mkdirSync(automakerDir, { recursive: true });
+      }
+
+      // Prepare log entry
+      const logEntry = {
+        timestamp: new Date().toISOString(),
+        query,
+        retrieval_mode: retrievalMode,
+        top_results: topResults.map((r, index) => ({
+          rank: index + 1,
+          chunk_id: r.chunk.id,
+          source_file: r.chunk.sourceFile,
+          chunk_index: r.chunk.chunkIndex,
+          source_type: r.chunk.sourceType,
+          score: r.score,
+        })),
+      };
+
+      // Append to log file
+      await fs.promises.appendFile(evalLogPath, JSON.stringify(logEntry) + '\n', 'utf-8');
+
+      // Check if rotation is needed
+      const stats = await fs.promises.stat(evalLogPath);
+      const lines = (await fs.promises.readFile(evalLogPath, 'utf-8')).split('\n').filter(Boolean);
+
+      if (lines.length > 10000) {
+        logger.info('Rotating knowledge-eval.jsonl (10k entries exceeded)');
+        // Keep most recent 5000 entries
+        const rotatedContent = lines.slice(-5000).join('\n') + '\n';
+        await fs.promises.writeFile(evalLogPath, rotatedContent, 'utf-8');
+      }
+    } catch (error) {
+      logger.warn('Failed to log evaluation data:', error);
+      // Don't throw - logging should not block search
+    }
+  }
+
+  /**
+   * Get aggregate evaluation statistics from knowledge-eval.jsonl.
+   * Returns metrics on retrieval mode usage and rank distribution.
+   *
+   * @param projectPath - Project path
+   * @returns Aggregate statistics
+   */
+  async getEvalStats(projectPath: string): Promise<{
+    total_searches: number;
+    retrieval_mode_counts: Record<RetrievalMode, number>;
+    avg_top_rank: number;
+    source_type_coverage: Record<string, number>;
+  }> {
+    try {
+      const evalLogPath = path.join(projectPath, '.automaker', 'knowledge-eval.jsonl');
+
+      if (!fs.existsSync(evalLogPath)) {
+        return {
+          total_searches: 0,
+          retrieval_mode_counts: { hybrid_hype: 0, hybrid: 0, bm25: 0 },
+          avg_top_rank: 0,
+          source_type_coverage: {},
+        };
+      }
+
+      const content = await fs.promises.readFile(evalLogPath, 'utf-8');
+      const lines = content.split('\n').filter(Boolean);
+
+      const retrieval_mode_counts: Record<RetrievalMode, number> = {
+        hybrid_hype: 0,
+        hybrid: 0,
+        bm25: 0,
+      };
+      const source_type_coverage: Record<string, number> = {};
+      let total_top_rank = 0;
+
+      for (const line of lines) {
+        try {
+          const entry = JSON.parse(line);
+
+          // Count retrieval modes
+          if (entry.retrieval_mode) {
+            retrieval_mode_counts[entry.retrieval_mode as RetrievalMode] =
+              (retrieval_mode_counts[entry.retrieval_mode as RetrievalMode] || 0) + 1;
+          }
+
+          // Track source type coverage (count unique source types in top results)
+          if (entry.top_results && Array.isArray(entry.top_results)) {
+            for (const result of entry.top_results) {
+              const sourceType = result.source_type;
+              source_type_coverage[sourceType] = (source_type_coverage[sourceType] || 0) + 1;
+            }
+
+            // Track average rank of first result (for rank improvement analysis)
+            if (entry.top_results.length > 0) {
+              total_top_rank += entry.top_results[0].rank;
+            }
+          }
+        } catch (parseError) {
+          logger.warn('Failed to parse eval log entry:', parseError);
+          // Continue processing other entries
+        }
+      }
+
+      const total_searches = lines.length;
+      const avg_top_rank = total_searches > 0 ? total_top_rank / total_searches : 0;
+
+      return {
+        total_searches,
+        retrieval_mode_counts,
+        avg_top_rank,
+        source_type_coverage,
+      };
+    } catch (error) {
+      logger.warn('Failed to get eval stats:', error);
+      return {
+        total_searches: 0,
+        retrieval_mode_counts: { hybrid_hype: 0, hybrid: 0, bm25: 0 },
+        avg_top_rank: 0,
+        source_type_coverage: {},
+      };
+    }
   }
 }

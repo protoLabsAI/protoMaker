@@ -807,4 +807,5 @@ export type {
   KnowledgeStoreStats,
   KnowledgeStoreSettings,
   KnowledgeSearchOptions,
+  RetrievalMode,
 } from './knowledge.js';
