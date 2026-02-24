@@ -5036,9 +5036,7 @@ Format your response as a structured markdown document.`;
               }
               // Default: block unless dependency is in a completed state
               return (
-                dep.status !== 'completed' &&
-                dep.status !== 'verified' &&
-                dep.status !== 'done'
+                dep.status !== 'completed' && dep.status !== 'verified' && dep.status !== 'done'
               );
             }) || [];
 
