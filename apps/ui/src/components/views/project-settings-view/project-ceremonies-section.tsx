@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { PartyPopper } from 'lucide-react';
+import { AlertTriangle, PartyPopper } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { Button } from '@protolabs/ui/atoms';
 import { Input } from '@protolabs/ui/atoms';
 import { Label } from '@protolabs/ui/atoms';
@@ -7,9 +8,21 @@ import { Switch } from '@protolabs/ui/atoms';
 import { toast } from 'sonner';
 import { useUpdateProjectSettings } from '@/hooks/mutations';
 import { useProjectSettings } from '@/hooks/queries';
+import { apiGet } from '@/lib/api-fetch';
+import { queryKeys } from '@/lib/query-keys';
 import type { Project } from '@/lib/electron';
 import type { CeremonySettings } from '@automaker/types';
 import { DEFAULT_CEREMONY_SETTINGS } from '@automaker/types';
+
+interface CeremonyStatusResponse {
+  success: boolean;
+  counts: Record<string, number>;
+  total: number;
+  lastCeremonyAt: string | null;
+  activeReflection: string | null;
+  reflectionCount: number;
+  lastReflection: { projectTitle: string; projectSlug: string; completedAt: string } | null;
+}
 
 interface ProjectCeremoniesSectionProps {
   project: Project;
@@ -60,6 +73,15 @@ export function ProjectCeremoniesSection({ project }: ProjectCeremoniesSectionPr
   const { data: projectSettings } = useProjectSettings(project.path);
 
   const [settings, setSettings] = useState<CeremonySettings>(() => DEFAULT_CEREMONY_SETTINGS);
+
+  const { data: ceremonyStatus } = useQuery({
+    queryKey: queryKeys.ceremonies.status(),
+    queryFn: () => apiGet<CeremonyStatusResponse>('/api/ceremonies/status'),
+    refetchInterval: 30_000,
+  });
+
+  const discordConfigured = projectSettings?.integrations?.discord?.enabled === true;
+  const discordPostFailures = ceremonyStatus?.counts?.discordPostFailures ?? 0;
 
   // Sync from server when project settings load
   useEffect(() => {
@@ -122,6 +144,45 @@ export function ProjectCeremoniesSection({ project }: ProjectCeremoniesSectionPr
           onCheckedChange={(checked) => handleToggle('enabled', checked)}
         />
       </div>
+
+      {/* Discord not configured warning */}
+      {settings.enabled && !discordConfigured && (
+        <div className="flex items-start gap-3 rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-4">
+          <AlertTriangle className="w-5 h-5 text-yellow-500 mt-0.5 shrink-0" />
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-yellow-500">Discord integration required</p>
+            <p className="text-xs text-muted-foreground">
+              Ceremonies are enabled but Discord is not configured. Go to{' '}
+              <span className="font-medium text-foreground">Integrations</span> settings to connect
+              your Discord bot, or ceremonies will have no delivery channel.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Ceremony status */}
+      {settings.enabled &&
+        ceremonyStatus &&
+        (ceremonyStatus.total > 0 || discordPostFailures > 0) && (
+          <div className="flex items-center gap-4 text-xs text-muted-foreground rounded-lg border border-border bg-card p-3">
+            {ceremonyStatus.lastCeremonyAt && (
+              <span>
+                Last ceremony:{' '}
+                <span className="text-foreground">
+                  {new Date(ceremonyStatus.lastCeremonyAt).toLocaleString()}
+                </span>
+              </span>
+            )}
+            <span>
+              Total: <span className="text-foreground">{ceremonyStatus.total}</span>
+            </span>
+            {discordPostFailures > 0 && (
+              <span className="text-yellow-500">
+                Discord failures: <span className="font-medium">{discordPostFailures}</span>
+              </span>
+            )}
+          </div>
+        )}
 
       {/* Individual Ceremony Toggles */}
       {settings.enabled && (

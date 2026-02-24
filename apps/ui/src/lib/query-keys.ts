@@ -351,6 +351,14 @@ export const queryKeys = {
   },
 
   // ============================================
+  // Ceremonies
+  // ============================================
+  ceremonies: {
+    /** Ceremony observability status */
+    status: () => ['ceremonies', 'status'] as const,
+  },
+
+  // ============================================
   // Activity Feed
   // ============================================
   activity: {
