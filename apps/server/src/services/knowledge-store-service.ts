@@ -8,7 +8,6 @@
 import * as path from 'node:path';
 import * as fs from 'node:fs';
 import * as BetterSqlite3 from 'better-sqlite3';
-import Anthropic from '@anthropic-ai/sdk';
 import { createLogger } from '@protolabs-ai/utils';
 import type {
   KnowledgeStoreStats,
@@ -18,7 +17,7 @@ import type {
   KnowledgeStoreSettings,
   RetrievalMode,
 } from '@protolabs-ai/types';
-import { EmbeddingService } from './embedding-service.js';
+import { KnowledgeEmbeddingOrchestrator } from './knowledge-embedding-orchestrator.js';
 import { KnowledgeIngestionService } from './knowledge-ingestion-service.js';
 
 const logger = createLogger('KnowledgeStoreService');
@@ -31,7 +30,7 @@ const logger = createLogger('KnowledgeStoreService');
 export class KnowledgeStoreService {
   private db: BetterSqlite3.Database | null = null;
   private projectPath: string | null = null;
-  private embeddingService: EmbeddingService;
+  private embeddingOrchestrator: KnowledgeEmbeddingOrchestrator;
   private ingestionService: KnowledgeIngestionService;
   private settings: KnowledgeStoreSettings = {
     maxChunkSize: 1000,
@@ -43,9 +42,9 @@ export class KnowledgeStoreService {
     hybridRetrieval: true,
   };
 
-  constructor(embeddingService?: EmbeddingService) {
-    this.embeddingService = embeddingService || new EmbeddingService();
-    this.ingestionService = new KnowledgeIngestionService(this.embeddingService);
+  constructor(embeddingOrchestrator?: KnowledgeEmbeddingOrchestrator) {
+    this.embeddingOrchestrator = embeddingOrchestrator || new KnowledgeEmbeddingOrchestrator();
+    this.ingestionService = new KnowledgeIngestionService(this.embeddingOrchestrator);
   }
 
   /**
@@ -249,7 +248,9 @@ export class KnowledgeStoreService {
       >,
       lastUpdated,
       dbPath,
-      enabledHybridRetrieval: this.settings.hybridRetrieval && this.embeddingService.isReady(),
+      enabledHybridRetrieval:
+        this.settings.hybridRetrieval &&
+        this.embeddingOrchestrator.getEmbeddingService().isReady(),
     };
   }
 
@@ -282,7 +283,8 @@ export class KnowledgeStoreService {
     const { maxResults = 20, maxTokens = 8000, sourceTypes = 'all' } = opts;
 
     // Determine if we can use hybrid retrieval
-    const canUseHybrid = this.settings.hybridRetrieval && this.embeddingService.isReady();
+    const canUseHybrid =
+      this.settings.hybridRetrieval && this.embeddingOrchestrator.getEmbeddingService().isReady();
 
     let retrievalMode: RetrievalMode = 'bm25';
 
@@ -342,7 +344,7 @@ export class KnowledgeStoreService {
     if (canUseHybrid && rows.length > 0) {
       try {
         // Embed the query
-        const queryEmbedding = await this.embeddingService.embed(query);
+        const queryEmbedding = await this.embeddingOrchestrator.getEmbeddingService().embed(query);
 
         if (queryEmbedding) {
           // Load direct embeddings for candidates
@@ -400,7 +402,9 @@ export class KnowledgeStoreService {
           for (const row of rows) {
             const embedding = embeddingMap.get(row.id);
             if (embedding) {
-              const similarity = this.embeddingService.cosineSimilarity(queryEmbedding, embedding);
+              const similarity = this.embeddingOrchestrator
+                .getEmbeddingService()
+                .cosineSimilarity(queryEmbedding, embedding);
               directCosineSimilarities.set(row.id, similarity);
             }
           }
@@ -410,10 +414,9 @@ export class KnowledgeStoreService {
           for (const row of rows) {
             const hypeEmbedding = hypeEmbeddingMap.get(row.id);
             if (hypeEmbedding) {
-              const similarity = this.embeddingService.cosineSimilarity(
-                queryEmbedding,
-                hypeEmbedding
-              );
+              const similarity = this.embeddingOrchestrator
+                .getEmbeddingService()
+                .cosineSimilarity(queryEmbedding, hypeEmbedding);
               hypeCosineSimilarities.set(row.id, similarity);
             }
           }
@@ -741,6 +744,7 @@ export class KnowledgeStoreService {
   /**
    * Get embedding status for a project.
    * Returns the total number of chunks, how many have embeddings, and how many are pending.
+   * Delegates to KnowledgeEmbeddingOrchestrator.
    *
    * @param projectPath - Project path to check
    * @returns Object with total, embedded, and pending counts
@@ -758,27 +762,13 @@ export class KnowledgeStoreService {
       return { total: 0, embedded: 0, pending: 0 };
     }
 
-    // Get total count
-    const totalResult = this.db.prepare('SELECT COUNT(*) as count FROM chunks').get() as {
-      count: number;
-    };
-    const total = totalResult.count;
-
-    // Get embedded count (from separate embeddings table)
-    const embeddedResult = this.db.prepare('SELECT COUNT(*) as count FROM embeddings').get() as {
-      count: number;
-    };
-    const embedded = embeddedResult.count;
-
-    // Calculate pending
-    const pending = total - embedded;
-
-    return { total, embedded, pending };
+    return this.embeddingOrchestrator.getEmbeddingStatus(this.db);
   }
 
   /**
    * Get HyPE status for a project.
    * Returns the total number of chunks, how many have HyPE embeddings, and how many are pending.
+   * Delegates to KnowledgeEmbeddingOrchestrator.
    *
    * @param projectPath - Project path to check
    * @returns Object with total, hype_ready, and pending counts
@@ -796,29 +786,7 @@ export class KnowledgeStoreService {
       return { total: 0, hype_ready: 0, pending: 0 };
     }
 
-    // Get total count
-    const totalResult = this.db.prepare('SELECT COUNT(*) as count FROM chunks').get() as {
-      count: number;
-    };
-    const total = totalResult.count;
-
-    // Get HyPE ready count (has hype_embeddings)
-    const hypeReadyResult = this.db
-      .prepare('SELECT COUNT(*) as count FROM chunks WHERE hype_embeddings IS NOT NULL')
-      .get() as { count: number };
-    const hype_ready = hypeReadyResult.count;
-
-    // Calculate pending (has embeddings but no hype_embeddings)
-    const pendingResult = this.db
-      .prepare(
-        `SELECT COUNT(*) as count FROM chunks c
-         WHERE EXISTS (SELECT 1 FROM embeddings WHERE embeddings.chunk_id = c.id)
-           AND c.hype_embeddings IS NULL`
-      )
-      .get() as { count: number };
-    const pending = pendingResult.count;
-
-    return { total, hype_ready, pending };
+    return this.embeddingOrchestrator.getHypeStatus(this.db);
   }
 
   /**
