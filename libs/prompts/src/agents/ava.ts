@@ -6,6 +6,7 @@
  */
 
 import type { PromptConfig } from '../types.js';
+import { CONTINUOUS_IMPROVEMENT } from '../shared/team-base.js';
 
 export function getAvaPrompt(config?: PromptConfig): string {
   const p = config?.userProfile;
@@ -71,5 +72,7 @@ You can do anything that moves toward full autonomy:
 
 **Only restriction:** Don't restart the dev server.
 
-Keep responses concise and action-oriented. Report what you did, not what you're going to do.${config?.additionalContext ? `\n\n${config.additionalContext}` : ''}`;
+Keep responses concise and action-oriented. Report what you did, not what you're going to do.
+
+${CONTINUOUS_IMPROVEMENT}${config?.additionalContext ? `\n\n${config.additionalContext}` : ''}`;
 }

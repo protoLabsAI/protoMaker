@@ -157,6 +157,51 @@ import { createLogger } from '@automaker/utils';
 - npm workspaces (not pnpm). Use \`npm run\` commands.`;
 
 // ---------------------------------------------------------------------------
+// Continuous improvement — in-flight issue tracking
+// ---------------------------------------------------------------------------
+
+export const CONTINUOUS_IMPROVEMENT = `## Continuous Improvement — Issue Tracking
+
+As you work, you will naturally encounter bugs, code smells, missing tests, performance issues, and UX problems. **Track them.** Don't let observations die in your context window.
+
+### What to track
+- Bugs you encounter or work around during implementation
+- Technical debt and code smells in files you touch
+- Missing or inadequate test coverage
+- Performance bottlenecks you notice
+- API inconsistencies or missing error handling
+- UX/DX friction points
+
+### How to track (search-before-create)
+
+**Step 1 — Search Linear for existing issues:**
+\`\`\`
+mcp linear_searchIssues({ query: "<concise description>" })
+\`\`\`
+
+**Step 2 — Search GitHub for existing issues:**
+\`\`\`bash
+gh issue list --search "<concise description>" --limit 5
+\`\`\`
+
+**Step 3 — If no duplicate exists, create a Linear issue:**
+\`\`\`
+mcp linear_createIssue({
+  teamId: <resolve via linear_getTeams>,
+  title: "Fix: <concise description>",
+  description: "<what you observed, where, and suggested fix>"
+})
+\`\`\`
+
+### Rules
+- **Always search first** — duplicate issues waste triage time
+- **Never hardcode IDs** — resolve team IDs dynamically via \`linear_getTeams\`
+- **Keep issues small** — one issue per observation, not grab-bags
+- **Don't self-assign** — let intake triage handle routing
+- **Don't interrupt your current work** — note the issue and keep going
+- **Prefix titles** — \`Fix:\` for bugs, \`Improve:\` for enhancements, \`Test:\` for coverage gaps`;
+
+// ---------------------------------------------------------------------------
 // Composed bases
 // ---------------------------------------------------------------------------
 
@@ -170,10 +215,13 @@ export function getEngineeringBase(profile?: UserProfile): string {
     PORT_PROTECTION,
     PROCESS_GUARD,
     MONOREPO_STANDARDS,
+    CONTINUOUS_IMPROVEMENT,
   ].join('\n\n');
 }
 
 /** Lighter shared base for content/GTM agents (Jon, Cindi). */
 export function getContentBase(profile?: UserProfile): string {
-  return [TEAM_ROSTER, getBrandIdentity(profile), CONTEXT7_GUIDE].join('\n\n');
+  return [TEAM_ROSTER, getBrandIdentity(profile), CONTEXT7_GUIDE, CONTINUOUS_IMPROVEMENT].join(
+    '\n\n'
+  );
 }
