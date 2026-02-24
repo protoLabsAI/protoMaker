@@ -2608,3 +2608,42 @@ usageStats:
 - **Situation:** Confusion about dependency ownership in monorepo structure - types library is meant for TypeScript type exports only
 - **Root cause:** Separating types from runtime code prevents circular dependencies, allows types to be consumed by any package without pulling in database drivers. Types packages export type definitions, not executable code.
 - **How to avoid:** Gains: Clean separation of concerns, types can be installed without runtime dependencies. Losses: Need to manage dependencies in correct package
+
+#### [Gotcha] Fallback operators in disjunctive conditions create implicit permission pathways. The nullish coalescing operator (??) in `(feature.planSpec?.tasksCompleted ?? 0)` allowed stale planSpec data on terminal-status features to bypass the intended logic guard. (2026-02-24)
+- **Situation:** Features with status='done' but planSpec.tasksCompleted < planSpec.tasksTotal were incorrectly eligible for re-execution. The OR condition allowed any feature with an approved planSpec to pass through regardless of status.
+- **Root cause:** In systems using `condition1 OR (data.property ?? default)`, the fallback to default creates a state where invalid entities can pass through if the data property exists with certain values. The status guard alone is insufficient.
+- **How to avoid:** Explicit status exclusions add verbosity but prevent silent failures from stale data. Alternative of removing planSpec checks entirely would have broken the backlog-with-approved-plan fallback.
+
+#### [Pattern] Terminal state metadata staleness pattern: When features transition to terminal states (done, verified), their associated metadata (planSpec) is not invalidated/cleaned, creating a risk that stale metadata will influence eligibility logic in subsequent operations. (2026-02-24)
+- **Problem solved:** The bug manifested because planSpec could exist on done/verified features with tasksCompleted != tasksTotal, even though those features should never be eligible for auto-mode regardless of plan completion state.
+- **Why this works:** Cleaning up associated metadata on state transitions is often deferred. Systems using multiple data sources (status field + planSpec object) must protect against metadata outliving its validity.
+- **Trade-offs:** Defensive guards in eligibility logic are safer for backward compatibility with existing data but require developers to remember terminal states need special handling everywhere such metadata is checked.
+
+### Using explicit exclusion (blacklist of terminal statuses) rather than explicit inclusion (whitelist of allowed statuses) in OR-based eligibility logic when adding safety guards. (2026-02-24)
+- **Context:** The fix added status guards to the planSpec fallback condition by excluding terminal states rather than creating an allowedStatuses array.
+- **Why:** In a disjunctive eligibility check with multiple branches, adding new conditions via OR means new invalid cases can emerge if you only include known-good cases. Explicit exclusion of known-bad cases is more maintainable for the 'backlog OR (planSpec.approved AND ...) pattern because new statuses added to the system should naturally fall through unless explicitly allowed.
+- **Rejected:** Using `const ELIGIBLE_STATUSES = ['backlog']; if (!ELIGIBLE_STATUSES.includes(status) && planSpec.approved)...` - this inverts the logic and is harder to reason about in a disjunctive context.
+- **Trade-offs:** Explicit exclusion list is verbose (5 negation checks) but creates a clear firewall preventing unknown/future statuses from falling through. Inclusion would be more concise but risky for extensibility.
+- **Breaking if changed:** If new feature statuses are added (e.g., 'archived', 'cancelled') without adding them to the exclusion list, those features would incorrectly become eligible for auto-mode execution if they have approved planSpecs.
+
+### Rebase failures are non-blocking with graceful degradation - agents continue execution on stale base instead of failing (2026-02-24)
+- **Context:** Agent execution must rebase onto latest origin/main, but network/merge conflicts can prevent this
+- **Why:** Ensures agent execution resilience. A failed rebase is worse than executing on stale code (which still works). Preserves availability over consistency.
+- **Rejected:** Make rebase blocking - fail agent execution if rebase fails. This would improve consistency but reduce availability and cause cascading failures.
+- **Trade-offs:** Gained: High availability and resilience. Lost: Strict consistency guarantee - agents may execute against outdated code when rebase fails.
+- **Breaking if changed:** If changed to blocking: Agents will fail when merge conflicts exist instead of proceeding, causing outages during periods of rapid main merges.
+
+#### [Pattern] Rebase integrated at 3 execution points (executeFeature, executePipelineStep, followUpFeature) rather than single entry point (2026-02-24)
+- **Problem solved:** Multiple independent code paths trigger agent execution with different calling conventions
+- **Why this works:** Indicates execution paths don't converge at a common parent. Adding rebase at a single higher point would miss some paths. Three touchpoints guarantee all executions rebase regardless of entry point.
+- **Trade-offs:** Gained: Coverage of all paths. Lost: Code duplication (rebase logic appears 3 times). Maintenance burden if rebase logic changes.
+
+#### [Pattern] Detect merge conflicts specifically and abort rebase cleanly rather than treating all failures the same (2026-02-24)
+- **Problem solved:** Rebase can fail due to conflicts (merge required) or other reasons (network, permissions, etc)
+- **Why this works:** Conflicts are recoverable and expected during parallel development. Distinguishing them from hard failures allows proper logging and monitoring. Aborting cleans up worktree state automatically.
+- **Trade-offs:** Gained: Operational visibility into conflict frequency. Lost: Slightly more complex error handling code.
+
+#### [Pattern] Use emoji indicators (⚠️, ✓) and context tags in logs for quick visual parsing of rebase outcomes during agent execution (2026-02-24)
+- **Problem solved:** Rebase happens silently during agent execution in background processes/logs
+- **Why this works:** Non-blocking rebase means failures don't stop execution but become silent risks. Emoji + clear messages enable ops/developers to scan logs quickly for rebase health. Indicates this is expected to fail sometimes in production.
+- **Trade-offs:** Gained: Operational observability. Lost: Slightly more verbose logs. Assumes ops/developers actively monitor logs for rebase messages.

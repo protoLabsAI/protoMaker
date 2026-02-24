@@ -64,6 +64,7 @@ DevOps documentation in [`docs/infra/`](./infra/):
 | [Route Organization](./server/route-organization.md) | Express route structure and patterns             |
 | [Providers](./server/providers.md)                   | AI provider architecture (Claude, Cursor, Codex) |
 | [Utilities](./server/utilities.md)                   | Server utility functions reference               |
+| [Knowledge Store](./server/knowledge-store.md)       | SQLite FTS5 knowledge base for agent context     |
 
 ## Authority System
 
