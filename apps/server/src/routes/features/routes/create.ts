@@ -43,7 +43,7 @@ export function createCreateHandler(featureLoader: FeatureLoader, events?: Event
       if (events) {
         events.emit('feature:created', {
           featureId: created.id,
-          featureName: created.name,
+          featureName: created.title,
           projectPath,
         });
       }

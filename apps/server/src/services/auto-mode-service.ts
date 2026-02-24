@@ -4378,7 +4378,7 @@ Format your response as a structured markdown document.`;
         await notificationService.createNotification({
           type: 'feature_waiting_approval',
           title: 'Feature Ready for Review',
-          message: `"${feature.name || featureId}" is ready for your review and approval.`,
+          message: `"${feature.title || featureId}" is ready for your review and approval.`,
           featureId,
           projectPath,
         });
@@ -4386,7 +4386,7 @@ Format your response as a structured markdown document.`;
         await notificationService.createNotification({
           type: 'feature_verified',
           title: 'Feature Verified',
-          message: `"${feature.name || featureId}" has been verified and is complete.`,
+          message: `"${feature.title || featureId}" has been verified and is complete.`,
           featureId,
           projectPath,
         });

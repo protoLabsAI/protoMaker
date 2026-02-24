@@ -397,8 +397,12 @@ export interface Feature {
    * All timestamps are ISO 8601 strings.
    */
   createdAt?: string; // When the feature was first created
-  updatedAt?: number; // Epoch ms timestamp of last modification
+  updatedAt?: string | number; // Last modification timestamp (ISO 8601 or epoch ms)
   completedAt?: string; // When the feature was marked as done or verified
+  /** Timestamp when agent just finished (for "just completed" badge, ISO 8601) */
+  justFinishedAt?: string;
+  /** Reason for the most recent status change (used in status transition history) */
+  statusChangeReason?: string;
   reviewStartedAt?: string; // When the feature entered review status
   /**
    * History of all status transitions for this feature.
