@@ -20,11 +20,11 @@ const logger = createLogger('CalendarService');
  * Calendar event types
  */
 export type CalendarEventType =
-  | 'custom'      // User-created events
-  | 'feature'     // Feature due dates
-  | 'milestone'   // Project milestone dates
-  | 'meeting'     // Scheduled meetings
-  | 'deadline';   // Hard deadlines
+  | 'custom' // User-created events
+  | 'feature' // Feature due dates
+  | 'milestone' // Project milestone dates
+  | 'meeting' // Scheduled meetings
+  | 'deadline'; // Hard deadlines
 
 /**
  * A calendar event
@@ -192,7 +192,9 @@ export class CalendarService {
     // Filter by date range
     let filteredEvents = allEvents;
     if (startDate || endDate) {
-      filteredEvents = allEvents.filter((event) => this.isDateInRange(event.date, startDate, endDate));
+      filteredEvents = allEvents.filter((event) =>
+        this.isDateInRange(event.date, startDate, endDate)
+      );
     }
 
     // Filter by types if specified

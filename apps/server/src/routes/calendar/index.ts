@@ -4,7 +4,11 @@
 
 import { Router, type Request, type Response } from 'express';
 import { validatePathParams } from '../../middleware/validate-paths.js';
-import type { CalendarService, CalendarQueryOptions, CalendarEventType } from '../../services/calendar-service.js';
+import type {
+  CalendarService,
+  CalendarQueryOptions,
+  CalendarEventType,
+} from '../../services/calendar-service.js';
 
 /**
  * Create calendar routes
