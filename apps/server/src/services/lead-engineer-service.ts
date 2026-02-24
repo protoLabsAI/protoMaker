@@ -1456,6 +1456,7 @@ export class LeadEngineerService {
   private prFeedbackService?: PRFeedbackService;
   private checkpointService?: PipelineCheckpointService;
   private contextFidelityService?: ContextFidelityService;
+  private knowledgeStoreService?: KnowledgeStoreService;
 
   constructor(
     private events: EventEmitter,
@@ -1479,6 +1480,13 @@ export class LeadEngineerService {
    */
   setContextFidelityService(service: ContextFidelityService): void {
     this.contextFidelityService = service;
+  }
+
+  /**
+   * Set knowledge store service for FTS5-powered reflection search.
+   */
+  setKnowledgeStoreService(service: KnowledgeStoreService): void {
+    this.knowledgeStoreService = service;
   }
 
   /**
@@ -1755,6 +1763,7 @@ export class LeadEngineerService {
         prFeedbackService: this.prFeedbackService,
         checkpointService: this.checkpointService,
         contextFidelityService: this.contextFidelityService,
+        knowledgeStoreService: this.knowledgeStoreService,
       };
 
       // Read workflow settings to control pipeline features
