@@ -2554,3 +2554,20 @@ usageStats:
 - **Problem solved:** Query key design for React Query caching and invalidation
 - **Why this works:** Allows invalidating all ceremony-related queries via queryKeys.ceremonies, or specific status queries via queryKeys.ceremonies.status(). Scales to multiple ceremony endpoints
 - **Trade-offs:** More complex key structure adds minimal overhead but provides powerful cache control. Requires discipline in other code to use same hierarchy
+
+### Build-time conditional provider wrapping: PersistQueryClientProvider (web) vs QueryClientProvider (Electron) selected via VITE_SKIP_ELECTRON environment variable (2026-02-24)
+- **Context:** Needed IndexedDB persistence in web but not Electron to avoid IDB overhead in electron-builder packages
+- **Why:** Environment variables are resolved at Vite build time, not runtime. This allows different provider configurations to be bundled for web vs Electron, eliminating dead code and avoiding IDB initialization in Electron entirely
+- **Rejected:** Runtime feature flag check using Electron API existence or window.process - would still bundle IDB code and init logic, paying overhead cost in all builds
+- **Trade-offs:** Web and Electron bundles are truly different (build-time split), but requires separate build targets and can't dynamically switch at runtime. Upside: no runtime overhead in Electron, cleaner bundle.
+- **Breaking if changed:** Removing the VITE_SKIP_ELECTRON check would cause Electron builds to attempt IndexedDB initialization, potentially failing on sandboxed filesystem contexts or bloating the app package
+
+#### [Gotcha] Zustand persist middleware only hydrates store on first component import/mount, not during app initialization (2026-02-24)
+- **Situation:** Test expected `automaker-ui-cache` localStorage key to exist after root component renders, but the Zustand store definition alone doesn't trigger hydration - requires actual component usage
+- **Root cause:** Zustand is lazy: store.getState() on an uninitialized persist store returns default state. Middleware hooks only run when component calls useUICacheStore() hook or explicit store.getState() access happens. This matches lazy evaluation pattern across React ecosystem.
+- **How to avoid:** Store initialization is implicit and deferred, making timing harder to reason about, but eliminates unnecessary hydration for unused stores. Testing requires awareness that localStorage writes happen on first component mount, not earlier.
+
+#### [Pattern] Dual-storage strategy: localStorage for UI state config + IndexedDB for React Query cache (2026-02-24)
+- **Problem solved:** UI state (sidebar toggle, current project, column order) is small/fast to access; React Query cache can be large and async-heavy
+- **Why this works:** localStorage is sync, small (<5MB), suitable for small config state. IndexedDB is async, large (50MB+), better for bulk query results. Using both matches storage capability to data type and access pattern.
+- **Trade-offs:** More complex (2 storage layers), but each optimized for its use case. localStorage provides sync access for UI (no render delays), IDB provides capacity for query cache without bloating main store.

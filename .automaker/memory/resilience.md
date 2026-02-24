@@ -5,9 +5,9 @@ relevantTo: [resilience]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 1
-  referenced: 0
-  successfulFeatures: 0
+  loaded: 3
+  referenced: 1
+  successfulFeatures: 1
 ---
 # resilience
 

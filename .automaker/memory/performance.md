@@ -5,9 +5,9 @@ relevantTo: [performance]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 6
-  referenced: 4
-  successfulFeatures: 4
+  loaded: 8
+  referenced: 5
+  successfulFeatures: 5
 ---
 # performance
 
@@ -118,3 +118,10 @@ usageStats:
 - **Rejected:** Real-time via WebSockets (infrastructure complexity), 5s polling (API load), on-demand queries (stale data)
 - **Trade-offs:** UI may be up to 30s behind reality; 30s polling is acceptable for non-critical status display vs maintenance burden of real-time infrastructure
 - **Breaking if changed:** Changing interval affects data freshness guarantees and API load; shorter intervals increase requests exponentially across all users
+
+### Extended React Query gcTime from 5 minutes to 24 hours (24*60*60*1000ms) (2026-02-24)
+- **Context:** PWA feature requires cached data to persist across browser restart/refresh so board displays instantly from cache before server responds
+- **Why:** gcTime controls how long stale data is kept in memory before garbage collection. 24 hours allows data to survive page refresh and browser restart within same day. Longer retention trades memory for UX (instant data display).
+- **Rejected:** Shorter gcTime (5-30 min) would require fresh server fetch on each page load or browser restart, defeating offline-first PWA pattern. Session/sessionStorage would lose data on browser restart entirely.
+- **Trade-offs:** Memory usage increases (more cached queries held longer), but eliminates network spinner on page refresh IF data is already cached. Cache is still soft (can be invalidated/refetched), not stale (user still sees fresh indicator).
+- **Breaking if changed:** If gcTime is reverted to <1 hour, cached data won't persist across browser restart, eliminating the instant-load UX that PWA feature enables

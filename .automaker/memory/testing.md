@@ -778,3 +778,8 @@ usageStats:
 - **Situation:** Initial tests attempted to validate both endpoint functionality and integration with ceremony system, but path/auth constraints made this impractical
 - **Root cause:** Path validation middleware protects production but prevents test isolation. Manual curl testing with valid credentials becomes the verification method instead.
 - **How to avoid:** Lose automated test coverage of retry endpoint behavior, gain assurance that production path validation works
+
+#### [Gotcha] localStorage direct manipulation in Playwright tests doesn't trigger Zustand hydration until component mounts and accesses store (2026-02-24)
+- **Situation:** Test manually set localStorage data but expected it to be immediately reflected in store state; localStorage write != store hydration
+- **Root cause:** localStorage.setItem() writes to browser storage, but Zustand's persist middleware only reads and hydrates on first store access (hook or getState()). Writing to storage doesn't retroactively hydrate already-instantiated stores.
+- **How to avoid:** Test must use Playwright page.evaluate() to set localStorage before any component mounts, then verify via component or direct store access after mount. Simpler test would be: mount component → localStorage auto-hydrates via middleware.
