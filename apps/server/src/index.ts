@@ -108,6 +108,7 @@ import { calendarService } from './services/calendar-service.js';
 import { createFlowsRoutes } from './routes/flows/index.js';
 import { createBacklogPlanRoutes } from './routes/backlog-plan/index.js';
 import { createCalendarRoutes } from './routes/calendar/index.js';
+import { createGoogleOAuthRoutes } from './routes/google-calendar/oauth.js';
 import { cleanupStaleValidations } from './routes/github/routes/validation-common.js';
 import { createMCPRoutes } from './routes/mcp/index.js';
 import { MCPTestService } from './services/mcp-test-service.js';
@@ -1354,6 +1355,8 @@ app.use('/api/setup', createSetupRoutes(settingsService));
 app.use('/webhooks', createWebhooksRoutes(events, settingsService));
 // Linear agent routes (OAuth + webhook)
 app.use('/api/linear', createLinearRoutes(settingsService, events, featureLoader));
+// Google Calendar OAuth (unauthenticated — browser-initiated redirect flow)
+app.use('/api/google-calendar', createGoogleOAuthRoutes(settingsService));
 
 // Apply authentication to all /api/* routes
 app.use('/api', authMiddleware);
