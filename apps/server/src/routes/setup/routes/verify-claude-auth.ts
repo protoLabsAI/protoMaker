@@ -193,8 +193,14 @@ export function createVerifyClaudeAuthHandler() {
           }
 
           // Check specifically for assistant messages with text content
-          if (msg.type === 'assistant' && (msg as any).message?.content) {
-            const content = (msg as any).message.content;
+          interface AssistantMessage {
+            type: 'assistant';
+            message?: {
+              content?: Array<{ type: string; text?: string }>;
+            };
+          }
+          if (msg.type === 'assistant' && (msg as AssistantMessage).message?.content) {
+            const content = (msg as AssistantMessage).message!.content!;
             if (Array.isArray(content)) {
               for (const block of content) {
                 if (block.type === 'text' && block.text) {

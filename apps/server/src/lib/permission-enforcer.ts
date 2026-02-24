@@ -2,7 +2,10 @@
  * Permission enforcement utilities for Cursor provider
  */
 
-import type { CursorCliConfigFile } from '@automaker/types';
+import type { CursorCliConfigFile, CursorToolCallEvent } from '@automaker/types';
+
+/** The tool_call shape from CursorToolCallEvent */
+type ToolCall = CursorToolCallEvent['tool_call'];
 import { createLogger } from '@automaker/utils';
 
 const logger = createLogger('PermissionEnforcer');
@@ -16,7 +19,7 @@ export interface PermissionCheckResult {
  * Check if a tool call is allowed based on permissions
  */
 export function checkToolCallPermission(
-  toolCall: any,
+  toolCall: ToolCall,
   permissions: CursorCliConfigFile | null
 ): PermissionCheckResult {
   if (!permissions || !permissions.permissions) {
@@ -152,7 +155,11 @@ function matchesRule(toolName: string, rule: string): boolean {
 /**
  * Log permission violations
  */
-export function logPermissionViolation(toolCall: any, reason: string, sessionId?: string): void {
+export function logPermissionViolation(
+  toolCall: ToolCall,
+  reason: string,
+  sessionId?: string
+): void {
   const sessionIdStr = sessionId ? ` [${sessionId}]` : '';
 
   if (toolCall.shellToolCall?.args?.command) {

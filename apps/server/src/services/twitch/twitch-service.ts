@@ -22,6 +22,13 @@ import type { RateLimitEntry, ParsedIdeaCommand } from './types.js';
 
 const logger = createLogger('TwitchService');
 
+/** Minimal shape of a Twurple ChatClient (dynamically imported) */
+interface TwurpleChatClient {
+  onMessage(handler: (channel: string, user: string, message: string) => void): void;
+  connect(): Promise<void>;
+  quit(): Promise<void>;
+}
+
 /**
  * TwitchService - Main service class for Twitch chat integration
  *
@@ -35,7 +42,7 @@ export class TwitchService {
   private rateLimitMap: Map<string, RateLimitEntry> = new Map();
   private recentSuggestions: Set<string> = new Set();
   private isConnected = false;
-  private chatClient: any = null; // Twurple ChatClient (dynamically loaded)
+  private chatClient: TwurpleChatClient | null = null; // Twurple ChatClient (dynamically loaded)
   private duplicateWindowMs = 60000; // 1 minute window for duplicate detection
 
   constructor(settings: TwitchSettings, projectPath: string) {
@@ -90,7 +97,7 @@ export class TwitchService {
       this.chatClient = new ChatClient({
         authProvider,
         channels: [this.settings.channelName],
-      });
+      }) as unknown as TwurpleChatClient;
 
       // Set up message handler
       this.chatClient.onMessage(async (channel: string, user: string, message: string) => {
@@ -395,7 +402,13 @@ export class TwitchService {
     title: string;
     choices: Array<{ title: string }>;
     durationSeconds: number;
-  }): Promise<any> {
+  }): Promise<{
+    id: string;
+    title: string;
+    choices: unknown;
+    durationSeconds: number;
+    status: string;
+  }> {
     try {
       // Dynamically import Twurple API
       const { ApiClient } = await import('@twurple/api');

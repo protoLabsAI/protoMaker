@@ -325,66 +325,74 @@ export async function getPromptCustomization(
     type AnyPromptObj = Record<string, string>;
     const asRecord = (obj: object): AnyPromptObj => obj as AnyPromptObj;
 
+    type CustomObjMap = Record<string, { enabled?: boolean } | undefined>;
+    const asCustomObj = (obj: object | undefined): CustomObjMap | undefined =>
+      obj as CustomObjMap | undefined;
+
     const categories: Array<{
       name: string;
       mergedObj: AnyPromptObj;
-      customObj?: Record<string, { enabled?: boolean } | undefined>;
+      customObj?: CustomObjMap;
     }> = [
       {
         name: 'autoMode',
         mergedObj: asRecord(merged.autoMode),
-        customObj: customization.autoMode as any,
+        customObj: asCustomObj(customization.autoMode),
       },
-      { name: 'agent', mergedObj: asRecord(merged.agent), customObj: customization.agent as any },
+      {
+        name: 'agent',
+        mergedObj: asRecord(merged.agent),
+        customObj: asCustomObj(customization.agent),
+      },
       {
         name: 'backlogPlan',
         mergedObj: asRecord(merged.backlogPlan),
-        customObj: customization.backlogPlan as any,
+        customObj: asCustomObj(customization.backlogPlan),
       },
       {
         name: 'enhancement',
         mergedObj: asRecord(merged.enhancement),
-        customObj: customization.enhancement as any,
+        customObj: asCustomObj(customization.enhancement),
       },
       {
         name: 'commitMessage',
         mergedObj: asRecord(merged.commitMessage),
-        customObj: customization.commitMessage as any,
+        customObj: asCustomObj(customization.commitMessage),
       },
       {
         name: 'titleGeneration',
         mergedObj: asRecord(merged.titleGeneration),
-        customObj: customization.titleGeneration as any,
+        customObj: asCustomObj(customization.titleGeneration),
       },
       {
         name: 'issueValidation',
         mergedObj: asRecord(merged.issueValidation),
-        customObj: customization.issueValidation as any,
+        customObj: asCustomObj(customization.issueValidation),
       },
       {
         name: 'ideation',
         mergedObj: asRecord(merged.ideation),
-        customObj: customization.ideation as any,
+        customObj: asCustomObj(customization.ideation),
       },
       {
         name: 'appSpec',
         mergedObj: asRecord(merged.appSpec),
-        customObj: customization.appSpec as any,
+        customObj: asCustomObj(customization.appSpec),
       },
       {
         name: 'contextDescription',
         mergedObj: asRecord(merged.contextDescription),
-        customObj: customization.contextDescription as any,
+        customObj: asCustomObj(customization.contextDescription),
       },
       {
         name: 'suggestions',
         mergedObj: asRecord(merged.suggestions),
-        customObj: customization.suggestions as any,
+        customObj: asCustomObj(customization.suggestions),
       },
       {
         name: 'taskExecution',
         mergedObj: asRecord(merged.taskExecution),
-        customObj: customization.taskExecution as any,
+        customObj: asCustomObj(customization.taskExecution),
       },
     ];
 
@@ -393,7 +401,7 @@ export async function getPromptCustomization(
     for (const { name, mergedObj, customObj } of categories) {
       for (const key of Object.keys(mergedObj)) {
         // Skip keys where the user has an enabled override
-        if ((customObj as any)?.[key]?.enabled) continue;
+        if (customObj?.[key]?.enabled) continue;
 
         resolvePromises.push(
           promptResolver

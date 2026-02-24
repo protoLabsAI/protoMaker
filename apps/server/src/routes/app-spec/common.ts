@@ -128,7 +128,7 @@ export function logAuthStatus(context: string): void {
  */
 export function logError(error: unknown, context: string): void {
   logger.error(`❌ ${context}:`);
-  logger.error('Error name:', (error as any)?.name);
+  logger.error('Error name:', (error as Error)?.name);
   logger.error('Error message:', (error as Error)?.message);
   logger.error('Error stack:', (error as Error)?.stack);
   logger.error('Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));

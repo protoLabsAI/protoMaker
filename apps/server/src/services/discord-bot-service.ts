@@ -28,6 +28,8 @@ import {
   REST,
   Routes,
   ChannelType,
+  type Attachment,
+  type ChatInputCommandInteraction,
   type Interaction,
   type Message,
   type TextChannel,
@@ -346,7 +348,7 @@ export class DiscordBotService {
   /**
    * Handle /idea slash command with attachment support.
    */
-  private async handleIdeaCommand(interaction: any): Promise<void> {
+  private async handleIdeaCommand(interaction: ChatInputCommandInteraction): Promise<void> {
     const title = interaction.options.getString('title');
     const description = interaction.options.getString('description') || '';
     const attachment = interaction.options.getAttachment('attachment');
@@ -431,7 +433,7 @@ export class DiscordBotService {
   /**
    * Handle /approve-idea slash command - explicitly approve an idea from anywhere.
    */
-  private async handleApproveIdeaCommand(interaction: any): Promise<void> {
+  private async handleApproveIdeaCommand(interaction: ChatInputCommandInteraction): Promise<void> {
     const featureId = interaction.options.getString('feature-id');
     if (!featureId) {
       await interaction.reply({ content: 'Feature ID is required.', ephemeral: true });
@@ -479,7 +481,7 @@ export class DiscordBotService {
   /**
    * Handle /dashboard slash command.
    */
-  private async handleDashboardCommand(interaction: any): Promise<void> {
+  private async handleDashboardCommand(interaction: ChatInputCommandInteraction): Promise<void> {
     await interaction.deferReply();
 
     try {
@@ -538,7 +540,7 @@ export class DiscordBotService {
   /**
    * Handle /approve slash command.
    */
-  private async handleApproveCommand(interaction: any): Promise<void> {
+  private async handleApproveCommand(interaction: ChatInputCommandInteraction): Promise<void> {
     const requestId = interaction.options.getString('id');
     if (!requestId) {
       await interaction.reply({ content: 'Approval ID is required.', ephemeral: true });
@@ -557,7 +559,7 @@ export class DiscordBotService {
   /**
    * Handle /reject slash command.
    */
-  private async handleRejectCommand(interaction: any): Promise<void> {
+  private async handleRejectCommand(interaction: ChatInputCommandInteraction): Promise<void> {
     const requestId = interaction.options.getString('id');
     const reason = interaction.options.getString('reason') || 'Rejected by CTO';
     if (!requestId) {
@@ -577,7 +579,7 @@ export class DiscordBotService {
   /**
    * Handle /setuplab slash command.
    */
-  private async handleSetuplabCommand(interaction: any): Promise<void> {
+  private async handleSetuplabCommand(interaction: ChatInputCommandInteraction): Promise<void> {
     await interaction.deferReply();
 
     const projectPath = interaction.options.getString('path');
@@ -680,7 +682,7 @@ export class DiscordBotService {
    * Handle a dynamic agent slash command (e.g. /ava, /gtm, /frank).
    * Creates a thread and emits a routed message event for the agent.
    */
-  private async handleAgentCommand(interaction: any): Promise<void> {
+  private async handleAgentCommand(interaction: ChatInputCommandInteraction): Promise<void> {
     const agentName = interaction.commandName;
     const userMessage = interaction.options.getString('message') || '';
     const username = interaction.user.username;
@@ -1234,18 +1236,18 @@ export class DiscordBotService {
    * Process a Discord attachment: download and categorize as text or image.
    */
   private async processAttachment(
-    attachment: any
+    attachment: Attachment
   ): Promise<{ textFiles?: Array<{ filename: string; content: string }>; imagePaths?: string[] }> {
     const result: {
       textFiles?: Array<{ filename: string; content: string }>;
       imagePaths?: string[];
     } = {};
 
-    if (!attachment?.url || !attachment?.name) return result;
+    if (!attachment.url || !attachment.name) return result;
 
-    const filename = attachment.name as string;
-    const url = attachment.url as string;
-    const contentType = (attachment.contentType || '') as string;
+    const filename = attachment.name;
+    const url = attachment.url;
+    const contentType = attachment.contentType || '';
 
     try {
       const isText = /\.(txt|md|markdown|text)$/i.test(filename) || contentType.startsWith('text/');

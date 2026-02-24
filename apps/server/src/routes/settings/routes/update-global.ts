@@ -45,16 +45,14 @@ export function createUpdateGlobalHandler(settingsService: SettingsService) {
       }
 
       // Minimal debug logging to help diagnose accidental wipes.
-      const projectsLen = Array.isArray((updates as any).projects)
-        ? (updates as any).projects.length
-        : undefined;
-      const trashedLen = Array.isArray((updates as any).trashedProjects)
-        ? (updates as any).trashedProjects.length
+      const projectsLen = Array.isArray(updates.projects) ? updates.projects.length : undefined;
+      const trashedLen = Array.isArray(updates.trashedProjects)
+        ? updates.trashedProjects.length
         : undefined;
       logger.info(
         `[SERVER_SETTINGS_UPDATE] Request received: projects=${projectsLen ?? 'n/a'}, trashedProjects=${trashedLen ?? 'n/a'}, theme=${
-          (updates as any).theme ?? 'n/a'
-        }, localStorageMigrated=${(updates as any).localStorageMigrated ?? 'n/a'}`
+          updates.theme ?? 'n/a'
+        }, localStorageMigrated=${updates.localStorageMigrated ?? 'n/a'}`
       );
 
       logger.info('[SERVER_SETTINGS_UPDATE] Calling updateGlobalSettings...');

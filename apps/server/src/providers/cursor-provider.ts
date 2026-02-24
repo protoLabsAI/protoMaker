@@ -68,6 +68,7 @@ interface CursorToolHandler<TArgs = unknown, TResult = unknown> {
  * Registry of Cursor tool handlers
  * Each handler knows how to normalize its specific tool call type
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- heterogeneous handler registry requires any for contravariant type params
 const CURSOR_TOOL_HANDLERS: Record<string, CursorToolHandler<any, any>> = {
   readToolCall: {
     name: 'Read',

@@ -44,8 +44,9 @@ export function createEventEmitter(): EventEmitter {
         subscribers.delete(callback);
       };
       // Attach EventSubscription interface for new consumers
-      (unsub as any).unsubscribe = unsub;
-      return unsub as (() => void) & EventSubscription;
+      const unsubWithMethod = unsub as UnsubscribeFn;
+      unsubWithMethod.unsubscribe = unsub;
+      return unsubWithMethod;
     },
 
     broadcast(type: EventType, payload?: unknown) {

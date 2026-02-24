@@ -53,7 +53,11 @@ export function createExecuteHandler(reviewService: AntagonisticReviewService) {
       });
 
       // Return result with trace information if available
-      const response: any = {
+      const response: {
+        success: boolean;
+        result: typeof result;
+        trace?: { traceId: string; totalCostUsd: number; durationMs: number };
+      } = {
         success: result.success,
         result,
       };

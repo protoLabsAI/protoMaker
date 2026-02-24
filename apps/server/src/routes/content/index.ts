@@ -50,9 +50,9 @@ export function createContentRoutes(settingsService: SettingsService): Router {
       const result = await contentFlowService.startFlow(projectPath, topic, contentConfig || {});
 
       res.json(result);
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Create flow error:', error);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
     }
   });
 
@@ -77,9 +77,9 @@ export function createContentRoutes(settingsService: SettingsService): Router {
       }
 
       res.json(status);
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Get status error:', error);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
     }
   });
 
@@ -99,9 +99,9 @@ export function createContentRoutes(settingsService: SettingsService): Router {
       const content = await contentFlowService.listContent(projectPath, filters);
 
       res.json({ content });
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('List content error:', error);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
     }
   });
 
@@ -141,9 +141,9 @@ export function createContentRoutes(settingsService: SettingsService): Router {
       });
 
       res.json(result);
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Review flow error:', error);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
     }
   });
 
@@ -171,9 +171,9 @@ export function createContentRoutes(settingsService: SettingsService): Router {
       const result = await contentFlowService.exportContent(projectPath, runId, format);
 
       res.json(result);
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Export content error:', error);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
     }
   });
 

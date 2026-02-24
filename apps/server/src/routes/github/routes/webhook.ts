@@ -309,7 +309,7 @@ export function createWebhookHandler(
 
       // Get raw body for signature verification
       // Express should preserve rawBody when using express.json({ verify: ... })
-      const rawBody = (req as any).rawBody as Buffer | undefined;
+      const rawBody = (req as Request & { rawBody?: Buffer }).rawBody;
 
       if (!rawBody) {
         logger.error('Raw body not available for signature verification');

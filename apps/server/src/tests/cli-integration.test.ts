@@ -64,6 +64,7 @@ describe('CLI Detection Framework', () => {
     });
 
     it('should handle unsupported platform', () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const instructions = getInstallInstructions('claude', 'unknown-platform' as any);
       expect(instructions).toContain('No installation instructions available');
     });
@@ -339,14 +340,17 @@ describe('Performance Tests', () => {
 // Edge Cases
 describe('Edge Cases', () => {
   it('should handle empty CLI names', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await expect(detectCli('' as any)).rejects.toThrow();
   });
 
   it('should handle null CLI names', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await expect(detectCli(null as any)).rejects.toThrow();
   });
 
   it('should handle undefined CLI names', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await expect(detectCli(undefined as any)).rejects.toThrow();
   });
 

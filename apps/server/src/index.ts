@@ -24,10 +24,15 @@ import { execSync } from 'node:child_process';
 import { access, unlink, writeFile } from 'node:fs/promises';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import express from 'express';
+import express, { type Request, type Response } from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
+
+/** Express request extended with raw body buffer for webhook signature verification */
+interface RequestWithRawBody extends Request {
+  rawBody?: Buffer;
+}
 import cookie from 'cookie';
 import { WebSocketServer, WebSocket } from 'ws';
 import { createServer } from 'http';
@@ -357,7 +362,7 @@ app.use(
 app.use(
   express.json({
     limit: '50mb',
-    verify: (req: any, _res, buf) => {
+    verify: (req: RequestWithRawBody, _res: Response, buf: Buffer) => {
       // Store raw body for routes that need it (e.g., webhook signature verification)
       req.rawBody = buf;
     },
@@ -786,7 +791,12 @@ intakeBridge.start();
 // Listen for Linear comment follow-up events and route to agent
 events.subscribe((type, payload) => {
   if (type === 'linear:comment:followup') {
-    const { featureId, projectPath, commentBody, userName } = payload as any;
+    const { featureId, projectPath, commentBody, userName } = payload as {
+      featureId: string;
+      projectPath: string;
+      commentBody: string;
+      userName: string;
+    };
     logger.info(`Routing Linear comment to agent for feature ${featureId}`, {
       userName,
     });
@@ -1530,7 +1540,7 @@ wss.on('connection', (ws: WebSocket) => {
         logger.info('Sending event to client:', {
           type,
           messageLength: message.length,
-          sessionId: (payload as any)?.sessionId,
+          sessionId: (payload as Record<string, unknown>)?.sessionId,
           bufferedAmount: ws.bufferedAmount,
         });
         ws.send(message);

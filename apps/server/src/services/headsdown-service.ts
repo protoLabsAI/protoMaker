@@ -11,6 +11,7 @@ import type { FeatureLoader } from './feature-loader.js';
 import type {
   AgentInstance,
   AgentRole,
+  AgentTaskType,
   HeadsdownConfig,
   HeadsdownState,
   WorkItem,
@@ -41,7 +42,7 @@ export interface StateDivergence {
   /** Human-readable summary for the agent */
   summary: string;
 }
-import { DiscordMonitor } from './discord-monitor.js';
+import { DiscordMonitor, type DiscordBotServiceLike } from './discord-monitor.js';
 import { LinearMonitor } from './linear-monitor.js';
 import { GitHubMonitor } from './github-monitor.js';
 import { v4 as uuidv4 } from 'uuid';
@@ -111,28 +112,35 @@ export class HeadsdownService {
     this.githubMonitor = new GitHubMonitor(events);
 
     // Subscribe to monitor events
-    this.events.subscribe((type, payload: any) => {
+    this.events.subscribe((type, payload: unknown) => {
+      const data = payload as Record<string, unknown>;
       switch (type) {
         case 'discord:message:detected':
-          logger.info(`Discord message detected in channel ${payload.channelId}`);
+          logger.info(`Discord message detected in channel ${data.channelId}`);
           // Add message to work queue for appropriate agents
           // This will be picked up by agents monitoring that channel
           break;
 
-        case 'linear:project:updated':
-          logger.info(`Linear project updated: ${payload.project.name}`);
+        case 'linear:project:updated': {
+          const project = data.project as Record<string, unknown> | undefined;
+          logger.info(`Linear project updated: ${project?.name}`);
           // Add project to work queue for EM agents
           break;
+        }
 
-        case 'linear:issue:detected':
-          logger.info(`Linear issue detected: ${payload.issue.identifier}`);
+        case 'linear:issue:detected': {
+          const issue = data.issue as Record<string, unknown> | undefined;
+          logger.info(`Linear issue detected: ${issue?.identifier}`);
           // Add issue to work queue for engineer agents
           break;
+        }
 
-        case 'github:pr:detected':
-          logger.info(`GitHub PR detected: #${payload.pr.number}`);
+        case 'github:pr:detected': {
+          const pr = data.pr as Record<string, unknown> | undefined;
+          logger.info(`GitHub PR detected: #${pr?.number}`);
           // Add PR to work queue for QA agents
           break;
+        }
       }
     });
   }
@@ -160,7 +168,7 @@ export class HeadsdownService {
   /**
    * Set the Discord bot service for message fetching
    */
-  setDiscordBotService(service: any): void {
+  setDiscordBotService(service: DiscordBotServiceLike): void {
     this.discordMonitor.setDiscordBotService(service);
   }
 
@@ -856,7 +864,7 @@ export class HeadsdownService {
 
     agent.status = 'working';
     agent.currentTask = {
-      type: workItem.type as any,
+      type: workItem.type as unknown as AgentTaskType,
       id: workItem.id,
       startedAt: new Date().toISOString(),
       description: workItem.description,

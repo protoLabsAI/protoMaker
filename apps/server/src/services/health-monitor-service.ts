@@ -17,6 +17,7 @@ import { createLogger } from '@automaker/utils';
 import { classifyError } from '../lib/error-handler.js';
 import type { EventEmitter } from '../lib/events.js';
 import type { Feature } from '@automaker/types';
+import type { Dirent } from 'fs';
 import { FeatureLoader } from './feature-loader.js';
 import * as secureFs from '../lib/secure-fs.js';
 import path from 'path';
@@ -431,7 +432,7 @@ export class HealthMonitorService {
 
       try {
         const entries = await secureFs.readdir(worktreesDir, { withFileTypes: true });
-        worktreeDirs = (entries as any[])
+        worktreeDirs = (entries as Dirent[])
           .filter((entry) => entry.isDirectory())
           .map((entry) => entry.name);
       } catch {
@@ -661,7 +662,9 @@ export class HealthMonitorService {
       return;
     }
 
-    const currentRetries = (feature as any)._autoRetryCount || 0;
+    const featureRecord = feature as unknown as Record<string, unknown>;
+    const currentRetries =
+      typeof featureRecord._autoRetryCount === 'number' ? featureRecord._autoRetryCount : 0;
 
     if (currentRetries >= MAX_AUTO_RETRY_ATTEMPTS) {
       logger.warn(

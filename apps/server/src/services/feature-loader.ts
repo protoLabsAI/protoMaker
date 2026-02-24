@@ -3,6 +3,7 @@
  * Each feature is stored in .automaker/features/{featureId}/feature.json
  */
 
+import type { Dirent } from 'fs';
 import path from 'path';
 import type {
   Feature,
@@ -252,7 +253,7 @@ export class FeatureLoader implements FeatureStore {
       // Read all feature directories
       const entries = (await secureFs.readdir(featuresDir, {
         withFileTypes: true,
-      })) as any[];
+      })) as Dirent[];
       const featureDirs = entries.filter((entry) => entry.isDirectory());
 
       // Load all features concurrently with automatic recovery from backups

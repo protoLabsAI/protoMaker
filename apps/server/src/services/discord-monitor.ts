@@ -12,6 +12,26 @@ import { createLogger } from '@automaker/utils';
 const logger = createLogger('DiscordMonitor');
 
 /**
+ * Minimal interface for the Discord bot service methods used by the monitor.
+ * Avoids importing the full DiscordBotService class (circular dependency risk).
+ */
+export interface DiscordBotServiceLike {
+  readMessages(
+    channelId: string,
+    limit: number
+  ): Promise<
+    Array<{
+      id: string;
+      content: string;
+      author?: { id?: string; username?: string };
+      timestamp?: string;
+      mentions?: string[];
+      hasAttachments?: boolean;
+    }>
+  >;
+}
+
+/**
  * Discord message with metadata
  */
 export interface DiscordMessageItem {
@@ -42,14 +62,14 @@ export class DiscordMonitor {
   private intervals = new Map<string, NodeJS.Timeout>();
 
   /** Discord bot service for reading messages */
-  private discordBotService: any;
+  private discordBotService: DiscordBotServiceLike | null = null;
 
   constructor(private events: EventEmitter) {}
 
   /**
    * Set the Discord bot service for message fetching
    */
-  setDiscordBotService(service: any): void {
+  setDiscordBotService(service: DiscordBotServiceLike): void {
     this.discordBotService = service;
   }
 
@@ -158,7 +178,7 @@ export class DiscordMonitor {
       const messages = await this.discordBotService.readMessages(channelId, limit);
 
       // Map from DiscordBotService message format to DiscordMessageItem
-      return messages.map((msg: any) => ({
+      return messages.map((msg) => ({
         id: msg.id,
         channelId,
         authorId: msg.author?.id || '',

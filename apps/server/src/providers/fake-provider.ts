@@ -9,6 +9,7 @@
 import { BaseProvider } from './base-provider.js';
 import type {
   ExecuteOptions,
+  ProviderConfig,
   ProviderMessage,
   InstallationStatus,
   ModelDefinition,
@@ -40,7 +41,7 @@ export class FakeProvider extends BaseProvider {
   private fakeConfig: FakeProviderConfig;
   private currentResponseIndex: number = 0;
 
-  constructor(config: Record<string, any> = {}) {
+  constructor(config: ProviderConfig & Partial<FakeProviderConfig> = {}) {
     super(config);
     this.fakeConfig = {
       responses: config.responses ?? 'This is a fake response from FakeProvider',

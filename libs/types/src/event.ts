@@ -351,6 +351,10 @@ export type EventType =
   // HITL form events (human-in-the-loop structured input)
   | 'hitl:form-requested'
   | 'hitl:form-responded'
+  // Ava Gateway heartbeat events (board health monitoring + circuit breaker)
+  | 'ava-gateway:alerts'
+  | 'ava-gateway:heartbeat-ok'
+  | 'ava-gateway:emergency-stop'
   // Server lifecycle events
   | 'server:shutdown';
 

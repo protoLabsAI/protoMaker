@@ -5,7 +5,7 @@
  * with the provider architecture.
  */
 
-import { query, type Options } from '@anthropic-ai/claude-agent-sdk';
+import { query, type Options, type SDKUserMessage } from '@anthropic-ai/claude-agent-sdk';
 import {
   getThinkingTokenBudget,
   validateBareModelId,
@@ -255,21 +255,20 @@ export class ClaudeProvider extends BaseProvider {
     };
 
     // Build prompt payload
-    let promptPayload: string | AsyncIterable<any>;
+    let promptPayload: string | AsyncIterable<SDKUserMessage>;
 
     if (Array.isArray(prompt)) {
       // Multi-part prompt (with images)
       promptPayload = (async function* () {
-        const multiPartPrompt = {
-          type: 'user' as const,
+        yield {
+          type: 'user',
           session_id: '',
           message: {
             role: 'user' as const,
             content: prompt,
           },
           parent_tool_use_id: null,
-        };
-        yield multiPartPrompt;
+        } as SDKUserMessage;
       })();
     } else {
       // Simple text prompt
@@ -315,12 +314,12 @@ export class ClaudeProvider extends BaseProvider {
         : userMessage;
 
       const enhancedError = new Error(message);
-      (enhancedError as any).originalError = error;
-      (enhancedError as any).type = errorInfo.type;
-
-      if (errorInfo.isRateLimit) {
-        (enhancedError as any).retryAfter = errorInfo.retryAfter;
-      }
+      Object.assign(enhancedError, {
+        originalError: error,
+        type: errorInfo.type,
+        ...(errorInfo.isRateLimit &&
+          errorInfo.retryAfter !== undefined && { retryAfter: errorInfo.retryAfter }),
+      });
 
       throw enhancedError;
     }

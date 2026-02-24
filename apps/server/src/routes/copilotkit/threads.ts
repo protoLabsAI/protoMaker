@@ -19,8 +19,8 @@ export function createCopilotKitThreadRoutes(threadService: CopilotKitThreadServ
       const projectPath = req.query.projectPath as string | undefined;
       const threads = await threadService.listThreads(projectPath);
       res.json({ threads });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
+    } catch (error: unknown) {
+      res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
     }
   });
 
@@ -37,8 +37,8 @@ export function createCopilotKitThreadRoutes(threadService: CopilotKitThreadServ
         return;
       }
       res.json({ thread });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
+    } catch (error: unknown) {
+      res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
     }
   });
 
@@ -67,8 +67,8 @@ export function createCopilotKitThreadRoutes(threadService: CopilotKitThreadServ
 
       await threadService.saveThread(thread);
       res.json({ thread });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
+    } catch (error: unknown) {
+      res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
     }
   });
 
@@ -86,8 +86,8 @@ export function createCopilotKitThreadRoutes(threadService: CopilotKitThreadServ
         return;
       }
       res.json({ thread: updated });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
+    } catch (error: unknown) {
+      res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
     }
   });
 
@@ -104,8 +104,8 @@ export function createCopilotKitThreadRoutes(threadService: CopilotKitThreadServ
         return;
       }
       res.json({ success: true });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
+    } catch (error: unknown) {
+      res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
     }
   });
 

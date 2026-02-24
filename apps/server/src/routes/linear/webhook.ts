@@ -210,8 +210,9 @@ export function createWebhookHandler(
     // Verify signature if secret is configured
     if (webhookSecret) {
       const signature = req.headers['linear-signature'] as string | undefined;
-      const rawBody = (req as any).rawBody
-        ? (req as any).rawBody.toString('utf-8')
+      const reqWithRaw = req as Request & { rawBody?: Buffer };
+      const rawBody = reqWithRaw.rawBody
+        ? reqWithRaw.rawBody.toString('utf-8')
         : JSON.stringify(req.body);
 
       if (!verifyWebhookSignature(rawBody, signature, webhookSecret)) {

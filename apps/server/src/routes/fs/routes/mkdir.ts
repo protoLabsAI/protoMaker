@@ -35,9 +35,9 @@ export function createMkdirHandler() {
           error: 'Path exists and is not a directory',
         });
         return;
-      } catch (statError: any) {
+      } catch (statError: unknown) {
         // ENOENT means path doesn't exist - we should create it
-        if (statError.code !== 'ENOENT') {
+        if ((statError as NodeJS.ErrnoException).code !== 'ENOENT') {
           // Some other error (could be ELOOP in parent path)
           throw statError;
         }
@@ -47,7 +47,7 @@ export function createMkdirHandler() {
       await secureFs.mkdir(resolvedPath, { recursive: true });
 
       res.json({ success: true });
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Path not allowed - return 403 Forbidden
       if (error instanceof PathNotAllowedError) {
         res.status(403).json({ success: false, error: getErrorMessage(error) });
@@ -55,7 +55,7 @@ export function createMkdirHandler() {
       }
 
       // Handle ELOOP specifically
-      if (error.code === 'ELOOP') {
+      if ((error as NodeJS.ErrnoException).code === 'ELOOP') {
         logError(error, 'Create directory failed - symlink loop detected');
         res.status(400).json({
           success: false,

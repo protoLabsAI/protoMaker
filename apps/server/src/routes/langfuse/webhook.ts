@@ -149,8 +149,9 @@ export function createWebhookHandler(syncService: PromptGitHubSyncService | null
     // Verify signature if secret is configured
     if (webhookSecret) {
       const signature = req.headers['x-langfuse-signature'] as string | undefined;
-      const rawBody = (req as any).rawBody
-        ? (req as any).rawBody.toString('utf-8')
+      const reqWithRaw = req as Request & { rawBody?: Buffer };
+      const rawBody = reqWithRaw.rawBody
+        ? reqWithRaw.rawBody.toString('utf-8')
         : JSON.stringify(req.body);
 
       const verification = verifyLangfuseWebhookSignature(rawBody, signature, webhookSecret);

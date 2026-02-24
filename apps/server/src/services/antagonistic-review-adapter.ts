@@ -16,6 +16,23 @@ import { v4 as uuidv4 } from 'uuid';
 const logger = createLogger('AntagonisticReviewAdapter');
 
 /**
+ * Shape of a reviewer perspective in flow results.
+ * Handles both @automaker/types ReviewerPerspective and node-local formats.
+ */
+interface FlowReviewPerspective {
+  overallVerdict?: string;
+  verdict?: string;
+  sections?: Array<{
+    issues?: string[];
+    concerns?: string[];
+    suggestions?: string[];
+    recommendations?: string[];
+  }>;
+  generalComments?: string[];
+  comments?: string[];
+}
+
+/**
  * Review result from a single agent
  */
 export interface ReviewResult {
@@ -424,8 +441,8 @@ ${prd.constraints || 'None specified'}
    * Handles both @automaker/types ReviewerPerspective (overallVerdict, sections, generalComments)
    * and node-local ReviewerPerspective (verdict, sections, comments)
    */
-  private extractAvaReview(result: any): ReviewResult {
-    const avaReview = result.avaReview;
+  private extractAvaReview(result: Record<string, unknown>): ReviewResult {
+    const avaReview = result.avaReview as FlowReviewPerspective | undefined;
 
     if (!avaReview) {
       return {
@@ -461,8 +478,8 @@ ${prd.constraints || 'None specified'}
    * Extract Jon's review from flow result
    * Handles both @automaker/types ReviewerPerspective and node-local format
    */
-  private extractJonReview(result: any): ReviewResult {
-    const jonReview = result.jonReview;
+  private extractJonReview(result: Record<string, unknown>): ReviewResult {
+    const jonReview = result.jonReview as FlowReviewPerspective | undefined;
 
     if (!jonReview) {
       return {

@@ -13,7 +13,7 @@
  */
 
 import { createLogger } from '@automaker/utils';
-import type { Feature } from '@automaker/types';
+import type { Feature, Project } from '@automaker/types';
 import type { EventEmitter } from '../lib/events.js';
 import type { SettingsService } from './settings-service.js';
 import type { FeatureLoader } from './feature-loader.js';
@@ -2438,7 +2438,7 @@ export class LinearSyncService {
    * @param project - The project to calculate progress for
    * @returns Completion percentage (0-100)
    */
-  private async calculateMilestoneProgress(project: any): Promise<number> {
+  private async calculateMilestoneProgress(project: Project): Promise<number> {
     if (!project.milestones || project.milestones.length === 0) {
       return 0;
     }
@@ -2489,7 +2489,7 @@ export class LinearSyncService {
    * @param project - The project to calculate progress for
    * @returns Completion percentage (0-100)
    */
-  private calculateMilestoneProgressFromStatus(project: any): number {
+  private calculateMilestoneProgressFromStatus(project: Project): number {
     if (!project.milestones || project.milestones.length === 0) {
       return 0;
     }
@@ -2987,7 +2987,7 @@ ${prdContent}
       }
 
       // Collect all changes to batch into a single update
-      const featureUpdates: Record<string, any> = {};
+      const featureUpdates: Partial<Feature> = {};
       const changeDescriptions: string[] = [];
 
       // --- Status sync ---
@@ -3011,7 +3011,7 @@ ${prdContent}
 
       // --- Priority sync (Linear 0-4 → Automaker 0-4, direct mapping) ---
       if (options?.priority !== undefined && options.priority !== feature.priority) {
-        featureUpdates.priority = options.priority;
+        featureUpdates.priority = options.priority as Feature['priority'];
         changeDescriptions.push(`priority: ${feature.priority ?? 'none'} → ${options.priority}`);
       }
 

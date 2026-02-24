@@ -40,7 +40,7 @@ export interface ErrorClassification {
   suggestedAction?: string;
   retryable: boolean;
   provider?: string;
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
 }
 
 export interface ErrorPattern {
@@ -180,7 +180,7 @@ const ERROR_PATTERNS: ErrorPattern[] = [
 export function classifyError(
   error: unknown,
   provider?: string,
-  context?: Record<string, any>
+  context?: Record<string, unknown>
 ): ErrorClassification {
   const errorText = getErrorText(error);
 
@@ -281,18 +281,24 @@ function getErrorText(error: unknown): string {
 
   if (typeof error === 'object' && error !== null) {
     // Handle structured error objects
-    const errorObj = error as any;
+    const errorObj = error as Record<string, unknown>;
 
-    if (errorObj.message) {
+    if (typeof errorObj.message === 'string') {
       return errorObj.message;
     }
 
-    if (errorObj.error?.message) {
-      return errorObj.error.message;
+    const nestedError = errorObj.error;
+    if (
+      typeof nestedError === 'object' &&
+      nestedError !== null &&
+      'message' in nestedError &&
+      typeof (nestedError as Record<string, unknown>).message === 'string'
+    ) {
+      return (nestedError as Record<string, unknown>).message as string;
     }
 
-    if (errorObj.error) {
-      return typeof errorObj.error === 'string' ? errorObj.error : JSON.stringify(errorObj.error);
+    if (nestedError) {
+      return typeof nestedError === 'string' ? nestedError : JSON.stringify(nestedError);
     }
 
     return JSON.stringify(error);
@@ -307,7 +313,7 @@ function getErrorText(error: unknown): string {
 export function createErrorResponse(
   error: unknown,
   provider?: string,
-  context?: Record<string, any>
+  context?: Record<string, unknown>
 ): {
   success: false;
   error: string;
@@ -335,7 +341,7 @@ export function logError(
   error: unknown,
   provider?: string,
   operation?: string,
-  additionalContext?: Record<string, any>
+  additionalContext?: Record<string, unknown>
 ): void {
   const classification = classifyError(error, provider, {
     operation,

@@ -740,7 +740,7 @@ export class AvaGatewayService {
         }
 
         if (this.events) {
-          (this.events as any).emit('ava-gateway:alerts', {
+          this.events.emit('ava-gateway:alerts', {
             alertCount: result.alerts.length,
             alerts: result.alerts,
           });
@@ -750,7 +750,7 @@ export class AvaGatewayService {
         logger.info(`Heartbeat OK (${duration}ms)`);
 
         if (this.events) {
-          (this.events as any).emit('ava-gateway:heartbeat-ok', {
+          this.events.emit('ava-gateway:heartbeat-ok', {
             message: result.message,
           });
         }
@@ -766,7 +766,7 @@ export class AvaGatewayService {
       if (circuitOpened) {
         await this.sendEmergencyStopAlert();
         if (this.events) {
-          (this.events as any).emit('ava-gateway:emergency-stop', {
+          this.events.emit('ava-gateway:emergency-stop', {
             failureCount: this.circuitBreaker.getFailureCount(),
             cooldownMs: 300000,
           });

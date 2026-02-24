@@ -56,7 +56,7 @@ export class SpecGenerationMonitor {
     // Subscribe to spec regeneration events to track activity
     this.events.subscribe((type, payload) => {
       if (type === 'spec-regeneration:event') {
-        const eventPayload = payload as any;
+        const eventPayload = payload as { projectPath?: string } | null;
         if (eventPayload?.projectPath) {
           // Update last activity timestamp for this project
           this.lastActivityTimestamps.set(eventPayload.projectPath, Date.now());

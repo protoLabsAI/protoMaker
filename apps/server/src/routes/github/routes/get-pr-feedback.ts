@@ -171,12 +171,26 @@ export function createGetPRFeedbackHandler() {
         const reviewThreadsData = JSON.parse(reviewThreadsOutput);
         const threads = reviewThreadsData.data?.repository?.pullRequest?.reviewThreads?.nodes || [];
 
-        inlineThreads = threads.flatMap((thread: any) => {
+        interface ReviewThread {
+          id: string;
+          isResolved: boolean;
+          comments: {
+            nodes: Array<{
+              id: string;
+              body: string;
+              author: { login: string };
+              path: string;
+              line: number;
+            }>;
+          };
+        }
+
+        inlineThreads = threads.flatMap((thread: ReviewThread) => {
           if (thread.isResolved) return [];
 
           return thread.comments.nodes
-            .filter((comment: any) => comment.author.login === 'coderabbitai')
-            .map((comment: any) => {
+            .filter((comment) => comment.author.login === 'coderabbitai')
+            .map((comment) => {
               // Parse severity from comment body if present
               const severityMatch = comment.body.match(/severity[:\s]+(\w+)/i);
               const severity = severityMatch ? severityMatch[1].toLowerCase() : undefined;

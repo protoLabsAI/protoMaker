@@ -31,8 +31,8 @@ export async function getTrackedBranches(projectPath: string): Promise<TrackedBr
     const content = (await secureFs.readFile(filePath, 'utf-8')) as string;
     const data: BranchTrackingData = JSON.parse(content);
     return data.branches || [];
-  } catch (error: any) {
-    if (error.code === 'ENOENT') {
+  } catch (error: unknown) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
       return [];
     }
     logger.warn('Failed to read tracked branches:', error);

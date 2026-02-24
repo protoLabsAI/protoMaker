@@ -97,6 +97,7 @@ import {
 } from '../lib/settings-helpers.js';
 import { getNotificationService } from './notification-service.js';
 import { RecoveryService, getRecoveryService } from './recovery-service.js';
+import type { LeadEngineerService } from './lead-engineer-service.js';
 import { gitWorkflowService } from './git-workflow-service.js';
 import { graphiteService } from './graphite-service.js';
 
@@ -409,7 +410,7 @@ export class AutoModeService {
   // Data integrity watchdog service for monitoring feature count (optional)
   private integrityWatchdogService: DataIntegrityWatchdogService | null = null;
   // Lead Engineer service for delegated feature execution (optional)
-  private leadEngineerService: any | null = null; // Type is any to avoid circular dependency
+  private leadEngineerService: LeadEngineerService | null = null;
   // Rate-limiting for auto_mode_progress events (per feature)
   private lastProgressEventTime = new Map<string, number>();
   private readonly PROGRESS_EVENT_MIN_INTERVAL_MS = 100; // Max 1 event per 100ms per feature
@@ -464,7 +465,7 @@ export class AutoModeService {
    * Wire up the Lead Engineer service for delegated feature execution.
    * When set, auto-mode will delegate feature processing to the state machine.
    */
-  setLeadEngineerService(service: any): void {
+  setLeadEngineerService(service: LeadEngineerService): void {
     this.leadEngineerService = service;
   }
 
@@ -1178,7 +1179,7 @@ export class AutoModeService {
           const executionPromise = this.leadEngineerService
             ? this.leadEngineerService.process(projectPath, nextFeature.id, {
                 model: featureModelResult.model,
-              } as any) // Cast to any since state machine will build full ExecuteOptions internally
+              } as unknown as ExecuteOptions) // State machine builds full ExecuteOptions internally
             : this.executeFeature(
                 projectPath,
                 nextFeature.id,
@@ -5953,8 +5954,9 @@ After generating the revised spec, output:
       }
 
       // Save Langfuse trace ID to feature for observability linking
-      if ('getLastTraceId' in provider && typeof (provider as any).getLastTraceId === 'function') {
-        const lastTraceId = (provider as any).getLastTraceId() as string | null;
+      const providerWithTrace = provider as unknown as { getLastTraceId?: () => string | null };
+      if (typeof providerWithTrace.getLastTraceId === 'function') {
+        const lastTraceId = providerWithTrace.getLastTraceId();
         if (lastTraceId) {
           try {
             await this.featureLoader.update(projectPath, featureId, { lastTraceId });
