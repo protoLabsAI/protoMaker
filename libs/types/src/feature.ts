@@ -445,7 +445,8 @@ export type FeatureStatus =
   | 'review' // PR created, under review
   | 'blocked' // Temporary halt (dependency/issue/failure - consolidates: failed)
   | 'done' // PR merged, work complete (consolidates: completed, waiting_approval)
-  | 'verified'; // Quality checks passed (Ralph autonomous loops)
+  | 'verified' // Quality checks passed (Ralph autonomous loops)
+  | 'interrupted'; // Server shut down while feature was running
 
 /**
  * Legacy status values for backwards compatibility
@@ -489,6 +490,7 @@ export function normalizeFeatureStatus(
     'blocked',
     'done',
     'verified',
+    'interrupted',
   ];
   if (canonical.includes(status as FeatureStatus)) {
     return status as FeatureStatus;

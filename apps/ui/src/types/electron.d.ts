@@ -361,6 +361,31 @@ export type AutoModeEvent =
         title?: string;
         status?: string;
       }>;
+    }
+  | {
+      type: 'feature_interrupted';
+      featureId: string;
+      previousStatus: string;
+      reason: string;
+      projectPath?: string;
+    }
+  | {
+      type: 'feature_status_changed';
+      featureId: string;
+      previousStatus: string;
+      newStatus: string;
+      reason: string;
+      projectPath?: string;
+    }
+  | {
+      type: 'features_reconciled';
+      count: number;
+      features: Array<{
+        featureId: string;
+        from: string;
+        to: string;
+      }>;
+      projectPath?: string;
     };
 
 export type SpecRegenerationEvent =

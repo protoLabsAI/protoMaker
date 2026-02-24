@@ -26,6 +26,8 @@ export type FeatureStatusWithPipeline =
   | 'blocked'
   | 'done'
   | 'verified'
+  | 'interrupted' // Server shut down while feature was running
+  | 'ready' // Dependencies satisfied, ready for execution
   // Legacy statuses still used by UI components (auto-normalized on server read)
   | 'waiting_approval'
   | 'completed'

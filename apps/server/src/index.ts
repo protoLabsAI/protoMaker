@@ -1052,47 +1052,28 @@ specGenerationMonitor.startMonitoring();
   await agentService.initialize();
   logger.info('Agent service initialized');
 
-  // Recover orphaned features (stuck in running/in-progress with no agent after restart)
+  // Reconcile stuck features (in_progress, interrupted, pipeline_* with no running agent)
   try {
     const settings = await settingsService.getGlobalSettings();
     const projectPaths = [
       ...(settings.autoModeAlwaysOn?.projects?.map((p) => p.projectPath) ?? []),
     ];
-    // Deduplicate
     const uniquePaths = [...new Set(projectPaths)];
 
     for (const projectPath of uniquePaths) {
       try {
-        const features = await featureLoader.getAll(projectPath);
-        const orphaned = features.filter(
-          (f) =>
-            f.status === 'running' ||
-            f.status === 'in_progress' ||
-            (f.status && f.status.startsWith('pipeline_'))
-        );
-
-        for (const feature of orphaned) {
+        const result = await autoModeService.reconcileFeatureStates(projectPath);
+        if (result.reconciled.length > 0) {
           logger.info(
-            `[ORPHAN-RECOVERY] Resetting orphaned feature "${feature.title || feature.id}" from "${feature.status}" to "backlog"`,
-            { projectPath, featureId: feature.id }
-          );
-          await featureLoader.update(projectPath, feature.id, {
-            status: 'backlog',
-            startedAt: undefined,
-          });
-        }
-
-        if (orphaned.length > 0) {
-          logger.info(
-            `[ORPHAN-RECOVERY] Reset ${orphaned.length} orphaned feature(s) for ${projectPath}`
+            `[STARTUP] Reconciled ${result.reconciled.length} stuck feature(s) for ${projectPath}`
           );
         }
       } catch (err) {
-        logger.warn(`[ORPHAN-RECOVERY] Failed to check features for ${projectPath}:`, err);
+        logger.warn(`[STARTUP] Failed to reconcile features for ${projectPath}:`, err);
       }
     }
   } catch (err) {
-    logger.warn('[ORPHAN-RECOVERY] Failed to run orphan recovery:', err);
+    logger.warn('[STARTUP] Failed to run feature reconciliation:', err);
   }
 
   // Run startup worktree recovery (prune phantom worktrees before auto-mode starts)
@@ -1310,7 +1291,7 @@ app.use(
     roleRegistryService
   )
 );
-app.use('/api/auto-mode', createAutoModeRoutes(autoModeService, featureLoader));
+app.use('/api/auto-mode', createAutoModeRoutes(autoModeService, featureLoader, settingsService));
 app.use('/api/enhance-prompt', createEnhancePromptRoutes(settingsService));
 app.use(
   '/api/worktree',

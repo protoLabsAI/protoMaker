@@ -2620,6 +2620,9 @@ Complete the pipeline step instructions above. Review the previous work and appl
       `[Shutdown] Stopping ${this.autoLoopsByProject.size} auto-loops and ${this.runningFeatures.size} running features`
     );
 
+    // Mark all running features as interrupted BEFORE aborting agents
+    await this.markAllRunningFeaturesInterrupted('server shutdown');
+
     // Stop all per-project auto-loops
     for (const [key, projectState] of this.autoLoopsByProject) {
       projectState.isRunning = false;
@@ -2656,6 +2659,140 @@ Complete the pipeline step instructions above. Review the previous work and appl
   }
 
   /**
+   * Check if a feature is currently running
+   */
+  isFeatureRunning(featureId: string): boolean {
+    return this.runningFeatures.has(featureId);
+  }
+
+  /**
+   * Mark a single running feature as interrupted.
+   * Called during shutdown to persist the interrupted state before aborting agents.
+   * Preserves pipeline_* statuses (pipeline resume needs the step info).
+   */
+  private async markFeatureInterrupted(featureId: string, reason: string): Promise<void> {
+    try {
+      const running = this.runningFeatures.get(featureId);
+      if (!running) return;
+
+      const feature = await this.loadFeature(running.projectPath, featureId);
+      if (!feature) return;
+
+      const previousStatus = feature.status || 'in_progress';
+
+      // Don't overwrite pipeline_* statuses — pipeline resume needs the step info
+      if (previousStatus.startsWith('pipeline_')) {
+        logger.info(
+          `[Shutdown] Preserving pipeline status "${previousStatus}" for feature ${featureId}`
+        );
+        return;
+      }
+
+      // Don't mark terminal statuses
+      if (
+        previousStatus === 'done' ||
+        previousStatus === 'review' ||
+        previousStatus === 'verified'
+      ) {
+        return;
+      }
+
+      await this.featureLoader.update(running.projectPath, featureId, {
+        status: 'interrupted',
+        statusChangeReason: `Interrupted from "${previousStatus}": ${reason}`,
+      });
+
+      this.emitAutoModeEvent('feature_interrupted', {
+        featureId,
+        previousStatus,
+        reason,
+        projectPath: running.projectPath,
+      });
+
+      logger.info(`[Shutdown] Marked feature ${featureId} as interrupted (was: ${previousStatus})`);
+    } catch (error) {
+      logger.warn(`[Shutdown] Failed to mark feature ${featureId} as interrupted:`, error);
+    }
+  }
+
+  /**
+   * Mark all currently running features as interrupted.
+   * Called at the start of shutdown() before aborting agents.
+   */
+  private async markAllRunningFeaturesInterrupted(reason: string): Promise<void> {
+    const featureIds = Array.from(this.runningFeatures.keys());
+    if (featureIds.length === 0) return;
+
+    logger.info(`[Shutdown] Marking ${featureIds.length} running feature(s) as interrupted`);
+    await Promise.allSettled(featureIds.map((id) => this.markFeatureInterrupted(id, reason)));
+  }
+
+  /**
+   * Reconcile feature states after server restart.
+   * Finds features stuck in transient states (in_progress, interrupted, pipeline_*)
+   * with no running agent and resets them to backlog.
+   * Emits events for each reconciled feature and a batch summary.
+   */
+  async reconcileFeatureStates(
+    projectPath: string
+  ): Promise<{ reconciled: Array<{ featureId: string; from: string; to: string }> }> {
+    const features = await this.featureLoader.getAll(projectPath);
+    const reconciled: Array<{ featureId: string; from: string; to: string }> = [];
+
+    const stuckFeatures = features.filter((f) => {
+      const status = f.status || '';
+      const isTransient =
+        status === 'in_progress' ||
+        status === 'interrupted' ||
+        status === 'running' ||
+        status.startsWith('pipeline_');
+      return isTransient && !this.runningFeatures.has(f.id);
+    });
+
+    for (const feature of stuckFeatures) {
+      const previousStatus = feature.status || 'unknown';
+      try {
+        await this.featureLoader.update(projectPath, feature.id, {
+          status: 'backlog',
+          startedAt: undefined,
+        });
+
+        reconciled.push({
+          featureId: feature.id,
+          from: previousStatus,
+          to: 'backlog',
+        });
+
+        this.emitAutoModeEvent('feature_status_changed', {
+          featureId: feature.id,
+          previousStatus,
+          newStatus: 'backlog',
+          reason: 'Reconciled after server restart',
+          projectPath,
+        });
+
+        logger.info(
+          `[RECONCILE] Reset feature "${feature.title || feature.id}" from "${previousStatus}" to "backlog"`,
+          { projectPath, featureId: feature.id }
+        );
+      } catch (error) {
+        logger.warn(`[RECONCILE] Failed to reset feature ${feature.id}:`, error);
+      }
+    }
+
+    if (reconciled.length > 0) {
+      this.emitAutoModeEvent('features_reconciled', {
+        count: reconciled.length,
+        features: reconciled,
+        projectPath,
+      });
+      logger.info(`[RECONCILE] Reset ${reconciled.length} stuck feature(s) for ${projectPath}`);
+    }
+
+    return { reconciled };
+  }
+
+  /**
    * Resume a feature (continues from saved context)
    */
   async resumeFeature(projectPath: string, featureId: string, useWorktrees = false): Promise<void> {
@@ -2665,9 +2802,7 @@ Complete the pipeline step instructions above. Review the previous work and appl
       logger.warn(
         `Feature ${featureId} is already running (runtime: ${runtime}s). Skipping duplicate resume.`
       );
-      throw new Error(
-        `Feature ${featureId} is already running (${runtime}s). If this is stale, restart the server or stop the feature first.`
-      );
+      return; // Idempotent — skip silently instead of throwing
     }
 
     // Load feature to check status
@@ -6410,9 +6545,10 @@ After generating the revised spec, output:
             continue;
           }
 
-          // Check if feature was interrupted (in_progress or pipeline_*)
+          // Check if feature was interrupted (in_progress, interrupted, or pipeline_*)
           if (
             feature.status === 'in_progress' ||
+            feature.status === 'interrupted' ||
             (feature.status && feature.status.startsWith('pipeline_'))
           ) {
             // Verify it has existing context (agent-output.md)
@@ -6425,8 +6561,13 @@ After generating the revised spec, output:
                 `Found interrupted feature: ${feature.id} (${feature.title}) - status: ${feature.status}`
               );
             } catch {
-              // No context file, skip this feature - it will be restarted fresh
-              logger.info(`Interrupted feature ${feature.id} has no context, will restart fresh`);
+              // No context file — still include interrupted features (they get started fresh)
+              if (feature.status === 'interrupted') {
+                interruptedFeatures.push(feature);
+                logger.info(`Interrupted feature ${feature.id} has no context, will restart fresh`);
+              } else {
+                logger.info(`Interrupted feature ${feature.id} has no context, will restart fresh`);
+              }
             }
           }
         }

@@ -44,7 +44,10 @@ export function useAutoModeQueryInvalidation(projectPath: string | undefined) {
         event.type === 'plan_approval_required' ||
         event.type === 'plan_approved' ||
         event.type === 'plan_rejected' ||
-        event.type === 'pipeline_step_complete'
+        event.type === 'pipeline_step_complete' ||
+        event.type === 'feature_interrupted' ||
+        event.type === 'feature_status_changed' ||
+        event.type === 'features_reconciled'
       ) {
         queryClient.invalidateQueries({
           queryKey: queryKeys.features.all(projectPath),
@@ -56,7 +59,9 @@ export function useAutoModeQueryInvalidation(projectPath: string | undefined) {
         event.type === 'auto_mode_feature_start' ||
         event.type === 'auto_mode_feature_complete' ||
         event.type === 'auto_mode_error' ||
-        event.type === 'auto_mode_resuming_features'
+        event.type === 'auto_mode_resuming_features' ||
+        event.type === 'feature_interrupted' ||
+        event.type === 'features_reconciled'
       ) {
         queryClient.invalidateQueries({
           queryKey: queryKeys.runningAgents.all(),
