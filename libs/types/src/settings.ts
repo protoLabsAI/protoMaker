@@ -959,7 +959,7 @@ export interface CeremonySettings {
  * DEFAULT_CEREMONY_SETTINGS - Default ceremony configuration
  */
 export const DEFAULT_CEREMONY_SETTINGS: CeremonySettings = {
-  enabled: false,
+  enabled: true,
   enableEpicKickoff: true,
   enableStandups: true,
   enableMilestoneUpdates: true,

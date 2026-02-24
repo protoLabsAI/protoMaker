@@ -236,6 +236,15 @@ export class CeremonyService {
   }
 
   /**
+   * Clear processed project from dedup guard (used by retry endpoint)
+   */
+  clearProcessedProject(projectPath: string, projectSlug: string): void {
+    const dedupeKey = `${projectPath}:${projectSlug}`;
+    this.processedProjects.delete(dedupeKey);
+    logger.info(`Cleared processed project: ${projectSlug}`);
+  }
+
+  /**
    * Handle epic creation event — post kickoff announcement with scope and complexity
    */
   private async handleEpicCreated(payload: EpicCreatedEventPayload): Promise<void> {
@@ -565,7 +574,6 @@ Keep it concise, actionable, and focused on what makes this milestone interestin
       logger.debug(`Project retro already processed for ${projectSlug}, skipping`);
       return;
     }
-    this.processedProjects.add(dedupeKey);
 
     // Check if ceremonies are enabled
     const ceremonySettings = await this.getCeremonySettings(projectPath);
@@ -573,6 +581,9 @@ Keep it concise, actionable, and focused on what makes this milestone interestin
       logger.debug('Ceremonies disabled, skipping project retrospective');
       return;
     }
+
+    // Mark as processed only after config check succeeds
+    this.processedProjects.add(dedupeKey);
 
     this.activeReflection = projectTitle;
 
