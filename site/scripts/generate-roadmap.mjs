@@ -142,15 +142,15 @@ function main() {
   // Inject counts — idempotent via id-targeted regex (replaces inner text of span)
   html = html.replace(
     /(<span[^>]*id="count-completed"[^>]*>)[^<]*(<\/span>)/,
-    `$1${counts.completed}$2`,
+    `$1${counts.completed}$2`
   );
   html = html.replace(
     /(<span[^>]*id="count-in-progress"[^>]*>)[^<]*(<\/span>)/,
-    `$1${counts['in-progress']}$2`,
+    `$1${counts['in-progress']}$2`
   );
   html = html.replace(
     /(<span[^>]*id="count-planned"[^>]*>)[^<]*(<\/span>)/,
-    `$1${counts.planned}$2`,
+    `$1${counts.planned}$2`
   );
 
   // Inject last updated — idempotent via id-targeted regex
@@ -161,7 +161,7 @@ function main() {
   });
   html = html.replace(
     /(<p[^>]*id="last-updated"[^>]*>)[^<]*(<\/p>)/,
-    `$1Last updated ${lastUpdated}$2`,
+    `$1Last updated ${lastUpdated}$2`
   );
 
   writeFileSync(ROADMAP_HTML, html);

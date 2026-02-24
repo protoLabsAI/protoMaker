@@ -315,24 +315,24 @@ function injectIntoHtml(months) {
     // Compute "features shipped" from changelog entries instead of .automaker/ dir count
     const featureCount = months.reduce(
       (n, m) => n + m.entries.filter((e) => e.category === 'feature').length,
-      0,
+      0
     );
 
     html = html.replace(
       /(<span[^>]*id="stat-prs"[^>]*>)[^<]*(<\/span>)/,
-      `$1${formatNumber(stats.prCount)}$2`,
+      `$1${formatNumber(stats.prCount)}$2`
     );
     html = html.replace(
       /(<span[^>]*id="stat-commits"[^>]*>)[^<]*(<\/span>)/,
-      `$1${formatNumber(stats.commitCount)}$2`,
+      `$1${formatNumber(stats.commitCount)}$2`
     );
     html = html.replace(
       /(<span[^>]*id="stat-features"[^>]*>)[^<]*(<\/span>)/,
-      `$1${formatNumber(featureCount)}$2`,
+      `$1${formatNumber(featureCount)}$2`
     );
     html = html.replace(
       /(<span[^>]*id="stat-loc"[^>]*>)[^<]*(<\/span>)/,
-      `$1${formatNumber(stats.locCount)}$2`,
+      `$1${formatNumber(stats.locCount)}$2`
     );
   }
 

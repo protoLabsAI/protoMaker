@@ -34,7 +34,7 @@ function getGitStats() {
   try {
     prCount = parseInt(
       run("gh pr list --state merged --json number --jq 'length' --limit 5000"),
-      10,
+      10
     );
   } catch {
     prCount = parseInt(run("git log --oneline --grep='(#' | wc -l"), 10);
