@@ -290,6 +290,34 @@ export function buildTemplates(
       tags: ['marketing', 'content', 'growth', 'gtm', 'brand'],
       systemPrompt: resolvePersonaPrompt('jon', getJonPrompt(promptConfig), personaOverrides),
     },
+    {
+      name: 'calendar-assistant',
+      displayName: 'Calendar Assistant',
+      description:
+        'Manages all calendar operations for the project. Handles scheduling, event creation/updates, deadline tracking, and temporal data management. Other agents delegate calendar operations to this assistant.',
+      role: 'calendar-assistant',
+      tier: 1,
+      model: 'opus',
+      maxTurns: 50,
+      canUseBash: false,
+      canModifyFiles: false,
+      canCommit: false,
+      canCreatePRs: false,
+      trustLevel: 3,
+      tools: [
+        'mcp__plugin_automaker_automaker__list_calendar_events',
+        'mcp__plugin_automaker_automaker__create_calendar_event',
+        'mcp__plugin_automaker_automaker__update_calendar_event',
+        'mcp__plugin_automaker_automaker__delete_calendar_event',
+        'mcp__plugin_automaker_automaker__list_features',
+        'mcp__plugin_automaker_automaker__get_feature',
+        'mcp__plugin_automaker_automaker__query_board',
+      ],
+      exposure: { cli: false, discord: false },
+      tags: ['calendar', 'scheduling', 'calendar-read', 'calendar-write'],
+      systemPrompt:
+        'You are the Calendar Assistant. You manage all calendar operations for the project. Other agents delegate to you when they need to schedule events, check deadlines, or query the calendar. You are the single source of truth for temporal data.',
+    },
   ];
 }
 
