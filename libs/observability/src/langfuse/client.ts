@@ -10,6 +10,20 @@ import type {
 
 const logger = createLogger('LangfuseClient');
 
+// Configure SDK logger to reduce noise from expected errors (e.g., prompt not found)
+// This runs once at module load time
+(async () => {
+  try {
+    // Import dynamically to handle cases where @langfuse/core isn't available as direct dep
+    const { configureGlobalLogger, LogLevel } = await import('@langfuse/core');
+    configureGlobalLogger({ level: LogLevel.ERROR });
+    logger.debug('Langfuse SDK global logger configured to ERROR level');
+  } catch (error) {
+    // Silently fail if @langfuse/core is not available - not critical
+    logger.debug('Could not configure Langfuse SDK logger (package not available)');
+  }
+})();
+
 /**
  * Wrapper around Langfuse SDK with fallback support
  */
