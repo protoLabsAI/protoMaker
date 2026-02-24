@@ -1746,12 +1746,12 @@ export class AutoModeService {
             if (rebaseResult.hasConflicts) {
               logger.warn(
                 `⚠️  Worktree has merge conflicts with main. Agent will execute on stale base. ` +
-                `Feature: ${featureId}, Branch: ${branchName}`
+                  `Feature: ${featureId}, Branch: ${branchName}`
               );
             } else {
               logger.warn(
                 `Rebase failed (${rebaseResult.error}). Agent will execute on current base. ` +
-                `Feature: ${featureId}`
+                  `Feature: ${featureId}`
               );
             }
           } else {
@@ -3090,12 +3090,12 @@ Complete the pipeline step instructions above. Review the previous work and appl
             if (rebaseResult.hasConflicts) {
               logger.warn(
                 `⚠️  Worktree has merge conflicts with main. Agent will execute on stale base. ` +
-                `Feature: ${featureId}, Branch: ${branchName}`
+                  `Feature: ${featureId}, Branch: ${branchName}`
               );
             } else {
               logger.warn(
                 `Rebase failed (${rebaseResult.error}). Agent will execute on current base. ` +
-                `Feature: ${featureId}`
+                  `Feature: ${featureId}`
               );
             }
           } else {
@@ -3361,12 +3361,12 @@ Complete the pipeline step instructions above. Review the previous work and appl
           if (rebaseResult.hasConflicts) {
             logger.warn(
               `⚠️  Worktree has merge conflicts with main. Follow-up will execute on stale base. ` +
-              `Feature: ${featureId}, Branch: ${branchName}`
+                `Feature: ${featureId}, Branch: ${branchName}`
             );
           } else {
             logger.warn(
               `Rebase failed (${rebaseResult.error}). Follow-up will execute on current base. ` +
-              `Feature: ${featureId}`
+                `Feature: ${featureId}`
             );
           }
         } else {
