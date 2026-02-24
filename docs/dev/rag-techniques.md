@@ -435,5 +435,5 @@ Each sentence becomes a separate chunk. Search for "JWT token storage" returns 3
 
 ## Related
 
-- **[Knowledge Hive](./knowledge-hive)** — Full architecture overview
-- **[Memory System](./memory-system)** — How learnings are written and retrieved
+- **[Knowledge Hive](./knowledge-hive.md)** — Full architecture overview
+- **[Memory System](./memory-system.md)** — How learnings are written and retrieved

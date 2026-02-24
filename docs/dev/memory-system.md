@@ -633,7 +633,7 @@ async function checkDuplicate(
 
 ## API Quick Reference
 
-See [Knowledge Hive](./knowledge-hive#api-endpoints) for full API documentation.
+See [Knowledge Hive](./knowledge-hive.md#api-endpoints) for full API documentation.
 
 **Key endpoints:**
 
@@ -645,5 +645,5 @@ See [Knowledge Hive](./knowledge-hive#api-endpoints) for full API documentation.
 
 ## Related
 
-- **[Knowledge Hive](./knowledge-hive)** — Full architecture overview
-- **[RAG Techniques](./rag-techniques)** — RAG technique decisions and rationale
+- **[Knowledge Hive](./knowledge-hive.md)** — Full architecture overview
+- **[RAG Techniques](./rag-techniques.md)** — RAG technique decisions and rationale
