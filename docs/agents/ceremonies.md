@@ -41,7 +41,7 @@ Ceremonies are configured per-project via **Project Settings > Ceremonies** in t
 
 | Field                        | Type    | Default               | Description                                      |
 | ---------------------------- | ------- | --------------------- | ------------------------------------------------ |
-| `enabled`                    | boolean | `false`               | Master toggle for all ceremonies                 |
+| `enabled`                    | boolean | `true`                | Master toggle for all ceremonies                 |
 | `discordChannelId`           | string  | —                     | Discord channel ID override for ceremony posts   |
 | `enableEpicKickoff`          | boolean | `true`                | Post kickoff when epic is created                |
 | `enableStandups`             | boolean | `true`                | Post standup when milestone starts               |
@@ -180,7 +180,7 @@ Posted when all milestones complete. Uses an LLM to generate a structured retros
 - `FeatureLoader` — loads features for metrics
 - `ProjectService` — loads project/milestone data
 
-**Initialization:** `apps/server/src/index.ts:388`
+**Initialization:** `apps/server/src/index.ts:652–658`
 
 **Singleton:** `ceremonyService` exported from module
 
@@ -230,6 +230,106 @@ CeremonyService
 This bridge also serves `IntegrationService` and `ChangelogService` — any service that emits `integration:discord` events with `{ action: 'send_message', channelId, content }` payloads will be delivered to Discord.
 
 **Key file:** `apps/server/src/index.ts` — `integration:discord` subscriber (after `eventHookService.initialize()`)
+
+## Audit Log & Observability
+
+### Ceremony Audit Log
+
+Every ceremony event is recorded to a JSONL append-only log at `.automaker/ceremony-log.jsonl`. Each entry includes the ceremony type, project, delivery status, and timing.
+
+**Service:** `apps/server/src/services/ceremony-audit-service.ts` → `CeremonyAuditLogService`
+
+**Key methods:**
+
+| Method                   | Purpose                                              |
+| ------------------------ | ---------------------------------------------------- |
+| `record(entry)`          | Append a ceremony event to the JSONL log             |
+| `getRecentEntries()`     | Get entries in reverse chronological order           |
+| `getEntriesByType()`     | Filter entries by ceremony type                      |
+| `updateDeliveryStatus()` | Update an entry's delivery status after Discord send |
+| `getDeliverySummary()`   | Aggregate delivery stats (delivered/pending/failed)  |
+
+**Delivery tracking flow:**
+
+```
+CeremonyService fires ceremony
+  → record({ type, deliveryStatus: 'pending', correlationId })
+  → emitDiscordEvent(channelId, content, correlationId)
+  → Bridge listener sends to Discord
+  → On success: updateDeliveryStatus(correlationId, 'delivered')
+  → On failure: updateDeliveryStatus(correlationId, 'failed', error)
+```
+
+### WebSocket Event: `ceremony:fired`
+
+After each ceremony is recorded, CeremonyService emits a `ceremony:fired` WebSocket event. The UI subscribes to this for live updates in the Ceremonies feed.
+
+**Payload:**
+
+```typescript
+{
+  type: string;           // e.g. 'milestone_retro', 'epic_kickoff'
+  projectPath: string;
+  projectSlug?: string;
+  milestoneTitle?: string;
+  deliveryStatus: string; // 'pending' | 'delivered' | 'failed' | 'skipped'
+  timestamp: string;      // ISO 8601
+}
+```
+
+### REST API Endpoints
+
+| Method | Endpoint                  | Purpose                              |
+| ------ | ------------------------- | ------------------------------------ |
+| GET    | `/api/ceremonies/status`  | Ceremony status + delivery summary   |
+| GET    | `/api/ceremonies/log`     | Audit log entries (with type filter) |
+| POST   | `/api/ceremonies/trigger` | Manually trigger a ceremony          |
+| POST   | `/api/ceremonies/retry`   | Clear dedup guard and re-trigger     |
+
+**`GET /api/ceremonies/log` query parameters:**
+
+- `projectPath` (required) — project directory path
+- `limit` (optional, default: 50) — max entries to return
+- `type` (optional) — filter by ceremony type
+
+### UI: Ceremonies Feed
+
+The Ceremonies page (`/ceremonies`) displays a live feed of ceremony events with filtering:
+
+- **Type filter tabs:** All, Kickoffs, Standups, Retros, Deliveries, Briefs, Project
+- **Status filter:** All, Delivered, Pending, Failed, Skipped
+- **Live updates** via `ceremony:fired` WebSocket events
+- **Sidebar badge** shows unread ceremony count
+
+**Key files:**
+
+- `apps/ui/src/routes/ceremonies.tsx` — Route definition
+- `apps/ui/src/components/views/ceremonies-view.tsx` — Page component
+- `apps/ui/src/store/ceremony-store.ts` — Zustand store
+- `apps/ui/src/hooks/use-ceremony-events.ts` — WebSocket subscription + data loading
+
+## Troubleshooting
+
+### Ceremonies not firing
+
+1. **Check master toggle:** `ceremonySettings.enabled` must be `true` in project settings
+2. **Check individual toggles:** Each ceremony type has its own enable flag
+3. **Verify Discord config:** `discordChannelId` must be set (project-level or global)
+4. **Verify Discord bot:** `DISCORD_BOT_TOKEN` must be set and bot must be running
+5. **Check guild membership:** Bot must be in the Discord server with send-message permissions
+6. **Check completion cascade:** Features must transition to `done` status to trigger milestone/project checks
+7. **Check deduplication:** Each ceremony has a dedup guard — use `/api/ceremonies/retry` to clear it
+
+### Discord messages not appearing
+
+1. Check the audit log: `GET /api/ceremonies/log?projectPath=...`
+2. Look for `deliveryStatus: 'failed'` entries with error details
+3. Verify the channel ID exists and the bot can post to it
+4. Check server logs for `integration:discord` bridge errors
+
+### Content briefs going to wrong channel
+
+Content briefs use `contentBriefChannelId` if set, otherwise fall back to `discordChannelId`. Verify the correct channel ID is configured.
 
 ## Manual Testing
 
@@ -336,4 +436,5 @@ Auto-generate or update docs when features complete or milestones finish:
 
 - [Discord Communication Guide](/integrations/discord) — Channel structure and integration
 - [Architecture Overview](./architecture.md) — How ceremonies fit into the agent system
-- [MCP Integration](./mcp-integration.md) — Programmatic ceremony control (future)
+- [MCP Integration](./mcp-integration.md) — Programmatic ceremony control
+- [Agent Quality Scoring](./quality-scoring.md) — Langfuse-backed scoring for agent work

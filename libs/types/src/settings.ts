@@ -956,7 +956,11 @@ export interface CeremonySettings {
 }
 
 /**
- * DEFAULT_CEREMONY_SETTINGS - Default ceremony configuration
+ * DEFAULT_CEREMONY_SETTINGS - Default ceremony configuration.
+ *
+ * `enabled` defaults to `true` — ceremonies are active out-of-the-box when a
+ * `discordChannelId` is configured. Individual ceremony types can be toggled
+ * independently. See docs/agents/ceremonies.md for the full reference.
  */
 export const DEFAULT_CEREMONY_SETTINGS: CeremonySettings = {
   enabled: true,
