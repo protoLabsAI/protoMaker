@@ -99,20 +99,32 @@ export const staleDeps: LeadFastPathRule = {
   triggers: ['feature:status-changed'],
 
   evaluate(worldState, _eventType, payload): LeadRuleAction[] {
-    const feature = featureFromPayload(worldState, payload);
-    if (!feature) return [];
-    if (feature.status !== 'blocked') return [];
-    if (!feature.dependencies || feature.dependencies.length === 0) return [];
+    const actions: LeadRuleAction[] = [];
 
-    const allDepsDone = feature.dependencies.every((depId) => {
-      const dep = worldState.features[depId];
-      return dep && (dep.status === 'done' || dep.status === 'verified');
-    });
+    // When a feature status changes (e.g., dep moves to 'done'), check ALL blocked
+    // features — not just the payload feature. The payload is the feature that changed,
+    // which is typically the dependency, not the dependent.
+    const changedFeature = featureFromPayload(worldState, payload);
+    const changedId = changedFeature?.id;
 
-    if (allDepsDone) {
-      return [{ type: 'unblock_feature', featureId: feature.id }];
+    const candidates = Object.values(worldState.features).filter(
+      (f) => f.status === 'blocked' && f.dependencies && f.dependencies.length > 0
+    );
+
+    for (const feature of candidates) {
+      // If we know which feature changed, only check features that depend on it
+      if (changedId && !feature.dependencies!.includes(changedId)) continue;
+
+      const allDepsDone = feature.dependencies!.every((depId) => {
+        const dep = worldState.features[depId];
+        return dep && (dep.status === 'done' || dep.status === 'verified');
+      });
+
+      if (allDepsDone) {
+        actions.push({ type: 'unblock_feature', featureId: feature.id });
+      }
     }
-    return [];
+    return actions;
   },
 };
 

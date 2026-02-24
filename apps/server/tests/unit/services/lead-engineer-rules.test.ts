@@ -127,63 +127,75 @@ describe('orphanedInProgress', () => {
 // ────────────────────────── staleDeps ──────────────────────────
 
 describe('staleDeps', () => {
-  it('unblocks feature when all deps are done', () => {
-    const feature = createFeature({
+  it('unblocks feature when dependency changes to done (payload is the dep)', () => {
+    const f3 = createFeature({
       id: 'f3',
       status: 'blocked',
       dependencies: ['f1', 'f2'],
     });
     const f1 = createFeature({ id: 'f1', status: 'done' });
     const f2 = createFeature({ id: 'f2', status: 'done' });
-    const ws = createMockWorldState({ features: { f1, f2, f3: feature } });
-    const actions = staleDeps.evaluate(ws, 'feature:status-changed', { featureId: 'f3' });
+    const ws = createMockWorldState({ features: { f1, f2, f3 } });
+    // Payload is the dep that just changed to done — not the blocked feature
+    const actions = staleDeps.evaluate(ws, 'feature:status-changed', { featureId: 'f1' });
     expect(actions).toHaveLength(1);
     expect(actions[0]).toEqual({ type: 'unblock_feature', featureId: 'f3' });
   });
 
   it('unblocks feature when deps are verified', () => {
-    const feature = createFeature({
+    const f2 = createFeature({
       id: 'f2',
       status: 'blocked',
       dependencies: ['f1'],
     });
     const f1 = createFeature({ id: 'f1', status: 'verified' });
-    const ws = createMockWorldState({ features: { f1, f2: feature } });
-    const actions = staleDeps.evaluate(ws, 'feature:status-changed', { featureId: 'f2' });
+    const ws = createMockWorldState({ features: { f1, f2 } });
+    // Payload is the dep that changed
+    const actions = staleDeps.evaluate(ws, 'feature:status-changed', { featureId: 'f1' });
     expect(actions).toHaveLength(1);
     expect(actions[0].type).toBe('unblock_feature');
   });
 
   it('no-ops when some deps are still in progress', () => {
-    const feature = createFeature({
+    const f3 = createFeature({
       id: 'f3',
       status: 'blocked',
       dependencies: ['f1', 'f2'],
     });
     const f1 = createFeature({ id: 'f1', status: 'done' });
     const f2 = createFeature({ id: 'f2', status: 'in_progress' });
-    const ws = createMockWorldState({ features: { f1, f2, f3: feature } });
-    const actions = staleDeps.evaluate(ws, 'feature:status-changed', { featureId: 'f3' });
+    const ws = createMockWorldState({ features: { f1, f2, f3 } });
+    const actions = staleDeps.evaluate(ws, 'feature:status-changed', { featureId: 'f1' });
     expect(actions).toHaveLength(0);
   });
 
   it('no-ops when feature is not blocked', () => {
-    const feature = createFeature({
+    const f2 = createFeature({
       id: 'f2',
       status: 'backlog',
       dependencies: ['f1'],
     });
     const f1 = createFeature({ id: 'f1', status: 'done' });
-    const ws = createMockWorldState({ features: { f1, f2: feature } });
-    const actions = staleDeps.evaluate(ws, 'feature:status-changed', { featureId: 'f2' });
+    const ws = createMockWorldState({ features: { f1, f2 } });
+    const actions = staleDeps.evaluate(ws, 'feature:status-changed', { featureId: 'f1' });
     expect(actions).toHaveLength(0);
   });
 
   it('no-ops when feature has no deps', () => {
-    const feature = createFeature({ id: 'f1', status: 'blocked' });
-    const ws = createMockWorldState({ features: { f1: feature } });
+    const f1 = createFeature({ id: 'f1', status: 'blocked' });
+    const ws = createMockWorldState({ features: { f1 } });
     const actions = staleDeps.evaluate(ws, 'feature:status-changed', { featureId: 'f1' });
     expect(actions).toHaveLength(0);
+  });
+
+  it('unblocks multiple features when shared dep completes', () => {
+    const f1 = createFeature({ id: 'f1', status: 'done' });
+    const f2 = createFeature({ id: 'f2', status: 'blocked', dependencies: ['f1'] });
+    const f3 = createFeature({ id: 'f3', status: 'blocked', dependencies: ['f1'] });
+    const ws = createMockWorldState({ features: { f1, f2, f3 } });
+    const actions = staleDeps.evaluate(ws, 'feature:status-changed', { featureId: 'f1' });
+    expect(actions).toHaveLength(2);
+    expect(actions.map((a) => a.featureId).sort()).toEqual(['f2', 'f3']);
   });
 });
 
