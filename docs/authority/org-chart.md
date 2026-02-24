@@ -33,7 +33,7 @@ Josh Mabry (CEO, Human)
 **Notes:**
 
 - PM, ProjM, and EM authority agents still exist in code but are now absorbed into the pipeline's automated steps (PRD generation, milestone decomposition, auto-mode orchestration) rather than being standalone team members. Their policy roles remain active for trust-gated permission checks.
-- System Health and PR State Sync functionality has been absorbed into the Lead Engineer state machine. See [Engine Architecture](../dev/engine-architecture.md) for details.
+- System Health and PR State Sync functionality has been absorbed into the Lead Engineer state machine. See [Engine Architecture](../archived/engine-architecture.md) for details.
 
 ## Roles
 

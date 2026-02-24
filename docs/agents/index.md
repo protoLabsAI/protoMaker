@@ -231,61 +231,25 @@ Covers:
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## Current Agent Team
+## Agent Roster
 
-### Interactive Agents (CLI + Discord)
+The full agent roster (names, models, domains, trust levels) is auto-generated in [Team Roles](../authority/roles.md). Below is a compact summary.
 
-These agents can be invoked interactively via CLI skills or Discord.
+| Agent | Domain                             | Model  | Surfaces                 |
+| ----- | ---------------------------------- | ------ | ------------------------ |
+| Ava   | Orchestration, routing, priorities | Opus   | CLI, Discord, Autonomous |
+| Matt  | Frontend, React, UI, Tailwind      | Sonnet | CLI, Discord, Auto-mode  |
+| Sam   | Agent infra, LangGraph, providers  | Sonnet | CLI, Discord, Auto-mode  |
+| Kai   | Backend, Express, APIs, services   | Sonnet | CLI, Discord, Auto-mode  |
+| Frank | DevOps, Docker, CI/CD, deploy      | Sonnet | CLI, Discord, Auto-mode  |
+| Cindi | Content, blog posts, docs, SEO     | Sonnet | CLI, Discord, Auto-mode  |
+| Jon   | GTM, brand, content strategy       | Sonnet | CLI, Discord             |
 
-| Role              | Agent | Model  | Trigger      | Exclusive Tools                   |
-| ----------------- | ----- | ------ | ------------ | --------------------------------- |
-| Chief of Staff    | Ava   | Opus   | CLI, Discord | —                                 |
-| Frontend Engineer | Matt  | Sonnet | CLI, Discord | Pencil design tool, agent-browser |
-| AI Agent Engineer | Sam   | Sonnet | CLI, Discord | —                                 |
-| Backend Engineer  | Kai   | Sonnet | CLI, Discord | —                                 |
-| DevOps Engineer   | Frank | Sonnet | CLI, Discord | —                                 |
-| Content Writer    | Cindi | Sonnet | CLI, Discord | —                                 |
-| GTM Specialist    | Jon   | Sonnet | CLI, Discord | —                                 |
+**Utility agents** (Haiku): PR Maintainer, Board Janitor — invoked on-demand via `execute_dynamic_agent`.
 
-### Agent Templates (On-Demand)
+**Authority agents** (pipeline steps): PM, ProjM, EM — event-driven, manage the pre-execution pipeline. See [Idea to Production](../dev/idea-to-production.md).
 
-These agent templates can be invoked on-demand via `execute_dynamic_agent`. Their responsibilities have been absorbed into the Lead Engineer state machine for autonomous operation. See [Engine Architecture](../dev/engine-architecture.md) for details.
-
-| Template      | Model | Purpose                                                   |
-| ------------- | ----- | --------------------------------------------------------- |
-| PR Maintainer | Haiku | Stale PRs, auto-merge status, orphaned worktrees          |
-| Board Janitor | Haiku | Merged-not-done, orphaned in-progress, stale dependencies |
-
-### Implementation Agents (Auto-Mode)
-
-These agents are assigned features dynamically by auto-mode and implement them in isolated worktrees.
-
-| Template            | Model  | Purpose                                     |
-| ------------------- | ------ | ------------------------------------------- |
-| Backend Engineer    | Sonnet | Server-side features, APIs, services        |
-| Frontend Engineer   | Sonnet | UI components, design system, styling       |
-| Product Manager     | Sonnet | Requirements, priorities, roadmap           |
-| Engineering Manager | Sonnet | Code review, capacity, quality standards    |
-| PR Maintainer       | Haiku  | Format fixes, PR creation, auto-merge       |
-| Board Janitor       | Haiku  | Board consistency, status reconciliation    |
-| Linear Specialist   | Sonnet | Linear workspace ops, sprint planning, sync |
-
-- Run in isolated worktrees
-- Create PRs on completion
-- **Trigger:** Auto-mode loop or manual `start_agent`
-- **Model selection:** Based on feature complexity (Haiku → Sonnet → Opus auto-escalation)
-- **Location:** `apps/server/src/services/auto-mode-service.ts`
-
-### Authority Agents (Dormant)
-
-These event-driven agents exist in code but aren't actively staffed yet.
-
-| Agent         | Trigger                    | Purpose                               | Location                                                   |
-| ------------- | -------------------------- | ------------------------------------- | ---------------------------------------------------------- |
-| PM            | `idea:injected` event      | Research ideas, create PRDs           | `apps/server/src/services/authority-agents/pm-agent.ts`    |
-| ProjM         | `prd:approved` event       | Decompose into milestones             | `apps/server/src/services/authority-agents/projm-agent.ts` |
-| EM            | `decomposition:complete`   | Technical feasibility                 | `apps/server/src/services/authority-agents/em-agent.ts`    |
-| Board Janitor | Agent template (on-demand) | Blocker detection, deadlock detection | Role Registry (agent template)                             |
+For the full template schema, trust levels, and policy permissions, see [Team Roles](../authority/roles.md) and [Org Chart](../authority/org-chart.md).
 
 ## Official Claude Resources
 

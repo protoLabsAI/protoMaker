@@ -71,21 +71,9 @@ graph TB
     FAST_PATH -->|"mergedNotDone, staleReview,<br/>stuckAgent, capacityRestart"| AUTO_MODE
 ```
 
-## The Pipeline: 7 Steps from Idea to Production
+## Pipeline
 
-The core execution flow is a 7-step pipeline backed by MCP tools:
-
-| Step | MCP Tool / Service      | What Happens                                                            |
-| ---- | ----------------------- | ----------------------------------------------------------------------- |
-| 1    | `process_idea`          | LangGraph flow validates idea, optional HITL approval gate              |
-| 2    | `initiate_project`      | Dedup check, create Linear project, write idea doc                      |
-| 3    | `generate_project_prd`  | SPARC PRD creation + antagonistic review (Ava ops + Jon market)         |
-| 4    | `approve_project_prd`   | Create board features from milestones, sync to Linear, set dependencies |
-| 5    | `launch_project`        | Set Linear status to "started", start auto-mode                         |
-| 6    | Lead Engineer (service) | Auto-starts on `project:lifecycle:launched` event, runs fast-path rules |
-| 7    | Auto-mode + PR pipeline | Agents implement features → CI → CodeRabbit → merge → done              |
-
-Steps 1-5 are MCP tools callable from any context (CLI, UI, agent). Step 6 is event-driven. Step 7 is the autonomous execution loop.
+For the complete 9-phase pipeline reference (TRIAGE through PUBLISH), see [Idea to Production](../dev/idea-to-production.md).
 
 ## Operations + Engineering Split
 
