@@ -465,9 +465,7 @@ class ExecuteProcessor implements StateProcessor {
         ftsResults = results.map((r) => r.chunk.content);
         if (ftsResults.length > 0) {
           ctx.siblingReflections = ftsResults;
-          logger.info(
-            `[EXECUTE] Loaded ${ftsResults.length} relevant reflections via FTS5 search`
-          );
+          logger.info(`[EXECUTE] Loaded ${ftsResults.length} relevant reflections via FTS5 search`);
         }
       }
 
