@@ -8,7 +8,7 @@
  * - Emits progress events for UI updates
  */
 
-import type { Feature, FeatureFactoryResult, Project } from '@protolabs-ai/types';
+import type { Feature, FeatureFactoryResult, Milestone, Phase, Project } from '@protolabs-ai/types';
 import { getProjectJsonPath } from '@protolabs-ai/platform';
 import { secureFs } from '@protolabs-ai/platform';
 import { phaseToFeatureDescription, slugify } from '@protolabs-ai/utils';
@@ -312,6 +312,90 @@ export async function orchestrateProjectFeatures(
               `Failed to set dependencies for phase ${phase.name}: ${getErrorMessage(err)}`
             );
           }
+        }
+      }
+    }
+
+    // Phase 2.5: Detect file contention and add sequential dependencies
+    events?.emit('project:features:progress', {
+      step: 'checking-file-contention',
+      message: 'Detecting file contention between phases',
+    });
+
+    // Build a list of all phases with their metadata
+    interface PhaseMetadata {
+      milestoneIndex: number;
+      milestone: Milestone;
+      phase: Phase;
+      featureId: string;
+      phaseKey: string;
+    }
+
+    const allPhases: PhaseMetadata[] = [];
+    for (let mi = 0; mi < project.milestones.length; mi++) {
+      const milestone = project.milestones[mi];
+      for (const phase of milestone.phases) {
+        const phaseKey = `${milestone.slug}:${phase.name}`;
+        const featureId = result.phaseFeatureMap[phaseKey];
+        if (featureId && phase.filesToModify && phase.filesToModify.length > 0) {
+          allPhases.push({
+            milestoneIndex: mi,
+            milestone,
+            phase,
+            featureId,
+            phaseKey,
+          });
+        }
+      }
+    }
+
+    // Check each pair of phases for file contention
+    for (let i = 0; i < allPhases.length; i++) {
+      for (let j = i + 1; j < allPhases.length; j++) {
+        const phaseA = allPhases[i];
+        const phaseB = allPhases[j];
+
+        // Check for file overlap
+        const filesA = phaseA.phase.filesToModify || [];
+        const filesB = phaseB.phase.filesToModify || [];
+        const sharedFiles = filesA.filter((file) => filesB.includes(file));
+
+        if (sharedFiles.length === 0) {
+          continue; // No overlap
+        }
+
+        // phaseA is always earlier than phaseB (since i < j in iteration order)
+        const earlierPhase = phaseA;
+        const laterPhase = phaseB;
+
+        // Check if there's already a dependency between them
+        const laterFeature = createdFeatures.get(laterPhase.phaseKey);
+        if (!laterFeature) continue;
+
+        const laterDeps = laterFeature.dependencies || [];
+        if (laterDeps.includes(earlierPhase.featureId)) {
+          continue; // Dependency already exists
+        }
+
+        // Add dependency: later phase depends on earlier phase
+        const updatedDeps = [...laterDeps, earlierPhase.featureId];
+        try {
+          await featureLoader.update(projectPath, laterPhase.featureId, {
+            dependencies: updatedDeps,
+          });
+
+          // Update in-memory feature
+          laterFeature.dependencies = updatedDeps;
+
+          // Log warning with the files that caused contention
+          const fileList = sharedFiles.join(', ');
+          console.warn(
+            `File contention detected: phase ${earlierPhase.phase.name} and phase ${laterPhase.phase.name} both modify ${fileList} — adding sequential dependency`
+          );
+        } catch (err) {
+          result.errors?.push(
+            `Failed to add file contention dependency between ${earlierPhase.phase.name} and ${laterPhase.phase.name}: ${getErrorMessage(err)}`
+          );
         }
       }
     }
