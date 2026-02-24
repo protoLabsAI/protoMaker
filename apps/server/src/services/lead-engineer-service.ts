@@ -1970,33 +1970,53 @@ export class LeadEngineerService {
 
   /**
    * Find all projects that have session files.
+   * Scans all known project paths from settings, falling back to cwd if none configured.
    */
   private async findProjectsWithSessions(): Promise<string[]> {
     const projects: string[] = [];
+    const fs = await import('node:fs/promises');
 
     try {
-      // Get all features to find unique project paths
-      // This is a heuristic - in production, you'd want a better way to enumerate projects
-      const _features = await this.featureLoader.getAll(process.cwd());
+      // Get all known project paths from global settings
+      const globalSettings = await this.settingsService.getGlobalSettings();
       const projectPaths = new Set<string>();
 
-      // For now, we'll just check the current project
-      // In a multi-project setup, you'd scan all projects
-      projectPaths.add(process.cwd());
+      // Add all project paths from settings
+      for (const project of globalSettings.projects ?? []) {
+        if (project.path) {
+          projectPaths.add(project.path);
+        }
+      }
+
+      // Fall back to process.cwd() if no projects are configured
+      if (projectPaths.size === 0) {
+        projectPaths.add(process.cwd());
+      }
 
       // Check each project for a session file
       for (const projectPath of projectPaths) {
         try {
+          // First verify the project path exists
+          await fs.access(projectPath);
+
+          // Then check for a session file
           const filePath = this.getSessionFilePath(projectPath);
-          const fs = await import('node:fs/promises');
           await fs.access(filePath);
           projects.push(projectPath);
         } catch {
-          // No session file for this project
+          // Project path doesn't exist or no session file for this project
         }
       }
     } catch (err) {
       logger.warn('Failed to enumerate projects for session restore:', err);
+      // On failure, try cwd as a last resort
+      try {
+        const filePath = this.getSessionFilePath(process.cwd());
+        await fs.access(filePath);
+        projects.push(process.cwd());
+      } catch {
+        // No session file in cwd either
+      }
     }
 
     return projects;
