@@ -4,18 +4,24 @@
 
 import type { Request, Response } from 'express';
 import type { AutoModeService } from '../../../services/auto-mode-service.js';
+import type { FeatureLoader } from '../../../services/feature-loader.js';
+import { areDependenciesSatisfied, getBlockingDependencies } from '@automaker/dependency-resolver';
 import { createLogger } from '@automaker/utils';
 import { getErrorMessage, logError } from '../common.js';
 
 const logger = createLogger('AutoMode');
 
-export function createRunFeatureHandler(autoModeService: AutoModeService) {
+export function createRunFeatureHandler(
+  autoModeService: AutoModeService,
+  featureLoader: FeatureLoader
+) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
-      const { projectPath, featureId, useWorktrees } = req.body as {
+      const { projectPath, featureId, useWorktrees, force } = req.body as {
         projectPath: string;
         featureId: string;
         useWorktrees?: boolean;
+        force?: boolean;
       };
 
       if (!projectPath || !featureId) {
@@ -24,6 +30,27 @@ export function createRunFeatureHandler(autoModeService: AutoModeService) {
           error: 'projectPath and featureId are required',
         });
         return;
+      }
+
+      // Check dependencies before allowing execution (unless force=true)
+      if (!force) {
+        const feature = await featureLoader.get(projectPath, featureId);
+        if (feature && feature.dependencies && feature.dependencies.length > 0) {
+          const allFeatures = await featureLoader.getAll(projectPath);
+          if (!areDependenciesSatisfied(feature, allFeatures)) {
+            const blocking = getBlockingDependencies(feature, allFeatures);
+            const blockingNames = blocking.map((depId) => {
+              const dep = allFeatures.find((f) => f.id === depId);
+              return dep ? `"${dep.title}" (${dep.status})` : depId;
+            });
+            res.status(409).json({
+              success: false,
+              error: `Feature has unsatisfied dependencies: ${blockingNames.join(', ')}`,
+              details: { blockingDependencies: blocking },
+            });
+            return;
+          }
+        }
       }
 
       // Check per-worktree capacity before starting

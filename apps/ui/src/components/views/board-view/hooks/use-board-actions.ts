@@ -514,20 +514,21 @@ export function useBoardActions({
         return false;
       }
 
-      // Check for blocking dependencies and show warning if enabled
+      // Block features with unsatisfied dependencies when dependency blocking is enabled
       if (enableDependencyBlocking) {
         const blockingDeps = getBlockingDependencies(feature, features);
         if (blockingDeps.length > 0) {
           const depDescriptions = blockingDeps
             .map((depId) => {
               const dep = features.find((f) => f.id === depId);
-              return dep ? truncateDescription(dep.description, 40) : depId;
+              return dep ? `"${dep.title || truncateDescription(dep.description, 40)}"` : depId;
             })
             .join(', ');
 
-          toast.warning('Starting feature with incomplete dependencies', {
-            description: `This feature depends on: ${depDescriptions}`,
+          toast.error('Blocked by dependencies', {
+            description: `Complete these first: ${depDescriptions}`,
           });
+          return false;
         }
       }
 

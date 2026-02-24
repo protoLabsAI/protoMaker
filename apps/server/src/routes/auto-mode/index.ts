@@ -6,6 +6,7 @@
 
 import { Router } from 'express';
 import type { AutoModeService } from '../../services/auto-mode-service.js';
+import type { FeatureLoader } from '../../services/feature-loader.js';
 import { validatePathParams } from '../../middleware/validate-paths.js';
 import { createStopFeatureHandler } from './routes/stop-feature.js';
 import { createStatusHandler } from './routes/status.js';
@@ -22,7 +23,10 @@ import { createCommitFeatureHandler } from './routes/commit-feature.js';
 import { createApprovePlanHandler } from './routes/approve-plan.js';
 import { createResumeInterruptedHandler } from './routes/resume-interrupted.js';
 
-export function createAutoModeRoutes(autoModeService: AutoModeService): Router {
+export function createAutoModeRoutes(
+  autoModeService: AutoModeService,
+  featureLoader: FeatureLoader
+): Router {
   const router = Router();
 
   // Auto loop control routes
@@ -34,7 +38,7 @@ export function createAutoModeRoutes(autoModeService: AutoModeService): Router {
   router.post(
     '/run-feature',
     validatePathParams('projectPath'),
-    createRunFeatureHandler(autoModeService)
+    createRunFeatureHandler(autoModeService, featureLoader)
   );
   router.post(
     '/verify-feature',
