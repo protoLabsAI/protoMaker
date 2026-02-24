@@ -8,13 +8,14 @@
  */
 
 import type { Request, Response } from 'express';
-import { exec } from 'child_process';
+import { exec, execFile } from 'child_process';
 import { promisify } from 'util';
 import { getErrorMessage, logError, execGitCommand } from '../common.js';
 import { createLogger } from '@automaker/utils';
 import { isValidBranchName, sanitizeCommitMessage } from '@automaker/platform';
 
 const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 const logger = createLogger('Worktree');
 
 export function createMergeHandler() {
@@ -117,7 +118,7 @@ export function createMergeHandler() {
         const squashMessage = options?.message
           ? sanitizeCommitMessage(options.message)
           : sanitizeCommitMessage(`Merge ${branchName} (squash)`);
-        await execAsync(`git commit -m "${squashMessage}"`, {
+        await execFileAsync('git', ['commit', '-m', squashMessage], {
           cwd: projectPath,
         });
       }

@@ -4,12 +4,13 @@
 
 import { createLogger } from '@automaker/utils';
 import { spawnProcess } from '@automaker/platform';
-import { exec } from 'child_process';
+import { exec, execFile } from 'child_process';
 import { promisify } from 'util';
 import { getErrorMessage as getErrorMessageShared, createLogError } from '../common.js';
 
 const logger = createLogger('Worktree');
 export const execAsync = promisify(exec);
+export const execFileAsync = promisify(execFile);
 
 // Re-export validation functions from platform package
 export {
