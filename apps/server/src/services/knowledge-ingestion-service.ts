@@ -24,8 +24,7 @@ export class KnowledgeIngestionService {
   private embeddingOrchestrator: KnowledgeEmbeddingOrchestrator;
 
   constructor(embeddingOrchestrator?: KnowledgeEmbeddingOrchestrator) {
-    this.embeddingOrchestrator =
-      embeddingOrchestrator || new KnowledgeEmbeddingOrchestrator();
+    this.embeddingOrchestrator = embeddingOrchestrator || new KnowledgeEmbeddingOrchestrator();
   }
 
   /**

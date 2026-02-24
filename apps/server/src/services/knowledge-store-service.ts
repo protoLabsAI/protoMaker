@@ -249,8 +249,7 @@ export class KnowledgeStoreService {
       lastUpdated,
       dbPath,
       enabledHybridRetrieval:
-        this.settings.hybridRetrieval &&
-        this.embeddingOrchestrator.getEmbeddingService().isReady(),
+        this.settings.hybridRetrieval && this.embeddingOrchestrator.getEmbeddingService().isReady(),
     };
   }
 
