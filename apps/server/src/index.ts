@@ -104,8 +104,10 @@ import { createGitHubRoutes } from './routes/github/index.js';
 import { createContextRoutes } from './routes/context/index.js';
 import { createContentRoutes } from './routes/content/index.js';
 import { contentFlowService } from './services/content-flow-service.js';
+import { calendarService } from './services/calendar-service.js';
 import { createFlowsRoutes } from './routes/flows/index.js';
 import { createBacklogPlanRoutes } from './routes/backlog-plan/index.js';
+import { createCalendarRoutes } from './routes/calendar/index.js';
 import { cleanupStaleValidations } from './routes/github/routes/validation-common.js';
 import { createMCPRoutes } from './routes/mcp/index.js';
 import { MCPTestService } from './services/mcp-test-service.js';
@@ -388,6 +390,9 @@ const ledgerService = new LedgerService(featureLoader, events);
 ledgerService.initialize();
 const archivalService = new ArchivalService(featureLoader, ledgerService, settingsService, events);
 archivalService.start();
+
+// Calendar service
+calendarService.setFeatureLoader(featureLoader);
 const autoModeService = new AutoModeService(events, settingsService);
 const hitlFormService = new HITLFormService({
   events,
@@ -1404,6 +1409,7 @@ app.use('/api/github', createGitHubRoutes(events, settingsService));
 app.use('/api/context', createContextRoutes(settingsService));
 app.use('/api/content', createContentRoutes(settingsService));
 app.use('/api/backlog-plan', createBacklogPlanRoutes(events, settingsService));
+app.use('/api/calendar', createCalendarRoutes(calendarService));
 app.use('/api/beads', createBeadsRoutes(beadsService));
 app.use('/api/mcp', createMCPRoutes(mcpTestService));
 app.use(
