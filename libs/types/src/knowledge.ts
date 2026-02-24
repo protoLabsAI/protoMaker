@@ -89,6 +89,9 @@ export interface KnowledgeStoreStats {
 
   /** Database file path */
   dbPath: string;
+
+  /** Whether hybrid retrieval is enabled */
+  enabledHybridRetrieval: boolean;
 }
 
 /**
@@ -112,6 +115,9 @@ export interface KnowledgeStoreSettings {
 
   /** File patterns to include for indexing (glob patterns) */
   includePatterns: string[];
+
+  /** Enable hybrid retrieval (BM25 + cosine similarity with RRF) */
+  hybridRetrieval: boolean;
 }
 
 /**

@@ -16,7 +16,7 @@ interface SearchRequest {
 }
 
 export function createSearchHandler(knowledgeStoreService: any) {
-  return (req: Request, res: Response): void => {
+  return async (req: Request, res: Response): Promise<void> => {
     try {
       const { projectPath, query, maxResults, maxTokens, sourceTypes } = req.body as SearchRequest;
 
@@ -35,13 +35,13 @@ export function createSearchHandler(knowledgeStoreService: any) {
       // Initialize for this project path (re-initializes if different)
       knowledgeStoreService.initialize(projectPath);
 
-      const results = knowledgeStoreService.search(projectPath, query, {
+      const { results, retrieval_mode } = await knowledgeStoreService.search(projectPath, query, {
         maxResults,
         maxTokens,
         sourceTypes: sourceTypes ?? 'all',
       });
 
-      res.json({ success: true, results });
+      res.json({ success: true, results, retrieval_mode });
     } catch (error) {
       logger.error('Search failed:', error);
       res.status(500).json({

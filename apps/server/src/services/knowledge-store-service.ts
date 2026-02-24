@@ -15,6 +15,7 @@ import type {
   KnowledgeSearchOptions,
   KnowledgeSearchResult,
   KnowledgeChunk,
+  KnowledgeStoreSettings,
 } from '@protolabs-ai/types';
 import { EmbeddingService } from './embedding-service.js';
 
@@ -29,6 +30,15 @@ export class KnowledgeStoreService {
   private db: BetterSqlite3.Database | null = null;
   private projectPath: string | null = null;
   private embeddingService: EmbeddingService;
+  private settings: KnowledgeStoreSettings = {
+    maxChunkSize: 1000,
+    chunkOverlap: 200,
+    defaultImportance: 0.5,
+    autoReindex: true,
+    excludePatterns: [],
+    includePatterns: [],
+    hybridRetrieval: true,
+  };
 
   constructor(embeddingService?: EmbeddingService) {
     this.embeddingService = embeddingService || new EmbeddingService();
@@ -71,7 +81,7 @@ export class KnowledgeStoreService {
   }
 
   /**
-   * Create the database schema (chunks table + FTS5 virtual table)
+   * Create the database schema (chunks table + FTS5 virtual table + embeddings table)
    */
   private createSchema(): void {
     if (!this.db) {
@@ -93,21 +103,20 @@ export class KnowledgeStoreService {
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
         last_retrieved_at TEXT,
-        retrieval_count INTEGER NOT NULL DEFAULT 0,
-        embeddings BLOB
+        retrieval_count INTEGER NOT NULL DEFAULT 0
       )
     `);
 
-    // Migration: Add embeddings column if it doesn't exist (for existing databases)
-    try {
-      this.db.exec(`
-        ALTER TABLE chunks ADD COLUMN embeddings BLOB
-      `);
-      logger.debug('Added embeddings column to chunks table');
-    } catch (err) {
-      // Column already exists, ignore error
-      logger.debug('embeddings column already exists');
-    }
+    // Embeddings table (stores vector embeddings as BLOB)
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS embeddings (
+        chunk_id TEXT PRIMARY KEY,
+        embedding BLOB NOT NULL,
+        model TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (chunk_id) REFERENCES chunks(id) ON DELETE CASCADE
+      )
+    `);
 
     // FTS5 virtual table for full-text search on heading and content
     this.db.exec(`
@@ -214,22 +223,24 @@ export class KnowledgeStoreService {
       >,
       lastUpdated,
       dbPath,
+      enabledHybridRetrieval: this.settings.hybridRetrieval && this.embeddingService.isReady(),
     };
   }
 
   /**
-   * Search the knowledge store using FTS5 BM25 ranking
+   * Search the knowledge store using hybrid retrieval (BM25 + cosine similarity with RRF)
+   * Falls back to pure BM25 if embeddings are unavailable.
    *
    * @param projectPath - Project path to search within
    * @param query - FTS5 query string (supports AND, OR, NOT, phrases)
    * @param opts - Search options (maxResults, maxTokens, sourceTypes filter)
-   * @returns Array of search results ordered by relevance score
+   * @returns Object with results array and retrieval_mode
    */
-  search(
+  async search(
     projectPath: string,
     query: string,
     opts: KnowledgeSearchOptions = {}
-  ): KnowledgeSearchResult[] {
+  ): Promise<{ results: KnowledgeSearchResult[]; retrieval_mode: 'hybrid' | 'bm25' }> {
     if (!this.db || !this.projectPath) {
       throw new Error('Knowledge store not initialized');
     }
@@ -244,7 +255,14 @@ export class KnowledgeStoreService {
 
     const { maxResults = 20, maxTokens = 8000, sourceTypes = 'all' } = opts;
 
-    // Build the base SQL query with FTS5 BM25 ranking
+    // Determine if we can use hybrid retrieval
+    const canUseHybrid = this.settings.hybridRetrieval && this.embeddingService.isReady();
+
+    let retrievalMode: 'hybrid' | 'bm25' = 'bm25';
+
+    // Step 1: Run BM25 FTS5 search to get top-50 candidates
+    const candidateLimit = canUseHybrid ? 50 : maxResults;
+
     let sql = `
       SELECT
         c.id,
@@ -264,7 +282,6 @@ export class KnowledgeStoreService {
       WHERE chunks_fts MATCH ?
     `;
 
-    // Add source type filter if specified
     const params: unknown[] = [query];
     if (sourceTypes !== 'all' && sourceTypes.length > 0) {
       const placeholders = sourceTypes.map(() => '?').join(', ');
@@ -272,13 +289,11 @@ export class KnowledgeStoreService {
       params.push(...sourceTypes);
     }
 
-    // Order by BM25 score (lower is better in BM25)
     sql += ' ORDER BY score LIMIT ?';
-    params.push(maxResults);
+    params.push(candidateLimit);
 
-    logger.debug(`Executing FTS5 search: query="${query}", maxResults=${maxResults}`);
+    logger.debug(`Executing FTS5 search: query="${query}", candidateLimit=${candidateLimit}`);
 
-    // Execute the query
     const stmt = this.db.prepare(sql);
     const rows = stmt.all(...params) as Array<{
       id: string;
@@ -295,11 +310,116 @@ export class KnowledgeStoreService {
       score: number;
     }>;
 
+    // Step 2: If hybrid retrieval is enabled, compute RRF merge
+    let rankedRows = rows;
+
+    if (canUseHybrid && rows.length > 0) {
+      try {
+        // Embed the query
+        const queryEmbedding = await this.embeddingService.embed(query);
+
+        if (queryEmbedding) {
+          // Load embeddings for candidates
+          const chunkIds = rows.map((r) => r.id);
+          const placeholders = chunkIds.map(() => '?').join(', ');
+          const embeddingSql = `
+            SELECT chunk_id, embedding
+            FROM embeddings
+            WHERE chunk_id IN (${placeholders})
+          `;
+
+          const embeddingRows = this.db.prepare(embeddingSql).all(...chunkIds) as Array<{
+            chunk_id: string;
+            embedding: Buffer;
+          }>;
+
+          // Build a map of chunk_id -> embedding
+          const embeddingMap = new Map<string, Float32Array>();
+          for (const row of embeddingRows) {
+            // Convert Buffer to Float32Array
+            const floatArray = new Float32Array(
+              row.embedding.buffer,
+              row.embedding.byteOffset,
+              row.embedding.byteLength / Float32Array.BYTES_PER_ELEMENT
+            );
+            embeddingMap.set(row.chunk_id, floatArray);
+          }
+
+          // Compute cosine similarity for chunks with embeddings
+          const cosineSimilarities = new Map<string, number>();
+          for (const row of rows) {
+            const embedding = embeddingMap.get(row.id);
+            if (embedding) {
+              const similarity = this.embeddingService.cosineSimilarity(queryEmbedding, embedding);
+              cosineSimilarities.set(row.id, similarity);
+            }
+          }
+
+          // Only proceed with hybrid if we have embeddings
+          if (cosineSimilarities.size > 0) {
+            // Step 3: Rank by BM25 (ascending order - lower score is better)
+            const bm25Ranked = [...rows].sort((a, b) => a.score - b.score);
+            const bm25RankMap = new Map<string, number>();
+            bm25Ranked.forEach((row, index) => {
+              bm25RankMap.set(row.id, index + 1);
+            });
+
+            // Step 4: Rank by cosine similarity (descending - higher is better)
+            const cosineRanked = [...rows]
+              .filter((r) => cosineSimilarities.has(r.id))
+              .sort((a, b) => {
+                const simA = cosineSimilarities.get(a.id) || 0;
+                const simB = cosineSimilarities.get(b.id) || 0;
+                return simB - simA;
+              });
+            const cosineRankMap = new Map<string, number>();
+            cosineRanked.forEach((row, index) => {
+              cosineRankMap.set(row.id, index + 1);
+            });
+
+            // Step 5: RRF merge with k=60
+            const k = 60;
+            const rrfScores = new Map<string, number>();
+
+            for (const row of rows) {
+              const bm25Rank = bm25RankMap.get(row.id) || rows.length + 1;
+              const cosineRank = cosineRankMap.get(row.id) || rows.length + 1;
+
+              const rrfScore = 1 / (k + bm25Rank) + 1 / (k + cosineRank);
+              rrfScores.set(row.id, rrfScore);
+            }
+
+            // Step 6: Sort by RRF score (higher is better)
+            rankedRows = [...rows].sort((a, b) => {
+              const scoreA = rrfScores.get(a.id) || 0;
+              const scoreB = rrfScores.get(b.id) || 0;
+              return scoreB - scoreA;
+            });
+
+            retrievalMode = 'hybrid';
+            logger.info(
+              `Hybrid retrieval: ${cosineSimilarities.size}/${rows.length} chunks with embeddings`
+            );
+          } else {
+            logger.debug('No embeddings found for candidates, falling back to BM25');
+          }
+        } else {
+          logger.debug('Query embedding failed, falling back to BM25');
+        }
+      } catch (error) {
+        logger.warn('Hybrid retrieval error, falling back to BM25:', error);
+      }
+    }
+
     // Apply token budget enforcement
     const results: KnowledgeSearchResult[] = [];
     let totalTokens = 0;
 
-    for (const row of rows) {
+    for (const row of rankedRows) {
+      if (results.length >= maxResults) {
+        break;
+      }
+
       // Estimate tokens: ~4 chars per token
       const contentTokens = Math.ceil(row.content.length / 4);
       const headingTokens = row.heading ? Math.ceil(row.heading.length / 4) : 0;
@@ -308,7 +428,7 @@ export class KnowledgeStoreService {
       // Check if adding this chunk would exceed the budget
       if (totalTokens + chunkTokens > maxTokens) {
         logger.debug(
-          `Token budget exhausted: ${totalTokens}/${maxTokens} tokens used, skipping ${rows.length - results.length} remaining chunks`
+          `Token budget exhausted: ${totalTokens}/${maxTokens} tokens used, skipping ${rankedRows.length - results.length} remaining chunks`
         );
         break;
       }
@@ -339,7 +459,7 @@ export class KnowledgeStoreService {
     }
 
     logger.info(
-      `Search completed: ${results.length} chunks returned, ${totalTokens}/${maxTokens} tokens used`
+      `Search completed (${retrievalMode}): ${results.length} chunks returned, ${totalTokens}/${maxTokens} tokens used`
     );
 
     // Update usage tracking for returned chunks
@@ -356,7 +476,7 @@ export class KnowledgeStoreService {
       logger.debug(`Updated usage tracking for ${chunkIds.length} chunks`);
     }
 
-    return results;
+    return { results, retrieval_mode: retrievalMode };
   }
 
   /**
@@ -496,9 +616,13 @@ export class KnowledgeStoreService {
     }
 
     try {
-      // Get chunks without embeddings
+      // Get chunks without embeddings (LEFT JOIN to find missing entries in embeddings table)
       const chunksToEmbed = this.db
-        .prepare('SELECT id, heading, content FROM chunks WHERE embeddings IS NULL')
+        .prepare(
+          `SELECT c.id, c.heading, c.content FROM chunks c
+           LEFT JOIN embeddings e ON c.id = e.chunk_id
+           WHERE e.chunk_id IS NULL`
+        )
         .all() as Array<{ id: string; heading: string | null; content: string }>;
 
       if (chunksToEmbed.length === 0) {
@@ -521,9 +645,14 @@ export class KnowledgeStoreService {
           // Convert Float32Array to Buffer for BLOB storage
           const buffer = Buffer.from(embedding.buffer);
 
-          // Update chunk with embedding
+          // Insert or replace embedding in the embeddings table
           if (this.db) {
-            this.db.prepare('UPDATE chunks SET embeddings = ? WHERE id = ?').run(buffer, chunk.id);
+            this.db
+              .prepare(
+                `INSERT OR REPLACE INTO embeddings (chunk_id, embedding, model, created_at)
+                 VALUES (?, ?, ?, datetime('now'))`
+              )
+              .run(chunk.id, buffer, 'all-MiniLM-L6-v2');
           }
 
           processed++;
@@ -663,10 +792,10 @@ Output the compressed memory file:`;
     };
     const total = totalResult.count;
 
-    // Get embedded count
-    const embeddedResult = this.db
-      .prepare('SELECT COUNT(*) as count FROM chunks WHERE embeddings IS NOT NULL')
-      .get() as { count: number };
+    // Get embedded count (from separate embeddings table)
+    const embeddedResult = this.db.prepare('SELECT COUNT(*) as count FROM embeddings').get() as {
+      count: number;
+    };
     const embedded = embeddedResult.count;
 
     // Calculate pending
@@ -879,11 +1008,11 @@ Output the compressed memory file:`;
    * @param maxResults - Maximum number of results (default: 5)
    * @returns Array of search results with relevance scores
    */
-  searchReflections(
+  async searchReflections(
     projectPath: string,
     query: string,
     maxResults: number = 5
-  ): KnowledgeSearchResult[] {
+  ): Promise<KnowledgeSearchResult[]> {
     // Sanitize for FTS5 — strip operators that break MATCH syntax
     const sanitized = query
       .replace(/['"*(){}[\]:^~!@#$%&\\|<>]/g, ' ')
@@ -891,10 +1020,12 @@ Output the compressed memory file:`;
       .trim();
     if (!sanitized) return [];
 
-    return this.search(projectPath, sanitized, {
+    const { results } = await this.search(projectPath, sanitized, {
       sourceTypes: ['reflection', 'agent_output'],
       maxResults,
       maxTokens: 3000,
     });
+
+    return results;
   }
 }
