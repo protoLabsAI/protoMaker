@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 311
-  referenced: 163
-  successfulFeatures: 163
+  loaded: 312
+  referenced: 165
+  successfulFeatures: 165
 ---
 # gotchas
 
@@ -277,3 +277,8 @@ usageStats:
 - **Situation:** Initial import attempt using default import failed - required investigation and switch to namespace import pattern
 - **Root cause:** better-sqlite3 uses named exports, not a default export. The library's actual module structure doesn't match the typical CommonJS default pattern.
 - **How to avoid:** Namespace import is more verbose but matches library's actual exports. Using wrong pattern causes runtime or type errors.
+
+#### [Gotcha] Turbo's shared cache references package paths from different worktrees, causing 'Cannot find module' errors that don't reflect actual code problems (2026-02-24)
+- **Situation:** Build fails with TypeScript dependency resolution errors when running in a feature worktree after another worktree has built
+- **Root cause:** Turbo's cache layer stores absolute paths but git worktrees are separate checkout locations. Cache from one worktree path becomes invalid in another.
+- **How to avoid:** None - this is a blocker. Workaround: force builds, clear cache, or build from main branch.

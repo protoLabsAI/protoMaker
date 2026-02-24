@@ -12,6 +12,7 @@ The server is an Express 5 application with WebSocket streaming, organized into 
 - **[Providers](./providers)** — AI provider abstraction (Claude, Cursor, Codex, OpenCode)
 - **[Utilities](./utilities)** — Server utility functions and helpers
 - **[Maintenance Scheduler](./maintenance-scheduler)** — Background task scheduling, cron overrides, and API
+- **[Knowledge Store](./knowledge-store)** — SQLite FTS5 knowledge base for agent context retrieval
 
 ## Key Technologies
 

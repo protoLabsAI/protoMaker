@@ -783,3 +783,10 @@ usageStats:
 - **Situation:** Test manually set localStorage data but expected it to be immediately reflected in store state; localStorage write != store hydration
 - **Root cause:** localStorage.setItem() writes to browser storage, but Zustand's persist middleware only reads and hydrates on first store access (hook or getState()). Writing to storage doesn't retroactively hydrate already-instantiated stores.
 - **How to avoid:** Test must use Playwright page.evaluate() to set localStorage before any component mounts, then verify via component or direct store access after mount. Simpler test would be: mount component → localStorage auto-hydrates via middleware.
+
+### Verification through comprehensive unit tests rather than full build validation when worktree environment has dependency resolution issues. (2026-02-24)
+- **Context:** The fix couldn't be verified via `npm run build:server` due to pre-existing TypeScript module resolution issues with `@protolabs-ai/*` packages in the worktree, but logic correctness was proven through 7 test cases covering all eligibility scenarios.
+- **Why:** Eligibility logic is stateless and deterministic - it can be verified independently of the build environment. Unit tests on pure functions provide stronger confidence for logic correctness than environment-dependent builds would.
+- **Rejected:** Waiting for or attempting to fix the worktree build environment, or assuming the code is correct without explicit test coverage.
+- **Trade-offs:** Unit test verification is faster and more reliable for logic changes but doesn't catch integration issues or type-system problems. The worktree's build issues masked a potential type safety problem.
+- **Breaking if changed:** If you remove the unit tests and rely only on build verification, you lose visibility into logic correctness when environments are unstable. However, build verification should still be required before merging.
