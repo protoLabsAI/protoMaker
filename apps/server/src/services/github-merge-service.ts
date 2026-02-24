@@ -265,11 +265,43 @@ export class GitHubMergeService {
       const shaMatch = stdout.match(/[0-9a-f]{40}/i);
       const mergeCommitSha = shaMatch ? shaMatch[0].substring(0, 8) : undefined;
 
-      logger.info(`Successfully merged PR #${prNumber}`);
-      return {
-        success: true,
-        mergeCommitSha,
-      };
+      // Verify the PR is actually merged by checking its state
+      // The --auto flag can enable auto-merge without immediately merging
+      logger.debug(`Verifying PR #${prNumber} state after merge command`);
+      const { stdout: prStateJson } = await execAsync(`gh pr view ${prNumber} --json state`, {
+        cwd: workDir,
+        env: execEnv,
+      });
+
+      const prData = JSON.parse(prStateJson);
+      const prState = prData.state?.toUpperCase();
+
+      if (prState === 'MERGED') {
+        logger.info(`Successfully merged PR #${prNumber}`);
+        return {
+          success: true,
+          mergeCommitSha,
+        };
+      } else if (prState === 'OPEN') {
+        // PR is still open - auto-merge was enabled but not merged yet
+        // Return success: false to prevent false confidence that the PR landed
+        logger.warn(
+          `PR #${prNumber} is still OPEN after merge command - auto-merge may be enabled but PR is not merged`
+        );
+        return {
+          success: false,
+          error:
+            'PR merge command succeeded but PR is still OPEN. Auto-merge may be enabled, waiting for checks to pass.',
+          autoMergeEnabled: true,
+        };
+      } else {
+        // Unexpected state (CLOSED without merge?)
+        logger.warn(`PR #${prNumber} is in unexpected state: ${prState}`);
+        return {
+          success: false,
+          error: `PR is in unexpected state: ${prState}`,
+        };
+      }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       logger.error(`Failed to merge PR #${prNumber}: ${errorMsg}`);
