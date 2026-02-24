@@ -3,6 +3,7 @@ import { useAppStore } from '@/store/app-store';
 import { useDesignsStore } from '@/store/designs-store';
 import { Spinner } from '@protolabs-ai/ui/atoms';
 import { DesignsTree } from './designs-tree';
+import { DesignsCanvas } from './designs-canvas';
 import { FileText } from 'lucide-react';
 
 export function DesignsView() {
@@ -48,22 +49,14 @@ export function DesignsView() {
           )}
 
           {/* Canvas content */}
-          <div className="flex-1 flex items-center justify-center p-8">
+          <div className="flex-1 flex items-center justify-center">
             {isLoadingDocument ? (
               <div className="flex flex-col items-center gap-3">
                 <Spinner size="lg" />
                 <p className="text-sm text-muted-foreground">Loading design...</p>
               </div>
             ) : selectedDocument ? (
-              <div className="text-center">
-                <FileText className="mx-auto h-12 w-12 text-muted-foreground/50" />
-                <p className="mt-4 text-sm text-muted-foreground">
-                  Canvas renderer will be implemented in a future milestone
-                </p>
-                <pre className="mt-4 text-xs text-left bg-muted p-4 rounded max-w-md overflow-auto">
-                  {JSON.stringify(selectedDocument, null, 2)}
-                </pre>
-              </div>
+              <DesignsCanvas penFile={selectedDocument} />
             ) : (
               <div className="text-center">
                 <FileText className="mx-auto h-12 w-12 text-muted-foreground/50" />
