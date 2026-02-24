@@ -174,6 +174,7 @@ import { workspaceTools } from './tools/workspace-tools.js';
 import { setupTools } from './tools/setup-tools.js';
 import { utilityTools } from './tools/utility-tools.js';
 import { schedulerTools } from './tools/scheduler-tools.js';
+import { calendarTools } from './tools/calendar-tools.js';
 
 // Aggregate all tools
 const tools: Tool[] = [
@@ -191,6 +192,7 @@ const tools: Tool[] = [
   ...setupTools,
   ...utilityTools,
   ...schedulerTools,
+  ...calendarTools,
 ];
 
 // Tool implementations
@@ -1380,6 +1382,18 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
             (f.description as string)?.toLowerCase().includes(lower)
         );
       }
+      if (args.dueBefore) {
+        qFeatures = qFeatures.filter((f) => {
+          if (!f.dueDate) return false;
+          return (f.dueDate as string) < (args.dueBefore as string);
+        });
+      }
+      if (args.dueAfter) {
+        qFeatures = qFeatures.filter((f) => {
+          if (!f.dueDate) return false;
+          return (f.dueDate as string) > (args.dueAfter as string);
+        });
+      }
 
       const qTotal = qFeatures.length;
       const qLimit = (args.limit as number) || 50;
@@ -1506,6 +1520,52 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       return apiCall('/notes/reorder-tabs', {
         projectPath: args.projectPath,
         tabOrder: args.tabOrder,
+      });
+
+    // Calendar Management
+    case 'list_calendar_events':
+      return apiCall('/calendar/events', {
+        projectPath: args.projectPath,
+        startDate: args.startDate,
+        endDate: args.endDate,
+        types: args.types,
+      });
+
+    case 'create_calendar_event': {
+      const eventData: Record<string, unknown> = {
+        title: args.title,
+        date: args.date,
+      };
+      if (args.endDate) eventData.endDate = args.endDate;
+      if (args.type) eventData.type = args.type;
+      if (args.description) eventData.description = args.description;
+      if (args.color) eventData.color = args.color;
+      if (args.url) eventData.url = args.url;
+      return apiCall('/calendar/events', {
+        projectPath: args.projectPath,
+        event: eventData,
+      });
+    }
+
+    case 'update_calendar_event': {
+      const updates: Record<string, unknown> = {};
+      if (args.title) updates.title = args.title;
+      if (args.date) updates.date = args.date;
+      if (args.endDate) updates.endDate = args.endDate;
+      if (args.description) updates.description = args.description;
+      if (args.color) updates.color = args.color;
+      if (args.url) updates.url = args.url;
+      return apiCall('/calendar/events/update', {
+        projectPath: args.projectPath,
+        id: args.id,
+        updates,
+      });
+    }
+
+    case 'delete_calendar_event':
+      return apiCall('/calendar/events/delete', {
+        projectPath: args.projectPath,
+        id: args.id,
       });
 
     // Scheduler Management
