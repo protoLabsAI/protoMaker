@@ -1,12 +1,12 @@
 {
-  "commitCount": 2926,
-  "prCount": 945,
-  "locCount": 397101,
+  "commitCount": 2930,
+  "prCount": 949,
+  "locCount": 397406,
   "contributorCount": 51,
   "firstCommitDate": "2025-12-07T16:43:26-05:00",
-  "latestCommitDate": "2026-02-24T12:13:38-08:00",
-  "fileCount": 2411,
-  "tsFileCount": 1875,
+  "latestCommitDate": "2026-02-24T12:25:15-08:00",
+  "fileCount": 2415,
+  "tsFileCount": 1876,
   "featureCount": 10,
   "avgCostPerFeature": null,
   "totalCost": null,
@@ -14,6 +14,6 @@
   "throughputPerDay": null,
   "avgCycleTimeMs": null,
   "costByModel": null,
-  "generatedAt": "2026-02-24T20:18:54.101Z",
+  "generatedAt": "2026-02-24T20:33:23.257Z",
   "source": "git-only"
 }

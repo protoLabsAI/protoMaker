@@ -252,8 +252,36 @@ function formatNumber(n) {
   return n.toLocaleString('en-US');
 }
 
+const VISIBLE_ENTRIES = 100;
+
+function renderEntry(entry) {
+  const cat = escapeHtml(entry.category);
+  const title = escapeHtml(entry.title);
+  const date = formatDate(entry.date);
+  const lines = [];
+  lines.push(`              <div class="mb-4 relative" data-category="${cat}">`);
+  lines.push(
+    `                <div class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"></div>`
+  );
+  lines.push(`                <div class="flex flex-wrap items-center gap-2">`);
+  lines.push(
+    `                  <span class="category-${cat} inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider">${cat}</span>`
+  );
+  lines.push(
+    `                  <a href="${entry.prUrl}" target="_blank" rel="noopener" class="text-zinc-300 hover:text-white transition-colors">${title}</a>`
+  );
+  lines.push(
+    `                  <span class="text-xs text-zinc-600 font-mono">#${entry.prNumber}</span>`
+  );
+  lines.push(`                  <span class="text-xs text-zinc-600">${date}</span>`);
+  lines.push(`                </div>`);
+  lines.push(`              </div>`);
+  return lines.join('\n');
+}
+
 /**
  * Generate static HTML for all changelog entries grouped by month.
+ * Entries beyond VISIBLE_ENTRIES are wrapped in a collapsible <details>.
  */
 function generateHtml(months) {
   const parts = [];
@@ -266,27 +294,22 @@ function generateHtml(months) {
     parts.push(`            <div class="relative pl-8">`);
     parts.push(`              <div class="timeline-line"></div>`);
 
-    for (const entry of group.entries) {
-      const cat = escapeHtml(entry.category);
-      const title = escapeHtml(entry.title);
-      const date = formatDate(entry.date);
-      parts.push(`              <div class="mb-4 relative" data-category="${cat}">`);
+    const visible = group.entries.slice(0, VISIBLE_ENTRIES);
+    const collapsed = group.entries.slice(VISIBLE_ENTRIES);
+
+    for (const entry of visible) {
+      parts.push(renderEntry(entry));
+    }
+
+    if (collapsed.length > 0) {
+      parts.push(`              <details class="mb-4">`);
       parts.push(
-        `                <div class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"></div>`
+        `                <summary class="cursor-pointer text-sm text-accent hover:text-white transition-colors py-2">Show ${collapsed.length} more changes</summary>`
       );
-      parts.push(`                <div class="flex flex-wrap items-center gap-2">`);
-      parts.push(
-        `                  <span class="category-${cat} inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider">${cat}</span>`
-      );
-      parts.push(
-        `                  <a href="${entry.prUrl}" target="_blank" rel="noopener" class="text-zinc-300 hover:text-white transition-colors">${title}</a>`
-      );
-      parts.push(
-        `                  <span class="text-xs text-zinc-600 font-mono">#${entry.prNumber}</span>`
-      );
-      parts.push(`                  <span class="text-xs text-zinc-600">${date}</span>`);
-      parts.push(`                </div>`);
-      parts.push(`              </div>`);
+      for (const entry of collapsed) {
+        parts.push(renderEntry(entry));
+      }
+      parts.push(`              </details>`);
     }
 
     parts.push(`            </div>`);

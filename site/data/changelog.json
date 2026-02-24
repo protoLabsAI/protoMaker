@@ -1,21 +1,69 @@
 {
   "summary": {
-    "totalEntries": 708,
+    "totalEntries": 714,
     "categories": {
-      "feature": 415,
+      "fix": 194,
+      "docs": 32,
+      "feature": 416,
       "infrastructure": 44,
-      "improvement": 28,
-      "fix": 191,
-      "docs": 30
+      "improvement": 28
     },
     "firstDate": "2026-02-04T21:35:59.000Z",
-    "latestDate": "2026-02-24T19:38:52.000Z"
+    "latestDate": "2026-02-24T20:25:15.000Z"
   },
   "months": [
     {
       "month": "2026-02",
       "label": "February 2026",
       "entries": [
+        {
+          "hash": "9deaa552",
+          "date": "2026-02-24T12:25:15-08:00",
+          "title": "Make changelog & roadmap generation idempotent with accurate stats",
+          "prNumber": 1040,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1040",
+          "category": "fix"
+        },
+        {
+          "hash": "06d76b03",
+          "date": "2026-02-24T12:22:01-08:00",
+          "title": "Guard executeFeature/resumeFeature against terminal status re-execution",
+          "prNumber": 1042,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1042",
+          "category": "fix"
+        },
+        {
+          "hash": "f908c706",
+          "date": "2026-02-24T12:21:33-08:00",
+          "title": "Handle malformed notifications.json in NotificationService",
+          "prNumber": 1041,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1041",
+          "category": "fix"
+        },
+        {
+          "hash": "65c3b3cf",
+          "date": "2026-02-24T11:48:05-08:00",
+          "title": "Architecture philosophy — Knowledge Hive, RAG techniques, memory system",
+          "prNumber": 1038,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1038",
+          "category": "docs"
+        },
+        {
+          "hash": "7275903c",
+          "date": "2026-02-24T11:44:27-08:00",
+          "title": "HyPE retrieval path with triple-mode fusion and evaluation logging",
+          "prNumber": 1033,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1033",
+          "category": "feature"
+        },
+        {
+          "hash": "4e0b7cac",
+          "date": "2026-02-24T11:43:14-08:00",
+          "title": "Update ceremony docs with audit log, observability, and troubleshooting",
+          "prNumber": 1037,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1037",
+          "category": "docs"
+        },
         {
           "hash": "8d0572d7",
           "date": "2026-02-24T11:38:52-08:00",
@@ -5683,5 +5731,5 @@
       ]
     }
   ],
-  "generatedAt": "2026-02-24T20:18:54.191Z"
+  "generatedAt": "2026-02-24T20:33:23.350Z"
 }
