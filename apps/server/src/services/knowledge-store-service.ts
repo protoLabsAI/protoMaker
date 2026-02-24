@@ -764,7 +764,14 @@ Output the compressed memory file:`;
     query: string,
     maxResults: number = 5
   ): KnowledgeSearchResult[] {
-    return this.search(projectPath, query, {
+    // Sanitize for FTS5 — strip operators that break MATCH syntax
+    const sanitized = query
+      .replace(/['"*(){}[\]:^~!@#$%&\\|<>]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (!sanitized) return [];
+
+    return this.search(projectPath, sanitized, {
       sourceTypes: ['reflection', 'agent_output'],
       maxResults,
       maxTokens: 3000,

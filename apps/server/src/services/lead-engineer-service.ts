@@ -455,12 +455,19 @@ class ExecuteProcessor implements StateProcessor {
         // Build search query from feature title and description
         const query = `${ctx.feature.title} ${ctx.feature.description || ''}`.trim();
 
+        // Skip FTS5 search if query is empty (both title and description falsy)
+        if (!query) {
+          logger.debug('[EXECUTE] Empty query, skipping FTS5 reflection search');
+        }
+
         // Search for relevant reflections and agent outputs across all features
-        const results = this.serviceContext.knowledgeStoreService.searchReflections(
-          ctx.projectPath,
-          query,
-          5 // maxResults
-        );
+        const results = query
+          ? this.serviceContext.knowledgeStoreService.searchReflections(
+              ctx.projectPath,
+              query,
+              5 // maxResults
+            )
+          : [];
 
         ftsResults = results.map((r) => r.chunk.content);
         if (ftsResults.length > 0) {
