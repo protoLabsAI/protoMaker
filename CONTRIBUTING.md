@@ -6,13 +6,9 @@ protoLabs Studio is an autonomous AI development studio that provides a Kanban-b
 
 This guide will help you get started with contributing to protoLabs Studio. Please take a moment to read through these guidelines to ensure a smooth contribution process.
 
-## Contribution License Agreement
+## Contribution License
 
-**Important:** By submitting, pushing, or contributing any code, documentation, pull requests, issues, or other materials to the protoLabs Studio project, you agree to assign all right, title, and interest in and to your contributions, including all copyrights, patents, and other intellectual property rights, to the Core Contributors of protoLabs Studio. This assignment is irrevocable and includes the right to use, modify, distribute, and monetize your contributions in any manner.
-
-**You understand and agree that you will have no right to receive any royalties, compensation, or other financial benefits from any revenue, income, or commercial use generated from your contributed code or any derivative works thereof.** All contributions are made without expectation of payment or financial return.
-
-For complete details on contribution terms and rights assignment, please review [Section 5 (CONTRIBUTIONS AND RIGHTS ASSIGNMENT) of the LICENSE](LICENSE#5-contributions-and-rights-assignment).
+By submitting a pull request, you agree that your contributions are licensed under the same [MIT License](LICENSE) that covers this project. You retain copyright to your work — no copyright assignment or transfer is required.
 
 ## Table of Contents
 
@@ -743,7 +739,7 @@ We take security seriously and appreciate responsible disclosure.
 
 ---
 
-For license and contribution terms, see the [LICENSE](LICENSE) file in the repository root and the [README.md](README.md#license) for more details.
+This project is licensed under the [MIT License](LICENSE).
 
 ---
 

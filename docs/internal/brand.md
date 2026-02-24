@@ -123,7 +123,11 @@ protoLabs is the maintained successor to the original Automaker project. The ori
 
 ## License
 
-Open source. License choice TBD (MIT or Apache 2.0). The goal is maximum community adoption — no restrictions beyond standard open source terms.
+**MIT License.** Maximum community adoption, zero restrictions beyond standard open source terms.
+
+The upstream Automaker project changed to MIT and is no longer actively maintained. As the maintained successor, we adopted MIT to match — giving everyone equal rights to use, modify, distribute, and build on protoLabs without restriction. No special Core Contributor privileges, no copyright assignment on contributions, no SaaS restrictions.
+
+The LICENSE file preserves dual copyright: the original Automaker contributors (2025) and Proto Labs AI (2025-2026).
 
 ## Community Strategy
 

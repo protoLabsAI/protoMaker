@@ -549,3 +549,8 @@ usageStats:
 - **Rejected:** Optimistic approach: return `{ success: true, autoMergeEnabled: true, checksPending: true }` - exposes internal state but invites misinterpretation that PR is landed
 - **Trade-offs:** Conservative approach forces callers to handle `success: false` cases, but ensures correct semantic meaning. Optimistic approach is more informative but semantically confusing.
 - **Breaking if changed:** If changed to optimistic success=true for OPEN PRs, callers that check success flag alone (ignoring metadata) would incorrectly assume PR is merged, causing bugs in downstream workflows
+
+#### [Pattern] Implemented getStats() as first-class public method on KnowledgeStoreService returning comprehensive metrics (counts, sizes, breakdown by type) (2026-02-24)
+- **Problem solved:** Knowledge store is new foundational component - needs observability from the start
+- **Why this works:** Statistics method provides debugging visibility, monitors store health, enables quota enforcement, allows informed decisions about store performance. First-class API method (not buried in logs) signals its importance.
+- **Trade-offs:** Gains: Observable, testable, discoverable interface for store metrics. Losses: Small overhead to calculate stats on request (could be mitigated with caching)

@@ -5,9 +5,9 @@ relevantTo: [architecture]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 26
-  referenced: 17
-  successfulFeatures: 17
+  loaded: 28
+  referenced: 18
+  successfulFeatures: 18
 ---
 # architecture
 
@@ -2603,3 +2603,8 @@ usageStats:
 - **Situation:** Single Linear webhook triggers both LinearIntakeBridge.handleIntake() and IntegrationService→SignalIntakeService path independently, both running in parallel.
 - **Root cause:** Event-driven architecture doesn't enforce serial ordering of handlers. Async processing means both handlers start work before either finishes. Neither handler knows about the other.
 - **How to avoid:** Parallel handlers are fast and provide redundancy but require careful dedup at each handler. Serial handlers avoid races but are slower and add coupling.
+
+#### [Gotcha] Initially added better-sqlite3 to libs/types/package.json but should only be in root package.json since types packages must not have runtime dependencies (2026-02-24)
+- **Situation:** Confusion about dependency ownership in monorepo structure - types library is meant for TypeScript type exports only
+- **Root cause:** Separating types from runtime code prevents circular dependencies, allows types to be consumed by any package without pulling in database drivers. Types packages export type definitions, not executable code.
+- **How to avoid:** Gains: Clean separation of concerns, types can be installed without runtime dependencies. Losses: Need to manage dependencies in correct package

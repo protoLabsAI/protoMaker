@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 308
-  referenced: 161
-  successfulFeatures: 161
+  loaded: 311
+  referenced: 163
+  successfulFeatures: 163
 ---
 # gotchas
 
@@ -272,3 +272,8 @@ usageStats:
 - **Situation:** Attempted to suppress SDK error logs via log level configuration, but discovered that specific error conditions use console.error directly.
 - **Root cause:** SDK implementation choice to bypass the logger for critical errors. This is a fundamental architectural limitation in the SDK itself (tracked as Langfuse issue #6482).
 - **How to avoid:** Must accept SDK limitation and address root cause (missing prompts) instead of symptom suppression. More maintainable but requires behavioral change (mandatory seeding).
+
+#### [Gotcha] better-sqlite3 requires namespace import (import * as BetterSqlite3) instead of default import (import BetterSqlite3 from) (2026-02-24)
+- **Situation:** Initial import attempt using default import failed - required investigation and switch to namespace import pattern
+- **Root cause:** better-sqlite3 uses named exports, not a default export. The library's actual module structure doesn't match the typical CommonJS default pattern.
+- **How to avoid:** Namespace import is more verbose but matches library's actual exports. Using wrong pattern causes runtime or type errors.
