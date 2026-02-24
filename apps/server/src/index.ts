@@ -1089,6 +1089,24 @@ specGenerationMonitor.startMonitoring();
     }
   }
 
+  // Wire reflection completion → knowledge store reindex (keeps FTS5 search up-to-date)
+  if (knowledgeStoreService) {
+    events.subscribe((type, payload) => {
+      if (type === 'feature:reflection:complete') {
+        const data = payload as { projectPath?: string };
+        if (data.projectPath) {
+          try {
+            knowledgeStoreService.ingestReflections(data.projectPath);
+            knowledgeStoreService.rebuildIndex(data.projectPath);
+            logger.info(`[KNOWLEDGE] Reindexed reflections for ${data.projectPath}`);
+          } catch (err) {
+            logger.warn('[KNOWLEDGE] Failed to reindex reflections:', err);
+          }
+        }
+      }
+    });
+  }
+
   // Reconcile stuck features (in_progress, interrupted, pipeline_* with no running agent)
   try {
     const settings = await settingsService.getGlobalSettings();

@@ -203,6 +203,7 @@ export class CompletionDetectorService {
     milestone.status = 'completed';
     await this.projectService!.updateProject(projectPath, projectSlug, {
       status: project.status,
+      milestones: project.milestones,
     });
 
     // Aggregate stats

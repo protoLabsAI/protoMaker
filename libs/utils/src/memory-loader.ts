@@ -10,6 +10,9 @@
  */
 
 import path from 'path';
+import { createLogger } from './logger.js';
+
+const logger = createLogger('MemoryLoader');
 
 /**
  * File system module interface (compatible with secureFs)
@@ -589,9 +592,7 @@ export async function appendLearning(
   dedupChecker?: DedupChecker,
   indexRebuilder?: IndexRebuilder
 ): Promise<void> {
-  console.log(
-    `[MemoryLoader] appendLearning called: category=${learning.category}, type=${learning.type}`
-  );
+  logger.debug(`appendLearning called: category=${learning.category}, type=${learning.type}`);
   const memoryDir = getMemoryDir(projectPath);
   // Sanitize category name: lowercase, replace spaces with hyphens, remove special chars
   const sanitizedCategory = learning.category
@@ -605,9 +606,7 @@ export async function appendLearning(
   if (dedupChecker) {
     const isDuplicate = await dedupChecker(projectPath, learning, fileName);
     if (isDuplicate) {
-      console.log(
-        `[MemoryLoader] Deduplicated learning: similar entry already exists in ${fileName}`
-      );
+      logger.debug(`Deduplicated learning: similar entry already exists in ${fileName}`);
       return;
     }
   }
@@ -620,10 +619,10 @@ export async function appendLearning(
       // File exists, append to it
       const formatted = formatLearning(learning);
       await fsModule.appendFile(filePath, '\n' + formatted);
-      console.log(`[MemoryLoader] Appended learning to existing file: ${fileName}`);
+      logger.debug(`Appended learning to existing file: ${fileName}`);
     } catch {
       // File doesn't exist, create it with frontmatter
-      console.log(`[MemoryLoader] Creating new memory file: ${fileName}`);
+      logger.debug(`Creating new memory file: ${fileName}`);
       const metadata: MemoryMetadata = {
         tags: [sanitizedCategory || 'general'],
         summary: `${learning.category} implementation decisions and patterns`,
@@ -719,6 +718,6 @@ Mistakes and edge cases to avoid. These are lessons learned from past issues.
 
     await fsModule.writeFile(path.join(memoryDir, 'gotchas.md'), gotchasContent);
 
-    console.log(`[MemoryLoader] Initialized memory folder at ${memoryDir}`);
+    logger.debug(`Initialized memory folder at ${memoryDir}`);
   }
 }

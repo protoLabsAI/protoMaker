@@ -33,7 +33,7 @@ export class AgentScoringService {
       if (type === 'feature:status-changed') {
         const data = payload as {
           featureId: string;
-          oldStatus?: string;
+          previousStatus?: string;
           newStatus?: string;
           projectPath?: string;
         };
@@ -41,7 +41,7 @@ export class AgentScoringService {
           void this.handleStatusChanged(
             data.projectPath,
             data.featureId,
-            data.oldStatus,
+            data.previousStatus,
             data.newStatus
           );
         }

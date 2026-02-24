@@ -464,9 +464,11 @@ export class CeremonyService {
       return;
     }
 
-    const channelId = ceremonySettings.contentBriefChannelId;
+    const channelId = ceremonySettings.contentBriefChannelId || ceremonySettings.discordChannelId;
     if (!channelId) {
-      logger.debug('No contentBriefChannelId configured, skipping content brief');
+      logger.debug(
+        'No contentBriefChannelId or discordChannelId configured, skipping content brief'
+      );
       return;
     }
 
@@ -1575,7 +1577,7 @@ ${summary}
     } catch {
       // No projects dir
     }
-    throw new Error('No Linear project ID found for this project');
+    return '';
   }
 
   /**
