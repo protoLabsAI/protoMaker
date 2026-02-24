@@ -7,11 +7,14 @@
 
 import * as path from 'node:path';
 import * as fs from 'node:fs';
-import Database from 'better-sqlite3';
-import { watch, type FSWatcher } from 'node:fs';
-import { createLogger, chunkMarkdownFile } from '@automaker/utils';
-import type { KnowledgeStoreStats } from '@automaker/types';
-import { randomUUID } from 'node:crypto';
+import * as BetterSqlite3 from 'better-sqlite3';
+import { createLogger } from '@automaker/utils';
+import type {
+  KnowledgeStoreStats,
+  KnowledgeSearchOptions,
+  KnowledgeSearchResult,
+  KnowledgeChunk,
+} from '@automaker/types';
 
 const logger = createLogger('KnowledgeStoreService');
 
@@ -21,10 +24,8 @@ const logger = createLogger('KnowledgeStoreService');
  * Manages a SQLite database with FTS5 full-text search for knowledge chunks.
  */
 export class KnowledgeStoreService {
-  private db: Database.Database | null = null;
+  private db: BetterSqlite3.Database | null = null;
   private projectPath: string | null = null;
-  private watcher: FSWatcher | null = null;
-  private rebuildDebounceTimer: NodeJS.Timeout | null = null;
 
   /**
    * Initialize the knowledge store for a given project.
@@ -51,16 +52,13 @@ export class KnowledgeStoreService {
     logger.info(`Initializing knowledge store at ${dbPath}`);
 
     // Open database with WAL mode for concurrent reads
-    this.db = new Database(dbPath);
+    this.db = new BetterSqlite3.default(dbPath);
 
     // Enable WAL mode
     this.db.pragma('journal_mode = WAL');
 
     // Create schema
     this.createSchema();
-
-    // Setup file watcher
-    this.setupFileWatcher();
 
     logger.info('Knowledge store initialized successfully');
   }
@@ -125,211 +123,6 @@ export class KnowledgeStoreService {
     `);
 
     logger.debug('Database schema created successfully');
-  }
-
-  /**
-   * Setup file watcher for .automaker/memory/*.md files
-   * Triggers rebuildIndex debounced 2s after any write
-   */
-  private setupFileWatcher(): void {
-    if (!this.projectPath) {
-      throw new Error('Project path not set');
-    }
-
-    const memoryDir = path.join(this.projectPath, '.automaker', 'memory');
-
-    // Ensure memory directory exists
-    if (!fs.existsSync(memoryDir)) {
-      fs.mkdirSync(memoryDir, { recursive: true });
-    }
-
-    // Watch for changes
-    this.watcher = watch(
-      memoryDir,
-      { recursive: true },
-      (eventType: string, filename: string | null) => {
-        if (!filename || !filename.endsWith('.md')) {
-          return;
-        }
-
-        logger.debug(`File watcher detected ${eventType} on ${filename}`);
-
-        // Debounce rebuild - clear existing timer and set new one
-        if (this.rebuildDebounceTimer) {
-          clearTimeout(this.rebuildDebounceTimer);
-        }
-
-        this.rebuildDebounceTimer = setTimeout(() => {
-          if (this.projectPath) {
-            logger.info('File watcher triggering knowledge store rebuild');
-            this.rebuildIndex(this.projectPath);
-          }
-        }, 2000);
-      }
-    );
-
-    logger.debug('File watcher setup for memory directory');
-  }
-
-  /**
-   * Upsert chunks for a source file
-   * Uses INSERT OR REPLACE on (source_file, chunk_index)
-   */
-  private upsertChunks(
-    sourceType: 'file' | 'url' | 'manual' | 'generated',
-    sourceFile: string,
-    chunks: Array<{
-      heading?: string;
-      content: string;
-      chunkIndex: number;
-      tags?: string[];
-      importance?: number;
-    }>
-  ): void {
-    if (!this.db || !this.projectPath) {
-      throw new Error('Knowledge store not initialized');
-    }
-
-    const stmt = this.db.prepare(`
-      INSERT OR REPLACE INTO chunks (
-        id, source_type, source_file, project_path, chunk_index,
-        heading, content, tags, importance, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-
-    const now = new Date().toISOString();
-
-    for (const chunk of chunks) {
-      const id = randomUUID();
-      const tagsJson = chunk.tags ? JSON.stringify(chunk.tags) : null;
-      const importance = chunk.importance ?? 0.5;
-
-      stmt.run(
-        id,
-        sourceType,
-        sourceFile,
-        this.projectPath,
-        chunk.chunkIndex,
-        chunk.heading || null,
-        chunk.content,
-        tagsJson,
-        importance,
-        now,
-        now
-      );
-    }
-
-    logger.debug(`Upserted ${chunks.length} chunks for ${sourceFile}`);
-  }
-
-  /**
-   * Ingest all .md files from .automaker/memory/
-   */
-  ingestMemoryFiles(projectPath: string): void {
-    const memoryDir = path.join(projectPath, '.automaker', 'memory');
-
-    if (!fs.existsSync(memoryDir)) {
-      logger.warn(`Memory directory does not exist: ${memoryDir}`);
-      return;
-    }
-
-    const files = fs.readdirSync(memoryDir).filter((f) => f.endsWith('.md'));
-
-    logger.info(`Ingesting ${files.length} memory files from ${memoryDir}`);
-
-    for (const file of files) {
-      const filePath = path.join(memoryDir, file);
-      const content = fs.readFileSync(filePath, 'utf-8');
-      const chunks = chunkMarkdownFile(content);
-
-      const relativeFile = path.relative(projectPath, filePath);
-      this.upsertChunks('file', relativeFile, chunks);
-    }
-
-    logger.info(`Memory files ingested successfully`);
-  }
-
-  /**
-   * Ingest all .md files from .automaker/context/
-   */
-  ingestContextFiles(projectPath: string): void {
-    const contextDir = path.join(projectPath, '.automaker', 'context');
-
-    if (!fs.existsSync(contextDir)) {
-      logger.warn(`Context directory does not exist: ${contextDir}`);
-      return;
-    }
-
-    const files = fs.readdirSync(contextDir).filter((f) => f.endsWith('.md'));
-
-    logger.info(`Ingesting ${files.length} context files from ${contextDir}`);
-
-    for (const file of files) {
-      const filePath = path.join(contextDir, file);
-      const content = fs.readFileSync(filePath, 'utf-8');
-      const chunks = chunkMarkdownFile(content);
-
-      const relativeFile = path.relative(projectPath, filePath);
-      this.upsertChunks('file', relativeFile, chunks);
-    }
-
-    logger.info(`Context files ingested successfully`);
-  }
-
-  /**
-   * Ingest all .automaker/features/{id}/reflection.md files
-   */
-  ingestReflections(projectPath: string): void {
-    const featuresDir = path.join(projectPath, '.automaker', 'features');
-
-    if (!fs.existsSync(featuresDir)) {
-      logger.warn(`Features directory does not exist: ${featuresDir}`);
-      return;
-    }
-
-    const featureDirs = fs
-      .readdirSync(featuresDir, { withFileTypes: true })
-      .filter((dirent) => dirent.isDirectory())
-      .map((dirent) => dirent.name);
-
-    let reflectionCount = 0;
-
-    for (const featureId of featureDirs) {
-      const reflectionPath = path.join(featuresDir, featureId, 'reflection.md');
-
-      if (fs.existsSync(reflectionPath)) {
-        const content = fs.readFileSync(reflectionPath, 'utf-8');
-        const chunks = chunkMarkdownFile(content);
-
-        const relativeFile = path.relative(projectPath, reflectionPath);
-        this.upsertChunks('file', relativeFile, chunks);
-
-        reflectionCount++;
-      }
-    }
-
-    logger.info(`Ingested ${reflectionCount} reflection files`);
-  }
-
-  /**
-   * Clear all chunks and re-ingest all sources
-   */
-  rebuildIndex(projectPath: string): void {
-    if (!this.db) {
-      throw new Error('Knowledge store not initialized');
-    }
-
-    logger.info('Rebuilding knowledge store index');
-
-    // Clear all chunks
-    this.db.exec('DELETE FROM chunks');
-
-    // Re-ingest all sources
-    this.ingestMemoryFiles(projectPath);
-    this.ingestContextFiles(projectPath);
-    this.ingestReflections(projectPath);
-
-    logger.info('Knowledge store index rebuilt successfully');
   }
 
   /**
@@ -402,20 +195,137 @@ export class KnowledgeStoreService {
   }
 
   /**
-   * Close the database connection and file watcher
+   * Search the knowledge store using FTS5 BM25 ranking
+   *
+   * @param projectPath - Project path to search within
+   * @param query - FTS5 query string (supports AND, OR, NOT, phrases)
+   * @param opts - Search options (maxResults, maxTokens, sourceTypes filter)
+   * @returns Array of search results ordered by relevance score
+   */
+  search(
+    projectPath: string,
+    query: string,
+    opts: KnowledgeSearchOptions = {}
+  ): KnowledgeSearchResult[] {
+    if (!this.db || !this.projectPath) {
+      throw new Error('Knowledge store not initialized');
+    }
+
+    if (this.projectPath !== projectPath) {
+      logger.warn(
+        `Project path mismatch: initialized with ${this.projectPath}, searching ${projectPath}`
+      );
+      // Re-initialize for the new project
+      this.initialize(projectPath);
+    }
+
+    const { maxResults = 20, maxTokens = 8000, sourceTypes = 'all' } = opts;
+
+    // Build the base SQL query with FTS5 BM25 ranking
+    let sql = `
+      SELECT
+        c.id,
+        c.source_type,
+        c.source_file,
+        c.project_path,
+        c.chunk_index,
+        c.heading,
+        c.content,
+        c.tags,
+        c.importance,
+        c.created_at,
+        c.updated_at,
+        bm25(chunks_fts) as score
+      FROM chunks_fts
+      JOIN chunks c ON chunks_fts.rowid = c.rowid
+      WHERE chunks_fts MATCH ?
+    `;
+
+    // Add source type filter if specified
+    const params: unknown[] = [query];
+    if (sourceTypes !== 'all' && sourceTypes.length > 0) {
+      const placeholders = sourceTypes.map(() => '?').join(', ');
+      sql += ` AND c.source_type IN (${placeholders})`;
+      params.push(...sourceTypes);
+    }
+
+    // Order by BM25 score (lower is better in BM25)
+    sql += ' ORDER BY score LIMIT ?';
+    params.push(maxResults);
+
+    logger.debug(`Executing FTS5 search: query="${query}", maxResults=${maxResults}`);
+
+    // Execute the query
+    const stmt = this.db.prepare(sql);
+    const rows = stmt.all(...params) as Array<{
+      id: string;
+      source_type: string;
+      source_file: string;
+      project_path: string;
+      chunk_index: number;
+      heading: string | null;
+      content: string;
+      tags: string | null;
+      importance: number;
+      created_at: string;
+      updated_at: string;
+      score: number;
+    }>;
+
+    // Apply token budget enforcement
+    const results: KnowledgeSearchResult[] = [];
+    let totalTokens = 0;
+
+    for (const row of rows) {
+      // Estimate tokens: ~4 chars per token
+      const contentTokens = Math.ceil(row.content.length / 4);
+      const headingTokens = row.heading ? Math.ceil(row.heading.length / 4) : 0;
+      const chunkTokens = contentTokens + headingTokens;
+
+      // Check if adding this chunk would exceed the budget
+      if (totalTokens + chunkTokens > maxTokens) {
+        logger.debug(
+          `Token budget exhausted: ${totalTokens}/${maxTokens} tokens used, skipping ${rows.length - results.length} remaining chunks`
+        );
+        break;
+      }
+
+      // Parse tags from JSON string
+      const tags = row.tags ? (JSON.parse(row.tags) as string[]) : undefined;
+
+      const chunk: KnowledgeChunk = {
+        id: row.id,
+        sourceType: row.source_type as KnowledgeChunk['sourceType'],
+        sourceFile: row.source_file,
+        projectPath: row.project_path,
+        chunkIndex: row.chunk_index,
+        heading: row.heading || undefined,
+        content: row.content,
+        tags,
+        importance: row.importance,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+      };
+
+      results.push({
+        chunk,
+        score: row.score,
+      });
+
+      totalTokens += chunkTokens;
+    }
+
+    logger.info(
+      `Search completed: ${results.length} chunks returned, ${totalTokens}/${maxTokens} tokens used`
+    );
+
+    return results;
+  }
+
+  /**
+   * Close the database connection
    */
   close(): void {
-    if (this.rebuildDebounceTimer) {
-      clearTimeout(this.rebuildDebounceTimer);
-      this.rebuildDebounceTimer = null;
-    }
-
-    if (this.watcher) {
-      logger.debug('Closing file watcher');
-      this.watcher.close();
-      this.watcher = null;
-    }
-
     if (this.db) {
       logger.debug('Closing knowledge store database');
       this.db.close();
@@ -428,7 +338,7 @@ export class KnowledgeStoreService {
    * Get the database instance (for advanced operations)
    * @internal
    */
-  getDatabase(): Database.Database | null {
+  getDatabase(): BetterSqlite3.Database | null {
     return this.db;
   }
 }

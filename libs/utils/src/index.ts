@@ -169,6 +169,3 @@ export {
   type SkillsFsModule,
   type SkillsLoadResult,
 } from './skills-loader.js';
-
-// Memory chunking
-export { chunkMarkdownFile, type MemoryChunk } from './memory-chunker.js';

@@ -799,4 +799,5 @@ export type {
   KnowledgeSearchResult,
   KnowledgeStoreStats,
   KnowledgeStoreSettings,
+  KnowledgeSearchOptions,
 } from './knowledge.js';

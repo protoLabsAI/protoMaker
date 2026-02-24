@@ -107,3 +107,17 @@ export interface KnowledgeStoreSettings {
   /** File patterns to include for indexing (glob patterns) */
   includePatterns: string[];
 }
+
+/**
+ * Options for searching the knowledge store
+ */
+export interface KnowledgeSearchOptions {
+  /** Maximum number of results to return (default: 20) */
+  maxResults?: number;
+
+  /** Maximum total tokens to return (default: 8000, ~4 chars per token) */
+  maxTokens?: number;
+
+  /** Filter by source types (default: 'all') */
+  sourceTypes?: KnowledgeSourceType[] | 'all';
+}
