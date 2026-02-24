@@ -4742,7 +4742,12 @@ Format your response as a structured markdown document.`;
         // Those features have completed execution and should not be picked up again
         const isEligibleStatus =
           canonicalStatus === 'backlog' ||
-          (feature.planSpec?.status === 'approved' &&
+          (canonicalStatus !== 'done' &&
+            canonicalStatus !== 'verified' &&
+            canonicalStatus !== 'review' &&
+            canonicalStatus !== 'in_progress' &&
+            canonicalStatus !== 'blocked' &&
+            feature.planSpec?.status === 'approved' &&
             (feature.planSpec.tasksCompleted ?? 0) < (feature.planSpec.tasksTotal ?? 0));
 
         // Log ALL features with their eligibility status for debugging
