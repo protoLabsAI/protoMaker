@@ -45,7 +45,9 @@ import { SandboxRejectionScreen } from '@/components/dialogs/sandbox-rejection-s
 import { LoadingState } from '@protolabs/ui/molecules';
 import { useProjectSettingsLoader } from '@/hooks/use-project-settings-loader';
 import { useBrowserNotifications } from '@/hooks/use-browser-notifications';
-import { useIsCompact } from '@/hooks/use-media-query';
+import { useIsCompact, useIsMobile } from '@/hooks/use-media-query';
+import { useMobileVisibility } from '@/hooks/use-mobile-visibility';
+import { useVirtualKeyboardResize } from '@/hooks/use-virtual-keyboard-resize';
 import { BottomPanel } from '@/components/layout/bottom-panel';
 import type { Project } from '@/lib/electron';
 
@@ -193,6 +195,13 @@ function RootLayoutContent() {
 
   // Global Cmd+K / Ctrl+K shortcut for the chat modal (web mode)
   useChatModalShortcut();
+
+  // Mobile device detection for PWA optimizations
+  const isMobile = useIsMobile();
+
+  // Mobile-specific hooks for performance and UX
+  useMobileVisibility(isMobile);
+  useVirtualKeyboardResize(isMobile);
 
   const isSetupRoute = location.pathname === '/setup';
   const isLoginRoute = location.pathname === '/login';
@@ -750,7 +759,7 @@ function RootLayoutContent() {
   // Note: No sandbox dialog here - it only shows after login and setup complete
   if (isLoginRoute || isLoggedOutRoute) {
     return (
-      <main className="h-screen overflow-hidden" data-testid="app-container">
+      <main className="h-screen-safe overflow-hidden" data-testid="app-container">
         <Outlet />
       </main>
     );
@@ -759,7 +768,7 @@ function RootLayoutContent() {
   // Chat overlay — chromeless, full window, no sidebar/project switcher
   if (isChatOverlayRoute) {
     return (
-      <main className="h-screen w-screen overflow-hidden" data-testid="app-container">
+      <main className="h-screen-safe w-screen overflow-hidden" data-testid="app-container">
         <Outlet />
       </main>
     );
@@ -768,7 +777,7 @@ function RootLayoutContent() {
   // Wait for auth check before rendering protected routes (ALL modes - unified flow)
   if (!authChecked) {
     return (
-      <main className="flex h-screen items-center justify-center" data-testid="app-container">
+      <main className="flex h-screen-safe items-center justify-center" data-testid="app-container">
         <LoadingState message="Loading..." />
       </main>
     );
@@ -778,7 +787,7 @@ function RootLayoutContent() {
   // Show loading state while navigation is in progress
   if (!isAuthenticated) {
     return (
-      <main className="flex h-screen items-center justify-center" data-testid="app-container">
+      <main className="flex h-screen-safe items-center justify-center" data-testid="app-container">
         <LoadingState message="Redirecting..." />
       </main>
     );
@@ -786,7 +795,7 @@ function RootLayoutContent() {
 
   if (shouldBlockForSettings) {
     return (
-      <main className="flex h-screen items-center justify-center" data-testid="app-container">
+      <main className="flex h-screen-safe items-center justify-center" data-testid="app-container">
         <LoadingState message="Loading settings..." />
       </main>
     );
@@ -794,7 +803,7 @@ function RootLayoutContent() {
 
   if (shouldAutoOpen) {
     return (
-      <main className="flex h-screen items-center justify-center" data-testid="app-container">
+      <main className="flex h-screen-safe items-center justify-center" data-testid="app-container">
         <LoadingState message="Opening project..." />
       </main>
     );
@@ -803,7 +812,7 @@ function RootLayoutContent() {
   // Show setup page (full screen, no sidebar) - authenticated only
   if (isSetupRoute) {
     return (
-      <main className="h-screen overflow-hidden" data-testid="app-container">
+      <main className="h-screen-safe overflow-hidden" data-testid="app-container">
         <Outlet />
       </main>
     );
@@ -813,7 +822,7 @@ function RootLayoutContent() {
   if (isDashboardRoute) {
     return (
       <>
-        <main className="h-screen overflow-hidden" data-testid="app-container">
+        <main className="h-screen-safe overflow-hidden" data-testid="app-container">
           <Outlet />
           <Toaster richColors position="bottom-right" />
         </main>
@@ -831,7 +840,7 @@ function RootLayoutContent() {
   // Also hide on compact screens (< 1240px) - the sidebar will show a logo instead
   return (
     <>
-      <main className="flex h-screen overflow-hidden" data-testid="app-container">
+      <main className="flex h-screen-safe overflow-hidden" data-testid="app-container">
         {/* Full-width titlebar drag region for Electron window dragging */}
         {isElectron() && (
           <div
