@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 362
-  referenced: 195
-  successfulFeatures: 195
+  loaded: 365
+  referenced: 198
+  successfulFeatures: 198
 ---
 # gotchas
 
@@ -343,7 +343,22 @@ usageStats:
 - **Root cause:** Stale configuration causes 'session not found' errors or attempts to restore from non-existent paths. Validation prevents these failures.
 - **How to avoid:** Slightly slower (stat calls per project), but prevents crash recovery feature itself from crashing. User doesn't get feedback that config is stale.
 
-#### [Gotcha] Sessions for deleted projects are permanently lost because path validation (line 2174) prevents checking non-existent paths. Project paths must remain valid to recover their sessions. (2026-02-24)
-- **Situation:** Session discovery validates that project paths exist before attempting to read session files
-- **Root cause:** Prevents file read errors on deleted projects, keeps implementation simple and predictable. But creates data loss scenario.
-- **How to avoid:** Safety and simplicity gained, but session recovery completeness lost for any deleted project. Users lose work if they delete a project without archiving its session.
+#### [Gotcha] Pattern matching uses first-match-wins approach - order of patterns in the list affects classification results, but ordering logic is implicit and not documented (2026-02-24)
+- **Situation:** 11 regex patterns evaluated sequentially; if multiple patterns match same error, only first match is returned
+- **Root cause:** Avoids multiple matches (which would be ambiguous) and makes logic deterministic, but order is a hidden dependency
+- **How to avoid:** Simpler code and deterministic results vs subtle bugs if patterns reordered or overlapping patterns added without understanding precedence
+
+#### [Gotcha] classifyBatch() and getClassificationStats() methods exist but are not called by the primary EscalateProcessor integration (2026-02-24)
+- **Situation:** 475-line service includes utility methods that appear over-engineered relative to actual usage
+- **Root cause:** Likely added for future analytics/batch-processing use cases or copy-pasted from similar services, but integration only uses classify() and isRetryable()
+- **How to avoid:** Unused code is maintenance burden but provides future extension points; unclear requirements led to speculative implementation
+
+#### [Gotcha] Template variable is ${CLAUDE_PLUGIN_ROOT}, not {{pluginDir}} or other variations. Incorrect variable name causes hooks to silently fail with unresolved paths. (2026-02-24)
+- **Situation:** Feature proposal originally suggested {{pluginDir}} syntax, but Claude Code's actual implementation uses ${} bash-style variable expansion.
+- **Root cause:** Claude Code evaluates hooks as bash commands, requiring bash-compatible variable syntax. The template variable name is environment-specific and non-obvious from documentation.
+- **How to avoid:** Bash variable syntax is familiar to shell-savvy developers (+) but could cause subtle failures if wrong variable name used without error messages (-)
+
+#### [Gotcha] Hook JSON configuration is merely a reference layer - actual hook scripts must already exist in the plugin's hooks/ directory. Missing scripts cause silent runtime failures. (2026-02-24)
+- **Situation:** Implementation added hook declarations to plugin.json, but success depends on hooks/compaction-prime-directive.sh, hooks/session-context.sh, etc. already being present in the plugin package.
+- **Root cause:** Plugin.json is declarative configuration; it doesn't create hooks, only references them. The executable scripts are the real implementation.
+- **How to avoid:** Plugin.json stays lightweight and declarative (+) but requires coordinated file management between config and script implementations (-)

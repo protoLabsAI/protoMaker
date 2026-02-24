@@ -23,15 +23,18 @@ jobs:
 
     # Use a persistent deploy directory that survives the runner's workspace
     # cleanup cron. The default _work/ directory gets wiped every 5min.
-    env:
-      DEPLOY_DIR: /opt/staging-deploy/automaker
-      ENV_SOURCE: /opt/staging-deploy/.env.staging
+    # Paths use $HOME so they work for any runner user without hardcoded PII.
 
     steps:
       - name: Setup persistent deploy directory
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          export DEPLOY_DIR="$HOME/staging-deploy/automaker"
+          export ENV_SOURCE="$HOME/staging-deploy/.env.staging"
+          echo "DEPLOY_DIR=$DEPLOY_DIR" >> "$GITHUB_ENV"
+          echo "ENV_SOURCE=$ENV_SOURCE" >> "$GITHUB_ENV"
+
           REPO_URL="https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
 
           # Create deploy dir if first run
@@ -51,12 +54,12 @@ jobs:
           if [ -f "$ENV_SOURCE" ]; then
             cp "$ENV_SOURCE" "$DEPLOY_DIR/.env"
             echo "Copied .env from $ENV_SOURCE"
-          elif [ -f "/opt/staging-deploy/.env" ]; then
+          elif [ -f "$HOME/staging-deploy/.env" ]; then
             echo "WARN: No staging env at $ENV_SOURCE — copying from dev .env as initial seed"
-            cp "/opt/staging-deploy/.env" "$ENV_SOURCE"
+            cp "$HOME/staging-deploy/.env" "$ENV_SOURCE"
             cp "$ENV_SOURCE" "$DEPLOY_DIR/.env"
           else
-            echo "ERROR: No .env found at $ENV_SOURCE or /opt/staging-deploy/.env"
+            echo "ERROR: No .env found at $ENV_SOURCE or $HOME/staging-deploy/.env"
             exit 1
           fi
 
@@ -90,7 +93,7 @@ jobs:
             --max-time 180 || echo "Drain skipped (server not running or no agents)"
 
       - name: Tag rollback images
-        working-directory: /opt/staging-deploy/automaker
+        working-directory: ${{ env.DEPLOY_DIR }}
         run: |
           # Save current working images so we can restore on failure.
           # Only tag app services — docs runs independently and is never rolled back.
@@ -106,7 +109,7 @@ jobs:
 
       - name: Rebuild and restart staging
         id: rebuild
-        working-directory: /opt/staging-deploy/automaker
+        working-directory: ${{ env.DEPLOY_DIR }}
         env:
           GIT_COMMIT_SHA: ${{ github.sha }}
         run: |
@@ -117,7 +120,7 @@ jobs:
 
       - name: Verify deployment
         id: verify
-        working-directory: /opt/staging-deploy/automaker
+        working-directory: ${{ env.DEPLOY_DIR }}
         run: |
           # Check server readiness (verifies API key, data dir, service init)
           retries=0
@@ -157,7 +160,7 @@ jobs:
 
       - name: Smoke tests
         id: smoke
-        working-directory: /opt/staging-deploy/automaker
+        working-directory: ${{ env.DEPLOY_DIR }}
         run: |
           # Source API key from .env (same machine as staging server)
           export AUTOMAKER_API_KEY=$(grep -oP 'AUTOMAKER_API_KEY=\K.*' .env || echo "")
@@ -168,7 +171,7 @@ jobs:
       - name: Rollback on failure
         id: rollback
         if: failure() && (steps.rebuild.outcome == 'failure' || steps.verify.outcome == 'failure' || steps.smoke.outcome == 'failure')
-        working-directory: /opt/staging-deploy/automaker
+        working-directory: ${{ env.DEPLOY_DIR }}
         run: |
           echo "Deploy verification failed — rolling back app services (docs runs independently)"
 

@@ -5,7 +5,7 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 120
+  loaded: 122
   referenced: 64
   successfulFeatures: 64
 ---
@@ -603,3 +603,22 @@ usageStats:
 - **Rejected:** Include stats in search response (bloats every query response), compute stats on-demand (expensive to aggregate large logs)
 - **Trade-offs:** Stats are aggregate (lose per-search breakdown), requires separate endpoint call. Enables efficient monitoring while keeping search path lean.
 - **Breaking if changed:** If stats endpoint is removed, lose visibility into retrieval mode distribution and effectiveness metrics
+
+### PenVariable.values uses Record<string, unknown> instead of strongly-typed theme variants (2026-02-24)
+- **Context:** Supporting theme-dependent variable values that can be colors, dimensions, or other types
+- **Why:** Flexibility to store any value type per theme without complex generic constraints; matches pattern used in design tools
+- **Rejected:** Alternative: PenVariableValues<T> generic would provide type safety but requires complex type arithmetic for multi-type variables
+- **Trade-offs:** Gains flexibility and simpler consumer API; loses type safety requiring runtime validation when accessing values
+- **Breaking if changed:** Changing to strongly-typed values would require all consumers to implement type guards or TypeScript overloads
+
+#### [Pattern] traverseNodes uses visitor callback pattern rather than returning materialized node arrays (2026-02-24)
+- **Problem solved:** Large design files (88+ nodes) with potential for many more in enterprise usage
+- **Why this works:** Callback pattern allows streaming-like behavior - processes nodes as encountered without loading full tree into memory; enables early termination without wasted iteration
+- **Trade-offs:** Easier: Memory efficient, composable; Harder: Cannot reuse same traversal result multiple times, requires understanding callback semantics
+
+### resolveVariable requires explicit theme/variables context parameters rather than baking them into parser (2026-02-24)
+- **Context:** Variables use $--prefix syntax that resolves differently per theme variant
+- **Why:** Design system variables are context-dependent - same variable might resolve to different color in light vs dark theme; keeps parser stateless and allows resolving same document under different themes without re-parsing
+- **Rejected:** Storing theme on parser instance or in document metadata - would require re-parsing to switch themes
+- **Trade-offs:** Easier: Flexibility, testability; Harder: Caller must manage theme context and pass it correctly
+- **Breaking if changed:** If theme was baked into document, couldn't generate multiple theme variants from single parsed file without re-parsing

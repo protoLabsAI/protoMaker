@@ -5,7 +5,7 @@ relevantTo: [architecture]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 35
+  loaded: 36
   referenced: 23
   successfulFeatures: 23
 ---
@@ -3137,31 +3137,92 @@ usageStats:
 - **Root cause:** Synthetic scores are simple to assign without data. High confidence for patterns encourages escalation; 0.5 for unknown preserves optionality. Intent is signaling, not accuracy metrics.
 - **How to avoid:** Easy to assign without data vs misleading if consumers interpret as accuracy. Good for alerting logic vs bad for learning or auditing. Simpler than Bayesian scoring vs loses information about pattern quality.
 
-### Checkpoint cleanup split across two services using both active and passive mechanisms: AutoModeService deletes checkpoints during feature state transitions, while LeadEngineerService performs comprehensive orphaned-checkpoint scan at startup (2026-02-24)
-- **Context:** Crash recovery system must handle checkpoint files that become orphaned when features are reset or when crashes interrupt cleanup operations
-- **Why:** Defense in depth approach where active cleanup during state transitions is complemented by passive validation scan. Passive scan catches edge cases: checkpoints orphaned by crashes, missed active deletions, or features reset to backlog. Separates concerns—AutoModeService owns feature lifecycle consequences, LeadEngineerService owns system-wide consistency invariants
-- **Rejected:** Single centralized cleanup service; relying only on active deletion during state transitions; scan-only approach without active cleanup
-- **Trade-offs:** Increased code complexity and two separate deletion paths, but guarantees orphaned checkpoints are caught even after crash scenarios. Passive scan adds startup latency but provides safety net for active cleanup failures
-- **Breaking if changed:** Removing passive scan leaves system vulnerable to orphaned files after crashes. Removing active cleanup means relying only on less immediate periodic scans, increasing recovery time
+### Pattern-based classification (regex + rule matching) instead of ML/LLM for failure analysis (2026-02-24)
+- **Context:** Building an 'intelligence' service for failure analysis - most would assume ML-based approach
+- **Why:** Deterministic results, zero-latency (no network), no external dependencies, fully auditable pattern logic, easy to test each category in isolation
+- **Rejected:** LLM-based classification - requires async calls, external API, non-deterministic outputs, harder to debug why a failure was classified incorrectly
+- **Trade-offs:** High reliability and speed vs limited semantic understanding; manual pattern maintenance required as error messages evolve
+- **Breaking if changed:** If error messages change significantly or new unpredictable failure modes emerge, patterns become stale and classification accuracy drops - would require migration to ML
 
-#### [Gotcha] Reconciliation order is a critical hidden dependency: reconcileFeatureStates() must execute before reconcileCheckpoints(). Reversed order causes orphaned checkpoints to be missed because features aren't yet in backlog state when scan runs (2026-02-24)
-- **Situation:** When reconcileFeatureStates resets a feature to backlog, that checkpoint becomes a candidate for orphaning. reconcileCheckpoints identifies checkpoints as orphaned by checking if corresponding features are in active states. If scan runs first, newly-reset features won't be seen as backlog yet
-- **Root cause:** State consistency requirement—the scan logic depends on seeing features in their final reconciled state. This is a temporal dependency that exists only due to the two-phase design
-- **How to avoid:** Requires maintaining implicit ordering constraint in startup sequence, creating subtle coupling between services that must be documented
+### Purely synchronous service design (no async, no await) despite being called from event-driven escalation flow (2026-02-24)
+- **Context:** EscalateProcessor calls classify() during escalation event handling
+- **Why:** Guarantees immediate result needed for synchronous decision logic (whether to escalate); prevents async callback complexity; keeps service stateless and testable
+- **Rejected:** Async classify() with promise/callback - would require event handler to become async, changes propagation up the call chain, harder to guarantee classification happens before escalation event fires
+- **Trade-offs:** Simple blocking calls easier to reason about vs potential for blocking event loop if classification ever becomes expensive (though current pattern matching is O(n) where n=11 patterns)
+- **Breaking if changed:** If future requirements need real-time LLM assistance or external API calls, service architecture must be redesigned to async/promise-based
 
-#### [Pattern] Non-blocking checkpoint deletion failures during startup recovery: errors are logged as warnings but don't halt system initialization. System prioritizes availability over perfect cleanup state (2026-02-24)
-- **Problem solved:** Crash recovery startup path must restore operational state. If cleanup failures block progress, partially-crashed system could become permanently stuck
-- **Why this works:** Recovery systems must separate concerns: checkpoint cleanup is a safety/consistency concern, but system availability is a liveness concern. Recovery paths must never allow safety work to block liveness
-- **Trade-offs:** Orphaned checkpoint files may accumulate on disk if cleanup repeatedly fails, but system remains operational. Increases risk of stale file accumulation but guarantees recovery completion
+### Classification happens at escalation time (late binding), not at initial failure detection (2026-02-24)
+- **Context:** classify() only called in EscalateProcessor when deciding to escalate, not during initial failure handling
+- **Why:** Only classify failures that might escalate (reduces waste), keeps early failure handlers lightweight, context at escalation time is richer (retry count available)
+- **Rejected:** Early classification at failure time - would classify all failures even transient ones that recover, adds latency to critical path, retry count unknown
+- **Trade-offs:** Reduces wasted classification computation vs loses opportunity for early failure pattern detection and alerting
+- **Breaking if changed:** If future feature needs failure classification immediately at detection time (e.g., for metrics/dashboards), would duplicate classification logic or refactor to classify on every failure
 
-#### [Pattern] Multi-level cascading fallback strategy implemented: (1) Use configured projects from global settings, (2) Fall back to process.cwd() if projects list is empty, (3) Fall back to cwd again if settings service read fails entirely (2026-02-24)
-- **Problem solved:** Recovering sessions across multiple projects requires discovering which projects exist, but this discovery can fail at different levels
-- **Why this works:** Handles two distinct failure modes: missing configuration (user hasn't set up projects) and runtime errors (settings service unavailable). Each level ensures some recovery capability works.
-- **Trade-offs:** Added complexity in error handling paths, but guarantees graceful degradation. Session recovery works even with partial system failures.
+#### [Pattern] Confidence scoring uses different ranges for known (0.8-0.95) vs unknown (0.5) categories to encode epistemic uncertainty (2026-02-24)
+- **Problem solved:** Pattern matches have high confidence; unmatchable errors have lower confidence, communicated via number not categorical flag
+- **Why this works:** Downstream code can use confidence as threshold for decision-making (e.g., only auto-retry if confidence > 0.8); avoids separate 'is_confident' boolean field
+- **Trade-offs:** Numeric score is richer signal but requires downstream consumers understand scoring ranges (implicit contract)
 
-### Project discovery driven by explicit global settings configuration (settingsService.getGlobalSettings().projects) rather than filesystem scanning or auto-discovery (2026-02-24)
-- **Context:** System needs to know which projects exist to recover their sessions during crash recovery
-- **Why:** Explicit configuration makes session recovery deterministic and auditable - exactly known projects are scanned. Filesystem scanning would be implicit and fragile (hidden dependencies on directory structure).
-- **Rejected:** Filesystem scanning (find all .ava/session files): creates hidden dependencies, inconsistent behavior across environments, harder to debug session recovery failures
-- **Trade-offs:** Requires users to explicitly configure projects (higher friction), but system behavior is predictable and debuggable. Easier to implement and test.
-- **Breaking if changed:** Unconfigured projects lose sessions entirely. Users must add projects to settings to enable session recovery. Changing to auto-discovery would require rearchitecting discovery mechanism.
+### Service instantiated directly in EscalateProcessor (not via DI container, not singleton) (2026-02-24)
+- **Context:** Each EscalateProcessor instance gets own FailureClassifierService instance
+- **Why:** Stateless service so no benefits to singleton; avoids DI setup complexity; each instance is cheap to create (just method definitions); isolation aids testing
+- **Rejected:** Singleton pattern or DI injection - adds infrastructure, doesn't add value for stateless service
+- **Trade-offs:** Simple direct instantiation vs loses opportunity to swap implementations (though unlikely given pattern-matching approach is baked in)
+- **Breaking if changed:** If needed to add caching or state to classifier (e.g., pattern performance metrics), direct instantiation becomes problematic and requires refactor to singleton/DI
+
+### Fire-and-forget async trajectory persistence (save() returns void immediately, write happens asynchronously in background) (2026-02-24)
+- **Context:** TrajectoryStoreService persists execution trajectories to filesystem without blocking state machine flow
+- **Why:** Decouples trajectory recording from critical path execution; trajectory data is observational, not required for feature state progression
+- **Rejected:** Awaiting trajectory save (would add I/O latency to every state transition); throwing errors (would crash state machine on file write failures)
+- **Trade-offs:** Gains: Fast execution, resilient to storage failures. Loses: Durability guarantees, error visibility - file write failures are silently logged
+- **Breaking if changed:** If trajectory data becomes required for correctness (e.g., for automated rollback decisions), entire flow changes from non-blocking to blocking
+
+#### [Gotcha] Auto-increment attempt numbering uses filesystem scanning (scan existing attempt-{N}.json files to determine next number) rather than persistent counter (2026-02-24)
+- **Situation:** Trajectory files stored at .automaker/trajectory/{featureId}/attempt-{N}.json with N auto-incremented per call
+- **Root cause:** Avoids need for external counter (database, shared state). Filesystem is already the storage location.
+- **How to avoid:** Gains: Simple, self-contained implementation. Loses: Directory I/O overhead per save(), race condition window if multiple processes write simultaneously
+
+### StateContext extended with startedAt and stateTransitions fields for trajectory data collection rather than creating separate trajectory tracking object (2026-02-24)
+- **Context:** State machine context evolved to carry timing and transition history used by TrajectoryStoreService.save()
+- **Why:** Single object holding all state reduces context-passing complexity and coordination points; trajectory is inherent to state progression
+- **Rejected:** Separate TrajectoryCollector object passed alongside StateContext (would require coordinating two objects). Event listener pattern (adds coupling between state machine and observer).
+- **Trade-offs:** Gains: Simple, co-located data. Loses: StateContext becomes responsible for non-state concerns (timing, trajectory schema compatibility)
+- **Breaking if changed:** StateContext schema changes require TrajectoryStoreService review; trajectory requirements drive StateContext evolution
+
+### Consolidated hooks from separate hooks.json into plugin.json, making hooks part of the plugin distribution payload rather than requiring per-project configuration (2026-02-24)
+- **Context:** Plugin format needed to support shipping hooks with MCP servers. Previously hooks were in separate hooks.json requiring manual setup in each project.
+- **Why:** Single source of truth for plugin configuration. Plugins automatically distribute hooks to all consuming projects on update without requiring separate configuration management.
+- **Rejected:** Keep hooks.json separate for modularity - rejected because it requires manual per-project configuration and doesn't achieve the goal of making hooks 'ship with plugin'
+- **Trade-offs:** Simpler distribution and maintenance (+) vs larger plugin.json file and tighter coupling of plugin definition to runtime behavior (-)
+- **Breaking if changed:** Projects with custom hooks.json will lose their hooks unless migrated into plugin.json format. The plugin.json field addition is non-breaking for existing installations without hooks.
+
+#### [Pattern] Hook execution model uses command-based execution (bash scripts) rather than direct function references or module imports, enabling plugin-agnostic hook dispatch from Claude Code runtime (2026-02-24)
+- **Problem solved:** Claude Code runtime needs to invoke hooks from plugins without loading plugin code directly. Shell command execution provides isolation and extensibility.
+- **Why this works:** Bash script invocation is process-isolated, doesn't require plugin code in Claude Code memory, and can be implemented consistently across different plugin types. Scripts can be in any language.
+- **Trade-offs:** Process isolation and language-agnostic (+) vs subprocess overhead and harder debugging (-)
+
+#### [Gotcha] Naming conflict between PenVector (2D point type) and PenVector (node type) in discriminated union. Resolved by renaming node type to PenVectorGraphic. (2026-02-24)
+- **Situation:** Creating a discriminated union of node types while also defining primitive types for coordinates/vectors
+- **Root cause:** Discriminated unions require unique identifiers for type discrimination. Having duplicate names causes ambiguous exports and type conflicts.
+- **How to avoid:** More deliberate naming (PenVectorGraphic) is longer but prevents silent collisions; clearer intent but adds verbosity
+
+### PenFill implemented as discriminated union with three variants (solid, gradient, image) rather than single interface with optional fields (2026-02-24)
+- **Context:** Supporting multiple fill types with different property sets (solid has color; gradient has stops; image has ref)
+- **Why:** Discriminated union prevents invalid combinations (e.g., gradient fill with imageRef) through TypeScript's type narrowing
+- **Rejected:** Alternative: Single interface with optional fields (fillType + optional color/gradient/imageRef) loses type safety
+- **Trade-offs:** More verbose type definitions; gains type-safe property access (no need for narrowing before accessing fill-specific props)
+- **Breaking if changed:** Changing to optional-field approach removes compile-time guarantees; accessing wrong properties becomes possible at runtime
+
+### Parser separated into discrete modules: parser (deserialization), traversal (graph navigation), variables (token resolution) (2026-02-24)
+- **Context:** Could have been implemented as single monolithic parser module
+- **Why:** Enables independent evolution of concerns - parser can be upgraded without touching traversal logic; variables resolution logic is isolated for reuse in other contexts (e.g., code generation, validation)
+- **Rejected:** Single monolithic PenParser class with all methods - would create tight coupling between parsing, navigation, and resolution
+- **Trade-offs:** Easier: Testing individual concerns, extending one module without risk; Harder: Requires understanding dependencies between modules, more files to maintain
+- **Breaking if changed:** If consolidated into single module, would lose ability to use traversal utilities independently or swap variable resolution strategies
+
+### Component instances use ID references instead of embedding component definition inline (2026-02-24)
+- **Context:** PEN file format design - could embed full component definition in every instance
+- **Why:** File size optimization - design file with 20 button instances referencing single Button component definition is much smaller than 20 copies of same definition; standard practice in design file formats
+- **Rejected:** Inline component definitions - would bloat file size by factor of component_count-1 for each component type
+- **Trade-offs:** Easier: Smaller file size, faster parsing; Harder: Requires reference resolution mechanism, circular ref checks, handling missing refs
+- **Breaking if changed:** If changed to inline definitions, parser doesn't need resolveRef, but file format becomes larger and updating component definition requires finding all instances

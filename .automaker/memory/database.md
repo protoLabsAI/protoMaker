@@ -113,3 +113,8 @@ usageStats:
 - **Rejected:** Store as JSON array of numbers; or external vector DB; or as separate embedding table
 - **Trade-offs:** Binary format is opaque in database inspection but gains efficiency; tied to Float32Array representation, not portable
 - **Breaking if changed:** Format migration if switching vector DB backends; if you inspect SQL with tools expecting JSON, get unreadable binary
+
+#### [Pattern] Outcome-based trajectory categorization: single outcome field ('success' vs 'escalated') enables different downstream processing without schema branching (2026-02-24)
+- **Problem solved:** DeployProcessor and EscalateProcessor both call save() but with different outcome values and different supplemental fields (failureAnalysis only on escalation)
+- **Why this works:** Discriminated union pattern: single schema with outcome tag determines which optional fields are present, avoiding multiple schema variants
+- **Trade-offs:** Gains: Single schema evolution point, flexible for new outcomes. Loses: Schema validation must be conditional on outcome field

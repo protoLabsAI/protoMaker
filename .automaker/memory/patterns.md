@@ -5,9 +5,9 @@ relevantTo: [patterns]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 14
-  referenced: 9
-  successfulFeatures: 9
+  loaded: 17
+  referenced: 12
+  successfulFeatures: 12
 ---
 # patterns
 
@@ -15,3 +15,8 @@ usageStats:
 - **Problem solved:** Need to automatically route calendar events to appropriate teams without manual setup. Which classification method?
 - **Why this works:** Keyword matching is O(1) per event, requires no ML model or training data, works with any calendar. Fallback ensures no events are unrouted (robustness). Simple for users to understand.
 - **Trade-offs:** Keyword matching sometimes misclassifies (e.g., 'campaign management sprint' matches both), but fallback ensures it goes somewhere. All events routed even if imperfectly.
+
+#### [Pattern] Matcher-based conditional hook execution allows same hook array to dispatch different behaviors based on context (e.g., SessionStart has separate matchers for 'compact', 'startup', 'resume' modes) (2026-02-24)
+- **Problem solved:** Plugins need hooks that behave differently depending on session state, tool type, or MCP method invoked. Matcher field enables context-aware routing without hardcoding in hook scripts.
+- **Why this works:** Reduces code duplication and provides declarative routing. Different session contexts (compact, startup, resume) can trigger different initialization sequences without needing conditional logic in bash scripts.
+- **Trade-offs:** Declarative matchers are easier to understand and modify (+) but add complexity to hook schema and require matcher implementation in Claude Code runtime (-)

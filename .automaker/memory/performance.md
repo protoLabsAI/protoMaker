@@ -208,3 +208,10 @@ usageStats:
 - **Rejected:** Full chunk content (might be kilobytes, expensive); summary extraction (adds complexity); configurable (adds operational burden)
 - **Trade-offs:** Cost control gained; but loses information if key content is after 500 chars (deterministic data loss)
 - **Breaking if changed:** If knowledge store contains chunks where critical content appears after 500 chars, questions will be misleading or irrelevant
+
+### buildComponentMap creates ID→node index for reusable components rather than searching tree on each ref resolution (2026-02-24)
+- **Context:** Component instances reference definitions via IDs; resolveRef needs O(1) lookup of component source
+- **Why:** Design files likely have 10-50+ component references that resolve to 2-10 unique definitions; linear search through tree is O(n) per ref, so 100 refs = O(100n); indexing is O(n + m) where m=refs, drastically faster for many refs
+- **Rejected:** Direct tree search on each resolveRef call - would be O(n*m) for m references in doc
+- **Trade-offs:** Easier: Fast ref resolution; Harder: Map must be rebuilt if document modified, adds memory overhead for index
+- **Breaking if changed:** If map removed, downstream code doing performance analysis wouldn't catch the O(n*m) scaling problem until large files

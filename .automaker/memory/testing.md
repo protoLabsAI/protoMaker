@@ -844,3 +844,28 @@ usageStats:
 - **Rejected:** Using Playwright to verify documentation renders (conflates content verification with behavior testing)
 - **Trade-offs:** Easier: faster feedback, simpler setup. Harder: misses rendering issues in specific documentation systems that static checks don't catch.
 - **Breaking if changed:** If link structure changes without validation checks, broken references become silent failures in production documentation.
+
+#### [Gotcha] Fire-and-forget semantics make trajectory persistence invisible to unit tests unless explicitly awaited or mocked (2026-02-24)
+- **Situation:** save() returns immediately; file write completes asynchronously after test assertion runs
+- **Root cause:** Non-blocking design prioritizes execution latency over test observability
+- **How to avoid:** Gains: Production latency. Loses: Test can assert file written before it actually exists; race condition in test assertions
+
+#### [Pattern] Using exhaustiveness checking with never type in switch statements to validate discriminated union completeness (2026-02-24)
+- **Problem solved:** Verifying that all node types in PenNode union are handled in type-narrowing code
+- **Why this works:** TypeScript compiler ensures all union members are covered; catches new types added to union without updating handlers
+- **Trade-offs:** Requires verbose default clause with const _exhaustive: never = node; but provides strong guarantees at compile time
+
+#### [Pattern] Multi-level verification strategy for type-only packages: successful build + .d.ts inspection + runtime import test (2026-02-24)
+- **Problem solved:** Verifying TypeScript types compile and export correctly without application code
+- **Why this works:** Type-only packages can't use traditional unit tests; need verification at multiple levels (build→export→import→usage)
+- **Trade-offs:** More verification steps than application code; but each step catches different classes of errors (compile, export, import)
+
+#### [Gotcha] Test file paths break due to process.cwd() returning different values depending on test execution context in monorepo (2026-02-24)
+- **Situation:** Tests written with 'designs/components/shadcn-kit.pen' path worked locally but failed in CI, required change to '../../designs/components/shadcn-kit.pen'
+- **Root cause:** npm workspace execution context places process.cwd() at workspace root or package root depending on how tests are invoked (direct vs workspace flag); relative paths are unreliable
+- **How to avoid:** Easier: Tests that import actual design files validate schema; Harder: Path fragility requires understanding monorepo structure, paths break if folder structure changes
+
+#### [Pattern] Integration tests use actual shadcn-kit.pen file (88+ nodes) rather than mocked minimal examples (2026-02-24)
+- **Problem solved:** Could have tested only synthetic documents with 3-5 nodes like unit tests
+- **Why this works:** Real design file catches edge cases in schema - nested component structures, theme variations, variable reference chains that wouldn't appear in minimal examples; validates file format compatibility at scale
+- **Trade-offs:** Easier: Tests validate against real-world data; Harder: Test file must be maintained, tests are slower, test data is opaque (hard to debug what's being tested)
