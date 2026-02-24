@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const SHADCN_PEN = join(__dirname, '../../../designs/components/shadcn-kit.pen');
 import {
   parsePenFile,
   parsePenFileFromPath,
@@ -60,7 +64,7 @@ describe('parsePenFile', () => {
 describe('parsePenFileFromPath', () => {
   it('should parse shadcn-kit.pen file', async () => {
     // Navigate up from libs/pen-parser to project root
-    const penPath = join(process.cwd(), '../../designs/components/shadcn-kit.pen');
+    const penPath = SHADCN_PEN;
     const doc = await parsePenFileFromPath(penPath);
 
     expect(doc.version).toBe('2.8');
@@ -140,7 +144,7 @@ describe('traverseNodes', () => {
   });
 
   it('should traverse all nodes in shadcn-kit.pen', async () => {
-    const penPath = join(process.cwd(), '../../designs/components/shadcn-kit.pen');
+    const penPath = SHADCN_PEN;
     const doc = await parsePenFileFromPath(penPath);
 
     let count = 0;
@@ -259,7 +263,7 @@ describe('findReusableComponents', () => {
   });
 
   it('should find reusable components in shadcn-kit.pen', async () => {
-    const penPath = join(process.cwd(), '../../designs/components/shadcn-kit.pen');
+    const penPath = SHADCN_PEN;
     const doc = await parsePenFileFromPath(penPath);
 
     const components = findReusableComponents(doc);
@@ -302,7 +306,7 @@ describe('resolveVariable', () => {
   });
 
   it('should handle theme-dependent values in shadcn-kit.pen', async () => {
-    const penPath = join(process.cwd(), '../../designs/components/shadcn-kit.pen');
+    const penPath = SHADCN_PEN;
     const doc = await parsePenFileFromPath(penPath);
     const theme = extractTheme(doc);
 
@@ -345,7 +349,7 @@ describe('resolveRef', () => {
   });
 
   it('should resolve component instances in shadcn-kit.pen', async () => {
-    const penPath = join(process.cwd(), '../../designs/components/shadcn-kit.pen');
+    const penPath = SHADCN_PEN;
     const doc = await parsePenFileFromPath(penPath);
 
     // Find a ref node
@@ -437,7 +441,7 @@ describe('buildComponentMap', () => {
 
 describe('integration tests with shadcn-kit.pen', () => {
   it('should parse and analyze shadcn-kit.pen completely', async () => {
-    const penPath = join(process.cwd(), '../../designs/components/shadcn-kit.pen');
+    const penPath = SHADCN_PEN;
     const content = await readFile(penPath, 'utf-8');
     const doc = parsePenFile(content);
 
