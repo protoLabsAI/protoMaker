@@ -194,7 +194,36 @@ export function WorkflowSettingsPanel() {
 
   useEffect(() => {
     if (data?.workflow) {
-      setLocalSettings(data.workflow as unknown as WorkflowSettings);
+      // Deep-merge with defaults so missing sections don't crash the UI
+      const merged: WorkflowSettings = {
+        ...DEFAULT_WORKFLOW_SETTINGS,
+        ...(data.workflow as Record<string, unknown>),
+        pipeline: {
+          ...DEFAULT_WORKFLOW_SETTINGS.pipeline,
+          ...((data.workflow as Record<string, unknown>).pipeline as
+            | Record<string, unknown>
+            | undefined),
+        },
+        retro: {
+          ...DEFAULT_WORKFLOW_SETTINGS.retro,
+          ...((data.workflow as Record<string, unknown>).retro as
+            | Record<string, unknown>
+            | undefined),
+        },
+        cleanup: {
+          ...DEFAULT_WORKFLOW_SETTINGS.cleanup,
+          ...((data.workflow as Record<string, unknown>).cleanup as
+            | Record<string, unknown>
+            | undefined),
+        },
+        signalIntake: {
+          ...DEFAULT_WORKFLOW_SETTINGS.signalIntake,
+          ...((data.workflow as Record<string, unknown>).signalIntake as
+            | Record<string, unknown>
+            | undefined),
+        },
+      };
+      setLocalSettings(merged);
       setIsDirty(false);
     }
   }, [data]);
