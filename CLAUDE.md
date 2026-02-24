@@ -323,6 +323,13 @@ mcp__automaker__create_feature({
 - `GITHUB_REPO_NAME` - GitHub repository name
 - `LANGFUSE_SYNC_LABEL` - Prompt label to filter webhook events (default: production)
 - `LANGFUSE_SYNC_CI_TRIGGER` - Enable repository_dispatch after prompt sync (true/1 to enable)
+- `DISCORD_TOKEN` - Discord bot token for event routing and notifications
+- `DISCORD_GUILD_ID` - Discord server (guild) ID
+- `DISCORD_CHANNEL_SUGGESTIONS` - Channel ID for #suggestions
+- `DISCORD_CHANNEL_PROJECT_PLANNING` - Channel ID for #project-planning
+- `DISCORD_CHANNEL_AGENT_LOGS` - Channel ID for #agent-logs
+- `DISCORD_CHANNEL_CODE_REVIEW` - Channel ID for #code-review
+- `DISCORD_CHANNEL_INFRA` - Channel ID for #infra (health checks, Ava Gateway)
 
 ## MCP Server & Claude Code Plugin
 

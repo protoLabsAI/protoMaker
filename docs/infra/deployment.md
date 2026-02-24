@@ -289,13 +289,19 @@ sudo systemctl disable automaker
 
 ### Integrations
 
-| Variable                | Required | Description                                                                     |
-| ----------------------- | -------- | ------------------------------------------------------------------------------- |
-| `LINEAR_CLIENT_ID`      | No       | Linear OAuth app client ID ([setup guide](/integrations/linear-sync))           |
-| `LINEAR_CLIENT_SECRET`  | No       | Linear OAuth app client secret                                                  |
-| `LINEAR_REDIRECT_URI`   | No       | OAuth callback URL (default: `http://localhost:3008/api/linear/oauth/callback`) |
-| `LINEAR_WEBHOOK_SECRET` | No       | Secret for verifying Linear webhook payloads                                    |
-| `DISCORD_TOKEN`         | No       | Discord bot token for event routing and notifications                           |
+| Variable                           | Required | Description                                                                                      |
+| ---------------------------------- | -------- | ------------------------------------------------------------------------------------------------ |
+| `LINEAR_CLIENT_ID`                 | No       | Linear OAuth app client ID ([setup guide](/integrations/linear-sync))                            |
+| `LINEAR_CLIENT_SECRET`             | No       | Linear OAuth app client secret                                                                   |
+| `LINEAR_REDIRECT_URI`              | No       | OAuth callback URL (default: `http://localhost:3008/api/linear/oauth/callback`)                  |
+| `LINEAR_WEBHOOK_SECRET`            | No       | Secret for verifying Linear webhook payloads                                                     |
+| `DISCORD_TOKEN`                    | No       | Discord bot token for event routing and notifications                                            |
+| `DISCORD_GUILD_ID`                 | No       | Discord server (guild) ID                                                                        |
+| `DISCORD_CHANNEL_SUGGESTIONS`      | No       | Channel ID for `#suggestions` — community feature ideas                                          |
+| `DISCORD_CHANNEL_PROJECT_PLANNING` | No       | Channel ID for `#project-planning` — epic and milestone discussions                              |
+| `DISCORD_CHANNEL_AGENT_LOGS`       | No       | Channel ID for `#agent-logs` — agent start/stop/complete events                                  |
+| `DISCORD_CHANNEL_CODE_REVIEW`      | No       | Channel ID for `#code-review` — PR reviews and architecture discussions                          |
+| `DISCORD_CHANNEL_INFRA`            | No       | Channel ID for `#infra` — infrastructure alerts, health checks, Ava Gateway heartbeat monitoring |
 
 ### Frontend Configuration
 

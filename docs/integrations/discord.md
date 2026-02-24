@@ -299,6 +299,45 @@ protoLabs emits events that can be routed to Discord channels:
 | `infra:backup`         | #infra            | Backup completed/failed                   |
 | `infra:secret-rotated` | #infra            | Secret rotation completed                 |
 
+## Server Configuration
+
+The protoLabs server uses Discord for event routing, agent notifications, and the idea submission bot. All Discord IDs are configured via environment variables — no channel IDs are hardcoded.
+
+### Required Environment Variables
+
+Add these to your `.env` file (see `apps/server/.env.example`):
+
+```bash
+# Bot token — required for any Discord integration
+DISCORD_TOKEN=your_bot_token
+
+# Guild (server) ID
+DISCORD_GUILD_ID=your_guild_id
+
+# Channel IDs — the bot routes events to these channels
+DISCORD_CHANNEL_SUGGESTIONS=       # #suggestions — !idea command and feature voting
+DISCORD_CHANNEL_PROJECT_PLANNING=  # #project-planning — epic discussions
+DISCORD_CHANNEL_AGENT_LOGS=        # #agent-logs — agent start/stop/complete
+DISCORD_CHANNEL_CODE_REVIEW=       # #code-review — PR notifications
+DISCORD_CHANNEL_INFRA=             # #infra — health checks, Ava Gateway heartbeat
+```
+
+### How to Get Channel IDs
+
+1. Open Discord **User Settings > Advanced > Developer Mode** (toggle on)
+2. Right-click any channel > **Copy Channel ID**
+3. Right-click the server name > **Copy Server ID** (this is the Guild ID)
+
+### Plugin Environment Variables
+
+The MCP plugin uses a separate `.env` at `packages/mcp-server/plugins/automaker/.env`:
+
+```bash
+DISCORD_BOT_TOKEN=your_bot_token   # Same token as DISCORD_TOKEN above
+```
+
+If channel IDs are not configured, the bot service will start but skip routing to unconfigured channels. No errors are thrown — events are silently dropped.
+
 ## Integration Points
 
 ### Discord MCP
