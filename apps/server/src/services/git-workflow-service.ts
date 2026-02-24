@@ -59,6 +59,59 @@ const execEnv = {
 };
 
 /**
+ * Build PR body with issue closing references.
+ * Appends "Closes #N" when the feature has a linked GitHub issue,
+ * so that merging the PR auto-closes the issue.
+ */
+function buildPRBody(feature: Feature): string {
+  const summary = feature.description.substring(0, 500);
+  const ellipsis = feature.description.length > 500 ? '...' : '';
+  let body = `## Summary\n\n${summary}${ellipsis}`;
+
+  // Append closing reference for linked GitHub issues
+  const issueRef = getGitHubIssueRef(feature);
+  if (issueRef) {
+    body += `\n\n${issueRef}`;
+  }
+
+  body += `\n\n---\n*Created automatically by Automaker*`;
+  return body;
+}
+
+/**
+ * Extract a GitHub issue closing reference from the feature.
+ * Checks explicit fields first, then parses URLs from title/description.
+ */
+function getGitHubIssueRef(feature: Feature): string | null {
+  // Explicit field takes priority
+  if (feature.githubIssueNumber) {
+    return `Closes #${feature.githubIssueNumber}`;
+  }
+  if (feature.githubIssueUrl) {
+    return `Closes ${feature.githubIssueUrl}`;
+  }
+
+  // Parse issue URLs from title and description
+  const text = `${feature.title || ''} ${feature.description || ''}`;
+  const issueUrlPattern = /https:\/\/github\.com\/[^/]+\/[^/]+\/issues\/(\d+)/g;
+  const matches = [...text.matchAll(issueUrlPattern)];
+  if (matches.length > 0) {
+    // Deduplicate by issue number
+    const seen = new Set<string>();
+    const refs: string[] = [];
+    for (const match of matches) {
+      if (!seen.has(match[1])) {
+        seen.add(match[1]);
+        refs.push(`Closes ${match[0]}`);
+      }
+    }
+    return refs.join('\n');
+  }
+
+  return null;
+}
+
+/**
  * Check if gh CLI is available on the system
  */
 async function isGhCliAvailable(): Promise<boolean> {
@@ -799,7 +852,7 @@ export class GitWorkflowService {
     prCreatedAt?: string;
   }> {
     const title = feature.title || extractTitleFromDescription(feature.description);
-    const body = `## Summary\n\n${feature.description.substring(0, 500)}${feature.description.length > 500 ? '...' : ''}\n\n---\n*Created automatically by Automaker*`;
+    const body = buildPRBody(feature);
 
     const submitResult = await graphiteService.submit(workDir, title, body);
 
@@ -1161,7 +1214,7 @@ export class GitWorkflowService {
     }
 
     const title = feature.title || extractTitleFromDescription(feature.description);
-    const body = `## Summary\n\n${feature.description.substring(0, 500)}${feature.description.length > 500 ? '...' : ''}\n\n---\n*Created automatically by Automaker*`;
+    const body = buildPRBody(feature);
 
     // Detect repository info by checking remotes
     // We need to explicitly set --repo to avoid gh defaulting to wrong upstream
