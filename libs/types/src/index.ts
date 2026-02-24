@@ -106,6 +106,14 @@ export type {
   LifecycleCollectResult,
 } from './project.js';
 
+// Calendar types
+export type {
+  CalendarEventType,
+  CalendarEvent,
+  CalendarEventsFile,
+  CalendarQueryOptions,
+} from './calendar.js';
+
 // Session types
 export type {
   AgentSession,

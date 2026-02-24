@@ -38,6 +38,7 @@ const DEFAULT_CONFIG: ThrottleConfig = {
 };
 
 let config: ThrottleConfig = { ...DEFAULT_CONFIG };
+// @ts-expect-error - pLimit v6 has type issues with tsup DTS generation
 let fsLimit = pLimit(config.maxConcurrency);
 
 /**
@@ -53,6 +54,7 @@ export function configureThrottling(newConfig: Partial<ThrottleConfig>): void {
         `[SecureFS] Cannot change maxConcurrency while operations are in flight. Active: ${fsLimit.activeCount}, Pending: ${fsLimit.pendingCount}`
       );
     }
+    // @ts-expect-error - pLimit v6 has type issues with tsup DTS generation
     fsLimit = pLimit(newConcurrency);
   }
 
