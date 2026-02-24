@@ -18,12 +18,14 @@ import type { SettingsService } from './settings-service.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { ProjectService } from './project-service.js';
 import type { MetricsService } from './metrics-service.js';
-import type { Feature, CeremonySettings } from '@protolabs-ai/types';
+import type { Feature, CeremonySettings, CeremonyAuditType } from '@protolabs-ai/types';
 import { simpleQuery } from '../providers/simple-query-service.js';
 import { BeadsService } from './beads-service.js';
 import { LinearProjectUpdateService } from './linear-project-update-service.js';
+import type { CeremonyAuditLogService } from './ceremony-audit-service.js';
 import { secureFs } from '@protolabs-ai/platform';
 import path from 'path';
+import crypto from 'crypto';
 import fs from 'fs/promises';
 
 const logger = createLogger('CeremonyService');
@@ -106,6 +108,7 @@ export class CeremonyService {
   private metricsService: MetricsService | null = null;
   private beadsService: BeadsService | null = null;
   private linearProjectUpdateService: LinearProjectUpdateService | null = null;
+  private auditLog: CeremonyAuditLogService | null = null;
   private unsubscribe: (() => void) | null = null;
 
   /** Observability counters for engine status */
@@ -246,6 +249,65 @@ export class CeremonyService {
   }
 
   /**
+   * Set the audit log service for ceremony event tracking
+   */
+  setAuditLog(auditLog: CeremonyAuditLogService): void {
+    this.auditLog = auditLog;
+  }
+
+  /**
+   * Record a ceremony event to the audit log and emit ceremony:fired WebSocket event.
+   * Returns the correlationId for Discord delivery tracking.
+   */
+  private recordCeremony(
+    ceremonyType: CeremonyAuditType,
+    projectPath: string,
+    discordSuccess: boolean,
+    opts: {
+      id?: string;
+      projectSlug?: string;
+      milestoneSlug?: string;
+      featureId?: string;
+      channelId?: string;
+      title: string;
+      summary?: string;
+    }
+  ): string {
+    const id = opts.id ?? crypto.randomUUID();
+    const now = new Date().toISOString();
+
+    if (this.auditLog) {
+      this.auditLog.record({
+        id,
+        timestamp: now,
+        ceremonyType,
+        projectPath,
+        projectSlug: opts.projectSlug,
+        milestoneSlug: opts.milestoneSlug,
+        featureId: opts.featureId,
+        discordChannelId: opts.channelId,
+        deliveryStatus: discordSuccess ? 'pending' : 'skipped',
+        payload: { title: opts.title, summary: opts.summary },
+      });
+    }
+
+    // Emit WebSocket event for live UI updates
+    if (this.emitter) {
+      this.emitter.emit('ceremony:fired', {
+        id,
+        timestamp: now,
+        ceremonyType,
+        projectPath,
+        projectSlug: opts.projectSlug,
+        title: opts.title,
+        deliveryStatus: discordSuccess ? 'pending' : 'skipped',
+      });
+    }
+
+    return id;
+  }
+
+  /**
    * Handle epic creation event — post kickoff announcement with scope and complexity
    */
   private async handleEpicCreated(payload: EpicCreatedEventPayload): Promise<void> {
@@ -277,16 +339,26 @@ export class CeremonyService {
 
       const messages = this.splitMessage(content, 2000);
 
+      const correlationId = crypto.randomUUID();
       let anySuccess = false;
       for (const message of messages) {
         const success = await this.emitDiscordEvent(
           projectPath,
           ceremonySettings.discordChannelId,
           message,
-          `Epic Kickoff: ${milestone.title}`
+          `Epic Kickoff: ${milestone.title}`,
+          correlationId
         );
         if (success) anySuccess = true;
       }
+
+      this.recordCeremony('epic_kickoff', projectPath, anySuccess, {
+        id: correlationId,
+        projectSlug,
+        milestoneSlug,
+        channelId: ceremonySettings.discordChannelId,
+        title: `Epic Kickoff: ${milestone.title}`,
+      });
 
       if (anySuccess) {
         this.ceremonyCounts.epicKickoff++;
@@ -323,16 +395,25 @@ export class CeremonyService {
 
       const messages = this.splitMessage(content, 2000);
 
+      const correlationId = crypto.randomUUID();
       let anySuccess = false;
       for (const message of messages) {
         const success = await this.emitDiscordEvent(
           projectPath,
           ceremonySettings.discordChannelId,
           message,
-          `Standup: Milestone ${milestoneNumber} — ${milestoneTitle}`
+          `Standup: Milestone ${milestoneNumber} — ${milestoneTitle}`,
+          correlationId
         );
         if (success) anySuccess = true;
       }
+
+      this.recordCeremony('standup', projectPath, anySuccess, {
+        id: correlationId,
+        projectSlug,
+        channelId: ceremonySettings.discordChannelId,
+        title: `Standup: Milestone ${milestoneNumber} — ${milestoneTitle}`,
+      });
 
       // Post to Linear project update if enabled
       if (ceremonySettings.enableLinearProjectUpdates && this.settingsService) {
@@ -387,6 +468,8 @@ export class CeremonyService {
       // Split into chunks if needed (Discord limit: 2000 chars)
       const messages = this.splitMessage(content, 2000);
 
+      const correlationId = crypto.randomUUID();
+
       // Emit Discord events for each message chunk
       let anySuccess = false;
       for (const message of messages) {
@@ -394,10 +477,18 @@ export class CeremonyService {
           projectPath,
           ceremonySettings.discordChannelId,
           message,
-          `Milestone ${milestoneNumber}: ${milestoneTitle}`
+          `Milestone ${milestoneNumber}: ${milestoneTitle}`,
+          correlationId
         );
         if (success) anySuccess = true;
       }
+
+      this.recordCeremony('milestone_retro', projectPath, anySuccess, {
+        id: correlationId,
+        projectSlug,
+        channelId: ceremonySettings.discordChannelId,
+        title: `Milestone ${milestoneNumber}: ${milestoneTitle}`,
+      });
 
       // Load milestone features to check for blockers
       const project = await this.projectService!.getProject(projectPath, projectSlug);
@@ -519,16 +610,26 @@ Keep it concise, actionable, and focused on what makes this milestone interestin
 
       // Post to the dedicated content-briefs channel
       const messages = this.splitMessage(formatted, 2000);
+
+      const correlationId = crypto.randomUUID();
       let anySuccess = false;
       for (const message of messages) {
         const success = await this.emitDiscordEvent(
           projectPath,
           channelId,
           message,
-          `Content Brief: ${milestoneTitle}`
+          `Content Brief: ${milestoneTitle}`,
+          correlationId
         );
         if (success) anySuccess = true;
       }
+
+      this.recordCeremony('content_brief', projectPath, anySuccess, {
+        id: correlationId,
+        projectSlug,
+        channelId,
+        title: `Content Brief: ${milestoneTitle}`,
+      });
 
       if (anySuccess) {
         this.ceremonyCounts.contentBrief++;
@@ -570,6 +671,8 @@ Keep it concise, actionable, and focused on what makes this milestone interestin
       // Split into chunks if needed (Discord limit: 2000 chars)
       const messages = this.splitMessage(content, 2000);
 
+      const correlationId = crypto.randomUUID();
+
       // Emit Discord events for each message chunk
       let anySuccess = false;
       for (const message of messages) {
@@ -577,10 +680,18 @@ Keep it concise, actionable, and focused on what makes this milestone interestin
           projectPath,
           ceremonySettings.discordChannelId,
           message,
-          `Epic Delivered: ${featureTitle}`
+          `Epic Delivered: ${featureTitle}`,
+          correlationId
         );
         if (success) anySuccess = true;
       }
+
+      this.recordCeremony('epic_delivery', projectPath, anySuccess, {
+        id: correlationId,
+        featureId,
+        channelId: ceremonySettings.discordChannelId,
+        title: `Epic Delivered: ${featureTitle}`,
+      });
 
       if (anySuccess) {
         this.ceremonyCounts.epicDelivery++;
@@ -708,6 +819,8 @@ ${dataSummary}`;
       // Split into chunks if needed (Discord limit: 2000 chars)
       const messages = this.splitMessage(formattedRetro, 2000);
 
+      const correlationId = crypto.randomUUID();
+
       // Post to Discord
       let anySuccess = false;
       for (const message of messages) {
@@ -715,10 +828,18 @@ ${dataSummary}`;
           projectPath,
           ceremonySettings.discordChannelId,
           message,
-          `Project Complete: ${projectTitle}`
+          `Project Complete: ${projectTitle}`,
+          correlationId
         );
         if (success) anySuccess = true;
       }
+
+      this.recordCeremony('project_retro', projectPath, anySuccess, {
+        id: correlationId,
+        projectSlug,
+        channelId: ceremonySettings.discordChannelId,
+        title: `Project Complete: ${projectTitle}`,
+      });
 
       if (anySuccess) {
         this.ceremonyCounts.projectRetro++;
@@ -1588,7 +1709,8 @@ ${summary}
     projectPath: string,
     channelId: string | undefined,
     content: string,
-    featureTitle: string
+    featureTitle: string,
+    correlationId?: string
   ): Promise<boolean> {
     if (!this.emitter) {
       return false;
@@ -1627,6 +1749,7 @@ ${summary}
       webhookToken: discordConfig.webhookToken,
       action: 'send_message',
       content,
+      correlationId,
     });
 
     return true;

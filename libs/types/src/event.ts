@@ -254,6 +254,7 @@ export type EventType =
   | 'ceremony:milestone-update'
   | 'ceremony:project-retro'
   | 'ceremony:triggered'
+  | 'ceremony:fired'
   // Retro improvement events (reflection loop: REFLECT → REPEAT)
   | 'retro:improvements:created'
   | 'retro:improvement:linear-sync'

@@ -2,6 +2,9 @@
  * Ceremony Routes
  *
  * POST /api/ceremonies/trigger — manually trigger a ceremony for a project/milestone.
+ * GET  /api/ceremonies/status — ceremony observability endpoint with delivery summary.
+ * GET  /api/ceremonies/log — audit log entries for ceremony events.
+ *
  * Loads project data, aggregates stats, and emits the appropriate event so
  * CeremonyService picks it up naturally.
  */
@@ -12,6 +15,7 @@ import type { EventEmitter } from '../../lib/events.js';
 import type { FeatureLoader } from '../../services/feature-loader.js';
 import type { ProjectService } from '../../services/project-service.js';
 import type { CeremonyService } from '../../services/ceremony-service.js';
+import type { CeremonyAuditLogService } from '../../services/ceremony-audit-service.js';
 import { validatePathParams } from '../../middleware/validate-paths.js';
 import { createLogger } from '@protolabs-ai/utils';
 
@@ -30,21 +34,52 @@ export function createCeremoniesRoutes(
   events: EventEmitter,
   featureLoader: FeatureLoader,
   projectService: ProjectService,
-  ceremonyService: CeremonyService
+  ceremonyService: CeremonyService,
+  auditLog?: CeremonyAuditLogService
 ): Router {
   const router = Router();
 
-  // GET /status — ceremony observability endpoint
-  router.get('/status', (_req: Request, res: Response): void => {
+  // GET /status — ceremony observability endpoint with delivery summary
+  router.get('/status', (req: Request, res: Response): void => {
     const status = ceremonyService.getStatus();
     const reflection = ceremonyService.getReflectionStatus();
+
+    // Include delivery summary from audit log if available
+    const projectPath = req.query.projectPath as string | undefined;
+    const deliverySummary =
+      projectPath && auditLog ? auditLog.getDeliverySummary(projectPath) : null;
+
     res.json({
       success: true,
       ...status,
       activeReflection: reflection.active ? reflection.activeProject : null,
       reflectionCount: reflection.reflectionCount,
       lastReflection: reflection.lastReflection,
+      ...(deliverySummary ? { deliverySummary } : {}),
     });
+  });
+
+  // GET /log — ceremony audit log entries
+  router.get('/log', (req: Request, res: Response): void => {
+    const projectPath = req.query.projectPath as string | undefined;
+    const limit = parseInt(req.query.limit as string, 10) || 50;
+    const type = req.query.type as string | undefined;
+
+    if (!projectPath) {
+      res.status(400).json({ success: false, error: 'projectPath query parameter is required' });
+      return;
+    }
+
+    if (!auditLog) {
+      res.json({ success: true, entries: [], message: 'Audit log not initialized' });
+      return;
+    }
+
+    const entries = type
+      ? auditLog.getEntriesByType(projectPath, type, limit)
+      : auditLog.getRecentEntries(projectPath, limit);
+
+    res.json({ success: true, entries, total: entries.length });
   });
 
   // POST /retry — clear dedup guard and re-trigger project:completed

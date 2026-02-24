@@ -62,6 +62,55 @@ export interface MilestoneUpdateData {
  * - Key learnings for future projects
  * - Recommendations for process improvements
  */
+/**
+ * CeremonyAuditType - All ceremony event types fired by CeremonyService
+ */
+export type CeremonyAuditType =
+  | 'epic_kickoff'
+  | 'standup'
+  | 'milestone_retro'
+  | 'epic_delivery'
+  | 'content_brief'
+  | 'project_retro';
+
+/**
+ * CeremonyDeliveryStatus - Delivery state of a ceremony event
+ */
+export type CeremonyDeliveryStatus = 'pending' | 'delivered' | 'failed' | 'skipped';
+
+/**
+ * CeremonyAuditEntry - A single ceremony event in the audit log
+ */
+export interface CeremonyAuditEntry {
+  /** Unique ID for this audit entry (also used as correlationId for Discord delivery) */
+  id: string;
+  /** ISO timestamp when the ceremony fired */
+  timestamp: string;
+  /** Type of ceremony */
+  ceremonyType: CeremonyAuditType;
+  /** Project path */
+  projectPath: string;
+  /** Project slug */
+  projectSlug?: string;
+  /** Milestone slug (if applicable) */
+  milestoneSlug?: string;
+  /** Feature ID (if applicable) */
+  featureId?: string;
+  /** Discord channel ID that was targeted */
+  discordChannelId?: string;
+  /** Discord message ID after delivery */
+  discordMessageId?: string;
+  /** Current delivery status */
+  deliveryStatus: CeremonyDeliveryStatus;
+  /** Error message if delivery failed */
+  errorMessage?: string;
+  /** Summary payload */
+  payload: {
+    title: string;
+    summary?: string;
+  };
+}
+
 export interface ProjectRetroData {
   /** ID of the completed project */
   projectId: string;

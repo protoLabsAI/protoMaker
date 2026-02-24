@@ -649,9 +649,13 @@ const { linearSyncService } = await import('./services/linear-sync-service.js');
 linearSyncService.initialize(events, settingsService, featureLoader, projectService);
 linearSyncService.start();
 
-// Initialize Ceremony Service for milestone completion ceremonies
+// Initialize Ceremony Audit Log and Ceremony Service
+const { CeremonyAuditLogService } = await import('./services/ceremony-audit-service.js');
+const ceremonyAuditLog = new CeremonyAuditLogService();
+
 const { ceremonyService } = await import('./services/ceremony-service.js');
 ceremonyService.initialize(events, settingsService, featureLoader, projectService, metricsService);
+ceremonyService.setAuditLog(ceremonyAuditLog);
 
 // Listen for retro improvements and create Linear issues when configured
 events.subscribe(async (type, payload) => {
@@ -898,15 +902,33 @@ eventHookService.initialize(
 
 // Bridge integration:discord events to Discord bot service
 // CeremonyService, IntegrationService, and ChangelogService emit these events
-// with { action: 'send_message', channelId, content } payloads
+// with { action: 'send_message', channelId, content, correlationId? } payloads
 events.subscribe(async (type, payload) => {
   if (type !== 'integration:discord') return;
-  const p = payload as { channelId?: string; content?: string; action?: string };
+  const p = payload as {
+    channelId?: string;
+    content?: string;
+    action?: string;
+    correlationId?: string;
+  };
   if (p.action !== 'send_message' || !p.channelId || !p.content) return;
   try {
     await discordBotService.sendToChannel(p.channelId, p.content);
+    // Track delivery receipt for ceremony audit log
+    if (p.correlationId) {
+      ceremonyAuditLog.updateDeliveryStatus(p.correlationId, 'delivered');
+    }
   } catch (error) {
     logger.error('Failed to deliver integration:discord event:', error);
+    // Track delivery failure for ceremony audit log
+    if (p.correlationId) {
+      ceremonyAuditLog.updateDeliveryStatus(
+        p.correlationId,
+        'failed',
+        undefined,
+        error instanceof Error ? error.message : String(error)
+      );
+    }
   }
 });
 
@@ -1433,7 +1455,7 @@ app.use(
 );
 app.use(
   '/api/ceremonies',
-  createCeremoniesRoutes(events, featureLoader, projectService, ceremonyService)
+  createCeremoniesRoutes(events, featureLoader, projectService, ceremonyService, ceremonyAuditLog)
 );
 app.use('/api/issues', createIssuesRoutes(events));
 app.use('/api/deploy', createDeployRoutes(autoModeService));

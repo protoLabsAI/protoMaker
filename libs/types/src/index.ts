@@ -246,7 +246,7 @@ export type {
   // Discord integration types
   DiscordSettings,
   DiscordUserDMConfig,
-  // Ceremony types
+  // Ceremony types (CeremonySettings only — audit types from ceremony.ts)
   CeremonySettings,
   // Project integration types
   LinearIntegrationConfig,
@@ -612,7 +612,14 @@ export type {
 } from './beads.js';
 
 // Ceremony types (milestone updates and project retrospectives)
-export type { CeremonyType, MilestoneUpdateData, ProjectRetroData } from './ceremony.js';
+export type {
+  CeremonyType,
+  MilestoneUpdateData,
+  ProjectRetroData,
+  CeremonyAuditType,
+  CeremonyDeliveryStatus,
+  CeremonyAuditEntry,
+} from './ceremony.js';
 
 // Linear sync types (bidirectional sync metadata and payloads)
 export type {
