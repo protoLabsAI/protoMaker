@@ -323,6 +323,25 @@ describe('dependency-resolver.ts', () => {
 
       expect(areDependenciesSatisfied(allFeatures[3], allFeatures)).toBe(false);
     });
+
+    it('should return false when dependency is in review status', () => {
+      const allFeatures = [
+        createFeature('f1', { status: 'review' }),
+        createFeature('f2', { status: 'backlog', dependencies: ['f1'] }),
+      ];
+
+      expect(areDependenciesSatisfied(allFeatures[1], allFeatures)).toBe(false);
+    });
+
+    it('should return true when all dependencies are done (merged)', () => {
+      const allFeatures = [
+        createFeature('f1', { status: 'done' }),
+        createFeature('f2', { status: 'done' }),
+        createFeature('f3', { status: 'backlog', dependencies: ['f1', 'f2'] }),
+      ];
+
+      expect(areDependenciesSatisfied(allFeatures[2], allFeatures)).toBe(true);
+    });
   });
 
   describe('getBlockingDependencies', () => {
@@ -427,6 +446,26 @@ describe('dependency-resolver.ts', () => {
       expect(blocking).toHaveLength(2);
       expect(blocking).toContain('f3');
       expect(blocking).toContain('f4');
+    });
+
+    it('should return blocking dependencies in review status', () => {
+      const allFeatures = [
+        createFeature('f1', { status: 'review' }),
+        createFeature('f2', { status: 'done' }),
+        createFeature('f3', { status: 'backlog', dependencies: ['f1', 'f2'] }),
+      ];
+
+      expect(getBlockingDependencies(allFeatures[2], allFeatures)).toEqual(['f1']);
+    });
+
+    it('should return empty array when all dependencies are done', () => {
+      const allFeatures = [
+        createFeature('f1', { status: 'done' }),
+        createFeature('f2', { status: 'done' }),
+        createFeature('f3', { status: 'backlog', dependencies: ['f1', 'f2'] }),
+      ];
+
+      expect(getBlockingDependencies(allFeatures[2], allFeatures)).toEqual([]);
     });
   });
 });
