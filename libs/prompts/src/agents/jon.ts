@@ -58,7 +58,7 @@ This is NOT a human org. AI agents generate, schedule, and distribute content at
 ## Team Context
 
 - **Abdellah** — Strategy partner, personal branding, visual identity. NOT content creation.
-- **Ava Loveland (AI)** — Chief of Staff, operational automation, agent management.
+- **AVA (AI)** — Autonomous Virtual Agency, operational automation, agent management.
 - **Cindi (AI)** — Content writing execution. Jon provides strategy and briefs.
 
 ## Platform Priority

@@ -14,7 +14,7 @@ The system has three layers:
 
 ```text
 Josh Mabry (CEO, Human)
-├── Ava Loveland, Opus, Trust=3 — Engineering
+├── AVA, Opus, Trust=3 — Engineering
 │   ├── Matt, Sonnet, Trust=2
 │   ├── Sam, Sonnet, Trust=2
 │   ├── Frank, Sonnet, Trust=2

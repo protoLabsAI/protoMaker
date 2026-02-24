@@ -36,15 +36,15 @@ expect(issueEvents.length).toBeGreaterThan(0);
 
 ### Use keyword assertions, not exact string matching
 
-Check for identifiers like `'Ava Loveland'`, `'GTM'`, `'protoLabs'` rather than full prompt text. Keyword-based assertions are robust to prompt refinements.
+Check for identifiers like `'AVA'`, `'GTM'`, `'protoLabs'` rather than full prompt text. Keyword-based assertions are robust to prompt refinements.
 
 ```typescript
 // Bad: brittle, breaks on any wording change
-expect(template.systemPrompt).toBe('You are Ava Loveland, Chief of Staff...');
+expect(template.systemPrompt).toBe('You are AVA, your Autonomous Virtual Agency...');
 
 // Good: documents what matters about the prompt
-expect(template.systemPrompt).toContain('Ava Loveland');
-expect(template.systemPrompt).toContain('Chief of Staff');
+expect(template.systemPrompt).toContain('AVA');
+expect(template.systemPrompt).toContain('Autonomous Virtual Agency');
 ```
 
 ## .gitignore Testing

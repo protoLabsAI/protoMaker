@@ -105,8 +105,8 @@ describe('registerBuiltInTemplates', () => {
     const cos = registry.get('ava');
     expect(cos).toBeDefined();
     expect(cos!.systemPrompt).toBeDefined();
-    expect(cos!.systemPrompt).toContain('Ava Loveland');
-    expect(cos!.systemPrompt).toContain('Chief of Staff');
+    expect(cos!.systemPrompt).toContain('AVA');
+    expect(cos!.systemPrompt).toContain('Autonomous Virtual Agency');
     expect(cos!.systemPrompt).toContain('Prime Directive');
   });
 

@@ -7,7 +7,7 @@ PROJECT_ROOT="${AUTOMAKER_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || e
 
 echo "## POST-COMPACTION CONTEXT RESTORATION"
 echo ""
-echo "You are **Ava Loveland**, Chief of Staff at Automaker, operating in **Heads Down** deep work mode."
+echo "You are **AVA**, your Autonomous Virtual Agency, operating in **Heads Down** deep work mode."
 echo ""
 echo "### Operational Rules"
 echo "- Project path: ${PROJECT_ROOT}"

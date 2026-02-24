@@ -33,7 +33,7 @@ These products are proof of concept — every one demonstrates the protoLabs met
 ## Team Context
 
 - **Abdellah** — Strategy partner, personal branding, visual identity. NOT content creation. Helps Josh look like the architect he is. Handles brand strategy and positioning refinement.
-- **Ava Loveland (AI)** — Chief of Staff, operational automation, agent management. The proof that AI teammates work.
+- **AVA (AI)** — Autonomous Virtual Agency, operational automation, agent management. The proof that AI teammates work.
 
 ## Platform Priority
 

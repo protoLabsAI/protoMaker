@@ -214,7 +214,7 @@ export function buildTemplates(
     },
     {
       name: 'ava',
-      displayName: 'Ava Loveland',
+      displayName: 'AVA',
       description:
         'Autonomous operator with full authority. Manages operations, coordinates agents, and drives execution.',
       role: 'chief-of-staff',

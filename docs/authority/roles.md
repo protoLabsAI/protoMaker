@@ -8,7 +8,7 @@
 
 ```text
 Josh Mabry (CEO, Human)
-├── Ava Loveland, Opus, Trust=3 — Engineering
+├── AVA, Opus, Trust=3 — Engineering
 │   ├── Matt, Sonnet, Trust=2
 │   ├── Sam, Sonnet, Trust=2
 │   ├── Frank, Sonnet, Trust=2
@@ -24,21 +24,21 @@ Josh Mabry (CEO, Human)
 
 ## Active Roster
 
-| Agent                                       | Role                | Model  | Trust           | Reports To   | Capabilities                  | Exposure     |
-| ------------------------------------------- | ------------------- | ------ | --------------- | ------------ | ----------------------------- | ------------ |
-| **Josh Mabry**                              | CEO & Founder       | —      | 3 (Autonomous)  | —            | All                           | —            |
-| [Ava Loveland](#ava)                        | chief-of-staff      | Opus   | 3 (Autonomous)  | Josh Mabry   | Bash, Edit, Commit, PR, Spawn | CLI, Discord |
-| [Matt](#matt)                               | frontend-engineer   | Sonnet | 2 (Conditional) | Ava Loveland | Bash, Edit, Commit, PR        | CLI, Discord |
-| [Sam](#sam)                                 | backend-engineer    | Sonnet | 2 (Conditional) | Ava Loveland | Bash, Edit, Commit, PR        | CLI, Discord |
-| [Frank](#frank)                             | devops-engineer     | Sonnet | 2 (Conditional) | Ava Loveland | Bash, Edit, Commit, PR        | CLI, Discord |
-| [Cindi](#cindi)                             | content-writer      | Sonnet | 2 (Conditional) | Ava Loveland | Edit, Commit, PR              | CLI, Discord |
-| [Backend Engineer](#backend-engineer)       | backend-engineer    | Sonnet | 2 (Conditional) | Ava Loveland | Bash, Edit, Commit, PR        | Internal     |
-| [Product Manager](#product-manager)         | product-manager     | Sonnet | 1 (Assisted)    | Ava Loveland | Read-only                     | Internal     |
-| [Engineering Manager](#engineering-manager) | engineering-manager | Sonnet | 1 (Assisted)    | Ava Loveland | Read-only                     | Internal     |
-| [Linear Specialist](#linear-specialist)     | linear-specialist   | Sonnet | 2 (Conditional) | Ava Loveland | Read-only                     | Internal     |
-| [PR Maintainer](#pr-maintainer)             | pr-maintainer       | Haiku  | 2 (Conditional) | Ava Loveland | Bash, Edit, Commit, PR        | Internal     |
-| [Board Janitor](#board-janitor)             | board-janitor       | Haiku  | 1 (Assisted)    | Ava Loveland | Read-only                     | Internal     |
-| [Jon](#jon)                                 | gtm-specialist      | Sonnet | 1 (Assisted)    | Josh Mabry   | Bash, Edit                    | CLI, Discord |
+| Agent                                       | Role                | Model  | Trust           | Reports To | Capabilities                  | Exposure     |
+| ------------------------------------------- | ------------------- | ------ | --------------- | ---------- | ----------------------------- | ------------ |
+| **Josh Mabry**                              | CEO & Founder       | —      | 3 (Autonomous)  | —          | All                           | —            |
+| [AVA](#ava)                                 | chief-of-staff      | Opus   | 3 (Autonomous)  | Josh Mabry | Bash, Edit, Commit, PR, Spawn | CLI, Discord |
+| [Matt](#matt)                               | frontend-engineer   | Sonnet | 2 (Conditional) | AVA        | Bash, Edit, Commit, PR        | CLI, Discord |
+| [Sam](#sam)                                 | backend-engineer    | Sonnet | 2 (Conditional) | AVA        | Bash, Edit, Commit, PR        | CLI, Discord |
+| [Frank](#frank)                             | devops-engineer     | Sonnet | 2 (Conditional) | AVA        | Bash, Edit, Commit, PR        | CLI, Discord |
+| [Cindi](#cindi)                             | content-writer      | Sonnet | 2 (Conditional) | AVA        | Edit, Commit, PR              | CLI, Discord |
+| [Backend Engineer](#backend-engineer)       | backend-engineer    | Sonnet | 2 (Conditional) | AVA        | Bash, Edit, Commit, PR        | Internal     |
+| [Product Manager](#product-manager)         | product-manager     | Sonnet | 1 (Assisted)    | AVA        | Read-only                     | Internal     |
+| [Engineering Manager](#engineering-manager) | engineering-manager | Sonnet | 1 (Assisted)    | AVA        | Read-only                     | Internal     |
+| [Linear Specialist](#linear-specialist)     | linear-specialist   | Sonnet | 2 (Conditional) | AVA        | Read-only                     | Internal     |
+| [PR Maintainer](#pr-maintainer)             | pr-maintainer       | Haiku  | 2 (Conditional) | AVA        | Bash, Edit, Commit, PR        | Internal     |
+| [Board Janitor](#board-janitor)             | board-janitor       | Haiku  | 1 (Assisted)    | AVA        | Read-only                     | Internal     |
+| [Jon](#jon)                                 | gtm-specialist      | Sonnet | 1 (Assisted)    | Josh Mabry | Bash, Edit                    | CLI, Discord |
 
 ## Josh Mabry {#josh}
 
@@ -52,12 +52,12 @@ Technical architecture decisions, product vision, hands-on coding. The goal is t
 
 ### Direct Reports
 
-- [Ava Loveland](#ava) — Autonomous operator with full authority
+- [AVA](#ava) — Autonomous operator with full authority
 - [Jon](#jon) — GTM Specialist — content strategy, brand positioning, social media, competitive research, and launch execution
 
 ---
 
-## Ava Loveland {#ava}
+## AVA — Autonomous Virtual Agency {#ava}
 
 **Type:** AI
 **Role:** chief-of-staff
@@ -97,7 +97,7 @@ Can spawn sub-agents with roles: backend-engineer, frontend-engineer, devops-eng
 **Role:** frontend-engineer
 **Model:** Sonnet
 **Trust Level:** 2 (Conditional)
-**Reports to:** Ava Loveland
+**Reports to:** AVA
 **Exposure:** CLI, Discord
 **Capabilities:** Bash, Edit, Commit, PR
 **Tags:** implementation, frontend, ui, design-system, storybook
@@ -114,7 +114,7 @@ Frontend engineering specialist. Implements UI components, design systems, themi
 **Role:** backend-engineer
 **Model:** Sonnet
 **Trust Level:** 2 (Conditional)
-**Reports to:** Ava Loveland
+**Reports to:** AVA
 **Exposure:** CLI, Discord
 **Capabilities:** Bash, Edit, Commit, PR
 **Tags:** implementation, ai-agents, langgraph, llm-providers, observability, flows
@@ -131,7 +131,7 @@ AI agent engineer. Designs multi-agent flows, LangGraph state graphs, LLM provid
 **Role:** devops-engineer
 **Model:** Sonnet
 **Trust Level:** 2 (Conditional)
-**Reports to:** Ava Loveland
+**Reports to:** AVA
 **Exposure:** CLI, Discord
 **Capabilities:** Bash, Edit, Commit, PR
 **Tags:** infrastructure, devops, ci-cd
@@ -148,7 +148,7 @@ Manages infrastructure, CI/CD, deployments, monitoring, and system reliability.
 **Role:** content-writer
 **Model:** Sonnet
 **Trust Level:** 2 (Conditional)
-**Reports to:** Ava Loveland
+**Reports to:** AVA
 **Exposure:** CLI, Discord
 **Capabilities:** Edit, Commit, PR
 **Tags:** content, writing, blog, documentation, seo, training-data
@@ -165,7 +165,7 @@ Content writing specialist for protoLabs. Uses content pipeline flows to produce
 **Role:** backend-engineer
 **Model:** Sonnet
 **Trust Level:** 2 (Conditional)
-**Reports to:** Ava Loveland
+**Reports to:** AVA
 **Exposure:** Internal
 **Capabilities:** Bash, Edit, Commit, PR
 **Tags:** implementation, backend, api
@@ -182,7 +182,7 @@ Implements server-side features, APIs, services, and database logic.
 **Role:** product-manager
 **Model:** Sonnet
 **Trust Level:** 1 (Assisted)
-**Reports to:** Ava Loveland
+**Reports to:** AVA
 **Exposure:** Internal
 **Capabilities:** Read-only
 **Tags:** planning, product, requirements
@@ -199,7 +199,7 @@ Manages requirements, priorities, roadmap, and stakeholder communication.
 **Role:** engineering-manager
 **Model:** Sonnet
 **Trust Level:** 1 (Assisted)
-**Reports to:** Ava Loveland
+**Reports to:** AVA
 **Exposure:** Internal
 **Capabilities:** Read-only
 **Tags:** management, review, coordination
@@ -216,7 +216,7 @@ Oversees engineering execution, code review, team coordination, and technical de
 **Role:** linear-specialist
 **Model:** Sonnet
 **Trust Level:** 2 (Conditional)
-**Reports to:** Ava Loveland
+**Reports to:** AVA
 **Exposure:** Internal
 **Capabilities:** Read-only
 **Tags:** linear, project-management, sprint-planning, issues, initiatives
@@ -233,7 +233,7 @@ Owns all Linear workspace operations: project management, sprint planning, issue
 **Role:** pr-maintainer
 **Model:** Haiku
 **Trust Level:** 2 (Conditional)
-**Reports to:** Ava Loveland
+**Reports to:** AVA
 **Exposure:** Internal
 **Capabilities:** Bash, Edit, Commit, PR
 **Tags:** pr, pipeline, maintenance, formatting, coderabbit
@@ -250,7 +250,7 @@ Handles PR pipeline mechanics: auto-merge enablement, CodeRabbit thread resoluti
 **Role:** board-janitor
 **Model:** Haiku
 **Trust Level:** 1 (Assisted)
-**Reports to:** Ava Loveland
+**Reports to:** AVA
 **Exposure:** Internal
 **Capabilities:** Read-only
 **Tags:** board, maintenance, cleanup, dependencies

@@ -33,7 +33,7 @@ export interface HeartbeatPromptData {
 export function generateHeartbeatPrompt(data: HeartbeatPromptData): string {
   return `# Ava Heartbeat Check
 
-You are Ava Loveland, Chief of Staff for Automaker. You monitor the development board to identify issues requiring immediate attention.
+You are AVA, the Autonomous Virtual Agency for Automaker. You monitor the development board to identify issues requiring immediate attention.
 
 ## Current Board State
 
