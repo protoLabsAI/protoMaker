@@ -77,6 +77,7 @@ import {
   getExecutionStatePath,
   ensureAutomakerDir,
 } from '@protolabs-ai/platform';
+import { rebaseWorktreeOnMain } from '@protolabs-ai/git-utils';
 import { exec, execFile } from 'child_process';
 import { promisify } from 'util';
 import { randomUUID } from 'crypto';
@@ -1734,6 +1735,37 @@ export class AutoModeService {
       // Ensure workDir is always an absolute path for cross-platform compatibility
       const workDir = worktreePath ? path.resolve(worktreePath) : path.resolve(projectPath);
 
+      // CRITICAL: Rebase worktree onto latest origin/main before agent execution
+      // This prevents agents from executing against stale code when PRs merge in quick succession
+      if (worktreePath) {
+        try {
+          logger.info(`Rebasing worktree onto latest origin/main: ${worktreePath}`);
+          const rebaseResult = await rebaseWorktreeOnMain(worktreePath);
+
+          if (!rebaseResult.success) {
+            if (rebaseResult.hasConflicts) {
+              logger.warn(
+                `⚠️  Worktree has merge conflicts with main. Agent will execute on stale base. ` +
+                  `Feature: ${featureId}, Branch: ${branchName}`
+              );
+            } else {
+              logger.warn(
+                `Rebase failed (${rebaseResult.error}). Agent will execute on current base. ` +
+                  `Feature: ${featureId}`
+              );
+            }
+          } else {
+            logger.info(`✓ Worktree successfully rebased onto latest origin/main`);
+          }
+        } catch (rebaseError) {
+          // Log error but don't fail execution - agent can still work on stale base
+          logger.error(
+            `Unexpected error during pre-execution rebase for ${featureId}:`,
+            rebaseError
+          );
+        }
+      }
+
       // Validate that working directory is allowed using centralized validation
       validateWorkingDirectory(workDir);
 
@@ -3047,6 +3079,36 @@ Complete the pipeline step instructions above. Review the previous work and appl
       }
 
       const workDir = worktreePath ? path.resolve(worktreePath) : path.resolve(projectPath);
+
+      // CRITICAL: Rebase worktree onto latest origin/main before pipeline execution
+      if (worktreePath) {
+        try {
+          logger.info(`Rebasing worktree onto latest origin/main: ${worktreePath}`);
+          const rebaseResult = await rebaseWorktreeOnMain(worktreePath);
+
+          if (!rebaseResult.success) {
+            if (rebaseResult.hasConflicts) {
+              logger.warn(
+                `⚠️  Worktree has merge conflicts with main. Agent will execute on stale base. ` +
+                  `Feature: ${featureId}, Branch: ${branchName}`
+              );
+            } else {
+              logger.warn(
+                `Rebase failed (${rebaseResult.error}). Agent will execute on current base. ` +
+                  `Feature: ${featureId}`
+              );
+            }
+          } else {
+            logger.info(`✓ Worktree successfully rebased onto latest origin/main`);
+          }
+        } catch (rebaseError) {
+          logger.error(
+            `Unexpected error during pre-execution rebase for ${featureId}:`,
+            rebaseError
+          );
+        }
+      }
+
       validateWorkingDirectory(workDir);
 
       // Get model and provider for this feature
@@ -3286,6 +3348,32 @@ Complete the pipeline step instructions above. Review the previous work and appl
             `Follow-up failed to create worktree for branch "${branchName}", using project path`
           );
         }
+      }
+    }
+
+    // CRITICAL: Rebase worktree onto latest origin/main before follow-up execution
+    if (worktreePath) {
+      try {
+        logger.info(`Rebasing worktree onto latest origin/main: ${worktreePath}`);
+        const rebaseResult = await rebaseWorktreeOnMain(worktreePath);
+
+        if (!rebaseResult.success) {
+          if (rebaseResult.hasConflicts) {
+            logger.warn(
+              `⚠️  Worktree has merge conflicts with main. Follow-up will execute on stale base. ` +
+                `Feature: ${featureId}, Branch: ${branchName}`
+            );
+          } else {
+            logger.warn(
+              `Rebase failed (${rebaseResult.error}). Follow-up will execute on current base. ` +
+                `Feature: ${featureId}`
+            );
+          }
+        } else {
+          logger.info(`✓ Worktree successfully rebased onto latest origin/main`);
+        }
+      } catch (rebaseError) {
+        logger.error(`Unexpected error during pre-execution rebase for ${featureId}:`, rebaseError);
       }
     }
 

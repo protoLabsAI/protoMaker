@@ -20,3 +20,6 @@ export {
 
 // Export merge detection utilities
 export { isBranchMerged, isCommitOnBranch, getBranchHeadCommit, branchExists } from './merge.js';
+
+// Export rebase utilities
+export { rebaseWorktreeOnMain, type RebaseResult } from './rebase.js';
