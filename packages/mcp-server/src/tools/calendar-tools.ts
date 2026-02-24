@@ -36,8 +36,7 @@ export const calendarTools: Tool[] = [
             type: 'string',
             enum: ['custom', 'feature_due_date', 'milestone'],
           },
-          description:
-            'Optional array of event types to filter by. If omitted, returns all types.',
+          description: 'Optional array of event types to filter by. If omitted, returns all types.',
         },
       },
       required: ['projectPath', 'startDate', 'endDate'],
@@ -45,8 +44,7 @@ export const calendarTools: Tool[] = [
   },
   {
     name: 'create_calendar_event',
-    description:
-      'Create a custom calendar event. Returns the created event with its generated ID.',
+    description: 'Create a custom calendar event. Returns the created event with its generated ID.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -90,8 +88,7 @@ export const calendarTools: Tool[] = [
   },
   {
     name: 'update_calendar_event',
-    description:
-      'Update an existing calendar event. Returns the updated event.',
+    description: 'Update an existing calendar event. Returns the updated event.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -133,8 +130,7 @@ export const calendarTools: Tool[] = [
   },
   {
     name: 'delete_calendar_event',
-    description:
-      'Delete a calendar event. Returns success confirmation.',
+    description: 'Delete a calendar event. Returns success confirmation.',
     inputSchema: {
       type: 'object',
       properties: {
