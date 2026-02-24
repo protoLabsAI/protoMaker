@@ -1,0 +1,57 @@
+/**
+ * Trajectory Store Types
+ *
+ * Structured records of agent execution attempts for the learning flywheel.
+ * Trajectories are persisted on every ExecuteProcessor exit (success or failure).
+ */
+
+/**
+ * Feature domain categories for trajectory matching
+ */
+export type TrajectoryDomain = 'frontend' | 'backend' | 'devops' | 'fullstack' | 'infrastructure' | 'testing' | 'documentation' | 'other';
+
+/**
+ * Verified trajectory record stored after each execution attempt.
+ *
+ * Stored at: .automaker/trajectory/{featureId}/attempt-{N}.json
+ */
+export interface VerifiedTrajectory {
+  /** Feature ID this trajectory belongs to */
+  featureId: string;
+
+  /** Domain classification (frontend/backend/devops etc) */
+  domain: TrajectoryDomain;
+
+  /** Feature complexity tier */
+  complexity: 'small' | 'medium' | 'large' | 'architectural';
+
+  /** Model used for this execution */
+  model: string;
+
+  /** First 500 chars of the implementation plan */
+  planSummary: string;
+
+  /** Agent output summary (first 500 chars) */
+  executionSummary: string;
+
+  /** Cost in USD */
+  costUsd: number;
+
+  /** Duration in milliseconds */
+  durationMs: number;
+
+  /** Number of retries attempted */
+  retryCount: number;
+
+  /** Escalation reason if any */
+  escalationReason?: string;
+
+  /** True only after PR merged successfully */
+  verified: boolean;
+
+  /** ISO timestamp of when this trajectory was recorded */
+  timestamp: string;
+
+  /** Attempt number (1-indexed) */
+  attemptNumber: number;
+}
