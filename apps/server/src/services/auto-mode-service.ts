@@ -5038,8 +5038,7 @@ Format your response as a structured markdown document.`;
               return (
                 dep.status !== 'completed' &&
                 dep.status !== 'verified' &&
-                dep.status !== 'done' &&
-                dep.status !== 'review'
+                dep.status !== 'done'
               );
             }) || [];
 

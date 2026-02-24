@@ -219,16 +219,14 @@ export function areDependenciesSatisfied(
       return dep.status === 'done' || dep.status === 'completed' || dep.status === 'verified';
     }
 
-    // Default: require 'completed', 'verified', 'done' (PR merged), or 'review' (PR open)
+    // Default: require 'completed', 'verified', or 'done' (PR merged)
     // 'done' = PR merged, final state
-    // 'review' = PR created and under review, work is complete
     // 'completed' = agent finished, no PR workflow
     // 'verified' = manually verified by user
     return (
       dep.status === 'completed' ||
       dep.status === 'verified' ||
-      dep.status === 'done' ||
-      dep.status === 'review'
+      dep.status === 'done'
     );
   });
 }
@@ -257,8 +255,7 @@ export function getBlockingDependencies(feature: Feature, allFeatures: Feature[]
     return (
       dep.status !== 'completed' &&
       dep.status !== 'verified' &&
-      dep.status !== 'done' &&
-      dep.status !== 'review'
+      dep.status !== 'done'
     );
   });
 }
@@ -313,8 +310,7 @@ export function getBlockingDependenciesFromMap(
     if (
       dep.status !== 'completed' &&
       dep.status !== 'verified' &&
-      dep.status !== 'done' &&
-      dep.status !== 'review'
+      dep.status !== 'done'
     ) {
       blockingDependencies.push(depId);
     }
