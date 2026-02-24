@@ -215,12 +215,16 @@ export async function orchestrateProjectFeatures(
       message: 'Wiring feature dependencies',
     });
 
-    for (const milestone of project.milestones) {
+    for (let mi = 0; mi < project.milestones.length; mi++) {
+      const milestone = project.milestones[mi];
+
       // Process milestone dependencies (epic -> epic)
-      if (milestone.dependencies && milestone.dependencies.length > 0) {
-        const epicId = result.milestoneEpicMap[milestone.slug];
-        if (epicId) {
-          const depIds: string[] = [];
+      const epicId = result.milestoneEpicMap[milestone.slug];
+      if (epicId) {
+        const depIds: string[] = [];
+
+        // Explicit milestone dependencies
+        if (milestone.dependencies && milestone.dependencies.length > 0) {
           for (const depSlug of milestone.dependencies) {
             const depEpicId = findDependencyId(
               depSlug,
@@ -232,14 +236,24 @@ export async function orchestrateProjectFeatures(
               depIds.push(depEpicId);
             }
           }
-          if (depIds.length > 0) {
-            try {
-              await featureLoader.update(projectPath, epicId, { dependencies: depIds });
-            } catch (err) {
-              result.errors?.push(
-                `Failed to set dependencies for epic ${milestone.slug}: ${getErrorMessage(err)}`
-              );
-            }
+        }
+
+        // Automatic sequential dependency: each epic depends on the previous epic
+        if (mi > 0) {
+          const prevMilestone = project.milestones[mi - 1];
+          const prevEpicId = result.milestoneEpicMap[prevMilestone.slug];
+          if (prevEpicId && !depIds.includes(prevEpicId)) {
+            depIds.push(prevEpicId);
+          }
+        }
+
+        if (depIds.length > 0) {
+          try {
+            await featureLoader.update(projectPath, epicId, { dependencies: depIds });
+          } catch (err) {
+            result.errors?.push(
+              `Failed to set dependencies for epic ${milestone.slug}: ${getErrorMessage(err)}`
+            );
           }
         }
       }
@@ -269,8 +283,7 @@ export async function orchestrateProjectFeatures(
           }
         }
 
-        // Always apply previous phase fallback for sequential execution
-        // This ensures phases within a milestone run in order by default
+        // Sequential dependency: phase N depends on phase N-1 within the milestone
         if (phase.number > 1) {
           const prevPhase = milestone.phases.find((p) => p.number === phase.number - 1);
           if (prevPhase) {
@@ -279,6 +292,15 @@ export async function orchestrateProjectFeatures(
             if (prevFeatureId && !depIds.includes(prevFeatureId)) {
               depIds.push(prevFeatureId);
             }
+          }
+        }
+
+        // Cross-milestone dependency: first phase of each milestone depends on previous epic
+        if (phase.number === 1 && mi > 0) {
+          const prevMilestone = project.milestones[mi - 1];
+          const prevEpicId = result.milestoneEpicMap[prevMilestone.slug];
+          if (prevEpicId && !depIds.includes(prevEpicId)) {
+            depIds.push(prevEpicId);
           }
         }
 

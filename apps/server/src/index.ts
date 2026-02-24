@@ -1300,7 +1300,7 @@ app.use(
     roleRegistryService
   )
 );
-app.use('/api/auto-mode', createAutoModeRoutes(autoModeService));
+app.use('/api/auto-mode', createAutoModeRoutes(autoModeService, featureLoader));
 app.use('/api/enhance-prompt', createEnhancePromptRoutes(settingsService));
 app.use(
   '/api/worktree',
