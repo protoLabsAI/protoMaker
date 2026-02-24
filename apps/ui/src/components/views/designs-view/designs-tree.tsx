@@ -106,37 +106,40 @@ export function DesignsTree({ projectPath }: DesignsTreeProps) {
     });
   };
 
-  const handleFileClick = useCallback(async (node: FileTreeNode) => {
-    if (node.type === 'folder') {
-      toggleFolder(node.path);
-      return;
-    }
-
-    // Load the .pen file
-    setLoadingDocument(true);
-    try {
-      const api = getElectronAPI();
-      const fullPath = `${projectPath}/designs/${node.path}`;
-
-      const result = await api.readFile(fullPath);
-      if (!result.success || !result.content) {
-        toast.error('Failed to load design file');
+  const handleFileClick = useCallback(
+    async (node: FileTreeNode) => {
+      if (node.type === 'folder') {
+        toggleFolder(node.path);
         return;
       }
 
-      // Parse the .pen file (for now, just store the raw content)
-      const document = {
-        content: result.content,
-      };
+      // Load the .pen file
+      setLoadingDocument(true);
+      try {
+        const api = getElectronAPI();
+        const fullPath = `${projectPath}/designs/${node.path}`;
 
-      setSelectedFile(node.path, document);
-    } catch (err) {
-      console.error('Failed to load design file:', err);
-      toast.error('Failed to load design file');
-    } finally {
-      setLoadingDocument(false);
-    }
-  }, [projectPath, toggleFolder, setSelectedFile, setLoadingDocument]);
+        const result = await api.readFile(fullPath);
+        if (!result.success || !result.content) {
+          toast.error('Failed to load design file');
+          return;
+        }
+
+        // Parse the .pen file (for now, just store the raw content)
+        const document = {
+          content: result.content,
+        };
+
+        setSelectedFile(node.path, document);
+      } catch (err) {
+        console.error('Failed to load design file:', err);
+        toast.error('Failed to load design file');
+      } finally {
+        setLoadingDocument(false);
+      }
+    },
+    [projectPath, toggleFolder, setSelectedFile, setLoadingDocument]
+  );
 
   return (
     <div className="p-2">
@@ -177,7 +180,13 @@ interface TreeNodeListProps {
   onNodeClick: (node: FileTreeNode) => void;
 }
 
-function TreeNodeList({ nodes, level, expandedFolders, selectedPath, onNodeClick }: TreeNodeListProps) {
+function TreeNodeList({
+  nodes,
+  level,
+  expandedFolders,
+  selectedPath,
+  onNodeClick,
+}: TreeNodeListProps) {
   return (
     <div>
       {nodes.map((node) => (
@@ -204,7 +213,14 @@ interface TreeNodeProps {
   onNodeClick: (node: FileTreeNode) => void;
 }
 
-function TreeNode({ node, level, isExpanded, isSelected, expandedFolders, onNodeClick }: TreeNodeProps) {
+function TreeNode({
+  node,
+  level,
+  isExpanded,
+  isSelected,
+  expandedFolders,
+  onNodeClick,
+}: TreeNodeProps) {
   const isFolder = node.type === 'folder';
   const hasChildren = isFolder && node.children && node.children.length > 0;
 

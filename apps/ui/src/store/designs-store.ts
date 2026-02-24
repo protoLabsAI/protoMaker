@@ -86,7 +86,7 @@ export const useDesignsStore = create<DesignsState & DesignsActions>()((set, get
   setSelectedFile: (path, document) =>
     set({
       selectedFilePath: path,
-      selectedDocument: document
+      selectedDocument: document,
     }),
 
   // Loading state actions
