@@ -95,6 +95,11 @@ export interface KnowledgeStoreStats {
 }
 
 /**
+ * Retrieval mode used in a search
+ */
+export type RetrievalMode = 'hybrid_hype' | 'hybrid' | 'bm25';
+
+/**
  * Configuration settings for the knowledge store
  */
 export interface KnowledgeStoreSettings {

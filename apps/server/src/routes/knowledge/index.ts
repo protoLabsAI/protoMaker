@@ -10,6 +10,7 @@ import {
   createIngestReflectionsHandler,
   createIngestAgentOutputsHandler,
 } from './routes/ingest.js';
+import { createEvalStatsHandler } from './routes/eval-stats.js';
 
 export function createKnowledgeRoutes(knowledgeStoreService: any): Router {
   const router = Router();
@@ -19,6 +20,7 @@ export function createKnowledgeRoutes(knowledgeStoreService: any): Router {
   router.post('/rebuild', createRebuildHandler(knowledgeStoreService));
   router.post('/ingest/reflections', createIngestReflectionsHandler(knowledgeStoreService));
   router.post('/ingest/agent-outputs', createIngestAgentOutputsHandler(knowledgeStoreService));
+  router.post('/eval-stats', createEvalStatsHandler(knowledgeStoreService));
 
   return router;
 }
