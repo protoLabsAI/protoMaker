@@ -157,6 +157,83 @@ import { createLogger } from '@automaker/utils';
 - npm workspaces (not pnpm). Use \`npm run\` commands.`;
 
 // ---------------------------------------------------------------------------
+// Structured output standards
+// ---------------------------------------------------------------------------
+
+export const OUTPUT_STANDARDS = `## Structured Output Standards
+
+### Prefer XML over JSON for LLM-generated output
+
+When your task requires structured output (not tool call parameters), use XML tags:
+
+\`\`\`xml
+<scratchpad>Internal reasoning — not shown to users.</scratchpad>
+
+<result>
+  <action>what_happened</action>
+  <files_changed>
+    <file>path/to/file.ts</file>
+  </files_changed>
+  <details>Human-readable explanation</details>
+</result>
+\`\`\`
+
+**Why XML:**
+- Faster token generation than JSON (no escaping, no strict nesting rules)
+- Graceful partial parsing — can extract content even if wrapper tags are missing
+- Semantic tag names are self-documenting
+
+**When to use JSON instead:**
+- Tool call parameters (Zod schemas handle validation)
+- Simple key-value responses with no nesting
+- When the consumer explicitly expects JSON
+
+### Progress markers
+
+Use these markers so the system can track your progress:
+\`\`\`
+[TASK_START] T001: Description
+[TASK_COMPLETE] T001: Brief summary
+[PHASE_COMPLETE] Phase 1 complete
+\`\`\`
+
+Without these markers, the system cannot distinguish "still working" from "done."`;
+
+// ---------------------------------------------------------------------------
+// Anti-patterns — what NOT to do
+// ---------------------------------------------------------------------------
+
+export const ANTI_PATTERNS = `## Anti-Patterns — NEVER Do These
+
+### Scope creep
+- **NEVER** create routes, wire services, or modify index.ts unless the feature description explicitly asks
+- **NEVER** refactor surrounding code while implementing a feature
+- **NEVER** add "nice to have" improvements beyond the spec
+
+### Dangerous operations
+- **NEVER** run \`git checkout\` in the main repo — it modifies .automaker/features/ on disk
+- **NEVER** use \`git add -A\` or \`git add .\` — always stage specific files by name
+- **NEVER** use \`cd\` to enter worktree directories — use absolute paths or \`git -C\`
+- **NEVER** start long-running processes (dev servers, watchers, Storybook)
+
+### False confidence
+- **NEVER** claim "build passes" without pasting actual build output
+- **NEVER** claim "tests pass" without running them
+- **NEVER** say "this should work" — run it and prove it
+- **NEVER** skip verification because "the change is small"
+
+### Code quality
+- **NEVER** use \`process.env\` in shared packages (\`libs/*\`) — it crashes in the browser where \`process\` is undefined
+- **NEVER** use Express 5 wildcard route syntax \`/:param(*)\` — use POST with \`req.body\` instead
+- **NEVER** add new enum values without updating ALL \`Record<Enum, T>\` consumers
+- **NEVER** point tsconfig \`paths\` to \`.d.ts\` files in projects using tsx for runtime
+
+### Exploration spirals
+- **NEVER** spend more than 20% of your turns reading code
+- **NEVER** try to understand the entire codebase — focus on 2-4 files relevant to your task
+- **NEVER** make more than 3 fix attempts for the same error — stop and report it as a blocker`;
+
+// ---------------------------------------------------------------------------
 // Continuous improvement — in-flight issue tracking
 // ---------------------------------------------------------------------------
 
@@ -215,6 +292,8 @@ export function getEngineeringBase(profile?: UserProfile): string {
     PORT_PROTECTION,
     PROCESS_GUARD,
     MONOREPO_STANDARDS,
+    OUTPUT_STANDARDS,
+    ANTI_PATTERNS,
     CONTINUOUS_IMPROVEMENT,
   ].join('\n\n');
 }

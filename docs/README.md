@@ -112,6 +112,12 @@ DevOps documentation in [`docs/infra/`](./infra/):
 | [CI/CD Setup](./protolabs/ci-cd-setup.md)                           | CI/CD pipeline setup for protoLabs                  |
 | [Flow Development Pattern](./protolabs/flow-development-pattern.md) | 5-layer flow development pattern                    |
 
+## Prompt Engineering
+
+| Document                                                             | Description                                         |
+| -------------------------------------------------------------------- | --------------------------------------------------- |
+| [Techniques Reference](./prompt-engineering/techniques-reference.md) | 200+ techniques from Learn Prompting (full catalog) |
+
 ## Internal
 
 | Document                                                   | Description                               |
