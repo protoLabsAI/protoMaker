@@ -4,6 +4,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { createLogger } from '@automaker/utils/logger';
 import { Sidebar } from '@/components/layout/sidebar';
+import { MobileBottomNav } from '@/components/layout/mobile-bottom-nav';
 import { ChatSidebar } from '@/components/views/chat/chat-sidebar';
 import { ChatModal, useChatModalShortcut } from '@/components/layout/chat-modal';
 import {
@@ -881,7 +882,7 @@ function RootLayoutContent() {
           />
         )}
         <Sidebar />
-        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden pb-[calc(56px+env(safe-area-inset-bottom))] md:pb-0">
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
             <Outlet />
           </div>
@@ -889,6 +890,7 @@ function RootLayoutContent() {
         </div>
         <ChatSidebar />
         <ChatModal />
+        <MobileBottomNav />
         <Toaster richColors position="bottom-right" />
       </main>
       <SandboxRiskDialog
