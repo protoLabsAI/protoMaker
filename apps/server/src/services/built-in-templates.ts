@@ -296,7 +296,7 @@ export function buildTemplates(
       description:
         'Manages all calendar operations for the project. Handles scheduling, event creation/updates, deadline tracking, and temporal data management. Other agents delegate calendar operations to this assistant.',
       role: 'calendar-assistant',
-      tier: 1,
+      tier: 0,
       model: 'opus',
       maxTurns: 50,
       canUseBash: false,
