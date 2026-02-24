@@ -307,8 +307,8 @@ Combine BM25 and cosine rankings using **Reciprocal Rank Fusion** (RRF) with `k=
 const k = 60;
 
 for (const chunk of candidates) {
-  const bm25Rank = getBM25Rank(chunk.id); // 1-based rank
-  const cosineRank = getCosineRank(chunk.id); // 1-based rank
+  const bm25Rank = getBM25Rank(chunk.id);      // 1-based rank
+  const cosineRank = getCosineRank(chunk.id);  // 1-based rank
 
   const rrfScore = 1 / (k + bm25Rank) + 1 / (k + cosineRank);
   rrfScores.set(chunk.id, rrfScore);
@@ -336,7 +336,7 @@ for (const chunk of rankedChunks) {
   const chunkTokens = Math.ceil(chunk.content.length / 4);
 
   if (totalTokens + chunkTokens > maxTokens) {
-    break; // Budget exhausted
+    break;  // Budget exhausted
   }
 
   results.push(chunk);
@@ -498,13 +498,13 @@ Configuration is stored in `.automaker/settings.json` under the `knowledgeStore`
 
 ```typescript
 interface KnowledgeStoreSettings {
-  maxChunkSize: number; // Default: 1000 tokens
-  chunkOverlap: number; // Default: 200 tokens (unused, reserved)
-  defaultImportance: number; // Default: 0.5
-  autoReindex: boolean; // Default: true
-  excludePatterns: string[]; // Glob patterns to exclude
-  includePatterns: string[]; // Glob patterns to include
-  hybridRetrieval: boolean; // Default: true (falls back to BM25 if false)
+  maxChunkSize: number;           // Default: 1000 tokens
+  chunkOverlap: number;           // Default: 200 tokens (unused, reserved)
+  defaultImportance: number;      // Default: 0.5
+  autoReindex: boolean;           // Default: true
+  excludePatterns: string[];      // Glob patterns to exclude
+  includePatterns: string[];      // Glob patterns to include
+  hybridRetrieval: boolean;       // Default: true (falls back to BM25 if false)
 }
 ```
 
@@ -634,7 +634,11 @@ POST /api/knowledge/rebuild
 Memory category files that exceed 50,000 tokens trigger automatic compaction via Haiku summarization.
 
 ```typescript
-await knowledgeStoreService.compactCategory(projectPath, 'patterns.md', 50000);
+await knowledgeStoreService.compactCategory(
+  projectPath,
+  'patterns.md',
+  50000
+);
 ```
 
 ### Pruning

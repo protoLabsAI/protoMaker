@@ -18,15 +18,15 @@ For each decision, we document what we evaluated, what we chose, and the rationa
 
 ### What We Evaluated
 
-| Strategy              | Description                                   | Pros                         | Cons                                |
-| --------------------- | --------------------------------------------- | ---------------------------- | ----------------------------------- |
-| Fixed-size            | Split every N tokens                          | Simple, predictable          | Breaks semantic boundaries          |
-| Paragraph-based       | Split on `\n\n`                               | Respects structure           | Variable size, can be too small     |
-| Sentence-based        | Split on `.` boundaries                       | Natural units                | Too granular, loses context         |
-| Header-based          | Split on `##` headings                        | Semantic boundaries          | Assumes well-structured markdown    |
-| Recursive             | Try headers, fallback to paragraphs/sentences | Best of both worlds          | Complex implementation              |
-| Semantic              | Use embeddings to find optimal split points   | Perfect semantic units       | Requires embeddings before chunking |
-| Token-overlap sliding | Fixed-size with N-token overlap               | Preserves context boundaries | Redundancy, larger corpus           |
+| Strategy             | Description                                   | Pros                          | Cons                                |
+| -------------------- | --------------------------------------------- | ----------------------------- | ----------------------------------- |
+| Fixed-size           | Split every N tokens                          | Simple, predictable           | Breaks semantic boundaries          |
+| Paragraph-based      | Split on `\n\n`                               | Respects structure            | Variable size, can be too small     |
+| Sentence-based       | Split on `.` boundaries                       | Natural units                 | Too granular, loses context         |
+| Header-based         | Split on `##` headings                        | Semantic boundaries           | Assumes well-structured markdown    |
+| Recursive            | Try headers, fallback to paragraphs/sentences | Best of both worlds           | Complex implementation              |
+| Semantic             | Use embeddings to find optimal split points   | Perfect semantic units        | Requires embeddings before chunking |
+| Token-overlap sliding| Fixed-size with N-token overlap               | Preserves context boundaries  | Redundancy, larger corpus           |
 
 ### What We Chose
 
@@ -62,15 +62,15 @@ For each decision, we document what we evaluated, what we chose, and the rationa
 
 ### What We Evaluated
 
-| Method            | Description                   | Pros                          | Cons                             |
-| ----------------- | ----------------------------- | ----------------------------- | -------------------------------- |
-| BM25 (FTS5)       | SQLite full-text search       | Fast, built-in, keyword-aware | No semantic understanding        |
-| Vector-only       | Pure cosine similarity        | Semantic search               | Misses exact term matches        |
-| Hybrid (BM25+Vec) | Combine keyword and semantic  | Best of both worlds           | More complex, requires both      |
-| Elastic/Solr      | Dedicated search engine       | Production-grade              | External dependency, overkill    |
-| MeiliSearch       | Fast typo-tolerant search     | Great UX                      | No vector support (yet)          |
-| Tantivy           | Rust-based Lucene alternative | Fast, embeddable              | Requires native bindings         |
-| Typesense         | Instant search with vectors   | Fast, vector support          | External service, not embeddable |
+| Method            | Description                              | Pros                          | Cons                              |
+| ----------------- | ---------------------------------------- | ----------------------------- | --------------------------------- |
+| BM25 (FTS5)       | SQLite full-text search                  | Fast, built-in, keyword-aware | No semantic understanding         |
+| Vector-only       | Pure cosine similarity                   | Semantic search               | Misses exact term matches         |
+| Hybrid (BM25+Vec) | Combine keyword and semantic             | Best of both worlds           | More complex, requires both       |
+| Elastic/Solr      | Dedicated search engine                  | Production-grade              | External dependency, overkill     |
+| MeiliSearch       | Fast typo-tolerant search                | Great UX                      | No vector support (yet)           |
+| Tantivy           | Rust-based Lucene alternative            | Fast, embeddable              | Requires native bindings          |
+| Typesense         | Instant search with vectors              | Fast, vector support          | External service, not embeddable  |
 
 ### What We Chose
 
@@ -121,16 +121,16 @@ CREATE TABLE embeddings (
 
 ### What We Evaluated
 
-| Model               | Dims | Size  | Provider        | Pros                       | Cons                      |
-| ------------------- | ---- | ----- | --------------- | -------------------------- | ------------------------- |
-| OpenAI text-embed-3 | 1536 | API   | OpenAI          | High quality               | API cost, vendor lock-in  |
-| Cohere embed-v3     | 1024 | API   | Cohere          | Multilingual               | API cost                  |
-| Voyage AI           | 1024 | API   | Voyage          | SOTA performance           | API cost, niche provider  |
-| all-MiniLM-L6-v2    | 384  | 90MB  | Sentence-BERT   | Fast, CPU-friendly         | Lower quality than large  |
-| all-mpnet-base-v2   | 768  | 420MB | Sentence-BERT   | Better quality than MiniLM | Slower, larger            |
-| bge-small-en-v1.5   | 384  | 130MB | BAAI            | Strong for retrieval       | Requires normalization    |
-| gte-small           | 384  | 120MB | Alibaba         | Good balance               | Less popular, fewer evals |
-| OpenAI Ada-002      | 1536 | API   | OpenAI (legacy) | Reliable                   | Deprecated, expensive     |
+| Model                   | Dims | Size   | Provider         | Pros                          | Cons                        |
+| ----------------------- | ---- | ------ | ---------------- | ----------------------------- | --------------------------- |
+| OpenAI text-embed-3     | 1536 | API    | OpenAI           | High quality                  | API cost, vendor lock-in    |
+| Cohere embed-v3         | 1024 | API    | Cohere           | Multilingual                  | API cost                    |
+| Voyage AI               | 1024 | API    | Voyage           | SOTA performance              | API cost, niche provider    |
+| all-MiniLM-L6-v2        | 384  | 90MB   | Sentence-BERT    | Fast, CPU-friendly            | Lower quality than large    |
+| all-mpnet-base-v2       | 768  | 420MB  | Sentence-BERT    | Better quality than MiniLM    | Slower, larger              |
+| bge-small-en-v1.5       | 384  | 130MB  | BAAI             | Strong for retrieval          | Requires normalization      |
+| gte-small               | 384  | 120MB  | Alibaba          | Good balance                  | Less popular, fewer evals   |
+| OpenAI Ada-002          | 1536 | API    | OpenAI (legacy)  | Reliable                      | Deprecated, expensive       |
 
 ### What We Chose
 
@@ -185,15 +185,15 @@ CREATE TABLE embeddings (
 
 ### What We Evaluated
 
-| Algorithm             | Description                     | Pros                   | Cons                       |
-| --------------------- | ------------------------------- | ---------------------- | -------------------------- |
-| BM25-only             | FTS5 ranking                    | Fast, simple           | No semantic understanding  |
-| Vector-only           | Cosine similarity on embeddings | Semantic search        | Misses exact matches       |
-| Weighted sum          | `α * BM25 + β * cosine`         | Flexible               | Requires tuning α, β       |
-| RRF (Reciprocal Rank) | Merge based on rank, not score  | No hyperparameters     | Assumes rank quality       |
-| Cross-encoder rerank  | BERT-style reranker on top-K    | SOTA accuracy          | Slow, requires large model |
-| ColBERT               | Token-level matching            | High recall            | Large index, complex       |
-| Dense retrieval       | Pure ANN search                 | Fast for large corpora | Misses keyword matches     |
+| Algorithm             | Description                                  | Pros                          | Cons                              |
+| --------------------- | -------------------------------------------- | ----------------------------- | --------------------------------- |
+| BM25-only             | FTS5 ranking                                 | Fast, simple                  | No semantic understanding         |
+| Vector-only           | Cosine similarity on embeddings              | Semantic search               | Misses exact matches              |
+| Weighted sum          | `α * BM25 + β * cosine`                      | Flexible                      | Requires tuning α, β              |
+| RRF (Reciprocal Rank) | Merge based on rank, not score               | No hyperparameters            | Assumes rank quality              |
+| Cross-encoder rerank  | BERT-style reranker on top-K                 | SOTA accuracy                 | Slow, requires large model        |
+| ColBERT               | Token-level matching                         | High recall                   | Large index, complex              |
+| Dense retrieval       | Pure ANN search                              | Fast for large corpora        | Misses keyword matches            |
 
 ### What We Chose
 
@@ -241,15 +241,15 @@ CREATE TABLE embeddings (
 
 ### What We Evaluated
 
-| Technique        | Description                                   | Pros                       | Cons                               |
-| ---------------- | --------------------------------------------- | -------------------------- | ---------------------------------- |
-| Raw query        | Use user query as-is                          | Fast, simple               | Misses synonyms, context           |
-| Query expansion  | Add synonyms via WordNet/thesaurus            | Better recall              | Noisy, requires dictionary         |
-| HyDE             | Generate hypothetical answer, embed that      | Much better semantic match | Requires LLM call per query        |
-| HyPE             | Pre-generate questions per chunk, embed those | Same benefit, zero runtime | Requires Haiku calls at index      |
-| Pseudo-relevance | Use top-K results to expand query             | Improves iterative search  | Only helps if initial results good |
-| Multi-query      | Generate 3 variations, retrieve for all       | Better coverage            | 3x retrieval cost                  |
-| Query rewriting  | Use LLM to reformulate query                  | Better structured queries  | LLM latency + cost                 |
+| Technique        | Description                                       | Pros                          | Cons                              |
+| ---------------- | ------------------------------------------------- | ----------------------------- | --------------------------------- |
+| Raw query        | Use user query as-is                              | Fast, simple                  | Misses synonyms, context          |
+| Query expansion  | Add synonyms via WordNet/thesaurus                | Better recall                 | Noisy, requires dictionary        |
+| HyDE             | Generate hypothetical answer, embed that          | Much better semantic match    | Requires LLM call per query       |
+| HyPE             | Pre-generate questions per chunk, embed those     | Same benefit, zero runtime    | Requires Haiku calls at index     |
+| Pseudo-relevance| Use top-K results to expand query                 | Improves iterative search     | Only helps if initial results good|
+| Multi-query      | Generate 3 variations, retrieve for all           | Better coverage               | 3x retrieval cost                 |
+| Query rewriting  | Use LLM to reformulate query                      | Better structured queries     | LLM latency + cost                |
 
 ### What We Chose
 
@@ -299,23 +299,23 @@ CREATE TABLE embeddings (
 
 ## Design Decisions Summary
 
-| Component     | Choice                     | Rationale                                     |
-| ------------- | -------------------------- | --------------------------------------------- |
-| Chunking      | Header-based (500 tokens)  | Semantic boundaries, structured markdown      |
-| Indexing      | SQLite FTS5 + embeddings   | Zero dependencies, good enough, hybrid wins   |
-| Embedding     | all-MiniLM-L6-v2 (local)   | No API cost, portable, fast enough            |
-| Retrieval     | BM25 + cosine + RRF (k=60) | No hyperparameters, balanced keyword/semantic |
-| Query Enhance | HyPE (index-time)          | Zero runtime cost, same benefit as HyDE       |
+| Component     | Choice                        | Rationale                                      |
+| ------------- | ----------------------------- | ---------------------------------------------- |
+| Chunking      | Header-based (500 tokens)     | Semantic boundaries, structured markdown       |
+| Indexing      | SQLite FTS5 + embeddings      | Zero dependencies, good enough, hybrid wins    |
+| Embedding     | all-MiniLM-L6-v2 (local)      | No API cost, portable, fast enough             |
+| Retrieval     | BM25 + cosine + RRF (k=60)    | No hyperparameters, balanced keyword/semantic  |
+| Query Enhance | HyPE (index-time)             | Zero runtime cost, same benefit as HyDE        |
 
 ## Why Not Cloud Vector Databases?
 
-| Service  | Why Not?                                                    |
-| -------- | ----------------------------------------------------------- |
-| Pinecone | Monthly cost, network latency, requires account/credit card |
-| Weaviate | Self-hosted complexity, memory-hungry (1GB+)                |
-| Qdrant   | Self-hosted, Docker required, overkill for local-first app  |
-| Milvus   | Heavy (Java/Go), distributed system, not embeddable         |
-| Chroma   | Better than others, but still requires external service     |
+| Service     | Why Not?                                                           |
+| ----------- | ------------------------------------------------------------------ |
+| Pinecone    | Monthly cost, network latency, requires account/credit card        |
+| Weaviate    | Self-hosted complexity, memory-hungry (1GB+)                       |
+| Qdrant      | Self-hosted, Docker required, overkill for local-first app         |
+| Milvus      | Heavy (Java/Go), distributed system, not embeddable                |
+| Chroma      | Better than others, but still requires external service            |
 
 **Core Philosophy:** Automaker is a **local-first** desktop app. Adding external dependencies (cloud services, Docker containers) breaks the "install and run" experience.
 
@@ -329,12 +329,12 @@ CREATE TABLE embeddings (
 
 ## SQLite-Native vs External Vector Store
 
-| Approach      | Pros                                    | Cons                                  |
-| ------------- | --------------------------------------- | ------------------------------------- |
-| SQLite-native | Zero dependencies, single database file | No ANN index, slower at 100k+ scale   |
-| pgvector      | Postgres extension, HNSW index          | Requires PostgreSQL, heavyweight      |
-| Chroma        | Fast, modern, Python/TS SDKs            | External service, setup complexity    |
-| FAISS         | Fast ANN, from Meta                     | Requires Python bindings, complex API |
+| Approach        | Pros                                     | Cons                                   |
+| --------------- | ---------------------------------------- | -------------------------------------- |
+| SQLite-native   | Zero dependencies, single database file  | No ANN index, slower at 100k+ scale    |
+| pgvector        | Postgres extension, HNSW index           | Requires PostgreSQL, heavyweight       |
+| Chroma          | Fast, modern, Python/TS SDKs             | External service, setup complexity     |
+| FAISS           | Fast ANN, from Meta                      | Requires Python bindings, complex API  |
 
 ### Why SQLite-Native?
 
@@ -410,11 +410,11 @@ Each sentence becomes a separate chunk. Search for "JWT token storage" returns 3
 
 ## BM25 vs TF-IDF vs Keyword Matching
 
-| Method  | Description                              | When It's Good                 | When It Fails                  |
-| ------- | ---------------------------------------- | ------------------------------ | ------------------------------ |
-| Keyword | Exact string match                       | Searching for code identifiers | Synonyms, typos, related terms |
-| TF-IDF  | Term frequency × inverse doc frequency   | Finds rare terms               | Ignores term proximity         |
-| BM25    | TF-IDF with saturation + doc length norm | Best for text search           | No semantic understanding      |
+| Method         | Description                              | When It's Good                | When It Fails                     |
+| -------------- | ---------------------------------------- | ----------------------------- | --------------------------------- |
+| Keyword        | Exact string match                       | Searching for code identifiers| Synonyms, typos, related terms    |
+| TF-IDF         | Term frequency × inverse doc frequency   | Finds rare terms              | Ignores term proximity            |
+| BM25           | TF-IDF with saturation + doc length norm | Best for text search          | No semantic understanding         |
 
 ### Why BM25?
 
