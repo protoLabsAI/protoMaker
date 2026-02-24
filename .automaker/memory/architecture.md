@@ -2571,3 +2571,35 @@ usageStats:
 - **Problem solved:** UI state (sidebar toggle, current project, column order) is small/fast to access; React Query cache can be large and async-heavy
 - **Why this works:** localStorage is sync, small (<5MB), suitable for small config state. IndexedDB is async, large (50MB+), better for bulk query results. Using both matches storage capability to data type and access pattern.
 - **Trade-offs:** More complex (2 storage layers), but each optimized for its use case. localStorage provides sync access for UI (no render delays), IDB provides capacity for query cache without bloating main store.
+
+### Implemented two-layer defense: (1) SDK log level configuration to reduce overall noise, (2) Prompt seeding script to eliminate root cause of 'Prompt not found' errors. (2026-02-24)
+- **Context:** SDK limitation prevents complete error suppression via configuration alone. Could have chosen single approach.
+- **Why:** Root cause analysis revealed that preventing the error condition (seeding prompts) is the only way to eliminate console.error logs. Configuration alone provides value for other SDK logs (DEBUG/INFO/WARN) as defense-in-depth.
+- **Rejected:** Single approach of only configuring log levels (leaves console.error errors visible); single approach of only seeding without log config (leaves other SDK noise)
+- **Trade-offs:** More implementation complexity (two mechanisms) but comprehensive solution that addresses both symptoms and root cause. Makes setup requirements explicit.
+- **Breaking if changed:** If prompt seeding is not performed during initialization, the errors still appear. This creates a behavioral contract: seeding is now mandatory for clean logs, not optional.
+
+#### [Pattern] Used dynamic import with try-catch to configure Langfuse SDK, relying on @langfuse/core as a transitive dependency via @langfuse/otel, without adding it as a direct dependency. (2026-02-24)
+- **Problem solved:** @langfuse/core is only available as a transitive dependency (not directly listed in package.json). Could have added it as explicit dependency or skipped SDK configuration.
+- **Why this works:** Graceful degradation pattern: SDK configuration is 'nice-to-have' not 'required'. If @langfuse/core becomes unavailable, the application continues working without the optimized log level. Avoids unnecessary direct dependency on implementation detail of Langfuse's dependency tree.
+- **Trade-offs:** More defensive code (try-catch wrapping) vs. lighter dependency tree. Configuration is optional/best-effort rather than guaranteed. Silent failure if transitive dependency is removed.
+
+#### [Pattern] Documented external SDK limitation (Langfuse issue #6482) in code comments and developer documentation to explain why log suppression alone cannot solve the problem. (2026-02-24)
+- **Problem solved:** Solution requires both seed script and log configuration. Without understanding why, future developers might attempt to remove seeding or replace it with pure log suppression.
+- **Why this works:** Prevents 'obvious but wrong' approaches by making the SDK limitation explicit. Establishes that this is a known upstream limitation, not a local implementation failure.
+- **Trade-offs:** Requires maintaining references to external issues that may change, but prevents recurring implementation discussions and attempted 'fixes' that won't work.
+
+#### [Gotcha] Silent race condition from dual independent intake paths for same external event. LinearIntakeBridge and SignalIntakeService both process Linear webhook events asynchronously, but only one had deduplication logic initially. (2026-02-24)
+- **Situation:** When Linear issue moves to 'In Progress', both webhook path (LinearIntakeBridge) and signal intake path (SignalIntakeService) trigger independently, each creating a feature without knowledge of the other.
+- **Root cause:** System evolved to have multiple intake mechanisms over time. Each path works correctly in isolation, so the bug only manifests when both paths are active. Developers may assume one path is 'primary' and dedup is handled there.
+- **How to avoid:** Multiple intake paths provide redundancy and reliability but require careful coordination at each entry point. More paths = more places to maintain dedup logic.
+
+#### [Pattern] Distributed deduplication pattern: when multiple independent intake mechanisms exist for same data source, deduplication logic must exist at each entry point, not centralized. (2026-02-24)
+- **Problem solved:** Only LinearIntakeBridge had findByLinearIssueId check; SignalIntakeService (different intake path for same source) didn't, despite both creating features from same Linear issues.
+- **Why this works:** Each intake path may fire independently or in any order. No guarantee which path wins the race. Centralizing dedup creates single point of failure and path-specific coordination problems. Each path must be defensive.
+- **Trade-offs:** More dedup code to maintain and keep synchronized vs. reliable deduplication regardless of which path processes the event first. Code duplication acceptable for architectural resilience.
+
+#### [Gotcha] Async event handlers for same external event create invisible coupling. Both webhook and signal intake handlers fire asynchronously without mutual awareness, creating race conditions that manifest as business logic bugs (duplicates). (2026-02-24)
+- **Situation:** Single Linear webhook triggers both LinearIntakeBridge.handleIntake() and IntegrationService→SignalIntakeService path independently, both running in parallel.
+- **Root cause:** Event-driven architecture doesn't enforce serial ordering of handlers. Async processing means both handlers start work before either finishes. Neither handler knows about the other.
+- **How to avoid:** Parallel handlers are fast and provide redundancy but require careful dedup at each handler. Serial handlers avoid races but are slower and add coupling.

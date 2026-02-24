@@ -6,9 +6,9 @@
 import type { Request, Response } from 'express';
 import { createLogger } from '@automaker/utils';
 import type { EventEmitter } from '../../../lib/events.js';
-import type { GitHubComment, FeatureCodeRabbitFeedback } from '@automaker/types';
+import type { GitHubComment } from '@automaker/types';
 import { codeRabbitParserService } from '../../../services/coderabbit-parser-service.js';
-import { featureBranchLinkingService } from '../../../services/feature-branch-linking-service.js';
+import { FeatureLoader } from '../../../services/feature-loader.js';
 import { execAsync, execEnv, getErrorMessage, logError } from './common.js';
 import { checkGitHubRemote } from './check-github-remote.js';
 
@@ -79,28 +79,22 @@ export function createResolvePRThreadsHandler(events: EventEmitter) {
       logger.debug(`PR #${prNumber} is for branch: ${branchName}`);
 
       // Step 2: Find feature linked to this branch
-      const featureLink = await featureBranchLinkingService.getFeatureByBranch(
-        projectPath,
-        branchName
-      );
+      const featureLoader = new FeatureLoader();
+      let feature = await featureLoader.findByBranchName(projectPath, branchName);
 
-      if (!featureLink) {
-        // Try to find by PR number
-        const featureLinkByPR = await featureBranchLinkingService.getFeatureByPR(
-          projectPath,
-          prNumber
-        );
-
-        if (!featureLinkByPR) {
-          res.status(404).json({
-            success: false,
-            error: `No feature found linked to branch ${branchName} or PR #${prNumber}`,
-          });
-          return;
-        }
+      if (!feature) {
+        feature = await featureLoader.findByPRNumber(projectPath, prNumber);
       }
 
-      const linkedFeatureId = featureLink?.featureId || '';
+      if (!feature) {
+        res.status(404).json({
+          success: false,
+          error: `No feature found linked to branch ${branchName} or PR #${prNumber}`,
+        });
+        return;
+      }
+
+      const linkedFeatureId = feature.id;
 
       // Step 3: Fetch PR comments using GraphQL (supports pagination)
       const commentsCmd = `gh api graphql -f query='
@@ -175,20 +169,7 @@ export function createResolvePRThreadsHandler(events: EventEmitter) {
         `${eligibleComments.length} comments meet severity threshold, ${skippedCount} skipped`
       );
 
-      // Step 6: Store feedback linked to feature
-      const feedback: FeatureCodeRabbitFeedback = {
-        featureId: linkedFeatureId,
-        branchName,
-        review: {
-          ...parseResult.review,
-          comments: eligibleComments,
-        },
-        processedAt: new Date().toISOString(),
-      };
-
-      await featureBranchLinkingService.storeCodeRabbitFeedback(projectPath, feedback);
-
-      // Step 7: Emit event for frontend/webhooks
+      // Step 6: Emit event for frontend/webhooks
       events.emit('coderabbit:feedback-processed', {
         featureId: linkedFeatureId,
         prNumber,

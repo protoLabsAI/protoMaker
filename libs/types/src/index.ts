@@ -484,7 +484,6 @@ export type {
   CodeRabbitSeverity,
   CodeRabbitComment,
   CodeRabbitReview,
-  FeatureBranchLink,
   FeatureCodeRabbitFeedback,
   CodeRabbitParseResult,
   ReviewThreadStatus,

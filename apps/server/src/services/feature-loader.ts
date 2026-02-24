@@ -340,6 +340,50 @@ export class FeatureLoader implements FeatureStore {
   }
 
   /**
+   * Find a feature by its branch name
+   * @param projectPath - Path to the project
+   * @param branchName - Git branch name to search for
+   * @returns The matching feature or null if not found
+   */
+  async findByBranchName(projectPath: string, branchName: string): Promise<Feature | null> {
+    if (!branchName || !branchName.trim()) {
+      return null;
+    }
+
+    const features = await this.getAll(projectPath);
+
+    for (const feature of features) {
+      if (feature.branchName === branchName) {
+        return feature;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Find a feature by its PR number
+   * @param projectPath - Path to the project
+   * @param prNumber - GitHub PR number to search for
+   * @returns The matching feature or null if not found
+   */
+  async findByPRNumber(projectPath: string, prNumber: number): Promise<Feature | null> {
+    if (!prNumber) {
+      return null;
+    }
+
+    const features = await this.getAll(projectPath);
+
+    for (const feature of features) {
+      if (feature.prNumber === prNumber) {
+        return feature;
+      }
+    }
+
+    return null;
+  }
+
+  /**
    * Find a feature by its Linear issue ID
    * @param projectPath - Path to the project
    * @param linearIssueId - Linear issue ID to search for

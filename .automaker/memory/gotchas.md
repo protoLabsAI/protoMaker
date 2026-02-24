@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 305
-  referenced: 158
-  successfulFeatures: 158
+  loaded: 308
+  referenced: 161
+  successfulFeatures: 161
 ---
 # gotchas
 
@@ -262,3 +262,13 @@ usageStats:
 - **Situation:** WebSocket event stream may contain duplicate tool-use events due to network retries or server-side resend logic
 - **Root cause:** Timestamp comparison is simpler than tracking event IDs across distributed components, but vulnerable to clock drift between client and server
 - **How to avoid:** Timestamp approach is 3 lines of code vs event ID registry (20+ lines). Trade-off: 1-2% edge case failures on high-latency networks vs code complexity
+
+#### [Gotcha] CLI command exit code 0 does not guarantee the intended state was achieved, especially for commands with deferred/async semantics. The `gh pr merge --auto` succeeds (exit 0) even when the PR remains OPEN pending CI checks. (2026-02-24)
+- **Situation:** The original bug: merge_pr tool reported success when PR wasn't actually merged because it only checked command exit code
+- **Root cause:** Commands like `gh pr merge --auto` have 'deferred success' semantics - they return success but schedule the actual merge for later when conditions are met
+- **How to avoid:** Trusting exit code is simpler (1 call) vs verification pattern (adds 1 API call). Verification adds ~100-200ms latency but prevents cascading bugs from incorrect assumptions
+
+#### [Gotcha] Langfuse SDK uses console.error directly for certain errors (e.g., 'Prompt not found'), completely bypassing the configurable logger. This means setting log level to ERROR does not suppress these errors. (2026-02-24)
+- **Situation:** Attempted to suppress SDK error logs via log level configuration, but discovered that specific error conditions use console.error directly.
+- **Root cause:** SDK implementation choice to bypass the logger for critical errors. This is a fundamental architectural limitation in the SDK itself (tracked as Langfuse issue #6482).
+- **How to avoid:** Must accept SDK limitation and address root cause (missing prompts) instead of symptom suppression. More maintainable but requires behavioral change (mandatory seeding).

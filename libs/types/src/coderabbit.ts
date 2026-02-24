@@ -43,17 +43,6 @@ export interface CodeRabbitReview {
 }
 
 /**
- * Feature linked to a PR/branch
- */
-export interface FeatureBranchLink {
-  featureId: string;
-  branchName: string;
-  prNumber?: number;
-  prUrl?: string;
-  linkedAt: string;
-}
-
-/**
  * CodeRabbit feedback mapped to feature
  */
 export interface FeatureCodeRabbitFeedback {

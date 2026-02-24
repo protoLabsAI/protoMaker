@@ -5,9 +5,9 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 94
-  referenced: 52
-  successfulFeatures: 52
+  loaded: 95
+  referenced: 53
+  successfulFeatures: 53
 ---
 # api
 
@@ -542,3 +542,10 @@ usageStats:
 - **Problem solved:** Added GET /api/ceremonies/status endpoint but actual Discord failure tracking not yet implemented in ceremonyService
 - **Why this works:** Prevents breaking API changes later when tracking is added. Clients can rely on field existing; implementation can be added without changing schema. Signals forward intent in codebase
 - **Trade-offs:** API has unused fields now; future work extends implementation not interface. Slightly misleading (0 doesn't mean no failures, could mean not tracked)
+
+### Return `success: false` with detailed error message when PR remains OPEN after merge command, rather than returning `success: true` with `autoMergeEnabled` flag (2026-02-24)
+- **Context:** Distinguishing between truly merged PRs vs auto-merge-pending PRs in the API response
+- **Why:** Callers expect `success: true` to mean 'work is done and landed' - returning true for OPEN PRs creates false confidence. Conservative approach prevents downstream callers from treating pending merges as completed work.
+- **Rejected:** Optimistic approach: return `{ success: true, autoMergeEnabled: true, checksPending: true }` - exposes internal state but invites misinterpretation that PR is landed
+- **Trade-offs:** Conservative approach forces callers to handle `success: false` cases, but ensures correct semantic meaning. Optimistic approach is more informative but semantically confusing.
+- **Breaking if changed:** If changed to optimistic success=true for OPEN PRs, callers that check success flag alone (ignoring metadata) would incorrectly assume PR is merged, causing bugs in downstream workflows

@@ -7,7 +7,7 @@ import type { Request, Response } from 'express';
 import { createLogger } from '@automaker/utils';
 import type { GitHubComment } from '@automaker/types';
 import { codeRabbitParserService } from '../../../services/coderabbit-parser-service.js';
-import { featureBranchLinkingService } from '../../../services/feature-branch-linking-service.js';
+import { FeatureLoader } from '../../../services/feature-loader.js';
 import { execAsync, execEnv, getErrorMessage, logError } from './common.js';
 import { checkGitHubRemote } from './check-github-remote.js';
 
@@ -64,21 +64,14 @@ export function createGetPRFeedbackHandler() {
       logger.debug(`PR #${prNumber} is for branch: ${branchName}`);
 
       // Step 2: Find feature linked to this branch (optional — manual PRs won't have one)
-      const featureLink = await featureBranchLinkingService.getFeatureByBranch(
-        projectPath,
-        branchName
-      );
+      const featureLoader = new FeatureLoader();
+      let feature = await featureLoader.findByBranchName(projectPath, branchName);
 
-      let linkedFeatureId = featureLink?.featureId || '';
-
-      if (!linkedFeatureId) {
-        // Try to find by PR number
-        const featureLinkByPR = await featureBranchLinkingService.getFeatureByPR(
-          projectPath,
-          prNumber
-        );
-        linkedFeatureId = featureLinkByPR?.featureId || '';
+      if (!feature) {
+        feature = await featureLoader.findByPRNumber(projectPath, prNumber);
       }
+
+      const linkedFeatureId = feature?.id || '';
 
       // Step 3: Fetch PR issue-level comments using GraphQL
       const commentsCmd = `gh api graphql -f query='
