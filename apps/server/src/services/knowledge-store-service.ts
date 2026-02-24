@@ -323,6 +323,129 @@ export class KnowledgeStoreService {
   }
 
   /**
+   * Find chunks similar to the given text, optionally filtered by source file.
+   * Used for deduplication before appending new learnings.
+   *
+   * @param projectPath - Project path
+   * @param text - Text to search for similar chunks
+   * @param sourceFile - Optional source file to filter results
+   * @param maxResults - Maximum number of results (default: 5)
+   * @returns Array of search results with BM25 scores
+   */
+  findSimilarChunks(
+    projectPath: string,
+    text: string,
+    sourceFile?: string,
+    maxResults: number = 5
+  ): KnowledgeSearchResult[] {
+    if (!this.db || !this.projectPath) {
+      return [];
+    }
+
+    if (this.projectPath !== projectPath) {
+      this.initialize(projectPath);
+    }
+
+    // Sanitize text for FTS5 query — remove special characters that break MATCH syntax
+    const sanitized = text
+      .replace(/['"*(){}[\]:^~!@#$%&\\|<>]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    if (!sanitized) {
+      return [];
+    }
+
+    // Truncate long queries to avoid FTS5 limits
+    const queryText = sanitized.split(' ').slice(0, 20).join(' ');
+
+    try {
+      let sql = `
+        SELECT
+          c.id, c.source_type, c.source_file, c.project_path,
+          c.chunk_index, c.heading, c.content, c.tags,
+          c.importance, c.created_at, c.updated_at,
+          bm25(chunks_fts) as score
+        FROM chunks_fts
+        JOIN chunks c ON chunks_fts.rowid = c.rowid
+        WHERE chunks_fts MATCH ?
+      `;
+
+      const params: unknown[] = [queryText];
+
+      if (sourceFile) {
+        sql += ' AND c.source_file = ?';
+        params.push(sourceFile);
+      }
+
+      sql += ' ORDER BY score LIMIT ?';
+      params.push(maxResults);
+
+      const rows = this.db.prepare(sql).all(...params) as Array<{
+        id: string;
+        source_type: string;
+        source_file: string;
+        project_path: string;
+        chunk_index: number;
+        heading: string | null;
+        content: string;
+        tags: string | null;
+        importance: number;
+        created_at: string;
+        updated_at: string;
+        score: number;
+      }>;
+
+      return rows.map((row) => ({
+        chunk: {
+          id: row.id,
+          sourceType: row.source_type as KnowledgeChunk['sourceType'],
+          sourceFile: row.source_file,
+          projectPath: row.project_path,
+          chunkIndex: row.chunk_index,
+          heading: row.heading || undefined,
+          content: row.content,
+          tags: row.tags ? (JSON.parse(row.tags) as string[]) : undefined,
+          importance: row.importance,
+          createdAt: row.created_at,
+          updatedAt: row.updated_at,
+        },
+        score: row.score,
+      }));
+    } catch (error) {
+      logger.warn('findSimilarChunks query failed:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Rebuild the FTS5 index by re-scanning project files.
+   * Called after learning appends to make new content immediately searchable.
+   *
+   * @param projectPath - Project path to rebuild index for
+   */
+  rebuildIndex(projectPath: string): void {
+    if (!this.db || !this.projectPath) {
+      logger.warn('Cannot rebuild index: knowledge store not initialized');
+      return;
+    }
+
+    if (this.projectPath !== projectPath) {
+      this.initialize(projectPath);
+    }
+
+    if (!this.db) return;
+
+    try {
+      // Rebuild FTS5 index from chunks table
+      this.db.exec("INSERT INTO chunks_fts(chunks_fts) VALUES('rebuild')");
+      logger.debug('FTS5 index rebuilt successfully');
+    } catch (error) {
+      logger.warn('Failed to rebuild FTS5 index:', error);
+    }
+  }
+
+  /**
    * Close the database connection
    */
   close(): void {

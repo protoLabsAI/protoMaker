@@ -557,14 +557,37 @@ export function formatLearning(learning: LearningEntry): string {
 }
 
 /**
+ * Deduplication checker callback
+ * Returns true if the learning should be skipped (duplicate found)
+ */
+export type DedupChecker = (
+  projectPath: string,
+  learning: LearningEntry,
+  targetFile: string
+) => Promise<boolean>;
+
+/**
+ * Callback to rebuild the knowledge store index after appending
+ */
+export type IndexRebuilder = (projectPath: string) => Promise<void>;
+
+/**
  * Append a learning to the appropriate category file
  * Creates the file with frontmatter if it doesn't exist
  * Uses file locking to prevent TOCTOU race conditions
+ *
+ * @param projectPath - Project root path
+ * @param learning - Learning entry to append
+ * @param fsModule - File system module
+ * @param dedupChecker - Optional callback to check for duplicates before writing
+ * @param indexRebuilder - Optional callback to rebuild search index after writing
  */
 export async function appendLearning(
   projectPath: string,
   learning: LearningEntry,
-  fsModule: MemoryFsModule
+  fsModule: MemoryFsModule,
+  dedupChecker?: DedupChecker,
+  indexRebuilder?: IndexRebuilder
 ): Promise<void> {
   console.log(
     `[MemoryLoader] appendLearning called: category=${learning.category}, type=${learning.type}`
@@ -577,6 +600,17 @@ export async function appendLearning(
     .replace(/[^a-z0-9-]/g, '');
   const fileName = `${sanitizedCategory || 'general'}.md`;
   const filePath = path.join(memoryDir, fileName);
+
+  // Check for duplicates before appending
+  if (dedupChecker) {
+    const isDuplicate = await dedupChecker(projectPath, learning, fileName);
+    if (isDuplicate) {
+      console.log(
+        `[MemoryLoader] Deduplicated learning: similar entry already exists in ${fileName}`
+      );
+      return;
+    }
+  }
 
   // Use file locking to prevent race conditions when multiple processes
   // try to create the same file simultaneously
@@ -605,6 +639,11 @@ export async function appendLearning(
       await fsModule.writeFile(filePath, content);
     }
   });
+
+  // Rebuild index after successful append so new chunk is immediately searchable
+  if (indexRebuilder) {
+    await indexRebuilder(projectPath);
+  }
 }
 
 /**
