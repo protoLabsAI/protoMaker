@@ -84,6 +84,7 @@ import { randomUUID } from 'crypto';
 import path from 'path';
 import * as secureFs from '../lib/secure-fs.js';
 import type { EventEmitter } from '../lib/events.js';
+import { ensureCleanWorktree } from '../lib/worktree-guard.js';
 import {
   createAutoModeOptions,
   createCustomOptions,
@@ -2024,6 +2025,10 @@ export class AutoModeService {
       // - skipTests=false (automated testing): go directly to 'verified' (no manual verify needed)
       // - skipTests=true (manual verification): go to 'waiting_approval' for manual review
       const finalStatus = feature.skipTests ? 'waiting_approval' : 'verified';
+
+      // Ensure worktree is clean before marking as verified
+      await ensureCleanWorktree(workDir, featureId);
+
       await this.updateFeatureStatus(projectPath, featureId, finalStatus);
 
       // Record success to reset consecutive failure tracking
@@ -2965,6 +2970,9 @@ Complete the pipeline step instructions above. Review the previous work and appl
 
       const finalStatus = feature.skipTests ? 'waiting_approval' : 'verified';
 
+      // Ensure worktree is clean before marking as verified
+      await ensureCleanWorktree(workDir, featureId);
+
       await this.updateFeatureStatus(projectPath, featureId, finalStatus);
 
       this.emitAutoModeEvent('auto_mode_feature_complete', {
@@ -3165,6 +3173,10 @@ Complete the pipeline step instructions above. Review the previous work and appl
 
       // Determine final status
       const finalStatus = feature.skipTests ? 'waiting_approval' : 'verified';
+
+      // Ensure worktree is clean before marking as verified
+      await ensureCleanWorktree(workDir, featureId);
+
       await this.updateFeatureStatus(projectPath, featureId, finalStatus);
 
       logger.info('Pipeline resume completed successfully');
@@ -3563,6 +3575,10 @@ Address the follow-up instructions above. Review the previous work and make the 
       // - skipTests=false (automated testing): go directly to 'verified' (no manual verify needed)
       // - skipTests=true (manual verification): go to 'waiting_approval' for manual review
       const finalStatus = feature?.skipTests ? 'waiting_approval' : 'verified';
+
+      // Ensure worktree is clean before marking as verified
+      await ensureCleanWorktree(workDir, featureId);
+
       await this.updateFeatureStatus(projectPath, featureId, finalStatus);
 
       // Record success to reset consecutive failure tracking
