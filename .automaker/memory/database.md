@@ -49,3 +49,22 @@ usageStats:
 - **Problem solved:** SignalIntakeService created features from Linear signals but didn't store linearIssueId, making it impossible to deduplicate based on source system identity.
 - **Why this works:** Without the external ID stored, dedup becomes fragile: you'd have to match on title (couples to title format), content (changes break dedup), or timestamps (unreliable). Source ID is the source of truth for 'is this the same external thing?'.
 - **Trade-offs:** Slight data model expansion (one extra field) vs. reliable deduplication and source tracking. Field becomes a foreign key-like identifier for dedup queries.
+
+### Enabled SQLite WAL (Write-Ahead Logging) mode via pragma('journal_mode = WAL') for the knowledge store database (2026-02-24)
+- **Context:** Knowledge store needs high concurrent read performance as it will be frequently queried during development
+- **Why:** WAL mode separates read and write operations, allowing concurrent reads while writes are in progress. Default rollback journal serializes all operations.
+- **Rejected:** Default rollback journal mode - simpler but blocks reads during writes
+- **Trade-offs:** Gains: Much better concurrent read performance. Losses: Requires additional cleanup on process exit (checkpoint operations), doesn't work on all filesystems (network drives, some cloud storage), more complex backup strategy
+- **Breaking if changed:** Removing WAL mode would cause read operations to block during writes, significantly degrading performance under concurrent access patterns
+
+#### [Pattern] Used SQLite FTS5 virtual table with automatic INSERT/UPDATE/DELETE triggers to keep full-text search index synchronized with main chunks table (2026-02-24)
+- **Problem solved:** Need efficient full-text search on chunk content and headings without manual index management scattered throughout application code
+- **Why this works:** Automatic triggers guarantee index stays synchronized with source data. Single source of truth: triggers defined once at schema time, then always applied. Prevents bugs from forgotten index updates in application code.
+- **Trade-offs:** Gains: Simpler application code, guaranteed consistency, single point of maintenance. Losses: Slight write overhead from trigger execution, less visibility into when updates happen
+
+### Created comprehensive database schema with full metadata columns (source_type, source_file, project_path, chunk_index, heading, tags, importance, created_at, updated_at) rather than minimal schema (2026-02-24)
+- **Context:** Designing schema for knowledge store that needs rich filtering, sorting, and statistics capabilities
+- **Why:** Comprehensive metadata enables future features: filter by source type, track chunk origin, calculate stats by source, sort by importance/timestamp, and organize by project. Better to include now than add columns later.
+- **Rejected:** Minimal schema with just id, content, and created_at - simpler but would require schema migration to add these later
+- **Trade-offs:** Gains: Flexibility for future features, rich statistics possible. Losses: More storage overhead, more complex inserts/updates, more careful typing needed
+- **Breaking if changed:** Removing columns would lose capability to filter/sort by source or importance, break any code depending on these fields
