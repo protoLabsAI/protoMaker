@@ -15,6 +15,7 @@ import {
   NotebookPen,
   PartyPopper,
   Palette,
+  CalendarDays,
 } from 'lucide-react';
 import type { NavSection, NavItem } from '../types';
 import type { KeyboardShortcut } from '@/hooks/use-keyboard-shortcuts';
@@ -163,6 +164,11 @@ export function useNavigation({
         id: 'designs',
         label: 'Designs',
         icon: Palette,
+      },
+      {
+        id: 'calendar',
+        label: 'Calendar',
+        icon: CalendarDays,
       },
     ];
 
