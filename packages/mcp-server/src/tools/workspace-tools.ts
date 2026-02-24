@@ -61,6 +61,14 @@ export const workspaceTools: Tool[] = [
           type: 'string',
           description: 'Text search in title and description',
         },
+        dueBefore: {
+          type: 'string',
+          description: 'Filter features with dueDate before this date (YYYY-MM-DD format)',
+        },
+        dueAfter: {
+          type: 'string',
+          description: 'Filter features with dueDate after this date (YYYY-MM-DD format)',
+        },
         limit: {
           type: 'number',
           description: 'Maximum results to return (default: 50)',
