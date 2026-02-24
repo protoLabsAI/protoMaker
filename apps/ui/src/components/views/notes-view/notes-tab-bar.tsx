@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { X, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button } from '@protolabs-ai/ui/atoms';
+import { Button, Popover, PopoverContent, PopoverTrigger } from '@protolabs-ai/ui/atoms';
 import { Input } from '@protolabs-ai/ui/atoms';
 
 interface NotesTabBarProps {
@@ -23,6 +23,7 @@ export function NotesTabBar({
 }: NotesTabBarProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const handleDoubleClick = useCallback((tabId: string, currentName: string) => {
     setEditingId(tabId);
@@ -70,15 +71,61 @@ export function NotesTabBar({
               <>
                 <span className="max-w-[120px] truncate">{tab.name}</span>
                 {tabs.length > 1 && (
-                  <button
-                    className="inline-flex rounded p-px text-muted-foreground/50 opacity-0 hover:bg-muted hover:text-foreground group-hover:opacity-100 transition-opacity"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onClose(tab.id);
+                  <Popover
+                    open={confirmDeleteId === tab.id}
+                    onOpenChange={(open) => {
+                      if (!open) setConfirmDeleteId(null);
                     }}
                   >
-                    <X className="size-3" />
-                  </button>
+                    <PopoverTrigger asChild>
+                      <button
+                        className="inline-flex rounded p-px text-muted-foreground/50 opacity-0 hover:bg-muted hover:text-foreground group-hover:opacity-100 transition-opacity"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setConfirmDeleteId(tab.id);
+                        }}
+                      >
+                        <X className="size-3" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      className="w-64 p-3"
+                      onClick={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => e.stopPropagation()}
+                    >
+                      <div className="space-y-3">
+                        <div>
+                          <h4 className="font-medium text-sm">Delete tab?</h4>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            This will permanently delete "{tab.name}".
+                          </p>
+                        </div>
+                        <div className="flex gap-2 justify-end">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setConfirmDeleteId(null);
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onClose(tab.id);
+                              setConfirmDeleteId(null);
+                            }}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                 )}
               </>
             )}
