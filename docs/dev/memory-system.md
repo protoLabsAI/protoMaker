@@ -33,16 +33,16 @@ Files are the source of truth. The knowledge store is derived and can be rebuilt
 
 Memory is organized into categories, each with its own file:
 
-| File              | Category      | Purpose                                     | Importance |
-| ----------------- | ------------- | ------------------------------------------- | ---------- |
-| `MEMORY.md`       | Core          | Always loaded, high-impact patterns         | 1.0        |
-| `patterns.md`     | Patterns      | Code patterns, conventions, anti-patterns   | 0.9        |
-| `debugging.md`    | Debugging     | Common errors, fixes, troubleshooting       | 0.8        |
-| `architecture.md` | Architecture  | System design decisions, component roles    | 0.9        |
-| `api.md`          | API           | API usage, endpoint patterns                | 0.7        |
-| `testing.md`      | Testing       | Test patterns, coverage strategies          | 0.7        |
-| `deployment.md`   | Deployment    | Build, release, Docker, CI/CD               | 0.6        |
-| `gotchas.md`      | Gotchas       | Surprising behavior, footguns, edge cases   | 0.8        |
+| File              | Category     | Purpose                                   | Importance |
+| ----------------- | ------------ | ----------------------------------------- | ---------- |
+| `MEMORY.md`       | Core         | Always loaded, high-impact patterns       | 1.0        |
+| `patterns.md`     | Patterns     | Code patterns, conventions, anti-patterns | 0.9        |
+| `debugging.md`    | Debugging    | Common errors, fixes, troubleshooting     | 0.8        |
+| `architecture.md` | Architecture | System design decisions, component roles  | 0.9        |
+| `api.md`          | API          | API usage, endpoint patterns              | 0.7        |
+| `testing.md`      | Testing      | Test patterns, coverage strategies        | 0.7        |
+| `deployment.md`   | Deployment   | Build, release, Docker, CI/CD             | 0.6        |
+| `gotchas.md`      | Gotchas      | Surprising behavior, footguns, edge cases | 0.8        |
 
 **Importance scores** influence retrieval ranking. Higher importance → more likely to be retrieved.
 
@@ -50,7 +50,7 @@ Memory is organized into categories, each with its own file:
 
 Memory files use markdown with YAML frontmatter:
 
-```markdown
+````markdown
 ---
 category: patterns
 importance: 0.9
@@ -86,26 +86,26 @@ const features = featureLoader.listFeatures();
 import { classifyError } from '@protolabs-ai/utils';
 
 try {
-  // ... operation
+// ... operation
 } catch (err) {
-  const classified = classifyError(err);
-  logger.error(\`\${classified.category}: \${classified.message}\`);
+const classified = classifyError(err);
+logger.error(\`\${classified.category}: \${classified.message}\`);
 }
 \```
 
 **Why:** `classifyError` maps technical errors to user-friendly categories (auth, network, validation, etc.).
 
 **When to use:** Catch blocks that surface errors to users.
-```
+````
 
 ### Frontmatter Fields
 
-| Field          | Type       | Required | Description                                |
-| -------------- | ---------- | -------- | ------------------------------------------ |
-| `category`     | string     | Yes      | Category name (matches filename stem)      |
-| `importance`   | number     | No       | 0.0-1.0, affects retrieval ranking         |
-| `tags`         | string[]   | No       | Keywords for filtering                     |
-| `last_updated` | ISO 8601   | No       | Timestamp of last append                   |
+| Field          | Type     | Required | Description                           |
+| -------------- | -------- | -------- | ------------------------------------- |
+| `category`     | string   | Yes      | Category name (matches filename stem) |
+| `importance`   | number   | No       | 0.0-1.0, affects retrieval ranking    |
+| `tags`         | string[] | No       | Keywords for filtering                |
+| `last_updated` | ISO 8601 | No       | Timestamp of last append              |
 
 ## Write Pipeline
 
@@ -122,6 +122,7 @@ Based on your work, identify learnings worth preserving:
 4. **Architecture** — Design decisions you made and why
 
 For each learning:
+
 - **Context:** When does this apply?
 - **Pattern/Fix:** What's the solution?
 - **Why:** What's the rationale?
@@ -132,7 +133,7 @@ Format as markdown sections under the appropriate category.
 
 The agent returns structured markdown:
 
-```markdown
+````markdown
 ## Learnings
 
 ### Patterns
@@ -156,7 +157,7 @@ knowledgeStore.initialize(projectPath);
 **Why:** If KnowledgeStoreService needs embeddings immediately, it will fail if EmbeddingService isn't ready.
 
 **When to use:** When services depend on async initialization of other services.
-```
+````
 
 ### 2. Deduplication Check
 
@@ -322,9 +323,11 @@ Token estimation: `content.length / 4` (approximate 4 chars per token).
 You are summarizing a category memory file that has grown too large. Your task is to compress the content while preserving the most important patterns, decisions, and lessons.
 
 # Original Content:
+
 {content}
 
 # Instructions:
+
 1. Preserve all critical information (architectural decisions, gotchas, patterns)
 2. Remove redundant or less important details
 3. Keep the YAML frontmatter intact
@@ -479,17 +482,17 @@ The knowledge store will automatically discover the new file and index it.
 
 Higher importance → more likely to be retrieved.
 
-| Category       | Importance | Rationale                                    |
-| -------------- | ---------- | -------------------------------------------- |
-| MEMORY.md      | 1.0        | Core patterns, always relevant               |
-| patterns.md    | 0.9        | High-value reusable patterns                 |
-| architecture.md| 0.9        | Design decisions affect all future work      |
-| debugging.md   | 0.8        | Common errors save time                      |
-| gotchas.md     | 0.8        | Surprising behavior is critical              |
-| api.md         | 0.7        | API usage is important but project-specific  |
-| testing.md     | 0.7        | Testing patterns are valuable but optional   |
-| deployment.md  | 0.6        | Deployment is infrequent                     |
-| performance.md | 0.7        | Optimization is important but not urgent     |
+| Category        | Importance | Rationale                                   |
+| --------------- | ---------- | ------------------------------------------- |
+| MEMORY.md       | 1.0        | Core patterns, always relevant              |
+| patterns.md     | 0.9        | High-value reusable patterns                |
+| architecture.md | 0.9        | Design decisions affect all future work     |
+| debugging.md    | 0.8        | Common errors save time                     |
+| gotchas.md      | 0.8        | Surprising behavior is critical             |
+| api.md          | 0.7        | API usage is important but project-specific |
+| testing.md      | 0.7        | Testing patterns are valuable but optional  |
+| deployment.md   | 0.6        | Deployment is infrequent                    |
+| performance.md  | 0.7        | Optimization is important but not urgent    |
 
 Importance is a **multiplier** in the retrieval scoring function. A chunk with `importance=0.9` and BM25 score of -5 effectively gets a boosted score.
 
@@ -508,12 +511,12 @@ Check `retrieval_mode` in response — should be `"hybrid"` if embeddings are wo
 
 ### Common Issues
 
-| Issue                          | Diagnosis                                  | Fix                                  |
-| ------------------------------ | ------------------------------------------ | ------------------------------------ |
-| No results returned            | `totalChunks: 0` in `/stats`               | Run `/rebuild` to reindex            |
-| `retrieval_mode: "bm25"`       | Embeddings not ready                       | Check `/embedding-status`, wait      |
-| Poor ranking                   | BM25 scores near 0                         | Query too broad or corpus incomplete |
-| Slow search (> 500ms)          | Too many candidates or large corpus        | Lower candidate limit or use ANN     |
+| Issue                    | Diagnosis                           | Fix                                  |
+| ------------------------ | ----------------------------------- | ------------------------------------ |
+| No results returned      | `totalChunks: 0` in `/stats`        | Run `/rebuild` to reindex            |
+| `retrieval_mode: "bm25"` | Embeddings not ready                | Check `/embedding-status`, wait      |
+| Poor ranking             | BM25 scores near 0                  | Query too broad or corpus incomplete |
+| Slow search (> 500ms)    | Too many candidates or large corpus | Lower candidate limit or use ANN     |
 
 ### Force Rebuild
 
@@ -550,11 +553,7 @@ async function completeTask(feature: Feature) {
 
   // Check for duplicates
   for (const learning of learnings) {
-    const isDuplicate = await checkDuplicate(
-      projectPath,
-      learning.text,
-      learning.category
-    );
+    const isDuplicate = await checkDuplicate(projectPath, learning.text, learning.category);
 
     if (!isDuplicate) {
       appendToMemory(projectPath, learning.category, learning.text);
