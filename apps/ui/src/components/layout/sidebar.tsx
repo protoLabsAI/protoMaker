@@ -6,6 +6,7 @@ const logger = createLogger('Sidebar');
 import { cn, isMac } from '@/lib/utils';
 import { useAppStore } from '@/store/app-store';
 import { useNotificationsStore } from '@/store/notifications-store';
+import { useCeremonyStore } from '@/store/ceremony-store';
 import { useKeyboardShortcuts, useKeyboardShortcutsConfig } from '@/hooks/use-keyboard-shortcuts';
 import { getElectronAPI, isElectron } from '@/lib/electron';
 import { initializeProject, hasAppSpec, hasAutomakerDir } from '@/lib/project-init';
@@ -96,6 +97,9 @@ export function Sidebar() {
 
   // Get unread notifications count
   const unreadNotificationsCount = useNotificationsStore((s) => s.unreadCount);
+
+  // Get unread ceremony event count
+  const unreadCeremonyCount = useCeremonyStore((s) => s.unreadCount);
 
   // State for delete project confirmation dialog
   const [showDeleteProjectDialog, setShowDeleteProjectDialog] = useState(false);
@@ -260,6 +264,7 @@ export function Sidebar() {
     cycleNextProject,
     unviewedValidationsCount,
     unreadNotificationsCount,
+    unreadCeremonyCount,
     isSpecGenerating: isCurrentProjectGeneratingSpec,
   });
 

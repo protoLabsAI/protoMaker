@@ -13,6 +13,7 @@ import {
   Inbox,
   Settings,
   NotebookPen,
+  PartyPopper,
 } from 'lucide-react';
 import type { NavSection, NavItem } from '../types';
 import type { KeyboardShortcut } from '@/hooks/use-keyboard-shortcuts';
@@ -55,6 +56,8 @@ interface UseNavigationProps {
   unviewedValidationsCount?: number;
   /** Count of unread notifications to show on Notifications nav item */
   unreadNotificationsCount?: number;
+  /** Count of unread ceremony events */
+  unreadCeremonyCount?: number;
   /** Whether spec generation is currently running for the current project */
   isSpecGenerating?: boolean;
 }
@@ -74,6 +77,7 @@ export function useNavigation({
   cycleNextProject,
   unviewedValidationsCount,
   unreadNotificationsCount,
+  unreadCeremonyCount,
   isSpecGenerating,
 }: UseNavigationProps) {
   // Track if current project has a GitHub remote
@@ -209,6 +213,12 @@ export function useNavigation({
           icon: Inbox,
         },
         {
+          id: 'ceremonies',
+          label: 'Ceremonies',
+          icon: PartyPopper,
+          count: unreadCeremonyCount,
+        },
+        {
           id: 'notifications',
           label: 'Notifications',
           icon: Bell,
@@ -233,6 +243,7 @@ export function useNavigation({
     hasGitHubRemote,
     unviewedValidationsCount,
     unreadNotificationsCount,
+    unreadCeremonyCount,
     isSpecGenerating,
   ]);
 
