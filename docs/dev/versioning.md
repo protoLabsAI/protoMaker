@@ -11,8 +11,8 @@ All `@automaker/*` and `@protolabs/*` packages in `libs/` share a single version
 | Package Group              | Versioning                     | Published    |
 | -------------------------- | ------------------------------ | ------------ |
 | `libs/*` (13 packages)     | Fixed (all share same version) | Yes (npm)    |
+| `packages/mcp-server`      | Fixed (same version as libs)   | Yes (npm)    |
 | `apps/server`, `apps/ui`   | Mirrors root version           | No (private) |
-| `packages/mcp-server`      | Independent                    | Yes (npm)    |
 | `packages/create-protolab` | Independent                    | Yes (npm)    |
 
 ## Commit Message Format
@@ -42,6 +42,7 @@ type(scope): description
 | `ci`       | CI config changes            | None         |
 | `style`    | Formatting, whitespace       | None         |
 | `revert`   | Revert a previous commit     | Patch        |
+| `epic`     | Epic-scoped commit           | Minor (0.x)  |
 
 ### Examples
 
@@ -86,12 +87,22 @@ npx changeset add --empty  # Creates an empty changeset (for chore/docs changes)
 
 ## Release Process
 
-### Automatic (CI)
+### Automated Pipeline (CI)
 
-1. PRs with `.changeset/*.md` files accumulate on `main`
-2. The `changeset-release.yml` workflow creates/updates a "Version Packages" PR
-3. This PR shows all pending changes and the computed version bump
-4. Merging the PR bumps all package versions and generates `CHANGELOG.md`
+The full release flow is automated via `changeset-release.yml`:
+
+```
+PR merged → changesets/action creates "Version Packages" PR
+  → Merge Version PR → npm publish + GitHub Release + site changelog refresh
+```
+
+1. **Prepare a changeset** — run `npm run release:prepare` to auto-generate a changeset from conventional commits since the last tag, or use `npx changeset` for interactive mode
+2. **Commit the changeset file** with your PR (or as a standalone PR)
+3. **CI opens a "Version Packages" PR** showing pending version bumps and changelog entries
+4. **Merge the Version Packages PR** — CI automatically:
+   - Publishes all packages to npm (`changeset publish`)
+   - Creates a GitHub Release with `--generate-notes` (triggers Electron builds via `release.yml`)
+   - Regenerates site data (`npm run stats:generate`) and commits to main
 
 ### Manual
 
@@ -106,17 +117,10 @@ npm run changeset:version
 npm run changeset:publish
 ```
 
-### Creating a GitHub Release (triggers Electron builds)
+### Prerequisites
 
-After `changeset:version` is merged:
-
-```bash
-git tag v0.X.Y
-git push origin v0.X.Y
-gh release create v0.X.Y --generate-notes
-```
-
-This triggers `release.yml` which builds Electron binaries for macOS, Windows, and Linux.
+- `NPM_TOKEN` secret must be set in GitHub repo settings (Settings → Secrets → Actions)
+- A baseline git tag (e.g., `v0.2.0`) must exist for `release:prepare` to analyze commits
 
 ## Roadmap
 

@@ -16,6 +16,7 @@
       "@automaker/llm-providers",
       "@automaker/observability",
       "@automaker/git-utils",
+      "@automaker/mcp-server",
       "@protolabs/ui"
     ]
   ],

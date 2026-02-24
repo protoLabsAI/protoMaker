@@ -21,6 +21,7 @@ module.exports = {
         'build',
         'ci',
         'revert',
+        'epic',
       ],
     ],
   },

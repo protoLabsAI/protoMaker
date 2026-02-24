@@ -68,6 +68,7 @@
     "changeset:version": "changeset version",
     "changeset:publish": "changeset publish",
     "changeset:status": "changeset status",
+    "release:prepare": "node scripts/prepare-release-changeset.mjs",
     "stats:generate": "node site/scripts/generate-stats.mjs && node site/scripts/generate-changelog.mjs && node site/scripts/generate-roadmap.mjs",
     "stats:generate:full": "node site/scripts/generate-stats.mjs --with-ledger && node site/scripts/generate-changelog.mjs && node site/scripts/generate-roadmap.mjs"
   },
