@@ -142,7 +142,6 @@ function getContextDir(projectPath: string): string {
   return path.join(projectPath, '.automaker', 'context');
 }
 
-
 /**
  * Load context metadata from the metadata file
  */
@@ -297,7 +296,8 @@ export async function loadContextFiles(
     if (useChunkedRetrieval) {
       try {
         // Build query from task context
-        const query = taskContext.title + (taskContext.description ? ' ' + taskContext.description : '');
+        const query =
+          taskContext.title + (taskContext.description ? ' ' + taskContext.description : '');
 
         // Search for relevant chunks using FTS5 BM25
         const searchResults = knowledgeStore.search(projectPath, query, {
