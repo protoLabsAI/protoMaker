@@ -36,6 +36,9 @@ docs/.vitepress/cache/
 # Runtime data — never git-track
 .automaker/ledger/
 .automaker/recovery/
+.automaker/checkpoints/
+.automaker/actionable-items.json
+.automaker/content/
 
 # Instance-specific — each machine starts fresh
 .automaker/projects/

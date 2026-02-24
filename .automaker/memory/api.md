@@ -5,9 +5,9 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 85
-  referenced: 50
-  successfulFeatures: 50
+  loaded: 93
+  referenced: 52
+  successfulFeatures: 52
 ---
 # api
 
@@ -518,3 +518,27 @@ usageStats:
 - **Problem solved:** When a project has no completed features, API could error out, return null, or return empty structure. Must decide whether 'no data' is an error condition or valid response.
 - **Why this works:** Clients always receive same response shape, eliminating shape-checking conditionals and null-guard code. Error responses reserved for actual failures (invalid projectPath). Treat 'empty dataset' as valid state, not error state.
 - **Trade-offs:** Slightly more verbose response size, but eliminates defensive programming in clients. Empty arrays are safe for iteration (clients never need 'if (data)' checks).
+
+#### [Pattern] Public API for clearing internal dedup state becomes necessary when retry mechanisms exist (2026-02-24)
+- **Problem solved:** clearProcessedProject() method was added as public, implying external systems need to manage the dedup guard
+- **Why this works:** Dedup guards create persistent internal state. Retry mechanisms require the ability to reset this state, so it cannot remain purely internal. The alternative (internal-only reset) would couple retry logic to the service
+- **Trade-offs:** Exposes implementation detail but enables loose coupling for retry mechanisms
+
+### Unified CeremonyService.getStatus() method consolidates separate getStatus() and getReflectionStatus() methods into single call (2026-02-24)
+- **Context:** Multiple status endpoints needed ceremony and reflection state, requiring two separate service calls
+- **Why:** Eliminates redundant queries and simplifies the interface - callers get all state in one call. Ceremony and reflection state are always needed together in practice.
+- **Rejected:** Keeping separate methods would maintain separation of concerns but increase call sites and risk inconsistency if calls aren't paired
+- **Trade-offs:** Easier/faster (single call) but all callers receive all fields even if they only need some. More data passed around than strictly necessary.
+- **Breaking if changed:** Code expecting separate getStatus() and getReflectionStatus() methods will fail; any logic relying on lazy evaluation of reflection status will change
+
+### emitDiscordEvent returns Promise<boolean> with validation-level failures returning false rather than throwing. Precondition checks (undefined channelId) happen inside the method. (2026-02-24)
+- **Context:** Method had implicit failure modes (Discord not configured, missing emitter, invalid channelId) that went undetected. Callers couldn't distinguish success from failure.
+- **Why:** Signal failures to callers via return value instead of exceptions, enabling graceful degradation. Pushes validation responsibility to the method that knows its requirements.
+- **Rejected:** Throw exceptions (would crash ceremony service); Return error objects (more complex caller logic); Validate at caller level (scattered validation, missed cases)
+- **Trade-offs:** Easier: Non-throwing failures allow ceremony service to stay up. Harder: Callers must check return value. Harder: Lost error details in return value.
+- **Breaking if changed:** Exception-based error handlers expecting throws. Code that ignores return value will silently skip counter increments. Code that assumed all events emit will have different behavior.
+
+#### [Pattern] Endpoint returns placeholder value (discordPostFailures: 0) for fields not yet tracked in service layer (2026-02-24)
+- **Problem solved:** Added GET /api/ceremonies/status endpoint but actual Discord failure tracking not yet implemented in ceremonyService
+- **Why this works:** Prevents breaking API changes later when tracking is added. Clients can rely on field existing; implementation can be added without changing schema. Signals forward intent in codebase
+- **Trade-offs:** API has unused fields now; future work extends implementation not interface. Slightly misleading (0 doesn't mean no failures, could mean not tracked)

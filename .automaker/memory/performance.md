@@ -111,3 +111,10 @@ usageStats:
 - **Problem solved:** getAgentPerformance loads and computes statistics across all completed features - expensive operation that could be called repeatedly by UI dashboards.
 - **Why this works:** Analytics data changes slowly in practice (features complete infrequently). 30s staleness is acceptable for non-transactional analytics. Timestamp-based TTL is simple - no distributed cache coordination, no event bus coupling.
 - **Trade-offs:** Accept up to 30s stale data to avoid invalidation complexity. Feature completion at T=0 queried at T=29 gets pre-completion stats. Works for analytics (not time-critical), not for transactional data.
+
+### 30-second polling interval via refetchInterval: 30000 for ceremony status (2026-02-24)
+- **Context:** Needed to surface Discord integration failures and ceremony counts in real-time UI
+- **Why:** 30s balances observability (status updates frequently enough to catch issues) with API load (not excessive requests). Avoids complexity/cost of WebSockets or Server-Sent Events
+- **Rejected:** Real-time via WebSockets (infrastructure complexity), 5s polling (API load), on-demand queries (stale data)
+- **Trade-offs:** UI may be up to 30s behind reality; 30s polling is acceptable for non-critical status display vs maintenance burden of real-time infrastructure
+- **Breaking if changed:** Changing interval affects data freshness guarantees and API load; shorter intervals increase requests exponentially across all users

@@ -25,3 +25,10 @@ usageStats:
 - **Problem solved:** OAuth tokens expire; must decide when to refresh to balance API calls against operation reliability.
 - **Why this works:** Proactive refresh prevents cascading failures where API calls fail mid-operation due to expired token. 5-minute buffer provides margin for network delays.
 - **Trade-offs:** Uses more token refresh API calls, but eliminates user-facing failures. Storage of refreshToken required (accepted complexity).
+
+### All ceremony endpoints require X-API-Key header authentication, even read operations (GET /api/ceremonies/status) (2026-02-24)
+- **Context:** New observability endpoints follow existing authentication pattern in the codebase
+- **Why:** Consistent with existing API security model. Ceremony state is sensitive operational data - even status should be restricted to authenticated clients.
+- **Rejected:** Leaving status endpoint unauthenticated would violate security consistency and expose internal state
+- **Trade-offs:** Simpler integration for internal tools that have API key, but requires all consumers to manage credentials
+- **Breaking if changed:** Unauthenticated requests to either endpoint return 401/403; any client expecting unauthenticated status access will fail

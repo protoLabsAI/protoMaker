@@ -431,3 +431,15 @@ usageStats:
 - **Problem solved:** Ensuring accessibility for screen reader users
 - **Why this works:** Visual affordance (X icon) is not sufficient for assistive technology users. aria-label bridges semantic gap.
 - **Trade-offs:** Additional attribute cost is minimal. Requires discipline to maintain aria-label consistency as UI evolves.
+
+#### [Gotcha] Status row rendering depends on compound condition: settings.enabled && status?.data exists (2026-02-24)
+- **Situation:** Status section only appears when ceremonies enabled AND status API response succeeds
+- **Root cause:** Avoids showing broken UI if query fails; prevents showing stale data when ceremonies disabled. Keeps related data together
+- **How to avoid:** Simple logic but creates hidden dependency: if status query fails, entire status display vanishes without indication. Users may miss Discord failures due to query failure
+
+### Warning banner reuses existing visual pattern (yellow border/bg, AlertTriangle icon) rather than creating new design (2026-02-24)
+- **Context:** Needed to warn about missing Discord integration in ceremony settings
+- **Why:** Maintains visual consistency across codebase. Users recognize yellow warning pattern from other features. Reduces design debt and cognitive load
+- **Rejected:** New custom design, red alert pattern, different icon
+- **Trade-offs:** Yellow warning is slightly less urgent-looking than red; maintains consistency at cost of visual differentiation. Prevents design system fragmentation
+- **Breaking if changed:** If codebase refactors warning pattern without updating all uses (like this banner), visual inconsistency breaks design intent. Requires tracking all uses
