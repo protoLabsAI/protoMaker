@@ -764,6 +764,9 @@ const { ContextFidelityService } = await import('./services/context-fidelity-ser
 const contextFidelityService = new ContextFidelityService();
 leadEngineerService.setContextFidelityService(contextFidelityService);
 
+// Wire KnowledgeStoreService for FTS5-powered reflection search
+leadEngineerService.setKnowledgeStoreService(knowledgeStoreService);
+
 await leadEngineerService.initialize();
 
 // Wire Lead Engineer service into auto-mode for delegated feature execution
