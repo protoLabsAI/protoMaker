@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSearch } from '@tanstack/react-router';
 import { useAppStore } from '@/store/app-store';
 import { useThemeStore } from '@/store/theme-store';
+import { useAIModelsStore } from '@/store/ai-models-store';
 import { useWorktreeStore } from '@/store/worktree-store';
 
 import { useSettingsView, type SettingsViewId } from './settings-view/hooks';
@@ -62,9 +63,8 @@ export function SettingsView() {
     setDefaultFeatureModel,
     promptCustomization,
     setPromptCustomization,
-    skipSandboxWarning,
-    setSkipSandboxWarning,
   } = useAppStore();
+  const { skipSandboxWarning, setSkipSandboxWarning } = useAIModelsStore();
   const { theme, setTheme } = useThemeStore();
   const { useWorktrees, setUseWorktrees } = useWorktreeStore();
 

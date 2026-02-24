@@ -11,7 +11,13 @@ import {
   useFileBrowser,
   setGlobalFileBrowser,
 } from '@/contexts/file-browser-context';
-import { useAppStore, getStoredTheme, type ThemeMode } from '@/store/app-store';
+import {
+  useAppStore,
+  useThemeStore,
+  useAIModelsStore,
+  getStoredTheme,
+  type ThemeMode,
+} from '@/store/app-store';
 import { useSetupStore } from '@/store/setup-store';
 import { useAuthStore } from '@/store/auth-store';
 import { getElectronAPI, isElectron } from '@/lib/electron';
@@ -165,16 +171,12 @@ function RootLayoutContent() {
     getEffectiveTheme,
     getEffectiveFontSans,
     getEffectiveFontMono,
-    // Subscribe to theme and font state to trigger re-renders when they change
-    theme,
-    fontFamilySans,
-    fontFamilyMono,
-    skipSandboxWarning,
-    setSkipSandboxWarning,
-    fetchCodexModels,
     sidebarOpen: _sidebarOpen,
     toggleSidebar: _toggleSidebar,
   } = useAppStore();
+  // Subscribe to theme and font state to trigger re-renders when they change
+  const { theme, fontFamilySans, fontFamilyMono } = useThemeStore();
+  const { skipSandboxWarning, setSkipSandboxWarning, fetchCodexModels } = useAIModelsStore();
   const { setupComplete, codexCliStatus } = useSetupStore();
   const navigate = useNavigate();
   const [isMounted, setIsMounted] = useState(false);
@@ -408,9 +410,7 @@ function RootLayoutContent() {
                 const settingsResult = await api.settings.getGlobal();
                 if (settingsResult.success && settingsResult.settings) {
                   const { settings: finalSettings, migrated } = await performSettingsMigration(
-                    settingsResult.settings as unknown as Parameters<
-                      typeof performSettingsMigration
-                    >[0]
+                    settingsResult.settings
                   );
 
                   if (migrated) {
@@ -571,7 +571,7 @@ function RootLayoutContent() {
         logger.debug('Settings fetched:', settingsResult.success ? 'success' : 'failed');
         if (settingsResult.success && settingsResult.settings) {
           const { settings: finalSettings } = await performSettingsMigration(
-            settingsResult.settings as unknown as Parameters<typeof performSettingsMigration>[0]
+            settingsResult.settings
           );
           logger.debug('Settings migrated, hydrating stores...');
           hydrateStoreFromSettings(finalSettings);

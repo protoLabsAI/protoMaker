@@ -630,7 +630,7 @@ export async function refreshSettingsFromServer(): Promise<boolean> {
       return false;
     }
 
-    const serverSettings = result.settings as unknown as GlobalSettings;
+    const serverSettings = result.settings!;
     const currentAppState = useAppStore.getState();
     const currentAIState = useAIModelsStore.getState();
 

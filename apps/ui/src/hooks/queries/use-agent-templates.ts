@@ -39,7 +39,7 @@ export function useAgentTemplates(role?: string) {
     queryKey: queryKeys.agentTemplates.all(role),
     queryFn: async (): Promise<AgentTemplateMetadata[]> => {
       const api = getElectronAPI();
-      const result = await (api as any).agentTemplates?.list(role);
+      const result = await api.agentTemplates.list(role);
       if (!result?.success) {
         throw new Error(result?.error || 'Failed to fetch agent templates');
       }

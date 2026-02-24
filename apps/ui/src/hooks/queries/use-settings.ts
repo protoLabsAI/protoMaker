@@ -29,7 +29,7 @@ export function useGlobalSettings() {
       if (!result.success) {
         throw new Error(result.error || 'Failed to fetch global settings');
       }
-      return result.settings as unknown as GlobalSettings;
+      return result.settings!;
     },
     staleTime: STALE_TIMES.SETTINGS,
   });
@@ -51,7 +51,7 @@ export function useProjectSettings(projectPath: string | undefined) {
       if (!result.success) {
         throw new Error(result.error || 'Failed to fetch project settings');
       }
-      return result.settings as unknown as ProjectSettings;
+      return result.settings!;
     },
     enabled: !!projectPath,
     staleTime: STALE_TIMES.SETTINGS,

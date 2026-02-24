@@ -77,7 +77,7 @@ export function GlowDonut({
                 borderRadius: '8px',
                 fontSize: '12px',
               }}
-              formatter={((v: number, name: string) => [formatValue(v), name]) as any}
+              formatter={(v, name) => [formatValue(v as number), name]}
             />
           </PieChart>
         </ResponsiveContainer>

@@ -498,7 +498,7 @@ export function useSettingsMigration(): MigrationState {
         try {
           const global = await api.settings.getGlobal();
           if (global.success && global.settings) {
-            serverSettings = global.settings as unknown as GlobalSettings;
+            serverSettings = global.settings!;
             logger.info(`Server has ${serverSettings.projects?.length ?? 0} projects`);
 
             // Update localStorage with fresh server data to keep cache in sync

@@ -198,9 +198,8 @@ export const AgentInfoPanel = memo(function AgentInfoPanel({
     return unsubscribe;
   }, [feature.id, shouldListenToEvents]);
 
-  // Cast properties once for use across render branches (index signature makes them `unknown`)
-  const featureModel = feature.model as string | undefined;
-  const featureSummary = feature.summary as string | undefined;
+  const featureModel = feature.model;
+  const featureSummary = feature.summary;
 
   // Model/Preset Info for Backlog Cards
   if (feature.status === 'backlog') {

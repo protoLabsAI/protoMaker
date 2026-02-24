@@ -397,6 +397,7 @@ export interface Feature {
    * All timestamps are ISO 8601 strings.
    */
   createdAt?: string; // When the feature was first created
+  updatedAt?: number; // Epoch ms timestamp of last modification
   completedAt?: string; // When the feature was marked as done or verified
   reviewStartedAt?: string; // When the feature entered review status
   /**
@@ -416,8 +417,6 @@ export interface Feature {
   domain?: string;
   /** Instance ID that has claimed this feature for execution */
   claimedBy?: string;
-
-  [key: string]: unknown; // Keep catch-all for extensibility
 }
 
 /**

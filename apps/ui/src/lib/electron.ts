@@ -18,6 +18,8 @@ import type {
   RepoResearchResult,
   GapAnalysisReport,
   AlignmentProposal,
+  GlobalSettings,
+  ProjectSettings,
 } from '@automaker/types';
 
 import { getJSON, setJSON, removeItem } from './storage';
@@ -766,6 +768,34 @@ export interface ElectronAPI {
       maxTurns?: number,
       systemPromptOverride?: string
     ) => Promise<{ success: boolean; error?: string }>;
+    queueList: (sessionId: string) => Promise<{
+      success: boolean;
+      queue?: Array<{
+        id: string;
+        message: string;
+        imagePaths?: string[];
+        model?: string;
+        thinkingLevel?: string;
+        addedAt: string;
+      }>;
+      error?: string;
+    }>;
+  };
+  agentTemplates: {
+    list: (role?: string) => Promise<{
+      success: boolean;
+      templates: Array<{
+        name: string;
+        displayName: string;
+        description: string;
+        role: string;
+        tier: number;
+        model?: string;
+        tags?: string[];
+      }>;
+      count: number;
+      error?: string;
+    }>;
   };
   sessions: {
     list: (includeArchived?: boolean) => Promise<{
@@ -842,12 +872,12 @@ export interface ElectronAPI {
     }>;
     getGlobal: () => Promise<{
       success: boolean;
-      settings?: Record<string, unknown>;
+      settings?: GlobalSettings;
       error?: string;
     }>;
     updateGlobal: (updates: Record<string, unknown>) => Promise<{
       success: boolean;
-      settings?: Record<string, unknown>;
+      settings?: GlobalSettings;
       error?: string;
     }>;
     getCredentials: () => Promise<{
@@ -872,7 +902,7 @@ export interface ElectronAPI {
     }>;
     getProject: (projectPath: string) => Promise<{
       success: boolean;
-      settings?: Record<string, unknown>;
+      settings?: ProjectSettings;
       error?: string;
     }>;
     updateProject: (
@@ -880,7 +910,7 @@ export interface ElectronAPI {
       updates: Record<string, unknown>
     ) => Promise<{
       success: boolean;
-      settings?: Record<string, unknown>;
+      settings?: ProjectSettings;
       error?: string;
     }>;
     migrate: (data: Record<string, string>) => Promise<{

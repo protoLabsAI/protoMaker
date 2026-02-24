@@ -59,7 +59,6 @@ function TabsDemo() {
 }
 
 export const ThreeTabs: Story = {
-  args: {} as any,
   render: () => <TabsDemo />,
 };
 
@@ -83,6 +82,5 @@ function TwoTabDemo() {
 }
 
 export const TextOnly: Story = {
-  args: {} as any,
   render: () => <TwoTabDemo />,
 };

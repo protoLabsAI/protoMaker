@@ -36,6 +36,8 @@ import type {
   RepoResearchResult,
   GapAnalysisReport,
   AlignmentProposal,
+  GlobalSettings,
+  ProjectSettings,
 } from '@automaker/types';
 import type { Message, SessionListItem } from '@/types/electron';
 import type { Feature, ClaudeUsageResponse, CodexUsageResponse } from '@/store/types';
@@ -2477,41 +2479,7 @@ export class HttpApiClient implements ElectronAPI {
     // Global settings
     getGlobal: (): Promise<{
       success: boolean;
-      settings?: {
-        version: number;
-        theme: string;
-        sidebarOpen: boolean;
-        chatHistoryOpen: boolean;
-        maxConcurrency: number;
-        defaultSkipTests: boolean;
-        enableDependencyBlocking: boolean;
-        useWorktrees: boolean;
-        defaultPlanningMode: string;
-        defaultRequirePlanApproval: boolean;
-        muteDoneSound: boolean;
-        enhancementModel: string;
-        keyboardShortcuts: Record<string, string>;
-        projects: unknown[];
-        trashedProjects: unknown[];
-        projectHistory: string[];
-        projectHistoryIndex: number;
-        lastProjectDir?: string;
-        recentFolders: string[];
-        worktreePanelCollapsed: boolean;
-        lastSelectedSessionByProject: Record<string, string>;
-        mcpServers?: Array<{
-          id: string;
-          name: string;
-          description?: string;
-          type?: 'stdio' | 'sse' | 'http';
-          command?: string;
-          args?: string[];
-          env?: Record<string, string>;
-          url?: string;
-          headers?: Record<string, string>;
-          enabled?: boolean;
-        }>;
-      };
+      settings?: GlobalSettings;
       error?: string;
     }> => this.get('/api/settings/global'),
 
@@ -2519,7 +2487,7 @@ export class HttpApiClient implements ElectronAPI {
       updates: Record<string, unknown>
     ): Promise<{
       success: boolean;
-      settings?: Record<string, unknown>;
+      settings?: GlobalSettings;
       error?: string;
     }> => this.put('/api/settings/global', updates),
 
@@ -2551,35 +2519,7 @@ export class HttpApiClient implements ElectronAPI {
       projectPath: string
     ): Promise<{
       success: boolean;
-      settings?: {
-        version: number;
-        theme?: string;
-        useWorktrees?: boolean;
-        currentWorktree?: { path: string | null; branch: string };
-        worktrees?: Array<{
-          path: string;
-          branch: string;
-          isMain: boolean;
-          hasChanges?: boolean;
-          changedFilesCount?: number;
-        }>;
-        boardBackground?: {
-          imagePath: string | null;
-          imageVersion?: number;
-          cardOpacity: number;
-          columnOpacity: number;
-          columnBorderEnabled: boolean;
-          cardGlassmorphism: boolean;
-          cardBorderEnabled: boolean;
-          cardBorderOpacity: number;
-          hideScrollbar: boolean;
-        };
-        worktreePanelVisible?: boolean;
-        showInitScriptIndicator?: boolean;
-        defaultDeleteBranchWithWorktree?: boolean;
-        autoDismissInitScriptIndicator?: boolean;
-        lastSelectedSessionId?: string;
-      };
+      settings?: ProjectSettings;
       error?: string;
     }> => this.post('/api/settings/project', { projectPath }),
 
@@ -2588,7 +2528,7 @@ export class HttpApiClient implements ElectronAPI {
       updates: Record<string, unknown>
     ): Promise<{
       success: boolean;
-      settings?: Record<string, unknown>;
+      settings?: ProjectSettings;
       error?: string;
     }> => this.put('/api/settings/project', { projectPath, updates }),
 
