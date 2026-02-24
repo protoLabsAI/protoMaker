@@ -4533,96 +4533,129 @@ Format your response as a structured markdown document.`;
             status: canonicalStatus,
           };
           allFeatures.push(normalizedFeature);
+        }
+      }
 
-          // Track pending features separately, filtered by worktree/branch
-          // Note: Features in 'review', 'done', or 'verified' are NOT eligible
-          // Those features have completed execution and should not be picked up again
-          const isEligibleStatus =
-            canonicalStatus === 'backlog' ||
-            (feature.planSpec?.status === 'approved' &&
-              (feature.planSpec.tasksCompleted ?? 0) < (feature.planSpec.tasksTotal ?? 0));
+      // ── Dependency re-evaluation: unblock features whose deps are now satisfied ──
+      // Features can be set to 'blocked' when their dependencies aren't ready.
+      // When those deps complete, we need to automatically move them back to 'backlog'.
+      const blockedWithDeps = allFeatures.filter(
+        (f) => f.status === 'blocked' && f.dependencies && f.dependencies.length > 0
+      );
 
-          // Log ALL features with their eligibility status for debugging
-          logger.debug(
-            `[loadPendingFeatures] Feature ${feature.id}: status="${feature.status}", assignee="${feature.assignee ?? 'null'}", isEpic=${feature.isEpic ?? false}, branchName="${feature.branchName ?? 'null'}", eligible=${isEligibleStatus}`
+      for (const feature of blockedWithDeps) {
+        const satisfied = areDependenciesSatisfied(feature, allFeatures);
+        if (satisfied) {
+          logger.info(
+            `[loadPendingFeatures] Unblocking feature ${feature.id} — all dependencies now satisfied`
           );
+          feature.status = 'backlog';
+          try {
+            await this.featureLoader.update(projectPath, feature.id, { status: 'backlog' });
+            this.events.emit('feature:status-changed', {
+              projectPath,
+              featureId: feature.id,
+              previousStatus: 'blocked',
+              newStatus: 'backlog',
+            });
+          } catch (error) {
+            logger.error(`[loadPendingFeatures] Failed to unblock feature ${feature.id}:`, error);
+          }
+        }
+      }
 
-          if (isEligibleStatus) {
-            // Skip epic features - they are containers, not executable
-            if (feature.isEpic) {
-              logger.info(
-                `[loadPendingFeatures] ❌ Skipping epic feature ${feature.id} - ${feature.title}`
-              );
-              continue;
-            }
+      // ── Filter eligible features for execution ──
+      for (const feature of allFeatures) {
+        const canonicalStatus = feature.status;
 
-            // Skip features assigned to humans (non-agent assignees)
-            if (feature.assignee && feature.assignee !== 'agent') {
-              logger.info(
-                `[loadPendingFeatures] ❌ Skipping feature ${feature.id} - assigned to "${feature.assignee}" (not agent)`
-              );
-              continue;
-            }
-            // Filter by branchName:
-            // - If branchName is null (main worktree), include features with:
-            //   - branchName === null (unassigned), OR
-            //   - branchName === primaryBranch (e.g., "main", "master", "develop"), OR
-            //   - branchName has no corresponding worktree (orphaned - will auto-create worktree)
-            // - If branchName is set, only include features with matching branchName
-            const featureBranch = feature.branchName ?? null;
-            if (branchName === null) {
-              // Main worktree: include features that are unassigned, on primary branch, or orphaned
-              const isPrimaryOrUnassigned =
-                featureBranch === null || (primaryBranch && featureBranch === primaryBranch);
-              // Orphaned = has branchName but no corresponding worktree exists
-              const isOrphaned = featureBranch !== null && !worktreeBranches.has(featureBranch);
-              // Stale worktree = has branchName with existing worktree BUT feature is in backlog
-              // This happens when a previous agent attempt created the worktree but failed before starting.
-              // The agent service will reuse the existing worktree, so we should include these.
-              const hasStaleWorktree =
-                featureBranch !== null &&
-                worktreeBranches.has(featureBranch) &&
-                (feature.status === 'backlog' ||
-                  feature.status === 'pending' ||
-                  feature.status === 'ready');
+        // Track pending features separately, filtered by worktree/branch
+        // Note: Features in 'review', 'done', or 'verified' are NOT eligible
+        // Those features have completed execution and should not be picked up again
+        const isEligibleStatus =
+          canonicalStatus === 'backlog' ||
+          (feature.planSpec?.status === 'approved' &&
+            (feature.planSpec.tasksCompleted ?? 0) < (feature.planSpec.tasksTotal ?? 0));
 
-              logger.debug(
-                `[loadPendingFeatures] Feature ${feature.id} branch filter - featureBranch: ${featureBranch}, primaryBranch: ${primaryBranch}, isPrimaryOrUnassigned: ${isPrimaryOrUnassigned}, isOrphaned: ${isOrphaned}, hasStaleWorktree: ${hasStaleWorktree}`
-              );
+        // Log ALL features with their eligibility status for debugging
+        logger.debug(
+          `[loadPendingFeatures] Feature ${feature.id}: status="${feature.status}", assignee="${feature.assignee ?? 'null'}", isEpic=${feature.isEpic ?? false}, branchName="${feature.branchName ?? 'null'}", eligible=${isEligibleStatus}`
+        );
 
-              if (isPrimaryOrUnassigned || isOrphaned || hasStaleWorktree) {
-                if (hasStaleWorktree) {
-                  logger.info(
-                    `[loadPendingFeatures] ✅ Including feature ${feature.id} with stale worktree (branchName: ${featureBranch}, status: ${feature.status}) for main worktree`
-                  );
-                } else if (isOrphaned) {
-                  logger.info(
-                    `[loadPendingFeatures] ✅ Including orphaned feature ${feature.id} (branchName: ${featureBranch} has no worktree) for main worktree`
-                  );
-                } else {
-                  logger.info(
-                    `[loadPendingFeatures] ✅ Including feature ${feature.id} for main worktree (featureBranch: ${featureBranch})`
-                  );
-                }
-                pendingFeatures.push(feature);
-              } else {
-                // Feature belongs to a specific worktree AND is actively being worked on (in_progress)
+        if (isEligibleStatus) {
+          // Skip epic features - they are containers, not executable
+          if (feature.isEpic) {
+            logger.info(
+              `[loadPendingFeatures] ❌ Skipping epic feature ${feature.id} - ${feature.title}`
+            );
+            continue;
+          }
+
+          // Skip features assigned to humans (non-agent assignees)
+          if (feature.assignee && feature.assignee !== 'agent') {
+            logger.info(
+              `[loadPendingFeatures] ❌ Skipping feature ${feature.id} - assigned to "${feature.assignee}" (not agent)`
+            );
+            continue;
+          }
+          // Filter by branchName:
+          // - If branchName is null (main worktree), include features with:
+          //   - branchName === null (unassigned), OR
+          //   - branchName === primaryBranch (e.g., "main", "master", "develop"), OR
+          //   - branchName has no corresponding worktree (orphaned - will auto-create worktree)
+          // - If branchName is set, only include features with matching branchName
+          const featureBranch = feature.branchName ?? null;
+          if (branchName === null) {
+            // Main worktree: include features that are unassigned, on primary branch, or orphaned
+            const isPrimaryOrUnassigned =
+              featureBranch === null || (primaryBranch && featureBranch === primaryBranch);
+            // Orphaned = has branchName but no corresponding worktree exists
+            const isOrphaned = featureBranch !== null && !worktreeBranches.has(featureBranch);
+            // Stale worktree = has branchName with existing worktree BUT feature is in backlog
+            // This happens when a previous agent attempt created the worktree but failed before starting.
+            // The agent service will reuse the existing worktree, so we should include these.
+            const hasStaleWorktree =
+              featureBranch !== null &&
+              worktreeBranches.has(featureBranch) &&
+              (feature.status === 'backlog' ||
+                feature.status === 'pending' ||
+                feature.status === 'ready');
+
+            logger.debug(
+              `[loadPendingFeatures] Feature ${feature.id} branch filter - featureBranch: ${featureBranch}, primaryBranch: ${primaryBranch}, isPrimaryOrUnassigned: ${isPrimaryOrUnassigned}, isOrphaned: ${isOrphaned}, hasStaleWorktree: ${hasStaleWorktree}`
+            );
+
+            if (isPrimaryOrUnassigned || isOrphaned || hasStaleWorktree) {
+              if (hasStaleWorktree) {
                 logger.info(
-                  `[loadPendingFeatures] ❌ Filtering out feature ${feature.id} (branchName: ${featureBranch} has worktree, status: ${feature.status}) for main worktree`
+                  `[loadPendingFeatures] ✅ Including feature ${feature.id} with stale worktree (branchName: ${featureBranch}, status: ${feature.status}) for main worktree`
+                );
+              } else if (isOrphaned) {
+                logger.info(
+                  `[loadPendingFeatures] ✅ Including orphaned feature ${feature.id} (branchName: ${featureBranch} has no worktree) for main worktree`
+                );
+              } else {
+                logger.info(
+                  `[loadPendingFeatures] ✅ Including feature ${feature.id} for main worktree (featureBranch: ${featureBranch})`
                 );
               }
+              pendingFeatures.push(feature);
             } else {
-              // Feature worktree: include features with matching branchName
-              if (featureBranch === branchName) {
-                logger.info(
-                  `[loadPendingFeatures] ✅ Including feature ${feature.id} for worktree ${branchName}`
-                );
-                pendingFeatures.push(feature);
-              } else {
-                logger.info(
-                  `[loadPendingFeatures] ❌ Filtering out feature ${feature.id} (branchName: ${featureBranch}, expected: ${branchName}) for worktree ${branchName}`
-                );
-              }
+              // Feature belongs to a specific worktree AND is actively being worked on (in_progress)
+              logger.info(
+                `[loadPendingFeatures] ❌ Filtering out feature ${feature.id} (branchName: ${featureBranch} has worktree, status: ${feature.status}) for main worktree`
+              );
+            }
+          } else {
+            // Feature worktree: include features with matching branchName
+            if (featureBranch === branchName) {
+              logger.info(
+                `[loadPendingFeatures] ✅ Including feature ${feature.id} for worktree ${branchName}`
+              );
+              pendingFeatures.push(feature);
+            } else {
+              logger.info(
+                `[loadPendingFeatures] ❌ Filtering out feature ${feature.id} (branchName: ${featureBranch}, expected: ${branchName}) for worktree ${branchName}`
+              );
             }
           }
         }
