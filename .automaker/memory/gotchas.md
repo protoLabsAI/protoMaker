@@ -5,7 +5,7 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 309
+  loaded: 304
   referenced: 158
   successfulFeatures: 158
 ---
@@ -248,7 +248,17 @@ usageStats:
 - **Root cause:** Package.json changes are not automatically synced to node_modules. When CI runs or developer checks out commit, they must run npm install. This is expected behavior but easy to miss if testing by reading files instead of building.
 - **How to avoid:** Easier: package.json is source of truth, dependency is managed. Harder: must remember npm install step before build after dependency changes.
 
-#### [Gotcha] When parameterizing prompts with many hardcoded values, the default values must EXACTLY match the original hardcoded values or the prompt behavior silently changes for existing callers (2026-02-23)
-- **Situation:** Extracted userName='Josh', agencyName='protoLabs', productName='protoMaker', githubOrg='proto-labs-ai' as defaults during refactoring
-- **Root cause:** Existing code calling getAvaPrompt() with no arguments must produce identical output. Any deviation in defaults breaks backward compatibility silently - no error, just different behavior.
-- **How to avoid:** Must preserve original strings exactly (including capitalization like 'protoLabs' vs 'protolabs'), making refactoring more tedious. Gain is backward compatibility, but at cost of stricter verification burden.
+#### [Gotcha] Git worktrees have stale/missing remote references (origin/main) compared to parent repository, breaking standard local-vs-remote commit comparison (2026-02-23)
+- **Situation:** In worktree with fresh feature branch, 'git rev-list origin/main..HEAD' fails because origin/main ref doesn't exist or is outdated. Single-strategy detection fails entirely.
+- **Root cause:** Worktrees isolate git state; not all remote refs are pulled/updated. Developers expect origin/main to always exist when working with branches.
+- **How to avoid:** Requires multiple detection strategies instead of single authoritative check. More code, more resilient to incomplete distributed state.
+
+#### [Gotcha] Tool execution duration is calculated from when tool_use block appears in the Claude API stream until tool response received—not actual tool execution time in the tools/agent framework. (2026-02-23)
+- **Situation:** Agent service only has visibility into the stream layer, not the actual tool implementation. Tool timing must be inferred from stream events.
+- **Root cause:** Stream events are the only timing signal available to agent service. Actual tool execution happens outside this layer (in the agent SDK).
+- **How to avoid:** Simple to implement (use stream events). Accurate for end-to-end latency, but not for tool execution latency specifically.
+
+#### [Gotcha] Timestamp-based deduplication with 1-second window using Math.abs(difference) is clock-sensitive and can silently fail on clock skew or late-arriving events (2026-02-23)
+- **Situation:** WebSocket event stream may contain duplicate tool-use events due to network retries or server-side resend logic
+- **Root cause:** Timestamp comparison is simpler than tracking event IDs across distributed components, but vulnerable to clock drift between client and server
+- **How to avoid:** Timestamp approach is 3 lines of code vs event ID registry (20+ lines). Trade-off: 1-2% edge case failures on high-latency networks vs code complexity

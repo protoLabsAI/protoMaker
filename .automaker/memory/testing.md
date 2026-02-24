@@ -5,9 +5,9 @@ relevantTo: [testing]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 40
-  referenced: 24
-  successfulFeatures: 24
+  loaded: 39
+  referenced: 23
+  successfulFeatures: 23
 ---
 # testing
 
@@ -739,19 +739,37 @@ usageStats:
 - **Root cause:** Quick validation of core logic before submitting feature. Permanent tests would require mocking gh CLI (complexity) and test fixtures.
 - **How to avoid:** Feature is verified to compile and core logic works, but lacks regression test coverage. If gh CLI invocation signature changes, it won't be caught by tests.
 
-### Zero-config acceptance criterion requires exact string-level identity to original, not just functional equivalence (2026-02-23)
-- **Context:** Verifying parameterization refactoring maintains complete backward compatibility
-- **Why:** String matching with .includes() checks proves the refactoring is truly transparent - every character matches original output. This prevents subtle value changes that functional testing might miss.
-- **Rejected:** Functional equivalence testing - weaker guarantee that doesn't catch value drift
-- **Trade-offs:** Easier: Absolute confidence in backward compatibility. Harder: Must exactly match all default values. Breaking: Even one character difference breaks the contract
-- **Breaking if changed:** If any default value is rounded, truncated, or reformatted differently, zero-config identity fails
+#### [Gotcha] Playwright bounding box measurements on React Flow nodes are unreliable in headless Chrome. Pixel-precise dimension assertions (50-250px width, 50-150px height) fail unpredictably in CI. (2026-02-23)
+- **Situation:** Initial test used boundingBox() to validate agent node dimensions. Tests were flaky; CI headless rendering produces different measurements than local Chrome.
+- **Root cause:** React Flow applies dynamic SVG/canvas transforms during rendering. Headless Chrome's rendering engine and transform calculations differ from headed browser, causing unpredictable viewport/canvas coordinate translation.
+- **How to avoid:** Switched to text content assertions (more reliable but don't validate layout/sizing). Gain: stable tests. Loss: miss visual regression in node dimensions.
 
-#### [Pattern] Used inline Node.js evaluation (--input-type=module --eval) for verification instead of formal test files (2026-02-23)
-- **Problem solved:** Rapidly verifying parameterization behavior during development
-- **Why this works:** Direct eval provides immediate feedback without test infrastructure setup - useful for verification-driven development where you're testing the actual running code, not test code.
-- **Trade-offs:** Easier: Fast feedback loop, direct code execution. Harder: Not repeatable, not part of CI/CD pipeline, not documented. Breaking: Inline tests vanish - they're not persistent verification
+#### [Pattern] Test environment produces non-critical errors that must be explicitly filtered: ResizeObserver, WebSocket failures, IPC connection failures, signal timeouts. Each error type appears in specific test conditions. (2026-02-23)
+- **Problem solved:** Tests failed on console error assertions because environment-specific errors (IPC connection failed, signal timed out) appeared in CI but not in production code paths.
+- **Why this works:** Headless Playwright spawns Node processes with IPC parent communication; timing variations in spawn/cleanup cause spurious errors. WebSocket connection failures normal in test environment with mocked backends.
+- **Trade-offs:** Filtering hides some real issues; requires ongoing maintenance as new error types appear in different test environments. Benefit: meaningful test results without false positives.
 
-#### [Pattern] Created temporary verification script to import and test the compiled/built output (not source TypeScript), then deleted it after verification (2026-02-23)
-- **Problem solved:** Needed to verify parameterization worked correctly after refactoring complex prompt templates
-- **Why this works:** Source TypeScript can have syntax that appears correct but fails at compilation. Testing against actual built output (npm run build artifacts) catches real-world issues. This is more realistic than testing source directly.
-- **Trade-offs:** Temporary script is more work but reveals actual deployment issues. Permanent tests would add maintenance burden for what is essentially verification, not feature validation.
+#### [Gotcha] Build success (TypeScript compilation + bundling) was used to justify skipping Playwright tests. This is insufficient verification for UI features. (2026-02-23)
+- **Situation:** After successful `npm run build` in apps/ui, tests were skipped with reasoning 'pure UI visualization with no complex logic... successful build provides sufficient confidence.' Full monorepo build failed due to unrelated p-limit issue in platform package.
+- **Root cause:** Apparent reasoning: build validates TypeScript types and module resolution. However, build output is code-only; it doesn't verify rendering, layout, interactions, or data binding correctness.
+- **How to avoid:** Saves: time/complexity of test setup with mock pipelineState. Costs: zero verification that the component renders correctly, that ChevronDown/ChevronRight chevrons toggle properly, that TimelineVisualization receives correct prop mapping, that expandable state works as intended.
+
+#### [Gotcha] Pre-existing build errors in unrelated packages completely block verification of correct implementation code. Solution: isolate verification by building individual packages, running type checks on dist outputs, creating tests for future execution. (2026-02-23)
+- **Situation:** p-limit import error in @automaker/platform prevented npm run build:server from running, even though AnalyticsService implementation was syntactically correct and logically sound.
+- **Root cause:** Build systems are monolithic - one error propagates to all dependents. Proves that implementation correctness is orthogonal to build success. Verification must be decoupled from infrastructure blockers.
+- **How to avoid:** Partial verification (individual packages, type tests) is less complete than e2e testing, but proves logic independently and unblocks handoff decision-making while infrastructure is fixed.
+
+#### [Gotcha] Empty state handling uses try/catch pattern, indicating component must gracefully handle both 'insufficient data' and 'data present' states at runtime. Test cannot verify which is correct, only that one is visible. (2026-02-23)
+- **Situation:** Playwright test for analytics panel content verification
+- **Root cause:** Real system behavior depends on runtime feature history, not static test data. Frontend cannot assume data will exist.
+- **How to avoid:** Single flexible test path vs multiple specific assertions. Tests are less explicit about expected state but more resilient to data variance.
+
+#### [Gotcha] Async React state updates require explicit wait delays (500ms hardcoded) between user action and assertion. UI event → state change → re-render → attribute update is multi-step async process. (2026-02-23)
+- **Situation:** Testing button icon class changes after panel toggle clicks
+- **Root cause:** React state updates and DOM attribute changes are not synchronous. CSS classes update after render cycle completes.
+- **How to avoid:** Fixed wait time is simple but fragile (too short = flaky, too long = slow tests). Polling is resilient but more complex.
+
+#### [Pattern] Tiered timeout strategy: Flow graph visibility (10s), panel visibility (5s), empty state check (3s). Different timeouts reflect measured component performance hierarchy. (2026-02-23)
+- **Problem solved:** Multiple async operations with varying network/rendering latency
+- **Why this works:** Flow graph likely has heavy initial load (possibly data queries, canvas setup), panel has lighter load, empty state is fastest. Timeouts should match real performance characteristics.
+- **Trade-offs:** Calibrated timeouts reduce flakiness but require empirical tuning. Uniform timeouts are simpler to maintain but cause intermittent failures.

@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "items": [
+    {
+      "id": "370012fd-6c83-4459-9c81-8aa68a81bade",
+      "actionType": "hitl_form",
+      "priority": "high",
+      "title": "Clarifying Questions: [ui:flow-graph] improve agent flow o11y",
+      "message": "1 step form from api",
+      "createdAt": "2026-02-23T20:14:51.767Z",
+      "expiresAt": "2026-02-23T20:24:51.765Z",
+      "status": "pending",
+      "actionPayload": {
+        "formId": "hitl-ddb996d9",
+        "featureId": "feature-1771877666412-jl3lddcah"
+      },
+      "projectPath": "/Users/kj/dev/automaker",
+      "read": false,
+      "category": "forms"
+    },
+    {
+      "id": "6cb79e46-a870-4bee-b225-6c4c406a8ace",
+      "actionType": "gate",
+      "priority": "high",
+      "title": "Pipeline gate: SPEC_REVIEW",
+      "message": "ops pipeline awaiting review gate at SPEC_REVIEW",
+      "createdAt": "2026-02-23T20:20:40.042Z",
+      "status": "pending",
+      "actionPayload": {
+        "featureId": "feature-1771877666412-jl3lddcah",
+        "pipelinePhase": "SPEC_REVIEW",
+        "pipelineBranch": "ops",
+        "gateMode": "review"
+      },
+      "projectPath": "/Users/kj/dev/automaker",
+      "read": false,
+      "category": "pipeline"
+    }
+  ]
+}
