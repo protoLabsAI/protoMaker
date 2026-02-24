@@ -26,6 +26,12 @@
     font-family: var(--font-sans);
   }
 
+  /* Mobile viewport height handling for virtual keyboard */
+  :root {
+    /* Fallback to 100vh when not set by JS (desktop or unsupported browsers) */
+    --visual-viewport-height: 100vh;
+  }
+
   /* Apply monospace font to code elements */
   code,
   pre,
@@ -154,6 +160,19 @@
 }
 
 @layer utilities {
+  /* Mobile-safe height utilities using visual viewport */
+  .h-screen-safe {
+    height: var(--visual-viewport-height, 100vh);
+  }
+
+  .min-h-screen-safe {
+    min-height: var(--visual-viewport-height, 100vh);
+  }
+
+  .max-h-screen-safe {
+    max-height: var(--visual-viewport-height, 100vh);
+  }
+
   /* Brand gradient utilities */
   .gradient-brand {
     background: linear-gradient(135deg, oklch(0.55 0.25 265), oklch(0.5 0.28 270));
