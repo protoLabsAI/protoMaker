@@ -13,7 +13,7 @@ import { createLogger } from '@protolabs-ai/utils';
 import * as secureFs from '../lib/secure-fs.js';
 import { getNotificationsPath, ensureAutomakerDir } from '@protolabs-ai/platform';
 import type { Notification, NotificationsFile, NotificationType } from '@protolabs-ai/types';
-import { DEFAULT_NOTIFICATIONS_FILE } from '@protolabs-ai/types';
+import { NOTIFICATIONS_VERSION } from '@protolabs-ai/types';
 import type { EventEmitter } from '../lib/events.js';
 import { randomUUID } from 'crypto';
 
@@ -40,6 +40,11 @@ async function atomicWriteJson(filePath: string, data: unknown): Promise<void> {
   }
 }
 
+/** Fresh copy of the default file — prevents shared mutable state */
+function emptyNotificationsFile(): NotificationsFile {
+  return { version: NOTIFICATIONS_VERSION, notifications: [] };
+}
+
 /**
  * Safely read notifications JSON file with fallback to default.
  * Validates the parsed shape — returns default if file contains
@@ -54,13 +59,13 @@ async function readNotificationsFile(filePath: string): Promise<NotificationsFil
       return parsed as NotificationsFile;
     }
     logger.warn(`Malformed notifications file at ${filePath}, using default`);
-    return { ...DEFAULT_NOTIFICATIONS_FILE };
+    return emptyNotificationsFile();
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      return { ...DEFAULT_NOTIFICATIONS_FILE };
+      return emptyNotificationsFile();
     }
     logger.error(`Error reading ${filePath}:`, error);
-    return { ...DEFAULT_NOTIFICATIONS_FILE };
+    return emptyNotificationsFile();
   }
 }
 
