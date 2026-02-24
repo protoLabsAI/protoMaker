@@ -259,6 +259,7 @@ export type {
   // Project integration types
   LinearIntegrationConfig,
   DiscordIntegrationConfig,
+  GoogleIntegrationConfig,
   ProjectIntegrations,
   IntegrationEventMapping,
   // Trust boundary types

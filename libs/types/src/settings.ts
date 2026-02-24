@@ -1818,6 +1818,22 @@ export interface DiscordIntegrationConfig {
 }
 
 /**
+ * GoogleIntegrationConfig - Configuration for Google Calendar OAuth integration
+ */
+export interface GoogleIntegrationConfig {
+  /** OAuth2 access token */
+  accessToken?: string;
+  /** OAuth2 refresh token (for obtaining new access tokens) */
+  refreshToken?: string;
+  /** Token expiry timestamp (epoch ms) */
+  tokenExpiry?: number;
+  /** Google account email address */
+  email?: string;
+  /** Selected Google Calendar ID (defaults to 'primary') */
+  calendarId?: string;
+}
+
+/**
  * ProjectIntegrations - Container for all per-project integration configurations
  *
  * Extensible structure for adding new integrations (Slack, Jira, etc.) in the future.
@@ -1828,10 +1844,8 @@ export interface ProjectIntegrations {
   linear?: LinearIntegrationConfig;
   /** Discord team communication integration */
   discord?: DiscordIntegrationConfig;
-  // Future integrations can be added here:
-  // slack?: SlackIntegrationConfig;
-  // jira?: JiraIntegrationConfig;
-  // etc.
+  /** Google Calendar integration (OAuth2 tokens) */
+  google?: GoogleIntegrationConfig;
 }
 
 /**
