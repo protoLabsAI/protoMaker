@@ -1,16 +1,23 @@
 import { PanelLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store/app-store';
-import { useIsCompact } from '@/hooks/use-media-query';
+import { useIsCompact, useIsMobile } from '@/hooks/use-media-query';
 
 /**
  * Floating toggle button for mobile that completely hides/shows the sidebar.
  * Positioned at the left-center of the screen.
  * Only visible on compact/mobile screens when the sidebar is hidden.
+ * Hidden on mobile screens (< 768px) where bottom nav is present.
  */
 export function MobileSidebarToggle() {
   const isCompact = useIsCompact();
+  const isMobile = useIsMobile();
   const { mobileSidebarHidden, toggleMobileSidebarHidden } = useAppStore();
+
+  // Hide on mobile screens where bottom nav is present
+  if (isMobile) {
+    return null;
+  }
 
   // Only show on compact screens when sidebar is hidden
   if (!isCompact || !mobileSidebarHidden) {
