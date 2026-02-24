@@ -8,6 +8,7 @@
 import * as path from 'node:path';
 import * as fs from 'node:fs';
 import * as BetterSqlite3 from 'better-sqlite3';
+import Anthropic from '@anthropic-ai/sdk';
 import { createLogger } from '@automaker/utils';
 import type {
   KnowledgeStoreStats,
@@ -84,7 +85,9 @@ export class KnowledgeStoreService {
         tags TEXT,
         importance REAL NOT NULL DEFAULT 0.5,
         created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
+        updated_at TEXT NOT NULL,
+        last_retrieved_at TEXT,
+        retrieval_count INTEGER NOT NULL DEFAULT 0
       )
     `);
 
@@ -319,6 +322,20 @@ export class KnowledgeStoreService {
       `Search completed: ${results.length} chunks returned, ${totalTokens}/${maxTokens} tokens used`
     );
 
+    // Update usage tracking for returned chunks
+    if (results.length > 0) {
+      const chunkIds = results.map((r) => r.chunk.id);
+      const placeholders = chunkIds.map(() => '?').join(', ');
+      const updateSql = `
+        UPDATE chunks
+        SET retrieval_count = retrieval_count + 1,
+            last_retrieved_at = datetime('now')
+        WHERE id IN (${placeholders})
+      `;
+      this.db.prepare(updateSql).run(...chunkIds);
+      logger.debug(`Updated usage tracking for ${chunkIds.length} chunks`);
+    }
+
     return results;
   }
 
@@ -443,6 +460,97 @@ export class KnowledgeStoreService {
     } catch (error) {
       logger.warn('Failed to rebuild FTS5 index:', error);
     }
+  }
+
+  /**
+   * Compact a category file if it exceeds the token threshold.
+   * Counts tokens (content length / 4), and if over threshold, uses Haiku to summarize.
+   */
+  async compactCategory(
+    projectPath: string,
+    categoryFile: string,
+    compactionThreshold: number = 50000
+  ): Promise<void> {
+    const memoryDir = path.join(projectPath, '.automaker', 'memory');
+    const categoryPath = path.join(memoryDir, categoryFile);
+
+    if (!fs.existsSync(categoryPath)) {
+      logger.debug(`Category file ${categoryFile} does not exist, skipping compaction`);
+      return;
+    }
+
+    const content = fs.readFileSync(categoryPath, 'utf-8');
+    const estimatedTokens = Math.ceil(content.length / 4);
+
+    logger.debug(
+      `Category ${categoryFile}: ${estimatedTokens} tokens (threshold: ${compactionThreshold})`
+    );
+
+    if (estimatedTokens <= compactionThreshold) {
+      return;
+    }
+
+    logger.info(
+      `Category ${categoryFile} exceeds threshold (${estimatedTokens} > ${compactionThreshold}), compacting...`
+    );
+
+    const anthropic = new Anthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY,
+    });
+
+    const prompt = `You are summarizing a category memory file that has grown too large. Your task is to compress the content while preserving the most important patterns, decisions, and lessons.
+
+# Original Content:
+${content}
+
+# Instructions:
+1. Preserve all critical information (architectural decisions, gotchas, patterns)
+2. Remove redundant or less important details
+3. Keep the YAML frontmatter intact
+4. Maintain the markdown structure
+5. Aim to reduce size by at least 30% while preserving value
+
+Output the compressed memory file:`;
+
+    const message = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 4096,
+      messages: [{ role: 'user', content: prompt }],
+    });
+
+    const summarizedContent =
+      message.content[0].type === 'text' ? message.content[0].text : content;
+
+    fs.writeFileSync(categoryPath, summarizedContent, 'utf-8');
+    logger.info(`Category ${categoryFile} compacted successfully`);
+  }
+
+  /**
+   * Prune stale chunks that haven't been retrieved in over 90 days with zero retrieval count.
+   */
+  pruneStaleChunks(projectPath: string): number {
+    if (!this.db || !this.projectPath) {
+      throw new Error('Knowledge store not initialized');
+    }
+
+    if (this.projectPath !== projectPath) {
+      this.initialize(projectPath);
+    }
+
+    const sql = `
+      DELETE FROM chunks
+      WHERE retrieval_count = 0
+        AND (
+          last_retrieved_at IS NULL
+          OR datetime(last_retrieved_at) < datetime('now', '-90 days')
+        )
+    `;
+
+    const result = this.db!.prepare(sql).run();
+    const deletedCount = result.changes;
+
+    logger.info(`Pruned ${deletedCount} stale chunks from knowledge store`);
+    return deletedCount;
   }
 
   /**

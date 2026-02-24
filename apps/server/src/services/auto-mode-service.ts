@@ -6821,6 +6821,9 @@ After generating the revised spec, output:
           }
         : undefined;
 
+      // Track unique categories for compaction check
+      const updatedCategories = new Set<string>();
+
       // Record each learning
       for (const item of parsed.learnings) {
         // Validate required fields with proper type narrowing
@@ -6860,6 +6863,24 @@ After generating the revised spec, output:
           dedupChecker,
           indexRebuilder
         );
+
+        // Track category for compaction check
+        const sanitizedCategory = learning.category
+          .toLowerCase()
+          .replace(/\s+/g, '-')
+          .replace(/[^a-z0-9-]/g, '');
+        updatedCategories.add(`${sanitizedCategory || 'general'}.md`);
+      }
+
+      // Check each updated category for compaction
+      if (this.knowledgeStoreService && updatedCategories.size > 0) {
+        for (const categoryFile of updatedCategories) {
+          try {
+            await this.knowledgeStoreService.compactCategory(projectPath, categoryFile);
+          } catch (error) {
+            logger.warn(`Failed to compact category ${categoryFile}:`, error);
+          }
+        }
       }
 
       const validLearnings = parsed.learnings.filter(
