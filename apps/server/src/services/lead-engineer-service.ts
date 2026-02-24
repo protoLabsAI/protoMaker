@@ -1540,6 +1540,69 @@ export class LeadEngineerService {
   }
 
   /**
+   * Reconcile orphaned checkpoints after server restart.
+   * Scans for checkpoint files with no matching active feature and deletes them.
+   * Should be called after autoModeService.reconcileFeatureStates() to clean up
+   * any checkpoints that were left behind when features were reset to backlog.
+   */
+  async reconcileCheckpoints(projectPath: string): Promise<{ deleted: string[] }> {
+    if (!this.checkpointService) {
+      logger.debug('[RECONCILE-CP] No checkpoint service configured, skipping');
+      return { deleted: [] };
+    }
+
+    const deleted: string[] = [];
+
+    try {
+      // Get all checkpoints for the project
+      const checkpoints = await this.checkpointService.listAll(projectPath);
+      if (checkpoints.length === 0) {
+        logger.debug(`[RECONCILE-CP] No checkpoints found for ${projectPath}`);
+        return { deleted };
+      }
+
+      // Get all features
+      const features = await this.featureLoader.getAll(projectPath);
+      const featureMap = new Map(features.map((f) => [f.id, f]));
+
+      // Find orphaned checkpoints:
+      // - Feature no longer exists
+      // - Feature is in backlog status (was reset and shouldn't have a checkpoint)
+      for (const checkpoint of checkpoints) {
+        const feature = featureMap.get(checkpoint.featureId);
+        const isOrphaned = !feature || feature.status === 'backlog';
+
+        if (isOrphaned) {
+          try {
+            await this.checkpointService.delete(projectPath, checkpoint.featureId);
+            deleted.push(checkpoint.featureId);
+            logger.info(
+              `[RECONCILE-CP] Deleted orphaned checkpoint for ${checkpoint.featureId}` +
+                (feature ? ` (feature status: ${feature.status})` : ' (feature not found)')
+            );
+          } catch (err) {
+            logger.warn(
+              `[RECONCILE-CP] Failed to delete checkpoint for ${checkpoint.featureId}:`,
+              err
+            );
+          }
+        }
+      }
+
+      if (deleted.length > 0) {
+        logger.info(
+          `[RECONCILE-CP] Deleted ${deleted.length} orphaned checkpoint(s) for ${projectPath}`
+        );
+      }
+
+      return { deleted };
+    } catch (err) {
+      logger.error(`[RECONCILE-CP] Failed to reconcile checkpoints for ${projectPath}:`, err);
+      return { deleted };
+    }
+  }
+
+  /**
    * Clean up subscriptions and stop all sessions.
    */
   destroy(): void {
