@@ -16,6 +16,7 @@ import type {
   KnowledgeSearchResult,
   KnowledgeChunk,
 } from '@protolabs-ai/types';
+import { EmbeddingService } from './embedding-service.js';
 
 const logger = createLogger('KnowledgeStoreService');
 
@@ -27,6 +28,11 @@ const logger = createLogger('KnowledgeStoreService');
 export class KnowledgeStoreService {
   private db: BetterSqlite3.Database | null = null;
   private projectPath: string | null = null;
+  private embeddingService: EmbeddingService;
+
+  constructor(embeddingService?: EmbeddingService) {
+    this.embeddingService = embeddingService || new EmbeddingService();
+  }
 
   /**
    * Initialize the knowledge store for a given project.
@@ -87,9 +93,21 @@ export class KnowledgeStoreService {
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
         last_retrieved_at TEXT,
-        retrieval_count INTEGER NOT NULL DEFAULT 0
+        retrieval_count INTEGER NOT NULL DEFAULT 0,
+        embeddings BLOB
       )
     `);
+
+    // Migration: Add embeddings column if it doesn't exist (for existing databases)
+    try {
+      this.db.exec(`
+        ALTER TABLE chunks ADD COLUMN embeddings BLOB
+      `);
+      logger.debug('Added embeddings column to chunks table');
+    } catch (err) {
+      // Column already exists, ignore error
+      logger.debug('embeddings column already exists');
+    }
 
     // FTS5 virtual table for full-text search on heading and content
     this.db.exec(`
@@ -459,8 +477,72 @@ export class KnowledgeStoreService {
       // Rebuild FTS5 index from chunks table
       this.db.exec("INSERT INTO chunks_fts(chunks_fts) VALUES('rebuild')");
       logger.debug('FTS5 index rebuilt successfully');
+
+      // Start background embedding worker (non-blocking)
+      void this.runBackgroundEmbedding();
     } catch (error) {
       logger.warn('Failed to rebuild FTS5 index:', error);
+    }
+  }
+
+  /**
+   * Background worker to generate embeddings for chunks without them.
+   * Runs asynchronously and non-blocking.
+   */
+  private async runBackgroundEmbedding(): Promise<void> {
+    if (!this.db) {
+      logger.warn('Cannot run background embedding: database not initialized');
+      return;
+    }
+
+    try {
+      // Get chunks without embeddings
+      const chunksToEmbed = this.db
+        .prepare('SELECT id, heading, content FROM chunks WHERE embeddings IS NULL')
+        .all() as Array<{ id: string; heading: string | null; content: string }>;
+
+      if (chunksToEmbed.length === 0) {
+        logger.debug('No chunks need embeddings');
+        return;
+      }
+
+      logger.info(`Starting background embedding for ${chunksToEmbed.length} chunks`);
+
+      // Process chunks one by one
+      let processed = 0;
+      for (const chunk of chunksToEmbed) {
+        try {
+          // Combine heading and content
+          const text = chunk.heading ? `${chunk.heading} ${chunk.content}` : chunk.content;
+
+          // Generate embedding
+          const embedding = await this.embeddingService.embed(text);
+
+          // Convert Float32Array to Buffer for BLOB storage
+          const buffer = Buffer.from(embedding.buffer);
+
+          // Update chunk with embedding
+          if (this.db) {
+            this.db.prepare('UPDATE chunks SET embeddings = ? WHERE id = ?').run(buffer, chunk.id);
+          }
+
+          processed++;
+
+          // Log progress every 10 chunks
+          if (processed % 10 === 0) {
+            logger.debug(`Embedded ${processed}/${chunksToEmbed.length} chunks`);
+          }
+        } catch (error) {
+          logger.warn(`Failed to embed chunk ${chunk.id}:`, error);
+          // Continue with next chunk
+        }
+      }
+
+      logger.info(
+        `Background embedding completed: ${processed}/${chunksToEmbed.length} chunks embedded`
+      );
+    } catch (error) {
+      logger.error('Background embedding failed:', error);
     }
   }
 
@@ -553,6 +635,44 @@ Output the compressed memory file:`;
 
     logger.info(`Pruned ${deletedCount} stale chunks from knowledge store`);
     return deletedCount;
+  }
+
+  /**
+   * Get embedding status for a project.
+   * Returns the total number of chunks, how many have embeddings, and how many are pending.
+   *
+   * @param projectPath - Project path to check
+   * @returns Object with total, embedded, and pending counts
+   */
+  getEmbeddingStatus(projectPath: string): { total: number; embedded: number; pending: number } {
+    if (!this.db || !this.projectPath) {
+      throw new Error('Knowledge store not initialized');
+    }
+
+    if (this.projectPath !== projectPath) {
+      this.initialize(projectPath);
+    }
+
+    if (!this.db) {
+      return { total: 0, embedded: 0, pending: 0 };
+    }
+
+    // Get total count
+    const totalResult = this.db.prepare('SELECT COUNT(*) as count FROM chunks').get() as {
+      count: number;
+    };
+    const total = totalResult.count;
+
+    // Get embedded count
+    const embeddedResult = this.db
+      .prepare('SELECT COUNT(*) as count FROM chunks WHERE embeddings IS NOT NULL')
+      .get() as { count: number };
+    const embedded = embeddedResult.count;
+
+    // Calculate pending
+    const pending = total - embedded;
+
+    return { total, embedded, pending };
   }
 
   /**

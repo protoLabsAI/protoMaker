@@ -50,6 +50,7 @@
     "@twurple/api": "^8.0.3",
     "@twurple/auth": "^8.0.3",
     "@twurple/chat": "^8.0.3",
+    "@xenova/transformers": "^2.17.2",
     "ai": "^6.0.90",
     "better-sqlite3": "^11.7.0",
     "cookie": "0.7.2",
