@@ -181,3 +181,8 @@ usageStats:
 - **Situation:** Feature added env var to docs but implementation feature itself may be incomplete - webhook verification is a security-critical path that cannot be assumed to exist just because the env var is documented
 - **Root cause:** Security principle: never document a secret variable without ensuring it's actually validated in code. Documenting LANGFUSE_WEBHOOK_SECRET without a webhook handler creates a false sense of security - developers will set it thinking they're protected, but if the handler doesn't verify it, the env var is useless.
 - **How to avoid:** If webhook verification code doesn't exist: developers waste time setting LANGFUSE_WEBHOOK_SECRET (false sense of security). If verification code exists but wasn't documented: this feature is incomplete.
+
+#### [Gotcha] Path validation middleware in POST /api/ceremonies/retry rejects temporary paths not under ALLOWED_ROOT_DIRECTORY, breaking Playwright tests (2026-02-24)
+- **Situation:** Tests attempted to use temporary paths created by test framework, which fail path validation intended to prevent path traversal attacks
+- **Root cause:** Middleware validates all file paths against allowed root to prevent security issues. This is correct security posture but creates a hard constraint on what paths endpoints accept.
+- **How to avoid:** Gain security constraint enforcement, lose ability to test with arbitrary paths. Production usage limited to paths under ALLOWED_ROOT_DIRECTORY.

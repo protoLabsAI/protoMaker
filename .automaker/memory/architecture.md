@@ -2505,3 +2505,52 @@ usageStats:
 - **Rejected:** Could use page-level selector for button, but loses encapsulation guarantees
 - **Trade-offs:** Stricter scoping is more maintainable but less flexible. Refactoring panel markup must preserve container relationship.
 - **Breaking if changed:** If close button moves outside panel container (moved to parent or different tree), selector breaks. Tests would fail before users notice broken close action.
+
+#### [Gotcha] Dedup state must be set AFTER validation checks, not before (2026-02-24)
+- **Situation:** Original bug: processedProjects.add() was called before checking if ceremonies were enabled, causing phantom 'already processed' states when ceremonies were disabled
+- **Root cause:** Setting dedup guards before validation creates a semantic gap: the project is marked as 'processed' even though the feature didn't actually run. This masks downstream failures and makes retry logic fail silently
+- **How to avoid:** Requires more careful sequencing of operations, but prevents false negatives in retry mechanisms
+
+### Dedup key format (${projectPath}:${projectSlug}) is implicitly part of the public API contract (2026-02-24)
+- **Context:** clearProcessedProject() accepts projectPath and projectSlug separately, then internally constructs the dedup key using string interpolation
+- **Why:** Once a method is public, its implementation details (key format) become contract details. Consistency between internal dedup logic and public method signature ensures the public method actually works as intended
+- **Rejected:** Hiding the key format from callers or using different formats internally vs externally (would break retry logic)
+- **Trade-offs:** Public method reveals internal key generation pattern, but ensures correctness
+- **Breaking if changed:** If dedup key format changes (e.g., to use ':' separator differently), the public method becomes ineffective or breaks
+
+#### [Gotcha] Default configuration values are behavioral contracts, not just implementation details (2026-02-24)
+- **Situation:** Changing DEFAULT_CEREMONY_SETTINGS.enabled from false to true is a breaking change in system behavior despite being a 'default' config
+- **Root cause:** Default values set expectations about what features are active out-of-the-box. Changing defaults affects every deployment that hasn't explicitly configured the setting, making it a breaking change in practice
+- **How to avoid:** Enables ceremonies by default but changes behavior for all existing deployments without explicit opt-in
+
+### Retry functionality implemented via event re-emission rather than direct ceremony logic invocation (2026-02-24)
+- **Context:** POST /api/ceremonies/retry endpoint needed to allow retrying failed ceremonies without duplicating ceremony execution logic
+- **Why:** Leverages existing event-driven architecture where ceremony service already listens to project:completed events. This reuses the full ceremony pipeline rather than reimplementing state transitions.
+- **Rejected:** Direct invocation of ceremony methods would duplicate logic and bypass existing validation/state management in the event handler
+- **Trade-offs:** Simpler implementation and guaranteed consistency with normal ceremony flow, but retry behavior is implicit in event system rather than explicit
+- **Breaking if changed:** If ceremony service stops listening to project:completed events or changes that listener's behavior, retry becomes unreliable
+
+#### [Pattern] Partial success semantics for batched Discord messages: Operation succeeds if ANY message succeeds, not if ALL succeed. Counter only increments on partial or full success. (2026-02-24)
+- **Problem solved:** Discord has 2000 char limit, so content is split into multiple messages. Need to determine when batch operation is 'successful'.
+- **Why this works:** Resilience: Avoid losing data/ceremony credit if one chunk fails. Better observability than all-or-nothing semantics. Reflects real-world expectation that partial delivery is still valuable.
+- **Trade-offs:** Easier: More lenient behavior, less data loss. Harder: Counter represents 'at least partial delivery', not 'guaranteed full delivery'. Harder to troubleshoot which chunk failed.
+
+#### [Gotcha] Shared discordPostFailures counter for 7 different ceremony types. All failure types increment same counter rather than type-specific failure counters. (2026-02-24)
+- **Situation:** Different ceremony types (epicKickoff, standup, milestoneRetro, etc.) can fail independently. With one shared failure counter, can't tell which ceremony type fails most.
+- **Root cause:** Simpler observability: One counter to monitor rather than 7. Signals 'we have discord problems' without distinguishing ceremony type. Focused on 'did platform stay up' not 'which ceremonies failed'.
+- **How to avoid:** Easier: One number to monitor. Harder: Can't see which ceremony types are failing. Harder: Need logs to correlate failure types to ceremonies.
+
+#### [Pattern] Local anySuccess flag accumulates across loop iterations before committing state changes. Decision to increment counter is separated from decision to emit each message. (2026-02-24)
+- **Problem solved:** Emitting multiple messages in a loop, need to update state based on aggregate result, not individual message results.
+- **Why this works:** Clean separation: Loop handles emission, flag accumulates, single if-block handles state commitment. Makes it impossible to update state if loop exits early or fails.
+- **Trade-offs:** Easier: Single point where state changes (easier to audit, debug, add transactions). Harder: Need to maintain local variable across loop. Harder: If structure is more verbose.
+
+#### [Gotcha] HTTP client resolved via getHttpApiClient() inside queryFn rather than direct import at hook initialization (2026-02-24)
+- **Situation:** useCeremonyStatus hook needed to call ceremonies.status() API method
+- **Root cause:** Direct httpApiClient import likely caused initialization/context timing issues in React Query hook execution context. Calling getHttpApiClient() defers resolution to query execution time when client is properly initialized
+- **How to avoid:** Adds function call overhead but ensures client is ready when queryFn executes; makes dependency injection implicit rather than explicit
+
+#### [Pattern] Hierarchical query key structure: queryKeys.ceremonies.status() enables cache invalidation at multiple levels (2026-02-24)
+- **Problem solved:** Query key design for React Query caching and invalidation
+- **Why this works:** Allows invalidating all ceremony-related queries via queryKeys.ceremonies, or specific status queries via queryKeys.ceremonies.status(). Scales to multiple ceremony endpoints
+- **Trade-offs:** More complex key structure adds minimal overhead but provides powerful cache control. Requires discipline in other code to use same hierarchy

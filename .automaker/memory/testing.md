@@ -773,3 +773,8 @@ usageStats:
 - **Problem solved:** Multiple async operations with varying network/rendering latency
 - **Why this works:** Flow graph likely has heavy initial load (possibly data queries, canvas setup), panel has lighter load, empty state is fastest. Timeouts should match real performance characteristics.
 - **Trade-offs:** Calibrated timeouts reduce flakiness but require empirical tuning. Uniform timeouts are simpler to maintain but cause intermittent failures.
+
+#### [Gotcha] Playwright test simplification: unable to verify endpoint behavior end-to-end due to path validation and authentication requirements (2026-02-24)
+- **Situation:** Initial tests attempted to validate both endpoint functionality and integration with ceremony system, but path/auth constraints made this impractical
+- **Root cause:** Path validation middleware protects production but prevents test isolation. Manual curl testing with valid credentials becomes the verification method instead.
+- **How to avoid:** Lose automated test coverage of retry endpoint behavior, gain assurance that production path validation works
