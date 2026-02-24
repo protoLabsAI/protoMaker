@@ -462,7 +462,7 @@ class ExecuteProcessor implements StateProcessor {
 
         // Search for relevant reflections and agent outputs across all features
         const results = query
-          ? this.serviceContext.knowledgeStoreService.searchReflections(
+          ? await this.serviceContext.knowledgeStoreService.searchReflections(
               ctx.projectPath,
               query,
               5 // maxResults
