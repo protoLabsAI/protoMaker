@@ -45,6 +45,7 @@ import { DEFAULT_RULES, evaluateRules } from './lead-engineer-rules.js';
 import { getWorkflowSettings } from '../lib/settings-helpers.js';
 import type { PipelineCheckpointService } from './pipeline-checkpoint-service.js';
 import type { ContextFidelityService } from './context-fidelity-service.js';
+import type { KnowledgeStoreService } from './knowledge-store-service.js';
 import { simpleQuery } from '../providers/simple-query-service.js';
 import { resolveModelString } from '@automaker/model-resolver';
 
@@ -72,6 +73,7 @@ export interface ProcessorServiceContext {
   prFeedbackService?: PRFeedbackService;
   checkpointService?: PipelineCheckpointService;
   contextFidelityService?: ContextFidelityService;
+  knowledgeStoreService?: KnowledgeStoreService;
 }
 
 // ────────────────────────── Feature State Machine ──────────────────────────
@@ -445,37 +447,68 @@ class ExecuteProcessor implements StateProcessor {
       }
     }
 
-    // Load reflections from completed sibling features for feed-forward context
+    // Load reflections from any feature using FTS5 semantic search
     try {
-      const allFeatures = await this.serviceContext.featureLoader.getAll(ctx.projectPath);
-      const siblings = allFeatures.filter(
-        (f) =>
-          f.id !== ctx.feature.id &&
-          (f.status === 'done' || f.status === 'verified') &&
-          (ctx.feature.epicId
-            ? f.epicId === ctx.feature.epicId
-            : f.projectSlug === ctx.feature.projectSlug)
-      );
-      const recent = siblings
-        .sort((a, b) => (b.completedAt || '').localeCompare(a.completedAt || ''))
-        .slice(0, 3);
+      let ftsResults: string[] = [];
 
-      const reflections: string[] = [];
-      const fs = await import('node:fs/promises');
-      for (const sib of recent) {
-        try {
-          const content = await fs.readFile(
-            path.join(getFeatureDir(ctx.projectPath, sib.id), 'reflection.md'),
-            'utf-8'
-          );
-          if (content.trim()) reflections.push(content.trim());
-        } catch {
-          /* no reflection yet */
+      if (this.serviceContext.knowledgeStoreService) {
+        // Build search query from feature title and description
+        const query = `${ctx.feature.title} ${ctx.feature.description || ''}`.trim();
+
+        // Skip FTS5 search if query is empty (both title and description falsy)
+        if (!query) {
+          logger.debug('[EXECUTE] Empty query, skipping FTS5 reflection search');
+        }
+
+        // Search for relevant reflections and agent outputs across all features
+        const results = query
+          ? this.serviceContext.knowledgeStoreService.searchReflections(
+              ctx.projectPath,
+              query,
+              5 // maxResults
+            )
+          : [];
+
+        ftsResults = results.map((r) => r.chunk.content);
+        if (ftsResults.length > 0) {
+          ctx.siblingReflections = ftsResults;
+          logger.info(`[EXECUTE] Loaded ${ftsResults.length} relevant reflections via FTS5 search`);
         }
       }
-      if (reflections.length > 0) {
-        ctx.siblingReflections = reflections;
-        logger.info(`[EXECUTE] Loaded ${reflections.length} sibling reflections`);
+
+      // Fallback to legacy same-epic search if FTS unavailable or returned no results
+      if (!this.serviceContext.knowledgeStoreService || ftsResults.length === 0) {
+        logger.info('[EXECUTE] Using legacy sibling search (FTS unavailable or empty)');
+        const allFeatures = await this.serviceContext.featureLoader.getAll(ctx.projectPath);
+        const siblings = allFeatures.filter(
+          (f) =>
+            f.id !== ctx.feature.id &&
+            (f.status === 'done' || f.status === 'verified') &&
+            (ctx.feature.epicId
+              ? f.epicId === ctx.feature.epicId
+              : f.projectSlug === ctx.feature.projectSlug)
+        );
+        const recent = siblings
+          .sort((a, b) => (b.completedAt || '').localeCompare(a.completedAt || ''))
+          .slice(0, 3);
+
+        const reflections: string[] = [];
+        const fs = await import('node:fs/promises');
+        for (const sib of recent) {
+          try {
+            const content = await fs.readFile(
+              path.join(getFeatureDir(ctx.projectPath, sib.id), 'reflection.md'),
+              'utf-8'
+            );
+            if (content.trim()) reflections.push(content.trim());
+          } catch {
+            /* no reflection yet */
+          }
+        }
+        if (reflections.length > 0) {
+          ctx.siblingReflections = reflections;
+          logger.info(`[EXECUTE] Loaded ${reflections.length} sibling reflections (legacy)`);
+        }
       }
     } catch (err) {
       logger.warn('[EXECUTE] Failed to load sibling reflections:', err);
