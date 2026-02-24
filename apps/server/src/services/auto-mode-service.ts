@@ -59,6 +59,8 @@ import {
   readJsonWithRecovery,
   logRecoveryWarning,
   DEFAULT_BACKUP_COUNT,
+  type DedupChecker,
+  type IndexRebuilder,
 } from '@automaker/utils';
 
 const logger = createLogger('AutoMode');
@@ -100,6 +102,7 @@ import { RecoveryService, getRecoveryService } from './recovery-service.js';
 import type { LeadEngineerService } from './lead-engineer-service.js';
 import { gitWorkflowService } from './git-workflow-service.js';
 import { graphiteService } from './graphite-service.js';
+import type { KnowledgeStoreService } from './knowledge-store-service.js';
 
 const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
@@ -412,6 +415,8 @@ export class AutoModeService {
   private integrityWatchdogService: DataIntegrityWatchdogService | null = null;
   // Lead Engineer service for delegated feature execution (optional)
   private leadEngineerService: LeadEngineerService | null = null;
+  // Knowledge Store service for learning deduplication (optional)
+  private knowledgeStoreService: KnowledgeStoreService | null = null;
   // Rate-limiting for auto_mode_progress events (per feature)
   private lastProgressEventTime = new Map<string, number>();
   private readonly PROGRESS_EVENT_MIN_INTERVAL_MS = 100; // Max 1 event per 100ms per feature
@@ -468,6 +473,14 @@ export class AutoModeService {
    */
   setLeadEngineerService(service: LeadEngineerService): void {
     this.leadEngineerService = service;
+  }
+
+  /**
+   * Wire up the Knowledge Store service for learning deduplication.
+   * When set, auto-mode will check for duplicate learnings before appending to memory files.
+   */
+  setKnowledgeStoreService(service: KnowledgeStoreService): void {
+    this.knowledgeStoreService = service;
   }
 
   /**
@@ -6760,6 +6773,54 @@ After generating the revised spec, output:
       // Valid learning types
       const validTypes = new Set(['decision', 'learning', 'pattern', 'gotcha']);
 
+      // Create deduplication checker if knowledge store is available
+      const dedupThreshold = settings?.knowledgeDedupThreshold ?? -0.5;
+      const dedupChecker: DedupChecker | undefined = this.knowledgeStoreService
+        ? async (
+            projPath: string,
+            learning: import('@automaker/utils').LearningEntry,
+            targetFile: string
+          ) => {
+            if (!this.knowledgeStoreService) return false;
+
+            try {
+              // Search for similar chunks in the target memory file
+              const similarChunks = this.knowledgeStoreService.findSimilarChunks(
+                projPath,
+                learning.content,
+                `.automaker/memory/${targetFile}`,
+                1
+              );
+
+              if (similarChunks.length > 0 && similarChunks[0].score < dedupThreshold) {
+                logger.debug(
+                  `Duplicate detected: score=${similarChunks[0].score} < threshold=${dedupThreshold}`
+                );
+                return true;
+              }
+
+              return false;
+            } catch (error) {
+              logger.warn('Error checking for duplicates:', error);
+              return false; // On error, allow the learning to be written
+            }
+          }
+        : undefined;
+
+      // Create index rebuilder if knowledge store is available
+      const indexRebuilder: IndexRebuilder | undefined = this.knowledgeStoreService
+        ? async (projPath: string) => {
+            if (!this.knowledgeStoreService) return;
+
+            try {
+              logger.debug('Rebuilding knowledge store index after learning append');
+              this.knowledgeStoreService.rebuildIndex(projPath);
+            } catch (error) {
+              logger.warn('Error rebuilding knowledge store index:', error);
+            }
+          }
+        : undefined;
+
       // Record each learning
       for (const item of parsed.learnings) {
         // Validate required fields with proper type narrowing
@@ -6795,7 +6856,9 @@ After generating the revised spec, output:
             tradeoffs: typeof learning.tradeoffs === 'string' ? learning.tradeoffs : undefined,
             breaking: typeof learning.breaking === 'string' ? learning.breaking : undefined,
           },
-          secureFs as Parameters<typeof appendLearning>[2]
+          secureFs as Parameters<typeof appendLearning>[2],
+          dedupChecker,
+          indexRebuilder
         );
       }
 

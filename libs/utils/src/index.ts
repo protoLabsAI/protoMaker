@@ -108,6 +108,8 @@ export {
   type UsageStats,
   type LearningEntry,
   type SimpleMemoryFile,
+  type DedupChecker,
+  type IndexRebuilder,
 } from './memory-loader.js';
 
 // String utilities
@@ -169,3 +171,6 @@ export {
   type SkillsFsModule,
   type SkillsLoadResult,
 } from './skills-loader.js';
+
+// Memory chunking
+export { chunkMarkdownFile, type MemoryChunk } from './memory-chunker.js';

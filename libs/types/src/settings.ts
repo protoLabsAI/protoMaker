@@ -1291,6 +1291,15 @@ export interface GlobalSettings {
   /** Default model and thinking level for new feature cards */
   defaultFeatureModel: PhaseModelEntry;
 
+  // Knowledge Store / Learning Settings
+  /**
+   * BM25 score threshold for deduplicating learnings before writing to memory files.
+   * SQLite FTS5 BM25 returns negative values where lower (more negative) = more relevant.
+   * Default: -0.5 (skip learning if top match score is below this threshold)
+   * Set to -Infinity to disable deduplication.
+   */
+  knowledgeDedupThreshold?: number;
+
   // Audio Preferences
   /** Mute completion notification sound */
   muteDoneSound: boolean;
