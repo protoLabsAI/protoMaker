@@ -6,12 +6,13 @@
  */
 
 import type { Request, Response } from 'express';
-import { exec } from 'child_process';
+import { exec, execFile } from 'child_process';
 import { promisify } from 'util';
 import { getErrorMessage, logError } from '../common.js';
 import { sanitizeCommitMessage } from '@automaker/platform';
 
 const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 export function createCommitHandler() {
   return async (req: Request, res: Response): Promise<void> => {
@@ -52,7 +53,7 @@ export function createCommitHandler() {
       const sanitizedMessage = sanitizeCommitMessage(message);
 
       // Create commit
-      await execAsync(`git commit -m "${sanitizedMessage}"`, {
+      await execFileAsync('git', ['commit', '-m', sanitizedMessage], {
         cwd: worktreePath,
       });
 

@@ -7,6 +7,7 @@ import {
   getErrorMessage,
   logError,
   execAsync,
+  execFileAsync,
   execEnv,
   isValidBranchName,
   isGhCliAvailable,
@@ -84,7 +85,7 @@ export function createCreatePRHandler() {
 
           // Create commit
           logger.debug(`Running: git commit`);
-          await execAsync(`git commit -m "${message.replace(/"/g, '\\"')}"`, {
+          await execFileAsync('git', ['commit', '-m', message], {
             cwd: worktreePath,
             env: execEnv,
           });

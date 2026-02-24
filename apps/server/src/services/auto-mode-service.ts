@@ -71,7 +71,7 @@ import {
   getExecutionStatePath,
   ensureAutomakerDir,
 } from '@automaker/platform';
-import { exec } from 'child_process';
+import { exec, execFile } from 'child_process';
 import { promisify } from 'util';
 import { randomUUID } from 'crypto';
 import path from 'path';
@@ -102,6 +102,7 @@ import { gitWorkflowService } from './git-workflow-service.js';
 import { graphiteService } from './graphite-service.js';
 
 const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 /**
  * Get the current branch name for a git repository
@@ -3709,7 +3710,7 @@ Address the follow-up instructions above. Review the previous work and make the 
 
       // Stage and commit
       await execAsync("git add -A -- ':!.automaker/'", { cwd: workDir });
-      await execAsync(`git commit -m "${commitMessage.replace(/"/g, '\\"')}"`, {
+      await execFileAsync('git', ['commit', '-m', commitMessage], {
         cwd: workDir,
       });
 

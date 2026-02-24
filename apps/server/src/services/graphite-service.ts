@@ -8,13 +8,14 @@
  * @see https://graphite.dev/docs/graphite-cli
  */
 
-import { exec } from 'child_process';
+import { exec, execFile } from 'child_process';
 import { promisify } from 'util';
 import { createLogger } from '@automaker/utils';
 import type { GraphiteSettings } from '@automaker/types';
 import { DEFAULT_GRAPHITE_SETTINGS } from '@automaker/types';
 
 const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 const logger = createLogger('GraphiteService');
 
 // Extended PATH for finding gt CLI (same as git-workflow-service)
@@ -402,8 +403,9 @@ export class GraphiteService {
       }
 
       // Use gt commit - it handles stack metadata
-      const escapedMessage = message.replace(/"/g, '\\"');
-      await execAsync(`gt commit -m "${escapedMessage}"`, {
+      // Use execFile to pass the message as an argument directly, avoiding shell
+      // interpolation issues with newlines and special characters.
+      await execFileAsync('gt', ['commit', '-m', message], {
         cwd: workDir,
         env: execEnv,
       });

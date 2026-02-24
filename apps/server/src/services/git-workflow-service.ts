@@ -5,7 +5,7 @@
  * complete features in auto-mode.
  */
 
-import { exec } from 'child_process';
+import { exec, execFile } from 'child_process';
 import { promisify } from 'util';
 import { createLogger } from '@automaker/utils';
 import type {
@@ -23,6 +23,7 @@ import { codeRabbitResolverService } from './coderabbit-resolver-service.js';
 import type { EventEmitter } from '../lib/events.js';
 
 const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 const logger = createLogger('GitWorkflow');
 
 // Extended PATH for finding git and gh CLI (same as worktree routes)
@@ -814,7 +815,9 @@ export class GitWorkflowService {
     }
 
     // Create commit (--no-verify bypasses commitlint hook; agents use auto-generated messages)
-    await execAsync(`git commit --no-verify -m "${commitMessage.replace(/"/g, '\\"')}"`, {
+    // Use execFile to pass the commit message as an argument directly, avoiding shell
+    // interpolation issues with newlines and special characters in the message.
+    await execFileAsync('git', ['commit', '--no-verify', '-m', commitMessage], {
       cwd: workDir,
       env: execEnv,
     });
