@@ -1,0 +1,40 @@
+/**
+ * POST /stats endpoint - Get knowledge store statistics
+ */
+
+import type { Request, Response } from 'express';
+import { createLogger } from '@automaker/utils';
+
+const logger = createLogger('KnowledgeRoutes');
+
+interface StatsRequest {
+  projectPath: string;
+}
+
+export function createStatsHandler(knowledgeStoreService: any) {
+  return (req: Request, res: Response): void => {
+    try {
+      const { projectPath } = req.body as StatsRequest;
+
+      if (!projectPath) {
+        res.status(400).json({ success: false, error: 'projectPath is required' });
+        return;
+      }
+
+      logger.debug('Stats request', { projectPath });
+
+      // Initialize for this project path (re-initializes if different)
+      knowledgeStoreService.initialize(projectPath);
+
+      const stats = knowledgeStoreService.getStats();
+
+      res.json({ success: true, stats });
+    } catch (error) {
+      logger.error('Get stats failed:', error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  };
+}

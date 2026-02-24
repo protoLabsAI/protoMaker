@@ -181,6 +181,7 @@ import { createAvaRoutes } from './routes/ava/index.js';
 import { createLinearRoutes } from './routes/linear/index.js';
 import { createTwitchRoutes } from './routes/twitch.js';
 import { createVoiceRoutes } from './routes/voice/index.js';
+import { createKnowledgeRoutes } from './routes/knowledge/index.js';
 import { LinearAgentService } from './services/linear-agent-service.js';
 import { LinearAgentRouter } from './services/linear-agent-router.js';
 import { MAX_SYSTEM_CONCURRENCY } from '@automaker/types';
@@ -424,6 +425,10 @@ const twitchSettings = {
   botUsername: process.env.TWITCH_BOT_USERNAME,
 };
 const twitchService = new TwitchService(twitchSettings, REPO_ROOT);
+
+// Initialize Knowledge Store Service for chunked retrieval
+import { KnowledgeStoreService } from './services/knowledge-store-service.js';
+const knowledgeStoreService = new KnowledgeStoreService();
 
 // Initialize Escalation Router
 const escalationRouter = getEscalationRouter();
@@ -1052,6 +1057,35 @@ specGenerationMonitor.startMonitoring();
   await agentService.initialize();
   logger.info('Agent service initialized');
 
+  // Initialize Knowledge Store Service for configured project paths
+  if (knowledgeStoreService) {
+    try {
+      const settings = await settingsService.getGlobalSettings();
+      const projectPaths = [
+        ...(settings.autoModeAlwaysOn?.projects?.map((p) => p.projectPath) ?? []),
+      ];
+      const uniquePaths = [...new Set(projectPaths)];
+
+      for (const projectPath of uniquePaths) {
+        try {
+          knowledgeStoreService.initialize(projectPath);
+          logger.info(`[KNOWLEDGE] Initialized knowledge store for ${projectPath}`);
+
+          const stats = knowledgeStoreService.getStats();
+          if (stats.totalChunks === 0) {
+            logger.info(`[KNOWLEDGE] Rebuilding index for ${projectPath} (no existing data)`);
+            knowledgeStoreService.rebuildIndex(projectPath);
+            logger.info(`[KNOWLEDGE] Index rebuild complete for ${projectPath}`);
+          }
+        } catch (err) {
+          logger.warn(`[KNOWLEDGE] Failed to initialize knowledge store for ${projectPath}:`, err);
+        }
+      }
+    } catch (err) {
+      logger.warn('[KNOWLEDGE] Failed to initialize knowledge stores:', err);
+    }
+  }
+
   // Reconcile stuck features (in_progress, interrupted, pipeline_* with no running agent)
   try {
     const settings = await settingsService.getGlobalSettings();
@@ -1420,6 +1454,12 @@ app.use('/api/ai', createAIRoutes());
 app.use('/api/notes', createNotesRoutes(events));
 app.use('/api/twitch', createTwitchRoutes(twitchService, events, featureLoader));
 app.use('/api/voice', createVoiceRoutes(voiceService, events));
+
+// Knowledge store routes (chunked retrieval)
+if (knowledgeStoreService) {
+  app.use('/api/knowledge', createKnowledgeRoutes(knowledgeStoreService));
+  logger.info('Knowledge store routes mounted at /api/knowledge');
+}
 
 // Create HTTP server
 const server = createServer(app);
