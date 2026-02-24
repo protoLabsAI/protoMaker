@@ -1,6 +1,6 @@
 ---
 name: headsdown
-description: Deep work mode - autonomously process features, manage the board, clean up code, update docs, and stay productive until everything is done.
+description: Deep work mode - autonomously process features, merge PRs, groom the board, and stay productive until the system is void of work.
 argument-hint: [project-path]
 allowed-tools:
   - Read
@@ -15,25 +15,43 @@ allowed-tools:
   - TaskList
   - TaskGet
   - AskUserQuestion
+  # Feature Management
   - mcp__plugin_automaker_automaker__list_features
   - mcp__plugin_automaker_automaker__get_feature
   - mcp__plugin_automaker_automaker__create_feature
   - mcp__plugin_automaker_automaker__update_feature
+  - mcp__plugin_automaker_automaker__delete_feature
   - mcp__plugin_automaker_automaker__move_feature
+  # Agent Control
   - mcp__plugin_automaker_automaker__start_agent
   - mcp__plugin_automaker_automaker__stop_agent
   - mcp__plugin_automaker_automaker__list_running_agents
   - mcp__plugin_automaker_automaker__get_agent_output
   - mcp__plugin_automaker_automaker__send_message_to_agent
+  # Auto-Mode
   - mcp__plugin_automaker_automaker__start_auto_mode
   - mcp__plugin_automaker_automaker__stop_auto_mode
   - mcp__plugin_automaker_automaker__get_auto_mode_status
+  # Board & Orchestration
   - mcp__plugin_automaker_automaker__get_board_summary
   - mcp__plugin_automaker_automaker__get_execution_order
+  # PR & Merge Pipeline
+  - mcp__plugin_automaker_automaker__merge_pr
+  - mcp__plugin_automaker_automaker__check_pr_status
+  - mcp__plugin_automaker_automaker__get_pr_feedback
+  - mcp__plugin_automaker_automaker__resolve_pr_threads
+  - mcp__plugin_automaker_automaker__create_pr_from_worktree
+  # Worktree Management
+  - mcp__plugin_automaker_automaker__list_worktrees
+  - mcp__plugin_automaker_automaker__get_worktree_status
+  # Graphite
+  - mcp__plugin_automaker_automaker__graphite_restack
+  # Utilities
   - mcp__plugin_automaker_automaker__health_check
-  - mcp__plugin_automaker_discord__send_message
-  - mcp__plugin_automaker_discord__list_channels
-  # Linear — create issues for discovered work (Linear-first)
+  # Discord
+  - mcp__plugin_automaker_discord__discord_send
+  - mcp__plugin_automaker_discord__discord_read_messages
+  # Linear
   - mcp__linear__linear_createIssue
   - mcp__linear__linear_updateIssue
   - mcp__linear__linear_searchIssues
@@ -45,7 +63,7 @@ allowed-tools:
 
 # Heads Down Mode
 
-You are in **deep work mode**. Your job is to stay productive and get everything done without bothering the user unless absolutely necessary.
+You are in **deep work mode**. Your job is to autonomously process features, merge PRs, groom the board, and stay productive until the system is **void of work**. Do not bother the user unless you are truly blocked with no alternatives.
 
 ## Automation Hooks (Active)
 
@@ -67,8 +85,9 @@ Use Context7 to look up current library docs when implementing features. Two-ste
 
 - **Never sit idle** - There's always something to do
 - **Work the queue** - Process features in dependency order
-- **Clean as you go** - Hooks handle format; you handle tests and docs
-- **Communicate progress** - Update Discord, log status
+- **Merge aggressively** - Ready PRs get merged, don't let them pile up
+- **Clean as you go** - Groom the board, fix stale features, resolve blockers
+- **Act, don't ask** - Make autonomous decisions. Only escalate to the user when truly stuck.
 - **Exponential backoff** - When truly blocked, sleep intelligently
 
 ## Linear-First Awareness
@@ -87,37 +106,54 @@ mcp__linear__linear_createIssue({
 
 Then move it to "In Progress" (`stateId: "3f4a449a-f1c1-49e4-999c-e0ccf0f828ad"`) to trigger intake.
 
-## Workflow Loop
+---
+
+## Main Loop
 
 ```
 while (work_remains) {
-  1. Check board status
-  2. If features in-progress → monitor agents, review output
-  3. If features in backlog → start next unblocked feature
-  4. If waiting on external (PR, build) → do productive work
-  5. If truly nothing to do → exponential backoff sleep
-  6. Repeat
+  1. Check board status + PR landscape
+  2. If features in-progress    -> monitor agents, review output
+  3. If features in backlog     -> start next unblocked feature
+  4. If features in review / open PRs -> Phase 4 (PR Triage & Merge)
+  5. If stale/blocked features  -> Phase 5 (Board Grooming)
+  6. If waiting on external     -> Phase 6 (Productive Waiting)
+  7. If truly nothing to do     -> Phase 7 (Exponential Backoff)
+  8. If everything is done      -> Phase 8 (Completion & Exit)
 }
 ```
 
 ---
 
-## Phase 1: Initialize
+## Phase 1: Initialize & Groom
 
-```bash
-# Check health
+Run all of these to build a complete picture of the system:
+
+```
+# Health
 mcp__plugin_automaker_automaker__health_check()
 
-# Get board state
+# Board state
 mcp__plugin_automaker_automaker__get_board_summary({ projectPath })
 mcp__plugin_automaker_automaker__list_features({ projectPath })
 mcp__plugin_automaker_automaker__get_execution_order({ projectPath })
+
+# Running agents
+mcp__plugin_automaker_automaker__list_running_agents()
+
+# PR landscape
+gh pr list --json number,title,state,mergeable,headRefName,baseRefName,statusCheckRollup,updatedAt --limit 50
+
+# Worktree state
+mcp__plugin_automaker_automaker__list_worktrees({ projectPath })
 ```
 
-Display current state:
+Display a unified dashboard:
 
 ```markdown
 ## Heads Down Mode: [Project Name]
+
+### Board
 
 | Status      | Count |
 | ----------- | ----- |
@@ -126,15 +162,29 @@ Display current state:
 | Review      | X     |
 | Done        | X     |
 
-### Currently Running Agents
+### Running Agents
 
 - [Feature Name] - [status]
+
+### Open PRs
+
+- PR #N: [title] ([status]: mergeable/conflicting/pending review)
+
+### Stale Features (no activity > 24h)
+
+- [Feature] - last updated [time ago]
+
+### Dependency Blockers
+
+- [Feature] blocked by [dependency]
 
 ### Next Up (unblocked)
 
 1. [Feature 1]
 2. [Feature 2]
 ```
+
+After displaying the dashboard, immediately begin acting on what you found — don't wait for user input.
 
 ---
 
@@ -164,25 +214,145 @@ mcp__plugin_automaker_automaker__list_running_agents()
 1. **Monitor Progress** - Check agent output periodically
 2. **Review Completed Work** - When agent finishes, review the output
 3. **Post-Flight Delegation** - Delegate mechanical cleanup to specialists:
-   - PR creation, formatting, CodeRabbit → `execute_dynamic_agent` with template `pr-maintainer`
-   - Board state fixes → Board Janitor crew handles automatically every 15min
+   - PR creation, formatting, CodeRabbit -> `execute_dynamic_agent` with template `pr-maintainer`
+   - Board state fixes -> Board Janitor crew handles automatically every 15min
 4. **Handle Failures** - If agent fails, analyze error and decide:
    - Retry with more context
-   - Escalate complexity (haiku → sonnet → opus)
+   - Escalate complexity (haiku -> sonnet -> opus)
    - Create blocking issue for manual intervention
 
 ### If No Agent Running:
 
 Check why:
 
-- **All done?** → Celebrate, final cleanup, exit
-- **Blocked on dependencies?** → Work on unblocked items or productive tasks
-- **Auto-mode paused?** → Restart if appropriate
-- **Error state?** → Diagnose and fix
+- **All done?** -> Phase 8 (Completion)
+- **Features in review / open PRs?** -> Phase 4 (PR Triage)
+- **Stale or blocked features?** -> Phase 5 (Board Groom)
+- **Blocked on dependencies?** -> Work on unblocked items or productive tasks
+- **Auto-mode paused?** -> Restart if appropriate
+- **Error state?** -> Diagnose and fix
 
 ---
 
-## Phase 4: Productive Waiting
+## Phase 4: PR Triage & Merge
+
+Handle the full PR lifecycle autonomously. No menus — decide and act.
+
+### 4.1 Scan Open PRs
+
+```bash
+gh pr list --json number,title,state,mergeable,headRefName,baseRefName,statusCheckRollup,updatedAt --limit 50
+```
+
+For each PR, extract: number, title, head/base branches, mergeable state, CodeRabbit status, last updated.
+
+### 4.2 Build Epic Mapping
+
+```
+mcp__plugin_automaker_automaker__list_features({ projectPath })
+```
+
+Map feature branches to epic branches. Features target their epic branch, epics target main, standalone features target main.
+
+### 4.3 Check PR Alignment
+
+For each open PR:
+
+- **Feature PRs** (head starts with `feature/`): Should target their epic branch if epicId exists
+- **Epic PRs** (head starts with `epic/`): Should target `main`
+- Flag any misaligned PRs
+
+### 4.4 Compute Deterministic Merge Order
+
+Sort by:
+
+1. **Features targeting epics** first (bottom-up within each epic)
+2. **Epics targeting main** (only after all child features merged)
+3. **Standalone PRs** last
+4. Within each group: ready -> pending -> conflicting, then by creation date, then PR number
+
+### 4.5 Execute Merges
+
+For each PR that is ready (MERGEABLE + all checks passing):
+
+```
+mcp__plugin_automaker_automaker__check_pr_status({ projectPath, prNumber })
+mcp__plugin_automaker_automaker__merge_pr({ projectPath, prNumber })
+```
+
+If a PR has unresolved review threads:
+
+```
+mcp__plugin_automaker_automaker__get_pr_feedback({ projectPath, prNumber })
+mcp__plugin_automaker_automaker__resolve_pr_threads({ projectPath, prNumber })
+```
+
+### 4.6 Handle Conflicts
+
+If PRs have conflicts after merges, use Graphite restack if available:
+
+```
+mcp__plugin_automaker_automaker__graphite_restack({ projectPath })
+```
+
+Otherwise, note which PRs need rebasing and handle them.
+
+### 4.7 Detect Missing PRs
+
+Find branches with commits but no PR:
+
+```bash
+git fetch --all
+git for-each-ref --sort=-committerdate refs/remotes/origin/ --format='%(refname:short)|%(committerdate:relative)' | grep -E "feature/|epic/" | head -20
+gh pr list --json headRefName --jq '.[].headRefName'
+```
+
+For branches missing PRs, create them:
+
+```
+mcp__plugin_automaker_automaker__create_pr_from_worktree({ projectPath, featureId })
+```
+
+### 4.8 Flag Stale PRs
+
+PRs not updated in >7 days are stale. Log them and decide: close, rebase, or ping.
+
+---
+
+## Phase 5: Board Grooming
+
+Keep the board clean and consistent. Act autonomously — don't present menus.
+
+### 5.1 Stale Feature Remediation
+
+For features in `in_progress` or `review` with no activity > 24h:
+
+- Check if an agent is actually running for them
+- If no agent and in_progress: restart agent or move back to backlog
+- If in review with merged PR: move to done
+- If in review with no PR: create PR or move back to in_progress
+
+### 5.2 Board Consistency Checks
+
+- **Done without PR**: Feature marked done but no merged PR -> verify manually or flag
+- **Review with merged PR**: PR already merged but feature still in review -> move to done
+- **In progress with no agent**: No running agent and no recent activity -> restart or reset
+- **Orphaned worktrees**: Worktrees for features that are already done -> note for cleanup
+
+### 5.3 Dependency Blocker Resolution
+
+- Check `get_execution_order` for blocked features
+- If a blocker is done/verified, the dependent feature should now be unblocked
+- Update feature status to reflect resolved dependencies
+
+### 5.4 Backlog Health
+
+- If backlog is empty and no work in flight: log that the system may be void of work
+- If backlog has >10 unblocked features: note the depth for prioritization
+
+---
+
+## Phase 6: Productive Waiting
 
 When blocked on external factors (PR review, CI build, rate limits), use time productively.
 
@@ -190,9 +360,9 @@ When blocked on external factors (PR review, CI build, rate limits), use time pr
 
 Before doing productive work, check if crew members are handling maintenance:
 
-- PR pipeline maintenance → **PR Maintainer** crew runs every 10min (auto-merge, CodeRabbit, format fixes)
-- Board consistency → **Board Janitor** crew runs every 15min (merged-not-done, orphaned features)
-- Server health → **Frank** crew runs every 10min (memory, health monitor)
+- PR pipeline maintenance -> **PR Maintainer** crew runs every 10min
+- Board consistency -> **Board Janitor** crew runs every 15min
+- Server health -> **Frank** crew runs every 10min
 
 Only intervene in these areas if the crew member hasn't fired yet and the issue is blocking your current work.
 
@@ -201,9 +371,6 @@ Only intervene in these areas if the crew member hasn't fired yet and the issue 
 ```bash
 # Run linter, fix issues
 npm run lint -- --fix
-
-# Format code
-npm run format
 
 # Type check
 npm run build:packages
@@ -242,7 +409,7 @@ npm run build:packages
 
 ---
 
-## Phase 5: Exponential Backoff
+## Phase 7: Exponential Backoff
 
 When truly nothing productive to do:
 
@@ -254,25 +421,6 @@ const backoffSchedule = [
   300, // 5 minutes
   600, // 10 minutes (max)
 ];
-
-let attempt = 0;
-
-while (waiting) {
-  const sleepTime = backoffSchedule[Math.min(attempt, backoffSchedule.length - 1)];
-
-  console.log(`Sleeping ${sleepTime}s (attempt ${attempt + 1})...`);
-  sleep(sleepTime);
-
-  // Check for new work
-  const status = checkBoardStatus();
-
-  if (status.hasWork) {
-    attempt = 0; // Reset backoff
-    processWork();
-  } else {
-    attempt++;
-  }
-}
 ```
 
 Implementation:
@@ -282,102 +430,57 @@ Implementation:
 sleep 30 && echo "Checking for work..."
 ```
 
----
-
-## Phase 6: Progress Reporting
-
-### Discord Updates (if configured)
-
-```
-# On feature start
-"🚀 Starting: [Feature Name]"
-
-# On feature complete
-"✅ Completed: [Feature Name] - [brief summary]"
-
-# On milestone complete
-"🎯 Milestone Complete: [Milestone Name]
-   - X features done
-   - Next: [Next Milestone]"
-
-# On project complete
-"🎉 Project Complete: [Project Name]
-   - Total features: X
-   - Duration: Y hours"
-```
-
-### Terminal Status
-
-Every 5 features or 30 minutes, output status:
-
-```markdown
-## Heads Down Progress Report
-
-**Time Elapsed**: 2h 15m
-**Features Completed**: 8/23
-**Current**: Channel Management
-
-### Completed This Session
-
-- ✅ Type Definitions (3m)
-- ✅ Settings Migration (8m)
-- ✅ Core Discord Service (12m)
-  ...
-
-### Up Next
-
-- Channel Management (in progress)
-- Notification System
-- Event Hook Extension
-```
+Reset backoff to 0 whenever new work appears.
 
 ---
 
-## Phase 7: Completion
+## Phase 8: Completion
 
-When all features are done:
+Exit headsdown mode **only** when ALL of these conditions are met:
+
+- All features are in `done` or `verified` status
+- All PRs are merged (zero open PRs)
+- No stale features remain
+- No dependency blockers remain
+- No branches missing PRs
+- Board is clean and consistent
 
 ### Final Checklist
 
 ```markdown
 - [ ] All features in Done column
+- [ ] All PRs merged (zero open)
+- [ ] No stale features
+- [ ] No blockers
 - [ ] No lint errors
 - [ ] Tests passing
 - [ ] Documentation updated
-- [ ] CHANGELOG updated (if applicable)
-- [ ] Discord notified
 ```
-
-### Cleanup Tasks
-
-1. Archive project plan (mark as completed)
-2. Update project status
-3. Create summary report
-4. Notify user of completion
 
 ### Exit Message
 
 ```markdown
-## Heads Down Complete! 🎉
+## Heads Down Complete!
 
 **Project**: [Name]
 **Duration**: X hours Y minutes
 **Features Completed**: N
+**PRs Merged**: M
 
 ### Summary
 
 [Brief description of what was accomplished]
 
-### Files Changed
+### Session Activity
 
-- libs/types/src/settings.ts
-- apps/server/src/services/discord-service.ts
-- ... (grouped by category)
+- Features processed: [list]
+- PRs merged: [list]
+- Board actions taken: [list]
 
 ### Next Steps (if any)
 
 - Manual testing recommended for [X]
-- PR review needed for [Y]
+- Follow-up work identified: [Y]
 ```
 
 ---
@@ -388,9 +491,9 @@ When all features are done:
 
 1. Read agent output for error details
 2. Check if it's a transient error (network, rate limit)
-3. If transient → retry with backoff
-4. If code error → analyze and potentially fix manually
-5. If blocked → create issue, move to next feature
+3. If transient -> retry with backoff
+4. If code error -> analyze and potentially fix manually
+5. If blocked -> create issue, move to next feature
 
 ### Build Failure
 
@@ -408,7 +511,7 @@ When all features are done:
 
 ### Complete Block
 
-If completely stuck:
+If completely stuck with no alternative paths:
 
 ```
 AskUserQuestion({
@@ -425,50 +528,45 @@ AskUserQuestion({
 
 ## Anti-Patterns to Avoid
 
-❌ **Don't spin** - If checking status, wait between checks
-❌ **Don't over-engineer** - Stick to the feature scope
-❌ **Don't break things** - Run tests before moving on
-❌ **Don't forget context** - Update docs as you go
-❌ **Don't hoard changes** - Commit frequently
-❌ **Don't ignore failures** - Address them before moving on
+- **Don't spin** - If checking status, wait between checks
+- **Don't over-engineer** - Stick to the feature scope
+- **Don't break things** - Run tests before moving on
+- **Don't forget context** - Update docs as you go
+- **Don't hoard changes** - Commit frequently
+- **Don't ignore failures** - Address them before moving on
+- **Don't present menus** - Decide and act autonomously
+- **Don't duplicate crew work** - Check if PR Maintainer/Board Janitor already handled it
 
 ---
 
 ## Quick Reference
 
-### Key Commands
-
-```bash
-# Board status
-mcp__plugin_automaker_automaker__get_board_summary({ projectPath })
-
-# Start auto-mode
-mcp__plugin_automaker_automaker__start_auto_mode({ projectPath })
-
-# Check agents
-mcp__plugin_automaker_automaker__list_running_agents()
-
-# Get agent output
-mcp__plugin_automaker_automaker__get_agent_output({ projectPath, featureId })
-
-# Move feature
-mcp__plugin_automaker_automaker__move_feature({ projectPath, featureId, status })
-```
-
 ### Status Flow
 
 ```
-backlog → in-progress → review → done
-           ↑                ↓
-           └── (on failure) ┘
+backlog -> in_progress -> review -> done
+              |             |
+              v             v
+           blocked <--------+
+
+           (verified = Ralph terminal state)
 ```
 
 ### Complexity Escalation
 
 ```
-small (haiku) → medium (sonnet) → large (sonnet) → architectural (opus)
-                                                           ↓
-                                              (2+ failures) → opus
+small (haiku) -> medium (sonnet) -> large (sonnet) -> architectural (opus)
+                                                              |
+                                                   (2+ failures) -> opus
+```
+
+### Deterministic PR Merge Order
+
+```
+1. Feature PRs -> their epic branch (bottom-up)
+2. Epic PRs -> main (after all child features merged)
+3. Standalone PRs -> main
+4. Within group: ready > pending > conflicting, then by date, then PR#
 ```
 
 ---
@@ -483,4 +581,4 @@ small (haiku) → medium (sonnet) → large (sonnet) → architectural (opus)
 /headsdown .
 ```
 
-Get to work! 🔨
+Get to work!
