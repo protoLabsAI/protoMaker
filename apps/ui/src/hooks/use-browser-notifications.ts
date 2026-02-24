@@ -12,7 +12,7 @@ import { useAppStore } from '@/store/app-store';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import type { ActionableItem } from '@protolabs-ai/types';
 
-const BASE_TITLE = 'Automaker';
+const BASE_TITLE = 'protoLabs.studio';
 
 /**
  * Mount at app root to enable browser-level notification channels.

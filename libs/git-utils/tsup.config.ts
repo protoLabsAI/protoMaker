@@ -9,5 +9,5 @@ export default defineConfig({
   clean: true,
   sourcemap: true,
   treeshake: true,
-  external: [/^@automaker\//],
+  external: [/^@protolabs-ai\//, 'tree-kill'],
 });
