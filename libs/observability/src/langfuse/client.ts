@@ -86,7 +86,14 @@ export class LangfuseClient {
         config: prompt.config as Record<string, any> | undefined,
       };
     } catch (error) {
-      logger.error(`Failed to fetch prompt from Langfuse: ${name}`, error);
+      // "Prompt not found" is expected when prompts haven't been seeded to Langfuse —
+      // the three-layer resolver falls back to hardcoded defaults gracefully.
+      const isNotFound = error instanceof Error && error.message.includes('Prompt not found');
+      if (isNotFound) {
+        logger.debug(`Prompt not in Langfuse: ${name} (will use default)`);
+      } else {
+        logger.error(`Failed to fetch prompt from Langfuse: ${name}`, error);
+      }
       return null;
     }
   }

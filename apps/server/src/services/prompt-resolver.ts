@@ -104,6 +104,12 @@ export class PromptResolver {
           this.cacheResult(cacheKey, result);
           return result;
         }
+
+        // Negative cache: prompt not in Langfuse — cache the default to avoid
+        // repeated Langfuse API calls for prompts that haven't been seeded.
+        const fallback: ResolvedPrompt = { prompt: defaultValue, source: 'default' };
+        this.cacheResult(cacheKey, fallback);
+        return fallback;
       } catch (error) {
         // Graceful degradation — fall through to default
         logger.debug(`Langfuse fetch failed for ${promptName}, using default`, error);
