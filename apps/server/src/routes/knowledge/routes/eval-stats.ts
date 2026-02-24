@@ -4,6 +4,7 @@
 
 import type { Request, Response } from 'express';
 import { createLogger } from '@protolabs-ai/utils';
+import type { KnowledgeStoreService } from '../../../services/knowledge-store-service.js';
 
 const logger = createLogger('KnowledgeRoutes');
 
@@ -11,7 +12,7 @@ interface EvalStatsRequest {
   projectPath: string;
 }
 
-export function createEvalStatsHandler(knowledgeStoreService: any) {
+export function createEvalStatsHandler(knowledgeStoreService: KnowledgeStoreService) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
       const { projectPath } = req.body as EvalStatsRequest;

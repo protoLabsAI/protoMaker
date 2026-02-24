@@ -34,7 +34,7 @@ export class KnowledgeIngestionService {
    * @param db - Database instance
    * @param projectPath - Project path to rebuild index for
    */
-  rebuildIndex(db: BetterSqlite3.Database, projectPath: string): void {
+  rebuildIndex(db: BetterSqlite3.Database, _projectPath: string): void {
     try {
       // Rebuild FTS5 index from chunks table
       db.exec("INSERT INTO chunks_fts(chunks_fts) VALUES('rebuild')");

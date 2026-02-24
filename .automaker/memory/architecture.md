@@ -3136,3 +3136,32 @@ usageStats:
 - **Situation:** Downstream consumers may assume confidence score correlates to classification accuracy, but it's arbitrary: all matching patterns get 0.8-0.95, unmatched gets 0.5, regardless of pattern quality or false-positive rate.
 - **Root cause:** Synthetic scores are simple to assign without data. High confidence for patterns encourages escalation; 0.5 for unknown preserves optionality. Intent is signaling, not accuracy metrics.
 - **How to avoid:** Easy to assign without data vs misleading if consumers interpret as accuracy. Good for alerting logic vs bad for learning or auditing. Simpler than Bayesian scoring vs loses information about pattern quality.
+
+### Checkpoint cleanup split across two services using both active and passive mechanisms: AutoModeService deletes checkpoints during feature state transitions, while LeadEngineerService performs comprehensive orphaned-checkpoint scan at startup (2026-02-24)
+- **Context:** Crash recovery system must handle checkpoint files that become orphaned when features are reset or when crashes interrupt cleanup operations
+- **Why:** Defense in depth approach where active cleanup during state transitions is complemented by passive validation scan. Passive scan catches edge cases: checkpoints orphaned by crashes, missed active deletions, or features reset to backlog. Separates concerns—AutoModeService owns feature lifecycle consequences, LeadEngineerService owns system-wide consistency invariants
+- **Rejected:** Single centralized cleanup service; relying only on active deletion during state transitions; scan-only approach without active cleanup
+- **Trade-offs:** Increased code complexity and two separate deletion paths, but guarantees orphaned checkpoints are caught even after crash scenarios. Passive scan adds startup latency but provides safety net for active cleanup failures
+- **Breaking if changed:** Removing passive scan leaves system vulnerable to orphaned files after crashes. Removing active cleanup means relying only on less immediate periodic scans, increasing recovery time
+
+#### [Gotcha] Reconciliation order is a critical hidden dependency: reconcileFeatureStates() must execute before reconcileCheckpoints(). Reversed order causes orphaned checkpoints to be missed because features aren't yet in backlog state when scan runs (2026-02-24)
+- **Situation:** When reconcileFeatureStates resets a feature to backlog, that checkpoint becomes a candidate for orphaning. reconcileCheckpoints identifies checkpoints as orphaned by checking if corresponding features are in active states. If scan runs first, newly-reset features won't be seen as backlog yet
+- **Root cause:** State consistency requirement—the scan logic depends on seeing features in their final reconciled state. This is a temporal dependency that exists only due to the two-phase design
+- **How to avoid:** Requires maintaining implicit ordering constraint in startup sequence, creating subtle coupling between services that must be documented
+
+#### [Pattern] Non-blocking checkpoint deletion failures during startup recovery: errors are logged as warnings but don't halt system initialization. System prioritizes availability over perfect cleanup state (2026-02-24)
+- **Problem solved:** Crash recovery startup path must restore operational state. If cleanup failures block progress, partially-crashed system could become permanently stuck
+- **Why this works:** Recovery systems must separate concerns: checkpoint cleanup is a safety/consistency concern, but system availability is a liveness concern. Recovery paths must never allow safety work to block liveness
+- **Trade-offs:** Orphaned checkpoint files may accumulate on disk if cleanup repeatedly fails, but system remains operational. Increases risk of stale file accumulation but guarantees recovery completion
+
+#### [Pattern] Multi-level cascading fallback strategy implemented: (1) Use configured projects from global settings, (2) Fall back to process.cwd() if projects list is empty, (3) Fall back to cwd again if settings service read fails entirely (2026-02-24)
+- **Problem solved:** Recovering sessions across multiple projects requires discovering which projects exist, but this discovery can fail at different levels
+- **Why this works:** Handles two distinct failure modes: missing configuration (user hasn't set up projects) and runtime errors (settings service unavailable). Each level ensures some recovery capability works.
+- **Trade-offs:** Added complexity in error handling paths, but guarantees graceful degradation. Session recovery works even with partial system failures.
+
+### Project discovery driven by explicit global settings configuration (settingsService.getGlobalSettings().projects) rather than filesystem scanning or auto-discovery (2026-02-24)
+- **Context:** System needs to know which projects exist to recover their sessions during crash recovery
+- **Why:** Explicit configuration makes session recovery deterministic and auditable - exactly known projects are scanned. Filesystem scanning would be implicit and fragile (hidden dependencies on directory structure).
+- **Rejected:** Filesystem scanning (find all .ava/session files): creates hidden dependencies, inconsistent behavior across environments, harder to debug session recovery failures
+- **Trade-offs:** Requires users to explicitly configure projects (higher friction), but system behavior is predictable and debuggable. Easier to implement and test.
+- **Breaking if changed:** Unconfigured projects lose sessions entirely. Users must add projects to settings to enable session recovery. Changing to auto-discovery would require rearchitecting discovery mechanism.

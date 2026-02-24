@@ -4,6 +4,8 @@
 
 import type { Request, Response } from 'express';
 import { createLogger } from '@protolabs-ai/utils';
+import type { KnowledgeSourceType } from '@protolabs-ai/types';
+import type { KnowledgeStoreService } from '../../../services/knowledge-store-service.js';
 
 const logger = createLogger('KnowledgeRoutes');
 
@@ -12,10 +14,10 @@ interface SearchRequest {
   query: string;
   maxResults?: number;
   maxTokens?: number;
-  sourceTypes?: string[];
+  sourceTypes?: KnowledgeSourceType[] | 'all';
 }
 
-export function createSearchHandler(knowledgeStoreService: any) {
+export function createSearchHandler(knowledgeStoreService: KnowledgeStoreService) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
       const { projectPath, query, maxResults, maxTokens, sourceTypes } = req.body as SearchRequest;

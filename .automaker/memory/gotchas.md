@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 359
-  referenced: 193
-  successfulFeatures: 193
+  loaded: 362
+  referenced: 195
+  successfulFeatures: 195
 ---
 # gotchas
 
@@ -342,3 +342,8 @@ usageStats:
 - **Situation:** Settings service persists project list, but filesystem state changes independently (projects deleted, moved, renamed)
 - **Root cause:** Stale configuration causes 'session not found' errors or attempts to restore from non-existent paths. Validation prevents these failures.
 - **How to avoid:** Slightly slower (stat calls per project), but prevents crash recovery feature itself from crashing. User doesn't get feedback that config is stale.
+
+#### [Gotcha] Sessions for deleted projects are permanently lost because path validation (line 2174) prevents checking non-existent paths. Project paths must remain valid to recover their sessions. (2026-02-24)
+- **Situation:** Session discovery validates that project paths exist before attempting to read session files
+- **Root cause:** Prevents file read errors on deleted projects, keeps implementation simple and predictable. But creates data loss scenario.
+- **How to avoid:** Safety and simplicity gained, but session recovery completeness lost for any deleted project. Users lose work if they delete a project without archiving its session.

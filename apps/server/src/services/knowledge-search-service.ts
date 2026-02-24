@@ -522,7 +522,6 @@ export class KnowledgeSearchService {
       fs.appendFileSync(evalLogPath, JSON.stringify(logEntry) + '\n');
 
       // Rotate if file exceeds 10k lines
-      const stats = fs.statSync(evalLogPath);
       const lineCount = fs.readFileSync(evalLogPath, 'utf-8').split('\n').length;
       if (lineCount > 10000) {
         const backupPath = path.join(automakerDir, `knowledge-eval-${Date.now()}.jsonl`);

@@ -13,7 +13,6 @@ import type {
   KnowledgeStoreStats,
   KnowledgeSearchOptions,
   KnowledgeSearchResult,
-  KnowledgeChunk,
   KnowledgeStoreSettings,
   RetrievalMode,
 } from '@protolabs-ai/types';
@@ -137,7 +136,7 @@ export class KnowledgeStoreService {
         ALTER TABLE chunks ADD COLUMN hype_queries TEXT
       `);
       logger.debug('Added hype_queries column to chunks table');
-    } catch (err) {
+    } catch (_err) {
       // Column already exists, ignore error
       logger.debug('hype_queries column already exists');
     }
@@ -148,7 +147,7 @@ export class KnowledgeStoreService {
         ALTER TABLE chunks ADD COLUMN hype_embeddings BLOB
       `);
       logger.debug('Added hype_embeddings column to chunks table');
-    } catch (err) {
+    } catch (_err) {
       // Column already exists, ignore error
       logger.debug('hype_embeddings column already exists');
     }

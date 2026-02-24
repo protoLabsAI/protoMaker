@@ -4,6 +4,7 @@
 
 import type { Request, Response } from 'express';
 import { createLogger } from '@protolabs-ai/utils';
+import type { KnowledgeStoreService } from '../../../services/knowledge-store-service.js';
 
 const logger = createLogger('KnowledgeIngestRoutes');
 
@@ -14,7 +15,7 @@ interface IngestRequest {
 /**
  * POST /ingest/reflections - Ingest all reflection.md files from features
  */
-export function createIngestReflectionsHandler(knowledgeStoreService: any) {
+export function createIngestReflectionsHandler(knowledgeStoreService: KnowledgeStoreService) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
       const { projectPath } = req.body as IngestRequest;
@@ -45,7 +46,7 @@ export function createIngestReflectionsHandler(knowledgeStoreService: any) {
 /**
  * POST /ingest/agent-outputs - Ingest all agent-output.md files from features
  */
-export function createIngestAgentOutputsHandler(knowledgeStoreService: any) {
+export function createIngestAgentOutputsHandler(knowledgeStoreService: KnowledgeStoreService) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
       const { projectPath } = req.body as IngestRequest;

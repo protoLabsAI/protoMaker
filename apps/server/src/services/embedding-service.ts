@@ -9,7 +9,6 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { EventEmitter } from 'node:events';
 import { createLogger } from '@protolabs-ai/utils';
-import type { Pipeline } from '@xenova/transformers';
 import type { FeatureExtractionPipeline } from '@xenova/transformers';
 
 const logger = createLogger('EmbeddingService');
