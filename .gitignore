@@ -150,8 +150,9 @@ labs/
 # Local project plans (not repo content)
 /projects/
 
-# Large media files (render locally, don't commit)
+# Gource visualization (render locally, don't commit)
 gource.mp4
+.gource/
 
 # Test fixture runtime artifacts
 test/fixtures/**/.automaker/categories.json
