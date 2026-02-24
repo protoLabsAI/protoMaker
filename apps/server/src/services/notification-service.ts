@@ -41,18 +41,26 @@ async function atomicWriteJson(filePath: string, data: unknown): Promise<void> {
 }
 
 /**
- * Safely read JSON file with fallback to default
+ * Safely read notifications JSON file with fallback to default.
+ * Validates the parsed shape — returns default if file contains
+ * malformed data (e.g. a bare array instead of {notifications: []}).
  */
-async function readJsonFile<T>(filePath: string, defaultValue: T): Promise<T> {
+async function readNotificationsFile(filePath: string): Promise<NotificationsFile> {
   try {
     const content = (await secureFs.readFile(filePath, 'utf-8')) as string;
-    return JSON.parse(content) as T;
+    const parsed = JSON.parse(content);
+    // Validate shape: must have a notifications array
+    if (parsed && Array.isArray(parsed.notifications)) {
+      return parsed as NotificationsFile;
+    }
+    logger.warn(`Malformed notifications file at ${filePath}, using default`);
+    return { ...DEFAULT_NOTIFICATIONS_FILE };
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      return defaultValue;
+      return { ...DEFAULT_NOTIFICATIONS_FILE };
     }
     logger.error(`Error reading ${filePath}:`, error);
-    return defaultValue;
+    return { ...DEFAULT_NOTIFICATIONS_FILE };
   }
 }
 
@@ -91,10 +99,7 @@ export class NotificationService {
    */
   async getNotifications(projectPath: string): Promise<Notification[]> {
     const notificationsPath = getNotificationsPath(projectPath);
-    const file = await readJsonFile<NotificationsFile>(
-      notificationsPath,
-      DEFAULT_NOTIFICATIONS_FILE
-    );
+    const file = await readNotificationsFile(notificationsPath);
     // Filter out dismissed notifications and sort by date (newest first)
     return file.notifications
       .filter((n) => !n.dismissed)
@@ -125,10 +130,7 @@ export class NotificationService {
     await ensureAutomakerDir(projectPath);
 
     const notificationsPath = getNotificationsPath(projectPath);
-    const file = await readJsonFile<NotificationsFile>(
-      notificationsPath,
-      DEFAULT_NOTIFICATIONS_FILE
-    );
+    const file = await readNotificationsFile(notificationsPath);
 
     const notification: Notification = {
       id: randomUUID(),
@@ -164,10 +166,7 @@ export class NotificationService {
    */
   async markAsRead(projectPath: string, notificationId: string): Promise<Notification | null> {
     const notificationsPath = getNotificationsPath(projectPath);
-    const file = await readJsonFile<NotificationsFile>(
-      notificationsPath,
-      DEFAULT_NOTIFICATIONS_FILE
-    );
+    const file = await readNotificationsFile(notificationsPath);
 
     const notification = file.notifications.find((n) => n.id === notificationId);
     if (!notification) {
@@ -189,10 +188,7 @@ export class NotificationService {
    */
   async markAllAsRead(projectPath: string): Promise<number> {
     const notificationsPath = getNotificationsPath(projectPath);
-    const file = await readJsonFile<NotificationsFile>(
-      notificationsPath,
-      DEFAULT_NOTIFICATIONS_FILE
-    );
+    const file = await readNotificationsFile(notificationsPath);
 
     let count = 0;
     for (const notification of file.notifications) {
@@ -219,10 +215,7 @@ export class NotificationService {
    */
   async dismissNotification(projectPath: string, notificationId: string): Promise<boolean> {
     const notificationsPath = getNotificationsPath(projectPath);
-    const file = await readJsonFile<NotificationsFile>(
-      notificationsPath,
-      DEFAULT_NOTIFICATIONS_FILE
-    );
+    const file = await readNotificationsFile(notificationsPath);
 
     const notification = file.notifications.find((n) => n.id === notificationId);
     if (!notification) {
@@ -244,10 +237,7 @@ export class NotificationService {
    */
   async dismissAll(projectPath: string): Promise<number> {
     const notificationsPath = getNotificationsPath(projectPath);
-    const file = await readJsonFile<NotificationsFile>(
-      notificationsPath,
-      DEFAULT_NOTIFICATIONS_FILE
-    );
+    const file = await readNotificationsFile(notificationsPath);
 
     let count = 0;
     for (const notification of file.notifications) {
