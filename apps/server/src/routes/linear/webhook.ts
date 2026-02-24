@@ -107,6 +107,8 @@ interface LinearIssueWebhookPayload extends LinearWebhookPayload {
       /** When SLA breach is expected */
       breachesAt?: string;
     };
+    /** Due date (YYYY-MM-DD format, set when issue has a due date in Linear) */
+    dueDate?: string;
     /** Timestamps */
     createdAt: string;
     updatedAt: string;
@@ -421,6 +423,7 @@ async function handleIssueUpdated(
   await linearSyncService.onLinearIssueUpdated(data.id, stateName, projectPath, {
     title: data.title,
     priority: data.priority,
+    dueDate: data.dueDate,
   });
 
   // Also emit event for other listeners (UI, logging, etc.)

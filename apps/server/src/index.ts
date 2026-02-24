@@ -393,6 +393,7 @@ archivalService.start();
 
 // Calendar service
 calendarService.setFeatureLoader(featureLoader);
+calendarService.setSettingsService(settingsService);
 const autoModeService = new AutoModeService(events, settingsService);
 const hitlFormService = new HITLFormService({
   events,

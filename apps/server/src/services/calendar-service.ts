@@ -12,6 +12,8 @@ import { createLogger, atomicWriteJson, readJsonWithRecovery } from '@protolabs-
 import { getAutomakerDir } from '@protolabs-ai/platform';
 import * as secureFs from '../lib/secure-fs.js';
 import type { FeatureLoader } from './feature-loader.js';
+import type { SettingsService } from './settings-service.js';
+import { LinearMCPClient } from './linear-mcp-client.js';
 import type { Feature } from '@protolabs-ai/types';
 
 const logger = createLogger('CalendarService');
@@ -57,6 +59,7 @@ export interface CalendarQueryOptions {
 export class CalendarService {
   private static instance: CalendarService;
   private featureLoader: FeatureLoader | null = null;
+  private settingsService: SettingsService | null = null;
 
   private constructor() {}
 
@@ -72,6 +75,13 @@ export class CalendarService {
    */
   setFeatureLoader(featureLoader: FeatureLoader): void {
     this.featureLoader = featureLoader;
+  }
+
+  /**
+   * Set the SettingsService instance for reading Linear integration config
+   */
+  setSettingsService(settingsService: SettingsService): void {
+    this.settingsService = settingsService;
   }
 
   /**
@@ -185,9 +195,38 @@ export class CalendarService {
       }
     }
 
-    // 3. Aggregate from project milestones (targetDate)
-    // TODO: Implement when targetDate is added to Milestone type
-    // For now, this is a placeholder for future enhancement
+    // 3. Aggregate from Linear project milestones (targetDate)
+    if (this.settingsService && (!types || types.includes('milestone'))) {
+      try {
+        const settings = await this.settingsService.getProjectSettings(projectPath);
+        const linearProjectId = settings.integrations?.linear?.projectId;
+
+        if (linearProjectId) {
+          const linearClient = new LinearMCPClient(this.settingsService, projectPath);
+          const milestones = await linearClient.listProjectMilestones(linearProjectId);
+
+          for (const milestone of milestones) {
+            if (!milestone.targetDate) continue;
+
+            const event: CalendarEvent = {
+              id: `milestone-${milestone.id}`,
+              title: milestone.name,
+              date: milestone.targetDate,
+              type: 'milestone',
+              description: milestone.description || undefined,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            };
+
+            if (this.isDateInRange(event.date, startDate, endDate)) {
+              allEvents.push(event);
+            }
+          }
+        }
+      } catch (error) {
+        logger.warn('Failed to load Linear milestones for calendar aggregation:', error);
+      }
+    }
 
     // Filter by date range
     let filteredEvents = allEvents;

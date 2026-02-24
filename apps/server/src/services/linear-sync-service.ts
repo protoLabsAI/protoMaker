@@ -2940,7 +2940,7 @@ ${prdContent}
     linearIssueId: string,
     newStateName: string,
     projectPath: string,
-    options?: { title?: string; priority?: number }
+    options?: { title?: string; priority?: number; dueDate?: string }
   ): Promise<void> {
     const startTime = Date.now();
     let featureId = 'unknown';
@@ -3013,6 +3013,12 @@ ${prdContent}
       if (options?.priority !== undefined && options.priority !== feature.priority) {
         featureUpdates.priority = options.priority as Feature['priority'];
         changeDescriptions.push(`priority: ${feature.priority ?? 'none'} → ${options.priority}`);
+      }
+
+      // --- Due date sync (Linear dueDate → Automaker dueDate) ---
+      if (options?.dueDate !== undefined && options.dueDate !== feature.dueDate) {
+        featureUpdates.dueDate = options.dueDate;
+        changeDescriptions.push(`dueDate: ${feature.dueDate ?? 'none'} → ${options.dueDate}`);
       }
 
       // --- Dependency sync (Linear issue relations → Automaker dependencies) ---

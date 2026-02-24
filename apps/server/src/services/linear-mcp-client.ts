@@ -1440,9 +1440,15 @@ export class LinearMCPClient {
    * @returns Array of milestones with id and name
    * @throws {LinearAPIError} On API errors
    */
-  async listProjectMilestones(
-    projectId: string
-  ): Promise<Array<{ id: string; name: string; description?: string; sortOrder: number }>> {
+  async listProjectMilestones(projectId: string): Promise<
+    Array<{
+      id: string;
+      name: string;
+      description?: string;
+      sortOrder: number;
+      targetDate?: string;
+    }>
+  > {
     const query = `
       query ListProjectMilestones($projectId: String!) {
         project(id: $projectId) {
@@ -1452,6 +1458,7 @@ export class LinearMCPClient {
               name
               description
               sortOrder
+              targetDate
             }
           }
         }
@@ -1466,6 +1473,7 @@ export class LinearMCPClient {
             name: string;
             description?: string;
             sortOrder: number;
+            targetDate?: string;
           }>;
         };
       };
