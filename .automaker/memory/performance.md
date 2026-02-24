@@ -5,9 +5,9 @@ relevantTo: [performance]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 9
-  referenced: 6
-  successfulFeatures: 6
+  loaded: 13
+  referenced: 8
+  successfulFeatures: 8
 ---
 # performance
 
@@ -125,3 +125,86 @@ usageStats:
 - **Rejected:** Shorter gcTime (5-30 min) would require fresh server fetch on each page load or browser restart, defeating offline-first PWA pattern. Session/sessionStorage would lose data on browser restart entirely.
 - **Trade-offs:** Memory usage increases (more cached queries held longer), but eliminates network spinner on page refresh IF data is already cached. Cache is still soft (can be invalidated/refetched), not stale (user still sees fresh indicator).
 - **Breaking if changed:** If gcTime is reverted to <1 hour, cached data won't persist across browser restart, eliminating the instant-load UX that PWA feature enables
+
+#### [Pattern] Achieved sub-12KB PNG files (10x better than 300KB requirement) by leveraging PNG palette mode compression on simple branded graphics with limited color palette (2026-02-24)
+- **Problem solved:** Generating simple branded images with dark background, logo, text, and gradient accents
+- **Why this works:** Simple graphics with large solid color areas compress extremely well in palette mode. Going beyond minimum requirements demonstrates mobile-first thinking and quality standards without extra effort
+- **Trade-offs:** No quality loss because simple graphics lack photos/gradients that suffer from aggressive compression
+
+### Disabled Gatekeeper assessment during build (gatekeeperAssess: false) as performance optimization (2026-02-24)
+- **Context:** Gatekeeper assessment runs as part of code signing process, but notarization performs more comprehensive security checks afterward
+- **Why:** Gatekeeper's assessment is redundant when notarization follows - notarization is a superset check that includes Gatekeeper validation. Skipping during build saves time without reducing security posture
+- **Rejected:** Keeping assessment enabled adds build time without benefit since final notarization is more thorough
+- **Trade-offs:** Saves 1-5 minutes per build by deferring security check to notarization (which already validates everything)
+- **Breaking if changed:** If re-enabled, builds take slightly longer but gain extra validation layer during signing (not breaking, just slower)
+
+#### [Gotcha] Notarization adds 1-5 minute latency per macOS build due to network round-trip to Apple's services, creating observable build time increase in CI/CD (2026-02-24)
+- **Situation:** Automated code signing and notarization requires external service call during every build
+- **Root cause:** This is a gotcha because while notarization is necessary for macOS distribution, the performance impact is non-obvious upfront and accumulates across all builds. It's an acceptable tradeoff but requires understanding the cost
+- **How to avoid:** 1-5 minute build time cost vs mandatory security/functionality requirement on macOS - the cost is inherent to the platform requirement
+
+#### [Gotcha] Rate limiting set to 6000ms (10 calls/minute) creates sequential processing bottleneck. With conservative timing, large knowledge bases will take hours/days to process all chunks. (2026-02-24)
+- **Situation:** HyPE worker uses setTimeout-based rate limiting between Haiku API calls to avoid quota issues
+- **Root cause:** Safety-first approach prioritizes quota safety over throughput, but Haiku has much higher quotas than GPT-4. The conservative rate was chosen to prevent any risk of quota exhaustion.
+- **How to avoid:** Safety and simplicity gained (single setTimeout loop), but throughput severely limited. Large datasets become a multi-hour background job.
+
+### Embedding averaging uses simple element-wise sum/divide instead of weighted averaging or L2 normalization. Creates representative query vector by averaging hypothetical question embeddings. (2026-02-24)
+- **Context:** Multiple generated questions need to be combined into single embedding for similarity search against chunk embeddings
+- **Why:** Element-wise averaging is mathematically simple, works for cosine similarity (magnitude-invariant), and reduces embedding count. Alternative methods add computational overhead without clear benefit for retrieval.
+- **Rejected:** L2 normalization adds complexity; weighted averaging requires deciding weights; PCA-based reduction requires matrix computation
+- **Trade-offs:** Simplicity and speed gained, but loses vector magnitude information which is irrelevant for cosine similarity anyway
+- **Breaking if changed:** If changed to L2-normalized averaging, magnitude-dependent similarity metrics would be affected
+
+### Evaluation logging uses async void promise (non-blocking) to prevent search request latency impact (2026-02-24)
+- **Context:** Adding evaluation logging for offline analysis without degrading search response times
+- **Why:** Search latency is user-facing; evaluation logging is for backend analytics. Async prevents blocking request completion on I/O
+- **Rejected:** Synchronous logging would guarantee data persistence but increase search p95/p99 latency
+- **Trade-offs:** Faster search responses gain risk of data loss on ungraceful shutdown; no backpressure if logging falls behind
+- **Breaking if changed:** Making logging synchronous would add measurable latency to every search; removing evaluation logging removes production data needed to optimize algorithm weights
+
+### Conservative rate limiting at 6000ms/call (10 calls/minute) for Haiku API instead of more aggressive batching (2026-02-24)
+- **Context:** Generating 3 queries per chunk via Claude Haiku requires API calls that must be rate-limited
+- **Why:** Prioritizes API quota safety and avoiding throttling over faster processing speed. System maintains reliability even under high ingestion loads
+- **Rejected:** Batching multiple chunks per API call or reducing delay (would risk hitting rate limits or quota exhaustion)
+- **Trade-offs:** HyPE generation slower (10 chunks/min max) but never risks API failures; client sees stale HyPE status temporarily during bulk ingestion
+- **Breaking if changed:** Reducing delay below 6000ms risks quota errors; removing rate limiting entirely could cause cascading API failures on large knowledge bases
+
+### Use simple element-wise average of query embeddings (sum then divide by count) instead of weighted average or L2 normalization (2026-02-24)
+- **Context:** Each chunk's 3 questions generate 3 embeddings that must be combined into single vector for semantic search
+- **Why:** No information about relative importance of the 3 questions; simple average is mathematically unbiased. Normalization adds complexity without clear benefit for semantic averaging
+- **Rejected:** Weighted average (would require scoring questions by relevance); L2 normalization (adds computation, unclear if beneficial for aggregated embeddings)
+- **Trade-offs:** Fast computation and deterministic results vs potential loss of query distinctiveness (questions blend into middle-ground embedding)
+- **Breaking if changed:** Changing averaging algorithm invalidates all stored hype_embeddings; stored vectors are no longer comparable to newly generated ones
+
+### Async, fire-and-forget evaluation logging (void promise) rather than synchronous logging (2026-02-24)
+- **Context:** Capturing search evaluation metrics without introducing latency overhead to every search operation
+- **Why:** Search latency is user-facing; logging is analytical. Decoupling them prevents evaluation instrumentation from degrading search performance. Async approach acceptable because loss of some log entries (on process crash) is acceptable for statistical analysis.
+- **Rejected:** Synchronous logging (would add 5-50ms per search), batch logging (more complex, delayed visibility), in-memory buffer with periodic flush (complex failure modes)
+- **Trade-offs:** Gains latency (critical for UX) at cost of eventual consistency and possible data loss on crash. Logs become best-effort approximation rather than exact history.
+- **Breaking if changed:** Converting to synchronous logging would expose every search to I/O latency. Removing logging entirely loses observability into retrieval effectiveness.
+
+### Hybrid retrieval uses fixed RRF k=60 constant rather than configurable parameter (2026-02-24)
+- **Context:** Merging BM25 lexical search with cosine similarity semantic search rankings
+- **Why:** RRF (Reciprocal Rank Fusion) with fixed k is standard ML approach for combining ranking systems. k=60 is commonly used baseline.
+- **Rejected:** Parameterized k value requiring calibration per use case; or different merge algorithms (learned-to-rank, weighted average)
+- **Trade-offs:** Fixed k is predictable and requires no tuning but may be suboptimal for specific data distributions. If one ranking system is consistently better, fixed k wastes potential.
+- **Breaking if changed:** If k=60 needs adjustment based on production metrics, would require code change and redeployment rather than configuration change
+
+### Serial rate-limited processing (6000ms delays = 10 Haiku calls/minute) instead of batch processing all questions together (2026-02-24)
+- **Context:** Generating 3 questions per chunk via Claude Haiku for n chunks
+- **Why:** Predictable rate limiting respects API quotas; easier to reason about and observe; avoids burst spike risks
+- **Rejected:** Batch process multiple chunks' questions in parallel or single batch; would be faster but harder to control and could trigger rate limits
+- **Trade-offs:** Slower overall throughput (serial) vs safer, more observable rate limiting. At scale, becomes bottleneck for large knowledge stores
+- **Breaking if changed:** Switching to batch processing requires redesign of rate limiting strategy and could cause API quota issues if not carefully managed
+
+#### [Gotcha] Embedding averaging uses simple element-wise mean without normalization, which preserves variance and potential magnitude differences across embeddings (2026-02-24)
+- **Situation:** Averaging 3 question embeddings into single representative vector for similarity search
+- **Root cause:** Simple, fast computation; matches averaging used elsewhere in codebase
+- **How to avoid:** Speed/simplicity gained vs potential retrieval quality loss if embeddings have heterogeneous scales; doesn't follow typical embedding best practices
+
+### Use first 500 characters of chunk content as context for question generation (plus heading if present) (2026-02-24)
+- **Context:** Balancing API cost (token count) against context quality for Haiku question generation
+- **Why:** Hardcoded balance: enough context for meaningful questions, short enough to keep Haiku calls cheap (<200 tokens)
+- **Rejected:** Full chunk content (might be kilobytes, expensive); summary extraction (adds complexity); configurable (adds operational burden)
+- **Trade-offs:** Cost control gained; but loses information if key content is after 500 chars (deterministic data loss)
+- **Breaking if changed:** If knowledge store contains chunks where critical content appears after 500 chars, questions will be misleading or irrelevant

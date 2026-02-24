@@ -35,3 +35,13 @@ usageStats:
 - **Situation:** Running `npm run build:packages` for final verification
 - **Root cause:** Monorepo build orchestration includes all packages as a single operation. Pre-existing errors in other packages block the entire build, preventing clear signal on this feature's package health.
 - **How to avoid:** Easier: Discover build isolation issue. Harder: Can't verify full monorepo build status. Breaking: If build system requires all packages to succeed, this feature can't deploy until secure-fs is fixed
+
+#### [Gotcha] OG meta tags must use absolute URLs, not relative URLs, because social media crawlers are external services without context to resolve relative URLs (2026-02-24)
+- **Situation:** Implementing og:image meta tags for social sharing across landing pages
+- **Root cause:** Social platforms crawl pages from their own servers and cannot resolve relative URLs the way a browser would. The crawler has no concept of the base URL context
+- **How to avoid:** Absolute URLs require hardcoding domain and are harder to manage across environments (dev/staging/prod), but are mandatory for external crawlers
+
+#### [Gotcha] Same satisfiedStatuses list appears in 3+ separate functions within single resolver.ts file. Each function is responsible for keeping this in sync independently. (2026-02-24)
+- **Situation:** Three functions (areDependenciesSatisfied, getBlockingDependencies, getBlockingDependenciesFromMap) each had their own copy of which statuses count as 'satisfied'
+- **Root cause:** Each function may have evolved independently to solve different caller needs. Extracting to constant might seem premature optimization until a change reveals the cost.
+- **How to avoid:** Explicit local context (understand status list in each function) vs DRY principle (maintenance burden of 3 copies)

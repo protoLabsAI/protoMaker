@@ -5,9 +5,9 @@ relevantTo: [documentation]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 35
-  referenced: 23
-  successfulFeatures: 23
+  loaded: 42
+  referenced: 28
+  successfulFeatures: 28
 ---
 # documentation
 

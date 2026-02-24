@@ -1661,6 +1661,19 @@ export class AutoModeService {
         throw new Error(`Feature ${featureId} not found`);
       }
 
+      // Guard: refuse to execute features in terminal states.
+      // This prevents zombie loops where done/verified features keep getting restarted
+      // by health checks, reconciliation, or stale retry timers.
+      const TERMINAL_STATUSES = new Set(['done', 'verified', 'completed', 'review']);
+      if (TERMINAL_STATUSES.has(feature.status ?? '')) {
+        logger.warn(
+          `Refusing to execute feature ${featureId} — already in terminal status "${feature.status}". ` +
+            `Removing from running features.`
+        );
+        this.runningFeatures.delete(featureId);
+        return;
+      }
+
       // Capture starting cost for execution-specific cost tracking
       startingCostUsd = feature.costUsd ?? 0;
 
@@ -2879,6 +2892,17 @@ Complete the pipeline step instructions above. Review the previous work and appl
     const feature = await this.loadFeature(projectPath, featureId);
     if (!feature) {
       throw new Error(`Feature ${featureId} not found`);
+    }
+
+    // Guard: refuse to resume features in terminal states.
+    // Only guard against truly terminal states (done/verified) — review features
+    // may legitimately need re-execution when PR feedback arrives.
+    const TERMINAL_STATUSES = new Set(['done', 'verified']);
+    if (TERMINAL_STATUSES.has(feature.status ?? '')) {
+      logger.warn(
+        `Refusing to resume feature ${featureId} — already in terminal status "${feature.status}".`
+      );
+      return;
     }
 
     // Check if feature is stuck in a pipeline step

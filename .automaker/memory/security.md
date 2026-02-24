@@ -5,9 +5,9 @@ relevantTo: [security]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 30
-  referenced: 18
-  successfulFeatures: 18
+  loaded: 33
+  referenced: 19
+  successfulFeatures: 19
 ---
 # security
 
@@ -186,3 +186,149 @@ usageStats:
 - **Situation:** Tests attempted to use temporary paths created by test framework, which fail path validation intended to prevent path traversal attacks
 - **Root cause:** Middleware validates all file paths against allowed root to prevent security issues. This is correct security posture but creates a hard constraint on what paths endpoints accept.
 - **How to avoid:** Gain security constraint enforcement, lose ability to test with arbitrary paths. Production usage limited to paths under ALLOWED_ROOT_DIRECTORY.
+
+#### [Pattern] Conditional feature detection for optional dependencies: `if (window.umami)` before calling analytics. (2026-02-24)
+- **Problem solved:** Analytics library (Umami) may not be loaded or available in all environments
+- **Why this works:** Gracefully handles missing optional dependencies without blocking form submission or throwing errors
+- **Trade-offs:** Silent graceful degradation vs. no visibility into missing analytics setup
+
+#### [Gotcha] ESLint flat config syntax requires /* global require, exports, process, console */ instead of /* eslint-env node */ for CommonJS files (2026-02-24)
+- **Situation:** Notarize.js ESLint validation failed with flat config until globals were explicitly declared
+- **Root cause:** ESLint flat config (newer specification) changed how execution environments are specified - env comments are no longer supported, requiring explicit global declarations instead
+- **How to avoid:** More verbose declarations, but makes runtime dependencies explicit and clearer for readers
+
+#### [Gotcha] com.apple.security.cs.allow-jit entitlement is mandatory for Electron. Without it, app crashes at runtime even if successfully signed and notarized. (2026-02-24)
+- **Situation:** Hardened runtime entitlements must be configured to enable macOS code signing
+- **Root cause:** Electron's V8 JavaScript engine requires JIT compilation to function. Hardened runtime sandbox disables JIT by default, making this entitlement non-negotiable for app execution.
+- **How to avoid:** JIT entitlement slightly weakens hardened runtime security model but is functionally required
+
+#### [Gotcha] RFC 3161 timestamping is mandatory for Windows code signatures to remain valid after certificate expiration (2026-02-24)
+- **Situation:** Without timestamping, signed executables become untrusted when the signing certificate expires, forcing all users to obtain a new signed version
+- **Root cause:** The signature validity is bound to the certificate lifetime unless decoupled via RFC 3161 timestamp from a trusted authority. This is how Windows validates that a signature was valid at the time of signing.
+- **How to avoid:** Requires network access during build to RFC 3161 server (adds ~1-2 seconds), but ensures signature validity persists for years after certificate renewal
+
+#### [Gotcha] SmartScreen warnings show immediately for EV certificates but standard certificates require building reputation over time with Microsoft (2026-02-24)
+- **Situation:** New certificates (even standard ones) trigger SmartScreen warnings until Windows gains statistical confidence that the certificate is legitimate
+- **Root cause:** Microsoft uses machine learning on certificate reputation and installer telemetry. EV certificates have already passed expensive validation, so they're trusted immediately. Standard certificates are seen as unknown publishers.
+- **How to avoid:** EV certificates cost 2-4x more (~$200-400/year) but eliminate SmartScreen immediately. Standard certificates cost less but require weeks/months of reputation building.
+
+#### [Gotcha] Certificate subject name must match exactly what's configured in electron-builder or Windows will reject the signature during installation (2026-02-24)
+- **Situation:** During the build, electron-builder validates the certificate CN/subject name matches `certificateSubjectName` configuration
+- **Root cause:** This explicit matching prevents accidentally signing with the wrong certificate (e.g., test cert instead of production cert). Mismatch causes vague errors.
+- **How to avoid:** Requires maintaining exact string (e.g., 'protoLabs Studio'), but prevents signing with wrong certificate
+
+### Azure Trusted Signing selected as the lower-cost primary option (~$10/month) with traditional EV certificates as fallback option (2026-02-24)
+- **Context:** Two viable Windows code signing approaches with different cost/setup/trust profiles
+- **Why:** Azure Trusted Signing reduces annual infrastructure cost from $200-400 to ~$120, eliminates need for physical hardware tokens, and integrates with Azure Key Vault. Supporting both allows cost-conscious teams to choose Azure while high-security teams can use EV.
+- **Rejected:** EV-only approach is more expensive; Azure-only approach excludes teams who already own EV certificates
+- **Trade-offs:** Supporting both adds minor config complexity (env var detection), but maximizes flexibility and cost efficiency
+- **Breaking if changed:** Removing Azure support would force teams to buy EV certificates; removing EV support would lock out existing cert investments
+
+### Selected MIT License specifically to avoid copyleft restrictions and ensure compatibility with commercial use cases and future SaaS offerings (2026-02-24)
+- **Context:** Choosing between MIT, Apache 2.0, GPL, and other licenses
+- **Why:** MIT is permissive, doesn't restrict proprietary forks, and is compatible with all major dependencies (Anthropic SDK, Express, React, Electron). Enables future business models without license conflicts.
+- **Rejected:** GPL/LGPL (would require reciprocal licensing and restrict proprietary derivatives), strict Apache 2.0 (more restrictive patent provisions)
+- **Trade-offs:** Maximum permissiveness and business flexibility at cost of weaker attribution guarantees for forks
+- **Breaking if changed:** Switching to GPL-licensed core dependencies or changing license to GPL creates incompatibility with current MIT dependencies
+
+#### [Pattern] Deferred legal compliance (ToS, Privacy Policy) based on deployment model rather than implementing upfront (2026-02-24)
+- **Problem solved:** Project currently self-hosted/local, but may become SaaS in future
+- **Why this works:** ToS and Privacy Policy only required for hosted versions with user data collection. Self-hosted installation has different legal posture. Documented requirements with conditional checklist.
+- **Trade-offs:** Deferred work reduces current burden but requires documentation that compliance is product-model-dependent
+
+### No license headers in source files; relying on centralized LICENSE file + git history for authorship (2026-02-24)
+- **Context:** Many open source projects add license boilerplate to every source file
+- **Why:** MIT license with centralized LICENSE file is legally sufficient. Git history provides authorship tracking. Reduces code clutter and boilerplate without losing legal protection.
+- **Rejected:** Per-file license headers (common in GPL projects due to stricter requirements), embedded license text
+- **Trade-offs:** Cleaner code without boilerplate vs less explicit per-file licensing information
+- **Breaking if changed:** If future corporate policy requires per-file license headers or if adding GPL-licensed components, headers become necessary and would require bulk addition
+
+#### [Pattern] Implemented license audit mechanism (license-checker tool) with recommendation for CI/CD enforcement (2026-02-24)
+- **Problem solved:** Multiple dependencies with varying licenses; risk of accidentally adding incompatible licenses
+- **Why this works:** Prevents license drift - developers can inadvertently add GPL/LGPL dependencies without noticing. Automated CI/CD checks catch this before merge.
+- **Trade-offs:** Requires CI/CD setup but prevents expensive license conflicts discovered late in development
+
+### License link in website footer points to GitHub LICENSE file (external) rather than embedding license text (2026-02-24)
+- **Context:** Making license discoverable on public website
+- **Why:** Single source of truth - ensures website license always matches actual LICENSE file in repo. GitHub link is authoritative and versioned.
+- **Rejected:** Embedding full license text (requires syncing when license changes), showing license only in repo (low discoverability for users)
+- **Trade-offs:** Requires GitHub to be reachable; ensures accuracy and reduces maintenance burden of dual documentation
+- **Breaking if changed:** If GitHub hosting changes or links restructure, website link breaks; need to maintain link integrity
+
+#### [Gotcha] Email validation relies only on HTML5 client-side validation (type='email', required attributes). No server-side validation before sending to Buttondown. (2026-02-24)
+- **Situation:** Protecting against invalid email submissions
+- **Root cause:** Static HTML landing page with no backend; form sends directly to Buttondown API
+- **How to avoid:** Reduces backend complexity but allows malformed emails to reach Buttondown; spam/invalid emails still counted as signups
+
+#### [Pattern] Analytics integration uses placeholder token (REPLACE_WITH_WEBSITE_ID) left in deployed HTML, requiring manual post-deploy configuration step (2026-02-24)
+- **Problem solved:** Umami analytics setup requires creating website in external dashboard before getting tracking ID
+- **Why this works:** Tracking ID cannot be generated pre-deployment; hardcoding wrong/generic ID would silently fail. Placeholder prevents accidental deployments without analytics, forcing explicit configuration step that confirms infrastructure setup was actually completed
+- **Trade-offs:** Clear explicit requirement gains higher likelihood of proper setup vs. requires manual step post-deploy that could be forgotten
+
+#### [Pattern] Persistent volumes explicitly configured in all platform deployment configs to prevent data loss on container restarts, with security headers and CORS at deployment level (2026-02-24)
+- **Problem solved:** Stateless container deployments would lose all user data and session information on pod restart without persistent storage configuration
+- **Why this works:** Ephemeral container filesystems are temporary by design. Explicit volume mounting in deployment configs ensures data survives container lifecycle events. Security at deployment level provides defense-in-depth rather than relying solely on application code
+- **Trade-offs:** Explicit persistent volume configuration adds storage infrastructure complexity and cost, but guarantees data durability. Deployment-level security is more maintainable but less flexible than application-level configuration
+
+#### [Gotcha] com.apple.security.cs.allow-jit entitlement is mandatory for Electron apps - without it the app crashes at runtime despite successful code signing and notarization (2026-02-24)
+- **Situation:** Hardened runtime restricts JIT compilation by default for security, but Electron's V8 engine requires JIT for runtime performance
+- **Root cause:** This coupling between hardened runtime policy and V8 implementation is non-obvious: failure mode is runtime crash (not signature validation failure), masking the root cause and making debugging difficult
+- **How to avoid:** Enabling JIT slightly weakens hardened runtime protections but is acceptable tradeoff for functional Electron applications
+
+### Used GitHub Actions secrets for credential passing (CSC_LINK base64 encoded certificate plus APPLE_ID/APPLE_APP_SPECIFIC_PASSWORD/APPLE_TEAM_ID) rather than alternative credential stores (2026-02-24)
+- **Context:** CI/CD requires secure automated credential passing for code signing while avoiding repository secrets exposure
+- **Why:** GitHub secrets are encrypted at rest, masked in logs, and provide native integration with Actions. Base64 encoding certificates is electron-builder's standard for passing binary data via environment variables - not using this standard would require custom encoding/decoding
+- **Rejected:** Repository-stored credentials (insecure), local developer credentials (non-reproducible CI), separate credential vaults (operational complexity)
+- **Trade-offs:** Requires managing 5 separate secrets (more configuration) vs monolithic credential approach, but achieves proper separation and auditability
+- **Breaking if changed:** Wrong credential format (e.g., incorrect base64 encoding, missing app-specific password) causes silent notarization failures in CI, not fast feedback
+
+#### [Pattern] Uses 'git add -A' (all changes including deletions) rather than selective staging, with conventional commit format 'chore: auto-commit' (2026-02-24)
+- **Problem solved:** Agent-generated work includes new files, modifications, and potentially deletions that must be captured in one atomic commit
+- **Why this works:** Captures complete state without whitelist/blacklist of file types. Conventional commit format makes intent transparent in git history for auditing and tooling.
+- **Trade-offs:** Less granular control over what gets committed (could stage unintended files), but ensures no agent progress is left uncommitted
+
+#### [Gotcha] RFC 3161 timestamping is CRITICAL for long-term signature validity. Signatures expire with the certificate unless timestamped. (2026-02-24)
+- **Situation:** Developers might assume a signed executable stays valid forever. Without timestamping, signed apps become 'untrusted' when certificate expires.
+- **Root cause:** Timestamps are permanent proof of when signature was made. Microsoft respects timestamp validity after cert expiration.
+- **How to avoid:** Adds one more required dependency (RFC 3161 server) but ensures long-term trust
+
+#### [Gotcha] SmartScreen reputation system treats EV certificates (immediate trust) and standard certificates (requires reputation building) differently. Azure Trusted Signing has immediate trust. (2026-02-24)
+- **Situation:** Teams often choose cheapest certificate option without realizing SmartScreen warnings will persist for months on standard certs
+- **Root cause:** Microsoft trusts EV certs and Microsoft's own signing infrastructure (Azure). Standard certs need reputation signals.
+- **How to avoid:** EV certs cost 20-40x more but work immediately; Azure Trusted Signing is cheap but requires Azure knowledge
+
+### Explicit certificateSubjectName configuration rather than auto-detection from certificate (2026-02-24)
+- **Context:** Subject name must match certificate or signing fails, but failure happens late in build process
+- **Why:** Explicit config allows verification before expensive CI/CD run; early validation catches mismatches
+- **Rejected:** Auto-detect subject name from certificate at signing time (delays error detection)
+- **Trade-offs:** Requires manual config but fails fast; auto-detect would be simpler but errors are harder to diagnose
+- **Breaking if changed:** If configured subject name doesn't match certificate, entire build fails at signing step
+
+#### [Gotcha] License headers are NOT required in source files for MIT licensed projects when using a centralized LICENSE file and git history for attribution (2026-02-24)
+- **Situation:** Many developers reflexively add license headers to every file, assuming it's a legal requirement
+- **Root cause:** MIT license doesn't require per-file headers; git history provides sufficient attribution; centralized LICENSE file is legally sufficient
+- **How to avoid:** Saves boilerplate but relies on developers/users finding the LICENSE file; git history visibility matters for attribution
+
+#### [Gotcha] Terms of Service and Privacy Policy requirements are deployment-model dependent: only needed for hosted/SaaS versions, not self-hosted software (2026-02-24)
+- **Situation:** Many early-stage projects add legal docs prematurely, creating maintenance burden before they're legally required
+- **Root cause:** TOS/Privacy Policy obligations derive from SaaS regulations (data handling, service availability); self-hosted installations have no such obligations
+- **How to avoid:** Deferred work reduces initial overhead but creates work later when pivoting to hosted model; better to plan ahead with requirements documented
+
+### License information distributed across three channels: LICENSE file (GitHub/git), package.json metadata (npm), website footer link (user visibility) (2026-02-24)
+- **Context:** Single source of truth for licensing inadequate - different distribution channels and audiences need different formats
+- **Why:** npm registry consumers need package.json metadata; GitHub users need LICENSE file; web visitors need visible link; each channel has different discovery patterns
+- **Rejected:** Centralizing in one location would miss distribution channels or be inconvenient for different audiences
+- **Trade-offs:** Requires maintaining information in three places vs. single source; each channel has appropriate format for its ecosystem
+- **Breaking if changed:** Removing any channel: npm loses required metadata, GitHub loses standard compliance location, web loses user-facing transparency
+
+#### [Pattern] Comprehensive licensing documentation (licensing.md) serves dual purpose: audit trail of decisions AND implementation guide for future compliance work (2026-02-24)
+- **Problem solved:** Compliance decisions are often informal or lost; dependency reviews require systematic approach; future contributors need context
+- **Why this works:** Documentation-driven compliance makes decisions discoverable, auditable, and repeatable; includes checklist and CI/CD recommendations for automation
+- **Trade-offs:** Upfront documentation effort pays dividends for audits, contributor onboarding, regulatory review, and decision reversibility
+
+### Dependency license compatibility tracked via matrix (MIT/Apache compatible groups) to prevent copyleft contamination of MIT-licensed project (2026-02-24)
+- **Context:** MIT project depending on GPL library creates derivative work under GPL - defeats MIT's permissive licensing
+- **Why:** Compatibility analysis is systematic; matrix is auditable and extensible; catch copyleft issues before they propagate
+- **Rejected:** Listing licenses without analyzing compatibility; trusting developers to spot issues
+- **Trade-offs:** Requires systematic review overhead but prevents subtle license contamination that's hard to detect later
+- **Breaking if changed:** Missing compatibility check could result in GPL dependency requiring full codebase release under GPL, completely changing project licensing

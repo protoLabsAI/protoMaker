@@ -5,9 +5,9 @@ relevantTo: [testing]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 39
-  referenced: 23
-  successfulFeatures: 23
+  loaded: 42
+  referenced: 24
+  successfulFeatures: 24
 ---
 # testing
 
@@ -790,3 +790,57 @@ usageStats:
 - **Rejected:** Waiting for or attempting to fix the worktree build environment, or assuming the code is correct without explicit test coverage.
 - **Trade-offs:** Unit test verification is faster and more reliable for logic changes but doesn't catch integration issues or type-system problems. The worktree's build issues masked a potential type safety problem.
 - **Breaking if changed:** If you remove the unit tests and rely only on build verification, you lose visibility into logic correctness when environments are unstable. However, build verification should still be required before merging.
+
+#### [Gotcha] Playwright tests require browser binaries installation, but cannot run reliably in constrained environments. Manual code review of form flow is necessary fallback. (2026-02-24)
+- **Situation:** Attempting to verify email form submission flow, loading states, and error handling
+- **Root cause:** Playwright needs Chromium/Firefox binaries; `npm install` doesn't include browsers. Manual review confirmed correctness of HTML structure and JS logic.
+- **How to avoid:** Manual code review is slower but sufficient for form-level verification vs. integration test coverage gaps
+
+#### [Gotcha] Path handling for file:// URLs in Playwright tests evolved through three iterations (join+dirname → path module → process.cwd()), revealing that relative path construction with __dirname in ESM is fragile for file:// protocol (2026-02-24)
+- **Situation:** Testing static HTML files locally using Playwright in an ES module environment
+- **Root cause:** The issue: fileURLToPath in ESM gives unreliable __dirname equivalents. Using process.cwd() + relative path is simpler and more predictable for file:// URLs since browsers resolve relative to the origin directory, not the script location
+- **How to avoid:** Easier: fewer path edge cases, more readable. Harder: assumes working directory is project root (depends on how tests are invoked)
+
+#### [Gotcha] When Playwright browser installation fails due to environment constraints, testing static HTML falls back to manual grep verification, exposing that browser-based testing for static sites is fragile in restricted environments (2026-02-24)
+- **Situation:** Attempting to run full Playwright test suite in environment without browser installation permissions
+- **Root cause:** Static HTML validation doesn't require a real browser. Grep checks for HTML structure, meta tags, semantic elements, accessibility attributes are deterministic and can verify correctness without chromium. Real browser testing is overkill for static markup.
+- **How to avoid:** Easier: works in any environment (no browser needed). Harder: can't test visual rendering, JavaScript interactions, or actual user experience
+
+#### [Gotcha] SmartScreen warnings cannot be verified through automated testing because they are OS-level security policies evaluated at install time on Windows (2026-02-24)
+- **Situation:** Attempting to verify code signing works via CI/CD Playwright tests or simulated installs will not trigger SmartScreen
+- **Root cause:** SmartScreen is a Windows user-mode security feature that reads certificate metadata and queries Microsoft's reputation servers. It's not accessible to headless testing frameworks.
+- **How to avoid:** Requires manual testing on Windows machines after certificate setup, but ensures verification reflects actual user experience
+
+#### [Pattern] Bidirectional test coverage for dependency status: test BOTH what IS blocking AND what IS NOT blocking. For status change, verify opposite states (review blocks, done doesn't). (2026-02-24)
+- **Problem solved:** Tests verified both that 'review' status blocks dependencies AND that 'done' status doesn't block - not just testing the happy path
+- **Why this works:** Dependency gating is inherently bidirectional logic; a false positive in one direction can catastrophically break the other. Testing both directions catches inverted conditionals and boundary errors.
+- **Trade-offs:** More test cases to maintain vs exponentially higher confidence in correctness; test complexity increases but catches subtle boolean logic errors
+
+### Tests passing = implementation correct; build tooling failures treated as separate infrastructure issue. Declaration generation can fail while functionality works. (2026-02-24)
+- **Context:** DTS (TypeScript declaration) build failed with module resolution errors, but all 38 tests passed, indicating code is functionally correct
+- **Why:** Monorepo workspace linking in tsup can have environmental issues (pre-existing, affects both worktree and main project) separate from code correctness. Tests are the true functional contract.
+- **Rejected:** Blocking feature on successful build - would be wrong since the code demonstrably works; the build issue is a tooling/environment problem
+- **Trade-offs:** Shipping with missing/stale .d.ts files (consumers lose type safety) vs shipping with proven working code (runtime safety)
+- **Breaking if changed:** If developers treat failed builds as signal to not ship, working features get blocked by environmental issues; if they ignore all build failures, type safety breaks for consumers
+
+#### [Pattern] Acceptance criteria that cannot be automated or code-verified reliably indicate scope mismatch. 'Record compelling gameplay' is subjective judgment; proper code features have quantifiable criteria. (2026-02-24)
+- **Problem solved:** Task lacks any acceptance criteria that could be tested in CI/CD or verified programmatically
+- **Why this works:** Code implementation produces verifiable artifacts; content creation produces subjective results. Mixing them in same pipeline breaks testing frameworks.
+- **Trade-offs:** Stricter criteria definition upstream costs time upfront but prevents pipeline waste; loose criteria allows flexibility but creates acceptance disputes
+
+#### [Pattern] Partial failure continuation pattern: Worker logs errors and continues processing remaining chunks rather than halting on first failure. Single chunk generation failure doesn't abort entire batch. (2026-02-24)
+- **Problem solved:** Processing 1000s of chunks where individual LLM calls or embeddings might fail for a specific chunk
+- **Why this works:** All-or-nothing failure on large batches results in no progress and requires full restart. Partial progress maintains utility and allows incremental completion.
+- **Trade-offs:** Resilience gained but silent failures are harder to debug; requires monitoring per-chunk failure rates
+
+#### [Gotcha] Existing test suite (2033 tests) passing doesn't prove extraction was done correctly—a separate verification strategy was needed to validate the architectural change actually occurred (2026-02-24)
+- **Situation:** After refactoring, npm test passed cleanly but tests don't verify that code was actually moved between files or that delegation was implemented
+- **Root cause:** Existing tests validate behavior correctness, not structural correctness. Could pass tests by leaving all code in original service (defeating the refactoring goal). Need explicit checks: file sizes, imports, delegation presence.
+- **How to avoid:** Required writing temporary verification tests (5 specific checks including file size >10KB, import presence, route handlers). But caught that extraction actually happened, preventing silent failures.
+
+### Static documentation verified through syntactic validation (Mermaid syntax, link checking, line counts) rather than runtime Playwright tests (2026-02-24)
+- **Context:** Architecture documentation feature with no executable behavior to test
+- **Why:** Documentation is content, not behavior. Playwright tests confirm UI interactions work; link checkers and syntax validators confirm documentation integrity. Test tool selection follows problem domain, not project convention.
+- **Rejected:** Using Playwright to verify documentation renders (conflates content verification with behavior testing)
+- **Trade-offs:** Easier: faster feedback, simpler setup. Harder: misses rendering issues in specific documentation systems that static checks don't catch.
+- **Breaking if changed:** If link structure changes without validation checks, broken references become silent failures in production documentation.

@@ -443,3 +443,22 @@ usageStats:
 - **Rejected:** New custom design, red alert pattern, different icon
 - **Trade-offs:** Yellow warning is slightly less urgent-looking than red; maintains consistency at cost of visual differentiation. Prevents design system fragmentation
 - **Breaking if changed:** If codebase refactors warning pattern without updating all uses (like this banner), visual inconsistency breaks design intent. Requires tracking all uses
+
+### Added prominent 'Get launch-day access' CTA in hero despite existing 'Get Notified' link in navigation. (2026-02-24)
+- **Context:** Landing page with existing waitlist nav link but low conversion on email capture
+- **Why:** Hero section receives immediate visual focus before scrolling; navigation links have lower engagement. Primary CTA placement increases discoverability.
+- **Rejected:** Rely only on nav link (low conversion), or replace nav link entirely (breaks existing UX patterns)
+- **Trade-offs:** Increased visual hierarchy and conversion vs. UI redundancy and scrolling friction
+- **Breaking if changed:** Removing hero CTA would hide the primary conversion path behind scroll/nav discovery
+
+#### [Pattern] Button state progression: disabled button + loading spinner + text change ('Submit' → 'Submitting...') all applied together as a single atomic state change during form submission. (2026-02-24)
+- **Problem solved:** Preventing duplicate submissions and providing user feedback during async operation
+- **Why this works:** Individual state changes (just disabling button) leave UI ambiguous - user doesn't know if click registered or if form is processing. Combined state makes intent clear.
+- **Trade-offs:** More JavaScript complexity but significantly better perceived responsiveness; requires careful state management to avoid partial state
+
+### Hero section has THREE CTAs with distinct styling (primary 'Get launch-day access' → form, secondary 'See how it works', tertiary 'Read docs') rather than single primary button. (2026-02-24)
+- **Context:** Maximizing conversion while accommodating different user intents
+- **Why:** Different users have different motivations - some want to reserve early access, some want to learn first, some want full documentation. Multiple CTAs serve each intent.
+- **Rejected:** Single primary CTA - would force all users through one path, losing conversions from users who want alternative entry points
+- **Trade-offs:** More visual clutter and potential distraction from primary goal, but captures broader audience and improves overall conversion rate
+- **Breaking if changed:** If you remove secondary/tertiary CTAs, users primarily interested in learning or docs would have no clear next step.

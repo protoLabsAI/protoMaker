@@ -192,6 +192,21 @@ export class ReconciliationService {
       throw new Error('featureId required for feature-no-agent');
     }
 
+    // Guard: verify feature is actually in-progress before resuming.
+    // Prevents zombie loops where done features keep getting restarted.
+    const feature = await this.featureLoader.get(drift.projectPath, drift.featureId);
+    if (!feature) {
+      return 'feature-not-found';
+    }
+
+    const terminalStatuses = new Set(['done', 'verified', 'completed', 'review']);
+    if (terminalStatuses.has(feature.status ?? '')) {
+      logger.warn(
+        `Skipping resume for feature ${drift.featureId} — already in terminal status "${feature.status}"`
+      );
+      return 'skipped-terminal-status';
+    }
+
     logger.info(`Resuming feature ${drift.featureId} - no agent running`);
 
     // Try to resume the feature

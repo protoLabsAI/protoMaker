@@ -68,3 +68,48 @@ usageStats:
 - **Rejected:** Minimal schema with just id, content, and created_at - simpler but would require schema migration to add these later
 - **Trade-offs:** Gains: Flexibility for future features, rich statistics possible. Losses: More storage overhead, more complex inserts/updates, more careful typing needed
 - **Breaking if changed:** Removing columns would lose capability to filter/sort by source or importance, break any code depending on these fields
+
+### Selected Turso (serverless SQLite) as primary database migration path instead of PostgreSQL for hosted deployments (2026-02-24)
+- **Context:** Application currently uses SQLite locally, needs hosted database solution for multiple deployment platforms
+- **Why:** Turso maintains SQLite compatibility (easier migration, minimal code changes) while providing edge replication, global distribution, and serverless scaling. PostgreSQL would require schema and driver changes
+- **Rejected:** PostgreSQL with managed services (RDS, Render's native PostgreSQL) would mean more infrastructure control but requires code migration and different connection pooling strategies
+- **Trade-offs:** Lower migration friction and protocol compatibility vs vendor lock-in to Turso and different scaling characteristics than traditional PostgreSQL
+- **Breaking if changed:** If switching away from Turso, requires full database migration including schema translation, connection string changes, and potential application code updates
+
+#### [Gotcha] Incremental processing via null-check creates hidden state versioning problem. Worker only processes chunks where `hype_queries IS NULL`. If generation logic changes, existing chunks won't be regenerated. (2026-02-24)
+- **Situation:** To support restart-safety and incremental progress, only chunks without hype_queries are processed
+- **Root cause:** Allows resuming interrupted processing without duplication. Chunks that failed on retry can be reattempted without reprocessing successful ones.
+- **How to avoid:** Simplicity and restart-safety gained, but creates invisible state that may become stale if logic changes
+
+#### [Gotcha] Embeddings stored as Buffer (Float32Array.buffer) in SQLite BLOB column. Encoding endianness and platform-specific byte order are persisted without conversion. (2026-02-24)
+- **Situation:** SQLite has no native array/vector type, so embeddings must be serialized to BLOB
+- **Root cause:** Binary BLOB is 4x more space-efficient than JSON and enables bulk binary I/O. Float32Array.buffer provides direct byte representation without JSON overhead.
+- **How to avoid:** Efficiency gained but reduced portability. Cross-platform and cross-architecture compatibility requires explicit endianness handling on deserialization.
+
+### Deduplication threshold: BM25 score < -5 (log-odds), pruning after 90 days OR zero retrieval count (whichever comes first). (2026-02-24)
+- **Context:** memory-system.md documents write pipeline deduplication (BM25 < -5) and pruning policy (90d + zero retrieval).
+- **Why:** BM25 < -5 is low-confidence match threshold (empirically chosen from similarity experiments—not documented but discoverable in code). Combining time-based (staleness) AND usage-based (relevance) pruning prevents two failure modes: (1) keeping irrelevant docs forever just because they're new, (2) removing useful docs that happen to not be retrieved recently.
+- **Rejected:** Could use only time-based pruning (simpler, but keeps unused docs consuming space). Could use only usage-based (discards potentially useful but less-frequently-accessed domain knowledge). Could use single threshold (BM25 > some value) without time component.
+- **Trade-offs:** Dual-criterion pruning is more complex to reason about and requires observing both metrics. But: prevents accumulating stale knowledge and prevents useful knowledge from being garbage-collected just because it's not in the hotpath.
+- **Breaking if changed:** Removing time-based pruning allows knowledge bloat. Removing usage-based pruning keeps rarely-used but valid docs. Changing BM25 threshold dramatically changes what counts as 'duplicate' (too high = misses duplicates, too low = false positives).
+
+### Store hype_queries as TEXT (JSON array) but hype_embeddings as BLOB (binary Float32Array buffer) (2026-02-24)
+- **Context:** Need to store both generated questions and their computed embeddings in same record
+- **Why:** Hybrid approach: TEXT for debuggability and inspection, BLOB for embedding efficiency (8x smaller than JSON float arrays). Simplifies querying questions without deserialization
+- **Rejected:** All-BLOB storage (smaller but loses query introspection); all-JSON storage (simpler schema but 8x larger embeddings column)
+- **Trade-offs:** Requires different serialization logic per column but gains both queryability and space efficiency
+- **Breaking if changed:** Changing hype_embeddings to TEXT would increase storage 8x; changing hype_queries to BLOB would eliminate ability to index/search questions without deserialization
+
+### Store HyPE embeddings in chunks.hype_embeddings column (pre-computed) rather than computing at query time (2026-02-24)
+- **Context:** HyPE embeddings are expensive to compute (require running model on stored query embeddings) and don't change for static corpus
+- **Why:** Pre-computation trades storage space for elimination of query-time computation latency. Since HyPE embeddings are deterministic given static query embeddings, computing once at ingestion time is strictly better than computing every search.
+- **Rejected:** Query-time computation (increases latency by model inference time), separate embeddings table (would require schema migration)
+- **Trade-offs:** Storage cost (embeddings take disk space) for latency gain (no inference per search). Schema is denormalized but justified by performance.
+- **Breaking if changed:** If chunk embeddings are updated, HyPE embeddings become stale and must be recomputed; removing this column disables hybrid_hype mode
+
+### Store averaged embeddings as Float32Array serialized to Buffer (BLOB), not JSON string (2026-02-24)
+- **Context:** Persisting 384-dim embedding vector to SQLite for each chunk
+- **Why:** 10-50x space efficiency vs JSON stringification; preserves numeric precision; faster serialization/deserialization
+- **Rejected:** Store as JSON array of numbers; or external vector DB; or as separate embedding table
+- **Trade-offs:** Binary format is opaque in database inspection but gains efficiency; tied to Float32Array representation, not portable
+- **Breaking if changed:** Format migration if switching vector DB backends; if you inspect SQL with tools expecting JSON, get unreadable binary

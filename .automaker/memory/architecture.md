@@ -5,9 +5,9 @@ relevantTo: [architecture]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 28
-  referenced: 18
-  successfulFeatures: 18
+  loaded: 35
+  referenced: 23
+  successfulFeatures: 23
 ---
 # architecture
 
@@ -2647,3 +2647,458 @@ usageStats:
 - **Problem solved:** Rebase happens silently during agent execution in background processes/logs
 - **Why this works:** Non-blocking rebase means failures don't stop execution but become silent risks. Emoji + clear messages enable ops/developers to scan logs quickly for rebase health. Indicates this is expected to fail sometimes in production.
 - **Trade-offs:** Gained: Operational observability. Lost: Slightly more verbose logs. Assumes ops/developers actively monitor logs for rebase messages.
+
+### Used programmatic image generation with Sharp's SVG compositing instead of pre-created static images or design-tool exports (2026-02-24)
+- **Context:** Need to generate branded 1200x630px OG images for 5 landing pages with consistent styling and easy regeneration capability
+- **Why:** Programmatic approach ensures version control (images tracked in git), reproducibility, consistency guarantees, and eliminates manual regeneration burden when branding changes. SVG overlays separate design logic from visual assets
+- **Rejected:** Pre-creating in design tools (not version controlled, manual updates), batch optimization tools (requires manual image creation), or static assets (hard to update)
+- **Trade-offs:** Requires thinking about design in code and learning Sharp API, but eliminates design tool dependency and ensures regeneration is trivial
+- **Breaking if changed:** If switched to manual/design-tool approach, consistency breaks, regeneration becomes forgotten chore, and git history loses image evolution
+
+#### [Pattern] Designed image generation script as idempotent - safe to run multiple times, regenerating all images from scratch rather than incremental updates (2026-02-24)
+- **Problem solved:** Script must be safe for CI/CD pipelines and repeated development runs without side effects or partial state
+- **Why this works:** Idempotency guarantees consistency regardless of execution count. Prevents stale images, partial updates, or version mismatches. Critical for automated systems where script might be interrupted or restarted
+- **Trade-offs:** Slight inefficiency regenerating unchanged images, but infinite predictability and maintainability
+
+### Static landing pages deployed directly to Cloudflare Pages with no build step, using Tailwind CDN for styling (2026-02-24)
+- **Context:** Creating standalone landing page for mythxengine.com domain
+- **Why:** Eliminates deployment complexity and build toolchain overhead. Each landing page is independent and can be deployed instantly without requiring a CI/CD build step. Cloudflare Pages serves static files directly.
+- **Rejected:** Building with webpack/vite, maintaining shared component library, monorepo deployment
+- **Trade-offs:** Easier: instant deployment, zero build failures, low maintenance. Harder: no code optimization, no asset bundling, potential duplication across landing pages if many exist
+- **Breaking if changed:** If landing pages ever need dynamic rendering, server-side compilation, or optimized assets, this approach prevents scaling to those requirements
+
+#### [Pattern] Infrastructure changes require parallel documentation updates: landing page addition triggers updates to both deployment.md (custom domains table) and landing-pages.md (sites table) (2026-02-24)
+- **Problem solved:** Creating mythxengine landing page required updating two documentation files in addition to creating deployment artifacts
+- **Why this works:** Single source of truth for operational knowledge. When manual Cloudflare steps are required (domain registration, DNS, SSL setup), documentation becomes the runbook. Keeping docs synchronized with infrastructure prevents confusion and deployment failures.
+- **Trade-offs:** Easier: anyone can follow the documented steps without reading code. Harder: requires discipline to keep docs in sync with changes
+
+### Landing pages are deployed to independent Cloudflare Pages projects with separate custom domains, rather than as routes within a monolithic site (2026-02-24)
+- **Context:** Setting up mythxengine.com as a separate landing page alongside other brand sites
+- **Why:** Each domain has independent deployment lifecycle, DNS settings, SSL certificates, and analytics tracking. Separation prevents one domain's configuration from affecting others. Allows different teams/stakeholders to manage different domains independently.
+- **Rejected:** Deploying all landing pages under a single domain with routing (e.g., mythxengine.com routes within main site), shared Cloudflare project
+- **Trade-offs:** Easier: independent scalability, separate analytics per domain, no routing complexity. Harder: more Cloudflare projects to manage, potential duplication of static HTML patterns
+- **Breaking if changed:** If mythxengine needs to be a subdirectory of a parent domain rather than a standalone domain, the entire deployment architecture would need to change
+
+#### [Pattern] Comprehensive setup guide documents all manual infrastructure steps that code cannot automate (domain registration, DNS configuration, Cloudflare Pages project creation, custom domain assignment, SSL verification) (2026-02-24)
+- **Problem solved:** mythxengine.com deployment requires external service configuration that cannot be scripted in this codebase
+- **Why this works:** Manual steps are a common point of failure and knowledge silos. Explicit documentation with step-by-step instructions ensures consistency, enables others to replicate setup, and serves as runbook for troubleshooting. Critical when infrastructure lives outside version control.
+- **Trade-offs:** Easier: new developers can self-serve setup, reduced tribal knowledge. Harder: documentation must be maintained and kept accurate as Cloudflare UI evolves
+
+### Use afterSign hook for notarization, not afterPack. Notarization must occur after code signing completes but before DMG artifact is created. (2026-02-24)
+- **Context:** electron-builder provides multiple hook points in build pipeline (afterSign, afterPack, afterBuild). Notarization timing is critical.
+- **Why:** Apple's notarization service requires a signed application bundle as input. Notarization must complete before final distribution artifact (DMG) is created, ensuring users receive notarized code.
+- **Rejected:** afterPack - would attempt notarization after DMG creation, potentially on wrong artifact; afterBuild - would run before signing exists
+- **Trade-offs:** afterSign is earlier in pipeline so more build steps occur after notarization, but guarantees atomicity
+- **Breaking if changed:** Wrong hook placement causes notarization to skip or operate on incorrect artifact, breaking macOS security chain
+
+#### [Pattern] Gracefully skip notarization when credentials absent (dev mode) but throw error if notarization actually fails (CI mode). Enables dual-mode operation. (2026-02-24)
+- **Problem solved:** notarize.js checks for APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD, APPLE_TEAM_ID environment variables and conditionally skips
+- **Why this works:** Supports two distinct workflows: (1) local development without Apple credentials, (2) CI builds that fail loudly on credential misconfiguration. Alternative (always require credentials) would block all local development.
+- **Trade-offs:** Silent skipping in absence of credentials could mask configuration issues, mitigated by console logging and error throwing on actual notarization failures
+
+### Code signing implementation is prerequisite for electron-updater auto-updates on macOS. Without signature, macOS Gatekeeper blocks app updates. (2026-02-24)
+- **Context:** Feature prepares infrastructure for future auto-update capability that currently exists only on Windows
+- **Why:** macOS Gatekeeper validates code signatures before allowing app execution. Unsigned binaries from remote sources are blocked as security risk. This unblocks the entire cross-platform auto-update feature.
+- **Rejected:** Deferring code signing until auto-update implementation phase - would require re-signing all past releases and rework
+- **Trade-offs:** Adds 1-5 minutes per macOS build (notarization network latency), but unlocks critical security/UX feature
+- **Breaking if changed:** Without code signing, auto-updater cannot function reliably on macOS as Gatekeeper will reject unsigned remote updates
+
+#### [Pattern] electron-builder automatically detects signing method (traditional vs Azure) based on environment variables rather than requiring separate build configurations (2026-02-24)
+- **Problem solved:** Supporting both EV certificates and Azure Trusted Signing requires different credential handling and API calls
+- **Why this works:** Single build configuration that auto-detects credentials eliminates duplicate build logic and allows seamless switching between methods based on available secrets. electron-builder's detection is built-in.
+- **Trade-offs:** Requires clear environment variable naming conventions so developers understand which method is active, but eliminates complexity of parallel build paths
+
+#### [Pattern] Placing code signing documentation in docs/dev/ rather than end-user docs signals this is a developer/ops concern, not a user-facing feature (2026-02-24)
+- **Problem solved:** Documentation could go in general docs, docs/dev, or docs/ops directories with different visibility implications
+- **Why this works:** Code signing is an implementation detail for developers building and releasing the app, not a feature that users configure. Placing in dev docs ensures relevant audience finds it while keeping user docs focused on app usage.
+- **Trade-offs:** Requires developers to look in dev docs, but prevents end-user confusion about signing requirements
+
+#### [Gotcha] Feature description requested actual gameplay recording (content creation), but task was assigned to a code repository. Developer couldn't execute the literal requirement—an AI agent cannot record gameplay or create video/GIF files. (2026-02-24)
+- **Situation:** Task: 'Record gameplay demo video/GIFs for marketing' in protoLabs/Automaker codebase (not the actual MythxEngine game)
+- **Root cause:** Requirements were vague about scope. Feature title sounded like a code task but was actually a content creation task. This fundamental mismatch only surfaced after investigation.
+- **How to avoid:** Pivoting to infrastructure-first (landing pages, directory structure, documentation) meant delivering something useful (the scaffolding) rather than failing at the impossible task. However, it doesn't deliver the actual marketing content.
+
+#### [Pattern] When task requirements are ambiguous (content vs. code vs. infrastructure), use evidence-based investigation: grep the codebase, read specification files, check project boundaries, verify what actually exists versus what's referenced. Only propose solutions based on findings, not assumptions. (2026-02-24)
+- **Problem solved:** Developer could have assumed MythxEngine code existed in repo, or immediately claimed task was impossible. Instead, systematically searched before proposing alternatives.
+- **Why this works:** Prevents false conclusions and builds credibility with stakeholders by showing due diligence. Concrete evidence (found MythxEngine mentioned in docs, not in code) supports the proposed pivot to infrastructure.
+- **Trade-offs:** Takes more time upfront (investigation) but prevents rework and wrong deliverables later. Builds trust by demonstrating understanding before proposing scope changes.
+
+#### [Gotcha] MythxEngine is referenced in product documentation (docs/landing-pages.md) as 'shipped by protoLabs' but has no implementation in this codebase. Creates false impression that all required context exists locally. (2026-02-24)
+- **Situation:** Feature task mentions MythxEngine without clarifying it's a separate product. Searching for it found only references, not actual code.
+- **Root cause:** Cross-product references in shared documentation can obscure project boundaries. Developers may assume all mentioned products are within scope of current repo.
+- **How to avoid:** Explicit documentation of 'shipped product' (external) vs. 'in-development feature' (internal) adds clarity but requires maintenance. Worth the cost.
+
+### Form placed inline on page with #notify anchor, linked from hero CTA via href='#notify', rather than opening modal or navigating to separate page. (2026-02-24)
+- **Context:** Directing traffic from hero section CTA to email capture form
+- **Why:** Anchor navigation keeps user on familiar page context, maintains scroll position awareness, reduces friction (no page load), improves perceived performance
+- **Rejected:** Modal popup - would interrupt page reading; separate form page - requires navigation, slower, breaks continuity
+- **Trade-offs:** Simpler UX but form must compete with other page content for attention; anchor scroll is slower than instant focus than modal
+- **Breaking if changed:** If form ID changes from 'notify' or anchor is removed, hero CTA becomes broken link with no fallback.
+
+#### [Pattern] Analytics tracking uses feature detection (if window.umami) rather than requiring Umami to be loaded. Form works with or without analytics. (2026-02-24)
+- **Problem solved:** Tracking waitlist signups while maintaining form reliability
+- **Why this works:** Analytics service may load slowly or fail; form functionality shouldn't depend on non-critical infrastructure
+- **Trade-offs:** Graceful degradation means occasional untracked signups if analytics is unavailable, but form always works
+
+### Static HTML sites deployed independently to Cloudflare Pages, one project per domain, from dedicated subdirectories in site/ (2026-02-24)
+- **Context:** Setting up mythxengine.com landing page following established protoLabs patterns
+- **Why:** Static HTML eliminates build complexity (direct CDN deployment), Cloudflare Pages offers automatic git-connected deploys with 30-60s turnaround. Separate projects per domain provide independent caching, DNS, SSL, and rollback strategies—critical when managing multiple portfolio landing pages
+- **Rejected:** Monorepo with single multi-tenant Cloudflare project using routing; SSR/framework-based approach requiring build step
+- **Trade-offs:** Simpler deployment pipeline and instant propagation vs. multiple infrastructure projects to manage and coordinate DNS across domains
+- **Breaking if changed:** Changing to single project requires rearchitecting Cloudflare Pages configuration, DNS routing logic, and CI/CD triggers; changing to build-based approach introduces deployment latency and build failure risks
+
+#### [Pattern] Comprehensive infrastructure setup guide (13 sections, 213 lines) documenting all manual steps with verification checklist, despite code being ready immediately (2026-02-24)
+- **Problem solved:** Landing page HTML complete but actual deployment requires manual Cloudflare/DNS configuration outside of git repository
+- **Why this works:** Manual infrastructure tasks are error-prone and non-repeatable without documentation. Comprehensive guide reduces support burden, enables others to replicate setup, and makes troubleshooting deterministic. Verification checklist prevents incomplete deployments passing as successful
+- **Trade-offs:** Heavy upfront documentation burden gains reproducible, supportable infrastructure setup; alternative approaches either lose reproducibility or add operational overhead
+
+### Landing page explicitly links back to protoLabs.studio and references protoLabs methodology in branding and content (2026-02-24)
+- **Context:** MythXEngine positioned as portfolio proof-of-concept using protoLabs approach, not as independent product
+- **Why:** Establishes brand hierarchy and establishes MythXEngine as demonstration of protoLabs capabilities rather than standalone offering. Backlinks improve SEO for protoLabs domain and clarify business relationship to users
+- **Rejected:** Standalone branding with no protoLabs attribution; footer mention only without navigation linkage
+- **Trade-offs:** Gains clear brand relationship and SEO benefits for parent domain; risks positioning MythXEngine as less-important demo vs. core protoLabs offering
+- **Breaking if changed:** Removing protoLabs links severs the portfolio relationship and loses SEO linkjuice flow back to protoLabs domain
+
+### Rejected Vercel despite feature name, chose Railway/Fly.io/Render instead due to WebSocket and long-lived process requirements (terminal/PTY operations) (2026-02-24)
+- **Context:** Feature spec mentioned 'Vercel or similar' but application architecture requires WebSocket support and long-running Express servers with PTY operations
+- **Why:** Vercel's serverless model with limited WebSocket support and request timeouts cannot handle the application's real-time terminal interaction needs. These platforms allow long-lived connections and background processes
+- **Rejected:** Vercel would have required significant application refactoring to remove WebSocket/PTY terminal features or splitting those features to a separate backend service
+- **Trade-offs:** More deployment flexibility across three platforms vs simplified single-platform deployment. Each platform requires different config syntax and has different pricing models
+- **Breaking if changed:** If application requirements change to remove WebSocket/PTY needs, Vercel becomes viable again and offers simpler deployment. Current choice locks architecture to these three platforms
+
+#### [Pattern] Implementation required zero application code changes - all deployment requirements were addressed through configuration files (YAML, TOML, Markdown). Existing codebase already fully supports containerization (2026-02-24)
+- **Problem solved:** Feature scope was 'set up web app on hosted deployment platforms' but application architecture already enabled this capability
+- **Why this works:** The Express application, database abstraction, and environment variable configuration were already designed for containerized deployment. No architectural gaps required closing - only providing deployment recipes and documentation
+- **Trade-offs:** Simpler implementation with no code risk, but reveals that platform support was already implicit in the architecture. May indicate deployment documentation was previously missing rather than capability gap
+
+#### [Gotcha] Dependency resolution logic duplicated across 3+ locations: main resolver functions (areDependenciesSatisfied, getBlockingDependencies, getBlockingDependenciesFromMap) AND inline copy in auto-mode-service.ts. Changes must be synced everywhere. (2026-02-24)
+- **Situation:** Updated 'review' status filtering in resolver.ts but also had to update auto-mode-service.ts inline copy to keep behavior consistent
+- **Root cause:** Monorepo services sometimes have inline copies of shared logic for historical reasons or perceived performance benefits, breaking single-source-of-truth
+- **How to avoid:** Local clarity and context independence vs maintainability risk; fewer lines of code vs higher chance of drift between implementations
+
+### Status 'review' does NOT count as dependency-satisfied. Features in review are still blocking downstream dependencies even though verification is in progress. (2026-02-24)
+- **Context:** Changed satisfiedStatuses to only include 'verified'/'done' statuses, explicitly excluding 'review' status from the satisfied list
+- **Why:** Features under review can still be modified or rejected; depending on them would create false confidence that work can proceed when foundational changes might still happen
+- **Rejected:** Treating 'review' as satisfied (allowing downstream work to proceed) - creates hidden dependency on unstable features
+- **Trade-offs:** More conservative scheduling (more things block longer) vs more resilient feature pipelines (fewer broken dependencies); stricter requirements vs lower rework
+- **Breaking if changed:** Any feature depending on another feature in 'review' status will now correctly report as blocked; code relying on 'review' being satisfied will see different readiness signals
+
+### Used afterSign hook (not afterPack) for notarization, allowing coexistence with existing afterPack hook for native module rebuilding (2026-02-24)
+- **Context:** Multiple build hooks needed at different lifecycle stages: native modules rebuild at pack time, notarization must occur after code signing but before DMG creation
+- **Why:** afterSign executes at the correct sequencing point - after code signing but before package creation. This maintains separation of concerns while allowing both hooks to compose in the build pipeline without interference
+- **Rejected:** Could have modified existing afterPack hook for notarization, but would require restructuring native module rebuild logic and create timing conflicts
+- **Trade-offs:** Multiple hooks add pipeline complexity but preserve independent concerns and allow future independent updates to each hook
+- **Breaking if changed:** If moved to afterPack, notarization would occur too late in lifecycle when binary is in wrong format/location for Apple's notarization service
+
+#### [Pattern] Notarization script implements asymmetric credential handling: gracefully skips when env vars missing (local dev), but throws error to fail CI build if credentials misconfigured (2026-02-24)
+- **Problem solved:** Need to support both local unsigned development builds and authenticated CI/CD without requiring developers to have Apple credentials locally
+- **Why this works:** Single runtime check separates concerns: local dev skips gracefully (no credentials needed), while CI fails-fast if credentials are misconfigured (prevents silent failures). Avoids forcing local credential setup or complex configuration branching
+- **Trade-offs:** Adds conditional logic in notarization script but eliminates credentials as a blocker for local development while maintaining safety in CI
+
+#### [Gotcha] Developer ID certificates expire after 5 years with no automatic renewal, requiring 6-month advance renewal planning to prevent production CI failures (2026-02-24)
+- **Situation:** Automated code signing pipeline depends on long-lived credentials with fixed expiration dates
+- **Root cause:** This is an invisible gotcha because code signing works perfectly until the moment it expires, then all CI/CD builds fail simultaneously. Apple's certificate policy doesn't auto-renew, creating a hard deadline that's easy to miss
+- **How to avoid:** Requires manual process and calendar reminders, but allows long-term automation without other interventions
+
+### Code signing identified as hard prerequisite for electron-updater functionality - auto-updates fail on macOS without code signing because Gatekeeper blocks unsigned binaries (2026-02-24)
+- **Context:** Feature architecture required sequencing code signing before electron-updater implementation could begin
+- **Why:** macOS Gatekeeper enforces code signing as a system-level policy that silently blocks auto-updates for unsigned applications. This creates a hard dependency, not optional optimization
+- **Rejected:** Attempting to implement electron-updater without code signing (silent failures, user updates blocked by OS)
+- **Trade-offs:** Adds upfront work to implement code signing, but unblocks downstream features like auto-updates
+- **Breaking if changed:** Without code signing, electron-updater fails silently or users receive Gatekeeper warnings, making auto-updates non-functional
+
+### ensureCleanWorktree() is called before updateFeatureStatus() regardless of whether finalStatus is 'verified' or 'waiting_approval' (2026-02-24)
+- **Context:** Both automated (verified) and manual review (waiting_approval) paths transition state, but only verified was initially assumed to need cleanup
+- **Why:** Ensures agent progress is persisted before ANY state transition, preventing loss of work in the manual approval path. Treats cleanup as a precondition for state stability, not just for verified states.
+- **Rejected:** Only calling on verified path would be simpler but would leave uncommitted changes in the manual review queue, potentially losing agent progress during manual iteration
+- **Trade-offs:** Slightly more database writes/commit operations, but guarantees consistency across all terminal states. Prevents silent loss of agent work.
+- **Breaking if changed:** If removed, manual review workflows lose uncommitted agent changes. The waiting_approval path would accumulate technical debt.
+
+#### [Pattern] Guard uses 'determine state → stabilize → persist' pattern: finalStatus is computed, THEN ensureCleanWorktree() is called, THEN updateFeatureStatus() writes to system (2026-02-24)
+- **Problem solved:** Three distinct operations that could fail independently, but are ordered to minimize damage if intermediate steps fail
+- **Why this works:** Separates business logic (what should the next state be?) from infrastructure concerns (ensure clean repo). If cleanup fails, status hasn't been corrupted in the database.
+- **Trade-offs:** Adds complexity of maintaining an intermediate state variable (finalStatus), but provides ordering guarantees for fault tolerance
+
+### ensureCleanWorktree() is called at 4 separate sites in auto-mode-service.ts rather than centralized in a wrapper around updateFeatureStatus() (2026-02-24)
+- **Context:** Multiple execution paths (main path, edge case handler, resume handler, follow-up handler) all reach updateFeatureStatus('verified')
+- **Why:** Each site has distinct context and execution semantics. Direct calls make the dependency explicit at each verification point, reducing risk of future sites forgetting the guard.
+- **Rejected:** Wrapping updateFeatureStatus() would centralize cleanup but would require higher-order function manipulation and might catch 'waiting_approval' calls incorrectly
+- **Trade-offs:** Code duplication (4 import uses, 4 function calls) vs maintainability. Distributed calls make intent clear locally but require remembering to add the guard to new sites.
+- **Breaking if changed:** If a 5th verification point is added without the guard call, that path silently bypasses the uncommitted changes protection
+
+#### [Pattern] Environment variable presence detection for feature selection (WIN_CSC_LINK vs AZURE_KEY_VAULT_* vs unsigned builds) (2026-02-24)
+- **Problem solved:** Need to support three different signing flows without branching logic or config changes
+- **Why this works:** electron-builder automatically detects method based on what env vars exist. Single binary/config works in all environments.
+- **Trade-offs:** Implicit behavior requires good documentation; harder to debug which method is active
+
+#### [Pattern] Allow unsigned builds when certificates not present (graceful degradation for local development) (2026-02-24)
+- **Problem solved:** Developers need to build and test locally without certificate setup; production builds require signing
+- **Why this works:** Unblocks developer workflow; unsigned installers show warnings but still work; signing is enforced only in CI/CD
+- **Trade-offs:** Easier local development but requires discipline to ensure CI/CD always signs
+
+#### [Gotcha] External product references (MythXEngine as separate portfolio product) entering code pipeline creates coupling and scope confusion. Tasks that depend on running external systems should have clear component boundaries or be routed to those systems' repos. (2026-02-24)
+- **Situation:** Feature references MythXEngine gameplay recording - a separate product not in this codebase - but task was filed as code feature
+- **Root cause:** External product dependencies create hidden blockers: availability issues, version management, maintenance burden across product boundaries
+- **How to avoid:** Stricter boundary enforcement prevents feature bloat but requires upfront routing/triage; loose boundaries allow more flexible workflows but accumulate unmaintainable cross-product coupling
+
+#### [Gotcha] Automated task intake from external systems (Linear Signal Intake) without category validation allows non-code tasks into development pipeline. 'Signal Intake' state has no filtering layer. (2026-02-24)
+- **Situation:** Feature came through Linear integration marked 'Signal Intake' without upstream classification that this is content creation, not code
+- **Root cause:** Unfiltered signal capture creates noise; content/marketing tasks require different tools, skills, and workflows than code tasks
+- **How to avoid:** Pre-filtering in Linear integration (or between Linear→dev pipeline) costs setup but prevents wasted developer time; post-filtering (developer discovers scope mismatch) is cheaper initially but accumulates pipeline waste
+
+### Non-blocking fire-and-forget background worker: `void this.runBackgroundHype()` chains after embeddings complete but doesn't await. No error handling or completion signal at call site. (2026-02-24)
+- **Context:** Need to process generated questions asynchronously without blocking main embedding workflow
+- **Why:** Prevents blocking synchronous API responses while embeddings are being processed. Keeps response latency low for the triggering request.
+- **Rejected:** Await pattern would block caller until all HyPE processing completes; queue system would require external service
+- **Trade-offs:** Faster response times but silent failures. Errors in HyPE worker won't bubble up to requestor. Must add explicit monitoring/logging.
+- **Breaking if changed:** If changed to await, callers must wait for HyPE completion; if removed, no HyPE processing happens
+
+#### [Pattern] RRF merge gracefully degrades based on available embeddings: uses 'hybrid_hype' if HyPE embeddings exist, falls back to 'hybrid' if only direct embeddings exist, and 'bm25' as ultimate fallback (2026-02-24)
+- **Problem solved:** Extending 2-mode to 3-mode RRF merge while handling incomplete embedding data across database
+- **Why this works:** Prevents search failures when pre-computed embeddings are missing; enables gradual rollout of HyPE without requiring complete data regeneration
+- **Trade-offs:** Complexity in mode selection logic gains operational flexibility; harder to predict which algorithm will execute
+
+#### [Gotcha] HyPE embeddings already pre-computed and stored in `chunks.hype_embeddings` column from prior feature; this implementation repurposes existing data rather than adding new embedding generation (2026-02-24)
+- **Situation:** Implementing retrieval using HyPE embeddings for first time
+- **Root cause:** Embeddings were stored but not yet used for retrieval—discovering existing infrastructure enables feature with zero new data pipeline work
+- **How to avoid:** Leveraging existing data structure becomes obvious after investigation but hidden before; reduces feature scope significantly
+
+### Triple-mode RRF uses equal weights (k=60) for all three signals (BM25, direct cosine, HyPE cosine) as starting point, with `/api/knowledge/eval-stats` endpoint designed to support future weight tuning based on production data (2026-02-24)
+- **Context:** Choosing initial fusion weights without offline evaluation results
+- **Why:** Equal weights provide symmetry and neutrality; eval stats endpoint creates measurement infrastructure for data-driven optimization rather than guessing
+- **Rejected:** Could have tuned weights empirically offline, but that's duplicating work eval-stats is designed to capture in production
+- **Trade-offs:** Equal weights may be suboptimal initially but enable principled tuning later; simplicity of implementation gains ability to measure real-world performance
+- **Breaking if changed:** If you hardcode weights instead of making them tunable, you lose ability to improve based on eval-stats data; if eval-stats endpoint is removed, the optimization path disappears
+
+### Kept public methods in KnowledgeStoreService that delegate to KnowledgeIngestionService rather than moving them entirely (2026-02-24)
+- **Context:** Refactoring to extract ingestion concerns while maintaining backward compatibility
+- **Why:** Zero breaking changes - existing clients calling knowledgeStoreService.ingestReflections() continue working without modification
+- **Rejected:** Removing methods from KnowledgeStoreService entirely and forcing clients to use KnowledgeIngestionService directly
+- **Trade-offs:** Cleaner client migration vs. maintaining forwarding methods; less code in KnowledgeStoreService vs. need to coordinate state across two classes (projectPath tracking)
+- **Breaking if changed:** Removing the delegation methods breaks any client code calling these methods on KnowledgeStoreService. The forwarding layer is the only thing preventing a breaking change.
+
+#### [Pattern] Database instance is passed to KnowledgeIngestionService methods as parameters rather than owned by the service (2026-02-24)
+- **Problem solved:** Extracted service needs access to database for persistence but shouldn't own the connection lifecycle
+- **Why this works:** Maintains transactional control and prevents multiple DB connections. Service methods operate within caller's transaction context, making composition safer
+- **Trade-offs:** Service is stateless for persistence (testable) but has mixed responsibility - owns projectPath state while receiving DB as parameter; less autonomous but more composable with different transaction contexts
+
+#### [Gotcha] Both KnowledgeStoreService and KnowledgeIngestionService track projectPath state independently, with the pattern checking `if (this.projectPath !== projectPath)` to re-initialize (2026-02-24)
+- **Situation:** Supporting multiple concurrent requests to different projects with long-lived service instances
+- **Root cause:** Reusing service instance across requests saves instantiation cost, but implicit state changes are a coupling point
+- **How to avoid:** Cheaper instances vs. hidden state mutation; single initialize call vs. scattered logic checking if reinitialization is needed; the idempotency check masks bugs where request A and B operate on different projects
+
+#### [Pattern] runBackgroundEmbedding() and runBackgroundHype() extracted together with ingestReflections/AgentOutputs as internal workers of the ingestion pipeline (2026-02-24)
+- **Problem solved:** These private methods are part of the post-ingest processing - they don't ingest data directly but process it after ingestion
+- **Why this works:** They form an implicit pipeline: ingest → embed → apply-hype. Extracting them together with ingest methods keeps the processing logic together, preventing split pipeline logic between services
+- **Trade-offs:** Cohesive ingestion service logic vs. blurring the line between 'ingest' (read files) and 'process' (generate embeddings); easier to modify pipeline when together vs. harder to reuse embedding without ingestion
+
+#### [Gotcha] compactCategory() is included in KnowledgeIngestionService even though it's called during post-processing, not during ingestion proper (2026-02-24)
+- **Situation:** Category files can grow oversized when many chunks are indexed, requiring compaction via Haiku LLM
+- **Root cause:** It's part of the embedding/processing workflow that follows ingestion, so it travels with the extraction boundary. It modifies data that was just ingested
+- **How to avoid:** Single service owns full ingestion→embedding→compaction workflow vs. the semantic boundary between 'ingest' (file I/O) and 'compact' (LLM processing) is blurred
+
+#### [Pattern] 800-line documentation constraint forced architectural clarity through scarcity. Initial memory-system.md was 981 lines (22% over), required consolidation of debugging sections and API references into quick-reference tables. (2026-02-24)
+- **Problem solved:** docs-standard.md requirement of <800 lines per file. Memory-system.md exceeded this and needed refactoring.
+- **Why this works:** Line count limits prevent over-documentation and force prioritization. Condensing 981→650 lines improved structure: moved verbose examples to separate sections, consolidated related content, created decision trees instead of prose.
+- **Trade-offs:** Constraint made docs harder to write initially but easier to maintain. Readers get focused context without excessive depth. Easier to update single file than coordinating multiple docs.
+
+### Documented rejected alternatives (e.g., 'Why not Pinecone? Why not LangChain chunking?') alongside positive choices in rag-techniques.md. (2026-02-24)
+- **Context:** rag-techniques.md included evaluation matrices and 'Why not X?' sections for alternative RAG approaches (Pinecone, chunking strategies, dense embeddings, etc.).
+- **Why:** Future developers will inevitably ask 'why this approach?'. Answering preemptively in the docs reduces context-switching and prevents re-evaluation of already-evaluated alternatives. This is meta-documentation: documenting the decision space, not just the decision.
+- **Rejected:** Could document only the chosen approach (knowledge-hive.md does this at high level), but this leaves decision reasoning implicit and scattered across past discussions/PRs.
+- **Trade-offs:** Longer docs but saves dev time by preventing repeated 'why not?' investigations. Creates single source of truth for design reasoning. Risk: must update when contexts change (e.g., if Pinecone becomes viable due to requirements change).
+- **Breaking if changed:** Removing this section would make architecture decisions invisible to new developers, increasing risk of unauthorized refactors based on incomplete information.
+
+#### [Pattern] Hybrid diagram strategy: ASCII art for simple flows (write pipeline), Mermaid for complex data dependencies (retrieval pipeline with multiple pathways and decision nodes). (2026-02-24)
+- **Problem solved:** knowledge-hive.md uses ASCII diagram for write pipeline (linear), Mermaid diagram for retrieval pipeline (branching, multiple stages, styled components).
+- **Why this works:** ASCII excels at showing simple sequential steps inline with prose. Mermaid excels at showing decision points, branching, and multi-layer dependencies with styling. Choosing per-diagram avoids forcing all diagrams into one tool's constraints.
+- **Trade-offs:** Hybrid approach requires developers to know both tools. ASCII stays readable in raw markdown. Mermaid offers styling and automatic layout. Maintenance: if rendering breaks, affects subset not all diagrams.
+
+#### [Pattern] Cross-document relative linking (./knowledge-hive, ./rag-techniques, ./memory-system) creates a cohesive knowledge graph within docs. Each document stands alone but explicitly references related topics. (2026-02-24)
+- **Problem solved:** Three documentation files placed in docs/dev/ with internal references using relative paths rather than creating one monolithic file or isolated docs.
+- **Why this works:** Relative links remain valid if documentation directory structure changes. Splitting into three focused docs (architecture, techniques, operations) reduces cognitive load per reader while relative links enable discoverability. Avoids the monolith problem (single 1900-line file = harder to navigate) and the fragmentation problem (multiple files with no connections).
+- **Trade-offs:** Relative linking requires knowing directory structure. More files to maintain. Readers must click through for full context. But: each doc is focused, faster to load, easier to reason about single responsibility.
+
+#### [Gotcha] Initial memory-system.md exceeded 800-line constraint by 23% (981 lines) despite planning. Refactoring required collapsing multiple debugging sections into a single reference table and deferring API details to cross-reference. (2026-02-24)
+- **Situation:** Documentation constraint from docs-standard.md was underestimated. Memory system has many edge cases and debugging scenarios that naturally expand documentation.
+- **Root cause:** Root cause: Wrote comprehensively first, then constrained. Should have outlined to estimate line count before drafting. Memory system (write pipeline, deduplication, compaction, pruning, API, debugging) has more subsystems than knowledge-hive.md or rag-techniques.md, making it harder to stay under 800 lines.
+- **How to avoid:** Refactoring improved focus (debugging now via quick-reference + SQL query examples rather than verbose explanations). Removed redundancy with knowledge-hive.md API section. Trade-off: less hand-holding for debugging—readers must read more carefully.
+
+#### [Pattern] Auto-discovery of documentation via generateSidebar() in docs/.vitepress/config.mts. No manual sidebar configuration needed—files are indexed automatically based on directory structure and naming conventions. (2026-02-24)
+- **Problem solved:** Docs automatically appear in VitePress sidebar without edits to config files. Mentioned in notes: 'docs auto-appear in the sidebar via generateSidebar().'
+- **Why this works:** Reduces maintenance burden—adding a new doc (docs/dev/new-topic.md) makes it appear in sidebar immediately. Prevents fork-bomb of sidebar config that grows with docs. Relies on file naming convention (kebab-case) and directory structure (docs/dev/) to drive discoverability.
+- **Trade-offs:** Auto-discovery trades control for scalability. If you want custom sidebar ordering or nested grouping, you need to override generateSidebar(). Most docs benefit from alphabetical/directory-based ordering.
+
+### Compaction threshold: 50,000 tokens per category file. Triggered on-demand via POST /api/knowledge/compact when file exceeds this size. (2026-02-24)
+- **Context:** memory-system.md documents that Knowledge Hive compacts oversized files at 50k token threshold (roughly 200KB of text).
+- **Why:** 50k tokens is a balance point: (1) Large enough to allow natural growth (e.g., patterns.md will contain hundreds of patterns), (2) Small enough to keep reindexing fast (50k tokens in all-MiniLM-L6-v2 = ~100ms), (3) Prevents single file from dominating memory/search latency. Default avoids constant compactions (token count fluctuates).
+- **Rejected:** Could compact on every write (prevents bloat but constant reindexing overhead). Could use higher threshold (fewer compactions but slower searches as files grow). Could use lower threshold (more compactions, more fragmentation across files).
+- **Trade-offs:** Threshold requires monitoring file growth and manual compaction API calls. But: prevents pathological behavior where a category file grows to millions of tokens. Lazy compaction (on-demand) means developers choose when to pay the reindex cost.
+- **Breaking if changed:** Removing compaction entirely allows unbounded file growth → search slowdown. Setting threshold too low causes constant reindexing churn. Setting too high causes single files to dominate memory/latency.
+
+#### [Pattern] Background worker runs AFTER embedding completion, not in parallel - sequential chaining of knowledge ingestion stages (2026-02-24)
+- **Problem solved:** HyPE worker depends on embeddings existing for each chunk; running both simultaneously would create race conditions
+- **Why this works:** Maintains dependency chain: file ingestion → embeddings → HyPE queries. Non-blocking async prevents main thread stalls while respecting data dependencies
+- **Trade-offs:** Slower end-to-end ingestion (sequential stages) but guaranteed data integrity and no race conditions
+
+### Extract KnowledgeIngestionService from KnowledgeStoreService - move embedding and HyPE workers to dedicated service (reduced KnowledgeStoreService from 1253→835 lines) (2026-02-24)
+- **Context:** Original service had 3 responsibilities: storage operations, file ingestion, and async workers (embeddings + HyPE)
+- **Why:** Separation of concerns - KnowledgeStoreService becomes focused on data access layer; ingestion logic isolated from storage logic. Easier testing and maintenance
+- **Rejected:** Keep workers in KnowledgeStoreService (single large class handling too many concerns); create separate IngestionWorker (adds another class for same coupling)
+- **Trade-offs:** More files to maintain but each has single responsibility; initialization flow more complex (KnowledgeStoreService must notify KnowledgeIngestionService on completion)
+- **Breaking if changed:** Reversing refactor would break initialization dependency chain; tests would need rewritten; caller would need to manage both service instances
+
+### Triple-mode fusion using Reciprocal Rank Fusion (RRF) to merge three independent ranking signals (BM25, direct cosine, HyPE cosine) with equal weights and k=60 parameter (2026-02-24)
+- **Context:** Combining heterogeneous retrieval signals from full-text search and two embedding spaces
+- **Why:** RRF combines complementary ranking functions without requiring explicit weight tuning. Each signal (lexical, semantic direct, semantic from query-embedding-to-query-embedding) provides different relevance perspectives. k=60 parameter controls the decay curve for rank positions.
+- **Rejected:** Simple weighted average of similarity scores (loses information from rank order), using only highest-performing signal (loses complementary signals), explicit weight tuning (requires offline analysis cycle)
+- **Trade-offs:** RRF is parameter-free and principled but assumes equal importance of all three signals. Equal weights may be suboptimal - future tuning based on eval stats could improve relevance.
+- **Breaking if changed:** Removing any of the three ranking sources breaks the fusion entirely; changing k parameter changes relative contribution of lower-ranked results
+
+#### [Pattern] Log rotation strategy: rotate at 10,000 entries while keeping most recent 5,000 entries (2026-02-24)
+- **Problem solved:** Preventing unbounded log file growth while maintaining sufficient historical data for offline analysis
+- **Why this works:** The 2x threshold (rotate at 10k, keep 5k) prevents logs from consuming unlimited disk while ensuring enough data exists for statistical significance. Rotating at upper threshold rather than fixed size gives better batching efficiency.
+- **Trade-offs:** Keeps 5k most recent entries only; analyses can't look beyond ~5k searches backward. Trade space savings for recency bias in analysis window.
+
+#### [Gotcha] Equal weighting (1:1:1) assumption for BM25:direct:HyPE in RRF merge encodes assumption that all three signals contribute equally to relevance (2026-02-24)
+- **Situation:** No prior empirical data on relative effectiveness of lexical vs direct embedding vs HyPE embedding retrieval
+- **Root cause:** Equal weights are principled starting point when no data exists. However, this is an assumption that different retrieval modalities have equal predictive power for relevance.
+- **How to avoid:** Simplicity and no tuning overhead vs suboptimal relevance if signals have different actual effectiveness. The eval stats endpoint exists to measure this.
+
+### Runtime mode selection (hybrid_hype → hybrid → bm25) based on actual embedding availability at search time (2026-02-24)
+- **Context:** System must function when embeddings are partially or fully unavailable
+- **Why:** Graceful degradation prevents search service failure when optional features fail. Embedding availability is runtime-dependent (model availability, cache state), so checking at search time is more reliable than pre-flight checks.
+- **Rejected:** Fail-fast at startup if embeddings unavailable (breaks search entirely), require explicit mode configuration (rigid, doesn't adapt)
+- **Trade-offs:** Mode can vary per-search (observable in retrieval_mode field); requires code paths for all three modes. Simpler than strict mode configuration.
+- **Breaking if changed:** Removing any fallback level (e.g., removing BM25 fallback) breaks searches when embeddings unavailable. Changing selection logic affects which mode is used for given corpus state.
+
+#### [Gotcha] Embeddings loaded from two separate sources: embeddings table (direct cosine) and chunks.hype_embeddings column (HyPE cosine) (2026-02-24)
+- **Situation:** Query-to-document embedding stored separately from pre-computed HyPE (query-embedding-to-query-embedding) embeddings
+- **Root cause:** Different embedding types have different lifecycles: direct embeddings are computed at ingestion, HyPE embeddings are pre-computed from direct embeddings. Separate storage mirrors this logical separation.
+- **How to avoid:** Schema clarity (type separation) requires loading from multiple sources. Root cause: embeddings are computed at different times with different inputs.
+
+### Used composition with facade pattern: KnowledgeStoreService delegates to KnowledgeSearchService rather than simple extraction with caller updates (2026-02-24)
+- **Context:** Extracting 200+ lines of search logic from monolithic service into dedicated service
+- **Why:** Preserves backward compatibility without 'hacks' - all existing callers work unchanged. Enables gradual migration path if future refactoring needed. Follows stated greenfield principle of preserving interface naturally.
+- **Rejected:** Direct extraction requiring all callers (routes, lead-engineer-service, auto-mode-service) to be updated to new service
+- **Trade-offs:** Slightly more code (one delegation layer) but eliminates coordination cost across 3+ call sites and risk of missing a caller. Enables future modularization without breaking changes.
+- **Breaking if changed:** If facade delegation is removed and KnowledgeSearchService methods are directly called, all consumers must be updated in coordinated change. With facade, services can migrate independently.
+
+#### [Pattern] KnowledgeSearchService remains stateless - database connection passed at call time rather than stored in constructor (2026-02-24)
+- **Problem solved:** Separating search concerns from knowledge store storage/initialization concerns
+- **Why this works:** Keeps search service testable without mocking database lifecycle. Allows same service instance to work with different database connections. Prevents long-lived connections being held in search layer.
+- **Trade-offs:** Requires passing db parameter on every search call (minor friction) but enables true separation of concerns and easier unit testing without integration setup
+
+### Service supports project path switching via re-initialization: if projectPath differs from initialized path, calls initialize(newPath) at search time (2026-02-24)
+- **Context:** Multi-project environment where same service instance might search different projects sequentially
+- **Why:** Single service instance can handle switching between projects without creating new instances. More convenient than factory pattern or connection pooling.
+- **Rejected:** Require creating new service instance per project; or throw error if project mismatch detected
+- **Trade-offs:** Simplifies caller code (no instance management) but adds latency when switching projects (reinitializes database). Assumes reinitialize is fast enough for interactive use.
+- **Breaking if changed:** If project switching is removed and service becomes single-project-only, multi-project scenarios would require significant caller refactoring. Current design keeps this flexible.
+
+### Created dedicated KnowledgeEmbeddingOrchestrator service to own embedding lifecycle end-to-end (table creation, HyPE processing, status tracking, hybrid retrieval) (2026-02-24)
+- **Context:** KnowledgeStoreService had mixed responsibilities: chunk storage/search AND embedding operations. These have different lifecycle patterns and trigger different background jobs.
+- **Why:** Embedding operations (async HyPE processing, background job management, embedding table schema) require different lifecycle management than synchronous search operations. Embedding status queries and hybrid retrieval are embedding concerns, not general search concerns.
+- **Rejected:** Could have kept everything in KnowledgeStoreService but then chunk/embedding changes would be entangled, making it harder to reason about which operations affect which data structures
+- **Trade-offs:** Gained: cleaner separation, independent testability, easier to modify embedding without affecting search. Lost: slightly more file complexity, requires orchestrator as dependency in search methods
+- **Breaking if changed:** If orchestrator is removed, HyPE background jobs, embedding status tracking, and hybrid retrieval all stop working. Search method can no longer delegate embedding operations.
+
+### Hybrid retrieval logic (RRF/Reciprocal Rank Fusion merging, ~200 lines) extracted as orchestrator responsibility, not search responsibility (2026-02-24)
+- **Context:** KnowledgeStoreService.search() was handling both pure BM25 results and hybrid result merging logic together
+- **Why:** Hybrid retrieval is specifically about merging BM25 + embedding results. This is an embedding orchestration concern, not a general search concern. Keeps search method focused on the retrieval mechanism, orchestrator handles result fusion.
+- **Rejected:** Could have kept it in search() but then adding new search modes (embedding-only, BM25-only) would require modifying search logic rather than orchestrator selection logic
+- **Trade-offs:** Gained: search() becomes dumber/simpler, orchestrator is clear integration point for different retrieval modes. Lost: requires delegating back to orchestrator after getting results
+- **Breaking if changed:** Pure search implementation cannot perform hybrid result merging directly. Must go through orchestrator's applyHybridRetrieval(). Any code depending on search method handling all merging breaks.
+
+### Evaluation logging (~130 lines) moved to orchestrator as embedding-specific concern, not general search concern (2026-02-24)
+- **Context:** getEvalStats() and logEvaluation() tracked which retrieval mode was used (BM25, embedding, hybrid). Was tightly coupled to search implementation.
+- **Why:** Evaluation metrics are meaningless for pure BM25 search (no retrieval mode to track). They only matter when embedding system is involved. This is orchestrator's domain.
+- **Rejected:** Could have kept evaluation in KnowledgeStoreService but then it would be tracking state about embedding operations from outside the embedding service, violating encapsulation
+- **Trade-offs:** Gained: clear ownership, evaluation only exists where it makes sense. Lost: evaluation is not available for non-embedding searches without duplicating logic
+- **Breaking if changed:** Code accessing eval stats through search service breaks. Must go through orchestrator. If you add non-embedding retrieval modes later, evaluation won't automatically track them.
+
+### Maintained KnowledgeStoreService as public API while delegating to KnowledgeIngestionService internally, rather than replacing the service entirely (2026-02-24)
+- **Context:** Extracting 413 lines of ingestion logic from a monolithic service while ensuring existing consumers remain unaffected
+- **Why:** Eliminates cascading changes across all consuming code. Zero breaking changes means routes, tests, and other services continue working without modification. Achieves modularization incrementally without coordination overhead.
+- **Rejected:** Making KnowledgeIngestionService the primary service and deprecating KnowledgeStoreService would require updating all consumers (routes, tests, other services). Or extracting without delegation facade, requiring API changes everywhere.
+- **Trade-offs:** Added indirection layer (one extra method call per delegation) but gained decoupling and maintainability. Code volume shift from store-service (66%) to ingestion-service (413 lines) signals cleaner separation.
+- **Breaking if changed:** Removing the delegation pattern and forcing consumers to import KnowledgeIngestionService directly would require updating all call sites. Removing KnowledgeStoreService entirely would break any code expecting its original interface.
+
+#### [Pattern] Created dedicated ingestion routes (ingest.ts) alongside the extracted service, establishing explicit API boundaries rather than implicit through methods (2026-02-24)
+- **Problem solved:** Service extraction could have left routes unchanged, but deliberately created route-level abstraction
+- **Why this works:** Routes define the actual contract/API surface area. By extracting them alongside the service, it clarifies that ingestion is a bounded context with specific entry points. Prevents accidental coupling to internal methods.
+- **Trade-offs:** Slight increase in file count (added ingest.ts) but massive gain in clarity. Makes ingestion functionality discoverable and independently testable at the HTTP layer.
+
+### Used quantitative metrics (250-line reduction target, achieved 413) as acceptance criteria rather than qualitative 'feels modular' (2026-02-24)
+- **Context:** Service modularization is often evaluated subjectively; used concrete line-count reduction as measurable goal
+- **Why:** Line count provides objective proof of extraction. Overshooting the target (165% of goal) demonstrates thorough extraction, not just moving a few methods. Harder to game or argue about.
+- **Rejected:** Subjective criteria like 'service should be smaller' or 'code should be more maintainable' lack objective verification and allow partial implementations to pass.
+- **Trade-offs:** Line count is crude metric (doesn't account for complexity), but it's concrete and verifiable. The overshoot (413 vs 250 target) signals confidence the extraction was comprehensive.
+- **Breaking if changed:** Without this metric, acceptance becomes opinion-based. A 50-line extraction could claim success despite leaving 80% of logic in original service. The target ensures meaningful refactoring occurred.
+
+#### [Pattern] Member variable pattern for KnowledgeIngestionService within KnowledgeStoreService enables lazy delegation while maintaining single responsibility (2026-02-24)
+- **Problem solved:** Could have composed the services via constructor injection, factory patterns, or service locator; chose simple member variable
+- **Why this works:** Member variable is simplest form of composition. Avoids overhead of factory/locator patterns. Clear ownership: store-service owns and controls ingestion-service lifecycle. Easier to test and understand dependency flow.
+- **Trade-offs:** Member variable approach is tightly bound but straightforward. Easier to understand than injected patterns, but harder to swap implementations for testing. The simple gain outweighs testing flexibility here since ingestion logic is relatively stable.
+
+### Documentation split into three focused files (knowledge-hive.md, rag-techniques.md, memory-system.md) rather than single monolithic document (2026-02-24)
+- **Context:** Creating comprehensive architecture documentation for RAG system
+- **Why:** Separates concerns: system overview vs technique decisions vs operational procedures. Enables clearer navigation and maintenance of distinct knowledge domains. Each file can evolve independently without tangling unrelated documentation.
+- **Rejected:** Single 1500+ line architecture.md file covering all topics together
+- **Trade-offs:** Easier: modular updates, focused reading paths. Harder: maintaining cross-file consistency, requires deliberate link structure.
+- **Breaking if changed:** If consolidated to single file, navigating to specific concerns becomes harder; future technique changes would need scrolling through unrelated content to find the right section.
+
+#### [Pattern] Each RAG technique choice explicitly documented with rejection rationale (e.g., why header-based chunking over fixed-size, why @xenova/transformers over native bindings, why HyPE over HyDE, why RRF over weighted sum) (2026-02-24)
+- **Problem solved:** Building RAG system with multiple viable technique alternatives at each layer
+- **Why this works:** Creates permanent architectural decision record. Prevents future developers from re-litigating already-decided tradeoffs. Rationale documentation prevents silent assumptions from calcifying into 'that's just how we do it'.
+- **Trade-offs:** Easier: future maintainers understand constraints and can spot when assumptions change. Harder: requires discipline to document non-obvious decisions upfront.
+
+### SQLite with FTS5 used as native vector store rather than external purpose-built vector database, with corpus size as deciding constraint (2026-02-24)
+- **Context:** Choosing storage layer for embedding vectors in knowledge system
+- **Why:** Corpus size constraint (knowledge.db stores chunked documentation, not massive external data) makes SQLite viable. Avoids operational complexity of managing separate database. Simplifies deployment in Electron/PWA environments.
+- **Rejected:** Pinecone, Weaviate, or other purpose-built vector DBs
+- **Trade-offs:** Easier: single database, no network calls, self-contained backups. Harder: less optimization for vector operations, scaling to millions of vectors would hit limitations.
+- **Breaking if changed:** If corpus grows to millions of embeddings or sub-millisecond latency becomes requirement, architectural change to external vector DB becomes necessary - tight coupling to SQLite in retrieval layer.
+
+#### [Pattern] HyPE query expansion documented as having 'zero runtime cost' - generates synthetic queries during embedding phase, not during retrieval (2026-02-24)
+- **Problem solved:** Comparing HyDE (generate on-the-fly) vs HyPE (pre-computed synthetic embeddings) for query expansion
+- **Why this works:** Shifts computational cost to write-time (embedding phase) rather than read-time (retrieval queries). For knowledge systems with stable corpus and frequent reads, this improves latency. The 'zero runtime cost' framing reveals optimization philosophy: pre-computation trades storage for retrieval speed.
+- **Trade-offs:** Easier: fast retrieval queries. Harder: storage overhead for synthetic embeddings; changes to query generation strategy require re-embedding entire corpus.
+
+### Documentation discovery from directory structure without sidebar manifest file, suggesting auto-discovery pattern for docs navigation (2026-02-24)
+- **Context:** Creating docs/dev/ section documentation with expectation of automatic inclusion in site navigation
+- **Why:** Auto-discovery from filesystem reduces configuration debt and makes documentation placement self-documenting. Directory structure IS the manifest.
+- **Rejected:** Manual sidebar.json or docs.config.js registration required for each new doc
+- **Trade-offs:** Easier: add file, documentation appears; directory structure visible in source control. Harder: can't customize ordering, navigation hierarchy follows filesystem exactly.
+- **Breaking if changed:** If documentation framework is upgraded or changed to require manual registration, existing docs would disappear from navigation until re-registered.
+
+### Line count limit (800 lines max per docs-standard.md) enforced for documentation files to maintain readability and focus (2026-02-24)
+- **Context:** Creating three documentation files totaling 1740 lines (652, 439, 649 lines each, all under 800)
+- **Why:** Prevents documentation from becoming navigation hell. 800-line limit forces deliberate scope boundaries and readability. Correlates with cognitive load - documentation beyond this length requires reader to maintain too much context.
+- **Rejected:** No limit or higher limit (e.g., 2000 lines) allowing consolidation
+- **Trade-offs:** Easier: readers can focus. Harder: requires cross-document navigation for complete picture, authors must resist scope creep.
+- **Breaking if changed:** If future architecture changes need substantial documentation, adding to existing files would violate standard, forcing creation of new docs and potential documentation fragmentation.
+
+#### [Pattern] Continue-on-error pattern: individual chunk LLM failures don't halt entire worker; silently skips that chunk and logs with progress every 10 items (2026-02-24)
+- **Problem solved:** Background worker processes hundreds of chunks; one bad response shouldn't block all progress
+- **Why this works:** Resilience: improves availability; avoids retry complexity; ensures forward progress even with occasional LLM failures
+- **Trade-offs:** Gained robustness/uptime; lost visibility into which chunks lack hype_embeddings (silent failures); no automatic retry recovery
+
+### HyPE worker executes sequentially AFTER embedding worker completes (dependency chain), not in parallel or standalone (2026-02-24)
+- **Context:** Two background ingestion tasks: embeddings + question generation; both needed for chunk search optimization
+- **Why:** Ensures logical precondition: HyPE requires chunks to have embeddings first; simple sequential model is easier to reason about
+- **Rejected:** Parallel execution with fallback; HyPE as independent scheduled job; merged into single ingestion step
+- **Trade-offs:** Simpler logic gained; but creates hard dependency: if embeddings fail, HyPE never runs (no independent recovery); doubles perceived ingestion time
+- **Breaking if changed:** If embedding worker is disabled/fails, HyPE silently doesn't run; switching to parallel requires handling race conditions and partial states
+
+#### [Gotcha] Feature toggle `hypeEnabled` disables future HyPE generation but does NOT remove or clean up existing hype_embeddings in database (2026-02-24)
+- **Situation:** Configuration allows turning HyPE on/off; toggle state unclear when OFF
+- **Root cause:** Simpler to implement: just skip the worker; cleanup logic complex (orphaned embeddings, idempotency); toggle is on/off flag not state manager
+- **How to avoid:** Implementation simplicity gained; but creates ambiguity: when hypeEnabled=false, is data stale? should retrieval use it? state becomes implicit
+
+### Hardcoded generation of exactly 3 questions per chunk; not parameterized or configurable (2026-02-24)
+- **Context:** Question diversity and retrieval coverage; decision on redundancy level
+- **Why:** Simple constant; presumably empirically chosen as sweet spot between coverage and cost
+- **Rejected:** Configurable parameter; dynamic based on chunk size; single question; five questions
+- **Trade-offs:** Simplicity and predictable cost; but inflexible if use cases need more diverse queries (search quality becomes architectural limit)
+- **Breaking if changed:** If operational needs change (need finer coverage), requires code change not config; if benchmarking shows 2 questions sufficient, still paying for 3

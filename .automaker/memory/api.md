@@ -5,9 +5,9 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 96
-  referenced: 54
-  successfulFeatures: 54
+  loaded: 120
+  referenced: 64
+  successfulFeatures: 64
 ---
 # api
 
@@ -554,3 +554,52 @@ usageStats:
 - **Problem solved:** Knowledge store is new foundational component - needs observability from the start
 - **Why this works:** Statistics method provides debugging visibility, monitors store health, enables quota enforcement, allows informed decisions about store performance. First-class API method (not buried in logs) signals its importance.
 - **Trade-offs:** Gains: Observable, testable, discoverable interface for store metrics. Losses: Small overhead to calculate stats on request (could be mitigated with caching)
+
+#### [Gotcha] Twitter requires both og:image AND twitter:image meta tags despite og:image being standard, because Twitter's parser checks for twitter:image first for backward compatibility (2026-02-24)
+- **Situation:** Adding social sharing support across multiple platforms
+- **Root cause:** Twitter's card parser has legacy behavior of checking twitter:image first and only falling back to og:image if missing. Providing both ensures compatibility across crawler versions
+- **How to avoid:** Minor HTML duplication but guarantees Twitter cards render correctly across all client versions
+
+#### [Gotcha] Buttondown API requires fetch with mode: 'no-cors', which prevents reading response body. Success is inferred from promise resolution, not from HTTP response content. (2026-02-24)
+- **Situation:** Third-party email service integration to external API endpoint
+- **Root cause:** Buttondown API does not set CORS headers properly, forcing no-cors mode as the only option to submit from browser
+- **How to avoid:** Simplicity of direct client-side submission vs. inability to validate actual API response content
+
+#### [Gotcha] Buttondown API requires fetch with mode: 'no-cors', which prevents reading response body. Success must be inferred from promise resolution rather than HTTP status codes. (2026-02-24)
+- **Situation:** Integrating with Buttondown email service for email capture
+- **Root cause:** Buttondown's CORS policy blocks standard fetch; no-cors mode allows request but sacrifices response inspection
+- **How to avoid:** Simpler client implementation but cannot distinguish between genuine success and network completion; harder to detect real failures
+
+#### [Gotcha] Buttondown requires specific FormData fields (embed=1, tag=launch-list) beyond just the email address. These hidden fields control email categorization and campaign tracking. (2026-02-24)
+- **Situation:** Sending email to Buttondown's embed-subscribe endpoint
+- **Root cause:** Buttondown's API design uses these fields to organize incoming emails into lists and track signup source
+- **How to avoid:** Tightly coupled to Buttondown's API contract; changing email provider requires rewriting submission logic
+
+#### [Pattern] Accessibility features (skip link, semantic HTML, ARIA labels, main landmark) implemented as standard pattern across all landing pages, not optional (2026-02-24)
+- **Problem solved:** Creating consistent landing page following existing protoLabs patterns
+- **Why this works:** Accessibility as standard ensures WCAG compliance across portfolio without page-by-page decisions. Improves SEO (semantic HTML), user experience, and legal risk mitigation. Skip link and main landmark are quick wins enabling keyboard users
+- **Trade-offs:** Small implementation cost gains compliance and inclusivity across entire portfolio; consistent pattern is easier to audit
+
+#### [Pattern] Defensive regex parsing of LLM output: `/[\[\s\S]*\]/` extracts JSON arrays even when wrapped in markdown code blocks. Claude wraps JSON in triple backticks despite being told to return only JSON. (2026-02-24)
+- **Problem solved:** Haiku generation prompt says 'return only a JSON array' but LLM often wraps it in markdown code fences anyway
+- **Why this works:** LLM output is inherently unpredictable despite instruction clarity. This pattern handles common deviations without failing the entire operation.
+- **Trade-offs:** Regex makes parsing robust but less strict; if malformed JSON exists outside brackets, it passes through silently
+
+#### [Pattern] Exposing `retrieval_mode` in API response enables production observability of which fusion algorithm executed for each search (2026-02-24)
+- **Problem solved:** Supporting three retrieval modes with fallback logic that makes actual execution mode non-obvious from request alone
+- **Why this works:** Allows tracking HyPE adoption rates, comparing result quality across modes, and correlating algorithm choice with query characteristics in production logs
+- **Trade-offs:** Exposing internal detail enables better observability; creates surface area for client code to depend on specific mode values
+
+### All ingest route handlers validate projectPath before calling service methods and return 400 Bad Request if missing (2026-02-24)
+- **Context:** Service methods throw errors if called without initialization, which requires projectPath to be set
+- **Why:** Creates an explicit precondition check in the API layer, giving clients clear 400 error vs. generic 500 from service layer; prevents invalid state propagation into service
+- **Rejected:** Let service handle validation - simpler route code but worse client UX (500 instead of 400); no validation - service errors become the contract
+- **Trade-offs:** Duplicate validation (routes + service initialization) vs. clear API contracts; more defensive but more code in handlers
+- **Breaking if changed:** Without the 400 validation, clients get error messages from the service layer which are less actionable and could expose implementation details
+
+### Separate /api/knowledge/eval-stats endpoint for aggregate retrieval statistics rather than embedding stats in search response (2026-02-24)
+- **Context:** Need observability into retrieval mode effectiveness without bloating every search response
+- **Why:** Separation of concerns: each search response is optimized for latency (minimal payload), while eval stats are for analytical consumption. Keeping stats out of search payload avoids overhead on hot path.
+- **Rejected:** Include stats in search response (bloats every query response), compute stats on-demand (expensive to aggregate large logs)
+- **Trade-offs:** Stats are aggregate (lose per-search breakdown), requires separate endpoint call. Enables efficient monitoring while keeping search path lean.
+- **Breaking if changed:** If stats endpoint is removed, lose visibility into retrieval mode distribution and effectiveness metrics
