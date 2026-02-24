@@ -25,7 +25,7 @@
     "kanban"
   ],
   "dependencies": {
-    "@automaker/tools": "workspace:*",
+    "@automaker/tools": "*",
     "@modelcontextprotocol/sdk": "^1.0.0"
   },
   "devDependencies": {
