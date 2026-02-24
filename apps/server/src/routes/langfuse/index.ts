@@ -288,5 +288,43 @@ export function createLangfuseRoutes(
    */
   router.post('/webhook/prompt', createWebhookHandler(promptGitHubSyncService));
 
+  /**
+   * POST /api/langfuse/prompts/seed
+   * Upload default prompt baselines to Langfuse for version tracking and A/B experiments.
+   *
+   * Body: { labels?: string[], force?: boolean }
+   * - labels: Langfuse labels to apply (default: ["production"])
+   * - force: Create new version even if prompt exists (default: false)
+   */
+  router.post('/prompts/seed', async (req, res) => {
+    try {
+      const { PromptSeedService } = await import('../../services/prompt-seed-service.js');
+      const { labels, force } = req.body ?? {};
+      const summary = await PromptSeedService.getInstance().seedDefaults(
+        labels ?? ['production'],
+        force ?? false
+      );
+      res.json(summary);
+    } catch (error) {
+      logger.error('Failed to seed prompts:', error);
+      res.status(500).json({ error: 'Failed to seed prompts' });
+    }
+  });
+
+  /**
+   * POST /api/langfuse/prompts/catalog
+   * Returns the prompt catalog (names and tags) without seeding.
+   */
+  router.post('/prompts/catalog', async (_req, res) => {
+    try {
+      const { PromptSeedService } = await import('../../services/prompt-seed-service.js');
+      const catalog = PromptSeedService.getInstance().getCatalog();
+      res.json({ catalog });
+    } catch (error) {
+      logger.error('Failed to get prompt catalog:', error);
+      res.status(500).json({ error: 'Failed to get prompt catalog' });
+    }
+  });
+
   return router;
 }

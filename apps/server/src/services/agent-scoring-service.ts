@@ -103,13 +103,21 @@ export class AgentScoringService {
         this.scoreSuccess(langfuse, traceId, 1.0, 'Feature completed — PR merged');
         this.scoreEfficiency(langfuse, traceId, feature);
         this.scoreQuality(langfuse, traceId, feature);
+        this.scoreBuildPass(langfuse, traceId, true);
+        this.scoreReworkCount(langfuse, traceId, feature);
       } else if (newStatus === 'review' && oldStatus === 'in_progress') {
         this.scoreSuccess(langfuse, traceId, 0.7, 'Feature in review — PR created');
         this.scoreEfficiency(langfuse, traceId, feature);
+        this.scoreBuildPass(langfuse, traceId, true);
+        this.scoreReworkCount(langfuse, traceId, feature);
       } else if (newStatus === 'backlog' && oldStatus === 'in_progress') {
         this.scoreSuccess(langfuse, traceId, 0.0, 'Feature reset to backlog — agent failed');
+        this.scoreBuildPass(langfuse, traceId, false);
+        this.scoreReworkCount(langfuse, traceId, feature);
       } else if (newStatus === 'blocked' && oldStatus === 'in_progress') {
         this.scoreSuccess(langfuse, traceId, 0.0, 'Feature blocked — agent failed');
+        this.scoreBuildPass(langfuse, traceId, false);
+        this.scoreReworkCount(langfuse, traceId, feature);
       }
 
       // Flush after scoring
@@ -151,6 +159,26 @@ export class AgentScoringService {
 
     langfuse.createScore({ traceId, name: 'agent.quality', value: quality, comment });
     logger.debug(`Scored agent.quality=${quality.toFixed(2)} for trace ${traceId}`);
+  }
+
+  private scoreBuildPass(langfuse: LangfuseClient, traceId: string, passed: boolean): void {
+    const value = passed ? 1.0 : 0.0;
+    const comment = passed
+      ? 'Build passed — agent produced compilable code'
+      : 'Build failed — agent did not produce working code';
+    langfuse.createScore({ traceId, name: 'agent.build_pass', value, comment });
+    logger.debug(`Scored agent.build_pass=${value} for trace ${traceId}`);
+  }
+
+  private scoreReworkCount(langfuse: LangfuseClient, traceId: string, feature: Feature): void {
+    const attempts = feature.executionHistory?.length ?? 1;
+    // Normalize: 1 attempt = 1.0 (perfect), 2 = 0.5, 3 = 0.33, etc.
+    const value = Math.min(1.0, 1 / attempts);
+    const comment = `${attempts} execution attempt(s)${attempts > 1 ? ' — required rework' : ''}`;
+    langfuse.createScore({ traceId, name: 'agent.rework_count', value, comment });
+    logger.debug(
+      `Scored agent.rework_count=${value.toFixed(2)} (${attempts} attempts) for trace ${traceId}`
+    );
   }
 
   private async scorePipelinePhase(

@@ -76,26 +76,75 @@ All prompts use hierarchical dot-notation: `{category}.{key}`
 | `suggestions`        | `featuresPrompt`, `refactoringPrompt`, `securityPrompt`, `performancePrompt`, `baseTemplate`                                                                                                                                                                                                            | `libs/prompts/defaults.ts`    |
 | `taskExecution`      | `taskPromptTemplate`, `implementationInstructions`, `playwrightVerificationInstructions`, `learningExtractionSystemPrompt`, `learningExtractionUserPromptTemplate`, `planRevisionTemplate`, `continuationAfterApprovalTemplate`, `resumeFeatureTemplate`, `projectAnalysisPrompt`, `prFeedbackTemplate` | `libs/prompts/defaults.ts`    |
 
-## Seed Script
+## Seeding Prompts
 
-Push all hardcoded prompts to Langfuse:
+Push default prompt baselines to Langfuse for version tracking and A/B experiments.
+
+### Via MCP Tool (Recommended)
+
+```
+langfuse_seed_prompts({ labels: ["production"], force: false })
+```
+
+### Via API
+
+```bash
+curl -X POST http://localhost:3008/api/langfuse/prompts/seed \
+  -H "Content-Type: application/json" \
+  -d '{"labels": ["production"], "force": false}'
+```
+
+### Via Seed Script (Legacy)
 
 ```bash
 npx tsx scripts/seed-langfuse-prompts.ts
 ```
 
-**Requirements:**
+### Prompt Catalog
 
-- `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` in your `.env`
-- `LANGFUSE_BASE_URL` (optional, defaults to `https://cloud.langfuse.com`)
+The seed service uploads 8 high-impact prompts:
 
-**Behavior:**
+| Langfuse Name                              | Tags                               | Impact                                        |
+| ------------------------------------------ | ---------------------------------- | --------------------------------------------- |
+| `autoMode.featurePromptTemplate`           | auto-mode, agent, high-impact      | Main feature prompt — controls agent behavior |
+| `autoMode.planningLite`                    | auto-mode, planning                | Lightweight planning phase                    |
+| `autoMode.planningSpec`                    | auto-mode, planning                | Spec-level planning                           |
+| `autoMode.planningFull`                    | auto-mode, planning                | Full planning with detailed analysis          |
+| `taskExecution.implementationInstructions` | task-execution, agent, high-impact | Implementation guidelines, verification gates |
+| `taskExecution.taskPromptTemplate`         | task-execution, agent              | Task execution template                       |
+| `agent.systemPrompt`                       | agent, system-prompt               | Base agent system prompt                      |
+| `backlogPlan.systemPrompt`                 | planning, backlog                  | Backlog planning system prompt                |
 
-- Creates each prompt with the `production` label
-- Idempotent: re-running creates new versions of existing prompts
-- Reports which prompts succeeded/failed
+### Options
 
-**Why seed?** Eliminates "Prompt not found" SDK errors in server logs. Even though our wrapper (`LangfuseClient.getPrompt()`) logs at debug level, the Langfuse SDK itself emits internal error logs via `console.error` that cannot be suppressed via configuration. Seeding ensures prompts exist upstream, preventing the errors entirely.
+- `labels`: Langfuse labels to apply (default: `["production"]`)
+- `force`: If `false` (default), skips prompts that already exist. If `true`, creates a new version.
+
+**Why seed?** Eliminates "Prompt not found" SDK errors in server logs. Also enables version tracking and A/B experiments through the Langfuse dashboard.
+
+## A/B Experiments & Rollout
+
+Once prompts are seeded, experiment with variants via the Langfuse dashboard:
+
+1. **Create variant**: Edit a prompt in Langfuse to create a new version
+2. **Label for testing**: Apply `staging` label to the new version
+3. **Test**: Configure a staging server with `LANGFUSE_SYNC_LABEL=staging`
+4. **Promote**: Move the `production` label to the winning version
+5. **Monitor**: Check agent scores in Langfuse to compare version performance
+
+### Scoring Signals
+
+The `AgentScoringService` automatically scores every agent execution trace:
+
+| Score                | Range      | Description                            |
+| -------------------- | ---------- | -------------------------------------- |
+| `agent.success`      | 0.0–1.0    | 1.0 = done, 0.7 = review, 0.0 = failed |
+| `agent.efficiency`   | 0.0–1.0    | 1 - (turnsUsed / maxTurns)             |
+| `agent.quality`      | 0.0–1.0    | 1 - (reviewThreads × 0.1)              |
+| `agent.build_pass`   | 0.0 or 1.0 | Whether agent produced compilable code |
+| `agent.rework_count` | 0.0–1.0    | 1/attempts (1.0 = first try success)   |
+
+Compare these scores across prompt versions to identify improvements.
 
 ## Managing Prompts in Langfuse
 
@@ -320,7 +369,8 @@ The dispatch event type is `langfuse-prompt-sync` and includes the prompt name, 
 | `apps/server/src/routes/langfuse/webhook.ts`             | Webhook route handler — filters by label, dispatches to sync |
 | `apps/server/src/services/prompt-github-sync-service.ts` | Octokit-based GitHub sync (commit prompts to `prompts/`)     |
 | `apps/server/src/services/prompt-ci-trigger-service.ts`  | `repository_dispatch` trigger after prompt commits           |
-| `libs/observability/src/langfuse/client.ts`              | `LangfuseClient.getPrompt()` with label support              |
+| `apps/server/src/services/prompt-seed-service.ts`        | Prompt seeding service — uploads baselines to Langfuse       |
+| `libs/observability/src/langfuse/client.ts`              | `LangfuseClient.getPrompt()` / `createPrompt()` with labels  |
 | `libs/observability/src/langfuse/cache.ts`               | `PromptCache` for TTL-based caching                          |
 | `libs/observability/src/langfuse/versioning.ts`          | `getRawPrompt()`, `prefetchPrompts()`, label/version pinning |
 | `scripts/seed-langfuse-prompts.ts`                       | One-time script to push all prompts to Langfuse              |

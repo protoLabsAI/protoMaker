@@ -1274,6 +1274,12 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         metadata: args.metadata,
       });
 
+    case 'langfuse_seed_prompts':
+      return apiCall('/langfuse/prompts/seed', {
+        labels: args.labels,
+        force: args.force,
+      });
+
     // Twitch Integration
     case 'twitch_list_suggestions':
       return apiCall(

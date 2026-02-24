@@ -223,6 +223,43 @@ export class LangfuseClient {
   }
 
   /**
+   * Create or update a text prompt in Langfuse.
+   *
+   * If a prompt with the same name already exists, a new version is created.
+   * Returns the created prompt metadata (name, version, labels).
+   */
+  async createPrompt(options: {
+    name: string;
+    prompt: string;
+    labels?: string[];
+    tags?: string[];
+    commitMessage?: string;
+    config?: Record<string, any>;
+  }): Promise<{ name: string; version: number; labels: string[] } | null> {
+    if (!this.isAvailable()) {
+      logger.debug('Langfuse unavailable, skipping prompt creation');
+      return null;
+    }
+
+    try {
+      const result = await this.client!.api.promptsCreate({
+        type: 'text',
+        name: options.name,
+        prompt: options.prompt,
+        labels: options.labels ?? [],
+        tags: options.tags ?? [],
+        commitMessage: options.commitMessage,
+        config: options.config,
+      });
+      logger.info(`Created prompt in Langfuse: ${options.name} (v${result.version})`);
+      return { name: result.name, version: result.version, labels: result.labels };
+    } catch (error) {
+      logger.error(`Failed to create prompt in Langfuse: ${options.name}`, error);
+      return null;
+    }
+  }
+
+  /**
    * Create a score for a trace
    */
   createScore(options: CreateScoreOptions) {
