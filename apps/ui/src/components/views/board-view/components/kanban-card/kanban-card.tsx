@@ -173,6 +173,7 @@ export const KanbanCard = memo(function KanbanCard({
 
   const wrapperClasses = cn(
     'relative select-none outline-none touch-none transition-transform duration-200 ease-out',
+    'draggable-card',
     getCursorClass(isOverlay, isDraggable, isSelectable),
     isOverlay && isLifted && 'scale-105 rotate-1 z-50',
     // Visual feedback when another card is being dragged over this one

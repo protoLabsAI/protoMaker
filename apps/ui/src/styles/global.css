@@ -178,6 +178,11 @@
     max-height: var(--visual-viewport-height, 100vh);
   }
 
+  /* Touch-action for draggable cards - prevents browser scroll during drag */
+  .draggable-card {
+    touch-action: none;
+  }
+
   /* Brand gradient utilities */
   .gradient-brand {
     background: linear-gradient(135deg, oklch(0.55 0.25 265), oklch(0.5 0.28 270));
