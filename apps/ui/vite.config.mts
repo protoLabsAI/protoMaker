@@ -6,6 +6,7 @@ import { defineConfig } from 'vite';
 import electron from 'vite-plugin-electron/simple';
 import { TanStackRouterVite } from '@tanstack/router-plugin/vite';
 import { fileURLToPath } from 'url';
+import { VitePWA } from 'vite-plugin-pwa';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -59,6 +60,70 @@ export default defineConfig(({ command }) => {
       }),
       tailwindcss(),
       react(),
+      // Only include PWA plugin in web mode (not Electron)
+      ...(skipElectron
+        ? [
+            VitePWA({
+              registerType: 'prompt',
+              includeAssets: ['favicon.ico', 'logo_larger.png'],
+              manifest: {
+                name: 'protoLabs.studio',
+                short_name: 'protoLabs',
+                description: 'Autonomous AI Development Studio',
+                theme_color: '#0a0a0a',
+                background_color: '#0a0a0a',
+                display: 'standalone',
+                icons: [
+                  {
+                    src: '/logo_larger.png',
+                    sizes: '512x512',
+                    type: 'image/png',
+                  },
+                ],
+              },
+              workbox: {
+                // Allow larger files to be cached (default is 2MB)
+                maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5MB
+                // Shell-first strategy for SPA shell
+                navigateFallback: '/index.html',
+                navigateFallbackDenylist: [/^\/api\//],
+                runtimeCaching: [
+                  {
+                    // Cache-first for static hashed assets (js/css/fonts)
+                    urlPattern: /\/assets\/.*/i,
+                    handler: 'CacheFirst',
+                    options: {
+                      cacheName: `static-assets-${Date.now()}`,
+                      expiration: {
+                        maxEntries: 500,
+                        maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+                      },
+                      cacheableResponse: {
+                        statuses: [0, 200],
+                      },
+                    },
+                  },
+                  {
+                    // Network-first for API routes
+                    urlPattern: /^\/api\/.*/i,
+                    handler: 'NetworkFirst',
+                    options: {
+                      cacheName: `api-cache-${Date.now()}`,
+                      expiration: {
+                        maxEntries: 100,
+                        maxAgeSeconds: 60 * 60, // 1 hour
+                      },
+                      networkTimeoutSeconds: 10,
+                      cacheableResponse: {
+                        statuses: [0, 200],
+                      },
+                    },
+                  },
+                ],
+              },
+            }),
+          ]
+        : []),
     ],
     resolve: {
       alias: {
@@ -101,6 +166,9 @@ export default defineConfig(({ command }) => {
           'stream',
           'events',
           'readline',
+          // Add PWA virtual modules as external in Electron mode
+          // They won't be imported at runtime since isWebMode checks prevent it
+          ...(skipElectron ? [] : ['virtual:pwa-register', 'virtual:pwa-register/react']),
         ],
       },
     },

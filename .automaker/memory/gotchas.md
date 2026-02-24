@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 308
-  referenced: 160
-  successfulFeatures: 160
+  loaded: 305
+  referenced: 158
+  successfulFeatures: 158
 ---
 # gotchas
 
@@ -262,8 +262,3 @@ usageStats:
 - **Situation:** WebSocket event stream may contain duplicate tool-use events due to network retries or server-side resend logic
 - **Root cause:** Timestamp comparison is simpler than tracking event IDs across distributed components, but vulnerable to clock drift between client and server
 - **How to avoid:** Timestamp approach is 3 lines of code vs event ID registry (20+ lines). Trade-off: 1-2% edge case failures on high-latency networks vs code complexity
-
-#### [Gotcha] useIsMobile hook uses 768px breakpoint, but feature required 640px (Tailwind sm). Custom media query was necessary instead of reusing existing hook. (2026-02-24)
-- **Situation:** Initially attempted to use existing useIsMobile() hook for sidebar auto-hide, but it checks max-width: 768px while feature spec required below 640px (Tailwind sm breakpoint).
-- **Root cause:** The Tailwind sm breakpoint (640px) is a specific design decision. Using a mismatched breakpoint (768px) would hide sidebar at wrong viewport width, breaking mobile UX alignment with Tailwind grid system.
-- **How to avoid:** Custom media query adds ~25 lines of code vs reusing hook, but ensures correct breakpoint alignment. Maintainability trade-off: custom query lives in __root.tsx rather than shared hook.
