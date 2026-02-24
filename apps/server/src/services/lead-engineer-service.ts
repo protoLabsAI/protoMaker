@@ -46,6 +46,10 @@ import { getWorkflowSettings } from '../lib/settings-helpers.js';
 import type { PipelineCheckpointService } from './pipeline-checkpoint-service.js';
 import type { ContextFidelityService } from './context-fidelity-service.js';
 import type { KnowledgeStoreService } from './knowledge-store-service.js';
+import type {
+  TrajectoryStoreService,
+  TrajectoryStateTransition,
+} from './trajectory-store-service.js';
 import { simpleQuery } from '../providers/simple-query-service.js';
 import { resolveModelString } from '@protolabs-ai/model-resolver';
 
@@ -74,6 +78,7 @@ export interface ProcessorServiceContext {
   checkpointService?: PipelineCheckpointService;
   contextFidelityService?: ContextFidelityService;
   knowledgeStoreService?: KnowledgeStoreService;
+  trajectoryStoreService?: TrajectoryStoreService;
 }
 
 // ────────────────────────── Feature State Machine ──────────────────────────
@@ -124,6 +129,11 @@ export interface StateContext {
   escalationReason?: string;
   reviewFeedback?: string;
   siblingReflections?: string[];
+  // Trajectory tracking fields
+  /** ISO 8601 timestamp when processing started */
+  startedAt?: string;
+  /** State transitions for trajectory recording */
+  stateTransitions?: TrajectoryStateTransition[];
 }
 
 /**
@@ -947,6 +957,24 @@ class DeployProcessor implements StateProcessor {
       remediationAttempts: ctx.remediationAttempts,
     });
 
+    // Fire-and-forget trajectory save (non-blocking)
+    if (this.serviceContext.trajectoryStoreService && ctx.startedAt) {
+      const completedAt = new Date().toISOString();
+      const durationMs = new Date(completedAt).getTime() - new Date(ctx.startedAt).getTime();
+      this.serviceContext.trajectoryStoreService.save({
+        feature: ctx.feature,
+        projectPath: ctx.projectPath,
+        outcome: 'success',
+        stateTransitions: ctx.stateTransitions || [],
+        startedAt: ctx.startedAt,
+        completedAt,
+        durationMs,
+        costUsd: finalCost,
+        model: ctx.options.model || 'sonnet',
+        prNumber: ctx.prNumber,
+      });
+    }
+
     // Fire-and-forget reflection (non-blocking)
     void this.generateReflection(ctx);
 
@@ -1071,6 +1099,30 @@ class EscalateProcessor implements StateProcessor {
       retryCount: ctx.retryCount,
       remediationAttempts: ctx.remediationAttempts,
     });
+
+    // Fire-and-forget trajectory save (non-blocking)
+    if (this.serviceContext.trajectoryStoreService && ctx.startedAt) {
+      const completedAt = new Date().toISOString();
+      const durationMs = new Date(completedAt).getTime() - new Date(ctx.startedAt).getTime();
+      this.serviceContext.trajectoryStoreService.save({
+        feature: ctx.feature,
+        projectPath: ctx.projectPath,
+        outcome: 'escalated',
+        stateTransitions: ctx.stateTransitions || [],
+        startedAt: ctx.startedAt,
+        completedAt,
+        durationMs,
+        costUsd: ctx.feature.costUsd || 0,
+        model: ctx.options.model || 'sonnet',
+        prNumber: ctx.prNumber,
+        failureAnalysis: {
+          reason: ctx.escalationReason || 'Unknown escalation reason',
+          retryCount: ctx.retryCount,
+          remediationAttempts: ctx.remediationAttempts,
+          reviewFeedback: ctx.reviewFeedback,
+        },
+      });
+    }
 
     return {
       nextState: null,
@@ -1220,6 +1272,9 @@ export class FeatureStateMachine {
       remediationAttempts: 0,
       mergeRetryCount: 0,
       planRetryCount: 0,
+      // Trajectory tracking
+      startedAt: new Date().toISOString(),
+      stateTransitions: [],
       // Merge any restored context from checkpoint
       ...resumeFromCheckpoint?.restoredContext,
     };
@@ -1329,6 +1384,14 @@ export class FeatureStateMachine {
         }
 
         completedStates.push(currentState);
+
+        // Track state transition for trajectory
+        ctx.stateTransitions?.push({
+          from: completedStates.length > 1 ? completedStates[completedStates.length - 2] : null,
+          to: currentState,
+          timestamp: new Date().toISOString(),
+          reason: result.reason,
+        });
 
         logger.info('State transition', {
           from: currentState,
