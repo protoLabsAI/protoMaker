@@ -144,7 +144,8 @@ export function chunkMarkdownFile(fileContent: string): MemoryChunk[] {
 
       // Extract heading and content
       const firstNewline = section.indexOf('\n');
-      const heading = firstNewline >= 0 ? section.substring(0, firstNewline).trim() : section.trim();
+      const heading =
+        firstNewline >= 0 ? section.substring(0, firstNewline).trim() : section.trim();
       const sectionContent = firstNewline >= 0 ? section.substring(firstNewline + 1).trim() : '';
 
       // Split section content if it exceeds max tokens

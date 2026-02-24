@@ -346,8 +346,8 @@ export class KnowledgeStoreService {
 
     // Total chunks
     const totalChunks =
-      (this.db.prepare('SELECT COUNT(*) as count FROM chunks').get() as { count: number })
-        ?.count || 0;
+      (this.db.prepare('SELECT COUNT(*) as count FROM chunks').get() as { count: number })?.count ||
+      0;
 
     // Total size
     let totalSizeBytes = 0;
