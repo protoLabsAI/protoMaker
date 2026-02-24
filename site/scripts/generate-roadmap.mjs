@@ -139,18 +139,34 @@ function main() {
     `<!--ROADMAP_START-->\n${entriesHtml}\n            <!--ROADMAP_END-->`
   );
 
-  // Inject counts
-  html = html.replace('<!--COUNT:completed-->', String(counts.completed));
-  html = html.replace('<!--COUNT:in-progress-->', String(counts['in-progress']));
-  html = html.replace('<!--COUNT:planned-->', String(counts.planned));
+  // Inject counts — idempotent via id-targeted regex (replaces inner text of span)
+  html = html.replace(
+    /(<span[^>]*id="count-completed"[^>]*>)[^<]*(<\/span>)/,
+    `$1${counts.completed}$2`
+  );
+  html = html.replace(
+    /(<span[^>]*id="count-in-progress"[^>]*>)[^<]*(<\/span>)/,
+    `$1${counts['in-progress']}$2`
+  );
+  html = html.replace(
+    /(<span[^>]*id="count-planned"[^>]*>)[^<]*(<\/span>)/,
+    `$1${counts.planned}$2`
+  );
 
-  // Inject last updated
-  const lastUpdated = new Date(roadmap.lastUpdated).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-  html = html.replace('<!--ROADMAP:lastUpdated-->', `Last updated ${lastUpdated}`);
+  // Inject last updated — idempotent via id-targeted regex
+  if (roadmap.lastUpdated) {
+    const lastUpdated = new Date(roadmap.lastUpdated).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+    html = html.replace(
+      /(<p[^>]*id="last-updated"[^>]*>)[^<]*(<\/p>)/,
+      `$1Last updated ${lastUpdated}$2`
+    );
+  } else {
+    console.warn('  roadmap.json is missing lastUpdated field — skipping last-updated injection');
+  }
 
   writeFileSync(ROADMAP_HTML, html);
   console.log(`  Injected into ${ROADMAP_HTML}`);
