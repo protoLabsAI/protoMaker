@@ -277,7 +277,7 @@ class IntakeProcessor implements StateProcessor {
 class PlanProcessor implements StateProcessor {
   private readonly MAX_PLAN_RETRIES = 2;
 
-  constructor(private _serviceContext: ProcessorServiceContext) {}
+  constructor(private serviceContext: ProcessorServiceContext) {}
 
   async enter(ctx: StateContext): Promise<void> {
     logger.info(`[PLAN] Starting planning phase for feature: ${ctx.feature.id}`, {
@@ -348,6 +348,25 @@ Keep it focused and actionable. If the feature description is too vague or uncle
 
     logger.info(`[PLAN] Plan approved (${ctx.planOutput.length} chars)`);
 
+    // Antagonistic review gate for large/architectural features
+    const reviewResult = await this.antagonisticReview(ctx);
+    if (reviewResult && !reviewResult.approved) {
+      logger.warn('[PLAN] Antagonistic review rejected plan', { reason: reviewResult.reason });
+
+      if (ctx.planRetryCount < this.MAX_PLAN_RETRIES) {
+        ctx.planRetryCount++;
+        return {
+          nextState: 'PLAN',
+          shouldContinue: true,
+          reason: `Plan rejected by review: ${reviewResult.reason}`,
+          context: { reviewFeedback: reviewResult.reason },
+        };
+      }
+
+      // Max retries exceeded — proceed anyway with a warning
+      logger.warn('[PLAN] Proceeding despite review rejection (max retries exceeded)');
+    }
+
     return {
       nextState: 'EXECUTE',
       shouldContinue: true,
@@ -357,6 +376,72 @@ Keep it focused and actionable. If the feature description is too vague or uncle
 
   async exit(_ctx: StateContext): Promise<void> {
     logger.info('[PLAN] Planning phase completed');
+  }
+
+  /**
+   * Run antagonistic review on large/architectural plans.
+   * Returns null if review is skipped (small/medium features or disabled).
+   */
+  private async antagonisticReview(
+    ctx: StateContext
+  ): Promise<{ approved: boolean; reason?: string } | null> {
+    const complexity = ctx.feature.complexity || 'medium';
+    if (complexity !== 'large' && complexity !== 'architectural') {
+      return null; // Skip for small/medium features
+    }
+
+    // Check if antagonistic review is enabled in workflow settings
+    const workflowSettings = await getWorkflowSettings(ctx.projectPath);
+    if (workflowSettings.pipeline.antagonisticPlanReview === false) {
+      return null; // Disabled by settings
+    }
+
+    logger.info('[PLAN] Running antagonistic review for complex feature', {
+      featureId: ctx.feature.id,
+      complexity,
+    });
+
+    try {
+      const result = await simpleQuery({
+        prompt: `You are a critical code reviewer. Evaluate this implementation plan for a ${complexity}-complexity feature.
+
+**Feature:** ${ctx.feature.title || 'Untitled'}
+**Description:** ${ctx.feature.description || 'No description'}
+
+**Proposed Plan:**
+${ctx.planOutput}
+
+Review the plan for:
+1. Missing error handling or edge cases
+2. Architectural risks (circular dependencies, monolithic changes)
+3. Missing test strategy
+4. Files that should be modified but aren't mentioned
+5. Overly complex approach where simpler exists
+
+If the plan is solid, respond with: APPROVED
+If critical issues exist, respond with: REJECTED: [concise reason]
+Minor suggestions don't warrant rejection — only reject for issues that would cause implementation failure.`,
+        model: resolveModelString('haiku'),
+        cwd: ctx.projectPath,
+        systemPrompt:
+          'You are a senior architect reviewing implementation plans. Be critical but fair — only reject plans with genuine issues that would cause failure.',
+        maxTurns: 1,
+        allowedTools: [],
+      });
+
+      const response = result.text.trim();
+      if (response.startsWith('APPROVED')) {
+        logger.info('[PLAN] Antagonistic review approved');
+        return { approved: true };
+      }
+
+      const reason = response.startsWith('REJECTED:') ? response.slice(9).trim() : response;
+      return { approved: false, reason };
+    } catch (err) {
+      // Review failure shouldn't block the pipeline — log and approve
+      logger.warn('[PLAN] Antagonistic review failed, approving by default', err);
+      return null;
+    }
   }
 
   private validatePlan(ctx: StateContext): {

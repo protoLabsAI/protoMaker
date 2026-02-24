@@ -2361,6 +2361,8 @@ export interface WorkflowSettings {
     maxAgentRuntimeMinutes: number;
     /** Max agent cost in USD before supervisor abort (default: 15) */
     maxAgentCostUsd: number;
+    /** Enable antagonistic plan review for large/architectural features (default: true) */
+    antagonisticPlanReview?: boolean;
   };
   retro: {
     /** Enable automatic retrospective generation on project completion (default: true) */
@@ -2405,6 +2407,7 @@ export const DEFAULT_WORKFLOW_SETTINGS: WorkflowSettings = {
     supervisorEnabled: true,
     maxAgentRuntimeMinutes: 45,
     maxAgentCostUsd: 15,
+    antagonisticPlanReview: true,
   },
   retro: {
     enabled: true,
