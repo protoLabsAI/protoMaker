@@ -173,6 +173,7 @@ function RootLayoutContent() {
     getEffectiveFontMono,
     sidebarOpen: _sidebarOpen,
     toggleSidebar: _toggleSidebar,
+    setMobileSidebarHidden,
   } = useAppStore();
   // Subscribe to theme and font state to trigger re-renders when they change
   const { theme, fontFamilySans, fontFamilyMono } = useThemeStore();
@@ -592,6 +593,37 @@ function RootLayoutContent() {
   useEffect(() => {
     setGlobalFileBrowser(openFileBrowser);
   }, [openFileBrowser]);
+
+  // Auto-hide sidebar on mobile (below 640px / Tailwind sm breakpoint)
+  // Uses a custom media query check for 640px specifically
+  const [isBelow640, setIsBelow640] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia('(max-width: 640px)').matches;
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const mediaQuery = window.matchMedia('(max-width: 640px)');
+    const handleChange = (e: MediaQueryListEvent) => {
+      setIsBelow640(e.matches);
+    };
+
+    // Sync initial state
+    setIsBelow640(mediaQuery.matches);
+
+    // Listen for changes
+    mediaQuery.addEventListener('change', handleChange);
+
+    return () => {
+      mediaQuery.removeEventListener('change', handleChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    // Hide sidebar when viewport width is below 640px
+    setMobileSidebarHidden(isBelow640);
+  }, [isBelow640, setMobileSidebarHidden]);
 
   // Test IPC connection on mount
   useEffect(() => {
