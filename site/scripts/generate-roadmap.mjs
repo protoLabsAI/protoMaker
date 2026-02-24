@@ -154,15 +154,19 @@ function main() {
   );
 
   // Inject last updated — idempotent via id-targeted regex
-  const lastUpdated = new Date(roadmap.lastUpdated).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-  html = html.replace(
-    /(<p[^>]*id="last-updated"[^>]*>)[^<]*(<\/p>)/,
-    `$1Last updated ${lastUpdated}$2`
-  );
+  if (roadmap.lastUpdated) {
+    const lastUpdated = new Date(roadmap.lastUpdated).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+    html = html.replace(
+      /(<p[^>]*id="last-updated"[^>]*>)[^<]*(<\/p>)/,
+      `$1Last updated ${lastUpdated}$2`
+    );
+  } else {
+    console.warn('  roadmap.json is missing lastUpdated field — skipping last-updated injection');
+  }
 
   writeFileSync(ROADMAP_HTML, html);
   console.log(`  Injected into ${ROADMAP_HTML}`);

@@ -8,6 +8,8 @@ on:
 jobs:
   regenerate:
     runs-on: self-hosted
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
         with:

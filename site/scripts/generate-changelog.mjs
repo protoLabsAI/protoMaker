@@ -24,7 +24,7 @@ const STATS_JSON = resolve(DATA_DIR, 'stats.json');
 const GITHUB_REPO = 'proto-labs-ai/protoMaker';
 
 // Only include entries from the protoMaker era (post-rebrand)
-const CUTOFF_DATE = '2026-02-04';
+const CUTOFF_DATE = '2026-02-04T00:00:00Z';
 
 function run(cmd) {
   return execSync(cmd, { cwd: ROOT, encoding: 'utf-8', maxBuffer: 50 * 1024 * 1024 }).trim();
@@ -149,6 +149,7 @@ function parseCommits() {
   if (!log) return [];
 
   const entries = [];
+  const seenPrs = new Set();
   const prRegex = /\(#(\d+)\)/;
 
   for (const line of log.split('\n')) {
@@ -164,6 +165,11 @@ function parseCommits() {
     if (!prMatch) continue;
 
     const prNumber = parseInt(prMatch[1], 10);
+
+    // Deduplicate — keep only the first (newest) commit per PR number
+    if (seenPrs.has(prNumber)) continue;
+    seenPrs.add(prNumber);
+
     const category = categorize(message);
     const title = cleanTitle(message);
 

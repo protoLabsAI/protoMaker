@@ -1,11 +1,11 @@
 {
   "summary": {
-    "totalEntries": 709,
+    "totalEntries": 708,
     "categories": {
       "feature": 415,
       "infrastructure": 44,
       "improvement": 28,
-      "fix": 192,
+      "fix": 191,
       "docs": 30
     },
     "firstDate": "2026-02-04T21:35:59.000Z",
@@ -647,14 +647,6 @@
           "prNumber": 944,
           "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/944",
           "category": "infrastructure"
-        },
-        {
-          "hash": "7303c098",
-          "date": "2026-02-23T10:21:53-08:00",
-          "title": "Langfuse cleanup — remove type shadows, add datasets tool, fix cache leak",
-          "prNumber": 943,
-          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/943",
-          "category": "fix"
         },
         {
           "hash": "54acf292",
@@ -5691,5 +5683,5 @@
       ]
     }
   ],
-  "generatedAt": "2026-02-24T20:03:58.221Z"
+  "generatedAt": "2026-02-24T20:18:54.191Z"
 }
