@@ -115,6 +115,7 @@ test.describe('Open Project', () => {
 
         // Add to existing projects (or create array)
         const existingProjects = json.settings.projects || [];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const hasProject = existingProjects.some((p: any) => p.id === projectId);
         if (!hasProject) {
           json.settings.projects = [testProject, ...existingProjects];

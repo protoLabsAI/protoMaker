@@ -16,6 +16,7 @@ const UI_DIR = path.resolve(__dirname, '../..');
 test.describe('Server Lifecycle', () => {
   test('should start the server and return a valid URL', async ({ window }) => {
     const serverUrl = await window.evaluate(async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return (window as any).electronAPI?.getServerUrl();
     });
 
@@ -25,6 +26,7 @@ test.describe('Server Lifecycle', () => {
 
   test('server health endpoint should respond with 200', async ({ window }) => {
     const serverUrl = await window.evaluate(async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return (window as any).electronAPI?.getServerUrl();
     });
 

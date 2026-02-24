@@ -348,6 +348,7 @@ export async function setupMockProjectWithFeatures(
 
     // Also store features in a global variable that the mock electron API can use
     // This is needed because the board-view loads features from the file system
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (window as any).__mockFeatures = mockFeatures;
 
     // Disable splash screen in tests
@@ -395,6 +396,7 @@ export async function setupMockProjectWithContextFile(
       // Set up mock file system with a context file for the feature
       // This will be used by the mock electron API
       // Now uses features/{id}/agent-output.md path
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (window as any).__mockContextFile = {
         featureId,
         path: `/mock/test-project/.automaker/features/${featureId}/agent-output.md`,
@@ -455,6 +457,7 @@ export async function setupMockProjectWithInProgressFeatures(
 
     // Also store features in a global variable that the mock electron API can use
     // This is needed because the board-view loads features from the file system
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (window as any).__mockFeatures = mockFeatures;
   }, options);
 }
@@ -687,6 +690,7 @@ export async function setupMockProjectWithAgentOutput(
 
       // Set up mock file system with output content for the feature
       // Now uses features/{id}/agent-output.md path
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (window as any).__mockContextFile = {
         featureId,
         path: `/mock/test-project/.automaker/features/${featureId}/agent-output.md`,
@@ -747,6 +751,7 @@ export async function setupMockProjectWithWaitingApprovalFeatures(
     localStorage.setItem('automaker-storage', JSON.stringify(mockState));
 
     // Also store features in a global variable that the mock electron API can use
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (window as any).__mockFeatures = mockFeatures;
   }, options);
 }

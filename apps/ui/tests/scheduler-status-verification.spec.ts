@@ -83,6 +83,7 @@ test.describe('Scheduler Status Endpoint', () => {
 
     // Look for the Graphite sync task (if scheduler has been initialized)
     // This verifies that the scheduler is actually tracking tasks
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const graphiteSyncTask = data.tasks.find((task: any) =>
       task.name.toLowerCase().includes('graphite')
     );

@@ -15,6 +15,7 @@ import { test, expect } from './fixtures';
 test.describe('IPC: electronAPI shape', () => {
   test('should expose all expected methods on window.electronAPI', async ({ window }) => {
     const apiShape = await window.evaluate(() => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const api = (window as any).electronAPI;
       if (!api) return null;
       return {
@@ -66,6 +67,7 @@ test.describe('IPC: electronAPI shape', () => {
 test.describe('IPC: ping', () => {
   test('should return pong', async ({ window }) => {
     const result = await window.evaluate(async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return (window as any).electronAPI.ping();
     });
     expect(result).toBe('pong');
@@ -75,6 +77,7 @@ test.describe('IPC: ping', () => {
 test.describe('IPC: app info', () => {
   test('should return a valid version string', async ({ window }) => {
     const version = await window.evaluate(async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return (window as any).electronAPI.getVersion();
     });
     expect(version).toMatch(/^\d+\.\d+\.\d+/);
@@ -83,6 +86,7 @@ test.describe('IPC: app info', () => {
   test('should return isPackaged as false in dev/test', async ({ window }) => {
     // When running from source (not a packaged build), isPackaged is false
     const isPackaged = await window.evaluate(async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return (window as any).electronAPI.isPackaged();
     });
     expect(isPackaged).toBe(false);
@@ -90,6 +94,7 @@ test.describe('IPC: app info', () => {
 
   test('should return a valid path for userData', async ({ window }) => {
     const userDataPath = await window.evaluate(async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return (window as any).electronAPI.getPath('userData');
     });
     expect(typeof userDataPath).toBe('string');
@@ -100,6 +105,7 @@ test.describe('IPC: app info', () => {
 test.describe('IPC: server connection', () => {
   test('should return localhost URL with a port', async ({ window }) => {
     const serverUrl = await window.evaluate(async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return (window as any).electronAPI.getServerUrl();
     });
     expect(serverUrl).toMatch(/^http:\/\/localhost:\d+$/);
@@ -107,6 +113,7 @@ test.describe('IPC: server connection', () => {
 
   test('should return an API key (or null in external mode)', async ({ window }) => {
     const apiKey = await window.evaluate(async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return (window as any).electronAPI.getApiKey();
     });
     // In test mode, API key may be a string or null depending on config
@@ -115,6 +122,7 @@ test.describe('IPC: server connection', () => {
 
   test('should report external server mode status', async ({ window }) => {
     const isExternal = await window.evaluate(async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return (window as any).electronAPI.isExternalServerMode();
     });
     expect(typeof isExternal).toBe('boolean');
@@ -124,6 +132,7 @@ test.describe('IPC: server connection', () => {
 test.describe('IPC: platform info', () => {
   test('should expose correct platform', async ({ window }) => {
     const platform = await window.evaluate(() => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return (window as any).electronAPI.platform;
     });
     expect(platform).toBe(process.platform);
@@ -131,6 +140,7 @@ test.describe('IPC: platform info', () => {
 
   test('should expose isElectron as true', async ({ window }) => {
     const isElectron = await window.evaluate(() => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return (window as any).electronAPI.isElectron;
     });
     expect(isElectron).toBe(true);
@@ -142,7 +152,9 @@ test.describe('IPC: window management', () => {
     // updateMinWidth should not throw for either sidebar state
     const result = await window.evaluate(async () => {
       try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await (window as any).electronAPI.updateMinWidth(true);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await (window as any).electronAPI.updateMinWidth(false);
         return { success: true };
       } catch (e: unknown) {

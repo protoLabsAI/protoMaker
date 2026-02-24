@@ -23,6 +23,7 @@ test.describe('Electron App Launch', () => {
   test('should expose electronAPI on window', async ({ window }) => {
     // The preload script exposes window.electronAPI
     const hasElectronAPI = await window.evaluate(() => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return typeof (window as any).electronAPI !== 'undefined';
     });
     expect(hasElectronAPI).toBe(true);
@@ -30,6 +31,7 @@ test.describe('Electron App Launch', () => {
 
   test('should report correct platform', async ({ window }) => {
     const platform = await window.evaluate(() => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return (window as any).electronAPI?.platform;
     });
     expect(platform).toBe(process.platform);
@@ -37,6 +39,7 @@ test.describe('Electron App Launch', () => {
 
   test('should report isElectron=true', async ({ window }) => {
     const isElectron = await window.evaluate(() => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return (window as any).electronAPI?.isElectron;
     });
     expect(isElectron).toBe(true);
