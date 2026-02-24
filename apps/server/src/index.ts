@@ -184,6 +184,7 @@ import { createLinearRoutes } from './routes/linear/index.js';
 import { createTwitchRoutes } from './routes/twitch.js';
 import { createVoiceRoutes } from './routes/voice/index.js';
 import { createKnowledgeRoutes } from './routes/knowledge/index.js';
+import { createDesignsRoutes } from './routes/designs/index.js';
 import { LinearAgentService } from './services/linear-agent-service.js';
 import { LinearAgentRouter } from './services/linear-agent-router.js';
 import { MAX_SYSTEM_CONCURRENCY } from '@protolabs-ai/types';
@@ -1524,6 +1525,10 @@ if (knowledgeStoreService) {
   app.use('/api/knowledge', createKnowledgeRoutes(knowledgeStoreService));
   logger.info('Knowledge store routes mounted at /api/knowledge');
 }
+
+// Designs routes (.pen file management)
+app.use('/api/designs', createDesignsRoutes());
+logger.info('Designs routes mounted at /api/designs');
 
 // Create HTTP server
 const server = createServer(app);
