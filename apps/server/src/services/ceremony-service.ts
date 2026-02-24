@@ -116,6 +116,7 @@ export class CeremonyService {
     epicDelivery: 0,
     contentBrief: 0,
     projectRetro: 0,
+    discordPostFailures: 0,
   };
   private lastCeremonyAt: string | null = null;
 
@@ -267,18 +268,24 @@ export class CeremonyService {
 
       const messages = this.splitMessage(content, 2000);
 
+      let anySuccess = false;
       for (const message of messages) {
-        await this.emitDiscordEvent(
+        const success = await this.emitDiscordEvent(
           projectPath,
           ceremonySettings.discordChannelId,
           message,
           `Epic Kickoff: ${milestone.title}`
         );
+        if (success) anySuccess = true;
       }
 
-      this.ceremonyCounts.epicKickoff++;
-      this.lastCeremonyAt = new Date().toISOString();
-      logger.info(`Posted epic kickoff for ${project.title} - Epic: ${milestone.title}`);
+      if (anySuccess) {
+        this.ceremonyCounts.epicKickoff++;
+        this.lastCeremonyAt = new Date().toISOString();
+        logger.info(`Posted epic kickoff for ${project.title} - Epic: ${milestone.title}`);
+      } else {
+        this.ceremonyCounts.discordPostFailures++;
+      }
     } catch (error) {
       logger.error('Failed to generate epic kickoff:', error);
     }
@@ -307,13 +314,15 @@ export class CeremonyService {
 
       const messages = this.splitMessage(content, 2000);
 
+      let anySuccess = false;
       for (const message of messages) {
-        await this.emitDiscordEvent(
+        const success = await this.emitDiscordEvent(
           projectPath,
           ceremonySettings.discordChannelId,
           message,
           `Standup: Milestone ${milestoneNumber} — ${milestoneTitle}`
         );
+        if (success) anySuccess = true;
       }
 
       // Post to Linear project update if enabled
@@ -329,11 +338,15 @@ export class CeremonyService {
         }
       }
 
-      this.ceremonyCounts.standup++;
-      this.lastCeremonyAt = new Date().toISOString();
-      logger.info(
-        `Posted milestone standup for ${projectTitle} - Milestone ${milestoneNumber}: ${milestoneTitle}`
-      );
+      if (anySuccess) {
+        this.ceremonyCounts.standup++;
+        this.lastCeremonyAt = new Date().toISOString();
+        logger.info(
+          `Posted milestone standup for ${projectTitle} - Milestone ${milestoneNumber}: ${milestoneTitle}`
+        );
+      } else {
+        this.ceremonyCounts.discordPostFailures++;
+      }
     } catch (error) {
       logger.error('Failed to generate milestone standup:', error);
     }
@@ -366,13 +379,15 @@ export class CeremonyService {
       const messages = this.splitMessage(content, 2000);
 
       // Emit Discord events for each message chunk
+      let anySuccess = false;
       for (const message of messages) {
-        await this.emitDiscordEvent(
+        const success = await this.emitDiscordEvent(
           projectPath,
           ceremonySettings.discordChannelId,
           message,
           `Milestone ${milestoneNumber}: ${milestoneTitle}`
         );
+        if (success) anySuccess = true;
       }
 
       // Load milestone features to check for blockers
@@ -408,11 +423,15 @@ export class CeremonyService {
         );
       }
 
-      this.ceremonyCounts.milestoneRetro++;
-      this.lastCeremonyAt = new Date().toISOString();
-      logger.info(
-        `Posted milestone ceremony for ${projectTitle} - Milestone ${milestoneNumber}: ${milestoneTitle}`
-      );
+      if (anySuccess) {
+        this.ceremonyCounts.milestoneRetro++;
+        this.lastCeremonyAt = new Date().toISOString();
+        logger.info(
+          `Posted milestone ceremony for ${projectTitle} - Milestone ${milestoneNumber}: ${milestoneTitle}`
+        );
+      } else {
+        this.ceremonyCounts.discordPostFailures++;
+      }
     } catch (error) {
       logger.error('Failed to generate milestone ceremony:', error);
     }
@@ -489,18 +508,24 @@ Keep it concise, actionable, and focused on what makes this milestone interestin
 
       // Post to the dedicated content-briefs channel
       const messages = this.splitMessage(formatted, 2000);
+      let anySuccess = false;
       for (const message of messages) {
-        await this.emitDiscordEvent(
+        const success = await this.emitDiscordEvent(
           projectPath,
           channelId,
           message,
           `Content Brief: ${milestoneTitle}`
         );
+        if (success) anySuccess = true;
       }
 
-      this.ceremonyCounts.contentBrief++;
-      this.lastCeremonyAt = new Date().toISOString();
-      logger.info(`Posted content brief to GTM channel for milestone: ${milestoneTitle}`);
+      if (anySuccess) {
+        this.ceremonyCounts.contentBrief++;
+        this.lastCeremonyAt = new Date().toISOString();
+        logger.info(`Posted content brief to GTM channel for milestone: ${milestoneTitle}`);
+      } else {
+        this.ceremonyCounts.discordPostFailures++;
+      }
     } catch (error) {
       logger.error('Failed to generate milestone content brief:', error);
     }
@@ -535,18 +560,24 @@ Keep it concise, actionable, and focused on what makes this milestone interestin
       const messages = this.splitMessage(content, 2000);
 
       // Emit Discord events for each message chunk
+      let anySuccess = false;
       for (const message of messages) {
-        await this.emitDiscordEvent(
+        const success = await this.emitDiscordEvent(
           projectPath,
           ceremonySettings.discordChannelId,
           message,
           `Epic Delivered: ${featureTitle}`
         );
+        if (success) anySuccess = true;
       }
 
-      this.ceremonyCounts.epicDelivery++;
-      this.lastCeremonyAt = new Date().toISOString();
-      logger.info(`Posted epic delivery announcement for "${featureTitle}"`);
+      if (anySuccess) {
+        this.ceremonyCounts.epicDelivery++;
+        this.lastCeremonyAt = new Date().toISOString();
+        logger.info(`Posted epic delivery announcement for "${featureTitle}"`);
+      } else {
+        this.ceremonyCounts.discordPostFailures++;
+      }
     } catch (error) {
       logger.error('Failed to generate epic delivery announcement:', error);
     }
@@ -665,17 +696,25 @@ ${dataSummary}`;
       const messages = this.splitMessage(formattedRetro, 2000);
 
       // Post to Discord
+      let anySuccess = false;
       for (const message of messages) {
-        await this.emitDiscordEvent(
+        const success = await this.emitDiscordEvent(
           projectPath,
           ceremonySettings.discordChannelId,
           message,
           `Project Complete: ${projectTitle}`
         );
+        if (success) anySuccess = true;
       }
 
-      this.ceremonyCounts.projectRetro++;
-      this.lastCeremonyAt = new Date().toISOString();
+      if (anySuccess) {
+        this.ceremonyCounts.projectRetro++;
+        this.lastCeremonyAt = new Date().toISOString();
+        logger.info(`Posted project retrospective with impact report for ${projectTitle}`);
+      } else {
+        this.ceremonyCounts.discordPostFailures++;
+      }
+
       this.activeReflection = null;
       this.reflectionCount++;
       this.lastReflection = {
@@ -683,7 +722,6 @@ ${dataSummary}`;
         projectSlug,
         completedAt: new Date().toISOString(),
       };
-      logger.info(`Posted project retrospective with impact report for ${projectTitle}`);
 
       // Emit reflection complete event (absorbed from ReflectionService)
       this.emitter!.emit('project:reflection:complete', {
@@ -1161,16 +1199,22 @@ ${dataSummary}`;
 
       // Post to Discord
       const messages = this.splitMessage(contentBrief, 2000);
+      let anySuccess = false;
       for (const message of messages) {
-        await this.emitDiscordEvent(
+        const success = await this.emitDiscordEvent(
           projectPath,
           ceremonySettings.discordChannelId,
           message,
           `Content Brief: ${feature.title}`
         );
+        if (success) anySuccess = true;
       }
 
-      logger.info(`Posted content brief for feature "${feature.title}"`);
+      if (anySuccess) {
+        logger.info(`Posted content brief for feature "${feature.title}"`);
+      } else {
+        this.ceremonyCounts.discordPostFailures++;
+      }
     } catch (error) {
       logger.error('Failed to generate content brief:', error);
     }
@@ -1525,14 +1569,17 @@ ${summary}
 
   /**
    * Emit a Discord integration event
+   * @returns true if event was emitted, false if Discord is not configured or channelId is missing
    */
   private async emitDiscordEvent(
     projectPath: string,
     channelId: string | undefined,
     content: string,
     featureTitle: string
-  ): Promise<void> {
-    if (!this.emitter) return;
+  ): Promise<boolean> {
+    if (!this.emitter) {
+      return false;
+    }
 
     // Get Discord config from project settings
     const projectSettings = await this.settingsService!.getProjectSettings(projectPath);
@@ -1540,7 +1587,13 @@ ${summary}
 
     if (!discordConfig?.enabled) {
       logger.warn('Discord integration not enabled, cannot post ceremony');
-      return;
+      return false;
+    }
+
+    const finalChannelId = channelId || discordConfig.channelId;
+    if (!finalChannelId) {
+      logger.warn('No Discord channel ID configured, cannot post ceremony');
+      return false;
     }
 
     // Create a placeholder feature for the event
@@ -1556,12 +1609,14 @@ ${summary}
       featureId: 'milestone-ceremony',
       feature: placeholderFeature,
       serverId: discordConfig.serverId,
-      channelId: channelId || discordConfig.channelId,
+      channelId: finalChannelId,
       webhookId: discordConfig.webhookId,
       webhookToken: discordConfig.webhookToken,
       action: 'send_message',
       content,
     });
+
+    return true;
   }
 
   /**
