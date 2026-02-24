@@ -143,7 +143,6 @@ export class EmbeddingService extends EventEmitter {
       });
 
       // Extract the Float32Array from the result
-      // @ts-expect-error - Transformers.js types are incomplete
       const embedding = result.data as Float32Array;
 
       return embedding;
