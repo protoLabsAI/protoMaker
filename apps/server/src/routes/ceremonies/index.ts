@@ -11,6 +11,7 @@ import type { Request, Response } from 'express';
 import type { EventEmitter } from '../../lib/events.js';
 import type { FeatureLoader } from '../../services/feature-loader.js';
 import type { ProjectService } from '../../services/project-service.js';
+import type { CeremonyService } from '../../services/ceremony-service.js';
 import { validatePathParams } from '../../middleware/validate-paths.js';
 import { createLogger } from '@automaker/utils';
 
@@ -28,9 +29,101 @@ interface TriggerBody {
 export function createCeremoniesRoutes(
   events: EventEmitter,
   featureLoader: FeatureLoader,
-  projectService: ProjectService
+  projectService: ProjectService,
+  ceremonyService: CeremonyService
 ): Router {
   const router = Router();
+
+  // GET /status — ceremony observability endpoint
+  router.get('/status', (_req: Request, res: Response): void => {
+    const status = ceremonyService.getStatus();
+    const reflection = ceremonyService.getReflectionStatus();
+    res.json({
+      success: true,
+      ...status,
+      activeReflection: reflection.active ? reflection.activeProject : null,
+      reflectionCount: reflection.reflectionCount,
+      lastReflection: reflection.lastReflection,
+    });
+  });
+
+  // POST /retry — clear dedup guard and re-trigger project:completed
+  router.post(
+    '/retry',
+    validatePathParams('projectPath'),
+    async (req: Request, res: Response): Promise<void> => {
+      try {
+        const { projectPath, projectSlug } = req.body as {
+          projectPath: string;
+          projectSlug: string;
+        };
+
+        if (!projectPath || !projectSlug) {
+          res.status(400).json({
+            success: false,
+            error: 'projectPath and projectSlug are required',
+          });
+          return;
+        }
+
+        const project = await projectService.getProject(projectPath, projectSlug);
+        if (!project) {
+          res.status(404).json({ success: false, error: `Project not found: ${projectSlug}` });
+          return;
+        }
+
+        // Clear dedup guard so the ceremony can re-run
+        ceremonyService.clearProcessedProject(projectPath, projectSlug);
+
+        // Aggregate stats and re-emit project:completed
+        const allFeatures = await featureLoader.getAll(projectPath);
+        let totalFeatures = 0;
+        let totalCostUsd = 0;
+        let failureCount = 0;
+        const milestoneSummaries: Array<{
+          milestoneTitle: string;
+          featureCount: number;
+          costUsd: number;
+        }> = [];
+
+        for (const milestone of project.milestones) {
+          const milestoneFeatures = allFeatures.filter((f) =>
+            milestone.phases.some((p) => p.featureId === f.id)
+          );
+          const costUsd = milestoneFeatures.reduce((sum, f) => sum + (f.costUsd || 0), 0);
+          totalFeatures += milestoneFeatures.length;
+          totalCostUsd += costUsd;
+          failureCount += milestoneFeatures.filter((f) => (f.failureCount || 0) > 0).length;
+
+          milestoneSummaries.push({
+            milestoneTitle: milestone.title,
+            featureCount: milestoneFeatures.length,
+            costUsd,
+          });
+        }
+
+        events.emit('project:completed', {
+          projectPath,
+          projectTitle: project.title,
+          projectSlug,
+          totalMilestones: project.milestones.length,
+          totalFeatures,
+          totalCostUsd,
+          failureCount,
+          milestoneSummaries,
+        });
+
+        logger.info(`Ceremony retry triggered for project "${project.title}"`);
+        res.json({ success: true, message: `Ceremony retry triggered for ${project.title}` });
+      } catch (error) {
+        logger.error('Failed to retry ceremony:', error);
+        res.status(500).json({
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+  );
 
   router.post(
     '/trigger',

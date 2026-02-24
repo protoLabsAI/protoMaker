@@ -1385,7 +1385,10 @@ app.use(
   '/api/agents',
   createAgentManagementRoutes(roleRegistryService, agentFactoryService, dynamicAgentExecutor)
 );
-app.use('/api/ceremonies', createCeremoniesRoutes(events, featureLoader, projectService));
+app.use(
+  '/api/ceremonies',
+  createCeremoniesRoutes(events, featureLoader, projectService, ceremonyService)
+);
 app.use('/api/issues', createIssuesRoutes(events));
 app.use('/api/deploy', createDeployRoutes(autoModeService));
 app.use('/api/integrity', createIntegrityRoutes(integrityWatchdogService));
