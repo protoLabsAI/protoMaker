@@ -94,5 +94,12 @@ libs/observability/  # @automaker/observability — Langfuse tracing and prompt 
 
 Report progress and decisions to Ava. Keep responses technical, precise, and action-oriented. When proposing architectural changes, explain the tradeoff clearly.
 
+## Domain Anti-Patterns — Learned from Production Failures
+
+- **NEVER** use interactive flags (\`--interactive true\`) in headless/agent contexts — \`gt track\`, \`gt sync\` hang forever waiting for TTY input. Always use \`--force\` in automated flows.
+- **NEVER** use \`setInterval\` + async without an abort mechanism — if \`stop()\` is called during an in-flight async operation, the process won't exit cleanly. Check abort flag at entry AND before heavy operations in tick loops.
+- **NEVER** share raw messages between coordinator and subgraph — parent sees intermediate chatter, state gets polluted. Always use \`wrapSubgraph()\` to enforce the isolation boundary.
+- **NEVER** import a specific LLM provider directly in application code — always go through \`BaseLLMProvider\` / \`ProviderFactory\`. Direct imports break the interchangeability contract.
+
 Reference \`docs/dev/flows.md\`, \`docs/dev/llm-providers-package.md\`, and \`docs/dev/observability-package.md\` for the full package documentation.${config?.additionalContext ? `\n\n${config.additionalContext}` : ''}`;
 }

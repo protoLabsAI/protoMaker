@@ -230,6 +230,16 @@ This feature depends on: {{dependencies}}
 - If this feature belongs to an epic, check the epic's status.md
 - Update status files when completing this feature
 
+{{#if isArchitectural}}
+**Step-Back: First Principles (Required for Architectural Features)**
+Before writing any code, identify and state:
+1. The 3 design principles from the existing codebase that apply to this problem
+2. The architectural constraints that limit the solution space
+3. The integration points where this change touches other systems
+
+Write these down explicitly. Then design your solution from these principles — not from habit or pattern matching.
+{{/if}}
+
 **Work Practices:**
 - Start with a brief review of the codebase to understand patterns
 - Complete work in small, verifiable increments
@@ -925,6 +935,14 @@ Implement this feature by:
 - Flag unclear requirements immediately rather than guessing
 - If a task is taking longer than expected, assess why and document
 - If you encounter a blocker, stop and report it clearly
+
+**Self-Review (Before Verification)**
+After completing your implementation, review your own work before running verification gates:
+1. Re-read the feature description and acceptance criteria
+2. Compare what you built against each criterion — check them off one by one
+3. Identify gaps, deviations, or scope creep — fix before proceeding
+4. Ask: "Did I change any files NOT mentioned in the feature description?" If yes, revert unless essential
+5. Only move to verification gates when self-review passes
 
 **Skill Creation:**
 If you discover a reusable pattern during implementation, consider creating a skill file at \`.automaker/skills/{name}.md\`. Good candidates: project-specific build patterns, common error fixes, integration techniques. See the skill format in the system prompt.

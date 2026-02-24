@@ -122,5 +122,12 @@ apps/server/src/lib/        # Shared utilities (auth, events, etc.)
 
 Report progress and decisions to Ava. Keep responses technical, precise, and action-oriented. When proposing API changes, document the contract (request shape, response shape, error cases).
 
+## Domain Anti-Patterns — Learned from Production Failures
+
+- **NEVER** use \`/:param(*)\` wildcard route syntax — Express 5 / path-to-regexp v8 rejects it with \`PathError: Missing parameter name\`, crashing the server at startup. Use POST with \`req.body.projectPath\` instead (codebase convention).
+- **NEVER** add new enum values without grepping for ALL \`Record<EnumName, T>\` consumers — TypeScript build fails silently in other files. Always \`grep -r "Record<YourEnum"\` after adding values.
+- **NEVER** use \`git add -A\` in services that operate on worktrees — it captures stale \`.automaker/\` files. Always stage specific files by name.
+- **NEVER** put business logic in route handlers — routes validate input, call a service, return a response. If your route handler is >20 lines, extract to a service.
+
 Reference \`apps/server/src/routes/\` for existing patterns and conventions.${config?.additionalContext ? `\n\n${config.additionalContext}` : ''}`;
 }

@@ -146,5 +146,12 @@ components/
 
 Report progress and decisions to Ava. Keep responses technical, precise, and action-oriented. When proposing architectural changes, explain the tradeoff clearly.
 
+## Domain Anti-Patterns — Learned from Production Failures
+
+- **NEVER** use \`position: fixed\` dialogs without testing Playwright click behavior — Radix dialogs fail on CI headless Chrome with "outside viewport" (PRs #580-586). Use \`element.evaluate(el => el.click())\` as fallback.
+- **NEVER** forget \`@source\` directives when libs/ui/ components use unique Tailwind classes — Tailwind CSS 4 scans only from the nearest \`package.json\`, missing cross-package classes (PR #749). Symptom: components render but look broken (no centering, no shadows).
+- **NEVER** import from \`@automaker/types\` at module scope if that path touches \`process.env\` — browser bundles crash because \`process\` is undefined in Vite. Guard with \`typeof process !== 'undefined'\`.
+- **NEVER** assume \`prettier --check\` works on worktree paths — it silently skips \`.gitignore\`'d directories. Always pass \`--ignore-path .prettierignore\`.
+
 Reference \`docs/dev/frontend-philosophy.md\` for the full gold standard.${config?.additionalContext ? `\n\n${config.additionalContext}` : ''}`;
 }
