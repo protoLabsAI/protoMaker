@@ -11,7 +11,7 @@ import { findNodeById } from './traversal.js';
 export function resolveVariable(
   name: string,
   theme?: Theme,
-  variables?: Variables,
+  variables?: Variables
 ): string | number {
   // Remove $ prefix if present
   const varName = name.startsWith('$') ? name.slice(1) : name;
