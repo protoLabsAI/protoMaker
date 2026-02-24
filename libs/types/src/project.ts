@@ -90,6 +90,9 @@ export interface Milestone {
   /** Current status */
   status: MilestoneStatus;
 
+  /** Target completion date (YYYY-MM-DD format) */
+  targetDate?: string;
+
   /** Epic feature ID after scaffolding (milestone becomes an epic) */
   epicId?: string;
 
