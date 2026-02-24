@@ -2210,7 +2210,22 @@ export class AutoModeService {
           projectPath,
         });
       } else if (errorInfo.type === 'max_turns' && feature && tempRunningFeature) {
-        // Special handling for error_max_turns: escalate turns and retry with cap
+        // Special handling for error_max_turns: save progress, escalate turns, and retry with cap
+
+        // Save uncommitted work so the retry agent picks up where this one left off
+        if (tempRunningFeature.worktreePath && feature.branchName) {
+          const savedHash = await gitWorkflowService.saveAgentProgress(
+            tempRunningFeature.worktreePath,
+            feature,
+            feature.branchName
+          );
+          if (savedHash) {
+            logger.info(
+              `Saved agent progress checkpoint (${savedHash}) before max-turns retry for feature ${featureId}`
+            );
+          }
+        }
+
         const MAX_MAX_TURNS_RETRIES = 3;
         const currentFailures = feature.failureCount ?? 0;
         const newFailureCount = currentFailures + 1;

@@ -183,6 +183,102 @@ export class GitWorkflowService {
   }
 
   /**
+   * Save agent progress as a WIP commit when an agent is interrupted (e.g., turn limit).
+   * Commits and pushes any uncommitted work so the next retry agent can pick up where
+   * the previous one left off instead of starting from scratch.
+   *
+   * This is a lightweight operation — no PR creation, no merge, no changeset.
+   * Returns the commit hash if work was saved, null if there was nothing to commit.
+   */
+  async saveAgentProgress(
+    workDir: string,
+    feature: Feature,
+    branchName: string
+  ): Promise<string | null> {
+    try {
+      // Check for uncommitted changes
+      const { stdout: status } = await execAsync('git status --porcelain --untracked-files=all', {
+        cwd: workDir,
+        env: execEnv,
+      });
+
+      if (!status.trim()) {
+        logger.debug(`No uncommitted changes to save for feature ${feature.id}`);
+        return null;
+      }
+
+      logger.info(
+        `Saving agent progress for feature ${feature.id} (${status.trim().split('\n').length} files changed)`
+      );
+
+      // Stage all changes (same pattern as commitChanges)
+      await execAsync("git add -A -- ':!.automaker/' '.automaker/memory/'", {
+        cwd: workDir,
+        env: execEnv,
+      });
+
+      // Format staged files before committing
+      try {
+        const { stdout: stagedFiles } = await execAsync(
+          "git diff --cached --name-only --diff-filter=ACMR -- '*.ts' '*.tsx' '*.js' '*.jsx' '*.json' '*.css' '*.md'",
+          { cwd: workDir, env: execEnv }
+        );
+        const files = stagedFiles.trim().split('\n').filter(Boolean);
+        if (files.length > 0) {
+          await execAsync(
+            `npx prettier --ignore-path /dev/null --write ${files.map((f) => `"${f}"`).join(' ')}`,
+            { cwd: workDir, env: execEnv }
+          );
+          await execAsync("git add -A -- ':!.automaker/' '.automaker/memory/'", {
+            cwd: workDir,
+            env: execEnv,
+          });
+        }
+      } catch {
+        // Non-fatal: formatting failure shouldn't block progress save
+      }
+
+      // Create WIP commit
+      const title = feature.title || 'agent work';
+      const commitMessage = `wip: ${title}\n\nAgent progress checkpoint — interrupted before completion.\nFeature ID: ${feature.id}`;
+      await execFileAsync('git', ['commit', '--no-verify', '-m', commitMessage], {
+        cwd: workDir,
+        env: execEnv,
+      });
+
+      // Get commit hash
+      const { stdout: hashOutput } = await execAsync('git rev-parse HEAD', {
+        cwd: workDir,
+        env: execEnv,
+      });
+      const hash = hashOutput.trim().substring(0, 8);
+
+      // Push to remote
+      try {
+        await execAsync(`git push origin ${branchName}`, {
+          cwd: workDir,
+          env: execEnv,
+        });
+        logger.info(
+          `Saved agent progress for feature ${feature.id}: commit ${hash}, pushed to ${branchName}`
+        );
+      } catch (pushError) {
+        logger.warn(
+          `Progress committed (${hash}) but push failed: ${pushError instanceof Error ? pushError.message : String(pushError)}`
+        );
+      }
+
+      this.trackOperation('commit', feature.id, true);
+      return hash;
+    } catch (error) {
+      logger.warn(
+        `Failed to save agent progress for feature ${feature.id}: ${error instanceof Error ? error.message : String(error)}`
+      );
+      return null;
+    }
+  }
+
+  /**
    * Run the complete git workflow after feature completion.
    * Operations are best-effort: failures in later steps don't prevent earlier steps from succeeding.
    *
