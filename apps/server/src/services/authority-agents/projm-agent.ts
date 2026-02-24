@@ -32,7 +32,6 @@ import {
   initializeAgent,
   withProcessingGuard,
   type AgentState,
-  type PhaseProcessor,
 } from './agent-utils.js';
 
 const logger = createLogger('ProjMAgent');

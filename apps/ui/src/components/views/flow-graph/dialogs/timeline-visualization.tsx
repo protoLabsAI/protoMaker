@@ -147,7 +147,6 @@ export function TimelineVisualization({
           const hasLangfuseLink = traceId && spanId;
 
           // Check if this phase had gate waiting
-          const phaseTransition = phaseHistory.find((t) => t.to === phase);
           const nextTransition = phaseHistory.find((t) => t.from === phase);
           const isWaiting = gateWaitingSince && !nextTransition;
 

@@ -36,7 +36,6 @@ import {
   initializeAgent,
   withProcessingGuard,
   type AgentState,
-  type PhaseProcessor,
 } from './agent-utils.js';
 
 const logger = createLogger('GTMAgent');
@@ -168,7 +167,7 @@ export class GTMAuthorityAgent {
     const guardKey = `gtm:${signal.title}:${signal.timestamp}`;
 
     return withProcessingGuard(this.state, guardKey, async () => {
-      const { projectPath, title, description, source } = signal;
+      const { title, source } = signal;
 
       logger.info(`Processing GTM signal: "${title}" (source: ${source})`);
 

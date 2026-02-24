@@ -6,7 +6,7 @@
  * (publicKey:secretKey).
  */
 
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router } from 'express';
 import { createLogger } from '@automaker/utils';
 import type { PromptGitHubSyncService } from '../../services/prompt-github-sync-service.js';
 import { createWebhookHandler } from './webhook.js';

@@ -5,13 +5,7 @@
  * pulling in the full Zustand store module.
  */
 
-import type { Project, TrashedProject } from '@/lib/electron';
-import { getItem, setItem } from '@/lib/storage';
-import {
-  UI_SANS_FONT_OPTIONS,
-  UI_MONO_FONT_OPTIONS,
-  DEFAULT_FONT_VALUE,
-} from '@/config/ui-font-options';
+import { getItem } from '@/lib/storage';
 import type {
   Feature as BaseFeature,
   FeatureImagePath,
@@ -20,22 +14,9 @@ import type {
   PlanningMode,
   ThinkingLevel,
   ModelProvider,
-  CursorModelId,
-  CodexModelId,
-  OpencodeModelId,
-  PhaseModelConfig,
-  PhaseModelKey,
-  PhaseModelEntry,
-  MCPServerConfig,
   FeatureStatusWithPipeline,
   PipelineConfig,
-  PipelineStep,
-  PromptCustomization,
-  ModelDefinition,
   ServerLogLevel,
-  EventHook,
-  ClaudeApiProfile,
-  ClaudeCompatibleProvider,
 } from '@automaker/types';
 
 // Re-export types from @automaker/types for convenience

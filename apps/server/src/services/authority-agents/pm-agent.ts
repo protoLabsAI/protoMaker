@@ -37,7 +37,6 @@ import {
   initializeAgent,
   withProcessingGuard,
   type AgentState,
-  type PhaseProcessor,
 } from './agent-utils.js';
 import { getWorkflowSettings } from '../../lib/settings-helpers.js';
 

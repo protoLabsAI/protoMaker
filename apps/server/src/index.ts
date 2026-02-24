@@ -541,7 +541,6 @@ integrationService.initialize(events, settingsService, featureLoader);
 wireHealthChecks(integrationRegistryService);
 
 // Initialize Signal Intake Service — bridges external signals to PM Agent pipeline
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const signalIntakeService = new SignalIntakeService(
   events,
   featureLoader,

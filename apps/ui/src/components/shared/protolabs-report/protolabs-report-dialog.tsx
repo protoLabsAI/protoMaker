@@ -172,7 +172,6 @@ export function ProtoLabsReportDialog({
   );
 
   const currentStepIndex = getStepIndex(step);
-  const isRunning = step === 'researching' || step === 'analyzing' || step === 'generating';
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>

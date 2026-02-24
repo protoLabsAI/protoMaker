@@ -18,7 +18,7 @@ const logger = createLogger('VoiceRoutes');
 /**
  * Create Voice router with all endpoints
  */
-export function createVoiceRoutes(voiceService: VoiceService, events: EventEmitter): Router {
+export function createVoiceRoutes(voiceService: VoiceService, _events: EventEmitter): Router {
   const router = Router();
 
   /**

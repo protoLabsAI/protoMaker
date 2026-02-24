@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import type {
   ModelAlias,
-  PlanningMode,
   ModelProvider,
   CursorModelId,
   CodexModelId,

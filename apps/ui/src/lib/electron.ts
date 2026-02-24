@@ -914,25 +914,12 @@ export interface ElectronAPI {
 // Note: Window interface is declared in @/types/electron.d.ts
 // Do not redeclare here to avoid type conflicts
 
-// Mock data for web development
-const mockFeatures = [
-  {
-    category: 'Core',
-    description: 'Sample Feature',
-    steps: ['Step 1', 'Step 2'],
-    passes: false,
-  },
-];
-
 // Local storage keys
 const STORAGE_KEYS = {
   PROJECTS: 'automaker_projects',
   CURRENT_PROJECT: 'automaker_current_project',
   TRASHED_PROJECTS: 'automaker_trashed_projects',
 } as const;
-
-// Mock file system using localStorage
-const mockFileSystem: Record<string, string> = {};
 
 // Check if we're in Electron (for UI indicators only)
 export const isElectron = (): boolean => {

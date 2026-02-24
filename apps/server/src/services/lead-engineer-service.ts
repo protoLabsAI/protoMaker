@@ -1104,7 +1104,7 @@ const DEFAULT_GOAL_GATES: Map<string, GoalGateValidator> = new Map([
     {
       gateId: 'review-exit',
       description: 'PR must be approved before moving to merge',
-      evaluate: (ctx: StateContext) => {
+      evaluate: (_ctx: StateContext) => {
         // This is checked inside ReviewProcessor already, but the gate
         // provides a declarative verification layer
         return { passed: true, reason: 'Review state validated by processor' };
@@ -1116,7 +1116,7 @@ const DEFAULT_GOAL_GATES: Map<string, GoalGateValidator> = new Map([
     {
       gateId: 'merge-exit',
       description: 'PR must be confirmed merged',
-      evaluate: (ctx: StateContext) => {
+      evaluate: (_ctx: StateContext) => {
         // Merge confirmation happens inside MergeProcessor via gh CLI
         return { passed: true, reason: 'Merge confirmed by processor' };
       },
@@ -1404,8 +1404,6 @@ interface PersistedSessionData {
 
 const SUPERVISOR_CHECK_MS = 30 * 1000; // 30 seconds
 const SUPERVISOR_WARN_RUNTIME_MS = 45 * 60 * 1000; // 45 minutes
-const SUPERVISOR_ABORT_RUNTIME_MS = 90 * 60 * 1000; // 90 minutes
-const SUPERVISOR_WARN_COST_USD = 8;
 const SUPERVISOR_ABORT_COST_USD = 15;
 
 export class LeadEngineerService {

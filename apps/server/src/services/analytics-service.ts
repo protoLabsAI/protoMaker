@@ -8,7 +8,7 @@
  */
 
 import { createLogger } from '@automaker/utils';
-import type { Feature, PipelinePhase } from '@automaker/types';
+import type { PipelinePhase } from '@automaker/types';
 import { FeatureLoader } from './feature-loader.js';
 
 const logger = createLogger('AnalyticsService');

@@ -14,7 +14,6 @@ import {
   FileText,
   Network,
   Rocket,
-  Radio,
   Cog,
   Bot,
   GitBranch,

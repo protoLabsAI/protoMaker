@@ -34,13 +34,13 @@ interface HealthDashboardResponse {
 
 export function SystemTab() {
   const currentProject = useAppStore((s) => s.currentProject);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: health, isLoading: healthLoading } = useSystemHealth(currentProject?.path) as {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     data: any;
     isLoading: boolean;
   };
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: engine, isLoading: engineLoading } = useEngineStatus() as {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     data: any;
     isLoading: boolean;
   };

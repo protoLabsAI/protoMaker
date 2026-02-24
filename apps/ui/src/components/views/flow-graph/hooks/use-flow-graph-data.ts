@@ -8,7 +8,7 @@
  * 4. Running agents & active features from app store
  */
 
-import { useMemo, useState, useEffect, useCallback } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import type { Node, Edge } from '@xyflow/react';
 import { useAppStore } from '@/store/app-store';
 import { useRunningAgents } from '@/hooks/queries/use-running-agents';

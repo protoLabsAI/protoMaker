@@ -7,7 +7,6 @@
 
 import { create } from 'zustand';
 import { DEFAULT_FONT_VALUE } from '@/config/ui-font-options';
-import { createLogger } from '@automaker/utils/logger';
 import type {
   TerminalPanelContent,
   TerminalTab,
@@ -18,8 +17,6 @@ import type {
   InitScriptState,
 } from './types';
 import { MAX_INIT_OUTPUT_LINES } from './types';
-
-const logger = createLogger('TerminalStore');
 
 // ---------------------------------------------------------------------------
 // Helpers
