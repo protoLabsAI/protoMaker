@@ -1,0 +1,29 @@
+name: Regenerate Site Data
+
+on:
+  schedule:
+    - cron: '0 6 * * *' # Daily at 6am UTC
+  workflow_dispatch: {} # Manual trigger
+
+jobs:
+  regenerate:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - run: npm run stats:generate
+
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site/data/ site/changelog/ site/roadmap/
+          if ! git diff --cached --quiet; then
+            git commit -m "docs: regenerate site data [skip ci]"
+            git push origin main
+          fi

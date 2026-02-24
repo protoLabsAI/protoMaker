@@ -29,8 +29,16 @@ function run(cmd) {
 function getGitStats() {
   const commitCount = parseInt(run('git log --oneline | wc -l'), 10);
 
-  // PRs: count commits with (#NNN) pattern (squash-merged PRs)
-  const prCount = parseInt(run("git log --oneline --grep='(#' | wc -l"), 10);
+  // PRs: use gh CLI for accurate merged count, fall back to git-grep
+  let prCount;
+  try {
+    prCount = parseInt(
+      run("gh pr list --state merged --json number --jq 'length' --limit 5000"),
+      10,
+    );
+  } catch {
+    prCount = parseInt(run("git log --oneline --grep='(#' | wc -l"), 10);
+  }
 
   // Lines of code: TypeScript + TSX files only
   const locOutput = run("git ls-files '*.ts' '*.tsx' | xargs wc -l 2>/dev/null | tail -1");

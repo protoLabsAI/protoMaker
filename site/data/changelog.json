@@ -1,21 +1,581 @@
 {
   "summary": {
-    "totalEntries": 650,
+    "totalEntries": 709,
     "categories": {
-      "feature": 386,
-      "fix": 176,
-      "infrastructure": 33,
-      "improvement": 27,
-      "docs": 28
+      "feature": 415,
+      "infrastructure": 44,
+      "improvement": 28,
+      "fix": 192,
+      "docs": 30
     },
-    "firstDate": "2026-01-09T20:11:59.000Z",
-    "latestDate": "2026-02-23T21:24:35.000Z"
+    "firstDate": "2026-02-04T21:35:59.000Z",
+    "latestDate": "2026-02-24T19:38:52.000Z"
   },
   "months": [
     {
       "month": "2026-02",
       "label": "February 2026",
       "entries": [
+        {
+          "hash": "8d0572d7",
+          "date": "2026-02-24T11:38:52-08:00",
+          "title": "Ceremony feed page with audit log viewer and sidebar badge",
+          "prNumber": 1034,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1034",
+          "category": "feature"
+        },
+        {
+          "hash": "fd7529fd",
+          "date": "2026-02-24T11:36:56-08:00",
+          "title": "Add unit tests for AgentScoringService and CeremonyAuditLogService",
+          "prNumber": 1036,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1036",
+          "category": "infrastructure"
+        },
+        {
+          "hash": "c036b122",
+          "date": "2026-02-24T11:32:33-08:00",
+          "title": "Extract KnowledgeIngestionService from KnowledgeStoreService",
+          "prNumber": 1035,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1035",
+          "category": "improvement"
+        },
+        {
+          "hash": "90b5c407",
+          "date": "2026-02-24T11:19:34-08:00",
+          "title": "Ceremony audit log with disk-backed JSONL and Discord delivery tracking",
+          "prNumber": 1032,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1032",
+          "category": "feature"
+        },
+        {
+          "hash": "07c28867",
+          "date": "2026-02-24T11:10:51-08:00",
+          "title": "Remove PII and hardcoded credentials from codebase",
+          "prNumber": 1031,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1031",
+          "category": "fix"
+        },
+        {
+          "hash": "fb92d94e",
+          "date": "2026-02-24T11:04:27-08:00",
+          "title": "EnsureCleanWorktree guard prevents silent loss of agent work",
+          "prNumber": 1029,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1029",
+          "category": "feature"
+        },
+        {
+          "hash": "a9bb83e5",
+          "date": "2026-02-24T11:00:56-08:00",
+          "title": "Detect file contention between project phases and auto-add dependencies",
+          "prNumber": 1030,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1030",
+          "category": "feature"
+        },
+        {
+          "hash": "961016db",
+          "date": "2026-02-24T10:52:14-08:00",
+          "title": "P0 ceremony data integrity and observability fixes",
+          "prNumber": 1028,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1028",
+          "category": "fix"
+        },
+        {
+          "hash": "74020318",
+          "date": "2026-02-24T10:52:12-08:00",
+          "title": "Remove 'review' from dependency satisfaction gates",
+          "prNumber": 1027,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1027",
+          "category": "fix"
+        },
+        {
+          "hash": "c4ab81a7",
+          "date": "2026-02-24T09:46:00-08:00",
+          "title": "HyPE ingestion — hypothetical query generation for chunks",
+          "prNumber": 1026,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1026",
+          "category": "feature"
+        },
+        {
+          "hash": "07a65064",
+          "date": "2026-02-24T09:38:39-08:00",
+          "title": "Hybrid BM25 + semantic retrieval with Reciprocal Rank Fusion",
+          "prNumber": 1024,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1024",
+          "category": "feature"
+        },
+        {
+          "hash": "7d3cea3f",
+          "date": "2026-02-24T09:36:14-08:00",
+          "title": "[linear] Landing page: add Open Graph meta tags and social sharing images",
+          "prNumber": 1025,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1025",
+          "category": "feature"
+        },
+        {
+          "hash": "5de51984",
+          "date": "2026-02-24T09:20:21-08:00",
+          "title": "EmbeddingService and SQLite vector storage integration",
+          "prNumber": 1022,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1022",
+          "category": "feature"
+        },
+        {
+          "hash": "841d40b6",
+          "date": "2026-02-24T09:18:05-08:00",
+          "title": "Pwa install shows \"Automaker\" instead of protoLabs.studio",
+          "prNumber": 1023,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1023",
+          "category": "fix"
+        },
+        {
+          "hash": "49c68bc8",
+          "date": "2026-02-24T09:17:06-08:00",
+          "title": "Rebase worktrees onto latest origin/main before agent execution",
+          "prNumber": 1021,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1021",
+          "category": "feature"
+        },
+        {
+          "hash": "6bedcc08",
+          "date": "2026-02-24T09:03:41-08:00",
+          "title": "Add Knowledge Store server reference page",
+          "prNumber": 1020,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1020",
+          "category": "docs"
+        },
+        {
+          "hash": "2651102c",
+          "date": "2026-02-24T08:56:25-08:00",
+          "title": "Exclude non-backlog features from planSpec eligibility fallback",
+          "prNumber": 1019,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1019",
+          "category": "fix"
+        },
+        {
+          "hash": "b3dd52f0",
+          "date": "2026-02-24T08:44:28-08:00",
+          "title": "Rename package scope @automaker/* → @protolabs-ai/*",
+          "prNumber": 1017,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1017",
+          "category": "infrastructure"
+        },
+        {
+          "hash": "85e8399c",
+          "date": "2026-02-24T08:30:26-08:00",
+          "title": "Wire KnowledgeStoreService into LeadEngineerService",
+          "prNumber": 1018,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1018",
+          "category": "fix"
+        },
+        {
+          "hash": "a3646390",
+          "date": "2026-02-24T08:21:49-08:00",
+          "title": "Universal reflection search and cross-project knowledge",
+          "prNumber": 1016,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1016",
+          "category": "feature"
+        },
+        {
+          "hash": "64bf6500",
+          "date": "2026-02-24T07:53:22-08:00",
+          "title": "Category summarization and usage-correlated pruning",
+          "prNumber": 1015,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1015",
+          "category": "feature"
+        },
+        {
+          "hash": "b07af3c9",
+          "date": "2026-02-24T07:41:43-08:00",
+          "title": "Knowledge API routes for search, stats, and rebuild",
+          "prNumber": 1013,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1013",
+          "category": "feature"
+        },
+        {
+          "hash": "133a8f32",
+          "date": "2026-02-24T03:40:09-08:00",
+          "title": "Learning deduplication with FTS5 similarity search",
+          "prNumber": 1014,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1014",
+          "category": "feature"
+        },
+        {
+          "hash": "b486061c",
+          "date": "2026-02-24T03:14:35-08:00",
+          "title": "FTS5 search engine and context loader integration",
+          "prNumber": 1012,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1012",
+          "category": "feature"
+        },
+        {
+          "hash": "3e55d9f8",
+          "date": "2026-02-24T02:57:42-08:00",
+          "title": "Chunk ingestion pipeline for Knowledge Hive",
+          "prNumber": 1011,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1011",
+          "category": "feature"
+        },
+        {
+          "hash": "66a39917",
+          "date": "2026-02-24T02:39:16-08:00",
+          "title": "Automate versioning, changelog & npm publishing pipeline",
+          "prNumber": 1010,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1010",
+          "category": "infrastructure"
+        },
+        {
+          "hash": "dc3b63b7",
+          "date": "2026-02-24T02:27:26-08:00",
+          "title": "Auto-commit agent progress on turn limit before retry",
+          "prNumber": 1009,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1009",
+          "category": "fix"
+        },
+        {
+          "hash": "6cad1eda",
+          "date": "2026-02-24T01:47:08-08:00",
+          "title": "Adopt MIT license, rewrite README for launch, add installation docs",
+          "prNumber": 1008,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1008",
+          "category": "infrastructure"
+        },
+        {
+          "hash": "1f9d0c0b",
+          "date": "2026-02-24T00:56:50-08:00",
+          "title": "Prompt snapshot tests and quality linter",
+          "prNumber": 1007,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1007",
+          "category": "feature"
+        },
+        {
+          "hash": "7f1adba1",
+          "date": "2026-02-24T00:56:16-08:00",
+          "title": "Prompt seeding service and agent quality scoring",
+          "prNumber": 1006,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1006",
+          "category": "feature"
+        },
+        {
+          "hash": "b5e8acda",
+          "date": "2026-02-24T00:45:12-08:00",
+          "title": "Replace dead FeatureBranchLinkingService with FeatureLoader lookups",
+          "prNumber": 1005,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1005",
+          "category": "fix"
+        },
+        {
+          "hash": "31909672",
+          "date": "2026-02-24T00:39:52-08:00",
+          "title": "M1 agent prompt hardening",
+          "prNumber": 1004,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1004",
+          "category": "feature"
+        },
+        {
+          "hash": "d8347542",
+          "date": "2026-02-24T00:36:14-08:00",
+          "title": "Add gource visualization scripts for PR milestones",
+          "prNumber": 1003,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1003",
+          "category": "infrastructure"
+        },
+        {
+          "hash": "111307fb",
+          "date": "2026-02-24T00:16:51-08:00",
+          "title": "Prompt engineering knowledge base and agent prompt improvements",
+          "prNumber": 1001,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1001",
+          "category": "feature"
+        },
+        {
+          "hash": "b644aa9a",
+          "date": "2026-02-24T00:12:08-08:00",
+          "title": "Suppress Langfuse SDK internal noise for missing prompts",
+          "prNumber": 1000,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1000",
+          "category": "fix"
+        },
+        {
+          "hash": "3843a005",
+          "date": "2026-02-24T00:10:32-08:00",
+          "title": "Verify PR state after merge command to prevent false success",
+          "prNumber": 999,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/999",
+          "category": "fix"
+        },
+        {
+          "hash": "3f64a4ea",
+          "date": "2026-02-23T23:50:29-08:00",
+          "title": "Reduce Langfuse prompt-not-found noise and add negative caching",
+          "prNumber": 998,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/998",
+          "category": "fix"
+        },
+        {
+          "hash": "9c908914",
+          "date": "2026-02-23T23:45:18-08:00",
+          "title": "Add Turborepo CI cache",
+          "prNumber": 997,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/997",
+          "category": "infrastructure"
+        },
+        {
+          "hash": "d29f6328",
+          "date": "2026-02-23T23:40:22-08:00",
+          "title": "Overhaul agent philosophy, reliability, and prompt engineering docs",
+          "prNumber": 995,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/995",
+          "category": "docs"
+        },
+        {
+          "hash": "ab41b204",
+          "date": "2026-02-23T23:34:31-08:00",
+          "title": "PWA Infrastructure",
+          "prNumber": 992,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/992",
+          "category": "feature"
+        },
+        {
+          "hash": "c798c2d2",
+          "date": "2026-02-23T23:18:46-08:00",
+          "title": "Mobile Layout and Navigation",
+          "prNumber": 993,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/993",
+          "category": "feature"
+        },
+        {
+          "hash": "f088bade",
+          "date": "2026-02-23T23:08:11-08:00",
+          "title": "PWA Performance and Resilience",
+          "prNumber": 994,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/994",
+          "category": "feature"
+        },
+        {
+          "hash": "78a62a40",
+          "date": "2026-02-23T22:49:20-08:00",
+          "title": "Update docs for APF agent reliability services",
+          "prNumber": 989,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/989",
+          "category": "infrastructure"
+        },
+        {
+          "hash": "201f5ef9",
+          "date": "2026-02-23T22:35:50-08:00",
+          "title": "Use execFile for git commit to prevent shell escaping failures",
+          "prNumber": 986,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/986",
+          "category": "fix"
+        },
+        {
+          "hash": "2f005e78",
+          "date": "2026-02-23T22:15:35-08:00",
+          "title": "Add Turborepo for parallel builds and dist caching",
+          "prNumber": 982,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/982",
+          "category": "feature"
+        },
+        {
+          "hash": "27cd706c",
+          "date": "2026-02-23T21:21:45-08:00",
+          "title": "Add continuous improvement tracking to orchestrator agent prompts",
+          "prNumber": 981,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/981",
+          "category": "feature"
+        },
+        {
+          "hash": "559c5ea2",
+          "date": "2026-02-23T21:15:09-08:00",
+          "title": "Graceful shutdown + feature state reconciliation",
+          "prNumber": 980,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/980",
+          "category": "feature"
+        },
+        {
+          "hash": "51ff371a",
+          "date": "2026-02-23T21:02:16-08:00",
+          "title": "Gitignore runtime artifacts and update agent memory",
+          "prNumber": 979,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/979",
+          "category": "infrastructure"
+        },
+        {
+          "hash": "b76f0d28",
+          "date": "2026-02-23T20:08:55-08:00",
+          "title": "Surface Discord config warning and ceremony status in settings UI",
+          "prNumber": 978,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/978",
+          "category": "feature"
+        },
+        {
+          "hash": "92c9c648",
+          "date": "2026-02-23T20:02:07-08:00",
+          "title": "Add ceremony status endpoint and retry route",
+          "prNumber": 977,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/977",
+          "category": "feature"
+        },
+        {
+          "hash": "47c8f9d9",
+          "date": "2026-02-23T19:59:08-08:00",
+          "title": "Lint zero — eliminate all 210 no-explicit-any warnings",
+          "prNumber": 976,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/976",
+          "category": "fix"
+        },
+        {
+          "hash": "35d64b92",
+          "date": "2026-02-23T19:47:45-08:00",
+          "title": "Enforce dependency checks on feature start and auto-wire epic deps",
+          "prNumber": 975,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/975",
+          "category": "fix"
+        },
+        {
+          "hash": "1c79d400",
+          "date": "2026-02-23T19:36:34-08:00",
+          "title": "Make emitDiscordEvent return boolean and guard ceremony counters",
+          "prNumber": 974,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/974",
+          "category": "fix"
+        },
+        {
+          "hash": "eced50f4",
+          "date": "2026-02-23T19:36:19-08:00",
+          "title": "Enable ceremonies by default and fix dedup guard ordering",
+          "prNumber": 973,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/973",
+          "category": "fix"
+        },
+        {
+          "hash": "d9c75e6e",
+          "date": "2026-02-23T18:26:02-08:00",
+          "title": "Auto-unblock features when dependencies complete (PRO-260)",
+          "prNumber": 971,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/971",
+          "category": "fix"
+        },
+        {
+          "hash": "2ead1119",
+          "date": "2026-02-23T17:35:08-08:00",
+          "title": "Resolve no-explicit-any warnings and remove stale proxy patterns (#913-#918)",
+          "prNumber": 970,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/970",
+          "category": "fix"
+        },
+        {
+          "hash": "54f2ecb0",
+          "date": "2026-02-23T17:12:55-08:00",
+          "title": "Rebrand Ava Loveland to AVA (Autonomous Virtual Agency)",
+          "prNumber": 969,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/969",
+          "category": "feature"
+        },
+        {
+          "hash": "c57432c8",
+          "date": "2026-02-23T17:01:45-08:00",
+          "title": "Consolidate headsdown, pr-review, and groom into unified headsdown skill",
+          "prNumber": 968,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/968",
+          "category": "feature"
+        },
+        {
+          "hash": "d514e106",
+          "date": "2026-02-23T16:56:31-08:00",
+          "title": "Add new user onboarding to Ava prompt",
+          "prNumber": 967,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/967",
+          "category": "feature"
+        },
+        {
+          "hash": "5b38a774",
+          "date": "2026-02-23T16:43:42-08:00",
+          "title": "Remove unused imports, variables, and stale eslint directives",
+          "prNumber": 966,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/966",
+          "category": "infrastructure"
+        },
+        {
+          "hash": "16b101b3",
+          "date": "2026-02-23T16:30:16-08:00",
+          "title": "Deep-merge workflow settings with defaults to prevent crash",
+          "prNumber": 965,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/965",
+          "category": "fix"
+        },
+        {
+          "hash": "f208bd15",
+          "date": "2026-02-23T16:24:04-08:00",
+          "title": "Add new user onboarding to Ava prompt",
+          "prNumber": 964,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/964",
+          "category": "feature"
+        },
+        {
+          "hash": "0a08ca8c",
+          "date": "2026-02-23T16:20:29-08:00",
+          "title": "Update agent memory files and checkpoints from o11y epic",
+          "prNumber": 963,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/963",
+          "category": "infrastructure"
+        },
+        {
+          "hash": "7ff74183",
+          "date": "2026-02-23T15:59:15-08:00",
+          "title": "Update changelog, stats, and roadmap for Feb 23",
+          "prNumber": 962,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/962",
+          "category": "infrastructure"
+        },
+        {
+          "hash": "fcd76e83",
+          "date": "2026-02-23T15:57:03-08:00",
+          "title": "Restore missing create-project plugin command",
+          "prNumber": 961,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/961",
+          "category": "fix"
+        },
+        {
+          "hash": "b3dc74e5",
+          "date": "2026-02-23T15:56:09-08:00",
+          "title": "Add agent performance analytics API",
+          "prNumber": 959,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/959",
+          "category": "feature"
+        },
+        {
+          "hash": "014ac64c",
+          "date": "2026-02-23T15:55:50-08:00",
+          "title": "Add analytics sidebar panel to flow graph",
+          "prNumber": 960,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/960",
+          "category": "feature"
+        },
+        {
+          "hash": "e478371f",
+          "date": "2026-02-23T15:55:08-08:00",
+          "title": "Add detailed execution timeline dialog",
+          "prNumber": 957,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/957",
+          "category": "feature"
+        },
+        {
+          "hash": "8010a7a1",
+          "date": "2026-02-23T15:54:40-08:00",
+          "title": "Add phase timeline strip to agent flow nodes",
+          "prNumber": 956,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/956",
+          "category": "feature"
+        },
+        {
+          "hash": "6575816c",
+          "date": "2026-02-23T14:01:02-08:00",
+          "title": "Add phase duration tracking and tool execution persistence",
+          "prNumber": 955,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/955",
+          "category": "feature"
+        },
         {
           "hash": "bf9c369e",
           "date": "2026-02-23T13:24:35-08:00",
@@ -1259,7 +1819,7 @@
         {
           "hash": "1f2e12a2",
           "date": "2026-02-18T00:40:33-08:00",
-          "title": "Rename @protolabs-ai/ui-components to @protolabs/ui",
+          "title": "Rename @automaker/ui-components to @protolabs/ui",
           "prNumber": 750,
           "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/750",
           "category": "feature"
@@ -2011,7 +2571,7 @@
         {
           "hash": "4d9d8819",
           "date": "2026-02-15T21:30:22-08:00",
-          "title": "Add @protolabs-ai/tools package with defineSharedTool factory",
+          "title": "Add @automaker/tools package with defineSharedTool factory",
           "prNumber": 614,
           "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/614",
           "category": "feature"
@@ -2107,7 +2667,7 @@
         {
           "hash": "44b2beed",
           "date": "2026-02-15T17:11:00-08:00",
-          "title": "Migrate @protolabs-ai/types to tsup",
+          "title": "Migrate @automaker/types to tsup",
           "prNumber": 598,
           "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/598",
           "category": "feature"
@@ -2251,7 +2811,7 @@
         {
           "hash": "5ab832bd",
           "date": "2026-02-15T10:12:27-08:00",
-          "title": "Inline @protolabs-ai/policy-engine into server",
+          "title": "Inline @automaker/policy-engine into server",
           "prNumber": 583,
           "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/583",
           "category": "improvement"
@@ -2403,7 +2963,7 @@
         {
           "hash": "c9088c8b",
           "date": "2026-02-14T23:00:13-08:00",
-          "title": "Extract remaining UI primitives to @protolabs-ai/ui-components",
+          "title": "Extract remaining UI primitives to @automaker/ui-components",
           "prNumber": 546,
           "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/546",
           "category": "feature"
@@ -2427,7 +2987,7 @@
         {
           "hash": "038409d3",
           "date": "2026-02-14T22:30:32-08:00",
-          "title": "Create libs/ui package structure for @protolabs-ai/ui-components",
+          "title": "Create libs/ui package structure for @automaker/ui-components",
           "prNumber": 541,
           "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/541",
           "category": "feature"
@@ -2931,7 +3491,7 @@
         {
           "hash": "c04e2c78",
           "date": "2026-02-13T18:22:31-08:00",
-          "title": "Add content output type schemas to @protolabs-ai/flows",
+          "title": "Add content output type schemas to @automaker/flows",
           "prNumber": 415,
           "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/415",
           "category": "feature"
@@ -5129,101 +5689,7 @@
           "category": "feature"
         }
       ]
-    },
-    {
-      "month": "2026-01",
-      "label": "January 2026",
-      "entries": [
-        {
-          "hash": "4f584f9a",
-          "date": "2026-01-20T23:01:06+01:00",
-          "title": "Bulk update cache invalidation and model dropdown display",
-          "prNumber": 633,
-          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/633",
-          "category": "fix"
-        },
-        {
-          "hash": "47a6033b",
-          "date": "2026-01-21T01:03:38+05:00",
-          "title": "Correct z.ai coding plan model mapping",
-          "prNumber": 625,
-          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/625",
-          "category": "fix"
-        },
-        {
-          "hash": "a1f234c7",
-          "date": "2026-01-20T20:57:23+01:00",
-          "title": "Claude Compatible Providers System",
-          "prNumber": 629,
-          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/629",
-          "category": "feature"
-        },
-        {
-          "hash": "02a7a547",
-          "date": "2026-01-19T23:36:40+01:00",
-          "title": "Auto-discover available ports when defaults are in use",
-          "prNumber": 614,
-          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/614",
-          "category": "feature"
-        },
-        {
-          "hash": "0d925947",
-          "date": "2026-01-19T22:58:47+01:00",
-          "title": "Prevent refresh button from overlapping close button in Dev Server dialog",
-          "prNumber": 610,
-          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/610",
-          "category": "fix"
-        },
-        {
-          "hash": "ea3930cf",
-          "date": "2026-01-19T21:17:05+01:00",
-          "title": "Convert OpenCode model format to CLI slash format",
-          "prNumber": 605,
-          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/605",
-          "category": "fix"
-        },
-        {
-          "hash": "d97c4b7b",
-          "date": "2026-01-19T20:36:58+01:00",
-          "title": "Unified Claude API key and profile system with z.AI, MiniMax, OpenRouter support",
-          "prNumber": 600,
-          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/600",
-          "category": "feature"
-        },
-        {
-          "hash": "a52c0461",
-          "date": "2026-01-19T10:22:26+01:00",
-          "title": "Add external terminal support with cross-platform detection",
-          "prNumber": 565,
-          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/565",
-          "category": "feature"
-        },
-        {
-          "hash": "55a34a9f",
-          "date": "2026-01-18T23:48:00+01:00",
-          "title": "Add auto-login for dev mode and fix log box formatting",
-          "prNumber": 567,
-          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/567",
-          "category": "feature"
-        },
-        {
-          "hash": "c4652190",
-          "date": "2026-01-18T23:45:43+01:00",
-          "title": "Add three viewing modes for app specification",
-          "prNumber": 566,
-          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/566",
-          "category": "feature"
-        },
-        {
-          "hash": "b2cf17b5",
-          "date": "2026-01-09T15:11:59-05:00",
-          "title": "  feat: add project-scoped agent memory system",
-          "prNumber": 351,
-          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/351",
-          "category": "feature"
-        }
-      ]
     }
   ],
-  "generatedAt": "2026-02-23T23:54:00.528Z"
+  "generatedAt": "2026-02-24T20:03:58.221Z"
 }

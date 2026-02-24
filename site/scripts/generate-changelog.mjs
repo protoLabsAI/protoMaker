@@ -23,6 +23,9 @@ const CHANGELOG_HTML = resolve(__dirname, '../changelog/index.html');
 const STATS_JSON = resolve(DATA_DIR, 'stats.json');
 const GITHUB_REPO = 'proto-labs-ai/protoMaker';
 
+// Only include entries from the protoMaker era (post-rebrand)
+const CUTOFF_DATE = '2026-02-04';
+
 function run(cmd) {
   return execSync(cmd, { cwd: ROOT, encoding: 'utf-8', maxBuffer: 50 * 1024 * 1024 }).trim();
 }
@@ -141,7 +144,7 @@ function parseCommits() {
   // Get all commits with PR numbers in the message — these are squash-merged PRs
   // Format: hash|date|message
   const SEP = '|||';
-  const log = run(`git log --grep='(#' --format='%H${SEP}%aI${SEP}%s'`);
+  const log = run(`git log --since='${CUTOFF_DATE}' --grep='(#' --format='%H${SEP}%aI${SEP}%s'`);
 
   if (!log) return [];
 
@@ -305,13 +308,32 @@ function injectIntoHtml(months) {
     `<!--CHANGELOG_START-->\n${entriesHtml}\n          <!--CHANGELOG_END-->`
   );
 
-  // Inject stats from stats.json if available
+  // Inject stats — idempotent via id-targeted regex (replaces inner text of span)
   if (existsSync(STATS_JSON)) {
     const stats = JSON.parse(readFileSync(STATS_JSON, 'utf-8'));
-    html = html.replace('<!--STAT:prCount-->', formatNumber(stats.prCount));
-    html = html.replace('<!--STAT:commitCount-->', formatNumber(stats.commitCount));
-    html = html.replace('<!--STAT:featureCount-->', formatNumber(stats.featureCount));
-    html = html.replace('<!--STAT:locCount-->', formatNumber(stats.locCount));
+
+    // Compute "features shipped" from changelog entries instead of .automaker/ dir count
+    const featureCount = months.reduce(
+      (n, m) => n + m.entries.filter((e) => e.category === 'feature').length,
+      0,
+    );
+
+    html = html.replace(
+      /(<span[^>]*id="stat-prs"[^>]*>)[^<]*(<\/span>)/,
+      `$1${formatNumber(stats.prCount)}$2`,
+    );
+    html = html.replace(
+      /(<span[^>]*id="stat-commits"[^>]*>)[^<]*(<\/span>)/,
+      `$1${formatNumber(stats.commitCount)}$2`,
+    );
+    html = html.replace(
+      /(<span[^>]*id="stat-features"[^>]*>)[^<]*(<\/span>)/,
+      `$1${formatNumber(featureCount)}$2`,
+    );
+    html = html.replace(
+      /(<span[^>]*id="stat-loc"[^>]*>)[^<]*(<\/span>)/,
+      `$1${formatNumber(stats.locCount)}$2`,
+    );
   }
 
   writeFileSync(CHANGELOG_HTML, html);
