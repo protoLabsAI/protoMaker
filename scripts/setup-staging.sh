@@ -208,16 +208,18 @@ start_services() {
   info "Starting services..."
   cd "$PROJECT_ROOT"
 
-  stop_existing
-
   # Ensure named volumes exist (external: true in compose won't auto-create them)
   for vol in automaker-data automaker-claude-config automaker-cursor-config \
              automaker-opencode-data automaker-opencode-config automaker-opencode-cache; do
     docker volume create "$vol" >/dev/null
   done
 
-  # Start app services (server + UI)
-  docker compose -f "$COMPOSE_FILE" up -d server ui
+  # Use --force-recreate instead of down+up to minimize downtime.
+  # Docker Compose stops each old container and starts its replacement in quick
+  # succession (~2-3s gap per service) rather than stopping everything first.
+  # --remove-orphans cleans up containers from renamed/removed services.
+  info "Recreating app services (minimal downtime)..."
+  docker compose -f "$COMPOSE_FILE" up -d --force-recreate --remove-orphans server ui
 
   # Start docs independently (won't be affected by app restarts)
   # Remove old container first — it may belong to a different compose project
