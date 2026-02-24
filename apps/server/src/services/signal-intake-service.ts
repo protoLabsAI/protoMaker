@@ -260,6 +260,18 @@ export class SignalIntakeService {
       }
 
       // Ops signals: route to Lead Engineer state machine
+      // Guard: For Linear signals, check if feature already exists
+      if (signal.source === 'linear' && signal.channelContext?.issueId) {
+        const linearIssueId = signal.channelContext.issueId as string;
+        const existing = await this.featureLoader.findByLinearIssueId(projectPath, linearIssueId);
+        if (existing) {
+          logger.info(
+            `Feature already exists for Linear issue ${linearIssueId}, skipping creation (feature: ${existing.id})`
+          );
+          return;
+        }
+      }
+
       // Create feature with idea state
       const feature = await this.featureLoader.create(projectPath, {
         title: `[${signal.source}] ${title}`,
@@ -268,6 +280,10 @@ export class SignalIntakeService {
         category: 'Signal Intake',
         complexity: 'medium',
         workItemState: 'idea',
+        // Store Linear issue ID if available
+        ...(signal.source === 'linear' && signal.channelContext?.issueId
+          ? { linearIssueId: signal.channelContext.issueId as string }
+          : {}),
       });
 
       // Trigger PM Agent pipeline
