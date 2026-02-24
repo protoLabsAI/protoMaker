@@ -556,6 +556,6 @@ This provides:
 
 ## Related Documentation
 
-- [Engine Architecture](./engine-architecture.md) - Lead Engineer state machine
+- [Engine Architecture](../archived/engine-architecture.md) - Lead Engineer state machine
 - [Authority System](../authority/index.md) - Escalation and approval flow
 - [Feature Status System](./feature-status-system.md) - Status transitions

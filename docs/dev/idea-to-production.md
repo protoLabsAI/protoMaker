@@ -349,7 +349,7 @@ The flow graph view tracks all concurrent pipelines, not just one. When multiple
 
 ## Next steps
 
-- [Engine architecture](./engine-architecture) — ADR for the Lead Engineer design
+- [Engine architecture](../archived/engine-architecture) — ADR for the Lead Engineer design (archived)
 - [Project lifecycle](./project-lifecycle) — Linear-driven project state machine
 - [Feature status system](./feature-status-system) — Canonical 6-status details
 - [PR remediation loop](./pr-remediation-loop) — CI failure handling

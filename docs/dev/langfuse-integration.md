@@ -306,5 +306,6 @@ This is intentional: agent execution uses the Claude Agent SDK (traced via `Trac
 
 ## Related Documentation
 
+- [Langfuse Prompt Management](./langfuse-prompts.md) — Versioned prompt management, three-layer resolution, webhook sync
 - [Observability Package](./observability-package.md) — `@automaker/observability` library reference (client, middleware, prompt versioning)
 - [Providers](../server/providers.md) — AI provider architecture
