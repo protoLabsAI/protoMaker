@@ -7,6 +7,10 @@
  *
  * Re-running creates new versions of existing prompts (idempotent, non-destructive).
  *
+ * **Why run this?** Seeding prompts to Langfuse eliminates "Prompt not found" SDK errors
+ * that appear in logs even after PR #998. The SDK logs these at error level internally,
+ * which cannot be suppressed via configuration. Seeding ensures prompts exist upstream.
+ *
  * Usage:
  *   npx tsx scripts/seed-langfuse-prompts.ts
  *

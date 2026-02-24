@@ -95,6 +95,8 @@ npx tsx scripts/seed-langfuse-prompts.ts
 - Idempotent: re-running creates new versions of existing prompts
 - Reports which prompts succeeded/failed
 
+**Why seed?** Eliminates "Prompt not found" SDK errors in server logs. Even though our wrapper (`LangfuseClient.getPrompt()`) logs at debug level, the Langfuse SDK itself emits internal error logs via `console.error` that cannot be suppressed via configuration. Seeding ensures prompts exist upstream, preventing the errors entirely.
+
 ## Managing Prompts in Langfuse
 
 ### Via Langfuse Dashboard
@@ -128,6 +130,16 @@ The PromptResolver fetches prompts with `label: "production"` by default. To tes
 2. Apply the `staging` label
 3. Verify in a staging environment
 4. Move the `production` label to the new version
+
+## SDK Logging Configuration
+
+The Langfuse SDK emits logs for various events (trace creation, prompt fetching, errors). To reduce noise in production:
+
+**Automatic Configuration:** The `LangfuseClient` automatically configures the Langfuse SDK's global logger to `ERROR` level on module load. This suppresses `DEBUG`, `INFO`, and `WARN` logs from the SDK itself.
+
+**Limitation:** The SDK uses `console.error` directly for certain errors (e.g., "Prompt not found"), which cannot be suppressed via log level configuration. This is a known limitation tracked in Langfuse issue [#6482](https://github.com/langfuse/langfuse-js/issues/6482). To eliminate these logs, seed all prompts using the script above.
+
+**Implementation:** See `libs/observability/src/langfuse/client.ts` for the `configureGlobalLogger` initialization.
 
 ## Disabling Langfuse Layer
 
