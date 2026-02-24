@@ -449,6 +449,8 @@ class ExecuteProcessor implements StateProcessor {
 
     // Load reflections from any feature using FTS5 semantic search
     try {
+      let ftsResults: string[] = [];
+
       if (this.serviceContext.knowledgeStoreService) {
         // Build search query from feature title and description
         const query = `${ctx.feature.title} ${ctx.feature.description || ''}`.trim();
@@ -460,17 +462,18 @@ class ExecuteProcessor implements StateProcessor {
           5 // maxResults
         );
 
-        if (results.length > 0) {
-          // Extract content from search results
-          const reflections = results.map((r) => r.chunk.content);
-          ctx.siblingReflections = reflections;
+        ftsResults = results.map((r) => r.chunk.content);
+        if (ftsResults.length > 0) {
+          ctx.siblingReflections = ftsResults;
           logger.info(
-            `[EXECUTE] Loaded ${reflections.length} relevant reflections via FTS5 search`
+            `[EXECUTE] Loaded ${ftsResults.length} relevant reflections via FTS5 search`
           );
         }
-      } else {
-        // Graceful fallback to old same-epic behavior if knowledge store not available
-        logger.info('[EXECUTE] Knowledge store not available, using legacy sibling search');
+      }
+
+      // Fallback to legacy same-epic search if FTS unavailable or returned no results
+      if (!this.serviceContext.knowledgeStoreService || ftsResults.length === 0) {
+        logger.info('[EXECUTE] Using legacy sibling search (FTS unavailable or empty)');
         const allFeatures = await this.serviceContext.featureLoader.getAll(ctx.projectPath);
         const siblings = allFeatures.filter(
           (f) =>
