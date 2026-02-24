@@ -78,11 +78,27 @@ export const orphanedInProgress: LeadFastPathRule = {
       const age = now - new Date(f.startedAt).getTime();
       if (age > ORPHANED_IN_PROGRESS_MS) {
         const hours = Math.round(age / (60 * 60 * 1000));
-        actions.push({
-          type: 'reset_feature',
-          featureId: f.id,
-          reason: `Orphaned in-progress for ${hours}h with no running agent`,
-        });
+
+        // Features with repeated failures get blocked instead of reset
+        // to prevent infinite retry loops
+        if (f.failureCount && f.failureCount >= 3) {
+          actions.push({
+            type: 'move_feature',
+            featureId: f.id,
+            toStatus: 'blocked',
+          });
+          actions.push({
+            type: 'log',
+            level: 'warn',
+            message: `orphanedInProgress: ${f.id} blocked after ${f.failureCount} failures (orphaned ${hours}h)`,
+          });
+        } else {
+          actions.push({
+            type: 'reset_feature',
+            featureId: f.id,
+            reason: `Orphaned in-progress for ${hours}h with no running agent`,
+          });
+        }
       }
     }
     return actions;
@@ -363,6 +379,67 @@ export const remediationStalled: LeadFastPathRule = {
   },
 };
 
+/**
+ * classifiedRecovery — Escalated feature with retryable failure → auto-retry.
+ * Uses FailureClassifier analysis from the escalation event payload.
+ */
+export const classifiedRecovery: LeadFastPathRule = {
+  name: 'classifiedRecovery',
+  description: 'Escalated feature with retryable failure → auto-retry',
+  triggers: ['escalation:signal-received'],
+
+  evaluate(worldState, _eventType, payload): LeadRuleAction[] {
+    const event = payload as Record<string, unknown> | null;
+    if (!event) return [];
+
+    // Only handle feature_escalated events from the state machine
+    if (event.type !== 'feature_escalated') return [];
+
+    const inner = event.payload as Record<string, unknown> | undefined;
+    if (!inner) return [];
+
+    const featureId = inner.featureId as string | undefined;
+    if (!featureId) return [];
+
+    // Verify feature exists in world state
+    const feature = worldState.features[featureId];
+    if (!feature) return [];
+
+    const failureAnalysis = inner.failureAnalysis as
+      | {
+          category: string;
+          isRetryable: boolean;
+          suggestedDelay: number;
+          maxRetries: number;
+          explanation: string;
+          confidence: number;
+        }
+      | undefined;
+
+    if (!failureAnalysis) return [];
+
+    const retryCount = (inner.retryCount as number) || 0;
+
+    // Auto-retry if: retryable + under max retries + high confidence
+    if (
+      failureAnalysis.isRetryable &&
+      retryCount < failureAnalysis.maxRetries &&
+      failureAnalysis.confidence >= 0.7
+    ) {
+      return [
+        {
+          type: 'reset_feature',
+          featureId,
+          reason: `Auto-retry: ${failureAnalysis.category} — ${failureAnalysis.explanation} (retry ${retryCount + 1}/${failureAnalysis.maxRetries})`,
+        },
+      ];
+    }
+
+    // Non-retryable or max retries exceeded — leave blocked
+    return [];
+  },
+};
+
 // ────────────────────────── Exports ──────────────────────────
 
 /** Default set of fast-path rules */
@@ -378,6 +455,7 @@ export const DEFAULT_RULES: LeadFastPathRule[] = [
   prApproved,
   threadsBlocking,
   remediationStalled,
+  classifiedRecovery,
 ];
 
 /**

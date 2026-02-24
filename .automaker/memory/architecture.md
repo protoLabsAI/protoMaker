@@ -3102,3 +3102,37 @@ usageStats:
 - **Rejected:** Configurable parameter; dynamic based on chunk size; single question; five questions
 - **Trade-offs:** Simplicity and predictable cost; but inflexible if use cases need more diverse queries (search quality becomes architectural limit)
 - **Breaking if changed:** If operational needs change (need finer coverage), requires code change not config; if benchmarking shows 2 questions sufficient, still paying for 3
+
+### Replaced working directory heuristic with explicit project configuration scan from settingsService for crash recovery session discovery (2026-02-24)
+- **Context:** Multi-project environments where crash recovery sessions could exist in any project, not just the one where LE was started
+- **Why:** Working directory is unreliable in crash scenarios - user might have been in project A but LE restarted in project B. Explicit configuration covers all known projects and is deterministic
+- **Rejected:** Filesystem scanning (too slow, discovers unrelated projects), environment variables (not scalable), continuing to use single cwd (original approach - misses sessions)
+- **Trade-offs:** Requires projects to be registered in settings service, but gains multi-project coverage and deterministic behavior. More complex dependency tree.
+- **Breaking if changed:** If a project is not in settings, its sessions won't be discovered even if they exist on disk. Configuration drift becomes a failure mode.
+
+#### [Pattern] Multi-level fallback chain: configured projects → process.cwd() if unconfigured → process.cwd() on error (2026-02-24)
+- **Problem solved:** Crash recovery is critical path - cannot fail even if settings service is broken or returns empty config
+- **Why this works:** Defensive programming for resilience. Each level provides a safety net: explicit config, then working directory heuristic, then error recovery.
+- **Trade-offs:** More code paths to test, but guarantees service always restores sessions from somewhere. Hides misconfiguration - user might not realize missing projects.
+
+#### [Gotcha] Pattern matching order (first-match-wins) is critical to correctness but implicit and undocumented. Pattern ordering must follow specificity principle: more specific patterns before general ones. (2026-02-24)
+- **Situation:** FailureClassifierService executes 11 matchers sequentially. Patterns for 'timeout' (transient) and 'network error' (transient) could overlap; order determines classification.
+- **Root cause:** First-match prevents backtracking, keeping logic simple and predictable. But this makes ordering a silent requirement—no explicit priority mechanism.
+- **How to avoid:** Code is simple and fast. Dangerous to refactor—reordering patterns silently changes behavior for edge cases. Adding overlapping patterns breaks existing classifications without test visibility.
+
+### Synchronous, pure pattern-matching classifier instead of async LLM or ML-based classification. (2026-02-24)
+- **Context:** Recovery strategies are hardcoded in patterns, no external ML model or API call. Confidence scores are synthetic (0.8-0.95), not probabilistic.
+- **Why:** Eliminates non-determinism, latency, and external dependencies. Every failure is classifiable offline. Pure functions enable embedding directly in hot-path code (EscalateProcessor).
+- **Rejected:** Async LLM: high accuracy but introduces latency, cost, rate limits, non-determinism. ML classifier: requires labeled training data, retraining pipeline. Rules engine DSL: more flexible but harder to reason about.
+- **Trade-offs:** Gains: reliability, speed, simplicity, offline-capability. Loses: accuracy for novel failure modes, adaptability without redeployment. Patterns become domain knowledge that must be manually maintained.
+- **Breaking if changed:** If failure diversity exceeds pattern coverage, classification accuracy degrades and unknown category grows. No learning loop to auto-improve patterns. Manual pattern updates required for new tools/frameworks.
+
+#### [Pattern] Recovery strategies are tightly mapped to FailureCategory patterns, embedding tactical recovery in the classifier itself. (2026-02-24)
+- **Problem solved:** FailureAnalysis includes both category and recoveryStrategy. Each pattern matcher returns a strategy (e.g., rate_limit → exponential_backoff). Strategies are union type from shared @protolabs-ai/types.
+- **Why this works:** Keeps failure diagnosis and recovery strategy coupled—if a failure is rate-limited, retry with backoff is the correct recovery. Single source of truth per failure type prevents strategy mismatches.
+- **Trade-offs:** Simpler code (diagnosis + strategy together). Harder to evolve strategies independently. RecoveryStrategy changes require classifier updates. Strategy becomes an implementation detail of the classifier.
+
+#### [Gotcha] Confidence scores (0.8-0.95 for patterns, 0.5 for unknown) are synthetic, not Bayesian—they don't represent actual error rates or misclassification probability. (2026-02-24)
+- **Situation:** Downstream consumers may assume confidence score correlates to classification accuracy, but it's arbitrary: all matching patterns get 0.8-0.95, unmatched gets 0.5, regardless of pattern quality or false-positive rate.
+- **Root cause:** Synthetic scores are simple to assign without data. High confidence for patterns encourages escalation; 0.5 for unknown preserves optionality. Intent is signaling, not accuracy metrics.
+- **How to avoid:** Easy to assign without data vs misleading if consumers interpret as accuracy. Good for alerting logic vs bad for learning or auditing. Simpler than Bayesian scoring vs loses information about pattern quality.

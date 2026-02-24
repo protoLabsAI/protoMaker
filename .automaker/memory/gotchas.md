@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 357
-  referenced: 192
-  successfulFeatures: 192
+  loaded: 359
+  referenced: 193
+  successfulFeatures: 193
 ---
 # gotchas
 
@@ -337,3 +337,8 @@ usageStats:
 - **Situation:** Claude Haiku returns JSON array of questions; sometimes wrapped as ```json [...]```
 - **Root cause:** Root cause: Claude interprets 'return JSON' as 'format as markdown code block' in certain contexts; had to handle both raw and wrapped formats
 - **How to avoid:** Regex approach is more fragile/loose but handles real-world LLM output variability
+
+#### [Gotcha] Configuration drift: project settings can reference deleted/moved projects. Solution validates existence before using each path. (2026-02-24)
+- **Situation:** Settings service persists project list, but filesystem state changes independently (projects deleted, moved, renamed)
+- **Root cause:** Stale configuration causes 'session not found' errors or attempts to restore from non-existent paths. Validation prevents these failures.
+- **How to avoid:** Slightly slower (stat calls per project), but prevents crash recovery feature itself from crashing. User doesn't get feedback that config is stale.

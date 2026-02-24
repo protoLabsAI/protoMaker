@@ -2218,7 +2218,10 @@ export class LeadEngineerService {
    */
   private onEvent(type: EventType, payload: unknown): void {
     const p = payload as Record<string, unknown> | null;
-    const projectPath = p?.projectPath as string | undefined;
+    const nested = p?.payload as Record<string, unknown> | null;
+
+    // Check projectPath at top level or inside nested payload
+    const projectPath = (p?.projectPath ?? nested?.projectPath) as string | undefined;
 
     if (projectPath) {
       const session = this.sessions.get(projectPath);
@@ -2229,8 +2232,8 @@ export class LeadEngineerService {
       return;
     }
 
-    // For events without projectPath (e.g., auto-mode events), try to match by featureId
-    const featureId = p?.featureId as string | undefined;
+    // Check featureId at top level or inside nested payload
+    const featureId = (p?.featureId ?? nested?.featureId) as string | undefined;
     if (featureId) {
       for (const session of this.sessions.values()) {
         if (session.flowState !== 'running') continue;
