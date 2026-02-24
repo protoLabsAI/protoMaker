@@ -6,6 +6,8 @@ import { SplashScreen } from './components/splash-screen';
 import { useSettingsSync } from './hooks/use-settings-sync';
 import { useCursorStatusInit } from './hooks/use-cursor-status-init';
 import { useProviderAuthInit } from './hooks/use-provider-auth-init';
+import { usePWA } from './hooks/use-pwa';
+import { toast } from 'sonner';
 import './styles/global.css';
 import './styles/theme-imports';
 import './styles/font-imports';
@@ -56,6 +58,33 @@ export default function App() {
 
   // Initialize Provider auth status at startup (for Claude/Codex usage display)
   useProviderAuthInit();
+
+  // Initialize PWA (only registers in web mode, not Electron)
+  const pwa = usePWA();
+
+  // Show toast notifications for PWA updates and offline readiness
+  useEffect(() => {
+    if (pwa.needRefresh) {
+      toast('Update available', {
+        description: 'A new version is available. Click to update.',
+        action: {
+          label: 'Update',
+          onClick: () => {
+            pwa.updateSW(true);
+            pwa.close();
+          },
+        },
+        duration: Infinity,
+      });
+    }
+
+    if (pwa.offlineReady) {
+      toast.success('App ready to work offline', {
+        description: 'The app is cached and ready to work offline.',
+        duration: 5000,
+      });
+    }
+  }, [pwa.needRefresh, pwa.offlineReady, pwa]);
 
   const handleSplashComplete = useCallback(() => {
     sessionStorage.setItem('automaker-splash-shown', 'true');
