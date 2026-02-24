@@ -128,7 +128,7 @@ Packages can only depend on packages above them:
 The server (`apps/server/src/`) follows a modular pattern:
 
 - `routes/` - Express route handlers organized by feature (agent, features, auto-mode, worktree, etc.)
-- `services/` - Business logic (AgentService, AutoModeService, FeatureLoader, TerminalService, AuthorityService, PRFeedbackService)
+- `services/` - Business logic (AgentService, AutoModeService, FeatureLoader, TerminalService, AuthorityService, PRFeedbackService, TrajectoryStoreService, FailureClassifierService)
 - `services/authority-agents/` - AI authority agents (PM, ProjM, EM, Status, Discord approval routing)
 - `providers/` - AI provider abstraction (currently Claude via Claude Agent SDK)
 - `lib/` - Utilities (events, auth, worktree metadata)
@@ -167,6 +167,9 @@ The UI (`apps/ui/src/`) uses:
 │       ├── agent-output.md
 │       └── images/
 ├── context/               # Context files for AI agents (CLAUDE.md, etc.)
+├── trajectory/            # Verified execution trajectories (learning flywheel)
+│   └── {featureId}/
+│       └── attempt-{N}.json
 ├── settings.json          # Project-specific settings
 ├── spec.md               # Project specification
 └── analysis.json         # Project structure analysis
