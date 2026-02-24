@@ -109,6 +109,7 @@ import type { LeadEngineerService } from './lead-engineer-service.js';
 import { gitWorkflowService } from './git-workflow-service.js';
 import { graphiteService } from './graphite-service.js';
 import type { KnowledgeStoreService } from './knowledge-store-service.js';
+import type { PipelineCheckpointService } from './pipeline-checkpoint-service.js';
 
 const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
@@ -423,6 +424,8 @@ export class AutoModeService {
   private leadEngineerService: LeadEngineerService | null = null;
   // Knowledge Store service for learning deduplication (optional)
   private knowledgeStoreService: KnowledgeStoreService | null = null;
+  // Pipeline Checkpoint service for crash recovery checkpoint cleanup (optional)
+  private pipelineCheckpointService: PipelineCheckpointService | null = null;
   // Track which projects have already been checked for interrupted features this server lifecycle.
   // Prevents the UI from re-triggering resumeInterruptedFeatures on every board mount.
   private resumeCheckedProjects = new Set<string>();
@@ -490,6 +493,14 @@ export class AutoModeService {
    */
   setKnowledgeStoreService(service: KnowledgeStoreService): void {
     this.knowledgeStoreService = service;
+  }
+
+  /**
+   * Wire up the Pipeline Checkpoint service for crash recovery checkpoint cleanup.
+   * When set, reconcileFeatureStates() will also delete checkpoints for reset features.
+   */
+  setPipelineCheckpointService(service: PipelineCheckpointService): void {
+    this.pipelineCheckpointService = service;
   }
 
   /**
@@ -2842,6 +2853,17 @@ Complete the pipeline step instructions above. Review the previous work and appl
           status: 'backlog',
           startedAt: undefined,
         });
+
+        // Delete checkpoint for this feature (crash recovery cleanup)
+        if (this.pipelineCheckpointService) {
+          try {
+            await this.pipelineCheckpointService.delete(projectPath, feature.id);
+            logger.debug(`[RECONCILE] Deleted checkpoint for feature ${feature.id}`);
+          } catch (cpError) {
+            // Checkpoint deletion should not block reconciliation
+            logger.warn(`[RECONCILE] Failed to delete checkpoint for ${feature.id}:`, cpError);
+          }
+        }
 
         reconciled.push({
           featureId: feature.id,

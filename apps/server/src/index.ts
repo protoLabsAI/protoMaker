@@ -762,6 +762,7 @@ const leadEngineerService = new LeadEngineerService(
 );
 const pipelineCheckpointService = new PipelineCheckpointService();
 leadEngineerService.setCheckpointService(pipelineCheckpointService);
+autoModeService.setPipelineCheckpointService(pipelineCheckpointService);
 
 // Wire ContextFidelityService for shaping prior context on retries
 const { ContextFidelityService } = await import('./services/context-fidelity-service.js');
@@ -1147,6 +1148,20 @@ specGenerationMonitor.startMonitoring();
         }
       } catch (err) {
         logger.warn(`[STARTUP] Failed to reconcile features for ${projectPath}:`, err);
+      }
+    }
+
+    // Reconcile orphaned checkpoints (runs after feature state reconciliation)
+    for (const projectPath of uniquePaths) {
+      try {
+        const result = await leadEngineerService.reconcileCheckpoints(projectPath);
+        if (result.deleted.length > 0) {
+          logger.info(
+            `[STARTUP] Deleted ${result.deleted.length} orphaned checkpoint(s) for ${projectPath}`
+          );
+        }
+      } catch (err) {
+        logger.warn(`[STARTUP] Failed to reconcile checkpoints for ${projectPath}:`, err);
       }
     }
   } catch (err) {
