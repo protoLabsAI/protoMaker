@@ -172,6 +172,8 @@ export class KnowledgeStoreService {
       url: 0,
       manual: 0,
       generated: 0,
+      reflection: 0,
+      agent_output: 0,
     };
 
     for (const row of sourceTypeRows) {
@@ -189,7 +191,7 @@ export class KnowledgeStoreService {
       totalSizeBytes,
       uniqueSources,
       sourceTypeBreakdown: sourceTypeBreakdown as Record<
-        'file' | 'url' | 'manual' | 'generated',
+        'file' | 'url' | 'manual' | 'generated' | 'reflection' | 'agent_output',
         number
       >,
       lastUpdated,
@@ -571,5 +573,201 @@ Output the compressed memory file:`;
    */
   getDatabase(): BetterSqlite3.Database | null {
     return this.db;
+  }
+
+  /**
+   * Ingest reflection.md files from all features in the project.
+   * Scans all .automaker/features/ directories and indexes reflection.md content.
+   *
+   * @param projectPath - Project path to scan
+   * @returns Number of reflections indexed
+   */
+  async ingestReflections(projectPath: string): Promise<number> {
+    if (!this.db || !this.projectPath) {
+      throw new Error('Knowledge store not initialized');
+    }
+
+    if (this.projectPath !== projectPath) {
+      this.initialize(projectPath);
+    }
+
+    const featuresDir = path.join(projectPath, '.automaker', 'features');
+    if (!fs.existsSync(featuresDir)) {
+      logger.debug('No features directory found, skipping reflection ingestion');
+      return 0;
+    }
+
+    const featureDirs = fs.readdirSync(featuresDir, { withFileTypes: true });
+    let indexedCount = 0;
+
+    for (const dir of featureDirs) {
+      if (!dir.isDirectory()) continue;
+
+      const reflectionPath = path.join(featuresDir, dir.name, 'reflection.md');
+      if (!fs.existsSync(reflectionPath)) continue;
+
+      try {
+        const content = await fs.promises.readFile(reflectionPath, 'utf-8');
+        if (!content.trim()) continue;
+
+        // Extract feature ID from directory name
+        const featureId = dir.name;
+        const timestamp = new Date().toISOString();
+
+        // Create chunk ID
+        const chunkId = `reflection-${featureId}`;
+
+        // Check if chunk already exists
+        const existing = this.db!.prepare('SELECT id FROM chunks WHERE id = ?').get(chunkId);
+
+        if (existing) {
+          // Update existing chunk
+          this.db!.prepare(
+            `
+            UPDATE chunks
+            SET content = ?, updated_at = ?
+            WHERE id = ?
+          `
+          ).run(content.trim(), timestamp, chunkId);
+        } else {
+          // Insert new chunk
+          this.db!.prepare(
+            `
+            INSERT INTO chunks (id, source_type, source_file, project_path, chunk_index, heading, content, tags, importance, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `
+          ).run(
+            chunkId,
+            'reflection',
+            `.automaker/features/${featureId}/reflection.md`,
+            projectPath,
+            0,
+            `Reflection: ${featureId}`,
+            content.trim(),
+            JSON.stringify(['reflection', featureId]),
+            0.8, // Higher importance for reflections
+            timestamp,
+            timestamp
+          );
+        }
+
+        indexedCount++;
+      } catch (err) {
+        logger.warn(`Failed to index reflection for ${dir.name}:`, err);
+      }
+    }
+
+    logger.info(`Indexed ${indexedCount} reflections from ${projectPath}`);
+    return indexedCount;
+  }
+
+  /**
+   * Ingest agent-output.md files from all features in the project.
+   * Indexes the last 2000 characters (summary section) of each agent-output.md.
+   *
+   * @param projectPath - Project path to scan
+   * @returns Number of agent outputs indexed
+   */
+  async ingestAgentOutputs(projectPath: string): Promise<number> {
+    if (!this.db || !this.projectPath) {
+      throw new Error('Knowledge store not initialized');
+    }
+
+    if (this.projectPath !== projectPath) {
+      this.initialize(projectPath);
+    }
+
+    const featuresDir = path.join(projectPath, '.automaker', 'features');
+    if (!fs.existsSync(featuresDir)) {
+      logger.debug('No features directory found, skipping agent output ingestion');
+      return 0;
+    }
+
+    const featureDirs = fs.readdirSync(featuresDir, { withFileTypes: true });
+    let indexedCount = 0;
+
+    for (const dir of featureDirs) {
+      if (!dir.isDirectory()) continue;
+
+      const agentOutputPath = path.join(featuresDir, dir.name, 'agent-output.md');
+      if (!fs.existsSync(agentOutputPath)) continue;
+
+      try {
+        const fullContent = await fs.promises.readFile(agentOutputPath, 'utf-8');
+        if (!fullContent.trim()) continue;
+
+        // Extract last 2000 characters (summary section)
+        const content = fullContent.length > 2000 ? fullContent.slice(-2000) : fullContent;
+
+        // Extract feature ID from directory name
+        const featureId = dir.name;
+        const timestamp = new Date().toISOString();
+
+        // Create chunk ID
+        const chunkId = `agent-output-${featureId}`;
+
+        // Check if chunk already exists
+        const existing = this.db!.prepare('SELECT id FROM chunks WHERE id = ?').get(chunkId);
+
+        if (existing) {
+          // Update existing chunk
+          this.db!.prepare(
+            `
+            UPDATE chunks
+            SET content = ?, updated_at = ?
+            WHERE id = ?
+          `
+          ).run(content.trim(), timestamp, chunkId);
+        } else {
+          // Insert new chunk
+          this.db!.prepare(
+            `
+            INSERT INTO chunks (id, source_type, source_file, project_path, chunk_index, heading, content, tags, importance, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `
+          ).run(
+            chunkId,
+            'agent_output',
+            `.automaker/features/${featureId}/agent-output.md`,
+            projectPath,
+            0,
+            `Agent Output: ${featureId}`,
+            content.trim(),
+            JSON.stringify(['agent_output', featureId]),
+            0.6, // Medium importance for agent outputs
+            timestamp,
+            timestamp
+          );
+        }
+
+        indexedCount++;
+      } catch (err) {
+        logger.warn(`Failed to index agent output for ${dir.name}:`, err);
+      }
+    }
+
+    logger.info(`Indexed ${indexedCount} agent outputs from ${projectPath}`);
+    return indexedCount;
+  }
+
+  /**
+   * Search for reflections and agent outputs using FTS5.
+   * Convenience method that filters to reflection and agent_output source types.
+   *
+   * @param projectPath - Project path
+   * @param query - Search query (feature title + description works well)
+   * @param maxResults - Maximum number of results (default: 5)
+   * @returns Array of search results with relevance scores
+   */
+  searchReflections(
+    projectPath: string,
+    query: string,
+    maxResults: number = 5
+  ): KnowledgeSearchResult[] {
+    return this.search(projectPath, query, {
+      sourceTypes: ['reflection', 'agent_output'],
+      maxResults,
+      maxTokens: 3000,
+    });
   }
 }

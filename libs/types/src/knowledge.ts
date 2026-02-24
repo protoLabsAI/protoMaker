@@ -8,7 +8,13 @@
 /**
  * Source type for a knowledge chunk
  */
-export type KnowledgeSourceType = 'file' | 'url' | 'manual' | 'generated';
+export type KnowledgeSourceType =
+  | 'file'
+  | 'url'
+  | 'manual'
+  | 'generated'
+  | 'reflection'
+  | 'agent_output';
 
 /**
  * A single indexed chunk of knowledge
