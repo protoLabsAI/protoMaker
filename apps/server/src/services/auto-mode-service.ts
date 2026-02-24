@@ -423,6 +423,9 @@ export class AutoModeService {
   private leadEngineerService: LeadEngineerService | null = null;
   // Knowledge Store service for learning deduplication (optional)
   private knowledgeStoreService: KnowledgeStoreService | null = null;
+  // Track which projects have already been checked for interrupted features this server lifecycle.
+  // Prevents the UI from re-triggering resumeInterruptedFeatures on every board mount.
+  private resumeCheckedProjects = new Set<string>();
   // Rate-limiting for auto_mode_progress events (per feature)
   private lastProgressEventTime = new Map<string, number>();
   private readonly PROGRESS_EVENT_MIN_INTERVAL_MS = 100; // Max 1 event per 100ms per feature
@@ -6687,6 +6690,14 @@ After generating the revised spec, output:
    * This should be called during server initialization
    */
   async resumeInterruptedFeatures(projectPath: string): Promise<void> {
+    // Only run once per project per server lifecycle.
+    // The UI calls this on every board mount — subsequent calls are no-ops.
+    if (this.resumeCheckedProjects.has(projectPath)) {
+      logger.debug(`Already checked interrupted features for ${projectPath}, skipping`);
+      return;
+    }
+    this.resumeCheckedProjects.add(projectPath);
+
     logger.info('Checking for interrupted features to resume...');
 
     // Clean up any stale running features from previous session
