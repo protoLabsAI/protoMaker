@@ -4,6 +4,8 @@ import { createLogger } from '@automaker/utils/logger';
 import {
   DndContext,
   PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   rectIntersection,
@@ -395,6 +397,17 @@ export function BoardView() {
     useSensor(DialogAwarePointerSensor, {
       activationConstraint: {
         distance: 8,
+      },
+    }),
+    useSensor(MouseSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 200,
+        tolerance: 5,
       },
     })
   );
