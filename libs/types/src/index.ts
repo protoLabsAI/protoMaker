@@ -791,3 +791,12 @@ export type {
   HITLFormRequest,
   HITLFormRequestSummary,
 } from './hitl-form.js';
+
+// Knowledge Store types (semantic search and retrieval)
+export type {
+  KnowledgeSourceType,
+  KnowledgeChunk,
+  KnowledgeSearchResult,
+  KnowledgeStoreStats,
+  KnowledgeStoreSettings,
+} from './knowledge.js';
