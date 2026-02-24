@@ -277,7 +277,7 @@
       ],
       "category": "Development",
       "icon": "public/logo_larger.png",
-      "maintainer": "webdevcody@gmail.com",
+      "maintainer": "hello@protolabs.studio",
       "executableName": "automaker",
       "description": "An autonomous AI development studio that helps you build software faster using AI-powered agents",
       "synopsis": "AI-powered autonomous development studio"

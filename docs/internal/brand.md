@@ -26,11 +26,11 @@ This is the living brand bible for protoLabs. All agents, content, and external 
 
 ## Voice & Tone
 
-### Josh Mabry — Positioning
+### Founder — Positioning
 
-**Who Josh is:** Architect, founder, AI systems expert. Three years deep in agentic AI — building production systems from design to deployment since LLMs had 4K context windows. Not someone who discovered AI coding tools last month. An expert who 10x'd his workflow through AI tooling, then 10x'd again by building autonomous agent orchestration.
+**Who the founder is:** Architect, founder, AI systems expert. Three years deep in agentic AI — building production systems from design to deployment since LLMs had 4K context windows. Not someone who discovered AI coding tools last month. An expert who 10x'd his workflow through AI tooling, then 10x'd again by building autonomous agent orchestration.
 
-**Background:** 8+ years shipping production software. Design systems architect for Fortune 500 clients (Phase2 Technology), AI lead at a SaaS platform (Knapsack), now founder of protoLabs. Has built countless AI systems — RAG pipelines, multi-agent research platforms, generative gaming engines, autonomous dev tooling. Was "vibe coding" before the term existed, copy-pasting into 4K context windows and telling anyone who'd listen to learn these systems.
+**Background:** 8+ years shipping production software. Experienced systems architect and AI engineer, now founder of protoLabs. Has built countless AI systems — RAG pipelines, multi-agent research platforms, generative gaming engines, autonomous dev tooling. Was "vibe coding" before the term existed, copy-pasting into 4K context windows and telling anyone who'd listen to learn these systems.
 
 **Language rules:**
 
@@ -60,13 +60,13 @@ The team is organized into **Operations** and **Engineering** branches. Orchestr
 
 ### Operations
 
-| Name           | Role                       | Type     | Notes                                                                    |
-| -------------- | -------------------------- | -------- | ------------------------------------------------------------------------ |
-| **Josh Mabry** | Founder / Project Owner    | Human    | Architect. Directs everything.                                           |
-| **AVA**        | Operations                 | AI Agent | Signal triage, antagonistic review, ceremonies, Discord.                 |
-| **Jon**        | GTM                        | AI Agent | Content strategy, brand positioning, antagonistic review (market value). |
-| **Cindi**      | Content Writing Specialist | AI Agent | Blog posts, technical docs, SEO, content pipeline.                       |
-| **Abdellah**   | Strategy Partner           | Human    | Personal branding, visual identity. NOT content creation.                |
+| Name               | Role                       | Type     | Notes                                                                    |
+| ------------------ | -------------------------- | -------- | ------------------------------------------------------------------------ |
+| **Founder**        | Project Owner              | Human    | Architect. Directs everything.                                           |
+| **AVA**            | Operations                 | AI Agent | Signal triage, antagonistic review, ceremonies, Discord.                 |
+| **Jon**            | GTM                        | AI Agent | Content strategy, brand positioning, antagonistic review (market value). |
+| **Cindi**          | Content Writing Specialist | AI Agent | Blog posts, technical docs, SEO, content pipeline.                       |
+| _Strategy Partner_ | Strategy Partner           | Human    | Personal branding, visual identity. NOT content creation.                |
 
 ### Engineering
 

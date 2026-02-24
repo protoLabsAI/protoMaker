@@ -17,11 +17,7 @@ Patterns for working with the Automaker Discord bot, including gotchas and worka
 
 ## Channel IDs
 
-| Channel | ID | Purpose |
-|---------|-----|---------|
-| #ava-josh | 1469195643590541353 | Primary Ava-Josh communication |
-| #infra | 1469109809939742814 | Infrastructure changes |
-| #dev | 1469080556720623699 | Code/feature updates |
+Channel IDs are configured per-instance via environment variables (DISCORD_CHANNEL_*) or UserProfile settings. Check your project's .env or settings for current values.
 
 ## Bot Tokens
 
@@ -41,8 +37,8 @@ For direct message sending without the bot service, use the MCP send tools which
 
 ### DM Routing (Event-Driven)
 - `AgentDiscordRouter` handles DM routing based on `userRouting` in settings
-- `chukz` → Ava (default)
-- `abdelly` → GTM Specialist (default)
+- Primary user → Ava (configured via settings `userRouting`)
+- Additional users → Routed per `userRouting` config
 - No manual polling needed — routing is event-driven via `discord:dm:received`
 
 ### Slash Command Routing (Dynamic)

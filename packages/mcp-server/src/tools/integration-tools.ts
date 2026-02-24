@@ -43,7 +43,7 @@ export const integrationTools: Tool[] = [
       properties: {
         username: {
           type: 'string',
-          description: 'Discord username to send the DM to (e.g., "chukz")',
+          description: 'Discord username to send the DM to (e.g., "username123")',
         },
         content: {
           type: 'string',
@@ -62,7 +62,7 @@ export const integrationTools: Tool[] = [
       properties: {
         username: {
           type: 'string',
-          description: 'Discord username to read DMs from (e.g., "chukz")',
+          description: 'Discord username to read DMs from (e.g., "username123")',
         },
         limit: {
           type: 'number',

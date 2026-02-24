@@ -32,7 +32,7 @@ Signal triage, quality gates, team health, and external communication. Orchestra
 
 | Agent               | Type         | Responsibilities                                                       |
 | ------------------- | ------------ | ---------------------------------------------------------------------- |
-| **Josh Mabry**      | Human (CEO)  | Ideas, direction, final approval                                       |
+| **Project Owner**   | Human (CEO)  | Ideas, direction, final approval                                       |
 | **Ava** (CoS)       | AI Orchestr. | Signal triage, antagonistic review, ceremonies, Discord comms          |
 | **Jon** (GTM)       | AI Agent     | Market perspective, content strategy, positioning, antagonistic review |
 | **Cindi** (Content) | AI Agent     | Blog posts, technical docs, SEO, content pipeline                      |

@@ -1005,7 +1005,7 @@ healthMonitorService.setEventEmitter(events);
 
 // Initialize Ava Gateway Service for heartbeat monitoring
 void avaGatewayService
-  .initialize(events, REPO_ROOT, '1469109809939742814')
+  .initialize(events, REPO_ROOT, process.env.DISCORD_CHANNEL_INFRA || '')
   .then(() => {
     // Start listening to critical events after initialization
     avaGatewayService.start();

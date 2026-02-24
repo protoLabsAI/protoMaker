@@ -38,6 +38,7 @@ docs/.vitepress/cache/
 .automaker/recovery/
 .automaker/checkpoints/
 .automaker/actionable-items.json
+.automaker/hitl-forms.json
 .automaker/content/
 
 # Instance-specific — each machine starts fresh

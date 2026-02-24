@@ -58,16 +58,16 @@ import * as path from 'node:path';
 
 const logger = createLogger('DiscordBot');
 
-/** Channel IDs from docs/discord.md */
+/** Channel IDs — configured via environment variables */
 const CHANNELS = {
-  suggestions: '1469049473756954645',
-  projectPlanning: '1469049525975908477',
-  agentLogs: '1469049504039702668',
-  codeReview: '1469049502550720896',
+  suggestions: process.env.DISCORD_CHANNEL_SUGGESTIONS || '',
+  projectPlanning: process.env.DISCORD_CHANNEL_PROJECT_PLANNING || '',
+  agentLogs: process.env.DISCORD_CHANNEL_AGENT_LOGS || '',
+  codeReview: process.env.DISCORD_CHANNEL_CODE_REVIEW || '',
 } as const;
 
-/** Guild ID from docs/discord.md */
-const GUILD_ID = '1070606339363049492';
+/** Guild ID — configured via environment variable */
+const GUILD_ID = process.env.DISCORD_GUILD_ID || '';
 
 /** Message prefix alternative to slash command */
 const IDEA_PREFIX = '!idea ';

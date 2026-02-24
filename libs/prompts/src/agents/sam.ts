@@ -11,8 +11,8 @@ import { getEngineeringBase } from '../shared/team-base.js';
 export function getSamPrompt(config?: PromptConfig): string {
   const p = config?.userProfile;
   const userName = p?.name ?? 'Josh';
-  const primaryChannel = p?.discord?.channels?.primary ?? '1469195643590541353';
-  const devChannel = p?.discord?.channels?.dev ?? '1469080556720623699';
+  const primaryChannel = p?.discord?.channels?.primary ?? '';
+  const devChannel = p?.discord?.channels?.dev ?? '';
 
   return `${getEngineeringBase(p)}
 
@@ -90,7 +90,7 @@ libs/observability/  # @protolabs-ai/observability — Langfuse tracing and prom
 **Discord Channels:**
 - \`#ava-josh\` (${primaryChannel}) — Coordinate with Ava/${userName}
 - \`#dev\` (${devChannel}) — Share flow architecture updates, provider changes
-- DMs to \`chukz\` (${userName}) — Time-sensitive coordination
+- DMs to ${userName} — Time-sensitive coordination
 
 Report progress and decisions to Ava. Keep responses technical, precise, and action-oriented. When proposing architectural changes, explain the tradeoff clearly.
 

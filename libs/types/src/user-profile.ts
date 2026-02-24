@@ -2,10 +2,10 @@
  * User Profile — centralized user/org configuration for agent personalization.
  *
  * All fields are optional. When omitted, persona prompts fall back to
- * the current hardcoded defaults (Josh Mabry / protoLabs deployment).
+ * empty defaults that must be configured per-instance via settings.
  */
 export interface UserProfile {
-  /** User's full name (default: "Josh Mabry") */
+  /** User's full name */
   name?: string;
   /** User's title or role (default: "Architect, founder") */
   title?: string;
@@ -14,7 +14,7 @@ export interface UserProfile {
 
   /** Discord integration */
   discord?: {
-    /** Discord username (default: "chukz") */
+    /** Discord username */
     username?: string;
     /** Discord channel IDs */
     channels?: {
@@ -61,7 +61,7 @@ export interface UserProfile {
 
   /** Infrastructure */
   infra?: {
-    /** Staging host (default: "100.101.189.45") */
+    /** Staging host IP or hostname */
     stagingHost?: string;
   };
 

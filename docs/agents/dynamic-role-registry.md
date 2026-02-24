@@ -271,7 +271,7 @@ Templates include optional `assignments` that define how external events route t
 ```typescript
 assignments: {
   discord: {
-    dmUsers: ['chukz'],          // DMs from these users → this agent
+    dmUsers: ['your-username'],   // DMs from these users → this agent
     watchChannels: ['123...'],    // Monitor these channels
     postChannels: ['456...'],     // Post updates here
     keywords: ['deploy', 'infra'] // Only trigger on these keywords

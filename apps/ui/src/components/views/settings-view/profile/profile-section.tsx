@@ -347,7 +347,7 @@ export function ProfileSection() {
                 }))
               }
               onBlur={() => save()}
-              placeholder="e.g. 100.101.189.45"
+              placeholder="e.g. 192.168.1.100"
             />
           </FieldRow>
         </div>

@@ -2,7 +2,7 @@
  * Discord DM Escalation Channel
  *
  * Sends emergency and critical escalation signals via Discord DM
- * to configured recipients (Josh/chukz by default).
+ * to configured recipients.
  *
  * Features:
  * - Emergency/critical severity only
@@ -36,7 +36,7 @@ export interface DiscordDMChannelConfig {
  * Default configuration
  */
 const DEFAULT_CONFIG: Required<DiscordDMChannelConfig> = {
-  recipients: ['chukz'], // Josh's Discord username
+  recipients: [], // Configure via settings or UserProfile
   rateLimitWindowMs: 15 * 60 * 1000, // 15 minutes
   maxMessagesPerWindow: 1,
 };
@@ -222,11 +222,11 @@ export class DiscordDMChannel implements EscalationChannel {
     // Build URL from GitHub context
     if (ctx.prNumber && typeof ctx.prNumber === 'number') {
       const repo = ctx.repo || 'automaker'; // Fallback to default repo
-      return `https://github.com/chukzzy/${repo}/pull/${ctx.prNumber}`;
+      return `https://github.com/${process.env.GITHUB_REPO_OWNER || 'proto-labs-ai'}/${repo}/pull/${ctx.prNumber}`;
     }
     if (ctx.issueNumber && typeof ctx.issueNumber === 'number') {
       const repo = ctx.repo || 'automaker';
-      return `https://github.com/chukzzy/${repo}/issues/${ctx.issueNumber}`;
+      return `https://github.com/${process.env.GITHUB_REPO_OWNER || 'proto-labs-ai'}/${repo}/issues/${ctx.issueNumber}`;
     }
 
     return null;

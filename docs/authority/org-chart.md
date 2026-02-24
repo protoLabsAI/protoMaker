@@ -13,7 +13,7 @@ The system has three layers:
 ## Organization Chart
 
 ```text
-Josh Mabry (CEO, Human)
+Project Owner (CEO, Human)
 ├── AVA, Opus, Trust=3 — Engineering
 │   ├── Matt, Sonnet, Trust=2
 │   ├── Sam, Sonnet, Trust=2

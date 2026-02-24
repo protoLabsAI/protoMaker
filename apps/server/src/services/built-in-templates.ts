@@ -42,9 +42,9 @@ function resolvePersonaPrompt(
  * Derive allowedUsers from user profile, falling back to current defaults.
  */
 function deriveAllowedUsers(profile?: UserProfile): string[] {
-  const primary = profile?.discord?.username ?? 'chukz';
+  const primary = profile?.discord?.username;
   const additional = profile?.additionalAllowedUsers ?? [];
-  return [primary, ...additional];
+  return primary ? [primary, ...additional] : additional;
 }
 
 export function buildTemplates(
@@ -285,9 +285,7 @@ export function buildTemplates(
       exposure: {
         cli: true,
         discord: true,
-        allowedUsers: allowedUsers.includes('abdelly')
-          ? allowedUsers
-          : [...allowedUsers, 'abdelly'],
+        allowedUsers,
       },
       tags: ['marketing', 'content', 'growth', 'gtm', 'brand'],
       systemPrompt: resolvePersonaPrompt('jon', getJonPrompt(promptConfig), personaOverrides),

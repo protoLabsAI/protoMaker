@@ -7,7 +7,7 @@
 ## Organization Chart
 
 ```text
-Josh Mabry (CEO, Human)
+Project Owner (CEO, Human)
 ├── AVA, Opus, Trust=3 — Engineering
 │   ├── Matt, Sonnet, Trust=2
 │   ├── Sam, Sonnet, Trust=2
@@ -24,23 +24,23 @@ Josh Mabry (CEO, Human)
 
 ## Active Roster
 
-| Agent                                       | Role                | Model  | Trust           | Reports To | Capabilities                  | Exposure     |
-| ------------------------------------------- | ------------------- | ------ | --------------- | ---------- | ----------------------------- | ------------ |
-| **Josh Mabry**                              | CEO & Founder       | —      | 3 (Autonomous)  | —          | All                           | —            |
-| [AVA](#ava)                                 | chief-of-staff      | Opus   | 3 (Autonomous)  | Josh Mabry | Bash, Edit, Commit, PR, Spawn | CLI, Discord |
-| [Matt](#matt)                               | frontend-engineer   | Sonnet | 2 (Conditional) | AVA        | Bash, Edit, Commit, PR        | CLI, Discord |
-| [Sam](#sam)                                 | backend-engineer    | Sonnet | 2 (Conditional) | AVA        | Bash, Edit, Commit, PR        | CLI, Discord |
-| [Frank](#frank)                             | devops-engineer     | Sonnet | 2 (Conditional) | AVA        | Bash, Edit, Commit, PR        | CLI, Discord |
-| [Cindi](#cindi)                             | content-writer      | Sonnet | 2 (Conditional) | AVA        | Edit, Commit, PR              | CLI, Discord |
-| [Backend Engineer](#backend-engineer)       | backend-engineer    | Sonnet | 2 (Conditional) | AVA        | Bash, Edit, Commit, PR        | Internal     |
-| [Product Manager](#product-manager)         | product-manager     | Sonnet | 1 (Assisted)    | AVA        | Read-only                     | Internal     |
-| [Engineering Manager](#engineering-manager) | engineering-manager | Sonnet | 1 (Assisted)    | AVA        | Read-only                     | Internal     |
-| [Linear Specialist](#linear-specialist)     | linear-specialist   | Sonnet | 2 (Conditional) | AVA        | Read-only                     | Internal     |
-| [PR Maintainer](#pr-maintainer)             | pr-maintainer       | Haiku  | 2 (Conditional) | AVA        | Bash, Edit, Commit, PR        | Internal     |
-| [Board Janitor](#board-janitor)             | board-janitor       | Haiku  | 1 (Assisted)    | AVA        | Read-only                     | Internal     |
-| [Jon](#jon)                                 | gtm-specialist      | Sonnet | 1 (Assisted)    | Josh Mabry | Bash, Edit                    | CLI, Discord |
+| Agent                                       | Role                | Model  | Trust           | Reports To    | Capabilities                  | Exposure     |
+| ------------------------------------------- | ------------------- | ------ | --------------- | ------------- | ----------------------------- | ------------ |
+| **Project Owner**                           | CEO & Founder       | —      | 3 (Autonomous)  | —             | All                           | —            |
+| [AVA](#ava)                                 | chief-of-staff      | Opus   | 3 (Autonomous)  | Owner         | Bash, Edit, Commit, PR, Spawn | CLI, Discord |
+| [Matt](#matt)                               | frontend-engineer   | Sonnet | 2 (Conditional) | AVA           | Bash, Edit, Commit, PR        | CLI, Discord |
+| [Sam](#sam)                                 | backend-engineer    | Sonnet | 2 (Conditional) | AVA           | Bash, Edit, Commit, PR        | CLI, Discord |
+| [Frank](#frank)                             | devops-engineer     | Sonnet | 2 (Conditional) | AVA           | Bash, Edit, Commit, PR        | CLI, Discord |
+| [Cindi](#cindi)                             | content-writer      | Sonnet | 2 (Conditional) | AVA           | Edit, Commit, PR              | CLI, Discord |
+| [Backend Engineer](#backend-engineer)       | backend-engineer    | Sonnet | 2 (Conditional) | AVA           | Bash, Edit, Commit, PR        | Internal     |
+| [Product Manager](#product-manager)         | product-manager     | Sonnet | 1 (Assisted)    | AVA           | Read-only                     | Internal     |
+| [Engineering Manager](#engineering-manager) | engineering-manager | Sonnet | 1 (Assisted)    | AVA           | Read-only                     | Internal     |
+| [Linear Specialist](#linear-specialist)     | linear-specialist   | Sonnet | 2 (Conditional) | AVA           | Read-only                     | Internal     |
+| [PR Maintainer](#pr-maintainer)             | pr-maintainer       | Haiku  | 2 (Conditional) | AVA           | Bash, Edit, Commit, PR        | Internal     |
+| [Board Janitor](#board-janitor)             | board-janitor       | Haiku  | 1 (Assisted)    | AVA           | Read-only                     | Internal     |
+| [Jon](#jon)                                 | gtm-specialist      | Sonnet | 1 (Assisted)    | Project Owner | Bash, Edit                    | CLI, Discord |
 
-## Josh Mabry {#josh}
+## Project Owner {#josh}
 
 **Type:** Human
 **Role:** CEO & Founder
@@ -63,7 +63,7 @@ Technical architecture decisions, product vision, hands-on coding. The goal is t
 **Role:** chief-of-staff
 **Model:** Opus
 **Trust Level:** 3 (Autonomous)
-**Reports to:** Josh Mabry
+**Reports to:** Project Owner
 **Exposure:** CLI, Discord
 **Capabilities:** Bash, Edit, Commit, PR, Spawn
 **Tags:** operations, leadership, autonomous
@@ -267,7 +267,7 @@ Maintains board consistency: moves merged-PR features to done, resets stale in-p
 **Role:** gtm-specialist
 **Model:** Sonnet
 **Trust Level:** 1 (Assisted)
-**Reports to:** Josh Mabry
+**Reports to:** Project Owner
 **Exposure:** CLI, Discord
 **Capabilities:** Bash, Edit
 **Tags:** marketing, content, growth, gtm, brand

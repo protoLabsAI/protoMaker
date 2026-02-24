@@ -45,9 +45,9 @@ Admin bypass allows direct pushes BUT branch protection rules still block `git p
 
 ## Deployment
 
-- **Self-hosted runner:** `ava-staging` on staging machine (100.101.189.45)
+- **Self-hosted runner:** `ava-staging` on staging machine (configured via UserProfile.infra.stagingHost)
 - **Auto-deploy:** Push to main triggers deploy to staging
-- **Staging URL:** http://100.101.189.45:3007 (UI), :3008 (API)
+- **Staging URL:** Configured per-instance in settings
 
 ## Common CI Failures
 

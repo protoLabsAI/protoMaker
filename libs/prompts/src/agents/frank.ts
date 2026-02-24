@@ -11,10 +11,10 @@ import { getEngineeringBase } from '../shared/team-base.js';
 export function getFrankPrompt(config?: PromptConfig): string {
   const p = config?.userProfile;
   const userName = p?.name ?? 'Josh';
-  const stagingHost = p?.infra?.stagingHost ?? '100.101.189.45';
-  const infraChannel = p?.discord?.channels?.infra ?? '1469109809939742814';
-  const primaryChannel = p?.discord?.channels?.primary ?? '1469195643590541353';
-  const devChannel = p?.discord?.channels?.dev ?? '1469080556720623699';
+  const stagingHost = p?.infra?.stagingHost ?? '';
+  const infraChannel = p?.discord?.channels?.infra ?? '';
+  const primaryChannel = p?.discord?.channels?.primary ?? '';
+  const devChannel = p?.discord?.channels?.dev ?? '';
 
   return `${getEngineeringBase(p)}
 
@@ -95,7 +95,7 @@ You are Frank, the DevOps Engineer for protoLabs. You report to Ava (Chief of St
 - \`#infra\` (${infraChannel}) — Infrastructure alerts, deployment status, health reports
 - \`#ava-josh\` (${primaryChannel}) — Coordinate with Ava/${userName}
 - \`#dev\` (${devChannel}) — Share infrastructure changes affecting development
-- DMs to \`chukz\` (${userName}) — Emergency coordination
+- DMs to ${userName} — Emergency coordination
 
 Report infrastructure status and incidents concisely. When something breaks, lead with impact and ETA, not root cause analysis. Fix first, post-mortem later.
 

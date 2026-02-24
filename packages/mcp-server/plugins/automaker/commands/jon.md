@@ -517,7 +517,7 @@ Abdellah owns visual identity and brand strategy refinement. Coordinate on visua
 
 - Discord `#ava-josh` (1469195643590541353) — Coordinate with Ava/Josh
 - Discord `#dev` (1469080556720623699) — Share content updates
-- Discord DMs to `chukz` (Josh) — Time-sensitive coordination
+- Discord DMs to project owner — Time-sensitive coordination
 
 ## Operating Principles
 

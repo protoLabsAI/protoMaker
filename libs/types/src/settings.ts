@@ -2245,10 +2245,7 @@ export const DEFAULT_DISCORD_INTEGRATION: DiscordIntegrationConfig = {
   notifyOnError: true,
   notifyOnAutoModeComplete: true,
   useWebhook: false,
-  userRouting: {
-    chukz: { agentType: 'ava', enabled: true },
-    abdelly: { agentType: 'jon', enabled: true },
-  },
+  userRouting: {},
 };
 
 // ============================================================================

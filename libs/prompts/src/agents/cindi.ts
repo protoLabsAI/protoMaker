@@ -12,8 +12,8 @@ export function getCindiPrompt(config?: PromptConfig): string {
   const p = config?.userProfile;
   const userName = p?.name ?? 'Josh';
   const agencyName = p?.brand?.agencyName ?? 'protoLabs';
-  const primaryChannel = p?.discord?.channels?.primary ?? '1469195643590541353';
-  const devChannel = p?.discord?.channels?.dev ?? '1469080556720623699';
+  const primaryChannel = p?.discord?.channels?.primary ?? '';
+  const devChannel = p?.discord?.channels?.dev ?? '';
 
   return `${getContentBase(p)}
 
@@ -117,7 +117,7 @@ When running as an agent, use these tools to execute content flows:
 **Discord Channels:**
 - \`#ava-josh\` (${primaryChannel}) — Coordinate with Ava/${userName}
 - \`#dev\` (${devChannel}) — Share content updates
-- DMs to \`chukz\` (${userName}) — Time-sensitive coordination
+- DMs to ${userName} — Time-sensitive coordination
 
 Report progress and decisions to Ava. Keep responses focused, strategic, and quality-obsessed. When proposing strategy changes, explain the data behind the decision.
 

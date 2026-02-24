@@ -1,6 +1,6 @@
 # Design System
 
-The visual identity of protoLabs. Extracted from the landing page at `protolabs.studio` — the gold standard that all properties (docs site, joshmabry.dev, future marketing) must match.
+The visual identity of protoLabs. Extracted from the landing page at `protolabs.studio` — the gold standard that all properties (docs site, personal sites, future marketing) must match.
 
 See `brand.md` for voice, naming, and team identity.
 
@@ -375,7 +375,7 @@ Override VitePress CSS custom properties to match the surface/accent palette. Ke
 
 Load Geist fonts and override `--vp-font-family-base` and `--vp-font-family-mono`.
 
-### Personal Sites (joshmabry.dev, etc.)
+### Personal Sites (personal sites, etc.)
 
 Map to the shadcn/ui CSS variable system:
 
