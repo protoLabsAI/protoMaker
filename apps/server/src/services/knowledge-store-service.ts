@@ -7,7 +7,7 @@
 
 import * as path from 'node:path';
 import * as fs from 'node:fs';
-import * as BetterSqlite3 from 'better-sqlite3';
+import Database from 'better-sqlite3';
 import { watch, type FSWatcher } from 'node:fs';
 import { createLogger, chunkMarkdownFile } from '@automaker/utils';
 import type { KnowledgeStoreStats } from '@automaker/types';
@@ -21,7 +21,7 @@ const logger = createLogger('KnowledgeStoreService');
  * Manages a SQLite database with FTS5 full-text search for knowledge chunks.
  */
 export class KnowledgeStoreService {
-  private db: BetterSqlite3.Database | null = null;
+  private db: Database.Database | null = null;
   private projectPath: string | null = null;
   private watcher: FSWatcher | null = null;
   private rebuildDebounceTimer: NodeJS.Timeout | null = null;
@@ -51,7 +51,7 @@ export class KnowledgeStoreService {
     logger.info(`Initializing knowledge store at ${dbPath}`);
 
     // Open database with WAL mode for concurrent reads
-    this.db = new BetterSqlite3(dbPath);
+    this.db = new Database(dbPath);
 
     // Enable WAL mode
     this.db.pragma('journal_mode = WAL');
@@ -428,7 +428,7 @@ export class KnowledgeStoreService {
    * Get the database instance (for advanced operations)
    * @internal
    */
-  getDatabase(): BetterSqlite3.Database | null {
+  getDatabase(): Database.Database | null {
     return this.db;
   }
 }
