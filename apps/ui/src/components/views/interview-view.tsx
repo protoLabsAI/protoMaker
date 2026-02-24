@@ -324,7 +324,7 @@ export function InterviewView() {
       const api = getElectronAPI();
       // Use platform-specific path separator
       const pathSep =
-        typeof window !== 'undefined' && (window as any).electronAPI
+        typeof window !== 'undefined' && (window as unknown as Record<string, unknown>).electronAPI
           ? navigator.platform.indexOf('Win') !== -1
             ? '\\'
             : '/'

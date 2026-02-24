@@ -314,13 +314,14 @@ export function useFlowGraphData(
   // Subscribe to agent phase events
   useEffect(() => {
     const api = getHttpApiClient();
-    const unsubscribe = api.subscribeToEvents((type: string, payload: any) => {
-      const featureId = payload?.featureId;
+    const unsubscribe = api.subscribeToEvents((type: string, payload: unknown) => {
+      const p = payload as Record<string, unknown>;
+      const featureId = p?.featureId as string | undefined;
       if (!featureId) return;
 
       if (type === 'pipeline:phase-completed') {
-        const phase = payload?.phase as AgentPhase | undefined;
-        const duration = payload?.duration as number | undefined;
+        const phase = p?.phase as AgentPhase | undefined;
+        const duration = p?.duration as number | undefined;
         if (phase && duration !== undefined) {
           setAgentPhaseData((prev) => {
             const next = new Map(prev);
@@ -336,7 +337,7 @@ export function useFlowGraphData(
           });
         }
       } else if (type === 'pipeline:phase-entered') {
-        const phase = payload?.phase as AgentPhase | undefined;
+        const phase = p?.phase as AgentPhase | undefined;
         if (phase) {
           setAgentPhaseData((prev) => {
             const next = new Map(prev);
@@ -349,9 +350,9 @@ export function useFlowGraphData(
           });
         }
       } else if (type === 'feature:tool-use') {
-        const toolName = payload?.tool as string | undefined;
-        const startedAt = payload?.startedAt as string | undefined;
-        const completed = payload?.completed as boolean | undefined;
+        const toolName = p?.tool as string | undefined;
+        const startedAt = p?.startedAt as string | undefined;
+        const completed = p?.completed as boolean | undefined;
         setAgentPhaseData((prev) => {
           const next = new Map(prev);
           const existing = next.get(featureId) || {};
@@ -365,7 +366,7 @@ export function useFlowGraphData(
           return next;
         });
       } else if (type === 'feature:progress') {
-        const progress = payload?.progress as number | undefined;
+        const progress = p?.progress as number | undefined;
         if (progress !== undefined) {
           setAgentPhaseData((prev) => {
             const next = new Map(prev);

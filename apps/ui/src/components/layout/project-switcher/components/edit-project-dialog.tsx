@@ -25,9 +25,9 @@ interface EditProjectDialogProps {
 export function EditProjectDialog({ project, open, onOpenChange }: EditProjectDialogProps) {
   const { setProjectName, setProjectIcon, setProjectCustomIcon } = useAppStore();
   const [name, setName] = useState(project.name);
-  const [icon, setIcon] = useState<string | null>((project as any).icon || null);
+  const [icon, setIcon] = useState<string | null>(project.icon || null);
   const [customIconPath, setCustomIconPath] = useState<string | null>(
-    (project as any).customIconPath || null
+    project.customIconPath || null
   );
   const [isUploadingIcon, setIsUploadingIcon] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -36,10 +36,10 @@ export function EditProjectDialog({ project, open, onOpenChange }: EditProjectDi
     if (name.trim() !== project.name) {
       setProjectName(project.id, name.trim());
     }
-    if (icon !== (project as any).icon) {
+    if (icon !== (project.icon ?? null)) {
       setProjectIcon(project.id, icon);
     }
-    if (customIconPath !== (project as any).customIconPath) {
+    if (customIconPath !== (project.customIconPath ?? null)) {
       setProjectCustomIcon(project.id, customIconPath);
     }
     onOpenChange(false);

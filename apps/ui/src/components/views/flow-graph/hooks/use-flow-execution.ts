@@ -82,7 +82,7 @@ export function useFlowExecution(featureId?: string, enabled = true) {
 
     // Subscribe to feature:progress events
     const apiClient = getHttpApiClient();
-    const unsubscribe = apiClient.subscribeToEvents((type: EventType, payload: any) => {
+    const unsubscribe = apiClient.subscribeToEvents((type: EventType, payload: unknown) => {
       if (type === 'feature:progress') {
         handleProgressEvent(payload as FeatureProgressEvent);
       }

@@ -53,15 +53,23 @@ export function TaskProgressPanel({
       }
 
       const result = await api.features.get(projectPath, featureId);
-      const feature: any = (result as any).feature;
+      const feature = result.feature as
+        | (Record<string, unknown> & {
+            planSpec?: {
+              tasks?: Array<{ id: string; description: string; filePath?: string; phase?: string }>;
+              currentTaskId?: string;
+              tasksCompleted?: number;
+            };
+          })
+        | undefined;
       if (result.success && feature?.planSpec?.tasks) {
-        const planSpec = feature.planSpec as any;
+        const planSpec = feature.planSpec;
         const planTasks = planSpec.tasks;
         const currentId = planSpec.currentTaskId;
         const completedCount = planSpec.tasksCompleted || 0;
 
         // Convert planSpec tasks to TaskInfo with proper status
-        const initialTasks: TaskInfo[] = planTasks.map((t: any, index: number) => ({
+        const initialTasks: TaskInfo[] = planTasks.map((t, index: number) => ({
           id: t.id,
           description: t.description,
           filePath: t.filePath,

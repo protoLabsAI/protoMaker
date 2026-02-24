@@ -92,13 +92,14 @@ export function FlowGraphView({ onFeatureClick }: FlowGraphViewProps) {
   // Subscribe to content:draft-ready WebSocket events
   useEffect(() => {
     const api = getHttpApiClient();
-    const unsub = api.subscribeToEvents((type: string, payload: any) => {
+    const unsub = api.subscribeToEvents((type: string, payload: unknown) => {
       if (type === 'content:draft-ready') {
+        const p = payload as Record<string, unknown>;
         setContentReviewData({
-          contentId: payload.contentId,
-          title: payload.title,
-          draft: payload.draft,
-          strategy: JSON.stringify(payload.strategy, null, 2),
+          contentId: p.contentId as string,
+          title: p.title as string,
+          draft: p.draft as string,
+          strategy: JSON.stringify(p.strategy, null, 2),
         });
         setContentReviewOpen(true);
       }
@@ -109,13 +110,14 @@ export function FlowGraphView({ onFeatureClick }: FlowGraphViewProps) {
   // Subscribe to ideation:prd-generated WebSocket events (auto-open PRD review)
   useEffect(() => {
     const api = getHttpApiClient();
-    const unsub = api.subscribeToEvents((type: string, payload: any) => {
-      if (type === 'ideation:prd-generated' && payload.prd) {
+    const unsub = api.subscribeToEvents((type: string, payload: unknown) => {
+      const p = payload as Record<string, unknown>;
+      if (type === 'ideation:prd-generated' && p.prd) {
         setPrdReviewData({
-          featureId: payload.featureId,
-          title: payload.title,
-          prd: payload.prd,
-          milestones: payload.milestones,
+          featureId: p.featureId as string,
+          title: p.title as string,
+          prd: p.prd as string,
+          milestones: p.milestones as Array<{ title: string; phases: unknown[] }> | undefined,
         });
         setPrdProjectSlug('');
         setPrdDialogOpen(true);

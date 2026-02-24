@@ -292,10 +292,10 @@ export function PrdReviewDialog({
                   <h4 className="text-xs font-semibold text-violet-400 uppercase tracking-wider">
                     Milestones
                   </h4>
-                  {milestones.map((ms: any, i: number) => (
+                  {milestones.map((ms: { title: string; phases?: unknown[] }, i: number) => (
                     <div key={i} className="text-sm p-2 rounded bg-muted/30">
                       <span className="font-medium">{ms.title}</span>
-                      {ms.phases?.length > 0 && (
+                      {ms.phases && ms.phases.length > 0 && (
                         <span className="text-muted-foreground ml-2">
                           ({ms.phases.length} phase{ms.phases.length !== 1 ? 's' : ''})
                         </span>

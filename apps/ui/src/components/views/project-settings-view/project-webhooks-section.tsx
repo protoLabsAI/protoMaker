@@ -29,7 +29,11 @@ export function ProjectWebhooksSection({ project }: ProjectWebhooksSectionProps)
   // Load webhook settings from project settings
   const [webhookSettings, setWebhookSettings] = useState<WebhookSettings>(() => {
     return (
-      ((project as any).settings?.webhookSettings as WebhookSettings) || {
+      (
+        (project as unknown as Record<string, unknown>).settings as
+          | { webhookSettings?: WebhookSettings }
+          | undefined
+      )?.webhookSettings || {
         webhookEnabled: false,
         webhookSecret: '',
         autoCreateFromIssues: false,

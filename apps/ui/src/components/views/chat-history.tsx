@@ -15,6 +15,7 @@ import {
   ArchiveRestore,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import type { ChatSession } from '@/store/types';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -156,7 +157,7 @@ export function ChatHistory() {
     createChatSession();
   };
 
-  const handleSelectSession = (session: any) => {
+  const handleSelectSession = (session: ChatSession) => {
     setCurrentChatSession(session);
   };
 

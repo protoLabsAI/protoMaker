@@ -43,9 +43,10 @@ export function HITLFormDialog() {
     const api = getHttpApiClient();
     const { addPendingForm, openForm, removePendingForm } = useHITLFormStore.getState();
 
-    const unsubRequested = api.hitlForms.onFormRequested(async (payload: any) => {
+    const unsubRequested = api.hitlForms.onFormRequested(async (payload: unknown) => {
       // Fetch full form data
-      const result = await api.hitlForms.get(payload.formId);
+      const { formId } = payload as { formId: string };
+      const result = await api.hitlForms.get(formId);
       if (result.success && result.form) {
         addPendingForm(result.form);
         // Only auto-open if no form is currently displayed
@@ -56,8 +57,9 @@ export function HITLFormDialog() {
       }
     });
 
-    const unsubResponded = api.hitlForms.onFormResponded((payload: any) => {
-      removePendingForm(payload.formId);
+    const unsubResponded = api.hitlForms.onFormResponded((payload: unknown) => {
+      const { formId } = payload as { formId: string };
+      removePendingForm(formId);
     });
 
     return () => {

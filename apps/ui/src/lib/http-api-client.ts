@@ -33,6 +33,7 @@ import type {
   ActionableItem,
   ActionableItemStatus,
   CreateActionableItemInput,
+  HITLFormRequest,
   RepoResearchResult,
   GapAnalysisReport,
   AlignmentProposal,
@@ -275,9 +276,11 @@ export const handleServerOffline = (): void => {
  * Must be called early in Electron mode before making API requests.
  */
 export const initServerUrl = async (): Promise<void> => {
-  // window.electronAPI is typed as ElectronAPI, but some Electron-only helpers
-  // (like getServerUrl) are not part of the shared interface. Narrow via `any`.
-  const electron = typeof window !== 'undefined' ? (window.electronAPI as any) : null;
+  // window.electronAPI may have Electron-only helpers not in the shared ElectronAPI interface
+  const electron =
+    typeof window !== 'undefined'
+      ? (window.electronAPI as unknown as { getServerUrl?: () => Promise<string> } | undefined)
+      : null;
   if (electron?.getServerUrl) {
     try {
       cachedServerUrl = await electron.getServerUrl();
@@ -301,7 +304,7 @@ const getServerUrl = (): string => {
 
     // In web mode (not Electron), use relative URL to leverage Vite proxy
     // This avoids CORS issues since requests appear same-origin
-    if (!(window as any).electron) {
+    if (!(window as Window & { electron?: unknown }).electron) {
       return '';
     }
   }
@@ -393,7 +396,9 @@ export const isElectronMode = (): boolean => {
   // Prefer a stable runtime marker from preload.
   // In some dev/electron setups, method availability can be temporarily undefined
   // during early startup, but `isElectron` remains reliable.
-  const api = window.electronAPI as any;
+  const api = window.electronAPI as unknown as
+    | { isElectron?: boolean; getApiKey?: () => Promise<string | null> }
+    | undefined;
   return api?.isElectron === true || !!api?.getApiKey;
 };
 
@@ -410,7 +415,9 @@ export const checkExternalServerMode = async (): Promise<boolean> => {
   }
 
   if (typeof window !== 'undefined') {
-    const api = window.electronAPI as any;
+    const api = window.electronAPI as unknown as
+      | { isExternalServerMode?: () => Promise<boolean> }
+      | undefined;
     if (api?.isExternalServerMode) {
       try {
         cachedExternalServerMode = Boolean(await api.isExternalServerMode());
@@ -2089,7 +2096,7 @@ export class HttpApiClient implements ElectronAPI {
       this.post('/api/worktree/generate-commit-message', { worktreePath }),
     push: (worktreePath: string, force?: boolean, remote?: string) =>
       this.post('/api/worktree/push', { worktreePath, force, remote }),
-    createPR: (worktreePath: string, options?: any) =>
+    createPR: (worktreePath: string, options?: Record<string, unknown>) =>
       this.post('/api/worktree/create-pr', { worktreePath, ...options }),
     getDiffs: (projectPath: string, featureId: string) =>
       this.post('/api/worktree/diffs', { projectPath, featureId }),
@@ -2851,7 +2858,7 @@ export class HttpApiClient implements ElectronAPI {
 
   // Notifications API - project-level notifications
   notifications: NotificationsAPI & {
-    onNotificationCreated: (callback: (notification: any) => void) => () => void;
+    onNotificationCreated: (callback: (notification: unknown) => void) => () => void;
   } = {
     list: (projectPath: string) => this.post('/api/notifications/list', { projectPath }),
 
@@ -2864,7 +2871,7 @@ export class HttpApiClient implements ElectronAPI {
     dismiss: (projectPath: string, notificationId?: string) =>
       this.post('/api/notifications/dismiss', { projectPath, notificationId }),
 
-    onNotificationCreated: (callback: (notification: any) => void): (() => void) => {
+    onNotificationCreated: (callback: (notification: unknown) => void): (() => void) => {
       return this.subscribeToEvent('notification:created', callback as EventCallback);
     },
   };
@@ -2884,29 +2891,33 @@ export class HttpApiClient implements ElectronAPI {
       featureId?: string;
       projectPath?: string;
       ttlSeconds?: number;
-    }): Promise<{ success: boolean; form?: any; error?: string }> =>
+    }): Promise<{ success: boolean; form?: HITLFormRequest; error?: string }> =>
       this.post('/api/hitl-forms/create', input),
 
-    get: (formId: string): Promise<{ success: boolean; form?: any; error?: string }> =>
+    get: (formId: string): Promise<{ success: boolean; form?: HITLFormRequest; error?: string }> =>
       this.post('/api/hitl-forms/get', { formId }),
 
-    list: (projectPath?: string): Promise<{ success: boolean; forms?: any[]; error?: string }> =>
+    list: (
+      projectPath?: string
+    ): Promise<{ success: boolean; forms?: HITLFormRequest[]; error?: string }> =>
       this.post('/api/hitl-forms/list', { projectPath }),
 
     submit: (
       formId: string,
       response: Record<string, unknown>[]
-    ): Promise<{ success: boolean; form?: any; error?: string }> =>
+    ): Promise<{ success: boolean; form?: HITLFormRequest; error?: string }> =>
       this.post('/api/hitl-forms/submit', { formId, response }),
 
-    cancel: (formId: string): Promise<{ success: boolean; form?: any; error?: string }> =>
+    cancel: (
+      formId: string
+    ): Promise<{ success: boolean; form?: HITLFormRequest; error?: string }> =>
       this.post('/api/hitl-forms/cancel', { formId }),
 
-    onFormRequested: (callback: (payload: any) => void): (() => void) => {
+    onFormRequested: (callback: (payload: unknown) => void): (() => void) => {
       return this.subscribeToEvent('hitl:form-requested', callback as EventCallback);
     },
 
-    onFormResponded: (callback: (payload: any) => void): (() => void) => {
+    onFormResponded: (callback: (payload: unknown) => void): (() => void) => {
       return this.subscribeToEvent('hitl:form-responded', callback as EventCallback);
     },
   };

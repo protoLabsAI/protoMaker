@@ -6,10 +6,12 @@ const logger = createLogger('CliInstallation');
 
 interface UseCliInstallationOptions {
   cliType: 'claude';
-  installApi: () => Promise<any>;
-  onProgressEvent?: (callback: (progress: any) => void) => (() => void) | undefined;
+  installApi: () => Promise<{ success: boolean; error?: string }>;
+  onProgressEvent?: (
+    callback: (progress: { cli?: string; data?: string; type?: string }) => void
+  ) => (() => void) | undefined;
   onSuccess?: () => void;
-  getStoreState?: () => any;
+  getStoreState?: () => { installed?: boolean } | null;
 }
 
 export function useCliInstallation({
@@ -32,15 +34,13 @@ export function useCliInstallation({
       let unsubscribe: (() => void) | undefined;
 
       if (onProgressEvent) {
-        unsubscribe = onProgressEvent(
-          (progress: { cli?: string; data?: string; type?: string }) => {
-            if (progress.cli === cliType) {
-              setInstallProgress((prev) => ({
-                output: [...prev.output, progress.data || progress.type || ''],
-              }));
-            }
+        unsubscribe = onProgressEvent((progress) => {
+          if (progress.cli === cliType) {
+            setInstallProgress((prev) => ({
+              output: [...prev.output, progress.data || progress.type || ''],
+            }));
           }
-        );
+        });
       }
 
       const result = await installApi();

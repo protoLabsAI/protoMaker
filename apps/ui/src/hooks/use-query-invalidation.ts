@@ -181,7 +181,8 @@ export function useSessionQueryInvalidation(sessionId: string | undefined) {
     if (!sessionId) return;
 
     const api = getElectronAPI();
-    const unsubscribe = api.agent.onStream((event: any) => {
+    const unsubscribe = api.agent.onStream((data: unknown) => {
+      const event = data as Record<string, unknown>;
       // Only handle events for the current session
       if ('sessionId' in event && event.sessionId !== sessionId) return;
 

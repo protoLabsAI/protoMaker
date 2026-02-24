@@ -19,7 +19,7 @@ export interface AuthorityEvent {
 /**
  * Extract human-readable message from authority event
  */
-function formatAuthorityMessage(type: EventType, payload: any): string {
+function formatAuthorityMessage(type: EventType, payload: Record<string, unknown>): string {
   switch (type) {
     case 'authority:pm-review-started':
       return `PM Agent reviewing PRD: ${payload.title || 'Untitled'}`;
@@ -82,7 +82,7 @@ function formatAuthorityMessage(type: EventType, payload: any): string {
     case 'authority:rejected':
       return `Proposal rejected`;
     default:
-      return payload.message || `Authority event: ${type}`;
+      return String(payload.message || `Authority event: ${type}`);
   }
 }
 
@@ -117,14 +117,14 @@ export function useAuthorityEvents(maxEvents: number = 50) {
   const [isConnected, setIsConnected] = useState(false);
 
   const addEvent = useCallback(
-    (type: EventType, payload: any) => {
+    (type: EventType, payload: Record<string, unknown>) => {
       const event: AuthorityEvent = {
         id: `${type}-${Date.now()}-${Math.random()}`,
         type,
         timestamp: Date.now(),
         message: formatAuthorityMessage(type, payload),
-        agent: payload.agent,
-        featureId: payload.featureId,
+        agent: typeof payload.agent === 'string' ? payload.agent : undefined,
+        featureId: typeof payload.featureId === 'string' ? payload.featureId : undefined,
         severity: getEventSeverity(type),
       };
 
@@ -181,17 +181,18 @@ export function useAuthorityEvents(maxEvents: number = 50) {
       'escalation:ui-notification',
     ];
 
-    // Subscribe to each event type
-    const unsubscribers = authorityEventTypes.map((eventType) => {
-      return (api as any).subscribeToEvent(eventType, (payload: any) => {
-        addEvent(eventType, payload);
-      });
+    // Subscribe to all events via the public wildcard API, filtering to authority types
+    const authorityEventSet = new Set<EventType>(authorityEventTypes);
+    const unsubscribe = api.subscribeToEvents((type: EventType, payload: unknown) => {
+      if (authorityEventSet.has(type)) {
+        addEvent(type, (payload ?? {}) as Record<string, unknown>);
+      }
     });
 
-    // Cleanup all subscriptions on unmount
+    // Cleanup subscription on unmount
     return () => {
       setIsConnected(false);
-      unsubscribers.forEach((unsub) => unsub());
+      unsubscribe();
     };
   }, [addEvent]);
 

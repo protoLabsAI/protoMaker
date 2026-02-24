@@ -68,8 +68,9 @@ interface CliSetupConfig {
   buildCliAuthStatus: (previous: CliSetupAuthStatus | null) => CliSetupAuthStatus;
   buildApiKeyAuthStatus: (previous: CliSetupAuthStatus | null) => CliSetupAuthStatus;
   buildClearedAuthStatus: (previous: CliSetupAuthStatus | null) => CliSetupAuthStatus;
-  statusApi: () => Promise<any>;
-  installApi: () => Promise<any>;
+  statusApi: () => Promise<{ success: boolean; [key: string]: unknown }>;
+  installApi: () => Promise<{ success: boolean; error?: string }>;
+
   verifyAuthApi: (
     method: 'cli' | 'api_key',
     apiKey?: string

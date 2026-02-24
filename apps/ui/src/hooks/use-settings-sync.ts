@@ -31,7 +31,6 @@ import {
   migrateCursorModelIds,
   migrateOpencodeModelIds,
   migratePhaseModelEntry,
-  type GlobalSettings,
   type CursorModelId,
 } from '@automaker/types';
 
@@ -360,8 +359,10 @@ export function useSettingsSync(): SettingsSyncState {
       }
 
       logger.info('[SYNC_SEND] Sending settings update to server:', {
-        projects: (updates.projects as any)?.length ?? 0,
-        trashedProjects: (updates.trashedProjects as any)?.length ?? 0,
+        projects: Array.isArray(updates.projects) ? updates.projects.length : 0,
+        trashedProjects: Array.isArray(updates.trashedProjects)
+          ? updates.trashedProjects.length
+          : 0,
       });
 
       const result = await api.settings.updateGlobal(updates);

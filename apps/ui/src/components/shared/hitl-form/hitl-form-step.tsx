@@ -6,6 +6,7 @@
 import { useRef, useCallback } from 'react';
 import type { IChangeEvent } from '@rjsf/core';
 import { Form } from '@rjsf/shadcn';
+import type { RJSFSchema, UiSchema } from '@rjsf/utils';
 import validator from '@rjsf/validator-ajv8';
 import type { HITLFormStep } from '@automaker/types';
 
@@ -25,7 +26,7 @@ export function HITLFormStepRenderer({
   onChange,
   submitRef,
 }: HITLFormStepProps) {
-  const formRef = useRef<any>(null);
+  const formRef = useRef<InstanceType<typeof Form> | null>(null);
 
   const handleSubmit = useCallback(
     (e: IChangeEvent) => {
@@ -54,8 +55,8 @@ export function HITLFormStepRenderer({
       {step.description && <p className="text-sm text-muted-foreground">{step.description}</p>}
       <Form
         ref={formRef}
-        schema={step.schema as any}
-        uiSchema={step.uiSchema as any}
+        schema={step.schema as RJSFSchema}
+        uiSchema={step.uiSchema as UiSchema | undefined}
         formData={formData}
         validator={validator}
         onSubmit={handleSubmit}

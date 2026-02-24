@@ -40,7 +40,7 @@ import type {
 } from '../types';
 import { PipelineMonitor } from './pipeline-monitor';
 import { TimelineVisualization } from './timeline-visualization';
-import type { PipelineState } from '@automaker/types';
+import type { PipelineState, PipelinePhase } from '@automaker/types';
 
 // ============================================
 // Shared helpers
@@ -1151,8 +1151,21 @@ export function AgentSection({ data, onStop, onViewLogs, isStopping }: AgentSect
           {timelineExpanded && (
             <div className="mt-2">
               <TimelineVisualization
-                phaseDurations={pipelineState.phaseDurations as any}
-                toolExecutions={pipelineState.toolExecutions as any}
+                phaseDurations={
+                  pipelineState.phaseDurations as Partial<Record<PipelinePhase, number>> | undefined
+                }
+                toolExecutions={
+                  pipelineState.toolExecutions as
+                    | Array<{
+                        name: string;
+                        icon?: string;
+                        duration?: number;
+                        phase?: PipelinePhase;
+                        timestamp?: string;
+                        success?: boolean;
+                      }>
+                    | undefined
+                }
                 phaseHistory={pipelineState.phaseHistory}
                 phaseSpanIds={pipelineState.phaseSpanIds}
                 traceId={pipelineState.traceId}

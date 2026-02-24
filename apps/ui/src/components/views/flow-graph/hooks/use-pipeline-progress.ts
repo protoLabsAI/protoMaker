@@ -89,11 +89,12 @@ export function usePipelineProgress(): PipelineProgressData {
   // Subscribe to pipeline WebSocket events — upsert by featureId
   useEffect(() => {
     const api = getHttpApiClient();
-    const unsubscribe = api.subscribeToEvents((type: string, payload: any) => {
+    const unsubscribe = api.subscribeToEvents((type: string, payload: unknown) => {
       if (!type.startsWith('pipeline:')) return;
 
-      const phase = payload?.phase as PipelinePhase | undefined;
-      const featureId = payload?.featureId as string | undefined;
+      const p = payload as Record<string, unknown>;
+      const phase = p?.phase as PipelinePhase | undefined;
+      const featureId = p?.featureId as string | undefined;
 
       // Add to recent events with featureId
       if (phase) {
@@ -102,7 +103,7 @@ export function usePipelineProgress(): PipelineProgressData {
             type,
             phase,
             timestamp: new Date().toISOString(),
-            detail: payload?.reason || payload?.action,
+            detail: (p?.reason as string) || (p?.action as string),
             featureId,
           };
           return [event, ...prev].slice(0, MAX_EVENTS);
@@ -110,12 +111,12 @@ export function usePipelineProgress(): PipelineProgressData {
       }
 
       // Upsert pipeline state by featureId
-      if (payload?.pipelineState && featureId) {
+      if (p?.pipelineState && featureId) {
         setPipelineMap((prev) => {
           const next = new Map(prev);
           const existing = prev.get(featureId);
           next.set(featureId, {
-            pipelineState: payload.pipelineState as PipelineState,
+            pipelineState: p.pipelineState as PipelineState,
             featureTitle: existing?.featureTitle || featureId.slice(0, 8),
           });
           return next;

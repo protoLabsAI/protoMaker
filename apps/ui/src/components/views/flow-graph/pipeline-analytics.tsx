@@ -81,7 +81,7 @@ function PipelineAnalyticsComponent() {
         avgDurationMinutes: 0,
         gateHoldRate: 0,
         phaseBreakdown: [],
-        ...((result as any)?.analytics ?? {}),
+        ...(((result as Record<string, unknown>)?.analytics as Record<string, unknown>) ?? {}),
       };
     },
     enabled: !!projectPath,

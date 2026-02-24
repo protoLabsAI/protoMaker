@@ -5,6 +5,7 @@ import { Brain, AlertTriangle } from 'lucide-react';
 import { AnthropicIcon, CursorIcon, OpenAIIcon } from '@/components/shared/provider-icon';
 import { cn } from '@/lib/utils';
 import { useAIModelsStore } from '@/store/ai-models-store';
+import type { CursorModelId } from '@automaker/types';
 import { useSetupStore } from '@/store/setup-store';
 import { getModelProvider } from '@automaker/types';
 import type { ModelProvider } from '@automaker/types';
@@ -75,8 +76,8 @@ export function ModelSelector({
     // Check both the full ID (for GPT models) and the unprefixed version (for non-GPT models)
     const unprefixedId = model.id.startsWith('cursor-') ? model.id.slice(7) : model.id;
     return (
-      enabledCursorModels.includes(model.id as any) ||
-      enabledCursorModels.includes(unprefixedId as any)
+      enabledCursorModels.includes(model.id as CursorModelId) ||
+      enabledCursorModels.includes(unprefixedId as CursorModelId)
     );
   });
 

@@ -49,7 +49,7 @@ interface UseEventFeedResult {
 /**
  * Generate a human-readable description for an event
  */
-function getEventDescription(type: EventType, payload: any): string {
+function getEventDescription(type: EventType, payload: Record<string, unknown>): string {
   switch (type) {
     case 'feature:started':
       return payload?.featureTitle ? `Feature started: ${payload.featureTitle}` : 'Feature started';
@@ -78,13 +78,13 @@ function getEventDescription(type: EventType, payload: any): string {
         ? `Changes committed: ${payload.featureTitle}`
         : 'Changes committed';
     case 'health:issue-detected':
-      return payload?.message || 'Health issue detected';
+      return String(payload?.message || 'Health issue detected');
     case 'health:issue-remediated':
-      return payload?.message || 'Health issue remediated';
+      return String(payload?.message || 'Health issue remediated');
     case 'milestone:completed':
-      return payload?.milestone || 'Milestone completed';
+      return String(payload?.milestone || 'Milestone completed');
     case 'project:completed':
-      return payload?.project || 'Project completed';
+      return String(payload?.project || 'Project completed');
     default:
       return type.replace(/:/g, ' ').replace(/-/g, ' ');
   }
@@ -134,7 +134,7 @@ export function useEventFeed({
   const eventIdCounter = useRef(0);
 
   const addEvent = useCallback(
-    (type: EventType, payload: any) => {
+    (type: EventType, payload: Record<string, unknown>) => {
       // Only process events we care about
       if (!FEED_EVENT_TYPES.includes(type)) {
         return;
@@ -176,7 +176,7 @@ export function useEventFeed({
     try {
       // Subscribe to all events via WebSocket
       const unsubscribe = api.subscribeToEvents((type: EventType, payload: unknown) => {
-        addEvent(type, payload);
+        addEvent(type, (payload ?? {}) as Record<string, unknown>);
       });
 
       setIsConnected(true);

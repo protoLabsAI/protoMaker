@@ -9,6 +9,8 @@ import {
   rectIntersection,
   pointerWithin,
   type PointerEvent as DndPointerEvent,
+  type CollisionDetection,
+  type Collision,
 } from '@dnd-kit/core';
 
 // Custom pointer sensor that ignores drag events from within dialogs
@@ -67,7 +69,7 @@ import { CreateBranchDialog } from './board-view/dialogs/create-branch-dialog';
 import { PRDReviewModal } from './prd-review-modal';
 import { WorktreePanel } from './board-view/worktree-panel';
 import type { PRInfo, WorktreeInfo, MergeConflictInfo } from './board-view/worktree-panel/types';
-import { COLUMNS, getColumnsWithPipeline } from './board-view/constants';
+import { COLUMNS, getColumnsWithPipeline, type ColumnId } from './board-view/constants';
 import {
   useBoardFeatures,
   useBoardDragDrop,
@@ -331,15 +333,16 @@ export function BoardView() {
 
     const unsubscribers = [
       // PRD generated - show notification with action to review
-      api['subscribeToEvent']('ideation:prd-generated', (payload: any) => {
-        if (payload.projectPath !== currentProject.path) return;
+      api['subscribeToEvent']('ideation:prd-generated', (payload: unknown) => {
+        const p = payload as Record<string, unknown>;
+        if (p.projectPath !== currentProject.path) return;
 
-        toast.success(`PRD ready for review: ${payload.title || 'Untitled'}`, {
+        toast.success(`PRD ready for review: ${(p.title as string) || 'Untitled'}`, {
           action: {
             label: 'Review',
             onClick: () => {
               // Find the feature and open PRD modal
-              const feature = hookFeatures.find((f) => f.id === payload.featureId);
+              const feature = hookFeatures.find((f) => f.id === p.featureId);
               if (feature) {
                 setPrdFeature(feature);
                 setPrdModalOpen(true);
@@ -354,15 +357,17 @@ export function BoardView() {
       }),
 
       // PRD approved - show success notification
-      api['subscribeToEvent']('ideation:prd-approved', (payload: any) => {
-        if (payload.projectPath !== currentProject.path) return;
+      api['subscribeToEvent']('ideation:prd-approved', (payload: unknown) => {
+        const p = payload as Record<string, unknown>;
+        if (p.projectPath !== currentProject.path) return;
         toast.success('PRD approved - breaking down into epics...');
         loadFeatures();
       }),
 
       // PRD rejected - show info notification
-      api['subscribeToEvent']('ideation:prd-rejected', (payload: any) => {
-        if (payload.projectPath !== currentProject.path) return;
+      api['subscribeToEvent']('ideation:prd-rejected', (payload: unknown) => {
+        const p = payload as Record<string, unknown>;
+        if (p.projectPath !== currentProject.path) return;
         toast.info('PRD rejected');
         loadFeatures();
       }),
@@ -439,12 +444,12 @@ export function BoardView() {
   }, [currentProject, worktreeRefreshKey]);
 
   // Custom collision detection that prioritizes specific drop targets (cards, worktrees) over columns
-  const collisionDetectionStrategy = useCallback((args: any) => {
+  const collisionDetectionStrategy: CollisionDetection = useCallback((args) => {
     const pointerCollisions = pointerWithin(args);
 
     // Priority 1: Specific drop targets (cards for dependency links, worktrees)
     // These need to be detected even if they are inside a column
-    const specificTargetCollisions = pointerCollisions.filter((collision: any) => {
+    const specificTargetCollisions = pointerCollisions.filter((collision: Collision) => {
       const id = String(collision.id);
       return id.startsWith('card-drop-') || id.startsWith('worktree-drop-');
     });
@@ -454,7 +459,7 @@ export function BoardView() {
     }
 
     // Priority 2: Columns
-    const columnCollisions = pointerCollisions.filter((collision: any) =>
+    const columnCollisions = pointerCollisions.filter((collision: Collision) =>
       COLUMNS.some((col) => col.id === collision.id)
     );
 
@@ -1179,7 +1184,7 @@ export function BoardView() {
     const columns = getColumnsWithPipeline(pipelineConfig);
     const map: Record<string, typeof hookFeatures> = {};
     for (const column of columns) {
-      map[column.id] = getColumnFeatures(column.id as any);
+      map[column.id] = getColumnFeatures(column.id as ColumnId);
     }
     return map;
   }, [pipelineConfig, getColumnFeatures]);

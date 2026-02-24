@@ -48,7 +48,14 @@ export function AgentOutputModal({
   const isBacklogPlan = featureId.startsWith('backlog-plan:');
 
   // Resolve project path - prefer prop, fallback to window.__currentProject
-  const resolvedProjectPath = projectPathProp || (window as any).__currentProject?.path || '';
+  const resolvedProjectPath =
+    projectPathProp ||
+    (
+      (window as unknown as Record<string, unknown>).__currentProject as
+        | { path?: string }
+        | undefined
+    )?.path ||
+    '';
 
   // Track additional content from WebSocket events (appended to query data)
   const [streamedContent, setStreamedContent] = useState<string>('');
@@ -260,22 +267,23 @@ export function AgentOutputModal({
     const api = getElectronAPI();
     if (!api?.backlogPlan) return;
 
-    const unsubscribe = api.backlogPlan.onEvent((event: any) => {
-      if (!event?.type) return;
+    const unsubscribe = api.backlogPlan.onEvent((event: unknown) => {
+      const e = event as Record<string, unknown> | null;
+      if (!e?.type) return;
 
       let newContent = '';
-      switch (event.type) {
+      switch (e.type) {
         case 'backlog_plan_progress':
-          newContent = `\n🧭 ${event.content || 'Backlog plan progress update'}\n`;
+          newContent = `\n🧭 ${(e.content as string) || 'Backlog plan progress update'}\n`;
           break;
         case 'backlog_plan_error':
-          newContent = `\n❌ Backlog plan error: ${event.error || 'Unknown error'}\n`;
+          newContent = `\n❌ Backlog plan error: ${(e.error as string) || 'Unknown error'}\n`;
           break;
         case 'backlog_plan_complete':
           newContent = `\n✅ Backlog plan completed\n`;
           break;
         default:
-          newContent = `\nℹ️ ${event.type}\n`;
+          newContent = `\nℹ️ ${e.type}\n`;
           break;
       }
 

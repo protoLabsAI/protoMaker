@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { createLogger } from '@automaker/utils/logger';
 import { useQueryClient } from '@tanstack/react-query';
-import { useAppStore, FileTreeNode, ProjectAnalysis } from '@/store/app-store';
+import { useAppStore, FileTreeNode, ProjectAnalysis, type Feature } from '@/store/app-store';
 import { getElectronAPI } from '@/lib/electron';
 import { queryKeys } from '@/lib/query-keys';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@protolabs/ui/atoms';
@@ -647,7 +647,7 @@ ${Object.entries(projectAnalysis.filesByExtension)
           status: 'backlog',
           // Initialize with empty steps so the object satisfies the Feature type
           steps: [],
-        } as any);
+        } as unknown as Feature);
       }
 
       // Invalidate React Query cache to sync UI

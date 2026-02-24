@@ -688,7 +688,8 @@ export interface ElectronAPI {
   };
   // Setup API surface is implemented by the main process and mirrored by HttpApiClient.
   // Keep this intentionally loose to avoid tight coupling between front-end and server types.
-  setup: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Intentionally loose: setup surface varies between Electron/HTTP transports
+  setup: Record<string, (...args: any[]) => any>;
   // SetupLab pipeline (repo research, gap analysis, report generation, alignment proposals)
   setupLab: {
     research: (projectPath: string) => Promise<{
@@ -957,7 +958,7 @@ export const isElectron = (): boolean => {
     return false;
   }
 
-  const w = window as any;
+  const w = window as Window & { isElectron?: boolean; electronAPI?: { isElectron?: boolean } };
 
   if (w.isElectron === true) {
     return true;
@@ -1037,7 +1038,7 @@ export const getCurrentApiMode = (): 'http' => {
 
 // Debug helpers
 if (typeof window !== 'undefined') {
-  (window as any).__checkApiMode = () => {
+  (window as Window & { __checkApiMode?: () => void }).__checkApiMode = () => {
     console.log('Current API mode:', getCurrentApiMode());
     console.log('isElectron():', isElectron());
   };

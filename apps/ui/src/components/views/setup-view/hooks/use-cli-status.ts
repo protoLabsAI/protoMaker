@@ -1,11 +1,35 @@
 import { useState, useCallback } from 'react';
 import { createLogger } from '@automaker/utils/logger';
 
+interface CliStatusResult {
+  success: boolean;
+  installed?: boolean;
+  status?: string;
+  path?: string | null;
+  version?: string | null;
+  method?: string;
+  auth?: {
+    authenticated: boolean;
+    method?: string;
+    hasStoredOAuthToken?: boolean;
+    hasEnvOAuthToken?: boolean;
+    hasStoredApiKey?: boolean;
+    hasEnvApiKey?: boolean;
+    hasAuthFile?: boolean;
+    hasApiKey?: boolean;
+  };
+}
+
 interface UseCliStatusOptions {
   cliType: 'claude' | 'codex';
-  statusApi: () => Promise<any>;
-  setCliStatus: (status: any) => void;
-  setAuthStatus: (status: any) => void;
+  statusApi: () => Promise<CliStatusResult>;
+  setCliStatus: (status: {
+    installed: boolean;
+    path: string | null;
+    version: string | null;
+    method: string;
+  }) => void;
+  setAuthStatus: (status: Record<string, unknown>) => void;
 }
 
 const VALID_AUTH_METHODS = {

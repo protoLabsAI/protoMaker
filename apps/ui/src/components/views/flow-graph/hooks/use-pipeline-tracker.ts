@@ -159,16 +159,17 @@ export function usePipelineTracker(props?: UsePipelineTrackerProps): UsePipeline
   }, [initialState]);
 
   // Track work items based on incoming events
-  const handleEvent = useCallback((type: EventType, payload: any) => {
+  const handleEvent = useCallback((type: EventType, payload: unknown) => {
     const stageId = EVENT_STAGE_MAP[type];
     if (!stageId) return;
 
     // Extract featureId from payload
-    const featureId = payload?.featureId;
+    const p = payload as Record<string, unknown> | null;
+    const featureId = p?.featureId as string | undefined;
     if (!featureId) return;
 
     const itemId = featureId;
-    const title = payload?.featureTitle || payload?.title || featureId;
+    const title = (p?.featureTitle as string) || (p?.title as string) || featureId;
 
     logger.debug('Tracking work item:', { itemId, title, stageId, type });
 

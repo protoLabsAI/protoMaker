@@ -111,22 +111,27 @@ function ActivityTicker({ projectPath }: ActivityTickerProps) {
         ) : (
           <ScrollArea className="h-[200px]">
             <div className="space-y-2">
-              {events.map((event: any, i: number) => (
-                <div
-                  key={i}
-                  className="flex items-start gap-2 p-2 rounded-md hover:bg-muted/50 transition-colors"
-                >
-                  <div className="w-1.5 h-1.5 rounded-full bg-status-info mt-2 shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-foreground leading-tight">
-                      {event.description || event.message || 'Activity event'}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {formatTimestamp(event.timestamp)}
-                    </p>
+              {events.map(
+                (
+                  event: { description?: string; message?: string; timestamp: string | Date },
+                  i: number
+                ) => (
+                  <div
+                    key={i}
+                    className="flex items-start gap-2 p-2 rounded-md hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="w-1.5 h-1.5 rounded-full bg-status-info mt-2 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-foreground leading-tight">
+                        {event.description || event.message || 'Activity event'}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {formatTimestamp(event.timestamp)}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              )}
             </div>
           </ScrollArea>
         )}
@@ -175,34 +180,44 @@ function AgentSessionCard() {
         ) : (
           <ScrollArea className="h-[200px]">
             <div className="space-y-3">
-              {agents.map((agent: any) => (
-                <div
-                  key={agent.id}
-                  className="p-3 rounded-lg border border-border/50 bg-muted/20 space-y-2"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Bot className="h-3.5 w-3.5 text-primary" />
-                      <span className="text-sm font-medium text-foreground">
-                        {agent.featureId || agent.sessionId}
+              {agents.map(
+                (agent: {
+                  id: string;
+                  featureId?: string;
+                  sessionId?: string;
+                  model?: string;
+                  currentTask?: string;
+                  status?: string;
+                  duration?: number;
+                }) => (
+                  <div
+                    key={agent.id}
+                    className="p-3 rounded-lg border border-border/50 bg-muted/20 space-y-2"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Bot className="h-3.5 w-3.5 text-primary" />
+                        <span className="text-sm font-medium text-foreground">
+                          {agent.featureId || agent.sessionId}
+                        </span>
+                      </div>
+                      <span
+                        className="text-xs px-2 py-0.5 rounded-full bg-primary/10
+                                   text-primary font-medium"
+                      >
+                        {agent.model || 'sonnet'}
                       </span>
                     </div>
-                    <span
-                      className="text-xs px-2 py-0.5 rounded-full bg-primary/10
-                                   text-primary font-medium"
-                    >
-                      {agent.model || 'sonnet'}
-                    </span>
+                    <p className="text-xs text-muted-foreground line-clamp-2">
+                      {agent.currentTask || agent.status || 'Running...'}
+                    </p>
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Clock className="h-3 w-3" />
+                      <span>{formatDuration(agent.duration || 0)}</span>
+                    </div>
                   </div>
-                  <p className="text-xs text-muted-foreground line-clamp-2">
-                    {agent.currentTask || agent.status || 'Running...'}
-                  </p>
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <Clock className="h-3 w-3" />
-                    <span>{formatDuration(agent.duration || 0)}</span>
-                  </div>
-                </div>
-              ))}
+                )
+              )}
             </div>
           </ScrollArea>
         )}

@@ -83,7 +83,9 @@ export function getStoredTheme(): ThemeMode | null {
     const legacy = getItem('automaker-storage');
     if (!legacy) return null;
     const parsed = JSON.parse(legacy) as { state?: { theme?: unknown } } | { theme?: unknown };
-    const theme = (parsed as any)?.state?.theme ?? (parsed as any)?.theme;
+    const theme =
+      (parsed as { state?: { theme?: unknown } })?.state?.theme ??
+      (parsed as { theme?: unknown })?.theme;
     if (typeof theme === 'string' && theme.length > 0) {
       return theme as ThemeMode;
     }
