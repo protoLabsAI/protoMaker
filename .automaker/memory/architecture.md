@@ -5,9 +5,9 @@ relevantTo: [architecture]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 23
-  referenced: 13
-  successfulFeatures: 13
+  loaded: 26
+  referenced: 17
+  successfulFeatures: 17
 ---
 # architecture
 
@@ -2397,102 +2397,111 @@ usageStats:
 - **Why this works:** Consistent naming enables shell scripts and config loaders to auto-discover vars by prefix (e.g., grep -E '^LANGFUSE_' to find all Langfuse vars). Commented-out defaults in .env.example prevent accidental activation while documenting required vs optional. Inline defaults in CLAUDE.md serve as quick reference for developers.
 - **Trade-offs:** Easier: Config tooling can auto-discover and organize by prefix. Harder: env var names are longer; requires discipline across teams to maintain prefix naming
 
-#### [Gotcha] Barrel export pattern: must import from @automaker/utils, not @automaker/utils/logger (2026-02-23)
-- **Situation:** Three separate files required the same correction from @automaker/utils/logger to @automaker/utils for createLogger import
-- **Root cause:** Project uses barrel exports to centralize utility exports and allow internal module reorganization without breaking downstream code
-- **How to avoid:** Indirection abstracts internal structure but requires developers to know barrel export convention; enables painless internal reorganization
+### Multi-tier fallback strategy that assumes commits should be pushed when detection methods fail, rather than failing safely with null (2026-02-23)
+- **Context:** Fresh branches (never pushed to origin) fail git rev-list comparison because remote tracking branch doesn't exist. Original code caught exceptions and silently returned null, breaking the entire workflow.
+- **Why:** Errs on the side of action (false positive: might push unnecessarily) rather than silent failure (false negative: silently skips commits). Silent failures break autonomous agent workflows completely; unnecessary pushes are recoverable.
+- **Rejected:** Fail-safe approach (return null when uncertain) - this was the original behavior causing the bug. Safer in isolation but catastrophic when commits are lost silently.
+- **Trade-offs:** Trade certainty for robustness. Code complexity increases but robustness against distributed git state inconsistency improves. Risk of false positives (pushing when shouldn't) but prevents false negatives (silently skipping).
+- **Breaking if changed:** If callers depend on null strictly meaning 'no commits exist', this breaks that invariant. Now null only means 'truly no commits' - uncertain cases return hash with warn logs.
 
-#### [Pattern] Empty interface placeholder with @typescript-eslint/no-empty-object-type eslint-disable and future TODO comment for phase-based implementation (2026-02-23)
-- **Problem solved:** GetPairRequest interface is empty with disable comment and 'Future: Add filtering/sampling parameters' - active sampling algorithm not yet implemented
-- **Why this works:** Maintains type-safe API contracts while explicitly signaling incomplete implementation. Enables incremental development without API breaking changes when active sampling is added later
-- **Trade-offs:** Less strict TypeScript validation initially but clear forward contract; eslint-disable is explicit intent marker; prevents premature API expansion
+#### [Pattern] Cascading detection strategies with decreasing certainty: remote branch compare → total commit count → HEAD existence check → last resort log inspection (2026-02-23)
+- **Problem solved:** Cannot rely on any single git operation succeeding in uncertain distributed state. Each fallback has different preconditions and reliability.
+- **Why this works:** Matches the actual state of git repositories: distributed, potentially incomplete, with missing refs. Each strategy trades certainty for availability.
+- **Trade-offs:** Increased complexity and multiple git invocations vs. guaranteed detection even with missing refs. Lines of code increase but success rate increases for edge cases.
 
-#### [Gotcha] When adding new optional properties to a Required<T> type, all resolution/configuration methods must explicitly include the new properties in their return objects. TypeScript won't warn about missing properties in object literals, allowing silent configuration failures. (2026-02-23)
-- **Situation:** Added salvageOnAbort and salvageOnAbortTypes to GitWorkflowSettings. Both DEFAULT_GIT_WORKFLOW_SETTINGS and resolveGitWorkflowSettings() needed updates or salvage options would be undefined at runtime despite type-checking.
-- **Root cause:** Type inference doesn't enforce completeness in object literals when used with Required<T>. Missing properties don't cause compile errors, only runtime behavior changes.
-- **How to avoid:** More boilerplate in resolution methods but prevents silent feature failures. Could use mapped types or const assertions to enforce completeness, but current approach is more explicit.
+### Use logging level semantics (info→warn, add debug) to signal decision confidence rather than adding error handling for uncertain outcomes (2026-02-23)
+- **Context:** Code encounters uncertain situations (origin/main missing, git command failures) but must continue. Can't throw errors without breaking workflow.
+- **Why:** Logging levels communicate severity to operators without exceptions. Warn level signals 'unexpected but handled' better than silent info logs that hide unusual behavior.
+- **Rejected:** Silently handling with info-level logs (original behavior) - makes root causes invisible. Throwing errors would break autonomous workflows.
+- **Trade-offs:** Increased log verbosity but makes problems discoverable in production. Operators can now see when fallback logic triggers.
+- **Breaking if changed:** If monitoring treats warn logs differently than info (alerts, metrics), this changes operational behavior. Intentional - makes silent failures visible.
 
-#### [Pattern] Preserve error context outside try/catch scope by declaring variables in outer scope (workDir, errorInfo) to avoid type narrowing issues when accessing error details in finally blocks. Finally blocks can't access catch error directly without careful scope management. (2026-02-23)
-- **Problem solved:** executeFeature() needed to pass error type information to salvageUncommittedWork() in the finally block. Direct catch-block error references aren't accessible in finally without narrowing.
-- **Why this works:** TypeScript's control flow analysis restricts error access to catch blocks. Variables declared at function scope remain accessible in finally and avoid type guards.
-- **Trade-offs:** Slightly more verbose variable declarations but ensures type safety and preserves error context. Alternative of nested try would be less clean.
+#### [Gotcha] Service initialization order is an implicit dependency: FeatureLoader must be created BEFORE AgentService if tool tracking is needed. No compile error if you get this wrong—tool tracking just silently fails. (2026-02-23)
+- **Situation:** Modified apps/server/src/index.ts to reorder service creation, creating FeatureLoader before AgentService
+- **Root cause:** AgentService.processCompletedTools() calls featureLoader.update() at runtime. If featureLoader is undefined, the no-op graceful degradation kicks in and tracking stops working without error.
+- **How to avoid:** Loose coupling (optional dependency) makes services reusable but creates a silent failure mode if dependency injection wiring is incorrect
 
-#### [Gotcha] Git worktrees share the .git directory but have separate working directories, causing npm workspace package links to point to the main branch's node_modules instead of the feature branch's dist files. Build caches can make this hard to detect. (2026-02-23)
-- **Situation:** Feature branch code compiled correctly in isolation but failed in full monorepo build because type definitions linked to main branch version, not feature branch.
-- **Root cause:** Worktree efficiency relies on shared git metadata, but build tooling doesn't understand this shared state and resolves workspace links from the wrong reference point.
-- **How to avoid:** Worktrees are lightweight and efficient for context switching, but require understanding of their build quirks. Full clone would avoid this but adds disk/time overhead.
+#### [Pattern] Graceful degradation via optional feature context: AgentService.sendMessage() accepts optional featureContext parameter. When present, tool tracking activates. When absent, service operates in context-free mode with tool tracking as a silent no-op. (2026-02-23)
+- **Problem solved:** Agent service needs to work both in feature-aware contexts (with tool tracking) and generic contexts (without persistence)
+- **Why this works:** Allows single service to support multiple usage patterns: (1) feature-driven pipeline with data capture, (2) standalone agent invocations without feature context
+- **Trade-offs:** Enables code reuse but means tool tracking failures are silent. Missing featureContext doesn't error; it just skips tracking. Callers must know to pass the parameter to get the feature.
 
-#### [Pattern] Use best-effort error handling in finally blocks for recovery operations (don't rethrow salvage errors). Log failures as warnings but preserve the original abort signal. Catching and suppressing exceptions prevents masking why the agent actually failed. (2026-02-23)
-- **Problem solved:** Salvage workflow runs in finally block during error state. If salvage itself throws, the original abort reason gets lost.
-- **Why this works:** Users need to know they were aborted (original error), not that salvage recovery failed. Salvage is best-effort; its failures shouldn't become the primary error signal.
-- **Trade-offs:** Salvage failures are logged but invisible to user error handling. Cleaner error messaging but requires robust logging for debugging. Could emit events instead for visibility.
+### Optional type fields (phaseDurations?, toolExecutions?) added to PipelineState for backward compatibility. Existing features in production won't have these fields after deployment. (2026-02-23)
+- **Context:** New observability fields added to existing PipelineState type used by all features
+- **Why:** Ensures old feature.json files on disk don't fail validation when server reads them. Features created before this code deployed will lack these fields forever, even after server restart.
+- **Rejected:** Alternative: make fields required with empty defaults—rejected because it would require migration of all existing feature.json files in production
+- **Trade-offs:** Backward compatibility achieved but creates an evolutionary schema: code must always check `if (feature.pipelineState.phaseDurations)` before using. New features will have the fields; old ones won't. No way to distinguish the two cases from data alone.
+- **Breaking if changed:** If fields are changed to required without providing defaults or migration logic, old features will fail to load with type validation errors
 
-### Make salvage workflow triggering configurable per-error-type via salvageOnAbortTypes array instead of simple boolean. Different error types have different recovery semantics and user expectations. (2026-02-23)
-- **Context:** Agent abort can happen for multiple reasons: agent cancellation, max_turns limit, detected infinite loop, etc. Not all warrant automatic salvage.
-- **Why:** max_turns aborts are often expected behavior (user's configured limit). Detected loops might indicate broken code worth discarding. Cancellations are unexpected and warrant salvage. Fine-grained control matches user intent better.
-- **Rejected:** Simple salvageOnAbort: boolean (too coarse; saves work for max_turns which is expected); always salvage (wastes resources on clearly broken code); never salvage (loses work from unexpected cancellations)
-- **Trade-offs:** More complex configuration but prevents unwanted salvages that consume resources or save bad code. Array approach is simpler than nested object config.
-- **Breaking if changed:** If salvageOnAbortTypes array doesn't include the actual error type, salvage won't trigger even if salvageOnAbort is true
+#### [Gotcha] Pre-existing p-limit TypeScript declaration generation error in libs/platform/src/secure-fs.ts was encountered during build but not fixed. Build still passes, but the issue remains. (2026-02-23)
+- **Situation:** During feature implementation, encountered unrelated pre-existing build issue. Decided it was out of scope and left it unfixed.
+- **Root cause:** Feature scope boundary decision: fixing platform-level build issues is separate from observability feature work. Minimal risk since build succeeds despite the error.
+- **How to avoid:** Kept scope tight for this feature, but technical debt accumulates. Future changes to platform code might trigger the same error.
 
-### Salvaged PRs are never auto-merged; they require manual review. Incomplete work from aborted agents shouldn't be merged automatically regardless of CI status. (2026-02-23)
-- **Context:** Agent was interrupted mid-feature. Salvaged work is preserved but potentially incomplete or in broken state.
-- **Why:** Auto-merge implies feature is complete and safe. Work interrupted by abort is by definition incomplete. Requiring manual review creates a safety gate and signals to team that work is partial.
-- **Rejected:** Creating commits only without PR (loses visibility, work might be forgotten); auto-merging with CI (completes unsafe incomplete work)
-- **Trade-offs:** Requires additional team action (PR review + merge) but prevents incomplete code from reaching main. Preserves code history and visibility.
-- **Breaking if changed:** If salvaged work auto-merges, incomplete/broken features leak into production. Requires explicit decision to merge incomplete work.
+#### [Pattern] Real-time observability via WebSocket events: feature:tool-use events emitted alongside persistent data writes. Clients can consume tool execution data in real-time without polling feature.json. (2026-02-23)
+- **Problem solved:** Tool execution tracking needs to support both persistent record-keeping AND real-time dashboard updates
+- **Why this works:** Dual consumption patterns: (1) historical analysis uses persisted data from feature.json, (2) live dashboards need real-time events. Event emission enables reactive UI updates without polling.
+- **Trade-offs:** Dual-path (persistence + events) provides both durability and responsiveness, but requires two code paths to keep in sync. If event emission fails, persistence still works as fallback.
 
-#### [Pattern] Maintain dual API surface during refactoring: keep original constant export unchanged while introducing parameterized function, allowing existing code to remain unmodified (2026-02-23)
-- **Problem solved:** Converting BRAND_IDENTITY from constant to parameterized getBrandIdentity(profile) function while maintaining backward compatibility
-- **Why this works:** Allows incremental migration - existing code importing BRAND_IDENTITY works unchanged, new code can use getBrandIdentity(profile). Avoids coordinating breaking changes across entire codebase
-- **Trade-offs:** Both exports must be maintained and kept in sync. Requires documentation/deprecation markers. But enables zero-friction adoption for new functionality
+#### [Pattern] Phase tracking data maintained in separate Map<featureId, PhaseData> structure merged at render time, not extended into AgentNodeData object (2026-02-23)
+- **Problem solved:** Phase timeline required adding fields (currentPhase, phaseDurations, activeTool, progressPct). Could add directly to node data or keep separate.
+- **Why this works:** Decouples state updates: phase events via WebSocket update only the phase map; node structure remains stable for React Flow layout engine. Prevents unnecessary graph recalculations on every phase tick. Simplifies cleanup when feature completes (remove one map entry vs deep object mutation).
+- **Trade-offs:** Adds one more data structure to manage; requires merge logic at render time. Gain: phase updates don't trigger node position/size recalculations. Loss: slightly more code complexity for conditional render logic.
 
-#### [Gotcha] Interface definitions kept inline in implementation file (team-base.ts) rather than centralized in @automaker/types, creating cognitive burden of discovering types exist before recognizing function signature requirements (2026-02-23)
-- **Situation:** UserProfile and BrandConfig types defined in team-base.ts but also exported from index.ts; external consumers must know types exist to properly use getBrandIdentity()
-- **Root cause:** Scope decision to keep feature self-contained. Avoids adding types to central types package for a single-feature use case. Reduces cross-package dependencies
-- **How to avoid:** Self-contained feature vs discoverable API contracts. Easier to delete feature if types are co-located, harder for consumers to find correct type imports
+#### [Pattern] Use index signatures (`[key: string]: unknown`) on data types to enable runtime property extension without modifying the base type definition. (2026-02-23)
+- **Problem solved:** AgentNodeData extends with pipelineState at runtime in the node-detail-sections component. pipelineState was not defined in the original type but accessed via destructuring.
+- **Why this works:** Allows UI components to work with dynamically-added data from different agent implementations without creating union types or modifying core type definitions. Reduces coupling between agent runtime behavior and UI layer.
+- **Trade-offs:** Gains: loose coupling, zero migration cost when backend adds properties. Loses: type safety for extended properties—no IDE autocomplete or compile-time checking for `pipelineState` access. Must document the runtime schema or risk TypeScript `as any` casts.
 
-#### [Gotcha] Worktree environments with shared monorepo node_modules cause TypeScript resolution to stale dist files when introducing new type exports (2026-02-23)
-- **Situation:** After building new UserProfile type in worktree, downstream packages couldn't resolve it despite successful build, because main repo's node_modules/@automaker/types/dist/ contained pre-branch dist without the new export
-- **Root cause:** Git worktrees share parent repo's node_modules for efficiency, but builds execute in worktree directory. TypeScript resolution follows node_modules search path which finds stale dist files from main branch before worktree's new exports are available
-- **How to avoid:** Efficient disk usage and single npm install vs requiring manual dist synchronization after introducing new type exports in worktree
+#### [Pattern] In monorepos with pre-existing build failures, use selective app builds (`npm run build` in apps/ui/) to verify feature changes without being blocked by unrelated package failures. (2026-02-23)
+- **Problem solved:** Root-level `npm run build` failed due to p-limit import error in `@automaker/platform` secure-fs.ts. Feature author worked around by building only the UI app where changes were made.
+- **Why this works:** Enables fast feedback loop on localized changes. Full monorepo builds are slow and often accumulate technical debt (broken imports, outdated deps). Selective builds isolate the feature's package boundary and confirm no regressions within that scope.
+- **Trade-offs:** Gains: unblocked verification, fast feedback. Loses: no guarantee that the full build works after PR merges. Another PR in platform may have unblocked the build by the time feature lands.
 
-#### [Pattern] Centralized prompt registry pattern: BasePromptConfig passes userProfile through single registry to all persona agents rather than modifying each agent individually (2026-02-23)
-- **Problem solved:** 10 different personified agents (ava, matt, sam, cindi, jon, linear-specialist, pr-maintainer, board-janitor, frank, kai) needed userProfile access for future personalization
-- **Why this works:** Centralizing in registry means: (1) single definition of what agents receive, (2) consistent interface across all agents, (3) easy to add/remove features for all agents simultaneously, (4) future changes don't require touching 10 files
-- **Trade-offs:** More complex registry code vs single source of truth for what data agents can access; easier to maintain vs harder to trace data flow for individual agents
+#### [Gotcha] FeatureLoader must be initialized before AgentService in dependency injection order. If AgentService is created without FeatureLoader being available, tool tracking silently becomes a no-op with no error thrown. (2026-02-23)
+- **Situation:** Service initialization in apps/server/src/index.ts was reordered. AgentService constructor now requires FeatureLoader instance to persist tool execution data.
+- **Root cause:** Tool tracking only works when FeatureLoader is available for atomic writes. Silent failure means bugs are hard to detect—developers won't know observability isn't working.
+- **How to avoid:** Initialization order is now a constraint. Harder to test AgentService in isolation. But guarantees tool tracking works if construction succeeds.
 
-#### [Gotcha] All 10 persona agents must be updated for type changes in centralized registry, not just explicit subset, to maintain consistent interface and prevent surprise gaps (2026-02-23)
-- **Situation:** Initial planning mentioned 7 agents but implementation discovered and updated all 10 for consistency
-- **Root cause:** Registry pattern creates shared contract - if only some agents updated, code that iterates all agents or checks agent type details encounters inconsistency. Future developer assumes all agents have userProfile access but some don't, causing subtle bugs
-- **How to avoid:** More changes + higher risk of missing an agent vs guarantees all agents have consistent capabilities
+#### [Pattern] WebSocket events (feature:tool-use) emitted for each completed tool, enabling real-time observability dashboards without blocking the execution pipeline or tight coupling. (2026-02-23)
+- **Problem solved:** Need to surface tool execution data to clients in real-time while agents are running, without the agent service knowing or caring about specific consumers.
+- **Why this works:** Event emission is non-blocking and decouples observability from execution. Multiple consumers (dashboards, metrics aggregators, alerts) can subscribe independently. No coupling between agent service and consumers.
+- **Trade-offs:** Adds event listener complexity, but eliminates coupling. Event emission is fire-and-forget; if emission fails, tool execution still succeeds.
 
-### Asymmetric UserProfile interface: Frank has infra.stagingHost field, while Kai/Matt/Sam only have user/channel fields (2026-02-23)
-- **Context:** Parameterizing four engineering personas with different concerns
-- **Why:** Frank has infrastructure-specific responsibilities requiring staging host configuration. Other personas share identical parameterization needs (user name + Discord channels). This reflects actual separation of concerns in the domain.
-- **Rejected:** Unified interface with all fields available to all personas - would create coupling and confusion about which fields each persona uses
-- **Trade-offs:** Easier: Clear intent and minimal API surface. Harder: More complex type system. Breaking: Code assuming all personas accept infra config will fail.
-- **Breaking if changed:** If Frank's responsibilities change or others gain infrastructure concerns, the interface asymmetry breaks the assumption
+#### [Pattern] lastActiveTool state tracks fading tool while activeTool tracks current tool, enabling overlapping animation states (2026-02-23)
+- **Problem solved:** Need to display fade-out animation when tool completes while potentially starting a new tool
+- **Why this works:** CSS transitions can't animate unmounting elements. By keeping lastActiveTool in DOM during fade, component can render two badges (one fading, one active) simultaneously
+- **Trade-offs:** Requires tracking two tool references instead of one, but enables smooth visual feedback. Without this pattern, badge flickers out instead of fading
 
-#### [Pattern] Parameterization scope decision: extract only the values with plausible overrides (staging host, user name, Discord channels) vs everything (2026-02-23)
-- **Problem solved:** Converting hardcoded values to configurable parameters
-- **Why this works:** These five values (Frank's stagingHost + shared userName/channels) represent the operational variation points teams actually customize per environment. Other prompt text is domain logic that shouldn't vary per user profile.
-- **Trade-offs:** Easier: Focused, minimal API. Harder: If new variation points emerge, must refactor again. Breaking: If parameterized value becomes non-optional in future
+#### [Pattern] Decoupled temporal state management using Map<featureId, AgentPhaseData> separate from primary AgentNodeData structure (2026-02-23)
+- **Problem solved:** Tracking real-time phase events (phase-completed, phase-entered, tool-use, progress) from WebSocket subscriptions while rendering agent nodes
+- **Why this works:** Prevents cascading re-renders of parent components when phase events fire. Keeps WebSocket event handling isolated and independently testable. Parent doesn't re-render on every phase change.
+- **Trade-offs:** Requires merging two data sources during render (agent node + phase map) vs simpler single-source-of-truth. Gained: testable event handling, avoided cascading re-renders.
 
-### Parameterized user-specific values (userName, agencyName, productName, githubOrg) while keeping TEAM_ROSTER and BRAND_IDENTITY constants static in team-base.ts (2026-02-23)
-- **Context:** When refactoring persona prompts to accept configuration, needed to decide which values should be configurable vs remain as system constants
-- **Why:** TEAM_ROSTER and BRAND_IDENTITY document the actual team structure and organizational identity - these should not vary per configuration. Only user/profile-specific values should be overridable.
-- **Rejected:** Could have parameterized everything in team-base.ts to achieve maximum flexibility, or kept everything static to minimize changes
-- **Trade-offs:** Maintains clear separation between system constants (what the team is) and user configurations (what the user prefers to call things). Reduces surface area of configuration but adds architectural clarity.
-- **Breaking if changed:** If TEAM_ROSTER becomes parameterized, the system can no longer guarantee which team members' prompts will be invoked, affecting which AI personas are available. This breaks the semantic meaning of prompt selection.
+### Added progressPct field to AgentPhaseData but deferred progress bar rendering to future feature (2026-02-23)
+- **Context:** Feature scope creep risk: could implement progress bar in this PR but chose to structure infrastructure without rendering
+- **Why:** Separates data infrastructure (field exists, WebSocket event wiring complete) from UI rendering (not implemented yet). Allows future feature to reuse this work without rearchitecting.
+- **Rejected:** Implementing full progress bar visualization now - scope bloat. Also omitting progressPct field entirely - would require future refactor to add it.
+- **Trade-offs:** Added 'dead code' field that doesn't render yet. Risk: field never gets implemented and becomes technical debt. Benefit: clear migration path for future feature.
+- **Breaking if changed:** If progressPct field is removed, future progress bar feature must reconstruct the WebSocket event wiring from scratch.
 
-### Used hierarchical config structure (userProfile.name, userProfile.brand.agencyName) instead of flat parameter names at root level (2026-02-23)
-- **Context:** When designing PromptConfig interface, needed to choose between flat vs nested organization of user and brand parameters
-- **Why:** Hierarchical structure groups related values (all brand values under brand object, all user values under userProfile). This suggests future extensibility - can add userProfile.title, userProfile.email without polluting root. Also reflects conceptual hierarchy: a user has a brand identity.
-- **Rejected:** Flat structure with individual params: { userName, agencyName, productName, githubOrg } would be simpler initially but loses semantic grouping
-- **Trade-offs:** Slightly more verbose at call sites (userProfile.name vs just name), but self-documents that these values represent a user's profile, not global defaults. Easier to add more profile fields later without interface pollution.
-- **Breaking if changed:** If flattened, future additions of profile fields (title, email, etc.) would clutter the root config namespace. Renaming to nested structure later breaks all call sites.
+### Extended existing PipelineState interface with optional phaseDurations and toolExecutions fields rather than creating separate AnalyticsPipelineState subtype. (2026-02-23)
+- **Context:** Analytics telemetry (phase timings, tool execution metadata) is new data that belongs on PipelineState. Choice: modify existing type vs create new type hierarchy.
+- **Why:** Optional fields maintain backward compatibility - existing code creating PipelineState doesn't require changes. Avoids type proliferation and casting. Gradual adoption model.
+- **Rejected:** Creating AnalyticsPipelineState extends PipelineState with required fields forces all analytics consumers to type-narrow, breaking any code that just uses base PipelineState.
+- **Trade-offs:** Optional fields require null-checks when accessed, but allow features without analytics data to coexist with those that have it. No mass refactoring required.
+- **Breaking if changed:** Making fields required forces migration of all PipelineState instantiation sites. Creating subtypes breaks code expecting base type. Optional is only backward-compatible approach.
 
-#### [Gotcha] Large template literal strings with many variable interpolations are high-risk during refactoring due to difficulty spotting syntax errors (2026-02-23)
-- **Situation:** Jon's prompt had 13 hardcoded references to parameterize within a large multi-line template literal
-- **Root cause:** Unclosed braces, missing $, or wrong interpolation syntax in large strings are easy to introduce and hard to spot visually. Template literals can easily become syntactically valid but semantically broken.
-- **How to avoid:** Comprehensive refactoring of entire prompt at once is faster but riskier. Breaking it into sections adds process overhead but catches errors earlier.
+### Implemented mean, median, p95 percentile calculations manually without adding a statistics library dependency. (2026-02-23)
+- **Context:** Analytics service must compute distribution statistics on phase duration arrays. Could import lodash, simple-statistics, or similar library.
+- **Why:** Calculations are straightforward (sort for median, loop for mean, index for p95) - not complex enough to justify library dependency. Reduces bundle size and transitive dependency graph.
+- **Rejected:** Library approach trades simplicity for maintenance burden when calculations are only ~15 lines of code. Library adds indirect dependencies that must be kept updated.
+- **Trade-offs:** More code to test and maintain in-house, but enables easy customization (changing p95 to p99, adding p50, etc.). Manual approach is easier to reason about than black-box library.
+- **Breaking if changed:** If you refactor to use a library, must ensure it's available in runtime (not dev-only). If you switch libraries, must verify same percentile calculation logic. Manual code is self-contained and doesn't break on transitive updates.
+
+### Close button location is verified via hierarchical selector within panel container (`panelContainer.locator('button[aria-label...]')`). Button must be semantically contained within panel element. (2026-02-23)
+- **Context:** Ensuring close button is discoverable and properly scoped to analytics panel
+- **Why:** Container-scoped selectors prevent accidental button scope creep and ensure proper component encapsulation. Makes refactoring safer.
+- **Rejected:** Could use page-level selector for button, but loses encapsulation guarantees
+- **Trade-offs:** Stricter scoping is more maintainable but less flexible. Refactoring panel markup must preserve container relationship.
+- **Breaking if changed:** If close button moves outside panel container (moved to parent or different tree), selector breaks. Tests would fail before users notice broken close action.

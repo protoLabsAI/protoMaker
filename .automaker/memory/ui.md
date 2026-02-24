@@ -380,3 +380,54 @@ usageStats:
 - **Problem solved:** Testing React Flow components without modifying the library
 - **Why this works:** Avoids adding test IDs to third-party library code. Framework CSS classes are part of public API contract and stable across versions. Reduces friction of testing external components.
 - **Trade-offs:** Test coupling to CSS class names (lower stability than test IDs) vs avoiding library modification
+
+### Phase timeline fit into existing node footprint using extreme constraint design (7-9px fonts, 2.5px icons, zero padding) rather than expanding node dimensions (2026-02-23)
+- **Context:** Phase timeline visualization added to agent nodes. Could expand node height or compress layout. Chose compression to avoid cascading layout changes across canvas.
+- **Why:** Agent node is compound unit for React Flow layout calculations. Expanding any node triggers boundary recalculations for all edges and parent containers. Maintaining fixed dimensions preserves canvas stability and readability density with multiple concurrent agents.
+- **Rejected:** Expanding node height to accommodate phase timeline with readable font sizes (11-14px)
+- **Trade-offs:** Very small text requires zoom/accessibility accommodations; tight spacing reduces click targets and uses hover tooltips for discovery. Benefit: canvas remains layout-stable across phase updates. Loss: readability at normal zoom.
+- **Breaking if changed:** If additional real-time indicators added to nodes (error badges, status lights, resource gauges), the 7-9px baseline becomes unsustainable. Any expansion breaks the cascading layout assumption.
+
+### Tool executions are matched to phases via a `phase` field on the tool execution object, not by array index or timestamp. (2026-02-23)
+- **Context:** TimelineVisualization receives both `phaseDurations` (phases) and `toolExecutions` (array of tools with execution data). Component iterates phaseDurations and then maps toolExecutions by reading their `phase` field.
+- **Why:** Tools are often async and may complete out-of-order. Field-based matching is resilient to reordering. Index-based matching would fail if a tool completes before an earlier phase finishes, or if phases/tools are sparse.
+- **Rejected:** Using array indices: `toolExecutions[phaseIndex]` would assume 1:1 correspondence and strict ordering. Rejected because it breaks with concurrent tool execution.
+- **Trade-offs:** Gains: handles out-of-order completions, flexible data structure. Loses: silent failure if a tool's `phase` field is missing or mismatched (tool appears unassigned to any phase).
+- **Breaking if changed:** If callers stop populating the `phase` field on tool execution objects, all tools vanish from the timeline UI. No error is raised; the visualization silently becomes incomplete.
+
+#### [Pattern] Proportional bar width visualization uses the longest phase duration as the 100% reference, allowing relative duration comparison at a glance. (2026-02-23)
+- **Problem solved:** TimelineVisualization renders each phase as a bar with width proportional to its duration, divided by the max duration in the timeline.
+- **Why this works:** Enables rapid visual scanning: long bars = slow phases, short bars = quick phases. Avoids fixed widths which would require scrolling for long timelines or waste space for short ones.
+- **Trade-offs:** Gains: instant visual bottleneck identification. Loses: absolute timing is harder to read—user must infer from labels.
+
+#### [Pattern] Graceful degradation rendering: timeline displays correctly with undefined phaseDurations, undefined currentPhase, and null activeTool (2026-02-23)
+- **Problem solved:** WebSocket events may arrive out-of-order or be delayed, leaving fields undefined when component first renders
+- **Why this works:** Robust UX under unreliable network conditions. Incomplete but correct UI is better than waiting for all data (which would cause jarring transitions and flickering). Aligns with eventual consistency model.
+- **Trade-offs:** Shows incomplete timeline (pending phases as circles) vs complete timeline. This is deliberate - better to show work-in-progress than block rendering.
+
+### Fixed 160x70px node dimensions constraint forced micro-typography (7-9px labels, 8px tool badge, 2.5px icons) and drove all spacing decisions (2026-02-23)
+- **Context:** Flow graph readability and density requirements conflict with adding 4-phase timeline visualization
+- **Why:** Extreme constraints breed creative solutions. The proportional visual hierarchy (current phase 5px icon, label 9px, spacing 2px) only works within this constraint. Scaling linearly breaks it.
+- **Rejected:** Increasing node size to 200x100px - this would reduce graph density and make the visualization less valuable for monitoring many agents.
+- **Trade-offs:** Very small text requires careful font selection and color contrast. Gained: preserved visual density and node readability.
+- **Breaking if changed:** Removing the 160x70px constraint would break the proportional design - fonts would need to scale non-linearly, spacing would collapse, the hierarchy falls apart.
+
+#### [Pattern] Pulsing animation (framer-motion infinite repeat) for active phase indicator vs static color changes for state feedback (2026-02-23)
+- **Problem solved:** Communicating 'currently running' state for the active phase to the user scanning multiple agent nodes
+- **Why this works:** Motion is more effective than color alone at capturing attention and indicating liveness. User's eye is drawn to motion first, allowing quick status assessment without reading labels.
+- **Trade-offs:** Animation costs minor GPU cycles but provides significantly better UX feedback. Pulsing is less distracting than faster animations.
+
+#### [Gotcha] Tool badge fade-out delay (2-second timeout after tool completion) prevents jarring UI updates from quick tool executions (2026-02-23)
+- **Situation:** Tools that complete in milliseconds (grep, quick API calls) would otherwise cause immediate badge disappearance, creating visual flicker
+- **Root cause:** Micro-timing UX pattern. Humans perceive <250ms transitions as jarring. 2s delay gives the badge time to feel intentional, not buggy. Smooth fade prevents distraction.
+- **How to avoid:** 2s delay increases perceived latency of tool completion feedback vs snappy immediate hide. Tradeoff worth it for perceived smoothness.
+
+#### [Pattern] Visual state detection via Tailwind CSS class inspection ('text-violet-400') rather than computed styles. Button highlight state is encoded in source-controlled class names. (2026-02-23)
+- **Problem solved:** Verifying panel open/close state by checking icon CSS classes
+- **Why this works:** CSS classes are deterministic, git-tracked, and survive minification. Computed styles vary by browser rendering engine.
+- **Trade-offs:** Class-based assertions are fragile to theme changes but reliable across environments. Computed style checks are resilient but slow and environment-dependent.
+
+#### [Pattern] Analytics panel uses aria-label='Close analytics panel' for close button. Semantic labeling required even when visible button has visual affordance. (2026-02-23)
+- **Problem solved:** Ensuring accessibility for screen reader users
+- **Why this works:** Visual affordance (X icon) is not sufficient for assistive technology users. aria-label bridges semantic gap.
+- **Trade-offs:** Additional attribute cost is minimal. Requires discipline to maintain aria-label consistency as UI evolves.

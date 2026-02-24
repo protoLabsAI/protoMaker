@@ -5,9 +5,9 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 84
-  referenced: 49
-  successfulFeatures: 49
+  loaded: 85
+  referenced: 50
+  successfulFeatures: 50
 ---
 # api
 
@@ -495,26 +495,26 @@ usageStats:
 - **Root cause:** GitHub's repository_dispatch filtering is strict - generic 'dispatch' events don't trigger workflow. Each event type must be explicitly listed in workflow definition.
 - **How to avoid:** Requires coordination between backend (event type) and CI config (workflow trigger). Typo in either breaks everything. Benefits: explicit intent, security (CI decides what events trigger it).
 
-### Thread optional configuration parameters through multiple function layers (getEngineeringBase/getContentBase -> getBrandIdentity) rather than applying defaults at each layer (2026-02-23)
-- **Context:** Optional UserProfile parameter passes through base composition functions to be applied at the lowest level where string interpolation occurs
-- **Why:** Single source of truth for default behavior - all parameterization logic centralized in getBrandIdentity(). Changes to brand identity logic don't require updating multiple function signatures
-- **Rejected:** Could compute defaults at each layer - spreads logic. Could make UserProfile mandatory - breaks backward compatibility. Could use factory pattern - adds unnecessary complexity
-- **Trade-offs:** Cleaner logic concentration, but requires understanding that undefined parameter triggers default behavior. Makes parameter optional vs required distinction semantically important
-- **Breaking if changed:** If getBrandIdentity() modifies its undefined-handling logic, all downstream functions (getEngineeringBase, getContentBase) change behavior automatically - good for consistency but could break expectations if not documented
+#### [Pattern] AgentService.sendMessage() accepts optional featureContext parameter. Tool tracking only activates when featureContext is provided; absent context is a graceful no-op. (2026-02-23)
+- **Problem solved:** Agent service needs to work in two modes: standalone chat (no feature tracking) and pipeline-aware (full observability). Without this pattern, would need two separate service classes.
+- **Why this works:** Enables single service to serve multiple contexts without duplication. Standalone callers don't pay cost of feature awareness. Feature-aware callers opt-in by passing context.
+- **Trade-offs:** Easier code reuse and flexibility. Downside: callers must remember to pass featureContext, or observability silently fails. No compiler error if omitted.
 
-#### [Pattern] Type export chain verification: source definition → package index export → dist .d.ts generation → consumer import resolution (2026-02-23)
-- **Problem solved:** UserProfile existed in source file but wasn't accessible to prompts package until explicitly exported from types/index.ts and verified in dist/index.d.ts
-- **Why this works:** TypeScript consumers don't import directly from source during build; they resolve through package.json entry points and generated dist .d.ts files. Breaking chain at any point causes resolution failures that look like the type doesn't exist
-- **Trade-offs:** Extra verification steps (grep dist exports, check package.json entries) vs catching integration errors immediately rather than at consumer compile time
+### Phase information in tool execution record comes from optional featureContext.phase parameter provided by caller, not automatically tracked from pipeline state. (2026-02-23)
+- **Context:** Tool executions need to know which pipeline phase they occurred in, but agent service has no direct access to pipeline orchestrator state.
+- **Why:** Decouples agent service from pipeline state management. Caller (auto-mode, pipeline orchestrator) knows current phase and can provide it.
+- **Rejected:** Alternative: pass entire pipeline state to agent service. This couples agent service to pipeline internals and becomes brittle.
+- **Trade-offs:** Simpler agent service, but caller must maintain phase correctly. If phase is stale or wrong, tool executions are attributed to wrong phase with no validation.
+- **Breaking if changed:** If caller provides incorrect phase, observability is silently broken (tools attributed to wrong phase). No consistency check between featureContext.phase and pipeline's actual phase.
 
-### Made userProfile optional in both GlobalSettings and PromptConfig to maintain backward compatibility while enabling new feature (2026-02-23)
-- **Context:** UserProfile is new infrastructure, existing code doesn't have user profile data and shouldn't require it
-- **Why:** Optional fields allow incremental adoption: old code works without changes, new code can use userProfile when available. No breaking changes means branch work doesn't destabilize main workflow
-- **Rejected:** Required field (breaks all existing code using GlobalSettings/PromptConfig); separate UserProfiledGlobalSettings type (creates type duplication and confusion)
-- **Trade-offs:** Easier adoption + zero breaking changes vs consumers must handle undefined userProfile (requires null checks or defaults)
-- **Breaking if changed:** Making field required would break all existing code paths that construct GlobalSettings/PromptConfig without userProfile; requires migration of all callsites
+### Unified WebSocket event payload with optional durationMs field: start events omit durationMs, completion events include it with timestamp (2026-02-23)
+- **Context:** Need to signal both tool start (for badge appearance) and completion (for fade trigger) in same event stream
+- **Why:** Single event type reduces event schema complexity and server-side branching. Listeners must check presence of durationMs to differentiate, but this is explicit
+- **Rejected:** Could use separate feature:tool-start and feature:tool-complete events, but doubles event volume and requires more subscription logic
+- **Trade-offs:** Simpler event volume but shifts responsibility to consumers (check durationMs). Prevents accidental double-subscription bugs but requires defensive coding
+- **Breaking if changed:** If listener assumes all tool events have durationMs, completion detection breaks silently and badges never fade out. Type narrowing is essential
 
-#### [Gotcha] Nullish coalescing (??) must be used instead of OR (||) operator for defaults to preserve falsy but valid values (2026-02-23)
-- **Situation:** Parameterizing prompt values with fallbacks to originals
-- **Root cause:** Falsy values like empty strings or 0 are valid configuration values. Using || would lose them. Example: if userName is '', using || would fallback to default instead of using the explicit empty string.
-- **How to avoid:** Easier: True optional semantics. Harder: Less common pattern, developers expect || behavior. Breaking: Using || instead treats falsy inputs as missing
+#### [Pattern] Return valid empty response structure (not 404/500/null) when queried analytics data doesn't exist: {phaseAverages: {}, slowestTools: [], retryTrends: [], totalFeaturesAnalyzed: 0}. (2026-02-23)
+- **Problem solved:** When a project has no completed features, API could error out, return null, or return empty structure. Must decide whether 'no data' is an error condition or valid response.
+- **Why this works:** Clients always receive same response shape, eliminating shape-checking conditionals and null-guard code. Error responses reserved for actual failures (invalid projectPath). Treat 'empty dataset' as valid state, not error state.
+- **Trade-offs:** Slightly more verbose response size, but eliminates defensive programming in clients. Empty arrays are safe for iteration (clients never need 'if (data)' checks).

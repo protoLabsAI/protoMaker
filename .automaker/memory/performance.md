@@ -5,9 +5,9 @@ relevantTo: [performance]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 2
-  referenced: 1
-  successfulFeatures: 1
+  loaded: 6
+  referenced: 4
+  successfulFeatures: 4
 ---
 # performance
 
@@ -89,3 +89,25 @@ usageStats:
 - **Problem solved:** Pipeline state hydration should happen once on mount, then rely on WebSocket for real-time updates
 - **Why this works:** Prevents unnecessary re-fetches when user returns to window after switching tabs. Caching + WebSocket pattern is more efficient than polling. Setting refetchOnWindowFocus to false explicitly signals this is hydration, not live data
 - **Trade-offs:** Gains: Automatic caching, deduplication if hook called multiple times. Loses: Doesn't automatically refetch if user manually refreshes data (but WebSocket updates are faster anyway)
+
+#### [Pattern] Tools accumulated in pendingTools Map during stream processing, then processed in single batch after assistant turn completes. Pending tools cleared after processing. (2026-02-23)
+- **Problem solved:** A single agent turn may execute 5-10 tools. Without batching, each tool would trigger a feature.json write, causing 5-10 sequential disk I/O operations.
+- **Why this works:** Reduces I/O from O(N) to O(1). Single atomic write means tool executions appear atomically in feature.json. Clearing pendingTools prevents memory leaks from orphaned operations if agent turn is interrupted.
+- **Trade-offs:** More complex state management (pendingTools tracking). But massive I/O reduction and memory safety.
+
+### Per-featureId debounce isolation: Each agent node has independent 500ms debounce timer via Map<featureId, timeoutId> rather than single global debounce (2026-02-23)
+- **Context:** Multiple agent nodes executing tools simultaneously would interfere with each other's update timings under global debounce
+- **Why:** Prevents one active agent from delaying UI updates to another agent. Global debounce would serialize all updates to 500ms intervals, causing visible lag when 2+ agents run concurrently
+- **Rejected:** Single global debounce timer would be simpler but couples independent agent states
+- **Trade-offs:** More complex state management (Map) but eliminates cross-agent scheduling interference. Each agent now updates within 500ms independently
+- **Breaking if changed:** If changed to global debounce, rapid tool events from multiple agents would queue serially, causing 1-2s delays on the slower agent
+
+#### [Gotcha] 500ms debounce window is empirically chosen and could accumulate latency in high-frequency scenarios (10+ tool events/sec). No adaptive adjustment (2026-02-23)
+- **Situation:** Rapid tool execution from parallel agent work can generate bursts of 20-50 events within 2 seconds
+- **Root cause:** 500ms balances responsiveness (not >1s lag) with batching efficiency (reduces render cycles). Chosen without profiling actual event frequencies
+- **How to avoid:** Fixed 500ms is predictable but not optimal for all workloads. High-frequency scenarios see visible batch delays. Low-frequency scenarios respond instantly
+
+#### [Pattern] Simple timestamp-based TTL cache with 30-second window for expensive aggregation queries. No event-based invalidation, no external cache store. (2026-02-23)
+- **Problem solved:** getAgentPerformance loads and computes statistics across all completed features - expensive operation that could be called repeatedly by UI dashboards.
+- **Why this works:** Analytics data changes slowly in practice (features complete infrequently). 30s staleness is acceptable for non-transactional analytics. Timestamp-based TTL is simple - no distributed cache coordination, no event bus coupling.
+- **Trade-offs:** Accept up to 30s stale data to avoid invalidation complexity. Feature completion at T=0 queried at T=29 gets pre-completion stats. Works for analytics (not time-critical), not for transactional data.
