@@ -2970,8 +2970,15 @@ Complete the pipeline step instructions above. Review the previous work and appl
 
       const finalStatus = feature.skipTests ? 'waiting_approval' : 'verified';
 
+      // Derive worktree path for the guard check
+      const branchName = feature.branchName;
+      const worktreePath = branchName
+        ? await this.findExistingWorktreeForBranch(projectPath, branchName)
+        : null;
+      const pipelineWorkDir = worktreePath ? path.resolve(worktreePath) : path.resolve(projectPath);
+
       // Ensure worktree is clean before marking as verified
-      await ensureCleanWorktree(workDir, featureId);
+      await ensureCleanWorktree(pipelineWorkDir, featureId);
 
       await this.updateFeatureStatus(projectPath, featureId, finalStatus);
 
