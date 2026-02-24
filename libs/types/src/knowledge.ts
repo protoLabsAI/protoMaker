@@ -118,6 +118,9 @@ export interface KnowledgeStoreSettings {
 
   /** Enable hybrid retrieval (BM25 + cosine similarity with RRF) */
   hybridRetrieval: boolean;
+
+  /** Enable HyPE (Hypothetical Phrase Embeddings) pre-computed query embeddings */
+  hypeEnabled?: boolean;
 }
 
 /**
