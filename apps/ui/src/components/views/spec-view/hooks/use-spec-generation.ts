@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { createLogger } from '@automaker/utils/logger';
+import { createLogger } from '@protolabs-ai/utils/logger';
 import { useAppStore } from '@/store/app-store';
 
 const logger = createLogger('SpecGeneration');

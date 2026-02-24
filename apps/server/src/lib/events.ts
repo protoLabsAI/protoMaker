@@ -6,8 +6,8 @@
  * (NATS, Redis) can be swapped in for hivemind distribution.
  */
 
-import type { EventType, EventCallback, EventBus, EventSubscription } from '@automaker/types';
-import { createLogger } from '@automaker/utils';
+import type { EventType, EventCallback, EventBus, EventSubscription } from '@protolabs-ai/types';
+import { createLogger } from '@protolabs-ai/utils';
 
 const logger = createLogger('Events');
 

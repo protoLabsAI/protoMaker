@@ -1,7 +1,7 @@
 import { useAppStore, type Feature } from '@/store/app-store';
 import { useIsMobile } from '@/hooks/use-media-query';
 import { useRunningAgentsCount } from '@/hooks/queries/use-running-agents';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@protolabs/ui/atoms';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@protolabs-ai/ui/atoms';
 import {
   Bot,
   ListTodo,

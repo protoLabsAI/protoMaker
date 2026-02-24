@@ -1,4 +1,4 @@
-# @automaker/git-utils
+# @protolabs-ai/git-utils
 
 Git operations and utilities for AutoMaker.
 
@@ -9,7 +9,7 @@ This package provides git-related utilities including repository detection, stat
 ## Installation
 
 ```bash
-npm install @automaker/git-utils
+npm install @protolabs-ai/git-utils
 ```
 
 ## Exports
@@ -19,7 +19,7 @@ npm install @automaker/git-utils
 Check if a path is a git repository.
 
 ```typescript
-import { isGitRepo } from '@automaker/git-utils';
+import { isGitRepo } from '@protolabs-ai/git-utils';
 
 const isRepo = await isGitRepo('/project/path');
 if (isRepo) {
@@ -32,8 +32,8 @@ if (isRepo) {
 Parse git status output into structured data.
 
 ```typescript
-import { parseGitStatus } from '@automaker/git-utils';
-import type { FileStatus } from '@automaker/git-utils';
+import { parseGitStatus } from '@protolabs-ai/git-utils';
+import type { FileStatus } from '@protolabs-ai/git-utils';
 
 const statusOutput = await execAsync('git status --porcelain');
 const files: FileStatus[] = parseGitStatus(statusOutput.stdout);
@@ -54,7 +54,7 @@ import {
   generateSyntheticDiffForNewFile,
   appendUntrackedFileDiffs,
   getGitRepositoryDiffs,
-} from '@automaker/git-utils';
+} from '@protolabs-ai/git-utils';
 
 // Generate diff for single untracked file
 const diff = await generateSyntheticDiffForNewFile('/project/path', 'src/new-file.ts');
@@ -71,7 +71,7 @@ console.log(result.hasChanges); // Boolean
 Handle non-git directories by treating all files as new.
 
 ```typescript
-import { listAllFilesInDirectory, generateDiffsForNonGitDirectory } from '@automaker/git-utils';
+import { listAllFilesInDirectory, generateDiffsForNonGitDirectory } from '@protolabs-ai/git-utils';
 
 // List all files (excluding build artifacts)
 const files = await listAllFilesInDirectory('/project/path');
@@ -118,7 +118,7 @@ interface FileStatus {
 ## Usage Example
 
 ```typescript
-import { isGitRepo, getGitRepositoryDiffs, parseGitStatus } from '@automaker/git-utils';
+import { isGitRepo, getGitRepositoryDiffs, parseGitStatus } from '@protolabs-ai/git-utils';
 
 async function getProjectChanges(projectPath: string) {
   const isRepo = await isGitRepo(projectPath);
@@ -227,7 +227,7 @@ try {
   const result = await getGitRepositoryDiffs('/project');
 } catch (error) {
   // Handle errors from git commands
-  // Errors are logged via @automaker/utils logger
+  // Errors are logged via @protolabs-ai/utils logger
   console.error('Git operation failed:', error);
 }
 ```
@@ -268,9 +268,9 @@ const diff = await generateSyntheticDiffForNewFile('/path', 'locked-file.txt');
 
 ## Dependencies
 
-- `@automaker/types` - FileStatus type definition
-- `@automaker/utils` - Logger utilities
+- `@protolabs-ai/types` - FileStatus type definition
+- `@protolabs-ai/utils` - Logger utilities
 
 ## Used By
 
-- `@automaker/server` - Git routes, worktree operations, feature context
+- `@protolabs-ai/server` - Git routes, worktree operations, feature context

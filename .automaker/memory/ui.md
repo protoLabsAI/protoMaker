@@ -322,7 +322,7 @@ usageStats:
 
 #### [Gotcha] Storybook stories.array config with multiple globs must maintain order: local app stories BEFORE library stories, otherwise type discovery or import resolution can fail (2026-02-18)
 - **Situation:** Added '../../../libs/ui/src/**/*.stories' to stories array that already had '../src/**/*.stories'. Configuration order matters for module resolution.
-- **Root cause:** Storybook processes stories array in sequence. If library path comes first and apps/ui stories import from libs/ui, the library stories may be processed before @automaker/ui module symlink is fully resolved by the monorepo.
+- **Root cause:** Storybook processes stories array in sequence. If library path comes first and apps/ui stories import from libs/ui, the library stories may be processed before @protolabs-ai/ui module symlink is fully resolved by the monorepo.
 - **How to avoid:** Correct ordering ensures reliable builds but requires discipline—new maintainers may accidentally reorder and break CI silently (build succeeds, stories fail to load at runtime).
 
 #### [Gotcha] Interactive Storybook controls (argTypes) enable dark/light theme switching without explicit story variants - Storybook's theme addon handles this automatically (2026-02-18)

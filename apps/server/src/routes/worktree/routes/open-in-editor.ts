@@ -3,7 +3,7 @@
  * GET /default-editor endpoint - Get the name of the default code editor
  * POST /refresh-editors endpoint - Clear editor cache and re-detect available editors
  *
- * This module uses @automaker/platform for cross-platform editor detection and launching.
+ * This module uses @protolabs-ai/platform for cross-platform editor detection and launching.
  */
 
 import type { Request, Response } from 'express';
@@ -14,8 +14,8 @@ import {
   detectDefaultEditor,
   openInEditor,
   openInFileManager,
-} from '@automaker/platform';
-import { createLogger } from '@automaker/utils';
+} from '@protolabs-ai/platform';
+import { createLogger } from '@protolabs-ai/utils';
 import { getErrorMessage, logError } from '../common.js';
 
 const logger = createLogger('open-in-editor');

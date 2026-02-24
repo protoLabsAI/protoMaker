@@ -7,10 +7,10 @@
  * - agent.quality: based on CodeRabbit review thread count
  */
 
-import { createLogger } from '@automaker/utils';
-import type { Feature } from '@automaker/types';
+import { createLogger } from '@protolabs-ai/utils';
+import type { Feature } from '@protolabs-ai/types';
 import { getLangfuseInstance } from '../lib/langfuse-singleton.js';
-import type { LangfuseClient } from '@automaker/observability';
+import type { LangfuseClient } from '@protolabs-ai/observability';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
 

@@ -13,8 +13,8 @@ import {
   isGhCliAvailable,
 } from '../common.js';
 import { updateWorktreePRInfo } from '../../../lib/worktree-metadata.js';
-import { createLogger } from '@automaker/utils';
-import { validatePRState } from '@automaker/types';
+import { createLogger } from '@protolabs-ai/utils';
+import { validatePRState } from '@protolabs-ai/types';
 
 const logger = createLogger('CreatePR');
 

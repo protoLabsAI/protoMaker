@@ -6,7 +6,7 @@
  */
 
 import { create } from 'zustand';
-import type { HITLFormRequest } from '@automaker/types';
+import type { HITLFormRequest } from '@protolabs-ai/types';
 
 const DRAFT_STORAGE_PREFIX = 'hitl-draft-';
 

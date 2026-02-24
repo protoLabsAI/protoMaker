@@ -1,10 +1,10 @@
-# Tools Package (`@automaker/tools`)
+# Tools Package (`@protolabs-ai/tools`)
 
 Unified tool definition and registry system for building type-safe, reusable tools with Zod schema validation and dependency injection.
 
 ## Overview
 
-The `@automaker/tools` package provides a centralized system for creating, managing, and executing tools with:
+The `@protolabs-ai/tools` package provides a centralized system for creating, managing, and executing tools with:
 
 - **Type-safe tool definitions** via `defineSharedTool<TInput, TOutput>()`
 - **Zod schema validation** for inputs and outputs
@@ -18,7 +18,7 @@ The `@automaker/tools` package provides a centralized system for creating, manag
 The package is part of the monorepo and available via workspace imports:
 
 ```typescript
-import { defineSharedTool, ToolRegistry } from '@automaker/tools';
+import { defineSharedTool, ToolRegistry } from '@protolabs-ai/tools';
 ```
 
 ## Core Concepts
@@ -74,7 +74,7 @@ interface ToolResult<TOutput> {
 ### Basic Tool
 
 ```typescript
-import { defineSharedTool } from '@automaker/tools';
+import { defineSharedTool } from '@protolabs-ai/tools';
 import { z } from 'zod';
 
 const greetTool = defineSharedTool({
@@ -211,7 +211,7 @@ The `ToolRegistry` provides centralized tool management.
 ### Creating a Registry
 
 ```typescript
-import { ToolRegistry } from '@automaker/tools';
+import { ToolRegistry } from '@protolabs-ai/tools';
 
 const registry = new ToolRegistry();
 ```
@@ -291,7 +291,7 @@ registry.clear();
 Tools can be used within LangGraph nodes:
 
 ```typescript
-import { defineSharedTool, ToolRegistry } from '@automaker/tools';
+import { defineSharedTool, ToolRegistry } from '@protolabs-ai/tools';
 import { StateGraph, Annotation } from '@langchain/langgraph';
 
 // Define tools
@@ -336,7 +336,7 @@ workflow.addNode('analyze', analyzeNode);
 Load tools from external sources at runtime:
 
 ```typescript
-import { defineSharedTool, ToolRegistry } from '@automaker/tools';
+import { defineSharedTool, ToolRegistry } from '@protolabs-ai/tools';
 import * as fs from 'fs/promises';
 
 async function loadToolsFromDirectory(registry: ToolRegistry, dir: string) {
@@ -429,7 +429,7 @@ The tools package is designed for easy testing with mock dependencies:
 ### Testing Tool Definitions
 
 ```typescript
-import { defineSharedTool } from '@automaker/tools';
+import { defineSharedTool } from '@protolabs-ai/tools';
 import { z } from 'zod';
 
 describe('greetTool', () => {
@@ -492,7 +492,7 @@ describe('saveFileTool', () => {
 ### Testing Registry
 
 ```typescript
-import { ToolRegistry } from '@automaker/tools';
+import { ToolRegistry } from '@protolabs-ai/tools';
 
 describe('ToolRegistry', () => {
   let registry: ToolRegistry;
@@ -529,7 +529,7 @@ describe('ToolRegistry', () => {
 
 ## Migration from Existing Tool Systems
 
-If you have existing tool implementations, migrate them to `@automaker/tools`:
+If you have existing tool implementations, migrate them to `@protolabs-ai/tools`:
 
 ### Before (Inline Tool Implementation)
 
@@ -547,7 +547,7 @@ async function processFeature(feature: Feature) {
 ### After (Tool Package)
 
 ```typescript
-import { defineSharedTool, ToolRegistry } from '@automaker/tools';
+import { defineSharedTool, ToolRegistry } from '@protolabs-ai/tools';
 
 // 1. Define tool
 const analyzeFeatureTool = defineSharedTool({
@@ -680,7 +680,7 @@ import {
   queryBoard,
   getDependencies,
   setDependencies,
-} from '@automaker/tools';
+} from '@protolabs-ai/tools';
 ```
 
 | Tool              | Input                                        | Description                                  |
@@ -752,7 +752,7 @@ The `setDependencies` tool validates before writing:
 Read and write notes tab content. Respects per-tab `agentRead` / `agentWrite` permissions.
 
 ```typescript
-import { listTabs, readTab, writeTab } from '@automaker/tools';
+import { listTabs, readTab, writeTab } from '@protolabs-ai/tools';
 ```
 
 | Tool       | Input                                | Description                                |

@@ -22,10 +22,10 @@ import {
   initApiKey,
   waitForApiKeyInit,
 } from '@/lib/http-api-client';
-import { Button } from '@protolabs/ui/atoms';
-import { Input } from '@protolabs/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
+import { Input } from '@protolabs-ai/ui/atoms';
 import { KeyRound, AlertCircle, RefreshCw, ServerCrash } from 'lucide-react';
-import { Spinner } from '@protolabs/ui/atoms';
+import { Spinner } from '@protolabs-ai/ui/atoms';
 import { useAuthStore } from '@/store/auth-store';
 import { useSetupStore } from '@/store/setup-store';
 

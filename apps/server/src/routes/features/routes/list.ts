@@ -3,7 +3,7 @@
  */
 
 import type { Request, Response } from 'express';
-import type { Feature, FeatureStatus } from '@automaker/types';
+import type { Feature, FeatureStatus } from '@protolabs-ai/types';
 import { FeatureLoader } from '../../../services/feature-loader.js';
 import { getErrorMessage, logError } from '../common.js';
 import { debugLog } from '../../../lib/debug-log.js';

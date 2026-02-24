@@ -11,7 +11,7 @@
  * All tasks emit events for UI display and logging.
  */
 
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import type { SchedulerService } from './scheduler-service.js';

@@ -1,7 +1,7 @@
 import { createPortal } from 'react-dom';
 import { X, Menu } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button } from '@protolabs/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
 
 interface HeaderActionsPanelProps {
   isOpen: boolean;

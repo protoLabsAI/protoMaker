@@ -4,8 +4,8 @@
  */
 
 import type { Request, Response } from 'express';
-import { createLogger } from '@automaker/utils';
-import type { PRMergeStrategy } from '@automaker/types';
+import { createLogger } from '@protolabs-ai/utils';
+import type { PRMergeStrategy } from '@protolabs-ai/types';
 import { githubMergeService } from '../../../services/github-merge-service.js';
 import { getErrorMessage, logError } from './common.js';
 import { checkGitHubRemote } from './check-github-remote.js';

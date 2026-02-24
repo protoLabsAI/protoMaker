@@ -8,7 +8,7 @@
 
 import { readdir, readFile, writeFile, unlink, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 
 const logger = createLogger('CopilotKitThreads');
 

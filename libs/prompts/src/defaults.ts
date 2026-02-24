@@ -23,8 +23,8 @@ import type {
   ResolvedContextDescriptionPrompts,
   ResolvedSuggestionsPrompts,
   ResolvedTaskExecutionPrompts,
-} from '@automaker/types';
-import { STATIC_PORT, SERVER_PORT } from '@automaker/types';
+} from '@protolabs-ai/types';
+import { STATIC_PORT, SERVER_PORT } from '@protolabs-ai/types';
 
 /**
  * ========================================================================

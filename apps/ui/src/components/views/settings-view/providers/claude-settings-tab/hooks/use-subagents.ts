@@ -12,7 +12,7 @@
 import { useMemo, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAppStore } from '@/store/app-store';
-import type { AgentDefinition } from '@automaker/types';
+import type { AgentDefinition } from '@protolabs-ai/types';
 import { useDiscoveredAgents } from '@/hooks/queries';
 import { queryKeys } from '@/lib/query-keys';
 

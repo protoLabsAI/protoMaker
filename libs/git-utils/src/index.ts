@@ -1,5 +1,5 @@
 /**
- * @automaker/git-utils
+ * @protolabs-ai/git-utils
  * Git operations utilities for AutoMaker
  */
 

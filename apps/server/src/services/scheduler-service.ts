@@ -21,8 +21,8 @@
  * - /: step values (*\/15 = every 15)
  */
 
-import { createLogger } from '@automaker/utils';
-import { secureFs } from '@automaker/platform';
+import { createLogger } from '@protolabs-ai/utils';
+import { secureFs } from '@protolabs-ai/platform';
 import path from 'path';
 import type { EventEmitter } from '../lib/events.js';
 

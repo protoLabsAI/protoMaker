@@ -88,7 +88,7 @@ Application code must work identically whether Langfuse is available or not. Eve
 
 ### Provider agnosticism
 
-No service should import `@langchain/anthropic` directly. Everything goes through `@automaker/llm-providers`. When we add a new model provider, zero application code changes.
+No service should import `@langchain/anthropic` directly. Everything goes through `@protolabs-ai/llm-providers`. When we add a new model provider, zero application code changes.
 
 ### Reducers define correctness
 
@@ -100,7 +100,7 @@ Build flows from small, typed, testable nodes. A coordinator is just a planning 
 
 ## Package Ownership
 
-### @automaker/flows (`libs/flows/`)
+### @protolabs-ai/flows (`libs/flows/`)
 
 LangGraph state graph primitives for multi-agent coordination.
 
@@ -116,7 +116,7 @@ LangGraph state graph primitives for multi-agent coordination.
 
 **Docs:** `docs/dev/flows.md`
 
-### @automaker/llm-providers (`libs/llm-providers/`)
+### @protolabs-ai/llm-providers (`libs/llm-providers/`)
 
 Multi-provider LLM abstraction with Zod-validated configuration.
 
@@ -130,7 +130,7 @@ Multi-provider LLM abstraction with Zod-validated configuration.
 
 **Docs:** `docs/dev/llm-providers-package.md`
 
-### @automaker/observability (`libs/observability/`)
+### @protolabs-ai/observability (`libs/observability/`)
 
 Langfuse-based tracing, prompt management, and cost tracking.
 
@@ -179,11 +179,11 @@ Langfuse-based tracing, prompt management, and cost tracking.
 
 ```
 libs/
-  flows/              # @automaker/flows — LangGraph primitives
-  llm-providers/      # @automaker/llm-providers — Multi-provider abstraction
-  observability/      # @automaker/observability — Langfuse tracing
-  types/              # @automaker/types — Shared type definitions
-  utils/              # @automaker/utils — Logging, errors
+  flows/              # @protolabs-ai/flows — LangGraph primitives
+  llm-providers/      # @protolabs-ai/llm-providers — Multi-provider abstraction
+  observability/      # @protolabs-ai/observability — Langfuse tracing
+  types/              # @protolabs-ai/types — Shared type definitions
+  utils/              # @protolabs-ai/utils — Logging, errors
 ```
 
 **Build order:** Always run `npm run build:packages` before building server if shared packages changed.

@@ -14,10 +14,10 @@ import { join } from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { Readable } from 'node:stream';
 import { Whisper, WhisperFullParams, WhisperSamplingStrategy } from '@napi-rs/whisper';
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import type { EventEmitter } from '../lib/events.js';
 import type { SettingsService } from './settings-service.js';
-import type { WhisperModelSize } from '@automaker/types';
+import type { WhisperModelSize } from '@protolabs-ai/types';
 
 const logger = createLogger('VoiceService');
 

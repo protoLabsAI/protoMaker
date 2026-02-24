@@ -4,7 +4,7 @@ import {
   normalizeContentBlocks,
   formatHistoryAsText,
   convertHistoryToMessages,
-} from '@automaker/utils';
+} from '@protolabs-ai/utils';
 import { conversationHistoryFixture } from '../../fixtures/messages.js';
 
 describe('conversation-utils.ts', () => {

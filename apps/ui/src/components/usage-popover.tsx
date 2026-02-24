@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Popover, PopoverContent, PopoverTrigger } from '@protolabs/ui/atoms';
-import { Button } from '@protolabs/ui/atoms';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@protolabs/ui/atoms';
+import { Popover, PopoverContent, PopoverTrigger } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@protolabs-ai/ui/atoms';
 import { RefreshCw, AlertTriangle, CheckCircle, XCircle, Clock, ExternalLink } from 'lucide-react';
-import { Spinner } from '@protolabs/ui/atoms';
+import { Spinner } from '@protolabs-ai/ui/atoms';
 import { cn } from '@/lib/utils';
 import { useSetupStore } from '@/store/setup-store';
 import { AnthropicIcon, OpenAIIcon } from '@/components/shared/provider-icon';

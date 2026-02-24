@@ -8,8 +8,8 @@
  * - Event listener registration
  */
 
-import type { AuthorityAgent, AuthorityRole, PipelinePhase } from '@automaker/types';
-import { createLogger } from '@automaker/utils';
+import type { AuthorityAgent, AuthorityRole, PipelinePhase } from '@protolabs-ai/types';
+import { createLogger } from '@protolabs-ai/utils';
 
 const logger = createLogger('AgentUtils');
 

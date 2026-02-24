@@ -9,15 +9,15 @@
  * Must complete in < 3 minutes.
  */
 
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import type { EventEmitter } from '../lib/events.js';
 import type { AgentFactoryService } from './agent-factory-service.js';
 import { DynamicAgentExecutor } from './dynamic-agent-executor.js';
-import type { SPARCPrd } from '@automaker/types';
+import type { SPARCPrd } from '@protolabs-ai/types';
 import { AntagonisticReviewAdapter } from './antagonistic-review-adapter.js';
 import { getLangfuseInstance } from '../lib/langfuse-singleton.js';
 import type { SettingsService } from './settings-service.js';
-import { resolveModelString } from '@automaker/model-resolver';
+import { resolveModelString } from '@protolabs-ai/model-resolver';
 
 const logger = createLogger('AntagonisticReview');
 

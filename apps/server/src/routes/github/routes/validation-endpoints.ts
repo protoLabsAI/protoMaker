@@ -4,7 +4,7 @@
 
 import type { Request, Response } from 'express';
 import type { EventEmitter } from '../../../lib/events.js';
-import type { IssueValidationEvent } from '@automaker/types';
+import type { IssueValidationEvent } from '@protolabs-ai/types';
 import {
   getValidationStatus,
   getRunningValidations,

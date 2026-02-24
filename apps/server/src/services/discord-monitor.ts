@@ -6,8 +6,8 @@
  */
 
 import type { EventEmitter } from '../lib/events.js';
-import type { DiscordMonitorConfig, WorkItem } from '@automaker/types';
-import { createLogger } from '@automaker/utils';
+import type { DiscordMonitorConfig, WorkItem } from '@protolabs-ai/types';
+import { createLogger } from '@protolabs-ai/utils';
 
 const logger = createLogger('DiscordMonitor');
 

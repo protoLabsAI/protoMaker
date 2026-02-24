@@ -10,9 +10,9 @@
 
 import { exec, execFile } from 'child_process';
 import { promisify } from 'util';
-import { createLogger } from '@automaker/utils';
-import type { GraphiteSettings } from '@automaker/types';
-import { DEFAULT_GRAPHITE_SETTINGS } from '@automaker/types';
+import { createLogger } from '@protolabs-ai/utils';
+import type { GraphiteSettings } from '@protolabs-ai/types';
+import { DEFAULT_GRAPHITE_SETTINGS } from '@protolabs-ai/types';
 
 const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);

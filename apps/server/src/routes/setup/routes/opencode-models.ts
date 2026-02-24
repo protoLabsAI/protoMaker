@@ -13,7 +13,7 @@ import {
   type OpenCodeProviderInfo,
 } from '../../../providers/opencode-provider.js';
 import { getErrorMessage, logError } from '../common.js';
-import type { ModelDefinition } from '@automaker/types';
+import type { ModelDefinition } from '@protolabs-ai/types';
 
 // Singleton provider instance for caching
 let providerInstance: OpencodeProvider | null = null;

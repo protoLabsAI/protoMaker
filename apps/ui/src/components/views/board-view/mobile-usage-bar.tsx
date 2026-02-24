@@ -1,7 +1,7 @@
 import { useEffect, useCallback, useState, type ComponentType, type ReactNode } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Spinner } from '@protolabs/ui/atoms';
+import { Spinner } from '@protolabs-ai/ui/atoms';
 import { getElectronAPI } from '@/lib/electron';
 import { useAIModelsStore } from '@/store/ai-models-store';
 import { AnthropicIcon, OpenAIIcon } from '@/components/shared/provider-icon';

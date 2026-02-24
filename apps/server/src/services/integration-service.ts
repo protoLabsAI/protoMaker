@@ -15,12 +15,12 @@
  * 4. External processes (EventHooks, MCP subscriptions) handle the events
  */
 
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import type { EventEmitter } from '../lib/events.js';
 import type { SettingsService } from './settings-service.js';
 import type { FeatureLoader } from './feature-loader.js';
-import type { LinearIntegrationConfig, ProjectIntegrations } from '@automaker/types';
-import type { Feature } from '@automaker/types';
+import type { LinearIntegrationConfig, ProjectIntegrations } from '@protolabs-ai/types';
+import type { Feature } from '@protolabs-ai/types';
 import type { CeremonyService } from './ceremony-service.js';
 
 const logger = createLogger('Integrations');

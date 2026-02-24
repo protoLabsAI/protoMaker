@@ -6,7 +6,7 @@ import {
   classifyError,
   getUserFriendlyErrorMessage,
   type ErrorType,
-} from '@automaker/utils';
+} from '@protolabs-ai/utils';
 
 describe('error-handler.ts', () => {
   describe('isAbortError', () => {

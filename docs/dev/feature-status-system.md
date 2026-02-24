@@ -43,7 +43,7 @@ The system automatically normalizes legacy status values:
 ### Backend (libs/types)
 
 ```typescript
-import { normalizeFeatureStatus } from '@automaker/types';
+import { normalizeFeatureStatus } from '@protolabs-ai/types';
 
 // Defensive normalization
 const status = normalizeFeatureStatus(feature.status, (from, to) => {

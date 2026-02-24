@@ -5,14 +5,14 @@
  * into milestones with proper dependencies.
  */
 
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import type {
   GapAnalysisReport,
   GapItem,
   AlignmentProposal,
   AlignmentMilestone,
   AlignmentFeature,
-} from '@automaker/types';
+} from '@protolabs-ai/types';
 
 const logger = createLogger('alignment-proposal');
 

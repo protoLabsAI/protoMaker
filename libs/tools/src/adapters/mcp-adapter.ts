@@ -108,7 +108,7 @@ function zodToMCPJsonSchema(zodSchema: z.ZodType<any, any, any>): {
  * @example
  * ```typescript
  * import { z } from 'zod';
- * import { defineSharedTool, toMCPTool } from '@automaker/tools';
+ * import { defineSharedTool, toMCPTool } from '@protolabs-ai/tools';
  *
  * const myTool = defineSharedTool({
  *   name: 'example-tool',
@@ -155,7 +155,7 @@ export function toMCPTool<TInput = unknown, TOutput = unknown>(
  * @example
  * ```typescript
  * import { z } from 'zod';
- * import { defineSharedTool, toMCPTools } from '@automaker/tools';
+ * import { defineSharedTool, toMCPTools } from '@protolabs-ai/tools';
  *
  * const tools = [
  *   defineSharedTool({

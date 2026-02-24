@@ -5,8 +5,8 @@
  * Health check wiring connects to the existing IntegrationService methods.
  */
 
-import type { IntegrationDescriptor, IntegrationHealth } from '@automaker/types';
-import { createLogger } from '@automaker/utils';
+import type { IntegrationDescriptor, IntegrationHealth } from '@protolabs-ai/types';
+import { createLogger } from '@protolabs-ai/utils';
 import type { IntegrationRegistryService } from './integration-registry-service.js';
 import { integrationService } from './integration-service.js';
 

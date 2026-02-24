@@ -8,7 +8,7 @@
  */
 
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { Button } from '@protolabs/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
 import { Plus, Trash2, Download } from 'lucide-react';
 
 const meta = {

@@ -12,9 +12,9 @@ import {
   type ClaudeApiProfile,
   type ClaudeCompatibleProvider,
   type Credentials,
-} from '@automaker/types';
+} from '@protolabs-ai/types';
 import { BaseProvider } from './base-provider.js';
-import { classifyError, getUserFriendlyErrorMessage, createLogger } from '@automaker/utils';
+import { classifyError, getUserFriendlyErrorMessage, createLogger } from '@protolabs-ai/utils';
 
 const logger = createLogger('ClaudeProvider');
 

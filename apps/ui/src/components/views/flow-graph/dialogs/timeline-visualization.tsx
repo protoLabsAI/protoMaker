@@ -9,7 +9,7 @@
  */
 
 import { ExternalLink, Clock, AlertCircle } from 'lucide-react';
-import type { PipelinePhase, PhaseTransition } from '@automaker/types';
+import type { PipelinePhase, PhaseTransition } from '@protolabs-ai/types';
 import { getLangfuseSpanUrl } from '@/lib/langfuse-url';
 
 interface ToolExecution {

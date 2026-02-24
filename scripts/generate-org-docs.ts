@@ -16,7 +16,7 @@
 import { writeFileSync, readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import type { AgentTemplate } from '@automaker/types';
+import type { AgentTemplate } from '@protolabs-ai/types';
 import { buildTemplates } from '../apps/server/src/services/built-in-templates.js';
 
 const BUILT_IN_TEMPLATES = buildTemplates();

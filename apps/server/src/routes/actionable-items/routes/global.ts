@@ -9,8 +9,8 @@ import type { Request, Response } from 'express';
 import type { ActionableItemService } from '../../../services/actionable-item-service.js';
 import type { SettingsService } from '../../../services/settings-service.js';
 import { getErrorMessage, logError } from '../common.js';
-import type { ActionableItem } from '@automaker/types';
-import { getEffectivePriority } from '@automaker/types';
+import type { ActionableItem } from '@protolabs-ai/types';
+import { getEffectivePriority } from '@protolabs-ai/types';
 
 export function createGlobalListHandler(
   service: ActionableItemService,

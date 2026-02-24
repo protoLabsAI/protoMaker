@@ -10,7 +10,7 @@
  */
 
 import { Router, Request, Response } from 'express';
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import type { AuthorityService } from '../../services/authority-service.js';
 import type { FeatureLoader } from '../../services/feature-loader.js';
 import type { PMAuthorityAgent } from '../../services/authority-agents/pm-agent.js';

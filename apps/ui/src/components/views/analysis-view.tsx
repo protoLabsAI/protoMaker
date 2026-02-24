@@ -1,11 +1,11 @@
 import { useCallback, useState } from 'react';
-import { createLogger } from '@automaker/utils/logger';
+import { createLogger } from '@protolabs-ai/utils/logger';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAppStore, FileTreeNode, ProjectAnalysis, type Feature } from '@/store/app-store';
 import { getElectronAPI } from '@/lib/electron';
 import { queryKeys } from '@/lib/query-keys';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@protolabs/ui/atoms';
-import { Button } from '@protolabs/ui/atoms';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
 import {
   Folder,
   FolderOpen,
@@ -21,7 +21,7 @@ import {
   AlertCircle,
   ListChecks,
 } from 'lucide-react';
-import { Spinner } from '@protolabs/ui/atoms';
+import { Spinner } from '@protolabs-ai/ui/atoms';
 import { cn, generateUUID } from '@/lib/utils';
 
 const logger = createLogger('AnalysisView');

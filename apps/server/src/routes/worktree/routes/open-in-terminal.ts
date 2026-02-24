@@ -16,8 +16,8 @@ import {
   detectAllTerminals,
   detectDefaultTerminal,
   openInExternalTerminal,
-} from '@automaker/platform';
-import { createLogger } from '@automaker/utils';
+} from '@protolabs-ai/platform';
+import { createLogger } from '@protolabs-ai/utils';
 import { getErrorMessage, logError } from '../common.js';
 
 const logger = createLogger('open-in-terminal');

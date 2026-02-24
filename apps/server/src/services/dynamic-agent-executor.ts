@@ -6,7 +6,7 @@
  * prompt assembly, output capture, error classification, and event emission.
  */
 
-import { createLogger, classifyError } from '@automaker/utils';
+import { createLogger, classifyError } from '@protolabs-ai/utils';
 import {
   simpleQuery,
   streamingQuery,

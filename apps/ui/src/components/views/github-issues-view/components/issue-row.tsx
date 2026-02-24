@@ -7,8 +7,8 @@ import {
   GitPullRequest,
   User,
 } from 'lucide-react';
-import { Spinner } from '@protolabs/ui/atoms';
-import { Button } from '@protolabs/ui/atoms';
+import { Spinner } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
 import { cn } from '@/lib/utils';
 import type { IssueRowProps } from '../types';
 import { isValidationStale } from '../utils';

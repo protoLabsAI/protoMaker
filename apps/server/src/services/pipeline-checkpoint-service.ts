@@ -8,10 +8,10 @@
 
 import path from 'node:path';
 import fs from 'node:fs/promises';
-import { createLogger, atomicWriteJson, readJsonWithRecovery } from '@automaker/utils';
-import { getAutomakerDir } from '@automaker/platform';
-import type { PipelineCheckpoint, GoalGateResult } from '@automaker/types';
-import { FeatureState } from '@automaker/types';
+import { createLogger, atomicWriteJson, readJsonWithRecovery } from '@protolabs-ai/utils';
+import { getAutomakerDir } from '@protolabs-ai/platform';
+import type { PipelineCheckpoint, GoalGateResult } from '@protolabs-ai/types';
+import { FeatureState } from '@protolabs-ai/types';
 import type { StateContext, FeatureProcessingState } from './lead-engineer-service.js';
 
 const logger = createLogger('PipelineCheckpointService');

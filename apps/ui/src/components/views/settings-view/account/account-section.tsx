@@ -1,11 +1,17 @@
 import { useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { Button } from '@protolabs/ui/atoms';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@protolabs/ui/atoms';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@protolabs/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@protolabs-ai/ui/atoms';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@protolabs-ai/ui/atoms';
 import { toast } from 'sonner';
 import { LogOut, User, Code2, RefreshCw } from 'lucide-react';
-import { Spinner } from '@protolabs/ui/atoms';
+import { Spinner } from '@protolabs-ai/ui/atoms';
 import { cn } from '@/lib/utils';
 import { logout } from '@/lib/http-api-client';
 import { useAuthStore } from '@/store/auth-store';

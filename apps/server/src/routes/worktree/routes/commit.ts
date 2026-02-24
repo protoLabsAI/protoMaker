@@ -9,7 +9,7 @@ import type { Request, Response } from 'express';
 import { exec, execFile } from 'child_process';
 import { promisify } from 'util';
 import { getErrorMessage, logError } from '../common.js';
-import { sanitizeCommitMessage } from '@automaker/platform';
+import { sanitizeCommitMessage } from '@protolabs-ai/platform';
 
 const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);

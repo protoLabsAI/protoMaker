@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { createLogger } from '@automaker/utils/logger';
+import { createLogger } from '@protolabs-ai/utils/logger';
 import { getElectronAPI } from '@/lib/electron';
 import { useTerminalStore } from '@/store/terminal-store';
-import type { TerminalInfo } from '@automaker/types';
+import type { TerminalInfo } from '@protolabs-ai/types';
 
 const logger = createLogger('AvailableTerminals');
 

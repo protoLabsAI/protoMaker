@@ -6,7 +6,7 @@
  * a "docs update" feature in backlog and emits docs:update-needed.
  */
 
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import { execSync } from 'child_process';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';

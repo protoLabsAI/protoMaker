@@ -16,14 +16,14 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button } from '@protolabs/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@protolabs/ui/atoms';
+} from '@protolabs-ai/ui/atoms';
 import type { Feature } from '@/store/types';
 
 /**

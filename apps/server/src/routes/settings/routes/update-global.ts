@@ -12,7 +12,7 @@ import type { Request, Response } from 'express';
 import type { SettingsService } from '../../../services/settings-service.js';
 import type { GlobalSettings } from '../../../types/settings.js';
 import { getErrorMessage, logError, logger } from '../common.js';
-import { setLogLevel, LogLevel } from '@automaker/utils';
+import { setLogLevel, LogLevel } from '@protolabs-ai/utils';
 import { setRequestLoggingEnabled } from '../../../index.js';
 
 /**

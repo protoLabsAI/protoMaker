@@ -78,7 +78,7 @@ const eslintConfig = defineConfig([
     },
     settings: {
       n: {
-        // Allow workspace package imports (@automaker/*)
+        // Allow workspace package imports (@protolabs-ai/*)
         allowModules: [],
         // Use the server's package.json for dependency resolution
         resolvePaths: ['.'],

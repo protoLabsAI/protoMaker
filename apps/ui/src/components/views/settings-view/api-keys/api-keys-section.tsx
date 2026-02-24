@@ -1,8 +1,8 @@
 import { useAppStore } from '@/store/app-store';
 import { useSetupStore } from '@/store/setup-store';
-import { Button } from '@protolabs/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
 import { Key, CheckCircle2, Trash2, Info } from 'lucide-react';
-import { Spinner } from '@protolabs/ui/atoms';
+import { Spinner } from '@protolabs-ai/ui/atoms';
 import { ApiKeyField } from './api-key-field';
 import { buildProviderConfigs } from '@/config/api-providers';
 import { SecurityNotice } from './security-notice';

@@ -3,7 +3,7 @@ import { memo, useState, useCallback } from 'react';
 import { Bot, ChevronDown, ChevronUp, Check, RefreshCw } from 'lucide-react';
 import { Feature, useAppStore } from '@/store/app-store';
 import { apiPost } from '@/lib/api-fetch';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@protolabs/ui/atoms';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@protolabs-ai/ui/atoms';
 
 const ROLE_LABELS: Record<string, string> = {
   'frontend-engineer': 'Frontend',

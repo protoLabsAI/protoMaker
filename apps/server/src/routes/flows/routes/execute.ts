@@ -4,7 +4,7 @@
 
 import type { Request, Response } from 'express';
 import type { AntagonisticReviewService } from '../../../services/antagonistic-review-service.js';
-import type { SPARCPrd } from '@automaker/types';
+import type { SPARCPrd } from '@protolabs-ai/types';
 import { getErrorMessage, logError } from '../common.js';
 
 export interface ExecuteRequest {

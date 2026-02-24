@@ -79,7 +79,7 @@ The protoLabs Claude Code plugin enables you to:
 
 The plugin consists of:
 
-1. **MCP Server** (`@automaker/mcp-server`) - Exposes protoLabs's API via Model Context Protocol
+1. **MCP Server** (`@protolabs-ai/mcp-server`) - Exposes protoLabs's API via Model Context Protocol
 2. **Claude Plugin** (`packages/mcp-server/plugins/automaker`) - Provides slash commands and subagents
 
 ## Installation

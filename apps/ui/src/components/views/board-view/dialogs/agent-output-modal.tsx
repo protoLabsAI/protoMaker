@@ -5,14 +5,14 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@protolabs/ui/atoms';
+} from '@protolabs-ai/ui/atoms';
 import { List, FileText, GitBranch, ClipboardList } from 'lucide-react';
-import { Spinner } from '@protolabs/ui/atoms';
+import { Spinner } from '@protolabs-ai/ui/atoms';
 import { getElectronAPI } from '@/lib/electron';
 import { LogViewer } from '@/components/shared/log-viewer';
 import { GitDiffPanel } from '@/components/shared/git-diff-panel';
 import { TaskProgressPanel } from '@/components/shared/task-progress-panel';
-import { Markdown } from '@protolabs/ui/molecules';
+import { Markdown } from '@protolabs-ai/ui/molecules';
 import { useWorktreeStore } from '@/store/worktree-store';
 import { extractSummary } from '@/lib/log-parser';
 import { useAgentOutput } from '@/hooks/queries';

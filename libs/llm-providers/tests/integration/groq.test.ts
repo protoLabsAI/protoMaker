@@ -4,7 +4,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { GroqProvider } from '../../src/server/providers/groq.js';
-import type { ExecuteOptions } from '@automaker/types';
+import type { ExecuteOptions } from '@protolabs-ai/types';
 
 describe('GroqProvider', () => {
   let provider: GroqProvider;

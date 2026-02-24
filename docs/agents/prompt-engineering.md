@@ -108,7 +108,7 @@ registerPrompt('kai', (config) => getKaiPrompt({ userProfile: config.userProfile
 ### Resolution
 
 ```typescript
-import { getPromptForRole } from '@automaker/prompts';
+import { getPromptForRole } from '@protolabs-ai/prompts';
 
 const prompt = getPromptForRole('matt', {
   projectPath: '/path/to/project',
@@ -126,7 +126,7 @@ Resolution order:
 Agent templates in the role registry can include a `systemPromptTemplate` string. The `createPromptFromTemplate()` function converts these to generators:
 
 ```typescript
-import { createPromptFromTemplate } from '@automaker/prompts';
+import { createPromptFromTemplate } from '@protolabs-ai/prompts';
 
 const generator = createPromptFromTemplate(
   'You are a security reviewer for {{projectPath}}. Context: {{contextFiles}}'
@@ -167,7 +167,7 @@ The defaults library (`libs/prompts/src/defaults.ts`) provides 12 categories of 
 All defaults are accessible via `DEFAULT_PROMPTS` object:
 
 ```typescript
-import { DEFAULT_PROMPTS } from '@automaker/prompts';
+import { DEFAULT_PROMPTS } from '@protolabs-ai/prompts';
 
 DEFAULT_PROMPTS.autoMode.planningLite;
 DEFAULT_PROMPTS.taskExecution.implementationInstructions;

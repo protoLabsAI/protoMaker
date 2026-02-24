@@ -7,10 +7,10 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@protolabs/ui/atoms';
-import { Button } from '@protolabs/ui/atoms';
+} from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
 import { DeleteConfirmDialog } from '@/components/ui/delete-confirm-dialog';
-import { ConfirmDialog } from '@protolabs/ui/molecules';
+import { ConfirmDialog } from '@protolabs-ai/ui/molecules';
 import type { TrashedProject } from '@/lib/electron';
 
 interface TrashDialogProps {

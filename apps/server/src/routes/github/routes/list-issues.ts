@@ -6,7 +6,7 @@ import { spawn } from 'child_process';
 import type { Request, Response } from 'express';
 import { execAsync, execEnv, getErrorMessage, logError } from './common.js';
 import { checkGitHubRemote } from './check-github-remote.js';
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 
 const logger = createLogger('ListIssues');
 const OPEN_ISSUES_LIMIT = 100;

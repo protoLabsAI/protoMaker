@@ -1,5 +1,5 @@
 import type { RequestHandler } from 'express';
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import { labsService } from '../../../services/labs-service.js';
 
 const logger = createLogger('setup:clone');

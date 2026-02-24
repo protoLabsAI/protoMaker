@@ -23,7 +23,7 @@
  */
 
 import { useEffect, useState, useRef } from 'react';
-import { createLogger } from '@automaker/utils/logger';
+import { createLogger } from '@protolabs-ai/utils/logger';
 import { getHttpApiClient, waitForApiKeyInit } from '@/lib/http-api-client';
 import { getItem, setItem } from '@/lib/storage';
 import { useAppStore, THEME_STORAGE_KEY } from '@/store/app-store';
@@ -43,7 +43,7 @@ import {
   type GlobalSettings,
   type CursorModelId,
   type OpencodeModelId,
-} from '@automaker/types';
+} from '@protolabs-ai/types';
 
 const logger = createLogger('SettingsMigration');
 

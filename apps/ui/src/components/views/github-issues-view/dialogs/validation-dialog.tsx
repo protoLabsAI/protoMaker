@@ -5,9 +5,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@protolabs/ui/atoms';
-import { Button } from '@protolabs/ui/atoms';
-import { Markdown } from '@protolabs/ui/molecules';
+} from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
+import { Markdown } from '@protolabs-ai/ui/molecules';
 import {
   CheckCircle2,
   XCircle,

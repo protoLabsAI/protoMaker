@@ -1,5 +1,5 @@
 /**
- * @automaker/flows - Project Planning
+ * @protolabs-ai/flows - Project Planning
  *
  * LangGraph flow for Linear-native project planning.
  * Drives the full workflow from project creation through milestone definition,

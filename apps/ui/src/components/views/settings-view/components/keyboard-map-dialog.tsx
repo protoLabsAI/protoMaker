@@ -5,7 +5,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@protolabs/ui/atoms';
+} from '@protolabs-ai/ui/atoms';
 import { KeyboardMap, ShortcutReferencePanel } from '@/components/shared/keyboard-map';
 
 interface KeyboardMapDialogProps {

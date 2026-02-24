@@ -6,7 +6,7 @@
  * authority:pm-review-approved for ProjM to decompose.
  */
 
-import { createLogger, slugify } from '@automaker/utils';
+import { createLogger, slugify } from '@protolabs-ai/utils';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { ApprovalContext } from './linear-approval-handler.js';

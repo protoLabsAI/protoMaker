@@ -13,7 +13,7 @@
 import { Router, type Request, type Response } from 'express';
 import { streamText } from 'ai';
 import { anthropic } from '@ai-sdk/anthropic';
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 
 const logger = createLogger('AIRoutes');
 

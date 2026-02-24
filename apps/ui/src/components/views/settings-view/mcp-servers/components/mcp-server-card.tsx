@@ -1,10 +1,10 @@
 import { ChevronDown, ChevronRight, Code, Pencil, Trash2, PlayCircle } from 'lucide-react';
-import { Spinner } from '@protolabs/ui/atoms';
-import { Button } from '@protolabs/ui/atoms';
-import { Switch } from '@protolabs/ui/atoms';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@protolabs/ui/atoms';
+import { Spinner } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
+import { Switch } from '@protolabs-ai/ui/atoms';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@protolabs-ai/ui/atoms';
 import { cn } from '@/lib/utils';
-import type { MCPServerConfig } from '@automaker/types';
+import type { MCPServerConfig } from '@protolabs-ai/types';
 import type { ServerTestState } from '../types';
 import { getServerIcon, getTestStatusIcon, maskSensitiveUrl } from '../utils';
 import { MCPToolsList } from '../mcp-tools-list';

@@ -1,5 +1,5 @@
 {
-  "name": "@automaker/ui",
+  "name": "@protolabs-ai/app",
   "version": "0.2.0",
   "description": "An autonomous AI development studio that helps you build software faster using AI-powered agents",
   "homepage": "https://github.com/AutoMaker-Org/automaker",
@@ -44,9 +44,9 @@
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.45",
     "@ai-sdk/react": "^3.0.92",
-    "@automaker/dependency-resolver": "0.2.0",
-    "@automaker/spec-parser": "0.2.0",
-    "@automaker/types": "0.2.0",
+    "@protolabs-ai/dependency-resolver": "0.2.0",
+    "@protolabs-ai/spec-parser": "0.2.0",
+    "@protolabs-ai/types": "0.2.0",
     "@codemirror/lang-xml": "6.1.0",
     "@codemirror/language": "^6.12.1",
     "@codemirror/legacy-modes": "^6.5.2",
@@ -149,7 +149,7 @@
     "@electron/rebuild": "^4.0.3",
     "@eslint/js": "9.0.0",
     "@playwright/test": "1.57.0",
-    "@protolabs/ui": "*",
+    "@protolabs-ai/ui": "*",
     "@storybook/addon-a11y": "^10.2.8",
     "@storybook/addon-docs": "^10.2.8",
     "@storybook/react-vite": "^10.2.8",

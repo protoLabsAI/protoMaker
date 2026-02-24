@@ -1,6 +1,6 @@
 // @ts-nocheck -- Electron API types pending strict validation refactor
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { createLogger } from '@automaker/utils/logger';
+import { createLogger } from '@protolabs-ai/utils/logger';
 import {
   getElectronAPI,
   GitHubIssue,
@@ -9,7 +9,7 @@ import {
   IssueValidationEvent,
   StoredValidation,
 } from '@/lib/electron';
-import type { LinkedPRInfo, PhaseModelEntry, ModelId } from '@automaker/types';
+import type { LinkedPRInfo, PhaseModelEntry, ModelId } from '@protolabs-ai/types';
 import { useAppStore } from '@/store/app-store';
 import { useAIModelsStore } from '@/store/ai-models-store';
 import { toast } from 'sonner';

@@ -1,13 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { createLogger } from '@automaker/utils/logger';
+import { createLogger } from '@protolabs-ai/utils/logger';
 import { useQueryClient } from '@tanstack/react-query';
-import { Card, CardContent, CardHeader, CardTitle } from '@protolabs/ui/atoms';
+import { Card, CardContent, CardHeader, CardTitle } from '@protolabs-ai/ui/atoms';
 
 const logger = createLogger('SessionManager');
-import { Button } from '@protolabs/ui/atoms';
-import { HotkeyButton } from '@protolabs/ui/molecules';
-import { Input } from '@protolabs/ui/atoms';
-import { Tabs, TabsList, TabsTrigger } from '@protolabs/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
+import { HotkeyButton } from '@protolabs-ai/ui/molecules';
+import { Input } from '@protolabs-ai/ui/atoms';
+import { Tabs, TabsList, TabsTrigger } from '@protolabs-ai/ui/atoms';
 import {
   Plus,
   MessageSquare,
@@ -18,7 +18,7 @@ import {
   X,
   ArchiveRestore,
 } from 'lucide-react';
-import { Spinner } from '@protolabs/ui/atoms';
+import { Spinner } from '@protolabs-ai/ui/atoms';
 import { cn } from '@/lib/utils';
 import type { SessionListItem } from '@/types/electron';
 import { useKeyboardShortcutsConfig } from '@/hooks/use-keyboard-shortcuts';

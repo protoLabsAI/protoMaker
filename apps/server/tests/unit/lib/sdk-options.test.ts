@@ -294,41 +294,41 @@ describe('sdk-options.ts', () => {
     });
   });
 
-  describe('getThinkingTokenBudget (from @automaker/types)', () => {
+  describe('getThinkingTokenBudget (from @protolabs-ai/types)', () => {
     it('should return undefined for "none" thinking level', async () => {
-      const { getThinkingTokenBudget } = await import('@automaker/types');
+      const { getThinkingTokenBudget } = await import('@protolabs-ai/types');
       expect(getThinkingTokenBudget('none')).toBeUndefined();
     });
 
     it('should return undefined for undefined thinking level', async () => {
-      const { getThinkingTokenBudget } = await import('@automaker/types');
+      const { getThinkingTokenBudget } = await import('@protolabs-ai/types');
       expect(getThinkingTokenBudget(undefined)).toBeUndefined();
     });
 
     it('should return 1024 for "low" thinking level', async () => {
-      const { getThinkingTokenBudget } = await import('@automaker/types');
+      const { getThinkingTokenBudget } = await import('@protolabs-ai/types');
       expect(getThinkingTokenBudget('low')).toBe(1024);
     });
 
     it('should return 10000 for "medium" thinking level', async () => {
-      const { getThinkingTokenBudget } = await import('@automaker/types');
+      const { getThinkingTokenBudget } = await import('@protolabs-ai/types');
       expect(getThinkingTokenBudget('medium')).toBe(10000);
     });
 
     it('should return 16000 for "high" thinking level', async () => {
-      const { getThinkingTokenBudget } = await import('@automaker/types');
+      const { getThinkingTokenBudget } = await import('@protolabs-ai/types');
       expect(getThinkingTokenBudget('high')).toBe(16000);
     });
 
     it('should return 32000 for "ultrathink" thinking level', async () => {
-      const { getThinkingTokenBudget } = await import('@automaker/types');
+      const { getThinkingTokenBudget } = await import('@protolabs-ai/types');
       expect(getThinkingTokenBudget('ultrathink')).toBe(32000);
     });
   });
 
   describe('THINKING_TOKEN_BUDGET constant', () => {
     it('should have correct values for all thinking levels', async () => {
-      const { THINKING_TOKEN_BUDGET } = await import('@automaker/types');
+      const { THINKING_TOKEN_BUDGET } = await import('@protolabs-ai/types');
 
       expect(THINKING_TOKEN_BUDGET.none).toBeUndefined();
       expect(THINKING_TOKEN_BUDGET.low).toBe(1024);
@@ -338,7 +338,7 @@ describe('sdk-options.ts', () => {
     });
 
     it('should have minimum of 1024 for enabled thinking levels', async () => {
-      const { THINKING_TOKEN_BUDGET } = await import('@automaker/types');
+      const { THINKING_TOKEN_BUDGET } = await import('@protolabs-ai/types');
 
       // Per Claude SDK docs: minimum is 1024 tokens
       expect(THINKING_TOKEN_BUDGET.low).toBeGreaterThanOrEqual(1024);
@@ -348,7 +348,7 @@ describe('sdk-options.ts', () => {
     });
 
     it('should have ultrathink at or below 32000 to avoid timeouts', async () => {
-      const { THINKING_TOKEN_BUDGET } = await import('@automaker/types');
+      const { THINKING_TOKEN_BUDGET } = await import('@protolabs-ai/types');
 
       // Per Claude SDK docs: above 32000 risks timeouts
       expect(THINKING_TOKEN_BUDGET.ultrathink).toBeLessThanOrEqual(32000);

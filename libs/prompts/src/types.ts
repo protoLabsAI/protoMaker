@@ -1,8 +1,8 @@
 /**
- * Shared types for @automaker/prompts
+ * Shared types for @protolabs-ai/prompts
  */
 
-import type { UserProfile } from '@automaker/types';
+import type { UserProfile } from '@protolabs-ai/types';
 
 /** Configuration for personified agent prompt generators */
 export interface PromptConfig {

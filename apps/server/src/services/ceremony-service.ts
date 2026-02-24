@@ -12,17 +12,17 @@ import {
   appendLearning,
   type LearningEntry,
   type MemoryFsModule,
-} from '@automaker/utils';
+} from '@protolabs-ai/utils';
 import type { EventEmitter } from '../lib/events.js';
 import type { SettingsService } from './settings-service.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { ProjectService } from './project-service.js';
 import type { MetricsService } from './metrics-service.js';
-import type { Feature, CeremonySettings } from '@automaker/types';
+import type { Feature, CeremonySettings } from '@protolabs-ai/types';
 import { simpleQuery } from '../providers/simple-query-service.js';
 import { BeadsService } from './beads-service.js';
 import { LinearProjectUpdateService } from './linear-project-update-service.js';
-import { secureFs } from '@automaker/platform';
+import { secureFs } from '@protolabs-ai/platform';
 import path from 'path';
 import fs from 'fs/promises';
 

@@ -7,9 +7,9 @@ import { CodexUsageSection } from '../codex/codex-usage-section';
 import { CodexModelConfiguration } from './codex-model-configuration';
 import { ProviderToggle } from './provider-toggle';
 import { getElectronAPI } from '@/lib/electron';
-import { createLogger } from '@automaker/utils/logger';
+import { createLogger } from '@protolabs-ai/utils/logger';
 import type { CliStatus as SharedCliStatus } from '../shared/types';
-import type { CodexModelId } from '@automaker/types';
+import type { CodexModelId } from '@protolabs-ai/types';
 
 const logger = createLogger('CodexSettings');
 

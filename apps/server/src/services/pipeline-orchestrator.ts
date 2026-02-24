@@ -11,7 +11,7 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import type { EventBus, EventCallback, EventType } from '@automaker/types';
+import type { EventBus, EventCallback, EventType } from '@protolabs-ai/types';
 import {
   DEFAULT_PIPELINE_GATES,
   GTM_SKIP_PHASES,
@@ -20,8 +20,8 @@ import {
   type PipelineBranch,
   type PipelinePhase,
   type PipelineState,
-} from '@automaker/types';
-import { createLogger } from '@automaker/utils';
+} from '@protolabs-ai/types';
+import { createLogger } from '@protolabs-ai/utils';
 import type { PhaseProcessor } from './authority-agents/agent-utils.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { SettingsService } from './settings-service.js';

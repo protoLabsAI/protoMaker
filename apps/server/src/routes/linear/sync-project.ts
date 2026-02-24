@@ -26,7 +26,7 @@
  */
 
 import type { RequestHandler } from 'express';
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import { linearSyncService } from '../../services/linear-sync-service.js';
 
 const logger = createLogger('SyncProject');

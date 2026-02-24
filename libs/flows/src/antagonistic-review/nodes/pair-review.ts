@@ -14,7 +14,7 @@
  */
 
 import { Annotation } from '@langchain/langgraph';
-import { type PairReviewResult, type ReviewVerdict, type SPARCPrd } from '@automaker/types';
+import { type PairReviewResult, type ReviewVerdict, type SPARCPrd } from '@protolabs-ai/types';
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { z } from 'zod';
 import { GraphBuilder } from '../../graphs/builder.js';

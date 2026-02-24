@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Timer, RefreshCw, Play, CheckCircle, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button } from '@protolabs/ui/atoms';
-import { Switch } from '@protolabs/ui/atoms';
-import { Input } from '@protolabs/ui/atoms';
-import { Spinner } from '@protolabs/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
+import { Switch } from '@protolabs-ai/ui/atoms';
+import { Input } from '@protolabs-ai/ui/atoms';
+import { Spinner } from '@protolabs-ai/ui/atoms';
 import { apiFetch } from '@/lib/api-fetch';
 
 interface SchedulerTask {

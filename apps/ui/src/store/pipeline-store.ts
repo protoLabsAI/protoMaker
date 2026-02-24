@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { PipelineConfig, PipelineStep } from '@automaker/types';
+import type { PipelineConfig, PipelineStep } from '@protolabs-ai/types';
 
 interface PipelineState {
   pipelineConfigByProject: Record<string, PipelineConfig>;

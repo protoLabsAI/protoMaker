@@ -6,7 +6,7 @@
  */
 
 import type { Request, Response } from 'express';
-import { projectPlanExists } from '@automaker/platform';
+import { projectPlanExists } from '@protolabs-ai/platform';
 import type { ProjectService } from '../../../services/project-service.js';
 import { getErrorMessage, logError } from '../common.js';
 

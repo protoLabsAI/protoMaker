@@ -5,10 +5,10 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from '@protolabs/ui/atoms';
-import { Button } from '@protolabs/ui/atoms';
-import { Input } from '@protolabs/ui/atoms';
-import { Label } from '@protolabs/ui/atoms';
+} from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
+import { Input } from '@protolabs-ai/ui/atoms';
+import { Label } from '@protolabs-ai/ui/atoms';
 import { Upload, X, ImageIcon } from 'lucide-react';
 import { useAppStore } from '@/store/app-store';
 import { getAuthenticatedImageUrl } from '@/lib/api-fetch';

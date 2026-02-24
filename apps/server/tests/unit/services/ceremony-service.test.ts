@@ -15,7 +15,7 @@ import type { EventEmitter } from '../../../src/lib/events.js';
 import type { SettingsService } from '../../../src/services/settings-service.js';
 import type { FeatureLoader } from '../../../src/services/feature-loader.js';
 import type { ProjectService } from '../../../src/services/project-service.js';
-import type { Feature, Project, CeremonySettings, ProjectSettings } from '@automaker/types';
+import type { Feature, Project, CeremonySettings, ProjectSettings } from '@protolabs-ai/types';
 
 // Mock dependencies
 const createMockSettingsService = (): SettingsService => {

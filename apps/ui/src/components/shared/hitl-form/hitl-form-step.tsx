@@ -8,7 +8,7 @@ import type { IChangeEvent } from '@rjsf/core';
 import { Form } from '@rjsf/shadcn';
 import type { RJSFSchema, UiSchema } from '@rjsf/utils';
 import validator from '@rjsf/validator-ajv8';
-import type { HITLFormStep } from '@automaker/types';
+import type { HITLFormStep } from '@protolabs-ai/types';
 
 interface HITLFormStepProps {
   step: HITLFormStep;

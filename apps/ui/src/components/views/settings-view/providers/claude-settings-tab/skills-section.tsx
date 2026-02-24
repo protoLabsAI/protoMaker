@@ -5,9 +5,9 @@
  * to load Skills from (user ~/.claude/skills/ or project .claude/skills/).
  */
 
-import { Label } from '@protolabs/ui/atoms';
-import { Switch } from '@protolabs/ui/atoms';
-import { Checkbox } from '@protolabs/ui/atoms';
+import { Label } from '@protolabs-ai/ui/atoms';
+import { Switch } from '@protolabs-ai/ui/atoms';
+import { Checkbox } from '@protolabs-ai/ui/atoms';
 import { cn } from '@/lib/utils';
 import { Zap, Globe, FolderOpen, ExternalLink, Sparkles } from 'lucide-react';
 import { useSkillsSettings } from './hooks/use-skills-settings';

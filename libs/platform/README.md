@@ -1,4 +1,4 @@
-# @automaker/platform
+# @protolabs-ai/platform
 
 Platform-specific utilities for AutoMaker.
 
@@ -9,7 +9,7 @@ This package provides platform-specific utilities including path management, sub
 ## Installation
 
 ```bash
-npm install @automaker/platform
+npm install @protolabs-ai/platform
 ```
 
 ## Exports
@@ -31,7 +31,7 @@ import {
   getAppSpecPath,
   getBranchTrackingPath,
   ensureAutomakerDir,
-} from '@automaker/platform';
+} from '@protolabs-ai/platform';
 
 // Get AutoMaker directory: /project/.automaker
 const automakerDir = getAutomakerDir('/project/path');
@@ -54,7 +54,7 @@ await ensureAutomakerDir('/project/path');
 Spawn and manage subprocesses with JSON-lines output.
 
 ```typescript
-import { spawnJSONLProcess, spawnProcess } from '@automaker/platform';
+import { spawnJSONLProcess, spawnProcess } from '@protolabs-ai/platform';
 
 // Spawn process with JSONL output parsing
 const result = await spawnJSONLProcess({
@@ -86,7 +86,7 @@ import {
   getAllowedRootDirectory,
   getDataDirectory,
   PathNotAllowedError,
-} from '@automaker/platform';
+} from '@protolabs-ai/platform';
 
 // Initialize allowed paths from environment
 // Reads ALLOWED_ROOT_DIRECTORY and DATA_DIR environment variables
@@ -120,7 +120,7 @@ import {
   ensureAutomakerDir,
   spawnJSONLProcess,
   validatePath,
-} from '@automaker/platform';
+} from '@protolabs-ai/platform';
 
 async function executeFeature(projectPath: string, featureId: string) {
   // Validate project path
@@ -181,7 +181,7 @@ DATA_DIR=/app/data
 The `secureFs` module wraps Node.js `fs` operations with path validation:
 
 ```typescript
-import { secureFs } from '@automaker/platform';
+import { secureFs } from '@protolabs-ai/platform';
 
 // All operations validate paths before execution
 await secureFs.readFile('/workspace/project/file.txt');
@@ -210,8 +210,8 @@ AutoMaker uses the following directory structure:
 
 ## Dependencies
 
-- `@automaker/types` - Type definitions
+- `@protolabs-ai/types` - Type definitions
 
 ## Used By
 
-- `@automaker/server`
+- `@protolabs-ai/server`

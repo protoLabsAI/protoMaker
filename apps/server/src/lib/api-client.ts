@@ -12,7 +12,7 @@
  * Use this for wrapping calls to GitHub, Discord, Graphite, and other external APIs.
  */
 
-import { createLogger, classifyError } from '@automaker/utils';
+import { createLogger, classifyError } from '@protolabs-ai/utils';
 
 const logger = createLogger('ApiClient');
 

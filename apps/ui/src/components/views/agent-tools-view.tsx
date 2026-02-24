@@ -1,12 +1,12 @@
 import { useState, useCallback } from 'react';
-import { createLogger } from '@automaker/utils/logger';
+import { createLogger } from '@protolabs-ai/utils/logger';
 import { useAppStore } from '@/store/app-store';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@protolabs/ui/atoms';
-import { Button } from '@protolabs/ui/atoms';
-import { Input } from '@protolabs/ui/atoms';
-import { Label } from '@protolabs/ui/atoms';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
+import { Input } from '@protolabs-ai/ui/atoms';
+import { Label } from '@protolabs-ai/ui/atoms';
 import { Terminal, CheckCircle, XCircle, Play, File, Pencil, Wrench } from 'lucide-react';
-import { Spinner } from '@protolabs/ui/atoms';
+import { Spinner } from '@protolabs-ai/ui/atoms';
 import { cn } from '@/lib/utils';
 import { getElectronAPI } from '@/lib/electron';
 

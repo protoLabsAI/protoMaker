@@ -2,11 +2,11 @@
  * Permission enforcement utilities for Cursor provider
  */
 
-import type { CursorCliConfigFile, CursorToolCallEvent } from '@automaker/types';
+import type { CursorCliConfigFile, CursorToolCallEvent } from '@protolabs-ai/types';
 
 /** The tool_call shape from CursorToolCallEvent */
 type ToolCall = CursorToolCallEvent['tool_call'];
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 
 const logger = createLogger('PermissionEnforcer');
 

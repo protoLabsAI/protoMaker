@@ -38,8 +38,8 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { createServer } from 'http';
 
 import { createEventEmitter, type EventEmitter } from './lib/events.js';
-import { initAllowedPaths } from '@automaker/platform';
-import { createLogger, setLogLevel, registerLogTransport, LogLevel } from '@automaker/utils';
+import { initAllowedPaths } from '@protolabs-ai/platform';
+import { createLogger, setLogLevel, registerLogTransport, LogLevel } from '@protolabs-ai/utils';
 import { createFileLogTransport } from './lib/server-log.js';
 
 // Register file log transport before creating any loggers that matter
@@ -184,7 +184,7 @@ import { createVoiceRoutes } from './routes/voice/index.js';
 import { createKnowledgeRoutes } from './routes/knowledge/index.js';
 import { LinearAgentService } from './services/linear-agent-service.js';
 import { LinearAgentRouter } from './services/linear-agent-router.js';
-import { MAX_SYSTEM_CONCURRENCY } from '@automaker/types';
+import { MAX_SYSTEM_CONCURRENCY } from '@protolabs-ai/types';
 import { TriageService } from './services/triage-service.js';
 import { IssueCreationService } from './services/issue-creation-service.js';
 import { createIssuesRoutes } from './routes/issues/index.js';

@@ -1,6 +1,6 @@
 import type { ComponentType, SVGProps } from 'react';
 import { cn } from '@/lib/utils';
-import type { AgentModel, ModelProvider } from '@automaker/types';
+import type { AgentModel, ModelProvider } from '@protolabs-ai/types';
 import { getProviderFromModel } from '@/lib/utils';
 
 const PROVIDER_ICON_KEYS = {

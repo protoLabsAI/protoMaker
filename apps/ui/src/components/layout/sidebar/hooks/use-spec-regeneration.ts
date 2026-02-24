@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { createLogger } from '@automaker/utils/logger';
+import { createLogger } from '@protolabs-ai/utils/logger';
 import { toast } from 'sonner';
 
 const logger = createLogger('SpecRegeneration');

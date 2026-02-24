@@ -1,7 +1,7 @@
 import React, { Component, ErrorInfo } from 'react';
-import { createLogger } from '@automaker/utils/logger';
+import { createLogger } from '@protolabs-ai/utils/logger';
 import { AlertCircle, RefreshCw } from 'lucide-react';
-import { Button } from '@protolabs/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
 import { cn } from '@/lib/utils';
 
 const logger = createLogger('TerminalErrorBoundary');

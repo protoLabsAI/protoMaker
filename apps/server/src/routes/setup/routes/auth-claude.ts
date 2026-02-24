@@ -17,7 +17,7 @@ export function createAuthClaudeHandler() {
       }
 
       // Check if CLI is already authenticated by checking auth indicators
-      const { getClaudeAuthIndicators } = await import('@automaker/platform');
+      const { getClaudeAuthIndicators } = await import('@protolabs-ai/platform');
       const indicators = await getClaudeAuthIndicators();
       const isAlreadyAuthenticated =
         indicators.hasStatsCacheWithActivity ||

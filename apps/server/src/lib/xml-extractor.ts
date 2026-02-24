@@ -9,8 +9,8 @@
  * using a library like 'fast-xml-parser' or 'xml2js'.
  */
 
-import { createLogger } from '@automaker/utils';
-import type { SpecOutput } from '@automaker/types';
+import { createLogger } from '@protolabs-ai/utils';
+import type { SpecOutput } from '@protolabs-ai/types';
 
 const logger = createLogger('XmlExtractor');
 

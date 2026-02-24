@@ -11,9 +11,13 @@
  * - Delete old events to manage disk space
  */
 
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import * as secureFs from '../lib/secure-fs.js';
-import { getEventHistoryIndexPath, getEventPath, ensureEventHistoryDir } from '@automaker/platform';
+import {
+  getEventHistoryIndexPath,
+  getEventPath,
+  ensureEventHistoryDir,
+} from '@protolabs-ai/platform';
 import type {
   StoredEvent,
   StoredEventIndex,
@@ -21,8 +25,8 @@ import type {
   EventHistoryFilter,
   EventHookTrigger,
   EventSeverity,
-} from '@automaker/types';
-import { DEFAULT_EVENT_HISTORY_INDEX } from '@automaker/types';
+} from '@protolabs-ai/types';
+import { DEFAULT_EVENT_HISTORY_INDEX } from '@protolabs-ai/types';
 import { randomUUID } from 'crypto';
 
 const logger = createLogger('EventHistoryService');

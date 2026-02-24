@@ -7,7 +7,7 @@
  */
 
 import { useCallback, useEffect } from 'react';
-import { Dialog, DialogContent, DialogTitle } from '@protolabs/ui/atoms';
+import { Dialog, DialogContent, DialogTitle } from '@protolabs-ai/ui/atoms';
 import { useChatSession } from '@/hooks/use-chat-session';
 import { useChatStore } from '@/store/chat-store';
 import { ChatOverlayContent } from '@/components/views/chat-overlay/chat-overlay-content';

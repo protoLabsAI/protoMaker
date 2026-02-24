@@ -14,8 +14,8 @@
 import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
 import path from 'node:path';
-import { createLogger, atomicWriteJson, readJsonWithRecovery } from '@automaker/utils';
-import { getAutomakerDir, getFeatureDir } from '@automaker/platform';
+import { createLogger, atomicWriteJson, readJsonWithRecovery } from '@protolabs-ai/utils';
+import { getAutomakerDir, getFeatureDir } from '@protolabs-ai/platform';
 import type {
   EventType,
   Feature,
@@ -31,7 +31,7 @@ import type {
   AgentRole,
   GoalGateResult,
   WorkflowSettings,
-} from '@automaker/types';
+} from '@protolabs-ai/types';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { AutoModeService } from './auto-mode-service.js';
@@ -47,7 +47,7 @@ import type { PipelineCheckpointService } from './pipeline-checkpoint-service.js
 import type { ContextFidelityService } from './context-fidelity-service.js';
 import type { KnowledgeStoreService } from './knowledge-store-service.js';
 import { simpleQuery } from '../providers/simple-query-service.js';
-import { resolveModelString } from '@automaker/model-resolver';
+import { resolveModelString } from '@protolabs-ai/model-resolver';
 
 const execAsync = promisify(exec);
 const logger = createLogger('LeadEngineerService');

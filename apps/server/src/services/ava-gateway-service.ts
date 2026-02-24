@@ -10,7 +10,7 @@
  * - Phase 9: Circuit breaker (failure protection + exponential backoff)
  */
 
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import type { EventEmitter } from '../lib/events.js';
 import { FeatureLoader } from './feature-loader.js';
 import { BeadsService } from './beads-service.js';

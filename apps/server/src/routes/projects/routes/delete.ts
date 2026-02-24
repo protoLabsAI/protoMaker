@@ -3,7 +3,7 @@
  */
 
 import type { Request, Response } from 'express';
-import { deleteProjectPlan, projectPlanExists } from '@automaker/platform';
+import { deleteProjectPlan, projectPlanExists } from '@protolabs-ai/platform';
 import { getErrorMessage, logError } from '../common.js';
 
 export function createDeleteHandler() {

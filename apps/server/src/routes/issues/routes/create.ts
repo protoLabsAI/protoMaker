@@ -3,7 +3,7 @@
  */
 
 import type { Request, Response } from 'express';
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import type { EventEmitter } from '../../../lib/events.js';
 
 const logger = createLogger('IssuesRoutes:Create');

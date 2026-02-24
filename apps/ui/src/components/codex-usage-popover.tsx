@@ -1,8 +1,8 @@
 import { useState, useMemo } from 'react';
-import { Popover, PopoverContent, PopoverTrigger } from '@protolabs/ui/atoms';
-import { Button } from '@protolabs/ui/atoms';
+import { Popover, PopoverContent, PopoverTrigger } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
 import { RefreshCw, AlertTriangle, CheckCircle, XCircle, Clock, ExternalLink } from 'lucide-react';
-import { Spinner } from '@protolabs/ui/atoms';
+import { Spinner } from '@protolabs-ai/ui/atoms';
 import { cn } from '@/lib/utils';
 import { useSetupStore } from '@/store/setup-store';
 import { useCodexUsage } from '@/hooks/queries';

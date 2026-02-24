@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Button } from '@protolabs/ui/atoms';
-import { Spinner } from '@protolabs/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
+import { Spinner } from '@protolabs-ai/ui/atoms';
 import { cn } from '@/lib/utils';
 import {
   History,
@@ -15,10 +15,10 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { useAppStore } from '@/store/app-store';
-import type { StoredEventSummary, StoredEvent, EventHookTrigger } from '@automaker/types';
-import { EVENT_HOOK_TRIGGER_LABELS } from '@automaker/types';
+import type { StoredEventSummary, StoredEvent, EventHookTrigger } from '@protolabs-ai/types';
+import { EVENT_HOOK_TRIGGER_LABELS } from '@protolabs-ai/types';
 import { getHttpApiClient } from '@/lib/http-api-client';
-import { ConfirmDialog } from '@protolabs/ui/molecules';
+import { ConfirmDialog } from '@protolabs-ai/ui/molecules';
 
 export function EventHistoryView() {
   const currentProject = useAppStore((state) => state.currentProject);

@@ -6,9 +6,9 @@
  */
 
 import { useState } from 'react';
-import { Badge } from '@protolabs/ui/atoms';
-import { Markdown } from '@protolabs/ui/molecules';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@protolabs/ui/atoms';
+import { Badge } from '@protolabs-ai/ui/atoms';
+import { Markdown } from '@protolabs-ai/ui/molecules';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@protolabs-ai/ui/atoms';
 import { cn } from '@/lib/utils';
 import {
   Globe,

@@ -11,7 +11,7 @@ import { spawn, execSync, type ChildProcess } from 'child_process';
 import * as secureFs from '../lib/secure-fs.js';
 import path from 'path';
 import net from 'net';
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import type { EventEmitter } from '../lib/events.js';
 
 const logger = createLogger('DevServerService');

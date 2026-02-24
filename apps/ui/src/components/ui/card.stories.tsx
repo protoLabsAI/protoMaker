@@ -18,7 +18,7 @@ import {
   CardAction,
   Button,
   Badge,
-} from '@protolabs/ui/atoms';
+} from '@protolabs-ai/ui/atoms';
 
 const meta = {
   title: 'UI/Card',

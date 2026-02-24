@@ -4,7 +4,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { OllamaProvider } from '../../src/server/providers/ollama.js';
-import type { ExecuteOptions } from '@automaker/types';
+import type { ExecuteOptions } from '@protolabs-ai/types';
 
 describe('OllamaProvider', () => {
   let provider: OllamaProvider;

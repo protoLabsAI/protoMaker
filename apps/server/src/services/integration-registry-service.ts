@@ -16,8 +16,8 @@ import {
   type IntegrationDescriptor,
   type IntegrationHealth,
   type IntegrationSummary,
-} from '@automaker/types';
-import { createLogger } from '@automaker/utils';
+} from '@protolabs-ai/types';
+import { createLogger } from '@protolabs-ai/utils';
 import type { EventEmitter } from '../lib/events.js';
 
 const logger = createLogger('IntegrationRegistry');

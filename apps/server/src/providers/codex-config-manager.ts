@@ -3,7 +3,7 @@
  */
 
 import path from 'path';
-import type { McpServerConfig } from '@automaker/types';
+import type { McpServerConfig } from '@protolabs-ai/types';
 import * as secureFs from '../lib/secure-fs.js';
 
 const CODEX_CONFIG_DIR = '.codex';

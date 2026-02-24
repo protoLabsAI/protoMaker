@@ -4,7 +4,11 @@
 
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import { getClaudeCliPaths, getClaudeAuthIndicators, systemPathAccess } from '@automaker/platform';
+import {
+  getClaudeCliPaths,
+  getClaudeAuthIndicators,
+  systemPathAccess,
+} from '@protolabs-ai/platform';
 import { getApiKey } from './common.js';
 import * as fs from 'fs';
 import * as path from 'path';

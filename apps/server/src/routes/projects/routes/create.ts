@@ -3,7 +3,7 @@
  */
 
 import type { Request, Response } from 'express';
-import type { Project, Milestone, Phase, SPARCPrd } from '@automaker/types';
+import type { Project, Milestone, Phase, SPARCPrd } from '@protolabs-ai/types';
 import {
   ensureProjectStructure,
   ensureMilestoneDir,
@@ -17,14 +17,14 @@ import {
   generatePhaseSlug,
   generateProjectSlug,
   projectPlanExists,
-} from '@automaker/platform';
-import { secureFs } from '@automaker/platform';
+} from '@protolabs-ai/platform';
+import { secureFs } from '@protolabs-ai/platform';
 import {
   generateProjectFile,
   generateMilestoneFile,
   generatePhaseFile,
   generatePrdFile,
-} from '@automaker/utils';
+} from '@protolabs-ai/utils';
 import { getErrorMessage, logError } from '../common.js';
 
 interface CreateProjectRequest {

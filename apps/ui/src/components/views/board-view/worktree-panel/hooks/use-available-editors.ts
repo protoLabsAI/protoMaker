@@ -4,7 +4,7 @@ import { getElectronAPI } from '@/lib/electron';
 import { useAppStore } from '@/store/app-store';
 import { useAvailableEditors as useAvailableEditorsQuery } from '@/hooks/queries';
 import { queryKeys } from '@/lib/query-keys';
-import type { EditorInfo } from '@automaker/types';
+import type { EditorInfo } from '@protolabs-ai/types';
 
 // Re-export EditorInfo for convenience
 export type { EditorInfo };

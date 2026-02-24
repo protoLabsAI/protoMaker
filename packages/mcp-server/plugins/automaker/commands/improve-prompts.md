@@ -24,7 +24,7 @@ Check: Are components present? In the right order? Is the directive near the end
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | "Help the user"   | "When the user declares an action: 1) Interpret intent, 2) Determine if dice roll needed, 3) Narrate outcome in 2-4 sentences" |
 | "Be helpful"      | "Respond in 3-5 sentences using active voice and present tense"                                                                |
-| "Write good code" | "Write TypeScript. Import from @automaker/types. Run build:packages after modifying libs/"                                     |
+| "Write good code" | "Write TypeScript. Import from @protolabs-ai/types. Run build:packages after modifying libs/"                                  |
 
 Check: Can the model unambiguously determine what to do? Are there action verbs? Are constraints explicit?
 

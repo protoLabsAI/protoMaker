@@ -11,7 +11,7 @@ import type { Request, Response } from 'express';
 import path from 'path';
 import * as secureFs from '../../../lib/secure-fs.js';
 import { getErrorMessage, logError, isValidBranchName } from '../common.js';
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import type { EventEmitter } from '../../../lib/events.js';
 import { forceRunInitScript } from '../../../services/init-script-service.js';
 

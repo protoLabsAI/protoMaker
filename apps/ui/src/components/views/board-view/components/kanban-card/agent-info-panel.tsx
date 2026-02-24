@@ -1,12 +1,12 @@
 import { memo, useEffect, useState, useMemo } from 'react';
 import { Feature, ThinkingLevel, ParsedTask } from '@/store/types';
-import type { ReasoningEffort } from '@automaker/types';
+import type { ReasoningEffort } from '@protolabs-ai/types';
 import { getProviderFromModel } from '@/lib/utils';
 import { parseAgentContext, formatModelName, DEFAULT_MODEL } from '@/lib/agent-context-parser';
 import { cn } from '@/lib/utils';
 import type { AutoModeEvent } from '@/types/electron';
 import { Brain, ListTodo, Sparkles, Expand, CheckCircle2, Circle, Wrench } from 'lucide-react';
-import { Spinner } from '@protolabs/ui/atoms';
+import { Spinner } from '@protolabs-ai/ui/atoms';
 import { getElectronAPI } from '@/lib/electron';
 import { SummaryDialog } from './summary-dialog';
 import { getProviderIconForModel } from '@/components/shared/provider-icon';

@@ -1,10 +1,10 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { createLogger } from '@automaker/utils/logger';
+import { createLogger } from '@protolabs-ai/utils/logger';
 import { cn } from '@/lib/utils';
 
 const logger = createLogger('ImageDropZone');
 import { ImageIcon, X } from 'lucide-react';
-import { Spinner } from '@protolabs/ui/atoms';
+import { Spinner } from '@protolabs-ai/ui/atoms';
 import type { ImageAttachment } from '@/store/types';
 import {
   fileToBase64,

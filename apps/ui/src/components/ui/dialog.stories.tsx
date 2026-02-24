@@ -18,7 +18,7 @@ import {
   DialogFooter,
   Button,
   Badge,
-} from '@protolabs/ui/atoms';
+} from '@protolabs-ai/ui/atoms';
 import { useState } from 'react';
 
 const meta = {

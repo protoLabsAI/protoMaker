@@ -19,9 +19,9 @@
  * Mirrors the PM Agent pattern for event handling and processing guards.
  */
 
-import type { PipelinePhase } from '@automaker/types';
-import { createLogger } from '@automaker/utils';
-import { resolveModelString } from '@automaker/model-resolver';
+import type { PipelinePhase } from '@protolabs-ai/types';
+import { createLogger } from '@protolabs-ai/utils';
+import { resolveModelString } from '@protolabs-ai/model-resolver';
 import { randomUUID } from 'node:crypto';
 import type { EventEmitter } from '../../lib/events.js';
 import type { AuthorityService } from '../authority-service.js';

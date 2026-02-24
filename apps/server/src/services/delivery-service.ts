@@ -15,7 +15,7 @@ import { execFile } from 'child_process';
 import { promisify } from 'util';
 import path from 'node:path';
 import fs from 'node:fs/promises';
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import { labsService } from './labs-service.js';
 
 const execFileAsync = promisify(execFile);

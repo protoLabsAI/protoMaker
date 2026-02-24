@@ -1,12 +1,12 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
-import { createLogger } from '@automaker/utils/logger';
+import { createLogger } from '@protolabs-ai/utils/logger';
 import { useAppStore } from '@/store/app-store';
 import { getElectronAPI } from '@/lib/electron';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { toast } from 'sonner';
-import { Button } from '@protolabs/ui/atoms';
-import { HotkeyButton } from '@protolabs/ui/molecules';
-import { Card } from '@protolabs/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
+import { HotkeyButton } from '@protolabs-ai/ui/molecules';
+import { Card } from '@protolabs-ai/ui/atoms';
 import {
   HeaderActionsPanel,
   HeaderActionsPanelTrigger,
@@ -25,7 +25,7 @@ import {
   FileUp,
   MoreVertical,
 } from 'lucide-react';
-import { Spinner } from '@protolabs/ui/atoms';
+import { Spinner } from '@protolabs-ai/ui/atoms';
 import {
   useKeyboardShortcuts,
   useKeyboardShortcutsConfig,
@@ -38,21 +38,21 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from '@protolabs/ui/atoms';
-import { Input } from '@protolabs/ui/atoms';
-import { Label } from '@protolabs/ui/atoms';
+} from '@protolabs-ai/ui/atoms';
+import { Input } from '@protolabs-ai/ui/atoms';
+import { Label } from '@protolabs-ai/ui/atoms';
 import { cn } from '@/lib/utils';
 
 const logger = createLogger('ContextView');
 import { sanitizeFilename } from '@/lib/image-utils';
-import { Markdown } from '@protolabs/ui/molecules';
+import { Markdown } from '@protolabs-ai/ui/molecules';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@protolabs/ui/atoms';
-import { Textarea } from '@protolabs/ui/atoms';
+} from '@protolabs-ai/ui/atoms';
+import { Textarea } from '@protolabs-ai/ui/atoms';
 
 interface ContextFile {
   name: string;

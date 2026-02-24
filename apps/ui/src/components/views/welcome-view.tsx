@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
-import { createLogger } from '@automaker/utils/logger';
-import { Button } from '@protolabs/ui/atoms';
+import { createLogger } from '@protolabs-ai/utils/logger';
+import { Button } from '@protolabs-ai/ui/atoms';
 import {
   Dialog,
   DialogContent,
@@ -8,7 +8,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@protolabs/ui/atoms';
+} from '@protolabs-ai/ui/atoms';
 import { useAppStore } from '@/store/app-store';
 import { getElectronAPI } from '@/lib/electron';
 import { initializeProject } from '@/lib/project-init';
@@ -21,13 +21,13 @@ import {
   MessageSquare,
   ChevronDown,
 } from 'lucide-react';
-import { Spinner } from '@protolabs/ui/atoms';
+import { Spinner } from '@protolabs-ai/ui/atoms';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@protolabs/ui/atoms';
+} from '@protolabs-ai/ui/atoms';
 import { toast } from 'sonner';
 import { WorkspacePickerModal } from '@/components/dialogs/workspace-picker-modal';
 import { NewProjectModal } from '@/components/dialogs/new-project-modal';

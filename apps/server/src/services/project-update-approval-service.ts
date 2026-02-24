@@ -8,7 +8,7 @@
  * Also handles approval via comments on project updates.
  */
 
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import type { EventEmitter } from '../lib/events.js';
 import type { ProjectLifecycleService } from './project-lifecycle-service.js';
 import type { ProjectService } from './project-service.js';

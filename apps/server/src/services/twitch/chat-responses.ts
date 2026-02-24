@@ -9,8 +9,8 @@
  * Feature completion announcements with PR links are handled by event listeners.
  */
 
-import { createLogger } from '@automaker/utils';
-import type { TwitchSuggestion } from '@automaker/types';
+import { createLogger } from '@protolabs-ai/utils';
+import type { TwitchSuggestion } from '@protolabs-ai/types';
 
 const logger = createLogger('TwitchChatResponses');
 

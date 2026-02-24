@@ -1,6 +1,6 @@
 # API Reference
 
-Complete API reference for `@automaker/llm-providers`.
+Complete API reference for `@protolabs-ai/llm-providers`.
 
 ## Table of Contents
 
@@ -588,7 +588,7 @@ function validateLLMProvidersConfig(config: unknown): LLMProvidersConfig;
 **Example:**
 
 ```typescript
-import { validateLLMProvidersConfig } from '@automaker/llm-providers';
+import { validateLLMProvidersConfig } from '@protolabs-ai/llm-providers';
 
 try {
   const validConfig = validateLLMProvidersConfig(userConfig);
@@ -731,8 +731,8 @@ try {
 ### Basic Setup
 
 ```typescript
-import { ProviderFactory } from '@automaker/llm-providers';
-import type { LLMProvidersConfig } from '@automaker/llm-providers';
+import { ProviderFactory } from '@protolabs-ai/llm-providers';
+import type { LLMProvidersConfig } from '@protolabs-ai/llm-providers';
 
 const config: LLMProvidersConfig = {
   providers: {
@@ -817,7 +817,7 @@ console.log(`${healthyProviders.length}/${providers.length} providers available`
 ### Type-Safe Configuration
 
 ```typescript
-import type { LLMProvidersConfig, ModelCategory, ProviderName } from '@automaker/llm-providers';
+import type { LLMProvidersConfig, ModelCategory, ProviderName } from '@protolabs-ai/llm-providers';
 
 // TypeScript will validate types
 const config: LLMProvidersConfig = {

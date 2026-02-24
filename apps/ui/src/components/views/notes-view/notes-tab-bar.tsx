@@ -1,8 +1,8 @@
 import { useState, useCallback } from 'react';
 import { X, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button } from '@protolabs/ui/atoms';
-import { Input } from '@protolabs/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
+import { Input } from '@protolabs-ai/ui/atoms';
 
 interface NotesTabBarProps {
   tabs: Array<{ id: string; name: string }>;

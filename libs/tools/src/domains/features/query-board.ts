@@ -7,7 +7,7 @@
  */
 
 import type { ToolContext, ToolResult, CompactFeature } from '../../types.js';
-import type { Feature, FeatureStatus } from '@automaker/types';
+import type { Feature, FeatureStatus } from '@protolabs-ai/types';
 
 export interface QueryBoardInput {
   projectPath: string;

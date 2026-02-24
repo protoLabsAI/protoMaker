@@ -1,7 +1,7 @@
 import { Mic, MicOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useVoiceActivation } from '@/hooks/use-voice-activation';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@protolabs/ui/atoms';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@protolabs-ai/ui/atoms';
 
 export function VoiceIndicator() {
   const { isEnabled, isListening, isProcessing, isCommandMode, error, toggle } =

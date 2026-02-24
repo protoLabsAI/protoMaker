@@ -6,8 +6,8 @@
  * This connects the unified inbox to all user-attention signals.
  */
 
-import { createLogger } from '@automaker/utils';
-import type { EventType } from '@automaker/types';
+import { createLogger } from '@protolabs-ai/utils';
+import type { EventType } from '@protolabs-ai/types';
 import type { ActionableItemService } from './actionable-item-service.js';
 import type { EventEmitter, UnsubscribeFn } from '../lib/events.js';
 

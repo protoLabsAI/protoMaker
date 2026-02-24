@@ -156,7 +156,7 @@ export const RichContent: Story = {
         <AccordionContent>
           <div className="space-y-2">
             <p>Install the package using your preferred package manager:</p>
-            <pre className="bg-muted p-2 rounded text-xs">npm install @protolabs/ui</pre>
+            <pre className="bg-muted p-2 rounded text-xs">npm install @protolabs-ai/ui</pre>
           </div>
         </AccordionContent>
       </AccordionItem>
@@ -166,7 +166,7 @@ export const RichContent: Story = {
           <div className="space-y-2">
             <p>Import and use the component in your application:</p>
             <pre className="bg-muted p-2 rounded text-xs">
-              {`import { Accordion } from '@protolabs/ui';`}
+              {`import { Accordion } from '@protolabs-ai/ui';`}
             </pre>
           </div>
         </AccordionContent>

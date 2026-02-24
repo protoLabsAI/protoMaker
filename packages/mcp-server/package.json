@@ -1,5 +1,5 @@
 {
-  "name": "@automaker/mcp-server",
+  "name": "@protolabs-ai/mcp-server",
   "version": "0.2.0",
   "description": "MCP server for interacting with Automaker board and features",
   "type": "module",
@@ -25,7 +25,7 @@
     "kanban"
   ],
   "dependencies": {
-    "@automaker/tools": "*",
+    "@protolabs-ai/tools": "*",
     "@modelcontextprotocol/sdk": "^1.0.0"
   },
   "devDependencies": {

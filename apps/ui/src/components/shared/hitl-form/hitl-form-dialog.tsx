@@ -13,8 +13,8 @@ import {
   DialogTitle,
   DialogDescription,
   Textarea,
-} from '@protolabs/ui/atoms';
-import { Button } from '@protolabs/ui/atoms';
+} from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
 import { Loader2, Send, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useHITLFormStore } from '@/store/hitl-form-store';

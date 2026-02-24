@@ -2,7 +2,7 @@
  * ModelPieChart - Donut chart showing cost distribution by model
  */
 
-import { Card, CardContent, CardHeader, CardTitle } from '@protolabs/ui/atoms';
+import { Card, CardContent, CardHeader, CardTitle } from '@protolabs-ai/ui/atoms';
 import { useChartColors, type ChartColors } from '@/hooks/use-chart-colors';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 

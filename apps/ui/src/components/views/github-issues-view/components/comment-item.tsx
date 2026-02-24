@@ -1,5 +1,5 @@
 import { User } from 'lucide-react';
-import { Markdown } from '@protolabs/ui/molecules';
+import { Markdown } from '@protolabs-ai/ui/molecules';
 import type { GitHubComment } from '@/lib/electron';
 import { formatDate } from '../utils';
 

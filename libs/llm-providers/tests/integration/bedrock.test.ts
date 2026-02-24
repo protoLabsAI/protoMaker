@@ -4,7 +4,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { BedrockProvider } from '../../src/server/providers/bedrock.js';
-import type { ExecuteOptions } from '@automaker/types';
+import type { ExecuteOptions } from '@protolabs-ai/types';
 
 describe('BedrockProvider', () => {
   let provider: BedrockProvider;

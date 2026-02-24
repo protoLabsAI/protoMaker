@@ -21,11 +21,11 @@ import type {
   RalphFailureAnalysis,
   RalphEventPayload,
   EventType,
-} from '@automaker/types';
-import type { RalphFailureCategory } from '@automaker/types';
-import { DEFAULT_RALPH_CONFIG } from '@automaker/types';
-import { atomicWriteJson, readJsonWithRecovery } from '@automaker/utils';
-import { getFeatureDir, getRalphDir } from '@automaker/platform';
+} from '@protolabs-ai/types';
+import type { RalphFailureCategory } from '@protolabs-ai/types';
+import { DEFAULT_RALPH_CONFIG } from '@protolabs-ai/types';
+import { atomicWriteJson, readJsonWithRecovery } from '@protolabs-ai/utils';
+import { getFeatureDir, getRalphDir } from '@protolabs-ai/platform';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import path from 'path';

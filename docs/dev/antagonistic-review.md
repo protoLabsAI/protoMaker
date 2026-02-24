@@ -141,7 +141,7 @@ Initial PRD → Critique (Ava) → Revision (if needed) → Re-Review
 ### Implementation Example
 
 ```typescript
-import { AntagonisticReviewService } from '@automaker/server';
+import { AntagonisticReviewService } from '@protolabs-ai/server';
 
 const reviewService = AntagonisticReviewService.getInstance(agentFactory, events);
 
@@ -212,7 +212,7 @@ The antagonistic review pattern integrates seamlessly into any LangGraph workflo
 
 ```typescript
 import { StateGraph, Annotation } from '@langchain/langgraph';
-import { createAntagonisticReviewSubgraph } from '@automaker/flows';
+import { createAntagonisticReviewSubgraph } from '@protolabs-ai/flows';
 
 const MainState = Annotation.Root({
   prd: Annotation<SPARCPrd>,
@@ -338,7 +338,7 @@ Full observability via Langfuse integration for review analytics and debugging.
 ### Trace Structure
 
 ```typescript
-import { withLangfuseTracing } from '@automaker/observability';
+import { withLangfuseTracing } from '@protolabs-ai/observability';
 
 const tracedReview = withLangfuseTracing(
   async (prd: SPARCPrd) => {
@@ -390,7 +390,7 @@ Query review metrics from Langfuse:
 ### PRD Review
 
 ```typescript
-import { AntagonisticReviewService } from '@automaker/server';
+import { AntagonisticReviewService } from '@protolabs-ai/server';
 
 const service = AntagonisticReviewService.getInstance(agentFactory, events);
 const result = await service.executeReview({
@@ -407,7 +407,7 @@ console.log('Final PRD:', result.finalPRD);
 ### Code Review
 
 ```typescript
-import { createCodeReviewFlow } from '@automaker/flows';
+import { createCodeReviewFlow } from '@protolabs-ai/flows';
 
 const result = await createCodeReviewFlow({ rubric: codeReviewRubric }).invoke({
   code: sourceCode,
@@ -540,8 +540,8 @@ Training models through critique and revision against constitutional principles.
 Complete example integrating all components:
 
 ```typescript
-import { AntagonisticReviewService } from '@automaker/server';
-import { withLangfuseTracing } from '@automaker/observability';
+import { AntagonisticReviewService } from '@protolabs-ai/server';
+import { withLangfuseTracing } from '@protolabs-ai/observability';
 import { StateGraph, MemorySaver } from '@langchain/langgraph';
 
 // Define review rubric

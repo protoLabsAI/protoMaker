@@ -1,5 +1,5 @@
 /**
- * ChatMessage — Re-exports the shared ChatMessage from @protolabs/ui/ai.
+ * ChatMessage — Re-exports the shared ChatMessage from @protolabs-ai/ui/ai.
  *
  * All chat message primitives (ChatMessage, ChatMessageAvatar, ChatMessageBubble,
  * ChatMessageMarkdown) are maintained in the shared library for reuse
@@ -11,4 +11,4 @@ export {
   ChatMessageAvatar,
   ChatMessageBubble,
   ChatMessageMarkdown,
-} from '@protolabs/ui/ai';
+} from '@protolabs-ai/ui/ai';

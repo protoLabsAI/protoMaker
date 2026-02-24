@@ -7,9 +7,9 @@
  */
 
 import type { Request, Response } from 'express';
-import { createLogger } from '@automaker/utils';
-import { resolveModelString } from '@automaker/model-resolver';
-import { CLAUDE_MODEL_MAP, type ThinkingLevel } from '@automaker/types';
+import { createLogger } from '@protolabs-ai/utils';
+import { resolveModelString } from '@protolabs-ai/model-resolver';
+import { CLAUDE_MODEL_MAP, type ThinkingLevel } from '@protolabs-ai/types';
 import { simpleQuery } from '../../../providers/simple-query-service.js';
 import type { SettingsService } from '../../../services/settings-service.js';
 import { getPromptCustomization, getProviderByModelId } from '../../../lib/settings-helpers.js';
@@ -130,7 +130,9 @@ export function createEnhanceHandler(
 
       // Check if the model is a provider model (like "GLM-4.5-Air")
       // If so, get the provider config and resolved Claude model
-      let claudeCompatibleProvider: import('@automaker/types').ClaudeCompatibleProvider | undefined;
+      let claudeCompatibleProvider:
+        | import('@protolabs-ai/types').ClaudeCompatibleProvider
+        | undefined;
       let providerResolvedModel: string | undefined;
       let credentials = await settingsService?.getCredentials();
 

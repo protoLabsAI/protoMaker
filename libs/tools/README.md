@@ -1,4 +1,4 @@
-# @automaker/tools
+# @protolabs-ai/tools
 
 Unified tool definition and registry system for AutoMaker.
 
@@ -18,7 +18,7 @@ This package provides a type-safe tool creation system with Zod schema validatio
 ## Installation
 
 ```bash
-npm install @automaker/tools
+npm install @protolabs-ai/tools
 ```
 
 ## Usage
@@ -26,7 +26,7 @@ npm install @automaker/tools
 ### Creating a Tool
 
 ```typescript
-import { defineSharedTool } from '@automaker/tools';
+import { defineSharedTool } from '@protolabs-ai/tools';
 import { z } from 'zod';
 
 const greetTool = defineSharedTool({
@@ -57,7 +57,7 @@ const greetTool = defineSharedTool({
 ### Using the Registry
 
 ```typescript
-import { ToolRegistry } from '@automaker/tools';
+import { ToolRegistry } from '@protolabs-ai/tools';
 
 // Create registry
 const registry = new ToolRegistry();

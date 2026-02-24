@@ -6,7 +6,11 @@ import type { Request, Response } from 'express';
 import * as secureFs from '../../../lib/secure-fs.js';
 import os from 'os';
 import path from 'path';
-import { getAllowedRootDirectory, PathNotAllowedError, isPathAllowed } from '@automaker/platform';
+import {
+  getAllowedRootDirectory,
+  PathNotAllowedError,
+  isPathAllowed,
+} from '@protolabs-ai/platform';
 import { getErrorMessage, logError } from '../common.js';
 
 export function createBrowseHandler() {

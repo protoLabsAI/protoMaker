@@ -8,7 +8,7 @@
 
 import { Router, type Request, type Response } from 'express';
 import type { EscalationRouter } from '../services/escalation-router.js';
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 
 const logger = createLogger('EscalationRoutes');
 

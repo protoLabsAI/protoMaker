@@ -1,6 +1,6 @@
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button } from '@protolabs/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
 import { PROJECT_SETTINGS_NAV_ITEMS } from '../config/navigation';
 import type { ProjectSettingsViewId } from '../hooks/use-project-settings-view';
 

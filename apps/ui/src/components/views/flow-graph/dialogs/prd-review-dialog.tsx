@@ -15,9 +15,9 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from '@protolabs/ui/atoms';
-import { Button } from '@protolabs/ui/atoms';
-import { Badge } from '@protolabs/ui/atoms';
+} from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
+import { Badge } from '@protolabs-ai/ui/atoms';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import Markdown from 'react-markdown';
 import { useEditor, EditorContent } from '@tiptap/react';

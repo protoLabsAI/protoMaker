@@ -1,7 +1,7 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@protolabs/ui/atoms';
-import { Input } from '@protolabs/ui/atoms';
-import { Textarea } from '@protolabs/ui/atoms';
-import { Label } from '@protolabs/ui/atoms';
+import { Card, CardContent, CardHeader, CardTitle } from '@protolabs-ai/ui/atoms';
+import { Input } from '@protolabs-ai/ui/atoms';
+import { Textarea } from '@protolabs-ai/ui/atoms';
+import { Label } from '@protolabs-ai/ui/atoms';
 import { FileText } from 'lucide-react';
 
 interface ProjectInfoSectionProps {

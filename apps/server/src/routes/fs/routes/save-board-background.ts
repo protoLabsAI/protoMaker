@@ -6,7 +6,7 @@ import type { Request, Response } from 'express';
 import * as secureFs from '../../../lib/secure-fs.js';
 import path from 'path';
 import { getErrorMessage, logError } from '../common.js';
-import { getBoardDir } from '@automaker/platform';
+import { getBoardDir } from '@protolabs-ai/platform';
 
 export function createSaveBoardBackgroundHandler() {
   return async (req: Request, res: Response): Promise<void> => {

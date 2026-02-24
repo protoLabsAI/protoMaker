@@ -9,7 +9,7 @@ import {
   useAppStore,
 } from '@/store/app-store';
 import { useWorktreeStore } from '@/store/worktree-store';
-import type { ReasoningEffort } from '@automaker/types';
+import type { ReasoningEffort } from '@protolabs-ai/types';
 import { FeatureImagePath as DescriptionImagePath } from '@/components/views/board-view/components/description-image-dropzone';
 import { getElectronAPI } from '@/lib/electron';
 import { isConnectionError, handleServerOffline } from '@/lib/http-api-client';
@@ -17,8 +17,8 @@ import { toast } from 'sonner';
 import { useAutoMode } from '@/hooks/use-auto-mode';
 import { useVerifyFeature, useResumeFeature } from '@/hooks/mutations';
 import { truncateDescription } from '@/lib/utils';
-import { getBlockingDependencies } from '@automaker/dependency-resolver';
-import { createLogger } from '@automaker/utils/logger';
+import { getBlockingDependencies } from '@protolabs-ai/dependency-resolver';
+import { createLogger } from '@protolabs-ai/utils/logger';
 
 const logger = createLogger('BoardActions');
 

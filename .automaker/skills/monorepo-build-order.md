@@ -18,15 +18,15 @@ The Automaker monorepo has a strict dependency chain. Building out of order caus
 ## Package Dependency Chain
 
 ```
-@automaker/types (no dependencies)
+@protolabs-ai/types (no dependencies)
     ↓
-@automaker/utils, @automaker/prompts, @automaker/platform,
-@automaker/model-resolver, @automaker/dependency-resolver,
-@automaker/spec-parser
+@protolabs-ai/utils, @protolabs-ai/prompts, @protolabs-ai/platform,
+@protolabs-ai/model-resolver, @protolabs-ai/dependency-resolver,
+@protolabs-ai/spec-parser
     ↓
-@automaker/git-utils
+@protolabs-ai/git-utils
     ↓
-@automaker/server, @automaker/ui
+@protolabs-ai/server, @protolabs-ai/ui
 ```
 
 ## Build Commands
@@ -54,11 +54,11 @@ npm run build
 
 ## Common Pitfall
 
-`@automaker/mcp-server` lives in `packages/` not `libs/`. It IS included in `build:packages` (fixed 2026-02-11). New MCP tools exist in source but not in `dist/index.js` until packages are rebuilt.
+`@protolabs-ai/mcp-server` lives in `packages/` not `libs/`. It IS included in `build:packages` (fixed 2026-02-11). New MCP tools exist in source but not in `dist/index.js` until packages are rebuilt.
 
 ## Agent Prompt Gap
 
 Agent prompts have zero guidance on monorepo build order. When sending context to agents via `send_message_to_agent`, always include:
 - Run `npm run build:packages` before `npm run build:server`
 - When modifying libs/*, rebuild packages first
-- Import from `@automaker/*` packages, never from relative paths to other packages
+- Import from `@protolabs-ai/*` packages, never from relative paths to other packages

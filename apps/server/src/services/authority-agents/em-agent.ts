@@ -13,9 +13,9 @@
  * All actions go through AuthorityService.submitProposal().
  */
 
-import type { Feature } from '@automaker/types';
-import type { AuthorityAgent } from '@automaker/types';
-import { createLogger } from '@automaker/utils';
+import type { Feature } from '@protolabs-ai/types';
+import type { AuthorityAgent } from '@protolabs-ai/types';
+import { createLogger } from '@protolabs-ai/utils';
 import type { EventEmitter } from '../../lib/events.js';
 import type { AuthorityService } from '../authority-service.js';
 import type { FeatureLoader } from '../feature-loader.js';

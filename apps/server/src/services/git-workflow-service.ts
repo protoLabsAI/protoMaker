@@ -7,16 +7,16 @@
 
 import { exec, execFile } from 'child_process';
 import { promisify } from 'util';
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import type {
   Feature,
   GitWorkflowSettings,
   GitWorkflowResult,
   GlobalSettings,
-} from '@automaker/types';
-import { DEFAULT_GIT_WORKFLOW_SETTINGS, DEFAULT_GRAPHITE_SETTINGS } from '@automaker/types';
+} from '@protolabs-ai/types';
+import { DEFAULT_GIT_WORKFLOW_SETTINGS, DEFAULT_GRAPHITE_SETTINGS } from '@protolabs-ai/types';
 import { updateWorktreePRInfo } from '../lib/worktree-metadata.js';
-import { validatePRState } from '@automaker/types';
+import { validatePRState } from '@protolabs-ai/types';
 import { graphiteService } from './graphite-service.js';
 import { githubMergeService } from './github-merge-service.js';
 import { codeRabbitResolverService } from './coderabbit-resolver-service.js';
@@ -947,19 +947,19 @@ export class GitWorkflowService {
 
     // Map directory prefixes to package names
     const DIR_TO_PACKAGE: Record<string, string> = {
-      'libs/types/': '@automaker/types',
-      'libs/utils/': '@automaker/utils',
-      'libs/platform/': '@automaker/platform',
-      'libs/prompts/': '@automaker/prompts',
-      'libs/tools/': '@automaker/tools',
-      'libs/model-resolver/': '@automaker/model-resolver',
-      'libs/dependency-resolver/': '@automaker/dependency-resolver',
-      'libs/spec-parser/': '@automaker/spec-parser',
-      'libs/flows/': '@automaker/flows',
-      'libs/llm-providers/': '@automaker/llm-providers',
-      'libs/observability/': '@automaker/observability',
-      'libs/git-utils/': '@automaker/git-utils',
-      'libs/ui/': '@protolabs/ui',
+      'libs/types/': '@protolabs-ai/types',
+      'libs/utils/': '@protolabs-ai/utils',
+      'libs/platform/': '@protolabs-ai/platform',
+      'libs/prompts/': '@protolabs-ai/prompts',
+      'libs/tools/': '@protolabs-ai/tools',
+      'libs/model-resolver/': '@protolabs-ai/model-resolver',
+      'libs/dependency-resolver/': '@protolabs-ai/dependency-resolver',
+      'libs/spec-parser/': '@protolabs-ai/spec-parser',
+      'libs/flows/': '@protolabs-ai/flows',
+      'libs/llm-providers/': '@protolabs-ai/llm-providers',
+      'libs/observability/': '@protolabs-ai/observability',
+      'libs/git-utils/': '@protolabs-ai/git-utils',
+      'libs/ui/': '@protolabs-ai/ui',
     };
 
     // Detect which packages were touched

@@ -10,9 +10,9 @@
 
 import path from 'path';
 import os from 'os';
-import { createLogger } from '@automaker/utils';
-import { secureFs, systemPaths } from '@automaker/platform';
-import type { AgentDefinition } from '@automaker/types';
+import { createLogger } from '@protolabs-ai/utils';
+import { secureFs, systemPaths } from '@protolabs-ai/platform';
+import type { AgentDefinition } from '@protolabs-ai/types';
 
 const logger = createLogger('AgentDiscovery');
 

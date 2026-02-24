@@ -17,7 +17,7 @@ import { getHttpApiClient } from '@/lib/http-api-client';
 import { OverlayBoard } from './stream-overlay/overlay-board';
 import { SuggestionQueue } from './stream-overlay/suggestion-queue';
 import { ActivityFeed } from './stream-overlay/activity-feed';
-import type { TwitchSuggestion } from '@automaker/types';
+import type { TwitchSuggestion } from '@protolabs-ai/types';
 
 interface ActivityEvent {
   id: string;

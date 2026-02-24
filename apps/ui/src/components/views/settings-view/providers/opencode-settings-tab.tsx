@@ -8,7 +8,7 @@ import { ProviderToggle } from './provider-toggle';
 import { useOpencodeCliStatus, useOpencodeProviders, useOpencodeModels } from '@/hooks/queries';
 import { queryKeys } from '@/lib/query-keys';
 import type { CliStatus as SharedCliStatus } from '../shared/types';
-import type { OpencodeModelId } from '@automaker/types';
+import type { OpencodeModelId } from '@protolabs-ai/types';
 import type { OpencodeAuthStatus, OpenCodeProviderInfo } from '../cli-status/opencode-cli-status';
 
 export function OpencodeSettingsTab() {

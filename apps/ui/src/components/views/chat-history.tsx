@@ -2,8 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { UIEvent } from 'react';
 import { useAppStore } from '@/store/app-store';
 import { useShallow } from 'zustand/react/shallow';
-import { Button } from '@protolabs/ui/atoms';
-import { Input } from '@protolabs/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
+import { Input } from '@protolabs-ai/ui/atoms';
 import {
   Plus,
   MessageSquare,
@@ -22,8 +22,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
-} from '@protolabs/ui/atoms';
-import { Badge } from '@protolabs/ui/atoms';
+} from '@protolabs-ai/ui/atoms';
+import { Badge } from '@protolabs-ai/ui/atoms';
 
 const CHAT_SESSION_ROW_HEIGHT_PX = 84;
 const CHAT_SESSION_OVERSCAN_COUNT = 6;

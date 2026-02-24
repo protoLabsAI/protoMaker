@@ -3,7 +3,7 @@
  */
 
 import type { z } from 'zod';
-import type { Feature, FeatureStatus } from '@automaker/types';
+import type { Feature, FeatureStatus } from '@protolabs-ai/types';
 
 /**
  * Tool execution context - dependency injection container

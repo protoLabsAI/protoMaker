@@ -378,5 +378,5 @@ The dispatch event type is `langfuse-prompt-sync` and includes the prompt name, 
 ## Related Documentation
 
 - [Langfuse Integration](./langfuse-integration.md) — Server-side tracing, agent scoring, API proxy routes
-- [Observability Package](./observability-package.md) — `@automaker/observability` library reference
+- [Observability Package](./observability-package.md) — `@protolabs-ai/observability` library reference
 - [Prompt Engineering](../agents/prompt-engineering.md) — How prompts are composed and customized

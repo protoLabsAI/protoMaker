@@ -4,10 +4,10 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { BeadsService } from '../../../src/services/beads-service.js';
-import * as platform from '@automaker/platform';
+import * as platform from '@protolabs-ai/platform';
 
 // Mock the platform module
-vi.mock('@automaker/platform', () => ({
+vi.mock('@protolabs-ai/platform', () => ({
   spawnProcess: vi.fn(),
 }));
 

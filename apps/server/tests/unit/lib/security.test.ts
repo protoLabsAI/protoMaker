@@ -15,7 +15,7 @@ describe('security.ts', () => {
       process.env.ALLOWED_ROOT_DIRECTORY = '/projects';
       delete process.env.DATA_DIR;
 
-      const { initAllowedPaths, getAllowedPaths } = await import('@automaker/platform');
+      const { initAllowedPaths, getAllowedPaths } = await import('@protolabs-ai/platform');
       initAllowedPaths();
 
       const allowed = getAllowedPaths();
@@ -26,7 +26,7 @@ describe('security.ts', () => {
       delete process.env.ALLOWED_ROOT_DIRECTORY;
       process.env.DATA_DIR = '/data/dir';
 
-      const { initAllowedPaths, getAllowedPaths } = await import('@automaker/platform');
+      const { initAllowedPaths, getAllowedPaths } = await import('@protolabs-ai/platform');
       initAllowedPaths();
 
       const allowed = getAllowedPaths();
@@ -37,7 +37,7 @@ describe('security.ts', () => {
       process.env.ALLOWED_ROOT_DIRECTORY = '/projects';
       process.env.DATA_DIR = '/data';
 
-      const { initAllowedPaths, getAllowedPaths } = await import('@automaker/platform');
+      const { initAllowedPaths, getAllowedPaths } = await import('@protolabs-ai/platform');
       initAllowedPaths();
 
       const allowed = getAllowedPaths();
@@ -50,7 +50,7 @@ describe('security.ts', () => {
       delete process.env.ALLOWED_ROOT_DIRECTORY;
       delete process.env.DATA_DIR;
 
-      const { initAllowedPaths, getAllowedPaths } = await import('@automaker/platform');
+      const { initAllowedPaths, getAllowedPaths } = await import('@protolabs-ai/platform');
       initAllowedPaths();
 
       const allowed = getAllowedPaths();
@@ -63,7 +63,7 @@ describe('security.ts', () => {
       process.env.ALLOWED_ROOT_DIRECTORY = '/allowed/project';
       process.env.DATA_DIR = '';
 
-      const { initAllowedPaths, isPathAllowed } = await import('@automaker/platform');
+      const { initAllowedPaths, isPathAllowed } = await import('@protolabs-ai/platform');
       initAllowedPaths();
 
       // Paths within allowed directory should be allowed
@@ -80,7 +80,7 @@ describe('security.ts', () => {
       delete process.env.DATA_DIR;
       delete process.env.ALLOWED_ROOT_DIRECTORY;
 
-      const { initAllowedPaths, isPathAllowed } = await import('@automaker/platform');
+      const { initAllowedPaths, isPathAllowed } = await import('@protolabs-ai/platform');
       initAllowedPaths();
 
       // All paths should be allowed when no restrictions are configured
@@ -95,7 +95,7 @@ describe('security.ts', () => {
       process.env.DATA_DIR = '/data';
       delete process.env.ALLOWED_ROOT_DIRECTORY;
 
-      const { initAllowedPaths, isPathAllowed } = await import('@automaker/platform');
+      const { initAllowedPaths, isPathAllowed } = await import('@protolabs-ai/platform');
       initAllowedPaths();
 
       // DATA_DIR should be allowed
@@ -114,7 +114,7 @@ describe('security.ts', () => {
       process.env.ALLOWED_ROOT_DIRECTORY = '/allowed';
       process.env.DATA_DIR = '';
 
-      const { initAllowedPaths, validatePath } = await import('@automaker/platform');
+      const { initAllowedPaths, validatePath } = await import('@protolabs-ai/platform');
       initAllowedPaths();
 
       const result = validatePath('/allowed/file.txt');
@@ -125,7 +125,7 @@ describe('security.ts', () => {
       process.env.ALLOWED_ROOT_DIRECTORY = '/allowed';
       process.env.DATA_DIR = '';
 
-      const { initAllowedPaths, validatePath } = await import('@automaker/platform');
+      const { initAllowedPaths, validatePath } = await import('@protolabs-ai/platform');
       initAllowedPaths();
 
       // Disallowed paths should throw PathNotAllowedError
@@ -136,7 +136,7 @@ describe('security.ts', () => {
       delete process.env.DATA_DIR;
       delete process.env.ALLOWED_ROOT_DIRECTORY;
 
-      const { initAllowedPaths, validatePath } = await import('@automaker/platform');
+      const { initAllowedPaths, validatePath } = await import('@protolabs-ai/platform');
       initAllowedPaths();
 
       // All paths are allowed when no restrictions configured
@@ -149,7 +149,7 @@ describe('security.ts', () => {
       process.env.ALLOWED_ROOT_DIRECTORY = cwd;
       process.env.DATA_DIR = '';
 
-      const { initAllowedPaths, validatePath } = await import('@automaker/platform');
+      const { initAllowedPaths, validatePath } = await import('@protolabs-ai/platform');
       initAllowedPaths();
 
       const result = validatePath('./file.txt');
@@ -162,7 +162,7 @@ describe('security.ts', () => {
       process.env.ALLOWED_ROOT_DIRECTORY = '/projects';
       process.env.DATA_DIR = '/data';
 
-      const { initAllowedPaths, getAllowedPaths } = await import('@automaker/platform');
+      const { initAllowedPaths, getAllowedPaths } = await import('@protolabs-ai/platform');
       initAllowedPaths();
 
       const result = getAllowedPaths();
@@ -176,7 +176,7 @@ describe('security.ts', () => {
       process.env.ALLOWED_ROOT_DIRECTORY = '/test';
       process.env.DATA_DIR = '';
 
-      const { initAllowedPaths, getAllowedPaths } = await import('@automaker/platform');
+      const { initAllowedPaths, getAllowedPaths } = await import('@protolabs-ai/platform');
       initAllowedPaths();
 
       const result = getAllowedPaths();

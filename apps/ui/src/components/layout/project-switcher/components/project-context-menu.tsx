@@ -14,7 +14,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { type ThemeMode, useAppStore } from '@/store/app-store';
 import { useThemeStore } from '@/store/theme-store';
-import { ConfirmDialog } from '@protolabs/ui/molecules';
+import { ConfirmDialog } from '@protolabs-ai/ui/molecules';
 import type { Project } from '@/lib/electron';
 import {
   PROJECT_DARK_THEMES,

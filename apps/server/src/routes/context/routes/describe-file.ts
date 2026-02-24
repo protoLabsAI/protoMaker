@@ -11,9 +11,9 @@
  */
 
 import type { Request, Response } from 'express';
-import { createLogger } from '@automaker/utils';
-import { PathNotAllowedError } from '@automaker/platform';
-import { resolvePhaseModel } from '@automaker/model-resolver';
+import { createLogger } from '@protolabs-ai/utils';
+import { PathNotAllowedError } from '@protolabs-ai/platform';
+import { resolvePhaseModel } from '@protolabs-ai/model-resolver';
 import { simpleQuery } from '../../../providers/simple-query-service.js';
 import * as secureFs from '../../../lib/secure-fs.js';
 import * as path from 'path';

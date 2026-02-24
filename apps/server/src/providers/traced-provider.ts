@@ -11,7 +11,7 @@ import type {
   ModelDefinition,
   ProviderConfig,
 } from './types.js';
-import { wrapProviderWithTracing, type TracingConfig } from '@automaker/observability';
+import { wrapProviderWithTracing, type TracingConfig } from '@protolabs-ai/observability';
 
 /** Feature context for enriching traces */
 export interface TracedProviderContext {

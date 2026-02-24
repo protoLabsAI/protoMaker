@@ -6,7 +6,7 @@ import { useEffect } from 'react';
 import { useActionableItemsStore } from '@/store/actionable-items-store';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { pathsEqual } from '@/lib/utils';
-import type { ActionableItem, ActionableItemStatus } from '@automaker/types';
+import type { ActionableItem, ActionableItemStatus } from '@protolabs-ai/types';
 
 /**
  * Subscribe to actionable item WebSocket events and update the store.

@@ -70,7 +70,7 @@ Adding optional parameters (`role?`, `maxTurns?`) to existing methods requires a
 
 ### process.env in shared packages crashes browser
 
-`@automaker/types` is imported by both server and UI. Any `process.env` access at module import time crashes in the browser where `process` is undefined. Guard with `typeof process !== 'undefined'`.
+`@protolabs-ai/types` is imported by both server and UI. Any `process.env` access at module import time crashes in the browser where `process` is undefined. Guard with `typeof process !== 'undefined'`.
 
 ### shell: bash works cross-platform in CI
 

@@ -12,7 +12,7 @@
  *   4. Repeat until all HITL gates pass → create issues → done
  */
 
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import {
   createProjectPlanningFlow,
   createLinearIssueCreator,
@@ -21,7 +21,7 @@ import {
   type HITLResponse,
   type PlanningArtifact,
   type PlanningStage,
-} from '@automaker/flows';
+} from '@protolabs-ai/flows';
 import type { EventEmitter } from '../lib/events.js';
 import type { LinearAgentService } from './linear-agent-service.js';
 import type { SettingsService } from './settings-service.js';

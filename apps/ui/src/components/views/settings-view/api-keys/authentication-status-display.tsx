@@ -1,4 +1,4 @@
-import { Label } from '@protolabs/ui/atoms';
+import { Label } from '@protolabs-ai/ui/atoms';
 import { CheckCircle2, AlertCircle, Info, Terminal } from 'lucide-react';
 import type { ClaudeAuthStatus } from '@/store/setup-store';
 

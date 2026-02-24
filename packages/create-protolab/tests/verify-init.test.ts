@@ -5,7 +5,7 @@
 
 import { test, expect } from 'vitest';
 import { init } from './src/phases/init.js';
-import type { RepoResearchResult } from '@automaker/types';
+import type { RepoResearchResult } from '@protolabs-ai/types';
 import { promises as fs } from 'node:fs';
 import * as path from 'node:path';
 import os from 'node:os';

@@ -6,7 +6,7 @@ import { Router } from 'express';
 import type { Request, Response } from 'express';
 import type { DataIntegrityWatchdogService } from '../services/data-integrity-watchdog-service.js';
 import { validatePathParams } from '../middleware/validate-paths.js';
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 
 const logger = createLogger('IntegrityRoutes');
 

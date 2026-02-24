@@ -1,15 +1,15 @@
 // @ts-nocheck -- Electron API types pending strict validation refactor
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { createLogger } from '@automaker/utils/logger';
+import { createLogger } from '@protolabs-ai/utils/logger';
 import { useAppStore, Feature } from '@/store/app-store';
-import { Card, CardContent } from '@protolabs/ui/atoms';
-import { Button } from '@protolabs/ui/atoms';
-import { Input } from '@protolabs/ui/atoms';
+import { Card, CardContent } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
+import { Input } from '@protolabs-ai/ui/atoms';
 import { Bot, Send, User, Sparkles, FileText, ArrowLeft, CheckCircle } from 'lucide-react';
-import { Spinner } from '@protolabs/ui/atoms';
+import { Spinner } from '@protolabs-ai/ui/atoms';
 import { cn, generateUUID } from '@/lib/utils';
 import { getElectronAPI } from '@/lib/electron';
-import { Markdown } from '@protolabs/ui/molecules';
+import { Markdown } from '@protolabs-ai/ui/molecules';
 import { useFileBrowser } from '@/contexts/file-browser-context';
 import { toast } from 'sonner';
 import { useNavigate } from '@tanstack/react-router';

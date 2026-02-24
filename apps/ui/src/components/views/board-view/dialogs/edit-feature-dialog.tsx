@@ -7,12 +7,12 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@protolabs/ui/atoms';
-import { Button } from '@protolabs/ui/atoms';
-import { HotkeyButton } from '@protolabs/ui/molecules';
-import { Input } from '@protolabs/ui/atoms';
-import { Label } from '@protolabs/ui/atoms';
-import { Checkbox } from '@protolabs/ui/atoms';
+} from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
+import { HotkeyButton } from '@protolabs-ai/ui/molecules';
+import { Input } from '@protolabs-ai/ui/atoms';
+import { Label } from '@protolabs-ai/ui/atoms';
+import { Checkbox } from '@protolabs-ai/ui/atoms';
 import { CategoryAutocomplete } from '@/components/views/board-view/components/category-autocomplete';
 import { DependencySelector } from '@/components/views/board-view/components/dependency-selector';
 import {
@@ -26,8 +26,12 @@ import { useNavigate } from '@tanstack/react-router';
 import { toast } from 'sonner';
 import { cn, modelSupportsThinking } from '@/lib/utils';
 import { Feature, ModelAlias, ThinkingLevel, PlanningMode } from '@/store/types';
-import type { ReasoningEffort, PhaseModelEntry, DescriptionHistoryEntry } from '@automaker/types';
-import { migrateModelId } from '@automaker/types';
+import type {
+  ReasoningEffort,
+  PhaseModelEntry,
+  DescriptionHistoryEntry,
+} from '@protolabs-ai/types';
+import { migrateModelId } from '@protolabs-ai/types';
 import {
   PrioritySelector,
   WorkModeSelector,
@@ -38,9 +42,9 @@ import {
 } from '../shared';
 import type { WorkMode } from '../shared';
 import { PhaseModelSelector } from '@/components/views/settings-view/model-defaults/phase-model-selector';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@protolabs/ui/atoms';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@protolabs-ai/ui/atoms';
 import { DependencyTreeDialog } from './dependency-tree-dialog';
-import { isClaudeModel, supportsReasoningEffort } from '@automaker/types';
+import { isClaudeModel, supportsReasoningEffort } from '@protolabs-ai/types';
 
 interface EditFeatureDialogProps {
   feature: Feature | null;

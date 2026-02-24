@@ -5,7 +5,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { HITLFormService } from '../../../src/services/hitl-form-service.js';
 import type { HITLFormServiceDeps } from '../../../src/services/hitl-form-service.js';
-import type { HITLFormRequestInput } from '@automaker/types';
+import type { HITLFormRequestInput } from '@protolabs-ai/types';
 import fs from 'fs/promises';
 
 vi.mock('fs/promises', () => ({
@@ -16,11 +16,11 @@ vi.mock('fs/promises', () => ({
   },
 }));
 
-vi.mock('@automaker/platform', () => ({
+vi.mock('@protolabs-ai/platform', () => ({
   ensureAutomakerDir: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock('@automaker/utils', () => ({
+vi.mock('@protolabs-ai/utils', () => ({
   createLogger: () => ({
     info: vi.fn(),
     warn: vi.fn(),

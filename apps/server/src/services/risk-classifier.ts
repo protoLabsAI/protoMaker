@@ -7,9 +7,9 @@
  * Uses a lightweight Haiku model for fast, cost-effective classification.
  */
 
-import type { RiskLevel } from '@automaker/types';
-import { createLogger } from '@automaker/utils';
-import { resolveModelString } from '@automaker/model-resolver';
+import type { RiskLevel } from '@protolabs-ai/types';
+import { createLogger } from '@protolabs-ai/utils';
+import { resolveModelString } from '@protolabs-ai/model-resolver';
 import Anthropic from '@anthropic-ai/sdk';
 
 const logger = createLogger('RiskClassifier');

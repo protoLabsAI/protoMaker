@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { useAppStore } from '@/store/app-store';
 import { useAIModelsStore } from '@/store/ai-models-store';
-import type { CursorModelId } from '@automaker/types';
+import type { CursorModelId } from '@protolabs-ai/types';
 import {
   CursorCliStatus,
   CursorCliStatusSkeleton,

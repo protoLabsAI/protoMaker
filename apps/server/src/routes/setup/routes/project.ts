@@ -2,10 +2,10 @@ import type { RequestHandler } from 'express';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import crypto from 'node:crypto';
-import { createLogger } from '@automaker/utils';
-import { ensureAutomakerDir } from '@automaker/platform';
+import { createLogger } from '@protolabs-ai/utils';
+import { ensureAutomakerDir } from '@protolabs-ai/platform';
 import { SettingsService } from '../../../services/settings-service.js';
-import type { RepoResearchResult } from '@automaker/types';
+import type { RepoResearchResult } from '@protolabs-ai/types';
 
 const logger = createLogger('setup:project');
 

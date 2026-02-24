@@ -78,7 +78,7 @@ usageStats:
 #### [Pattern] Named ESM exports preserve tree-shaking across multi-entry monorepo builds (2026-02-18)
 - **Problem solved:** Exporting a utility function (cn) from a shared package that must remain tree-shakeable when imported by multiple apps
 - **Why this works:** The built dist/lib/index.js uses named exports (`export { cn }`) rather than default or wrapped exports. This allows bundlers (webpack, vite, esbuild) to statically analyze which exports are actually used and remove unused code.
-- **Trade-offs:** Named exports require explicit import syntax from consumers (`import { cn } from '@protolabs/ui/lib'`), but this is explicitly desired for clarity. Unused utilities in lib/ are automatically dropped during consumer build.
+- **Trade-offs:** Named exports require explicit import syntax from consumers (`import { cn } from '@protolabs-ai/ui/lib'`), but this is explicitly desired for clarity. Unused utilities in lib/ are automatically dropped during consumer build.
 
 #### [Gotcha] Large story files (12+ export statements) can impact Storybook build time but tradeoff is worth it for comprehensive component coverage in single file vs split files (2026-02-18)
 - **Situation:** Some atoms (textarea, skeleton, spinner, label, kbd) have 11-12 story exports. Textarea has 12 stories in single file

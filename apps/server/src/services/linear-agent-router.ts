@@ -21,8 +21,8 @@
  *   5. If elicitation sent → session awaits input → user responds → prompted webhook → loop
  */
 
-import { createLogger } from '@automaker/utils';
-import type { AgentRole } from '@automaker/types';
+import { createLogger } from '@protolabs-ai/utils';
+import type { AgentRole } from '@protolabs-ai/types';
 import type { EventEmitter } from '../lib/events.js';
 import type { RoleRegistryService } from './role-registry-service.js';
 import type { LinearAgentService } from './linear-agent-service.js';

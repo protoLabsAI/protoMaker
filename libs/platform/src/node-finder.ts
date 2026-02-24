@@ -262,7 +262,7 @@ function findNodeViaShell(
  *
  * @example
  * ```typescript
- * import { findNodeExecutable } from '@automaker/platform';
+ * import { findNodeExecutable } from '@protolabs-ai/platform';
  *
  * // In development, skip the search
  * const result = findNodeExecutable({ skipSearch: isDev });
@@ -325,7 +325,7 @@ export function findNodeExecutable(options: NodeFinderOptions = {}): NodeFinderR
  *
  * @example
  * ```typescript
- * import { findNodeExecutable, buildEnhancedPath } from '@automaker/platform';
+ * import { findNodeExecutable, buildEnhancedPath } from '@protolabs-ai/platform';
  *
  * const { nodePath } = findNodeExecutable();
  * const enhancedPath = buildEnhancedPath(nodePath, process.env.PATH);

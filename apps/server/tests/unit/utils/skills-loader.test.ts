@@ -16,8 +16,8 @@ import {
   deleteSkill,
   recordSkillUsage,
   type SkillsFsModule,
-} from '@automaker/utils';
-import type { Skill, CreateSkillOptions } from '@automaker/types';
+} from '@protolabs-ai/utils';
+import type { Skill, CreateSkillOptions } from '@protolabs-ai/types';
 
 // Mock file system
 function createMockFs(files: Record<string, string> = {}): SkillsFsModule {

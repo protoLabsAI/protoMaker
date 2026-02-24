@@ -86,7 +86,7 @@ npm outdated
 
 Check for:
 
-- Inconsistent imports (old paths vs new @automaker/\* packages)
+- Inconsistent imports (old paths vs new @protolabs-ai/\* packages)
 - TODO comments that should be tickets
 - Console.logs in production code
 - Unused exports

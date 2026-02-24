@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Health Checks Example for @automaker/llm-providers
+ * Health Checks Example for @protolabs-ai/llm-providers
  *
  * This example demonstrates:
  * - Provider health monitoring
@@ -14,8 +14,8 @@
  * Run: npm run example:health-checks
  */
 
-import { ProviderFactory } from '@automaker/llm-providers';
-import type { LLMProvidersConfig, ModelCategory, ProviderName } from '@automaker/llm-providers';
+import { ProviderFactory } from '@protolabs-ai/llm-providers';
+import type { LLMProvidersConfig, ModelCategory, ProviderName } from '@protolabs-ai/llm-providers';
 
 /**
  * Health check result for examples (extends the base HealthCheckResult from server/base.ts)

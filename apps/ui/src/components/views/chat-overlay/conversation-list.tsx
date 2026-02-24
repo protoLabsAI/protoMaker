@@ -6,7 +6,7 @@
  */
 
 import { MessageSquare, Plus, Trash2, X } from 'lucide-react';
-import { Button } from '@protolabs/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
 import { cn } from '@/lib/utils';
 import type { ChatSession } from '@/store/chat-store';
 

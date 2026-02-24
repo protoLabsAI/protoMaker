@@ -4,8 +4,8 @@ import {
   areDependenciesSatisfied,
   getBlockingDependencies,
   type DependencyResolutionResult,
-} from '@automaker/dependency-resolver';
-import type { Feature } from '@automaker/types';
+} from '@protolabs-ai/dependency-resolver';
+import type { Feature } from '@protolabs-ai/types';
 
 // Helper to create test features
 function createFeature(

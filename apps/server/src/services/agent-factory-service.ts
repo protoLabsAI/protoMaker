@@ -10,10 +10,10 @@ import {
   AgentTemplateSchema,
   type AgentTemplate,
   type DeploymentEnvironment,
-} from '@automaker/types';
-import { createLogger } from '@automaker/utils';
-import { resolveModelString } from '@automaker/model-resolver';
-import { getPromptForRole, hasPrompt } from '@automaker/prompts';
+} from '@protolabs-ai/types';
+import { createLogger } from '@protolabs-ai/utils';
+import { resolveModelString } from '@protolabs-ai/model-resolver';
+import { getPromptForRole, hasPrompt } from '@protolabs-ai/prompts';
 import type { RoleRegistryService } from './role-registry-service.js';
 import type { EventEmitter } from '../lib/events.js';
 

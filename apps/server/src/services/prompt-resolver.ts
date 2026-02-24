@@ -10,8 +10,8 @@
  * to defaults with zero added latency.
  */
 
-import { createLogger } from '@automaker/utils';
-import type { LangfuseClient } from '@automaker/observability';
+import { createLogger } from '@protolabs-ai/utils';
+import type { LangfuseClient } from '@protolabs-ai/observability';
 
 const logger = createLogger('PromptResolver');
 
@@ -36,7 +36,7 @@ export interface ResolvedCategory<T extends Record<string, string>> {
  *
  * Layer 1: User overrides from settings.json promptCustomization
  * Layer 2: Langfuse managed prompts (fetched with label: "production")
- * Layer 3: Hardcoded defaults from @automaker/prompts
+ * Layer 3: Hardcoded defaults from @protolabs-ai/prompts
  */
 export class PromptResolver {
   private label: string;
@@ -64,7 +64,7 @@ export class PromptResolver {
    * Resolve a single prompt by name using three-layer fallback.
    *
    * @param promptName - Dot-notation name (e.g., "autoMode.planningLite")
-   * @param defaultValue - Hardcoded default from @automaker/prompts
+   * @param defaultValue - Hardcoded default from @protolabs-ai/prompts
    * @param userOverride - Optional user override from settings (already resolved enabled check)
    */
   async resolve(

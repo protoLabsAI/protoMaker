@@ -6,8 +6,8 @@
  */
 
 import type { EventEmitter } from '../lib/events.js';
-import type { GitHubMonitorConfig, WorkItem } from '@automaker/types';
-import { createLogger } from '@automaker/utils';
+import type { GitHubMonitorConfig, WorkItem } from '@protolabs-ai/types';
+import { createLogger } from '@protolabs-ai/utils';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 

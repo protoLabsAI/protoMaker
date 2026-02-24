@@ -2,7 +2,7 @@
 /**
  * Seed Langfuse Prompts
  *
- * One-time idempotent script that pushes all hardcoded prompts from @automaker/prompts
+ * One-time idempotent script that pushes all hardcoded prompts from @protolabs-ai/prompts
  * to Langfuse using dot-notation naming and the "production" label.
  *
  * Re-running creates new versions of existing prompts (idempotent, non-destructive).
@@ -42,7 +42,7 @@ import {
   DEFAULT_CONTEXT_DESCRIPTION_PROMPTS,
   DEFAULT_SUGGESTIONS_PROMPTS,
   DEFAULT_TASK_EXECUTION_PROMPTS,
-} from '@automaker/prompts';
+} from '@protolabs-ai/prompts';
 
 // --- Configuration ---
 

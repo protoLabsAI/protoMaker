@@ -6,11 +6,11 @@
 
 import { useState, useCallback } from 'react';
 import { GitPullRequest, RefreshCw, ExternalLink, GitMerge, X } from 'lucide-react';
-import { Spinner } from '@protolabs/ui/atoms';
+import { Spinner } from '@protolabs-ai/ui/atoms';
 import { getElectronAPI, type GitHubPR } from '@/lib/electron';
 import { useAppStore } from '@/store/app-store';
-import { Button } from '@protolabs/ui/atoms';
-import { Markdown } from '@protolabs/ui/molecules';
+import { Button } from '@protolabs-ai/ui/atoms';
+import { Markdown } from '@protolabs-ai/ui/molecules';
 import { cn } from '@/lib/utils';
 import { useGitHubPRs } from '@/hooks/queries';
 

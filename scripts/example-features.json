@@ -6,7 +6,7 @@
   },
   {
     "title": "Add request logging middleware",
-    "description": "Log all incoming requests with timestamp, method, path, and response time.\n\nFormat: [timestamp] METHOD /path - 200 (45ms)\n\nUse the existing logger from @automaker/utils.",
+    "description": "Log all incoming requests with timestamp, method, path, and response time.\n\nFormat: [timestamp] METHOD /path - 200 (45ms)\n\nUse the existing logger from @protolabs-ai/utils.",
     "status": "backlog"
   },
   {

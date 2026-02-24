@@ -2,14 +2,14 @@
 import { memo, useState } from 'react';
 import { Feature } from '@/store/types';
 import { cn } from '@/lib/utils';
-import { CardDescription, CardHeader, CardTitle } from '@protolabs/ui/atoms';
-import { Button } from '@protolabs/ui/atoms';
+import { CardDescription, CardHeader, CardTitle } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@protolabs/ui/atoms';
+} from '@protolabs-ai/ui/atoms';
 import {
   GripVertical,
   Edit,
@@ -20,7 +20,7 @@ import {
   ChevronUp,
   GitFork,
 } from 'lucide-react';
-import { Spinner } from '@protolabs/ui/atoms';
+import { Spinner } from '@protolabs-ai/ui/atoms';
 import { CountUpTimer } from '@/components/shared/count-up-timer';
 import { formatModelName, DEFAULT_MODEL } from '@/lib/agent-context-parser';
 import { DeleteConfirmDialog } from '@/components/ui/delete-confirm-dialog';

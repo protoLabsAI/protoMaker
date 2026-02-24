@@ -1,9 +1,9 @@
 {
-  "name": "@automaker/llm-providers-examples",
+  "name": "@protolabs-ai/llm-providers-examples",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Example applications for @automaker/llm-providers",
+  "description": "Example applications for @protolabs-ai/llm-providers",
   "scripts": {
     "example:basic-usage": "tsx basic-usage.ts",
     "example:health-checks": "tsx health-checks.ts",
@@ -21,7 +21,7 @@
     "node": ">=22.0.0 <23.0.0"
   },
   "dependencies": {
-    "@automaker/llm-providers": "^1.0.0"
+    "@protolabs-ai/llm-providers": "^1.0.0"
   },
   "devDependencies": {
     "@types/node": "22.19.3",

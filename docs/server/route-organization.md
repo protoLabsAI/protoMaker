@@ -153,7 +153,7 @@ export function create{Module}Routes(events: EventEmitter): Router {
 **Pattern**:
 
 ```typescript
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 
 const logger = createLogger('{ModuleName}');
 
@@ -203,7 +203,7 @@ export function getErrorMessage(error: unknown): string {
 ```typescript
 import type { Request, Response } from "express";
 import type { EventEmitter } from "../../../lib/events.js";
-import { createLogger } from "@automaker/utils";
+import { createLogger } from "@protolabs-ai/utils";
 import {
   isRunning,
   setRunningState,
@@ -288,7 +288,7 @@ export function create{Action}Handler(events: EventEmitter) {
 
 import { query, type Options } from '@anthropic-ai/claude-agent-sdk';
 import type { EventEmitter } from '../../lib/events.js';
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import { logAuthStatus } from './common.js';
 import { anotherBusinessFunction } from './another-business-function.js';
 

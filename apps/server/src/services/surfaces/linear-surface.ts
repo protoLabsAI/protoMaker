@@ -20,9 +20,9 @@ import type {
   SurfaceDocument,
   SurfaceMessage,
   SurfacePlanStep,
-} from '@automaker/types';
+} from '@protolabs-ai/types';
 import type { LinearAgentService } from '../linear-agent-service.js';
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 
 const logger = createLogger('LinearSurface');
 

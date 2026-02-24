@@ -1,4 +1,4 @@
-import { createLogger } from '@automaker/utils/logger';
+import { createLogger } from '@protolabs-ai/utils/logger';
 import { useSetupStore } from '@/store/setup-store';
 import { StepIndicator } from './setup-view/components';
 import {

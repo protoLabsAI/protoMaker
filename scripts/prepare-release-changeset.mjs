@@ -17,20 +17,20 @@ import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
 
 const FIXED_PACKAGES = [
-  '@automaker/types',
-  '@automaker/utils',
-  '@automaker/platform',
-  '@automaker/prompts',
-  '@automaker/tools',
-  '@automaker/model-resolver',
-  '@automaker/dependency-resolver',
-  '@automaker/spec-parser',
-  '@automaker/flows',
-  '@automaker/llm-providers',
-  '@automaker/observability',
-  '@automaker/git-utils',
-  '@automaker/mcp-server',
-  '@protolabs/ui',
+  '@protolabs-ai/types',
+  '@protolabs-ai/utils',
+  '@protolabs-ai/platform',
+  '@protolabs-ai/prompts',
+  '@protolabs-ai/tools',
+  '@protolabs-ai/model-resolver',
+  '@protolabs-ai/dependency-resolver',
+  '@protolabs-ai/spec-parser',
+  '@protolabs-ai/flows',
+  '@protolabs-ai/llm-providers',
+  '@protolabs-ai/observability',
+  '@protolabs-ai/git-utils',
+  '@protolabs-ai/mcp-server',
+  '@protolabs-ai/ui',
 ];
 
 function run(cmd) {

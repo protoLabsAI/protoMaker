@@ -13,7 +13,7 @@
  */
 
 import { Annotation, StateGraph } from '@langchain/langgraph';
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 
 const logger = createLogger('basic-graph');
 

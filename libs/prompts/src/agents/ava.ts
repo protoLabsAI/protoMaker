@@ -2,7 +2,7 @@
  * AVA — Autonomous Virtual Agency prompt
  *
  * Personified prompt for the Ava agent template.
- * Used by built-in-templates.ts via @automaker/prompts.
+ * Used by built-in-templates.ts via @protolabs-ai/prompts.
  */
 
 import type { PromptConfig } from '../types.js';

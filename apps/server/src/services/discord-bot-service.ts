@@ -36,7 +36,7 @@ import {
   type ThreadChannel,
   Events,
 } from 'discord.js';
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import type { EventEmitter } from '../lib/events.js';
 import type { AuthorityService } from './authority-service.js';
 import type { FeatureLoader } from './feature-loader.js';

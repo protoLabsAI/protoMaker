@@ -12,7 +12,7 @@ import type { SharedTool, ToolDefinition, ToolContext, ToolResult } from './type
  * @example
  * ```typescript
  * import { z } from 'zod';
- * import { defineSharedTool } from '@automaker/tools';
+ * import { defineSharedTool } from '@protolabs-ai/tools';
  *
  * const myTool = defineSharedTool({
  *   name: 'example-tool',

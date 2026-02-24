@@ -3,7 +3,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
 import { PipelineService } from '@/services/pipeline-service.js';
-import type { PipelineConfig, PipelineStep } from '@automaker/types';
+import type { PipelineConfig, PipelineStep } from '@protolabs-ai/types';
 
 // Mock secure-fs
 vi.mock('@/lib/secure-fs.js', () => ({
@@ -14,12 +14,12 @@ vi.mock('@/lib/secure-fs.js', () => ({
 }));
 
 // Mock ensureAutomakerDir
-vi.mock('@automaker/platform', () => ({
+vi.mock('@protolabs-ai/platform', () => ({
   ensureAutomakerDir: vi.fn(),
 }));
 
 import * as secureFs from '@/lib/secure-fs.js';
-import { ensureAutomakerDir } from '@automaker/platform';
+import { ensureAutomakerDir } from '@protolabs-ai/platform';
 
 describe('pipeline-service.ts', () => {
   let testProjectDir: string;

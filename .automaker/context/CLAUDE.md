@@ -26,7 +26,7 @@ automaker/
 ├── apps/
 │   ├── ui/           # React + Vite frontend (port 3007)
 │   └── server/       # Express + WebSocket backend (port 3008)
-└── libs/             # Shared packages (@automaker/*)
+└── libs/             # Shared packages (@protolabs-ai/*)
     ├── types/        # Core TypeScript definitions (NO dependencies)
     ├── utils/        # Logging, errors, image processing
     ├── prompts/      # AI prompt templates
@@ -41,11 +41,11 @@ automaker/
 ## Package Dependency Chain (top = no deps)
 
 ```
-@automaker/types
+@protolabs-ai/types
     ↓
-@automaker/utils, prompts, platform, model-resolver, dependency-resolver, policy-engine, spec-parser
+@protolabs-ai/utils, prompts, platform, model-resolver, dependency-resolver, policy-engine, spec-parser
     ↓
-@automaker/git-utils
+@protolabs-ai/git-utils
     ↓
 apps/server, apps/ui
 ```
@@ -63,9 +63,9 @@ Stale `dist/` = wrong types = wasted work.
 
 ```typescript
 // ALWAYS import from packages
-import type { Feature, ExecutionRecord } from '@automaker/types';
-import { createLogger } from '@automaker/utils';
-import { resolveModelString } from '@automaker/model-resolver';
+import type { Feature, ExecutionRecord } from '@protolabs-ai/types';
+import { createLogger } from '@protolabs-ai/utils';
+import { resolveModelString } from '@protolabs-ai/model-resolver';
 
 // NEVER import from relative paths to other packages
 // ❌ import { Feature } from '../services/feature-loader';
@@ -74,7 +74,7 @@ import { resolveModelString } from '@automaker/model-resolver';
 ## Before Creating New Types
 
 ALWAYS check `libs/types/src/` first. Types for features, settings, events, ceremonies, etc. already exist.
-If a type exists, import it from `@automaker/types`. Do NOT recreate it.
+If a type exists, import it from `@protolabs-ai/types`. Do NOT recreate it.
 
 ## Key Existing Types (libs/types/src/)
 
@@ -88,7 +88,7 @@ If a type exists, import it from `@automaker/types`. Do NOT recreate it.
 
 Services are classes in `apps/server/src/services/`:
 ```typescript
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import { FeatureLoader } from './feature-loader.js';
 
 const logger = createLogger('MyService');

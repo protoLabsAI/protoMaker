@@ -1,5 +1,5 @@
 {
-  "name": "@automaker/prompts",
+  "name": "@protolabs-ai/prompts",
   "version": "0.2.0",
   "type": "module",
   "description": "AI prompt templates for AutoMaker",
@@ -26,8 +26,8 @@
     "node": ">=22.0.0 <23.0.0"
   },
   "dependencies": {
-    "@automaker/types": "0.2.0",
-    "@automaker/utils": "0.2.0"
+    "@protolabs-ai/types": "0.2.0",
+    "@protolabs-ai/utils": "0.2.0"
   },
   "devDependencies": {
     "@types/node": "22.19.3",

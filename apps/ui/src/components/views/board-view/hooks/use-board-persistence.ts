@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Feature } from '@/store/app-store';
 import { getElectronAPI } from '@/lib/electron';
 import { useAppStore } from '@/store/app-store';
-import { createLogger } from '@automaker/utils/logger';
+import { createLogger } from '@protolabs-ai/utils/logger';
 import { queryKeys } from '@/lib/query-keys';
 
 const logger = createLogger('BoardPersistence');

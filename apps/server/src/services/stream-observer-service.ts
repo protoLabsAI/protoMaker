@@ -8,7 +8,7 @@
  * Returns an abort signal with reason when pathological behavior is detected.
  */
 
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import { createHash } from 'node:crypto';
 
 const logger = createLogger('StreamObserver');

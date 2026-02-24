@@ -1,4 +1,4 @@
-# @automaker/model-resolver
+# @protolabs-ai/model-resolver
 
 Claude model resolution and mapping utilities.
 
@@ -9,7 +9,7 @@ This package handles Claude model resolution, converting user-friendly aliases t
 ## Installation
 
 ```bash
-npm install @automaker/model-resolver
+npm install @protolabs-ai/model-resolver
 ```
 
 ## Exports
@@ -19,8 +19,8 @@ npm install @automaker/model-resolver
 Convert model aliases to full model identifiers.
 
 ```typescript
-import { resolveModelString, DEFAULT_MODELS } from '@automaker/model-resolver';
-import { CLAUDE_MODEL_MAP } from '@automaker/types';
+import { resolveModelString, DEFAULT_MODELS } from '@protolabs-ai/model-resolver';
+import { CLAUDE_MODEL_MAP } from '@protolabs-ai/types';
 
 // Resolve model string
 const model = resolveModelString('sonnet');
@@ -46,7 +46,7 @@ const model5 = resolveModelString('claude-opus-4-5-20251101');
 Get the actual model that will be used.
 
 ```typescript
-import { getEffectiveModel } from '@automaker/model-resolver';
+import { getEffectiveModel } from '@protolabs-ai/model-resolver';
 
 // Get effective model with fallback chain
 const model = getEffectiveModel({
@@ -61,8 +61,8 @@ const model = getEffectiveModel({
 Access model mappings and defaults.
 
 ```typescript
-import { DEFAULT_MODELS } from '@automaker/model-resolver';
-import { CLAUDE_MODEL_MAP } from '@automaker/types';
+import { DEFAULT_MODELS } from '@protolabs-ai/model-resolver';
+import { CLAUDE_MODEL_MAP } from '@protolabs-ai/types';
 
 // Default models for different use cases
 console.log(DEFAULT_MODELS.claude); // 'claude-opus-4-5-20251101' - orchestration/planning
@@ -86,8 +86,8 @@ console.log(CLAUDE_MODEL_MAP.opus); // 'claude-opus-4-5-20251101'
 ## Usage Example
 
 ```typescript
-import { resolveModelString, DEFAULT_MODELS } from '@automaker/model-resolver';
-import type { Feature } from '@automaker/types';
+import { resolveModelString, DEFAULT_MODELS } from '@protolabs-ai/model-resolver';
+import type { Feature } from '@protolabs-ai/types';
 
 function prepareFeatureExecution(feature: Feature) {
   // Resolve model from feature or use default
@@ -130,11 +130,11 @@ prepareFeatureExecution(feature);
 
 ## Dependencies
 
-- `@automaker/types` - Model type definitions and constants
+- `@protolabs-ai/types` - Model type definitions and constants
 
 ## Used By
 
-- `@automaker/server` - Feature execution, agent chat, enhancement
+- `@protolabs-ai/server` - Feature execution, agent chat, enhancement
 
 ## Notes
 

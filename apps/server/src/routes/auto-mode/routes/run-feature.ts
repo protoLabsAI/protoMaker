@@ -5,8 +5,11 @@
 import type { Request, Response } from 'express';
 import type { AutoModeService } from '../../../services/auto-mode-service.js';
 import type { FeatureLoader } from '../../../services/feature-loader.js';
-import { areDependenciesSatisfied, getBlockingDependencies } from '@automaker/dependency-resolver';
-import { createLogger } from '@automaker/utils';
+import {
+  areDependenciesSatisfied,
+  getBlockingDependencies,
+} from '@protolabs-ai/dependency-resolver';
+import { createLogger } from '@protolabs-ai/utils';
 import { getErrorMessage, logError } from '../common.js';
 
 const logger = createLogger('AutoMode');

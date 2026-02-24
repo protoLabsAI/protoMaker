@@ -2,7 +2,7 @@
  * SuccessChart - Area chart showing success rate over time
  */
 
-import { Card, CardContent, CardHeader, CardTitle } from '@protolabs/ui/atoms';
+import { Card, CardContent, CardHeader, CardTitle } from '@protolabs-ai/ui/atoms';
 import { useChartColors } from '@/hooks/use-chart-colors';
 import {
   AreaChart,

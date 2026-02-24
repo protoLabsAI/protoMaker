@@ -24,9 +24,9 @@ import type {
   ModelDefinition,
   InstallationStatus,
   ContentBlock,
-} from '@automaker/types';
-import { type SubprocessOptions, getOpenCodeAuthIndicators } from '@automaker/platform';
-import { createLogger } from '@automaker/utils';
+} from '@protolabs-ai/types';
+import { type SubprocessOptions, getOpenCodeAuthIndicators } from '@protolabs-ai/platform';
+import { createLogger } from '@protolabs-ai/utils';
 
 // Create logger for OpenCode operations
 const opencodeLogger = createLogger('OpencodeProvider');

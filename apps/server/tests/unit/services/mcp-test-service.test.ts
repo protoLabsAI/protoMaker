@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { MCPServerConfig } from '@automaker/types';
+import type { MCPServerConfig } from '@protolabs-ai/types';
 
 // Skip this test suite - MCP SDK mocking is complex and these tests need integration tests
 // Coverage will be handled by excluding this file from coverage thresholds

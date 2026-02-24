@@ -9,7 +9,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import type { PipelinePhase, PipelineBranch, PipelineState } from '@automaker/types';
+import type { PipelinePhase, PipelineBranch, PipelineState } from '@protolabs-ai/types';
 import { useAppStore } from '@/store/app-store';
 import { getHttpApiClient } from '@/lib/http-api-client';
 

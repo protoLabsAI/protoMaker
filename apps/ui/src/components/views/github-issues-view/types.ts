@@ -1,5 +1,5 @@
 import type { GitHubIssue, StoredValidation, GitHubComment } from '@/lib/electron';
-import type { ModelId, LinkedPRInfo, PhaseModelEntry } from '@automaker/types';
+import type { ModelId, LinkedPRInfo, PhaseModelEntry } from '@protolabs-ai/types';
 
 // ============================================================================
 // Issues Filter State Types

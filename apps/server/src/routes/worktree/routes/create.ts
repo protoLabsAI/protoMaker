@@ -13,7 +13,7 @@ import { promisify } from 'util';
 import path from 'path';
 import * as secureFs from '../../../lib/secure-fs.js';
 import type { EventEmitter } from '../../../lib/events.js';
-import { isGitRepo } from '@automaker/git-utils';
+import { isGitRepo } from '@protolabs-ai/git-utils';
 import {
   getErrorMessage,
   logError,
@@ -23,11 +23,11 @@ import {
   execGitCommand,
 } from '../common.js';
 import { trackBranch } from './branch-tracking.js';
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import { runInitScript } from '../../../services/init-script-service.js';
 import { graphiteService } from '../../../services/graphite-service.js';
-import type { GraphiteSettings } from '@automaker/types';
-import { DEFAULT_GRAPHITE_SETTINGS } from '@automaker/types';
+import type { GraphiteSettings } from '@protolabs-ai/types';
+import { DEFAULT_GRAPHITE_SETTINGS } from '@protolabs-ai/types';
 
 const logger = createLogger('Worktree');
 

@@ -5,7 +5,7 @@
 import type { Request, Response } from 'express';
 import * as secureFs from '../../../lib/secure-fs.js';
 import path from 'path';
-import { getAllowedRootDirectory, getDataDirectory } from '@automaker/platform';
+import { getAllowedRootDirectory, getDataDirectory } from '@protolabs-ai/platform';
 import { getErrorMessage, logError } from '../common.js';
 
 export function createConfigHandler() {

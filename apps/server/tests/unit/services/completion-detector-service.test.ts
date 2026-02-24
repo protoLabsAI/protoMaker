@@ -9,8 +9,8 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { CompletionDetectorService } from '@/services/completion-detector-service.js';
-import type { Feature, Milestone, Project } from '@automaker/types';
-import type { EventType } from '@automaker/types';
+import type { Feature, Milestone, Project } from '@protolabs-ai/types';
+import type { EventType } from '@protolabs-ai/types';
 
 // ────────────────────────── Mocks ──────────────────────────
 

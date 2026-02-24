@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useSetupStore, type ClaudeAuthMethod, type CodexAuthMethod } from '@/store/setup-store';
 import { getHttpApiClient } from '@/lib/http-api-client';
-import { createLogger } from '@automaker/utils/logger';
+import { createLogger } from '@protolabs-ai/utils/logger';
 
 const logger = createLogger('ProviderAuthInit');
 

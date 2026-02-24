@@ -5,13 +5,13 @@
  * Produces a structured report of gaps, compliance, and an alignment score.
  */
 
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import type {
   RepoResearchResult,
   GapAnalysisReport,
   GapItem,
   ComplianceItem,
-} from '@automaker/types';
+} from '@protolabs-ai/types';
 
 const logger = createLogger('gap-analysis');
 

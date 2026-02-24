@@ -1,14 +1,20 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Label } from '@protolabs/ui/atoms';
-import { Switch } from '@protolabs/ui/atoms';
-import { Input } from '@protolabs/ui/atoms';
-import { Button } from '@protolabs/ui/atoms';
-import { Slider } from '@protolabs/ui/atoms';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@protolabs/ui/atoms';
+import { Label } from '@protolabs-ai/ui/atoms';
+import { Switch } from '@protolabs-ai/ui/atoms';
+import { Input } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
+import { Slider } from '@protolabs-ai/ui/atoms';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@protolabs-ai/ui/atoms';
 import { Mic, Download, Check, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getHttpApiClient } from '@/lib/http-api-client';
-import type { VoiceSettings as VoiceSettingsType, WhisperModelSize } from '@automaker/types';
+import type { VoiceSettings as VoiceSettingsType, WhisperModelSize } from '@protolabs-ai/types';
 
 const DEFAULT_VOICE: VoiceSettingsType = {
   enabled: false,

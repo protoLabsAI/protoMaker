@@ -1,7 +1,7 @@
 import { useAIModelsStore } from '@/store/ai-models-store';
-import type { ModelProvider } from '@automaker/types';
-import { Switch } from '@protolabs/ui/atoms';
-import { Label } from '@protolabs/ui/atoms';
+import type { ModelProvider } from '@protolabs-ai/types';
+import { Switch } from '@protolabs-ai/ui/atoms';
+import { Label } from '@protolabs-ai/ui/atoms';
 import { EyeOff, Eye } from 'lucide-react';
 
 interface ProviderToggleProps {

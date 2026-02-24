@@ -9,7 +9,7 @@
  * issues that already have a feature on the board.
  */
 
-import { createLogger, slugify } from '@automaker/utils';
+import { createLogger, slugify } from '@protolabs-ai/utils';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { ApprovalContext } from './linear-approval-handler.js';

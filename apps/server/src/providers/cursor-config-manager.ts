@@ -6,9 +6,13 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { getAllCursorModelIds, type CursorCliConfig, type CursorModelId } from '@automaker/types';
-import { createLogger } from '@automaker/utils';
-import { getAutomakerDir } from '@automaker/platform';
+import {
+  getAllCursorModelIds,
+  type CursorCliConfig,
+  type CursorModelId,
+} from '@protolabs-ai/types';
+import { createLogger } from '@protolabs-ai/utils';
+import { getAutomakerDir } from '@protolabs-ai/platform';
 
 // Create logger for this module
 const logger = createLogger('CursorConfigManager');

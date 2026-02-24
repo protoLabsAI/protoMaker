@@ -1,9 +1,9 @@
 import { useEffect, useState, useCallback } from 'react';
-import { createLogger } from '@automaker/utils/logger';
+import { createLogger } from '@protolabs-ai/utils/logger';
 import { useAppStore } from '@/store/app-store';
 import { getElectronAPI } from '@/lib/electron';
-import { Button } from '@protolabs/ui/atoms';
-import { Card } from '@protolabs/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
+import { Card } from '@protolabs-ai/ui/atoms';
 import {
   HeaderActionsPanel,
   HeaderActionsPanelTrigger,
@@ -19,7 +19,7 @@ import {
   FilePlus,
   MoreVertical,
 } from 'lucide-react';
-import { Spinner } from '@protolabs/ui/atoms';
+import { Spinner } from '@protolabs-ai/ui/atoms';
 import {
   Dialog,
   DialogContent,
@@ -27,17 +27,17 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from '@protolabs/ui/atoms';
-import { Input } from '@protolabs/ui/atoms';
-import { Label } from '@protolabs/ui/atoms';
+} from '@protolabs-ai/ui/atoms';
+import { Input } from '@protolabs-ai/ui/atoms';
+import { Label } from '@protolabs-ai/ui/atoms';
 import { cn } from '@/lib/utils';
-import { Markdown } from '@protolabs/ui/molecules';
+import { Markdown } from '@protolabs-ai/ui/molecules';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@protolabs/ui/atoms';
+} from '@protolabs-ai/ui/atoms';
 
 const logger = createLogger('MemoryView');
 

@@ -1,5 +1,5 @@
 /**
- * Policy engine — inlined from former @automaker/policy-engine package.
+ * Policy engine — inlined from former @protolabs-ai/policy-engine package.
  *
  * Trust-based authorization: permission matrix, status transition guards,
  * and risk gating for agent actions.
@@ -14,7 +14,7 @@ import type {
   PermissionMatrixEntry,
   StatusTransitionGuard,
   RiskLevel,
-} from '@automaker/types';
+} from '@protolabs-ai/types';
 
 // ---------------------------------------------------------------------------
 // Risk level comparison

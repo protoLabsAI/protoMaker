@@ -1,5 +1,5 @@
 /**
- * @automaker/llm-providers
+ * @protolabs-ai/llm-providers
  *
  * Multi-provider LLM abstraction layer for AutoMaker.
  * Provides a unified interface for Anthropic, OpenAI, Google, Groq, Ollama, and Bedrock.
@@ -7,7 +7,7 @@
  * Note: Three independent base classes exist from parallel feature development.
  * - BaseLLMProvider (config-based) — server/providers/base.ts
  * - BaseLLMProviderLangChain (LangChain-based) — server/base.ts
- * - BaseProvider (@automaker/types-based) — server/providers/base-provider.ts
+ * - BaseProvider (@protolabs-ai/types-based) — server/providers/base-provider.ts
  * - RuntimeBaseProvider (inline types) — server/types.ts
  */
 

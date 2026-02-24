@@ -3,15 +3,15 @@
  * Provides programmatic access to Ava's task manager with automatic sync after mutations
  */
 
-import { spawnProcess } from '@automaker/platform';
-import { createLogger } from '@automaker/utils';
+import { spawnProcess } from '@protolabs-ai/platform';
+import { createLogger } from '@protolabs-ai/utils';
 import type {
   BeadsTask,
   CreateBeadsTaskOptions,
   UpdateBeadsTaskOptions,
   ListBeadsTasksOptions,
   BeadsOperationResult,
-} from '@automaker/types';
+} from '@protolabs-ai/types';
 import type { EventEmitter } from '../lib/events.js';
 
 const logger = createLogger('BeadsService');

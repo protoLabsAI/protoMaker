@@ -15,7 +15,7 @@ import {
   type ReviewerPerspective,
   type PairReviewResult,
   DistillationDepth,
-} from '@automaker/types';
+} from '@protolabs-ai/types';
 
 /**
  * Zod schema for AntagonisticReviewState

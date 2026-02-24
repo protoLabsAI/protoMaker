@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
-import { createLogger } from '@automaker/utils/logger';
+import { createLogger } from '@protolabs-ai/utils/logger';
 import {
   X,
   SplitSquareHorizontal,
@@ -23,15 +23,21 @@ import {
   ArrowDown,
   GitBranch,
 } from 'lucide-react';
-import { Button } from '@protolabs/ui/atoms';
-import { Spinner } from '@protolabs/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
+import { Spinner } from '@protolabs-ai/ui/atoms';
 import { cn } from '@/lib/utils';
-import { Popover, PopoverContent, PopoverTrigger } from '@protolabs/ui/atoms';
-import { Slider } from '@protolabs/ui/atoms';
-import { Label } from '@protolabs/ui/atoms';
-import { Input } from '@protolabs/ui/atoms';
-import { Switch } from '@protolabs/ui/atoms';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@protolabs/ui/atoms';
+import { Popover, PopoverContent, PopoverTrigger } from '@protolabs-ai/ui/atoms';
+import { Slider } from '@protolabs-ai/ui/atoms';
+import { Label } from '@protolabs-ai/ui/atoms';
+import { Input } from '@protolabs-ai/ui/atoms';
+import { Switch } from '@protolabs-ai/ui/atoms';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@protolabs-ai/ui/atoms';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { useAppStore } from '@/store/app-store';
 import { useTerminalStore } from '@/store/terminal-store';

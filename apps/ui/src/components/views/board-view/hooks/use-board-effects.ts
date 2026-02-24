@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { getElectronAPI } from '@/lib/electron';
-import { createLogger } from '@automaker/utils/logger';
+import { createLogger } from '@protolabs-ai/utils/logger';
 
 const logger = createLogger('BoardEffects');
 

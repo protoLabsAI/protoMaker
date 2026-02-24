@@ -7,7 +7,7 @@
  * - Per-project settings ({projectPath}/.automaker/settings.json)
  */
 
-import { createLogger, atomicWriteJson, DEFAULT_BACKUP_COUNT } from '@automaker/utils';
+import { createLogger, atomicWriteJson, DEFAULT_BACKUP_COUNT } from '@protolabs-ai/utils';
 import * as secureFs from '../lib/secure-fs.js';
 import os from 'os';
 import path from 'path';
@@ -19,7 +19,7 @@ import {
   getProjectSettingsPath,
   ensureDataDir,
   ensureAutomakerDir,
-} from '@automaker/platform';
+} from '@protolabs-ai/platform';
 import type {
   GlobalSettings,
   Credentials,
@@ -52,7 +52,7 @@ import {
   migrateModelId,
   migrateCursorModelIds,
   migrateOpencodeModelIds,
-} from '@automaker/types';
+} from '@protolabs-ai/types';
 
 const logger = createLogger('SettingsService');
 

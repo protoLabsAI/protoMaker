@@ -9,8 +9,8 @@
 import { Router, type Request, type Response } from 'express';
 import { streamText, type ModelMessage } from 'ai';
 import { anthropic } from '@ai-sdk/anthropic';
-import { createLogger } from '@automaker/utils';
-import { resolveModelString } from '@automaker/model-resolver';
+import { createLogger } from '@protolabs-ai/utils';
+import { resolveModelString } from '@protolabs-ai/model-resolver';
 import { selectPersona, buildPersonaPrompt, type NotesContext } from './personas.js';
 
 const logger = createLogger('ChatRoutes');

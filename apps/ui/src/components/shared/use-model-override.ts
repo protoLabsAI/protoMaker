@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useAIModelsStore } from '@/store/ai-models-store';
-import type { ModelId, PhaseModelKey, PhaseModelEntry } from '@automaker/types';
-import { DEFAULT_PHASE_MODELS } from '@automaker/types';
+import type { ModelId, PhaseModelKey, PhaseModelEntry } from '@protolabs-ai/types';
+import { DEFAULT_PHASE_MODELS } from '@protolabs-ai/types';
 
 export interface UseModelOverrideOptions {
   /** Which phase this override is for */

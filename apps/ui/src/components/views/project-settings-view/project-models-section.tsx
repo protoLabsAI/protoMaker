@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { useAppStore } from '@/store/app-store';
 import { useAIModelsStore } from '@/store/ai-models-store';
-import { Button } from '@protolabs/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
 import { Workflow, RotateCcw, Globe, Check, Replace } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Project } from '@/lib/electron';
 import { PhaseModelSelector } from '@/components/views/settings-view/model-defaults/phase-model-selector';
 import { ProjectBulkReplaceDialog } from './project-bulk-replace-dialog';
-import type { PhaseModelKey, PhaseModelEntry } from '@automaker/types';
-import { DEFAULT_PHASE_MODELS } from '@automaker/types';
+import type { PhaseModelKey, PhaseModelEntry } from '@protolabs-ai/types';
+import { DEFAULT_PHASE_MODELS } from '@protolabs-ai/types';
 
 interface ProjectModelsSectionProps {
   project: Project;

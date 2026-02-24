@@ -6,7 +6,7 @@
  */
 
 import type { Request, Response } from 'express';
-import type { AgentTemplate } from '@automaker/types';
+import type { AgentTemplate } from '@protolabs-ai/types';
 import type { RoleRegistryService } from '../../../services/role-registry-service.js';
 import { getErrorMessage, logError } from '../common.js';
 

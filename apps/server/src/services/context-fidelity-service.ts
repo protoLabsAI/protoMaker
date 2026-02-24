@@ -11,8 +11,8 @@
  * - none:    Nothing — fresh start
  */
 
-import { createLogger } from '@automaker/utils';
-import type { ContextFidelityMode } from '@automaker/types';
+import { createLogger } from '@protolabs-ai/utils';
+import type { ContextFidelityMode } from '@protolabs-ai/types';
 
 const logger = createLogger('ContextFidelityService');
 

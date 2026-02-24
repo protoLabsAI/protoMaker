@@ -7,8 +7,8 @@
  */
 
 // Import shared model constants and types
-import { CLAUDE_MODEL_MAP, DEFAULT_MODELS } from '@automaker/types';
-import { resolveModelString } from '@automaker/model-resolver';
+import { CLAUDE_MODEL_MAP, DEFAULT_MODELS } from '@protolabs-ai/types';
+import { resolveModelString } from '@protolabs-ai/model-resolver';
 
 // Re-export for backward compatibility
 export { CLAUDE_MODEL_MAP, DEFAULT_MODELS, resolveModelString };

@@ -19,7 +19,7 @@ import type {
   SurfaceCapabilities,
   SurfaceChoiceOption,
   SurfaceMessage,
-} from '@automaker/types';
+} from '@protolabs-ai/types';
 import type { DiscordBotService } from '../discord-bot-service.js';
 
 /** Maps session IDs to Discord context */

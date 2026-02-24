@@ -11,8 +11,8 @@ import { useActionableItemsStore } from '@/store/actionable-items-store';
 import { useHITLFormStore } from '@/store/hitl-form-store';
 import { useLoadActionableItems, useActionableItemEvents } from '@/hooks/use-actionable-items';
 import { getHttpApiClient } from '@/lib/http-api-client';
-import { Button } from '@protolabs/ui/atoms';
-import { Spinner } from '@protolabs/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
+import { Spinner } from '@protolabs-ai/ui/atoms';
 import {
   Inbox,
   FileText,
@@ -30,8 +30,8 @@ import type {
   ActionableItem,
   ActionableItemActionType,
   ActionableItemPriority,
-} from '@automaker/types';
-import { getEffectivePriority } from '@automaker/types';
+} from '@protolabs-ai/types';
+import { getEffectivePriority } from '@protolabs-ai/types';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 

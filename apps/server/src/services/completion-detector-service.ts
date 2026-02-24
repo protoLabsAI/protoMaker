@@ -9,13 +9,13 @@
  * completion — no polling required.
  */
 
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { ProjectService } from './project-service.js';
 import type { SettingsService } from './settings-service.js';
 import { LinearMCPClient } from './linear-mcp-client.js';
-import type { Feature, Milestone } from '@automaker/types';
+import type { Feature, Milestone } from '@protolabs-ai/types';
 
 const logger = createLogger('CompletionDetector');
 

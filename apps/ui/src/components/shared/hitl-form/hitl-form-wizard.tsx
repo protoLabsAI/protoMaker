@@ -4,11 +4,11 @@
  */
 
 import { useRef, useCallback } from 'react';
-import { Button } from '@protolabs/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
 import { ChevronLeft, ChevronRight, Loader2, Send } from 'lucide-react';
 import { useHITLFormStore } from '@/store/hitl-form-store';
 import { HITLFormStepRenderer } from './hitl-form-step';
-import type { HITLFormRequest } from '@automaker/types';
+import type { HITLFormRequest } from '@protolabs-ai/types';
 
 interface HITLFormWizardProps {
   form: HITLFormRequest;

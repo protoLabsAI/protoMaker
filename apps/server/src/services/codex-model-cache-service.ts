@@ -1,7 +1,7 @@
 import path from 'path';
-import { secureFs } from '@automaker/platform';
-import { createLogger } from '@automaker/utils';
-import type { AppServerModel } from '@automaker/types';
+import { secureFs } from '@protolabs-ai/platform';
+import { createLogger } from '@protolabs-ai/utils';
+import type { AppServerModel } from '@protolabs-ai/types';
 import type { CodexAppServerService } from './codex-app-server-service.js';
 
 const logger = createLogger('CodexModelCache');

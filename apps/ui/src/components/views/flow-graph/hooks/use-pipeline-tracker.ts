@@ -8,9 +8,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getHttpApiClient } from '@/lib/http-api-client';
-import { createLogger } from '@automaker/utils/logger';
+import { createLogger } from '@protolabs-ai/utils/logger';
 import { STALE_TIMES } from '@/lib/query-client';
-import type { EventType } from '@automaker/types';
+import type { EventType } from '@protolabs-ai/types';
 import type { PipelineStageId, TrackedWorkItem, PipelineStageStatus } from '../types';
 
 const logger = createLogger('PipelineTracker');

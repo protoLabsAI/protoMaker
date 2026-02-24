@@ -6,7 +6,7 @@
  * from template systemPromptTemplate strings.
  *
  * Usage:
- *   import { getPromptForRole } from '@automaker/prompts';
+ *   import { getPromptForRole } from '@protolabs-ai/prompts';
  *   const prompt = getPromptForRole('product-manager', { projectPath: '/path' });
  */
 
@@ -29,7 +29,7 @@ import { getBoardJanitorPrompt } from './agents/board-janitor.js';
 import { getFrankPrompt } from './agents/frank.js';
 import { getKaiPrompt } from './agents/kai.js';
 
-import type { UserProfile } from '@automaker/types';
+import type { UserProfile } from '@protolabs-ai/types';
 
 /** Base config that all prompt functions accept */
 export interface BasePromptConfig {

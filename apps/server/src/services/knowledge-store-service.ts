@@ -9,13 +9,13 @@ import * as path from 'node:path';
 import * as fs from 'node:fs';
 import * as BetterSqlite3 from 'better-sqlite3';
 import Anthropic from '@anthropic-ai/sdk';
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import type {
   KnowledgeStoreStats,
   KnowledgeSearchOptions,
   KnowledgeSearchResult,
   KnowledgeChunk,
-} from '@automaker/types';
+} from '@protolabs-ai/types';
 
 const logger = createLogger('KnowledgeStoreService');
 

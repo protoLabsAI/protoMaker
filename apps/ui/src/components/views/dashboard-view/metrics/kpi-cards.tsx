@@ -2,7 +2,7 @@
  * KPI Hero Cards - Top-level metrics summary cards
  */
 
-import { Card, CardContent } from '@protolabs/ui/atoms';
+import { Card, CardContent } from '@protolabs-ai/ui/atoms';
 import { DollarSign, Hash, Zap, Clock, GitPullRequest, GitCommit } from 'lucide-react';
 
 interface KpiCardsProps {

@@ -9,7 +9,7 @@ import type {
   InstallationStatus,
   ValidationResult,
   ModelDefinition,
-} from '@automaker/types';
+} from '@protolabs-ai/types';
 
 /**
  * Base provider class that all provider implementations must extend

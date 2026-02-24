@@ -6,9 +6,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@protolabs/ui/atoms';
-import { Button } from '@protolabs/ui/atoms';
-import { Badge } from '@protolabs/ui/atoms';
+} from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
+import { Badge } from '@protolabs-ai/ui/atoms';
 import { apiGet, apiPost } from '@/lib/api-fetch';
 import { AlertTriangle, ArrowLeft, ArrowRight, Check } from 'lucide-react';
 

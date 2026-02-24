@@ -13,7 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from '@protolabs/ui/atoms';
+} from '@protolabs-ai/ui/atoms';
 import { useStopFeature } from '@/hooks/mutations';
 import { AgentOutputModal } from '@/components/views/board-view/dialogs/agent-output-modal';
 import {

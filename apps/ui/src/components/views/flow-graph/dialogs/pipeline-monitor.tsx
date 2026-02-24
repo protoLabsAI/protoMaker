@@ -9,7 +9,7 @@
  */
 
 import { useQuery } from '@tanstack/react-query';
-import { Badge } from '@protolabs/ui/atoms';
+import { Badge } from '@protolabs-ai/ui/atoms';
 import { CheckCircle, XCircle, Clock, Shield, AlertTriangle } from 'lucide-react';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { queryKeys } from '@/lib/query-keys';

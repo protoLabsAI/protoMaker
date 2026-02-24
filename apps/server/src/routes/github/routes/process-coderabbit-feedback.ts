@@ -4,9 +4,9 @@
  */
 
 import type { Request, Response } from 'express';
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import type { EventEmitter } from '../../../lib/events.js';
-import type { GitHubComment } from '@automaker/types';
+import type { GitHubComment } from '@protolabs-ai/types';
 import { codeRabbitParserService } from '../../../services/coderabbit-parser-service.js';
 import { FeatureLoader } from '../../../services/feature-loader.js';
 import { execAsync, execEnv, getErrorMessage, logError } from './common.js';

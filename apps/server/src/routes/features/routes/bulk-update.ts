@@ -4,7 +4,7 @@
 
 import type { Request, Response } from 'express';
 import { FeatureLoader } from '../../../services/feature-loader.js';
-import type { Feature } from '@automaker/types';
+import type { Feature } from '@protolabs-ai/types';
 import { getErrorMessage, logError } from '../common.js';
 
 interface BulkUpdateRequest {

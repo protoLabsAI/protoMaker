@@ -1,12 +1,12 @@
 # Langfuse Integration
 
-Server-side wiring that connects [`@automaker/observability`](./observability-package.md) to the Automaker runtime. Covers the Langfuse singleton, traced provider wrapper, automatic agent scoring, API proxy routes, and MCP tools. All tracing is opt-in — the server runs identically when Langfuse credentials are absent.
+Server-side wiring that connects [`@protolabs-ai/observability`](./observability-package.md) to the Automaker runtime. Covers the Langfuse singleton, traced provider wrapper, automatic agent scoring, API proxy routes, and MCP tools. All tracing is opt-in — the server runs identically when Langfuse credentials are absent.
 
 ## Architecture Overview
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  @automaker/observability (library)                     │
+│  @protolabs-ai/observability (library)                     │
 │  LangfuseClient · wrapProviderWithTracing               │
 └────────────────────┬────────────────────────────────────┘
                      │ imported by
@@ -295,10 +295,10 @@ This uses the same `TracedProvider` path as agent execution — no separate trac
 
 Two independent tracing mechanisms coexist:
 
-| Track           | Mechanism                                     | Covers                           | Trace Source      |
-| --------------- | --------------------------------------------- | -------------------------------- | ----------------- |
-| **SDK Wrapper** | `TracedProvider` + `@automaker/observability` | Agent runs (Claude Agent SDK)    | Manual SDK        |
-| **OTEL**        | `@langfuse/otel` + `@opentelemetry/sdk-node`  | Chat UI (`/api/chat` via AI SDK) | Auto-instrumented |
+| Track           | Mechanism                                        | Covers                           | Trace Source      |
+| --------------- | ------------------------------------------------ | -------------------------------- | ----------------- |
+| **SDK Wrapper** | `TracedProvider` + `@protolabs-ai/observability` | Agent runs (Claude Agent SDK)    | Manual SDK        |
+| **OTEL**        | `@langfuse/otel` + `@opentelemetry/sdk-node`     | Chat UI (`/api/chat` via AI SDK) | Auto-instrumented |
 
 This is intentional: agent execution uses the Claude Agent SDK (traced via `TracedProvider`), while the chat UI uses Vercel AI SDK (auto-traced via OpenTelemetry spans). The two tracks produce separate Langfuse traces with different structures but both land in the same Langfuse project.
 
@@ -307,5 +307,5 @@ This is intentional: agent execution uses the Claude Agent SDK (traced via `Trac
 ## Related Documentation
 
 - [Langfuse Prompt Management](./langfuse-prompts.md) — Versioned prompt management, three-layer resolution, webhook sync
-- [Observability Package](./observability-package.md) — `@automaker/observability` library reference (client, middleware, prompt versioning)
+- [Observability Package](./observability-package.md) — `@protolabs-ai/observability` library reference (client, middleware, prompt versioning)
 - [Providers](../server/providers.md) — AI provider architecture

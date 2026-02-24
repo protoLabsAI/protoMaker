@@ -35,7 +35,7 @@ import type {
   ResolvedContextDescriptionPrompts,
   ResolvedSuggestionsPrompts,
   ResolvedTaskExecutionPrompts,
-} from '@automaker/types';
+} from '@protolabs-ai/types';
 import {
   DEFAULT_AUTO_MODE_PROMPTS,
   DEFAULT_AGENT_PROMPTS,

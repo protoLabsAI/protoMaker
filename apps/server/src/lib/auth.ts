@@ -12,7 +12,7 @@ import type { Request, Response, NextFunction } from 'express';
 import crypto from 'crypto';
 import path from 'path';
 import * as secureFs from './secure-fs.js';
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 
 const logger = createLogger('Auth');
 

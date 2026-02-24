@@ -8,7 +8,7 @@
 import type { Request, Response } from 'express';
 import { getErrorMessage, logError } from '../common.js';
 import { graphiteService } from '../../../services/graphite-service.js';
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 
 const logger = createLogger('GraphiteSync');
 

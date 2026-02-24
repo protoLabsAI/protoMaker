@@ -14,14 +14,14 @@ import {
   DialogHeader,
   DialogTitle,
   Textarea,
-} from '@protolabs/ui/atoms';
-import { Button } from '@protolabs/ui/atoms';
-import { Markdown } from '@protolabs/ui/molecules';
-import { Spinner } from '@protolabs/ui/atoms';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@protolabs/ui/atoms';
+} from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
+import { Markdown } from '@protolabs-ai/ui/molecules';
+import { Spinner } from '@protolabs-ai/ui/atoms';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@protolabs-ai/ui/atoms';
 import { ChevronDown, CheckCircle, XCircle, Pencil, Save } from 'lucide-react';
 import { toast } from 'sonner';
-import type { Feature } from '@automaker/types';
+import type { Feature } from '@protolabs-ai/types';
 import { getHttpApiClient } from '@/lib/http-api-client';
 
 interface PRDReviewModalProps {

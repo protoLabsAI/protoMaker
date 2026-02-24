@@ -3,8 +3,8 @@
  */
 
 import { useEventFeed } from '@/hooks/use-event-feed';
-import { ScrollArea } from '@protolabs/ui/atoms';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@protolabs/ui/atoms';
+import { ScrollArea } from '@protolabs-ai/ui/atoms';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@protolabs-ai/ui/atoms';
 import * as LucideIcons from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';

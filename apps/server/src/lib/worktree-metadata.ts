@@ -5,7 +5,7 @@
 
 import * as secureFs from './secure-fs.js';
 import * as path from 'path';
-import type { PRState, WorktreePRInfo } from '@automaker/types';
+import type { PRState, WorktreePRInfo } from '@protolabs-ai/types';
 
 // Re-export types for backwards compatibility
 export type { PRState, WorktreePRInfo };

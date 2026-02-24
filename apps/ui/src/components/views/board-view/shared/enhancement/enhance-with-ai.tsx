@@ -1,13 +1,13 @@
 import { useState } from 'react';
-import { createLogger } from '@automaker/utils/logger';
-import { Button } from '@protolabs/ui/atoms';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@protolabs/ui/atoms';
+import { createLogger } from '@protolabs-ai/utils/logger';
+import { Button } from '@protolabs-ai/ui/atoms';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@protolabs-ai/ui/atoms';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@protolabs/ui/atoms';
+} from '@protolabs-ai/ui/atoms';
 import { Sparkles, ChevronDown, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { getElectronAPI } from '@/lib/electron';

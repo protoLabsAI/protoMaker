@@ -6,7 +6,7 @@
  * Manages session plans and multi-turn conversations.
  */
 
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import {
   LinearMCPClient,
   type AgentActivityContent,

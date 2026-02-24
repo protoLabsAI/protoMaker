@@ -11,7 +11,7 @@
  * - LLM-assisted coherence checking
  */
 
-import { LangfuseClient } from '@automaker/observability';
+import { LangfuseClient } from '@protolabs-ai/observability';
 import type { RunnableConfig } from '@langchain/core/runnables';
 import { copilotkitEmitState, emitHeartbeat } from '../copilotkit-utils.js';
 

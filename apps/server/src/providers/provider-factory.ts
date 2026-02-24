@@ -8,7 +8,12 @@
 import { BaseProvider } from './base-provider.js';
 import { TracedProvider } from './traced-provider.js';
 import type { InstallationStatus, ModelDefinition } from './types.js';
-import { isCursorModel, isCodexModel, isOpencodeModel, type ModelProvider } from '@automaker/types';
+import {
+  isCursorModel,
+  isCodexModel,
+  isOpencodeModel,
+  type ModelProvider,
+} from '@protolabs-ai/types';
 import { getLangfuseInstance } from '../lib/langfuse-singleton.js';
 import * as fs from 'fs';
 import * as path from 'path';

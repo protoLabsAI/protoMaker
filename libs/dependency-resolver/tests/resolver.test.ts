@@ -8,7 +8,7 @@ import {
   wouldCreateCircularDependency,
   dependencyExists,
 } from '../src/resolver';
-import type { Feature } from '@automaker/types';
+import type { Feature } from '@protolabs-ai/types';
 
 // Helper to create test features
 function createFeature(

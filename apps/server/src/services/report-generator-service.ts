@@ -5,8 +5,8 @@
  * The report includes Tailwind CSS via CDN and inline JavaScript for interactivity.
  */
 
-import { createLogger } from '@automaker/utils';
-import type { GapAnalysisReport, RepoResearchResult } from '@automaker/types';
+import { createLogger } from '@protolabs-ai/utils';
+import type { GapAnalysisReport, RepoResearchResult } from '@protolabs-ai/types';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { exec } from 'node:child_process';

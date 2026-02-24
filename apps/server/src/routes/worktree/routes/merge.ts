@@ -11,8 +11,8 @@ import type { Request, Response } from 'express';
 import { exec, execFile } from 'child_process';
 import { promisify } from 'util';
 import { getErrorMessage, logError, execGitCommand } from '../common.js';
-import { createLogger } from '@automaker/utils';
-import { isValidBranchName, sanitizeCommitMessage } from '@automaker/platform';
+import { createLogger } from '@protolabs-ai/utils';
+import { isValidBranchName, sanitizeCommitMessage } from '@protolabs-ai/platform';
 
 const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);

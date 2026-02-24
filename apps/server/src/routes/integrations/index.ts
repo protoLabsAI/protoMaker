@@ -3,9 +3,9 @@
  */
 
 import { Router, Request, Response } from 'express';
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import type { SettingsService } from '../../services/settings-service.js';
-import type { ProjectIntegrations } from '@automaker/types';
+import type { ProjectIntegrations } from '@protolabs-ai/types';
 import { integrationService } from '../../services/integration-service.js';
 import type { IntegrationRegistryService } from '../../services/integration-registry-service.js';
 

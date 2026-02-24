@@ -1,7 +1,7 @@
 // @ts-nocheck -- Feature index signature causes property access type errors
 import { memo } from 'react';
 import { Feature } from '@/store/types';
-import { Button } from '@protolabs/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
 import {
   Edit,
   PlayCircle,

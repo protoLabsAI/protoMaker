@@ -46,7 +46,7 @@ export interface ExpressAdapterOptions {
  * @example
  * ```typescript
  * import express from 'express';
- * import { toExpressRouter } from '@automaker/tools/adapters/express';
+ * import { toExpressRouter } from '@protolabs-ai/tools/adapters/express';
  * import { myTool } from './tools';
  *
  * const app = express();

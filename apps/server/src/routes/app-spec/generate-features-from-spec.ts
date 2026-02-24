@@ -7,12 +7,12 @@
 
 import * as secureFs from '../../lib/secure-fs.js';
 import type { EventEmitter } from '../../lib/events.js';
-import { createLogger } from '@automaker/utils';
-import { DEFAULT_PHASE_MODELS } from '@automaker/types';
-import { resolvePhaseModel } from '@automaker/model-resolver';
+import { createLogger } from '@protolabs-ai/utils';
+import { DEFAULT_PHASE_MODELS } from '@protolabs-ai/types';
+import { resolvePhaseModel } from '@protolabs-ai/model-resolver';
 import { streamingQuery } from '../../providers/simple-query-service.js';
 import { parseAndCreateFeatures } from './parse-and-create-features.js';
-import { getAppSpecPath } from '@automaker/platform';
+import { getAppSpecPath } from '@protolabs-ai/platform';
 import type { SettingsService } from '../../services/settings-service.js';
 import {
   getAutoLoadClaudeMdSetting,

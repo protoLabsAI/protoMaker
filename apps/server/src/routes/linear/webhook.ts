@@ -15,7 +15,7 @@
 import type { RequestHandler, Request, Response } from 'express';
 import { createHmac } from 'node:crypto';
 import { execSync } from 'node:child_process';
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import type { SettingsService } from '../../services/settings-service.js';
 import type { EventEmitter } from '../../lib/events.js';
 import type { FeatureLoader } from '../../services/feature-loader.js';

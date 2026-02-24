@@ -4,7 +4,7 @@ import * as LucideIcons from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getAuthenticatedImageUrl } from '@/lib/api-fetch';
 import type { Project } from '@/lib/electron';
-import { Popover, PopoverContent, PopoverTrigger } from '@protolabs/ui/atoms';
+import { Popover, PopoverContent, PopoverTrigger } from '@protolabs-ai/ui/atoms';
 import { useAppStore } from '@/store/app-store';
 
 interface SidebarHeaderProps {

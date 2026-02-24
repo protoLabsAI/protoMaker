@@ -12,9 +12,9 @@
  * - Labels issues with 'escalation' and source type
  */
 
-import { createLogger } from '@automaker/utils';
-import type { EscalationChannel, EscalationSignal } from '@automaker/types';
-import { EscalationSeverity } from '@automaker/types';
+import { createLogger } from '@protolabs-ai/utils';
+import type { EscalationChannel, EscalationSignal } from '@protolabs-ai/types';
+import { EscalationSeverity } from '@protolabs-ai/types';
 import type { BeadsService } from '../beads-service.js';
 
 const logger = createLogger('BeadsChannel');

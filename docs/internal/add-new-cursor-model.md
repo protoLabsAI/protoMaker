@@ -56,7 +56,7 @@ export const CURSOR_MODEL_MAP: Record<CursorModelId, CursorModelConfig> = {
 After making changes, rebuild the types package:
 
 ```bash
-npm run build -w @automaker/types
+npm run build -w @protolabs-ai/types
 ```
 
 ### Step 4: Verify the Changes
@@ -139,7 +139,7 @@ After rebuilding, "Cursor Turbo" will appear in all model selection UIs.
 
 - [ ] Added model ID to `CursorModelId` type
 - [ ] Added config entry to `CURSOR_MODEL_MAP`
-- [ ] Rebuilt types package (`npm run build -w @automaker/types`)
+- [ ] Rebuilt types package (`npm run build -w @protolabs-ai/types`)
 - [ ] Verified model appears in Add Feature dialog
 - [ ] Verified model appears in AI Profiles form
 - [ ] Tested execution with new model (if Cursor CLI supports it)

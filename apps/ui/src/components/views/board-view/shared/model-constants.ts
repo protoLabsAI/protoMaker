@@ -1,9 +1,9 @@
-import type { ModelProvider, ThinkingLevel, ReasoningEffort } from '@automaker/types';
+import type { ModelProvider, ThinkingLevel, ReasoningEffort } from '@protolabs-ai/types';
 import {
   CURSOR_MODEL_MAP,
   CODEX_MODEL_MAP,
   OPENCODE_MODELS as OPENCODE_MODEL_CONFIGS,
-} from '@automaker/types';
+} from '@protolabs-ai/types';
 import { Brain, Zap, Scale, Cpu, Rocket, Sparkles } from 'lucide-react';
 import {
   AnthropicIcon,

@@ -12,14 +12,14 @@ import type {
   ClaudeCompatibleProvider,
   ProviderModel,
   ClaudeModelAlias,
-} from '@automaker/types';
+} from '@protolabs-ai/types';
 import {
   STANDALONE_CURSOR_MODELS,
   getModelGroup,
   isGroupSelected,
   getSelectedVariant,
   codexModelHasThinking,
-} from '@automaker/types';
+} from '@protolabs-ai/types';
 import {
   CLAUDE_MODELS,
   CURSOR_MODELS,
@@ -40,7 +40,7 @@ import {
   MiniMaxIcon,
   getProviderIconForModel,
 } from '@/components/shared/provider-icon';
-import { Button } from '@protolabs/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
 import {
   Command,
   CommandEmpty,
@@ -49,8 +49,8 @@ import {
   CommandItem,
   CommandList,
   CommandSeparator,
-} from '@protolabs/ui/atoms';
-import { Popover, PopoverContent, PopoverTrigger } from '@protolabs/ui/atoms';
+} from '@protolabs-ai/ui/atoms';
+import { Popover, PopoverContent, PopoverTrigger } from '@protolabs-ai/ui/atoms';
 
 const OPENCODE_CLI_GROUP_LABEL = 'OpenCode CLI';
 const OPENCODE_PROVIDER_FALLBACK = 'opencode';

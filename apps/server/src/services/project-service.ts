@@ -12,7 +12,7 @@ import type {
   UpdateProjectInput,
   CreateFeaturesFromProjectOptions,
   CreateFeaturesResult,
-} from '@automaker/types';
+} from '@protolabs-ai/types';
 import {
   createLogger,
   createProject,
@@ -22,8 +22,8 @@ import {
   phaseToFeatureDescription,
   phaseToBranchName,
   slugify,
-} from '@automaker/utils';
-import { secureFs } from '@automaker/platform';
+} from '@protolabs-ai/utils';
+import { secureFs } from '@protolabs-ai/platform';
 import {
   getProjectsDir,
   getProjectDir,
@@ -34,7 +34,7 @@ import {
   getMilestoneFilePath,
   ensureProjectDir,
   ensureMilestoneDir,
-} from '@automaker/platform';
+} from '@protolabs-ai/platform';
 import type { FeatureLoader } from './feature-loader.js';
 
 const logger = createLogger('ProjectService');

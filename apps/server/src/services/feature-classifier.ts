@@ -5,9 +5,9 @@
  * Single-turn query with <2s timeout, fallback to backend-engineer on low confidence.
  */
 
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import { simpleQuery } from '../providers/simple-query-service.js';
-import type { AgentRole } from '@automaker/types';
+import type { AgentRole } from '@protolabs-ai/types';
 
 const logger = createLogger('FeatureClassifier');
 

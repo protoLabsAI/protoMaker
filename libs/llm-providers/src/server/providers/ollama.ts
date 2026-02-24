@@ -6,7 +6,7 @@
 
 import { Ollama } from 'ollama';
 import { BaseProvider } from './base-provider.js';
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import type {
   ProviderConfig,
   ExecuteOptions,
@@ -14,7 +14,7 @@ import type {
   InstallationStatus,
   ModelDefinition,
   ValidationResult,
-} from '@automaker/types';
+} from '@protolabs-ai/types';
 
 const logger = createLogger('OllamaProvider');
 

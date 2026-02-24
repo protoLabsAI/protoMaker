@@ -1,6 +1,6 @@
 // @ts-nocheck -- Feature index signature causes property access type errors
 import { useState, useEffect, useRef } from 'react';
-import { createLogger } from '@automaker/utils/logger';
+import { createLogger } from '@protolabs-ai/utils/logger';
 import {
   Dialog,
   DialogContent,
@@ -8,12 +8,12 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@protolabs/ui/atoms';
-import { Button } from '@protolabs/ui/atoms';
-import { HotkeyButton } from '@protolabs/ui/molecules';
-import { Input } from '@protolabs/ui/atoms';
-import { Label } from '@protolabs/ui/atoms';
-import { Checkbox } from '@protolabs/ui/atoms';
+} from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
+import { HotkeyButton } from '@protolabs-ai/ui/molecules';
+import { Input } from '@protolabs-ai/ui/atoms';
+import { Label } from '@protolabs-ai/ui/atoms';
+import { Checkbox } from '@protolabs-ai/ui/atoms';
 import { CategoryAutocomplete } from '@/components/views/board-view/components/category-autocomplete';
 import { DependencySelector } from '@/components/views/board-view/components/dependency-selector';
 import {
@@ -29,8 +29,8 @@ import { cn } from '@/lib/utils';
 import { modelSupportsThinking } from '@/lib/utils';
 import { useAppStore, ThinkingLevel, FeatureImage, PlanningMode, Feature } from '@/store/app-store';
 import { useWorktreeStore } from '@/store/worktree-store';
-import type { ReasoningEffort, PhaseModelEntry, AgentModel } from '@automaker/types';
-import { supportsReasoningEffort, isClaudeModel } from '@automaker/types';
+import type { ReasoningEffort, PhaseModelEntry, AgentModel } from '@protolabs-ai/types';
+import { supportsReasoningEffort, isClaudeModel } from '@protolabs-ai/types';
 import {
   PrioritySelector,
   WorkModeSelector,
@@ -42,12 +42,12 @@ import {
 } from '../shared';
 import type { WorkMode } from '../shared';
 import { PhaseModelSelector } from '@/components/views/settings-view/model-defaults/phase-model-selector';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@protolabs/ui/atoms';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@protolabs-ai/ui/atoms';
 import {
   getAncestors,
   formatAncestorContextForPrompt,
   type AncestorContext,
-} from '@automaker/dependency-resolver';
+} from '@protolabs-ai/dependency-resolver';
 
 const _logger = createLogger('AddFeatureDialog');
 

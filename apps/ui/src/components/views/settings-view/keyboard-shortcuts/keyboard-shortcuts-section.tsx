@@ -1,4 +1,4 @@
-import { Button } from '@protolabs/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
 import { Settings2, Keyboard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 

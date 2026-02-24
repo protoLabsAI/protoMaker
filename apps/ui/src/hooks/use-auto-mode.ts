@@ -1,7 +1,7 @@
 import { useEffect, useCallback, useMemo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
-import { createLogger } from '@automaker/utils/logger';
-import { DEFAULT_MAX_CONCURRENCY } from '@automaker/types';
+import { createLogger } from '@protolabs-ai/utils/logger';
+import { DEFAULT_MAX_CONCURRENCY } from '@protolabs-ai/types';
 import { useAppStore } from '@/store/app-store';
 import { useWorktreeStore } from '@/store/worktree-store';
 import { getElectronAPI } from '@/lib/electron';

@@ -10,11 +10,11 @@
  */
 
 import type { EventEmitter } from '../lib/events.js';
-import type { DiscordUserMessageRoutedPayload, AgentRole } from '@automaker/types';
-import { createLogger, classifyError } from '@automaker/utils';
+import type { DiscordUserMessageRoutedPayload, AgentRole } from '@protolabs-ai/types';
+import { createLogger, classifyError } from '@protolabs-ai/utils';
 import { DiscordBotService } from './discord-bot-service.js';
 import { simpleQuery } from '../providers/simple-query-service.js';
-import { ROLE_CAPABILITIES } from '@automaker/types';
+import { ROLE_CAPABILITIES } from '@protolabs-ai/types';
 import {
   getProductManagerPrompt,
   getEngineeringManagerPrompt,
@@ -23,7 +23,7 @@ import {
   getDevOpsEngineerPrompt,
   getQAEngineerPrompt,
   getDocsEngineerPrompt,
-} from '@automaker/prompts';
+} from '@protolabs-ai/prompts';
 import type { RoleRegistryService } from './role-registry-service.js';
 
 const logger = createLogger('AgentDiscordRouter');

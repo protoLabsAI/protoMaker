@@ -13,7 +13,7 @@ import type {
   PhaseComplexity,
   ProjectStatus,
   MilestoneStatus,
-} from '@automaker/types';
+} from '@protolabs-ai/types';
 
 /**
  * Parse a project.md file into a Project object

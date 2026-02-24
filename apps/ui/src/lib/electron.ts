@@ -20,7 +20,7 @@ import type {
   AlignmentProposal,
   GlobalSettings,
   ProjectSettings,
-} from '@automaker/types';
+} from '@protolabs-ai/types';
 
 import { getJSON, setJSON, removeItem } from './storage';
 
@@ -470,7 +470,7 @@ import type {
   StoredEventSummary,
   EventHistoryFilter,
   EventReplayResult,
-} from '@automaker/types';
+} from '@protolabs-ai/types';
 
 export interface NotificationsAPI {
   list: (projectPath: string) => Promise<{
@@ -1070,7 +1070,7 @@ export interface Project {
    * Keys are phase names (e.g., 'enhancementModel'), values are PhaseModelEntry.
    * If a phase is not present, the global setting is used.
    */
-  phaseModelOverrides?: Partial<import('@automaker/types').PhaseModelConfig>;
+  phaseModelOverrides?: Partial<import('@protolabs-ai/types').PhaseModelConfig>;
 }
 
 export interface TrashedProject extends Project {

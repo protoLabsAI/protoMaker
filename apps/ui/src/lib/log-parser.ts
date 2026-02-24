@@ -9,7 +9,7 @@ import type {
   CursorAssistantEvent,
   CursorToolCallEvent,
   CursorResultEvent,
-} from '@automaker/types';
+} from '@protolabs-ai/types';
 
 /**
  * Cleans up fragmented streaming text by removing spurious newlines

@@ -10,8 +10,8 @@
  * - Lightweight implementation using existing event infrastructure
  */
 
-import { createLogger } from '@automaker/utils';
-import type { EscalationChannel, EscalationSignal } from '@automaker/types';
+import { createLogger } from '@protolabs-ai/utils';
+import type { EscalationChannel, EscalationSignal } from '@protolabs-ai/types';
 import type { EventEmitter } from '../../lib/events.js';
 
 const logger = createLogger('UINotificationChannel');

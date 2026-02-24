@@ -13,8 +13,8 @@
  * All Twitch errors are isolated and will not crash the agent pipeline.
  */
 
-import { createLogger } from '@automaker/utils';
-import type { TwitchSuggestion, TwitchSettings } from '@automaker/types';
+import { createLogger } from '@protolabs-ai/utils';
+import type { TwitchSuggestion, TwitchSettings } from '@protolabs-ai/types';
 import { promises as fs } from 'fs';
 import { join, dirname } from 'path';
 import { v4 as uuidv4 } from 'uuid';

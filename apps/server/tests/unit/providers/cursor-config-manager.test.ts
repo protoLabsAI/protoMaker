@@ -5,7 +5,7 @@ import os from 'os';
 import { CursorConfigManager } from '@/providers/cursor-config-manager.js';
 
 vi.mock('fs');
-vi.mock('@automaker/platform', () => ({
+vi.mock('@protolabs-ai/platform', () => ({
   getAutomakerDir: vi.fn((projectPath: string) => path.join(projectPath, '.automaker')),
 }));
 

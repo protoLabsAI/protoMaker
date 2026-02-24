@@ -45,18 +45,18 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
       // Resolve shared packages to source files for proper mocking in tests
-      '@automaker/utils': path.resolve(__dirname, '../../libs/utils/src/index.ts'),
-      '@automaker/platform': path.resolve(__dirname, '../../libs/platform/src/index.ts'),
-      '@automaker/types': path.resolve(__dirname, '../../libs/types/src/index.ts'),
-      '@automaker/model-resolver': path.resolve(
+      '@protolabs-ai/utils': path.resolve(__dirname, '../../libs/utils/src/index.ts'),
+      '@protolabs-ai/platform': path.resolve(__dirname, '../../libs/platform/src/index.ts'),
+      '@protolabs-ai/types': path.resolve(__dirname, '../../libs/types/src/index.ts'),
+      '@protolabs-ai/model-resolver': path.resolve(
         __dirname,
         '../../libs/model-resolver/src/index.ts'
       ),
-      '@automaker/dependency-resolver': path.resolve(
+      '@protolabs-ai/dependency-resolver': path.resolve(
         __dirname,
         '../../libs/dependency-resolver/src/index.ts'
       ),
-      '@automaker/git-utils': path.resolve(__dirname, '../../libs/git-utils/src/index.ts'),
+      '@protolabs-ai/git-utils': path.resolve(__dirname, '../../libs/git-utils/src/index.ts'),
     },
   },
 });

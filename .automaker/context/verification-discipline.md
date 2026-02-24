@@ -185,7 +185,7 @@ Why this is right:
 This file is automatically loaded by `loadContextFiles()` in:
 - `apps/server/src/services/auto-mode-service.ts`
 - `apps/server/src/services/agent-service.ts`
-- Any other service using `loadContextFiles()` from `@automaker/utils`
+- Any other service using `loadContextFiles()` from `@protolabs-ai/utils`
 
 When agents receive prompts for feature implementation, this verification discipline is injected as part of the system prompt. **All agents MUST follow this discipline when claiming completion.**
 

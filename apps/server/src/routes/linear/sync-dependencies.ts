@@ -31,7 +31,7 @@
  */
 
 import type { RequestHandler } from 'express';
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import type { FeatureLoader } from '../../services/feature-loader.js';
 import { LinearMCPClient } from '../../services/linear-mcp-client.js';
 import type { SettingsService } from '../../services/settings-service.js';

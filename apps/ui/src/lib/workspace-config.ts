@@ -3,7 +3,7 @@
  * Centralizes the logic for determining where projects should be created/opened
  */
 
-import { createLogger } from '@automaker/utils/logger';
+import { createLogger } from '@protolabs-ai/utils/logger';
 import { getHttpApiClient } from './http-api-client';
 import { useAppStore } from '@/store/app-store';
 

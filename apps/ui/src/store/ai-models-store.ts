@@ -11,16 +11,16 @@ import type {
   ModelDefinition,
   ClaudeCompatibleProvider,
   ClaudeApiProfile,
-} from '@automaker/types';
+} from '@protolabs-ai/types';
 import {
   getAllCursorModelIds,
   getAllCodexModelIds,
   getAllOpencodeModelIds,
   DEFAULT_PHASE_MODELS,
   DEFAULT_OPENCODE_MODEL,
-} from '@automaker/types';
+} from '@protolabs-ai/types';
 import { getElectronAPI } from '@/lib/electron';
-import { createLogger } from '@automaker/utils/logger';
+import { createLogger } from '@protolabs-ai/utils/logger';
 import type { ClaudeUsage, CodexUsage } from './types';
 
 const logger = createLogger('AIModelsStore');

@@ -5,7 +5,7 @@
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { FeatureLoader } from '../../../src/services/feature-loader.js';
-import type { FeatureStore } from '@automaker/types';
+import type { FeatureStore } from '@protolabs-ai/types';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';

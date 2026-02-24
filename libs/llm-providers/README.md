@@ -1,4 +1,4 @@
-# @automaker/llm-providers
+# @protolabs-ai/llm-providers
 
 > Unified LLM provider abstraction layer for AutoMaker
 
@@ -19,14 +19,14 @@ A flexible, type-safe abstraction layer for working with multiple LLM providers 
 ### Installation
 
 ```bash
-npm install @automaker/llm-providers
+npm install @protolabs-ai/llm-providers
 ```
 
 ### Basic Usage
 
 ```typescript
-import { ProviderFactory } from '@automaker/llm-providers';
-import type { LLMProvidersConfig } from '@automaker/llm-providers';
+import { ProviderFactory } from '@protolabs-ai/llm-providers';
+import type { LLMProvidersConfig } from '@protolabs-ai/llm-providers';
 
 // Configure providers
 const config: LLMProvidersConfig = {

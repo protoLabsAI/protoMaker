@@ -3,7 +3,7 @@
  * Can be placed in the sidebar or toolbar.
  */
 
-import { Badge } from '@protolabs/ui/atoms';
+import { Badge } from '@protolabs-ai/ui/atoms';
 import { ClipboardList } from 'lucide-react';
 import { useHITLFormStore } from '@/store/hitl-form-store';
 

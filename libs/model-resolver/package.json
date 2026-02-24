@@ -1,5 +1,5 @@
 {
-  "name": "@automaker/model-resolver",
+  "name": "@protolabs-ai/model-resolver",
   "version": "0.2.0",
   "type": "module",
   "description": "Model resolution utilities for AutoMaker",
@@ -26,7 +26,7 @@
     "node": ">=22.0.0 <23.0.0"
   },
   "dependencies": {
-    "@automaker/types": "0.2.0"
+    "@protolabs-ai/types": "0.2.0"
   },
   "devDependencies": {
     "@types/node": "22.19.3",

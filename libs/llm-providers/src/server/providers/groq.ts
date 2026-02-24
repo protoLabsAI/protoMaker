@@ -6,7 +6,7 @@
 
 import Groq from 'groq-sdk';
 import { BaseProvider } from './base-provider.js';
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import type {
   ProviderConfig,
   ExecuteOptions,
@@ -15,7 +15,7 @@ import type {
   ModelDefinition,
   ValidationResult,
   ConversationMessage,
-} from '@automaker/types';
+} from '@protolabs-ai/types';
 
 const logger = createLogger('GroqProvider');
 

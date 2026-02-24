@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AlertCircle, Plug, RefreshCw } from 'lucide-react';
-import { Button, Spinner } from '@protolabs/ui/atoms';
+import { Button, Spinner } from '@protolabs-ai/ui/atoms';
 import { apiFetch } from '@/lib/api-fetch';
-import type { IntegrationSummary } from '@automaker/types';
+import type { IntegrationSummary } from '@protolabs-ai/types';
 import { IntegrationCard } from './integration-card';
 import { IntegrationConfigDialog } from './integration-config-dialog';
 

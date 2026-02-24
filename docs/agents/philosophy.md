@@ -116,7 +116,7 @@ The escalation chain: Haiku → Sonnet → Opus → ESCALATE (human intervention
 
 Model selection is about cost discipline, not capability gatekeeping. Using Opus for a format fix wastes ~100x the cost. Using Haiku for an architectural refactor wastes developer time in failed retries. The tier system matches cost to complexity.
 
-Use `resolveModelString()` from `@automaker/model-resolver` to convert aliases to model IDs.
+Use `resolveModelString()` from `@protolabs-ai/model-resolver` to convert aliases to model IDs.
 
 ## Worktree isolation as a first principle
 

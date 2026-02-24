@@ -1,6 +1,6 @@
 # Configuration Guide
 
-Complete guide to configuring the `@automaker/llm-providers` package.
+Complete guide to configuring the `@protolabs-ai/llm-providers` package.
 
 ## Table of Contents
 
@@ -17,8 +17,8 @@ Complete guide to configuring the `@automaker/llm-providers` package.
 The LLM providers package uses a declarative configuration approach with TypeScript types and Zod validation. Configuration is passed to the `ProviderFactory` during initialization.
 
 ```typescript
-import { ProviderFactory } from '@automaker/llm-providers';
-import type { LLMProvidersConfig } from '@automaker/llm-providers';
+import { ProviderFactory } from '@protolabs-ai/llm-providers';
+import type { LLMProvidersConfig } from '@protolabs-ai/llm-providers';
 
 const config: LLMProvidersConfig = {
   providers: {
@@ -485,7 +485,7 @@ Error: Configuration validation failed:
 ### Validation in Code
 
 ```typescript
-import { validateLLMProvidersConfig } from '@automaker/llm-providers';
+import { validateLLMProvidersConfig } from '@protolabs-ai/llm-providers';
 
 try {
   const validConfig = validateLLMProvidersConfig(config);

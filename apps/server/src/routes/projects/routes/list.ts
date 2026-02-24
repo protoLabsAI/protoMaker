@@ -3,7 +3,7 @@
  */
 
 import type { Request, Response } from 'express';
-import { listProjectPlans } from '@automaker/platform';
+import { listProjectPlans } from '@protolabs-ai/platform';
 import { getErrorMessage, logError } from '../common.js';
 
 export function createListHandler() {

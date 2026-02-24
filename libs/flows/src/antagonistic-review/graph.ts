@@ -25,7 +25,7 @@
 import { MemorySaver } from '@langchain/langgraph';
 import { GraphBuilder } from '../graphs/builder.js';
 import { AntagonisticReviewStateAnnotation, type AntagonisticReviewState } from './state.js';
-import { DistillationDepth, type ReviewerPerspective, type SPARCPrd } from '@automaker/types';
+import { DistillationDepth, type ReviewerPerspective, type SPARCPrd } from '@protolabs-ai/types';
 
 // Import real LLM-powered nodes
 import { classifyTopicNode } from './nodes/classify-topic.js';
@@ -43,7 +43,7 @@ import { createPairReviewNode } from './nodes/pair-review.js';
 
 // ─── Type Bridge Helpers ───────────────────────────────────────────────────
 // The real LLM nodes use their own local types (prd: string, node-local
-// ReviewerPerspective). The graph state uses @automaker/types (prd: SPARCPrd,
+// ReviewerPerspective). The graph state uses @protolabs-ai/types (prd: SPARCPrd,
 // types ReviewerPerspective). These helpers bridge the gap.
 
 /**
@@ -67,7 +67,7 @@ ${prd.constraints || 'None specified'}`;
 }
 
 /**
- * Map node-local verdict to @automaker/types ReviewVerdict
+ * Map node-local verdict to @protolabs-ai/types ReviewVerdict
  */
 function mapVerdictToReviewVerdict(verdict: string): 'approve' | 'concern' | 'block' {
   switch (verdict) {
@@ -85,7 +85,7 @@ function mapVerdictToReviewVerdict(verdict: string): 'approve' | 'concern' | 'bl
 }
 
 /**
- * Map node-local ReviewerPerspective to @automaker/types ReviewerPerspective
+ * Map node-local ReviewerPerspective to @protolabs-ai/types ReviewerPerspective
  */
 function mapNodeReviewToGraphReview(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -111,7 +111,7 @@ function mapNodeReviewToGraphReview(
 }
 
 /**
- * Map @automaker/types ReviewerPerspective to node-local format for LLM context
+ * Map @protolabs-ai/types ReviewerPerspective to node-local format for LLM context
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapGraphReviewToNodeReview(graphReview: ReviewerPerspective): any {
@@ -161,7 +161,7 @@ function parsePrdString(prdText: string, fallback: SPARCPrd): SPARCPrd {
 
 // ─── LLM Node Adapters ────────────────────────────────────────────────────
 // Each adapter wraps a real LLM node, handling type conversion between
-// graph state (SPARCPrd, @automaker/types) and node state (string, local types).
+// graph state (SPARCPrd, @protolabs-ai/types) and node state (string, local types).
 // When no models are injected, falls back to deterministic mock behavior.
 
 /**

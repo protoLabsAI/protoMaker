@@ -19,8 +19,8 @@ import type {
   EscalationSignal,
   EscalationSeverity,
   EscalationSource,
-} from '@automaker/types';
-import { createLogger } from '@automaker/utils';
+} from '@protolabs-ai/types';
+import { createLogger } from '@protolabs-ai/utils';
 import { LinearMCPClient, type CreateIssueOptions } from '../linear-mcp-client.js';
 import type { SettingsService } from '../settings-service.js';
 

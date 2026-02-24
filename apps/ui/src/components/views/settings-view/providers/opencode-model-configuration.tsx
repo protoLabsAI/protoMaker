@@ -1,19 +1,25 @@
-import { Label } from '@protolabs/ui/atoms';
-import { Badge } from '@protolabs/ui/atoms';
-import { Checkbox } from '@protolabs/ui/atoms';
-import { Button } from '@protolabs/ui/atoms';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@protolabs/ui/atoms';
+import { Label } from '@protolabs-ai/ui/atoms';
+import { Badge } from '@protolabs-ai/ui/atoms';
+import { Checkbox } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@protolabs-ai/ui/atoms';
 import { Terminal, Cloud, Cpu, Brain, Github, KeyRound, ShieldCheck } from 'lucide-react';
-import { Spinner } from '@protolabs/ui/atoms';
+import { Spinner } from '@protolabs-ai/ui/atoms';
 import { cn } from '@/lib/utils';
-import { Input } from '@protolabs/ui/atoms';
+import { Input } from '@protolabs-ai/ui/atoms';
 import type {
   OpencodeModelId,
   OpencodeProvider,
   OpencodeModelConfig,
   ModelDefinition,
-} from '@automaker/types';
-import { OPENCODE_MODELS, OPENCODE_MODEL_CONFIG_MAP } from '@automaker/types';
+} from '@protolabs-ai/types';
+import { OPENCODE_MODELS, OPENCODE_MODEL_CONFIG_MAP } from '@protolabs-ai/types';
 import type { OpenCodeProviderInfo } from '../cli-status/opencode-cli-status';
 import {
   OpenCodeIcon,

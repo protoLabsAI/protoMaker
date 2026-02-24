@@ -13,7 +13,7 @@ This guide walks you through setting up Langfuse integration for the Automaker o
 
 ## Overview
 
-The `@automaker/observability` package integrates with Langfuse for:
+The `@protolabs-ai/observability` package integrates with Langfuse for:
 
 - **Prompt Management**: Version and manage prompts in Langfuse
 - **Distributed Tracing**: Track agent executions and LLM API calls
@@ -113,7 +113,7 @@ LANGFUSE_FLUSH_INTERVAL=2000
 You can configure the Langfuse client programmatically:
 
 ```typescript
-import { LangfuseClient } from '@automaker/observability';
+import { LangfuseClient } from '@protolabs-ai/observability';
 
 const langfuse = new LangfuseClient({
   // API credentials
@@ -198,7 +198,7 @@ Langfuse Status: ✗ Fallback Mode
 ### Check in Code
 
 ```typescript
-import { LangfuseClient } from '@automaker/observability';
+import { LangfuseClient } from '@protolabs-ai/observability';
 
 const langfuse = new LangfuseClient({
   publicKey: process.env.LANGFUSE_PUBLIC_KEY,

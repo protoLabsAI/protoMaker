@@ -10,10 +10,10 @@
  * Aggregated after each PR feedback cycle and stored in .automaker/analytics/
  */
 
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import { writeFile, readFile, mkdir } from 'fs/promises';
 import { join } from 'path';
-import type { ReviewThreadFeedback } from '@automaker/types';
+import type { ReviewThreadFeedback } from '@protolabs-ai/types';
 
 const logger = createLogger('FeedbackAnalytics');
 

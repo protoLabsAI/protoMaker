@@ -18,7 +18,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@protolabs/ui/atoms';
+} from '@protolabs-ai/ui/atoms';
 import { Settings, User, Bell } from 'lucide-react';
 
 const meta = {

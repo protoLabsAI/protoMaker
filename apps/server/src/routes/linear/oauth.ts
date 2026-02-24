@@ -16,7 +16,7 @@
 
 import { Router, type Request, type Response } from 'express';
 import { randomBytes } from 'node:crypto';
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import type { SettingsService } from '../../services/settings-service.js';
 
 const logger = createLogger('linear:oauth');

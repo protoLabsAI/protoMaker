@@ -1,6 +1,6 @@
-import { Popover, PopoverContent, PopoverTrigger } from '@protolabs/ui/atoms';
-import { Label } from '@protolabs/ui/atoms';
-import { Switch } from '@protolabs/ui/atoms';
+import { Popover, PopoverContent, PopoverTrigger } from '@protolabs-ai/ui/atoms';
+import { Label } from '@protolabs-ai/ui/atoms';
+import { Switch } from '@protolabs-ai/ui/atoms';
 import { GitBranch, Settings2 } from 'lucide-react';
 
 interface WorktreeSettingsPopoverProps {

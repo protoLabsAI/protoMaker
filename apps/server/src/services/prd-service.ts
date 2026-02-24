@@ -6,9 +6,9 @@
  */
 
 import type { EventEmitter } from '../lib/events.js';
-import type { SPARCPrd } from '@automaker/types';
-import { createLogger, atomicWriteJson, readJsonWithRecovery } from '@automaker/utils';
-import { ensureAutomakerDir } from '@automaker/platform';
+import type { SPARCPrd } from '@protolabs-ai/types';
+import { createLogger, atomicWriteJson, readJsonWithRecovery } from '@protolabs-ai/utils';
+import { ensureAutomakerDir } from '@protolabs-ai/platform';
 import path from 'node:path';
 import { existsSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';

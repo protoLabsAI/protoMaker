@@ -3,8 +3,8 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { AutoMergeSettings } from '@automaker/types';
-import { DEFAULT_AUTO_MERGE_SETTINGS } from '@automaker/types';
+import type { AutoMergeSettings } from '@protolabs-ai/types';
+import { DEFAULT_AUTO_MERGE_SETTINGS } from '@protolabs-ai/types';
 import {
   MergeEligibilityService,
   type MergeEligibilityResult,

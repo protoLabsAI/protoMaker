@@ -1,11 +1,17 @@
-import { Label } from '@protolabs/ui/atoms';
-import { Badge } from '@protolabs/ui/atoms';
-import { Checkbox } from '@protolabs/ui/atoms';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@protolabs/ui/atoms';
+import { Label } from '@protolabs-ai/ui/atoms';
+import { Badge } from '@protolabs-ai/ui/atoms';
+import { Checkbox } from '@protolabs-ai/ui/atoms';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@protolabs-ai/ui/atoms';
 import { Terminal } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { CursorModelId, CursorModelConfig } from '@automaker/types';
-import { CURSOR_MODEL_MAP } from '@automaker/types';
+import type { CursorModelId, CursorModelConfig } from '@protolabs-ai/types';
+import { CURSOR_MODEL_MAP } from '@protolabs-ai/types';
 
 interface CursorModelConfigurationProps {
   enabledCursorModels: CursorModelId[];

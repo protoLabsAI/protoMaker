@@ -8,8 +8,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { getElectronAPI, GitHubIssue, GitHubComment } from '@/lib/electron';
 import { queryKeys } from '@/lib/query-keys';
 import { toast } from 'sonner';
-import type { LinkedPRInfo, ModelId, ThinkingLevel, ReasoningEffort } from '@automaker/types';
-import { resolveModelString } from '@automaker/model-resolver';
+import type { LinkedPRInfo, ModelId, ThinkingLevel, ReasoningEffort } from '@protolabs-ai/types';
+import { resolveModelString } from '@protolabs-ai/model-resolver';
 
 /**
  * Input for validating a GitHub issue

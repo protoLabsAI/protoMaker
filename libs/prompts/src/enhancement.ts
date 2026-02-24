@@ -11,10 +11,10 @@
  * Uses chain-of-thought prompting with few-shot examples for consistent results.
  */
 
-import type { EnhancementMode, EnhancementExample } from '@automaker/types';
+import type { EnhancementMode, EnhancementExample } from '@protolabs-ai/types';
 
 // Re-export enhancement types from shared package
-export type { EnhancementMode, EnhancementExample } from '@automaker/types';
+export type { EnhancementMode, EnhancementExample } from '@protolabs-ai/types';
 
 // Import all enhancement mode definitions from separate files
 import {

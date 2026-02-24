@@ -6,7 +6,7 @@ import {
   setLogLevel,
   setColorsEnabled,
   setTimestampsEnabled,
-} from '@automaker/utils';
+} from '@protolabs-ai/utils';
 
 describe('logger.ts', () => {
   let consoleSpy: {

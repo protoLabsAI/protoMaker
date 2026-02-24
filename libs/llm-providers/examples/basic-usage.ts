@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Basic Usage Example for @automaker/llm-providers
+ * Basic Usage Example for @protolabs-ai/llm-providers
  *
  * This example demonstrates:
  * - Provider initialization and configuration
@@ -13,8 +13,8 @@
  * Run: npm run example:basic-usage
  */
 
-import { ProviderFactory } from '@automaker/llm-providers';
-import type { LLMProvidersConfig, ModelCategory } from '@automaker/llm-providers';
+import { ProviderFactory } from '@protolabs-ai/llm-providers';
+import type { LLMProvidersConfig, ModelCategory } from '@protolabs-ai/llm-providers';
 
 /**
  * Example configuration with multiple providers

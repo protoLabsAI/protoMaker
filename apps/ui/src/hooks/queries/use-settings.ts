@@ -8,7 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 import { getElectronAPI } from '@/lib/electron';
 import { queryKeys } from '@/lib/query-keys';
 import { STALE_TIMES } from '@/lib/query-client';
-import type { GlobalSettings, ProjectSettings } from '@automaker/types';
+import type { GlobalSettings, ProjectSettings } from '@protolabs-ai/types';
 
 /**
  * Fetch global settings

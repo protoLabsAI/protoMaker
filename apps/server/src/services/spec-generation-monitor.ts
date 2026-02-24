@@ -9,7 +9,7 @@
  * Uses a tick-based approach similar to WorldStateMonitor for consistency.
  */
 
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import type { EventEmitter } from '../lib/events.js';
 import { getSpecRegenerationStatus, setRunningState } from '../routes/app-spec/common.js';
 

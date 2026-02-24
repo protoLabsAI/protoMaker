@@ -6,15 +6,15 @@
  * outline approval/modification.
  */
 
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import {
   OutlineSchema,
   type Outline,
   type ContentConfig,
   type ResearchSummary,
-} from '@automaker/types';
-import { getOutlinePlannerPrompt } from '@automaker/prompts';
-import { wrapProviderWithTracing } from '@automaker/observability';
+} from '@protolabs-ai/types';
+import { getOutlinePlannerPrompt } from '@protolabs-ai/prompts';
+import { wrapProviderWithTracing } from '@protolabs-ai/observability';
 import type { ContentState } from '../content-flow.js';
 import { copilotkitEmitState, emitHeartbeat } from '../copilotkit-utils.js';
 

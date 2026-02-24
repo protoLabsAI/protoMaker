@@ -2,7 +2,7 @@ import { spawn } from 'child_process';
 import * as os from 'os';
 import * as pty from 'node-pty';
 import { ClaudeUsage } from '../routes/claude/types.js';
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 
 /**
  * Claude Usage Service

@@ -1,5 +1,5 @@
 import { CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
-import { Spinner } from '@protolabs/ui/atoms';
+import { Spinner } from '@protolabs-ai/ui/atoms';
 
 interface StatusBadgeProps {
   status:

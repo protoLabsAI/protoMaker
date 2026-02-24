@@ -9,7 +9,7 @@ import {
   initializeAgent,
   type AgentState,
 } from '../../../../src/services/authority-agents/agent-utils.js';
-import type { AuthorityAgent } from '@automaker/types';
+import type { AuthorityAgent } from '@protolabs-ai/types';
 
 describe('agent-utils', () => {
   describe('createAgentState', () => {

@@ -9,7 +9,7 @@
  */
 
 import type { RequestHandler, Request, Response } from 'express';
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import { verifyLangfuseWebhookSignature } from '../../lib/langfuse-webhook.js';
 import { getPromptResolver } from '../../lib/langfuse-singleton.js';
 import type { PromptGitHubSyncService } from '../../services/prompt-github-sync-service.js';

@@ -1,5 +1,5 @@
-import { Label } from '@protolabs/ui/atoms';
-import { Checkbox } from '@protolabs/ui/atoms';
+import { Label } from '@protolabs-ai/ui/atoms';
+import { Checkbox } from '@protolabs-ai/ui/atoms';
 import {
   FlaskConical,
   TestTube,
@@ -14,8 +14,14 @@ import {
   Cpu,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@protolabs/ui/atoms';
-import type { PhaseModelEntry } from '@automaker/types';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@protolabs-ai/ui/atoms';
+import type { PhaseModelEntry } from '@protolabs-ai/types';
 import { PhaseModelSelector } from '../model-defaults/phase-model-selector';
 
 type PlanningMode = 'skip' | 'lite' | 'spec' | 'full';

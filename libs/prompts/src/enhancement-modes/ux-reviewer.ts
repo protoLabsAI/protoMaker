@@ -3,7 +3,7 @@
  * Reviews and enhances task descriptions from a user experience and design perspective.
  */
 
-import type { EnhancementExample } from '@automaker/types';
+import type { EnhancementExample } from '@protolabs-ai/types';
 
 /**
  * System prompt for the "ux-reviewer" enhancement mode.

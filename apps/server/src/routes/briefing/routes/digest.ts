@@ -25,7 +25,7 @@
 import type { Request, Response } from 'express';
 import type { EventHistoryService } from '../../../services/event-history-service.js';
 import type { BriefingCursorService } from '../../../services/briefing-cursor-service.js';
-import type { StoredEvent, EventHookTrigger } from '@automaker/types';
+import type { StoredEvent, EventHookTrigger } from '@protolabs-ai/types';
 import { getErrorMessage, logError } from '../common.js';
 
 /**

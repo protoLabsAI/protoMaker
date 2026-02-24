@@ -10,8 +10,8 @@
 import { Router, type Request, type Response } from 'express';
 import type { VoiceService } from '../../services/voice-service.js';
 import type { EventEmitter } from '../../lib/events.js';
-import { createLogger } from '@automaker/utils';
-import type { WhisperModelSize } from '@automaker/types';
+import { createLogger } from '@protolabs-ai/utils';
+import type { WhisperModelSize } from '@protolabs-ai/types';
 
 const logger = createLogger('VoiceRoutes');
 

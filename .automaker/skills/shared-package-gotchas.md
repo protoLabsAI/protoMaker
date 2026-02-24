@@ -1,7 +1,7 @@
 ---
 name: shared-package-gotchas
 emoji: 📦
-description: "Common pitfalls when working with @automaker/* shared packages — browser crashes, import rules, and dependency chain."
+description: "Common pitfalls when working with @protolabs-ai/* shared packages — browser crashes, import rules, and dependency chain."
 metadata:
   author: agent
   created: 2026-02-12T16:57:07.759Z
@@ -13,11 +13,11 @@ metadata:
 
 # Shared Package Gotchas
 
-Common pitfalls when working with `@automaker/*` packages in the monorepo.
+Common pitfalls when working with `@protolabs-ai/*` packages in the monorepo.
 
 ## process.env Crashes Browser
 
-`@automaker/types` is imported by both server and UI. Any `process.env` access at module import time crashes in the browser where `process` is undefined.
+`@protolabs-ai/types` is imported by both server and UI. Any `process.env` access at module import time crashes in the browser where `process` is undefined.
 
 **Wrong:**
 ```typescript
@@ -38,13 +38,13 @@ Vite doesn't polyfill `process.env` by default. Only `import.meta.env.VITE_*` wo
 Packages can ONLY depend on packages above them:
 
 ```
-@automaker/types (no dependencies)
+@protolabs-ai/types (no dependencies)
     ↓
-@automaker/utils, @automaker/prompts, @automaker/platform,
-@automaker/model-resolver, @automaker/dependency-resolver,
-@automaker/spec-parser
+@protolabs-ai/utils, @protolabs-ai/prompts, @protolabs-ai/platform,
+@protolabs-ai/model-resolver, @protolabs-ai/dependency-resolver,
+@protolabs-ai/spec-parser
     ↓
-@automaker/git-utils
+@protolabs-ai/git-utils
     ↓
 apps/server, apps/ui
 ```
@@ -57,8 +57,8 @@ Always import from workspace packages, never from old paths:
 
 ```typescript
 // ✅ Correct
-import type { Feature } from '@automaker/types';
-import { createLogger } from '@automaker/utils';
+import type { Feature } from '@protolabs-ai/types';
+import { createLogger } from '@protolabs-ai/utils';
 
 // ❌ Wrong
 import { Feature } from '../services/feature-loader';
@@ -79,7 +79,7 @@ This builds ALL shared packages in dependency order. Without this:
 
 ## Worktree Symlink Issue
 
-npm workspace hoisting resolves `@automaker/types` to the main repo in worktrees, not the worktree's copy. Agents may see main's types instead of the worktree's modified types.
+npm workspace hoisting resolves `@protolabs-ai/types` to the main repo in worktrees, not the worktree's copy. Agents may see main's types instead of the worktree's modified types.
 
 **Workaround:** Rebuild packages from within the worktree if modifying shared types:
 ```bash

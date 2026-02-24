@@ -7,8 +7,8 @@
 
 import { useState, useCallback } from 'react';
 import { History, X } from 'lucide-react';
-import { ChatMessageList, ChatInput } from '@protolabs/ui/ai';
-import { Button } from '@protolabs/ui/atoms';
+import { ChatMessageList, ChatInput } from '@protolabs-ai/ui/ai';
+import { Button } from '@protolabs-ai/ui/atoms';
 import { cn } from '@/lib/utils';
 import { ChatModelSelect } from '@/components/views/chat/components/chat-model-select';
 import { ConversationList } from './conversation-list';

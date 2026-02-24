@@ -9,7 +9,7 @@
 
 import { Router, type Request, type Response } from 'express';
 import { contentFlowService } from '../../services/content-flow-service.js';
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import type { SettingsService } from '../../services/settings-service.js';
 
 const logger = createLogger('ContentRoutes');

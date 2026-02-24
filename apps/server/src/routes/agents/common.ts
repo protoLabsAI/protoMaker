@@ -2,7 +2,7 @@
  * Common utilities for agent management routes
  */
 
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 
 const logger = createLogger('AgentManagementAPI');
 

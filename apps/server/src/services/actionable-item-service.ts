@@ -12,16 +12,16 @@
  * - Pipeline gates
  */
 
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import * as secureFs from '../lib/secure-fs.js';
-import { ensureAutomakerDir } from '@automaker/platform';
+import { ensureAutomakerDir } from '@protolabs-ai/platform';
 import type {
   ActionableItem,
   ActionableItemsFile,
   CreateActionableItemInput,
   ActionableItemStatus,
-} from '@automaker/types';
-import { DEFAULT_ACTIONABLE_ITEMS_FILE, getEffectivePriority } from '@automaker/types';
+} from '@protolabs-ai/types';
+import { DEFAULT_ACTIONABLE_ITEMS_FILE, getEffectivePriority } from '@protolabs-ai/types';
 import type { EventEmitter } from '../lib/events.js';
 import { randomUUID } from 'crypto';
 import { join } from 'path';

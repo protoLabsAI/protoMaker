@@ -39,7 +39,7 @@ import type {
   PlanningMode,
   ExecutionContext,
   ActionProposal,
-} from '@automaker/types';
+} from '@protolabs-ai/types';
 import {
   DEFAULT_PHASE_MODELS,
   DEFAULT_MAX_CONCURRENCY,
@@ -47,7 +47,7 @@ import {
   isClaudeModel,
   stripProviderPrefix,
   normalizeFeatureStatus,
-} from '@automaker/types';
+} from '@protolabs-ai/types';
 import {
   buildPromptWithImages,
   classifyError,
@@ -61,18 +61,22 @@ import {
   DEFAULT_BACKUP_COUNT,
   type DedupChecker,
   type IndexRebuilder,
-} from '@automaker/utils';
+} from '@protolabs-ai/utils';
 
 const logger = createLogger('AutoMode');
-import { resolveModelString, resolvePhaseModel, DEFAULT_MODELS } from '@automaker/model-resolver';
-import { resolveDependencies, areDependenciesSatisfied } from '@automaker/dependency-resolver';
+import {
+  resolveModelString,
+  resolvePhaseModel,
+  DEFAULT_MODELS,
+} from '@protolabs-ai/model-resolver';
+import { resolveDependencies, areDependenciesSatisfied } from '@protolabs-ai/dependency-resolver';
 import {
   getFeatureDir,
   getAutomakerDir,
   getFeaturesDir,
   getExecutionStatePath,
   ensureAutomakerDir,
-} from '@automaker/platform';
+} from '@protolabs-ai/platform';
 import { exec, execFile } from 'child_process';
 import { promisify } from 'util';
 import { randomUUID } from 'crypto';
@@ -122,7 +126,7 @@ async function getCurrentBranch(projectPath: string): Promise<string | null> {
   }
 }
 
-// PlanningMode type is imported from @automaker/types
+// PlanningMode type is imported from @protolabs-ai/types
 
 // Model selection for features is handled by AutoModeService.getModelForFeature() class method
 // which reads the user-configured agentExecutionModel from settings.
@@ -1018,7 +1022,7 @@ export class AutoModeService {
             );
             for (const issue of report.issues) {
               this.events.emit(
-                'escalation:signal-received' as import('@automaker/types').EventType,
+                'escalation:signal-received' as import('@protolabs-ai/types').EventType,
                 {
                   source: 'auto_mode_health_sweep',
                   severity: issue.type === 'stale_gate' ? 'medium' : 'low',
@@ -5261,7 +5265,9 @@ This mock response was generated because AUTOMAKER_MOCK_AGENT=true was set.
 
     // Try to find a provider for the model (if it's a provider model like "GLM-4.7")
     // This allows users to select provider models in the Auto Mode / Feature execution
-    let claudeCompatibleProvider: import('@automaker/types').ClaudeCompatibleProvider | undefined;
+    let claudeCompatibleProvider:
+      | import('@protolabs-ai/types').ClaudeCompatibleProvider
+      | undefined;
     let providerResolvedModel: string | undefined;
     if (finalModel && this.settingsService) {
       // If providerId is explicitly set (from agentExecutionModel phase setting),
@@ -5986,7 +5992,7 @@ After generating the revised spec, output:
 
                   // Emit loop detection event
                   this.events.emit(
-                    'pipeline:loop-detected' as import('@automaker/types').EventType,
+                    'pipeline:loop-detected' as import('@protolabs-ai/types').EventType,
                     {
                       featureId,
                       loopSignature: streamObserver.getLoopSignature() || 'unknown',
@@ -6778,7 +6784,7 @@ After generating the revised spec, output:
       const dedupChecker: DedupChecker | undefined = this.knowledgeStoreService
         ? async (
             projPath: string,
-            learning: import('@automaker/utils').LearningEntry,
+            learning: import('@protolabs-ai/utils').LearningEntry,
             targetFile: string
           ) => {
             if (!this.knowledgeStoreService) return false;

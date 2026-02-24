@@ -13,7 +13,7 @@ import readline from 'node:readline';
 import { randomUUID } from 'node:crypto';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 
 const execFileAsync = promisify(execFile);
 import type {
@@ -27,7 +27,7 @@ import type {
   TimeSeriesMetric,
   TimeGroupBy,
   CycleTimeBucket,
-} from '@automaker/types';
+} from '@protolabs-ai/types';
 import type { FeatureLoader } from './feature-loader.js';
 import type { EventEmitter } from '../lib/events.js';
 

@@ -10,7 +10,7 @@ import { RoleRegistryService } from '../../../src/services/role-registry-service
 import { AgentFactoryService } from '../../../src/services/agent-factory-service.js';
 import { registerBuiltInTemplates } from '../../../src/services/built-in-templates.js';
 import { createEventEmitter } from '../../../src/lib/events.js';
-import type { AgentTemplate } from '@automaker/types';
+import type { AgentTemplate } from '@protolabs-ai/types';
 
 describe('Agent Template Flow (integration)', () => {
   let registry: RoleRegistryService;

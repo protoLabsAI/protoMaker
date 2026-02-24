@@ -10,7 +10,7 @@
  * Reflection node at the bottom completes the feedback loop.
  */
 
-import type { PipelinePhase } from '@automaker/types';
+import type { PipelinePhase } from '@protolabs-ai/types';
 import type { FlowEdge, PipelineStageId, EngineServiceId } from './types';
 
 // ============================================

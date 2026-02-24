@@ -1,6 +1,6 @@
 # Observability Package
 
-`@automaker/observability` provides Langfuse-based tracing, prompt management, and cost tracking for LLM operations. All tracing is transparent — application code works identically whether Langfuse is available or not.
+`@protolabs-ai/observability` provides Langfuse-based tracing, prompt management, and cost tracking for LLM operations. All tracing is transparent — application code works identically whether Langfuse is available or not.
 
 **Owner:** Sam (AI Agent Engineer)
 
@@ -23,7 +23,7 @@ libs/observability/src/
 Wrapper around the Langfuse SDK that provides graceful fallback when Langfuse is unavailable. All methods are safe to call regardless of connection state.
 
 ```typescript
-import { LangfuseClient } from '@automaker/observability';
+import { LangfuseClient } from '@protolabs-ai/observability';
 
 const client = new LangfuseClient({
   publicKey: process.env.LANGFUSE_PUBLIC_KEY,
@@ -60,8 +60,8 @@ All methods return `null` or silently no-op when Langfuse is unavailable.
 `wrapProviderWithTracing()` transparently adds Langfuse tracing to any async generator. The application code doesn't change.
 
 ```typescript
-import { wrapProviderWithTracing } from '@automaker/observability';
-import type { TracingConfig } from '@automaker/observability';
+import { wrapProviderWithTracing } from '@protolabs-ai/observability';
+import type { TracingConfig } from '@protolabs-ai/observability';
 
 const tracingConfig: TracingConfig = {
   enabled: true,
@@ -116,7 +116,7 @@ Default pricing is included for Claude models (opus, sonnet, haiku).
 For cases where the middleware pattern doesn't fit:
 
 ```typescript
-import { createTracingContext, completeTracingContext } from '@automaker/observability';
+import { createTracingContext, completeTracingContext } from '@protolabs-ai/observability';
 
 // Start a trace
 const ctx = createTracingContext(client, {
@@ -147,7 +147,7 @@ import {
   prefetchPrompts,
   pinPromptVersion,
   pinPromptLabel,
-} from '@automaker/observability';
+} from '@protolabs-ai/observability';
 
 const langfuse = getLangfuseClient('pk-...', 'sk-...');
 
@@ -175,7 +175,7 @@ const prompts = await prefetchPrompts(langfuse, [
 `PromptCache` provides TTL-based local caching to avoid repeated Langfuse API calls.
 
 ```typescript
-import { createPromptCache } from '@automaker/observability';
+import { createPromptCache } from '@protolabs-ai/observability';
 
 const cache = createPromptCache({
   defaultTtl: 5 * 60 * 1000, // 5 minutes (default)
@@ -203,7 +203,7 @@ const removed = cache.cleanup();
 `executeTrackedPrompt()` combines prompt fetching, variable injection, execution, and tracing in one call:
 
 ```typescript
-import { executeTrackedPrompt, LangfuseClient } from '@automaker/observability';
+import { executeTrackedPrompt, LangfuseClient } from '@protolabs-ai/observability';
 
 const result = await executeTrackedPrompt(client, 'greeting', {
   version: 2,
@@ -308,5 +308,5 @@ interface CreateScoreOptions {
 ```
 langfuse       # Langfuse SDK
 zod            # Schema validation (for PromptConfigSchema)
-@automaker/utils  # Logging
+@protolabs-ai/utils  # Logging
 ```

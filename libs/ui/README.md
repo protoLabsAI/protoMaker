@@ -1,11 +1,11 @@
-# @protolabs/ui
+# @protolabs-ai/ui
 
 Shared UI component library for AutoMaker, built on Radix UI primitives with Tailwind CSS v4 styling and atomic design principles.
 
 ## Installation
 
 ```bash
-npm install @protolabs/ui
+npm install @protolabs-ai/ui
 ```
 
 ### Peer Dependencies
@@ -23,7 +23,7 @@ npm install react@^19 tailwindcss@^4
 Import the theme CSS file in your app entry point (e.g., `main.tsx` or `App.tsx`):
 
 ```tsx
-import '@protolabs/ui/themes.css';
+import '@protolabs-ai/ui/themes.css';
 ```
 
 ### 2. Apply Theme Class
@@ -57,22 +57,22 @@ Components are organized into atoms, molecules, and organisms following atomic d
 
 ```tsx
 // Atoms (primitives)
-import { Button, Card, Input, Label } from '@protolabs/ui';
+import { Button, Card, Input, Label } from '@protolabs-ai/ui';
 
 // Molecules (composed components)
-import { ConfirmDialog, Autocomplete, Markdown } from '@protolabs/ui/molecules';
+import { ConfirmDialog, Autocomplete, Markdown } from '@protolabs-ai/ui/molecules';
 
 // Organisms (complex compositions)
 // Coming soon...
 
 // Utilities
-import { cn } from '@protolabs/ui/lib';
+import { cn } from '@protolabs-ai/ui/lib';
 ```
 
 ### Basic Example
 
 ```tsx
-import { Button, Card, CardHeader, CardTitle, CardContent } from '@protolabs/ui';
+import { Button, Card, CardHeader, CardTitle, CardContent } from '@protolabs-ai/ui';
 
 function Example() {
   return (
@@ -119,7 +119,7 @@ Buttons support loading state with built-in spinner:
 Use `asChild` prop to render components as different elements:
 
 ```tsx
-import { Button } from '@protolabs/ui';
+import { Button } from '@protolabs-ai/ui';
 
 <Button asChild>
   <a href="/dashboard">Go to Dashboard</a>
@@ -137,7 +137,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@protolabs/ui';
+} from '@protolabs-ai/ui';
 
 function DeleteDialog() {
   return (
@@ -163,7 +163,7 @@ function DeleteDialog() {
 ### Form Example
 
 ```tsx
-import { Input, Label, Button, Card, CardContent } from '@protolabs/ui';
+import { Input, Label, Button, Card, CardContent } from '@protolabs-ai/ui';
 
 function LoginForm() {
   return (
@@ -253,7 +253,7 @@ All components accept `className` prop for Tailwind utilities:
 The `cn()` utility combines class names and resolves Tailwind conflicts:
 
 ```tsx
-import { cn } from '@protolabs/ui/lib';
+import { cn } from '@protolabs-ai/ui/lib';
 
 <Button className={cn('w-full', isActive && 'bg-primary', isDisabled && 'opacity-50')}>
   Dynamic Button
@@ -265,7 +265,7 @@ import { cn } from '@protolabs/ui/lib';
 Export both components and their variants for custom compositions:
 
 ```tsx
-import { buttonVariants } from '@protolabs/ui';
+import { buttonVariants } from '@protolabs-ai/ui';
 
 <a className={buttonVariants({ variant: 'outline', size: 'sm' })}>Link styled as button</a>;
 ```
@@ -347,7 +347,7 @@ This library follows:
 All components are fully typed with TypeScript 5.9+:
 
 ```tsx
-import type { ButtonProps } from '@protolabs/ui';
+import type { ButtonProps } from '@protolabs-ai/ui';
 
 function CustomButton(props: ButtonProps) {
   return <Button {...props} />;

@@ -1,7 +1,7 @@
 /**
- * Enhancement Prompts - Re-exported from @automaker/prompts
+ * Enhancement Prompts - Re-exported from @protolabs-ai/prompts
  *
- * This file now re-exports enhancement prompts from the shared @automaker/prompts package
+ * This file now re-exports enhancement prompts from the shared @protolabs-ai/prompts package
  * to maintain backward compatibility with existing imports in the server codebase.
  */
 
@@ -20,6 +20,6 @@ export {
   buildUserPrompt,
   isValidEnhancementMode,
   getAvailableEnhancementModes,
-} from '@automaker/prompts';
+} from '@protolabs-ai/prompts';
 
-export type { EnhancementMode, EnhancementExample } from '@automaker/prompts';
+export type { EnhancementMode, EnhancementExample } from '@protolabs-ai/prompts';

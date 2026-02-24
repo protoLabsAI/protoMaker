@@ -108,7 +108,7 @@ export function useProjectSettingsLoader() {
       | null
       | undefined;
     const phaseModelOverrides = settingsWithExtras.phaseModelOverrides as
-      | import('@automaker/types').PhaseModelConfig
+      | import('@protolabs-ai/types').PhaseModelConfig
       | undefined;
 
     // Check if we need to update the project

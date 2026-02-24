@@ -2,8 +2,8 @@
  * Git diff generation utilities
  */
 
-import { createLogger } from '@automaker/utils';
-import { secureFs } from '@automaker/platform';
+import { createLogger } from '@protolabs-ai/utils';
+import { secureFs } from '@protolabs-ai/platform';
 import path from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';

@@ -5,7 +5,7 @@
  * Uses a modified Kahn's algorithm that respects both dependencies and priorities.
  */
 
-import type { Feature } from '@automaker/types';
+import type { Feature } from '@protolabs-ai/types';
 
 export interface DependencyResolutionResult {
   orderedFeatures: Feature[]; // Features in dependency-aware order

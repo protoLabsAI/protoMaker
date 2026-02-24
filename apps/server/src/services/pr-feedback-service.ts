@@ -13,7 +13,7 @@
  * 5. EM agent picks up and handles reassignment or merge
  */
 
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import type { EventEmitter } from '../lib/events.js';
@@ -24,8 +24,8 @@ import type {
   ReviewThreadFeedback,
   FeedbackThreadDecision,
   PendingFeedback,
-} from '@automaker/types';
-import { EscalationSeverity, EscalationSource } from '@automaker/types';
+} from '@protolabs-ai/types';
+import { EscalationSeverity, EscalationSource } from '@protolabs-ai/types';
 import { codeRabbitParserService } from './coderabbit-parser-service.js';
 import { codeRabbitResolverService } from './coderabbit-resolver-service.js';
 
@@ -1375,7 +1375,7 @@ This is iteration ${iterationCount} of the review cycle. Be judicious - not all 
       // Store denial audit trail in remediationHistory
       if (deniedDecisions.length > 0) {
         const remediationHistory = (feature?.remediationHistory ||
-          []) as import('@automaker/types').RemediationHistoryEntry[];
+          []) as import('@protolabs-ai/types').RemediationHistoryEntry[];
         const currentEntry = remediationHistory.find(
           (entry) => entry.iteration === pr.iterationCount && !entry.completedAt
         );

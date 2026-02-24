@@ -8,10 +8,10 @@
  * - Emits progress events for UI updates
  */
 
-import type { Feature, FeatureFactoryResult, Project } from '@automaker/types';
-import { getProjectJsonPath } from '@automaker/platform';
-import { secureFs } from '@automaker/platform';
-import { phaseToFeatureDescription, slugify } from '@automaker/utils';
+import type { Feature, FeatureFactoryResult, Project } from '@protolabs-ai/types';
+import { getProjectJsonPath } from '@protolabs-ai/platform';
+import { secureFs } from '@protolabs-ai/platform';
+import { phaseToFeatureDescription, slugify } from '@protolabs-ai/utils';
 import { FeatureLoader } from './feature-loader.js';
 import type { EventEmitter } from '../lib/events.js';
 import { getErrorMessage } from '../routes/projects/common.js';

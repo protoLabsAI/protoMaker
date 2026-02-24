@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { createLogger } from '@automaker/utils/logger';
+import { createLogger } from '@protolabs-ai/utils/logger';
 import type { ImageAttachment, TextFileAttachment } from '@/store/types';
 
 const logger = createLogger('MessageQueue');

@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Label } from '@protolabs/ui/atoms';
-import { Badge } from '@protolabs/ui/atoms';
-import { Button } from '@protolabs/ui/atoms';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@protolabs/ui/atoms';
+import { Label } from '@protolabs-ai/ui/atoms';
+import { Badge } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@protolabs-ai/ui/atoms';
 import { Shield, ShieldCheck, ShieldAlert, ChevronDown, Copy, Check } from 'lucide-react';
-import { Spinner } from '@protolabs/ui/atoms';
+import { Spinner } from '@protolabs-ai/ui/atoms';
 import { cn } from '@/lib/utils';
 import type { CursorStatus } from '../hooks/use-cursor-status';
 import type { PermissionsData } from '../hooks/use-cursor-permissions';

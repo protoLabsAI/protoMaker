@@ -7,7 +7,7 @@ import { createUpdateStepHandler } from '@/routes/pipeline/routes/update-step.js
 import { createDeleteStepHandler } from '@/routes/pipeline/routes/delete-step.js';
 import { createReorderStepsHandler } from '@/routes/pipeline/routes/reorder-steps.js';
 import type { PipelineService } from '@/services/pipeline-service.js';
-import type { PipelineConfig, PipelineStep } from '@automaker/types';
+import type { PipelineConfig, PipelineStep } from '@protolabs-ai/types';
 import { createMockExpressContext } from '../../utils/mocks.js';
 
 describe('pipeline routes', () => {

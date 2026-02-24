@@ -3,7 +3,7 @@
  * Provides analytics for project performance, cost tracking, and capacity planning
  */
 
-import type { Feature } from '@automaker/types';
+import type { Feature } from '@protolabs-ai/types';
 import { FeatureLoader } from './feature-loader.js';
 
 /**

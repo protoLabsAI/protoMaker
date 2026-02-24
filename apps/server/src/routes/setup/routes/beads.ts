@@ -3,8 +3,8 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { createLogger } from '@automaker/utils';
-import type { BeadsSetupResult } from '@automaker/types';
+import { createLogger } from '@protolabs-ai/utils';
+import type { BeadsSetupResult } from '@protolabs-ai/types';
 
 const logger = createLogger('setup:beads');
 const execFileAsync = promisify(execFile);

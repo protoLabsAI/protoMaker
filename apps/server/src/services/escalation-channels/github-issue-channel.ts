@@ -13,13 +13,13 @@
  */
 
 import { execSync } from 'node:child_process';
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import {
   EscalationSource,
   EscalationSeverity,
   type EscalationChannel,
   type EscalationSignal,
-} from '@automaker/types';
+} from '@protolabs-ai/types';
 import type { FeatureLoader } from '../feature-loader.js';
 
 const logger = createLogger('GitHubIssueChannel');

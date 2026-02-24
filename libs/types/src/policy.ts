@@ -2,7 +2,7 @@
  * Policy and Trust Types - Authorization and decision-making for Automaker agents
  *
  * This file contains TWO layers of types:
- * 1. Policy Engine Types - Used by @automaker/policy-engine for checkPolicy() evaluation
+ * 1. Policy Engine Types - Used by @protolabs-ai/policy-engine for checkPolicy() evaluation
  * 2. Authority System Types - Used by the authority service for organizational workflows
  *
  * The engine types are optimized for fast policy checks (short role codes, indexed permission matrix).
@@ -11,7 +11,7 @@
 
 // ============================================================================
 // POLICY ENGINE TYPES
-// Used by @automaker/policy-engine checkPolicy() function
+// Used by @protolabs-ai/policy-engine checkPolicy() function
 // ============================================================================
 
 /**

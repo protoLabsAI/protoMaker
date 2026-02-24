@@ -11,7 +11,7 @@ import type { Request, Response } from 'express';
 import { validatePathParams } from '../../middleware/validate-paths.js';
 import type { LeadEngineerService } from '../../services/lead-engineer-service.js';
 import { getErrorMessage, createLogError } from '../common.js';
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 
 const logger = createLogger('LeadEngineerRoutes');
 const logError = createLogError(logger);

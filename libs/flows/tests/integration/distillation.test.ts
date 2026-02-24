@@ -11,7 +11,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createAntagonisticReviewGraph } from '../../src/antagonistic-review/graph.js';
-import { DistillationDepth, type SPARCPrd } from '@automaker/types';
+import { DistillationDepth, type SPARCPrd } from '@protolabs-ai/types';
 import type { AntagonisticReviewState } from '../../src/antagonistic-review/state.js';
 
 /**

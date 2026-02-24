@@ -12,9 +12,9 @@
  * - Configurable recipient list
  */
 
-import type { EscalationSignal, EscalationChannel, EscalationSeverity } from '@automaker/types';
-import { EscalationSeverity as Severity } from '@automaker/types';
-import { createLogger } from '@automaker/utils';
+import type { EscalationSignal, EscalationChannel, EscalationSeverity } from '@protolabs-ai/types';
+import { EscalationSeverity as Severity } from '@protolabs-ai/types';
+import { createLogger } from '@protolabs-ai/utils';
 import type { DiscordBotService } from '../discord-bot-service.js';
 import type { EventEmitter } from '../../lib/events.js';
 
@@ -239,7 +239,7 @@ export class DiscordDMChannel implements EscalationChannel {
     // Listen for Discord reaction events
     // Note: This would require the Discord bot service to emit reaction events
     // For now, this is a placeholder for future reaction-based acknowledgment
-    // TODO: Add discord:reaction:added event type to @automaker/types when implementing
+    // TODO: Add discord:reaction:added event type to @protolabs-ai/types when implementing
     // this.events.subscribe((type, payload: any) => {
     //   if (type === 'discord:reaction:added') {
     //     this.handleReaction(payload);

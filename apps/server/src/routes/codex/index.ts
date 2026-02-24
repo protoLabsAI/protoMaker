@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { CodexUsageService } from '../../services/codex-usage-service.js';
 import { CodexModelCacheService } from '../../services/codex-model-cache-service.js';
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 
 const logger = createLogger('Codex');
 

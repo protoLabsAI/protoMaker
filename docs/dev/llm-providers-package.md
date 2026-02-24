@@ -1,6 +1,6 @@
 # LLM Providers Package
 
-`@automaker/llm-providers` provides a multi-provider LLM abstraction layer. It defines a unified interface for Anthropic, OpenAI, Google, Groq, Ollama, and Bedrock with Zod-validated configuration, a singleton factory, and health checking.
+`@protolabs-ai/llm-providers` provides a multi-provider LLM abstraction layer. It defines a unified interface for Anthropic, OpenAI, Google, Groq, Ollama, and Bedrock with Zod-validated configuration, a singleton factory, and health checking.
 
 **Owner:** Sam (AI Agent Engineer)
 
@@ -19,7 +19,7 @@ libs/llm-providers/src/
 │   │   └── provider-factory.ts    # ProviderFactory singleton
 │   └── providers/
 │       ├── base.ts                # BaseLLMProvider (canonical base class)
-│       ├── base-provider.ts       # BaseProvider (@automaker/types-based)
+│       ├── base-provider.ts       # BaseProvider (@protolabs-ai/types-based)
 │       ├── anthropic.ts           # AnthropicProvider
 │       ├── openai.ts              # OpenAIProvider
 │       ├── google.ts              # GoogleProvider
@@ -37,7 +37,7 @@ Three base classes exist from parallel development. For new providers, extend `B
 | -------------------------- | ----------------------------------- | ----------------------------------------------------------------------------------------------- |
 | `BaseLLMProvider`          | `server/providers/base.ts`          | **Canonical.** Config-based, abstract methods for `createModel`, `initialize`, `validateConfig` |
 | `BaseLLMProviderLangChain` | `server/base.ts`                    | LangChain integration with model tiers, health checks                                           |
-| `BaseProvider`             | `server/providers/base-provider.ts` | `@automaker/types`-based, simpler interface                                                     |
+| `BaseProvider`             | `server/providers/base-provider.ts` | `@protolabs-ai/types`-based, simpler interface                                                  |
 
 ### BaseLLMProvider API
 
@@ -90,7 +90,7 @@ import {
   validateLLMProvidersConfig,
   providerConfigSchema,
   llmProvidersConfigSchema,
-} from '@automaker/llm-providers';
+} from '@protolabs-ai/llm-providers';
 
 // Validate a single provider config
 const config = validateProviderConfig(rawConfig);
@@ -104,7 +104,7 @@ const fullConfig = validateLLMProvidersConfig(rawFullConfig);
 Singleton factory for creating and managing provider instances:
 
 ```typescript
-import { ProviderFactory } from '@automaker/llm-providers';
+import { ProviderFactory } from '@protolabs-ai/llm-providers';
 
 // Get the singleton
 const factory = ProviderFactory.getInstance();
@@ -158,7 +158,7 @@ Factory methods:
 Primary provider with health check caching (60s TTL):
 
 ```typescript
-import { AnthropicProvider } from '@automaker/llm-providers';
+import { AnthropicProvider } from '@protolabs-ai/llm-providers';
 
 const provider = new AnthropicProvider({
   name: 'anthropic',
@@ -177,7 +177,7 @@ const provider = new AnthropicProvider({
 Local model provider with configurable inference parameters:
 
 ```typescript
-import { OllamaProvider } from '@automaker/llm-providers';
+import { OllamaProvider } from '@protolabs-ai/llm-providers';
 
 // OllamaConfig extends ProviderConfig with:
 // - host?: string (default: http://localhost:11434)
@@ -191,7 +191,7 @@ import { OllamaProvider } from '@automaker/llm-providers';
 AWS Bedrock with region and credential validation (missing values are warnings, not errors):
 
 ```typescript
-import { BedrockProvider } from '@automaker/llm-providers';
+import { BedrockProvider } from '@protolabs-ai/llm-providers';
 ```
 
 ### Other Providers
@@ -203,7 +203,7 @@ import { BedrockProvider } from '@automaker/llm-providers';
 ## Default Model Config
 
 ```typescript
-import { ANTHROPIC_MODELS, getModelIdForTier } from '@automaker/llm-providers';
+import { ANTHROPIC_MODELS, getModelIdForTier } from '@protolabs-ai/llm-providers';
 
 // ANTHROPIC_MODELS contains the full model catalog
 // getModelIdForTier('fast') → returns the model ID for that tier
@@ -220,7 +220,7 @@ import { ANTHROPIC_MODELS, getModelIdForTier } from '@automaker/llm-providers';
 7. Register with `ProviderFactory` at application startup
 
 ```typescript
-import { BaseLLMProvider } from '@automaker/llm-providers';
+import { BaseLLMProvider } from '@protolabs-ai/llm-providers';
 
 export class MyProvider extends BaseLLMProvider {
   async initialize(): Promise<void> {
@@ -248,6 +248,6 @@ export class MyProvider extends BaseLLMProvider {
 @langchain/community   # Community LangChain providers
 @langchain/core        # LangChain core types
 zod                    # Schema validation
-@automaker/types       # Shared type definitions
-@automaker/utils       # Logging
+@protolabs-ai/types       # Shared type definitions
+@protolabs-ai/utils       # Logging
 ```

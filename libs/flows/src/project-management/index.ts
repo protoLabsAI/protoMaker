@@ -1,5 +1,5 @@
 /**
- * @automaker/flows - Project Management
+ * @protolabs-ai/flows - Project Management
  *
  * This directory previously contained LangGraph flows for project management
  * (status reporting, milestone summaries, risk assessment) but they were removed

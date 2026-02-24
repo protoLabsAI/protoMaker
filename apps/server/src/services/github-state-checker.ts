@@ -9,7 +9,7 @@
  * - Stale PRs (no activity > 7 days)
  */
 
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import type { FeatureLoader } from './feature-loader.js';
@@ -20,7 +20,7 @@ import type {
   GitHubPRChecksUpdatedPayload,
   GitHubPRApprovedPayload,
   GitHubPRChangesRequestedPayload,
-} from '@automaker/types';
+} from '@protolabs-ai/types';
 
 const logger = createLogger('GitHubStateChecker');
 const execAsync = promisify(exec);

@@ -4,7 +4,7 @@ import {
   isValidSpecXml,
   type ParseResult,
   type SpecOutput,
-} from '@automaker/spec-parser';
+} from '@protolabs-ai/spec-parser';
 
 /**
  * Result of the spec parsing hook.

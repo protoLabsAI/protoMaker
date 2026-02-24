@@ -1,8 +1,8 @@
 import { readFile } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { LangfuseClient } from '@automaker/observability';
-import { createLogger } from '@automaker/utils';
+import { LangfuseClient } from '@protolabs-ai/observability';
+import { createLogger } from '@protolabs-ai/utils';
 
 const logger = createLogger('PromptLoader');
 

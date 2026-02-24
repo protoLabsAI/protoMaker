@@ -1,7 +1,7 @@
 import type { RequestHandler } from 'express';
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import { analyzeGaps } from '../../../services/gap-analysis-service.js';
-import type { RepoResearchResult, GapAnalysisReport, ProtolabConfig } from '@automaker/types';
+import type { RepoResearchResult, GapAnalysisReport, ProtolabConfig } from '@protolabs-ai/types';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 

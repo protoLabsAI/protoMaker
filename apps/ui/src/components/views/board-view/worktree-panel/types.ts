@@ -1,6 +1,6 @@
-// Re-export shared types from @automaker/types
-export type { PRState, WorktreePRInfo } from '@automaker/types';
-import type { PRState, WorktreePRInfo } from '@automaker/types';
+// Re-export shared types from @protolabs-ai/types
+export type { PRState, WorktreePRInfo } from '@protolabs-ai/types';
+import type { PRState, WorktreePRInfo } from '@protolabs-ai/types';
 
 export interface WorktreeInfo {
   path: string;

@@ -1,5 +1,5 @@
 {
-  "name": "@automaker/dependency-resolver",
+  "name": "@protolabs-ai/dependency-resolver",
   "version": "0.2.0",
   "description": "Feature dependency resolution for AutoMaker",
   "type": "module",
@@ -32,7 +32,7 @@
     "node": ">=22.0.0 <23.0.0"
   },
   "dependencies": {
-    "@automaker/types": "0.2.0"
+    "@protolabs-ai/types": "0.2.0"
   },
   "devDependencies": {
     "@types/node": "22.19.3",

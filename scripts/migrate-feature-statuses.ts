@@ -19,9 +19,9 @@
 import { readdir, readFile, writeFile, mkdir, copyFile, rename } from 'fs/promises';
 import { join, dirname } from 'path';
 import { existsSync } from 'fs';
-import type { Feature } from '@automaker/types';
-import { normalizeFeatureStatus } from '@automaker/types';
-import { atomicWriteJson } from '@automaker/utils';
+import type { Feature } from '@protolabs-ai/types';
+import { normalizeFeatureStatus } from '@protolabs-ai/types';
+import { atomicWriteJson } from '@protolabs-ai/utils';
 
 interface MigrationStats {
   total: number;

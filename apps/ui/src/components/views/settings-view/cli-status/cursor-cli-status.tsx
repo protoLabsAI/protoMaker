@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
-import { Button } from '@protolabs/ui/atoms';
-import { SkeletonPulse } from '@protolabs/ui/atoms';
-import { Spinner } from '@protolabs/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
+import { SkeletonPulse } from '@protolabs-ai/ui/atoms';
+import { Spinner } from '@protolabs-ai/ui/atoms';
 import { CheckCircle2, AlertCircle, RefreshCw, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CursorIcon } from '@/components/shared/provider-icon';

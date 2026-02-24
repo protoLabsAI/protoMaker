@@ -4,7 +4,7 @@
  */
 
 import type { Request, Response } from 'express';
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import { githubMergeService } from '../../../services/github-merge-service.js';
 import { getErrorMessage, logError } from './common.js';
 import { checkGitHubRemote } from './check-github-remote.js';

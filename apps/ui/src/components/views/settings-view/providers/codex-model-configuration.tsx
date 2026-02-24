@@ -1,9 +1,15 @@
-import { Label } from '@protolabs/ui/atoms';
-import { Badge } from '@protolabs/ui/atoms';
-import { Checkbox } from '@protolabs/ui/atoms';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@protolabs/ui/atoms';
+import { Label } from '@protolabs-ai/ui/atoms';
+import { Badge } from '@protolabs-ai/ui/atoms';
+import { Checkbox } from '@protolabs-ai/ui/atoms';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@protolabs-ai/ui/atoms';
 import { cn } from '@/lib/utils';
-import type { CodexModelId } from '@automaker/types';
+import type { CodexModelId } from '@protolabs-ai/types';
 import { OpenAIIcon } from '@/components/shared/provider-icon';
 
 interface CodexModelConfigurationProps {

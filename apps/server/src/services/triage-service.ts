@@ -6,8 +6,8 @@
  * and failure signals.
  */
 
-import type { FailureCategory } from '@automaker/types';
-import { createLogger } from '@automaker/utils';
+import type { FailureCategory } from '@protolabs-ai/types';
+import { createLogger } from '@protolabs-ai/utils';
 import type { EventEmitter } from '../lib/events.js';
 
 const logger = createLogger('TriageService');

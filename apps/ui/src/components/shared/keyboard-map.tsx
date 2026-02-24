@@ -7,12 +7,12 @@ import {
 } from '@/store/app-store';
 import type { KeyboardShortcuts } from '@/store/app-store';
 import { cn } from '@/lib/utils';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@protolabs/ui/atoms';
-import { Input } from '@protolabs/ui/atoms';
-import { Button } from '@protolabs/ui/atoms';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@protolabs-ai/ui/atoms';
+import { Input } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
 import { CheckCircle2, X, RotateCcw, Edit2 } from 'lucide-react';
-import { Checkbox } from '@protolabs/ui/atoms';
-import { Label } from '@protolabs/ui/atoms';
+import { Checkbox } from '@protolabs-ai/ui/atoms';
+import { Label } from '@protolabs-ai/ui/atoms';
 
 // Detect if running on Mac
 const isMac =

@@ -4,7 +4,7 @@
  * Generates structured content outlines from research summaries
  */
 
-import type { ContentConfig, ResearchSummary } from '@automaker/types';
+import type { ContentConfig, ResearchSummary } from '@protolabs-ai/types';
 
 export interface OutlinePlannerConfig {
   researchSummary: ResearchSummary;

@@ -1,7 +1,7 @@
 /**
  * PromptSeedService — Seeds default prompts into Langfuse as managed baselines.
  *
- * Uploads the key prompt templates from @automaker/prompts to Langfuse,
+ * Uploads the key prompt templates from @protolabs-ai/prompts to Langfuse,
  * enabling version tracking, A/B experiments, and rollout management
  * through the Langfuse dashboard.
  *
@@ -9,9 +9,9 @@
  * This matches the PromptResolver lookup pattern.
  */
 
-import { createLogger } from '@automaker/utils';
-import { DEFAULT_PROMPTS } from '@automaker/prompts';
-import type { LangfuseClient } from '@automaker/observability';
+import { createLogger } from '@protolabs-ai/utils';
+import { DEFAULT_PROMPTS } from '@protolabs-ai/prompts';
+import type { LangfuseClient } from '@protolabs-ai/observability';
 import { getLangfuseInstance } from '../lib/langfuse-singleton.js';
 
 const logger = createLogger('PromptSeedService');
@@ -173,7 +173,7 @@ export class PromptSeedService {
         tags: entry.tags,
         commitMessage: force
           ? 'Baseline update from prompt seed service'
-          : 'Initial baseline from @automaker/prompts defaults',
+          : 'Initial baseline from @protolabs-ai/prompts defaults',
       });
 
       if (!result) {

@@ -8,7 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { queryKeys } from '@/lib/query-keys';
 import { STALE_TIMES } from '@/lib/query-client';
-import type { CursorPermissionProfile } from '@automaker/types';
+import type { CursorPermissionProfile } from '@protolabs-ai/types';
 
 export interface CursorPermissionsData {
   activeProfile: CursorPermissionProfile | null;

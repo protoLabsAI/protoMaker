@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 import { useThemeStore } from '@/store/theme-store';
 import type { ThemeMode } from '@/store/types';
 import { darkThemes, lightThemes } from '@/config/theme-options';
-import { Popover, PopoverContent, PopoverTrigger } from '@protolabs/ui/atoms';
+import { Popover, PopoverContent, PopoverTrigger } from '@protolabs-ai/ui/atoms';
 import { useThemeTransition } from '@/lib/theme/transitions';
 import { curatedThemes } from '@/lib/theme/registry';
 

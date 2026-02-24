@@ -6,7 +6,7 @@ import type { Request, Response } from 'express';
 import { spawn } from 'child_process';
 import path from 'path';
 import * as secureFs from '../../../lib/secure-fs.js';
-import { PathNotAllowedError } from '@automaker/platform';
+import { PathNotAllowedError } from '@protolabs-ai/platform';
 import { logger, getErrorMessage, logError } from '../common.js';
 
 export function createCloneHandler() {

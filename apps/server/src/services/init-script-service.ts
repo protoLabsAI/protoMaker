@@ -7,8 +7,8 @@
 
 import { spawn } from 'child_process';
 import path from 'path';
-import { createLogger } from '@automaker/utils';
-import { systemPathExists, getShellPaths, findGitBashPath } from '@automaker/platform';
+import { createLogger } from '@protolabs-ai/utils';
+import { systemPathExists, getShellPaths, findGitBashPath } from '@protolabs-ai/platform';
 import { findCommand } from '../lib/cli-detection.js';
 import type { EventEmitter } from '../lib/events.js';
 import { readWorktreeMetadata, writeWorktreeMetadata } from '../lib/worktree-metadata.js';

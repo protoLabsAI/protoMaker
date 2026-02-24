@@ -15,7 +15,7 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import { readdir, stat } from 'fs/promises';
 import { join } from 'path';
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import type { SettingsService } from './settings-service.js';
 import type { GraphiteService } from './graphite-service.js';
 

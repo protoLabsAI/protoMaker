@@ -12,7 +12,7 @@ The hivemind architecture requires pluggable backends for storage, events, and i
 | `EventBus`         | `createEventEmitter()` (in-memory Set) | Mesh-aware transport (HTTP broadcast) |
 | `InstanceIdentity` | N/A (single instance)                  | Per-instance ID + domain ownership    |
 
-All interfaces live in `@automaker/types` so any package can depend on the abstractions without pulling in server code.
+All interfaces live in `@protolabs-ai/types` so any package can depend on the abstractions without pulling in server code.
 
 ## FeatureStore
 
@@ -21,7 +21,7 @@ All interfaces live in `@automaker/types` so any package can depend on the abstr
 Pluggable storage abstraction for feature CRUD plus distributed ownership.
 
 ```typescript
-import type { FeatureStore } from '@automaker/types';
+import type { FeatureStore } from '@protolabs-ai/types';
 ```
 
 ### Methods
@@ -55,7 +55,7 @@ import type { FeatureStore } from '@automaker/types';
 Pluggable event transport abstraction.
 
 ```typescript
-import type { EventBus, EventSubscription } from '@automaker/types';
+import type { EventBus, EventSubscription } from '@protolabs-ai/types';
 ```
 
 ### Methods

@@ -17,10 +17,10 @@ import {
   SelectTrigger,
   SelectValue,
   Spinner,
-} from '@protolabs/ui/atoms';
+} from '@protolabs-ai/ui/atoms';
 import { apiFetch } from '@/lib/api-fetch';
 import { useAppStore } from '@/store/app-store';
-import type { IntegrationDescriptor, ConfigField } from '@automaker/types';
+import type { IntegrationDescriptor, ConfigField } from '@protolabs-ai/types';
 
 interface IntegrationConfigDialogProps {
   integrationId: string | null;

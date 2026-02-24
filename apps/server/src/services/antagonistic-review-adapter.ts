@@ -6,18 +6,18 @@
  * for the old service with zero changes to calling code.
  */
 
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import { ChatAnthropic } from '@langchain/anthropic';
-import { createAntagonisticReviewGraph } from '@automaker/flows';
-import type { SPARCPrd } from '@automaker/types';
-import { LangfuseClient } from '@automaker/observability';
+import { createAntagonisticReviewGraph } from '@protolabs-ai/flows';
+import type { SPARCPrd } from '@protolabs-ai/types';
+import { LangfuseClient } from '@protolabs-ai/observability';
 import { v4 as uuidv4 } from 'uuid';
 
 const logger = createLogger('AntagonisticReviewAdapter');
 
 /**
  * Shape of a reviewer perspective in flow results.
- * Handles both @automaker/types ReviewerPerspective and node-local formats.
+ * Handles both @protolabs-ai/types ReviewerPerspective and node-local formats.
  */
 interface FlowReviewPerspective {
   overallVerdict?: string;
@@ -438,7 +438,7 @@ ${prd.constraints || 'None specified'}
 
   /**
    * Extract Ava's review from flow result
-   * Handles both @automaker/types ReviewerPerspective (overallVerdict, sections, generalComments)
+   * Handles both @protolabs-ai/types ReviewerPerspective (overallVerdict, sections, generalComments)
    * and node-local ReviewerPerspective (verdict, sections, comments)
    */
   private extractAvaReview(result: Record<string, unknown>): ReviewResult {
@@ -476,7 +476,7 @@ ${prd.constraints || 'None specified'}
 
   /**
    * Extract Jon's review from flow result
-   * Handles both @automaker/types ReviewerPerspective and node-local format
+   * Handles both @protolabs-ai/types ReviewerPerspective and node-local format
    */
   private extractJonReview(result: Record<string, unknown>): ReviewResult {
     const jonReview = result.jonReview as FlowReviewPerspective | undefined;

@@ -1,8 +1,8 @@
 'use client';
 
-import { Label } from '@protolabs/ui/atoms';
+import { Label } from '@protolabs-ai/ui/atoms';
 import { BranchAutocomplete } from '@/components/views/board-view/components/branch-autocomplete';
-import { RadioGroup, RadioGroupItem } from '@protolabs/ui/atoms';
+import { RadioGroup, RadioGroupItem } from '@protolabs-ai/ui/atoms';
 
 interface BranchSelectorProps {
   useCurrentBranch: boolean;

@@ -4,7 +4,7 @@
 
 import type { Request, Response } from 'express';
 import type { EventEmitter } from '../../../lib/events.js';
-import type { ThinkingLevel } from '@automaker/types';
+import type { ThinkingLevel } from '@protolabs-ai/types';
 import { getSuggestionsStatus, setRunningState, getErrorMessage, logError } from '../common.js';
 import { generateSuggestions } from '../generate-suggestions.js';
 import type { SettingsService } from '../../../services/settings-service.js';

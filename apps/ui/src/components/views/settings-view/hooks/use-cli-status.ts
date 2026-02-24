@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { createLogger } from '@automaker/utils/logger';
+import { createLogger } from '@protolabs-ai/utils/logger';
 import { useSetupStore } from '@/store/setup-store';
 
 const logger = createLogger('CliStatus');

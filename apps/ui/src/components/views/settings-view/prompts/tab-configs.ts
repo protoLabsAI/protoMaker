@@ -25,7 +25,7 @@ import {
   DEFAULT_CONTEXT_DESCRIPTION_PROMPTS,
   DEFAULT_SUGGESTIONS_PROMPTS,
   DEFAULT_TASK_EXECUTION_PROMPTS,
-} from '@automaker/prompts';
+} from '@protolabs-ai/prompts';
 import type { TabConfig } from './types';
 
 /**

@@ -1,11 +1,11 @@
 import { useMemo } from 'react';
-import { Popover, PopoverContent, PopoverTrigger } from '@protolabs/ui/atoms';
-import { Label } from '@protolabs/ui/atoms';
-import { Switch } from '@protolabs/ui/atoms';
-import { Slider } from '@protolabs/ui/atoms';
+import { Popover, PopoverContent, PopoverTrigger } from '@protolabs-ai/ui/atoms';
+import { Label } from '@protolabs-ai/ui/atoms';
+import { Switch } from '@protolabs-ai/ui/atoms';
+import { Slider } from '@protolabs-ai/ui/atoms';
 import { FastForward, Bot, Settings2, Lock, CheckCircle, Clock } from 'lucide-react';
 import { useAppStore } from '@/store/app-store';
-import { getBlockingDependencies } from '@automaker/dependency-resolver';
+import { getBlockingDependencies } from '@protolabs-ai/dependency-resolver';
 
 interface AutoModeSettingsPopoverProps {
   skipVerificationInAutoMode: boolean;

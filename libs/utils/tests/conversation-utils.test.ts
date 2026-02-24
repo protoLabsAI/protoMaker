@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { ConversationMessage } from '@automaker/types';
+import type { ConversationMessage } from '@protolabs-ai/types';
 import {
   extractTextFromContent,
   normalizeContentBlocks,

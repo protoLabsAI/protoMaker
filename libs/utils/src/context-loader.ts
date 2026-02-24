@@ -14,7 +14,7 @@
  */
 
 import path from 'path';
-import { secureFs } from '@automaker/platform';
+import { secureFs } from '@protolabs-ai/platform';
 import {
   getMemoryDir,
   parseFrontmatter,
@@ -90,7 +90,7 @@ export interface ContextFilesResult {
 
 /**
  * File system module interface for context loading
- * Compatible with secureFs from @automaker/platform
+ * Compatible with secureFs from @protolabs-ai/platform
  * Includes write methods needed for memory initialization
  */
 export interface ContextFsModule {

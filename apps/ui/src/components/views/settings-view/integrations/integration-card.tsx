@@ -2,8 +2,8 @@ import { useState } from 'react';
 import * as LucideIcons from 'lucide-react';
 import { Settings2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Card, CardContent, Switch, Badge, Button } from '@protolabs/ui/atoms';
-import type { IntegrationSummary, IntegrationHealthStatus } from '@automaker/types';
+import { Card, CardContent, Switch, Badge, Button } from '@protolabs-ai/ui/atoms';
+import type { IntegrationSummary, IntegrationHealthStatus } from '@protolabs-ai/types';
 
 const HEALTH_STYLES: Record<IntegrationHealthStatus, { dot: string; label: string }> = {
   connected: { dot: 'bg-emerald-500', label: 'Connected' },

@@ -10,7 +10,7 @@ import { useEffect, useRef } from 'react';
 import { useActionableItemsStore } from '@/store/actionable-items-store';
 import { useAppStore } from '@/store/app-store';
 import { getHttpApiClient } from '@/lib/http-api-client';
-import type { ActionableItem } from '@automaker/types';
+import type { ActionableItem } from '@protolabs-ai/types';
 
 const BASE_TITLE = 'Automaker';
 

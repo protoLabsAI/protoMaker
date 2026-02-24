@@ -40,7 +40,7 @@ Or with npx (after publishing):
   "mcpServers": {
     "automaker": {
       "command": "npx",
-      "args": ["@automaker/mcp-server"],
+      "args": ["@protolabs-ai/mcp-server"],
       "env": {
         "AUTOMAKER_API_URL": "http://localhost:3008",
         "AUTOMAKER_API_KEY": "your-api-key"

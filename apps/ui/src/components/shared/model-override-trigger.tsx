@@ -1,7 +1,12 @@
 import * as React from 'react';
 import { cn } from '@/lib/utils';
 import { useAIModelsStore } from '@/store/ai-models-store';
-import type { ModelAlias, CursorModelId, PhaseModelKey, PhaseModelEntry } from '@automaker/types';
+import type {
+  ModelAlias,
+  CursorModelId,
+  PhaseModelKey,
+  PhaseModelEntry,
+} from '@protolabs-ai/types';
 import { PhaseModelSelector } from '@/components/views/settings-view/model-defaults/phase-model-selector';
 
 /**

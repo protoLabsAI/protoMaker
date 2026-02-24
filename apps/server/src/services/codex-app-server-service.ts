@@ -1,13 +1,13 @@
 import { spawn, type ChildProcess } from 'child_process';
 import readline from 'readline';
-import { findCodexCliPath } from '@automaker/platform';
-import { createLogger } from '@automaker/utils';
+import { findCodexCliPath } from '@protolabs-ai/platform';
+import { createLogger } from '@protolabs-ai/utils';
 import type {
   AppServerModelResponse,
   AppServerAccountResponse,
   AppServerRateLimitsResponse,
   JsonRpcRequest,
-} from '@automaker/types';
+} from '@protolabs-ai/types';
 
 const logger = createLogger('CodexAppServer');
 

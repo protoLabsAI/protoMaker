@@ -9,7 +9,7 @@
 
 import type { Request, Response } from 'express';
 import type { PipelineService } from '../../../services/pipeline-service.js';
-import type { PipelineConfig } from '@automaker/types';
+import type { PipelineConfig } from '@protolabs-ai/types';
 import { getErrorMessage, logError } from '../common.js';
 
 export function createSaveConfigHandler(pipelineService: PipelineService) {

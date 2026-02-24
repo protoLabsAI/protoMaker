@@ -13,7 +13,7 @@ import type { FeatureLoader } from '../../services/feature-loader.js';
 import type { ProjectService } from '../../services/project-service.js';
 import type { CeremonyService } from '../../services/ceremony-service.js';
 import { validatePathParams } from '../../middleware/validate-paths.js';
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 
 const logger = createLogger('ceremonies');
 

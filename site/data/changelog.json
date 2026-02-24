@@ -1259,7 +1259,7 @@
         {
           "hash": "1f2e12a2",
           "date": "2026-02-18T00:40:33-08:00",
-          "title": "Rename @automaker/ui-components to @protolabs/ui",
+          "title": "Rename @protolabs-ai/ui-components to @protolabs/ui",
           "prNumber": 750,
           "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/750",
           "category": "feature"
@@ -2011,7 +2011,7 @@
         {
           "hash": "4d9d8819",
           "date": "2026-02-15T21:30:22-08:00",
-          "title": "Add @automaker/tools package with defineSharedTool factory",
+          "title": "Add @protolabs-ai/tools package with defineSharedTool factory",
           "prNumber": 614,
           "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/614",
           "category": "feature"
@@ -2107,7 +2107,7 @@
         {
           "hash": "44b2beed",
           "date": "2026-02-15T17:11:00-08:00",
-          "title": "Migrate @automaker/types to tsup",
+          "title": "Migrate @protolabs-ai/types to tsup",
           "prNumber": 598,
           "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/598",
           "category": "feature"
@@ -2251,7 +2251,7 @@
         {
           "hash": "5ab832bd",
           "date": "2026-02-15T10:12:27-08:00",
-          "title": "Inline @automaker/policy-engine into server",
+          "title": "Inline @protolabs-ai/policy-engine into server",
           "prNumber": 583,
           "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/583",
           "category": "improvement"
@@ -2403,7 +2403,7 @@
         {
           "hash": "c9088c8b",
           "date": "2026-02-14T23:00:13-08:00",
-          "title": "Extract remaining UI primitives to @automaker/ui-components",
+          "title": "Extract remaining UI primitives to @protolabs-ai/ui-components",
           "prNumber": 546,
           "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/546",
           "category": "feature"
@@ -2427,7 +2427,7 @@
         {
           "hash": "038409d3",
           "date": "2026-02-14T22:30:32-08:00",
-          "title": "Create libs/ui package structure for @automaker/ui-components",
+          "title": "Create libs/ui package structure for @protolabs-ai/ui-components",
           "prNumber": 541,
           "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/541",
           "category": "feature"
@@ -2931,7 +2931,7 @@
         {
           "hash": "c04e2c78",
           "date": "2026-02-13T18:22:31-08:00",
-          "title": "Add content output type schemas to @automaker/flows",
+          "title": "Add content output type schemas to @protolabs-ai/flows",
           "prNumber": 415,
           "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/415",
           "category": "feature"

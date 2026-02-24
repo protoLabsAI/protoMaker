@@ -1,17 +1,17 @@
 # Server Utilities Reference
 
-> **Note:** Most utilities documented here have been extracted to shared packages. Import from `@automaker/utils`, `@automaker/model-resolver`, and `@automaker/platform` instead of `apps/server/src/lib/`. See [Shared Packages](../dev/shared-packages) for the canonical import guide.
+> **Note:** Most utilities documented here have been extracted to shared packages. Import from `@protolabs-ai/utils`, `@protolabs-ai/model-resolver`, and `@protolabs-ai/platform` instead of `apps/server/src/lib/`. See [Shared Packages](../dev/shared-packages) for the canonical import guide.
 >
-> | Old Path                    | New Package                 |
-> | --------------------------- | --------------------------- |
-> | `lib/image-handler.ts`      | `@automaker/utils`          |
-> | `lib/prompt-builder.ts`     | `@automaker/utils`          |
-> | `lib/model-resolver.ts`     | `@automaker/model-resolver` |
-> | `lib/conversation-utils.ts` | `@automaker/utils`          |
-> | `lib/error-handler.ts`      | `@automaker/utils`          |
-> | `lib/subprocess-manager.ts` | `@automaker/platform`       |
+> | Old Path                    | New Package                    |
+> | --------------------------- | ------------------------------ |
+> | `lib/image-handler.ts`      | `@protolabs-ai/utils`          |
+> | `lib/prompt-builder.ts`     | `@protolabs-ai/utils`          |
+> | `lib/model-resolver.ts`     | `@protolabs-ai/model-resolver` |
+> | `lib/conversation-utils.ts` | `@protolabs-ai/utils`          |
+> | `lib/error-handler.ts`      | `@protolabs-ai/utils`          |
+> | `lib/subprocess-manager.ts` | `@protolabs-ai/platform`       |
 
-This document describes utility functions available for server-side code. The canonical imports use shared packages (`@automaker/utils`, `@automaker/model-resolver`, `@automaker/platform`), not direct `lib/` paths.
+This document describes utility functions available for server-side code. The canonical imports use shared packages (`@protolabs-ai/utils`, `@protolabs-ai/model-resolver`, `@protolabs-ai/platform`), not direct `lib/` paths.
 
 ---
 

@@ -17,8 +17,8 @@ import {
   createLLMDeepResearchExecutor,
   createLLMPRDGenerator,
   createLLMMilestonePlanner,
-} from '@automaker/flows';
-import { createLogger } from '@automaker/utils';
+} from '@protolabs-ai/flows';
+import { createLogger } from '@protolabs-ai/utils';
 
 const logger = createLogger('ProjectPlanningExecutors');
 

@@ -1,9 +1,15 @@
 import { Zap, ClipboardList, FileText, ScrollText } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@protolabs/ui/atoms';
-import { Checkbox } from '@protolabs/ui/atoms';
-import { Label } from '@protolabs/ui/atoms';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@protolabs-ai/ui/atoms';
+import { Checkbox } from '@protolabs-ai/ui/atoms';
+import { Label } from '@protolabs-ai/ui/atoms';
 import { cn } from '@/lib/utils';
-import type { PlanningMode } from '@automaker/types';
+import type { PlanningMode } from '@protolabs-ai/types';
 
 interface PlanningModeSelectProps {
   mode: PlanningMode;

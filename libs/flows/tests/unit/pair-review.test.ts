@@ -15,7 +15,7 @@ import {
   MATT_CINDI_PAIR,
   SAM_JAKE_PAIR,
 } from '../../src/antagonistic-review/pairs.js';
-import { type SPARCPrd } from '@automaker/types';
+import { type SPARCPrd } from '@protolabs-ai/types';
 
 describe('Pair Review Subgraph', () => {
   let mockPRD: SPARCPrd;

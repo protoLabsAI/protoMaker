@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { createLogger } from '@automaker/utils/logger';
+import { createLogger } from '@protolabs-ai/utils/logger';
 import { getElectronAPI } from '@/lib/electron';
 
 const logger = createLogger('SetupDialog');

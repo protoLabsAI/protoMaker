@@ -13,7 +13,7 @@
 
 import fs from 'fs';
 import path from 'path';
-import type { LogTransport } from '@automaker/utils';
+import type { LogTransport } from '@protolabs-ai/utils';
 
 const DATA_DIR = process.env.DATA_DIR || './data';
 const LOG_FILE = path.join(DATA_DIR, 'server.log');

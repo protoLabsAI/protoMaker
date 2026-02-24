@@ -10,7 +10,7 @@
  */
 
 import { Router } from 'express';
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import { FeedbackAnalyticsService } from '../services/feedback-analytics-service.js';
 import { AnalyticsService } from '../services/analytics-service.js';
 

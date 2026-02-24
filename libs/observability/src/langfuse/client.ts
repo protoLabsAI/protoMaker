@@ -1,5 +1,5 @@
 import { Langfuse } from 'langfuse';
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import type {
   LangfuseConfig,
   CreateTraceOptions,

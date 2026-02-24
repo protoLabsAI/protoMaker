@@ -9,7 +9,7 @@
  * - Generating user-friendly error messages
  */
 
-import type { ErrorType, ErrorInfo } from '@automaker/types';
+import type { ErrorType, ErrorInfo } from '@protolabs-ai/types';
 
 /**
  * Check if an error is an abort/cancellation error

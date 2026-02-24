@@ -4,7 +4,7 @@
 
 import type { Request, Response } from 'express';
 import type { RalphDeps } from '../common.js';
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 
 const logger = createLogger('RalphRoutes:Resume');
 

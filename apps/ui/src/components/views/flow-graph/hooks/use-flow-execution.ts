@@ -12,8 +12,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { getHttpApiClient } from '@/lib/http-api-client';
-import { createLogger } from '@automaker/utils';
-import type { EventType } from '@automaker/types';
+import { createLogger } from '@protolabs-ai/utils';
+import type { EventType } from '@protolabs-ai/types';
 
 const logger = createLogger('useFlowExecution');
 

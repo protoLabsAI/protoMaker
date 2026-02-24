@@ -12,8 +12,8 @@
 import { StateGraph, Annotation } from '@langchain/langgraph';
 import { z } from 'zod';
 import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
-import { createLogger } from '@automaker/utils';
-import { LangfuseClient } from '@automaker/observability';
+import { createLogger } from '@protolabs-ai/utils';
+import { LangfuseClient } from '@protolabs-ai/observability';
 import { extractTag, extractAllTags, extractRequiredTag } from '../xml-parser.js';
 
 const logger = createLogger('SectionWriter');

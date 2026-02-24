@@ -202,7 +202,7 @@ usageStats:
 ### Exporting all public types from src/index.ts rather than requiring users to import from submodules (2026-02-13)
 - **Context:** Users need LangfuseClient, CreateSpanOptions, CreateScoreOptions, and other types for TypeScript support
 - **Why:** Single import point reduces cognitive load and prevents users from importing from internal implementation details (langfuse/client, langfuse/types). Enables internal refactoring without breaking imports.
-- **Rejected:** Requiring `import { LangfuseClient } from '@automaker/observability/dist/langfuse/client'` exposes internal structure
+- **Rejected:** Requiring `import { LangfuseClient } from '@protolabs-ai/observability/dist/langfuse/client'` exposes internal structure
 - **Trade-offs:** Central barrel export is easier to use (one source of truth), requires explicit re-exports (minor maintenance overhead)
 - **Breaking if changed:** If index.ts stops re-exporting types, any code importing from it breaks. Users must be aware of public API guarantees.
 
@@ -351,7 +351,7 @@ usageStats:
 - **Trade-offs:** One operation is faster but less flexible. Can't approve without creating feature. But given use case (Twitch polls are final), this is acceptable.
 - **Breaking if changed:** If approval and creation are ever decoupled (e.g., approve now, create later), this endpoint becomes misleading.
 
-#### [Gotcha] TwitchSuggestion type already exists in @automaker/types, but no API endpoint exists to fetch suggestions — ChatResponseHandler.readSuggestions() currently returns empty array (2026-02-17)
+#### [Gotcha] TwitchSuggestion type already exists in @protolabs-ai/types, but no API endpoint exists to fetch suggestions — ChatResponseHandler.readSuggestions() currently returns empty array (2026-02-17)
 - **Situation:** Suggestion queue component and chat `!queue` command both need to display suggestions, but the data model exists while the data transport does not
 - **Root cause:** Type was defined during initial Twitch feature planning (types are infrastructure), but the HTTP endpoint to serialize/transmit suggestions was not implemented. This is a common gap: types built first, implementation deferred
 - **How to avoid:** Suggestions display 'empty state' currently. Once endpoint is added, queue and chat command will work automatically because types are already aligned

@@ -10,7 +10,7 @@
  */
 
 import { Send, Command } from '@langchain/langgraph';
-import { DistillationDepth } from '@automaker/types';
+import { DistillationDepth } from '@protolabs-ai/types';
 import type { AntagonisticReviewState } from '../state.js';
 import { ALL_PAIRS, MATT_CINDI_PAIR } from '../pairs.js';
 

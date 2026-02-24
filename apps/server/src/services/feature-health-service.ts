@@ -11,10 +11,10 @@
  * Provides dry-run and auto-fix modes.
  */
 
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
-import type { Feature } from '@automaker/types';
+import type { Feature } from '@protolabs-ai/types';
 import type { FeatureLoader } from './feature-loader.js';
 import type { AutoModeService } from './auto-mode-service.js';
 

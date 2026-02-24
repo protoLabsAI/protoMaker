@@ -2,9 +2,9 @@
  * Common utilities and state for setup routes
  */
 
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import path from 'path';
-import { secureFs } from '@automaker/platform';
+import { secureFs } from '@protolabs-ai/platform';
 import { getErrorMessage as getErrorMessageShared, createLogError } from '../common.js';
 
 const logger = createLogger('Setup');

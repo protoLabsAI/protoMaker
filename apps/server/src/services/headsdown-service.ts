@@ -17,9 +17,9 @@ import type {
   WorkItem,
   DesiredStateCondition,
   StateOperator,
-} from '@automaker/types';
-import { DEFAULT_HEADSDOWN_CONFIGS } from '@automaker/types';
-import { createLogger, atomicWriteJson, readJsonWithRecovery } from '@automaker/utils';
+} from '@protolabs-ai/types';
+import { DEFAULT_HEADSDOWN_CONFIGS } from '@protolabs-ai/types';
+import { createLogger, atomicWriteJson, readJsonWithRecovery } from '@protolabs-ai/utils';
 import type { RoleRegistryService } from './role-registry-service.js';
 
 /** Goal type for work evaluation */

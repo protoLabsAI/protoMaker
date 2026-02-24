@@ -10,7 +10,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { getElectronAPI } from '@/lib/electron';
 import { queryKeys } from '@/lib/query-keys';
 import type { AutoModeEvent, SpecRegenerationEvent } from '@/types/electron';
-import type { IssueValidationEvent } from '@automaker/types';
+import type { IssueValidationEvent } from '@protolabs-ai/types';
 
 /**
  * Invalidate queries based on auto mode events

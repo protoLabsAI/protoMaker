@@ -68,7 +68,7 @@ usageStats:
 
 #### [Gotcha] Nested packages directory structure caused import path confusion - created packages/create-protolab/packages/ instead of correctly placing files in packages/create-protolab/src/ (2026-02-13)
 - **Situation:** During initial implementation, file structure was created with incorrect nesting (packages/create-protolab/packages/create-protolab/...) instead of the expected monorepo pattern
-- **Root cause:** Unclear mental model of the monorepo structure. The package name @automaker/create-protolab led to confusion about where files should live vs. where imports come from
+- **Root cause:** Unclear mental model of the monorepo structure. The package name @protolabs-ai/create-protolab led to confusion about where files should live vs. where imports come from
 - **How to avoid:** Caught early through verification testing which tried to import and immediately failed, forcing correction. Manual test-first approach prevented committing broken code
 
 #### [Gotcha] BaseProvider.constructor calls this.getName() before subclass constructor sets required instance variables, causing method to access undefined properties (2026-02-13)
@@ -87,7 +87,7 @@ usageStats:
 - **How to avoid:** Type assertions disable type safety at these call sites, but methods are stable LangGraph API. Alternative would be wrapping StateGraph in typed facade class.
 
 #### [Gotcha] Workspace dependency references must use explicit version numbers, not workspace:* protocol in certain contexts (2026-02-13)
-- **Situation:** Initial npm resolution failed when @automaker/flows tried to reference @automaker/types using workspace protocol
+- **Situation:** Initial npm resolution failed when @protolabs-ai/flows tried to reference @protolabs-ai/types using workspace protocol
 - **Root cause:** LangGraph build/compilation process may not resolve workspace protocol correctly in some monorepo configurations. Explicit version numbers force npm resolution to use published versions or local copies consistently.
 - **How to avoid:** Explicit versions slightly decouple from monorepo's version management - requires manual sync. But gained immediate stability and avoided monorepo-wide configuration changes.
 
@@ -162,7 +162,7 @@ usageStats:
 - **How to avoid:** Required manual diagnosis via glob search and path repair; lesson reinforces requirement to always use absolute paths in worktrees
 
 #### [Gotcha] Bulk import updates via task agents missed relative imports (../ui/markdown) that weren't part of standard aliased import patterns (2026-02-18)
-- **Situation:** After moving components and running bulk import updates with aliases (@protolabs/ui/molecules), two files (memory-view.tsx, context-view.tsx) still had old relative imports (from '../ui/markdown'). These weren't caught by the import replacement because they used a different pattern than the task expected.
+- **Situation:** After moving components and running bulk import updates with aliases (@protolabs-ai/ui/molecules), two files (memory-view.tsx, context-view.tsx) still had old relative imports (from '../ui/markdown'). These weren't caught by the import replacement because they used a different pattern than the task expected.
 - **Root cause:** Automated bulk updates use regex patterns that match common import styles. Relative imports vary widely and may not match the exact pattern. Manual post-verification of grep results catches patterns the automation missed.
 - **How to avoid:** Added manual verification step (grep for old import paths) increases refactoring time but ensures complete migration. Prevents runtime errors from missed imports.
 
@@ -206,7 +206,7 @@ usageStats:
 - **Root cause:** Empirical 5-second threshold accounts for OBS buffer flush behavior. Avoids platform-specific file locking checks. Simple and reliable for this specific use case.
 - **How to avoid:** Automatic and reliable stabilization vs. 5-second artificial delay (non-critical since remux is fast relative to streaming duration).
 
-### Accepted pre-existing TypeScript build error in @automaker/platform package (p-limit import issue) as acceptable since feature only creates static HTML files (2026-02-22)
+### Accepted pre-existing TypeScript build error in @protolabs-ai/platform package (p-limit import issue) as acceptable since feature only creates static HTML files (2026-02-22)
 - **Context:** Build verification encountered compilation error in unrelated package, but feature doesn't depend on it
 - **Why:** Feature has zero dependency on broken package, proceeding unblocks delivery, fixing unrelated errors is scope creep, static HTML files can be deployed regardless
 - **Rejected:** Fixing the build error (scope creep); blocking feature on unrelated issues

@@ -5,7 +5,7 @@
 import { Router } from 'express';
 import type { Request, Response } from 'express';
 import type { LedgerService } from '../../services/ledger-service.js';
-import type { TimeSeriesMetric, TimeGroupBy } from '@automaker/types';
+import type { TimeSeriesMetric, TimeGroupBy } from '@protolabs-ai/types';
 import { validatePathParams } from '../../middleware/validate-paths.js';
 
 export function createLedgerRoutes(ledgerService: LedgerService): Router {

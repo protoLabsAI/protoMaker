@@ -13,13 +13,13 @@
 import { randomUUID } from 'node:crypto';
 import fs from 'fs/promises';
 import { join } from 'path';
-import { createLogger } from '@automaker/utils';
-import { ensureAutomakerDir } from '@automaker/platform';
+import { createLogger } from '@protolabs-ai/utils';
+import { ensureAutomakerDir } from '@protolabs-ai/platform';
 import type {
   HITLFormRequest,
   HITLFormRequestInput,
   HITLFormRequestSummary,
-} from '@automaker/types';
+} from '@protolabs-ai/types';
 import type { EventEmitter } from '../lib/events.js';
 
 const logger = createLogger('HITLFormService');

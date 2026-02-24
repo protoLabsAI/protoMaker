@@ -11,9 +11,9 @@
  * - Audit log for signal history
  */
 
-import type { EscalationSignal, EscalationChannel } from '@automaker/types';
-import { EscalationSeverity } from '@automaker/types';
-import { createLogger } from '@automaker/utils';
+import type { EscalationSignal, EscalationChannel } from '@protolabs-ai/types';
+import { EscalationSeverity } from '@protolabs-ai/types';
+import { createLogger } from '@protolabs-ai/utils';
 import type { EventEmitter } from '../lib/events.js';
 
 const logger = createLogger('EscalationRouter');

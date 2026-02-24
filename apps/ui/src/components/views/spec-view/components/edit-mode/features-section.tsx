@@ -1,14 +1,14 @@
 import { Plus, X, ChevronDown, ChevronUp, FolderOpen } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
-import { Button } from '@protolabs/ui/atoms';
-import { Input } from '@protolabs/ui/atoms';
-import { Textarea } from '@protolabs/ui/atoms';
-import { Card, CardContent, CardHeader, CardTitle } from '@protolabs/ui/atoms';
-import { Label } from '@protolabs/ui/atoms';
-import { Badge } from '@protolabs/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
+import { Input } from '@protolabs-ai/ui/atoms';
+import { Textarea } from '@protolabs-ai/ui/atoms';
+import { Card, CardContent, CardHeader, CardTitle } from '@protolabs-ai/ui/atoms';
+import { Label } from '@protolabs-ai/ui/atoms';
+import { Badge } from '@protolabs-ai/ui/atoms';
 import { ListChecks } from 'lucide-react';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@protolabs/ui/atoms';
-import type { SpecOutput } from '@automaker/spec-parser';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@protolabs-ai/ui/atoms';
+import type { SpecOutput } from '@protolabs-ai/spec-parser';
 
 type Feature = SpecOutput['implemented_features'][number];
 

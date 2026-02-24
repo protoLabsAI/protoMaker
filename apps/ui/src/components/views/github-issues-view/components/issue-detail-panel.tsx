@@ -13,11 +13,11 @@ import {
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
-import { Spinner } from '@protolabs/ui/atoms';
+import { Spinner } from '@protolabs-ai/ui/atoms';
 import { useState } from 'react';
-import { Button } from '@protolabs/ui/atoms';
-import { Checkbox } from '@protolabs/ui/atoms';
-import { Markdown } from '@protolabs/ui/molecules';
+import { Button } from '@protolabs-ai/ui/atoms';
+import { Checkbox } from '@protolabs-ai/ui/atoms';
+import { Markdown } from '@protolabs-ai/ui/molecules';
 import { cn } from '@/lib/utils';
 import type { IssueDetailPanelProps } from '../types';
 import { isValidationStale } from '../utils';

@@ -5,7 +5,7 @@
 import type { Request, Response } from 'express';
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import { getGitHubCliPaths, getExtendedPath, systemPathAccess } from '@automaker/platform';
+import { getGitHubCliPaths, getExtendedPath, systemPathAccess } from '@protolabs-ai/platform';
 import { getErrorMessage, logError } from '../common.js';
 
 const execAsync = promisify(exec);

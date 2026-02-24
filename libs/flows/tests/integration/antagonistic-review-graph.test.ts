@@ -9,8 +9,8 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createAntagonisticReviewGraph } from '../../src/antagonistic-review/graph.js';
-import type { SPARCPrd } from '@automaker/types';
-import { DistillationDepth } from '@automaker/types';
+import type { SPARCPrd } from '@protolabs-ai/types';
+import { DistillationDepth } from '@protolabs-ai/types';
 
 describe('Antagonistic Review Graph', () => {
   let graph: ReturnType<typeof createAntagonisticReviewGraph>;

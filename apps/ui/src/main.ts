@@ -30,7 +30,7 @@ process.on('uncaughtException', (err) => {
  * This version spawns the backend server and uses HTTP API for most operations.
  * Only native features (dialogs, shell) use IPC.
  *
- * SECURITY: All file system access uses centralized methods from @automaker/platform.
+ * SECURITY: All file system access uses centralized methods from @protolabs-ai/platform.
  */
 
 import path from 'path';
@@ -40,7 +40,7 @@ import crypto from 'crypto';
 import http, { Server } from 'http';
 import net from 'net';
 import { app, BrowserWindow, ipcMain, dialog, shell, screen, globalShortcut } from 'electron';
-import { createLogger } from '@automaker/utils/logger';
+import { createLogger } from '@protolabs-ai/utils/logger';
 import { initAutoUpdater } from './auto-updater';
 import {
   findNodeExecutable,
@@ -60,7 +60,7 @@ import {
   electronAppReadFile,
   // System path operations
   systemPathExists,
-} from '@automaker/platform';
+} from '@protolabs-ai/platform';
 
 const logger = createLogger('Electron');
 const serverLogger = createLogger('Server');
@@ -181,7 +181,7 @@ const MIN_HEIGHT = 500; // Reduced to allow more flexibility
 const DEFAULT_WIDTH = 1600;
 const DEFAULT_HEIGHT = 950;
 
-// Window bounds interface (matches @automaker/types WindowBounds)
+// Window bounds interface (matches @protolabs-ai/types WindowBounds)
 interface WindowBounds {
   x: number;
   y: number;

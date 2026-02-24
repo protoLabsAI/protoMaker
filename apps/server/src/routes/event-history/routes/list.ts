@@ -17,7 +17,7 @@
 
 import type { Request, Response } from 'express';
 import type { EventHistoryService } from '../../../services/event-history-service.js';
-import type { EventHistoryFilter } from '@automaker/types';
+import type { EventHistoryFilter } from '@protolabs-ai/types';
 import { getErrorMessage, logError } from '../common.js';
 
 export function createListHandler(eventHistoryService: EventHistoryService) {

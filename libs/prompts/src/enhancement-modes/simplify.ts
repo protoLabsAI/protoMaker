@@ -3,7 +3,7 @@
  * Makes verbose descriptions concise and focused.
  */
 
-import type { EnhancementExample } from '@automaker/types';
+import type { EnhancementExample } from '@protolabs-ai/types';
 
 /**
  * System prompt for the "simplify" enhancement mode.

@@ -6,9 +6,9 @@
  */
 
 import type { EventEmitter } from '../lib/events.js';
-import type { LinearMonitorConfig, WorkItem } from '@automaker/types';
+import type { LinearMonitorConfig, WorkItem } from '@protolabs-ai/types';
 import type { SettingsService } from './settings-service.js';
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 
 const logger = createLogger('LinearMonitor');
 

@@ -5,14 +5,14 @@
  * structured feedback that can be linked to features.
  */
 
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import type {
   CodeRabbitComment,
   CodeRabbitReview,
   CodeRabbitParseResult,
   CodeRabbitSeverity,
   GitHubComment,
-} from '@automaker/types';
+} from '@protolabs-ai/types';
 
 const logger = createLogger('CodeRabbitParser');
 

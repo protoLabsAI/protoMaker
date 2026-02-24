@@ -1,7 +1,7 @@
-import { Button } from '@protolabs/ui/atoms';
-import { Badge } from '@protolabs/ui/atoms';
-import { SkeletonPulse } from '@protolabs/ui/atoms';
-import { Spinner } from '@protolabs/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
+import { Badge } from '@protolabs-ai/ui/atoms';
+import { SkeletonPulse } from '@protolabs-ai/ui/atoms';
+import { Spinner } from '@protolabs-ai/ui/atoms';
 import { CheckCircle2, AlertCircle, RefreshCw, Bot, Cloud } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { CliStatus } from '../shared/types';

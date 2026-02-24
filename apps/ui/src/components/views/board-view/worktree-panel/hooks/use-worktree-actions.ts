@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { createLogger } from '@automaker/utils/logger';
+import { createLogger } from '@protolabs-ai/utils/logger';
 import { getElectronAPI } from '@/lib/electron';
 import { toast } from 'sonner';
 import {

@@ -1,5 +1,5 @@
-import { Label } from '@protolabs/ui/atoms';
-import { Checkbox } from '@protolabs/ui/atoms';
+import { Label } from '@protolabs-ai/ui/atoms';
+import { Checkbox } from '@protolabs-ai/ui/atoms';
 import { FlaskConical } from 'lucide-react';
 
 interface TestingTabContentProps {

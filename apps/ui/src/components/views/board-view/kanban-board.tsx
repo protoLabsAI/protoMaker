@@ -9,13 +9,13 @@ import {
 } from 'react';
 import { DragOverlay } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { Button } from '@protolabs/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
 import { KanbanColumn, KanbanCard, EmptyStateCard } from './components';
 import { Feature, useAppStore, formatShortcut } from '@/store/app-store';
 import { Archive, Settings2, CheckSquare, GripVertical, Plus } from 'lucide-react';
 import { useResponsiveKanban } from '@/hooks/use-responsive-kanban';
 import { getColumnsWithPipeline, type ColumnId } from './constants';
-import type { PipelineConfig } from '@automaker/types';
+import type { PipelineConfig } from '@protolabs-ai/types';
 import { cn } from '@/lib/utils';
 interface KanbanBoardProps {
   activeFeature: Feature | null;

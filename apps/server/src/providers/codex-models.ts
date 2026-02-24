@@ -4,7 +4,7 @@
  * Official Codex CLI models as documented at https://developers.openai.com/codex/models/
  */
 
-import { CODEX_MODEL_MAP } from '@automaker/types';
+import { CODEX_MODEL_MAP } from '@protolabs-ai/types';
 import type { ModelDefinition } from './types.js';
 
 const CONTEXT_WINDOW_256K = 256000;

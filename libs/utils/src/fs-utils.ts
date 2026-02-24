@@ -2,7 +2,7 @@
  * File system utilities that handle symlinks safely
  */
 
-import { secureFs } from '@automaker/platform';
+import { secureFs } from '@protolabs-ai/platform';
 import path from 'path';
 
 /**

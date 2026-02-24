@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { GitBranch } from 'lucide-react';
-import { Autocomplete, AutocompleteOption } from '@protolabs/ui/molecules';
+import { Autocomplete, AutocompleteOption } from '@protolabs-ai/ui/molecules';
 
 interface BranchAutocompleteProps {
   value: string;

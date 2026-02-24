@@ -9,11 +9,11 @@
  * - Long-running operations complete (spec generation)
  */
 
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import * as secureFs from '../lib/secure-fs.js';
-import { getNotificationsPath, ensureAutomakerDir } from '@automaker/platform';
-import type { Notification, NotificationsFile, NotificationType } from '@automaker/types';
-import { DEFAULT_NOTIFICATIONS_FILE } from '@automaker/types';
+import { getNotificationsPath, ensureAutomakerDir } from '@protolabs-ai/platform';
+import type { Notification, NotificationsFile, NotificationType } from '@protolabs-ai/types';
+import { DEFAULT_NOTIFICATIONS_FILE } from '@protolabs-ai/types';
 import type { EventEmitter } from '../lib/events.js';
 import { randomUUID } from 'crypto';
 

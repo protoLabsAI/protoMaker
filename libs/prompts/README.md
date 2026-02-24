@@ -1,4 +1,4 @@
-# @automaker/prompts
+# @protolabs-ai/prompts
 
 AI prompt templates for text enhancement and other AI-powered features in AutoMaker.
 
@@ -9,7 +9,7 @@ This package provides professionally-crafted prompt templates for enhancing user
 ## Installation
 
 ```bash
-npm install @automaker/prompts
+npm install @protolabs-ai/prompts
 ```
 
 ## Exports
@@ -33,7 +33,7 @@ import {
   TECHNICAL_SYSTEM_PROMPT,
   SIMPLIFY_SYSTEM_PROMPT,
   ACCEPTANCE_SYSTEM_PROMPT,
-} from '@automaker/prompts';
+} from '@protolabs-ai/prompts';
 
 console.log(IMPROVE_SYSTEM_PROMPT); // Full system prompt for improve mode
 ```
@@ -45,7 +45,7 @@ console.log(IMPROVE_SYSTEM_PROMPT); // Full system prompt for improve mode
 Get complete prompt (system + user) for an enhancement mode:
 
 ```typescript
-import { getEnhancementPrompt } from '@automaker/prompts';
+import { getEnhancementPrompt } from '@protolabs-ai/prompts';
 
 const result = getEnhancementPrompt('improve', 'make app faster');
 
@@ -58,7 +58,7 @@ console.log(result.userPrompt); // User prompt with examples and input
 Get only the system prompt for a mode:
 
 ```typescript
-import { getSystemPrompt } from '@automaker/prompts';
+import { getSystemPrompt } from '@protolabs-ai/prompts';
 
 const systemPrompt = getSystemPrompt('technical');
 ```
@@ -68,7 +68,7 @@ const systemPrompt = getSystemPrompt('technical');
 Get few-shot examples for a mode:
 
 ```typescript
-import { getExamples } from '@automaker/prompts';
+import { getExamples } from '@protolabs-ai/prompts';
 
 const examples = getExamples('simplify');
 // Returns array of { input, output } pairs
@@ -79,7 +79,7 @@ const examples = getExamples('simplify');
 Build user prompt with examples:
 
 ```typescript
-import { buildUserPrompt } from '@automaker/prompts';
+import { buildUserPrompt } from '@protolabs-ai/prompts';
 
 const userPrompt = buildUserPrompt('add login page', 'improve');
 // Includes examples + user's description
@@ -90,7 +90,7 @@ const userPrompt = buildUserPrompt('add login page', 'improve');
 Check if a mode is valid:
 
 ```typescript
-import { isValidEnhancementMode } from '@automaker/prompts';
+import { isValidEnhancementMode } from '@protolabs-ai/prompts';
 
 if (isValidEnhancementMode('improve')) {
   // Mode is valid
@@ -102,7 +102,7 @@ if (isValidEnhancementMode('improve')) {
 Get list of all available modes:
 
 ```typescript
-import { getAvailableEnhancementModes } from '@automaker/prompts';
+import { getAvailableEnhancementModes } from '@protolabs-ai/prompts';
 
 const modes = getAvailableEnhancementModes();
 // Returns: ['improve', 'technical', 'simplify', 'acceptance']
@@ -113,7 +113,7 @@ const modes = getAvailableEnhancementModes();
 ### Basic Enhancement
 
 ```typescript
-import { getEnhancementPrompt } from '@automaker/prompts';
+import { getEnhancementPrompt } from '@protolabs-ai/prompts';
 
 async function enhanceDescription(description: string, mode: string) {
   const { systemPrompt, userPrompt } = getEnhancementPrompt(mode, description);
@@ -139,7 +139,7 @@ const technical = await enhanceDescription('add search', 'technical');
 ### Mode Validation
 
 ```typescript
-import { isValidEnhancementMode, getAvailableEnhancementModes } from '@automaker/prompts';
+import { isValidEnhancementMode, getAvailableEnhancementModes } from '@protolabs-ai/prompts';
 
 function validateAndEnhance(mode: string, description: string) {
   if (!isValidEnhancementMode(mode)) {
@@ -154,7 +154,7 @@ function validateAndEnhance(mode: string, description: string) {
 ### Custom Prompt Building
 
 ```typescript
-import { getSystemPrompt, buildUserPrompt, getExamples } from '@automaker/prompts';
+import { getSystemPrompt, buildUserPrompt, getExamples } from '@protolabs-ai/prompts';
 
 // Get components separately for custom workflows
 const systemPrompt = getSystemPrompt('simplify');
@@ -168,8 +168,8 @@ const response = await processWithClaude(systemPrompt, userPrompt);
 ### Server Route Example
 
 ```typescript
-import { getEnhancementPrompt, isValidEnhancementMode } from '@automaker/prompts';
-import { createLogger } from '@automaker/utils';
+import { getEnhancementPrompt, isValidEnhancementMode } from '@protolabs-ai/prompts';
+import { createLogger } from '@protolabs-ai/utils';
 
 const logger = createLogger('EnhancementRoute');
 
@@ -245,11 +245,11 @@ Adds testable acceptance criteria to feature descriptions.
 
 ## Dependencies
 
-- `@automaker/types` - Type definitions for EnhancementMode and EnhancementExample
+- `@protolabs-ai/types` - Type definitions for EnhancementMode and EnhancementExample
 
 ## Used By
 
-- `@automaker/server` - Enhancement API routes
+- `@protolabs-ai/server` - Enhancement API routes
 - Future packages requiring AI-powered text enhancement
 
 ## License

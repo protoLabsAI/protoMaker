@@ -9,7 +9,7 @@
 
 import { Router } from 'express';
 import type { Request, Response } from 'express';
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import type { AutoModeService } from '../../services/auto-mode-service.js';
 import type { LeadEngineerService } from '../../services/lead-engineer-service.js';
 import type { PRFeedbackService } from '../../services/pr-feedback-service.js';
@@ -27,9 +27,9 @@ import type { PipelineOrchestrator } from '../../services/pipeline-orchestrator.
 import type { CeremonyService } from '../../services/ceremony-service.js';
 import type { CompletionDetectorService } from '../../services/completion-detector-service.js';
 import type { SettingsService } from '../../services/settings-service.js';
-import { getNotesWorkspacePath, ensureNotesDir, secureFs } from '@automaker/platform';
-import type { NotesWorkspace, PipelinePhase } from '@automaker/types';
-import { PIPELINE_PHASES } from '@automaker/types';
+import { getNotesWorkspacePath, ensureNotesDir, secureFs } from '@protolabs-ai/platform';
+import type { NotesWorkspace, PipelinePhase } from '@protolabs-ai/types';
+import { PIPELINE_PHASES } from '@protolabs-ai/types';
 
 const logger = createLogger('EngineRoutes');
 

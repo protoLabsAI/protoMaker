@@ -24,11 +24,11 @@ import type {
   AgentTrustProfile,
   EngineActionProposal,
   PolicyAction,
-} from '@automaker/types';
-import { AUTHORITY_TO_ROLE_NAME } from '@automaker/types';
+} from '@protolabs-ai/types';
+import { AUTHORITY_TO_ROLE_NAME } from '@protolabs-ai/types';
 import { checkPolicy, DEFAULT_POLICY_CONFIG } from './policy-engine.js';
-import { createLogger, atomicWriteJson, readJsonWithRecovery } from '@automaker/utils';
-import { getAutomakerDir } from '@automaker/platform';
+import { createLogger, atomicWriteJson, readJsonWithRecovery } from '@protolabs-ai/utils';
+import { getAutomakerDir } from '@protolabs-ai/platform';
 import type { EventEmitter } from '../lib/events.js';
 import * as secureFs from '../lib/secure-fs.js';
 import type { RiskClassifier } from './risk-classifier.js';

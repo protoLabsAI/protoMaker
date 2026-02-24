@@ -14,7 +14,7 @@
 import { Router, type Request, type Response } from 'express';
 import type { TwitchService } from '../services/twitch/twitch-service.js';
 import type { EventEmitter } from '../lib/events.js';
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import type { FeatureLoader } from '../services/feature-loader.js';
 import { v4 as uuidv4 } from 'uuid';
 

@@ -17,7 +17,7 @@ import type { SharedTool, ToolContext, ToolResult } from '../types.js';
  * @example
  * ```typescript
  * import { z } from 'zod';
- * import { defineSharedTool, toLangGraphTool } from '@automaker/tools';
+ * import { defineSharedTool, toLangGraphTool } from '@protolabs-ai/tools';
  * import { DynamicStructuredTool } from '@langchain/core/tools';
  *
  * const myTool = defineSharedTool({
@@ -82,7 +82,7 @@ export function toLangGraphTool<TInput = unknown, TOutput = unknown>(
  * @example
  * ```typescript
  * import { z } from 'zod';
- * import { defineSharedTool, toLangGraphTools } from '@automaker/tools';
+ * import { defineSharedTool, toLangGraphTools } from '@protolabs-ai/tools';
  *
  * const tools = [
  *   defineSharedTool({

@@ -11,8 +11,8 @@
  * Scheduled via maintenance-tasks.ts every 5 minutes.
  */
 
-import { createLogger } from '@automaker/utils';
-import { getFeaturesDir } from '@automaker/platform';
+import { createLogger } from '@protolabs-ai/utils';
+import { getFeaturesDir } from '@protolabs-ai/platform';
 import * as secureFs from '../lib/secure-fs.js';
 import path from 'path';
 import type { EventEmitter } from '../lib/events.js';

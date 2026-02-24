@@ -662,7 +662,7 @@ function qualityRouter(state: typeof State.State): string {
 **Add logging:**
 
 ```typescript
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 
 const logger = createLogger('my-graph');
 

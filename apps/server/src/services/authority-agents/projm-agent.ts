@@ -18,15 +18,15 @@
  * All actions go through AuthorityService.submitProposal().
  */
 
-import type { Feature, Milestone, MilestoneStatus, PipelinePhase } from '@automaker/types';
-import type { AuthorityAgent } from '@automaker/types';
-import { createLogger } from '@automaker/utils';
+import type { Feature, Milestone, MilestoneStatus, PipelinePhase } from '@protolabs-ai/types';
+import type { AuthorityAgent } from '@protolabs-ai/types';
+import { createLogger } from '@protolabs-ai/utils';
 import type { EventEmitter } from '../../lib/events.js';
 import type { AuthorityService } from '../authority-service.js';
 import type { FeatureLoader } from '../feature-loader.js';
 import type { ProjectService } from '../project-service.js';
 import { simpleQuery } from '../../providers/simple-query-service.js';
-import { resolveModelString } from '@automaker/model-resolver';
+import { resolveModelString } from '@protolabs-ai/model-resolver';
 import {
   createAgentState,
   initializeAgent,

@@ -12,8 +12,8 @@
  * - Helper methods for checking sync eligibility
  */
 
-import { createLogger } from '@automaker/utils';
-import type { Feature, Project } from '@automaker/types';
+import { createLogger } from '@protolabs-ai/utils';
+import type { Feature, Project } from '@protolabs-ai/types';
 import type { EventEmitter } from '../lib/events.js';
 import type { SettingsService } from './settings-service.js';
 import type { FeatureLoader } from './feature-loader.js';

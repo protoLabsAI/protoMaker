@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import * as utils from '@automaker/utils';
+import * as utils from '@protolabs-ai/utils';
 import * as fs from 'fs/promises';
 
 // Mock fs module for the image-handler's readFile calls

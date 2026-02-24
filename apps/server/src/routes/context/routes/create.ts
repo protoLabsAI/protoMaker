@@ -9,8 +9,8 @@
  */
 
 import type { Request, Response } from 'express';
-import { createLogger } from '@automaker/utils';
-import { getContextDir, ensureAutomakerDir } from '@automaker/platform';
+import { createLogger } from '@protolabs-ai/utils';
+import { getContextDir, ensureAutomakerDir } from '@protolabs-ai/platform';
 import * as secureFs from '../../../lib/secure-fs.js';
 import * as path from 'path';
 

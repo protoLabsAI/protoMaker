@@ -8,7 +8,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { queryKeys } from '@/lib/query-keys';
-import type { TimeSeriesMetric, TimeGroupBy } from '@automaker/types';
+import type { TimeSeriesMetric, TimeGroupBy } from '@protolabs-ai/types';
 
 const METRICS_STALE_TIME = 30 * 1000; // 30 seconds
 const CAPACITY_STALE_TIME = 10 * 1000; // 10 seconds

@@ -7,7 +7,7 @@
  */
 
 import { Router } from 'express';
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import type { PromptGitHubSyncService } from '../../services/prompt-github-sync-service.js';
 import { createWebhookHandler } from './webhook.js';
 

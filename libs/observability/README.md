@@ -1,4 +1,4 @@
-# @automaker/observability
+# @protolabs-ai/observability
 
 Observability package for Automaker with Langfuse integration for prompt management, tracing, and monitoring.
 
@@ -17,13 +17,13 @@ Observability package for Automaker with Langfuse integration for prompt managem
 This package is part of the Automaker monorepo and is already available:
 
 ```typescript
-import { LangfuseClient } from '@automaker/observability';
+import { LangfuseClient } from '@protolabs-ai/observability';
 ```
 
 ### Basic Usage
 
 ```typescript
-import { LangfuseClient } from '@automaker/observability';
+import { LangfuseClient } from '@protolabs-ai/observability';
 
 // Initialize client (works with or without credentials)
 const langfuse = new LangfuseClient({

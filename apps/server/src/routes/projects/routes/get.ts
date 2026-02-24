@@ -3,7 +3,7 @@
  */
 
 import type { Request, Response } from 'express';
-import type { Project, Milestone, Phase } from '@automaker/types';
+import type { Project, Milestone, Phase } from '@protolabs-ai/types';
 import {
   getProjectJsonPath,
   getProjectFilePath,
@@ -12,9 +12,9 @@ import {
   listMilestones,
   listPhases,
   projectPlanExists,
-} from '@automaker/platform';
-import { secureFs } from '@automaker/platform';
-import { parseProjectFile, parseMilestoneFile, parsePhaseFile } from '@automaker/utils';
+} from '@protolabs-ai/platform';
+import { secureFs } from '@protolabs-ai/platform';
+import { parseProjectFile, parseMilestoneFile, parsePhaseFile } from '@protolabs-ai/utils';
 import { getErrorMessage, logError } from '../common.js';
 
 export function createGetHandler() {

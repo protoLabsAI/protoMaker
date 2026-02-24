@@ -11,8 +11,8 @@
  */
 
 import path from 'path';
-import { createLogger } from '@automaker/utils';
-import { getAutomakerDir } from '@automaker/platform';
+import { createLogger } from '@protolabs-ai/utils';
+import { getAutomakerDir } from '@protolabs-ai/platform';
 import type { EventEmitter } from '../lib/events.js';
 import type { AuthorityService } from './authority-service.js';
 import * as secureFs from '../lib/secure-fs.js';

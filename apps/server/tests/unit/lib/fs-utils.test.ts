@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { mkdirSafe, existsSafe } from '@automaker/utils';
+import { mkdirSafe, existsSafe } from '@protolabs-ai/utils';
 import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';

@@ -6,7 +6,7 @@
  *
  * @example
  * ```typescript
- * import { isWslAvailable, findCliInWsl, createWslCommand } from '@automaker/platform';
+ * import { isWslAvailable, findCliInWsl, createWslCommand } from '@protolabs-ai/platform';
  *
  * // Check if WSL is available
  * if (process.platform === 'win32' && isWslAvailable()) {

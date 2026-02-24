@@ -8,11 +8,11 @@
 
 import path from 'node:path';
 import fs from 'node:fs/promises';
-import { createLogger } from '@automaker/utils';
-import { getAutomakerDir } from '@automaker/platform';
+import { createLogger } from '@protolabs-ai/utils';
+import { getAutomakerDir } from '@protolabs-ai/platform';
 import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { ChatAnthropic } from '@langchain/anthropic';
-import { createContentCreationFlow } from '@automaker/flows';
+import { createContentCreationFlow } from '@protolabs-ai/flows';
 import type { EventEmitter } from '../lib/events.js';
 import { getLangfuseInstance } from '../lib/langfuse-singleton.js';
 
@@ -63,7 +63,7 @@ interface ContentCreationConfig {
   outputFormats: Array<'markdown' | 'html' | 'pdf'>;
   smartModel: BaseChatModel;
   fastModel: BaseChatModel;
-  langfuseClient?: import('@automaker/observability').LangfuseClient;
+  langfuseClient?: import('@protolabs-ai/observability').LangfuseClient;
   enableHITL?: boolean;
   maxRetries?: number;
 }

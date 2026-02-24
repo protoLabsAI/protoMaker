@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
-import { Button } from '@protolabs/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
 import { GitBranch, Plus, RefreshCw } from 'lucide-react';
-import { Spinner } from '@protolabs/ui/atoms';
+import { Spinner } from '@protolabs-ai/ui/atoms';
 import { pathsEqual } from '@/lib/utils';
 import { toast } from 'sonner';
 import { getHttpApiClient } from '@/lib/http-api-client';
@@ -25,7 +25,7 @@ import {
 import { useAppStore } from '@/store/app-store';
 import { useWorktreeStore } from '@/store/worktree-store';
 import { ViewWorktreeChangesDialog, PushToRemoteDialog, MergeWorktreeDialog } from '../dialogs';
-import { ConfirmDialog } from '@protolabs/ui/molecules';
+import { ConfirmDialog } from '@protolabs-ai/ui/molecules';
 import { Undo2 } from 'lucide-react';
 import { getElectronAPI } from '@/lib/electron';
 

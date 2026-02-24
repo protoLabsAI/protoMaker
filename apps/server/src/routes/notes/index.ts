@@ -5,9 +5,14 @@
  */
 
 import { Router, type Request, type Response } from 'express';
-import { createLogger } from '@automaker/utils';
-import { getNotesWorkspacePath, ensureNotesDir, secureFs, validatePath } from '@automaker/platform';
-import type { NotesWorkspace, NoteTab, NoteTabPermissions } from '@automaker/types';
+import { createLogger } from '@protolabs-ai/utils';
+import {
+  getNotesWorkspacePath,
+  ensureNotesDir,
+  secureFs,
+  validatePath,
+} from '@protolabs-ai/platform';
+import type { NotesWorkspace, NoteTab, NoteTabPermissions } from '@protolabs-ai/types';
 import type { EventEmitter } from '../../lib/events.js';
 
 const logger = createLogger('NotesRoutes');

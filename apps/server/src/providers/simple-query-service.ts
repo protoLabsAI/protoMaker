@@ -22,8 +22,8 @@ import type {
   ClaudeApiProfile,
   ClaudeCompatibleProvider,
   Credentials,
-} from '@automaker/types';
-import { stripProviderPrefix } from '@automaker/types';
+} from '@protolabs-ai/types';
+import { stripProviderPrefix } from '@protolabs-ai/types';
 
 /**
  * Options for simple query execution

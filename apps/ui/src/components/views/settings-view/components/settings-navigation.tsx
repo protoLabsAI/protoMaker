@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { ChevronDown, ChevronRight, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button } from '@protolabs/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
 import type { Project } from '@/lib/electron';
 import type { NavigationItem } from '../config/navigation';
 import { GLOBAL_NAV_GROUPS } from '../config/navigation';
 import type { SettingsViewId } from '../hooks/use-settings-view';
 import { useAIModelsStore } from '@/store/ai-models-store';
-import type { ModelProvider } from '@automaker/types';
+import type { ModelProvider } from '@protolabs-ai/types';
 
 const PROVIDERS_DROPDOWN_KEY = 'settings-providers-dropdown-open';
 

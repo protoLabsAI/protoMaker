@@ -6,8 +6,8 @@ import {
   createFeatureMap,
   getBlockingDependenciesFromMap,
   resolveDependencies,
-} from '@automaker/dependency-resolver';
-import { normalizeFeatureStatus } from '@automaker/types';
+} from '@protolabs-ai/dependency-resolver';
+import { normalizeFeatureStatus } from '@protolabs-ai/types';
 
 type ColumnId = Feature['status'];
 

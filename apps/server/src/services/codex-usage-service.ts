@@ -3,8 +3,8 @@ import {
   getCodexAuthPath,
   systemPathExists,
   systemPathReadFile,
-} from '@automaker/platform';
-import { createLogger } from '@automaker/utils';
+} from '@protolabs-ai/platform';
+import { createLogger } from '@protolabs-ai/utils';
 import type { CodexAppServerService } from './codex-app-server-service.js';
 
 const logger = createLogger('CodexUsage');

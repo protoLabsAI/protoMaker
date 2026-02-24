@@ -26,7 +26,7 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuLabel,
-} from '@protolabs/ui/atoms';
+} from '@protolabs-ai/ui/atoms';
 import { DndContext, closestCenter } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { SortableProjectItem, ThemeMenuItem } from './';

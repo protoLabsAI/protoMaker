@@ -22,8 +22,8 @@ import {
   MemorySaver,
 } from '@langchain/langgraph';
 import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
-import { createLogger } from '@automaker/utils';
-import { LangfuseClient } from '@automaker/observability';
+import { createLogger } from '@protolabs-ai/utils';
+import { LangfuseClient } from '@protolabs-ai/observability';
 import { wrapSubgraph } from '../graphs/utils/subgraph-wrapper.js';
 import {
   createSectionWriterGraph,

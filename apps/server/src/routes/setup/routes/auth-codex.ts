@@ -17,7 +17,7 @@ export function createAuthCodexHandler() {
       }
 
       // Use the same detection logic as the Codex provider
-      const { getCodexAuthIndicators } = await import('@automaker/platform');
+      const { getCodexAuthIndicators } = await import('@protolabs-ai/platform');
       const indicators = await getCodexAuthIndicators();
 
       const isAlreadyAuthenticated =

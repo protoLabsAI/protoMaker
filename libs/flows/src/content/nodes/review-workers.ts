@@ -9,8 +9,8 @@
 
 import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import type { RunnableConfig } from '@langchain/core/runnables';
-import { createLogger } from '@automaker/utils';
-import { LangfuseClient } from '@automaker/observability';
+import { createLogger } from '@protolabs-ai/utils';
+import { LangfuseClient } from '@protolabs-ai/observability';
 import { compilePrompt } from '../prompt-loader.js';
 import { extractAllTags, extractTag, extractRequiredEnum } from '../xml-parser.js';
 import { copilotkitEmitState, emitHeartbeat } from '../copilotkit-utils.js';

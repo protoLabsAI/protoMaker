@@ -7,7 +7,7 @@
  * via getContentBase().
  */
 
-import type { UserProfile } from '@automaker/types';
+import type { UserProfile } from '@protolabs-ai/types';
 
 // ---------------------------------------------------------------------------
 // Team roster — who does what, delegation routing
@@ -45,7 +45,7 @@ export function getBrandIdentity(profile?: UserProfile): string {
 - **${productName}** = the AI development studio product
 - **${internalCodename}** = internal codename only — never in external-facing content, docs, or user-visible UI
 
-In code: \`@automaker/*\` packages, \`.automaker/\` directories are fine (internal).
+In code: \`@protolabs-ai/*\` packages, \`.automaker/\` directories are fine (internal).
 In prose, docs, or anything a user/customer sees: use **${agencyName}** / **${productName}**.`;
 }
 
@@ -80,7 +80,7 @@ You have access to Context7 MCP tools for looking up **current** library documen
 **When NOT to use it:**
 
 - For libraries you already know well and the project version matches your training
-- For internal \`@automaker/*\` packages (just read the source)`;
+- For internal \`@protolabs-ai/*\` packages (just read the source)`;
 
 // ---------------------------------------------------------------------------
 // Worktree safety
@@ -135,18 +135,18 @@ export const MONOREPO_STANDARDS = `## Monorepo Standards
 
 ### Package dependency chain (top → bottom):
 \`\`\`
-@automaker/types          (no deps)
-@automaker/utils, prompts, platform, model-resolver, dependency-resolver,
+@protolabs-ai/types          (no deps)
+@protolabs-ai/utils, prompts, platform, model-resolver, dependency-resolver,
   policy-engine, spec-parser, flows, llm-providers, observability
-@automaker/git-utils
+@protolabs-ai/git-utils
 apps/server, apps/ui
 \`\`\`
 
 ### Import conventions:
 \`\`\`typescript
 // Always import from packages, never relative cross-package paths
-import type { Feature } from '@automaker/types';
-import { createLogger } from '@automaker/utils';
+import type { Feature } from '@protolabs-ai/types';
+import { createLogger } from '@protolabs-ai/utils';
 \`\`\`
 
 ### Build order:

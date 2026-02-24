@@ -8,7 +8,7 @@
  */
 
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { Badge } from '@protolabs/ui/atoms';
+import { Badge } from '@protolabs-ai/ui/atoms';
 
 const meta = {
   title: 'UI/Badge',

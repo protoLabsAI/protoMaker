@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Button } from '@protolabs/ui/atoms';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@protolabs/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@protolabs-ai/ui/atoms';
 import { MessageSquareText, RotateCcw, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { PromptCustomization, CustomPrompt } from '@automaker/types';
+import type { PromptCustomization, CustomPrompt } from '@protolabs-ai/types';
 import { TAB_CONFIGS } from './tab-configs';
 import { Banner, PromptFieldList } from './components';
 

@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { createLogger } from '@automaker/utils/logger';
+import { createLogger } from '@protolabs-ai/utils/logger';
 import { useNavigate, useLocation } from '@tanstack/react-router';
 
 const logger = createLogger('Sidebar');

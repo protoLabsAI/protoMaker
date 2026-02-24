@@ -12,15 +12,15 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import path from 'path';
 import * as secureFs from '../../../lib/secure-fs.js';
-import { isGitRepo } from '@automaker/git-utils';
+import { isGitRepo } from '@protolabs-ai/git-utils';
 import { getErrorMessage, logError, normalizePath, execEnv, isGhCliAvailable } from '../common.js';
 import {
   readAllWorktreeMetadata,
   updateWorktreePRInfo,
   type WorktreePRInfo,
 } from '../../../lib/worktree-metadata.js';
-import { createLogger } from '@automaker/utils';
-import { validatePRState } from '@automaker/types';
+import { createLogger } from '@protolabs-ai/utils';
+import { validatePRState } from '@protolabs-ai/types';
 import {
   checkGitHubRemote,
   type GitHubRemoteStatus,

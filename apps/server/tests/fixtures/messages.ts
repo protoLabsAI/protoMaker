@@ -2,7 +2,7 @@
  * Message fixtures for testing providers and lib utilities
  */
 
-import type { ConversationMessage, ProviderMessage, ContentBlock } from '@automaker/types';
+import type { ConversationMessage, ProviderMessage, ContentBlock } from '@protolabs-ai/types';
 
 export const conversationHistoryFixture: ConversationMessage[] = [
   {

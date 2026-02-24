@@ -1,12 +1,12 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Button, Badge, Switch, Textarea } from '@protolabs/ui/atoms';
+import { Button, Badge, Switch, Textarea } from '@protolabs-ai/ui/atoms';
 import { Users, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useGlobalSettings } from '@/hooks/queries/use-settings';
 import { useUpdateGlobalSettings } from '@/hooks/mutations/use-settings-mutations';
 import { useAgentTemplates } from '@/hooks/queries/use-agent-templates';
 import type { AgentTemplateMetadata } from '@/hooks/queries/use-agent-templates';
-import type { CustomPrompt } from '@automaker/types';
+import type { CustomPrompt } from '@protolabs-ai/types';
 
 function modelBadgeVariant(model?: string): 'default' | 'secondary' | 'outline' {
   switch (model) {

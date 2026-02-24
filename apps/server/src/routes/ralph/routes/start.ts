@@ -4,8 +4,8 @@
 
 import type { Request, Response } from 'express';
 import type { RalphDeps } from '../common.js';
-import type { RalphLoopConfig } from '@automaker/types';
-import { createLogger } from '@automaker/utils';
+import type { RalphLoopConfig } from '@protolabs-ai/types';
+import { createLogger } from '@protolabs-ai/utils';
 
 const logger = createLogger('RalphRoutes:Start');
 

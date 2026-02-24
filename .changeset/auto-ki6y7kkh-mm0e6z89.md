@@ -1,5 +1,5 @@
 ---
-'@automaker/types': minor
+'@protolabs-ai/types': minor
 ---
 
 Types, Schema & KnowledgeStoreService

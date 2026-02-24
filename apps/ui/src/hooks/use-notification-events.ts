@@ -6,7 +6,7 @@ import { useEffect } from 'react';
 import { useNotificationsStore } from '@/store/notifications-store';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { pathsEqual } from '@/lib/utils';
-import type { Notification } from '@automaker/types';
+import type { Notification } from '@protolabs-ai/types';
 
 /**
  * Hook to subscribe to notification events and update the store.

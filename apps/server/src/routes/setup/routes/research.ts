@@ -1,9 +1,9 @@
 import type { RequestHandler } from 'express';
 import path from 'node:path';
 import fs from 'node:fs/promises';
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import { researchRepo } from '../../../services/repo-research-service.js';
-import type { RepoResearchResult } from '@automaker/types';
+import type { RepoResearchResult } from '@protolabs-ai/types';
 
 const logger = createLogger('setup:research');
 

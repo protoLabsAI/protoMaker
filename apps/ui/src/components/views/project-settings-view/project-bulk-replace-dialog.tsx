@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useAppStore } from '@/store/app-store';
 import { useAIModelsStore } from '@/store/ai-models-store';
-import { Button } from '@protolabs/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
 import {
   Dialog,
   DialogContent,
@@ -9,8 +9,14 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@protolabs/ui/atoms';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@protolabs/ui/atoms';
+} from '@protolabs-ai/ui/atoms';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@protolabs-ai/ui/atoms';
 import { ArrowRight, Cloud, Server, Check, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Project } from '@/lib/electron';
@@ -19,8 +25,8 @@ import type {
   PhaseModelEntry,
   ClaudeCompatibleProvider,
   ClaudeModelAlias,
-} from '@automaker/types';
-import { DEFAULT_PHASE_MODELS } from '@automaker/types';
+} from '@protolabs-ai/types';
+import { DEFAULT_PHASE_MODELS } from '@protolabs-ai/types';
 
 interface ProjectBulkReplaceDialogProps {
   open: boolean;

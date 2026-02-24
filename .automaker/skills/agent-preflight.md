@@ -34,7 +34,7 @@ git -C <worktree-path> fetch origin && git -C <worktree-path> rebase origin/main
 npm run build:packages
 ```
 
-**Why:** Stale `dist/` in `@automaker/types` causes agents to hallucinate wrong type names and method signatures. Always rebuild after ANY types or shared package PR merges.
+**Why:** Stale `dist/` in `@protolabs-ai/types` causes agents to hallucinate wrong type names and method signatures. Always rebuild after ANY types or shared package PR merges.
 
 ## 3. Verify Dependency Chain
 

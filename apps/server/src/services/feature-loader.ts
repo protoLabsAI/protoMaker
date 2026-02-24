@@ -11,8 +11,8 @@ import type {
   FeatureStatus,
   FeatureStore,
   StatusTransition,
-} from '@automaker/types';
-import { normalizeFeatureStatus } from '@automaker/types';
+} from '@protolabs-ai/types';
+import { normalizeFeatureStatus } from '@protolabs-ai/types';
 import {
   createLogger,
   atomicWriteJson,
@@ -20,7 +20,7 @@ import {
   logRecoveryWarning,
   DEFAULT_BACKUP_COUNT,
   slugify,
-} from '@automaker/utils';
+} from '@protolabs-ai/utils';
 import * as secureFs from '../lib/secure-fs.js';
 import {
   getFeaturesDir,
@@ -29,7 +29,7 @@ import {
   getFeatureBackupDir,
   getAppSpecPath,
   ensureAutomakerDir,
-} from '@automaker/platform';
+} from '@protolabs-ai/platform';
 import { addImplementedFeature, type ImplementedFeature } from '../lib/xml-extractor.js';
 import { debugLog } from '../lib/debug-log.js';
 import type { DataIntegrityWatchdogService } from './data-integrity-watchdog-service.js';

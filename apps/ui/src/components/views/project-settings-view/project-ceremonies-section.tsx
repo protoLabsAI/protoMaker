@@ -1,18 +1,18 @@
 import { useState, useEffect } from 'react';
 import { AlertTriangle, PartyPopper } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { Button } from '@protolabs/ui/atoms';
-import { Input } from '@protolabs/ui/atoms';
-import { Label } from '@protolabs/ui/atoms';
-import { Switch } from '@protolabs/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
+import { Input } from '@protolabs-ai/ui/atoms';
+import { Label } from '@protolabs-ai/ui/atoms';
+import { Switch } from '@protolabs-ai/ui/atoms';
 import { toast } from 'sonner';
 import { useUpdateProjectSettings } from '@/hooks/mutations';
 import { useProjectSettings } from '@/hooks/queries';
 import { apiGet } from '@/lib/api-fetch';
 import { queryKeys } from '@/lib/query-keys';
 import type { Project } from '@/lib/electron';
-import type { CeremonySettings } from '@automaker/types';
-import { DEFAULT_CEREMONY_SETTINGS } from '@automaker/types';
+import type { CeremonySettings } from '@protolabs-ai/types';
+import { DEFAULT_CEREMONY_SETTINGS } from '@protolabs-ai/types';
 
 interface CeremonyStatusResponse {
   success: boolean;

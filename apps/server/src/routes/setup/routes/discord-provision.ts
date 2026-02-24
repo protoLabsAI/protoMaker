@@ -1,6 +1,6 @@
 import type { RequestHandler } from 'express';
-import { createLogger } from '@automaker/utils';
-import type { DiscordProvisionResult } from '@automaker/types';
+import { createLogger } from '@protolabs-ai/utils';
+import type { DiscordProvisionResult } from '@protolabs-ai/types';
 
 const logger = createLogger('setup:discord-provision');
 

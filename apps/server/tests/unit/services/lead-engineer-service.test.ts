@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { EventType, Feature } from '@automaker/types';
+import type { EventType, Feature } from '@protolabs-ai/types';
 import { LeadEngineerService } from '@/services/lead-engineer-service.js';
 
 // ────────────────────────── Mocks ──────────────────────────

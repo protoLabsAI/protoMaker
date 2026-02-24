@@ -11,7 +11,7 @@ import { useAppStore } from '@/store/app-store';
 import { useWorktreeStore } from '@/store/worktree-store';
 import { getElectronAPI } from '@/lib/electron';
 import { toast } from 'sonner';
-import { createLogger } from '@automaker/utils/logger';
+import { createLogger } from '@protolabs-ai/utils/logger';
 import { useFeatures } from '@/hooks/queries';
 import { queryKeys } from '@/lib/query-keys';
 

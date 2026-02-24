@@ -5,7 +5,7 @@
 import { freemem, totalmem, cpus, loadavg } from 'node:os';
 import v8 from 'node:v8';
 import { Router, Request, Response } from 'express';
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import type { AutoModeService } from '../services/auto-mode-service.js';
 import type { LeadEngineerService } from '../services/lead-engineer-service.js';
 

@@ -17,8 +17,8 @@
 
 import type { Options } from '@anthropic-ai/claude-agent-sdk';
 import path from 'path';
-import { resolveModelString } from '@automaker/model-resolver';
-import { createLogger } from '@automaker/utils';
+import { resolveModelString } from '@protolabs-ai/model-resolver';
+import { createLogger } from '@protolabs-ai/utils';
 
 const logger = createLogger('SdkOptions');
 import {
@@ -27,8 +27,12 @@ import {
   type McpServerConfig,
   type ThinkingLevel,
   getThinkingTokenBudget,
-} from '@automaker/types';
-import { isPathAllowed, PathNotAllowedError, getAllowedRootDirectory } from '@automaker/platform';
+} from '@protolabs-ai/types';
+import {
+  isPathAllowed,
+  PathNotAllowedError,
+  getAllowedRootDirectory,
+} from '@protolabs-ai/platform';
 
 /**
  * Result of sandbox compatibility check
@@ -362,13 +366,13 @@ export interface CreateSdkOptionsConfig {
   resume?: string;
 }
 
-// Re-export MCP types from @automaker/types for convenience
+// Re-export MCP types from @protolabs-ai/types for convenience
 export type {
   McpServerConfig,
   McpStdioServerConfig,
   McpSSEServerConfig,
   McpHttpServerConfig,
-} from '@automaker/types';
+} from '@protolabs-ai/types';
 
 /**
  * Create SDK options for spec generation

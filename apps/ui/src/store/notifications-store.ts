@@ -3,7 +3,7 @@
  */
 
 import { create } from 'zustand';
-import type { Notification } from '@automaker/types';
+import type { Notification } from '@protolabs-ai/types';
 
 // ============================================================================
 // State Interface

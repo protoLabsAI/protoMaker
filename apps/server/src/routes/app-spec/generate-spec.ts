@@ -8,13 +8,13 @@
 import * as secureFs from '../../lib/secure-fs.js';
 import type { EventEmitter } from '../../lib/events.js';
 import { specOutputSchema, specToXml, type SpecOutput } from '../../lib/app-spec-format.js';
-import { createLogger } from '@automaker/utils';
-import { DEFAULT_PHASE_MODELS, isCursorModel } from '@automaker/types';
-import { resolvePhaseModel } from '@automaker/model-resolver';
+import { createLogger } from '@protolabs-ai/utils';
+import { DEFAULT_PHASE_MODELS, isCursorModel } from '@protolabs-ai/types';
+import { resolvePhaseModel } from '@protolabs-ai/model-resolver';
 import { extractJson } from '../../lib/json-extractor.js';
 import { streamingQuery } from '../../providers/simple-query-service.js';
 import { generateFeaturesFromSpec } from './generate-features-from-spec.js';
-import { ensureAutomakerDir, getAppSpecPath } from '@automaker/platform';
+import { ensureAutomakerDir, getAppSpecPath } from '@protolabs-ai/platform';
 import type { SettingsService } from '../../services/settings-service.js';
 import {
   getAutoLoadClaudeMdSetting,

@@ -4,7 +4,7 @@
 
 import type { Request, Response } from 'express';
 import * as secureFs from '../../../lib/secure-fs.js';
-import { PathNotAllowedError } from '@automaker/platform';
+import { PathNotAllowedError } from '@protolabs-ai/platform';
 import { getErrorMessage, logError } from '../common.js';
 
 // Optional files that are expected to not exist in new projects

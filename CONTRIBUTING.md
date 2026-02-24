@@ -169,20 +169,20 @@ protolabs-studio/
 │   ├── ui/              # React + Vite + Electron frontend
 │   └── server/          # Express + WebSocket backend
 ├── libs/
-│   ├── @automaker/types/            # Shared TypeScript types
-│   ├── @automaker/utils/            # Utility functions
-│   ├── @automaker/prompts/          # AI prompt templates
-│   ├── @automaker/platform/         # Platform abstractions
-│   ├── @automaker/model-resolver/   # AI model resolution
-│   ├── @automaker/dependency-resolver/ # Dependency management
-│   └── @automaker/git-utils/        # Git operations
+│   ├── @protolabs-ai/types/            # Shared TypeScript types
+│   ├── @protolabs-ai/utils/            # Utility functions
+│   ├── @protolabs-ai/prompts/          # AI prompt templates
+│   ├── @protolabs-ai/platform/         # Platform abstractions
+│   ├── @protolabs-ai/model-resolver/   # AI model resolution
+│   ├── @protolabs-ai/dependency-resolver/ # Dependency management
+│   └── @protolabs-ai/git-utils/        # Git operations
 ├── docs/                # Documentation
 └── package.json         # Root package configuration
 ```
 
 **Key conventions:**
 
-- Always import from `@automaker/*` shared packages, never use relative paths to `libs/`
+- Always import from `@protolabs-ai/*` shared packages, never use relative paths to `libs/`
 - Frontend code lives in `apps/ui/`
 - Backend code lives in `apps/server/`
 - Shared logic should be in the appropriate `libs/` package
@@ -512,7 +512,7 @@ npm run test
 npx playwright test --headed
 
 # Run a specific test file
-npm test --workspace=@automaker/ui -- tests/example.spec.ts
+npm test --workspace=@protolabs-ai/ui -- tests/example.spec.ts
 ```
 
 **E2E Test Guidelines:**
@@ -571,12 +571,12 @@ protoLabs Studio uses **GitHub Actions** for continuous integration. Every pull 
 
 The following checks must pass before your PR can be merged:
 
-| Check             | Description                                   |
-| ----------------- | --------------------------------------------- |
-| **Format**        | Verifies code is formatted with Prettier      |
-| **Build**         | Ensures the project compiles without errors   |
-| **Package Tests** | Runs tests for shared `@automaker/*` packages |
-| **Server Tests**  | Runs server unit tests with coverage          |
+| Check             | Description                                      |
+| ----------------- | ------------------------------------------------ |
+| **Format**        | Verifies code is formatted with Prettier         |
+| **Build**         | Ensures the project compiles without errors      |
+| **Package Tests** | Runs tests for shared `@protolabs-ai/*` packages |
+| **Server Tests**  | Runs server unit tests with coverage             |
 
 #### CI Testing Environment
 

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Terminal, Check, X, ChevronDown, ChevronUp } from 'lucide-react';
-import { Spinner } from '@protolabs/ui/atoms';
+import { Spinner } from '@protolabs-ai/ui/atoms';
 import { cn } from '@/lib/utils';
 import { useTerminalStore } from '@/store/terminal-store';
 import type { InitScriptState } from '@/store/types';

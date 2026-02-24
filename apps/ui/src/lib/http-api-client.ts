@@ -5,7 +5,7 @@
  * but communicates with the backend server via HTTP/WebSocket.
  */
 
-import { createLogger } from '@automaker/utils/logger';
+import { createLogger } from '@protolabs-ai/utils/logger';
 import type {
   ElectronAPI,
   FileResult,
@@ -39,11 +39,11 @@ import type {
   AlignmentProposal,
   GlobalSettings,
   ProjectSettings,
-} from '@automaker/types';
+} from '@protolabs-ai/types';
 import type { Message, SessionListItem } from '@/types/electron';
 import type { Feature, ClaudeUsageResponse, CodexUsageResponse } from '@/store/types';
 import type { WorktreeAPI, GitAPI, ModelDefinition, ProviderStatus } from '@/types/electron';
-import type { ModelId, ThinkingLevel, ReasoningEffort } from '@automaker/types';
+import type { ModelId, ThinkingLevel, ReasoningEffort } from '@protolabs-ai/types';
 import { getGlobalFileBrowser } from '@/contexts/file-browser-context';
 
 const logger = createLogger('HttpClient');
@@ -2689,12 +2689,12 @@ export class HttpApiClient implements ElectronAPI {
   notes = {
     getWorkspace: (
       projectPath: string
-    ): Promise<{ workspace: import('@automaker/types').NotesWorkspace }> =>
+    ): Promise<{ workspace: import('@protolabs-ai/types').NotesWorkspace }> =>
       this.post('/api/notes/get', { projectPath }),
 
     saveWorkspace: (
       projectPath: string,
-      workspace: import('@automaker/types').NotesWorkspace
+      workspace: import('@protolabs-ai/types').NotesWorkspace
     ): Promise<{ success: boolean }> => this.post('/api/notes/save', { projectPath, workspace }),
 
     createTab: (
@@ -2720,7 +2720,7 @@ export class HttpApiClient implements ElectronAPI {
     updateTabPermissions: (
       projectPath: string,
       tabId: string,
-      permissions: Partial<import('@automaker/types').NoteTabPermissions>
+      permissions: Partial<import('@protolabs-ai/types').NoteTabPermissions>
     ): Promise<{ success: boolean; tab: Record<string, unknown>; workspaceVersion: number }> =>
       this.post('/api/notes/update-tab-permissions', { projectPath, tabId, permissions }),
 
@@ -3373,7 +3373,7 @@ export class HttpApiClient implements ElectronAPI {
       featureId: string
     ): Promise<{
       success: boolean;
-      pipelineState?: import('@automaker/types').PipelineState;
+      pipelineState?: import('@protolabs-ai/types').PipelineState;
       error?: string;
     }> => this.post('/api/engine/pipeline/status', { projectPath, featureId }),
     /** Resolve a pipeline gate (advance or reject) */

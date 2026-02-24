@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { createLogger } from '@automaker/utils/logger';
+import { createLogger } from '@protolabs-ai/utils/logger';
 import { useAppStore } from '@/store/app-store';
 
 const logger = createLogger('MCPServers');
 import { toast } from 'sonner';
-import type { MCPServerConfig } from '@automaker/types';
+import type { MCPServerConfig } from '@protolabs-ai/types';
 import { syncSettingsToServer, loadMCPServersFromServer } from '@/hooks/use-settings-migration';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import type { ServerFormData, ServerTestState } from '../types';

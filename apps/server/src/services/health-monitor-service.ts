@@ -13,10 +13,10 @@
  * - Cleans up orphaned worktrees
  */
 
-import { createLogger } from '@automaker/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import { classifyError } from '../lib/error-handler.js';
 import type { EventEmitter } from '../lib/events.js';
-import type { Feature } from '@automaker/types';
+import type { Feature } from '@protolabs-ai/types';
 import type { Dirent } from 'fs';
 import { FeatureLoader } from './feature-loader.js';
 import * as secureFs from '../lib/secure-fs.js';

@@ -5,7 +5,7 @@ import {
   CURSOR_MODEL_MAP,
   DEFAULT_MODELS,
   type PhaseModelEntry,
-} from '@automaker/types';
+} from '@protolabs-ai/types';
 
 describe('model-resolver', () => {
   describe('resolveModelString', () => {

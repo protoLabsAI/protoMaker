@@ -2,7 +2,7 @@
  * Cindi — Content Writing Specialist prompt
  *
  * Personified prompt for the Cindi agent template.
- * Used by built-in-templates.ts via @automaker/prompts.
+ * Used by built-in-templates.ts via @protolabs-ai/prompts.
  */
 
 import type { PromptConfig } from '../types.js';

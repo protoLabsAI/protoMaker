@@ -6,7 +6,7 @@ Automaker uses [Changesets](https://github.com/changesets/changesets) for versio
 
 ## Version Scheme
 
-All `@automaker/*` and `@protolabs/*` packages in `libs/` share a single version (currently `0.x.y`). The `0.x` range signals pre-stable — breaking changes bump the minor version, features/fixes bump the patch.
+All `@protolabs-ai/*` and `@protolabs/*` packages in `libs/` share a single version (currently `0.x.y`). The `0.x` range signals pre-stable — breaking changes bump the minor version, features/fixes bump the patch.
 
 | Package Group              | Versioning                     | Published    |
 | -------------------------- | ------------------------------ | ------------ |

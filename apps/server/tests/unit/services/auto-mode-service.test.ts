@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { AutoModeService } from '@/services/auto-mode-service.js';
-import type { Feature } from '@automaker/types';
+import type { Feature } from '@protolabs-ai/types';
 
 describe('auto-mode-service.ts', () => {
   let service: AutoModeService;
