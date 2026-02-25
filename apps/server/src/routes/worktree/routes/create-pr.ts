@@ -15,10 +15,12 @@ import {
 import { updateWorktreePRInfo } from '../../../lib/worktree-metadata.js';
 import { createLogger } from '@protolabs-ai/utils';
 import { validatePRState } from '@protolabs-ai/types';
+import { buildPROwnershipWatermark } from '../../github/utils/pr-ownership.js';
+import type { SettingsService } from '../../../services/settings-service.js';
 
 const logger = createLogger('CreatePR');
 
-export function createCreatePRHandler() {
+export function createCreatePRHandler(settingsService?: SettingsService) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
       const { worktreePath, projectPath, commitMessage, prTitle, prBody, baseBranch, draft } =
@@ -145,7 +147,24 @@ export function createCreatePRHandler() {
       // Create PR using gh CLI or provide browser fallback
       const base = baseBranch || 'main';
       const title = prTitle || branchName;
-      const body = prBody || `Changes from branch ${branchName}`;
+      const rawBody = prBody || `Changes from branch ${branchName}`;
+
+      // Append ownership watermark so other Automaker instances can detect who owns this PR
+      let body = rawBody;
+      if (settingsService) {
+        try {
+          const instanceId = await settingsService.getInstanceId();
+          const globalSettings = await settingsService.getGlobalSettings();
+          const teamId = globalSettings.teamId || '';
+          body = `${rawBody}\n\n${buildPROwnershipWatermark(instanceId, teamId)}`;
+        } catch (watermarkErr) {
+          logger.warn(
+            'Failed to build PR ownership watermark, creating PR without it:',
+            watermarkErr
+          );
+        }
+      }
+
       const draftFlag = draft ? '--draft' : '';
 
       let prUrl: string | null = null;

@@ -680,6 +680,27 @@ export class SettingsService {
     return fileExists(settingsPath);
   }
 
+  /**
+   * Get or generate a stable instance ID for this Automaker installation.
+   *
+   * Returns the configured `instanceId` from settings if set.
+   * On first call without a configured value, generates a UUID, persists it
+   * to settings, and returns it. Subsequent calls return the persisted UUID.
+   *
+   * @returns Promise resolving to the instance ID string
+   */
+  async getInstanceId(): Promise<string> {
+    const settings = await this.getGlobalSettings();
+    if (settings.instanceId) {
+      return settings.instanceId;
+    }
+    const { randomUUID } = await import('crypto');
+    const generatedId = randomUUID();
+    await this.updateGlobalSettings({ instanceId: generatedId });
+    logger.info(`Generated and persisted new instance ID: ${generatedId}`);
+    return generatedId;
+  }
+
   // ============================================================================
   // Credentials
   // ============================================================================

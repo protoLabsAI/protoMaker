@@ -91,7 +91,7 @@ export function createWorktreeRoutes(
     validatePathParams('projectPath', 'worktreePath'),
     createDeleteHandler(autoModeService)
   );
-  router.post('/create-pr', createCreatePRHandler());
+  router.post('/create-pr', createCreatePRHandler(settingsService));
   router.post('/pr-info', createPRInfoHandler());
   router.post(
     '/commit',
