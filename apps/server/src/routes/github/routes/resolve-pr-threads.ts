@@ -42,7 +42,7 @@ function meetsMinSeverity(threadBody: string, minSeverity: string): boolean {
   return threadLevel >= minLevel;
 }
 
-export function createResolvePRThreadsHandler(events: EventEmitter) {
+export function createResolvePRThreadsHandler(_events: EventEmitter) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
       const { projectPath, prNumber, minSeverity = 'low' } = req.body as ResolvePRThreadsRequest;
@@ -141,16 +141,6 @@ export function createResolvePRThreadsHandler(events: EventEmitter) {
           logger.warn(`Failed to resolve thread ${thread.id}: ${msg}`);
           errors.push(`${thread.id}: ${msg}`);
         }
-      }
-
-      // Step 4: Emit event for subscribers
-      if (resolvedCount > 0) {
-        events.emit('coderabbit:threads-resolved', {
-          projectPath,
-          prNumber,
-          resolvedCount,
-          skippedCount,
-        });
       }
 
       res.json({
