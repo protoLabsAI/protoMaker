@@ -167,6 +167,42 @@ When a git workflow step (commit, push, PR creation) fails, the error is persist
 
 These events drive downstream integrations: Langfuse scoring, ceremony triggers, UI real-time updates.
 
+## Drift Detection & Auto-Reconciliation
+
+Board consistency drift occurs when a feature's status doesn't automatically update after its PR merges — most commonly leaving features stuck in `blocked` or `review`. Three mechanisms work together to prevent and correct this:
+
+### Layer 1 — Auto-Mode Poll (fastest)
+
+Every time auto-mode polls for pending work, `loadPendingFeatures()` fetches recently merged PRs alongside open PRs. Any `blocked` or `review` feature whose branch has a merged PR is immediately transitioned to `done` before dependency evaluation runs. This means drift is corrected within seconds whenever auto-mode is active.
+
+### Layer 2 — GitHub Webhook (real-time)
+
+`POST /webhooks/github` handles `pull_request` closed events from GitHub. When a PR is merged, the handler looks up the feature by branch name and transitions it to `done`, emitting a `feature:pr-merged` event for UI notification.
+
+The endpoint is **enabled by default** and protected by HMAC signature verification when `webhookSecrets.github` is configured in credentials. To explicitly disable it, set `githubWebhook.enabled: false` in global settings.
+
+To configure the webhook in GitHub:
+
+1. Go to **Settings → Webhooks → Add webhook**
+2. Set payload URL to `https://api.protolabs.studio/webhooks/github`
+3. Content type: `application/json`
+4. Secret: value from `credentials.json > webhookSecrets.github`
+5. Events: **Pull requests** + **Pull request reviews**
+
+### Layer 3 — Periodic Drift Scan (catch-all)
+
+`GitHubStateChecker` runs every 5 minutes and scans all `review`, `in_progress`, and `blocked` features. For each, it finds the associated PR via `gh pr list` and emits a `pr-merged-status-stale` drift event if the PR is already merged. `ReconciliationService` handles that drift by calling `featureLoader.update(..., { status: 'done' })`.
+
+The drift check also detects and emits events for: CI failures, changes requested, approved-but-not-merged, and stale PRs (>7 days inactive).
+
+### Maximum Drift Window
+
+| Scenario                                | Maximum correction delay  |
+| --------------------------------------- | ------------------------- |
+| Auto-mode running, PR merges            | Seconds (next poll cycle) |
+| Webhook configured + GitHub sends event | < 5 seconds               |
+| Webhook not configured, auto-mode idle  | 5 minutes (drift scan)    |
+
 ## Future Work
 
 - Integrate Authority System `workItemState` with canonical statuses

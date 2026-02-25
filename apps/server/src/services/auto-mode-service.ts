@@ -5131,6 +5131,26 @@ Format your response as a structured markdown document.`;
       logger.warn('[loadPendingFeatures] Could not fetch open PRs (non-fatal):', err);
     }
 
+    // Fetch recently merged PRs to reconcile blocked/review features whose PRs already landed.
+    // Catches drift from: webhook disabled, server down during merge, or feature blocked before PR was created.
+    const mergedPrBranches = new Map<string, { number: number; mergedAt?: string }>(); // branch → PR info
+    try {
+      const { stdout: mergedPrJson } = await execAsync(
+        'gh pr list --state merged --json number,headRefName,mergedAt --limit 100',
+        { cwd: projectPath, timeout: 15000 }
+      );
+      const mergedPrs: { number: number; headRefName: string; mergedAt?: string }[] = JSON.parse(
+        mergedPrJson || '[]'
+      );
+      for (const pr of mergedPrs)
+        mergedPrBranches.set(pr.headRefName, { number: pr.number, mergedAt: pr.mergedAt });
+      logger.debug(
+        `[loadPendingFeatures] Found ${mergedPrBranches.size} recently merged PR(s) — used for stale blocked/review reconciliation`
+      );
+    } catch (err) {
+      logger.warn('[loadPendingFeatures] Could not fetch merged PRs (non-fatal):', err);
+    }
+
     try {
       const entries = await secureFs.readdir(featuresDir, {
         withFileTypes: true,
@@ -5166,6 +5186,42 @@ Format your response as a structured markdown document.`;
             status: canonicalStatus,
           };
           allFeatures.push(normalizedFeature);
+        }
+      }
+
+      // ── Merged PR reconciliation: fix blocked/review features whose PRs already landed ──
+      // Runs before dependency evaluation so a done feature doesn't get unblocked back to backlog.
+      const staleViaLinkedPr = allFeatures.filter(
+        (f) =>
+          (f.status === 'blocked' || f.status === 'review') &&
+          f.branchName &&
+          mergedPrBranches.has(f.branchName)
+      );
+      for (const feature of staleViaLinkedPr) {
+        const mergedPr = mergedPrBranches.get(feature.branchName!)!;
+        logger.info(
+          `[loadPendingFeatures] Feature ${feature.id} ("${feature.title}") has merged PR #${mergedPr.number} — reconciling to done`
+        );
+        const prevStatus = feature.status;
+        try {
+          await this.featureLoader.update(projectPath, feature.id, {
+            status: 'done',
+            prNumber: mergedPr.number,
+            prMergedAt: mergedPr.mergedAt ?? new Date().toISOString(),
+          });
+          feature.status = 'done';
+          this.events.emit('feature:status-changed', {
+            projectPath,
+            featureId: feature.id,
+            previousStatus: prevStatus,
+            newStatus: 'done',
+          });
+        } catch (error) {
+          feature.status = prevStatus;
+          logger.error(
+            `[loadPendingFeatures] Failed to reconcile feature ${feature.id} to done:`,
+            error
+          );
         }
       }
 
