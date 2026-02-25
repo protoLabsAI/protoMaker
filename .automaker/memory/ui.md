@@ -490,9 +490,17 @@ usageStats:
 - **Root cause:** PenNodeRenderer uses CSS variables injected by PenThemeProvider; context must be in component tree or variables silently fail to resolve
 - **How to avoid:** Required wrapper adds component hierarchy complexity vs. ensuring correct styling that works out-of-box
 
-### Replaced synchronous `window.prompt()` with asynchronous Dialog component + Promise-based saveIdentity(). (2026-02-25)
-- **Context:** Original UX was blocking prompt. Needed non-blocking, dismissible input that could fail gracefully.
-- **Why:** Dialog is non-blocking, allows escape/cancel flow, persists state across dismissals, better UX than modal prompt. Async allows API validation before confirm.
-- **Rejected:** Keep window.prompt (synchronous, blocks UI, bad UX). Or use inline input field without dialog (less modal clarity, harder to focus flow).
-- **Trade-offs:** Dialog UX better, but requires async state handling in component. `.then(success => {})` pattern is callback-heavy; could use async/await in event handler.
-- **Breaking if changed:** If changed back to prompt: lose non-blocking behavior and error handling capability. Revert to old UX degradation.
+#### [Gotcha] DragOverlay component must render outside normal component tree and use active.data.current for payload access, not direct closure/props (2026-02-25)
+- **Situation:** Ghost preview overlay needs to be visually on top of everything but receive data from scattered draggable components
+- **Root cause:** DragOverlay renders into portal at document level, outside reach of props passed to useDraggable. @dnd-kit separates draggable implementation (which stores data in context) from visual rendering (DragOverlay). Only access point is active.data.current in DndContext
+- **How to avoid:** Gained: clean visual layering, unclipped rendering. Lost: direct prop passing, need explicit data serialization in active.data
+
+#### [Pattern] Semantic token adoption as theming abstraction layer - replacing hardcoded color classes (bg-white, bg-gray-50, text-gray-600) with design tokens (bg-card, bg-muted, text-muted-foreground) (2026-02-25)
+- **Problem solved:** Need to support dark mode and brand compliance without changing component logic or rewriting JSX
+- **Why this works:** Decouples color values from component code at CSS level; enables theme switching without touching components; one change to token value updates all uses; supports arbitrary future themes
+- **Trade-offs:** Requires upfront semantic token infrastructure investment; components become less self-documenting; enables powerful theming at cost of indirection
+
+#### [Pattern] Leverage @dnd-kit's strategy selection based on layout direction (verticalListSortingStrategy vs horizontalListSortingStrategy) rather than generic collision detection (2026-02-25)
+- **Problem solved:** sortable-node.tsx selects strategy in SortableContext based on frame.layoutDirection
+- **Why this works:** Layout-specific strategies optimize drop targeting and visual feedback; closestCenter collision detection alone insufficient for constrained layouts
+- **Trade-offs:** More code but significantly better UX; drop zones more predictable and insertion indicators clearer

@@ -5,9 +5,15 @@ relevantTo: [patterns]
 importance: 0.7
 relatedFiles: []
 usageStats:
+<<<<<<< Updated upstream
   loaded: 28
   referenced: 15
   successfulFeatures: 15
+=======
+  loaded: 23
+  referenced: 12
+  successfulFeatures: 12
+>>>>>>> Stashed changes
 ---
 # patterns
 

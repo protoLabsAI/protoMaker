@@ -5,9 +5,9 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 157
-  referenced: 73
-  successfulFeatures: 73
+  loaded: 162
+  referenced: 74
+  successfulFeatures: 74
 ---
 # api
 
@@ -647,6 +647,7 @@ usageStats:
 - **Root cause:** Linear labels are team-scoped resources. The API doesn't support name-based label lookups - you must know the ID beforehand or query the labels list.
 - **How to avoid:** Simplified to text-based label hints in issue description. Trade structured label filtering/querying capability for reduced API calls and complexity. Production may need to query labels upfront and cache.
 
+<<<<<<< Updated upstream
 ### Used two-tier severity classification ('warn' vs 'block') for violations instead of numeric scores (0-10) or detailed enum with many levels. (2026-02-25)
 - **Context:** Defining violation severity to help callers decide whether to reject or log
 - **Why:** Binary severity simplifies decision-making: 'block' violations should always be rejected (safety boundary), 'warn' violations are suspicious but might be legitimate (audit trail). More granular scoring (numeric 0-10) doesn't add value—callers still need a cutoff threshold and reasoning becomes arbitrary.
@@ -679,3 +680,38 @@ usageStats:
 - **Rejected:** Full user object: overkill, harder to serialize. JWT/session claim: requires auth system (out of scope). localStorage only: loses cloud sync.
 - **Trade-offs:** String is lightweight but doesn't scale if features need user ID, email, permissions. Filter logic must handle case sensitivity and exact matches.
 - **Breaking if changed:** If later needing user ID or other fields, must migrate stored string to object structure. Existing string identities need schema upgrade.
+=======
+### Changed PenThemeProvider API from `themes={...} variables={...}` pattern to `document={document}` signature (2026-02-25)
+- **Context:** Updating designs canvas theming infrastructure during brand compliance audit
+- **Why:** Simpler, more focused API surface with explicit document binding; cleaner separation between theme data and application context; reduces prop drilling complexity
+- **Rejected:** Maintaining backwards-compatible props with deprecation warnings; keeping themes/variables structure
+- **Trade-offs:** Easier to use and understand API vs. immediate breaking change for existing consumers; reduced flexibility (must pass document) vs. decoupled design
+- **Breaking if changed:** All existing code using PenThemeProvider with themes/variables props fails immediately; requires coordinated update across codebase
+
+### Changed function signature from `ensureCleanWorktree(workDir, featureId): void` to `ensureCleanWorktree(workDir, featureId, branchName): WorktreeGuardResult` with structured return type (2026-02-25)
+- **Context:** Callers need visibility into what cleanup actions were actually taken (did it commit? did it push?) but void return provides no feedback
+- **Why:** Structured return enables callers to understand operation state without re-querying git. Also documents contract: this function performs cleanup and reports results
+- **Rejected:** Keep void return and have callers check git state afterward (duplicates git queries). Or add separate status methods (more API surface).
+- **Trade-offs:** Observability gained: callers know exactly what happened. API burden gained: all call sites must change to pass branchName parameter.
+- **Breaking if changed:** Any code calling the old void signature will have type errors. The return value is now required information that some callers may not handle
+
+#### [Pattern] Used `setImmediate()` to defer scan execution after HTTP response completion (2026-02-25)
+- **Problem solved:** Scan must run after resume-interrupted endpoint responds, to avoid delaying client response
+- **Why this works:** Ensures non-blocking: HTTP response sends first, then background scan runs. Prevents timeout perception.
+- **Trade-offs:** Slightly more complex control flow vs. guaranteed fast responses. Scan runs asynchronously without visibility to caller.
+
+### Made gitWorkflowError field optional in Feature type rather than required-with-null default (2026-02-25)
+- **Context:** Need backward compatibility with existing features that don't have git workflow errors
+- **Why:** Optional field means existing feature.json files are valid without modification; only features that experience git errors need the field populated. Cleaner for data model - field only exists when relevant.
+- **Rejected:** Required field with null default - would force all serialized features to include the field even when empty, polluting JSON
+- **Trade-offs:** Two-state representation (field absent vs present with error) vs single-state (field always present, null when no error); requires null/undefined checks but lighter JSON
+- **Breaking if changed:** Type definitions without gitWorkflowError in older feature.json files are still valid; but code that does `if (feature.gitWorkflowError.message)` without existence check will error
+>>>>>>> Stashed changes
+
+
+### Extended DragData interface to support both 'component' and 'node' drag types, allowing single DND provider to handle both component instantiation and node reordering (2026-02-25)
+- **Context:** DndProvider collision detection + handleDragEnd event handling unified for two distinct operations
+- **Why:** Eliminates need for separate drag systems; reuses existing @dnd-kit infrastructure and DndProvider context
+- **Rejected:** Create separate DND contexts/handlers for component instantiation vs node reordering
+- **Trade-offs:** Simpler infrastructure but more complex handleDragEnd logic with type-based operation branching
+- **Breaking if changed:** If drag type discrimination fails (e.g., drag data not properly set), wrong operation executes silently—needs strict validation at drag start

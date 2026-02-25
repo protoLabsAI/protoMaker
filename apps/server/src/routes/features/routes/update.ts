@@ -126,6 +126,18 @@ export function createUpdateHandler(
         }
       }
 
+      // Require a reason when blocking a feature
+      if (newStatus === 'blocked' && previousStatus !== 'blocked') {
+        const reason = updates.statusChangeReason?.trim();
+        if (!reason) {
+          res.status(400).json({
+            success: false,
+            error: 'A reason is required when blocking a feature. Set statusChangeReason.',
+          });
+          return;
+        }
+      }
+
       const updated = await featureLoader.update(
         projectPath,
         featureId,

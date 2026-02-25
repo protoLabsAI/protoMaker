@@ -5,9 +5,15 @@ relevantTo: [reliability]
 importance: 0.7
 relatedFiles: []
 usageStats:
+<<<<<<< Updated upstream
   loaded: 8
   referenced: 3
   successfulFeatures: 3
+=======
+  loaded: 6
+  referenced: 0
+  successfulFeatures: 0
+>>>>>>> Stashed changes
 ---
 # reliability
 

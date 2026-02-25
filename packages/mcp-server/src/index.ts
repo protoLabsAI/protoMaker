@@ -264,6 +264,7 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       if (args.dueDate !== undefined) updates.dueDate = args.dueDate;
       if (args.priority !== undefined) updates.priority = args.priority;
       if (args.isFoundation !== undefined) updates.isFoundation = args.isFoundation;
+      if (args.statusChangeReason) updates.statusChangeReason = args.statusChangeReason;
       return apiCall('/features/update', {
         projectPath: args.projectPath,
         featureId: args.featureId,
