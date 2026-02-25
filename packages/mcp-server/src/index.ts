@@ -177,6 +177,7 @@ import { schedulerTools } from './tools/scheduler-tools.js';
 import { calendarTools } from './tools/calendar-tools.js';
 import { quarantineTools } from './tools/quarantine-tools.js';
 import { fileOpsTools } from './tools/file-ops-tools.js';
+import { gitOpsTools } from './tools/git-ops-tools.js';
 
 // Aggregate all tools
 const tools: Tool[] = [
@@ -187,6 +188,7 @@ const tools: Tool[] = [
   ...orchestrationTools,
   ...projectTools,
   ...gitTools,
+  ...gitOpsTools,
   ...observabilityTools,
   ...contentTools,
   ...integrationTools,
@@ -731,6 +733,22 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
     case 'graphite_restack':
       return apiCall('/worktree/graphite-restack', {
         worktreePath: args.worktreePath,
+      });
+
+    // Git Operations
+    case 'git_enhanced_status':
+      return apiCall('/git/enhanced-status', { projectPath: args.projectPath });
+
+    case 'git_stage_files':
+      return apiCall('/git/stage-files', {
+        projectPath: args.projectPath,
+        files: args.files,
+      });
+
+    case 'git_file_details':
+      return apiCall('/git/details', {
+        projectPath: args.projectPath,
+        filePath: args.filePath,
       });
 
     // GitHub Operations
