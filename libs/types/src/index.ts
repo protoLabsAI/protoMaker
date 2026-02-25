@@ -829,6 +829,9 @@ export type {
   RetrievalMode,
 } from './knowledge.js';
 
+// Auto-mode service types (ConcurrencyManager lease tracking)
+export type { RunningFeatureLease } from './auto-mode.js';
+
 // PenFile types (vector graphics format v2.8)
 export type {
   PenColor,
