@@ -453,7 +453,7 @@ LinearSyncService moves issue to "Done" + adds comment
 
 **Worktree safety** — NEVER `cd` into worktree directories. Always use `git -C <worktree-path>` or absolute paths.
 
-**PR Ownership** — Every Automaker-created PR has a hidden watermark: `<!-- automaker:owner instance=X team=Y created=Z -->`. Before acting on any PR, call `POST /api/github/check-pr-status` and check the `ownership` field:
+**PR Ownership** — Every Automaker-created PR has a hidden watermark: `<!-- automaker:owner instance=X team=Y created=Z -->`. Before acting on any PR, call `mcp__plugin_automaker_automaker__check_pr_status` and check the `ownership` field:
 
 - `isOwnedByThisInstance: true` → act freely
 - `isOwnedByThisInstance: false`, `isStale: false` → **skip** — another live instance owns it

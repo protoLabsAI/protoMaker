@@ -78,7 +78,7 @@ If you create a PR directly (not through auto-mode), include the watermark manua
 
 ```bash
 INSTANCE_ID="$(cat data/settings.json | jq -r '.instanceId // "local"')"
-gh pr create --title "..." --body "$(cat <<'EOF'
+gh pr create --title "..." --body "$(cat <<EOF
 ## Summary
 ...
 
