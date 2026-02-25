@@ -31,12 +31,14 @@ Instead, submit your ideas through our issue templates, and our AI agents will h
 Have an idea for a new feature or improvement? We'd love to hear it!
 
 **Process:**
+
 1. [Search existing issues](https://github.com/proto-labs-ai/automaker/issues) to avoid duplicates
 2. [Submit an idea](https://github.com/proto-labs-ai/automaker/issues/new/choose) using the "Idea Submission" template
 3. Provide a clear problem statement and proposed solution
 4. Our team will review and respond
 
 **What happens next:**
+
 - **Triage:** Maintainers review your idea and label it appropriately
 - **Discussion:** We may ask clarifying questions or discuss alternatives
 - **Accepted:** If approved, the idea is added to our backlog
@@ -49,12 +51,14 @@ Have an idea for a new feature or improvement? We'd love to hear it!
 Found a bug? Help us fix it by reporting it properly.
 
 **Process:**
+
 1. [Search existing bug reports](https://github.com/proto-labs-ai/automaker/issues?q=is%3Aissue+label%3Abug) to avoid duplicates
 2. [Submit a bug report](https://github.com/proto-labs-ai/automaker/issues/new/choose) using the "Bug Report" template
 3. Include all requested information: steps to reproduce, expected behavior, actual behavior, environment details
 4. Add screenshots or logs if available
 
 **What makes a good bug report:**
+
 - Clear, descriptive title
 - Step-by-step reproduction steps
 - Expected vs. actual behavior
@@ -66,6 +70,7 @@ Found a bug? Help us fix it by reporting it properly.
 Participate in conversations about features, architecture, and the future of Automaker.
 
 **Where to engage:**
+
 - **GitHub Issues:** Comment on existing issues with your thoughts
 - **GitHub Discussions:** Share ideas, ask questions, or help others
 - **Discord:** Join our [Discord server](https://discord.gg/jjem7aEDKU) for real-time chat
@@ -75,6 +80,7 @@ Participate in conversations about features, architecture, and the future of Aut
 Documentation improvements are valuable contributions!
 
 **How to help:**
+
 - Report unclear or outdated documentation
 - Suggest new guides or tutorials
 - Point out typos or broken links
@@ -113,11 +119,13 @@ We are committed to providing a welcoming and inclusive environment for everyone
 ### Enforcement
 
 Violations of the code of conduct may result in:
+
 1. Warning from maintainers
 2. Temporary ban from community spaces
 3. Permanent ban for severe or repeated violations
 
 Report code of conduct violations to:
+
 - Discord: DM `@webdevcody`
 - Email: conduct@protolabs.studio
 
@@ -132,23 +140,27 @@ See our [Security Policy](SECURITY.md) for instructions on responsibly disclosin
 Understanding our label system helps you navigate issues:
 
 ### Type Labels
+
 - `type: idea` - Feature ideas or enhancement suggestions
 - `bug` - Something isn't working correctly
 - `documentation` - Documentation improvements
 
 ### Status Labels
+
 - `status: needs-triage` - Awaiting initial review
 - `status: accepted` - Approved for implementation
 - `status: in-progress` - Currently being worked on
 - `status: blocked` - Waiting on something else
 
 ### Priority Labels
+
 - `priority: critical` - Urgent issues requiring immediate attention
 - `priority: high` - Important issues to address soon
 - `priority: medium` - Standard priority
 - `priority: low` - Nice-to-have improvements
 
 ### Area Labels
+
 - `area: ui` - User interface changes
 - `area: agent` - AI agent functionality
 - `area: kanban` - Kanban board features
@@ -164,6 +176,7 @@ Yes! Automaker is open source under the MIT License. You're free to fork, modify
 ### Can I help with code review?
 
 Code review is handled by maintainers. However, you can:
+
 - Comment on issues with technical insights
 - Share your expertise in discussions
 - Help others troubleshoot problems in Discord
@@ -171,6 +184,7 @@ Code review is handled by maintainers. However, you can:
 ### How long does it take for ideas to be implemented?
 
 It varies based on:
+
 - Complexity of the idea
 - Current priorities and roadmap
 - Available resources
@@ -181,6 +195,7 @@ We can't provide specific timelines, but accepted ideas are tracked publicly in 
 ### What if my idea is rejected?
 
 Not all ideas can be implemented. Ideas may be declined because they:
+
 - Don't align with the project's vision
 - Are too complex relative to the benefit
 - Are better suited as plugins or extensions
