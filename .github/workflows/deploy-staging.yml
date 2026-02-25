@@ -1,3 +1,4 @@
+# SECURITY: This workflow is hardened against fork PR attacks. See docs/security/ci-hardening.md
 name: Deploy Staging
 
 on:
@@ -5,6 +6,8 @@ on:
     branches:
       - main
   workflow_dispatch:
+
+permissions: read-all
 
 jobs:
   deploy:
