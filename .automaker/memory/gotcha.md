@@ -45,3 +45,8 @@ usageStats:
 - **Situation:** Three functions (areDependenciesSatisfied, getBlockingDependencies, getBlockingDependenciesFromMap) each had their own copy of which statuses count as 'satisfied'
 - **Root cause:** Each function may have evolved independently to solve different caller needs. Extracting to constant might seem premature optimization until a change reveals the cost.
 - **How to avoid:** Explicit local context (understand status list in each function) vs DRY principle (maintenance burden of 3 copies)
+
+#### [Gotcha] Pre-existing build issues in monorepo blocked full verification: platform package (p-limit import error) and UI app (react-day-picker dependency) (2026-02-25)
+- **Situation:** Could verify types package builds and types export correctly, but couldn't verify full app build or runtime behavior
+- **Root cause:** Monorepo with multiple interdependent packages. One package's build failure cascades. Implementation is likely correct but unverifiable in broken build state.
+- **How to avoid:** Could implement feature but couldn't prove it works end-to-end. Partial verification still valuable (types correct, no compilation errors in changed files)

@@ -5,9 +5,9 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 122
-  referenced: 64
-  successfulFeatures: 64
+  loaded: 130
+  referenced: 67
+  successfulFeatures: 67
 ---
 # api
 
@@ -622,3 +622,27 @@ usageStats:
 - **Rejected:** Storing theme on parser instance or in document metadata - would require re-parsing to switch themes
 - **Trade-offs:** Easier: Flexibility, testability; Harder: Caller must manage theme context and pass it correctly
 - **Breaking if changed:** If theme was baked into document, couldn't generate multiple theme variants from single parsed file without re-parsing
+
+### VariableResolver type imported from @protolabs-ai/types rather than defined inline in style-utils.ts (2026-02-25)
+- **Context:** Style utilities need to accept a resolver function with specific signature for theme variable resolution
+- **Why:** Centralized type definition ensures consistency across the codebase; changes to resolver contract stay synchronized across all consumers
+- **Rejected:** Inline types or use 'any' would avoid the import but creates risk of signature drift between utils and context
+- **Trade-offs:** Requires monorepo type coordination but prevents silent breaking changes when resolver signature evolves
+- **Breaking if changed:** If types are changed in @protolabs-ai/types without updating callers, style-utils become type-incompatible at compile time (safe failure)
+
+#### [Gotcha] Environment variable interpolation in Grafana provisioned configs uses ${VAR_NAME} syntax, not $VAR_NAME or ${VAR_NAME} as bash/Docker (2026-02-25)
+- **Situation:** Discord webhook URL stored in DISCORD_WEBHOOK_INFRA environment variable, referenced in contactpoints.yml as ${DISCORD_WEBHOOK_INFRA}
+- **Root cause:** Grafana's provisioning system has its own variable interpolation layer separate from container runtime
+- **How to avoid:** ${VAR_NAME} syntax is Grafana-specific knowledge required. Benefit is that provisioning works consistently across deployment methods (K8s, Docker, manual).
+
+### Discord contact point template uses Go template syntax ({{ .GroupLabels.alertname }}) for message formatting, not Jinja or other template engines (2026-02-25)
+- **Context:** Alert messages need dynamic content: alert name, severity, dashboard links, timestamps - all embedded in single Discord message template
+- **Why:** Grafana unified alerting standardized on Go templates for all message templates. Using Go templates ensures consistency across contact point types (Discord, email, webhook).
+- **Rejected:** Custom Go template in webhook handler: Would require separate service, more infrastructure, harder to version control
+- **Trade-offs:** Go templates provide full expression power within Grafana. Benefit is templates are version-controlled with alerting config. Cost is Go template syntax is less intuitive than other template languages.
+- **Breaking if changed:** If someone uses Jinja syntax or other template language, template rendering fails silently and generic message gets sent to Discord instead of formatted alert details.
+
+#### [Gotcha] Linear API requires team-specific label IDs that aren't easily discoverable without additional API calls (2026-02-25)
+- **Situation:** Attempted to apply labels to created Linear issues using label names. Discovered Linear only accepts label IDs, which require querying the team's labels endpoint first.
+- **Root cause:** Linear labels are team-scoped resources. The API doesn't support name-based label lookups - you must know the ID beforehand or query the labels list.
+- **How to avoid:** Simplified to text-based label hints in issue description. Trade structured label filtering/querying capability for reduced API calls and complexity. Production may need to query labels upfront and cache.

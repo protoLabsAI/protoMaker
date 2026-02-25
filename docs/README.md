@@ -95,6 +95,7 @@ DevOps documentation in [`docs/infra/`](./infra/):
 | [Design Philosophy](./dev/design-philosophy.md)           | UI design direction (Linear, Vercel, shadcn/ui)      |
 | [Frontend Philosophy](./dev/frontend-philosophy.md)       | Gold standard frontend decisions                     |
 | [UI Architecture](./dev/ui-architecture.md)               | Frontend structure and patterns                      |
+| [UI Standards](./dev/ui-standards.md)                     | Component library, forbidden patterns, enforcement   |
 | [Hivemind Interfaces](./dev/hivemind-interfaces.md)       | Service abstractions for multi-instance architecture |
 | [Testing Patterns](./dev/testing-patterns.md)             | Test patterns and anti-patterns                      |
 | [Clean Code](./dev/clean-code.md)                         | Code quality standards and patterns                  |

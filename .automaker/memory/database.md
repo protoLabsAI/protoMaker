@@ -118,3 +118,10 @@ usageStats:
 - **Problem solved:** DeployProcessor and EscalateProcessor both call save() but with different outcome values and different supplemental fields (failureAnalysis only on escalation)
 - **Why this works:** Discriminated union pattern: single schema with outcome tag determines which optional fields are present, avoiding multiple schema variants
 - **Trade-offs:** Gains: Single schema evolution point, flexible for new outcomes. Loses: Schema validation must be conditional on outcome field
+
+### Using TSDB schema with filesystem storage in Loki configuration instead of older BoltDB-based schemas or cloud storage backends (2026-02-25)
+- **Context:** Selecting storage architecture for self-hosted log aggregation in Loki v3.x
+- **Why:** TSDB schema in Loki v3.x is optimized for performance and recommended upstream; filesystem backend enables self-hosted deployment without cloud dependencies
+- **Rejected:** Older schema versions (legacy); cloud storage (S3, GCS) which adds operational complexity and latency
+- **Trade-offs:** Better query performance and simpler deployment vs limited horizontal scalability; schema version is immutable once data is written
+- **Breaking if changed:** Schema version must match across all Loki instances; changing schema requires data migration or reindexing
