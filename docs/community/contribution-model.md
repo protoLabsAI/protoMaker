@@ -50,6 +50,7 @@ Before submitting a new idea, search existing issues to avoid duplicates:
 3. Check both open and closed issues (we may have already implemented it)
 
 If you find a similar issue:
+
 - Add a 👍 reaction to show support
 - Add a comment with your specific use case or variation
 
@@ -74,13 +75,15 @@ Each template has specific fields. Here's what to include:
 **Title**: Short, clear description (e.g., "Add dark mode toggle to settings")
 
 **Problem**: What problem does this solve? Who is affected?
-```
+
+```text
 Example: "Users working at night find the bright white UI straining on their eyes.
 Many modern apps have dark mode, and users expect it."
 ```
 
 **Proposed solution**: What should the feature do? Be specific about behavior.
-```
+
+```text
 Example: "Add a dark mode toggle in Settings > Appearance. When enabled:
 - All panels should use dark backgrounds (#1a1a1a) with light text (#e0e0e0)
 - Code editor should switch to a dark theme (e.g., GitHub Dark)
@@ -88,7 +91,8 @@ Example: "Add a dark mode toggle in Settings > Appearance. When enabled:
 ```
 
 **Alternatives considered** (optional): Other approaches you thought about
-```
+
+```text
 Example: "Could auto-detect system theme, but explicit toggle gives users control"
 ```
 
@@ -99,13 +103,15 @@ Example: "Could auto-detect system theme, but explicit toggle gives users contro
 **Title**: What's broken (e.g., "Syntax error in generated TypeScript")
 
 **Bug description**: What happened vs. what should happen
-```
+
+```text
 Example: "When I ask the agent to create a TypeScript interface, it generates code
 with a syntax error: missing semicolon after property declarations."
 ```
 
 **Reproduction steps**: Exact steps to reproduce the bug
-```
+
+```text
 1. Open a new project
 2. Tell agent: "Create an interface User with name and email fields"
 3. Observe generated code in src/types.ts
@@ -113,11 +119,13 @@ with a syntax error: missing semicolon after property declarations."
 ```
 
 **Expected behavior**: What should happen instead
-```
+
+```text
 "Generated code should be valid TypeScript with proper semicolons"
 ```
 
 **Environment**:
+
 - protoLabs version: (e.g., v0.2.0)
 - OS: (e.g., macOS 14.0, Ubuntu 22.04)
 - Browser (if UI issue): (e.g., Chrome 120)
@@ -129,13 +137,15 @@ with a syntax error: missing semicolon after property declarations."
 **Title**: Which doc needs fixing (e.g., "Installation guide missing Node.js version")
 
 **Documentation issue**: What's wrong or missing
-```
+
+```text
 Example: "The installation guide doesn't mention what version of Node.js is required.
 Users might install on an unsupported version and get errors."
 ```
 
 **Suggested fix**: What should be changed
-```
+
+```text
 Example: "Add a requirements section at the top:
 - Node.js 18.x or higher
 - npm 9.x or higher"
@@ -146,6 +156,7 @@ Example: "Add a requirements section at the top:
 ### Step 4: Submit and wait for triage
 
 After submitting:
+
 1. A maintainer will review within **2-3 business days**
 2. They'll add labels (e.g., `feature`, `bug`, `priority:high`)
 3. They may ask clarifying questions
@@ -162,6 +173,7 @@ A maintainer reviews your submission and decides:
 - **Decline**: Close with explanation (duplicate, out of scope, or won't fix)
 
 **Accepted submissions** get:
+
 - Label indicating type (`feature`, `bug`, `docs`)
 - Priority label (`priority:high`, `priority:medium`, `priority:low`)
 - Size label (`size:small`, `size:medium`, `size:large`)
@@ -203,15 +215,15 @@ You can track releases at [github.com/proto-labs-ai/automaker/releases](https://
 
 ### Timeline expectations
 
-| Stage              | Duration           | Notes                                      |
-| ------------------ | ------------------ | ------------------------------------------ |
-| Triage             | 2-3 business days  | May be faster for critical bugs           |
-| Agent assignment   | Immediate          | Automatic once approved                    |
-| Implementation     | 1-7 days           | Varies by size and complexity              |
-| Code review        | 1-2 days           | Automated + human review                   |
-| Merge to main      | After review pass  | Immediate if checks pass                   |
-| Staging deployment | Immediate          | Automatic via GitHub Actions               |
-| Production release | Weekly or milestone| Check roadmap for next release date        |
+| Stage              | Duration            | Notes                               |
+| ------------------ | ------------------- | ----------------------------------- |
+| Triage             | 2-3 business days   | May be faster for critical bugs     |
+| Agent assignment   | Immediate           | Automatic once approved             |
+| Implementation     | 1-7 days            | Varies by size and complexity       |
+| Code review        | 1-2 days            | Automated + human review            |
+| Merge to main      | After review pass   | Immediate if checks pass            |
+| Staging deployment | Immediate           | Automatic via GitHub Actions        |
+| Production release | Weekly or milestone | Check roadmap for next release date |
 
 **Note**: Timelines are estimates. High-priority bugs may be expedited; large features may take longer.
 
@@ -222,11 +234,13 @@ Your **trust tier** determines how strictly your submissions are validated (see 
 ### Initial tier (Tier 1: GitHub user)
 
 When you first submit an idea:
+
 - **Trust tier**: 1 (GitHub user)
 - **Validation**: Full validation (all quarantine stages)
 - **Privileges**: Can submit ideas, subject to full sanitization
 
 Your submission goes through all 4 quarantine stages:
+
 1. Gate: Full validation mode
 2. Syntax: Length, unicode, control characters
 3. Content: Prompt injection, markdown sanitization
@@ -235,11 +249,13 @@ Your submission goes through all 4 quarantine stages:
 ### After first merge (Tier 2: Contributor)
 
 Once your first idea is successfully implemented and merged:
+
 - **Trust tier**: 2 (Contributor)
 - **Validation**: Advisory mode (warnings don't block)
 - **Privileges**: Can submit ideas with less friction
 
 Your submissions still go through quarantine, but:
+
 - Violations are logged but don't block submission
 - Maintainers review violations and may reject manually
 - You've proven you're not submitting malicious ideas
@@ -249,11 +265,13 @@ This is **automatic** — no action required. The system tracks merged features 
 ### Maintainer tier (Tier 3)
 
 If you become a team member:
+
 - **Trust tier**: 3 (Maintainer)
 - **Validation**: Bypass all stages
 - **Privileges**: Full trust, no quarantine
 
 This tier is **manually granted** by project admins. To become a maintainer:
+
 1. Submit multiple high-quality ideas (typically 5-10 merged features)
 2. Demonstrate understanding of project goals and architecture
 3. Show consistent positive engagement with the community
@@ -268,6 +286,7 @@ You can't check your tier directly, but you can infer it:
 - **Tier 3**: You've been explicitly granted maintainer access
 
 Maintainers can check tiers via the API:
+
 ```bash
 curl -X POST https://api.protolabs.studio/api/quarantine/trust-tiers/list \
   -H "Authorization: Bearer YOUR_TOKEN"
@@ -282,6 +301,7 @@ curl -X POST https://api.protolabs.studio/api/quarantine/trust-tiers/list \
 ### Q: What if my idea is rejected?
 
 **A**: We'll explain why in the issue. Common reasons:
+
 - **Duplicate**: Already exists or in progress
 - **Out of scope**: Doesn't align with project goals
 - **Won't fix**: Intentional behavior or design decision
@@ -295,6 +315,7 @@ You can appeal by providing additional context or use cases.
 ### Q: How detailed should my idea be?
 
 **A**: More detail is better, but not required. The AI agents will ask clarifying questions if needed. Focus on:
+
 - **What** you want (the outcome)
 - **Why** you want it (the problem)
 - **Who** benefits (the use case)
@@ -312,11 +333,13 @@ Don't worry about **how** to implement it — the agents will figure that out.
 ### Q: What if my submission gets stuck in quarantine?
 
 **A**: If your submission is flagged by the quarantine pipeline:
+
 1. A maintainer will review it manually
 2. They'll either approve (if false positive) or reject (if unsafe)
 3. You'll get a comment explaining the decision
 
 Common false positives:
+
 - Legitimate use of words like "ignore" in a different context
 - File paths that look like traversal but aren't (e.g., `../README.md` in docs)
 
@@ -325,6 +348,7 @@ If rejected, revise and resubmit without the flagged content.
 ### Q: How do I report a security vulnerability?
 
 **A**: Don't use public issues for security vulnerabilities. Follow the [SECURITY.md](../../SECURITY.md) process:
+
 1. Email security contact (listed in SECURITY.md)
 2. Include detailed reproduction steps
 3. Wait for acknowledgment before public disclosure
@@ -332,6 +356,7 @@ If rejected, revise and resubmit without the flagged content.
 ### Q: What if I have a question, not a feature idea?
 
 **A**: Use GitHub Discussions instead of issues:
+
 - [github.com/proto-labs-ai/automaker/discussions](https://github.com/proto-labs-ai/automaker/discussions)
 
 Issues are for actionable ideas; discussions are for questions, brainstorming, and general feedback.
@@ -339,6 +364,7 @@ Issues are for actionable ideas; discussions are for questions, brainstorming, a
 ### Q: Can I contribute by triaging issues?
 
 **A**: Not currently. Triage is handled by maintainers and AI agents. You can help by:
+
 - Adding 👍 reactions to issues you care about (signals priority)
 - Commenting with additional use cases or context
 - Answering questions from other users in discussions
@@ -350,6 +376,7 @@ Issues are for actionable ideas; discussions are for questions, brainstorming, a
 ### Q: How do I know if my idea is being worked on?
 
 **A**: Check the issue labels:
+
 - `status:triaged` — Approved, waiting for agent assignment
 - `status:in-progress` — Agent is implementing
 - `status:review` — PR created, under review
@@ -364,6 +391,7 @@ You'll also get notifications when the agent comments or creates a PR.
 ### Q: What if I want to implement my own feature locally?
 
 **A**: You can fork the repo and implement locally, but:
+
 - We won't merge your implementation (submit an idea instead)
 - You'll need to maintain your fork separately
 - Your changes may conflict with our releases
@@ -373,6 +401,7 @@ We recommend submitting an idea and waiting for the agent implementation.
 ### Q: How can I speed up implementation of my idea?
 
 **A**: You can't directly control timing, but you can help by:
+
 - Providing very detailed requirements upfront
 - Adding screenshots, mockups, or examples
 - Responding quickly to clarifying questions
