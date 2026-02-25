@@ -24,6 +24,7 @@ import {
 import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { createLogger } from '@protolabs-ai/utils';
 import { LangfuseClient } from '@protolabs-ai/observability';
+import { isLangfuseReady } from './langfuse-guard.js';
 import { wrapSubgraph } from '../graphs/utils/subgraph-wrapper.js';
 import {
   createSectionWriterGraph,
@@ -194,7 +195,7 @@ Return ONLY a JSON array of strings, no markdown formatting. Example:
     const endTime = new Date();
 
     // Track generation in Langfuse
-    if (config.langfuseClient?.isAvailable() && state.traceId) {
+    if (isLangfuseReady(config.langfuseClient) && state.traceId) {
       config.langfuseClient.createGeneration({
         traceId: state.traceId,
         name: 'generate_queries',
@@ -338,7 +339,7 @@ Return ONLY the JSON object, no markdown formatting.`;
     const endTime = new Date();
 
     // Track generation in Langfuse
-    if (config.langfuseClient?.isAvailable() && state.traceId) {
+    if (isLangfuseReady(config.langfuseClient) && state.traceId) {
       config.langfuseClient.createGeneration({
         traceId: state.traceId,
         name: `research_delegate:${query.slice(0, 40)}`,
@@ -625,7 +626,7 @@ Return ONLY the JSON, no markdown formatting.`;
     const endTime = new Date();
 
     // Track generation in Langfuse
-    if (config.langfuseClient?.isAvailable() && state.traceId) {
+    if (isLangfuseReady(config.langfuseClient) && state.traceId) {
       config.langfuseClient.createGeneration({
         traceId: state.traceId,
         name: 'generate_outline',

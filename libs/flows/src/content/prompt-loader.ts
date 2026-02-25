@@ -3,6 +3,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { LangfuseClient } from '@protolabs-ai/observability';
 import { createLogger } from '@protolabs-ai/utils';
+import { isLangfuseReady } from './langfuse-guard.js';
 
 const logger = createLogger('PromptLoader');
 
@@ -125,7 +126,7 @@ export async function compilePrompt(options: CompilePromptOptions): Promise<Comp
   let promptVersion: number | undefined;
 
   // Try Langfuse first if client provided
-  if (langfuseClient && langfuseClient.isAvailable()) {
+  if (isLangfuseReady(langfuseClient)) {
     try {
       logger.debug(`Attempting to fetch prompt from Langfuse: ${name}`, { version });
       const langfusePrompt = await langfuseClient.getPrompt(name, version);
@@ -243,7 +244,7 @@ export async function loadPromptTemplate(
   let version: number | undefined;
 
   // Try Langfuse first if client provided
-  if (langfuseClient && langfuseClient.isAvailable()) {
+  if (isLangfuseReady(langfuseClient)) {
     try {
       const langfusePrompt = await langfuseClient.getPrompt(name);
 

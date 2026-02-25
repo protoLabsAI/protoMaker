@@ -11,6 +11,7 @@ import type { BaseChatModel } from '@langchain/core/language_models/chat_models'
 import type { RunnableConfig } from '@langchain/core/runnables';
 import { createLogger } from '@protolabs-ai/utils';
 import { LangfuseClient } from '@protolabs-ai/observability';
+import { isLangfuseReady } from '../langfuse-guard.js';
 import { compilePrompt } from '../prompt-loader.js';
 import { extractAllTags, extractTag, extractRequiredEnum } from '../xml-parser.js';
 import { copilotkitEmitState, emitHeartbeat } from '../copilotkit-utils.js';
@@ -463,7 +464,7 @@ export async function technicalReviewerNode(
     const generationStartTime = new Date();
     let generationId: string | undefined;
 
-    if (langfuseClient?.isAvailable() && traceId) {
+    if (isLangfuseReady(langfuseClient) && traceId) {
       generationId = `gen-tech-review-${Date.now()}`;
       langfuseClient.createGeneration({
         traceId,
@@ -498,7 +499,7 @@ export async function technicalReviewerNode(
     }
 
     // Update Langfuse trace
-    if (langfuseClient?.isAvailable() && traceId && generationId) {
+    if (isLangfuseReady(langfuseClient) && traceId && generationId) {
       langfuseClient.createGeneration({
         traceId,
         id: generationId,
@@ -597,7 +598,7 @@ export async function styleReviewerNode(
     const generationStartTime = new Date();
     let generationId: string | undefined;
 
-    if (langfuseClient?.isAvailable() && traceId) {
+    if (isLangfuseReady(langfuseClient) && traceId) {
       generationId = `gen-style-review-${Date.now()}`;
       langfuseClient.createGeneration({
         traceId,
@@ -632,7 +633,7 @@ export async function styleReviewerNode(
     }
 
     // Update Langfuse trace
-    if (langfuseClient?.isAvailable() && traceId && generationId) {
+    if (isLangfuseReady(langfuseClient) && traceId && generationId) {
       langfuseClient.createGeneration({
         traceId,
         id: generationId,
@@ -774,7 +775,7 @@ export async function factCheckerNode(
     const generationStartTime = new Date();
     let generationId: string | undefined;
 
-    if (langfuseClient?.isAvailable() && traceId) {
+    if (isLangfuseReady(langfuseClient) && traceId) {
       generationId = `gen-fact-check-${Date.now()}`;
       langfuseClient.createGeneration({
         traceId,
@@ -810,7 +811,7 @@ export async function factCheckerNode(
     }
 
     // Update Langfuse trace
-    if (langfuseClient?.isAvailable() && traceId && generationId) {
+    if (isLangfuseReady(langfuseClient) && traceId && generationId) {
       langfuseClient.createGeneration({
         traceId,
         id: generationId,

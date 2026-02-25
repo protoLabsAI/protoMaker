@@ -13,6 +13,7 @@ import { StateGraph, Annotation } from '@langchain/langgraph';
 import { z } from 'zod';
 import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { createLogger } from '@protolabs-ai/utils';
+import { isLangfuseReady } from '../langfuse-guard.js';
 import { LangfuseClient } from '@protolabs-ai/observability';
 import { extractTag, extractAllTags, extractRequiredTag } from '../xml-parser.js';
 
@@ -129,7 +130,7 @@ async function generateNode(
   const generationStartTime = new Date();
   let generationId: string | undefined;
 
-  if (langfuseClient?.isAvailable() && traceId) {
+  if (isLangfuseReady(langfuseClient) && traceId) {
     generationId = `gen-${Date.now()}`;
     langfuseClient.createGeneration({
       traceId,
@@ -173,7 +174,7 @@ async function generateNode(
     }
 
     // Update trace with successful generation
-    if (langfuseClient?.isAvailable() && traceId && generationId) {
+    if (isLangfuseReady(langfuseClient) && traceId && generationId) {
       langfuseClient.createGeneration({
         traceId,
         id: generationId,
@@ -214,7 +215,7 @@ async function generateNode(
     const generationEndTime = new Date();
 
     // Update trace with error
-    if (langfuseClient?.isAvailable() && traceId && generationId) {
+    if (isLangfuseReady(langfuseClient) && traceId && generationId) {
       langfuseClient.createGeneration({
         traceId,
         id: generationId,
