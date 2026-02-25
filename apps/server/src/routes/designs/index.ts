@@ -14,6 +14,7 @@ import { createListHandler } from './routes/list.js';
 import { createReadHandler } from './routes/read.js';
 import { createWriteHandler } from './routes/write.js';
 import { createCreateHandler } from './routes/create.js';
+import { createDirectoryHandler, createStatHandler } from './routes/directory.js';
 
 export function createDesignsRoutes(): Router {
   const router = Router();
@@ -23,6 +24,10 @@ export function createDesignsRoutes(): Router {
   router.post('/read', validatePathParams('projectPath', 'filePath'), createReadHandler());
   router.post('/write', validatePathParams('projectPath', 'filePath'), createWriteHandler());
   router.post('/create', validatePathParams('projectPath', 'filePath'), createCreateHandler());
+
+  // Directory operations for web mode (HTTP fallback for Electron IPC)
+  router.post('/directory', createDirectoryHandler());
+  router.post('/stat', createStatHandler());
 
   return router;
 }

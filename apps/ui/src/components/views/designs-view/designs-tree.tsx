@@ -30,16 +30,54 @@ export function DesignsTree({ projectPath }: DesignsTreeProps) {
     loadFileTree();
   }, [projectPath]);
 
+  // Check if Electron API is available
+  const isElectronMode = typeof window !== 'undefined' && window.electronAPI;
+
+  // HTTP API fallback for web mode
+  const readDirectoryHttp = async (path: string) => {
+    const response = await fetch('/api/designs/directory', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to read directory');
+    }
+
+    return await response.json();
+  };
+
+  const statFileHttp = async (path: string) => {
+    const response = await fetch('/api/designs/stat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to stat file');
+    }
+
+    return await response.json();
+  };
+
   const loadFileTree = useCallback(async () => {
     setLoadingTree(true);
     setError(null);
 
     try {
-      const api = getElectronAPI();
       const designsPath = `${projectPath}/designs`;
 
       // Check if designs directory exists
-      const dirResult = await api.readDirectory(designsPath);
+      let dirResult;
+      if (isElectronMode) {
+        const api = getElectronAPI();
+        dirResult = await api.readDirectory(designsPath);
+      } else {
+        dirResult = await readDirectoryHttp(designsPath);
+      }
+
       if (!dirResult.success) {
         setFileTree([]);
         setError('No designs directory found');
@@ -57,54 +95,69 @@ export function DesignsTree({ projectPath }: DesignsTreeProps) {
     } finally {
       setLoadingTree(false);
     }
-  }, [projectPath, setFileTree, setLoadingTree]);
+  }, [projectPath, setFileTree, setLoadingTree, isElectronMode]);
 
-  const buildFileTree = async (basePath: string, relativePath: string): Promise<FileTreeNode[]> => {
-    const api = getElectronAPI();
-    const fullPath = relativePath ? `${basePath}/${relativePath}` : basePath;
+  const buildFileTree = useCallback(
+    async (basePath: string, relativePath: string): Promise<FileTreeNode[]> => {
+      const fullPath = relativePath ? `${basePath}/${relativePath}` : basePath;
 
-    const result = await api.readDirectory(fullPath);
-    if (!result.success || !result.files) {
-      return [];
-    }
-
-    const nodes: FileTreeNode[] = [];
-
-    for (const file of result.files) {
-      const filePath = relativePath ? `${relativePath}/${file}` : file;
-      const fileFullPath = `${basePath}/${filePath}`;
-
-      // Check if it's a directory
-      const statResult = await api.statFile(fileFullPath);
-      const isDirectory = statResult.success && statResult.isDirectory;
-
-      if (isDirectory) {
-        // Recursively build subtree
-        const children = await buildFileTree(basePath, filePath);
-        nodes.push({
-          name: file,
-          path: filePath,
-          type: 'folder',
-          children,
-        });
-      } else if (file.endsWith('.pen')) {
-        // Only include .pen files
-        nodes.push({
-          name: file,
-          path: filePath,
-          type: 'file',
-        });
+      let result;
+      if (isElectronMode) {
+        const api = getElectronAPI();
+        result = await api.readDirectory(fullPath);
+      } else {
+        result = await readDirectoryHttp(fullPath);
       }
-    }
 
-    // Sort: folders first, then files, alphabetically
-    return nodes.sort((a, b) => {
-      if (a.type !== b.type) {
-        return a.type === 'folder' ? -1 : 1;
+      if (!result.success || !result.files) {
+        return [];
       }
-      return a.name.localeCompare(b.name);
-    });
-  };
+
+      const nodes: FileTreeNode[] = [];
+
+      for (const file of result.files) {
+        const filePath = relativePath ? `${relativePath}/${file}` : file;
+        const fileFullPath = `${basePath}/${filePath}`;
+
+        // Check if it's a directory
+        let statResult;
+        if (isElectronMode) {
+          const api = getElectronAPI();
+          statResult = await api.statFile(fileFullPath);
+        } else {
+          statResult = await statFileHttp(fileFullPath);
+        }
+        const isDirectory = statResult.success && statResult.isDirectory;
+
+        if (isDirectory) {
+          // Recursively build subtree
+          const children = await buildFileTree(basePath, filePath);
+          nodes.push({
+            name: file,
+            path: filePath,
+            type: 'folder',
+            children,
+          });
+        } else if (file.endsWith('.pen')) {
+          // Only include .pen files
+          nodes.push({
+            name: file,
+            path: filePath,
+            type: 'file',
+          });
+        }
+      }
+
+      // Sort: folders first, then files, alphabetically
+      return nodes.sort((a, b) => {
+        if (a.type !== b.type) {
+          return a.type === 'folder' ? -1 : 1;
+        }
+        return a.name.localeCompare(b.name);
+      });
+    },
+    [isElectronMode]
+  );
 
   const handleFileClick = useCallback(
     async (node: FileTreeNode) => {
@@ -116,10 +169,30 @@ export function DesignsTree({ projectPath }: DesignsTreeProps) {
       // Load the .pen file
       setLoadingDocument(true);
       try {
-        const api = getElectronAPI();
         const fullPath = `${projectPath}/designs/${node.path}`;
 
-        const result = await api.readFile(fullPath);
+        let result;
+        if (isElectronMode) {
+          const api = getElectronAPI();
+          result = await api.readFile(fullPath);
+        } else {
+          // Use existing HTTP API endpoint for reading files
+          const response = await fetch('/api/designs/read', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              projectPath,
+              filePath: node.path,
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to load design file');
+          }
+
+          result = await response.json();
+        }
+
         if (!result.success || !result.content) {
           toast.error('Failed to load design file');
           return;
@@ -138,7 +211,7 @@ export function DesignsTree({ projectPath }: DesignsTreeProps) {
         setLoadingDocument(false);
       }
     },
-    [projectPath, toggleFolder, setSelectedFile, setLoadingDocument]
+    [projectPath, toggleFolder, setSelectedFile, setLoadingDocument, isElectronMode]
   );
 
   return (
