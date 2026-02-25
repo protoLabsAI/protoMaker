@@ -12,6 +12,12 @@ This is a greenfield codebase. We are building the future, not maintaining the p
 - **No shortcuts.** Do it right the first time. If that means touching 10 files to propagate a type change, touch 10 files.
 - **Do things correctly or not at all.** Every line of code should be production-quality from day one.
 
+## Working Style
+
+- **Implementation first.** Unless explicitly asked to plan, start writing code. Don't spend the session on exploration and subtask creation without producing output. Read the specific files you need, then implement.
+- **Confirm the target upfront.** Before starting work, state which specific file/component/service/endpoint you'll modify. If it's ambiguous, ask — don't assume.
+- **Check for recent related work.** Before implementing anything, check open PRs and recent commits for work that overlaps. Running `gh pr list --state open` and `git log --oneline -10 origin/main` prevents duplicating what's already shipped.
+
 ## Planning & Approach
 
 - When creating plans, start with the minimal viable scope. Do NOT propose multi-phase plans unless explicitly asked. Default to the smallest, lowest-risk approach first.
@@ -37,10 +43,22 @@ See `docs/dev/branch-strategy.md` for the full strategy.
 - Agent feature PRs target `dev` by default (`prBaseBranch: 'dev'` in `DEFAULT_GIT_WORKFLOW_SETTINGS`).
 - Before committing, run `git status` and verify only intended files are staged. Watch for accidentally staged deletions from previously merged PRs.
 - `.automaker/memory/` files are updated by agents during autonomous work. Include memory changes in your commits alongside related code changes — don't leave them as unstaged drift.
+- **Before opening a PR**, check for concurrent open PRs that touch the same files (`gh pr list --state open`). Merge conflicts from uncoordinated PRs are avoidable.
+- **Always read `packageManager` from `package.json`** before assuming pnpm/npm/node versions in CI config. Never guess.
 
 ## Session Continuation
 
 - When continuing a previous session or autonomous loop, always check MCP server connectivity and board status FIRST before attempting any agent launches or API calls.
+
+## MCP & External Tools
+
+- Before building a workflow around an MCP tool, verify it's actually responding. If tools aren't loading, suggest restarting the session or checking that the backing service is running (dev server, Pencil desktop app, etc.).
+- All Automaker operations go through MCP tools (`mcp__plugin_automaker_automaker__*`). Never make direct HTTP calls to the server — the MCP plugin handles auth automatically.
+
+## Code Standards
+
+- This is a TypeScript-first codebase. All new code is TypeScript. When fixing type errors, grep for existing patterns before inventing new approaches.
+- `npm run build` (Vite) does NOT type-check. Always verify with `npx tsc --noEmit` when type correctness is in question.
 
 ## Project Overview
 
