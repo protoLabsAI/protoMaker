@@ -504,3 +504,10 @@ usageStats:
 - **Problem solved:** sortable-node.tsx selects strategy in SortableContext based on frame.layoutDirection
 - **Why this works:** Layout-specific strategies optimize drop targeting and visual feedback; closestCenter collision detection alone insufficient for constrained layouts
 - **Trade-offs:** More code but significantly better UX; drop zones more predictable and insertion indicators clearer
+
+### HTML table format for platform downloads instead of bullet lists or separate sections per platform (2026-02-25)
+- **Context:** Need to present 6 download options (macOS .dmg/.zip, Windows .exe, Linux .AppImage/.deb/.rpm) clearly without overwhelming users
+- **Why:** Table format enables column alignment (Platform, Type, Link), visual grouping, and rapid scanning. Users can quickly find their exact platform-file combination without parsing mixed list formats
+- **Rejected:** Bullet lists (harder to compare across platforms). Separate sections per OS (verbose, harder to find). Description lists (loses platform alignment)
+- **Trade-offs:** HTML tables are more complex markdown than simple lists. But provide measurably better UX for platform selection - users find their download in ~3 seconds vs 15 seconds
+- **Breaking if changed:** Without structured table layout, users must scan entire list linearly. Platform selection becomes friction point instead of clear path
