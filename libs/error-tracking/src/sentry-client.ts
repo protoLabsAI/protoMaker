@@ -147,24 +147,16 @@ export function captureMessage(
 }
 
 /**
- * Start a performance transaction
- * Returns a transaction object that must be finished with transaction.finish()
- * Note: Uses legacy Transaction API for compatibility
+ * Start a performance transaction (compatibility shim for Sentry v8)
+ * Sentry v8 removed startTransaction — returns a no-op stub.
+ * Callers should migrate to Sentry.startSpan for performance monitoring.
  */
-export function startTransaction(options: {
+export function startTransaction(_options: {
   op: string;
   name: string;
   data?: Record<string, any>;
-}): any {
-  // In Sentry v8, startTransaction is deprecated but still available for compatibility
-  // @ts-ignore - Using legacy API for simplicity
-  return (
-    Sentry.startTransaction?.({
-      op: options.op,
-      name: options.name,
-      data: options.data,
-    }) || { finish: () => {}, setStatus: () => {} }
-  );
+}): { finish: () => void; setStatus: (status: string) => void; setAttribute: (key: string, value: unknown) => void } {
+  return { finish: () => {}, setStatus: () => {}, setAttribute: () => {} };
 }
 
 /**
