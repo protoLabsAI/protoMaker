@@ -199,6 +199,7 @@ import { LinearIntakeBridge } from './services/linear-intake-bridge.js';
 import { createDeployRoutes } from './routes/deploy/index.js';
 import { createIntegrityRoutes } from './routes/integrity.js';
 import { createAnalyticsRoutes } from './routes/analytics.js';
+import { createAlertsRoutes } from './routes/alerts/index.js';
 import { createEngineRoutes } from './routes/engine/index.js';
 import { EventStreamBuffer } from './lib/event-stream-buffer.js';
 import { AntagonisticReviewService } from './services/antagonistic-review-service.js';
@@ -1363,6 +1364,8 @@ app.use('/api/metrics', createPrometheusRoute());
 
 // Mount webhooks at root level (unauthenticated - uses signature verification)
 app.use('/webhooks', createWebhooksRoutes(events, settingsService));
+// Alerts webhook routes (unauthenticated - Grafana webhooks)
+app.use('/webhooks/alerts', createAlertsRoutes(settingsService, discordBotService));
 // Linear agent routes (OAuth + webhook)
 app.use('/api/linear', createLinearRoutes(settingsService, events, featureLoader));
 // Google Calendar OAuth + sync (unauthenticated — browser-initiated redirect flow)
