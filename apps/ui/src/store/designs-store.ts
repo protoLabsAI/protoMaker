@@ -68,6 +68,15 @@ export interface DesignsActions {
   updateDocument: (content: string, addToHistory?: boolean) => void;
   createRefNode: (targetFrameId: string, componentId: string) => void;
 
+  // Reordering actions
+  reorderChildren: (frameId: string, fromIndex: number, toIndex: number) => void;
+  moveNode: (
+    nodeId: string,
+    sourceFrameId: string,
+    targetFrameId: string,
+    targetIndex: number
+  ) => void;
+
   // History actions
   undo: () => void;
   redo: () => void;
@@ -122,6 +131,84 @@ function updateNodeInTree(nodes: PenNode[], nodeId: string, updates: Partial<Pen
     }
     return node;
   });
+}
+
+// Helper to reorder children within a frame
+function reorderChildrenInTree(
+  nodes: PenNode[],
+  frameId: string,
+  fromIndex: number,
+  toIndex: number
+): PenNode[] {
+  return nodes.map((node) => {
+    if (node.id === frameId && 'children' in node && node.children) {
+      const children = [...node.children];
+      const [movedItem] = children.splice(fromIndex, 1);
+      children.splice(toIndex, 0, movedItem);
+      return { ...node, children };
+    }
+    if ('children' in node && node.children) {
+      return {
+        ...node,
+        children: reorderChildrenInTree(node.children, frameId, fromIndex, toIndex),
+      };
+    }
+    return node;
+  });
+}
+
+// Helper to move a node from one frame to another
+function moveNodeBetweenFrames(
+  nodes: PenNode[],
+  nodeId: string,
+  sourceFrameId: string,
+  targetFrameId: string,
+  targetIndex: number
+): { nodes: PenNode[]; movedNode: PenNode | null } {
+  let movedNode: PenNode | null = null;
+
+  // First, remove the node from source frame
+  const removeNode = (nodes: PenNode[]): PenNode[] => {
+    return nodes.map((node) => {
+      if (node.id === sourceFrameId && 'children' in node && node.children) {
+        const children = node.children.filter((child) => {
+          if (child.id === nodeId) {
+            movedNode = child;
+            return false;
+          }
+          return true;
+        });
+        return { ...node, children };
+      }
+      if ('children' in node && node.children) {
+        return { ...node, children: removeNode(node.children) };
+      }
+      return node;
+    });
+  };
+
+  // Then, insert the node into target frame
+  const insertNode = (nodes: PenNode[]): PenNode[] => {
+    return nodes.map((node) => {
+      if (node.id === targetFrameId && 'children' in node && node.children) {
+        const children = [...node.children];
+        const insertIndex = Math.min(targetIndex, children.length);
+        if (movedNode) {
+          children.splice(insertIndex, 0, movedNode);
+        }
+        return { ...node, children };
+      }
+      if ('children' in node && node.children) {
+        return { ...node, children: insertNode(node.children) };
+      }
+      return node;
+    });
+  };
+
+  const nodesAfterRemoval = removeNode(nodes);
+  const nodesAfterInsertion = insertNode(nodesAfterRemoval);
+
+  return { nodes: nodesAfterInsertion, movedNode };
 }
 
 export const useDesignsStore = create<DesignsState & DesignsActions>()((set, get) => ({
@@ -264,6 +351,55 @@ export const useDesignsStore = create<DesignsState & DesignsActions>()((set, get
       }
     } catch (error) {
       console.error('Failed to create ref node:', error);
+    }
+  },
+
+  // Reorder children within a frame
+  reorderChildren: (frameId, fromIndex, toIndex) => {
+    const state = get();
+    const { selectedDocument } = state;
+
+    if (!selectedDocument) return;
+
+    try {
+      const parsed = JSON.parse(selectedDocument.content);
+      const updatedChildren = reorderChildrenInTree(
+        parsed.children || [],
+        frameId,
+        fromIndex,
+        toIndex
+      );
+      const newContent = JSON.stringify({ ...parsed, children: updatedChildren }, null, 2);
+
+      get().updateDocument(newContent, true);
+    } catch (error) {
+      console.error('Failed to reorder children:', error);
+    }
+  },
+
+  // Move node between frames
+  moveNode: (nodeId, sourceFrameId, targetFrameId, targetIndex) => {
+    const state = get();
+    const { selectedDocument } = state;
+
+    if (!selectedDocument) return;
+
+    try {
+      const parsed = JSON.parse(selectedDocument.content);
+      const { nodes: updatedChildren, movedNode } = moveNodeBetweenFrames(
+        parsed.children || [],
+        nodeId,
+        sourceFrameId,
+        targetFrameId,
+        targetIndex
+      );
+
+      if (movedNode) {
+        const newContent = JSON.stringify({ ...parsed, children: updatedChildren }, null, 2);
+        get().updateDocument(newContent, true);
+      }
+    } catch (error) {
+      console.error('Failed to move node:', error);
     }
   },
 
