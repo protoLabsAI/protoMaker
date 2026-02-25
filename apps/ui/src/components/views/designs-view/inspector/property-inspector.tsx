@@ -1,51 +1,73 @@
 /**
- * Property inspector panel that displays selected node properties
+ * Property inspector for editing selected PEN nodes
  */
 
-import type { PenNode } from '@protolabs-ai/types';
+import { useMemo } from 'react';
+import type { PenNode, PenDocument as PenDocumentParsed } from '@protolabs-ai/types';
+import { useDesignsStore } from '@/store/designs-store';
 import { TransformSection } from './transform-section';
 import { FillSection } from './fill-section';
-import { StrokeSection } from './stroke-section';
 import { TypographySection } from './typography-section';
 import { LayoutSection } from './layout-section';
 
-interface PropertyInspectorProps {
-  node: PenNode | null;
-}
+export function PropertyInspector() {
+  const selectedDocument = useDesignsStore((state) => state.selectedDocument);
+  const selectedNodeId = useDesignsStore((state) => state.selectedNodeId);
 
-/**
- * Main property inspector component showing all relevant sections
- * for the selected node
- */
-export function PropertyInspector({ node }: PropertyInspectorProps) {
-  if (!node) {
+  // Parse document and find selected node
+  const selectedNode = useMemo<PenNode | null>(() => {
+    if (!selectedDocument?.content || !selectedNodeId) return null;
+
+    try {
+      const parsed: PenDocumentParsed = JSON.parse(selectedDocument.content);
+
+      const findNode = (nodes: PenNode[]): PenNode | null => {
+        for (const node of nodes) {
+          if (node.id === selectedNodeId) return node;
+          if ('children' in node && node.children) {
+            const found = findNode(node.children);
+            if (found) return found;
+          }
+        }
+        return null;
+      };
+
+      return findNode(parsed.children || []);
+    } catch {
+      return null;
+    }
+  }, [selectedDocument, selectedNodeId]);
+
+  if (!selectedNode) {
     return (
-      <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-        <p>No node selected</p>
+      <div className="flex h-full items-center justify-center p-4 text-center text-sm text-muted-foreground">
+        <p>Select a node to view and edit properties</p>
       </div>
     );
   }
 
-  const isTextNode = node.type === 'text';
-  const isContainerNode = node.type === 'frame' || node.type === 'group';
-  const hasStroke = 'strokes' in node && Array.isArray(node.strokes) && node.strokes.length > 0;
-
   return (
-    <div className="flex h-full flex-col overflow-y-auto">
-      {/* Node header */}
-      <div className="border-b border-gray-200 p-4">
-        <div className="text-xs text-muted-foreground">{node.type}</div>
-        <div className="font-semibold">{node.name || node.id}</div>
+    <div className="h-full overflow-y-auto p-4 space-y-4">
+      {/* Node info */}
+      <div className="rounded-lg bg-white p-3 shadow-sm">
+        <div className="text-xs text-muted-foreground">Selected</div>
+        <div className="font-medium">{selectedNode.name || selectedNode.type}</div>
+        <div className="text-xs text-muted-foreground">{selectedNode.type}</div>
       </div>
 
-      {/* Properties sections */}
-      <div className="flex-1 overflow-y-auto">
-        <TransformSection node={node} />
-        <FillSection node={node} />
-        {hasStroke && <StrokeSection node={node} />}
-        {isTextNode && <TypographySection node={node} />}
-        {isContainerNode && <LayoutSection node={node} />}
-      </div>
+      {/* Transform section - all nodes have position */}
+      <TransformSection node={selectedNode} />
+
+      {/* Fill section - for nodes with fills */}
+      {('fills' in selectedNode || selectedNode.type === 'text') && (
+        <FillSection node={selectedNode} />
+      )}
+
+      {/* Typography section - for text nodes */}
+      {selectedNode.type === 'text' && <TypographySection node={selectedNode} />}
+
+      {/* Layout section - for frames */}
+      {selectedNode.type === 'frame' && <LayoutSection node={selectedNode} />}
     </div>
   );
 }

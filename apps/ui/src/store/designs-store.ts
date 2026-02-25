@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { PenNode } from '@protolabs-ai/types';
 
 // Temporary type definitions - will be replaced when server types are available
 export interface PenDocument {
@@ -13,6 +14,11 @@ export interface FileTreeNode {
   children?: FileTreeNode[];
 }
 
+export interface HistoryEntry {
+  content: string;
+  timestamp: number;
+}
+
 export interface DesignsState {
   // File tree state
   fileTree: FileTreeNode[];
@@ -22,8 +28,16 @@ export interface DesignsState {
   selectedFilePath: string | null;
   selectedDocument: PenDocument | null;
 
-  // Selected node state
+  // Selection state
   selectedNodeId: string | null;
+
+  // Dirty state
+  isDirty: boolean;
+  isSaving: boolean;
+
+  // History state
+  history: HistoryEntry[];
+  historyIndex: number;
 
   // Loading states
   isLoadingTree: boolean;
@@ -40,8 +54,23 @@ export interface DesignsActions {
   // Selected file actions
   setSelectedFile: (path: string | null, document: PenDocument | null) => void;
 
-  // Selected node actions
+  // Selection actions
+  selectNode: (nodeId: string | null) => void;
   setSelectedNode: (nodeId: string | null) => void;
+
+  // Document update actions
+  updateNode: (nodeId: string, updates: Partial<PenNode>) => void;
+  updateDocument: (content: string, addToHistory?: boolean) => void;
+
+  // History actions
+  undo: () => void;
+  redo: () => void;
+  canUndo: () => boolean;
+  canRedo: () => boolean;
+
+  // Save actions
+  saveDocument: () => Promise<void>;
+  setDirty: (dirty: boolean) => void;
 
   // Loading state actions
   setLoadingTree: (loading: boolean) => void;
@@ -57,9 +86,29 @@ const initialState: DesignsState = {
   selectedFilePath: null,
   selectedDocument: null,
   selectedNodeId: null,
+  isDirty: false,
+  isSaving: false,
+  history: [],
+  historyIndex: -1,
   isLoadingTree: false,
   isLoadingDocument: false,
 };
+
+// Helper to find and update a node in the tree
+function updateNodeInTree(nodes: PenNode[], nodeId: string, updates: Partial<PenNode>): PenNode[] {
+  return nodes.map((node) => {
+    if (node.id === nodeId) {
+      return { ...node, ...updates };
+    }
+    if ('children' in node && node.children) {
+      return {
+        ...node,
+        children: updateNodeInTree(node.children, nodeId, updates),
+      };
+    }
+    return node;
+  });
+}
 
 export const useDesignsStore = create<DesignsState & DesignsActions>()((set, get) => ({
   ...initialState,
@@ -90,15 +139,136 @@ export const useDesignsStore = create<DesignsState & DesignsActions>()((set, get
   },
 
   // Selected file actions
-  setSelectedFile: (path, document) =>
+  setSelectedFile: (path, document) => {
+    // Initialize history when loading a new document
+    const history = document ? [{ content: document.content, timestamp: Date.now() }] : [];
     set({
       selectedFilePath: path,
       selectedDocument: document,
-      selectedNodeId: null, // Clear node selection when switching files
-    }),
+      selectedNodeId: null,
+      isDirty: false,
+      history,
+      historyIndex: document ? 0 : -1,
+    });
+  },
 
-  // Selected node actions
+  // Selection actions
+  selectNode: (nodeId) => set({ selectedNodeId: nodeId }),
   setSelectedNode: (nodeId) => set({ selectedNodeId: nodeId }),
+
+  // Document update actions
+  updateNode: (nodeId, updates) => {
+    const state = get();
+    const { selectedDocument } = state;
+
+    if (!selectedDocument) return;
+
+    try {
+      const parsed = JSON.parse(selectedDocument.content);
+      const updatedChildren = updateNodeInTree(parsed.children || [], nodeId, updates);
+      const newContent = JSON.stringify({ ...parsed, children: updatedChildren }, null, 2);
+
+      get().updateDocument(newContent, true);
+    } catch (error) {
+      console.error('Failed to update node:', error);
+    }
+  },
+
+  updateDocument: (content, addToHistory = true) => {
+    const state = get();
+
+    if (addToHistory) {
+      // Truncate history if we're not at the end
+      const newHistory = state.history.slice(0, state.historyIndex + 1);
+      newHistory.push({ content, timestamp: Date.now() });
+
+      // Limit history to 50 entries
+      const limitedHistory = newHistory.slice(-50);
+
+      set({
+        selectedDocument: { ...state.selectedDocument!, content },
+        history: limitedHistory,
+        historyIndex: limitedHistory.length - 1,
+        isDirty: true,
+      });
+    } else {
+      set({
+        selectedDocument: { ...state.selectedDocument!, content },
+        isDirty: true,
+      });
+    }
+  },
+
+  // History actions
+  undo: () => {
+    const state = get();
+    if (state.historyIndex > 0) {
+      const newIndex = state.historyIndex - 1;
+      const content = state.history[newIndex].content;
+      set({
+        selectedDocument: { ...state.selectedDocument!, content },
+        historyIndex: newIndex,
+        isDirty: true,
+      });
+    }
+  },
+
+  redo: () => {
+    const state = get();
+    if (state.historyIndex < state.history.length - 1) {
+      const newIndex = state.historyIndex + 1;
+      const content = state.history[newIndex].content;
+      set({
+        selectedDocument: { ...state.selectedDocument!, content },
+        historyIndex: newIndex,
+        isDirty: true,
+      });
+    }
+  },
+
+  canUndo: () => {
+    const state = get();
+    return state.historyIndex > 0;
+  },
+
+  canRedo: () => {
+    const state = get();
+    return state.historyIndex < state.history.length - 1;
+  },
+
+  // Save actions
+  saveDocument: async () => {
+    const state = get();
+    const { selectedFilePath, selectedDocument } = state;
+
+    if (!selectedFilePath || !selectedDocument) return;
+
+    set({ isSaving: true });
+
+    try {
+      const response = await fetch('/api/designs/write', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          filePath: selectedFilePath,
+          content: selectedDocument.content,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save document');
+      }
+
+      // Reset dirty flag on successful save
+      set({ isDirty: false, isSaving: false });
+    } catch (error) {
+      console.error('Failed to save document:', error);
+      set({ isSaving: false });
+      throw error;
+    }
+  },
+
+  setDirty: (dirty) => set({ isDirty: dirty }),
 
   // Loading state actions
   setLoadingTree: (loading) => set({ isLoadingTree: loading }),
