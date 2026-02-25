@@ -18,13 +18,25 @@ export function FillSection({ node }: FillSectionProps) {
     const fill = node.fills[0];
     if (fill.type === 'solid' && fill.color) {
       const { r, g, b } = fill.color;
-      currentColor = `#${Math.round(r * 255).toString(16).padStart(2, '0')}${Math.round(g * 255).toString(16).padStart(2, '0')}${Math.round(b * 255).toString(16).padStart(2, '0')}`;
+      currentColor = `#${Math.round(r * 255)
+        .toString(16)
+        .padStart(2, '0')}${Math.round(g * 255)
+        .toString(16)
+        .padStart(2, '0')}${Math.round(b * 255)
+        .toString(16)
+        .padStart(2, '0')}`;
     }
   } else if (node.type === 'text' && 'color' in node) {
     const textNode = node as PenTextNode;
     if (textNode.color) {
       const { r, g, b } = textNode.color;
-      currentColor = `#${Math.round(r * 255).toString(16).padStart(2, '0')}${Math.round(g * 255).toString(16).padStart(2, '0')}${Math.round(b * 255).toString(16).padStart(2, '0')}`;
+      currentColor = `#${Math.round(r * 255)
+        .toString(16)
+        .padStart(2, '0')}${Math.round(g * 255)
+        .toString(16)
+        .padStart(2, '0')}${Math.round(b * 255)
+        .toString(16)
+        .padStart(2, '0')}`;
     }
   }
 
