@@ -141,6 +141,16 @@ export interface Feature {
   priority?: 0 | 1 | 2 | 3 | 4;
   status?: FeatureStatus | string; // Allow string for extensibility
   dependencies?: string[];
+  /**
+   * Reason why this feature is blocked by dependencies.
+   * Populated by dependency resolver when getBlockingInfo detects unsatisfied dependencies.
+   */
+  blockingReason?: string;
+  /**
+   * True if this feature is blocked by a dependency assigned to a human.
+   * Set by dependency resolver when human-assigned blockers are detected.
+   */
+  blockedByHuman?: boolean;
   spec?: string;
   model?: string;
   imagePaths?: Array<string | FeatureImagePath | { path: string; [key: string]: unknown }>;

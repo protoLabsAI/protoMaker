@@ -9,6 +9,7 @@ export {
   getBlockingDependencies,
   createFeatureMap,
   getBlockingDependenciesFromMap,
+  getBlockingInfo,
   wouldCreateCircularDependency,
   dependencyExists,
   getAncestors,
@@ -16,4 +17,5 @@ export {
   type DependencyResolutionResult,
   type DependencySatisfactionOptions,
   type AncestorContext,
+  type BlockingInfo,
 } from './resolver.js';
