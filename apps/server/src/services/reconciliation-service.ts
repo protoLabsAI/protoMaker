@@ -6,9 +6,12 @@
  */
 
 import { createLogger } from '@protolabs-ai/utils';
+import type { ExecutionState } from '@protolabs-ai/types';
+import { getExecutionStatePath } from '@protolabs-ai/platform';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { AutoModeService } from './auto-mode-service.js';
+import * as secureFs from '../lib/secure-fs.js';
 
 const logger = createLogger('ReconciliationService');
 
@@ -329,6 +332,71 @@ export class ReconciliationService {
     });
 
     return 'feature-marked-done';
+  }
+
+  /**
+   * Called on server startup to recover features that were in-flight when the server crashed.
+   * Reads .automaker/execution-state.json and resets any running features to backlog.
+   * This ensures features don't get stuck in-progress after a crash/restart.
+   */
+  async reconcileStartupState(projectPath: string): Promise<void> {
+    const statePath = getExecutionStatePath(projectPath);
+
+    let state: ExecutionState;
+    try {
+      const content = (await secureFs.readFile(statePath, 'utf-8')) as string;
+      state = JSON.parse(content) as ExecutionState;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        // No execution state file — no crash recovery needed
+        return;
+      }
+      logger.error(`Failed to read execution state for ${projectPath}:`, error);
+      return;
+    }
+
+    if (!state.runningFeatureIds || state.runningFeatureIds.length === 0) {
+      logger.info(`No in-flight features to recover for ${projectPath}`);
+      return;
+    }
+
+    logger.info(
+      `Recovering ${state.runningFeatureIds.length} in-flight feature(s) for ${projectPath}: ` +
+        `[${state.runningFeatureIds.join(', ')}]`
+    );
+
+    const IN_FLIGHT_STATUSES = new Set(['in_progress', 'running', 'interrupted', 'starting']);
+
+    for (const featureId of state.runningFeatureIds) {
+      try {
+        const feature = await this.featureLoader.get(projectPath, featureId);
+        if (!feature) {
+          logger.warn(`Feature ${featureId} not found during startup recovery, skipping`);
+          continue;
+        }
+
+        // Only reset features that were actually in-flight (not already in a terminal state)
+        if (!IN_FLIGHT_STATUSES.has(feature.status ?? '')) {
+          logger.info(`Skipping recovery for ${featureId} — already in status "${feature.status}"`);
+          continue;
+        }
+
+        logger.info(
+          `Resetting in-flight feature ${featureId} to backlog (was "${feature.status}")`
+        );
+        await this.featureLoader.update(projectPath, featureId, { status: 'backlog' });
+
+        // Emit status-changed event so clients reflect the corrected state
+        this.events.emit('feature:status-changed', {
+          projectPath,
+          featureId,
+          previousStatus: feature.status,
+          newStatus: 'backlog',
+        });
+      } catch (error) {
+        logger.error(`Failed to recover feature ${featureId} during startup:`, error);
+      }
+    }
   }
 
   /**
