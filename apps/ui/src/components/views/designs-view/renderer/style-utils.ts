@@ -5,12 +5,27 @@
 import type { PenFill, PenStroke, PenColor } from '@protolabs-ai/types';
 
 /**
+ * Variable resolver function type
+ */
+export type VariableResolver = (name: string) => string | number | boolean | null;
+
+/**
  * Convert PenColor to CSS rgba string
  */
-export function colorToCSS(color: string | PenColor): string {
+export function colorToCSS(
+  color: string | PenColor,
+  resolveVariable?: VariableResolver
+): string {
   if (typeof color === 'string') {
-    // Handle CSS variables (e.g., $primary -> var(--primary))
+    // Handle theme variables (e.g., $--background)
     if (color.startsWith('$')) {
+      if (resolveVariable) {
+        const resolved = resolveVariable(color);
+        if (resolved !== null && typeof resolved === 'string') {
+          return resolved;
+        }
+      }
+      // Fallback to CSS variable syntax
       return `var(--${color.slice(1)})`;
     }
     // Already a hex or CSS color string
@@ -23,10 +38,10 @@ export function colorToCSS(color: string | PenColor): string {
 /**
  * Convert PenFill to CSS background
  */
-export function fillToCSS(fill: PenFill): string {
+export function fillToCSS(fill: PenFill, resolveVariable?: VariableResolver): string {
   switch (fill.type) {
     case 'solid': {
-      const color = colorToCSS(fill.color);
+      const color = colorToCSS(fill.color, resolveVariable);
       const opacity = fill.opacity ?? 1;
       if (opacity < 1) {
         // Apply opacity to the color
@@ -40,7 +55,7 @@ export function fillToCSS(fill: PenFill): string {
     }
     case 'gradient': {
       const stops = fill.stops
-        .map((stop) => `${colorToCSS(stop.color)} ${stop.position * 100}%`)
+        .map((stop) => `${colorToCSS(stop.color, resolveVariable)} ${stop.position * 100}%`)
         .join(', ');
 
       if (fill.gradientType === 'linear') {
@@ -81,12 +96,15 @@ function calculateGradientAngle(
 /**
  * Convert PenStroke to CSS border
  */
-export function strokeToCSS(stroke: PenStroke): {
+export function strokeToCSS(
+  stroke: PenStroke,
+  resolveVariable?: VariableResolver
+): {
   borderWidth: string;
   borderStyle: string;
   borderColor: string;
 } {
-  const color = colorToCSS(stroke.color);
+  const color = colorToCSS(stroke.color, resolveVariable);
   const width = `${stroke.width}px`;
   const style = stroke.dashPattern ? 'dashed' : 'solid';
 

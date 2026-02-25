@@ -5,6 +5,7 @@
 import type { PenFrame } from '@protolabs-ai/types';
 import { PenNodeRenderer } from './pen-node-renderer';
 import { fillToCSS, strokeToCSS, paddingToCSS, layoutToFlexDirection } from './style-utils';
+import { usePenTheme } from './pen-theme-context';
 import type { CSSProperties } from 'react';
 
 interface PenFrameRendererProps {
@@ -15,6 +16,8 @@ interface PenFrameRendererProps {
  * Renders a frame node as a div with CSS flexbox layout
  */
 export function PenFrameRenderer({ node }: PenFrameRendererProps) {
+  const { resolveVariable } = usePenTheme();
+
   const style: CSSProperties = {
     position: node.layoutMode === 'none' ? 'relative' : undefined,
     display: node.layoutMode !== 'none' ? 'flex' : undefined,
@@ -56,7 +59,7 @@ export function PenFrameRenderer({ node }: PenFrameRendererProps) {
   // Fills (background)
   if (node.fills && node.fills.length > 0) {
     const fill = node.fills[0]; // Use first fill for now
-    style.background = fillToCSS(fill);
+    style.background = fillToCSS(fill, resolveVariable);
     if (fill.opacity !== undefined && fill.opacity < 1) {
       // Apply fill opacity to background
       style.opacity = fill.opacity;
@@ -66,7 +69,7 @@ export function PenFrameRenderer({ node }: PenFrameRendererProps) {
   // Strokes (border)
   if (node.strokes && node.strokes.length > 0) {
     const stroke = node.strokes[0]; // Use first stroke for now
-    const borderStyle = strokeToCSS(stroke);
+    const borderStyle = strokeToCSS(stroke, resolveVariable);
     style.borderWidth = borderStyle.borderWidth;
     style.borderStyle = borderStyle.borderStyle;
     style.borderColor = borderStyle.borderColor;
