@@ -138,9 +138,7 @@ export class AutoLoopCoordinator {
     const existing = this.loops.get(key);
     if (existing?.isRunning) {
       const desc = config.branchName ? `worktree ${config.branchName}` : 'main worktree';
-      throw new Error(
-        `Auto mode is already running for ${desc} in project: ${config.projectPath}`
-      );
+      throw new Error(`Auto mode is already running for ${desc} in project: ${config.projectPath}`);
     }
 
     const state: LoopState = {
@@ -275,9 +273,7 @@ export class AutoLoopCoordinator {
     state.failureTimestamps.push(now);
 
     // Prune timestamps outside the rolling window
-    state.failureTimestamps = state.failureTimestamps.filter(
-      (ts) => now - ts < FAILURE_WINDOW_MS
-    );
+    state.failureTimestamps = state.failureTimestamps.filter((ts) => now - ts < FAILURE_WINDOW_MS);
 
     if (state.failureTimestamps.length >= FAILURE_THRESHOLD) {
       logger.warn(

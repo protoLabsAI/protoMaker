@@ -128,7 +128,11 @@ import { gitWorkflowService } from './git-workflow-service.js';
 import { graphiteService } from './graphite-service.js';
 import type { KnowledgeStoreService } from './knowledge-store-service.js';
 import type { PipelineCheckpointService } from './pipeline-checkpoint-service.js';
-import { AutoLoopCoordinator, type LoopState, type AutoModeLoopConfig } from './auto-mode/auto-loop-coordinator.js';
+import {
+  AutoLoopCoordinator,
+  type LoopState,
+  type AutoModeLoopConfig,
+} from './auto-mode/auto-loop-coordinator.js';
 
 const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
@@ -388,6 +392,8 @@ export class AutoModeService {
   private concurrencyManager: ConcurrencyManager;
   private runningFeatures = new Map<string, RunningFeature>();
   private readonly coordinator = new AutoLoopCoordinator();
+  /** Guards against TOCTOU race in startAutoLoopForProject: keys claimed synchronously before any await */
+  private readonly pendingLoopStarts = new Set<string>();
   private featureLoader = new FeatureLoader();
   // Legacy single-project properties (kept for backward compatibility during transition)
   private autoLoopRunning = false;
@@ -950,14 +956,26 @@ export class AutoModeService {
       }
     }
 
+    // Compute key early so we can synchronously claim it before any await.
+    // This prevents the TOCTOU race where concurrent callers all pass the
+    // isRunning check before coordinator.startLoop() sets isRunning = true.
+    const worktreeKey = this.coordinator.makeKey(projectPath, branchName);
+    const worktreeDesc = branchName ? `worktree ${branchName}` : 'main worktree';
+
+    if (this.coordinator.isRunning(worktreeKey) || this.pendingLoopStarts.has(worktreeKey)) {
+      throw new Error(
+        `Auto mode is already running for ${worktreeDesc} in project: ${projectPath}`
+      );
+    }
+    // Claim the slot synchronously — no await can occur between here and the add,
+    // so no concurrent caller can sneak through in the same event-loop turn.
+    this.pendingLoopStarts.add(worktreeKey);
+
     const resolvedMaxConcurrency = await this.resolveMaxConcurrency(
       projectPath,
       branchName,
       maxConcurrency
     );
-
-    // Use worktree-scoped key
-    const worktreeKey = this.coordinator.makeKey(projectPath, branchName);
 
     const config: AutoModeLoopConfig = {
       maxConcurrency: resolvedMaxConcurrency,
@@ -965,8 +983,6 @@ export class AutoModeService {
       projectPath,
       branchName,
     };
-
-    const worktreeDesc = branchName ? `worktree ${branchName}` : 'main worktree';
 
     try {
       logger.info(
@@ -993,6 +1009,9 @@ export class AutoModeService {
       // If initialization fails, clean up the state we just set
       this.coordinator.stopLoop(worktreeKey);
       throw error;
+    } finally {
+      // Release the pending claim regardless of outcome so the key can be reused
+      this.pendingLoopStarts.delete(worktreeKey);
     }
   }
 
@@ -1654,17 +1673,17 @@ export class AutoModeService {
       recoveryContext?: string;
     }
   ): Promise<void> {
-    // Lease-based concurrency: acquire() returns false if the feature is already running
-    // (nested call, e.g. resumeInterruptedFeatures → resumeFeature → executeFeature).
-    // Nested calls increment the lease count rather than throwing a false-positive error.
+    // Lease-based concurrency: acquire() returns false if the feature is already running.
+    // Callers that need idempotent behaviour (e.g. resumeInterruptedFeatures) should
+    // check concurrencyManager.has() before calling executeFeature.  Throwing here
+    // preserves the error contract expected by the integration test suite.
     const isNewAcquire = this.concurrencyManager.acquire(featureId, projectPath, null, null);
     if (!isNewAcquire) {
       const existing = this.concurrencyManager.get(featureId);
       const runtime = existing ? Math.floor((Date.now() - existing.startTime) / 1000) : 0;
-      logger.info(
-        `Feature ${featureId} is already running (runtime: ${runtime}s). Nested acquire — lease incremented, skipping duplicate execution.`
-      );
-      return;
+      // Undo the lease increment so the ref count stays correct
+      this.concurrencyManager.release(featureId);
+      throw new Error(`Feature ${featureId} is already running (runtime: ${runtime}s)`);
     }
 
     // Add to running features immediately to prevent duplicate execution race condition
