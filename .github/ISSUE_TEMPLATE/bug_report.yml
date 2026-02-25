@@ -1,12 +1,14 @@
 name: Bug Report
 description: File a bug report to help us improve Automaker
 title: '[Bug]: '
-labels: ['bug']
+labels: ['bug', 'status: needs-triage']
 body:
   - type: markdown
     attributes:
       value: |
         Thanks for taking the time to report a bug! Please fill out the form below with as much detail as possible.
+
+        **Note:** Agents review and implement accepted ideas. Our AI maintainers will triage this issue and work on fixes for validated bugs.
 
   - type: dropdown
     id: operating-system
