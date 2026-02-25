@@ -226,6 +226,7 @@ export interface KeyboardShortcuts {
   terminal: string;
   ideation: string;
   notes: string;
+  docs: string;
   notifications: string;
   githubIssues: string;
   githubPrs: string;
@@ -264,6 +265,7 @@ export const DEFAULT_KEYBOARD_SHORTCUTS: KeyboardShortcuts = {
   terminal: 'T',
   ideation: 'I',
   notes: 'W',
+  docs: 'Cmd+D',
   notifications: 'X',
   githubIssues: 'G',
   githubPrs: 'R',
