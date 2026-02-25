@@ -147,9 +147,41 @@ export function captureMessage(
 }
 
 /**
+ * Start a performance span (Sentry v8 API)
+ * Use this to track performance of operations.
+ *
+ * @example
+ * ```typescript
+ * await startSpan({ op: 'feature.execution', name: 'Execute Feature' }, async (span) => {
+ *   await executeFeature(feature);
+ *   span.setStatus('ok');
+ * });
+ * ```
+ */
+export function startSpan<T>(
+  options: {
+    op: string;
+    name: string;
+    attributes?: Record<string, any>;
+  },
+  callback: (span: any) => T | Promise<T>
+): Promise<T> {
+  return Promise.resolve(
+    Sentry.startSpan(
+      {
+        op: options.op,
+        name: options.name,
+        attributes: options.attributes,
+      },
+      callback
+    )
+  );
+}
+
+/**
  * Start a performance transaction (compatibility shim for Sentry v8)
  * Sentry v8 removed startTransaction — returns a no-op stub.
- * Callers should migrate to Sentry.startSpan for performance monitoring.
+ * Callers should migrate to startSpan for performance monitoring.
  */
 export function startTransaction(_options: {
   op: string;

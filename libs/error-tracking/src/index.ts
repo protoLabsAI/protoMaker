@@ -9,7 +9,7 @@
  *
  * @example
  * ```typescript
- * import { initializeSentry, setFeatureContext, startTransaction } from '@protolabs-ai/error-tracking';
+ * import { initializeSentry, setFeatureContext, startSpan } from '@protolabs-ai/error-tracking';
  *
  * // Initialize at app startup
  * initializeSentry({
@@ -22,21 +22,23 @@
  * // Set feature context when executing a feature
  * setFeatureContext(feature);
  *
- * // Track performance
- * const transaction = startTransaction({
- *   op: 'feature.execution',
- *   name: 'Execute Feature',
- *   data: { featureId: feature.id },
- * });
- * try {
- *   await executeFeature(feature);
- *   transaction.setStatus('ok');
- * } catch (error) {
- *   transaction.setStatus('internal_error');
- *   throw error;
- * } finally {
- *   transaction.finish();
- * }
+ * // Track performance (Sentry v8 API)
+ * await startSpan(
+ *   {
+ *     op: 'feature.execution',
+ *     name: 'Execute Feature',
+ *     attributes: { featureId: feature.id },
+ *   },
+ *   async (span) => {
+ *     try {
+ *       await executeFeature(feature);
+ *       span.setStatus('ok');
+ *     } catch (error) {
+ *       span.setStatus('internal_error');
+ *       throw error;
+ *     }
+ *   }
+ * );
  * ```
  */
 
@@ -49,7 +51,7 @@ export {
   clearSessionContext,
   captureException,
   captureMessage,
-  startTransaction,
+  startSpan,
   addBreadcrumb,
   flush,
   close,
