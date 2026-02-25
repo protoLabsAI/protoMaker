@@ -194,6 +194,7 @@ export interface PenNodeBase {
   transform?: PenTransform;
   bounds?: PenBounds;
   effects?: PenEffect[];
+  reusable?: boolean; // Marks node as a reusable component
 }
 
 // ============================================================================

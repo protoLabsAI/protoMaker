@@ -39,6 +39,11 @@ export interface DesignsState {
   history: HistoryEntry[];
   historyIndex: number;
 
+  // Component library state
+  isLibraryVisible: boolean;
+  librarySearchFilter: string;
+  expandedLibraryGroups: Set<string>;
+
   // Loading states
   isLoadingTree: boolean;
   isLoadingDocument: boolean;
@@ -72,6 +77,11 @@ export interface DesignsActions {
   saveDocument: () => Promise<void>;
   setDirty: (dirty: boolean) => void;
 
+  // Component library actions
+  toggleLibraryVisibility: () => void;
+  setLibrarySearchFilter: (filter: string) => void;
+  toggleLibraryGroup: (groupName: string) => void;
+
   // Loading state actions
   setLoadingTree: (loading: boolean) => void;
   setLoadingDocument: (loading: boolean) => void;
@@ -90,6 +100,9 @@ const initialState: DesignsState = {
   isSaving: false,
   history: [],
   historyIndex: -1,
+  isLibraryVisible: true,
+  librarySearchFilter: '',
+  expandedLibraryGroups: new Set(),
   isLoadingTree: false,
   isLoadingDocument: false,
 };
@@ -269,6 +282,21 @@ export const useDesignsStore = create<DesignsState & DesignsActions>()((set, get
   },
 
   setDirty: (dirty) => set({ isDirty: dirty }),
+
+  // Component library actions
+  toggleLibraryVisibility: () => set((state) => ({ isLibraryVisible: !state.isLibraryVisible })),
+
+  setLibrarySearchFilter: (filter) => set({ librarySearchFilter: filter }),
+
+  toggleLibraryGroup: (groupName) => {
+    const expanded = new Set(get().expandedLibraryGroups);
+    if (expanded.has(groupName)) {
+      expanded.delete(groupName);
+    } else {
+      expanded.add(groupName);
+    }
+    set({ expandedLibraryGroups: expanded });
+  },
 
   // Loading state actions
   setLoadingTree: (loading) => set({ isLoadingTree: loading }),

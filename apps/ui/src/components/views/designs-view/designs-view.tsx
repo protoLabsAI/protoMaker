@@ -5,12 +5,20 @@ import { Spinner } from '@protolabs-ai/ui/atoms';
 import { DesignsTree } from './designs-tree';
 import { DesignsCanvas } from './designs-canvas';
 import { PropertyInspector } from './inspector/property-inspector';
-import { FileText } from 'lucide-react';
+import { ComponentLibrary } from './library';
+import { FileText, Package } from 'lucide-react';
 
 export function DesignsView() {
   const { currentProject } = useAppStore();
-  const { selectedFilePath, selectedDocument, isLoadingDocument, isDirty, reset } =
-    useDesignsStore();
+  const {
+    selectedFilePath,
+    selectedDocument,
+    isLoadingDocument,
+    isDirty,
+    isLibraryVisible,
+    toggleLibraryVisibility,
+    reset,
+  } = useDesignsStore();
 
   // Reset store when project changes or component unmounts
   useEffect(() => {
@@ -47,12 +55,33 @@ export function DesignsView() {
 
   return (
     <div className="flex h-full flex-col">
+      {/* Toolbar */}
+      <div className="border-b border-border bg-muted/30 px-4 py-2 flex items-center gap-2">
+        <button
+          onClick={toggleLibraryVisibility}
+          className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+            isLibraryVisible ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
+          }`}
+          title={isLibraryVisible ? 'Hide component library' : 'Show component library'}
+        >
+          <Package className="h-4 w-4" />
+          Components
+        </button>
+      </div>
+
       {/* Main content area */}
       <div className="flex flex-1 overflow-hidden">
         {/* Left sidebar - File tree */}
         <div className="w-64 border-r border-border bg-background overflow-y-auto">
           <DesignsTree projectPath={currentProject.path} />
         </div>
+
+        {/* Component library panel */}
+        {isLibraryVisible && (
+          <div className="w-80 border-r border-border bg-background overflow-hidden">
+            <ComponentLibrary penFile={selectedDocument} />
+          </div>
+        )}
 
         {/* Middle pane - Canvas/Document viewer */}
         <div className="flex-1 flex flex-col">
