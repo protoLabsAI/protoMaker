@@ -27,12 +27,15 @@ import { githubMergeService } from './github-merge-service.js';
 import { graphiteService } from './graphite-service.js';
 import { gitWorkflowService } from './git-workflow-service.js';
 import type { Feature } from '@protolabs-ai/types';
+import { Octokit } from '@octokit/rest';
 
 const execFileAsync = promisify(execFile);
 
 const logger = createLogger('MaintenanceTasks');
 
 const STALE_THRESHOLD_MS = 2 * 60 * 60 * 1000; // 2 hours
+const STUCK_RUN_THRESHOLD_MS = 10 * 60 * 1000; // 10 minutes
+const RUNNER_CONGESTION_THRESHOLD = 0.5; // 50% utilization
 
 /**
  * Safety check: Verify a worktree has no uncommitted changes.
@@ -198,6 +201,23 @@ export async function registerMaintenanceTasks(
     );
   }
 
+  // Every 5 minutes: GitHub Actions runner health check
+  if (process.env.GITHUB_TOKEN && process.env.GITHUB_REPO_OWNER && process.env.GITHUB_REPO_NAME) {
+    await scheduler.registerTask(
+      'maintenance:runner-health',
+      'GitHub Actions Runner Health',
+      '*/5 * * * *', // Every 5 minutes
+      async () => {
+        const projectPaths = getKnownProjectPaths(autoModeService);
+        await checkRunnerHealth(events, projectPaths);
+      }
+    );
+    taskCount++;
+    logger.info('Registered GitHub Actions runner health maintenance task');
+  } else {
+    logger.warn('Skipping runner health task registration - GitHub credentials not configured');
+  }
+
   // Daily at 2am: Graphite sync (replaces standalone setTimeout/setInterval scheduler)
   if (graphiteSyncScheduler) {
     await scheduler.registerTask(
@@ -274,6 +294,132 @@ function getKnownProjectPaths(autoModeService: AutoModeService): string[] {
   }
 
   return Array.from(paths);
+}
+
+/**
+ * Check GitHub Actions runner health and detect stuck builds.
+ * Auto-recovers stuck runs and alerts on runner congestion.
+ */
+async function checkRunnerHealth(events: EventEmitter, projectPaths: string[]): Promise<void> {
+  logger.info('Checking GitHub Actions runner health...');
+
+  const githubToken = process.env.GITHUB_TOKEN;
+  const owner = process.env.GITHUB_REPO_OWNER;
+  const repo = process.env.GITHUB_REPO_NAME;
+
+  if (!githubToken || !owner || !repo) {
+    logger.warn('GitHub credentials not configured, skipping runner health check');
+    return;
+  }
+
+  try {
+    const octokit = new Octokit({ auth: githubToken });
+
+    // Get all workflow runs in progress
+    const { data: runs } = await octokit.actions.listWorkflowRunsForRepo({
+      owner,
+      repo,
+      status: 'in_progress',
+      per_page: 100,
+    });
+
+    logger.info(`Found ${runs.workflow_runs.length} in-progress workflow runs`);
+
+    const now = Date.now();
+    const stuckRuns: typeof runs.workflow_runs = [];
+
+    // Detect stuck runs (in_progress > 10 minutes without update)
+    for (const run of runs.workflow_runs) {
+      const runStartedAt = new Date(run.created_at).getTime();
+      const runUpdatedAt = new Date(run.updated_at).getTime();
+      const elapsed = now - runUpdatedAt;
+
+      if (elapsed > STUCK_RUN_THRESHOLD_MS) {
+        logger.warn(
+          `Detected stuck workflow run: ${run.name} #${run.run_number} (${run.id}) - no update for ${Math.floor(elapsed / 1000 / 60)} minutes`
+        );
+        stuckRuns.push(run);
+      }
+    }
+
+    // Auto-cancel stuck runs
+    for (const run of stuckRuns) {
+      try {
+        logger.info(`Canceling stuck run: ${run.name} #${run.run_number} (${run.id})`);
+        await octokit.actions.cancelWorkflowRun({
+          owner,
+          repo,
+          run_id: run.id,
+        });
+
+        events.emit('maintenance', {
+          type: 'runner-health',
+          action: 'cancel-stuck-run',
+          runId: run.id,
+          runName: run.name,
+          runNumber: run.run_number,
+          elapsedMinutes: Math.floor((now - new Date(run.updated_at).getTime()) / 1000 / 60),
+        });
+
+        // Retrigger the run by re-running failed jobs
+        logger.info(`Retriggering run: ${run.name} #${run.run_number} (${run.id})`);
+        await octokit.actions.reRunWorkflowFailedJobs({
+          owner,
+          repo,
+          run_id: run.id,
+        });
+      } catch (error) {
+        logger.error(`Failed to cancel/retrigger stuck run ${run.id}:`, error);
+      }
+    }
+
+    // Check runner pool congestion
+    const { data: runners } = await octokit.actions.listSelfHostedRunnersForRepo({
+      owner,
+      repo,
+      per_page: 100,
+    });
+
+    const totalRunners = runners.runners.length;
+    const busyRunners = runners.runners.filter((r: { busy: boolean }) => r.busy).length;
+    const utilization = totalRunners > 0 ? busyRunners / totalRunners : 0;
+
+    logger.info(
+      `Runner pool status: ${busyRunners}/${totalRunners} busy (${(utilization * 100).toFixed(1)}%)`
+    );
+
+    if (utilization > RUNNER_CONGESTION_THRESHOLD) {
+      logger.warn(
+        `Runner pool congestion detected: ${(utilization * 100).toFixed(1)}% utilization (threshold: ${(RUNNER_CONGESTION_THRESHOLD * 100).toFixed(1)}%)`
+      );
+
+      events.emit('maintenance', {
+        type: 'runner-health',
+        action: 'congestion-alert',
+        utilization,
+        busyRunners,
+        totalRunners,
+      });
+    }
+
+    // Emit health summary
+    events.emit('maintenance', {
+      type: 'runner-health',
+      action: 'health-check',
+      totalRuns: runs.workflow_runs.length,
+      stuckRuns: stuckRuns.length,
+      totalRunners,
+      busyRunners,
+      utilization,
+    });
+  } catch (error) {
+    logger.error('Failed to check runner health:', error);
+    events.emit('maintenance', {
+      type: 'runner-health',
+      action: 'check-failed',
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
 }
 
 /**
