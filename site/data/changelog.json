@@ -1,21 +1,317 @@
 {
   "summary": {
-    "totalEntries": 714,
+    "totalEntries": 751,
     "categories": {
-      "fix": 194,
-      "docs": 32,
-      "feature": 416,
-      "infrastructure": 44,
-      "improvement": 28
+      "feature": 439,
+      "infrastructure": 47,
+      "fix": 203,
+      "improvement": 30,
+      "docs": 32
     },
     "firstDate": "2026-02-04T21:35:59.000Z",
-    "latestDate": "2026-02-24T20:25:15.000Z"
+    "latestDate": "2026-02-25T01:53:49.000Z"
   },
   "months": [
     {
       "month": "2026-02",
       "label": "February 2026",
       "entries": [
+        {
+          "hash": "bf8f8c4e",
+          "date": "2026-02-24T17:53:49-08:00",
+          "title": "Loki + Promtail log aggregation for monitoring stack",
+          "prNumber": 1082,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1082",
+          "category": "feature"
+        },
+        {
+          "hash": "5eb6db85",
+          "date": "2026-02-24T17:43:05-08:00",
+          "title": "Auto-commit agent progress before verification",
+          "prNumber": 1083,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1083",
+          "category": "infrastructure"
+        },
+        {
+          "hash": "75038a7a",
+          "date": "2026-02-24T17:37:21-08:00",
+          "title": "Variable resolution and theme switching for PEN renderer",
+          "prNumber": 1081,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1081",
+          "category": "feature"
+        },
+        {
+          "hash": "992f2ee7",
+          "date": "2026-02-24T17:33:07-08:00",
+          "title": "Text, icon, ref & shape renderers for PEN designs",
+          "prNumber": 1080,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1080",
+          "category": "feature"
+        },
+        {
+          "hash": "71c93560",
+          "date": "2026-02-24T17:27:35-08:00",
+          "title": "Docker monitoring stack with Prometheus, Grafana & node-exporter",
+          "prNumber": 1079,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1079",
+          "category": "feature"
+        },
+        {
+          "hash": "505d3ddc",
+          "date": "2026-02-25T01:10:34+00:00",
+          "title": "Version packages",
+          "prNumber": 1078,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1078",
+          "category": "infrastructure"
+        },
+        {
+          "hash": "1b5f0ce5",
+          "date": "2026-02-24T17:00:26-08:00",
+          "title": "Add turbo.json and missing libs to Docker build context",
+          "prNumber": 1077,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1077",
+          "category": "fix"
+        },
+        {
+          "hash": "06ebce3e",
+          "date": "2026-02-24T16:30:12-08:00",
+          "title": "Add Google Calendar integration to project settings",
+          "prNumber": 1076,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1076",
+          "category": "feature"
+        },
+        {
+          "hash": "e6dadeab",
+          "date": "2026-02-24T16:20:55-08:00",
+          "title": "Add missing build:libs script for Docker builds",
+          "prNumber": 1075,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1075",
+          "category": "fix"
+        },
+        {
+          "hash": "2a98af28",
+          "date": "2026-02-24T16:20:11-08:00",
+          "title": "Add custom event creation and management UI",
+          "prNumber": 1074,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1074",
+          "category": "feature"
+        },
+        {
+          "hash": "e4e3c84c",
+          "date": "2026-02-24T16:10:23-08:00",
+          "title": "Add Google Calendar sync service",
+          "prNumber": 1073,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1073",
+          "category": "feature"
+        },
+        {
+          "hash": "2daa7026",
+          "date": "2026-02-24T16:09:25-08:00",
+          "title": "Add Calendar route and sidebar navigation",
+          "prNumber": 1072,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1072",
+          "category": "feature"
+        },
+        {
+          "hash": "4ac6c23a",
+          "date": "2026-02-24T16:05:34-08:00",
+          "title": "Core frame and layout renderer for PEN designs",
+          "prNumber": 1071,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1071",
+          "category": "feature"
+        },
+        {
+          "hash": "a1afec37",
+          "date": "2026-02-24T15:57:42-08:00",
+          "title": "Reduce staging deploy downtime with force-recreate",
+          "prNumber": 1070,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1070",
+          "category": "fix"
+        },
+        {
+          "hash": "38a89c1f",
+          "date": "2026-02-24T15:57:12-08:00",
+          "title": "Prometheus metrics endpoint with prom-client",
+          "prNumber": 1069,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1069",
+          "category": "feature"
+        },
+        {
+          "hash": "bb7fe04e",
+          "date": "2026-02-24T15:53:52-08:00",
+          "title": "Add Google Calendar OAuth types and server routes",
+          "prNumber": 1062,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1062",
+          "category": "feature"
+        },
+        {
+          "hash": "278766fa",
+          "date": "2026-02-24T15:52:43-08:00",
+          "title": "Add Calendar view component with react-day-picker",
+          "prNumber": 1068,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1068",
+          "category": "feature"
+        },
+        {
+          "hash": "9c08e126",
+          "date": "2026-02-24T15:47:43-08:00",
+          "title": "Auto-close GitHub issues when agent PRs merge",
+          "prNumber": 1067,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1067",
+          "category": "fix"
+        },
+        {
+          "hash": "c0ae1580",
+          "date": "2026-02-24T15:46:39-08:00",
+          "title": "Designs panel UI shell with file tree and sidebar navigation",
+          "prNumber": 1066,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1066",
+          "category": "feature"
+        },
+        {
+          "hash": "2bbd97ce",
+          "date": "2026-02-24T15:45:40-08:00",
+          "title": "Pen Parser Package with variable resolution",
+          "prNumber": 1064,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1064",
+          "category": "feature"
+        },
+        {
+          "hash": "11b6e214",
+          "date": "2026-02-24T15:42:45-08:00",
+          "title": "Designs directory API routes for .pen file management",
+          "prNumber": 1065,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1065",
+          "category": "feature"
+        },
+        {
+          "hash": "d2f594a6",
+          "date": "2026-02-24T15:39:56-08:00",
+          "title": "PenFile type definitions for .pen v2.8 format",
+          "prNumber": 1063,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1063",
+          "category": "feature"
+        },
+        {
+          "hash": "86150eb9",
+          "date": "2026-02-24T15:06:14-08:00",
+          "title": "Restore staging deploy path and release workflow permissions",
+          "prNumber": 1059,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1059",
+          "category": "fix"
+        },
+        {
+          "hash": "b190fb7a",
+          "date": "2026-02-24T14:55:42-08:00",
+          "title": "Add MCP calendar tools and dueBefore/dueAfter query_board filters",
+          "prNumber": 1057,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1057",
+          "category": "feature"
+        },
+        {
+          "hash": "9e99d6ad",
+          "date": "2026-02-24T14:52:00-08:00",
+          "title": "Add CalendarEvent types, storage path, and Milestone.targetDate",
+          "prNumber": 1055,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1055",
+          "category": "feature"
+        },
+        {
+          "hash": "f033c962",
+          "date": "2026-02-24T14:47:14-08:00",
+          "title": "Add CalendarService and Express routes for /api/calendar",
+          "prNumber": 1056,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1056",
+          "category": "feature"
+        },
+        {
+          "hash": "bcd71830",
+          "date": "2026-02-24T14:32:41-08:00",
+          "title": "Auto-commit agent progress before verification",
+          "prNumber": 1054,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1054",
+          "category": "infrastructure"
+        },
+        {
+          "hash": "9034f323",
+          "date": "2026-02-24T13:58:45-08:00",
+          "title": "Resolve all lint warnings in knowledge services and routes",
+          "prNumber": 1053,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1053",
+          "category": "fix"
+        },
+        {
+          "hash": "3a0eff4f",
+          "date": "2026-02-24T13:35:00-08:00",
+          "title": "Wire FailureClassifier into fast-path rules",
+          "prNumber": 1051,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1051",
+          "category": "feature"
+        },
+        {
+          "hash": "053fd71c",
+          "date": "2026-02-24T13:23:39-08:00",
+          "title": "FailureClassifierService — pattern-based failure analysis",
+          "prNumber": 1049,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1049",
+          "category": "feature"
+        },
+        {
+          "hash": "3e1a5a21",
+          "date": "2026-02-24T13:18:39-08:00",
+          "title": "TrajectoryStoreService — persist execution trajectories",
+          "prNumber": 1050,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1050",
+          "category": "feature"
+        },
+        {
+          "hash": "a2a378d9",
+          "date": "2026-02-24T12:57:00-08:00",
+          "title": "Extract KnowledgeSearchService from KnowledgeStoreService",
+          "prNumber": 1046,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1046",
+          "category": "improvement"
+        },
+        {
+          "hash": "2c1fdfe7",
+          "date": "2026-02-24T12:56:13-08:00",
+          "title": "Scan all project paths for crash recovery session restore",
+          "prNumber": 1048,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1048",
+          "category": "fix"
+        },
+        {
+          "hash": "1eaf1355",
+          "date": "2026-02-24T12:49:14-08:00",
+          "title": "Delete pipeline checkpoints when features reset to backlog",
+          "prNumber": 1047,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1047",
+          "category": "fix"
+        },
+        {
+          "hash": "a325c7b2",
+          "date": "2026-02-24T12:43:08-08:00",
+          "title": "Extract KnowledgeEmbeddingOrchestrator from KnowledgeStoreService",
+          "prNumber": 1045,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1045",
+          "category": "improvement"
+        },
+        {
+          "hash": "3ce95c46",
+          "date": "2026-02-24T12:41:32-08:00",
+          "title": "Collapse changelog entries after first 100",
+          "prNumber": 1044,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1044",
+          "category": "feature"
+        },
+        {
+          "hash": "cd563229",
+          "date": "2026-02-24T12:29:28-08:00",
+          "title": "Run resumeInterruptedFeatures once per server lifecycle",
+          "prNumber": 1043,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1043",
+          "category": "fix"
+        },
         {
           "hash": "9deaa552",
           "date": "2026-02-24T12:25:15-08:00",
@@ -5731,5 +6027,5 @@
       ]
     }
   ],
-  "generatedAt": "2026-02-24T20:33:23.350Z"
+  "generatedAt": "2026-02-25T01:57:52.408Z"
 }
