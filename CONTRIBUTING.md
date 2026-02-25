@@ -98,33 +98,40 @@ Help grow the Automaker community:
 - Recommend Automaker to others
 - Answer questions in Discord or GitHub Discussions
 
+## Architecture Resources
+
+Understanding Automaker's architecture helps you contribute better ideas:
+
+### Core Architecture
+
+- **[Monorepo Architecture](./docs/dev/monorepo-architecture.md)** - Package structure, dependency chain, import conventions
+- **[Git Workflow](./docs/dev/git-workflow.md)** - Branch strategies, worktree isolation, epic workflow
+- **[Environment Setup](./docs/dev/environment-setup.md)** - Required environment variables, configuration
+
+### Agent System
+
+- **[Agent SDK Integration](./docs/agents/sdk-integration.md)** - How agents execute, session management, context injection
+- **[Agent Templates](./docs/agents/authoring-templates.md)** - Creating custom agent templates
+- **[Model Resolver](./docs/server/model-resolver.md)** - Model aliases, complexity-based selection
+
+### Extensibility
+
+- **[Creating MCP Tools](./docs/dev/creating-mcp-tools.md)** - Build custom MCP tools for agents
+- **[MCP Tools Reference](./docs/integrations/mcp-tools-reference.md)** - Complete catalog of 135+ tools
+- **[Project Orchestration](./docs/infra/orchestration.md)** - Hierarchical project planning, epics, dependencies
+
 ## Code of Conduct
 
 We are committed to providing a welcoming and inclusive environment for everyone.
 
-### Our Standards
+Please read our [Code of Conduct](./CODE_OF_CONDUCT.md) for:
 
-- **Be respectful:** Treat everyone with respect and kindness
-- **Be constructive:** Provide helpful, actionable feedback
-- **Be inclusive:** Welcome people of all backgrounds and skill levels
-- **Be patient:** Remember that maintainers are volunteers
+- Community standards and expectations
+- Unacceptable behavior
+- Enforcement procedures
+- How to report violations
 
-### Unacceptable Behavior
-
-- Harassment, discrimination, or personal attacks
-- Trolling, insulting comments, or inflammatory language
-- Spam or off-topic content
-- Sharing others' private information without permission
-
-### Enforcement
-
-Violations of the code of conduct may result in:
-
-1. Warning from maintainers
-2. Temporary ban from community spaces
-3. Permanent ban for severe or repeated violations
-
-Report code of conduct violations to:
+**Report violations:**
 
 - Discord: DM `@webdevcody`
 - Email: conduct@protolabs.studio
