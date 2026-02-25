@@ -173,7 +173,7 @@ export function useCalendarEvents({
         setIsMutating(false);
       }
     },
-    [projectPath, fetchEvents],
+    [projectPath, fetchEvents]
   );
 
   const updateEvent = useCallback(
@@ -197,7 +197,7 @@ export function useCalendarEvents({
         setIsMutating(false);
       }
     },
-    [projectPath, fetchEvents],
+    [projectPath, fetchEvents]
   );
 
   const deleteEvent = useCallback(
@@ -220,7 +220,7 @@ export function useCalendarEvents({
         setIsMutating(false);
       }
     },
-    [projectPath, fetchEvents],
+    [projectPath, fetchEvents]
   );
 
   return {

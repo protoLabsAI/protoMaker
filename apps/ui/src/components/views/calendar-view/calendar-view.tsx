@@ -128,11 +128,7 @@ interface DayEventsPopoverContentProps {
   onEventClick: (event: CalendarEvent) => void;
 }
 
-function DayEventsPopoverContent({
-  dateStr,
-  events,
-  onEventClick,
-}: DayEventsPopoverContentProps) {
+function DayEventsPopoverContent({ dateStr, events, onEventClick }: DayEventsPopoverContentProps) {
   return (
     <div className="space-y-1">
       <p className="text-xs font-medium text-muted-foreground mb-2">{formatDateLabel(dateStr)}</p>
@@ -147,7 +143,7 @@ function DayEventsPopoverContent({
             <span
               className={cn(
                 'mt-1 inline-block h-2 w-2 rounded-full shrink-0',
-                getEventDotClass(event),
+                getEventDotClass(event)
               )}
               style={getEventDotStyle(event)}
             />
@@ -228,7 +224,7 @@ export function CalendarView() {
 
   const now = new Date();
   const [displayMonth, setDisplayMonth] = useState<Date>(
-    new Date(now.getFullYear(), now.getMonth()),
+    new Date(now.getFullYear(), now.getMonth())
   );
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
@@ -296,7 +292,7 @@ export function CalendarView() {
         toast.error(err instanceof Error ? err.message : 'Failed to create event');
       }
     },
-    [createEvent],
+    [createEvent]
   );
 
   const handleUpdateEvent = useCallback(
@@ -308,7 +304,7 @@ export function CalendarView() {
         toast.error(err instanceof Error ? err.message : 'Failed to update event');
       }
     },
-    [updateEvent],
+    [updateEvent]
   );
 
   const handleDeleteEvent = useCallback(
@@ -322,7 +318,7 @@ export function CalendarView() {
         toast.error(err instanceof Error ? err.message : 'Failed to delete event');
       }
     },
-    [deleteEvent],
+    [deleteEvent]
   );
 
   // No project selected state
@@ -440,7 +436,7 @@ export function CalendarView() {
                         'flex flex-col items-center gap-0.5',
                         isSelected && hasEvents && 'bg-accent text-accent-foreground',
                         modifiers.today && 'font-bold text-primary',
-                        modifiers.outside && 'text-muted-foreground/40',
+                        modifiers.outside && 'text-muted-foreground/40'
                       )}
                       onClick={(e) => {
                         handleDayClick(date);

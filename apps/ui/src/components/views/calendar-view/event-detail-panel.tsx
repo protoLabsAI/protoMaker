@@ -342,7 +342,7 @@ function EditableEventDetail({
               'bg-emerald-500/20',
               !color
                 ? 'border-foreground ring-2 ring-foreground/20'
-                : 'border-transparent hover:border-muted-foreground/40',
+                : 'border-transparent hover:border-muted-foreground/40'
             )}
             title="Default"
           />
@@ -355,7 +355,7 @@ function EditableEventDetail({
                 'h-6 w-6 rounded-full border-2 transition-all',
                 color === preset.value
                   ? 'border-foreground ring-2 ring-foreground/20'
-                  : 'border-transparent hover:border-muted-foreground/40',
+                  : 'border-transparent hover:border-muted-foreground/40'
               )}
               style={{ backgroundColor: preset.value }}
               title={preset.label}
