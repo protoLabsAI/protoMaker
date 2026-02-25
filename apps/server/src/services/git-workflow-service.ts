@@ -47,9 +47,7 @@ async function retryWithExponentialBackoff<T>(
       if (attempt === maxRetries) {
         // Final failure after all retries
         const errorMessage = error instanceof Error ? error.message : String(error);
-        logger.error(
-          `${operationName} failed after ${maxRetries} retries: ${errorMessage}`
-        );
+        logger.error(`${operationName} failed after ${maxRetries} retries: ${errorMessage}`);
         throw error;
       }
 
@@ -351,15 +349,12 @@ export class GitWorkflowService {
 
       // Push to remote with retry logic
       try {
-        await retryWithExponentialBackoff(
-          async () => {
-            await execAsync(`git push origin ${branchName}`, {
-              cwd: workDir,
-              env: execEnv,
-            });
-          },
-          `Push agent progress for ${branchName}`
-        );
+        await retryWithExponentialBackoff(async () => {
+          await execAsync(`git push origin ${branchName}`, {
+            cwd: workDir,
+            env: execEnv,
+          });
+        }, `Push agent progress for ${branchName}`);
         logger.info(
           `Saved agent progress for feature ${feature.id}: commit ${hash}, pushed to ${branchName}`
         );
@@ -1351,26 +1346,23 @@ export class GitWorkflowService {
 
     try {
       // Use retry logic for PR creation
-      const { prUrl, prNumber, prCreatedAt } = await retryWithExponentialBackoff(
-        async () => {
-          const { stdout: prOutput } = await execAsync(prCmd, {
-            cwd: workDir,
-            env: execEnv,
-          });
-          const prUrl = prOutput.trim();
+      const { prUrl, prNumber, prCreatedAt } = await retryWithExponentialBackoff(async () => {
+        const { stdout: prOutput } = await execAsync(prCmd, {
+          cwd: workDir,
+          env: execEnv,
+        });
+        const prUrl = prOutput.trim();
 
-          // Extract PR number
-          let prNumber: number | undefined;
-          const prCreatedAt = new Date().toISOString();
-          const prMatch = prUrl.match(/\/pull\/(\d+)/);
-          if (prMatch) {
-            prNumber = parseInt(prMatch[1], 10);
-          }
+        // Extract PR number
+        let prNumber: number | undefined;
+        const prCreatedAt = new Date().toISOString();
+        const prMatch = prUrl.match(/\/pull\/(\d+)/);
+        if (prMatch) {
+          prNumber = parseInt(prMatch[1], 10);
+        }
 
-          return { prUrl, prNumber, prCreatedAt };
-        },
-        `Create PR for ${branchName}`
-      );
+        return { prUrl, prNumber, prCreatedAt };
+      }, `Create PR for ${branchName}`);
 
       // Store metadata after successful creation
       if (prNumber) {
