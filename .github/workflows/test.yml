@@ -1,3 +1,4 @@
+# SECURITY: This workflow is hardened against fork PR attacks. See docs/security/ci-hardening.md
 name: Test Suite
 
 on:
@@ -9,6 +10,8 @@ on:
       - main
       - master
 
+permissions: read-all
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
@@ -16,10 +19,11 @@ concurrency:
 jobs:
   test:
     runs-on: self-hosted
+    if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name != 'pull_request'
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Setup project
         uses: ./.github/actions/setup-project

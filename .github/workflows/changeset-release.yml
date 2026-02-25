@@ -1,25 +1,27 @@
+# SECURITY: This workflow is hardened against fork PR attacks. See docs/security/ci-hardening.md
 name: Version & Release
 
 on:
   push:
     branches: [main]
 
+permissions: read-all
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-
-permissions:
-  contents: write
-  pull-requests: write
 
 jobs:
   release:
     runs-on: self-hosted
     if: github.repository == 'proto-labs-ai/protoMaker'
     timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 0
 
@@ -36,7 +38,7 @@ jobs:
 
       - name: Create release PR or publish
         id: changesets
-        uses: changesets/action@v1
+        uses: changesets/action@3de3850952bec538fbe1c0ec8c9c99a97336f3bc # v1
         with:
           title: 'chore: version packages'
           commit: 'chore: version packages'

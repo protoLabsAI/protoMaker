@@ -1,3 +1,4 @@
+# SECURITY: This workflow is hardened against fork PR attacks. See docs/security/ci-hardening.md
 name: E2E Tests
 
 on:
@@ -6,6 +7,8 @@ on:
       - main
   workflow_dispatch:
 
+permissions: read-all
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
@@ -13,11 +16,12 @@ concurrency:
 jobs:
   e2e:
     runs-on: self-hosted
+    if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name != 'pull_request'
     timeout-minutes: 15
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Setup project
         uses: ./.github/actions/setup-project
@@ -154,7 +158,7 @@ jobs:
           netstat -tlnp 2>/dev/null | grep :3018 || echo "Port 3018 not listening"
 
       - name: Upload Playwright report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea0b2ab0ac28f991c6d9a1f34563c7adb743d037 # v4
         if: always()
         with:
           name: playwright-report
@@ -162,7 +166,7 @@ jobs:
           retention-days: 7
 
       - name: Upload test results (screenshots, traces, videos)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea0b2ab0ac28f991c6d9a1f34563c7adb743d037 # v4
         if: always()
         with:
           name: test-results
