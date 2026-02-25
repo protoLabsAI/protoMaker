@@ -43,6 +43,8 @@ export enum EscalationSource {
   human_mention = 'human_mention',
   /** Agent needs human input (elicitation) */
   agent_needs_input = 'agent_needs_input',
+  /** Feature blocked by dependency assigned to human */
+  human_blocked_dependency = 'human_blocked_dependency',
 }
 
 /**

@@ -59,6 +59,7 @@ function sourceToLabel(source: EscalationSource): string {
     board_anomaly: 'source:board-anomaly',
     human_mention: 'source:human-mention',
     agent_needs_input: 'source:agent-needs-input',
+    human_blocked_dependency: 'source:human-blocked-dependency',
   };
   return labelMap[source];
 }

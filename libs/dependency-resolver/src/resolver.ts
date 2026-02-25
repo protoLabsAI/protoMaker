@@ -308,6 +308,76 @@ export function getBlockingDependenciesFromMap(
 }
 
 /**
+ * Result type for getBlockingInfo function.
+ * Provides detailed information about why a feature is blocked.
+ */
+export interface BlockingInfo {
+  /** True if the feature is blocked by unsatisfied dependencies */
+  isBlocked: boolean;
+  /** Array of feature IDs that are blocking this feature and are assigned to humans */
+  humanBlockers: string[];
+  /** Array of feature IDs that are blocking this feature and are NOT assigned to humans */
+  agentBlockers: string[];
+}
+
+/**
+ * Gets detailed blocking information for a feature, identifying whether
+ * blocking dependencies are assigned to humans or agents.
+ *
+ * A dependency is considered "assigned to a human" if:
+ * - assignee field is set AND assignee !== 'agent'
+ *
+ * @param feature - Feature to check
+ * @param allFeatures - All features in the project
+ * @returns BlockingInfo with categorized blockers
+ */
+export function getBlockingInfo(feature: Feature, allFeatures: Feature[]): BlockingInfo {
+  if (!feature.dependencies || feature.dependencies.length === 0) {
+    return { isBlocked: false, humanBlockers: [], agentBlockers: [] };
+  }
+
+  const humanBlockers: string[] = [];
+  const agentBlockers: string[] = [];
+
+  for (const depId of feature.dependencies) {
+    const dep = allFeatures.find((f) => f.id === depId);
+    if (!dep) {
+      continue; // Missing dependency is not blocking (not found in feature list)
+    }
+
+    // Check if dependency is incomplete (blocking)
+    let isBlocking = false;
+
+    // Foundation deps require 'done' (merged) — 'review' is NOT sufficient
+    if (dep.isFoundation) {
+      isBlocking = dep.status !== 'done' && dep.status !== 'completed' && dep.status !== 'verified';
+    } else {
+      isBlocking = dep.status !== 'completed' && dep.status !== 'verified' && dep.status !== 'done';
+    }
+
+    if (isBlocking) {
+      // Categorize blocker: human-assigned vs agent-assigned
+      // A feature is human-assigned if assignee is set and NOT 'agent'
+      const isHumanAssigned = dep.assignee !== undefined && dep.assignee !== 'agent';
+
+      if (isHumanAssigned) {
+        humanBlockers.push(depId);
+      } else {
+        agentBlockers.push(depId);
+      }
+    }
+  }
+
+  const isBlocked = humanBlockers.length > 0 || agentBlockers.length > 0;
+
+  return {
+    isBlocked,
+    humanBlockers,
+    agentBlockers,
+  };
+}
+
+/**
  * Checks if adding a dependency from sourceId to targetId would create a circular dependency.
  * When we say "targetId depends on sourceId", we add sourceId to targetId.dependencies.
  * A cycle would occur if sourceId already depends on targetId (directly or transitively).
