@@ -29,11 +29,7 @@ import type {
   ExecutionContext,
   ActionProposal,
 } from '@protolabs-ai/types';
-import {
-  DEFAULT_PHASE_MODELS,
-  isClaudeModel,
-  stripProviderPrefix,
-} from '@protolabs-ai/types';
+import { DEFAULT_PHASE_MODELS, isClaudeModel, stripProviderPrefix } from '@protolabs-ai/types';
 import {
   buildPromptWithImages,
   classifyError,
@@ -49,9 +45,7 @@ import {
   resolvePhaseModel,
   DEFAULT_MODELS,
 } from '@protolabs-ai/model-resolver';
-import {
-  getFeatureDir,
-} from '@protolabs-ai/platform';
+import { getFeatureDir } from '@protolabs-ai/platform';
 import { rebaseWorktreeOnMain } from '@protolabs-ai/git-utils';
 import { exec } from 'child_process';
 import { promisify } from 'util';
@@ -68,10 +62,7 @@ import {
   agentTokensOutputTotal,
   agentExecutionsTotal,
 } from '../../lib/prometheus.js';
-import {
-  createAutoModeOptions,
-  validateWorkingDirectory,
-} from '../../lib/sdk-options.js';
+import { createAutoModeOptions, validateWorkingDirectory } from '../../lib/sdk-options.js';
 import { FeatureLoader } from '../feature-loader.js';
 import type { SettingsService } from '../settings-service.js';
 import type { AuthorityService } from '../authority-service.js';
@@ -422,10 +413,7 @@ export class ExecutionService {
 
       if (useWorktrees && branchName) {
         // Try to find existing worktree for this branch
-        worktreePath = await this.callbacks.findExistingWorktreeForBranch(
-          projectPath,
-          branchName
-        );
+        worktreePath = await this.callbacks.findExistingWorktreeForBranch(projectPath, branchName);
 
         if (worktreePath) {
           logger.info(`Using existing worktree for branch "${branchName}": ${worktreePath}`);
@@ -687,8 +675,7 @@ export class ExecutionService {
       // Run the agent with the feature's model and images
       // Context files are passed as system prompt for higher priority
       // On retries, try to resume from the previous session if available
-      const resumeSessionId =
-        tempRunningFeature.retryCount > 0 ? feature.lastSessionId : undefined;
+      const resumeSessionId = tempRunningFeature.retryCount > 0 ? feature.lastSessionId : undefined;
       if (resumeSessionId) {
         logger.info(
           `Resuming feature ${featureId} from session ${resumeSessionId} (retry #${tempRunningFeature.retryCount})`
@@ -762,11 +749,7 @@ export class ExecutionService {
           costUsd: executionCostUsd,
           model: modelResult.model,
           success: true,
-          trigger: isAutoMode
-            ? tempRunningFeature.retryCount > 0
-              ? 'retry'
-              : 'auto'
-            : 'manual',
+          trigger: isAutoMode ? (tempRunningFeature.retryCount > 0 ? 'retry' : 'auto') : 'manual',
         };
         const history = currentFeature?.executionHistory ?? [];
         await this.featureLoader.update(projectPath, featureId, {
@@ -918,9 +901,7 @@ export class ExecutionService {
                 timestamp: new Date().toISOString(),
               },
             })
-            .catch((e) =>
-              logger.warn(`Failed to persist git workflow error for ${featureId}:`, e)
-            );
+            .catch((e) => logger.warn(`Failed to persist git workflow error for ${featureId}:`, e));
         }
       }
 
@@ -961,11 +942,7 @@ export class ExecutionService {
             model: tempRunningFeature.model || 'unknown',
             success: false,
             error: errorInfo.message,
-            trigger: isAutoMode
-              ? tempRunningFeature.retryCount > 0
-                ? 'retry'
-                : 'auto'
-              : 'manual',
+            trigger: isAutoMode ? (tempRunningFeature.retryCount > 0 ? 'retry' : 'auto') : 'manual',
           };
           const history = currentFeature?.executionHistory ?? [];
           await this.featureLoader.update(projectPath, featureId, {
@@ -1365,7 +1342,12 @@ export class ExecutionService {
     abortController: AbortController,
     autoLoadClaudeMd: boolean,
     previousContext: string,
-    prompts: { taskExecution: { implementationInstructions: string; playwrightVerificationInstructions: string } },
+    prompts: {
+      taskExecution: {
+        implementationInstructions: string;
+        playwrightVerificationInstructions: string;
+      };
+    },
     contextFilesPrompt: string
   ): Promise<string> {
     const pipelineStatus = `pipeline_${step.id}`;
@@ -2022,8 +2004,7 @@ This mock response was generated because AUTOMAKER_MOCK_AGENT=true was set.
                         const hasFeedback =
                           approvalResult.feedback && approvalResult.feedback.trim().length > 0;
                         const hasEdits =
-                          approvalResult.editedPlan &&
-                          approvalResult.editedPlan.trim().length > 0;
+                          approvalResult.editedPlan && approvalResult.editedPlan.trim().length > 0;
 
                         if (!hasFeedback && !hasEdits) {
                           // No feedback or edits = explicit cancel
@@ -2079,8 +2060,7 @@ After generating the revised spec, output:
                           cwd: workDir,
                           allowedTools: allowedTools,
                           abortController,
-                          mcpServers:
-                            Object.keys(mcpServers).length > 0 ? mcpServers : undefined,
+                          mcpServers: Object.keys(mcpServers).length > 0 ? mcpServers : undefined,
                           credentials, // Pass credentials for resolving 'credentials' apiKeySource
                           claudeCompatibleProvider, // Pass provider for alternative endpoint configuration
                         });
@@ -2295,9 +2275,7 @@ After generating the revised spec, output:
                     }
                   }
 
-                  logger.info(
-                    `All ${parsedTasks.length} tasks completed for feature ${featureId}`
-                  );
+                  logger.info(`All ${parsedTasks.length} tasks completed for feature ${featureId}`);
                 } else {
                   // No parsed tasks - fall back to single-agent execution
                   logger.info(

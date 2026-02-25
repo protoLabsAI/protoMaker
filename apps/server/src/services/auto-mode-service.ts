@@ -188,7 +188,6 @@ interface PipelineStatusInfo {
   config: PipelineConfig | null;
 }
 
-
 interface AutoModeConfig {
   maxConcurrency: number;
   useWorktrees: boolean;
@@ -1587,7 +1586,7 @@ export class AutoModeService {
         useWorktrees,
         isAutoMode,
         providedWorktreePath,
-        options,
+        options
       );
     } finally {
       this.concurrencyManager.release(featureId);

@@ -832,7 +832,6 @@ export type {
   RetrievalMode,
 } from './knowledge.js';
 
-
 // PenFile types (vector graphics format v2.8)
 export type {
   PenColor,

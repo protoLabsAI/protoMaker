@@ -77,10 +77,7 @@ export interface IAutoModeCallbacks {
   resumeFeature(projectPath: string, featureId: string, useWorktrees: boolean): Promise<void>;
 
   // Worktree management
-  findExistingWorktreeForBranch(
-    projectPath: string,
-    branchName: string
-  ): Promise<string | null>;
+  findExistingWorktreeForBranch(projectPath: string, branchName: string): Promise<string | null>;
   createWorktreeForBranch(
     projectPath: string,
     branchName: string,
@@ -100,11 +97,7 @@ export interface IAutoModeCallbacks {
   getAutoLoopRunning(): boolean;
 
   // Status updates
-  updateFeatureStatus(
-    projectPath: string,
-    featureId: string,
-    status: string
-  ): Promise<void>;
+  updateFeatureStatus(projectPath: string, featureId: string, status: string): Promise<void>;
   updateFeaturePlanSpec(
     projectPath: string,
     featureId: string,
