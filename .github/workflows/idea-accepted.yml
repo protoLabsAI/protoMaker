@@ -1,0 +1,22 @@
+name: Idea Accepted Notification
+
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  notify-acceptance:
+    runs-on: ubuntu-latest
+    if: "github.event.label.name == 'status: accepted'"
+    steps:
+      - name: Post acceptance comment
+        run: |
+          gh issue comment ${{ github.event.issue.number }} \
+            --body "This idea has been accepted and queued for implementation by our AI agents. We will link the PR here when work begins." \
+            --repo ${{ github.repository }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

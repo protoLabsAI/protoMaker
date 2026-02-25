@@ -1,0 +1,38 @@
+name: Triage New Issues
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add needs-triage label
+        run: |
+          gh issue edit ${{ github.event.issue.number }} \
+            --add-label "status: needs-triage" \
+            --repo ${{ github.repository }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Post welcome comment
+        run: |
+          gh issue comment ${{ github.event.issue.number }} \
+            --body "👋 Thank you for submitting this idea!
+
+          Your issue has been added to our ideas pipeline. Here's what happens next:
+
+          1. **Triage** (1-3 days): Our team will review and label your idea
+          2. **Discussion** (ongoing): We may ask clarifying questions or gather community feedback
+          3. **Acceptance** (varies): If accepted, we'll add the \`status: accepted\` label
+          4. **Implementation** (varies): Our AI agents will implement accepted ideas and link the PR here
+
+          We appreciate your contribution to making this project better! 🚀" \
+            --repo ${{ github.repository }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

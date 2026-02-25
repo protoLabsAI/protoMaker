@@ -1,0 +1,29 @@
+name: Close Stale Issues
+
+on:
+  schedule:
+    # Run daily at 1:00 AM UTC
+    - cron: '0 1 * * *'
+  workflow_dispatch: # Allow manual triggering
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mark stale issues and close inactive ones
+        uses: actions/stale@5bef64f19d7facfb25b37b414482c7164d639639 # v9
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          days-before-stale: 60
+          days-before-close: 14
+          stale-issue-message: 'This issue has been inactive for 60 days and will be closed in 14 days if there is no further activity. If you believe this issue is still relevant, please comment to keep it open.'
+          close-issue-message: 'This issue has been closed due to inactivity. If you believe this should be reopened, please create a new issue and reference this one.'
+          stale-issue-label: 'status: stale'
+          exempt-issue-labels: 'status: accepted,type: in-progress'
+          exempt-pr-labels: 'status: accepted,type: in-progress'
+          operations-per-run: 100
