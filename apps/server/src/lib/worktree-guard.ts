@@ -14,45 +14,108 @@ const execAsync = promisify(exec);
 const logger = createLogger('WorktreeGuard');
 
 /**
- * Ensure worktree is clean by auto-committing any uncommitted changes
+ * Result of worktree cleanup operation
+ */
+export interface WorktreeGuardResult {
+  /** Whether changes were committed */
+  committed: boolean;
+  /** Whether commits were pushed to remote */
+  pushed: boolean;
+  /** Error message if operation failed (non-blocking) */
+  error?: string;
+}
+
+/**
+ * Ensure worktree is clean by auto-committing and pushing any changes
  *
  * @param worktreePath - Absolute path to the worktree
  * @param featureId - Feature ID for logging context
- * @returns Promise that resolves when worktree is clean (or was already clean).
- *          Best-effort: logs a warning and continues if git commands fail.
+ * @param branchName - Branch name to push to remote
+ * @returns Promise that resolves with result indicating what happened.
+ *          Best-effort: logs errors but doesn't throw, allowing verification to proceed.
  */
-export async function ensureCleanWorktree(worktreePath: string, featureId: string): Promise<void> {
+export async function ensureCleanWorktree(
+  worktreePath: string,
+  featureId: string,
+  branchName: string
+): Promise<WorktreeGuardResult> {
+  const result: WorktreeGuardResult = {
+    committed: false,
+    pushed: false,
+  };
+
   try {
     // Check for uncommitted changes using git status --porcelain
     const { stdout: statusOutput } = await execAsync('git status --porcelain', {
       cwd: worktreePath,
     });
 
-    // If output is empty, worktree is already clean
-    if (!statusOutput.trim()) {
-      logger.info(`Worktree is clean for feature ${featureId}`);
-      return;
+    // If there are uncommitted changes, commit them
+    if (statusOutput.trim()) {
+      // Uncommitted changes detected - log and auto-commit
+      logger.warn(
+        `Uncommitted changes detected in worktree for feature ${featureId}, auto-committing...`
+      );
+      logger.debug(`Uncommitted changes:\n${statusOutput}`);
+
+      // Stage all changes - exclude .automaker/ except memory/ (matches git-workflow-service pattern)
+      await execAsync("git add -A -- ':!.automaker/' '.automaker/memory/'", {
+        cwd: worktreePath,
+      });
+
+      // Commit with standard message
+      await execAsync('git commit -m "chore: auto-commit agent progress before verification"', {
+        cwd: worktreePath,
+      });
+
+      result.committed = true;
+      logger.info(`Successfully auto-committed changes for feature ${featureId}`);
     }
 
-    // Uncommitted changes detected - log and auto-commit
-    logger.warn(
-      `Uncommitted changes detected in worktree for feature ${featureId}, auto-committing...`
+    // Check for unpushed commits
+    const { stdout: unpushedOutput } = await execAsync(
+      `git log origin/${branchName}..HEAD --oneline`,
+      {
+        cwd: worktreePath,
+      }
     );
-    logger.debug(`Uncommitted changes:\n${statusOutput}`);
 
-    // Stage all changes
-    await execAsync('git add -A', { cwd: worktreePath });
+    // If there are unpushed commits, push them
+    if (unpushedOutput.trim()) {
+      logger.info(
+        `Unpushed commits detected for feature ${featureId}, pushing to origin/${branchName}...`
+      );
+      logger.debug(`Unpushed commits:\n${unpushedOutput}`);
 
-    // Commit with standard message
-    await execAsync('git commit -m "chore: auto-commit agent progress before verification"', {
-      cwd: worktreePath,
-    });
+      try {
+        await execAsync(`git push origin ${branchName}`, {
+          cwd: worktreePath,
+        });
 
-    logger.info(`Successfully auto-committed changes for feature ${featureId}`);
+        result.pushed = true;
+        logger.info(`Successfully pushed commits for feature ${featureId}`);
+      } catch (pushError) {
+        const pushErrorMessage = pushError instanceof Error ? pushError.message : String(pushError);
+        // Push failures are visible but non-blocking
+        logger.error(
+          `Failed to push commits for feature ${featureId}: ${pushErrorMessage}. Verification will proceed anyway.`
+        );
+        result.error = `Push failed: ${pushErrorMessage}`;
+      }
+    }
+
+    // If nothing was committed or pushed, log that worktree was already clean
+    if (!result.committed && !result.pushed) {
+      logger.info(`Worktree is clean for feature ${featureId}`);
+    }
+
+    return result;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     // Don't throw — the guard is best-effort. Failing here should not block
     // the verified transition (e.g. in test/mock environments without real git repos).
     logger.warn(`Could not ensure clean worktree for feature ${featureId}: ${errorMessage}`);
+    result.error = errorMessage;
+    return result;
   }
 }

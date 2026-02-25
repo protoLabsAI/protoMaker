@@ -2063,7 +2063,7 @@ export class AutoModeService {
       const finalStatus = feature.skipTests ? 'waiting_approval' : 'verified';
 
       // Ensure worktree is clean before marking as verified
-      await ensureCleanWorktree(workDir, featureId);
+      await ensureCleanWorktree(workDir, featureId, feature.branchName ?? 'main');
 
       await this.updateFeatureStatus(projectPath, featureId, finalStatus);
 
@@ -3082,7 +3082,7 @@ Complete the pipeline step instructions above. Review the previous work and appl
       const pipelineWorkDir = worktreePath ? path.resolve(worktreePath) : path.resolve(projectPath);
 
       // Ensure worktree is clean before marking as verified
-      await ensureCleanWorktree(pipelineWorkDir, featureId);
+      await ensureCleanWorktree(pipelineWorkDir, featureId, branchName ?? 'main');
 
       await this.updateFeatureStatus(projectPath, featureId, finalStatus);
 
@@ -3346,7 +3346,7 @@ Complete the pipeline step instructions above. Review the previous work and appl
       const finalStatus = feature.skipTests ? 'waiting_approval' : 'verified';
 
       // Ensure worktree is clean before marking as verified
-      await ensureCleanWorktree(workDir, featureId);
+      await ensureCleanWorktree(workDir, featureId, branchName ?? 'main');
 
       await this.updateFeatureStatus(projectPath, featureId, finalStatus);
 
@@ -3750,7 +3750,7 @@ Address the follow-up instructions above. Review the previous work and make the 
       const finalStatus = feature?.skipTests ? 'waiting_approval' : 'verified';
 
       // Ensure worktree is clean before marking as verified
-      await ensureCleanWorktree(workDir, featureId);
+      await ensureCleanWorktree(workDir, featureId, branchName ?? 'main');
 
       await this.updateFeatureStatus(projectPath, featureId, finalStatus);
 
