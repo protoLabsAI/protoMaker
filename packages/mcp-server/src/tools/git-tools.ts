@@ -80,7 +80,7 @@ export const gitTools: Tool[] = [
   {
     name: 'resolve_pr_threads',
     description:
-      'Resolve CodeRabbit review threads for a PR. Respects severity gates - only resolves threads that meet severity thresholds. Must call get_pr_feedback first.',
+      'Resolve all unresolved CodeRabbit review threads for a PR using the GitHub GraphQL resolveReviewThread mutation. Fetches PRRT_ thread node IDs (not PRRC_ comment IDs) and resolves each one. Supports an optional minSeverity gate. Returns resolvedCount and skippedCount.',
     inputSchema: {
       type: 'object',
       properties: {

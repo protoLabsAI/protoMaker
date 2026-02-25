@@ -355,3 +355,44 @@ export function assertValidSessionId(
     throw new Error(msg);
   }
 }
+
+// ============================================================================
+// Shell-Safe Integer Validation
+// ============================================================================
+
+/**
+ * Branded type for integers safe to interpolate into shell commands.
+ * TypeScript types are erased at runtime — any `number`-typed field
+ * (e.g. `prNumber`) could be a float, NaN, or tainted string at runtime.
+ * Using this branded type enforces an explicit validation step.
+ */
+export type SafeShellInteger = number & { readonly __brand: 'SafeShellInteger' };
+
+/**
+ * Assert that a value is a finite, non-negative integer safe for shell
+ * interpolation.
+ *
+ * Use before every `execAsync` call that embeds a numeric value:
+ *
+ * ```typescript
+ * assertSafeShellInteger(prNumber, 'gh pr view');
+ * await execAsync(`gh pr view ${prNumber} --json state`);
+ * ```
+ *
+ * @param value  - The value to validate (accepts `number | string | unknown`)
+ * @param context - Optional label for the error message
+ * @throws Error if value is not a valid safe integer
+ */
+export function assertSafeShellInteger(
+  value: unknown,
+  context?: string
+): asserts value is SafeShellInteger {
+  const n = typeof value === 'string' ? parseInt(value, 10) : (value as number);
+  const valid = typeof n === 'number' && Number.isInteger(n) && Number.isFinite(n) && n >= 0;
+  if (!valid) {
+    const label = context ? `[${context}] ` : '';
+    throw new Error(
+      `${label}Value is not a safe integer for shell interpolation: ${String(value)}`
+    );
+  }
+}
