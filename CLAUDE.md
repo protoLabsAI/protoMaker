@@ -95,6 +95,7 @@ automaker/
     ├── model-resolver/    # Claude model alias resolution
     ├── dependency-resolver/  # Feature dependency ordering
     ├── spec-parser/       # XML/markdown spec parsing for project plans
+    ├── pen-parser/        # PEN file parser for Penpot design files
     ├── git-utils/    # Git operations & worktree management
     ├── tools/        # Unified tool definition and registry system
     ├── flows/        # LangGraph state graph primitives & flow orchestration
@@ -110,7 +111,7 @@ Packages can only depend on packages above them:
 ```
 @protolabs-ai/types (no dependencies)
     ↓
-@protolabs-ai/utils, @protolabs-ai/prompts, @protolabs-ai/platform, @protolabs-ai/model-resolver, @protolabs-ai/dependency-resolver, @protolabs-ai/spec-parser, @protolabs-ai/tools, @protolabs-ai/flows, @protolabs-ai/llm-providers, @protolabs-ai/observability
+@protolabs-ai/utils, @protolabs-ai/prompts, @protolabs-ai/platform, @protolabs-ai/model-resolver, @protolabs-ai/dependency-resolver, @protolabs-ai/spec-parser, @protolabs-ai/pen-parser, @protolabs-ai/tools, @protolabs-ai/flows, @protolabs-ai/llm-providers, @protolabs-ai/observability
     ↓
 @protolabs-ai/git-utils, @protolabs-ai/ui
     ↓
@@ -351,7 +352,7 @@ claude plugin install automaker
 
 ### Available MCP Tools
 
-The MCP server exposes 48+ tools organized by category:
+The MCP server exposes 135 tools organized by category:
 
 **Feature Management:** `list_features`, `get_feature`, `create_feature`, `update_feature`, `delete_feature`, `move_feature`
 
