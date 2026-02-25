@@ -29,8 +29,6 @@ function formatDuration(startTime: number): string {
   return `${hours}h ${mins % 60}m`;
 }
 
-
-
 function AgentNodeComponent({ data }: NodeProps & { data: AgentNodeData }) {
   const badge = getModelBadge(data.model);
   const [duration, setDuration] = useState(formatDuration(data.startTime));

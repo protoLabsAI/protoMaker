@@ -253,7 +253,6 @@ const SERVICE_TO_GRAPH_MAP: Partial<Record<EngineServiceId, string>> = {
   'content-pipeline': 'content-creation',
 };
 
-
 export function useFlowGraphData(
   onNodeClick?: (serviceId: EngineServiceId, graphId: string) => void
 ) {
@@ -425,7 +424,6 @@ export function useFlowGraphData(
   );
 
   const gtmEnabled = engineStatus?.gtmEnabled ?? false;
-
 
   const nodes = useMemo(() => {
     const result: Node[] = [];
