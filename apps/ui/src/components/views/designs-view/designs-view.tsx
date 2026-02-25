@@ -1,52 +1,34 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 import { useAppStore } from '@/store/app-store';
 import { useDesignsStore } from '@/store/designs-store';
 import { Spinner } from '@protolabs-ai/ui/atoms';
 import { DesignsTree } from './designs-tree';
 import { DesignsCanvas } from './designs-canvas';
-import { PropertyInspector } from './inspector';
+import { PropertyInspector } from './inspector/property-inspector';
 import { FileText } from 'lucide-react';
-import type { PenNode } from '@protolabs-ai/types';
-
-/**
- * Helper to recursively find a node by ID in the document tree
- */
-function findNodeById(nodes: PenNode[], nodeId: string): PenNode | null {
-  for (const node of nodes) {
-    if (node.id === nodeId) {
-      return node;
-    }
-    if ('children' in node && Array.isArray(node.children)) {
-      const found = findNodeById(node.children, nodeId);
-      if (found) return found;
-    }
-  }
-  return null;
-}
 
 export function DesignsView() {
   const { currentProject } = useAppStore();
-  const { selectedFilePath, selectedDocument, selectedNodeId, isLoadingDocument, reset } =
+  const { selectedFilePath, selectedDocument, isLoadingDocument, isDirty, reset } =
     useDesignsStore();
-
-  // Find the selected node in the document
-  const selectedNode = useMemo(() => {
-    if (!selectedDocument?.content || !selectedNodeId) return null;
-    try {
-      const parsed = JSON.parse(selectedDocument.content);
-      if (parsed.children && Array.isArray(parsed.children)) {
-        return findNodeById(parsed.children, selectedNodeId);
-      }
-    } catch {
-      return null;
-    }
-    return null;
-  }, [selectedDocument, selectedNodeId]);
 
   // Reset store when project changes or component unmounts
   useEffect(() => {
     return () => reset();
   }, [currentProject?.path, reset]);
+
+  // Warn user about unsaved changes when navigating away
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isDirty) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isDirty]);
 
   // Show empty state if no project
   if (!currentProject) {
@@ -72,7 +54,7 @@ export function DesignsView() {
           <DesignsTree projectPath={currentProject.path} />
         </div>
 
-        {/* Center pane - Canvas/Document viewer */}
+        {/* Middle pane - Canvas/Document viewer */}
         <div className="flex-1 flex flex-col">
           {/* Canvas header */}
           {selectedFilePath && (
@@ -103,9 +85,11 @@ export function DesignsView() {
         </div>
 
         {/* Right sidebar - Property inspector */}
-        <div className="w-80 border-l border-border bg-background">
-          <PropertyInspector node={selectedNode} />
-        </div>
+        {selectedDocument && (
+          <div className="w-80 border-l border-border bg-background overflow-y-auto">
+            <PropertyInspector />
+          </div>
+        )}
       </div>
     </div>
   );
