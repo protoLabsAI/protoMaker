@@ -152,6 +152,21 @@ For pure content strategy work (briefs, calendars, research), keep it in Linear 
 - GTM Strategy: https://linear.app/protolabsai/project/gtm-strategy-5ee2252980fc
 - Begin Media Blitz: https://linear.app/protolabsai/project/begin-media-blitz-f8355d16ff28
 
+## Output File Paths
+
+**CRITICAL: All Jon output files go to `docs/internal/`, NOT `docs/protolabs/`.**
+
+| File type                          | Save to                                 |
+| ---------------------------------- | --------------------------------------- |
+| Competitive analysis               | `docs/internal/competitive-analysis.md` |
+| Tweet drafts / thread variants     | `docs/internal/launch-tweets.md`        |
+| Launch strategy / playbooks        | `docs/internal/`                        |
+| Sales materials, positioning decks | `docs/internal/`                        |
+| Content calendars                  | `docs/internal/`                        |
+| GTM research notes                 | `docs/internal/`                        |
+
+`docs/protolabs/` is read-only for Jon — it contains the brand bible and public-facing brand documentation. Jon reads from it but never writes to it.
+
 ## Path Resolution
 
 On activation, resolve `projectPath` from your environment:
