@@ -1,21 +1,125 @@
 {
   "summary": {
-    "totalEntries": 751,
+    "totalEntries": 764,
     "categories": {
-      "feature": 439,
-      "infrastructure": 47,
-      "fix": 203,
-      "improvement": 30,
-      "docs": 32
+      "docs": 34,
+      "feature": 446,
+      "infrastructure": 50,
+      "fix": 204,
+      "improvement": 30
     },
     "firstDate": "2026-02-04T21:35:59.000Z",
-    "latestDate": "2026-02-25T01:53:49.000Z"
+    "latestDate": "2026-02-25T03:58:53.000Z"
   },
   "months": [
     {
       "month": "2026-02",
       "label": "February 2026",
       "entries": [
+        {
+          "hash": "db3520f4",
+          "date": "2026-02-24T19:58:53-08:00",
+          "title": "Update MCP tool count to 135 and add pen-parser to monorepo structure",
+          "prNumber": 1099,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1099",
+          "category": "docs"
+        },
+        {
+          "hash": "705bc828",
+          "date": "2026-02-24T19:57:22-08:00",
+          "title": "Rewrite GitHub community files for ideas-only contribution model",
+          "prNumber": 1097,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1097",
+          "category": "feature"
+        },
+        {
+          "hash": "349b87b6",
+          "date": "2026-02-24T19:52:42-08:00",
+          "title": "Add quarantine types and trust tier fields to Feature interface",
+          "prNumber": 1098,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1098",
+          "category": "feature"
+        },
+        {
+          "hash": "99d5709a",
+          "date": "2026-02-24T19:18:19-08:00",
+          "title": "Add UI standards enforcement strategy and agent context files",
+          "prNumber": 1095,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1095",
+          "category": "docs"
+        },
+        {
+          "hash": "446f6bf2",
+          "date": "2026-02-24T19:16:41-08:00",
+          "title": "Version packages 0.4.0",
+          "prNumber": 1094,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1094",
+          "category": "infrastructure"
+        },
+        {
+          "hash": "44fa99a5",
+          "date": "2026-02-24T18:58:25-08:00",
+          "title": "Auto-commit agent progress before verification",
+          "prNumber": 1092,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1092",
+          "category": "infrastructure"
+        },
+        {
+          "hash": "e3388a6c",
+          "date": "2026-02-24T18:46:53-08:00",
+          "title": "Address CodeRabbit review feedback",
+          "prNumber": 1090,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1090",
+          "category": "fix"
+        },
+        {
+          "hash": "b072bbc6",
+          "date": "2026-02-24T18:39:25-08:00",
+          "title": "Component library panel for PEN design editor",
+          "prNumber": 1089,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1089",
+          "category": "feature"
+        },
+        {
+          "hash": "c9d061c8",
+          "date": "2026-02-24T18:21:08-08:00",
+          "title": "Property editing and file save for PEN design inspector",
+          "prNumber": 1088,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1088",
+          "category": "feature"
+        },
+        {
+          "hash": "95ad689b",
+          "date": "2026-02-24T18:11:50-08:00",
+          "title": "Grafana alerting rules with Discord notification pipeline",
+          "prNumber": 1087,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1087",
+          "category": "feature"
+        },
+        {
+          "hash": "7f985017",
+          "date": "2026-02-24T18:10:17-08:00",
+          "title": "Regenerate site stats with accurate PR count and date cutoff",
+          "prNumber": 1086,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1086",
+          "category": "feature"
+        },
+        {
+          "hash": "c3764b1b",
+          "date": "2026-02-24T18:05:11-08:00",
+          "title": "Node selection and property inspector panel for designs view",
+          "prNumber": 1085,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1085",
+          "category": "feature"
+        },
+        {
+          "hash": "2e68ac5b",
+          "date": "2026-02-24T17:55:21-08:00",
+          "title": "Auto-commit agent progress before verification",
+          "prNumber": 1084,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1084",
+          "category": "infrastructure"
+        },
         {
           "hash": "bf8f8c4e",
           "date": "2026-02-24T17:53:49-08:00",
@@ -6027,5 +6131,5 @@
       ]
     }
   ],
-  "generatedAt": "2026-02-25T01:57:52.408Z"
+  "generatedAt": "2026-02-25T04:02:06.533Z"
 }

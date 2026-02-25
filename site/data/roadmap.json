@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-02-23T04:00:00.000Z",
+  "lastUpdated": "2026-02-24T00:00:00.000Z",
   "milestones": [
     {
       "status": "completed",
@@ -101,10 +101,21 @@
       "description": "Fully open source as the maintained successor to the original Automaker project. Public repo, community engagement, and developer resources.",
       "items": [
         "GitHub repo public access (MIT/Apache 2.0)",
-        "create-protolab CLI for scaffolding new projects",
+        "create-protolab CLI for scaffolding new projects (created, pending npm publish)",
         "Methodology guide and prompt library",
         "Community Discord and upstream engagement",
         "setupLab consulting offering"
+      ]
+    },
+    {
+      "status": "planned",
+      "title": "0.3.0 Engine E2E",
+      "description": "End-to-end testing and validation for the complete engine workflow.",
+      "items": [
+        "Full pipeline integration tests",
+        "E2E test coverage for core workflows",
+        "Performance and stress testing",
+        "Automated regression test suite"
       ]
     }
   ]
