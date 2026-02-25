@@ -6,8 +6,8 @@ importance: 0.7
 relatedFiles: []
 usageStats:
   loaded: 457
-  referenced: 227
-  successfulFeatures: 227
+  referenced: 229
+  successfulFeatures: 229
 ---
 # gotchas
 
@@ -442,3 +442,13 @@ usageStats:
 - **Situation:** Dialog footer has disabled state on empty input, but no visual feedback if API call times out or returns error.
 - **Root cause:** Implementation focused on happy path. `.then(success => {})` pattern checks success bool but doesn't distinguish between network error, validation error, or permission error.
 - **How to avoid:** Current: clean code, but silent failures. With error handling: more verbose but better UX for failure cases.
+
+#### [Gotcha] Monorepo dist artifacts become stale when source changes but dist/ is not rebuilt. Consuming packages (model-resolver) import from dist, so they get old behavior despite new source code existing. (2026-02-25)
+- **Situation:** Developer modified libs/types/src/model.ts, but model-resolver tests continued using old model IDs until dist was rebuilt
+- **Root cause:** TypeScript compilation is explicit; dist/ is generated output, not auto-updated on source change. Workspace packages import from dist, not src.
+- **How to avoid:** Dist artifacts allow compiled output distribution but require explicit rebuild discipline. CI catches this; local dev doesn't always.
+
+#### [Gotcha] TOOL_PRESETS tools are hardcoded in multiple preset objects (fullAccess and chat). Adding/removing tools requires updates in all presets, creating maintenance burden and drift risk. (2026-02-25)
+- **Situation:** Added MultiEdit, LS, Task, Skill to both TOOL_PRESETS.fullAccess and TOOL_PRESETS.chat. Same 4 tools in 2 places.
+- **Root cause:** Current structure duplicates tool lists. Different access levels need different tools, but no shared base.
+- **How to avoid:** Duplication is explicit (easy to understand locally) but fragile (easy to forget one preset). Base approach would reduce duplication but add indirection.

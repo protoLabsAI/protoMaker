@@ -5,9 +5,9 @@ relevantTo: [security]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 33
-  referenced: 19
-  successfulFeatures: 19
+  loaded: 49
+  referenced: 21
+  successfulFeatures: 21
 ---
 # security
 
@@ -350,7 +350,105 @@ usageStats:
 - **Why this works:** Prevents Grafana from accidentally or maliciously modifying its own provisioning configuration. Enforces separation between infrastructure configuration (external, version-controlled) and runtime state (container-internal).
 - **Trade-offs:** Slightly more secure but means Grafana UI edits don't persist (users must modify source JSON, not UI, for changes to stick)
 
-#### [Pattern] Used instanceof Error check before accessing .message: `gitError instanceof Error ? gitError.message : String(gitError)` to defensively handle unknown error types (2026-02-25)
-- **Problem solved:** Catch blocks in JavaScript can receive any value type (Error objects, strings, null, etc.), not just Error instances
-- **Why this works:** Production robustness - JavaScript allows throwing non-Error values. Code that assumes only Error objects will crash if third-party or edge-case code throws a string/object. This pattern survives any throw without crashing.
-- **Trade-offs:** Adds null-coalescing complexity; protects against edge cases but makes code slightly more verbose
+#### [Gotcha] Zero-width characters (U+200B-U+2060) and directional overrides (U+202A-U+2069) are invisible to humans but can be used for homograph attacks, code injection hiding, and social engineering. They must be explicitly stripped during normalization. (2026-02-25)
+- **Situation:** Implementing normalizeUnicode to sanitize user input for LLM processing
+- **Root cause:** Invisible Unicode can pass visual review but execute malicious intent. Stripping these prevents a class of attacks that Unicode normalization alone doesn't catch.
+- **How to avoid:** Slightly more aggressive sanitization (removes legitimate uses of these chars like ZWNJ in typography) but security-first approach is justified for LLM input
+
+### Used curated character-by-character homoglyph mapping (Cyrillic-to-Latin replacements) instead of Unicode property detection or algorithmic homoglyph discovery. (2026-02-25)
+- **Context:** Implementing normalizeUnicode to detect lookalike characters that could bypass visual inspection
+- **Why:** Homoglyph attacks are intent-driven—specific characters chosen by an attacker to look identical. A curated, explicit map is auditable and maintainable. Algorithmic approaches (Unicode confusables) either miss targeted attacks or have excessive false positives.
+- **Rejected:** Using Unicode.Confusable property (misses targeted Cyrillic attacks), machine learning classifier (non-deterministic, hard to audit), or algorithmic similarity detection (too broad, destroys legitimate text)
+- **Trade-offs:** Requires ongoing curation as new homoglyph attacks are discovered (maintenance burden), but provides exact control and zero false positives on mapped characters. Can't detect unknown homoglyph pairs until explicitly added.
+- **Breaking if changed:** If the homoglyph map is removed or simplified, targeted visual attacks using Cyrillic/Latin confusion become viable again. Callers relying on confidence that all homoglyphs are caught would get false negatives.
+
+### Used pattern-based prompt injection detection with severity levels ('warn' vs 'block') instead of probabilistic/ML or regex whitelisting approaches. (2026-02-25)
+- **Context:** Implementing detectPromptInjection to catch common prompt manipulation attempts
+- **Why:** Pattern-based detection is deterministic, auditable, and doesn't require training data or external models. Severity levels allow callers to choose whether to reject ('block') or alert ('warn') on suspicious patterns, giving flexibility without being overly restrictive.
+- **Rejected:** ML-based detection (non-deterministic, hard to audit, requires training data), regex-based whitelist of safe inputs (too restrictive, breaks legitimate uses), simple keyword matching without context (high false positives)
+- **Trade-offs:** Misses novel/obfuscated injection patterns unknown at implementation time, but catches the common, well-known attacks with zero false positives. Requires updating patterns as new attack vectors emerge.
+- **Breaking if changed:** If patterns are removed or made too generic, the detector becomes either useless or creates unacceptable false positives. The severity classification must remain—removal forces callers to either block all violations or ignore all.
+
+### Sanitization utilities library has zero external dependencies, using only built-in JavaScript/TypeScript features. (2026-02-25)
+- **Context:** Creating a foundational security utility used across the codebase (utils package that other packages depend on)
+- **Why:** Security-critical code at a low level of the dependency graph should minimize supply chain risk. Every external dependency is a potential attack surface and licensing liability. Built-in features are auditable and stable across Node/TypeScript versions.
+- **Rejected:** Using dedicated sanitization libraries (xss, sanitize-html, etc.), Unicode libraries (unidecode ports), or regex helpers (escapeRegExp from lodash)
+- **Trade-offs:** Slightly more verbose code (manual regex patterns, explicit character mappings), but eliminates transitive dependencies and keeps the library lightweight for bundling. Forced to maintain homoglyph map and injection patterns explicitly.
+- **Breaking if changed:** If dependencies are added, it changes the surface area for supply chain attacks and increases bundle size for consuming code. The library would no longer be self-contained and portable.
+
+### Set suspicious line length threshold at 2000 characters for sanitizeMarkdownForLLM, with a 'warn' severity classification. (2026-02-25)
+- **Context:** Detecting potential prompt injection or context window attacks in Markdown before feeding to LLM
+- **Why:** LLM context windows are typically 4K-100K tokens, and 2000 chars is a reasonable heuristic for 'unusually dense input that might be an attack pattern or data exfiltration attempt.' 'Warn' severity (not 'block') allows legitimate long-form content while flagging for review.
+- **Rejected:** No line length limit (misses some context flooding attacks), lower threshold like 500 chars (too many false positives on normal code blocks), 'block' severity (breaks legitimate use cases), per-window-size tuning (adds complexity)
+- **Trade-offs:** May not catch all context flooding attacks, but avoids rejecting legitimate long paragraphs. Callers can inspect 'warn' violations and decide if content is legitimate.
+- **Breaking if changed:** If threshold is removed, context flooding attacks become easier. If threshold is lowered to 500, legitimate code blocks and long lists get flagged. If changed to 'block', legitimate users get rejected.
+
+#### [Pattern] Environment variable AUTOMAKER_API_URL with localhost fallback (process.env.AUTOMAKER_API_URL || 'http://localhost:3001'). Enables local development without env setup while supporting multiple deployment environments. (2026-02-25)
+- **Problem solved:** Stats script runs in multiple contexts: local dev (no env vars), CI/CD (env vars configured), deployed (might be different URL).
+- **Why this works:** Reduces friction for local development (works out of box if server on default port). Supports staging/production (via env var). Single code path for all environments.
+- **Trade-offs:** Relies on convention (server on localhost:3001 in dev). If dev sets up server differently, must use env var. But convention is well-established.
+
+#### [Pattern] Event-specific fork protection strategies: pull_request events require explicit fork checks (github.event.pull_request.head.repo.full_name == github.repository), but push and release events have implicit fork protection since only maintainers can trigger them. (2026-02-25)
+- **Problem solved:** GitHub Actions workflows triggered by different events have different vulnerability profiles when using self-hosted runners.
+- **Why this works:** pull_request events can be triggered from forks with user-controlled code and metadata. push and release events are inherently restricted to maintainers. Treating them identically wastes security checks and complicates guards.
+- **Trade-offs:** Event-specific logic is more complex but more precise. Simpler to audit and understand the actual vulnerability profile of each event.
+
+#### [Gotcha] String processing from PR metadata (title, body, description) in shell scripts requires fork protection even in events that seem safe (pull_request: [closed]). Fork-controlled PR metadata can contain shell injection payloads. (2026-02-25)
+- **Situation:** linear-sync.yml processes PR title/body in bash scripts. Initial assessment: 'safe' because it only triggers on pull_request:closed. Actual risk: PR metadata is under fork control and can be weaponized.
+- **Root cause:** PR metadata fields are completely controlled by fork submitters. Even in bash scripts that don't directly execute user code, string interpolation into commands is vulnerable to injection. Examples: `PR_TITLE='$(malicious_command)'`
+- **How to avoid:** Adding fork checks to linear-sync.yml adds 1 line of guard logic. Alternative: avoid processing PR metadata entirely (much larger refactor). The guard is minimal cost for high security value.
+
+#### [Pattern] Permissions hierarchy: Workflow-level permissions: read-all with job-level elevation only where needed (e.g., contents:write, pull-requests:write for release jobs). Creates explicit security boundaries and makes privilege requirements auditable. (2026-02-25)
+- **Problem solved:** GitHub Actions workflows can declare permissions at workflow level (applies to all jobs) or job level (override for specific jobs). Many workflows use a single blanket permission.
+- **Why this works:** Setting minimal at workflow level means jobs without elevated permissions automatically fail safe. Job-level elevation makes it explicit which jobs need write access. Easier to audit and harder to accidentally leak permissions.
+- **Trade-offs:** More verbose YAML but much clearer security model. Debugging permission errors requires checking both levels, but this is a feature—forces explicit thinking about what each job needs.
+
+### Explicit fork checks (if: github.event.pull_request.head.repo.full_name == github.repository) instead of pull_request_target event. Trades automatic fork isolation for explicit, auditable guards. (2026-02-25)
+- **Context:** GitHub Actions provides pull_request_target event which runs workflow code from main branch even when triggered by fork PRs. Alternative approach is pull_request event with explicit fork checks.
+- **Why:** pull_request_target is opaque and harder to audit—developers don't see 'what is being protected' in the workflow file. Explicit fork checks make the security model visible and auditable. Also avoids the complexity of pull_request_target (requires separate fetch of PR code if needed).
+- **Rejected:** Using pull_request_target event (automatic fork isolation but less auditable), or using pull_request without any fork checks (vulnerable)
+- **Trade-offs:** Explicit checks require manual maintenance of the fork-detection logic. pull_request_target would be automatic but less visible. Current approach wins on auditability and clarity.
+- **Breaking if changed:** Removing the explicit fork check guard but keeping pull_request event would expose self-hosted runners to fork PR code execution. Using pull_request_target without understanding its security properties can lead to credential leaks (secrets are available in pull_request_target but isolated from PR code).
+
+#### [Pattern] SHA-pinned actions with version comments (e.g., @abc123def...40chars # v4) enable supply chain attack prevention while maintaining semantic versioning context. Comment serves as audit trail of what action version was intended. (2026-02-25)
+- **Problem solved:** GitHub actions can be referenced by tag (e.g., actions/checkout@v4) which is convenient but mutable, or by full commit SHA (immutable but opaque).
+- **Why this works:** Tags can be moved by action maintainers (intentionally or via compromise). Full SHAs are immutable and prevent malicious action maintainers from injecting code into existing version tags. Comments document intent and make it easier to track when a deliberate action upgrade occurred vs. when a SHA became stale.
+- **Trade-offs:** More verbose, requires occasional pinning updates. But updates are explicit and auditable (commit message shows 'upgraded actions/checkout to v4.2.0'). Vulnerability surface reduced significantly.
+
+#### [Pattern] Layered repository validation: combining fork check + explicit repository name check + event type check + merge status check creates multiple layers of defense. Each layer catches different attack vectors independently. (2026-02-25)
+- **Problem solved:** The implementation checks: (1) github.event.pull_request.head.repo.full_name == github.repository (fork check), (2) github.repository == 'proto-labs-ai/protoMaker' (explicit repo name), (3) github.event.pull_request.merged == true (merge status), (4) different checks for different event types.
+- **Why this works:** No single check is bulletproof. Fork check prevents fork attacks but doesn't verify this is the correct repo. Repo name check prevents workflows running in mirrors/forks of the codebase. Merge status check prevents accidental processing of open PRs. Layering makes exploitation harder—attacker would need to bypass multiple independent validations.
+- **Trade-offs:** More verbose guard logic (2-3 if conditions). But defense-in-depth is worth the verbosity for self-hosted runner workflows where compromise is costly.
+
+### Trust tier bypass logic embedded in QuarantineService.Gate stage (returns early if tier >= 3) rather than checked in create route handler before calling quarantine. (2026-02-25)
+- **Context:** Three sources with different trust levels: api-key (tier 1, full validation), ui-session (tier 3, bypass), mcp/internal (tier 4, bypass). Need to conditionally validate based on tier.
+- **Why:** Centralizing bypass logic in the validation service creates complete audit trail (quarantine entry marks stage='Gate', violations empty, status='bypassed') vs bypassing before validation (no audit record). Maintains separation of concerns: handler doesn't need to know about validation rules.
+- **Rejected:** Check tier in handler with `if (tier >= 3) { return create(feature) }`. This skips validation entirely and loses audit trail of who submitted what and why it was bypassed. Complicates future security audits.
+- **Trade-offs:** All submissions create quarantine entries (even bypassed ones) → more disk I/O. Benefit: complete submission history. Handler code simpler: always call quarantine, don't conditionally skip.
+- **Breaking if changed:** If bypass check moved to handler, bypassed features would have no quarantine entry record. Future 'show me all submissions from API keys' queries fail. Audit trail becomes incomplete, security forensics impossible.
+
+### Save quarantine-processed content (title/description from outcome) to feature, not raw request input. Example: save outcome.entry.title instead of req.body.feature.title. (2026-02-25)
+- **Context:** QuarantineService sanitizes content (removes prompts, normalizes unicode, escapes HTML). Raw input may contain injection vectors that sanitization removes.
+- **Why:** Ensures stored feature data matches what passed validation. If raw input stored, sanitization becomes theater (database contains unsanitized content). Prevents subtle bugs where UI renders sanitized content but database serves raw content on next load.
+- **Rejected:** Store raw input and sanitize on render. Problem: race condition between storage and query. Other services query features without going through render pipeline and see unsanitized content. Distributed sanitization is unreliable.
+- **Trade-offs:** Data loss: normalization may truncate or collapse content. Benefit: guaranteed consistency between validation and storage. Worth the trade-off for security-critical data.
+- **Breaking if changed:** If raw input stored instead of sanitized: sanitization bypass via feature.json download (auth to get raw data). Content injection attacks succeed if downstream code trusts database without re-sanitizing.
+
+#### [Pattern] Organize security utility tests by threat class, not just code structure. Utilities grouped by attack vector: Unicode attacks (normalizeUnicode), content injection (sanitizeMarkdownForLLM), LLM-specific attacks (detectPromptInjection), path manipulation (validateFilePaths). (2026-02-25)
+- **Problem solved:** 19 tests across 4 sanitization utilities required systematic test design to ensure threat coverage
+- **Why this works:** Threat-based organization makes coverage gaps visible and maps to actual security risk model rather than just code coverage
+- **Trade-offs:** Requires upfront threat modeling, but provides clearer verification that all attack classes are handled
+
+### Security violation severity levels (block vs warn) embedded in sanitization utilities. Different violations warrant different risk tolerance—some hard-fail execution, others log warnings for investigation. (2026-02-25)
+- **Context:** Multiple types of security violations in LLM context (prompt injection, path traversal, XSS) have different impact profiles
+- **Why:** Not all security risks are equally critical in the same context. Injected script tags may warrant block; zero-width Unicode characters warrant warn.
+- **Rejected:** Treating all violations as hard failures or warnings uniformly
+- **Trade-offs:** Adds state to security functions but enables nuanced policy enforcement without code changes
+- **Breaking if changed:** Removing severity levels collapses risk categories—downstream code can't differentiate response strategy
+
+### Path traversal protection uses normalize() then relative() to validate paths stay within docs/internal/, not simple string checks like startsWith('..') or includes('..') (2026-02-25)
+- **Context:** Blocking path traversal attacks in file serving API
+- **Why:** normalize() resolves edge cases like mid-path '../' sequences that string checks miss. relative(docDir, join(docDir, path)) guarantees the result doesn't start with '..' only if normalized path never escapes. Double validation is defensive.
+- **Rejected:** Simple checks: if(path.includes('..')) or if(!path.startsWith('/')) - these fail on paths like 'docs/../../../.env' which normalize to '../../../.env'
+- **Trade-offs:** More code and two function calls per request vs false sense of security from naive checks. Worth the cost for file serving.
+- **Breaking if changed:** Removing normalize() allows paths like 'docs/../../.env' to bypass relative() check. Removing relative() check allows any path that doesn't contain raw '..' (e.g., after normalization).

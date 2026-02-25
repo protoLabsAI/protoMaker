@@ -926,3 +926,8 @@ usageStats:
 - **Problem solved:** Security utilities can pass tests with made-up examples while failing against real attacks
 - **Why this works:** Synthetic test cases may exercise code paths without actually triggering threat detection logic. Real attack patterns verify the threat model itself.
 - **Trade-offs:** Requires research into real-world attack vectors, but provides confidence tests catch actual threats
+
+#### [Gotcha] Tests that verify model resolution must be updated every time model IDs change. 13 test cases expected specific model strings; all had to be updated. (2026-02-25)
+- **Situation:** Updated model aliases (opus 4-5 → 4-6, sonnet 4-5 → 4-6), then had to update 13 test assertions to match new IDs
+- **Root cause:** Tests are tightly coupled to implementation constants. They verify behavior, not contracts.
+- **How to avoid:** String assertions are simple but brittle. Could use parameterized tests or test against a config file instead.
