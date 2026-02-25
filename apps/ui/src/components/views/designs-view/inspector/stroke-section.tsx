@@ -34,7 +34,7 @@ export function StrokeSection({ node }: StrokeSectionProps) {
       <button
         onClick={() => setIsExpanded(!isExpanded)}
         className="flex w-full items-center justify-between p-4 text-left hover:bg-accent"
-        aria-label={isExpanded ? "Collapse stroke section" : "Expand stroke section"}
+        aria-label={isExpanded ? 'Collapse stroke section' : 'Expand stroke section'}
       >
         <span className="text-sm font-semibold">Stroke</span>
         {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}

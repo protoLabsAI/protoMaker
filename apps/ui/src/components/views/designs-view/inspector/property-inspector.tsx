@@ -65,9 +65,7 @@ export function PropertyInspector() {
       )}
 
       {/* Stroke section - for nodes with strokes */}
-      {('strokes' in selectedNode) && (
-        <StrokeSection node={selectedNode} />
-      )}
+      {'strokes' in selectedNode && <StrokeSection node={selectedNode} />}
 
       {/* Typography section - for text nodes */}
       {selectedNode.type === 'text' && <TypographySection node={selectedNode} />}
