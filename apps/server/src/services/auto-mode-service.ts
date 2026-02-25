@@ -1713,10 +1713,11 @@ export class AutoModeService {
     if (!isNewAcquire) {
       const existing = this.concurrencyManager.get(featureId);
       const runtime = existing ? Math.floor((Date.now() - existing.startTime) / 1000) : 0;
-      logger.info(
-        `Feature ${featureId} is already running (runtime: ${runtime}s). Nested acquire — lease incremented, skipping duplicate execution.`
+      // Undo the lease increment before throwing — we're not going to execute
+      this.concurrencyManager.release(featureId);
+      throw new Error(
+        `Feature ${featureId} is already running (runtime: ${runtime}s)`
       );
-      return;
     }
 
     // Add to running features immediately to prevent duplicate execution race condition
