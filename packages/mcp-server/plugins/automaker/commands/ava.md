@@ -455,7 +455,10 @@ LinearSyncService moves issue to "Done" + adds comment
 - `staging` — Integration / QA. Promoted from `dev` via PR. Auto-deploys to staging env.
 - `main` — Stable release. **Only PRs from `staging` are allowed** — enforced by `promotion-check` CI. Any PR from another branch fails the `source-branch` required check.
 
-When reviewing or creating PRs: feature branches target `dev`, not `main`. If you see a feature PR targeting `main`, rebase it to target `dev` instead.
+When reviewing or creating PRs: feature branches target `dev`, not `main`. If you see a feature PR targeting `main`, retarget it with two steps:
+
+1. `gh pr edit <number> --base dev` — update the PR metadata
+2. `git rebase --onto dev main <branch>` — rebase commits off main onto dev (only needed if main commits were merged into the branch)
 
 **Promotion commands:**
 
