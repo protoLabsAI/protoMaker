@@ -4,6 +4,7 @@
 
 import type { PenFrameNode } from '@protolabs-ai/types';
 import { useDesignsStore } from '@/store/designs-store';
+import { Input } from '@protolabs-ai/ui/atoms';
 
 interface LayoutSectionProps {
   node: PenFrameNode;
@@ -25,7 +26,7 @@ export function LayoutSection({ node }: LayoutSectionProps) {
   };
 
   return (
-    <div className="rounded-lg bg-white p-3 shadow-sm space-y-3">
+    <div className="rounded-lg bg-card p-3 shadow-sm space-y-3">
       <div className="text-sm font-semibold">Layout</div>
 
       {/* Layout Direction */}
@@ -35,7 +36,8 @@ export function LayoutSection({ node }: LayoutSectionProps) {
           <select
             value={node.layout}
             onChange={(e) => handleLayoutChange(e.target.value as PenFrameNode['layout'])}
-            className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
+            className="w-full rounded border border-border bg-card px-2 py-1 text-sm"
+            aria-label="Layout direction"
           >
             <option value="horizontal">Horizontal</option>
             <option value="vertical">Vertical</option>
@@ -48,12 +50,13 @@ export function LayoutSection({ node }: LayoutSectionProps) {
       {node.padding !== undefined && (
         <div className="space-y-2">
           <div className="text-xs text-muted-foreground">Padding</div>
-          <input
+          <Input
             type="number"
             value={node.padding}
             onChange={(e) => handlePaddingChange(Number(e.target.value))}
-            className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
+            className="w-full text-sm"
             min="0"
+            aria-label="Padding"
           />
         </div>
       )}
@@ -62,12 +65,13 @@ export function LayoutSection({ node }: LayoutSectionProps) {
       {node.gap !== undefined && (
         <div className="space-y-2">
           <div className="text-xs text-muted-foreground">Gap</div>
-          <input
+          <Input
             type="number"
             value={node.gap}
             onChange={(e) => handleGapChange(Number(e.target.value))}
-            className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
+            className="w-full text-sm"
             min="0"
+            aria-label="Gap"
           />
         </div>
       )}

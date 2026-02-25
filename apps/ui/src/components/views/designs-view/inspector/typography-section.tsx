@@ -4,6 +4,16 @@
 
 import type { PenTextNode } from '@protolabs-ai/types';
 import { useDesignsStore } from '@/store/designs-store';
+import { Input } from '@protolabs-ai/ui/atoms';
+import { Textarea } from '@protolabs-ai/ui/atoms';
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
 
 interface TypographySectionProps {
   node: PenTextNode;
@@ -29,17 +39,18 @@ export function TypographySection({ node }: TypographySectionProps) {
   };
 
   return (
-    <div className="rounded-lg bg-white p-3 shadow-sm space-y-3">
+    <div className="rounded-lg bg-card p-3 shadow-sm space-y-3">
       <div className="text-sm font-semibold">Typography</div>
 
       {/* Content */}
       <div className="space-y-2">
         <div className="text-xs text-muted-foreground">Content</div>
-        <textarea
+        <Textarea
           value={node.content || ''}
           onChange={(e) => handleContentChange(e.target.value)}
-          className="w-full rounded border border-gray-300 px-2 py-1 text-sm resize-none"
+          className="w-full text-sm resize-none"
           rows={3}
+          aria-label="Text content"
         />
       </div>
 
@@ -47,12 +58,13 @@ export function TypographySection({ node }: TypographySectionProps) {
       {node.fontSize !== undefined && (
         <div className="space-y-2">
           <div className="text-xs text-muted-foreground">Font Size</div>
-          <input
+          <Input
             type="number"
             value={node.fontSize}
             onChange={(e) => handleFontSizeChange(Number(e.target.value))}
-            className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
+            className="w-full text-sm"
             min="1"
+            aria-label="Font size"
           />
         </div>
       )}
@@ -64,7 +76,8 @@ export function TypographySection({ node }: TypographySectionProps) {
           <select
             value={node.fontWeight}
             onChange={(e) => handleFontWeightChange(Number(e.target.value))}
-            className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
+            className="w-full rounded border border-border bg-card px-2 py-1 text-sm"
+            aria-label="Font weight"
           >
             <option value={100}>Thin (100)</option>
             <option value={200}>Extra Light (200)</option>
@@ -85,17 +98,16 @@ export function TypographySection({ node }: TypographySectionProps) {
           <div className="text-xs text-muted-foreground">Text Align</div>
           <div className="flex gap-1">
             {(['left', 'center', 'right', 'justify'] as const).map((align) => (
-              <button
+              <Button
                 key={align}
                 onClick={() => handleTextAlignChange(align)}
-                className={`flex-1 rounded border px-2 py-1 text-xs capitalize ${
-                  node.textAlign === align
-                    ? 'border-blue-500 bg-blue-50 text-blue-700'
-                    : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
-                }`}
+                variant={node.textAlign === align ? 'default' : 'outline'}
+                size="sm"
+                className="flex-1 text-xs capitalize"
+                aria-label={`Align text ${align}`}
               >
                 {align}
-              </button>
+              </Button>
             ))}
           </div>
         </div>

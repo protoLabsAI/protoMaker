@@ -4,6 +4,7 @@
 
 import type { PenNode, PenTextNode } from '@protolabs-ai/types';
 import { useDesignsStore } from '@/store/designs-store';
+import { Input } from '@protolabs-ai/ui/atoms';
 
 interface FillSectionProps {
   node: PenNode;
@@ -65,7 +66,7 @@ export function FillSection({ node }: FillSectionProps) {
   };
 
   return (
-    <div className="rounded-lg bg-white p-3 shadow-sm space-y-3">
+    <div className="rounded-lg bg-card p-3 shadow-sm space-y-3">
       <div className="text-sm font-semibold">Fill</div>
 
       <div className="space-y-2">
@@ -75,9 +76,10 @@ export function FillSection({ node }: FillSectionProps) {
             type="color"
             value={currentColor}
             onChange={(e) => handleColorChange(e.target.value)}
-            className="h-8 w-16 rounded border border-gray-300 cursor-pointer"
+            className="h-8 w-16 rounded border border-border cursor-pointer"
+            aria-label="Fill color picker"
           />
-          <input
+          <Input
             type="text"
             value={currentColor.toUpperCase()}
             onChange={(e) => {
@@ -86,8 +88,9 @@ export function FillSection({ node }: FillSectionProps) {
                 handleColorChange(value);
               }
             }}
-            className="flex-1 rounded border border-gray-300 px-2 py-1 text-sm font-mono"
+            className="flex-1 text-sm font-mono"
             placeholder="#000000"
+            aria-label="Fill color hex value"
           />
         </div>
       </div>
