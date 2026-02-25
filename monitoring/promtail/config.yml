@@ -20,7 +20,7 @@ scrape_configs:
         refresh_interval: 5s
         filters:
           - name: label
-            values: ["com.docker.compose.project=automaker"]
+            values: ['com.docker.compose.project=automaker']
 
     relabel_configs:
       # Container name label
