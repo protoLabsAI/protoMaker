@@ -1,4 +1,4 @@
-import { BookOpen } from 'lucide-react';
+import { Library } from 'lucide-react';
 import { useAppStore } from '@/store/app-store';
 
 export function DocsView() {
@@ -16,7 +16,7 @@ export function DocsView() {
     <div className="flex h-full flex-col">
       {/* Header */}
       <div className="flex items-center gap-2 border-b border-border px-4 py-2">
-        <BookOpen className="size-4 text-primary" />
+        <Library className="size-4 text-primary" />
         <h1 className="text-sm font-medium">Docs</h1>
       </div>
 

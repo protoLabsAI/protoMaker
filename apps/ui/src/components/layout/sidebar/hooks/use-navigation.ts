@@ -4,6 +4,7 @@ import {
   FileText,
   LayoutGrid,
   BookOpen,
+  Library,
   Terminal,
   CircleDot,
   GitPullRequest,
@@ -138,7 +139,7 @@ export function useNavigation({
       {
         id: 'docs',
         label: 'Docs',
-        icon: BookOpen,
+        icon: Library,
         shortcut: shortcuts.docs,
       },
     ];
