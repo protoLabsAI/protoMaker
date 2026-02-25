@@ -51,7 +51,7 @@ export function createQuarantineRoutes(): Router {
       let files: string[];
       try {
         files = (await secureFs.readdir(quarantineDir)) as string[];
-      } catch (error) {
+      } catch (_error) {
         // If directory doesn't exist, return empty array
         res.json({
           success: true,

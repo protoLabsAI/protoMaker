@@ -17,13 +17,7 @@ import {
   detectPromptInjection,
   validateFilePaths,
 } from '@protolabs-ai/utils';
-import type {
-  TrustTier,
-  QuarantineEntry,
-  QuarantineStage,
-  QuarantineResult,
-  SanitizationViolation,
-} from '@protolabs-ai/types';
+import type { TrustTier, QuarantineEntry, SanitizationViolation } from '@protolabs-ai/types';
 import type { Feature } from '@protolabs-ai/types';
 import type { TrustTierService } from './trust-tier-service.js';
 import path from 'path';
@@ -388,10 +382,13 @@ export class QuarantineService {
   async getEntry(id: string): Promise<QuarantineEntry | null> {
     const filePath = path.join(this.quarantineDir, `${id}.json`);
     try {
-      const entry = await readJsonFile<QuarantineEntry>(filePath, null as any);
+      const entry = await readJsonFile<QuarantineEntry>(
+        filePath,
+        null as unknown as QuarantineEntry
+      );
       return entry;
-    } catch (error) {
-      logger.error(`Failed to read quarantine entry ${id}:`, error);
+    } catch (_error) {
+      logger.error(`Failed to read quarantine entry ${id}:`, _error);
       return null;
     }
   }
@@ -411,7 +408,10 @@ export class QuarantineService {
         if (!file.endsWith('.json')) continue;
 
         const filePath = path.join(this.quarantineDir, file);
-        const entry = await readJsonFile<QuarantineEntry>(filePath, null as any);
+        const entry = await readJsonFile<QuarantineEntry>(
+          filePath,
+          null as unknown as QuarantineEntry
+        );
 
         if (entry && entry.result === 'failed' && !entry.reviewedAt) {
           entries.push(entry);
@@ -487,7 +487,7 @@ export class QuarantineService {
   private async ensureQuarantineDir(): Promise<void> {
     try {
       await secureFs.mkdir(this.quarantineDir, { recursive: true });
-    } catch (error) {
+    } catch (_error) {
       // Ignore if directory already exists
     }
   }
