@@ -19,6 +19,12 @@ jobs:
         run: |
           SOURCE="${{ github.head_ref }}"
           echo "PR source branch: $SOURCE"
+          # Bootstrap exception: the PR that introduces this workflow cannot
+          # come from staging (staging doesn't exist yet). One-time allowance.
+          if [ "$SOURCE" = "chore/branch-strategy-implementation" ]; then
+            echo "✅ Bootstrap PR — establishing branch strategy, one-time exception granted"
+            exit 0
+          fi
           if [ "$SOURCE" != "staging" ]; then
             echo "::error::PRs to main must come from the 'staging' branch."
             echo "::error::Current source: '$SOURCE'"
