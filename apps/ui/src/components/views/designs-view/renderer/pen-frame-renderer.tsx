@@ -6,6 +6,8 @@ import type { PenFrame } from '@protolabs-ai/types';
 import { PenNodeRenderer } from './pen-node-renderer';
 import { fillToCSS, strokeToCSS, paddingToCSS, layoutToFlexDirection } from './style-utils';
 import { usePenTheme } from './pen-theme-context';
+import { useDroppable } from '@dnd-kit/core';
+import { DropZone } from '../dnd/drop-zone';
 import type { CSSProperties } from 'react';
 
 interface PenFrameRendererProps {
@@ -19,6 +21,14 @@ interface PenFrameRendererProps {
  */
 export function PenFrameRenderer({ node, onClick, style: externalStyle }: PenFrameRendererProps) {
   const { resolveVariable } = usePenTheme();
+
+  // Make frame droppable if it has a layout mode (can accept children)
+  const canDrop = node.layoutMode !== 'none';
+  const { setNodeRef, isOver } = useDroppable({
+    id: `frame-${node.id}`,
+    disabled: !canDrop,
+    data: { nodeId: node.id, nodeType: 'frame' },
+  });
 
   const style: CSSProperties = {
     position: node.layoutMode === 'none' ? 'relative' : undefined,
@@ -94,8 +104,9 @@ export function PenFrameRenderer({ node, onClick, style: externalStyle }: PenFra
   }
 
   // Render children recursively
-  return (
+  const content = (
     <div
+      ref={setNodeRef}
       style={{ ...style, ...externalStyle }}
       data-node-id={node.id}
       data-node-type="frame"
@@ -106,4 +117,11 @@ export function PenFrameRenderer({ node, onClick, style: externalStyle }: PenFra
       ))}
     </div>
   );
+
+  // Wrap in drop zone if droppable
+  if (canDrop) {
+    return <DropZone isOver={isOver}>{content}</DropZone>;
+  }
+
+  return content;
 }

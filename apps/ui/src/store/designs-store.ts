@@ -61,6 +61,7 @@ export interface DesignsActions {
   // Document update actions
   updateNode: (nodeId: string, updates: Partial<PenNode>) => void;
   updateDocument: (content: string, addToHistory?: boolean) => void;
+  createRefNode: (targetFrameId: string, componentId: string, position?: { x: number; y: number }) => void;
 
   // History actions
   undo: () => void;
@@ -104,6 +105,28 @@ function updateNodeInTree(nodes: PenNode[], nodeId: string, updates: Partial<Pen
       return {
         ...node,
         children: updateNodeInTree(node.children, nodeId, updates),
+      };
+    }
+    return node;
+  });
+}
+
+// Helper to add a child to a specific node
+function addChildToNode(nodes: PenNode[], nodeId: string, child: PenNode): PenNode[] {
+  return nodes.map((node) => {
+    if (node.id === nodeId) {
+      if ('children' in node && Array.isArray(node.children)) {
+        return {
+          ...node,
+          children: [...node.children, child],
+        };
+      }
+      return node;
+    }
+    if ('children' in node && node.children) {
+      return {
+        ...node,
+        children: addChildToNode(node.children, nodeId, child),
       };
     }
     return node;
@@ -196,6 +219,42 @@ export const useDesignsStore = create<DesignsState & DesignsActions>()((set, get
         selectedDocument: { ...state.selectedDocument!, content },
         isDirty: true,
       });
+    }
+  },
+
+  createRefNode: (targetFrameId, componentId, position) => {
+    const state = get();
+    const { selectedDocument } = state;
+
+    if (!selectedDocument) return;
+
+    try {
+      const parsed = JSON.parse(selectedDocument.content);
+
+      // Create new ref node
+      const refNode: PenNode = {
+        type: 'ref',
+        id: `ref-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        refId: componentId,
+        name: `${componentId} Instance`,
+        visible: true,
+        bounds: position
+          ? {
+              x: position.x,
+              y: position.y,
+              width: 100,
+              height: 100,
+            }
+          : undefined,
+      };
+
+      // Add ref node to target frame's children
+      const updatedChildren = addChildToNode(parsed.children || [], targetFrameId, refNode);
+      const newContent = JSON.stringify({ ...parsed, children: updatedChildren }, null, 2);
+
+      get().updateDocument(newContent, true);
+    } catch (error) {
+      console.error('Failed to create ref node:', error);
     }
   },
 
