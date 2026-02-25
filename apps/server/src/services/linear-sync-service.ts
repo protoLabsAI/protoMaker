@@ -22,6 +22,10 @@ import { LinearProjectSync } from './linear-project-sync.js';
 import { LinearWebhookHandler } from './linear-webhook-handler.js';
 import { LinearCommentService } from './linear-comment-service.js';
 import {
+  mapAutomakerStatusToLinear as _mapAutomakerStatusToLinear,
+  mapLinearStateToAutomaker as _mapLinearStateToAutomaker,
+} from './linear-state-mapper.js';
+import {
   DEBOUNCE_WINDOW_MS,
   type SyncMetrics,
   type SyncActivity,
@@ -149,6 +153,7 @@ export class LinearSyncService {
   // -------------------------------------------------------------------------
 
   private async route(type: string, payload: unknown): Promise<void> {
+    if (!this.running) return;
     if (type === 'feature:created') {
       await this.issueSync.onFeatureCreated(payload as FeatureEventPayload);
     } else if (type === 'feature:status-changed') {
@@ -196,6 +201,30 @@ export class LinearSyncService {
 
   protected unmarkSyncing(featureId: string): void {
     this.syncingFeatures.delete(featureId);
+  }
+
+  protected mapAutomakerStatusToLinear(status: string): string {
+    return _mapAutomakerStatusToLinear(status);
+  }
+
+  protected mapLinearStateToAutomaker(stateName: string): string {
+    return _mapLinearStateToAutomaker(stateName);
+  }
+
+  protected async getWorkflowStateId(
+    projectPath: string,
+    teamId: string,
+    stateName: string
+  ): Promise<string> {
+    return this.issueSync.getWorkflowStateId(projectPath, teamId, stateName);
+  }
+
+  protected async addCommentToIssue(
+    projectPath: string,
+    issueId: string,
+    commentBody: string
+  ): Promise<void> {
+    return this.issueSync.addCommentToIssue(projectPath, issueId, commentBody);
   }
 
   async isProjectSyncEnabled(projectPath: string): Promise<boolean> {
