@@ -14,7 +14,7 @@ import { ProviderFactory } from '../providers/provider-factory.js';
 import { simpleQuery } from '../providers/simple-query-service.js';
 import { StreamObserver } from './stream-observer-service.js';
 import { getWorkflowSettings } from '../lib/settings-helpers.js';
-import { startTransaction, setFeatureContext } from '@protolabs-ai/error-tracking';
+import { setFeatureContext } from '@protolabs-ai/error-tracking';
 
 /**
  * Error thrown when stream observer detects an agent loop.
@@ -1727,19 +1727,6 @@ export class AutoModeService {
       recoveryContext?: string;
     }
   ): Promise<void> {
-    // Start Sentry performance transaction for feature execution
-    const transaction = startTransaction({
-      op: 'feature.execution',
-      name: `Execute Feature: ${featureId}`,
-      data: {
-        featureId,
-        projectPath,
-        useWorktrees,
-        isAutoMode,
-        retryCount: options?.retryCount ?? 0,
-      },
-    });
-
     if (this.runningFeatures.has(featureId)) {
       const existing = this.runningFeatures.get(featureId);
       const runtime = existing ? Math.floor((Date.now() - existing.startTime) / 1000) : 0;
