@@ -107,6 +107,7 @@ async function writeSettingsJson(filePath: string, data: unknown): Promise<void>
  */
 export class SettingsService {
   private dataDir: string;
+  private instanceIdInitPromise: Promise<string> | null = null;
 
   /**
    * Create a new SettingsService instance
@@ -694,11 +695,17 @@ export class SettingsService {
     if (settings.instanceId) {
       return settings.instanceId;
     }
-    const { randomUUID } = await import('crypto');
-    const generatedId = randomUUID();
-    await this.updateGlobalSettings({ instanceId: generatedId });
-    logger.info(`Generated and persisted new instance ID: ${generatedId}`);
-    return generatedId;
+    // Guard against concurrent callers both racing through the !instanceId branch
+    if (!this.instanceIdInitPromise) {
+      this.instanceIdInitPromise = (async () => {
+        const { randomUUID } = await import('crypto');
+        const generatedId = randomUUID();
+        await this.updateGlobalSettings({ instanceId: generatedId });
+        logger.info(`Generated and persisted new instance ID: ${generatedId}`);
+        return generatedId;
+      })();
+    }
+    return this.instanceIdInitPromise;
   }
 
   // ============================================================================

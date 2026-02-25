@@ -104,7 +104,7 @@ describe('isPRStale', () => {
     expect(isPRStale(25, 25, 24)).toBe(true);
   });
 
-  it('returns true at exactly the boundary when both equal TTL', () => {
+  it('returns false at exactly the boundary when both equal TTL', () => {
     // strictly greater than, so equal is NOT stale
     expect(isPRStale(24, 24, 24)).toBe(false);
   });

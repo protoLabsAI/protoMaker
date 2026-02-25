@@ -74,7 +74,7 @@ export function createCheckPRStatusHandler(settingsService?: SettingsService) {
 
       try {
         const { stdout: prDataJson } = await execAsync(
-          `gh pr view ${prNumber} --json body,updatedAt,commits`,
+          `gh pr view ${prNumber} --repo ${remoteStatus.owner}/${remoteStatus.repo} --json body,updatedAt,commits`,
           { cwd: projectPath, env: execEnv }
         );
         const prData = JSON.parse(prDataJson) as {

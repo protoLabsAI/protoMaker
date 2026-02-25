@@ -24,7 +24,7 @@ export interface PROwnership {
 
 const WATERMARK_PREFIX = 'automaker:owner';
 const WATERMARK_COMMENT_RE =
-  /<!--\s*automaker:owner\s+instance=(\S+)\s+team=(\S+)\s+created=(\S+)\s*-->/;
+  /<!--\s*automaker:owner\s+instance=(\S+)\s+team=(\S*)\s+created=(\S+)\s*-->/;
 
 /**
  * Parse the Automaker ownership watermark from a PR body.
