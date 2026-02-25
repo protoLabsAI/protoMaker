@@ -13,7 +13,7 @@ jobs:
   deploy:
     runs-on: self-hosted
     if: github.repository == 'proto-labs-ai/protoMaker'
-    timeout-minutes: 15
+    timeout-minutes: 30
     concurrency:
       group: staging-deploy
       cancel-in-progress: false
@@ -101,7 +101,7 @@ jobs:
           # Save current working images so we can restore on failure.
           # Only tag app services — docs runs independently and is never rolled back.
           for svc in server ui; do
-            img=$(docker compose -f docker-compose.staging.yml images -q "$svc" 2>/dev/null || true)
+            img=$(docker compose -f docker-compose.staging.yml images -q "$svc" 2>/dev/null | head -1 || true)
             if [ -n "$img" ]; then
               docker tag "$img" "automaker-staging-${svc}:rollback"
               echo "Tagged ${svc} image ${img} as rollback"
