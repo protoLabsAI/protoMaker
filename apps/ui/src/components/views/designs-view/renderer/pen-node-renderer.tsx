@@ -5,6 +5,10 @@
 import type { PenNode } from '@protolabs-ai/types';
 import { PenFrameRenderer } from './pen-frame-renderer';
 import { PenGroupRenderer } from './pen-group-renderer';
+import { PenTextRenderer } from './pen-text-renderer';
+import { PenIconRenderer } from './pen-icon-renderer';
+import { PenRefRenderer } from './pen-ref-renderer';
+import { PenShapeRenderer } from './pen-shape-renderer';
 
 interface PenNodeRendererProps {
   node: PenNode;
@@ -25,14 +29,18 @@ export function PenNodeRenderer({ node }: PenNodeRendererProps) {
       return <PenFrameRenderer node={node} />;
     case 'group':
       return <PenGroupRenderer node={node} />;
+    case 'text':
+      return <PenTextRenderer node={node} />;
+    case 'icon-font':
+      return <PenIconRenderer node={node} />;
+    case 'ref':
+      return <PenRefRenderer node={node} />;
     case 'rectangle':
     case 'ellipse':
+      return <PenShapeRenderer node={node} />;
     case 'line':
     case 'polygon':
     case 'path':
-    case 'text':
-    case 'icon-font':
-    case 'ref':
     case 'image':
     case 'vector':
     case 'instance':
