@@ -395,18 +395,20 @@ export class LinearSyncService {
   // -------------------------------------------------------------------------
 
   private buildGuards(): SyncGuards {
-    const svc = this;
+    // Capture emitter reference for use in the getter closure.
+    // Arrow functions below capture `this` lexically from the class method.
+    const emitter = this.emitter;
     return {
-      shouldSync: (id) => svc.shouldSync(id),
-      markSyncing: (id) => svc.markSyncing(id),
-      unmarkSyncing: (id) => svc.unmarkSyncing(id),
-      isProjectSyncEnabled: (path) => svc.isProjectSyncEnabled(path),
-      getSyncMetadata: (id) => svc.getSyncMetadata(id),
-      updateSyncMetadata: (m) => svc.updateSyncMetadata(m),
+      shouldSync: (id) => this.shouldSync(id),
+      markSyncing: (id) => this.markSyncing(id),
+      unmarkSyncing: (id) => this.unmarkSyncing(id),
+      isProjectSyncEnabled: (path) => this.isProjectSyncEnabled(path),
+      getSyncMetadata: (id) => this.getSyncMetadata(id),
+      updateSyncMetadata: (m) => this.updateSyncMetadata(m),
       recordOperation: (id, dir, status, ms, conflict, err) =>
-        svc.recordOperation(id, dir, status, ms, conflict, err),
+        this.recordOperation(id, dir, status, ms, conflict, err),
       get emitter() {
-        return svc.emitter;
+        return emitter;
       },
     };
   }
