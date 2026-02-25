@@ -25,6 +25,8 @@ import type { GraphiteSyncScheduler } from './graphite-sync-scheduler.js';
 import { mergeEligibilityService } from './merge-eligibility-service.js';
 import { githubMergeService } from './github-merge-service.js';
 import { graphiteService } from './graphite-service.js';
+import { gitWorkflowService } from './git-workflow-service.js';
+import type { Feature } from '@protolabs-ai/types';
 
 const execFileAsync = promisify(execFile);
 
@@ -1160,5 +1162,180 @@ async function autoRebaseStalePRs(
   } catch (error) {
     logger.error('Auto-rebase stale PRs check failed:', error);
     throw error;
+  }
+}
+
+/**
+ * Scan all worktrees for uncommitted changes and unpushed commits.
+ * This runs non-blocking after server initialization to detect and recover
+ * from crashes where work was completed but not committed/pushed/PR'd.
+ *
+ * For features in verified/done status with unpushed work, triggers runPostCompletionWorkflow.
+ * For features in other states, logs a warning.
+ */
+export async function scanWorktreesForCrashRecovery(
+  projectPath: string,
+  featureLoader: FeatureLoader,
+  settingsService: SettingsService,
+  events: EventEmitter
+): Promise<void> {
+  logger.info(`Starting crash recovery scan for ${projectPath}...`);
+
+  try {
+    let totalScanned = 0;
+    let totalRecovered = 0;
+    let totalWarnings = 0;
+    const recoveredWorktrees: string[] = [];
+    const warningWorktrees: Array<{ worktree: string; status: string; reason: string }> = [];
+
+    // List all worktrees
+    const { stdout: worktreeList } = await execFileAsync('git', ['worktree', 'list', '--porcelain'], {
+      cwd: projectPath,
+      encoding: 'utf-8',
+      timeout: 10_000,
+    });
+
+    const worktrees = worktreeList
+      .split('\n\n')
+      .filter((block) => block.trim())
+      .map((block) => {
+        const lines = block.split('\n');
+        const worktreeLine = lines.find((l) => l.startsWith('worktree '));
+        const branchLine = lines.find((l) => l.startsWith('branch '));
+        return {
+          path: worktreeLine?.replace('worktree ', '') ?? '',
+          branch: branchLine?.replace('branch refs/heads/', '') ?? '',
+        };
+      })
+      .filter((w) => w.path && w.branch && w.branch !== 'main' && w.branch !== 'master');
+
+    logger.info(`Found ${worktrees.length} non-main worktree(s) to scan`);
+
+    // Get all features for this project
+    const allFeatures = await featureLoader.getAll(projectPath);
+    const featuresByBranch = new Map<string, Feature>();
+    for (const feature of allFeatures) {
+      if (feature.branchName) {
+        featuresByBranch.set(feature.branchName, feature);
+      }
+    }
+
+    // Scan each worktree
+    for (const worktree of worktrees) {
+      totalScanned++;
+      const feature = featuresByBranch.get(worktree.branch);
+
+      if (!feature) {
+        logger.debug(`No feature found for worktree branch ${worktree.branch}, skipping`);
+        continue;
+      }
+
+      // Check for uncommitted changes
+      const { stdout: statusOutput } = await execFileAsync('git', ['status', '--porcelain'], {
+        cwd: worktree.path,
+        encoding: 'utf-8',
+        timeout: 5_000,
+      });
+      const hasUncommittedChanges = statusOutput.trim() !== '';
+
+      // Check for unpushed commits (compare local branch to remote)
+      let hasUnpushedCommits = false;
+      try {
+        const { stdout: revListOutput } = await execFileAsync(
+          'git',
+          ['rev-list', `origin/${worktree.branch}..${worktree.branch}`, '--count'],
+          {
+            cwd: worktree.path,
+            encoding: 'utf-8',
+            timeout: 5_000,
+          }
+        );
+        const unpushedCount = parseInt(revListOutput.trim(), 10);
+        hasUnpushedCommits = unpushedCount > 0;
+      } catch (error) {
+        // Remote branch might not exist yet - treat as unpushed
+        logger.debug(`Could not check unpushed commits for ${worktree.branch}, assuming unpushed`);
+        hasUnpushedCommits = true;
+      }
+
+      // If no uncommitted changes and no unpushed commits, skip
+      if (!hasUncommittedChanges && !hasUnpushedCommits) {
+        logger.debug(`Worktree ${worktree.branch} is clean and up-to-date`);
+        continue;
+      }
+
+      logger.info(
+        `Worktree ${worktree.branch} (${feature.title}) has uncommitted: ${hasUncommittedChanges}, unpushed: ${hasUnpushedCommits}, status: ${feature.status}`
+      );
+
+      // For verified/done features with unpushed work, trigger post-completion workflow
+      if ((feature.status === 'verified' || feature.status === 'done') && (hasUncommittedChanges || hasUnpushedCommits)) {
+        logger.info(`Triggering post-completion workflow for ${feature.title} (${feature.status})`);
+
+        try {
+          const globalSettings = await settingsService.getGlobalSettings();
+          const result = await gitWorkflowService.runPostCompletionWorkflow(
+            projectPath,
+            feature.id,
+            feature,
+            worktree.path,
+            globalSettings,
+            undefined,
+            events
+          );
+
+          if (result) {
+            totalRecovered++;
+            recoveredWorktrees.push(
+              `${worktree.branch} (${feature.title}) - committed: ${!!result.commitHash}, pushed: ${result.pushed}, PR: ${!!result.prUrl}`
+            );
+            logger.info(`Successfully recovered ${worktree.branch}: ${JSON.stringify(result)}`);
+          } else {
+            logger.debug(`No recovery actions needed for ${worktree.branch}`);
+          }
+        } catch (error) {
+          logger.error(`Failed to run post-completion workflow for ${worktree.branch}:`, error);
+          totalWarnings++;
+          warningWorktrees.push({
+            worktree: worktree.branch,
+            status: feature.status,
+            reason: `Recovery failed: ${error instanceof Error ? error.message : String(error)}`,
+          });
+        }
+      } else {
+        // For other statuses, just log a warning
+        totalWarnings++;
+        const reason = hasUncommittedChanges
+          ? 'uncommitted changes'
+          : hasUnpushedCommits
+            ? 'unpushed commits'
+            : 'unknown';
+        warningWorktrees.push({
+          worktree: worktree.branch,
+          status: feature.status ?? 'unknown',
+          reason,
+        });
+        logger.warn(
+          `Worktree ${worktree.branch} (${feature.status ?? 'unknown'}) has ${reason} but not in verified/done status`
+        );
+      }
+    }
+
+    // Log summary
+    const message = `Crash recovery scan complete: ${totalScanned} worktree(s) scanned, ${totalRecovered} recovered, ${totalWarnings} warning(s)`;
+    logger.info(message);
+
+    // Emit event with results
+    events.emit('maintenance:crash_recovery_scan_completed' as Parameters<typeof events.emit>[0], {
+      projectPath,
+      totalScanned,
+      totalRecovered,
+      totalWarnings,
+      recoveredWorktrees: recoveredWorktrees.length > 0 ? recoveredWorktrees : undefined,
+      warningWorktrees: warningWorktrees.length > 0 ? warningWorktrees : undefined,
+    });
+  } catch (error) {
+    logger.error(`Crash recovery scan failed for ${projectPath}:`, error);
+    // Don't throw - this is a non-blocking scan
   }
 }

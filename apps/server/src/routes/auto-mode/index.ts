@@ -8,6 +8,7 @@ import { Router } from 'express';
 import type { AutoModeService } from '../../services/auto-mode-service.js';
 import type { FeatureLoader } from '../../services/feature-loader.js';
 import type { SettingsService } from '../../services/settings-service.js';
+import type { EventEmitter } from '../../lib/events.js';
 import { validatePathParams } from '../../middleware/validate-paths.js';
 import { createStopFeatureHandler } from './routes/stop-feature.js';
 import { createStatusHandler } from './routes/status.js';
@@ -28,7 +29,8 @@ import { createReconcileHandler } from './routes/reconcile.js';
 export function createAutoModeRoutes(
   autoModeService: AutoModeService,
   featureLoader: FeatureLoader,
-  settingsService: SettingsService
+  settingsService: SettingsService,
+  events?: EventEmitter
 ): Router {
   const router = Router();
 
@@ -86,7 +88,7 @@ export function createAutoModeRoutes(
   router.post(
     '/resume-interrupted',
     validatePathParams('projectPath'),
-    createResumeInterruptedHandler(autoModeService)
+    createResumeInterruptedHandler(autoModeService, featureLoader, settingsService, events)
   );
   router.post(
     '/reconcile',
