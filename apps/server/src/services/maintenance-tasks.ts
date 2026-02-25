@@ -1189,11 +1189,15 @@ export async function scanWorktreesForCrashRecovery(
     const warningWorktrees: Array<{ worktree: string; status: string; reason: string }> = [];
 
     // List all worktrees
-    const { stdout: worktreeList } = await execFileAsync('git', ['worktree', 'list', '--porcelain'], {
-      cwd: projectPath,
-      encoding: 'utf-8',
-      timeout: 10_000,
-    });
+    const { stdout: worktreeList } = await execFileAsync(
+      'git',
+      ['worktree', 'list', '--porcelain'],
+      {
+        cwd: projectPath,
+        encoding: 'utf-8',
+        timeout: 10_000,
+      }
+    );
 
     const worktrees = worktreeList
       .split('\n\n')
@@ -1269,7 +1273,10 @@ export async function scanWorktreesForCrashRecovery(
       );
 
       // For verified/done features with unpushed work, trigger post-completion workflow
-      if ((feature.status === 'verified' || feature.status === 'done') && (hasUncommittedChanges || hasUnpushedCommits)) {
+      if (
+        (feature.status === 'verified' || feature.status === 'done') &&
+        (hasUncommittedChanges || hasUnpushedCommits)
+      ) {
         logger.info(`Triggering post-completion workflow for ${feature.title} (${feature.status})`);
 
         try {
