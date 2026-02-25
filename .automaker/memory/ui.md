@@ -462,3 +462,30 @@ usageStats:
 - **Rejected:** Single primary CTA - would force all users through one path, losing conversions from users who want alternative entry points
 - **Trade-offs:** More visual clutter and potential distraction from primary goal, but captures broader audience and improves overall conversion rate
 - **Breaking if changed:** If you remove secondary/tertiary CTAs, users primarily interested in learning or docs would have no clear next step.
+
+#### [Pattern] Theme axes dynamically parsed from naming convention 'Axis: Value' to auto-generate theme switcher buttons (2026-02-25)
+- **Problem solved:** Theme structure not known at compile time; needed flexible UI that adapts to any theme definition in .pen files
+- **Why this works:** Eliminates hardcoded UI for specific axes (Mode, Base, Accent); allows theme switcher to work with any future theme structure without code changes
+- **Trade-offs:** Simpler theme addition but fragile if naming convention isn't followed; no validation that names match expected pattern
+
+#### [Gotcha] Event propagation requires e.stopPropagation() in node click handlers to prevent immediate deselection when clicking nodes (2026-02-25)
+- **Situation:** Canvas background has deselection handler; nodes also have selection handlers. Both listen to clicks on the same hierarchy.
+- **Root cause:** Without stopping propagation, node clicks bubble to canvas handler which immediately deselects. Event flows up the DOM chain by default.
+- **How to avoid:** Simple implementation vs potential confusion about event flow; makes click behavior less predictable if developers don't understand propagation
+
+#### [Pattern] Type guards on discriminated unions to conditionally render inspector sections based on node type (2026-02-25)
+- **Problem solved:** Different PEN node types (text, frame, group, icon) have different properties. Inspector should only show relevant sections.
+- **Why this works:** Avoids runtime errors from accessing undefined properties. TypeScript catches type mismatches at compile time with proper guards like `node.type === 'text'` or `'strokes' in node`
+- **Trade-offs:** More verbose conditional logic vs type safety and clarity. Each new node type requires updating multiple conditionals.
+
+### External style prop merging pattern: pass style from parent to merge with component's internal styles rather than prop-drilling a 'selected' flag (2026-02-25)
+- **Context:** Need to add blue outline to selected nodes. Don't want to modify every renderer component's internal styling logic.
+- **Why:** Decouples selection UI from renderer internals. Parent (canvas) controls selection outline, component just applies the merged style. Scales to many node types.
+- **Rejected:** Alternatively: pass `selected={true}` prop and have each renderer add outline logic (duplicates code) or use CSS class (less flexible)
+- **Trade-offs:** Clean separation of concerns vs requires understanding style merging pattern. Makes styling less obvious from component inspection.
+- **Breaking if changed:** If style prop is removed or not merged properly, selection outline completely disappears with no obvious cause
+
+#### [Gotcha] PenThemeProvider context wrapper is REQUIRED around PenNodeRenderer for thumbnails - theme CSS variables won't resolve without it (2026-02-25)
+- **Situation:** Thumbnail renderer uses existing PenNodeRenderer component which depends on theme context for styling variables
+- **Root cause:** PenNodeRenderer uses CSS variables injected by PenThemeProvider; context must be in component tree or variables silently fail to resolve
+- **How to avoid:** Required wrapper adds component hierarchy complexity vs. ensuring correct styling that works out-of-box

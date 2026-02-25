@@ -332,3 +332,20 @@ usageStats:
 - **Rejected:** Listing licenses without analyzing compatibility; trusting developers to spot issues
 - **Trade-offs:** Requires systematic review overhead but prevents subtle license contamination that's hard to detect later
 - **Breaking if changed:** Missing compatibility check could result in GPL dependency requiring full codebase release under GPL, completely changing project licensing
+
+### Grafana configured with anonymous read-only access (Viewer role) instead of requiring authentication (2026-02-25)
+- **Context:** Need to balance dashboard accessibility with security
+- **Why:** Viewer role provides granular access control (read-only); anonymous access removes barrier to viewing dashboards without requiring credential distribution; assumes dashboards don't expose sensitive data
+- **Rejected:** Admin-only access (less accessible), fully open with edit permissions (security risk), authentication-only (operational overhead)
+- **Trade-offs:** Lower friction for users vs potential exposure if dashboards contain sensitive metrics
+- **Breaking if changed:** If Viewer role is removed or auth.anonymous disabled, all access requires credentials; requires admin password management if changed to auth-only model
+
+#### [Gotcha] Ingestion rate limits (10MB/s, 20MB burst) in Loki silently drop excess logs without alerting operator when limits are exceeded (2026-02-25)
+- **Situation:** Protecting Loki server from being overwhelmed by log traffic from noisy containers
+- **Root cause:** Ingestion limits provide QoS and prevent single container from consuming all resources; but failure mode is silent data loss rather than explicit error
+- **How to avoid:** System stability vs debugging difficulty when logs mysteriously disappear; dropped logs are not typically logged
+
+#### [Pattern] Provisioning directory mounted as read-only (:ro) in docker-compose despite being provisioned into container (2026-02-25)
+- **Problem solved:** Grafana receives pre-configured dashboards that should not be modified at runtime
+- **Why this works:** Prevents Grafana from accidentally or maliciously modifying its own provisioning configuration. Enforces separation between infrastructure configuration (external, version-controlled) and runtime state (container-internal).
+- **Trade-offs:** Slightly more secure but means Grafana UI edits don't persist (users must modify source JSON, not UI, for changes to stick)

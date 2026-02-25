@@ -35,7 +35,8 @@ automaker/
     ├── dependency-resolver/  # Feature dependency ordering
     ├── policy-engine/     # Trust-based policy checking
     ├── spec-parser/       # XML/markdown spec parsing
-    └── git-utils/    # Git operations & worktree management
+    ├── git-utils/    # Git operations & worktree management
+    └── ui/           # Shared UI components (atoms, molecules, theme)
 ```
 
 ## Package Dependency Chain (top = no deps)
@@ -70,6 +71,10 @@ import { resolveModelString } from '@protolabs-ai/model-resolver';
 // NEVER import from relative paths to other packages
 // ❌ import { Feature } from '../services/feature-loader';
 ```
+
+## Frontend UI Standards
+
+For all frontend work, follow the UI standards in `ui-standards.md`. Always use shared components from `@protolabs-ai/ui` -- never bare HTML elements (`<button>`, `<input>`, `<select>`, `<textarea>`, `<label>`). Never hardcode color classes (`bg-gray-*`, `text-blue-*`); always use semantic tokens (`bg-card`, `text-foreground`, `border-border`).
 
 ## Before Creating New Types
 

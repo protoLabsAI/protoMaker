@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 365
-  referenced: 198
-  successfulFeatures: 198
+  loaded: 394
+  referenced: 209
+  successfulFeatures: 209
 ---
 # gotchas
 
@@ -362,3 +362,23 @@ usageStats:
 - **Situation:** Implementation added hook declarations to plugin.json, but success depends on hooks/compaction-prime-directive.sh, hooks/session-context.sh, etc. already being present in the plugin package.
 - **Root cause:** Plugin.json is declarative configuration; it doesn't create hooks, only references them. The executable scripts are the real implementation.
 - **How to avoid:** Plugin.json stays lightweight and declarative (+) but requires coordinated file management between config and script implementations (-)
+
+#### [Gotcha] Loki retention_period configuration requires compactor service to be enabled; setting retention alone does not delete old data (2026-02-25)
+- **Situation:** Attempting to manage disk usage by setting retention_period: 168h (7 days)
+- **Root cause:** Loki v3.x separates log writing from log cleanup; compactor runs asynchronously to find and delete chunks exceeding retention period; without compactor, chunks are never deleted despite retention setting
+- **How to avoid:** Explicit compactor configuration prevents accidental data loss vs easy to forget this requirement; results in silent disk space leaks
+
+#### [Gotcha] Promtail requires both Docker socket mount (/var/run/docker.sock) for service discovery AND container log directory mount (/var/lib/docker/containers) for actual log file access (2026-02-25)
+- **Situation:** Setting up Promtail to collect logs from Docker containers
+- **Root cause:** Docker socket provides service discovery and metadata (container names, labels); actual log files are filesystem-based; Promtail must read from filesystem but needs socket API for dynamic container detection
+- **How to avoid:** Dual mount provides automatic container discovery plus actual log access vs increased container privileges and attack surface
+
+#### [Gotcha] Volume mount path in docker-compose must exactly match where dashboard files actually exist. Mismatch causes silent failure - Grafana starts successfully but dashboards don't load. (2026-02-25)
+- **Situation:** Implementation created dashboards in monitoring/grafana/provisioning/dashboards/ but initial docker-compose pointed to ./grafana-dashboards/
+- **Root cause:** Docker volume mounts don't validate path existence; Grafana logs the mount but doesn't fail loudly if path is wrong, making the failure nearly invisible until dashboards don't appear
+- **How to avoid:** Silent failure is difficult to debug but avoids hard deployment failures. Requires careful path documentation and testing.
+
+#### [Gotcha] Duration unit conversion: durationMs from execution record must be divided by 1000 for Prometheus histogram (expects seconds per standard) (2026-02-25)
+- **Situation:** Code captures execution time in milliseconds internally, but Prometheus convention uses seconds. Conversion point is easy to miss or misapply.
+- **Root cause:** Prometheus ecosystem standardizes on seconds for duration histograms. Conversion ensures metrics are compatible with standard dashboards and alert thresholds.
+- **How to avoid:** Conversion required at metric ingestion point, but keeps internal timing logic unchanged; missing conversion creates 1000x inflated duration metrics

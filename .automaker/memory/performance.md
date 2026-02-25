@@ -5,9 +5,9 @@ relevantTo: [performance]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 13
-  referenced: 8
-  successfulFeatures: 8
+  loaded: 17
+  referenced: 10
+  successfulFeatures: 10
 ---
 # performance
 
@@ -215,3 +215,22 @@ usageStats:
 - **Rejected:** Direct tree search on each resolveRef call - would be O(n*m) for m references in doc
 - **Trade-offs:** Easier: Fast ref resolution; Harder: Map must be rebuilt if document modified, adds memory overhead for index
 - **Breaking if changed:** If map removed, downstream code doing performance analysis wouldn't catch the O(n*m) scaling problem until large files
+
+#### [Pattern] Health checks on all 3 services with setup script polling until healthy (30 retries) before declaring success (2026-02-25)
+- **Problem solved:** Automated scripts need to run after monitoring stack starts - must wait for readiness, not just container start
+- **Why this works:** Container running ≠ service ready; prevents race conditions where dependent operations fail; polling approach survives temporary startup delays
+- **Trade-offs:** Slightly slower startup (waiting for health) vs guaranteed reliable automation; script complexity vs automation robustness
+
+### Strategic label cardinality management: feature_id labels only on cost/duration metrics, but omitted from tokens/executions metrics to prevent combinatorial explosion (2026-02-25)
+- **Context:** Each unique label combination creates separate metric series. Using feature_id + model + complexity on all metrics would create O(features × models × complexity) = potentially 10,000s of series.
+- **Why:** Prometheus cardinality explosion degrades query performance and storage. Keeping cardinality bounded by limiting high-cardinality label combinations.
+- **Rejected:** Could have used consistent labeling scheme (feature_id everywhere) for uniformity, but would hit cardinality limits in production
+- **Trade-offs:** Lose per-feature token granularity (can only see global totals by model), but maintain sub-second query latency on metrics dashboard
+- **Breaking if changed:** If high-cardinality labels are added later (e.g., feature_id to all metrics), could cause Prometheus scrape failures or dropped series
+
+### Use Set<string> for tracking expanded groups instead of Array or Record<string, boolean> (2026-02-25)
+- **Context:** Group expanded state checked on every render to conditionally show/hide group contents and icons
+- **Why:** Set provides O(1) containment checking vs O(n) for array.includes() or verbose Record syntax; critical when filtering/rendering many groups
+- **Rejected:** Array with .includes() - adequate but degrades with many groups; Record - more verbose with no performance gain
+- **Trade-offs:** Better render performance and cleaner code vs. Set is less familiar and less serializable if state persistence added later
+- **Breaking if changed:** Switching to array search would degrade UX responsiveness with large component libraries; Set choice matters for performance-critical render path

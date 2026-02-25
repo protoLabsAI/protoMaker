@@ -3226,3 +3226,172 @@ usageStats:
 - **Rejected:** Inline component definitions - would bloat file size by factor of component_count-1 for each component type
 - **Trade-offs:** Easier: Smaller file size, faster parsing; Harder: Requires reference resolution mechanism, circular ref checks, handling missing refs
 - **Breaking if changed:** If changed to inline definitions, parser doesn't need resolveRef, but file format becomes larger and updating component definition requires finding all instances
+
+### Used host.docker.internal:3008 to reach Automaker server from Prometheus container instead of Docker network linking (2026-02-25)
+- **Context:** Prometheus container needs to scrape metrics from host-running Automaker server on port 3008
+- **Why:** host.docker.internal is DNS name that resolves to host IP from inside container; simplest approach when app runs outside Docker without requiring custom bridge networks or host network mode
+- **Rejected:** Docker bridge network (would require app to join monitoring network), host network mode (reduces container isolation), localhost (fails - container localhost ≠ host localhost)
+- **Trade-offs:** Simpler setup vs reduced network flexibility; works across platforms (Mac/Linux/Windows) vs platform-specific solutions
+- **Breaking if changed:** If changed to localhost or removed port mapping, Prometheus loses access to metrics endpoint; deployment on systems without host.docker.internal support would fail
+
+#### [Pattern] Prometheus configured to scrape 3 separate targets: application metrics, node-exporter system metrics, and self-monitoring - not just application metrics (2026-02-25)
+- **Problem solved:** Observability stack needs visibility into both application behavior and infrastructure health
+- **Why this works:** Separating targets enforces single-responsibility; allows independent alerting/dashboarding on infrastructure vs application concerns; self-scraping enables Prometheus uptime monitoring
+- **Trade-offs:** More complex scrape config vs better separation of concerns; separate targets enable independent failure domains
+
+#### [Pattern] Grafana datasource auto-provisioned via external provisioning file (monitoring/grafana/provisioning/datasources/prometheus.yml) instead of manual UI configuration (2026-02-25)
+- **Problem solved:** Grafana needs to know about Prometheus datasource on startup
+- **Why this works:** Provisioning files make infrastructure immutable and version-controllable; eliminates manual post-deploy configuration step; stack can be recreated identically from files alone
+- **Trade-offs:** Extra file/directory structure vs reproducibility and IaC; harder to discover vs easier to automate
+
+#### [Gotcha] Prometheus scrapes specific endpoint /api/metrics/prometheus on Automaker server - requires server implementation and version compatibility (2026-02-25)
+- **Situation:** Stack documentation says 'existing /api/metrics/prometheus endpoint is already implemented' - but this creates hard dependency
+- **Root cause:** Prometheus requires specific metrics format (OpenMetrics/Prometheus text format); cannot use arbitrary JSON endpoints without custom exporters
+- **How to avoid:** Tight coupling to server implementation vs simpler Prometheus config
+
+### Grafana port remapped to 3010 instead of standard internal port 3000 (2026-02-25)
+- **Context:** Docker port mapping decision for external access
+- **Why:** Avoids port conflicts with potential dev services already using 3000 (React apps, etc.); indicates intentional port allocation strategy in deployment environment
+- **Rejected:** Using standard 3000 (risks conflicts with other services), using random port (harder to remember and document)
+- **Trade-offs:** Non-standard port slightly harder to remember vs eliminates common port conflicts
+- **Breaking if changed:** If changed back to 3000, external access must change; documentation and scripts become invalid; developers must know to use :3010 not :3000
+
+#### [Pattern] Configuration managed via external YAML/INI files mounted into containers rather than environment variables in docker-compose (2026-02-25)
+- **Problem solved:** Complex configurations (Prometheus scrape jobs, Grafana auth settings) need to be managed and versioned
+- **Why this works:** YAML/INI files preserve structure and comments better than flattened env vars; easier to diff/version control complex configs; external files enable secrets injection without modifying docker-compose
+- **Trade-offs:** More files to manage vs better readability, version control, and security (can use .gitignore on sensitive files)
+
+#### [Pattern] Using Promtail relabel_configs to extract Docker metadata (container_name, service, compose_project) as Loki labels rather than parsing log content or relying on application instrumentation (2026-02-25)
+- **Problem solved:** Making logs searchable by meaningful identifiers without modifying application code or parsing log lines
+- **Why this works:** Prometheus relabel syntax allows powerful extraction from Docker service discovery API; decouples infrastructure concerns from application logic; labels become immutable at ingestion time for efficient indexing
+- **Trade-offs:** Centralized, scalable label management vs requires understanding Prometheus relabel syntax; fixed label cardinality from start
+
+### Configuring two separate Promtail Docker scrape jobs: one filtered to compose project containers, one collecting from all Docker containers (2026-02-25)
+- **Context:** Handling mixed deployment scenarios with both compose-managed and potentially standalone containers
+- **Why:** Compose-filtered job provides logical application-level isolation; all-containers job acts as safety net for non-compose workloads; allows selective relabeling strategies per job
+- **Rejected:** Single catch-all job for all containers; single compose-only job that misses non-compose containers
+- **Trade-offs:** Flexibility and coverage vs potential for duplicate log ingestion if filters overlap; added configuration complexity
+- **Breaking if changed:** Removing either job reduces scope coverage; duplicates would inflate retention period impact and costs
+
+### Resolver function passed as parameter through style utilities instead of accessing PenThemeContext directly within utils (2026-02-25)
+- **Context:** Need to resolve theme variables in style-utils.ts functions (colorToCSS, fillToCSS, strokeToCSS) while keeping utilities pure and testable
+- **Why:** Dependency injection pattern keeps utilities decoupled from React Context, enables testing utils without mocking context, and maintains single responsibility
+- **Rejected:** Direct context access in utils via useContext hook would couple utils to React and make unit testing impossible
+- **Trade-offs:** Easier to test style utilities but requires threading resolver through multiple function calls; more explicit dependencies
+- **Breaking if changed:** Removing resolver parameter causes all variable tokens ($--variable-name) to pass through unresolved, rendering literal strings instead of computed values
+
+#### [Gotcha] Variable resolution falls back to default value when no theme-specific value exists, but silently succeeds if default is also missing (2026-02-25)
+- **Situation:** resolveVariable() function has no error handling for missing defaults; returns undefined without indicating resolution failure
+- **Root cause:** Graceful degradation approach avoids crashes, but makes bugs harder to catch—unresolved variables render as actual values rather than throwing
+- **How to avoid:** Robust against incomplete data but unresolved variable bugs become silent failures only visible in visual inspection
+
+### Theme selections not persisted to localStorage; context value resets on page refresh (2026-02-25)
+- **Context:** Users switch themes via context state, which lives only in component memory during current session
+- **Why:** Scope boundary decision—feature focused on rendering system, not UX workflow; avoids adding state persistence complexity
+- **Rejected:** localStorage persistence would remember user selections but adds sync complexity and storage API dependency
+- **Trade-offs:** Simpler implementation but users lose theme preference on navigation; future feature would require refactoring
+- **Breaking if changed:** Adding persistence later requires state sync between context updates and localStorage, plus handling stale data scenarios
+
+#### [Pattern] PenThemeProvider uses render props pattern with React context instead of exposing useContext hook only (2026-02-25)
+- **Problem solved:** Components need theme context value AND a way to update theme selections while maintaining composition
+- **Why this works:** Render props gives consumers explicit control over what gets rendered; avoids HOC wrapper hell; keeps theme logic centralized while allowing flexible UI layer
+- **Trade-offs:** More boilerplate in consumers (render function callback) but enables theme logic to be isolated and testable independently of component tree
+
+#### [Pattern] Dashboard provisioning via YAML config + JSON definitions instead of manual Grafana UI configuration (2026-02-25)
+- **Problem solved:** Dashboards must be reproducible across deployments and persist in version control
+- **Why this works:** Enables Infrastructure as Code, GitOps workflows, and eliminates manual configuration drift. Provisioning ensures dashboards auto-load on Grafana startup without user intervention.
+- **Trade-offs:** Added complexity of maintaining separate provisioning YAML + JSON structures, but gained complete reproducibility and elimination of configuration drift
+
+#### [Pattern] Dashboard-level templating variables (time_range) instead of hardcoded time ranges in individual panels (2026-02-25)
+- **Problem solved:** Users need to filter dashboard data across multiple panels simultaneously without editing dashboard configuration
+- **Why this works:** Dashboard variables propagate to all panels sharing that variable, enabling single-click time range changes across the entire dashboard. Alternative (per-panel configuration) would require users to edit each panel individually.
+- **Trade-offs:** Adds JSON complexity to dashboard structure but dramatically improves operational usability and user experience
+
+### Dashboards defined assuming Prometheus datasource with UID 'prometheus' exists, without enforcing or validating this dependency at provisioning time (2026-02-25)
+- **Context:** Dashboards reference specific datasource UID in all panel queries but don't validate the datasource exists
+- **Why:** Loose coupling allows dashboard provisioning independent of datasource setup. Tighter coupling would require orchestrated initialization sequence. Grafana can provision dashboards before datasources are created (though they'll appear empty).
+- **Rejected:** Fail-fast validation that datasource exists (creates ordering dependency, complicates deployment)
+- **Trade-offs:** Looser coupling enables flexible deployment, but datasource misconfiguration silently fails with empty dashboards
+- **Breaking if changed:** If Prometheus datasource UID changes or datasource name differs, all dashboard queries fail silently without showing datasource error.
+
+#### [Gotcha] Dashboards can be successfully provisioned before their required Prometheus metrics are instrumented in the application code (2026-02-25)
+- **Situation:** Dashboard configurations reference metrics like automaker_deploys_total, automaker_agents_active that may not exist yet in Prometheus
+- **Root cause:** Grafana doesn't validate metric existence at dashboard load time. This loose coupling allows config-driven development but creates potential for silent data absence.
+- **How to avoid:** Enables parallel development of monitoring infrastructure and metrics instrumentation, but causes confusing 'empty dashboard' state until metrics are emitted
+
+#### [Pattern] UID-based semantic naming convention for dashboards (automaker-*) instead of auto-generated GUIDs (2026-02-25)
+- **Problem solved:** Grafana dashboards need stable, identifiable UIDs across deployments for linking and dashboard relationships
+- **Why this works:** Semantic UIDs survive dashboard reimports/reprovisioning and enable reliable linking between dashboards. Auto-generated UIDs change with each reimport, breaking saved links.
+- **Trade-offs:** Requires manual UID planning but provides stable dashboard identity across deployments
+
+#### [Pattern] Real-time state tracking via push-based gauge updates at 7 collection mutation points (add/remove from runningFeatures map) vs calculated from counters (2026-02-25)
+- **Problem solved:** Could have incremented a counter on agent start and decremented on agent end, then calculated active count = start_total - end_total
+- **Why this works:** Gauge updated at mutation time gives accurate real-time snapshot of concurrent agent activity. Counter approach would require query-time calculation and lose precision on agent lifecycle events.
+- **Trade-offs:** More frequent metric updates (7 points) but accurate real-time concurrency visibility on dashboards; alternative would trade update overhead for stale data
+
+### Used recursive findNodeById tree traversal instead of pre-indexing nodes in store (2026-02-25)
+- **Context:** Need to locate selected node by ID anywhere in nested PEN document tree to display properties
+- **Why:** PEN documents are small UI editor trees (typically <1000 nodes). O(n) search is negligible. Pre-indexing adds memory overhead and requires maintaining index on every document mutation.
+- **Rejected:** Pre-building ID->node Map on document load would be O(1) lookup but requires index maintenance complexity
+- **Trade-offs:** Slightly slower search (microseconds) vs significantly simpler code and less state to manage. Scales poorly above ~10k nodes.
+- **Breaking if changed:** If document trees grow to 100k+ nodes, performance degrades. If tree structure changes, search logic must adapt.
+
+#### [Pattern] Selection state auto-clears when switching files to prevent stale references to nodes no longer in document (2026-02-25)
+- **Problem solved:** User selects node in File A, then switches to File B. Selected node ID no longer exists in new document.
+- **Why this works:** Prevents inspector from showing properties for a node that doesn't exist in current view. Maintains consistency between selection state and visible content.
+- **Trade-offs:** Less selection persistence vs data consistency. Users must reselect after file switch but always see valid data.
+
+#### [Gotcha] Datasource UID must match exactly between alert rules and datasource provisioning. Alert rules reference datasourceUid internally, not datasource names. (2026-02-25)
+- **Situation:** Alert rules define Prometheus queries with a datasourceUid field that must match the UID assigned in provisioning/datasources/prometheus.yml
+- **Root cause:** Grafana stores datasource references by internal UUID. If UUIDs don't match, alerts silently fail without error messages.
+- **How to avoid:** UUID coupling makes config less readable but ensures deterministic datasource binding across environments
+
+### Notification policies use matchers (severity = critical/warning) to route alerts to different batch windows, not separate contact points per severity (2026-02-25)
+- **Context:** Need to send critical alerts immediately (0s wait) and batch warnings every 5 minutes (30s wait, 5m interval) without duplicate notifications
+- **Why:** Matchers in notification policies are the Grafana unified alerting native pattern. Single contact point (Discord) with routing logic is more maintainable than multiple contact points.
+- **Rejected:** Alternative: Create separate contact points and manual rules for each severity. Would be more flexible but harder to modify routing logic later.
+- **Trade-offs:** Centralized routing in policies is easier to modify and audit. Less flexible for complex multi-dimensional routing (though that can be added via additional matchers).
+- **Breaking if changed:** If matchers are removed or naming changes, all alerts route to default policy. Removing severity-based routing loses batching strategy entirely.
+
+### Critical alerts configured with 0s group_wait and 1m repeat interval vs warnings with 30s group_wait and 5m interval to balance responsiveness with notification fatigue (2026-02-25)
+- **Context:** Grafana alert grouping window (group_wait) determines how long to wait before sending first notification, repeat interval controls how often to re-notify
+- **Why:** 0s for critical means immediate Discord notification (maximizes MTTR), 30s for warnings allows grouping multiple related alerts into single message (reduces noise)
+- **Rejected:** Uniform batching (e.g., all 5m): Would reduce critical alert latency. Uniform immediate (e.g., all 0s): Would cause Discord spam for warning storms.
+- **Trade-offs:** Immediate critical notification means faster response but potential for alert fatigue if too many criticals. Batched warnings reduce noise at cost of up to 5m detection delay.
+- **Breaking if changed:** Setting critical group_wait to > 0 introduces alert latency that could impact incident response. Removing batching for warnings causes Discord notification storms.
+
+#### [Pattern] Grouped alerting by alertname + severity in notification policies reduces Discord notification volume for correlated failures (e.g., multiple disk mount points failing simultaneously) (2026-02-25)
+- **Problem solved:** Alert rules configured to fire independently; notification policy groups related alerts to prevent notification explosion during cascading failures
+- **Why this works:** When infrastructure degrades, multiple alerts often fire simultaneously (e.g., CPU spike → disk thrashing → memory pressure). Grouping by alertname ensures single Discord message per alert type per severity level.
+- **Trade-offs:** Grouping reduces notification noise and makes Discord channel readable. Trade-off: Requires checking Grafana UI to see individual alert instances within the group.
+
+#### [Pattern] Group components using name prefix with '/' delimiter (e.g., 'Button/Primary' → 'Button' group) instead of explicit group metadata (2026-02-25)
+- **Problem solved:** Need hierarchical component organization without requiring additional properties on every node
+- **Why this works:** Leverages existing naming convention in design systems for automatic hierarchy; zero metadata overhead; scales as components are added
+- **Trade-offs:** Automatic convenience and clean UI vs. strict naming discipline requirement and inability to reorganize without renaming
+
+### Mark reusable components with optional boolean flag (reusable?: boolean) on PenNodeBase instead of maintaining separate component registry (2026-02-25)
+- **Context:** Need to identify which nodes can be instantiated as library components without external configuration
+- **Why:** Single source of truth - metadata lives with node; enables any node to opt-in without ceremony; no synchronization required between node tree and registry
+- **Rejected:** Separate registry - would require manual registration, duplicate storage, and out-of-sync risk when nodes are deleted or moved
+- **Trade-offs:** Simpler, decentralized design vs. inability to externally mark nodes as reusable without modifying the document
+- **Breaking if changed:** Removing the flag means losing component-level reusability control; switching to registry would require migrating all marked nodes and complex tree scanning logic
+
+### Separate webhook routes outside /api/* paths to avoid authentication middleware (2026-02-25)
+- **Context:** Grafana webhooks must be unauthenticated. Initial attempt put alerts at /api/alerts which failed because API routes had auth middleware applied.
+- **Why:** Webhook services like Grafana cannot provide credentials in their outbound HTTP requests. Mixing webhooks with authenticated API routes creates a permission model conflict where valid webhooks get rejected.
+- **Rejected:** Conditional auth middleware to whitelist webhook paths, or embedding API key requirements in webhook URLs (less secure)
+- **Trade-offs:** Requires separate route files and mounting points (slightly more code organization) but prevents hard-to-debug authentication failures. Cleaner permission model.
+- **Breaking if changed:** Moving webhooks back under /api/* will cause Grafana (and other webhook services) to receive 401/403 responses and fail silently to POST alerts.
+
+### Use simple exact title matching for deduplication instead of fingerprint hashing (2026-02-25)
+- **Context:** Multiple Grafana alert firing events for the same underlying condition could create multiple Linear issues. Needed deduplication strategy.
+- **Why:** MVP speed - exact matching is trivial to implement (single Linear search API call). Described as 'simple but effective'. Fingerprint hashing would require additional logic to normalize alert data.
+- **Rejected:** Fingerprint-based deduplication using MD5 of normalized alert state (more robust but adds complexity and requires determining which fields constitute uniqueness)
+- **Trade-offs:** Simple implementation now vs. false negative risk later. Will create duplicate issues if alert name changes slightly (e.g., 'HighCPU_prod' vs 'HighCPU_prod_instance2'). Production may need fingerprinting.
+- **Breaking if changed:** Deduplication stops working if alert names are variations on same condition. Also fails if same issue is resolved+recreated - exact title match won't find the closed issue.
+
+#### [Pattern] Graceful degradation for optional services - Discord notifications are non-blocking relative to Linear issue creation (2026-02-25)
+- **Problem solved:** Implementation creates Linear issues and posts Discord notifications. Discord service might be unavailable or unconfigured.
+- **Why this works:** Core functionality (bug tracking) should not depend on secondary notification channel. Prevents cascading failures where one missing integration blocks the entire pipeline.
+- **Trade-offs:** Issues get created even if Discord is down (good). Operator might miss notifications but issue is still tracked (acceptable). Code must handle missing Discord gracefully with proper null checks.
