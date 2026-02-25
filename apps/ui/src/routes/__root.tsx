@@ -50,6 +50,7 @@ import { useIsCompact, useIsMobile } from '@/hooks/use-media-query';
 import { useMobileVisibility } from '@/hooks/use-mobile-visibility';
 import { useVirtualKeyboardResize } from '@/hooks/use-virtual-keyboard-resize';
 import { BottomPanel } from '@/components/layout/bottom-panel';
+import { UpdateNotification } from '@/components/layout/update-notification';
 import type { Project } from '@/lib/electron';
 
 const logger = createLogger('RootLayout');
@@ -865,6 +866,7 @@ function RootLayoutContent() {
           onDeny={handleSandboxDeny}
         />
         <HITLFormDialog />
+        <UpdateNotification />
       </>
     );
   }
@@ -899,6 +901,7 @@ function RootLayoutContent() {
         onDeny={handleSandboxDeny}
       />
       <HITLFormDialog />
+      <UpdateNotification />
     </>
   );
 }
