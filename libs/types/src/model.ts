@@ -16,8 +16,8 @@ export type ClaudeCanonicalId = 'claude-haiku' | 'claude-sonnet' | 'claude-opus'
  */
 export const CLAUDE_CANONICAL_MAP: Record<ClaudeCanonicalId, string> = {
   'claude-haiku': 'claude-haiku-4-5-20251001',
-  'claude-sonnet': 'claude-sonnet-4-5-20250929',
-  'claude-opus': 'claude-opus-4-5-20251101',
+  'claude-sonnet': 'claude-sonnet-4-6',
+  'claude-opus': 'claude-opus-4-6',
 } as const;
 
 /**
@@ -27,8 +27,8 @@ export const CLAUDE_CANONICAL_MAP: Record<ClaudeCanonicalId, string> = {
  */
 export const CLAUDE_MODEL_MAP: Record<string, string> = {
   haiku: 'claude-haiku-4-5-20251001',
-  sonnet: 'claude-sonnet-4-5-20250929',
-  opus: 'claude-opus-4-5-20251101',
+  sonnet: 'claude-sonnet-4-6',
+  opus: 'claude-opus-4-6',
 } as const;
 
 /**
@@ -101,9 +101,9 @@ export function getAllCodexModelIds(): CodexModelId[] {
  */
 export const DEFAULT_MODELS = {
   /** Default for general Claude usage - opus for orchestration/planning */
-  claude: 'claude-opus-4-5-20251101',
+  claude: 'claude-opus-4-6',
   /** Default for auto-mode feature implementation - sonnet for ticket work */
-  autoMode: 'claude-sonnet-4-5-20250929',
+  autoMode: 'claude-sonnet-4-6',
   /** Default for trivial/quick tasks - haiku */
   trivial: 'claude-haiku-4-5-20251001',
   cursor: 'cursor-auto', // Cursor's recommended default (with prefix)
