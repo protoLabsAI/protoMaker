@@ -325,7 +325,7 @@ export class GitHubStateChecker {
   private async findPRForBranch(projectPath: string, branchName: string): Promise<GitHubPR | null> {
     try {
       const { stdout } = await execAsync(
-        `gh pr list --head ${branchName} --json number,state,merged,mergedAt,headRefName,updatedAt --limit 1`,
+        `gh pr list --head ${branchName} --state all --json number,state,merged,mergedAt,headRefName,updatedAt --limit 1`,
         { cwd: projectPath }
       );
 
