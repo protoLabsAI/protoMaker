@@ -184,19 +184,19 @@
         <!-- Stats bar -->
         <div class="flex flex-wrap gap-6 mb-8">
           <div class="flex items-baseline gap-2">
-            <span class="text-3xl font-bold text-white" id="stat-prs">1,004</span>
+            <span class="text-3xl font-bold text-white" id="stat-prs">1,040</span>
             <span class="text-sm text-muted">PRs merged</span>
           </div>
           <div class="flex items-baseline gap-2">
-            <span class="text-3xl font-bold text-white" id="stat-commits">2,986</span>
+            <span class="text-3xl font-bold text-white" id="stat-commits">3,020</span>
             <span class="text-sm text-muted">commits</span>
           </div>
           <div class="flex items-baseline gap-2">
-            <span class="text-3xl font-bold text-white" id="stat-features">446</span>
+            <span class="text-3xl font-bold text-white" id="stat-features">458</span>
             <span class="text-sm text-muted">features shipped</span>
           </div>
           <div class="flex items-baseline gap-2">
-            <span class="text-3xl font-bold text-white" id="stat-loc">407,889</span>
+            <span class="text-3xl font-bold text-white" id="stat-loc">414,367</span>
             <span class="text-sm text-muted">lines of TypeScript</span>
           </div>
         </div>
@@ -250,10 +250,631 @@
             <h2
               class="text-xl font-semibold text-white mb-6 sticky top-16 bg-surface-0/90 backdrop-blur-sm py-2 z-10"
             >
-              February 2026<span class="text-sm font-normal text-muted ml-3">764 changes</span>
+              February 2026<span class="text-sm font-normal text-muted ml-3">795 changes</span>
             </h2>
             <div class="relative pl-8">
               <div class="timeline-line"></div>
+              <div class="mb-4 relative" data-category="fix">
+                <div
+                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                ></div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <span
+                    class="category-fix inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                    >fix</span
+                  >
+                  <a
+                    href="https://github.com/proto-labs-ai/protoMaker/pull/1137"
+                    target="_blank"
+                    rel="noopener"
+                    class="text-zinc-300 hover:text-white transition-colors"
+                    >Resolve OpenCode CLI stuck on &quot;not authenticated&quot; by treating
+                    installed CLI as free tier ready</a
+                  >
+                  <span class="text-xs text-zinc-600 font-mono">#1137</span>
+                  <span class="text-xs text-zinc-600">Feb 24</span>
+                </div>
+              </div>
+              <div class="mb-4 relative" data-category="docs">
+                <div
+                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                ></div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <span
+                    class="category-docs inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                    >docs</span
+                  >
+                  <a
+                    href="https://github.com/proto-labs-ai/protoMaker/pull/1134"
+                    target="_blank"
+                    rel="noopener"
+                    class="text-zinc-300 hover:text-white transition-colors"
+                    >Revise open-source strategy to reflect implemented quarantine</a
+                  >
+                  <span class="text-xs text-zinc-600 font-mono">#1134</span>
+                  <span class="text-xs text-zinc-600">Feb 24</span>
+                </div>
+              </div>
+              <div class="mb-4 relative" data-category="infrastructure">
+                <div
+                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                ></div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <span
+                    class="category-infrastructure inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                    >infrastructure</span
+                  >
+                  <a
+                    href="https://github.com/proto-labs-ai/protoMaker/pull/1132"
+                    target="_blank"
+                    rel="noopener"
+                    class="text-zinc-300 hover:text-white transition-colors"
+                    >Gitignore runtime DB files and commit agent memory drift</a
+                  >
+                  <span class="text-xs text-zinc-600 font-mono">#1132</span>
+                  <span class="text-xs text-zinc-600">Feb 24</span>
+                </div>
+              </div>
+              <div class="mb-4 relative" data-category="docs">
+                <div
+                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                ></div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <span
+                    class="category-docs inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                    >docs</span
+                  >
+                  <a
+                    href="https://github.com/proto-labs-ai/protoMaker/pull/1129"
+                    target="_blank"
+                    rel="noopener"
+                    class="text-zinc-300 hover:text-white transition-colors"
+                    >Quarantine pipeline and contribution model</a
+                  >
+                  <span class="text-xs text-zinc-600 font-mono">#1129</span>
+                  <span class="text-xs text-zinc-600">Feb 24</span>
+                </div>
+              </div>
+              <div class="mb-4 relative" data-category="feature">
+                <div
+                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                ></div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <span
+                    class="category-feature inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                    >feature</span
+                  >
+                  <a
+                    href="https://github.com/proto-labs-ai/protoMaker/pull/1130"
+                    target="_blank"
+                    rel="noopener"
+                    class="text-zinc-300 hover:text-white transition-colors"
+                    >Discord notification, auto-unblock, and pipeline stall detection</a
+                  >
+                  <span class="text-xs text-zinc-600 font-mono">#1130</span>
+                  <span class="text-xs text-zinc-600">Feb 24</span>
+                </div>
+              </div>
+              <div class="mb-4 relative" data-category="docs">
+                <div
+                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                ></div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <span
+                    class="category-docs inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                    >docs</span
+                  >
+                  <a
+                    href="https://github.com/proto-labs-ai/protoMaker/pull/1128"
+                    target="_blank"
+                    rel="noopener"
+                    class="text-zinc-300 hover:text-white transition-colors"
+                    >Document git workflow reliability changes</a
+                  >
+                  <span class="text-xs text-zinc-600 font-mono">#1128</span>
+                  <span class="text-xs text-zinc-600">Feb 24</span>
+                </div>
+              </div>
+              <div class="mb-4 relative" data-category="fix">
+                <div
+                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                ></div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <span
+                    class="category-fix inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                    >fix</span
+                  >
+                  <a
+                    href="https://github.com/proto-labs-ai/protoMaker/pull/1127"
+                    target="_blank"
+                    rel="noopener"
+                    class="text-zinc-300 hover:text-white transition-colors"
+                    >Make git workflow error persistence non-blocking</a
+                  >
+                  <span class="text-xs text-zinc-600 font-mono">#1127</span>
+                  <span class="text-xs text-zinc-600">Feb 24</span>
+                </div>
+              </div>
+              <div class="mb-4 relative" data-category="feature">
+                <div
+                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                ></div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <span
+                    class="category-feature inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                    >feature</span
+                  >
+                  <a
+                    href="https://github.com/proto-labs-ai/protoMaker/pull/1126"
+                    target="_blank"
+                    rel="noopener"
+                    class="text-zinc-300 hover:text-white transition-colors"
+                    >Surface git workflow errors on feature data</a
+                  >
+                  <span class="text-xs text-zinc-600 font-mono">#1126</span>
+                  <span class="text-xs text-zinc-600">Feb 24</span>
+                </div>
+              </div>
+              <div class="mb-4 relative" data-category="infrastructure">
+                <div
+                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                ></div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <span
+                    class="category-infrastructure inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                    >infrastructure</span
+                  >
+                  <a
+                    href="https://github.com/proto-labs-ai/protoMaker/pull/1124"
+                    target="_blank"
+                    rel="noopener"
+                    class="text-zinc-300 hover:text-white transition-colors"
+                    >Add comprehensive unit tests for QuarantineService and TrustTierService</a
+                  >
+                  <span class="text-xs text-zinc-600 font-mono">#1124</span>
+                  <span class="text-xs text-zinc-600">Feb 24</span>
+                </div>
+              </div>
+              <div class="mb-4 relative" data-category="feature">
+                <div
+                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                ></div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <span
+                    class="category-feature inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                    >feature</span
+                  >
+                  <a
+                    href="https://github.com/proto-labs-ai/protoMaker/pull/1122"
+                    target="_blank"
+                    rel="noopener"
+                    class="text-zinc-300 hover:text-white transition-colors"
+                    >Startup worktree scan for crash recovery</a
+                  >
+                  <span class="text-xs text-zinc-600 font-mono">#1122</span>
+                  <span class="text-xs text-zinc-600">Feb 24</span>
+                </div>
+              </div>
+              <div class="mb-4 relative" data-category="infrastructure">
+                <div
+                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                ></div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <span
+                    class="category-infrastructure inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                    >infrastructure</span
+                  >
+                  <a
+                    href="https://github.com/proto-labs-ai/protoMaker/pull/1123"
+                    target="_blank"
+                    rel="noopener"
+                    class="text-zinc-300 hover:text-white transition-colors"
+                    >Add comprehensive sanitization utility tests</a
+                  >
+                  <span class="text-xs text-zinc-600 font-mono">#1123</span>
+                  <span class="text-xs text-zinc-600">Feb 24</span>
+                </div>
+              </div>
+              <div class="mb-4 relative" data-category="fix">
+                <div
+                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                ></div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <span
+                    class="category-fix inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                    >fix</span
+                  >
+                  <a
+                    href="https://github.com/proto-labs-ai/protoMaker/pull/1121"
+                    target="_blank"
+                    rel="noopener"
+                    class="text-zinc-300 hover:text-white transition-colors"
+                    >Clean up lint warnings in quarantine service and routes</a
+                  >
+                  <span class="text-xs text-zinc-600 font-mono">#1121</span>
+                  <span class="text-xs text-zinc-600">Feb 24</span>
+                </div>
+              </div>
+              <div class="mb-4 relative" data-category="feature">
+                <div
+                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                ></div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <span
+                    class="category-feature inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                    >feature</span
+                  >
+                  <a
+                    href="https://github.com/proto-labs-ai/protoMaker/pull/1119"
+                    target="_blank"
+                    rel="noopener"
+                    class="text-zinc-300 hover:text-white transition-colors"
+                    >Add human-blocked dependency types and resolver</a
+                  >
+                  <span class="text-xs text-zinc-600 font-mono">#1119</span>
+                  <span class="text-xs text-zinc-600">Feb 24</span>
+                </div>
+              </div>
+              <div class="mb-4 relative" data-category="fix">
+                <div
+                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                ></div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <span
+                    class="category-fix inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                    >fix</span
+                  >
+                  <a
+                    href="https://github.com/proto-labs-ai/protoMaker/pull/1120"
+                    target="_blank"
+                    rel="noopener"
+                    class="text-zinc-300 hover:text-white transition-colors"
+                    >Pass githubIssueNumber to features created from GitHub issue webhooks</a
+                  >
+                  <span class="text-xs text-zinc-600 font-mono">#1120</span>
+                  <span class="text-xs text-zinc-600">Feb 24</span>
+                </div>
+              </div>
+              <div class="mb-4 relative" data-category="feature">
+                <div
+                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                ></div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <span
+                    class="category-feature inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                    >feature</span
+                  >
+                  <a
+                    href="https://github.com/proto-labs-ai/protoMaker/pull/1116"
+                    target="_blank"
+                    rel="noopener"
+                    class="text-zinc-300 hover:text-white transition-colors"
+                    >Add inline identity dialog and My Tasks filter</a
+                  >
+                  <span class="text-xs text-zinc-600 font-mono">#1116</span>
+                  <span class="text-xs text-zinc-600">Feb 24</span>
+                </div>
+              </div>
+              <div class="mb-4 relative" data-category="infrastructure">
+                <div
+                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                ></div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <span
+                    class="category-infrastructure inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                    >infrastructure</span
+                  >
+                  <a
+                    href="https://github.com/proto-labs-ai/protoMaker/pull/1118"
+                    target="_blank"
+                    rel="noopener"
+                    class="text-zinc-300 hover:text-white transition-colors"
+                    >Auto-commit agent progress before verification</a
+                  >
+                  <span class="text-xs text-zinc-600 font-mono">#1118</span>
+                  <span class="text-xs text-zinc-600">Feb 24</span>
+                </div>
+              </div>
+              <div class="mb-4 relative" data-category="feature">
+                <div
+                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                ></div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <span
+                    class="category-feature inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                    >feature</span
+                  >
+                  <a
+                    href="https://github.com/proto-labs-ai/protoMaker/pull/1117"
+                    target="_blank"
+                    rel="noopener"
+                    class="text-zinc-300 hover:text-white transition-colors"
+                    >Add quarantine gate to feature creation route</a
+                  >
+                  <span class="text-xs text-zinc-600 font-mono">#1117</span>
+                  <span class="text-xs text-zinc-600">Feb 24</span>
+                </div>
+              </div>
+              <div class="mb-4 relative" data-category="fix">
+                <div
+                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                ></div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <span
+                    class="category-fix inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                    >fix</span
+                  >
+                  <a
+                    href="https://github.com/proto-labs-ai/protoMaker/pull/1114"
+                    target="_blank"
+                    rel="noopener"
+                    class="text-zinc-300 hover:text-white transition-colors"
+                    >Add exponential backoff retry to git push and PR creation</a
+                  >
+                  <span class="text-xs text-zinc-600 font-mono">#1114</span>
+                  <span class="text-xs text-zinc-600">Feb 24</span>
+                </div>
+              </div>
+              <div class="mb-4 relative" data-category="feature">
+                <div
+                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                ></div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <span
+                    class="category-feature inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                    >feature</span
+                  >
+                  <a
+                    href="https://github.com/proto-labs-ai/protoMaker/pull/1115"
+                    target="_blank"
+                    rel="noopener"
+                    class="text-zinc-300 hover:text-white transition-colors"
+                    >Add user identity service and settings API</a
+                  >
+                  <span class="text-xs text-zinc-600 font-mono">#1115</span>
+                  <span class="text-xs text-zinc-600">Feb 24</span>
+                </div>
+              </div>
+              <div class="mb-4 relative" data-category="fix">
+                <div
+                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                ></div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <span
+                    class="category-fix inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                    >fix</span
+                  >
+                  <a
+                    href="https://github.com/proto-labs-ai/protoMaker/pull/1113"
+                    target="_blank"
+                    rel="noopener"
+                    class="text-zinc-300 hover:text-white transition-colors"
+                    >Add resolve alias to types vitest config for package self-reference</a
+                  >
+                  <span class="text-xs text-zinc-600 font-mono">#1113</span>
+                  <span class="text-xs text-zinc-600">Feb 24</span>
+                </div>
+              </div>
+              <div class="mb-4 relative" data-category="infrastructure">
+                <div
+                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                ></div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <span
+                    class="category-infrastructure inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                    >infrastructure</span
+                  >
+                  <a
+                    href="https://github.com/proto-labs-ai/protoMaker/pull/1112"
+                    target="_blank"
+                    rel="noopener"
+                    class="text-zinc-300 hover:text-white transition-colors"
+                    >Auto-commit agent progress before verification</a
+                  >
+                  <span class="text-xs text-zinc-600 font-mono">#1112</span>
+                  <span class="text-xs text-zinc-600">Feb 24</span>
+                </div>
+              </div>
+              <div class="mb-4 relative" data-category="infrastructure">
+                <div
+                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                ></div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <span
+                    class="category-infrastructure inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                    >infrastructure</span
+                  >
+                  <a
+                    href="https://github.com/proto-labs-ai/protoMaker/pull/1110"
+                    target="_blank"
+                    rel="noopener"
+                    class="text-zinc-300 hover:text-white transition-colors"
+                    >Auto-commit agent progress before verification</a
+                  >
+                  <span class="text-xs text-zinc-600 font-mono">#1110</span>
+                  <span class="text-xs text-zinc-600">Feb 24</span>
+                </div>
+              </div>
+              <div class="mb-4 relative" data-category="infrastructure">
+                <div
+                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                ></div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <span
+                    class="category-infrastructure inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                    >infrastructure</span
+                  >
+                  <a
+                    href="https://github.com/proto-labs-ai/protoMaker/pull/1109"
+                    target="_blank"
+                    rel="noopener"
+                    class="text-zinc-300 hover:text-white transition-colors"
+                    >Auto-commit agent progress before verification</a
+                  >
+                  <span class="text-xs text-zinc-600 font-mono">#1109</span>
+                  <span class="text-xs text-zinc-600">Feb 24</span>
+                </div>
+              </div>
+              <div class="mb-4 relative" data-category="feature">
+                <div
+                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                ></div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <span
+                    class="category-feature inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                    >feature</span
+                  >
+                  <a
+                    href="https://github.com/proto-labs-ai/protoMaker/pull/1108"
+                    target="_blank"
+                    rel="noopener"
+                    class="text-zinc-300 hover:text-white transition-colors"
+                    >Design Tab Theming &amp; Brand Compliance</a
+                  >
+                  <span class="text-xs text-zinc-600 font-mono">#1108</span>
+                  <span class="text-xs text-zinc-600">Feb 24</span>
+                </div>
+              </div>
+              <div class="mb-4 relative" data-category="infrastructure">
+                <div
+                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                ></div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <span
+                    class="category-infrastructure inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                    >infrastructure</span
+                  >
+                  <a
+                    href="https://github.com/proto-labs-ai/protoMaker/pull/1107"
+                    target="_blank"
+                    rel="noopener"
+                    class="text-zinc-300 hover:text-white transition-colors"
+                    >Auto-commit agent progress before verification</a
+                  >
+                  <span class="text-xs text-zinc-600 font-mono">#1107</span>
+                  <span class="text-xs text-zinc-600">Feb 24</span>
+                </div>
+              </div>
+              <div class="mb-4 relative" data-category="feature">
+                <div
+                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                ></div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <span
+                    class="category-feature inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                    >feature</span
+                  >
+                  <a
+                    href="https://github.com/proto-labs-ai/protoMaker/pull/1106"
+                    target="_blank"
+                    rel="noopener"
+                    class="text-zinc-300 hover:text-white transition-colors"
+                    >Add GitHub Actions workflows for community automation</a
+                  >
+                  <span class="text-xs text-zinc-600 font-mono">#1106</span>
+                  <span class="text-xs text-zinc-600">Feb 24</span>
+                </div>
+              </div>
+              <div class="mb-4 relative" data-category="infrastructure">
+                <div
+                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                ></div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <span
+                    class="category-infrastructure inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                    >infrastructure</span
+                  >
+                  <a
+                    href="https://github.com/proto-labs-ai/protoMaker/pull/1105"
+                    target="_blank"
+                    rel="noopener"
+                    class="text-zinc-300 hover:text-white transition-colors"
+                    >Auto-commit agent progress before verification</a
+                  >
+                  <span class="text-xs text-zinc-600 font-mono">#1105</span>
+                  <span class="text-xs text-zinc-600">Feb 24</span>
+                </div>
+              </div>
+              <div class="mb-4 relative" data-category="feature">
+                <div
+                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                ></div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <span
+                    class="category-feature inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                    >feature</span
+                  >
+                  <a
+                    href="https://github.com/proto-labs-ai/protoMaker/pull/1104"
+                    target="_blank"
+                    rel="noopener"
+                    class="text-zinc-300 hover:text-white transition-colors"
+                    >Update roadmap, changelog, and stats data</a
+                  >
+                  <span class="text-xs text-zinc-600 font-mono">#1104</span>
+                  <span class="text-xs text-zinc-600">Feb 24</span>
+                </div>
+              </div>
+              <div class="mb-4 relative" data-category="feature">
+                <div
+                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                ></div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <span
+                    class="category-feature inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                    >feature</span
+                  >
+                  <a
+                    href="https://github.com/proto-labs-ai/protoMaker/pull/1101"
+                    target="_blank"
+                    rel="noopener"
+                    class="text-zinc-300 hover:text-white transition-colors"
+                    >Add sanitization utilities library</a
+                  >
+                  <span class="text-xs text-zinc-600 font-mono">#1101</span>
+                  <span class="text-xs text-zinc-600">Feb 24</span>
+                </div>
+              </div>
+              <div class="mb-4 relative" data-category="feature">
+                <div
+                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                ></div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <span
+                    class="category-feature inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                    >feature</span
+                  >
+                  <a
+                    href="https://github.com/proto-labs-ai/protoMaker/pull/1102"
+                    target="_blank"
+                    rel="noopener"
+                    class="text-zinc-300 hover:text-white transition-colors"
+                    >Wire stats generation to Langfuse cost data</a
+                  >
+                  <span class="text-xs text-zinc-600 font-mono">#1102</span>
+                  <span class="text-xs text-zinc-600">Feb 24</span>
+                </div>
+              </div>
+              <div class="mb-4 relative" data-category="fix">
+                <div
+                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                ></div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <span
+                    class="category-fix inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                    >fix</span
+                  >
+                  <a
+                    href="https://github.com/proto-labs-ai/protoMaker/pull/1103"
+                    target="_blank"
+                    rel="noopener"
+                    class="text-zinc-300 hover:text-white transition-colors"
+                    >Emit feature lifecycle events from updateFeatureStatus()</a
+                  >
+                  <span class="text-xs text-zinc-600 font-mono">#1103</span>
+                  <span class="text-xs text-zinc-600">Feb 24</span>
+                </div>
+              </div>
               <div class="mb-4 relative" data-category="docs">
                 <div
                   class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
@@ -1634,632 +2255,632 @@
                   <span class="text-xs text-zinc-600">Feb 24</span>
                 </div>
               </div>
-              <div class="mb-4 relative" data-category="fix">
-                <div
-                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
-                ></div>
-                <div class="flex flex-wrap items-center gap-2">
-                  <span
-                    class="category-fix inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
-                    >fix</span
-                  >
-                  <a
-                    href="https://github.com/proto-labs-ai/protoMaker/pull/1023"
-                    target="_blank"
-                    rel="noopener"
-                    class="text-zinc-300 hover:text-white transition-colors"
-                    >Pwa install shows &quot;Automaker&quot; instead of protoLabs.studio</a
-                  >
-                  <span class="text-xs text-zinc-600 font-mono">#1023</span>
-                  <span class="text-xs text-zinc-600">Feb 24</span>
-                </div>
-              </div>
-              <div class="mb-4 relative" data-category="feature">
-                <div
-                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
-                ></div>
-                <div class="flex flex-wrap items-center gap-2">
-                  <span
-                    class="category-feature inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
-                    >feature</span
-                  >
-                  <a
-                    href="https://github.com/proto-labs-ai/protoMaker/pull/1021"
-                    target="_blank"
-                    rel="noopener"
-                    class="text-zinc-300 hover:text-white transition-colors"
-                    >Rebase worktrees onto latest origin/main before agent execution</a
-                  >
-                  <span class="text-xs text-zinc-600 font-mono">#1021</span>
-                  <span class="text-xs text-zinc-600">Feb 24</span>
-                </div>
-              </div>
-              <div class="mb-4 relative" data-category="docs">
-                <div
-                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
-                ></div>
-                <div class="flex flex-wrap items-center gap-2">
-                  <span
-                    class="category-docs inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
-                    >docs</span
-                  >
-                  <a
-                    href="https://github.com/proto-labs-ai/protoMaker/pull/1020"
-                    target="_blank"
-                    rel="noopener"
-                    class="text-zinc-300 hover:text-white transition-colors"
-                    >Add Knowledge Store server reference page</a
-                  >
-                  <span class="text-xs text-zinc-600 font-mono">#1020</span>
-                  <span class="text-xs text-zinc-600">Feb 24</span>
-                </div>
-              </div>
-              <div class="mb-4 relative" data-category="fix">
-                <div
-                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
-                ></div>
-                <div class="flex flex-wrap items-center gap-2">
-                  <span
-                    class="category-fix inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
-                    >fix</span
-                  >
-                  <a
-                    href="https://github.com/proto-labs-ai/protoMaker/pull/1019"
-                    target="_blank"
-                    rel="noopener"
-                    class="text-zinc-300 hover:text-white transition-colors"
-                    >Exclude non-backlog features from planSpec eligibility fallback</a
-                  >
-                  <span class="text-xs text-zinc-600 font-mono">#1019</span>
-                  <span class="text-xs text-zinc-600">Feb 24</span>
-                </div>
-              </div>
-              <div class="mb-4 relative" data-category="infrastructure">
-                <div
-                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
-                ></div>
-                <div class="flex flex-wrap items-center gap-2">
-                  <span
-                    class="category-infrastructure inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
-                    >infrastructure</span
-                  >
-                  <a
-                    href="https://github.com/proto-labs-ai/protoMaker/pull/1017"
-                    target="_blank"
-                    rel="noopener"
-                    class="text-zinc-300 hover:text-white transition-colors"
-                    >Rename package scope @automaker/* → @protolabs-ai/*</a
-                  >
-                  <span class="text-xs text-zinc-600 font-mono">#1017</span>
-                  <span class="text-xs text-zinc-600">Feb 24</span>
-                </div>
-              </div>
-              <div class="mb-4 relative" data-category="fix">
-                <div
-                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
-                ></div>
-                <div class="flex flex-wrap items-center gap-2">
-                  <span
-                    class="category-fix inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
-                    >fix</span
-                  >
-                  <a
-                    href="https://github.com/proto-labs-ai/protoMaker/pull/1018"
-                    target="_blank"
-                    rel="noopener"
-                    class="text-zinc-300 hover:text-white transition-colors"
-                    >Wire KnowledgeStoreService into LeadEngineerService</a
-                  >
-                  <span class="text-xs text-zinc-600 font-mono">#1018</span>
-                  <span class="text-xs text-zinc-600">Feb 24</span>
-                </div>
-              </div>
-              <div class="mb-4 relative" data-category="feature">
-                <div
-                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
-                ></div>
-                <div class="flex flex-wrap items-center gap-2">
-                  <span
-                    class="category-feature inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
-                    >feature</span
-                  >
-                  <a
-                    href="https://github.com/proto-labs-ai/protoMaker/pull/1016"
-                    target="_blank"
-                    rel="noopener"
-                    class="text-zinc-300 hover:text-white transition-colors"
-                    >Universal reflection search and cross-project knowledge</a
-                  >
-                  <span class="text-xs text-zinc-600 font-mono">#1016</span>
-                  <span class="text-xs text-zinc-600">Feb 24</span>
-                </div>
-              </div>
-              <div class="mb-4 relative" data-category="feature">
-                <div
-                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
-                ></div>
-                <div class="flex flex-wrap items-center gap-2">
-                  <span
-                    class="category-feature inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
-                    >feature</span
-                  >
-                  <a
-                    href="https://github.com/proto-labs-ai/protoMaker/pull/1015"
-                    target="_blank"
-                    rel="noopener"
-                    class="text-zinc-300 hover:text-white transition-colors"
-                    >Category summarization and usage-correlated pruning</a
-                  >
-                  <span class="text-xs text-zinc-600 font-mono">#1015</span>
-                  <span class="text-xs text-zinc-600">Feb 24</span>
-                </div>
-              </div>
-              <div class="mb-4 relative" data-category="feature">
-                <div
-                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
-                ></div>
-                <div class="flex flex-wrap items-center gap-2">
-                  <span
-                    class="category-feature inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
-                    >feature</span
-                  >
-                  <a
-                    href="https://github.com/proto-labs-ai/protoMaker/pull/1013"
-                    target="_blank"
-                    rel="noopener"
-                    class="text-zinc-300 hover:text-white transition-colors"
-                    >Knowledge API routes for search, stats, and rebuild</a
-                  >
-                  <span class="text-xs text-zinc-600 font-mono">#1013</span>
-                  <span class="text-xs text-zinc-600">Feb 24</span>
-                </div>
-              </div>
-              <div class="mb-4 relative" data-category="feature">
-                <div
-                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
-                ></div>
-                <div class="flex flex-wrap items-center gap-2">
-                  <span
-                    class="category-feature inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
-                    >feature</span
-                  >
-                  <a
-                    href="https://github.com/proto-labs-ai/protoMaker/pull/1014"
-                    target="_blank"
-                    rel="noopener"
-                    class="text-zinc-300 hover:text-white transition-colors"
-                    >Learning deduplication with FTS5 similarity search</a
-                  >
-                  <span class="text-xs text-zinc-600 font-mono">#1014</span>
-                  <span class="text-xs text-zinc-600">Feb 24</span>
-                </div>
-              </div>
-              <div class="mb-4 relative" data-category="feature">
-                <div
-                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
-                ></div>
-                <div class="flex flex-wrap items-center gap-2">
-                  <span
-                    class="category-feature inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
-                    >feature</span
-                  >
-                  <a
-                    href="https://github.com/proto-labs-ai/protoMaker/pull/1012"
-                    target="_blank"
-                    rel="noopener"
-                    class="text-zinc-300 hover:text-white transition-colors"
-                    >FTS5 search engine and context loader integration</a
-                  >
-                  <span class="text-xs text-zinc-600 font-mono">#1012</span>
-                  <span class="text-xs text-zinc-600">Feb 24</span>
-                </div>
-              </div>
-              <div class="mb-4 relative" data-category="feature">
-                <div
-                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
-                ></div>
-                <div class="flex flex-wrap items-center gap-2">
-                  <span
-                    class="category-feature inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
-                    >feature</span
-                  >
-                  <a
-                    href="https://github.com/proto-labs-ai/protoMaker/pull/1011"
-                    target="_blank"
-                    rel="noopener"
-                    class="text-zinc-300 hover:text-white transition-colors"
-                    >Chunk ingestion pipeline for Knowledge Hive</a
-                  >
-                  <span class="text-xs text-zinc-600 font-mono">#1011</span>
-                  <span class="text-xs text-zinc-600">Feb 24</span>
-                </div>
-              </div>
-              <div class="mb-4 relative" data-category="infrastructure">
-                <div
-                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
-                ></div>
-                <div class="flex flex-wrap items-center gap-2">
-                  <span
-                    class="category-infrastructure inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
-                    >infrastructure</span
-                  >
-                  <a
-                    href="https://github.com/proto-labs-ai/protoMaker/pull/1010"
-                    target="_blank"
-                    rel="noopener"
-                    class="text-zinc-300 hover:text-white transition-colors"
-                    >Automate versioning, changelog &amp; npm publishing pipeline</a
-                  >
-                  <span class="text-xs text-zinc-600 font-mono">#1010</span>
-                  <span class="text-xs text-zinc-600">Feb 24</span>
-                </div>
-              </div>
-              <div class="mb-4 relative" data-category="fix">
-                <div
-                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
-                ></div>
-                <div class="flex flex-wrap items-center gap-2">
-                  <span
-                    class="category-fix inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
-                    >fix</span
-                  >
-                  <a
-                    href="https://github.com/proto-labs-ai/protoMaker/pull/1009"
-                    target="_blank"
-                    rel="noopener"
-                    class="text-zinc-300 hover:text-white transition-colors"
-                    >Auto-commit agent progress on turn limit before retry</a
-                  >
-                  <span class="text-xs text-zinc-600 font-mono">#1009</span>
-                  <span class="text-xs text-zinc-600">Feb 24</span>
-                </div>
-              </div>
-              <div class="mb-4 relative" data-category="infrastructure">
-                <div
-                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
-                ></div>
-                <div class="flex flex-wrap items-center gap-2">
-                  <span
-                    class="category-infrastructure inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
-                    >infrastructure</span
-                  >
-                  <a
-                    href="https://github.com/proto-labs-ai/protoMaker/pull/1008"
-                    target="_blank"
-                    rel="noopener"
-                    class="text-zinc-300 hover:text-white transition-colors"
-                    >Adopt MIT license, rewrite README for launch, add installation docs</a
-                  >
-                  <span class="text-xs text-zinc-600 font-mono">#1008</span>
-                  <span class="text-xs text-zinc-600">Feb 24</span>
-                </div>
-              </div>
-              <div class="mb-4 relative" data-category="feature">
-                <div
-                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
-                ></div>
-                <div class="flex flex-wrap items-center gap-2">
-                  <span
-                    class="category-feature inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
-                    >feature</span
-                  >
-                  <a
-                    href="https://github.com/proto-labs-ai/protoMaker/pull/1007"
-                    target="_blank"
-                    rel="noopener"
-                    class="text-zinc-300 hover:text-white transition-colors"
-                    >Prompt snapshot tests and quality linter</a
-                  >
-                  <span class="text-xs text-zinc-600 font-mono">#1007</span>
-                  <span class="text-xs text-zinc-600">Feb 24</span>
-                </div>
-              </div>
-              <div class="mb-4 relative" data-category="feature">
-                <div
-                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
-                ></div>
-                <div class="flex flex-wrap items-center gap-2">
-                  <span
-                    class="category-feature inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
-                    >feature</span
-                  >
-                  <a
-                    href="https://github.com/proto-labs-ai/protoMaker/pull/1006"
-                    target="_blank"
-                    rel="noopener"
-                    class="text-zinc-300 hover:text-white transition-colors"
-                    >Prompt seeding service and agent quality scoring</a
-                  >
-                  <span class="text-xs text-zinc-600 font-mono">#1006</span>
-                  <span class="text-xs text-zinc-600">Feb 24</span>
-                </div>
-              </div>
-              <div class="mb-4 relative" data-category="fix">
-                <div
-                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
-                ></div>
-                <div class="flex flex-wrap items-center gap-2">
-                  <span
-                    class="category-fix inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
-                    >fix</span
-                  >
-                  <a
-                    href="https://github.com/proto-labs-ai/protoMaker/pull/1005"
-                    target="_blank"
-                    rel="noopener"
-                    class="text-zinc-300 hover:text-white transition-colors"
-                    >Replace dead FeatureBranchLinkingService with FeatureLoader lookups</a
-                  >
-                  <span class="text-xs text-zinc-600 font-mono">#1005</span>
-                  <span class="text-xs text-zinc-600">Feb 24</span>
-                </div>
-              </div>
-              <div class="mb-4 relative" data-category="feature">
-                <div
-                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
-                ></div>
-                <div class="flex flex-wrap items-center gap-2">
-                  <span
-                    class="category-feature inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
-                    >feature</span
-                  >
-                  <a
-                    href="https://github.com/proto-labs-ai/protoMaker/pull/1004"
-                    target="_blank"
-                    rel="noopener"
-                    class="text-zinc-300 hover:text-white transition-colors"
-                    >M1 agent prompt hardening</a
-                  >
-                  <span class="text-xs text-zinc-600 font-mono">#1004</span>
-                  <span class="text-xs text-zinc-600">Feb 24</span>
-                </div>
-              </div>
-              <div class="mb-4 relative" data-category="infrastructure">
-                <div
-                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
-                ></div>
-                <div class="flex flex-wrap items-center gap-2">
-                  <span
-                    class="category-infrastructure inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
-                    >infrastructure</span
-                  >
-                  <a
-                    href="https://github.com/proto-labs-ai/protoMaker/pull/1003"
-                    target="_blank"
-                    rel="noopener"
-                    class="text-zinc-300 hover:text-white transition-colors"
-                    >Add gource visualization scripts for PR milestones</a
-                  >
-                  <span class="text-xs text-zinc-600 font-mono">#1003</span>
-                  <span class="text-xs text-zinc-600">Feb 24</span>
-                </div>
-              </div>
-              <div class="mb-4 relative" data-category="feature">
-                <div
-                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
-                ></div>
-                <div class="flex flex-wrap items-center gap-2">
-                  <span
-                    class="category-feature inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
-                    >feature</span
-                  >
-                  <a
-                    href="https://github.com/proto-labs-ai/protoMaker/pull/1001"
-                    target="_blank"
-                    rel="noopener"
-                    class="text-zinc-300 hover:text-white transition-colors"
-                    >Prompt engineering knowledge base and agent prompt improvements</a
-                  >
-                  <span class="text-xs text-zinc-600 font-mono">#1001</span>
-                  <span class="text-xs text-zinc-600">Feb 24</span>
-                </div>
-              </div>
-              <div class="mb-4 relative" data-category="fix">
-                <div
-                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
-                ></div>
-                <div class="flex flex-wrap items-center gap-2">
-                  <span
-                    class="category-fix inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
-                    >fix</span
-                  >
-                  <a
-                    href="https://github.com/proto-labs-ai/protoMaker/pull/1000"
-                    target="_blank"
-                    rel="noopener"
-                    class="text-zinc-300 hover:text-white transition-colors"
-                    >Suppress Langfuse SDK internal noise for missing prompts</a
-                  >
-                  <span class="text-xs text-zinc-600 font-mono">#1000</span>
-                  <span class="text-xs text-zinc-600">Feb 24</span>
-                </div>
-              </div>
-              <div class="mb-4 relative" data-category="fix">
-                <div
-                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
-                ></div>
-                <div class="flex flex-wrap items-center gap-2">
-                  <span
-                    class="category-fix inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
-                    >fix</span
-                  >
-                  <a
-                    href="https://github.com/proto-labs-ai/protoMaker/pull/999"
-                    target="_blank"
-                    rel="noopener"
-                    class="text-zinc-300 hover:text-white transition-colors"
-                    >Verify PR state after merge command to prevent false success</a
-                  >
-                  <span class="text-xs text-zinc-600 font-mono">#999</span>
-                  <span class="text-xs text-zinc-600">Feb 24</span>
-                </div>
-              </div>
-              <div class="mb-4 relative" data-category="fix">
-                <div
-                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
-                ></div>
-                <div class="flex flex-wrap items-center gap-2">
-                  <span
-                    class="category-fix inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
-                    >fix</span
-                  >
-                  <a
-                    href="https://github.com/proto-labs-ai/protoMaker/pull/998"
-                    target="_blank"
-                    rel="noopener"
-                    class="text-zinc-300 hover:text-white transition-colors"
-                    >Reduce Langfuse prompt-not-found noise and add negative caching</a
-                  >
-                  <span class="text-xs text-zinc-600 font-mono">#998</span>
-                  <span class="text-xs text-zinc-600">Feb 23</span>
-                </div>
-              </div>
-              <div class="mb-4 relative" data-category="infrastructure">
-                <div
-                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
-                ></div>
-                <div class="flex flex-wrap items-center gap-2">
-                  <span
-                    class="category-infrastructure inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
-                    >infrastructure</span
-                  >
-                  <a
-                    href="https://github.com/proto-labs-ai/protoMaker/pull/997"
-                    target="_blank"
-                    rel="noopener"
-                    class="text-zinc-300 hover:text-white transition-colors"
-                    >Add Turborepo CI cache</a
-                  >
-                  <span class="text-xs text-zinc-600 font-mono">#997</span>
-                  <span class="text-xs text-zinc-600">Feb 23</span>
-                </div>
-              </div>
-              <div class="mb-4 relative" data-category="docs">
-                <div
-                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
-                ></div>
-                <div class="flex flex-wrap items-center gap-2">
-                  <span
-                    class="category-docs inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
-                    >docs</span
-                  >
-                  <a
-                    href="https://github.com/proto-labs-ai/protoMaker/pull/995"
-                    target="_blank"
-                    rel="noopener"
-                    class="text-zinc-300 hover:text-white transition-colors"
-                    >Overhaul agent philosophy, reliability, and prompt engineering docs</a
-                  >
-                  <span class="text-xs text-zinc-600 font-mono">#995</span>
-                  <span class="text-xs text-zinc-600">Feb 23</span>
-                </div>
-              </div>
-              <div class="mb-4 relative" data-category="feature">
-                <div
-                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
-                ></div>
-                <div class="flex flex-wrap items-center gap-2">
-                  <span
-                    class="category-feature inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
-                    >feature</span
-                  >
-                  <a
-                    href="https://github.com/proto-labs-ai/protoMaker/pull/992"
-                    target="_blank"
-                    rel="noopener"
-                    class="text-zinc-300 hover:text-white transition-colors"
-                    >PWA Infrastructure</a
-                  >
-                  <span class="text-xs text-zinc-600 font-mono">#992</span>
-                  <span class="text-xs text-zinc-600">Feb 23</span>
-                </div>
-              </div>
-              <div class="mb-4 relative" data-category="feature">
-                <div
-                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
-                ></div>
-                <div class="flex flex-wrap items-center gap-2">
-                  <span
-                    class="category-feature inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
-                    >feature</span
-                  >
-                  <a
-                    href="https://github.com/proto-labs-ai/protoMaker/pull/993"
-                    target="_blank"
-                    rel="noopener"
-                    class="text-zinc-300 hover:text-white transition-colors"
-                    >Mobile Layout and Navigation</a
-                  >
-                  <span class="text-xs text-zinc-600 font-mono">#993</span>
-                  <span class="text-xs text-zinc-600">Feb 23</span>
-                </div>
-              </div>
-              <div class="mb-4 relative" data-category="feature">
-                <div
-                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
-                ></div>
-                <div class="flex flex-wrap items-center gap-2">
-                  <span
-                    class="category-feature inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
-                    >feature</span
-                  >
-                  <a
-                    href="https://github.com/proto-labs-ai/protoMaker/pull/994"
-                    target="_blank"
-                    rel="noopener"
-                    class="text-zinc-300 hover:text-white transition-colors"
-                    >PWA Performance and Resilience</a
-                  >
-                  <span class="text-xs text-zinc-600 font-mono">#994</span>
-                  <span class="text-xs text-zinc-600">Feb 23</span>
-                </div>
-              </div>
-              <div class="mb-4 relative" data-category="infrastructure">
-                <div
-                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
-                ></div>
-                <div class="flex flex-wrap items-center gap-2">
-                  <span
-                    class="category-infrastructure inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
-                    >infrastructure</span
-                  >
-                  <a
-                    href="https://github.com/proto-labs-ai/protoMaker/pull/989"
-                    target="_blank"
-                    rel="noopener"
-                    class="text-zinc-300 hover:text-white transition-colors"
-                    >Update docs for APF agent reliability services</a
-                  >
-                  <span class="text-xs text-zinc-600 font-mono">#989</span>
-                  <span class="text-xs text-zinc-600">Feb 23</span>
-                </div>
-              </div>
-              <div class="mb-4 relative" data-category="fix">
-                <div
-                  class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
-                ></div>
-                <div class="flex flex-wrap items-center gap-2">
-                  <span
-                    class="category-fix inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
-                    >fix</span
-                  >
-                  <a
-                    href="https://github.com/proto-labs-ai/protoMaker/pull/986"
-                    target="_blank"
-                    rel="noopener"
-                    class="text-zinc-300 hover:text-white transition-colors"
-                    >Use execFile for git commit to prevent shell escaping failures</a
-                  >
-                  <span class="text-xs text-zinc-600 font-mono">#986</span>
-                  <span class="text-xs text-zinc-600">Feb 23</span>
-                </div>
-              </div>
               <details class="mb-4">
                 <summary
                   class="cursor-pointer text-sm text-accent hover:text-white transition-colors py-2"
                 >
-                  Show 664 more changes
+                  Show 695 more changes
                 </summary>
+                <div class="mb-4 relative" data-category="fix">
+                  <div
+                    class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                  ></div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span
+                      class="category-fix inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                      >fix</span
+                    >
+                    <a
+                      href="https://github.com/proto-labs-ai/protoMaker/pull/1023"
+                      target="_blank"
+                      rel="noopener"
+                      class="text-zinc-300 hover:text-white transition-colors"
+                      >Pwa install shows &quot;Automaker&quot; instead of protoLabs.studio</a
+                    >
+                    <span class="text-xs text-zinc-600 font-mono">#1023</span>
+                    <span class="text-xs text-zinc-600">Feb 24</span>
+                  </div>
+                </div>
+                <div class="mb-4 relative" data-category="feature">
+                  <div
+                    class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                  ></div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span
+                      class="category-feature inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                      >feature</span
+                    >
+                    <a
+                      href="https://github.com/proto-labs-ai/protoMaker/pull/1021"
+                      target="_blank"
+                      rel="noopener"
+                      class="text-zinc-300 hover:text-white transition-colors"
+                      >Rebase worktrees onto latest origin/main before agent execution</a
+                    >
+                    <span class="text-xs text-zinc-600 font-mono">#1021</span>
+                    <span class="text-xs text-zinc-600">Feb 24</span>
+                  </div>
+                </div>
+                <div class="mb-4 relative" data-category="docs">
+                  <div
+                    class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                  ></div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span
+                      class="category-docs inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                      >docs</span
+                    >
+                    <a
+                      href="https://github.com/proto-labs-ai/protoMaker/pull/1020"
+                      target="_blank"
+                      rel="noopener"
+                      class="text-zinc-300 hover:text-white transition-colors"
+                      >Add Knowledge Store server reference page</a
+                    >
+                    <span class="text-xs text-zinc-600 font-mono">#1020</span>
+                    <span class="text-xs text-zinc-600">Feb 24</span>
+                  </div>
+                </div>
+                <div class="mb-4 relative" data-category="fix">
+                  <div
+                    class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                  ></div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span
+                      class="category-fix inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                      >fix</span
+                    >
+                    <a
+                      href="https://github.com/proto-labs-ai/protoMaker/pull/1019"
+                      target="_blank"
+                      rel="noopener"
+                      class="text-zinc-300 hover:text-white transition-colors"
+                      >Exclude non-backlog features from planSpec eligibility fallback</a
+                    >
+                    <span class="text-xs text-zinc-600 font-mono">#1019</span>
+                    <span class="text-xs text-zinc-600">Feb 24</span>
+                  </div>
+                </div>
+                <div class="mb-4 relative" data-category="infrastructure">
+                  <div
+                    class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                  ></div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span
+                      class="category-infrastructure inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                      >infrastructure</span
+                    >
+                    <a
+                      href="https://github.com/proto-labs-ai/protoMaker/pull/1017"
+                      target="_blank"
+                      rel="noopener"
+                      class="text-zinc-300 hover:text-white transition-colors"
+                      >Rename package scope @automaker/* → @protolabs-ai/*</a
+                    >
+                    <span class="text-xs text-zinc-600 font-mono">#1017</span>
+                    <span class="text-xs text-zinc-600">Feb 24</span>
+                  </div>
+                </div>
+                <div class="mb-4 relative" data-category="fix">
+                  <div
+                    class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                  ></div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span
+                      class="category-fix inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                      >fix</span
+                    >
+                    <a
+                      href="https://github.com/proto-labs-ai/protoMaker/pull/1018"
+                      target="_blank"
+                      rel="noopener"
+                      class="text-zinc-300 hover:text-white transition-colors"
+                      >Wire KnowledgeStoreService into LeadEngineerService</a
+                    >
+                    <span class="text-xs text-zinc-600 font-mono">#1018</span>
+                    <span class="text-xs text-zinc-600">Feb 24</span>
+                  </div>
+                </div>
+                <div class="mb-4 relative" data-category="feature">
+                  <div
+                    class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                  ></div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span
+                      class="category-feature inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                      >feature</span
+                    >
+                    <a
+                      href="https://github.com/proto-labs-ai/protoMaker/pull/1016"
+                      target="_blank"
+                      rel="noopener"
+                      class="text-zinc-300 hover:text-white transition-colors"
+                      >Universal reflection search and cross-project knowledge</a
+                    >
+                    <span class="text-xs text-zinc-600 font-mono">#1016</span>
+                    <span class="text-xs text-zinc-600">Feb 24</span>
+                  </div>
+                </div>
+                <div class="mb-4 relative" data-category="feature">
+                  <div
+                    class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                  ></div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span
+                      class="category-feature inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                      >feature</span
+                    >
+                    <a
+                      href="https://github.com/proto-labs-ai/protoMaker/pull/1015"
+                      target="_blank"
+                      rel="noopener"
+                      class="text-zinc-300 hover:text-white transition-colors"
+                      >Category summarization and usage-correlated pruning</a
+                    >
+                    <span class="text-xs text-zinc-600 font-mono">#1015</span>
+                    <span class="text-xs text-zinc-600">Feb 24</span>
+                  </div>
+                </div>
+                <div class="mb-4 relative" data-category="feature">
+                  <div
+                    class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                  ></div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span
+                      class="category-feature inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                      >feature</span
+                    >
+                    <a
+                      href="https://github.com/proto-labs-ai/protoMaker/pull/1013"
+                      target="_blank"
+                      rel="noopener"
+                      class="text-zinc-300 hover:text-white transition-colors"
+                      >Knowledge API routes for search, stats, and rebuild</a
+                    >
+                    <span class="text-xs text-zinc-600 font-mono">#1013</span>
+                    <span class="text-xs text-zinc-600">Feb 24</span>
+                  </div>
+                </div>
+                <div class="mb-4 relative" data-category="feature">
+                  <div
+                    class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                  ></div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span
+                      class="category-feature inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                      >feature</span
+                    >
+                    <a
+                      href="https://github.com/proto-labs-ai/protoMaker/pull/1014"
+                      target="_blank"
+                      rel="noopener"
+                      class="text-zinc-300 hover:text-white transition-colors"
+                      >Learning deduplication with FTS5 similarity search</a
+                    >
+                    <span class="text-xs text-zinc-600 font-mono">#1014</span>
+                    <span class="text-xs text-zinc-600">Feb 24</span>
+                  </div>
+                </div>
+                <div class="mb-4 relative" data-category="feature">
+                  <div
+                    class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                  ></div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span
+                      class="category-feature inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                      >feature</span
+                    >
+                    <a
+                      href="https://github.com/proto-labs-ai/protoMaker/pull/1012"
+                      target="_blank"
+                      rel="noopener"
+                      class="text-zinc-300 hover:text-white transition-colors"
+                      >FTS5 search engine and context loader integration</a
+                    >
+                    <span class="text-xs text-zinc-600 font-mono">#1012</span>
+                    <span class="text-xs text-zinc-600">Feb 24</span>
+                  </div>
+                </div>
+                <div class="mb-4 relative" data-category="feature">
+                  <div
+                    class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                  ></div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span
+                      class="category-feature inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                      >feature</span
+                    >
+                    <a
+                      href="https://github.com/proto-labs-ai/protoMaker/pull/1011"
+                      target="_blank"
+                      rel="noopener"
+                      class="text-zinc-300 hover:text-white transition-colors"
+                      >Chunk ingestion pipeline for Knowledge Hive</a
+                    >
+                    <span class="text-xs text-zinc-600 font-mono">#1011</span>
+                    <span class="text-xs text-zinc-600">Feb 24</span>
+                  </div>
+                </div>
+                <div class="mb-4 relative" data-category="infrastructure">
+                  <div
+                    class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                  ></div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span
+                      class="category-infrastructure inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                      >infrastructure</span
+                    >
+                    <a
+                      href="https://github.com/proto-labs-ai/protoMaker/pull/1010"
+                      target="_blank"
+                      rel="noopener"
+                      class="text-zinc-300 hover:text-white transition-colors"
+                      >Automate versioning, changelog &amp; npm publishing pipeline</a
+                    >
+                    <span class="text-xs text-zinc-600 font-mono">#1010</span>
+                    <span class="text-xs text-zinc-600">Feb 24</span>
+                  </div>
+                </div>
+                <div class="mb-4 relative" data-category="fix">
+                  <div
+                    class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                  ></div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span
+                      class="category-fix inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                      >fix</span
+                    >
+                    <a
+                      href="https://github.com/proto-labs-ai/protoMaker/pull/1009"
+                      target="_blank"
+                      rel="noopener"
+                      class="text-zinc-300 hover:text-white transition-colors"
+                      >Auto-commit agent progress on turn limit before retry</a
+                    >
+                    <span class="text-xs text-zinc-600 font-mono">#1009</span>
+                    <span class="text-xs text-zinc-600">Feb 24</span>
+                  </div>
+                </div>
+                <div class="mb-4 relative" data-category="infrastructure">
+                  <div
+                    class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                  ></div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span
+                      class="category-infrastructure inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                      >infrastructure</span
+                    >
+                    <a
+                      href="https://github.com/proto-labs-ai/protoMaker/pull/1008"
+                      target="_blank"
+                      rel="noopener"
+                      class="text-zinc-300 hover:text-white transition-colors"
+                      >Adopt MIT license, rewrite README for launch, add installation docs</a
+                    >
+                    <span class="text-xs text-zinc-600 font-mono">#1008</span>
+                    <span class="text-xs text-zinc-600">Feb 24</span>
+                  </div>
+                </div>
+                <div class="mb-4 relative" data-category="feature">
+                  <div
+                    class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                  ></div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span
+                      class="category-feature inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                      >feature</span
+                    >
+                    <a
+                      href="https://github.com/proto-labs-ai/protoMaker/pull/1007"
+                      target="_blank"
+                      rel="noopener"
+                      class="text-zinc-300 hover:text-white transition-colors"
+                      >Prompt snapshot tests and quality linter</a
+                    >
+                    <span class="text-xs text-zinc-600 font-mono">#1007</span>
+                    <span class="text-xs text-zinc-600">Feb 24</span>
+                  </div>
+                </div>
+                <div class="mb-4 relative" data-category="feature">
+                  <div
+                    class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                  ></div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span
+                      class="category-feature inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                      >feature</span
+                    >
+                    <a
+                      href="https://github.com/proto-labs-ai/protoMaker/pull/1006"
+                      target="_blank"
+                      rel="noopener"
+                      class="text-zinc-300 hover:text-white transition-colors"
+                      >Prompt seeding service and agent quality scoring</a
+                    >
+                    <span class="text-xs text-zinc-600 font-mono">#1006</span>
+                    <span class="text-xs text-zinc-600">Feb 24</span>
+                  </div>
+                </div>
+                <div class="mb-4 relative" data-category="fix">
+                  <div
+                    class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                  ></div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span
+                      class="category-fix inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                      >fix</span
+                    >
+                    <a
+                      href="https://github.com/proto-labs-ai/protoMaker/pull/1005"
+                      target="_blank"
+                      rel="noopener"
+                      class="text-zinc-300 hover:text-white transition-colors"
+                      >Replace dead FeatureBranchLinkingService with FeatureLoader lookups</a
+                    >
+                    <span class="text-xs text-zinc-600 font-mono">#1005</span>
+                    <span class="text-xs text-zinc-600">Feb 24</span>
+                  </div>
+                </div>
+                <div class="mb-4 relative" data-category="feature">
+                  <div
+                    class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                  ></div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span
+                      class="category-feature inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                      >feature</span
+                    >
+                    <a
+                      href="https://github.com/proto-labs-ai/protoMaker/pull/1004"
+                      target="_blank"
+                      rel="noopener"
+                      class="text-zinc-300 hover:text-white transition-colors"
+                      >M1 agent prompt hardening</a
+                    >
+                    <span class="text-xs text-zinc-600 font-mono">#1004</span>
+                    <span class="text-xs text-zinc-600">Feb 24</span>
+                  </div>
+                </div>
+                <div class="mb-4 relative" data-category="infrastructure">
+                  <div
+                    class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                  ></div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span
+                      class="category-infrastructure inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                      >infrastructure</span
+                    >
+                    <a
+                      href="https://github.com/proto-labs-ai/protoMaker/pull/1003"
+                      target="_blank"
+                      rel="noopener"
+                      class="text-zinc-300 hover:text-white transition-colors"
+                      >Add gource visualization scripts for PR milestones</a
+                    >
+                    <span class="text-xs text-zinc-600 font-mono">#1003</span>
+                    <span class="text-xs text-zinc-600">Feb 24</span>
+                  </div>
+                </div>
+                <div class="mb-4 relative" data-category="feature">
+                  <div
+                    class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                  ></div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span
+                      class="category-feature inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                      >feature</span
+                    >
+                    <a
+                      href="https://github.com/proto-labs-ai/protoMaker/pull/1001"
+                      target="_blank"
+                      rel="noopener"
+                      class="text-zinc-300 hover:text-white transition-colors"
+                      >Prompt engineering knowledge base and agent prompt improvements</a
+                    >
+                    <span class="text-xs text-zinc-600 font-mono">#1001</span>
+                    <span class="text-xs text-zinc-600">Feb 24</span>
+                  </div>
+                </div>
+                <div class="mb-4 relative" data-category="fix">
+                  <div
+                    class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                  ></div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span
+                      class="category-fix inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                      >fix</span
+                    >
+                    <a
+                      href="https://github.com/proto-labs-ai/protoMaker/pull/1000"
+                      target="_blank"
+                      rel="noopener"
+                      class="text-zinc-300 hover:text-white transition-colors"
+                      >Suppress Langfuse SDK internal noise for missing prompts</a
+                    >
+                    <span class="text-xs text-zinc-600 font-mono">#1000</span>
+                    <span class="text-xs text-zinc-600">Feb 24</span>
+                  </div>
+                </div>
+                <div class="mb-4 relative" data-category="fix">
+                  <div
+                    class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                  ></div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span
+                      class="category-fix inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                      >fix</span
+                    >
+                    <a
+                      href="https://github.com/proto-labs-ai/protoMaker/pull/999"
+                      target="_blank"
+                      rel="noopener"
+                      class="text-zinc-300 hover:text-white transition-colors"
+                      >Verify PR state after merge command to prevent false success</a
+                    >
+                    <span class="text-xs text-zinc-600 font-mono">#999</span>
+                    <span class="text-xs text-zinc-600">Feb 24</span>
+                  </div>
+                </div>
+                <div class="mb-4 relative" data-category="fix">
+                  <div
+                    class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                  ></div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span
+                      class="category-fix inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                      >fix</span
+                    >
+                    <a
+                      href="https://github.com/proto-labs-ai/protoMaker/pull/998"
+                      target="_blank"
+                      rel="noopener"
+                      class="text-zinc-300 hover:text-white transition-colors"
+                      >Reduce Langfuse prompt-not-found noise and add negative caching</a
+                    >
+                    <span class="text-xs text-zinc-600 font-mono">#998</span>
+                    <span class="text-xs text-zinc-600">Feb 23</span>
+                  </div>
+                </div>
+                <div class="mb-4 relative" data-category="infrastructure">
+                  <div
+                    class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                  ></div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span
+                      class="category-infrastructure inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                      >infrastructure</span
+                    >
+                    <a
+                      href="https://github.com/proto-labs-ai/protoMaker/pull/997"
+                      target="_blank"
+                      rel="noopener"
+                      class="text-zinc-300 hover:text-white transition-colors"
+                      >Add Turborepo CI cache</a
+                    >
+                    <span class="text-xs text-zinc-600 font-mono">#997</span>
+                    <span class="text-xs text-zinc-600">Feb 23</span>
+                  </div>
+                </div>
+                <div class="mb-4 relative" data-category="docs">
+                  <div
+                    class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                  ></div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span
+                      class="category-docs inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                      >docs</span
+                    >
+                    <a
+                      href="https://github.com/proto-labs-ai/protoMaker/pull/995"
+                      target="_blank"
+                      rel="noopener"
+                      class="text-zinc-300 hover:text-white transition-colors"
+                      >Overhaul agent philosophy, reliability, and prompt engineering docs</a
+                    >
+                    <span class="text-xs text-zinc-600 font-mono">#995</span>
+                    <span class="text-xs text-zinc-600">Feb 23</span>
+                  </div>
+                </div>
+                <div class="mb-4 relative" data-category="feature">
+                  <div
+                    class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                  ></div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span
+                      class="category-feature inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                      >feature</span
+                    >
+                    <a
+                      href="https://github.com/proto-labs-ai/protoMaker/pull/992"
+                      target="_blank"
+                      rel="noopener"
+                      class="text-zinc-300 hover:text-white transition-colors"
+                      >PWA Infrastructure</a
+                    >
+                    <span class="text-xs text-zinc-600 font-mono">#992</span>
+                    <span class="text-xs text-zinc-600">Feb 23</span>
+                  </div>
+                </div>
+                <div class="mb-4 relative" data-category="feature">
+                  <div
+                    class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                  ></div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span
+                      class="category-feature inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                      >feature</span
+                    >
+                    <a
+                      href="https://github.com/proto-labs-ai/protoMaker/pull/993"
+                      target="_blank"
+                      rel="noopener"
+                      class="text-zinc-300 hover:text-white transition-colors"
+                      >Mobile Layout and Navigation</a
+                    >
+                    <span class="text-xs text-zinc-600 font-mono">#993</span>
+                    <span class="text-xs text-zinc-600">Feb 23</span>
+                  </div>
+                </div>
+                <div class="mb-4 relative" data-category="feature">
+                  <div
+                    class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                  ></div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span
+                      class="category-feature inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                      >feature</span
+                    >
+                    <a
+                      href="https://github.com/proto-labs-ai/protoMaker/pull/994"
+                      target="_blank"
+                      rel="noopener"
+                      class="text-zinc-300 hover:text-white transition-colors"
+                      >PWA Performance and Resilience</a
+                    >
+                    <span class="text-xs text-zinc-600 font-mono">#994</span>
+                    <span class="text-xs text-zinc-600">Feb 23</span>
+                  </div>
+                </div>
+                <div class="mb-4 relative" data-category="infrastructure">
+                  <div
+                    class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                  ></div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span
+                      class="category-infrastructure inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                      >infrastructure</span
+                    >
+                    <a
+                      href="https://github.com/proto-labs-ai/protoMaker/pull/989"
+                      target="_blank"
+                      rel="noopener"
+                      class="text-zinc-300 hover:text-white transition-colors"
+                      >Update docs for APF agent reliability services</a
+                    >
+                    <span class="text-xs text-zinc-600 font-mono">#989</span>
+                    <span class="text-xs text-zinc-600">Feb 23</span>
+                  </div>
+                </div>
+                <div class="mb-4 relative" data-category="fix">
+                  <div
+                    class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"
+                  ></div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span
+                      class="category-fix inline-block px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+                      >fix</span
+                    >
+                    <a
+                      href="https://github.com/proto-labs-ai/protoMaker/pull/986"
+                      target="_blank"
+                      rel="noopener"
+                      class="text-zinc-300 hover:text-white transition-colors"
+                      >Use execFile for git commit to prevent shell escaping failures</a
+                    >
+                    <span class="text-xs text-zinc-600 font-mono">#986</span>
+                    <span class="text-xs text-zinc-600">Feb 23</span>
+                  </div>
+                </div>
                 <div class="mb-4 relative" data-category="feature">
                   <div
                     class="absolute -left-8 top-1.5 w-2.5 h-2.5 rounded-full bg-surface-3 border-2 border-accent/50"

@@ -1,21 +1,269 @@
 {
   "summary": {
-    "totalEntries": 764,
+    "totalEntries": 795,
     "categories": {
-      "docs": 34,
-      "feature": 446,
-      "infrastructure": 50,
-      "fix": 204,
+      "fix": 211,
+      "docs": 37,
+      "infrastructure": 59,
+      "feature": 458,
       "improvement": 30
     },
     "firstDate": "2026-02-04T21:35:59.000Z",
-    "latestDate": "2026-02-25T03:58:53.000Z"
+    "latestDate": "2026-02-25T07:12:58.000Z"
   },
   "months": [
     {
       "month": "2026-02",
       "label": "February 2026",
       "entries": [
+        {
+          "hash": "98385012",
+          "date": "2026-02-24T23:12:58-08:00",
+          "title": "Resolve OpenCode CLI stuck on \"not authenticated\" by treating installed CLI as free tier ready",
+          "prNumber": 1137,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1137",
+          "category": "fix"
+        },
+        {
+          "hash": "2ef3224e",
+          "date": "2026-02-24T22:57:51-08:00",
+          "title": "Revise open-source strategy to reflect implemented quarantine",
+          "prNumber": 1134,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1134",
+          "category": "docs"
+        },
+        {
+          "hash": "2da1e5aa",
+          "date": "2026-02-24T22:48:35-08:00",
+          "title": "Gitignore runtime DB files and commit agent memory drift",
+          "prNumber": 1132,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1132",
+          "category": "infrastructure"
+        },
+        {
+          "hash": "e4fb3396",
+          "date": "2026-02-24T22:37:33-08:00",
+          "title": "Quarantine pipeline and contribution model",
+          "prNumber": 1129,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1129",
+          "category": "docs"
+        },
+        {
+          "hash": "a6ce0643",
+          "date": "2026-02-24T22:34:19-08:00",
+          "title": "Discord notification, auto-unblock, and pipeline stall detection",
+          "prNumber": 1130,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1130",
+          "category": "feature"
+        },
+        {
+          "hash": "45e891f9",
+          "date": "2026-02-24T22:30:02-08:00",
+          "title": "Document git workflow reliability changes",
+          "prNumber": 1128,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1128",
+          "category": "docs"
+        },
+        {
+          "hash": "3296c3d9",
+          "date": "2026-02-24T22:24:46-08:00",
+          "title": "Make git workflow error persistence non-blocking",
+          "prNumber": 1127,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1127",
+          "category": "fix"
+        },
+        {
+          "hash": "de9c9a9c",
+          "date": "2026-02-24T22:07:42-08:00",
+          "title": "Surface git workflow errors on feature data",
+          "prNumber": 1126,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1126",
+          "category": "feature"
+        },
+        {
+          "hash": "677ecce4",
+          "date": "2026-02-24T22:01:15-08:00",
+          "title": "Add comprehensive unit tests for QuarantineService and TrustTierService",
+          "prNumber": 1124,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1124",
+          "category": "infrastructure"
+        },
+        {
+          "hash": "c745a42b",
+          "date": "2026-02-24T21:56:39-08:00",
+          "title": "Startup worktree scan for crash recovery",
+          "prNumber": 1122,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1122",
+          "category": "feature"
+        },
+        {
+          "hash": "8bb60c1d",
+          "date": "2026-02-24T21:47:48-08:00",
+          "title": "Add comprehensive sanitization utility tests",
+          "prNumber": 1123,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1123",
+          "category": "infrastructure"
+        },
+        {
+          "hash": "7238ef3a",
+          "date": "2026-02-24T21:40:36-08:00",
+          "title": "Clean up lint warnings in quarantine service and routes",
+          "prNumber": 1121,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1121",
+          "category": "fix"
+        },
+        {
+          "hash": "cb14f571",
+          "date": "2026-02-24T21:40:06-08:00",
+          "title": "Add human-blocked dependency types and resolver",
+          "prNumber": 1119,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1119",
+          "category": "feature"
+        },
+        {
+          "hash": "ef69f727",
+          "date": "2026-02-24T21:33:45-08:00",
+          "title": "Pass githubIssueNumber to features created from GitHub issue webhooks",
+          "prNumber": 1120,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1120",
+          "category": "fix"
+        },
+        {
+          "hash": "2d118f55",
+          "date": "2026-02-24T21:24:52-08:00",
+          "title": "Add inline identity dialog and My Tasks filter",
+          "prNumber": 1116,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1116",
+          "category": "feature"
+        },
+        {
+          "hash": "9841b61a",
+          "date": "2026-02-24T21:24:09-08:00",
+          "title": "Auto-commit agent progress before verification",
+          "prNumber": 1118,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1118",
+          "category": "infrastructure"
+        },
+        {
+          "hash": "4c0c490c",
+          "date": "2026-02-24T21:22:53-08:00",
+          "title": "Add quarantine gate to feature creation route",
+          "prNumber": 1117,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1117",
+          "category": "feature"
+        },
+        {
+          "hash": "9dcc47ab",
+          "date": "2026-02-24T21:16:17-08:00",
+          "title": "Add exponential backoff retry to git push and PR creation",
+          "prNumber": 1114,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1114",
+          "category": "fix"
+        },
+        {
+          "hash": "3d56f336",
+          "date": "2026-02-24T21:12:32-08:00",
+          "title": "Add user identity service and settings API",
+          "prNumber": 1115,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1115",
+          "category": "feature"
+        },
+        {
+          "hash": "860dcc79",
+          "date": "2026-02-24T21:00:13-08:00",
+          "title": "Add resolve alias to types vitest config for package self-reference",
+          "prNumber": 1113,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1113",
+          "category": "fix"
+        },
+        {
+          "hash": "428aedf5",
+          "date": "2026-02-24T20:57:46-08:00",
+          "title": "Auto-commit agent progress before verification",
+          "prNumber": 1112,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1112",
+          "category": "infrastructure"
+        },
+        {
+          "hash": "88c63430",
+          "date": "2026-02-24T20:53:04-08:00",
+          "title": "Auto-commit agent progress before verification",
+          "prNumber": 1110,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1110",
+          "category": "infrastructure"
+        },
+        {
+          "hash": "b3caab43",
+          "date": "2026-02-24T20:45:48-08:00",
+          "title": "Auto-commit agent progress before verification",
+          "prNumber": 1109,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1109",
+          "category": "infrastructure"
+        },
+        {
+          "hash": "f0b8411b",
+          "date": "2026-02-24T20:43:51-08:00",
+          "title": "Design Tab Theming & Brand Compliance",
+          "prNumber": 1108,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1108",
+          "category": "feature"
+        },
+        {
+          "hash": "83471ee4",
+          "date": "2026-02-24T20:37:26-08:00",
+          "title": "Auto-commit agent progress before verification",
+          "prNumber": 1107,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1107",
+          "category": "infrastructure"
+        },
+        {
+          "hash": "2d3e812a",
+          "date": "2026-02-24T20:28:02-08:00",
+          "title": "Add GitHub Actions workflows for community automation",
+          "prNumber": 1106,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1106",
+          "category": "feature"
+        },
+        {
+          "hash": "5f2683b2",
+          "date": "2026-02-24T20:26:29-08:00",
+          "title": "Auto-commit agent progress before verification",
+          "prNumber": 1105,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1105",
+          "category": "infrastructure"
+        },
+        {
+          "hash": "374d9db3",
+          "date": "2026-02-24T20:20:49-08:00",
+          "title": "Update roadmap, changelog, and stats data",
+          "prNumber": 1104,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1104",
+          "category": "feature"
+        },
+        {
+          "hash": "b4552a00",
+          "date": "2026-02-24T20:17:46-08:00",
+          "title": "Add sanitization utilities library",
+          "prNumber": 1101,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1101",
+          "category": "feature"
+        },
+        {
+          "hash": "e1a5554c",
+          "date": "2026-02-24T20:12:01-08:00",
+          "title": "Wire stats generation to Langfuse cost data",
+          "prNumber": 1102,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1102",
+          "category": "feature"
+        },
+        {
+          "hash": "e31e57f6",
+          "date": "2026-02-24T20:09:56-08:00",
+          "title": "Emit feature lifecycle events from updateFeatureStatus()",
+          "prNumber": 1103,
+          "prUrl": "https://github.com/proto-labs-ai/protoMaker/pull/1103",
+          "category": "fix"
+        },
         {
           "hash": "db3520f4",
           "date": "2026-02-24T19:58:53-08:00",
@@ -6131,5 +6379,5 @@
       ]
     }
   ],
-  "generatedAt": "2026-02-25T04:02:06.533Z"
+  "generatedAt": "2026-02-25T07:18:38.678Z"
 }
