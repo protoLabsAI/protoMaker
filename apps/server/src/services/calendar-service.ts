@@ -26,7 +26,8 @@ export type CalendarEventType =
   | 'feature' // Feature due dates
   | 'milestone' // Project milestone dates
   | 'meeting' // Scheduled meetings
-  | 'deadline'; // Hard deadlines
+  | 'deadline' // Hard deadlines
+  | 'google'; // Synced from Google Calendar
 
 /**
  * A calendar event
@@ -40,6 +41,7 @@ export interface CalendarEvent {
   description?: string;
   color?: string; // Hex color for display
   url?: string; // Optional link (e.g., to feature, PR, Linear issue)
+  sourceId?: string; // External source ID (e.g., Google Calendar event ID) for dedup
   createdAt: string;
   updatedAt: string;
 }
@@ -337,6 +339,50 @@ export class CalendarService {
     await this.writeCalendarFile(projectPath, events);
 
     logger.info(`Deleted calendar event ${id}`);
+  }
+
+  /**
+   * Upsert a calendar event by sourceId. If an event with the same sourceId exists,
+   * update it; otherwise create a new one. Returns the upserted event and whether it was new.
+   */
+  async upsertBySourceId(
+    projectPath: string,
+    sourceId: string,
+    data: Omit<CalendarEvent, 'id' | 'createdAt' | 'updatedAt'>
+  ): Promise<{ event: CalendarEvent; created: boolean }> {
+    const events = await this.readCalendarFile(projectPath);
+    const existingIndex = events.findIndex((e) => e.sourceId === sourceId);
+    const now = new Date().toISOString();
+
+    if (existingIndex !== -1) {
+      // Update existing event
+      const existing = events[existingIndex];
+      const updated: CalendarEvent = {
+        ...existing,
+        ...data,
+        id: existing.id,
+        sourceId,
+        createdAt: existing.createdAt,
+        updatedAt: now,
+      };
+      events[existingIndex] = updated;
+      await this.writeCalendarFile(projectPath, events);
+      return { event: updated, created: false };
+    }
+
+    // Create new event
+    const id = `google-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+    const newEvent: CalendarEvent = {
+      ...data,
+      id,
+      sourceId,
+      createdAt: now,
+      updatedAt: now,
+    };
+    events.push(newEvent);
+    await this.writeCalendarFile(projectPath, events);
+    logger.info(`Created synced calendar event ${id} (sourceId: ${sourceId})`);
+    return { event: newEvent, created: true };
   }
 }
 

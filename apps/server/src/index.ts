@@ -109,6 +109,7 @@ import { createFlowsRoutes } from './routes/flows/index.js';
 import { createBacklogPlanRoutes } from './routes/backlog-plan/index.js';
 import { createCalendarRoutes } from './routes/calendar/index.js';
 import { createGoogleOAuthRoutes } from './routes/google-calendar/oauth.js';
+import { GoogleCalendarSyncService } from './services/google-calendar-sync-service.js';
 import { cleanupStaleValidations } from './routes/github/routes/validation-common.js';
 import { createMCPRoutes } from './routes/mcp/index.js';
 import { MCPTestService } from './services/mcp-test-service.js';
@@ -396,6 +397,7 @@ archivalService.start();
 // Calendar service
 calendarService.setFeatureLoader(featureLoader);
 calendarService.setSettingsService(settingsService);
+const googleCalendarSyncService = new GoogleCalendarSyncService(settingsService, calendarService);
 const autoModeService = new AutoModeService(events, settingsService);
 const hitlFormService = new HITLFormService({
   events,
@@ -1355,8 +1357,11 @@ app.use('/api/setup', createSetupRoutes(settingsService));
 app.use('/webhooks', createWebhooksRoutes(events, settingsService));
 // Linear agent routes (OAuth + webhook)
 app.use('/api/linear', createLinearRoutes(settingsService, events, featureLoader));
-// Google Calendar OAuth (unauthenticated — browser-initiated redirect flow)
-app.use('/api/google-calendar', createGoogleOAuthRoutes(settingsService));
+// Google Calendar OAuth + sync (unauthenticated — browser-initiated redirect flow)
+app.use(
+  '/api/google-calendar',
+  createGoogleOAuthRoutes(settingsService, googleCalendarSyncService)
+);
 
 // Apply authentication to all /api/* routes
 app.use('/api', authMiddleware);

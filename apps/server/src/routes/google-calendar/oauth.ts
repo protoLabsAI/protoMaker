@@ -7,6 +7,7 @@ import { Router, type Request, type Response } from 'express';
 import { randomBytes } from 'node:crypto';
 import { createLogger } from '@protolabs-ai/utils';
 import type { SettingsService } from '../../services/settings-service.js';
+import type { GoogleCalendarSyncService } from '../../services/google-calendar-sync-service.js';
 
 const logger = createLogger('google-calendar:oauth');
 const SCOPES = ['https://www.googleapis.com/auth/calendar.readonly'];
@@ -19,7 +20,10 @@ function cleanExpiredStates(): void {
   }
 }
 
-export function createGoogleOAuthRoutes(settingsService: SettingsService): Router {
+export function createGoogleOAuthRoutes(
+  settingsService: SettingsService,
+  googleCalendarSyncService?: GoogleCalendarSyncService
+): Router {
   const router = Router();
 
   // GET /authorize — redirect to Google OAuth consent screen
@@ -203,6 +207,38 @@ export function createGoogleOAuthRoutes(settingsService: SettingsService): Route
     } catch (error) {
       logger.error('Failed to revoke Google token', { error });
       res.status(500).json({ error: 'Failed to revoke token' });
+    }
+  });
+
+  // POST /sync — trigger a one-time sync from Google Calendar
+  router.post('/sync', async (req: Request, res: Response) => {
+    try {
+      const { projectPath } = req.body;
+      if (!projectPath) {
+        res.status(400).json({ error: 'projectPath is required' });
+        return;
+      }
+
+      if (!googleCalendarSyncService) {
+        res.status(503).json({ error: 'Google Calendar sync service not available' });
+        return;
+      }
+
+      const settings = await settingsService.getProjectSettings(projectPath);
+      const google = settings.integrations?.google;
+      if (!google?.accessToken || !google?.refreshToken) {
+        res.status(400).json({ error: 'Google Calendar not connected. Complete OAuth first.' });
+        return;
+      }
+
+      const result = await googleCalendarSyncService.syncFromGoogle(projectPath);
+
+      logger.info('Google Calendar sync completed', { projectPath, ...result });
+      res.json({ synced: result.synced, created: result.created });
+    } catch (error) {
+      logger.error('Google Calendar sync failed', { error });
+      const message = error instanceof Error ? error.message : 'Sync failed';
+      res.status(500).json({ error: message });
     }
   });
 
