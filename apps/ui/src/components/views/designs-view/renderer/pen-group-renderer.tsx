@@ -9,12 +9,14 @@ import type { CSSProperties } from 'react';
 
 interface PenGroupRendererProps {
   node: PenGroup;
+  onClick?: (e: React.MouseEvent) => void;
+  style?: React.CSSProperties;
 }
 
 /**
  * Renders a group node as a div with layout only (no background/fill)
  */
-export function PenGroupRenderer({ node }: PenGroupRendererProps) {
+export function PenGroupRenderer({ node, onClick, style: externalStyle }: PenGroupRendererProps) {
   const style: CSSProperties = {
     position: node.layoutMode === 'none' ? 'relative' : undefined,
     display: node.layoutMode !== 'none' ? 'flex' : undefined,
@@ -56,7 +58,12 @@ export function PenGroupRenderer({ node }: PenGroupRendererProps) {
 
   // Render children recursively
   return (
-    <div style={style} data-node-id={node.id} data-node-type="group">
+    <div
+      style={{ ...style, ...externalStyle }}
+      data-node-id={node.id}
+      data-node-type="group"
+      onClick={onClick}
+    >
       {node.children?.map((child) => (
         <PenNodeRenderer key={child.id} node={child} />
       ))}

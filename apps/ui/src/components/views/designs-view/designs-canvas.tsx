@@ -5,6 +5,7 @@
 import { useState, useRef, useEffect, useMemo, type MouseEvent } from 'react';
 import type { PenDocument as PenDocumentParsed } from '@protolabs-ai/types';
 import type { PenDocument } from '@/store/designs-store';
+import { useDesignsStore } from '@/store/designs-store';
 import { PenNodeRenderer } from './renderer';
 import { PenThemeProvider } from './renderer/pen-theme-context';
 import { DesignsToolbar } from './designs-toolbar';
@@ -14,6 +15,7 @@ interface DesignsCanvasProps {
 }
 
 export function DesignsCanvas({ penFile }: DesignsCanvasProps) {
+  const { setSelectedNode } = useDesignsStore();
   // Parse the raw PEN content into a structured document
   const document = useMemo<PenDocumentParsed | null>(() => {
     if (!penFile?.content) return null;
@@ -88,6 +90,13 @@ export function DesignsCanvas({ penFile }: DesignsCanvasProps) {
     setPan({ x: 0, y: 0 });
   };
 
+  // Deselect node when clicking canvas background
+  const handleCanvasClick = (e: MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget) {
+      setSelectedNode(null);
+    }
+  };
+
   if (!document || !document.children || document.children.length === 0) {
     return (
       <div className="flex h-full items-center justify-center text-muted-foreground">
@@ -118,6 +127,7 @@ export function DesignsCanvas({ penFile }: DesignsCanvasProps) {
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
+            onClick={handleCanvasClick}
             style={{ cursor: isPanning ? 'grabbing' : 'default' }}
           >
             {/* Zoom controls */}

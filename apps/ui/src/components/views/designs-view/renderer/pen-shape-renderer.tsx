@@ -8,12 +8,14 @@ import type { CSSProperties } from 'react';
 
 interface PenShapeRendererProps {
   node: PenRectangle | PenEllipse;
+  onClick?: (e: React.MouseEvent) => void;
+  style?: React.CSSProperties;
 }
 
 /**
  * Renders rectangle and ellipse shapes with fills and strokes
  */
-export function PenShapeRenderer({ node }: PenShapeRendererProps) {
+export function PenShapeRenderer({ node, onClick, style: externalStyle }: PenShapeRendererProps) {
   const style: CSSProperties = {
     position: 'relative',
     boxSizing: 'border-box',
@@ -72,5 +74,12 @@ export function PenShapeRenderer({ node }: PenShapeRendererProps) {
     style.borderRadius = '50%';
   }
 
-  return <div style={style} data-node-id={node.id} data-node-type={node.type.toLowerCase()} />;
+  return (
+    <div
+      style={{ ...style, ...externalStyle }}
+      data-node-id={node.id}
+      data-node-type={node.type.toLowerCase()}
+      onClick={onClick}
+    />
+  );
 }
