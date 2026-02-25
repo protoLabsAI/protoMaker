@@ -252,9 +252,12 @@ async function incrementResearchRetryNode(
   const currentCount = state.researchRetryCount || 0;
   const newCount = currentCount + 1;
   logger.info(`Incrementing research retry count to ${newCount}`);
+  // NOTE: Do NOT output researchResults: [] here. The state uses an append
+  // reducer ((left, right) => [...left, ...right]), so [] merges as a no-op.
+  // Previous results remain and accumulate across retries, which is the
+  // intended behavior — the reviewer re-evaluates ALL accumulated research.
   return {
     researchRetryCount: newCount,
-    researchResults: [], // Clear previous results for fresh retry
   };
 }
 
@@ -281,9 +284,10 @@ async function incrementFinalRetryNode(
   const currentCount = state.finalRetryCount || 0;
   const newCount = currentCount + 1;
   logger.info(`Incrementing final content retry count to ${newCount}`);
+  // NOTE: Do NOT output sections: [] here. Same append reducer issue as
+  // researchResults — [] merges as no-op, previous sections persist.
   return {
     finalRetryCount: newCount,
-    sections: [], // Clear previous sections for fresh retry
   };
 }
 

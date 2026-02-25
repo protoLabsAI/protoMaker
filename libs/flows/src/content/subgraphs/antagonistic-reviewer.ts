@@ -445,34 +445,76 @@ Suggestion: [How to improve]
 }
 
 /**
- * Parse dimension scores from review output
+ * Parse dimension scores from review output.
+ *
+ * LLMs format scores inconsistently — the colon may appear inside or outside
+ * bold markers, or bold may be omitted entirely. We try 5 patterns in order
+ * of specificity and fall back to a default of 5/10 (logged as a warning).
  */
-function parseDimensionScores(output: string, expectedDimensions: string[]): DimensionScore[] {
+export function parseDimensionScores(
+  output: string,
+  expectedDimensions: string[]
+): DimensionScore[] {
   const scores: DimensionScore[] = [];
+  const escapeDim = (d: string) => d.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
   for (const dimension of expectedDimensions) {
-    // Match pattern: **DimensionName:** X/10
-    const scoreRegex = new RegExp(`\\*\\*${dimension}\\*\\*:\\s*(\\d+)/10`, 'i');
-    const evidenceRegex = new RegExp(`Evidence:[\\s]*([^\\n]+)`, 'i');
-    const suggestionRegex = new RegExp(`Suggestion:[\\s]*([^\\n]+)`, 'i');
+    const escaped = escapeDim(dimension);
 
-    const scoreMatch = output.match(scoreRegex);
-    const score = scoreMatch ? parseInt(scoreMatch[1], 10) : 5; // Default to middle score if not found
+    // Try multiple patterns in order of specificity
+    const scorePatterns = [
+      // **Dim:** X/10 (colon inside bold — matches prompt format)
+      new RegExp(`\\*\\*${escaped}:\\*\\*\\s*(\\d+)\\s*/\\s*10`, 'i'),
+      // **Dim**: X/10 (colon outside bold)
+      new RegExp(`\\*\\*${escaped}\\*\\*:\\s*(\\d+)\\s*/\\s*10`, 'i'),
+      // **Dim:** X out of 10
+      new RegExp(`\\*\\*${escaped}:?\\*\\*:?\\s*(\\d+)\\s+out\\s+of\\s+10`, 'i'),
+      // Dim: X/10 (no bold)
+      new RegExp(`${escaped}\\s*:\\s*(\\d+)\\s*/\\s*10`, 'i'),
+      // X/10 after dimension name mentioned anywhere nearby
+      new RegExp(`${escaped}[\\s\\S]{0,40}?(\\d+)\\s*/\\s*10`, 'i'),
+    ];
 
-    // Find the section for this dimension
-    const dimensionSectionRegex = new RegExp(
-      `\\*\\*${dimension}\\*\\*:\\s*\\d+/10[\\s\\S]*?(?=\\*\\*|##|$)`,
-      'i'
-    );
-    const sectionMatch = output.match(dimensionSectionRegex);
-    const section = sectionMatch ? sectionMatch[0] : '';
+    let parsedScore: number | null = null;
+    for (const pattern of scorePatterns) {
+      const match = output.match(pattern);
+      if (match) {
+        const val = parseInt(match[1], 10);
+        if (val >= 1 && val <= 10) {
+          parsedScore = val;
+          break;
+        }
+      }
+    }
 
+    if (parsedScore === null) {
+      logger.warn(`Could not parse score for dimension "${dimension}", defaulting to 5/10`);
+      parsedScore = 5;
+    }
+
+    // Find the section for this dimension using flexible patterns
+    const sectionPatterns = [
+      new RegExp(`\\*\\*${escaped}:?\\*\\*:?\\s*\\d+[\\s\\S]*?(?=\\*\\*[A-Z]|##|$)`, 'i'),
+      new RegExp(`${escaped}\\s*:\\s*\\d+/10[\\s\\S]*?(?=\\n[A-Z]|##|$)`, 'i'),
+    ];
+
+    let section = '';
+    for (const pattern of sectionPatterns) {
+      const match = output.match(pattern);
+      if (match) {
+        section = match[0];
+        break;
+      }
+    }
+
+    const evidenceRegex = /Evidence:[\s]*([^\n]+)/i;
+    const suggestionRegex = /Suggestion:[\s]*([^\n]+)/i;
     const evidenceMatch = section.match(evidenceRegex);
     const suggestionMatch = section.match(suggestionRegex);
 
     scores.push({
       dimension,
-      score,
+      score: parsedScore,
       evidence: evidenceMatch ? evidenceMatch[1].trim() : 'No evidence provided',
       suggestion: suggestionMatch ? suggestionMatch[1].trim() : undefined,
     });
