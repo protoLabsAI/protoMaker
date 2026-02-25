@@ -125,3 +125,13 @@ usageStats:
 - **Rejected:** Older schema versions (legacy); cloud storage (S3, GCS) which adds operational complexity and latency
 - **Trade-offs:** Better query performance and simpler deployment vs limited horizontal scalability; schema version is immutable once data is written
 - **Breaking if changed:** Schema version must match across all Loki instances; changing schema requires data migration or reindexing
+
+#### [Pattern] TrustTierService uses AtomicWriter (not direct fs.writeFile) for persisting trust-tiers.json. Data updates are atomic — partial writes cannot corrupt the file. Aligns with SettingsService and AnalyticsService pattern for security-critical persistent state. (2026-02-25)
+- **Problem solved:** Trust tier records are security-sensitive. Corruption or partial updates could grant unintended access. File-based storage chosen for simplicity and auditability.
+- **Why this works:** Atomic writes guarantee that trust state is always consistent. A crash or process kill during write cannot leave the file in a partially-updated state. Essential for security-related data where any corruption is a security breach.
+- **Trade-offs:** AtomicWriter adds ~10-20ms overhead per write (temp file + rename). But guarantees correctness, which is non-negotiable for trust data. Trade speed for reliability on writes that should be rare anyway.
+
+#### [Pattern] Backward compatibility via absence: features created before quarantine feature was implemented have no quarantineStatus field. System treats this absence as implicit 'bypassed' status without migration. (2026-02-25)
+- **Problem solved:** Adding quarantine metadata to existing features requires migration or graceful degradation. No migration job was written.
+- **Why this works:** Implicit bypass via absence is safe default (old features continue working). Avoids complex migration logic. Clear data semantics: missing field means 'pre-quarantine era'.
+- **Trade-offs:** Simpler deployment (no migration) vs audit ambiguity (can't distinguish 'bypassed' from 'never validated'). Acceptable because quarantine is a new security feature, not a fix for existing data.

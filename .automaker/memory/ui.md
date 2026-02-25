@@ -489,3 +489,10 @@ usageStats:
 - **Situation:** Thumbnail renderer uses existing PenNodeRenderer component which depends on theme context for styling variables
 - **Root cause:** PenNodeRenderer uses CSS variables injected by PenThemeProvider; context must be in component tree or variables silently fail to resolve
 - **How to avoid:** Required wrapper adds component hierarchy complexity vs. ensuring correct styling that works out-of-box
+
+### Replaced synchronous `window.prompt()` with asynchronous Dialog component + Promise-based saveIdentity(). (2026-02-25)
+- **Context:** Original UX was blocking prompt. Needed non-blocking, dismissible input that could fail gracefully.
+- **Why:** Dialog is non-blocking, allows escape/cancel flow, persists state across dismissals, better UX than modal prompt. Async allows API validation before confirm.
+- **Rejected:** Keep window.prompt (synchronous, blocks UI, bad UX). Or use inline input field without dialog (less modal clarity, harder to focus flow).
+- **Trade-offs:** Dialog UX better, but requires async state handling in component. `.then(success => {})` pattern is callback-heavy; could use async/await in event handler.
+- **Breaking if changed:** If changed back to prompt: lose non-blocking behavior and error handling capability. Revert to old UX degradation.

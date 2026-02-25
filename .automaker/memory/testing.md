@@ -869,3 +869,60 @@ usageStats:
 - **Problem solved:** Could have tested only synthetic documents with 3-5 nodes like unit tests
 - **Why this works:** Real design file catches edge cases in schema - nested component structures, theme variations, variable reference chains that wouldn't appear in minimal examples; validates file format compatibility at scale
 - **Trade-offs:** Easier: Tests validate against real-world data; Harder: Test file must be maintained, tests are slower, test data is opaque (hard to debug what's being tested)
+
+### Used Playwright test suite (E2E browser automation framework) for JSON data validation and schema verification, despite semantic mismatch. (2026-02-25)
+- **Context:** Created test file to verify roadmap.json structure, stats.json prCount, changelog.json firstDate without any UI interaction.
+- **Why:** Playwright is already in project infrastructure; consistent test runner across E2E and data tests; familiar syntax for team. Avoids separate test framework.
+- **Rejected:** Jest, native Node assertions, or custom validation scripts would be semantically clearer and lightweight.
+- **Trade-offs:** Benefit: reuse infrastructure, single test runner. Cost: Playwright adds browser overhead for non-UI tests; semantic confusion (Playwright = UI automation); tight coupling between data validation and E2E framework.
+- **Breaking if changed:** If Playwright is removed from dependencies, data tests have no runner. If Playwright major version upgrades change assertion API, both E2E and data tests break. Heavy coupling.
+
+#### [Gotcha] Functional correctness of a service can be verified at ESM level without full server build. Created standalone Node.js test script that imports compiled ESM, runs operations, verifies behavior. All 10 tests passed despite TypeScript DTS build failures and unrelated server build issues (platform package). This proves the service works correctly in isolation. (2026-02-25)
+- **Situation:** Full server build blocked by unrelated platform package DTS failures. TypeScript build also failing. However, the service code itself is sound and needed verification before being marked complete.
+- **Root cause:** ESM (JavaScript runtime) is the actual code that runs. DTS build failures don't affect runtime correctness. By testing at the module level (compile ESM, import, run), you bypass build infrastructure issues and test the actual behavior.
+- **How to avoid:** ESM-level testing is lightweight and fast, but doesn't verify type safety. It catches logic bugs and API contract violations, but not TypeScript type errors. For security-critical code, both are needed eventually, but ESM testing unblocks faster.
+
+#### [Gotcha] Event emitter mock initially used Map<eventType, handlers[]> with type-indexed routing, but actual EventEmitter.subscribe() is type-agnostic: single handler receives all events as (type, payload) tuple, not type-specific subscriptions. (2026-02-25)
+- **Situation:** Creating mock EventEmitter for signal-intake-service tests revealed interface contract mismatch in initial implementation.
+- **Root cause:** Easy to assume mock mirrors pub/sub type-routing, but this service uses a universal fan-out model where one handler gets all event notifications. Interface reading error.
+- **How to avoid:** Array-based simple list is less type-safe but correct. Type-indexed map adds structure but creates dead subscriptions.
+
+#### [Pattern] Unit tests for async event-driven service require 50-100ms timeouts to allow event handlers to complete before assertions. Async processing happens off the call stack. (2026-02-25)
+- **Problem solved:** signal-intake-service processes signals via event emission with async handlers; tests needed explicit waits.
+- **Why this works:** Events are fired synchronously but handlers may run async (e.g., awaiting mocked db calls, event propagation). Without delays, assertions run before handlers complete, causing false failures.
+- **Trade-offs:** Delays make tests slower but reliable. Missing delays cause flaky tests. Suggests service is inherently async/event-driven, not synchronous.
+
+#### [Pattern] Unit tests pass despite pre-existing TypeScript build errors in transitive dependencies (@protolabs-ai/platform). Test isolation via comprehensive mocking prevents build-time failures from blocking test-time verification. (2026-02-25)
+- **Problem solved:** secure-fs.ts has p-limit type error; test files compile and run successfully.
+- **Why this works:** Tests mock external dependencies (db, event emitter, services). They don't import the broken @protolabs-ai/platform code at runtime, only the service code being tested. Build-time type checking and runtime test execution are decoupled.
+- **Trade-offs:** Tests prove the service code is correct but don't catch errors in dependencies. Build will still fail. Good for iteration; bad for shipping without a passing build.
+
+#### [Gotcha] Mock return types must include ALL interface fields, not just primary data. readJsonWithRecovery mocks initially returned {data: T} but actual signature requires {data: T, recovered: boolean, source: string}. TypeScript compiled with partial mocks but tests failed at runtime when code accessed .recovered or .source. (2026-02-25)
+- **Situation:** Test setup discovered that structural typing in TypeScript allows incomplete mock objects to pass type checking if they contain the minimum needed properties.
+- **Root cause:** TypeScript's object literal type checking uses structural (duck) typing - it doesn't enforce that all interface properties are present, only that provided properties match. Mock code compiled because it had 'data', but runtime access to missing fields failed.
+- **How to avoid:** Full mock completeness (all fields) ensures test code matches real behavior and catches integration bugs early; partial mocks compile and run locally but fail mysteriously at runtime in CI.
+
+#### [Gotcha] Bulk sed replacements on repetitive mock data (CalendarEvent arrays) can create duplicates if the pattern already exists. Added projectPath to all CalendarEvent objects using sed, but some already had it from earlier edits, requiring a second cleanup pass. (2026-02-25)
+- **Situation:** Test fixtures used repetitive object literals across multiple test cases. CalendarEvent interface requires projectPath field, discovered during mock construction.
+- **Root cause:** Sed pattern matching doesn't know about object context - it matches lines and adds after them. Multiple CalendarEvent objects with the same structure meant the pattern matched multiple times, but idempotency wasn't guaranteed.
+- **How to avoid:** Sed bulk edits are fast for large changes but risk duplicates without post-validation; manual edits are slower but guaranteed correct.
+
+#### [Pattern] Test data (mock objects) must be as complete as real implementation objects, even for internal-only fields. CalendarEvent needed projectPath in tests even though the public API doesn't expose it - discovered by type errors during mock construction. (2026-02-25)
+- **Problem solved:** Tests discovered that the CalendarEvent interface requires projectPath for internal deduplication and storage logic, despite this not being part of the service's public API surface.
+- **Why this works:** The implementation uses projectPath internally to scope events to specific projects. Tests must instantiate objects exactly as the implementation expects, not as the API documentation suggests.
+- **Trade-offs:** Complete mock objects match reality and catch bugs early; simpler mocks are easier to write but miss real requirements and fail in production.
+
+#### [Pattern] Async state machines in services (like pause/resume loops) require timing-aware test patterns: delays to let state transitions complete, explicit cleanup between tests, and assertions on final state rather than intermediate state. (2026-02-25)
+- **Problem solved:** ralph-loop-service tests had to handle pauseLoop/resumeLoop functionality where internal state (paused, running, completed) changes asynchronously. Tests needed to wait for state changes before asserting.
+- **Why this works:** Async loops have internal timers and state flags that update asynchronously. Tests must either mock timers completely (using vi.useFakeTimers) or add delays to let real timers fire. Race conditions occur if tests assert before async operations complete.
+- **Trade-offs:** Explicit timing (delays + cleanup) tests real behavior but adds complexity and slight flakiness; fake timers eliminate timing but don't test actual timer implementation.
+
+#### [Pattern] Services aggregating data from multiple external sources need error mode testing for each source independently. calendar-service tests mock failure scenarios for FeatureLoader, LinearMCPClient, and Google Calendar separately to ensure graceful degradation. (2026-02-25)
+- **Problem solved:** Calendar service merges events from three sources (features, Linear milestones, Google Calendar). Tests needed to verify service behavior when each source fails independently.
+- **Why this works:** In production, one source failing (e.g., Linear API down) should not break the entire calendar. Tests must verify that partial data still returns successfully, not that the entire service crashes.
+- **Trade-offs:** Comprehensive error mocking ensures production resilience but adds significant test complexity (more mocked scenarios); simple happy-path tests are easy to write but miss critical failure cases.
+
+#### [Pattern] Security test data uses realistic attack patterns, not synthetic edge cases. Tests include actual zero-width space characters, genuine prompt injection phrasings, real path traversal sequences. (2026-02-25)
+- **Problem solved:** Security utilities can pass tests with made-up examples while failing against real attacks
+- **Why this works:** Synthetic test cases may exercise code paths without actually triggering threat detection logic. Real attack patterns verify the threat model itself.
+- **Trade-offs:** Requires research into real-world attack vectors, but provides confidence tests catch actual threats

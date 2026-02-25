@@ -5,9 +5,9 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 130
-  referenced: 67
-  successfulFeatures: 67
+  loaded: 157
+  referenced: 73
+  successfulFeatures: 73
 ---
 # api
 
@@ -646,3 +646,36 @@ usageStats:
 - **Situation:** Attempted to apply labels to created Linear issues using label names. Discovered Linear only accepts label IDs, which require querying the team's labels endpoint first.
 - **Root cause:** Linear labels are team-scoped resources. The API doesn't support name-based label lookups - you must know the ID beforehand or query the labels list.
 - **How to avoid:** Simplified to text-based label hints in issue description. Trade structured label filtering/querying capability for reduced API calls and complexity. Production may need to query labels upfront and cache.
+
+### Used two-tier severity classification ('warn' vs 'block') for violations instead of numeric scores (0-10) or detailed enum with many levels. (2026-02-25)
+- **Context:** Defining violation severity to help callers decide whether to reject or log
+- **Why:** Binary severity simplifies decision-making: 'block' violations should always be rejected (safety boundary), 'warn' violations are suspicious but might be legitimate (audit trail). More granular scoring (numeric 0-10) doesn't add value—callers still need a cutoff threshold and reasoning becomes arbitrary.
+- **Rejected:** Numeric severity scale 0-10 (arbitrary thresholds, hard to explain), five-tier enum (too many levels, unclear practical difference between levels), boolean strict flag (loses severity information for logging)
+- **Trade-offs:** Less expressive than granular scales, but decisions are binary and easy to reason about. Callers can't tune sensitivity precisely, but the library isn't designed for that—it's a gatekeeper.
+- **Breaking if changed:** If severity is removed (treating all violations equally), callers lose the ability to distinguish critical security issues from suspicious patterns. If expanded to many levels, callers must decide which thresholds to enforce, reinventing the binary decision the library should provide.
+
+#### [Pattern] Two-tier API fallback during endpoint migration: tries new fetchMetrics() with dual endpoints (/api/metrics/summary + /api/langfuse/costs), falls back to legacy getLedgerStats() if unavailable, returns null gracefully if all fail. (2026-02-25)
+- **Problem solved:** Transitioning from legacy metrics API to new Langfuse-backed cost tracking without breaking existing stats generation.
+- **Why this works:** Decouples stats script deployment from server API readiness. Server may not have new endpoints implemented yet, or Langfuse may not be configured. Script must work in all states.
+- **Trade-offs:** Code complexity increases (3 codepaths), but deployment flexibility increases. No forced coordination between server and stats script releases.
+
+### Two separate API endpoints for cost metrics: /api/metrics/summary (aggregated stats) and /api/langfuse/costs (detailed breakdown by model). Both queried, results merged into stats object. (2026-02-25)
+- **Context:** Server now supports Langfuse integration for cost tracking. Stats need both summary (totalCost, avgCostPerFeature) and detailed breakdown (costByModel).
+- **Why:** Separation of concerns. Summary endpoint fast + cacheable (aggregated). Langfuse endpoint may be slower (queries external service). Kept separate to allow independent caching/optimization.
+- **Rejected:** Single /api/metrics endpoint returning all stats. Would couple update frequency and cause one slow query to block both paths.
+- **Trade-offs:** Scripts must orchestrate two API calls (slight complexity). Endpoints must be kept in sync (schema contract). But each can be tuned independently.
+- **Breaking if changed:** Removing Langfuse endpoint means costByModel is unavailable. Removing summary endpoint means primary cost fields become unavailable. Both should degrade separately.
+
+### Consistent response envelope: success boolean + error/data fields in all responses, no bare object returns (2026-02-25)
+- **Context:** GET returns { success: true, userName, source }; POST returns { success: true, userName, source }; errors return { success: false, error }
+- **Why:** Predictable client handling; client can check .success before reading .userName or .error
+- **Rejected:** Bare responses (return object on success, throw on error; status code only indicates outcome)
+- **Trade-offs:** Explicit success field adds 1 byte per response vs eliminates need for status-code-only parsing; enables middleware success tracking
+- **Breaking if changed:** If client code checks response.userName directly without .success guard, will fail on error responses (error field is string, not object)
+
+### Identity stored as simple string in app-store instead of user object or session structure. Endpoints are `/api/user/identity` (GET/POST). (2026-02-25)
+- **Context:** Needed to persist user's name for 'My Tasks' filter. Could be full user profile, JWT claim, or just string.
+- **Why:** String is simplest schema, easy to compare in filter logic (`assignee === userIdentity`). Reduces payload size. Works for 'name-based' filtering.
+- **Rejected:** Full user object: overkill, harder to serialize. JWT/session claim: requires auth system (out of scope). localStorage only: loses cloud sync.
+- **Trade-offs:** String is lightweight but doesn't scale if features need user ID, email, permissions. Filter logic must handle case sensitivity and exact matches.
+- **Breaking if changed:** If later needing user ID or other fields, must migrate stored string to object structure. Existing string identities need schema upgrade.

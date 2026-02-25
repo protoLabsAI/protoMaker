@@ -5,9 +5,9 @@ relevantTo: [reliability]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 1
-  referenced: 0
-  successfulFeatures: 0
+  loaded: 8
+  referenced: 3
+  successfulFeatures: 3
 ---
 # reliability
 

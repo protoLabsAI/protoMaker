@@ -5,9 +5,9 @@ relevantTo: [architecture]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 36
-  referenced: 23
-  successfulFeatures: 23
+  loaded: 42
+  referenced: 25
+  successfulFeatures: 25
 ---
 # architecture
 
@@ -3395,3 +3395,126 @@ usageStats:
 - **Problem solved:** Implementation creates Linear issues and posts Discord notifications. Discord service might be unavailable or unconfigured.
 - **Why this works:** Core functionality (bug tracking) should not depend on secondary notification channel. Prevents cascading failures where one missing integration blocks the entire pipeline.
 - **Trade-offs:** Issues get created even if Discord is down (good). Operator might miss notifications but issue is still tracked (acceptable). Code must handle missing Discord gracefully with proper null checks.
+
+#### [Pattern] Defensive quality gates prevent low-quality output generation by refusing to create content.md when antagonistic review scores fall below threshold (75%), rather than generating and filtering afterward. (2026-02-25)
+- **Problem solved:** Content pipeline completes end-to-end but produces zero output files because research scores consistently fail at ~10%. This appears to be a failure but is actually the quality gate system working as designed.
+- **Why this works:** Prevents propagation of low-quality content downstream. A refused generation is better than silently releasing substandard content. The architectural choice is: fail-safe (don't generate) not fail-open (generate and flag).
+- **Trade-offs:** Upside: Guarantees output quality meets threshold. Downside: Debugging why content wasn't generated requires checking quality scores in Langfuse, not checking for missing files. Visibility requires trace inspection, not artifact inspection.
+
+#### [Pattern] Fail-forward with draft fallback: save research findings as draft content even when quality gates fail, providing debugging artifacts and visibility into why gates failed. (2026-02-25)
+- **Problem solved:** Research fallback code saves research results to content.md when antagonistic review fails (added to content-flow-service.ts:715-737). Requires server restart to activate. All 5 test runs completed without crashing despite quality failures.
+- **Why this works:** When quality gates block content generation, you lose visibility into whether the block was due to poor input (sparse research) or a genuine quality issue. Draft artifacts let you inspect research findings and decide if threshold is miscalibrated.
+- **Trade-offs:** Upside: Debugging surface area (you can see what research produced 10% score). Downside: Draft files may be mistaken for real output if visibility is poor. Requires documentation that draft ≠ final.
+
+### Configurable pass threshold (PASS_THRESHOLD=75%) for quality gates, allowing tuning without code changes. Log notes this should be adjusted based on quality requirements. (2026-02-25)
+- **Context:** The 75% threshold blocks all test runs. Implementation recommends adjusting based on 'quality requirements' but doesn't specify what happens if you lower to 50% or raise to 90%.
+- **Why:** Different topics have different quality requirements. Content about complex architecture needs higher threshold than tutorial content. Configuration allows operators to tune without deploying.
+- **Rejected:** Alternative: Hardcode threshold. Rejected because it forces code changes and redeployment for threshold adjustments. Alternative: Use dynamic thresholds per topic (config file per topic). Rejected as over-engineered.
+- **Trade-offs:** Upside: Operators can tune without involving developers. Downside: No guidance on how to choose threshold. Too high = no content ever passes. Too low = low-quality content passes.
+- **Breaking if changed:** If threshold config is missing or set to 0%, all runs will fail (threshold unreachable) or all will pass (threshold meaningless). The configuration is critical to the feature working correctly but has no validation.
+
+### GitHub Release v0.4.0 created manually via gh CLI before npm publishing was possible, decoupling release artifacts from npm registry availability (2026-02-25)
+- **Context:** NPM_TOKEN not configured in GitHub Secrets, blocking automated changeset workflow. Developer needed to demonstrate completeness of release without waiting for npm authentication.
+- **Why:** Releasing is multi-phase: (1) versioning/tagging/release artifact creation, (2) npm publishing. Decoupling these prevents external infrastructure dependencies from blocking visibility of what was released. Release notes can document blockers without affecting the release artifact itself.
+- **Rejected:** Waiting for NPM_TOKEN configuration before creating any release artifact would delay feedback and treat npm publishing as mandatory for release visibility rather than a separate post-release step.
+- **Trade-offs:** Easier: Clear separation between 'what was released' (tag + GitHub release) vs 'where it's published' (npm). Harder: Requires communicating to users that packages are tagged but not yet on npm.
+- **Breaking if changed:** If releases are required to include working npm links before publication, this decoupling becomes impossible. Tightly coupling release to npm availability delays release communication.
+
+### Release notes explicitly document NPM_TOKEN blocker for npm publishing, providing clear handoff point rather than silent failure or workaround (2026-02-25)
+- **Context:** Packages are at v0.4.0, GitHub release exists, but npm publishing is blocked. Stakeholders need to understand why packages aren't on npm registry.
+- **Why:** Explicit communication of blockers (1) prevents support load from 'why can't I install the package?', (2) makes it clear this is external dependency (secrets management), not code issue, (3) provides clear next steps for resolution.
+- **Rejected:** Silent failure (workflow fails, no communication) creates confusion. Workaround (upload to custom registry) adds technical debt. Retrying indefinitely burns CI minutes.
+- **Trade-offs:** Easier: stakeholders understand status and why. Harder: must document infrastructure setup alongside feature completion.
+- **Breaking if changed:** If this communication is removed, release appears incomplete/broken to end users. If blocker isn't documented, developers waste time debugging missing npm token instead of configuring it.
+
+#### [Pattern] Feature stops at external infrastructure requirement (NPM_TOKEN configuration) rather than expanding scope to include secret management or workarounds (2026-02-25)
+- **Problem solved:** Implementation is feature-complete (versioning, tagging, release notes) but blocked on GitHub Secrets configuration which is outside the feature boundary
+- **Why this works:** Clear scope boundaries prevent scope creep and technical debt. NPM_TOKEN management is (1) repository-wide infrastructure, not feature-specific, (2) requires human security review (who can publish?), (3) one-time setup that enables many releases.
+- **Trade-offs:** Cleaner architecture: security setup is separated from release mechanics. Slight friction: handoff requires human action (Josh configures secret).
+
+#### [Pattern] Defined SanitizationViolation, SanitizationResult, and SanitizationSeverity interfaces locally in sanitize.ts rather than in @protolabs-ai/types package, despite types being the centralized interface repository. (2026-02-25)
+- **Problem solved:** Creating reusable sanitization library that exports both functions and types
+- **Why this works:** If types were imported from @protolabs-ai/types and types re-exported, it would create a circular dependency: types imports from utils for normalization, utils imports from types for interfaces. Local definitions break the cycle while keeping the library self-contained.
+- **Trade-offs:** Slight duplication if other packages need these interfaces (they'd have to import from utils instead of types), but eliminates circular dependency overhead and keeps sanitization library dependency-free
+
+### Feature count logic explicitly aligns with generate-changelog.mjs: same cutoff date (CUTOFF_DATE 2026-02-04), same categorization (feature-category commits), same git log parsing logic. (2026-02-25)
+- **Context:** Two independent scripts (changelog generator and stats generator) both need to count 'features shipped'. Without alignment, they can report different numbers.
+- **Why:** Data consistency. Users see 'X features' in changelog and 'X features' in stats.json. Mismatch erodes confidence. Shared logic also reduces copy-paste bugs.
+- **Rejected:** Loading feature count from Automaker board directly (would miss features not yet migrated to board). Or: querying database (introduces coupling, fragility).
+- **Trade-offs:** Stats script now depends on git log format conventions (feature-category syntax). Easy to break if someone changes commit message format. But git history is immutable, so it's the authoritative source.
+- **Breaking if changed:** If feature count logic diverges, changelog and stats report different numbers. Users notice inconsistency. Single source of truth is compromised.
+
+#### [Pattern] Data-driven static site: JSON files (roadmap.json, stats.json, changelog.json) are single source of truth; mjs scripts perform git analysis and inject data into HTML templates, creating derived artifacts that are version-controlled. (2026-02-25)
+- **Problem solved:** Roadmap and changelog are public marketing pages that must stay in sync with git history and project state without manual updates.
+- **Why this works:** Decouples data from presentation; makes content reproducible and git-trackable; prevents manual HTML drift; git-analysis scripts are deterministic.
+- **Trade-offs:** Benefit: reproducible, version-controlled, queryable data. Cost: requires running generation scripts; HTML is derived not editable; hidden dependency chain between scripts.
+
+### JSON data-only changes (no TypeScript code) are valid and complete even when npm run build:server fails with unrelated TypeScript errors. Data generation pipeline is decoupled from code compilation. (2026-02-25)
+- **Context:** Feature modified 5 JSON files; npm run build:server failed on secure-fs.ts (unrelated). Feature was still considered complete.
+- **Why:** stats:generate is a standalone Node script that doesn't depend on TypeScript compilation. JSON has no compilation step. Separates data concerns from code concerns.
+- **Rejected:** Could block all changes on full build success, but that gates valid data work with irrelevant code errors.
+- **Trade-offs:** Benefit: unblock data-only work from code issues. Risk: developers may miss that code errors exist. Requires discipline: knowing which features are data-only vs. code-dependent.
+- **Breaking if changed:** If project later mandates 'all PRs must have passing build', this pattern breaks. Would need different gating (only check code files, not data files) or fix the underlying build error.
+
+#### [Pattern] Trust classification uses layered precedence: explicit storedTier (if provided) overrides source-based classification. Source classification itself is tiered: mcp/internal=4, ui=3, api/github=1, unknown=0. This creates an explicit-before-implicit hierarchy for trust decisions. (2026-02-25)
+- **Problem solved:** Needed to support both automatic trust inference from feature source AND manual trust grants that override automatic classification
+- **Why this works:** Security principle: explicit trust decisions must not be bypassed by implicit source classification. An admin-granted tier should always take precedence over where the feature came from. Allows gradual trust escalation while maintaining override capability.
+- **Trade-offs:** Adds parameter complexity to classifyTrust(), but ensures security model is unambiguous. Explicit tier > source classification > default creates clear decision tree.
+
+### Service accepts dataDir in constructor (passed from environment/config), stores data to '{dataDir}/trust-tiers.json'. Does not hardcode paths. Consistent with SettingsService and existing service patterns. (2026-02-25)
+- **Context:** Different deployment environments need different data directories. Dev uses local, staging uses mounted volume, Electron uses app data directory, etc.
+- **Why:** Constructor injection of dataDir makes the service testable (can pass test directory) and portable (works anywhere dataDir is mounted). Avoids hardcoding assumptions about file locations.
+- **Rejected:** Hardcoding path like `~/.automaker/trust-tiers.json` (breaks in containerized/Electron deployments). Reading from env var at module load time (creates side effects).
+- **Trade-offs:** Requires dataDir to be known at service instantiation time. But pays for flexibility across deployment contexts. Slightly more boilerplate in service instantiation code, but massive payoff in portability.
+- **Breaking if changed:** If code assumes dataDir is always /home/user/.automaker, running in Electron or Docker container breaks. If code changes dataDir after instantiation, the service won't see it.
+
+#### [Pattern] Signal deduplication uses polymorphic keys: GitHub/Linear/Discord/MCP signals deduplicate by (source, authorID); UI/MCP HTTP signals deduplicate by (source, timestamp). No universal deduplication strategy. (2026-02-25)
+- **Problem solved:** signal-intake-service must prevent duplicate processing but different signal sources have different lifecycle expectations.
+- **Why this works:** Integrations (GitHub, Linear, Discord) originate from users (authorID is stable); UI/MCP are requests (timestamp is the unique marker). Conflating these causes either false duplicates or missed deduplication.
+- **Trade-offs:** Polymorphic keys require understanding each source's semantics but prevent business logic errors. Adds code complexity.
+
+### content-flow-service does NOT validate input parameters upfront (e.g., non-empty topics, valid format enum). Validation happens implicitly during async LangGraph execution, errors bubble as failed flow states. (2026-02-25)
+- **Context:** Service architecture separates parameter acceptance from parameter validation; allows async execution to handle constraints.
+- **Why:** Defers validation cost to execution time. Invalid parameters don't fail fast but instead fail during workflow execution, which may be asynchronous anyway. Tests reflect actual behavior (no upfront rejection).
+- **Rejected:** Upfront validation with thrown exceptions for invalid parameters; would require explicit error handling in callers and test assertions on error responses.
+- **Trade-offs:** Caller doesn't get immediate feedback on invalid parameters; errors appear during execution. But execution may handle some 'invalid' inputs gracefully.
+- **Breaking if changed:** If upfront validation is added (e.g., `if (!topics || topics.length === 0) throw`), all callers must expect synchronous errors. Current code assumes all results are async flow states.
+
+### Resolution chain returns single source string (settings|env|git), not aggregated availability of all sources (2026-02-25)
+- **Context:** User requests identity and receives { userName, source } rather than { settings?: x, env?: y, git?: z }
+- **Why:** Simpler API response; matches conventional identity patterns (single authoritative source); client doesn't need source metadata
+- **Rejected:** Multi-value response { settings?: value, env?: value, git?: value, resolvedSource: 'settings' } with full visibility into all sources
+- **Trade-offs:** Lean API contract vs lost introspection capability; client can't detect which sources are available
+- **Breaking if changed:** If code needs to know 'settings unavailable, fell back to git', must call service internals or add new API field
+
+#### [Pattern] Validation logic placed in routes layer, not in service; HTTP concerns (empty strings, type checking) separated from business logic (2026-02-25)
+- **Problem solved:** POST /api/user/identity validates userName before calling userIdentityService.setUserName()
+- **Why this works:** Routes handle transport-layer concerns (HTTP semantics); service owns persistence logic only
+- **Trade-offs:** Routes are dumb wrappers (easy to test, obvious HTTP mapping) vs validation can't be reused if service called via other transport (gRPC, pubsub)
+
+#### [Pattern] Service instantiation order in index.ts strictly enforced: dependencies created before service, service created before routes registered (2026-02-25)
+- **Problem solved:** UserIdentityService created after SettingsService, then routes registered; order is implicit, not enforced by compiler
+- **Why this works:** Dependency injection pattern requires explicit constructor dependencies; no DI container auto-resolves
+- **Trade-offs:** Explicit order is clear to readers vs fragile to refactoring (easy to accidentally reverse order)
+
+#### [Gotcha] Backend API endpoints `/api/user/identity` assumed but not implemented. Feature built to spec but non-functional without backend work. (2026-02-25)
+- **Situation:** UI implementation completed with http-api-client calls to endpoints that don't exist on server. Build passes, but feature cannot execute.
+- **Root cause:** Feature scope unclear about backend/frontend boundary. UI developer proceeded with API contract assumptions that weren't validated.
+- **How to avoid:** UI is clean and complete, but dependency assumption creates hard blocker. Discovered late (after build), not during planning.
+
+#### [Gotcha] Feature title 'auto-assign me' but implementation is actually task FILTERING, not assignment. 'My Tasks' button filters tasks where assignee matches userIdentity. (2026-02-25)
+- **Situation:** Requirement unclear: is this assigning features to the current user, or filtering a pre-existing board? Implementation chose filtering.
+- **Root cause:** Root cause: feature title uses 'assign' but board UI doesn't have assignment logic. Button is filter button in header. Requirement scope mismatch.
+- **How to avoid:** Filtering is simpler (no backend mutation), works with any feature that has assignee data. But title misleads into thinking this is assignment UX.
+
+### Per-request QuarantineService instantiation vs singleton pattern. QuarantineService is instantiated in route handler with request-specific projectPath, while TrustTierService remains a singleton initialized at startup with DATA_DIR. (2026-02-25)
+- **Context:** Feature creation pipeline needs to validate submissions against project-specific quarantine rules (file paths stored at {projectPath}/.automaker/quarantine/), but trust tier classification is global.
+- **Why:** Services requiring request-scoped data (projectPath) cannot be singletons without context-bleeding across concurrent requests. Singleton architecture with parameter-passing at creation time breaks when parameter varies per request.
+- **Rejected:** Making QuarantineService a singleton and passing projectPath on each method call would work but violates single responsibility (init should define scope). Alternative: store projectPath on instance via setter (thread-safety issue in concurrent requests).
+- **Trade-offs:** Per-request instantiation creates slight GC pressure per request vs cleaner architectural separation. Singleton TrustTierService is more efficient but only works because trust classification doesn't vary by request context.
+- **Breaking if changed:** If QuarantineService became a singleton initialized at startup, concurrent requests would overwrite projectPath, causing one project's validation to use another's quarantine config. Results in security bypass and cross-project data leakage.
+
+#### [Gotcha] TypeScript optional fields in QuarantineEntry type (stage and violations can be undefined) require explicit casting when returning HTTP 422 response. Type system doesn't guarantee these fields are present in all code paths. (2026-02-25)
+- **Situation:** QuarantineEntry has optional stage and violations fields. create.ts needs to return these in HTTP 422 body. Compiler doesn't enforce non-null guarantee.
+- **Root cause:** QuarantineEntry type allows stage/violations to be undefined (accommodates different use cases). HTTP 422 response shape expects these fields. Gap between type definition and API contract.
+- **How to avoid:** Explicit casting documents that HTTP endpoint guarantees these fields (unlike internal service). Adds type safety at call site. Cost: boilerplate cast code.

@@ -40,6 +40,10 @@ docs/.vitepress/cache/
 .automaker/actionable-items.json
 .automaker/hitl-forms.json
 .automaker/content/
+.automaker/knowledge.db
+.automaker/knowledge.db-shm
+.automaker/knowledge.db-wal
+.automaker/ceremony-log.jsonl
 
 # Instance-specific — each machine starts fresh
 .automaker/projects/
