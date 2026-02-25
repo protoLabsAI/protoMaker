@@ -5158,14 +5158,17 @@ Format your response as a structured markdown document.`;
 
     // Fetch recently merged PRs to reconcile blocked/review features whose PRs already landed.
     // Catches drift from: webhook disabled, server down during merge, or feature blocked before PR was created.
-    const mergedPrBranches = new Map<string, number>(); // branch → PR number
+    const mergedPrBranches = new Map<string, { number: number; mergedAt?: string }>(); // branch → PR info
     try {
       const { stdout: mergedPrJson } = await execAsync(
-        'gh pr list --state merged --json number,headRefName --limit 100',
+        'gh pr list --state merged --json number,headRefName,mergedAt --limit 100',
         { cwd: projectPath, timeout: 15000 }
       );
-      const mergedPrs: { number: number; headRefName: string }[] = JSON.parse(mergedPrJson || '[]');
-      for (const pr of mergedPrs) mergedPrBranches.set(pr.headRefName, pr.number);
+      const mergedPrs: { number: number; headRefName: string; mergedAt?: string }[] = JSON.parse(
+        mergedPrJson || '[]'
+      );
+      for (const pr of mergedPrs)
+        mergedPrBranches.set(pr.headRefName, { number: pr.number, mergedAt: pr.mergedAt });
       logger.debug(
         `[loadPendingFeatures] Found ${mergedPrBranches.size} recently merged PR(s) — used for stale blocked/review reconciliation`
       );
@@ -5220,18 +5223,18 @@ Format your response as a structured markdown document.`;
           mergedPrBranches.has(f.branchName)
       );
       for (const feature of staleViaLinkedPr) {
-        const mergedPrNumber = mergedPrBranches.get(feature.branchName!)!;
+        const mergedPr = mergedPrBranches.get(feature.branchName!)!;
         logger.info(
-          `[loadPendingFeatures] Feature ${feature.id} ("${feature.title}") has merged PR #${mergedPrNumber} — reconciling to done`
+          `[loadPendingFeatures] Feature ${feature.id} ("${feature.title}") has merged PR #${mergedPr.number} — reconciling to done`
         );
         const prevStatus = feature.status;
-        feature.status = 'done';
         try {
           await this.featureLoader.update(projectPath, feature.id, {
             status: 'done',
-            prNumber: mergedPrNumber,
-            prMergedAt: new Date().toISOString(),
+            prNumber: mergedPr.number,
+            prMergedAt: mergedPr.mergedAt ?? new Date().toISOString(),
           });
+          feature.status = 'done';
           this.events.emit('feature:status-changed', {
             projectPath,
             featureId: feature.id,
@@ -5239,6 +5242,7 @@ Format your response as a structured markdown document.`;
             newStatus: 'done',
           });
         } catch (error) {
+          feature.status = prevStatus;
           logger.error(
             `[loadPendingFeatures] Failed to reconcile feature ${feature.id} to done:`,
             error
