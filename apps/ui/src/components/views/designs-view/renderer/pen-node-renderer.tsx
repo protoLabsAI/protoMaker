@@ -3,6 +3,7 @@
  */
 
 import type { PenNode } from '@protolabs-ai/types';
+import { useDesignsStore } from '@/store/designs-store';
 import { PenFrameRenderer } from './pen-frame-renderer';
 import { PenGroupRenderer } from './pen-group-renderer';
 import { PenTextRenderer } from './pen-text-renderer';
@@ -18,26 +19,43 @@ interface PenNodeRendererProps {
  * Main node renderer that dispatches based on node type
  */
 export function PenNodeRenderer({ node }: PenNodeRendererProps) {
+  const { selectedNodeId, setSelectedNode } = useDesignsStore();
+  const isSelected = selectedNodeId === node.id;
+
   // Handle visibility
   if (node.visible === false) {
     return null;
   }
 
+  // Click handler to select node
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedNode(node.id);
+  };
+
+  // Wrapper style for selection outline
+  const wrapperStyle = isSelected
+    ? {
+        outline: '2px solid #3b82f6',
+        outlineOffset: '2px',
+      }
+    : undefined;
+
   // Dispatch to specific renderer based on type
   switch (node.type) {
     case 'frame':
-      return <PenFrameRenderer node={node} />;
+      return <PenFrameRenderer node={node} onClick={handleClick} style={wrapperStyle} />;
     case 'group':
-      return <PenGroupRenderer node={node} />;
+      return <PenGroupRenderer node={node} onClick={handleClick} style={wrapperStyle} />;
     case 'text':
-      return <PenTextRenderer node={node} />;
+      return <PenTextRenderer node={node} onClick={handleClick} style={wrapperStyle} />;
     case 'icon-font':
-      return <PenIconRenderer node={node} />;
+      return <PenIconRenderer node={node} onClick={handleClick} style={wrapperStyle} />;
     case 'ref':
-      return <PenRefRenderer node={node} />;
+      return <PenRefRenderer node={node} onClick={handleClick} style={wrapperStyle} />;
     case 'rectangle':
     case 'ellipse':
-      return <PenShapeRenderer node={node} />;
+      return <PenShapeRenderer node={node} onClick={handleClick} style={wrapperStyle} />;
     case 'line':
     case 'polygon':
     case 'path':
@@ -47,11 +65,13 @@ export function PenNodeRenderer({ node }: PenNodeRendererProps) {
       // Placeholder for other node types - will be implemented in future features
       return (
         <div
+          onClick={handleClick}
           style={{
             padding: '8px',
             background: '#f0f0f0',
             border: '1px dashed #ccc',
             borderRadius: '4px',
+            ...wrapperStyle,
           }}
         >
           {node.type} ({node.name || node.id})

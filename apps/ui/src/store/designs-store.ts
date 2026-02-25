@@ -22,6 +22,9 @@ export interface DesignsState {
   selectedFilePath: string | null;
   selectedDocument: PenDocument | null;
 
+  // Selected node state
+  selectedNodeId: string | null;
+
   // Loading states
   isLoadingTree: boolean;
   isLoadingDocument: boolean;
@@ -37,6 +40,9 @@ export interface DesignsActions {
   // Selected file actions
   setSelectedFile: (path: string | null, document: PenDocument | null) => void;
 
+  // Selected node actions
+  setSelectedNode: (nodeId: string | null) => void;
+
   // Loading state actions
   setLoadingTree: (loading: boolean) => void;
   setLoadingDocument: (loading: boolean) => void;
@@ -50,6 +56,7 @@ const initialState: DesignsState = {
   expandedFolders: new Set(),
   selectedFilePath: null,
   selectedDocument: null,
+  selectedNodeId: null,
   isLoadingTree: false,
   isLoadingDocument: false,
 };
@@ -87,7 +94,11 @@ export const useDesignsStore = create<DesignsState & DesignsActions>()((set, get
     set({
       selectedFilePath: path,
       selectedDocument: document,
+      selectedNodeId: null, // Clear node selection when switching files
     }),
+
+  // Selected node actions
+  setSelectedNode: (nodeId) => set({ selectedNodeId: nodeId }),
 
   // Loading state actions
   setLoadingTree: (loading) => set({ isLoadingTree: loading }),

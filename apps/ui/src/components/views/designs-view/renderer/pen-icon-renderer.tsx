@@ -9,13 +9,15 @@ import * as LucideIcons from 'lucide-react';
 
 interface PenIconRendererProps {
   node: PenIconFont;
+  onClick?: (e: React.MouseEvent) => void;
+  style?: React.CSSProperties;
 }
 
 /**
  * Renders an icon font node as a Lucide React icon (if fontFamily is 'lucide')
  * or as a Unicode character from the specified font
  */
-export function PenIconRenderer({ node }: PenIconRendererProps) {
+export function PenIconRenderer({ node, onClick, style: externalStyle }: PenIconRendererProps) {
   const style: CSSProperties = {
     position: 'relative',
     boxSizing: 'border-box',
@@ -70,7 +72,12 @@ export function PenIconRenderer({ node }: PenIconRendererProps) {
       }
 
       return (
-        <div style={style} data-node-id={node.id} data-node-type="icon-font">
+        <div
+          style={{ ...style, ...externalStyle }}
+          data-node-id={node.id}
+          data-node-type="icon-font"
+          onClick={onClick}
+        >
           <IconComponent size={node.fontSize} color={iconColor} strokeWidth={strokeWidth} />
         </div>
       );
@@ -78,7 +85,12 @@ export function PenIconRenderer({ node }: PenIconRendererProps) {
 
     // Fallback if icon not found
     return (
-      <div style={style} data-node-id={node.id} data-node-type="icon-font">
+      <div
+        style={{ ...style, ...externalStyle }}
+        data-node-id={node.id}
+        data-node-type="icon-font"
+        onClick={onClick}
+      >
         <span style={{ fontSize: `${node.fontSize}px`, color: iconColor }}>[{iconName}]</span>
       </div>
     );
@@ -97,7 +109,12 @@ export function PenIconRenderer({ node }: PenIconRendererProps) {
   }
 
   return (
-    <div style={style} data-node-id={node.id} data-node-type="icon-font">
+    <div
+      style={{ ...style, ...externalStyle }}
+      data-node-id={node.id}
+      data-node-type="icon-font"
+      onClick={onClick}
+    >
       {node.character}
     </div>
   );

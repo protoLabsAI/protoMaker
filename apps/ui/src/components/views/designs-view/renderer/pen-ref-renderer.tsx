@@ -9,12 +9,14 @@ import { useMemo } from 'react';
 
 interface PenRefRendererProps {
   node: PenRef;
+  onClick?: (e: React.MouseEvent) => void;
+  style?: React.CSSProperties;
 }
 
 /**
  * Renders a ref node by resolving it to its source and applying overrides
  */
-export function PenRefRenderer({ node }: PenRefRendererProps) {
+export function PenRefRenderer({ node, onClick, style: externalStyle }: PenRefRendererProps) {
   const { resolveRef } = usePenDocument();
 
   // Resolve the referenced node
@@ -52,9 +54,11 @@ export function PenRefRenderer({ node }: PenRefRendererProps) {
           border: '1px dashed #ffc107',
           borderRadius: '4px',
           color: '#856404',
+          ...externalStyle,
         }}
         data-node-id={node.id}
         data-node-type="ref"
+        onClick={onClick}
       >
         Ref not found: {node.refId}
       </div>
@@ -62,5 +66,10 @@ export function PenRefRenderer({ node }: PenRefRendererProps) {
   }
 
   // Render the resolved node with its renderer
-  return <PenNodeRenderer node={resolvedNode} />;
+  // Note: We need to wrap it to apply onClick and style
+  return (
+    <div onClick={onClick} style={externalStyle}>
+      <PenNodeRenderer node={resolvedNode} />
+    </div>
+  );
 }

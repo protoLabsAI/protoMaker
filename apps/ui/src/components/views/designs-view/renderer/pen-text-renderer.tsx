@@ -8,12 +8,14 @@ import type { CSSProperties } from 'react';
 
 interface PenTextRendererProps {
   node: PenText;
+  onClick?: (e: React.MouseEvent) => void;
+  style?: React.CSSProperties;
 }
 
 /**
  * Renders a text node with font properties, alignment, and color
  */
-export function PenTextRenderer({ node }: PenTextRendererProps) {
+export function PenTextRenderer({ node, onClick, style: externalStyle }: PenTextRendererProps) {
   const style: CSSProperties = {
     position: 'relative',
     boxSizing: 'border-box',
@@ -86,7 +88,12 @@ export function PenTextRenderer({ node }: PenTextRendererProps) {
   }
 
   return (
-    <div style={style} data-node-id={node.id} data-node-type="text">
+    <div
+      style={{ ...style, ...externalStyle }}
+      data-node-id={node.id}
+      data-node-type="text"
+      onClick={onClick}
+    >
       {node.content}
     </div>
   );

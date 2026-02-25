@@ -10,12 +10,14 @@ import type { CSSProperties } from 'react';
 
 interface PenFrameRendererProps {
   node: PenFrame;
+  onClick?: (e: React.MouseEvent) => void;
+  style?: React.CSSProperties;
 }
 
 /**
  * Renders a frame node as a div with CSS flexbox layout
  */
-export function PenFrameRenderer({ node }: PenFrameRendererProps) {
+export function PenFrameRenderer({ node, onClick, style: externalStyle }: PenFrameRendererProps) {
   const { resolveVariable } = usePenTheme();
 
   const style: CSSProperties = {
@@ -93,7 +95,12 @@ export function PenFrameRenderer({ node }: PenFrameRendererProps) {
 
   // Render children recursively
   return (
-    <div style={style} data-node-id={node.id} data-node-type="frame">
+    <div
+      style={{ ...style, ...externalStyle }}
+      data-node-id={node.id}
+      data-node-type="frame"
+      onClick={onClick}
+    >
       {node.children?.map((child) => (
         <PenNodeRenderer key={child.id} node={child} />
       ))}
