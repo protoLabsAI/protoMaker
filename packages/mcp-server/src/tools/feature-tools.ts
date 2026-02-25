@@ -194,6 +194,11 @@ export const featureTools: Tool[] = [
           description:
             'Mark as foundation feature (package scaffold, base types). Downstream features wait for this to be merged before starting.',
         },
+        statusChangeReason: {
+          type: 'string',
+          description:
+            "Required when setting status to 'blocked'. Explain why the feature is blocked (e.g., 'Waiting on PR #123 to merge', 'Blocked by API rate limits').",
+        },
       },
       required: ['projectPath', 'featureId'],
     },

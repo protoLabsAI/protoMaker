@@ -126,6 +126,7 @@ usageStats:
 - **Trade-offs:** Better query performance and simpler deployment vs limited horizontal scalability; schema version is immutable once data is written
 - **Breaking if changed:** Schema version must match across all Loki instances; changing schema requires data migration or reindexing
 
+<<<<<<< Updated upstream
 #### [Pattern] TrustTierService uses AtomicWriter (not direct fs.writeFile) for persisting trust-tiers.json. Data updates are atomic — partial writes cannot corrupt the file. Aligns with SettingsService and AnalyticsService pattern for security-critical persistent state. (2026-02-25)
 - **Problem solved:** Trust tier records are security-sensitive. Corruption or partial updates could grant unintended access. File-based storage chosen for simplicity and auditability.
 - **Why this works:** Atomic writes guarantee that trust state is always consistent. A crash or process kill during write cannot leave the file in a partially-updated state. Essential for security-related data where any corruption is a security breach.
@@ -135,3 +136,11 @@ usageStats:
 - **Problem solved:** Adding quarantine metadata to existing features requires migration or graceful degradation. No migration job was written.
 - **Why this works:** Implicit bypass via absence is safe default (old features continue working). Avoids complex migration logic. Clear data semantics: missing field means 'pre-quarantine era'.
 - **Trade-offs:** Simpler deployment (no migration) vs audit ambiguity (can't distinguish 'bypassed' from 'never validated'). Acceptable because quarantine is a new security feature, not a fix for existing data.
+=======
+### Persisted git workflow errors directly to feature.json via featureLoader.update() rather than separate error tracking/logging system (2026-02-25)
+- **Context:** Need to store git errors so they survive server restarts and are accessible to all clients querying feature state
+- **Why:** Colocates error data with feature data - single source of truth, no distributed state, errors immediately visible in feature snapshots, follows existing update patterns
+- **Rejected:** Separate error log file, database error table, or in-memory error registry - would require coordination with feature state and add potential sync issues
+- **Trade-offs:** feature.json includes error metadata (slightly larger JSON); error state travels with feature across systems; simplified debugging but feature.json schema now has optional error fields
+- **Breaking if changed:** Code that assumes feature.json only contains production-happy paths; serialization/deserialization must handle optional gitWorkflowError; migrations needed if schema versioning was strict
+>>>>>>> Stashed changes
