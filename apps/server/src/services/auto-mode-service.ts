@@ -4742,6 +4742,9 @@ Format your response as a structured markdown document.`;
         return;
       }
 
+      // Capture previous status before updating for event emission
+      const previousStatus = feature.status;
+
       feature.status = status;
       feature.updatedAt = new Date().toISOString();
       // Set justFinishedAt timestamp when moving to waiting_approval (agent just completed)
@@ -4759,6 +4762,35 @@ Format your response as a structured markdown document.`;
 
       // Use atomic write with backup support
       await atomicWriteJson(featurePath, feature, { backupCount: DEFAULT_BACKUP_COUNT });
+
+      // Emit feature:status-changed event for all status transitions
+      this.events.emit('feature:status-changed', {
+        projectPath,
+        featureId,
+        previousStatus,
+        newStatus: status,
+      });
+
+      // Emit feature:completed event when reaching terminal success states
+      // This allows Lead Engineer and other services to detect completion
+      if (status === 'verified' || status === 'done') {
+        this.events.emit('feature:completed', {
+          projectPath,
+          featureId,
+          featureTitle: feature.title,
+          status,
+        });
+      }
+
+      // Emit feature:error event when reaching error states
+      if (status === 'failed' || status === 'blocked') {
+        this.events.emit('feature:error', {
+          projectPath,
+          featureId,
+          error: feature.error || 'Feature execution failed',
+          status,
+        });
+      }
 
       // Create notifications for important status changes
       const notificationService = getNotificationService();
