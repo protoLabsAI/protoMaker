@@ -82,8 +82,158 @@ jobs:
             apps/ui/release/*.blockmap
           retention-days: 30
 
+  build-windows:
+    runs-on: windows-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: version
+        shell: bash
+        run: echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Update package.json version
+        run: node apps/ui/scripts/update-version.mjs "${{ steps.version.outputs.version }}"
+
+      - name: Setup project
+        uses: ./.github/actions/setup-project
+        with:
+          check-lockfile: 'true'
+
+      - name: Build Electron app (Windows x64)
+        run: npm run build:electron:win --workspace=apps/ui
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-builds
+          path: |
+            apps/ui/release/*.exe
+            apps/ui/release/*.blockmap
+          retention-days: 30
+
+  test-mac:
+    needs: build-mac
+    runs-on: macos-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup project
+        uses: ./.github/actions/setup-project
+        with:
+          check-lockfile: 'true'
+
+      - name: Download macOS artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: mac-builds
+          path: artifacts/mac
+
+      - name: Install and test DMG
+        run: bash apps/ui/scripts/smoke-test-mac.sh
+        env:
+          ARTIFACT_DIR: artifacts/mac
+
+      - name: Run Playwright smoke tests
+        run: npm run test:smoke --workspace=apps/ui
+        env:
+          ELECTRON_EXEC_PATH: /tmp/test-app/protoLabs.studio.app/Contents/MacOS/protoLabs.studio
+
+      - name: Upload test results on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-test-results
+          path: apps/ui/test-results/
+          retention-days: 7
+
+  test-windows:
+    needs: build-windows
+    runs-on: windows-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup project
+        uses: ./.github/actions/setup-project
+        with:
+          check-lockfile: 'true'
+
+      - name: Download Windows artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-builds
+          path: artifacts/windows
+
+      - name: Install and test NSIS
+        run: powershell apps/ui/scripts/smoke-test-win.ps1
+        env:
+          ARTIFACT_DIR: artifacts/windows
+
+      - name: Run Playwright smoke tests
+        run: npm run test:smoke --workspace=apps/ui
+        env:
+          ELECTRON_EXEC_PATH: C:\test-app\protoLabs.studio.exe
+
+      - name: Upload test results on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-test-results
+          path: apps/ui/test-results/
+          retention-days: 7
+
+  test-linux:
+    needs: build-linux
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup project
+        uses: ./.github/actions/setup-project
+        with:
+          check-lockfile: 'true'
+
+      - name: Install Xvfb for headless testing
+        run: sudo apt-get update && sudo apt-get install -y xvfb
+
+      - name: Download Linux artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-builds
+          path: artifacts/linux
+
+      - name: Install and test AppImage + DEB
+        run: bash apps/ui/scripts/smoke-test-linux.sh
+        env:
+          ARTIFACT_DIR: artifacts/linux
+
+      - name: Run Playwright smoke tests
+        run: npm run test:smoke --workspace=apps/ui
+        env:
+          ELECTRON_EXEC_PATH: /tmp/test-app/protoLabs.studio.AppImage
+
+      - name: Upload test results on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-test-results
+          path: apps/ui/test-results/
+          retention-days: 7
+
   upload-release:
-    needs: [build-mac, build-linux]
+    needs: [test-mac, test-windows, test-linux]
     runs-on: self-hosted
     permissions:
       contents: write
@@ -94,6 +244,12 @@ jobs:
         with:
           name: mac-builds
           path: artifacts/mac
+
+      - name: Download Windows artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-builds
+          path: artifacts/windows
 
       - name: Download Linux artifacts
         uses: actions/download-artifact@v4
@@ -106,6 +262,7 @@ jobs:
         with:
           files: |
             artifacts/mac/*
+            artifacts/windows/*
             artifacts/linux/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
