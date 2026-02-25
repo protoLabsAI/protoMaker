@@ -36,6 +36,8 @@ Six strategies, applied based on category:
 
 Transient retries use exponential backoff: `base × 2^retryCount`, capped at `maxDelay`.
 
+**Agent-level backoff** (RecoveryService):
+
 | Parameter                | Value     |
 | ------------------------ | --------- |
 | Base delay               | 1,000 ms  |
@@ -43,6 +45,19 @@ Transient retries use exponential backoff: `base × 2^retryCount`, capped at `ma
 | Max transient retries    | 3         |
 | Max test failure retries | 2         |
 | Rate limit base delay    | 5,000 ms  |
+
+**Git workflow backoff** (git-workflow-service):
+
+| Parameter   | Value                                 |
+| ----------- | ------------------------------------- |
+| Base delay  | 2,000 ms                              |
+| Max retries | 3                                     |
+| Backoff     | 2s → 4s → 8s                          |
+| Applies to  | `git push`, `gh pr create` operations |
+
+The `retryWithExponentialBackoff<T>()` helper in `git-workflow-service.ts` wraps push and PR creation calls. This prevents transient GitHub/network errors from causing silent git workflow failures.
+
+**Source:** `apps/server/src/services/git-workflow-service.ts`
 
 ### Lesson generation
 
@@ -310,6 +325,50 @@ Called by `EscalateProcessor.process()` in the Lead Engineer state machine. The 
 
 **Source:** `apps/server/src/services/failure-classifier-service.ts`
 
+## Crash recovery scan
+
+On server startup, a non-blocking worktree scan detects stranded work from crashed agent sessions.
+
+### How it works
+
+After `resumeInterruptedFeatures()` completes, `scanWorktreesForCrashRecovery()` runs via `setImmediate()`:
+
+1. Lists all worktrees via `git worktree list --porcelain`
+2. Cross-references each worktree with its feature status
+3. For features in `verified`/`done` with uncommitted or unpushed work:
+   - Commits stranded changes via `ensureCleanWorktree()`
+   - Pushes to remote
+   - Triggers `runPostCompletionWorkflow()` (PR creation)
+4. For features in other states with stranded work: logs a warning
+5. Emits `maintenance:crash_recovery_scan_completed` with summary
+
+### When it triggers
+
+- Server startup only (not a cron task)
+- Non-blocking — does not delay server initialization or request handling
+- Fire-and-forget — scan failures are logged but don't crash the server
+
+**Source:** `apps/server/src/services/maintenance-tasks.ts`
+
+## Git workflow error surfacing
+
+When git operations (commit, push, PR creation) fail after agent execution, the error is stored on the feature for UI visibility.
+
+### The `gitWorkflowError` field
+
+```typescript
+interface Feature {
+  gitWorkflowError?: {
+    message: string; // Error description
+    timestamp: string; // ISO 8601 when the error occurred
+  };
+}
+```
+
+All 4 git workflow catch blocks in `auto-mode-service.ts` persist errors to `feature.json` instead of silently logging them. Feature status remains unchanged (e.g., stays `verified`) — the error field provides a separate visibility channel.
+
+**Source:** `libs/types/src/feature.ts`, `apps/server/src/services/auto-mode-service.ts`
+
 ## Event-driven observability
 
 All reliability services emit events for real-time UI updates and audit logging:
@@ -319,7 +378,9 @@ All reliability services emit events for real-time UI updates and audit logging:
 | RecoveryService      | `recovery_*`    | `analysis`, `started`, `completed`, `recorded`, `escalated`, `lesson_generated` |
 | EscalationRouter     | `escalation:*`  | `signal-received`, `deduplicated`, `sent`, `failed`, `routed`, `acknowledged`   |
 | FeatureHealthService | (via auto-mode) | Issues surface through escalation events                                        |
+| AutoModeService      | `feature:*`     | `status-changed`, `completed`, `error`                                          |
 | Lead Engineer        | `feature:*`     | `reflection:complete`, `pr-merged`, `state-changed`                             |
+| Maintenance          | `maintenance:*` | `crash_recovery_scan_completed`                                                 |
 
 ## Recovery architecture diagram
 

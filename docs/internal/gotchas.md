@@ -76,6 +76,25 @@ Adding optional parameters (`role?`, `maxTurns?`) to existing methods requires a
 
 bash is available on ubuntu, macOS, and Windows (via Git Bash). Using platform-native shells requires different syntax per OS. `shell: bash` in GitHub Actions eliminates script branching.
 
+## Git Workflow
+
+### Git workflow failures were silently swallowed
+
+All 4 git workflow catch blocks in `auto-mode-service.ts` previously logged `logger.warn()` but took no corrective action. Features would reach `verified` status with uncommitted work stranded in the worktree.
+
+**Fix (PR #1103–#1126):** Three-layer defense:
+
+1. **Worktree guard** — `ensureCleanWorktree()` now commits AND pushes (not just commits). Returns structured `WorktreeGuardResult`.
+2. **Retry with backoff** — `retryWithExponentialBackoff()` wraps `git push` and `gh pr create` (3 retries, 2s/4s/8s).
+3. **Error surfacing** — `gitWorkflowError` field on Feature type stores failure details for UI visibility. Feature status remains unchanged.
+4. **Crash recovery** — `scanWorktreesForCrashRecovery()` runs at startup, detects stranded work, triggers recovery.
+
+### Pipeline-step-removed path skipped git workflow
+
+When a feature had its pipeline steps removed mid-execution, the `pipeline-step-removed` code path exited without calling `runPostCompletionWorkflow()`. Work was left uncommitted.
+
+**Fix (PR #1105):** Added `runPostCompletionWorkflow()` call with epic branch resolution to the pipeline-step-removed path.
+
 ## Agent Operations
 
 ### MAX_PR_ITERATIONS must be synced across services

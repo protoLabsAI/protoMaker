@@ -140,9 +140,35 @@ Additionally, tests verify telemetry callback invocation for metrics.
 5. **Telemetry** - Track legacy usage for monitoring
 6. **Authority Integration** - WorkItemState preserved for future integration
 
+## Git Workflow Error Field
+
+Features carry an optional `gitWorkflowError` field that captures git operation failures without changing the feature status:
+
+```typescript
+interface Feature {
+  gitWorkflowError?: {
+    message: string; // Error description
+    timestamp: string; // ISO 8601 when the error occurred
+  };
+}
+```
+
+When a git workflow step (commit, push, PR creation) fails, the error is persisted to `feature.json`. The feature status remains unchanged (e.g., stays `verified`). This makes git failures visible in the UI without disrupting the state machine.
+
+## Status Change Events
+
+`AutoModeService.updateFeatureStatus()` emits events on every status transition:
+
+| Event                    | When                                                               |
+| ------------------------ | ------------------------------------------------------------------ |
+| `feature:status-changed` | Every status transition (carries `previousStatus` and `newStatus`) |
+| `feature:completed`      | Feature reaches `verified` or `done`                               |
+| `feature:error`          | Feature reaches `failed` or `blocked`                              |
+
+These events drive downstream integrations: Langfuse scoring, ceremony triggers, UI real-time updates.
+
 ## Future Work
 
 - Integrate Authority System `workItemState` with canonical statuses
 - Add status transition guards in policy engine
-- Implement status history tracking
 - Add analytics dashboard for status flow metrics

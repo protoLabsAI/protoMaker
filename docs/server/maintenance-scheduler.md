@@ -71,6 +71,16 @@ The **Settings > System > Maintenance** page shows:
 - Last/next run times, execution and failure counts
 - "Run Now" button for immediate execution
 
+## Startup Tasks (Non-Cron)
+
+In addition to cron-scheduled tasks, `maintenance-tasks.ts` exports a startup-only function:
+
+| Function                          | Trigger                             | Purpose                                              |
+| --------------------------------- | ----------------------------------- | ---------------------------------------------------- |
+| `scanWorktreesForCrashRecovery()` | Server startup (via `setImmediate`) | Detect and recover stranded work from crashed agents |
+
+This runs once after `resumeInterruptedFeatures()` completes. It lists all worktrees, cross-references with feature statuses, and triggers `runPostCompletionWorkflow()` for verified/done features with uncommitted or unpushed work. See [Reliability & Recovery](../agents/reliability.md#crash-recovery-scan) for details.
+
 ## Key Files
 
 - `apps/server/src/services/scheduler-service.ts` — Core scheduler with cron parsing, task execution, persistence
