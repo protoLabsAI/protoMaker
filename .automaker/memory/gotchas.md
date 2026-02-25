@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 394
-  referenced: 209
-  successfulFeatures: 209
+  loaded: 452
+  referenced: 227
+  successfulFeatures: 227
 ---
 # gotchas
 
@@ -382,3 +382,63 @@ usageStats:
 - **Situation:** Code captures execution time in milliseconds internally, but Prometheus convention uses seconds. Conversion point is easy to miss or misapply.
 - **Root cause:** Prometheus ecosystem standardizes on seconds for duration histograms. Conversion ensures metrics are compatible with standard dashboards and alert thresholds.
 - **How to avoid:** Conversion required at metric ingestion point, but keeps internal timing logic unchanged; missing conversion creates 1000x inflated duration metrics
+
+#### [Gotcha] LLM output regex parsing fails silently: patterns like `**dimension[:\s]*\*\*` that don't match LLM output format return default scores (50%) instead of the actual LLM score, making it impossible to detect parsing failures. (2026-02-25)
+- **Situation:** Antagonistic reviewer extracts review scores via regex. If pattern doesn't match actual LLM output format, the regex silently fails and a default score is assigned, causing all quality gates to fail incorrectly.
+- **Root cause:** The fix changed pattern to `**dimension\*\*:` (exact format matching) because LLM output format is inconsistent. Exact matching + subsequent validation would catch mismatches, but the code doesn't currently fail fast on non-match.
+- **How to avoid:** Exact pattern matching requires keeping the pattern in sync with prompt changes (LLM output format updates = code updates required). Loose patterns risk false positives and silent data corruption.
+
+#### [Gotcha] Sparse research discovery: research phase consistently produces ~10% quality scores (minimal facts/examples/references found) across all test runs regardless of topic, suggesting research delegate is not effectively discovering source files in the codebase. (2026-02-25)
+- **Situation:** All 5 end-to-end validation runs failed the research gate at ~10% score. Implementation log notes this as 'expected behavior - requires better source topics' but this is a deeper pattern about agent information discovery.
+- **Root cause:** Research delegate is likely using generic file search patterns instead of codebase-aware discovery. Without explicit source hints or file-by-file prompting, LLM agents struggle to find relevant code examples, patterns, and documentation.
+- **How to avoid:** Upside: Documented and understood. Downside: Blocks content generation for ANY topic until research discovery improves. Suggests the antagonistic reviewer is too strict relative to research capability.
+
+#### [Gotcha] Build verification (`npm run build:packages`) was manually executed before release, but no automated pre-release gate prevents publishing broken packages (2026-02-25)
+- **Situation:** Developer discovered need to verify 15 packages build cleanly before committing to release. Currently manual, not automated in workflow.
+- **Root cause:** Publishing broken packages is high-severity issue (breaks all consumers). Manual gate provides safety where automated CI may not catch package-level issues.
+- **How to avoid:** Safer: manual verification catches package-build regressions early. Slower: requires developer discipline to run this before release.
+
+#### [Gotcha] Changeset publish workflow can silently fail if NPM_TOKEN is missing - workflow runs, npm auth fails with 401, but doesn't explicitly block merge/deployment (2026-02-25)
+- **Situation:** The `.github/workflows/changeset-release.yml` workflow is designed to run on PRs that merge to main, but has no safeguard if NPM_TOKEN secret is missing
+- **Root cause:** GitHub Actions secrets are injected at runtime. If secret doesn't exist, it becomes an empty string in the env var, and npm commands fail downstream with cryptic 401 errors.
+- **How to avoid:** Simpler workflow: no conditional checks needed. More fragile: failure is not obvious until after merge when workflow runs and artifacts are already in CI.
+
+#### [Pattern] Data provenance metadata via 'source' field ('git-only' vs 'git+metrics'). Allows consumers to understand whether cost data was actually fetched or is missing/placeholder. (2026-02-25)
+- **Problem solved:** stats.json is published output. Consumers (dashboards, reports) need to know if fields are real or null placeholders.
+- **Why this works:** Prevents silent data quality degradation. If cost fields are null (server down), consuming systems should display 'incomplete' or 'draft' status, not treat nulls as '0 cost'.
+- **Trade-offs:** One extra field in JSON, but consumers gain visibility into data completeness. Enables conditional rendering (e.g., 'Langfuse data unavailable, costs not included').
+
+#### [Gotcha] Roadmap milestone status values (completed, in-progress, planned) are implicitly enumerated with no formal schema. Downstream generation scripts likely contain hardcoded status checks that will silently fail or misbehave if new status values are added. (2026-02-25)
+- **Situation:** The generate-roadmap.mjs script accepts milestone.status and injects into HTML, probably with if/else chains for display logic.
+- **Root cause:** No TypeScript enums or JSON schema validation; team assumed these three statuses were sufficient and scripts were written to that assumption.
+- **How to avoid:** Simpler initial code. Risk: future status additions (e.g., 'blocked', 'on-hold') require hunting through scripts for hardcoded checks. No compiler warning.
+
+#### [Gotcha] Generated HTML files (site/changelog/index.html, site/roadmap/index.html) use destructive write pattern. Every npm run stats:generate overwrites these files, erasing any manual edits (styling, layout fixes, comments). (2026-02-25)
+- **Situation:** Generation scripts inject data into HTML templates and save, with no versioning or merge logic.
+- **Root cause:** Simpler implementation than templating engines with change tracking. Assumption: HTML is 100% derived from data, never hand-edited.
+- **How to avoid:** Simpler generation logic. Risk: developers attempting HTML-level styling/layout changes lose them on next generation. No signal that HTML is generated.
+
+#### [Gotcha] TypeScript DTS (declaration file) build fails to resolve exported types that are actually present in the codebase. ESM (JavaScript) build succeeds and produces correct runtime code. Types ARE exported and referenced correctly, but DTS build can't find them. Root cause: TypeScript's module resolution in git worktrees doesn't properly traverse workspace symlinks before type-checking, causing false-positive 'missing export' errors. (2026-02-25)
+- **Situation:** TrustTierService DTS build failed with 'cannot find name TrustTier' and 'property source does not exist' errors, despite both types being verifiably present and ESM build succeeding
+- **Root cause:** Worktree isolation creates a context where TypeScript's type checker executes before module resolution completes across workspace boundaries. Type-checking happens in isolation, module symlinks haven't been fully resolved yet.
+- **How to avoid:** Separating ESM and DTS validation adds two failure modes (ESM success ≠ DTS success), but allows distinguishing real bugs from type-checking artifacts. In worktrees, ESM-level functional testing is more reliable than TS build errors.
+
+#### [Gotcha] Synchronous git config lookup (execSync) can block request handling if git command hangs or repository is slow (2026-02-25)
+- **Situation:** UserIdentityService uses execSync('git config user.name') as fallback in resolution chain
+- **Root cause:** Avoids async/await complexity in service instantiation; git config lookup is expected to be fast
+- **How to avoid:** Simpler code and initialization vs potential request latency if git is slow or unresponsive
+
+#### [Gotcha] Identity cache lacks TTL or automatic invalidation; only cleared by explicit clearCache() call (2026-02-25)
+- **Situation:** Single cachedIdentity variable persists for server lifetime until manual clearCache()
+- **Root cause:** Avoids repeated execSync calls for performance; assumes identity is stable per server instance
+- **How to avoid:** Excellent performance after first resolution vs stale identity if git config changes externally
+
+#### [Gotcha] npm install required in worktree to link workspace packages; TypeScript compilation fails without symlinks in node_modules (2026-02-25)
+- **Situation:** Implementation created in worktree; tsconfig references @automaker/* packages which require workspace symlinks
+- **Root cause:** npm workspace hoisting creates symlinks to workspace packages, not copies; symlinks don't exist until npm install runs
+- **How to avoid:** One-time npm install cost vs having full workspace available for compilation and testing
+
+#### [Gotcha] No error handling if saveIdentity API call fails. Dialog closes only on `success === true`, but user sees no error message. (2026-02-25)
+- **Situation:** Dialog footer has disabled state on empty input, but no visual feedback if API call times out or returns error.
+- **Root cause:** Implementation focused on happy path. `.then(success => {})` pattern checks success bool but doesn't distinguish between network error, validation error, or permission error.
+- **How to avoid:** Current: clean code, but silent failures. With error handling: more verbose but better UX for failure cases.

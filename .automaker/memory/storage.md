@@ -5,9 +5,9 @@ relevantTo: [storage]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 1
-  referenced: 0
-  successfulFeatures: 0
+  loaded: 10
+  referenced: 2
+  successfulFeatures: 2
 ---
 # storage
 
