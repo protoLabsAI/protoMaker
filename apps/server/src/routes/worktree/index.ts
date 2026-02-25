@@ -58,6 +58,10 @@ import { createPruneHandler } from './routes/prune.js';
 import { createCherryPickHandler } from './routes/cherry-pick.js';
 import { createAbortOperationHandler } from './routes/abort-operation.js';
 import { createContinueOperationHandler } from './routes/continue-operation.js';
+import { createStashPushHandler } from './routes/stash-push.js';
+import { createStashListHandler } from './routes/stash-list.js';
+import { createStashApplyHandler } from './routes/stash-apply.js';
+import { createStashDropHandler } from './routes/stash-drop.js';
 import type { SettingsService } from '../../services/settings-service.js';
 import type { WorktreeLifecycleService } from '../../services/worktree-lifecycle-service.js';
 import type { AutoModeService } from '../../services/auto-mode-service.js';
@@ -214,6 +218,12 @@ export function createWorktreeRoutes(
     validatePathParams('worktreePath'),
     createContinueOperationHandler()
   );
+
+  // Stash operations
+  router.post('/stash-push', validatePathParams('worktreePath'), createStashPushHandler());
+  router.post('/stash-list', validatePathParams('worktreePath'), createStashListHandler());
+  router.post('/stash-apply', validatePathParams('worktreePath'), createStashApplyHandler());
+  router.post('/stash-drop', validatePathParams('worktreePath'), createStashDropHandler());
 
   // Worktree health and recovery routes
   if (worktreeLifecycleService) {

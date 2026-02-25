@@ -178,6 +178,7 @@ import { calendarTools } from './tools/calendar-tools.js';
 import { quarantineTools } from './tools/quarantine-tools.js';
 import { fileOpsTools } from './tools/file-ops-tools.js';
 import { gitOpsTools } from './tools/git-ops-tools.js';
+import { worktreeGitTools } from './tools/worktree-git-tools.js';
 
 // Aggregate all tools
 const tools: Tool[] = [
@@ -199,6 +200,7 @@ const tools: Tool[] = [
   ...calendarTools,
   ...quarantineTools,
   ...fileOpsTools,
+  ...worktreeGitTools,
 ];
 
 // Tool implementations
@@ -860,6 +862,28 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       return apiCall('/github/resolve-pr-comment', {
         projectPath: args.projectPath,
         threadId: args.threadId,
+      });
+
+    case 'worktree_stash_push':
+      return apiCall('/worktree/stash-push', {
+        worktreePath: args.worktreePath,
+        message: args.message,
+        files: args.files,
+      });
+
+    case 'worktree_stash_list':
+      return apiCall('/worktree/stash-list', { worktreePath: args.worktreePath });
+
+    case 'worktree_stash_apply':
+      return apiCall('/worktree/stash-apply', {
+        worktreePath: args.worktreePath,
+        stashRef: args.stashRef,
+      });
+
+    case 'worktree_stash_drop':
+      return apiCall('/worktree/stash-drop', {
+        worktreePath: args.worktreePath,
+        stashRef: args.stashRef,
       });
 
     // Observability
