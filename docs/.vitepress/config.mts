@@ -109,6 +109,18 @@ export default defineConfig({
           items: generateSidebar('infra', '/infra'),
         },
       ],
+      '/security/': [
+        {
+          text: 'Security',
+          items: generateSidebar('security', '/security'),
+        },
+      ],
+      '/community/': [
+        {
+          text: 'Community',
+          items: generateSidebar('community', '/community'),
+        },
+      ],
       '/dev/': [
         {
           text: 'Development',
