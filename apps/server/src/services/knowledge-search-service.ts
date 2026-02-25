@@ -463,14 +463,23 @@ export class KnowledgeSearchService {
     query: string,
     maxResults: number = 5
   ): Promise<KnowledgeSearchResult[]> {
-    // Sanitize for FTS5 — strip operators that break MATCH syntax
+    // Sanitize for FTS5 — strip operators that break MATCH syntax, then quote
+    // each token individually so FTS5 never treats a word as a column filter.
     const sanitized = query
       .replace(/['"*(){}[\]:^~!@#$%&\\|<>]/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();
     if (!sanitized) return [];
 
-    const { results } = await this.search(projectPath, sanitized, {
+    // Wrap each token in double quotes to prevent FTS5 column-filter interpretation.
+    // e.g. "Save" alone would otherwise trigger "no such column: Save".
+    const ftsQuery = sanitized
+      .split(' ')
+      .filter((t) => t.length > 0)
+      .map((t) => `"${t}"`)
+      .join(' ');
+
+    const { results } = await this.search(projectPath, ftsQuery, {
       sourceTypes: ['reflection', 'agent_output'],
       maxResults,
       maxTokens: 3000,

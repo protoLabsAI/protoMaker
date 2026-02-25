@@ -127,10 +127,13 @@ export {
   type ValidatedRemoteName,
   type SanitizedCommitMessage,
   type ValidatedSessionId,
+  type SafeShellInteger,
   // Constants
   MAX_BRANCH_NAME_LENGTH,
   MAX_REMOTE_NAME_LENGTH,
   MAX_COMMIT_MESSAGE_LENGTH,
+  // Shell-safe integer assertion
+  assertSafeShellInteger,
 } from './validation.js';
 
 // Secure file system (validates paths before I/O operations)

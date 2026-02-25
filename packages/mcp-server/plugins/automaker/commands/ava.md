@@ -173,6 +173,8 @@ This is your routing table. For every signal, find the right row and delegate ac
 | PR behind main                    | PR Maintainer agent                  | `execute_dynamic_agent` template `pr-maintainer` |
 | Build failure (TypeScript)        | Feature agent retry or PR Maintainer | Retry first, delegate if mechanical              |
 | Orphaned worktree with commits    | PR Maintainer agent                  | `execute_dynamic_agent` template `pr-maintainer` |
+| PR owned by another instance      | **Skip** (not stale)                 | Check `ownership.isOwnedByThisInstance` first    |
+| PR owned by another, stale >24h   | PR Maintainer agent                  | May reclaim — original owner inactive            |
 | **Board Consistency**             |                                      |                                                  |
 | Review + PR merged, not done      | Board Janitor crew (auto)            | Runs every 15min                                 |
 | In-progress, no running agent >4h | Board Janitor crew (auto)            | Runs every 15min                                 |
@@ -447,9 +449,36 @@ LinearSyncService moves issue to "Done" + adds comment
 
 **Git workflow: Graphite-first.** Use `gt` over `gh` for all branch and PR operations.
 
+**Three-branch strategy** — All agent PRs target `dev`. Promotion flow: `feature/* → dev → staging → main`.
+
+- `dev` — Active development. All agent PRs land here. Default `prBaseBranch`.
+- `staging` — Integration / QA. Promoted from `dev` via PR. Auto-deploys to staging env.
+- `main` — Stable release. **Only PRs from `staging` are allowed** — enforced by `promotion-check` CI. Any PR from another branch fails the `source-branch` required check.
+
+When reviewing or creating PRs: feature branches target `dev`, not `main`. If you see a feature PR targeting `main`, rebase it to target `dev` instead.
+
+**Promotion commands:**
+
+```bash
+# dev → staging
+gh pr create --base staging --head dev --title "chore: promote dev to staging"
+
+# staging → main (use template — enforced by CI)
+gh pr create --base main --head staging --template .github/PULL_REQUEST_TEMPLATE/promote-to-main.md
+```
+
 **Beads** (`bd` CLI) — Your operational brain and primary work queue.
 
 **Worktree safety** — NEVER `cd` into worktree directories. Always use `git -C <worktree-path>` or absolute paths.
+
+**PR Ownership** — Every Automaker-created PR has a hidden watermark: `<!-- automaker:owner instance=X team=Y created=Z -->`. Before acting on any PR, call `mcp__plugin_automaker_automaker__check_pr_status` and check the `ownership` field:
+
+- `isOwnedByThisInstance: true` → act freely
+- `isOwnedByThisInstance: false`, `isStale: false` → **skip** — another live instance owns it
+- `isOwnedByThisInstance: false`, `isStale: true` → may reclaim (original owner inactive after 24h)
+- `instanceId: null` → not an Automaker PR — apply project policy
+
+Configure your identity in global settings: `instanceId` (auto-generated UUID if absent), `teamId`, `prOwnershipStaleTtlHours` (default 24). See `docs/dev/multi-instance-pr-coordination.md`.
 
 **Package rebuilds** — After ANY types or shared package PR merges, run `npm run build:packages`.
 

@@ -130,6 +130,46 @@ Key fields available on every feature:
 - `failureCount?, retryCount?` — failure tracking
 - `complexity?: 'small' | 'medium' | 'large' | 'architectural'`
 
+## Git Workflow — Three-Branch Strategy
+
+All agent PRs target **`dev`** by default. The promotion flow is:
+
+```
+feature/* ──▶ dev ──▶ staging ──▶ main
+```
+
+- **`dev`**: Active development. All agent-generated PRs land here.
+- **`staging`**: Integration / QA environment. Promoted from `dev` via PR. Auto-deploys.
+- **`main`**: Stable release only. PRs to `main` **must** come from `staging` — enforced by CI (`promotion-check`). Any PR to `main` from another branch will fail the `source-branch` required check.
+
+**Never open a PR directly from a feature branch to `main`.** If you need to create a PR manually, target `dev`:
+
+```bash
+gh pr create --base dev --head feature/your-branch --title "..." --body "..."
+```
+
+The `gitWorkflow.prBaseBranch` setting is `"dev"` — auto-mode and the git workflow service read this automatically.
+
 ## Dev Server
 
 NEVER start, stop, or restart the dev server. It's managed externally.
+
+## PR Ownership (Multi-Instance Coordination)
+
+When implementing features, every PR created by Automaker contains a hidden ownership watermark:
+
+```html
+<!-- automaker:owner instance=<instanceId> team=<teamId> created=<ISO8601> -->
+```
+
+This is appended automatically by `create-pr.ts` via `buildPROwnershipWatermark()`. You do not need to add it manually.
+
+**WorktreeRecoveryService** runs after every agent exit. If you leave uncommitted changes in the worktree, it will:
+1. Format changed files
+2. Stage (excluding `.automaker/`)
+3. Commit with `HUSKY=0`
+4. Push and create a PR
+
+If recovery fails, the feature is marked `blocked` with a `statusChangeReason`. The Lead Engineer will escalate rather than retry — retrying the agent won't resolve a git or network failure.
+
+**Implication**: Commit your work before exiting. The recovery service is a safety net, not a substitute for proper commits.

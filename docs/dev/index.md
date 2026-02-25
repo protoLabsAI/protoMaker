@@ -41,3 +41,4 @@ Extend protoLabs. Architecture, packages, code standards, and how to contribute.
 ## Multi-Instance
 
 - **[Hivemind Interfaces](./hivemind-interfaces)** — Service abstractions for multi-instance architecture
+- **[Multi-Instance PR Coordination](./multi-instance-pr-coordination)** — PR ownership watermarks, stale decay, and nudge rules

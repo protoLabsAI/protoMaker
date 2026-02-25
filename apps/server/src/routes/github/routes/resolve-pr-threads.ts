@@ -1,16 +1,18 @@
 /**
  * POST /resolve-pr-threads endpoint
- * Resolve CodeRabbit review threads for a PR with severity gate support
+ * Resolve all unresolved CodeRabbit review threads for a PR.
+ *
+ * Uses GitHub GraphQL `reviewThreads` to fetch PRRT_ thread node IDs, then
+ * calls the `resolveReviewThread` mutation for each unresolved thread. Supports
+ * an optional `minSeverity` gate to skip lower-severity threads.
  */
 
 import type { Request, Response } from 'express';
 import { createLogger } from '@protolabs-ai/utils';
 import type { EventEmitter } from '../../../lib/events.js';
-import type { GitHubComment } from '@protolabs-ai/types';
-import { codeRabbitParserService } from '../../../services/coderabbit-parser-service.js';
-import { FeatureLoader } from '../../../services/feature-loader.js';
 import { execAsync, execEnv, getErrorMessage, logError } from './common.js';
 import { checkGitHubRemote } from './check-github-remote.js';
+import { assertSafeShellInteger } from '@protolabs-ai/platform';
 
 const logger = createLogger('ResolvePRThreads');
 
@@ -26,13 +28,21 @@ const SEVERITY_LEVELS: Record<string, number> = {
   high: 3,
 };
 
-function meetsMinSeverity(commentSeverity: string | undefined, minSeverity: string): boolean {
-  const minLevel = SEVERITY_LEVELS[minSeverity] || 1;
-  const commentLevel = commentSeverity ? SEVERITY_LEVELS[commentSeverity] || 1 : 1;
-  return commentLevel >= minLevel;
+/** Parse a severity keyword from a CodeRabbit thread body. */
+function parseSeverityFromBody(body: string): 'low' | 'medium' | 'high' {
+  const lower = body.toLowerCase();
+  if (lower.includes('critical') || lower.includes('🔴')) return 'high';
+  if (lower.includes('major') || lower.includes('🟠')) return 'medium';
+  return 'low';
 }
 
-export function createResolvePRThreadsHandler(events: EventEmitter) {
+function meetsMinSeverity(threadBody: string, minSeverity: string): boolean {
+  const minLevel = SEVERITY_LEVELS[minSeverity] ?? 1;
+  const threadLevel = SEVERITY_LEVELS[parseSeverityFromBody(threadBody)] ?? 1;
+  return threadLevel >= minLevel;
+}
+
+export function createResolvePRThreadsHandler(_events: EventEmitter) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
       const { projectPath, prNumber, minSeverity = 'low' } = req.body as ResolvePRThreadsRequest;
@@ -49,139 +59,96 @@ export function createResolvePRThreadsHandler(events: EventEmitter) {
         return;
       }
 
-      // Check if this is a GitHub repo
+      // Validate prNumber is a safe integer before any shell interpolation
+      assertSafeShellInteger(prNumber, 'resolve-pr-threads');
+
       const remoteStatus = await checkGitHubRemote(projectPath);
       if (!remoteStatus.hasGitHubRemote || !remoteStatus.owner || !remoteStatus.repo) {
-        res.status(400).json({
-          success: false,
-          error: 'Project does not have a GitHub remote',
-        });
+        res.status(400).json({ success: false, error: 'Project does not have a GitHub remote' });
         return;
       }
+
+      const { owner, repo } = remoteStatus;
 
       logger.info(
-        `Resolving CodeRabbit threads for PR #${prNumber} (min severity: ${minSeverity})`
+        `Resolving review threads for PR #${prNumber} in ${owner}/${repo} (minSeverity: ${minSeverity})`
       );
 
-      // Step 1: Get PR info including branch name and URL
-      const repoQualifier = `${remoteStatus.owner}/${remoteStatus.repo}`;
-      const prInfoCmd = `gh pr view ${prNumber} -R ${repoQualifier} --json number,url,headRefName`;
-
-      const { stdout: prInfoOutput } = await execAsync(prInfoCmd, {
-        cwd: projectPath,
-        env: execEnv,
-      });
-
-      const prInfo = JSON.parse(prInfoOutput);
-      const branchName = prInfo.headRefName as string;
-      const prUrl = prInfo.url as string;
-
-      logger.debug(`PR #${prNumber} is for branch: ${branchName}`);
-
-      // Step 2: Find feature linked to this branch
-      const featureLoader = new FeatureLoader();
-      let feature = await featureLoader.findByBranchName(projectPath, branchName);
-
-      if (!feature) {
-        feature = await featureLoader.findByPRNumber(projectPath, prNumber);
-      }
-
-      if (!feature) {
-        res.status(404).json({
-          success: false,
-          error: `No feature found linked to branch ${branchName} or PR #${prNumber}`,
-        });
-        return;
-      }
-
-      const linkedFeatureId = feature.id;
-
-      // Step 3: Fetch PR comments using GraphQL (supports pagination)
-      const commentsCmd = `gh api graphql -f query='
-        query {
-          repository(owner: "${remoteStatus.owner}", name: "${remoteStatus.repo}") {
-            pullRequest(number: ${prNumber}) {
-              comments(first: 100) {
-                nodes {
-                  id
-                  author {
-                    login
+      // Step 1: Fetch review threads using reviewThreads (returns PRRT_ node IDs, not PRRC_)
+      const threadsQuery = `{
+        repository(owner: "${owner}", name: "${repo}") {
+          pullRequest(number: ${prNumber}) {
+            reviewThreads(first: 100) {
+              nodes {
+                id
+                isResolved
+                comments(first: 1) {
+                  nodes {
+                    author { login }
+                    body
                   }
-                  body
-                  createdAt
-                  updatedAt
                 }
               }
             }
           }
         }
-      '`;
+      }`.replace(/\n\s*/g, ' ');
 
-      const { stdout: commentsOutput } = await execAsync(commentsCmd, {
-        cwd: projectPath,
-        env: execEnv,
+      const { stdout: threadsOutput } = await execAsync(
+        `gh api graphql -f query='${threadsQuery}'`,
+        { cwd: projectPath, env: execEnv }
+      );
+
+      const threadsData = JSON.parse(threadsOutput);
+      const allThreads: Array<{
+        id: string;
+        isResolved: boolean;
+        comments: { nodes: Array<{ author: { login: string }; body: string }> };
+      }> = threadsData.data?.repository?.pullRequest?.reviewThreads?.nodes ?? [];
+
+      logger.debug(`Fetched ${allThreads.length} review threads for PR #${prNumber}`);
+
+      // Step 2: Filter to unresolved threads that meet severity gate
+      const unresolvedThreads = allThreads.filter((t) => {
+        if (t.isResolved) return false;
+        if (minSeverity === 'low') return true; // resolve all when no gate
+        const firstBody = t.comments.nodes[0]?.body ?? '';
+        return meetsMinSeverity(firstBody, minSeverity);
       });
 
-      const commentsData = JSON.parse(commentsOutput);
-      const comments: GitHubComment[] =
-        commentsData.data?.repository?.pullRequest?.comments?.nodes?.map(
-          (node: {
-            id: string;
-            author: { login: string };
-            body: string;
-            createdAt: string;
-            updatedAt: string;
-          }) => ({
-            id: node.id,
-            author: { login: node.author.login },
-            body: node.body,
-            createdAt: node.createdAt,
-            updatedAt: node.updatedAt,
-          })
-        ) || [];
+      const skippedCount =
+        allThreads.filter((t) => !t.isResolved).length - unresolvedThreads.length;
 
-      logger.debug(`Fetched ${comments.length} comments for PR #${prNumber}`);
+      logger.info(
+        `${unresolvedThreads.length} threads to resolve, ${skippedCount} skipped by severity gate`
+      );
 
-      // Step 4: Parse CodeRabbit comments
-      const parseResult = codeRabbitParserService.parseReview(prNumber, prUrl, comments);
+      // Step 3: Resolve each thread via GraphQL mutation
+      let resolvedCount = 0;
+      const errors: string[] = [];
 
-      if (!parseResult.success || !parseResult.review) {
-        res.json({
-          success: false,
-          error: parseResult.error || 'Failed to parse CodeRabbit review',
-        });
-        return;
+      for (const thread of unresolvedThreads) {
+        try {
+          const mutation = `mutation { resolveReviewThread(input: { threadId: "${thread.id}" }) { thread { id isResolved } } }`;
+          await execAsync(`gh api graphql -f query='${mutation}'`, {
+            cwd: projectPath,
+            env: execEnv,
+          });
+          resolvedCount++;
+          logger.debug(`Resolved thread ${thread.id}`);
+        } catch (err) {
+          const msg = getErrorMessage(err);
+          logger.warn(`Failed to resolve thread ${thread.id}: ${msg}`);
+          errors.push(`${thread.id}: ${msg}`);
+        }
       }
-
-      logger.info(
-        `Found ${parseResult.review.comments.length} CodeRabbit comments in PR #${prNumber}`
-      );
-
-      // Step 5: Filter comments by severity gate
-      const eligibleComments = parseResult.review.comments.filter((comment) => {
-        const severity = comment.severity || 'low';
-        return meetsMinSeverity(severity, minSeverity);
-      });
-
-      const skippedCount = parseResult.review.comments.length - eligibleComments.length;
-
-      logger.info(
-        `${eligibleComments.length} comments meet severity threshold, ${skippedCount} skipped`
-      );
-
-      // Step 6: Emit event for frontend/webhooks
-      events.emit('coderabbit:feedback-processed', {
-        featureId: linkedFeatureId,
-        prNumber,
-        commentCount: eligibleComments.length,
-        skippedCount,
-      });
 
       res.json({
         success: true,
-        featureId: linkedFeatureId,
-        resolvedCount: eligibleComments.length,
+        resolvedCount,
         skippedCount,
+        totalUnresolved: allThreads.filter((t) => !t.isResolved).length,
+        ...(errors.length > 0 && { errors }),
       });
     } catch (error) {
       logError(error, 'Resolve PR threads failed');

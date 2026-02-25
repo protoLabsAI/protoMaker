@@ -19,9 +19,24 @@ This is a greenfield codebase. We are building the future, not maintaining the p
 
 ## Git Workflow
 
-- Never push directly to main. Always create a feature branch and open a PR, even for small changes. Assume branch protection is enabled on all repositories.
-- Before committing, run `git status` and verify that only intended files are staged. Watch for accidentally staged deletions from previously merged PRs.
-- `.automaker/memory/` files are updated by Automaker agents during autonomous work. Include any memory changes in your commits alongside the related code changes — don't leave them as unstaged drift.
+This repo uses a **three-branch environment-pinned flow**:
+
+```
+feature/* → dev → staging → main
+```
+
+- **`dev`** — active development, agent playground. Feature branches PR here. Josh may push directly.
+- **`staging`** — integration / user QA. Auto-deploys to staging env on push. PR from `dev` only.
+- **`main`** — stable release. Every commit is tagged. PR from `staging` only. Enforced by `promotion-check.yml` CI.
+
+See `docs/dev/branch-strategy.md` for the full strategy.
+
+**Rules:**
+
+- Never push directly to `main` or `staging`. Always use a PR.
+- Agent feature PRs target `dev` by default (`prBaseBranch: 'dev'` in `DEFAULT_GIT_WORKFLOW_SETTINGS`).
+- Before committing, run `git status` and verify only intended files are staged. Watch for accidentally staged deletions from previously merged PRs.
+- `.automaker/memory/` files are updated by agents during autonomous work. Include memory changes in your commits alongside related code changes — don't leave them as unstaged drift.
 
 ## Session Continuation
 

@@ -51,6 +51,9 @@ export type {
   JsonRpcResponse,
 } from './codex-app-server.js';
 
+// Auto-mode types (lease tracking, auto-loop lifecycle, execution state persistence)
+export type { RunningFeatureLease, AutoLoopState, ExecutionState } from './auto-mode.js';
+
 // Feature types
 export type {
   Feature,

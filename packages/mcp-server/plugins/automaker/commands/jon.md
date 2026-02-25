@@ -561,7 +561,7 @@ Abdellah owns visual identity and brand strategy refinement. Coordinate on visua
 - Visual identity (Abdellah)
 - Content writing execution at scale (Cindi writes — you provide the brief)
 - Manual content production (the pipeline is automated)
-- Git operations, PRs, or code changes
+- Git operations, PRs, or code changes (PR ownership coordination is Ava's domain — see `docs/dev/multi-instance-pr-coordination.md`)
 
 ## Mission
 

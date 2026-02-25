@@ -1,172 +1,60 @@
 /**
- * Linear Sync Service
+ * Linear Sync Service — Orchestrator
  *
- * Foundation service for syncing features to Linear.
- * Provides guard mechanisms for loop prevention and debouncing.
- *
- * This service handles:
- * - Event subscriptions for feature lifecycle events
- * - Loop prevention using a Set to track features currently being synced
- * - Debouncing logic to prevent multiple syncs within a short time window
- * - Sync metadata storage for tracking sync state
- * - Helper methods for checking sync eligibility
+ * Thin coordinator that:
+ *  1. Manages guard state (loop prevention, debouncing, metrics, activity log)
+ *  2. Wires sub-services via a shared SyncGuards callback object
+ *  3. Subscribes to feature/project lifecycle events and routes them
+ *  4. Delegates all sync business logic to focused modules:
+ *     - LinearIssueSync      — feature → Linear issue (create / update / merge)
+ *     - LinearProjectSync    — project scaffolding, milestone sync, status sync
+ *     - LinearWebhookHandler — inbound Linear → Automaker (status/title/deps)
+ *     - LinearCommentService — comment routing, PRD workflows
  */
 
 import { createLogger } from '@protolabs-ai/utils';
-import type { Feature, Project } from '@protolabs-ai/types';
 import type { EventEmitter } from '../lib/events.js';
 import type { SettingsService } from './settings-service.js';
 import type { FeatureLoader } from './feature-loader.js';
-import { LinearMCPClient } from './linear-mcp-client.js';
 import type { ProjectService } from './project-service.js';
+import { LinearIssueSync } from './linear-issue-sync.js';
+import { LinearProjectSync } from './linear-project-sync.js';
+import { LinearWebhookHandler } from './linear-webhook-handler.js';
+import { LinearCommentService } from './linear-comment-service.js';
+import {
+  mapAutomakerStatusToLinear as _mapAutomakerStatusToLinear,
+  mapLinearStateToAutomaker as _mapLinearStateToAutomaker,
+} from './linear-state-mapper.js';
+import {
+  DEBOUNCE_WINDOW_MS,
+  type SyncMetrics,
+  type SyncActivity,
+  type SyncMetadata,
+  type SyncGuards,
+  type FeatureEventPayload,
+  type ProjectScaffoldedPayload,
+  type ProjectStatusChangedPayload,
+  type CommentCreatedPayload,
+} from './linear-sync-types.js';
+
+// Re-export types consumed by route files and other services
+export type { SyncMetrics, SyncActivity, SyncMetadata };
 
 const logger = createLogger('LinearSyncService');
 
-/**
- * Aggregated sync metrics
- */
-export interface SyncMetrics {
-  totalOperations: number;
-  successfulOperations: number;
-  failedOperations: number;
-  conflictsDetected: number;
-  pushCount: number;
-  pullCount: number;
-  avgDurationMs: number;
-  lastOperationAt: string | null;
-}
-
-/**
- * A single sync activity entry for the activity log
- */
-export interface SyncActivity {
-  timestamp: string;
-  featureId: string;
-  direction: 'push' | 'pull';
-  status: 'success' | 'error';
-  durationMs: number;
-  conflictDetected: boolean;
-  error?: string;
-}
-
-/**
- * Metadata stored for each synced feature
- */
-export interface SyncMetadata {
-  featureId: string;
-  lastSyncTimestamp: number;
-  lastSyncStatus: 'success' | 'error' | 'pending';
-  linearIssueId?: string;
-  errorMessage?: string;
-  syncCount: number;
-  syncSource?: 'automaker' | 'linear';
-  syncDirection?: 'push' | 'pull';
-  lastLinearState?: string;
-  lastSyncedAt?: number;
-  conflictDetected?: boolean;
-}
-
-/**
- * Feature event payload structure
- */
-interface FeatureEventPayload {
-  featureId: string;
-  featureName?: string;
-  projectPath: string;
-  status?: string;
-  prUrl?: string;
-  prNumber?: number;
-  mergeCommitSha?: string;
-  mergedBy?: string;
-  error?: string;
-}
-
-/**
- * Project scaffolded event payload structure
- */
-interface ProjectScaffoldedPayload {
-  projectPath: string;
-  projectSlug: string;
-  projectTitle: string;
-  milestoneCount: number;
-  featuresCreated: number;
-}
-
-/**
- * Project status changed event payload structure
- */
-interface ProjectStatusChangedPayload {
-  projectPath: string;
-  projectSlug: string;
-  status: string;
-  previousStatus?: string;
-}
-
-/**
- * Comment created event payload structure
- */
-interface CommentCreatedPayload {
-  commentId: string;
-  issueId?: string;
-  body: string;
-  user?: {
-    id: string;
-    name: string;
-    email?: string;
-  };
-  createdAt: string;
-}
-
-/**
- * Debounce time window in milliseconds (5 seconds)
- */
-const DEBOUNCE_WINDOW_MS = 5000;
-
-/**
- * Conflict detection window in milliseconds (10 seconds)
- * If syncs from both sources occur within this window, flag as conflict
- */
-const CONFLICT_DETECTION_WINDOW_MS = 10000;
-
-/**
- * LinearSyncService - Manages syncing features to Linear
- *
- * This service provides the foundational infrastructure for Linear sync:
- * - Guard mechanisms to prevent sync loops
- * - Debouncing to prevent duplicate syncs
- * - Metadata tracking for sync state
- * - Event subscriptions for feature lifecycle
- */
 export class LinearSyncService {
+  // ---- injected dependencies ----
   private emitter: EventEmitter | null = null;
   private settingsService: SettingsService | null = null;
-  private featureLoader: FeatureLoader | null = null;
-  private projectService: ProjectService | null = null;
   private unsubscribe: (() => void) | null = null;
 
-  /**
-   * Set of feature IDs currently being synced (loop prevention)
-   */
+  // ---- guard state ----
   private syncingFeatures: Set<string> = new Set();
-
-  /**
-   * Map of feature IDs to last sync timestamps (debouncing)
-   */
   private lastSyncTimes: Map<string, number> = new Map();
-
-  /**
-   * Map of feature IDs to sync metadata (state tracking)
-   */
   private syncState: Map<string, SyncMetadata> = new Map();
-
-  /**
-   * Flag to track if service is running
-   */
   private running = false;
 
-  /**
-   * Metrics counters
-   */
+  // ---- metrics ----
   private metrics: SyncMetrics = {
     totalOperations: 0,
     successfulOperations: 0,
@@ -177,16 +65,19 @@ export class LinearSyncService {
     avgDurationMs: 0,
     lastOperationAt: null,
   };
-
-  /**
-   * Circular buffer for recent activity (last 100 operations)
-   */
   private activityLog: SyncActivity[] = [];
   private readonly MAX_ACTIVITY_LOG_SIZE = 100;
 
-  /**
-   * Initialize the service with event emitter, settings service, feature loader, and project service
-   */
+  // ---- sub-services ----
+  private readonly issueSync = new LinearIssueSync();
+  private readonly projectSync = new LinearProjectSync();
+  private readonly webhookHandler = new LinearWebhookHandler();
+  private readonly commentService = new LinearCommentService();
+
+  // -------------------------------------------------------------------------
+  // Lifecycle
+  // -------------------------------------------------------------------------
+
   initialize(
     emitter: EventEmitter,
     settingsService: SettingsService,
@@ -195,72 +86,46 @@ export class LinearSyncService {
   ): void {
     this.emitter = emitter;
     this.settingsService = settingsService;
-    this.featureLoader = featureLoader;
-    this.projectService = projectService ?? null;
 
-    // Subscribe to feature and project lifecycle events
+    const guards = this.buildGuards();
+
+    this.issueSync.initialize(settingsService, featureLoader, guards, projectService);
+    this.projectSync.initialize(settingsService, featureLoader, guards, projectService);
+    this.webhookHandler.initialize(settingsService, featureLoader, guards);
+    this.commentService.initialize(settingsService, featureLoader, guards);
+
     this.unsubscribe = emitter.subscribe((type, payload) => {
-      if (type === 'feature:created') {
-        this.handleFeatureCreated(payload as FeatureEventPayload);
-      } else if (type === 'feature:status-changed') {
-        this.handleFeatureStatusChanged(payload as FeatureEventPayload);
-      } else if (type === 'feature:pr-merged') {
-        this.handleFeaturePRMerged(payload as FeatureEventPayload);
-      } else if (type === 'project:scaffolded') {
-        this.handleProjectScaffolded(payload as ProjectScaffoldedPayload);
-      } else if (type === 'project:status-changed') {
-        this.handleProjectStatusChanged(payload as ProjectStatusChangedPayload);
-      } else if (type === 'linear:comment:created') {
-        this.handleCommentCreated(payload as CommentCreatedPayload);
-      } else if (type === 'authority:pm-prd-ready') {
-        this.handlePrdReady(payload as { projectPath?: string; featureId?: string; prd?: string });
-      }
+      void this.route(type, payload);
     });
 
-    logger.info('LinearSyncService initialized with event subscriptions');
+    logger.info('LinearSyncService initialized');
   }
 
-  /**
-   * Start the sync service
-   */
   start(): void {
     if (this.running) {
       logger.warn('LinearSyncService is already running');
       return;
     }
-
     this.running = true;
     logger.info('LinearSyncService started');
   }
 
-  /**
-   * Stop the sync service
-   */
   stop(): void {
     if (!this.running) {
       logger.warn('LinearSyncService is not running');
       return;
     }
-
     this.running = false;
-
-    // Clear any in-progress syncs
     this.syncingFeatures.clear();
-
     logger.info('LinearSyncService stopped');
   }
 
-  /**
-   * Cleanup subscriptions and state
-   */
   destroy(): void {
     this.stop();
-
     if (this.unsubscribe) {
       this.unsubscribe();
       this.unsubscribe = null;
     }
-
     this.emitter = null;
     this.settingsService = null;
     this.lastSyncTimes.clear();
@@ -276,35 +141,156 @@ export class LinearSyncService {
       avgDurationMs: 0,
       lastOperationAt: null,
     };
-
     logger.info('LinearSyncService destroyed');
   }
 
-  /**
-   * Check if the sync service is currently running
-   */
   isRunning(): boolean {
     return this.running;
   }
 
-  /**
-   * Get aggregated sync metrics
-   */
+  // -------------------------------------------------------------------------
+  // Event routing
+  // -------------------------------------------------------------------------
+
+  private async route(type: string, payload: unknown): Promise<void> {
+    if (!this.running) return;
+    if (type === 'feature:created') {
+      await this.issueSync.onFeatureCreated(payload as FeatureEventPayload);
+    } else if (type === 'feature:status-changed') {
+      await this.issueSync.onFeatureStatusChanged(payload as FeatureEventPayload);
+    } else if (type === 'feature:pr-merged') {
+      await this.issueSync.onPRMerged(payload as FeatureEventPayload);
+    } else if (type === 'project:scaffolded') {
+      await this.projectSync.handleProjectScaffolded(payload as ProjectScaffoldedPayload);
+    } else if (type === 'project:status-changed') {
+      await this.projectSync.handleProjectStatusChanged(payload as ProjectStatusChangedPayload);
+    } else if (type === 'linear:comment:created') {
+      await this.commentService.handleCommentCreated(payload as CommentCreatedPayload);
+    } else if (type === 'authority:pm-prd-ready') {
+      this.commentService.handlePrdReady(
+        payload as { projectPath?: string; featureId?: string; prd?: string }
+      );
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Guard methods (shared with sub-services via SyncGuards)
+  // -------------------------------------------------------------------------
+
+  shouldSync(featureId: string): boolean {
+    if (!this.running) {
+      logger.debug(`Sync skipped for ${featureId}: service not running`);
+      return false;
+    }
+    if (this.syncingFeatures.has(featureId)) {
+      logger.debug(`Sync skipped for ${featureId}: already syncing`);
+      return false;
+    }
+    const lastSync = this.lastSyncTimes.get(featureId);
+    if (lastSync && Date.now() - lastSync < DEBOUNCE_WINDOW_MS) {
+      logger.debug(`Sync skipped for ${featureId}: debounce window active`);
+      return false;
+    }
+    return true;
+  }
+
+  protected markSyncing(featureId: string): void {
+    this.syncingFeatures.add(featureId);
+    this.lastSyncTimes.set(featureId, Date.now());
+  }
+
+  protected unmarkSyncing(featureId: string): void {
+    this.syncingFeatures.delete(featureId);
+  }
+
+  protected mapAutomakerStatusToLinear(status: string): string {
+    return _mapAutomakerStatusToLinear(status);
+  }
+
+  protected mapLinearStateToAutomaker(stateName: string): string {
+    return _mapLinearStateToAutomaker(stateName);
+  }
+
+  protected async getWorkflowStateId(
+    projectPath: string,
+    teamId: string,
+    stateName: string
+  ): Promise<string> {
+    return this.issueSync.getWorkflowStateId(projectPath, teamId, stateName);
+  }
+
+  protected async addCommentToIssue(
+    projectPath: string,
+    issueId: string,
+    commentBody: string
+  ): Promise<void> {
+    return this.issueSync.addCommentToIssue(projectPath, issueId, commentBody);
+  }
+
+  async isProjectSyncEnabled(projectPath: string): Promise<boolean> {
+    if (!this.settingsService) return false;
+    try {
+      const settings = await this.settingsService.getProjectSettings(projectPath);
+      const linear = settings?.integrations?.linear;
+      if (!linear?.enabled) return false;
+      const hasToken = !!(
+        linear.agentToken ||
+        linear.apiKey ||
+        process.env.LINEAR_API_KEY ||
+        process.env.LINEAR_API_TOKEN
+      );
+      if (!hasToken) {
+        logger.warn(`Linear sync enabled for ${projectPath} but no API token configured.`);
+        return false;
+      }
+      return (
+        linear.syncOnFeatureCreate !== false ||
+        linear.syncOnStatusChange !== false ||
+        linear.commentOnCompletion !== false
+      );
+    } catch (error) {
+      logger.error(`Failed to check Linear sync settings for ${projectPath}:`, error);
+      return false;
+    }
+  }
+
+  getSyncMetadata(featureId: string): SyncMetadata | undefined {
+    return this.syncState.get(featureId);
+  }
+
+  updateSyncMetadata(metadata: SyncMetadata): void {
+    this.syncState.set(metadata.featureId, metadata);
+  }
+
+  getConflicts(): SyncMetadata[] {
+    return [...this.syncState.values()].filter((m) => m.conflictDetected).map((m) => ({ ...m }));
+  }
+
+  resolveConflict(
+    featureId: string,
+    strategy: 'accept-linear' | 'accept-automaker' | 'manual'
+  ): boolean {
+    const metadata = this.syncState.get(featureId);
+    if (!metadata?.conflictDetected) return false;
+    metadata.conflictDetected = false;
+    metadata.lastSyncStatus = 'success';
+    this.syncState.set(featureId, metadata);
+    logger.info(`Conflict resolved for feature ${featureId} using strategy: ${strategy}`);
+    return true;
+  }
+
+  // -------------------------------------------------------------------------
+  // Metrics
+  // -------------------------------------------------------------------------
+
   getMetrics(): SyncMetrics {
     return { ...this.metrics };
   }
 
-  /**
-   * Get recent sync activity entries
-   * @param limit Maximum entries to return (default: 20)
-   */
   getRecentActivity(limit = 20): SyncActivity[] {
     return this.activityLog.slice(-limit);
   }
 
-  /**
-   * Record a sync operation result for metrics tracking
-   */
   private recordOperation(
     featureId: string,
     direction: 'push' | 'pull',
@@ -313,31 +299,20 @@ export class LinearSyncService {
     conflictDetected: boolean,
     error?: string
   ): void {
-    // Update counters
     this.metrics.totalOperations++;
-    if (status === 'success') {
-      this.metrics.successfulOperations++;
-    } else {
-      this.metrics.failedOperations++;
-    }
-    if (conflictDetected) {
-      this.metrics.conflictsDetected++;
-    }
-    if (direction === 'push') {
-      this.metrics.pushCount++;
-    } else {
-      this.metrics.pullCount++;
-    }
+    if (status === 'success') this.metrics.successfulOperations++;
+    else this.metrics.failedOperations++;
+    if (conflictDetected) this.metrics.conflictsDetected++;
+    if (direction === 'push') this.metrics.pushCount++;
+    else this.metrics.pullCount++;
     this.metrics.lastOperationAt = new Date().toISOString();
 
-    // Update rolling average duration (only for successful ops)
     if (status === 'success' && this.metrics.successfulOperations > 0) {
       const prevTotal = this.metrics.avgDurationMs * (this.metrics.successfulOperations - 1);
       this.metrics.avgDurationMs = (prevTotal + durationMs) / this.metrics.successfulOperations;
     }
 
-    // Add to activity log (circular buffer)
-    const activity: SyncActivity = {
+    this.activityLog.push({
       timestamp: new Date().toISOString(),
       featureId,
       direction,
@@ -345,2839 +320,61 @@ export class LinearSyncService {
       durationMs,
       conflictDetected,
       ...(error && { error }),
-    };
-    this.activityLog.push(activity);
-    if (this.activityLog.length > this.MAX_ACTIVITY_LOG_SIZE) {
-      this.activityLog.shift();
-    }
-  }
-
-  /**
-   * Check if Linear sync is enabled for a project.
-   *
-   * Sync is enabled when:
-   * 1. Settings have `integrations.linear.enabled: true` AND a token source exists
-   *    (agentToken, apiKey, or LINEAR_API_KEY env var)
-   * 2. At least one sync option is not explicitly disabled
-   */
-  async isProjectSyncEnabled(projectPath: string): Promise<boolean> {
-    if (!this.settingsService) {
-      logger.warn('Settings service not available');
-      return false;
-    }
-
-    try {
-      const settings = await this.settingsService.getProjectSettings(projectPath);
-      const linearConfig = settings.integrations?.linear;
-
-      if (!linearConfig?.enabled) {
-        return false;
-      }
-
-      // Check for any available token source
-      const hasToken = !!(
-        linearConfig.agentToken ||
-        linearConfig.apiKey ||
-        process.env.LINEAR_API_KEY ||
-        process.env.LINEAR_API_TOKEN
-      );
-
-      if (!hasToken) {
-        logger.warn(
-          `Linear sync enabled for ${projectPath} but no API token configured. ` +
-            'Set agentToken (OAuth), apiKey (settings), or LINEAR_API_KEY/LINEAR_API_TOKEN (env var).'
-        );
-        return false;
-      }
-
-      // At least one sync option should be enabled (default is true if not explicitly set)
-      const hasSyncEnabled =
-        linearConfig.syncOnFeatureCreate !== false ||
-        linearConfig.syncOnStatusChange !== false ||
-        linearConfig.commentOnCompletion !== false;
-
-      return hasSyncEnabled;
-    } catch (error) {
-      logger.error(`Failed to check Linear sync settings for ${projectPath}:`, error);
-      return false;
-    }
-  }
-
-  /**
-   * Resolve a Linear API token from project settings or environment.
-   *
-   * Priority: OAuth agentToken > settings apiKey > LINEAR_API_KEY env > LINEAR_API_TOKEN env
-   *
-   * @throws Error if no token source is available
-   */
-  private async resolveLinearToken(projectPath: string): Promise<string> {
-    if (!this.settingsService) {
-      throw new Error('SettingsService not initialized');
-    }
-
-    const settings = await this.settingsService.getProjectSettings(projectPath);
-    const linearConfig = settings.integrations?.linear;
-
-    // Priority 1: OAuth agent token
-    if (linearConfig?.agentToken) {
-      return linearConfig.agentToken;
-    }
-
-    // Priority 2: Personal API key from settings
-    if (linearConfig?.apiKey) {
-      return linearConfig.apiKey;
-    }
-
-    // Priority 3: Environment variable fallback
-    const envToken = process.env.LINEAR_API_KEY || process.env.LINEAR_API_TOKEN;
-    if (envToken) {
-      return envToken;
-    }
-
-    throw new Error(
-      'No Linear API token configured. Set agentToken (OAuth), apiKey (settings), or LINEAR_API_KEY/LINEAR_API_TOKEN (env var).'
-    );
-  }
-
-  /**
-   * Format the Authorization header value for a Linear API token.
-   * API keys (lin_api_*) must be sent raw; OAuth tokens use Bearer prefix.
-   */
-  private formatLinearAuth(token: string): string {
-    return token.startsWith('lin_api_') ? token : `Bearer ${token}`;
-  }
-
-  /**
-   * Get sync metadata for a feature
-   */
-  getSyncMetadata(featureId: string): SyncMetadata | undefined {
-    return this.syncState.get(featureId);
-  }
-
-  /**
-   * Update sync metadata for a feature
-   */
-  updateSyncMetadata(metadata: SyncMetadata): void {
-    this.syncState.set(metadata.featureId, metadata);
-    logger.debug(`Updated sync metadata for feature ${metadata.featureId}`, {
-      status: metadata.lastSyncStatus,
-      syncCount: metadata.syncCount,
     });
+    if (this.activityLog.length > this.MAX_ACTIVITY_LOG_SIZE) this.activityLog.shift();
   }
 
-  /**
-   * Get all features with detected conflicts
-   */
-  getConflicts(): SyncMetadata[] {
-    const conflicts: SyncMetadata[] = [];
-    for (const metadata of this.syncState.values()) {
-      if (metadata.conflictDetected) {
-        conflicts.push({ ...metadata });
-      }
-    }
-    return conflicts;
-  }
+  // -------------------------------------------------------------------------
+  // Public delegation to sub-services
+  // -------------------------------------------------------------------------
 
-  /**
-   * Resolve a conflict for a feature
-   *
-   * @param featureId - The feature with the conflict
-   * @param strategy - Resolution strategy: 'accept-linear' keeps Linear state,
-   *   'accept-automaker' keeps Automaker state, 'manual' just clears the flag
-   * @returns true if conflict was found and resolved
-   */
-  resolveConflict(
-    featureId: string,
-    strategy: 'accept-linear' | 'accept-automaker' | 'manual'
-  ): boolean {
-    const metadata = this.syncState.get(featureId);
-    if (!metadata || !metadata.conflictDetected) {
-      return false;
-    }
-
-    metadata.conflictDetected = false;
-    metadata.lastSyncStatus = 'success';
-    this.syncState.set(featureId, metadata);
-
-    logger.info(`Conflict resolved for feature ${featureId} using strategy: ${strategy}`);
-    return true;
-  }
-
-  /**
-   * Check if a feature should be synced (passes all guard checks)
-   *
-   * Guards:
-   * 1. Service must be running
-   * 2. Feature must not be currently syncing (loop prevention)
-   * 3. Sufficient time must have passed since last sync (debouncing)
-   */
-  shouldSync(featureId: string): boolean {
-    // Guard 1: Service must be running
-    if (!this.running) {
-      logger.debug(`Sync skipped for ${featureId}: service not running`);
-      return false;
-    }
-
-    // Guard 2: Feature must not be currently syncing (loop prevention)
-    if (this.syncingFeatures.has(featureId)) {
-      logger.debug(`Sync skipped for ${featureId}: already syncing (loop prevention)`);
-      return false;
-    }
-
-    // Guard 3: Debouncing - check if enough time has passed since last sync
-    const lastSyncTime = this.lastSyncTimes.get(featureId);
-    if (lastSyncTime) {
-      const timeSinceLastSync = Date.now() - lastSyncTime;
-      if (timeSinceLastSync < DEBOUNCE_WINDOW_MS) {
-        logger.debug(
-          `Sync skipped for ${featureId}: debounce window active (${timeSinceLastSync}ms < ${DEBOUNCE_WINDOW_MS}ms)`
-        );
-        return false;
-      }
-    }
-
-    return true;
-  }
-
-  /**
-   * Handle feature:created events
-   */
-  private async handleFeatureCreated(payload: FeatureEventPayload): Promise<void> {
-    logger.debug('Received feature:created event', {
-      featureId: payload.featureId,
-      featureName: payload.featureName,
-    });
-
-    // Call the async implementation
-    await this.onFeatureCreated(payload);
-  }
-
-  /**
-   * Create Linear issue when a feature is created
-   */
-  private async onFeatureCreated(payload: FeatureEventPayload): Promise<void> {
-    const { featureId, projectPath } = payload;
-
-    // Guard: Check if service is running and sync is enabled
-    if (!this.shouldSync(featureId)) {
-      return;
-    }
-
-    // Check if sync is enabled for this project
-    const syncEnabled = await this.isProjectSyncEnabled(projectPath);
-    if (!syncEnabled) {
-      logger.debug(`Linear sync not enabled for project ${projectPath}`);
-      return;
-    }
-
-    if (!this.featureLoader) {
-      logger.error('FeatureLoader not initialized');
-      return;
-    }
-
-    const startTime = Date.now();
-
-    try {
-      // Get the feature details
-      const feature = await this.featureLoader.get(projectPath, featureId);
-      if (!feature) {
-        logger.error(`Feature ${featureId} not found`);
-        return;
-      }
-
-      // Skip if already synced to Linear
-      if (feature.linearIssueId) {
-        logger.info(`Feature ${featureId} already has Linear issue ${feature.linearIssueId}`);
-        return;
-      }
-
-      // Mark as syncing to prevent duplicates (after validation checks)
-      this.markSyncing(featureId);
-
-      // Create Linear issue
-      const issueResult = await this.createLinearIssue(projectPath, feature);
-
-      // Update feature with Linear issue info
-      await this.featureLoader.update(projectPath, featureId, {
-        linearIssueId: issueResult.issueId,
-        linearIssueUrl: issueResult.issueUrl,
-      });
-
-      // Sync dependencies as issue relations
-      await this.syncDependencies(projectPath, feature, issueResult.issueId);
-
-      // Update sync metadata
-      const metadata: SyncMetadata = {
-        featureId,
-        lastSyncTimestamp: Date.now(),
-        lastSyncStatus: 'success',
-        linearIssueId: issueResult.issueId,
-        syncCount: 1,
-        syncSource: 'automaker',
-        syncDirection: 'push',
-      };
-      this.updateSyncMetadata(metadata);
-
-      // Record metrics
-      this.recordOperation(featureId, 'push', 'success', Date.now() - startTime, false);
-
-      // Emit completion event
-      if (this.emitter) {
-        this.emitter.emit('linear:sync:completed', {
-          featureId,
-          direction: 'push',
-          conflictDetected: false,
-          timestamp: new Date().toISOString(),
-        });
-      }
-
-      logger.info(
-        `Successfully synced feature ${featureId} to Linear issue ${issueResult.issueId}`
-      );
-    } catch (error) {
-      logger.error(`Failed to sync feature ${featureId} to Linear:`, error);
-
-      // Record metrics
-      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      this.recordOperation(featureId, 'push', 'error', Date.now() - startTime, false, errorMsg);
-
-      // Update sync metadata with error
-      const metadata: SyncMetadata = {
-        featureId,
-        lastSyncTimestamp: Date.now(),
-        lastSyncStatus: 'error',
-        errorMessage: errorMsg,
-        syncCount: 0,
-      };
-      this.updateSyncMetadata(metadata);
-
-      // Emit error event
-      if (this.emitter) {
-        this.emitter.emit('linear:sync:error', {
-          featureId,
-          direction: 'push',
-          error: errorMsg,
-          timestamp: new Date().toISOString(),
-        });
-      }
-    } finally {
-      // Unmark syncing
-      this.unmarkSyncing(featureId);
-    }
-  }
-
-  /**
-   * Format issue description with enhanced formatting for Linear
-   * Includes SPARC PRD sections, antagonistic review verdicts, milestone context,
-   * acceptance criteria, and estimated cost
-   */
-  private async formatIssueDescription(projectPath: string, feature: Feature): Promise<string> {
-    const sections: string[] = [];
-
-    // Basic description
-    sections.push(feature.description || 'No description provided');
-
-    // Add PRD metadata if available (SPARC sections)
-    if (feature.prdMetadata) {
-      sections.push('\n---\n## 📋 PRD Context');
-
-      // Get the project to access SPARC PRD
-      if (this.projectService && feature.projectSlug) {
-        try {
-          const project = await this.projectService.getProject(projectPath, feature.projectSlug);
-          if (project?.prd) {
-            const { prd } = project;
-
-            // Format SPARC sections
-            sections.push('\n### Situation');
-            sections.push(prd.situation || 'N/A');
-
-            sections.push('\n### Problem');
-            sections.push(prd.problem || 'N/A');
-
-            sections.push('\n### Approach');
-            sections.push(prd.approach || 'N/A');
-
-            sections.push('\n### Results');
-            sections.push(prd.results || 'N/A');
-
-            sections.push('\n### Constraints');
-            sections.push(prd.constraints || 'N/A');
-          }
-        } catch (error) {
-          logger.debug(
-            `Could not fetch project PRD: ${error instanceof Error ? error.message : 'Unknown error'}`
-          );
-        }
-      }
-    }
-
-    // Add milestone context if available
-    if (feature.milestoneSlug && this.projectService && feature.projectSlug) {
-      try {
-        const project = await this.projectService.getProject(projectPath, feature.projectSlug);
-        const milestone = project?.milestones?.find((m) => m.slug === feature.milestoneSlug);
-        if (milestone) {
-          sections.push('\n---\n## 🎯 Milestone Context');
-          sections.push(`**Milestone:** ${milestone.title}`);
-          sections.push(`**Description:** ${milestone.description}`);
-          sections.push(`**Status:** ${milestone.status}`);
-
-          if (milestone.dependencies && milestone.dependencies.length > 0) {
-            sections.push(`**Dependencies:** ${milestone.dependencies.join(', ')}`);
-          }
-        }
-      } catch (error) {
-        logger.debug(
-          `Could not fetch milestone context: ${error instanceof Error ? error.message : 'Unknown error'}`
-        );
-      }
-    }
-
-    // Add acceptance criteria as checklist if available
-    if (this.projectService && feature.projectSlug && feature.milestoneSlug) {
-      try {
-        const project = await this.projectService.getProject(projectPath, feature.projectSlug);
-        const milestone = project?.milestones?.find((m) => m.slug === feature.milestoneSlug);
-        const phase = milestone?.phases?.find((p) => p.featureId === feature.id);
-
-        if (phase?.acceptanceCriteria && phase.acceptanceCriteria.length > 0) {
-          sections.push('\n---\n## ✅ Acceptance Criteria');
-          phase.acceptanceCriteria.forEach((criterion) => {
-            sections.push(`- [ ] ${criterion}`);
-          });
-        }
-      } catch (error) {
-        logger.debug(
-          `Could not fetch acceptance criteria: ${error instanceof Error ? error.message : 'Unknown error'}`
-        );
-      }
-    }
-
-    // Add antagonistic review verdicts if available
-    if (this.projectService && feature.projectSlug) {
-      try {
-        const project = await this.projectService.getProject(projectPath, feature.projectSlug);
-        // Check if project has review comments
-        if (project?.reviewComments && project.reviewComments.length > 0) {
-          sections.push('\n---\n## 🔍 Review Verdicts');
-
-          // Group by reviewer
-          const avaComments = project.reviewComments.filter((c) => c.author === 'ava');
-          const jonComments = project.reviewComments.filter((c) => c.author === 'jon');
-
-          if (avaComments.length > 0) {
-            sections.push('\n### Ava (Operational Review)');
-            avaComments.forEach((comment) => {
-              const emoji =
-                comment.type === 'approval'
-                  ? '✅'
-                  : comment.type === 'change-requested'
-                    ? '⚠️'
-                    : '💡';
-              sections.push(
-                `${emoji} **${comment.type}** ${comment.section ? `(${comment.section})` : ''}: ${comment.content}`
-              );
-            });
-          }
-
-          if (jonComments.length > 0) {
-            sections.push('\n### Jon (Market Review)');
-            jonComments.forEach((comment) => {
-              const emoji =
-                comment.type === 'approval'
-                  ? '✅'
-                  : comment.type === 'change-requested'
-                    ? '⚠️'
-                    : '💡';
-              sections.push(
-                `${emoji} **${comment.type}** ${comment.section ? `(${comment.section})` : ''}: ${comment.content}`
-              );
-            });
-          }
-        }
-      } catch (error) {
-        logger.debug(
-          `Could not fetch review verdicts: ${error instanceof Error ? error.message : 'Unknown error'}`
-        );
-      }
-    }
-
-    // Add estimated cost if available
-    if (feature.costUsd !== undefined && feature.costUsd > 0) {
-      sections.push('\n---\n## 💰 Estimated Cost');
-      sections.push(`**Total Cost:** $${feature.costUsd.toFixed(4)} USD`);
-
-      if (feature.executionHistory && feature.executionHistory.length > 0) {
-        sections.push(`**Executions:** ${feature.executionHistory.length}`);
-        const totalTokens = feature.executionHistory.reduce(
-          (sum, exec) => sum + (exec.inputTokens || 0) + (exec.outputTokens || 0),
-          0
-        );
-        sections.push(`**Total Tokens:** ${totalTokens.toLocaleString()}`);
-      }
-    }
-
-    // Add metadata footer
-    sections.push('\n---\n_Synced from Automaker_');
-
-    return sections.join('\n');
-  }
-
-  /**
-   * Create a Linear issue via GraphQL API
-   */
-  private async createLinearIssue(
-    projectPath: string,
-    feature: Feature
-  ): Promise<{ issueId: string; issueUrl: string }> {
-    if (!this.settingsService) {
-      throw new Error('SettingsService not initialized');
-    }
-
-    if (!this.featureLoader) {
-      throw new Error('FeatureLoader not initialized');
-    }
-
-    // Get Linear OAuth token from settings
-    const settings = await this.settingsService.getProjectSettings(projectPath);
-    const linearAccessToken = await this.resolveLinearToken(projectPath);
-    const teamId = settings.integrations?.linear?.teamId;
-
-    if (!teamId) {
-      throw new Error('No Linear team ID found in settings');
-    }
-
-    // Map Automaker priority (0-4) to Linear priority (0-4)
-    // 0=none, 1=urgent, 2=high, 3=normal, 4=low
-    const linearPriority = feature.priority ?? 3;
-
-    // Build the issue title and description with enhanced formatting
-    const title = feature.title || 'Untitled Feature';
-    const description = await this.formatIssueDescription(projectPath, feature);
-
-    // Check if this feature has a parent epic (milestone epic)
-    // If so, get the parent's linearIssueId to set as parentId
-    let parentId: string | undefined;
-    if (feature.epicId) {
-      const parentFeature = await this.featureLoader.get(projectPath, feature.epicId);
-      if (parentFeature?.linearIssueId) {
-        parentId = parentFeature.linearIssueId;
-        logger.debug(
-          `Setting parentId ${parentId} for child feature with epicId ${feature.epicId}`
-        );
-      }
-    }
-
-    // GraphQL mutation to create issue
-    const mutation = `
-      mutation CreateIssue($teamId: String!, $title: String!, $description: String!, $priority: Int!, $parentId: String) {
-        issueCreate(input: { teamId: $teamId, title: $title, description: $description, priority: $priority, parentId: $parentId }) {
-          success
-          issue {
-            id
-            url
-          }
-        }
-      }
-    `;
-
-    const variables = {
-      teamId,
-      title,
-      description,
-      priority: linearPriority,
-      parentId,
-    };
-
-    // Call Linear GraphQL API with 30s timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
-
-    try {
-      const response = await fetch('https://api.linear.app/graphql', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: this.formatLinearAuth(linearAccessToken),
-        },
-        body: JSON.stringify({ query: mutation, variables }),
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        throw new Error(`Linear API error: ${response.status} ${response.statusText}`);
-      }
-
-      const result = (await response.json()) as {
-        data?: {
-          issueCreate?: {
-            success: boolean;
-            issue?: { id: string; url: string };
-          };
-        };
-        errors?: Array<{ message: string }>;
-      };
-
-      if (result.errors) {
-        throw new Error(`Linear GraphQL error: ${result.errors.map((e) => e.message).join(', ')}`);
-      }
-
-      if (!result.data?.issueCreate?.success || !result.data.issueCreate.issue) {
-        throw new Error('Failed to create Linear issue');
-      }
-
-      return {
-        issueId: result.data.issueCreate.issue.id,
-        issueUrl: result.data.issueCreate.issue.url,
-      };
-    } catch (error) {
-      clearTimeout(timeoutId);
-      if (error instanceof Error && error.name === 'AbortError') {
-        throw new Error('Linear API request timed out after 30s');
-      }
-      throw error;
-    }
-  }
-
-  /**
-   * Update a Linear issue via GraphQL API
-   * Used to sync feature updates back to Linear with enhanced formatting
-   */
-  private async updateLinearIssue(
-    projectPath: string,
-    issueId: string,
-    feature: Feature
-  ): Promise<void> {
-    if (!this.settingsService) {
-      throw new Error('SettingsService not initialized');
-    }
-
-    const _settings = await this.settingsService.getProjectSettings(projectPath);
-    const linearAccessToken = await this.resolveLinearToken(projectPath);
-
-    // Format the description with enhanced formatting
-    const description = await this.formatIssueDescription(projectPath, feature);
-    const title = feature.title || 'Untitled Feature';
-    const priority = feature.priority ?? 3;
-
-    // GraphQL mutation to update issue
-    const mutation = `
-      mutation UpdateIssue($id: String!, $title: String, $description: String, $priority: Int) {
-        issueUpdate(id: $id, input: { title: $title, description: $description, priority: $priority }) {
-          success
-          issue {
-            id
-            url
-          }
-        }
-      }
-    `;
-
-    const variables = {
-      id: issueId,
-      title,
-      description,
-      priority,
-    };
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
-
-    try {
-      const response = await fetch('https://api.linear.app/graphql', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: this.formatLinearAuth(linearAccessToken),
-        },
-        body: JSON.stringify({ query: mutation, variables }),
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        throw new Error(`Linear API error: ${response.status} ${response.statusText}`);
-      }
-
-      const result = (await response.json()) as {
-        data?: {
-          issueUpdate?: {
-            success: boolean;
-            issue?: { id: string; url: string };
-          };
-        };
-        errors?: Array<{ message: string }>;
-      };
-
-      if (result.errors) {
-        throw new Error(`Linear GraphQL error: ${result.errors.map((e) => e.message).join(', ')}`);
-      }
-
-      if (!result.data?.issueUpdate?.success) {
-        throw new Error('Failed to update Linear issue');
-      }
-
-      logger.info(`Updated Linear issue ${issueId} with enhanced formatting`);
-    } catch (error) {
-      clearTimeout(timeoutId);
-      if (error instanceof Error && error.name === 'AbortError') {
-        throw new Error('Linear API request timed out after 30s');
-      }
-      throw error;
-    }
-  }
-
-  /**
-   * Handle feature:status-changed events
-   */
-  private async handleFeatureStatusChanged(payload: FeatureEventPayload): Promise<void> {
-    logger.debug('Received feature:status-changed event', {
-      featureId: payload.featureId,
-      status: payload.status,
-    });
-
-    // Call the async implementation
-    await this.onFeatureStatusChanged(payload);
-  }
-
-  /**
-   * Sync feature status changes to Linear
-   */
-  private async onFeatureStatusChanged(payload: FeatureEventPayload): Promise<void> {
-    const { featureId, projectPath, status } = payload;
-
-    // Guard: Check if service is running and sync is enabled
-    if (!this.shouldSync(featureId)) {
-      return;
-    }
-
-    // Check if sync is enabled for this project
-    const syncEnabled = await this.isProjectSyncEnabled(projectPath);
-    if (!syncEnabled) {
-      logger.debug(`Linear sync not enabled for project ${projectPath}`);
-      return;
-    }
-
-    // Check if status change sync is enabled
-    if (!this.settingsService) {
-      logger.error('SettingsService not initialized');
-      return;
-    }
-
-    const settings = await this.settingsService.getProjectSettings(projectPath);
-    if (settings.integrations?.linear?.syncOnStatusChange === false) {
-      logger.debug(`Status change sync disabled for project ${projectPath}`);
-      return;
-    }
-
-    if (!this.featureLoader) {
-      logger.error('FeatureLoader not initialized');
-      return;
-    }
-
-    const startTime = Date.now();
-
-    try {
-      // Get the feature details
-      const feature = await this.featureLoader.get(projectPath, featureId);
-      if (!feature) {
-        logger.error(`Feature ${featureId} not found`);
-        return;
-      }
-
-      // Skip if feature has no Linear issue ID
-      if (!feature.linearIssueId) {
-        logger.debug(`Feature ${featureId} has no Linear issue ID, skipping status sync`);
-        return;
-      }
-
-      // Mark as syncing to prevent duplicates (after validation checks)
-      this.markSyncing(featureId);
-
-      // Skip if status is unchanged from last sync
-      const lastMetadata = this.getSyncMetadata(featureId);
-      if (lastMetadata?.linearIssueId === feature.linearIssueId) {
-        // Check if status is the same
-        const currentLinearState = await this.getIssueState(projectPath, feature.linearIssueId);
-        const newLinearState = this.mapAutomakerStatusToLinear(
-          status || feature.status || 'backlog'
-        );
-
-        if (currentLinearState === newLinearState) {
-          logger.debug(`Status unchanged for feature ${featureId}, skipping sync`);
-          return;
-        }
-      }
-
-      // Update Linear issue status
-      await this.updateIssueStatus(
-        projectPath,
-        feature.linearIssueId,
-        status || feature.status || 'backlog'
-      );
-
-      // Update sync metadata
-      const existingMetadata = this.getSyncMetadata(featureId);
-      const metadata: SyncMetadata = {
-        featureId,
-        lastSyncTimestamp: Date.now(),
-        lastSyncStatus: 'success',
-        linearIssueId: feature.linearIssueId,
-        syncCount: (existingMetadata?.syncCount || 0) + 1,
-        syncSource: 'automaker',
-        syncDirection: 'push',
-      };
-      this.updateSyncMetadata(metadata);
-
-      // Record metrics
-      this.recordOperation(featureId, 'push', 'success', Date.now() - startTime, false);
-
-      // Emit completion event
-      if (this.emitter) {
-        this.emitter.emit('linear:sync:completed', {
-          featureId,
-          direction: 'push',
-          conflictDetected: false,
-          timestamp: new Date().toISOString(),
-        });
-      }
-
-      logger.info(
-        `Successfully synced status change for feature ${featureId} to Linear issue ${feature.linearIssueId}`
-      );
-    } catch (error) {
-      logger.error(`Failed to sync status change for feature ${featureId}:`, error);
-
-      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      this.recordOperation(featureId, 'push', 'error', Date.now() - startTime, false, errorMsg);
-
-      // Update sync metadata with error
-      const metadata: SyncMetadata = {
-        featureId,
-        lastSyncTimestamp: Date.now(),
-        lastSyncStatus: 'error',
-        errorMessage: errorMsg,
-        syncCount: 0,
-      };
-      this.updateSyncMetadata(metadata);
-
-      // Emit error event
-      if (this.emitter) {
-        this.emitter.emit('linear:sync:error', {
-          featureId,
-          direction: 'push',
-          error: errorMsg,
-          timestamp: new Date().toISOString(),
-        });
-      }
-    } finally {
-      // Unmark syncing
-      this.unmarkSyncing(featureId);
-    }
-  }
-
-  /**
-   * Map Automaker status to Linear workflow state name
-   */
-  private mapAutomakerStatusToLinear(status: string): string {
-    switch (status) {
-      case 'backlog':
-        return 'Backlog';
-      case 'in_progress':
-        return 'In Progress';
-      case 'review':
-        return 'In Review';
-      case 'done':
-        return 'Done';
-      case 'blocked':
-        return 'Blocked';
-      case 'verified':
-        return 'Done'; // Map verified to Done
-      default:
-        logger.warn(`Unknown Automaker status: ${status}, defaulting to Backlog`);
-        return 'Backlog';
-    }
-  }
-
-  /**
-   * Map Linear workflow state to Automaker status (reverse mapping)
-   */
-  private mapLinearStateToAutomaker(stateName: string): string {
-    const normalized = stateName.toLowerCase();
-
-    if (normalized.includes('backlog') || normalized.includes('todo')) {
-      return 'backlog';
-    } else if (normalized.includes('in progress') || normalized.includes('started')) {
-      return 'in_progress';
-    } else if (normalized.includes('in review') || normalized.includes('review')) {
-      return 'review';
-    } else if (normalized.includes('done') || normalized.includes('completed')) {
-      return 'done';
-    } else if (normalized.includes('blocked')) {
-      return 'blocked';
-    } else {
-      logger.warn(`Unknown Linear state: ${stateName}, defaulting to backlog`);
-      return 'backlog';
-    }
-  }
-
-  /**
-   * Get current Linear issue state
-   */
-  private async getIssueState(projectPath: string, issueId: string): Promise<string> {
-    if (!this.settingsService) {
-      throw new Error('SettingsService not initialized');
-    }
-
-    const _settings = await this.settingsService.getProjectSettings(projectPath);
-    const linearAccessToken = await this.resolveLinearToken(projectPath);
-
-    // GraphQL query to get issue state
-    const query = `
-      query GetIssue($id: String!) {
-        issue(id: $id) {
-          id
-          state {
-            name
-          }
-        }
-      }
-    `;
-
-    const variables = {
-      id: issueId,
-    };
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
-
-    try {
-      const response = await fetch('https://api.linear.app/graphql', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: this.formatLinearAuth(linearAccessToken),
-        },
-        body: JSON.stringify({ query, variables }),
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        throw new Error(`Linear API error: ${response.status} ${response.statusText}`);
-      }
-
-      const result = (await response.json()) as {
-        data?: {
-          issue?: {
-            state?: { name: string };
-          };
-        };
-        errors?: Array<{ message: string }>;
-      };
-
-      if (result.errors) {
-        throw new Error(`Linear GraphQL error: ${result.errors.map((e) => e.message).join(', ')}`);
-      }
-
-      return result.data?.issue?.state?.name || 'Backlog';
-    } catch (error) {
-      clearTimeout(timeoutId);
-      if (error instanceof Error && error.name === 'AbortError') {
-        throw new Error('Linear API request timed out after 30s');
-      }
-      throw error;
-    }
-  }
-
-  /**
-   * Update Linear issue status
-   */
-  private async updateIssueStatus(
-    projectPath: string,
-    issueId: string,
-    status: string
-  ): Promise<void> {
-    if (!this.settingsService) {
-      throw new Error('SettingsService not initialized');
-    }
-
-    const settings = await this.settingsService.getProjectSettings(projectPath);
-    const linearAccessToken = await this.resolveLinearToken(projectPath);
-    const teamId = settings.integrations?.linear?.teamId;
-
-    if (!teamId) {
-      throw new Error('No Linear team ID found in settings');
-    }
-
-    // Map status to Linear state name
-    const linearStateName = this.mapAutomakerStatusToLinear(status);
-
-    // Get workflow state ID from Linear
-    const stateId = await this.getWorkflowStateId(projectPath, teamId, linearStateName);
-
-    // GraphQL mutation to update issue
-    const mutation = `
-      mutation UpdateIssue($id: String!, $stateId: String!) {
-        issueUpdate(id: $id, input: { stateId: $stateId }) {
-          success
-          issue {
-            id
-            state {
-              name
-            }
-          }
-        }
-      }
-    `;
-
-    const variables = {
-      id: issueId,
-      stateId,
-    };
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
-
-    try {
-      const response = await fetch('https://api.linear.app/graphql', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: this.formatLinearAuth(linearAccessToken),
-        },
-        body: JSON.stringify({ query: mutation, variables }),
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        throw new Error(`Linear API error: ${response.status} ${response.statusText}`);
-      }
-
-      const result = (await response.json()) as {
-        data?: {
-          issueUpdate?: {
-            success: boolean;
-            issue?: { id: string; state?: { name: string } };
-          };
-        };
-        errors?: Array<{ message: string }>;
-      };
-
-      if (result.errors) {
-        throw new Error(`Linear GraphQL error: ${result.errors.map((e) => e.message).join(', ')}`);
-      }
-
-      if (!result.data?.issueUpdate?.success) {
-        throw new Error('Failed to update Linear issue status');
-      }
-
-      logger.info(`Updated Linear issue ${issueId} to state: ${linearStateName}`);
-    } catch (error) {
-      clearTimeout(timeoutId);
-      if (error instanceof Error && error.name === 'AbortError') {
-        throw new Error('Linear API request timed out after 30s');
-      }
-      throw error;
-    }
-  }
-
-  /**
-   * Get workflow state ID from Linear by state name
-   */
-  private async getWorkflowStateId(
-    projectPath: string,
-    teamId: string,
-    stateName: string
-  ): Promise<string> {
-    if (!this.settingsService) {
-      throw new Error('SettingsService not initialized');
-    }
-
-    const _settings = await this.settingsService.getProjectSettings(projectPath);
-    const linearAccessToken = await this.resolveLinearToken(projectPath);
-
-    // GraphQL query to fetch workflow states
-    const query = `
-      query GetWorkflowStates($teamId: String!) {
-        team(id: $teamId) {
-          id
-          states {
-            nodes {
-              id
-              name
-            }
-          }
-        }
-      }
-    `;
-
-    const variables = {
-      teamId,
-    };
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
-
-    try {
-      const response = await fetch('https://api.linear.app/graphql', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: this.formatLinearAuth(linearAccessToken),
-        },
-        body: JSON.stringify({ query, variables }),
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        throw new Error(`Linear API error: ${response.status} ${response.statusText}`);
-      }
-
-      const result = (await response.json()) as {
-        data?: {
-          team?: {
-            states?: {
-              nodes: Array<{ id: string; name: string }>;
-            };
-          };
-        };
-        errors?: Array<{ message: string }>;
-      };
-
-      if (result.errors) {
-        throw new Error(`Linear GraphQL error: ${result.errors.map((e) => e.message).join(', ')}`);
-      }
-
-      const states = result.data?.team?.states?.nodes || [];
-      const state = states.find((s) => s.name === stateName);
-
-      if (!state) {
-        throw new Error(`Workflow state "${stateName}" not found in Linear team ${teamId}`);
-      }
-
-      return state.id;
-    } catch (error) {
-      clearTimeout(timeoutId);
-      if (error instanceof Error && error.name === 'AbortError') {
-        throw new Error('Linear API request timed out after 30s');
-      }
-      throw error;
-    }
-  }
-
-  /**
-   * Create custom workflow states for HITL (Human-In-The-Loop) deepening
-   * Creates "Needs Human Review", "Escalated", and "Agent Denied" states
-   * Stores state IDs in project config for routing
-   *
-   * Note: This requires Business plan for custom workflow states.
-   * Gracefully degrades if the feature is not available.
-   *
-   * @param projectPath - The project path
-   * @param teamId - The Linear team ID
-   * @returns Object with created state IDs, or empty object if creation fails
-   */
   async createCustomWorkflowStates(
     projectPath: string,
     teamId: string
   ): Promise<{ needsHumanReview?: string; escalated?: string; agentDenied?: string }> {
-    if (!this.settingsService) {
-      logger.warn('SettingsService not initialized, cannot create custom workflow states');
-      return {};
-    }
-
-    const _settings = await this.settingsService.getProjectSettings(projectPath);
-    let linearAccessToken: string;
-    try {
-      linearAccessToken = await this.resolveLinearToken(projectPath);
-    } catch {
-      logger.warn('No Linear API token configured, cannot create custom workflow states');
-      return {};
-    }
-
-    // Check if custom states already exist
-    const existingStates = await this.getCustomWorkflowStates(projectPath, teamId);
-    if (existingStates.needsHumanReview && existingStates.escalated && existingStates.agentDenied) {
-      logger.info('Custom workflow states already exist, skipping creation');
-      return existingStates;
-    }
-
-    const customStateIds: { needsHumanReview?: string; escalated?: string; agentDenied?: string } =
-      {};
-
-    // Define custom states to create
-    const statesToCreate = [
-      { name: 'Needs Human Review', type: 'started', color: '#f2c94c', key: 'needsHumanReview' },
-      { name: 'Escalated', type: 'started', color: '#f2994a', key: 'escalated' },
-      { name: 'Agent Denied', type: 'canceled', color: '#eb5757', key: 'agentDenied' },
-    ] as const;
-
-    // Try to create each state
-    for (const stateConfig of statesToCreate) {
-      // Skip if already exists
-      const existingKey = stateConfig.key as keyof typeof existingStates;
-      if (existingStates[existingKey]) {
-        customStateIds[existingKey] = existingStates[existingKey];
-        continue;
-      }
-
-      try {
-        const mutation = `
-          mutation CreateWorkflowState($teamId: String!, $name: String!, $type: String!, $color: String!) {
-            workflowStateCreate(input: { teamId: $teamId, name: $name, type: $type, color: $color }) {
-              success
-              workflowState {
-                id
-                name
-                type
-                color
-              }
-            }
-          }
-        `;
-
-        const variables = {
-          teamId,
-          name: stateConfig.name,
-          type: stateConfig.type,
-          color: stateConfig.color,
-        };
-
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000);
-
-        const response = await fetch('https://api.linear.app/graphql', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: this.formatLinearAuth(linearAccessToken),
-          },
-          body: JSON.stringify({ query: mutation, variables }),
-          signal: controller.signal,
-        });
-        clearTimeout(timeoutId);
-
-        if (!response.ok) {
-          logger.warn(
-            `Failed to create workflow state "${stateConfig.name}": ${response.status} ${response.statusText}`
-          );
-          continue;
-        }
-
-        const result = (await response.json()) as {
-          data?: {
-            workflowStateCreate?: {
-              success: boolean;
-              workflowState?: { id: string; name: string };
-            };
-          };
-          errors?: Array<{ message: string }>;
-        };
-
-        if (result.errors) {
-          logger.warn(
-            `Failed to create workflow state "${stateConfig.name}": ${result.errors.map((e) => e.message).join(', ')}`
-          );
-          continue;
-        }
-
-        if (
-          result.data?.workflowStateCreate?.success &&
-          result.data.workflowStateCreate.workflowState
-        ) {
-          const stateId = result.data.workflowStateCreate.workflowState.id;
-          customStateIds[existingKey] = stateId;
-          logger.info(`Created custom workflow state "${stateConfig.name}": ${stateId}`);
-        }
-      } catch (error) {
-        // Graceful degradation: log warning but continue
-        logger.warn(
-          `Failed to create workflow state "${stateConfig.name}": ${error instanceof Error ? error.message : 'Unknown error'}`
-        );
-      }
-    }
-
-    // Store state IDs in project config
-    if (Object.keys(customStateIds).length > 0) {
-      try {
-        const currentSettings = await this.settingsService.getProjectSettings(projectPath);
-        if (currentSettings.integrations?.linear) {
-          currentSettings.integrations.linear.customStateIds = {
-            ...currentSettings.integrations.linear.customStateIds,
-            ...customStateIds,
-          };
-          await this.settingsService.updateProjectSettings(projectPath, currentSettings);
-          logger.info('Stored custom workflow state IDs in project config');
-        }
-      } catch (error) {
-        logger.error(
-          `Failed to store custom state IDs in config: ${error instanceof Error ? error.message : 'Unknown error'}`
-        );
-      }
-    }
-
-    return customStateIds;
+    return this.projectSync.createCustomWorkflowStates(projectPath, teamId);
   }
 
-  /**
-   * Get existing custom workflow states from Linear team
-   * Returns state IDs for "Needs Human Review", "Escalated", and "Agent Denied"
-   *
-   * @param projectPath - The project path
-   * @param teamId - The Linear team ID
-   * @returns Object with existing state IDs
-   */
-  private async getCustomWorkflowStates(
-    projectPath: string,
-    teamId: string
-  ): Promise<{ needsHumanReview?: string; escalated?: string; agentDenied?: string }> {
-    if (!this.settingsService) {
-      return {};
-    }
-
-    const _settings = await this.settingsService.getProjectSettings(projectPath);
-    let linearAccessToken: string;
-    try {
-      linearAccessToken = await this.resolveLinearToken(projectPath);
-    } catch {
-      return {};
-    }
-
-    try {
-      const query = `
-        query GetWorkflowStates($teamId: String!) {
-          team(id: $teamId) {
-            id
-            states {
-              nodes {
-                id
-                name
-              }
-            }
-          }
-        }
-      `;
-
-      const variables = { teamId };
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000);
-
-      const response = await fetch('https://api.linear.app/graphql', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: this.formatLinearAuth(linearAccessToken),
-        },
-        body: JSON.stringify({ query, variables }),
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        return {};
-      }
-
-      const result = (await response.json()) as {
-        data?: {
-          team?: {
-            states?: {
-              nodes: Array<{ id: string; name: string }>;
-            };
-          };
-        };
-      };
-
-      const states = result.data?.team?.states?.nodes || [];
-      const customStates: { needsHumanReview?: string; escalated?: string; agentDenied?: string } =
-        {};
-
-      for (const state of states) {
-        if (state.name === 'Needs Human Review') {
-          customStates.needsHumanReview = state.id;
-        } else if (state.name === 'Escalated') {
-          customStates.escalated = state.id;
-        } else if (state.name === 'Agent Denied') {
-          customStates.agentDenied = state.id;
-        }
-      }
-
-      return customStates;
-    } catch (error) {
-      logger.warn(
-        `Failed to fetch existing custom workflow states: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
-      return {};
-    }
-  }
-
-  /**
-   * Handle feature:pr-merged events
-   */
-  private async handleFeaturePRMerged(payload: FeatureEventPayload): Promise<void> {
-    logger.debug('Received feature:pr-merged event', {
-      featureId: payload.featureId,
-      prUrl: payload.prUrl,
-      prNumber: payload.prNumber,
-    });
-
-    // Call the async implementation
-    await this.onPRMerged(payload);
-  }
-
-  /**
-   * Add comment to Linear issue when PR is merged and mark issue as Done
-   */
-  private async onPRMerged(payload: FeatureEventPayload): Promise<void> {
-    const { featureId, projectPath, prUrl, prNumber, mergedBy } = payload;
-
-    // Guard: Check if service is running and sync is enabled
-    if (!this.shouldSync(featureId)) {
-      return;
-    }
-
-    // Check if sync is enabled for this project
-    const syncEnabled = await this.isProjectSyncEnabled(projectPath);
-    if (!syncEnabled) {
-      logger.debug(`Linear sync not enabled for project ${projectPath}`);
-      return;
-    }
-
-    // Check if comment on completion is enabled
-    if (!this.settingsService) {
-      logger.error('SettingsService not initialized');
-      return;
-    }
-
-    const settings = await this.settingsService.getProjectSettings(projectPath);
-    if (settings.integrations?.linear?.commentOnCompletion === false) {
-      logger.debug(`Comment on completion disabled for project ${projectPath}`);
-      return;
-    }
-
-    if (!this.featureLoader) {
-      logger.error('FeatureLoader not initialized');
-      return;
-    }
-
-    // Mark as syncing to prevent duplicates
-    this.markSyncing(featureId);
-
-    const startTime = Date.now();
-
-    try {
-      // Get the feature details
-      const feature = await this.featureLoader.get(projectPath, featureId);
-      if (!feature) {
-        logger.error(`Feature ${featureId} not found`);
-        return;
-      }
-
-      // Skip if feature has no Linear issue ID
-      if (!feature.linearIssueId) {
-        logger.debug(`Feature ${featureId} has no Linear issue ID, skipping PR merge sync`);
-        return;
-      }
-
-      // Build the comment markdown
-      const agentName = mergedBy || 'agent';
-      const prLink = prUrl && prNumber ? `[#${prNumber}](${prUrl})` : prUrl || `#${prNumber}`;
-      const timestamp = new Date().toISOString();
-      const commentBody = `✅ PR merged: ${prLink} by ${agentName}. Feature complete.`;
-
-      // Add comment to Linear issue
-      await this.addCommentToIssue(projectPath, feature.linearIssueId, commentBody);
-
-      // Mark issue as Done if not already
-      const currentState = await this.getIssueState(projectPath, feature.linearIssueId);
-      if (currentState !== 'Done') {
-        await this.updateIssueStatus(projectPath, feature.linearIssueId, 'done');
-      }
-
-      // Update sync metadata
-      const existingMetadata = this.getSyncMetadata(featureId);
-      const metadata: SyncMetadata = {
-        featureId,
-        lastSyncTimestamp: Date.now(),
-        lastSyncStatus: 'success',
-        linearIssueId: feature.linearIssueId,
-        syncCount: (existingMetadata?.syncCount || 0) + 1,
-        syncSource: 'automaker',
-        syncDirection: 'push',
-      };
-      this.updateSyncMetadata(metadata);
-
-      // Record metrics
-      this.recordOperation(featureId, 'push', 'success', Date.now() - startTime, false);
-
-      // Emit completion event
-      if (this.emitter) {
-        this.emitter.emit('linear:sync:completed', {
-          featureId,
-          direction: 'push',
-          conflictDetected: false,
-          timestamp,
-        });
-      }
-
-      logger.info(
-        `Successfully synced PR merge for feature ${featureId} to Linear issue ${feature.linearIssueId}`
-      );
-    } catch (error) {
-      logger.error(`Failed to sync PR merge for feature ${featureId}:`, error);
-
-      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      this.recordOperation(featureId, 'push', 'error', Date.now() - startTime, false, errorMsg);
-
-      // Update sync metadata with error
-      const metadata: SyncMetadata = {
-        featureId,
-        lastSyncTimestamp: Date.now(),
-        lastSyncStatus: 'error',
-        errorMessage: errorMsg,
-        syncCount: 0,
-      };
-      this.updateSyncMetadata(metadata);
-
-      // Emit error event
-      if (this.emitter) {
-        this.emitter.emit('linear:sync:error', {
-          featureId,
-          direction: 'push',
-          error: errorMsg,
-          timestamp: new Date().toISOString(),
-        });
-      }
-    } finally {
-      // Unmark syncing
-      this.unmarkSyncing(featureId);
-    }
-  }
-
-  /**
-   * Add a comment to a Linear issue
-   */
-  private async addCommentToIssue(
-    projectPath: string,
-    issueId: string,
-    commentBody: string
-  ): Promise<void> {
-    if (!this.settingsService) {
-      throw new Error('SettingsService not initialized');
-    }
-
-    const _settings = await this.settingsService.getProjectSettings(projectPath);
-    const linearAccessToken = await this.resolveLinearToken(projectPath);
-
-    // GraphQL mutation to add comment
-    const mutation = `
-      mutation AddComment($issueId: String!, $body: String!) {
-        commentCreate(input: { issueId: $issueId, body: $body }) {
-          success
-          comment {
-            id
-            body
-          }
-        }
-      }
-    `;
-
-    const variables = {
-      issueId,
-      body: commentBody,
-    };
-
-    const response = await fetch('https://api.linear.app/graphql', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: this.formatLinearAuth(linearAccessToken),
-      },
-      body: JSON.stringify({ query: mutation, variables }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Linear API error: ${response.status} ${response.statusText}`);
-    }
-
-    const result = (await response.json()) as {
-      data?: {
-        commentCreate?: {
-          success: boolean;
-          comment?: { id: string; body: string };
-        };
-      };
-      errors?: Array<{ message: string }>;
-    };
-
-    if (result.errors) {
-      throw new Error(`Linear GraphQL error: ${result.errors.map((e) => e.message).join(', ')}`);
-    }
-
-    if (!result.data?.commentCreate?.success) {
-      throw new Error('Failed to add comment to Linear issue');
-    }
-
-    logger.info(`Added comment to Linear issue ${issueId}`);
-  }
-
-  /**
-   * Handle authority:pm-prd-ready events — post PRD back to originating Linear issue
-   */
-  private handlePrdReady(payload: {
-    projectPath?: string;
-    featureId?: string;
-    prd?: string;
-  }): void {
-    const { projectPath, featureId, prd } = payload;
-    if (!projectPath || !featureId || !prd || !this.featureLoader) return;
-
-    this.postPrdToLinear(projectPath, featureId, prd).catch((err) => {
-      logger.warn(`Failed to post PRD to Linear for feature ${featureId}:`, err);
-    });
-  }
-
-  private async postPrdToLinear(
-    projectPath: string,
-    featureId: string,
-    prd: string
-  ): Promise<void> {
-    const feature = await this.featureLoader!.get(projectPath, featureId);
-    if (!feature?.linearIssueId) {
-      logger.debug(`Feature ${featureId} has no linearIssueId, skipping PRD comment`);
-      return;
-    }
-
-    const MAX_PRD_LENGTH = 4000;
-    const truncatedPrd =
-      prd.length > MAX_PRD_LENGTH ? prd.slice(0, MAX_PRD_LENGTH) + '\n\n…(truncated)' : prd;
-
-    const commentBody = `## PRD Generated\n\n${truncatedPrd}`;
-
-    await this.addCommentToIssue(projectPath, feature.linearIssueId, commentBody);
-    logger.info(`Posted PRD to Linear issue ${feature.linearIssueId} for feature ${featureId}`);
-  }
-
-  /**
-   * Handle project:scaffolded events
-   */
-  private async handleProjectScaffolded(payload: ProjectScaffoldedPayload): Promise<void> {
-    logger.debug('Received project:scaffolded event', {
-      projectSlug: payload.projectSlug,
-      projectTitle: payload.projectTitle,
-    });
-
-    await this.onProjectScaffolded(payload);
-  }
-
-  /**
-   * Handle project:status-changed events
-   */
-  private async handleProjectStatusChanged(payload: ProjectStatusChangedPayload): Promise<void> {
-    logger.debug('Received project:status-changed event', {
-      projectSlug: payload.projectSlug,
-      status: payload.status,
-      previousStatus: payload.previousStatus,
-    });
-
-    await this.syncProjectStatusToLinear(payload.projectPath, payload.projectSlug, payload.status);
-  }
-
-  /**
-   * Create a Linear project when an Automaker project is scaffolded,
-   * and add any synced child features to the project.
-   */
-  private async onProjectScaffolded(payload: ProjectScaffoldedPayload): Promise<void> {
-    const { projectPath, projectSlug, projectTitle } = payload;
-
-    if (!this.running) {
-      logger.debug(`Sync skipped for project ${projectSlug}: service not running`);
-      return;
-    }
-
-    // Check if sync is enabled for this project
-    const syncEnabled = await this.isProjectSyncEnabled(projectPath);
-    if (!syncEnabled) {
-      logger.debug(`Linear sync not enabled for project ${projectPath}`);
-      return;
-    }
-
-    if (!this.settingsService || !this.projectService) {
-      logger.debug('SettingsService or ProjectService not initialized, skipping project sync');
-      return;
-    }
-
-    const startTime = Date.now();
-
-    try {
-      // Get project to check if already synced
-      const project = await this.projectService.getProject(projectPath, projectSlug);
-      if (!project) {
-        logger.error(`Project ${projectSlug} not found`);
-        return;
-      }
-
-      // Skip if already synced
-      if (project.linearProjectId) {
-        logger.info(`Project ${projectSlug} already has Linear project ${project.linearProjectId}`);
-        return;
-      }
-
-      // Get Linear settings
-      const settings = await this.settingsService.getProjectSettings(projectPath);
-      const teamId = settings.integrations?.linear?.teamId;
-
-      if (!teamId) {
-        logger.debug(`No Linear team ID configured for project ${projectPath}`);
-        return;
-      }
-
-      // Create Linear project via LinearMCPClient
-      const client = new LinearMCPClient(this.settingsService, projectPath);
-      const result = await client.createProject({
-        name: projectTitle,
-        description: project.goal,
-        teamIds: [teamId],
-      });
-
-      // Store linearProjectId on project metadata
-      await this.projectService.updateProject(projectPath, projectSlug, {
-        linearProjectId: result.projectId,
-        linearProjectUrl: result.url,
-      });
-
-      // Also update the project-level Linear settings with the project ID
-      const currentSettings = await this.settingsService.getProjectSettings(projectPath);
-      if (currentSettings.integrations?.linear) {
-        currentSettings.integrations.linear.projectId = result.projectId;
-        await this.settingsService.updateProjectSettings(projectPath, currentSettings);
-      }
-
-      // Create milestones for each project milestone
-      if (project.milestones && project.milestones.length > 0) {
-        let milestonesCreated = 0;
-        for (let i = 0; i < project.milestones.length; i++) {
-          const milestone = project.milestones[i];
-          if (milestone.linearMilestoneId) {
-            logger.debug(`Milestone ${milestone.title} already has Linear ID, skipping`);
-            continue;
-          }
-          try {
-            const milestoneResult = await client.createProjectMilestone({
-              projectId: result.projectId,
-              name: `M${milestone.number}: ${milestone.title}`,
-              description: milestone.description,
-              sortOrder: i,
-            });
-            milestone.linearMilestoneId = milestoneResult.id;
-            milestonesCreated++;
-            logger.debug(`Created Linear milestone for ${milestone.title}: ${milestoneResult.id}`);
-          } catch (milestoneError) {
-            logger.error(
-              `Failed to create Linear milestone for ${milestone.title}:`,
-              milestoneError
-            );
-          }
-        }
-
-        // Persist milestone IDs back to project.json
-        if (milestonesCreated > 0) {
-          await this.projectService.updateProject(projectPath, projectSlug, {
-            milestones: project.milestones,
-          });
-          logger.info(`Created ${milestonesCreated} Linear milestones for project ${projectSlug}`);
-        }
-      }
-
-      // Add child features that already have Linear issues to the project
-      await this.addChildFeaturesToProject(projectPath, projectSlug, result.projectId, client);
-
-      // Sync dependencies for all features in this project
-      await this.syncProjectDependencies(projectPath, projectSlug);
-
-      // Sync initial project status to Linear
-      await this.syncProjectStatusToLinear(projectPath, projectSlug, project.status);
-
-      // Record metrics
-      this.recordOperation(
-        `project:${projectSlug}`,
-        'push',
-        'success',
-        Date.now() - startTime,
-        false
-      );
-
-      // Emit project sync event
-      if (this.emitter) {
-        this.emitter.emit('linear:project:created', {
-          projectPath,
-          projectSlug,
-          linearProjectId: result.projectId,
-          linearProjectUrl: result.url,
-          timestamp: new Date().toISOString(),
-        });
-      }
-
-      logger.info(`Created Linear project for ${projectSlug}: ${result.projectId}`);
-    } catch (error) {
-      logger.error(`Failed to sync project ${projectSlug} to Linear:`, error);
-
-      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      this.recordOperation(
-        `project:${projectSlug}`,
-        'push',
-        'error',
-        Date.now() - startTime,
-        false,
-        errorMsg
-      );
-
-      if (this.emitter) {
-        this.emitter.emit('linear:sync:error', {
-          projectSlug,
-          direction: 'push',
-          error: errorMsg,
-          timestamp: new Date().toISOString(),
-        });
-      }
-    }
-  }
-
-  /**
-   * Add child features (that have linearIssueId) to a Linear project
-   */
-  private async addChildFeaturesToProject(
-    projectPath: string,
-    projectSlug: string,
-    linearProjectId: string,
-    client: LinearMCPClient
-  ): Promise<void> {
-    if (!this.featureLoader) {
-      return;
-    }
-
-    try {
-      // Get all features for this project path
-      const features = await this.featureLoader.getAll(projectPath);
-
-      // Filter features that have a linearIssueId (already synced to Linear)
-      const syncedFeatures = features.filter((f: Feature) => f.linearIssueId);
-
-      if (syncedFeatures.length === 0) {
-        logger.debug(`No synced features to add to Linear project for ${projectSlug}`);
-        return;
-      }
-
-      let addedCount = 0;
-      for (const feature of syncedFeatures) {
-        try {
-          await client.addIssueToProject(feature.linearIssueId!, linearProjectId);
-          addedCount++;
-        } catch (error) {
-          logger.warn(
-            `Failed to add feature ${feature.id} to Linear project ${linearProjectId}:`,
-            error
-          );
-        }
-      }
-
-      logger.info(
-        `Added ${addedCount}/${syncedFeatures.length} features to Linear project ${linearProjectId}`
-      );
-    } catch (error) {
-      logger.error(`Failed to add child features to Linear project:`, error);
-    }
-  }
-
-  /**
-   * Sync feature dependencies as Linear issue relations
-   * Creates "blocks" relations for each dependency
-   *
-   * @param projectPath - The project path
-   * @param feature - The feature with dependencies
-   * @param issueId - The Linear issue ID for this feature
-   */
-  private async syncDependencies(
-    projectPath: string,
-    feature: Feature,
-    issueId: string
-  ): Promise<void> {
-    if (!feature.dependencies || feature.dependencies.length === 0) {
-      logger.debug(`Feature ${feature.id} has no dependencies to sync`);
-      return;
-    }
-
-    if (!this.settingsService || !this.featureLoader) {
-      logger.warn('SettingsService or FeatureLoader not initialized, skipping dependency sync');
-      return;
-    }
-
-    try {
-      const client = new LinearMCPClient(this.settingsService, projectPath);
-
-      // Get existing relations to avoid duplicates
-      const existingRelations = await client.getIssueRelations(issueId);
-      const existingRelatedIds = new Set(existingRelations.map((r) => r.id));
-
-      let createdCount = 0;
-      let skippedCount = 0;
-
-      for (const dependencyId of feature.dependencies) {
-        try {
-          // Get the dependency feature to find its Linear issue ID
-          const dependencyFeature = await this.featureLoader.get(projectPath, dependencyId);
-
-          if (!dependencyFeature) {
-            logger.warn(`Dependency feature ${dependencyId} not found, skipping relation creation`);
-            continue;
-          }
-
-          if (!dependencyFeature.linearIssueId) {
-            logger.debug(
-              `Dependency feature ${dependencyId} has no Linear issue ID yet, skipping relation`
-            );
-            continue;
-          }
-
-          // Check if relation already exists
-          if (existingRelatedIds.has(dependencyFeature.linearIssueId)) {
-            logger.debug(
-              `Relation already exists: ${issueId} → ${dependencyFeature.linearIssueId}, skipping`
-            );
-            skippedCount++;
-            continue;
-          }
-
-          // Create the relation: issueId is blocked by dependencyFeature.linearIssueId
-          await client.createIssueRelation({
-            issueId,
-            relatedIssueId: dependencyFeature.linearIssueId,
-            type: 'blocks',
-          });
-          createdCount++;
-        } catch (error) {
-          logger.warn(
-            `Failed to create issue relation for dependency ${dependencyId}:`,
-            error instanceof Error ? error.message : 'Unknown error'
-          );
-        }
-      }
-
-      logger.info(
-        `Synced dependencies for feature ${feature.id}: ${createdCount} created, ${skippedCount} skipped (duplicates)`
-      );
-    } catch (error) {
-      logger.error(
-        `Failed to sync dependencies for feature ${feature.id}:`,
-        error instanceof Error ? error.message : 'Unknown error'
-      );
-    }
-  }
-
-  /**
-   * Sync dependencies for all features in a project
-   * Called after project scaffolding to create all issue relations
-   *
-   * @param projectPath - The project path
-   * @param projectSlug - The project slug
-   */
-  private async syncProjectDependencies(projectPath: string, projectSlug: string): Promise<void> {
-    if (!this.featureLoader) {
-      logger.warn('FeatureLoader not initialized, skipping project dependency sync');
-      return;
-    }
-
-    try {
-      // Get all features for this project
-      const features = await this.featureLoader.getAll(projectPath);
-
-      // Filter features that have Linear issues and dependencies
-      const featuresWithDeps = features.filter(
-        (f: Feature) =>
-          f.linearIssueId &&
-          f.dependencies &&
-          f.dependencies.length > 0 &&
-          f.projectSlug === projectSlug
-      );
-
-      if (featuresWithDeps.length === 0) {
-        logger.debug(`No features with dependencies to sync for project ${projectSlug}`);
-        return;
-      }
-
-      logger.info(
-        `Syncing dependencies for ${featuresWithDeps.length} features in project ${projectSlug}`
-      );
-
-      for (const feature of featuresWithDeps) {
-        await this.syncDependencies(projectPath, feature, feature.linearIssueId!);
-      }
-
-      logger.info(`Completed dependency sync for project ${projectSlug}`);
-    } catch (error) {
-      logger.error(
-        `Failed to sync project dependencies for ${projectSlug}:`,
-        error instanceof Error ? error.message : 'Unknown error'
-      );
-    }
-  }
-
-  /**
-   * Sync Automaker project status and milestone progress to Linear project
-   *
-   * @param projectPath - The project path
-   * @param projectSlug - The project slug
-   * @param projectStatus - The new project status
-   */
   async syncProjectStatusToLinear(
     projectPath: string,
     projectSlug: string,
     projectStatus: string
   ): Promise<void> {
-    if (!this.running) {
-      logger.debug(`Sync skipped for project ${projectSlug}: service not running`);
-      return;
-    }
-
-    if (!this.projectService || !this.settingsService) {
-      logger.debug('ProjectService or SettingsService not initialized');
-      return;
-    }
-
-    const startTime = Date.now();
-
-    try {
-      // Get project to find linearProjectId
-      const project = await this.projectService.getProject(projectPath, projectSlug);
-      if (!project) {
-        logger.error(`Project ${projectSlug} not found`);
-        return;
-      }
-
-      if (!project.linearProjectId) {
-        logger.debug(`Project ${projectSlug} has no Linear project ID, skipping status sync`);
-        return;
-      }
-
-      // Check if sync is enabled for this project
-      const syncEnabled = await this.isProjectSyncEnabled(projectPath);
-      if (!syncEnabled) {
-        logger.debug(`Linear sync not enabled for project ${projectPath}`);
-        return;
-      }
-
-      // Calculate milestone completion percentage
-      const completionPercentage = await this.calculateMilestoneProgress(project);
-
-      // Map Automaker project status to Linear project status
-      const linearStatus = this.mapProjectStatusToLinear(projectStatus);
-
-      // Update Linear project via MCP client
-      const client = new LinearMCPClient(this.settingsService, projectPath);
-      await client.updateProject(project.linearProjectId, {
-        status: linearStatus,
-        progress: completionPercentage,
-      });
-
-      // Record metrics
-      this.recordOperation(
-        `project:${projectSlug}`,
-        'push',
-        'success',
-        Date.now() - startTime,
-        false
-      );
-
-      // Emit project status sync event
-      if (this.emitter) {
-        this.emitter.emit('linear:project:status-updated', {
-          projectPath,
-          projectSlug,
-          linearProjectId: project.linearProjectId,
-          status: projectStatus,
-          linearStatus,
-          progress: completionPercentage,
-          timestamp: new Date().toISOString(),
-        });
-      }
-
-      logger.info(
-        `Synced project status for ${projectSlug} to Linear: ${linearStatus} (${completionPercentage}%)`
-      );
-    } catch (error) {
-      logger.error(`Failed to sync project status for ${projectSlug}:`, error);
-
-      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      this.recordOperation(
-        `project:${projectSlug}`,
-        'push',
-        'error',
-        Date.now() - startTime,
-        false,
-        errorMsg
-      );
-
-      if (this.emitter) {
-        this.emitter.emit('linear:sync:error', {
-          projectSlug,
-          direction: 'push',
-          error: errorMsg,
-          timestamp: new Date().toISOString(),
-        });
-      }
-    }
+    return this.projectSync.syncProjectStatusToLinear(projectPath, projectSlug, projectStatus);
   }
 
-  /**
-   * Calculate milestone completion percentage based on phase completion
-   *
-   * @param project - The project to calculate progress for
-   * @returns Completion percentage (0-100)
-   */
-  private async calculateMilestoneProgress(project: Project): Promise<number> {
-    if (!project.milestones || project.milestones.length === 0) {
-      return 0;
-    }
-
-    if (!this.featureLoader) {
-      // Fallback to milestone status if feature loader not available
-      return this.calculateMilestoneProgressFromStatus(project);
-    }
-
-    let totalPhases = 0;
-    let completedPhases = 0;
-
-    for (const milestone of project.milestones) {
-      if (milestone.phases && milestone.phases.length > 0) {
-        totalPhases += milestone.phases.length;
-
-        // Count phases with completed features
-        for (const phase of milestone.phases) {
-          if (phase.featureId) {
-            try {
-              // Get the feature to check its actual status
-              const feature = await this.featureLoader.get(
-                process.cwd(), // Use current working directory as project path
-                phase.featureId
-              );
-
-              if (feature && (feature.status === 'done' || feature.status === 'verified')) {
-                completedPhases++;
-              }
-            } catch (_error) {
-              logger.debug(`Failed to get feature ${phase.featureId} for progress calculation`);
-            }
-          }
-        }
-      }
-    }
-
-    if (totalPhases === 0) {
-      return 0;
-    }
-
-    return Math.round((completedPhases / totalPhases) * 100);
-  }
-
-  /**
-   * Calculate milestone completion based on milestone status (fallback)
-   *
-   * @param project - The project to calculate progress for
-   * @returns Completion percentage (0-100)
-   */
-  private calculateMilestoneProgressFromStatus(project: Project): number {
-    if (!project.milestones || project.milestones.length === 0) {
-      return 0;
-    }
-
-    let totalMilestones = project.milestones.length;
-    let completedMilestones = 0;
-
-    for (const milestone of project.milestones) {
-      if (milestone.status === 'completed') {
-        completedMilestones++;
-      }
-    }
-
-    return Math.round((completedMilestones / totalMilestones) * 100);
-  }
-
-  /**
-   * Map Automaker project status to Linear project status
-   *
-   * @param status - Automaker project status
-   * @returns Linear project status
-   */
-  private mapProjectStatusToLinear(status: string): string {
-    switch (status) {
-      case 'researching':
-      case 'drafting':
-        return 'planned';
-      case 'reviewing':
-        return 'planned';
-      case 'approved':
-      case 'scaffolded':
-        return 'started';
-      case 'active':
-        return 'started';
-      case 'completed':
-        return 'completed';
-      default:
-        logger.warn(`Unknown project status: ${status}, defaulting to planned`);
-        return 'planned';
-    }
-  }
-
-  /**
-   * Mark a feature as currently syncing (internal use by future sync logic)
-   */
-  protected markSyncing(featureId: string): void {
-    this.syncingFeatures.add(featureId);
-    this.lastSyncTimes.set(featureId, Date.now());
-  }
-
-  /**
-   * Unmark a feature as syncing (internal use by future sync logic)
-   */
-  protected unmarkSyncing(featureId: string): void {
-    this.syncingFeatures.delete(featureId);
-  }
-
-  /**
-   * Handle comment:created events
-   */
-  private async handleCommentCreated(payload: CommentCreatedPayload): Promise<void> {
-    logger.debug('Received linear:comment:created event', {
-      commentId: payload.commentId,
-      issueId: payload.issueId,
-      userName: payload.user?.name,
-    });
-
-    // Call the async implementation
-    await this.onCommentCreated(payload);
-  }
-
-  /**
-   * Handle Linear comment creation
-   * Parses comment and routes it based on content:
-   * 1. Reply to agent elicitation -> forward to running agent
-   * 2. New instructions -> update feature description
-   * 3. Approval language -> trigger approval bridge
-   *
-   * @param payload - Comment creation payload
-   */
-  private async onCommentCreated(payload: CommentCreatedPayload): Promise<void> {
-    const { commentId, issueId, body, user } = payload;
-
-    if (!issueId) {
-      logger.debug(`Comment ${commentId} has no issueId, skipping`);
-      return;
-    }
-
-    if (!this.running) {
-      logger.debug(`Sync service not running, skipping comment ${commentId}`);
-      return;
-    }
-
-    if (!this.featureLoader) {
-      logger.error('FeatureLoader not initialized');
-      return;
-    }
-
-    try {
-      // Find the feature associated with this Linear issue
-      // We need to search across all projects since we don't have projectPath in the webhook
-      // For now, we'll use process.cwd() as the project path
-      const projectPath = process.cwd();
-      const feature = await this.featureLoader.findByLinearIssueId(projectPath, issueId);
-
-      if (!feature) {
-        logger.debug(`No feature found for Linear issue ${issueId}, skipping comment routing`);
-        return;
-      }
-
-      logger.info(`Processing comment for feature ${feature.id}`, {
-        commentId,
-        issueId,
-        userName: user?.name,
-      });
-
-      // Parse comment to determine routing
-      const commentLower = body.toLowerCase().trim();
-
-      // Check for approval language
-      if (this.isApprovalComment(commentLower)) {
-        logger.info(`Approval comment detected on issue ${issueId}`);
-        // Emit approval event for approval bridge to handle
-        if (this.emitter) {
-          this.emitter.emit('linear:approval:detected', {
-            issueId,
-            title: feature.title,
-            description: feature.description,
-            approvalState: 'Comment Approval',
-            detectedAt: new Date().toISOString(),
-          });
-        }
-        return;
-      }
-
-      // Check for new instructions (contains action words)
-      if (this.isInstructionComment(commentLower)) {
-        logger.info(`Instruction comment detected for feature ${feature.id}`);
-        // Update feature description with new instructions
-        const updatedDescription = `${feature.description}\n\n---\n\n**Additional Instructions from ${user?.name || 'Linear'}:**\n${body}`;
-        await this.featureLoader.update(projectPath, feature.id, {
-          description: updatedDescription,
-        });
-
-        // Emit event for potential signal creation
-        if (this.emitter) {
-          this.emitter.emit('linear:comment:instruction', {
-            featureId: feature.id,
-            issueId,
-            commentBody: body,
-            userName: user?.name,
-          });
-        }
-        return;
-      }
-
-      // Default: treat as agent follow-up reply
-      logger.info(`Treating comment as agent follow-up for feature ${feature.id}`);
-      if (this.emitter) {
-        this.emitter.emit('linear:comment:followup', {
-          featureId: feature.id,
-          projectPath,
-          commentBody: body,
-          userName: user?.name,
-          issueId,
-        });
-      }
-    } catch (error) {
-      logger.error(`Failed to process comment ${commentId}:`, error);
-    }
-  }
-
-  /**
-   * Check if comment contains approval language
-   */
-  private isApprovalComment(commentLower: string): boolean {
-    const approvalKeywords = [
-      'approve',
-      'approved',
-      'looks good',
-      'lgtm',
-      'ship it',
-      'go ahead',
-      'proceed',
-      'green light',
-    ];
-    return approvalKeywords.some((keyword) => commentLower.includes(keyword));
-  }
-
-  /**
-   * Check if comment contains instruction language
-   */
-  private isInstructionComment(commentLower: string): boolean {
-    const instructionKeywords = [
-      'please',
-      'can you',
-      'could you',
-      'make sure',
-      'also',
-      'additionally',
-      'instead',
-      'change',
-      'update',
-      'modify',
-      'add',
-      'remove',
-      'fix',
-    ];
-    return instructionKeywords.some((keyword) => commentLower.includes(keyword));
-  }
-
-  /**
-   * Create a Linear issue for PRD review
-   * Called when a PRD needs human review before proceeding to planning
-   *
-   * @param projectPath - The project path
-   * @param prdContent - The PRD markdown content
-   * @param reviewSummary - Summary of what needs to be reviewed
-   * @param recommendedAction - Recommended next steps
-   * @returns Object with created issue ID and URL
-   */
   async createPRDReviewIssue(
     projectPath: string,
     prdContent: string,
     reviewSummary: string,
     recommendedAction: string
   ): Promise<{ issueId: string; issueUrl: string }> {
-    if (!this.settingsService) {
-      throw new Error('SettingsService not initialized');
-    }
-
-    // Get Linear OAuth token from settings
-    const settings = await this.settingsService.getProjectSettings(projectPath);
-    const linearAccessToken = await this.resolveLinearToken(projectPath);
-    const teamId = settings.integrations?.linear?.teamId;
-
-    if (!teamId) {
-      throw new Error('No Linear team ID found in settings');
-    }
-
-    // Build issue title and description
-    const title = '🔍 PRD Review Required';
-    const description = `## Review Summary
-${reviewSummary}
-
-## Recommended Action
-${recommendedAction}
-
----
-
-## PRD Content
-
-${prdContent}
-
----
-
-**Instructions:**
-- Review the PRD content above
-- If approved: Change status to **Approved** to trigger planning stage
-- If changes needed: Change status to **Changes Requested** to return to PRD revision`;
-
-    // Get the "In Review" state ID
-    const stateId = await this.getWorkflowStateId(projectPath, teamId, 'In Review');
-
-    // GraphQL mutation to create issue
-    const mutation = `
-      mutation CreateIssue($teamId: String!, $title: String!, $description: String!, $stateId: String!, $priority: Int!) {
-        issueCreate(input: { teamId: $teamId, title: $title, description: $description, stateId: $stateId, priority: $priority }) {
-          success
-          issue {
-            id
-            url
-          }
-        }
-      }
-    `;
-
-    const variables = {
-      teamId,
-      title,
-      description,
-      stateId,
-      priority: 2, // High priority for reviews
-    };
-
-    // Call Linear GraphQL API with 30s timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
-
-    try {
-      const response = await fetch('https://api.linear.app/graphql', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: this.formatLinearAuth(linearAccessToken),
-        },
-        body: JSON.stringify({ query: mutation, variables }),
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        throw new Error(`Linear API error: ${response.status} ${response.statusText}`);
-      }
-
-      const result = (await response.json()) as {
-        data?: {
-          issueCreate?: {
-            success: boolean;
-            issue?: { id: string; url: string };
-          };
-        };
-        errors?: Array<{ message: string }>;
-      };
-
-      if (result.errors) {
-        throw new Error(`Linear GraphQL error: ${result.errors.map((e) => e.message).join(', ')}`);
-      }
-
-      if (!result.data?.issueCreate?.success || !result.data.issueCreate.issue) {
-        throw new Error('Failed to create Linear PRD review issue');
-      }
-
-      logger.info(`Created PRD review issue in Linear: ${result.data.issueCreate.issue.id}`);
-
-      return {
-        issueId: result.data.issueCreate.issue.id,
-        issueUrl: result.data.issueCreate.issue.url,
-      };
-    } catch (error) {
-      clearTimeout(timeoutId);
-      if (error instanceof Error && error.name === 'AbortError') {
-        throw new Error('Linear API request timed out after 30s');
-      }
-      throw error;
-    }
+    return this.commentService.createPRDReviewIssue(
+      projectPath,
+      prdContent,
+      reviewSummary,
+      recommendedAction
+    );
   }
 
-  /**
-   * Fetch issue relations from Linear GraphQL API
-   * Returns an array of related issue IDs (blocks, blocked-by, relates-to, duplicates)
-   *
-   * @param linearIssueId - The Linear issue ID to fetch relations for
-   * @param projectPath - The project path for settings
-   * @returns Array of related Linear issue IDs
-   */
-  private async fetchIssueRelations(linearIssueId: string, projectPath: string): Promise<string[]> {
-    if (!this.settingsService) {
-      throw new Error('SettingsService not initialized');
-    }
-
-    const settings = await this.settingsService.getProjectSettings(projectPath);
-    const linearAccessToken = settings.integrations?.linear?.agentToken;
-
-    if (!linearAccessToken) {
-      throw new Error('No Linear OAuth token found in settings');
-    }
-
-    // GraphQL query to fetch issue relations
-    const query = `
-      query GetIssueRelations($id: String!) {
-        issue(id: $id) {
-          id
-          relations {
-            nodes {
-              id
-              type
-              relatedIssue {
-                id
-              }
-            }
-          }
-        }
-      }
-    `;
-
-    const variables = {
-      id: linearIssueId,
-    };
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
-
-    try {
-      const response = await fetch('https://api.linear.app/graphql', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: this.formatLinearAuth(linearAccessToken),
-        },
-        body: JSON.stringify({ query, variables }),
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        throw new Error(`Linear API error: ${response.status} ${response.statusText}`);
-      }
-
-      const result = (await response.json()) as {
-        data?: {
-          issue?: {
-            relations?: {
-              nodes: Array<{
-                id: string;
-                type: string;
-                relatedIssue?: { id: string };
-              }>;
-            };
-          };
-        };
-        errors?: Array<{ message: string }>;
-      };
-
-      if (result.errors) {
-        throw new Error(`Linear GraphQL error: ${result.errors.map((e) => e.message).join(', ')}`);
-      }
-
-      const relations = result.data?.issue?.relations?.nodes || [];
-
-      // Extract related issue IDs
-      // Filter for dependency relations: 'blocks', 'blocked', 'relatedTo'
-      const relatedIssueIds = relations
-        .filter((rel) => rel.relatedIssue && ['blocks', 'blocked', 'relatedTo'].includes(rel.type))
-        .map((rel) => rel.relatedIssue!.id);
-
-      return relatedIssueIds;
-    } catch (error) {
-      clearTimeout(timeoutId);
-      if (error instanceof Error && error.name === 'AbortError') {
-        throw new Error('Linear API request timed out after 30s');
-      }
-      throw error;
-    }
-  }
-
-  /**
-   * Handle Linear issue updates (inbound sync from Linear to Automaker)
-   * This method is called when a Linear issue is updated externally.
-   * Syncs status, priority, title, and dependency changes in a single batched update.
-   *
-   * @param linearIssueId - The Linear issue ID that was updated
-   * @param newStateName - The new Linear workflow state name
-   * @param projectPath - The project path (required to find the feature)
-   * @param options - Optional additional fields to sync (title, priority)
-   */
   async onLinearIssueUpdated(
     linearIssueId: string,
     newStateName: string,
     projectPath: string,
     options?: { title?: string; priority?: number; dueDate?: string }
   ): Promise<void> {
-    const startTime = Date.now();
-    let featureId = 'unknown';
-
-    try {
-      // Find the feature by Linear issue ID
-      if (!this.featureLoader) {
-        logger.error('FeatureLoader not initialized');
-        return;
-      }
-
-      const feature = await this.featureLoader.findByLinearIssueId(projectPath, linearIssueId);
-      if (!feature) {
-        logger.warn(`No feature found for Linear issue ${linearIssueId}, skipping sync`);
-        return;
-      }
-
-      featureId = feature.id;
-
-      // Guard: Check if service is running and sync is enabled
-      if (!this.shouldSync(featureId)) {
-        return;
-      }
-
-      // Check if sync is enabled for this project
-      const syncEnabled = await this.isProjectSyncEnabled(projectPath);
-      if (!syncEnabled) {
-        logger.debug(`Linear sync not enabled for project ${projectPath}`);
-        return;
-      }
-
-      // Get sync metadata to check for loop prevention
-      const metadata = this.getSyncMetadata(featureId);
-
-      // Loop prevention: Skip if last sync was from Automaker (outbound push)
-      if (metadata?.syncSource === 'automaker') {
-        const timeSinceLastSync = Date.now() - (metadata.lastSyncTimestamp || 0);
-        if (timeSinceLastSync < DEBOUNCE_WINDOW_MS) {
-          logger.debug(
-            `Skipping Linear update for ${featureId}: last sync was from Automaker ${timeSinceLastSync}ms ago (loop prevention)`
-          );
-          return;
-        }
-      }
-
-      // Collect all changes to batch into a single update
-      const featureUpdates: Partial<Feature> = {};
-      const changeDescriptions: string[] = [];
-
-      // --- Status sync ---
-      const lastLinearState = metadata?.lastLinearState;
-      const stateChanged = lastLinearState !== newStateName;
-
-      if (stateChanged) {
-        const newAutomakerStatus = this.mapLinearStateToAutomaker(newStateName);
-        if (feature.status !== newAutomakerStatus) {
-          featureUpdates.status = newAutomakerStatus;
-          featureUpdates.statusChangeReason = `Synced from Linear (${newStateName})`;
-          changeDescriptions.push(`status: ${feature.status} → ${newAutomakerStatus}`);
-        }
-      }
-
-      // --- Title sync ---
-      if (options?.title !== undefined && options.title !== feature.title) {
-        featureUpdates.title = options.title;
-        changeDescriptions.push(`title: "${feature.title}" → "${options.title}"`);
-      }
-
-      // --- Priority sync (Linear 0-4 → Automaker 0-4, direct mapping) ---
-      if (options?.priority !== undefined && options.priority !== feature.priority) {
-        featureUpdates.priority = options.priority as Feature['priority'];
-        changeDescriptions.push(`priority: ${feature.priority ?? 'none'} → ${options.priority}`);
-      }
-
-      // --- Due date sync (Linear dueDate → Automaker dueDate) ---
-      if (options?.dueDate !== undefined && options.dueDate !== feature.dueDate) {
-        featureUpdates.dueDate = options.dueDate;
-        changeDescriptions.push(`dueDate: ${feature.dueDate ?? 'none'} → ${options.dueDate}`);
-      }
-
-      // --- Dependency sync (Linear issue relations → Automaker dependencies) ---
-      try {
-        // Fetch current issue relations from Linear
-        const relatedLinearIssueIds = await this.fetchIssueRelations(linearIssueId, projectPath);
-
-        // Map Linear issue IDs to Automaker feature IDs
-        const newDependencyIds: string[] = [];
-        for (const relatedIssueId of relatedLinearIssueIds) {
-          const relatedFeature = await this.featureLoader.findByLinearIssueId(
-            projectPath,
-            relatedIssueId
-          );
-          if (relatedFeature) {
-            newDependencyIds.push(relatedFeature.id);
-          }
-        }
-
-        // Compare with current dependencies
-        const currentDeps = feature.dependencies || [];
-        const depsChanged =
-          newDependencyIds.length !== currentDeps.length ||
-          !newDependencyIds.every((id) => currentDeps.includes(id));
-
-        if (depsChanged) {
-          featureUpdates.dependencies = newDependencyIds;
-          changeDescriptions.push(
-            `dependencies: [${currentDeps.join(', ')}] → [${newDependencyIds.join(', ')}]`
-          );
-        }
-      } catch (error) {
-        // Non-fatal: log warning and continue with other syncs
-        logger.warn(
-          `Failed to sync dependencies for feature ${featureId}:`,
-          error instanceof Error ? error.message : 'Unknown error'
-        );
-      }
-
-      // If nothing changed, just update metadata and return
-      if (Object.keys(featureUpdates).length === 0) {
-        if (stateChanged) {
-          // State name changed but mapped to same Automaker status — still record it
-          const updatedMetadata: SyncMetadata = {
-            ...metadata,
-            featureId,
-            lastSyncTimestamp: Date.now(),
-            lastSyncStatus: 'success',
-            linearIssueId,
-            syncCount: (metadata?.syncCount || 0) + 1,
-            syncSource: 'linear',
-            syncDirection: 'pull',
-            lastLinearState: newStateName,
-            lastSyncedAt: Date.now(),
-          };
-          this.updateSyncMetadata(updatedMetadata);
-        }
-        logger.debug(`No field changes needed for feature ${featureId}`);
-        return;
-      }
-
-      // Mark as syncing to prevent duplicates
-      this.markSyncing(featureId);
-
-      try {
-        // Detect conflicts: if last sync was very recent from either source
-        let conflictDetected = false;
-        if (metadata?.lastSyncedAt) {
-          const timeSinceLastSync = Date.now() - metadata.lastSyncedAt;
-          if (timeSinceLastSync < CONFLICT_DETECTION_WINDOW_MS) {
-            conflictDetected = true;
-            logger.warn(
-              `Conflict detected for feature ${featureId}: syncs from both sources within ${CONFLICT_DETECTION_WINDOW_MS}ms window`
-            );
-          }
-        }
-
-        // Batch all field updates into a single call
-        await this.featureLoader.update(projectPath, featureId, featureUpdates);
-
-        // Update sync metadata
-        const updatedMetadata: SyncMetadata = {
-          featureId,
-          lastSyncTimestamp: Date.now(),
-          lastSyncStatus: 'success',
-          linearIssueId,
-          syncCount: (metadata?.syncCount || 0) + 1,
-          syncSource: 'linear',
-          syncDirection: 'pull',
-          lastLinearState: newStateName,
-          lastSyncedAt: Date.now(),
-          conflictDetected,
-        };
-        this.updateSyncMetadata(updatedMetadata);
-
-        // Record metrics
-        this.recordOperation(
-          featureId,
-          'pull',
-          'success',
-          Date.now() - startTime,
-          conflictDetected
-        );
-
-        // Emit completion event
-        if (this.emitter) {
-          this.emitter.emit('linear:sync:completed', {
-            featureId,
-            direction: 'pull',
-            conflictDetected,
-            changes: changeDescriptions,
-            timestamp: new Date().toISOString(),
-          });
-        }
-
-        logger.info(
-          `Synced Linear issue ${linearIssueId} → feature ${featureId}: ${changeDescriptions.join(', ')}${conflictDetected ? ' (conflict detected)' : ''}`
-        );
-      } finally {
-        // Unmark syncing
-        this.unmarkSyncing(featureId);
-      }
-    } catch (error) {
-      logger.error(`Failed to sync Linear issue ${linearIssueId}:`, error);
-
-      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      this.recordOperation(featureId, 'pull', 'error', Date.now() - startTime, false, errorMsg);
-
-      // Emit error event
-      if (this.emitter) {
-        this.emitter.emit('linear:sync:error', {
-          linearIssueId,
-          direction: 'pull',
-          error: errorMsg,
-          timestamp: new Date().toISOString(),
-        });
-      }
-    }
+    return this.webhookHandler.onLinearIssueUpdated(
+      linearIssueId,
+      newStateName,
+      projectPath,
+      options
+    );
   }
 
-  /**
-   * Sync an Automaker project's milestones to Linear project milestones.
-   *
-   * Creates/updates Linear project milestones from Automaker milestones,
-   * matches project issues to milestones by epic title, and assigns
-   * issues to their correct milestones.
-   *
-   * @param projectPath - The project path
-   * @param projectSlug - The project slug
-   * @param options - Sync options
-   * @returns Summary of sync results
-   */
   async syncProjectToLinear(
     projectPath: string,
     projectSlug: string,
-    options?: {
-      linearProjectId?: string;
-      cleanupPlaceholders?: boolean;
-    }
+    options?: { linearProjectId?: string; cleanupPlaceholders?: boolean }
   ): Promise<{
     success: boolean;
     linearProjectId: string;
@@ -3190,280 +387,29 @@ ${prdContent}
     deletedPlaceholders: string[];
     errors: string[];
   }> {
-    const startTime = Date.now();
-    const errors: string[] = [];
+    return this.projectSync.syncProjectToLinear(projectPath, projectSlug, options);
+  }
 
-    // Guard checks
-    if (!this.projectService || !this.settingsService) {
-      throw new Error('ProjectService or SettingsService not initialized');
-    }
+  // -------------------------------------------------------------------------
+  // Guard factory
+  // -------------------------------------------------------------------------
 
-    // Load project
-    const project = await this.projectService.getProject(projectPath, projectSlug);
-    if (!project) {
-      throw new Error(`Project ${projectSlug} not found`);
-    }
-
-    if (!project.milestones || project.milestones.length === 0) {
-      throw new Error(`Project ${projectSlug} has no milestones`);
-    }
-
-    // Determine Linear project ID
-    const linearProjectId = options?.linearProjectId || project.linearProjectId;
-    if (!linearProjectId) {
-      throw new Error(`No Linear project ID. Pass linearProjectId or set it on the project first.`);
-    }
-
-    // Create Linear client
-    const client = new LinearMCPClient(this.settingsService, projectPath);
-
-    logger.info(
-      `Starting project milestone sync for ${projectSlug} → Linear project ${linearProjectId}`
-    );
-
-    // Step 1: List existing Linear milestones
-    const existingMilestones = await client.listProjectMilestones(linearProjectId);
-    const milestoneByName = new Map(existingMilestones.map((m) => [m.name, m]));
-    const milestoneById = new Map(existingMilestones.map((m) => [m.id, m]));
-
-    logger.info(`Found ${existingMilestones.length} existing Linear milestones`);
-
-    // Step 2: Create/update milestones
-    const milestoneResults: Array<{
-      name: string;
-      linearMilestoneId: string;
-      action: 'created' | 'updated' | 'existing';
-    }> = [];
-    const matchedLinearMilestoneIds = new Set<string>();
-
-    for (const milestone of project.milestones) {
-      const milestoneName = `M${milestone.number}: ${milestone.title}`;
-
-      try {
-        // Try to match by existing linearMilestoneId first (idempotency)
-        if (milestone.linearMilestoneId && milestoneById.has(milestone.linearMilestoneId)) {
-          const existing = milestoneById.get(milestone.linearMilestoneId)!;
-          matchedLinearMilestoneIds.add(existing.id);
-
-          // Update name if it changed
-          if (existing.name !== milestoneName) {
-            await client.updateProjectMilestone(existing.id, {
-              name: milestoneName,
-              description: milestone.description,
-              sortOrder: milestone.number,
-            });
-            milestoneResults.push({
-              name: milestoneName,
-              linearMilestoneId: existing.id,
-              action: 'updated',
-            });
-          } else {
-            milestoneResults.push({
-              name: milestoneName,
-              linearMilestoneId: existing.id,
-              action: 'existing',
-            });
-          }
-          continue;
-        }
-
-        // Try to match by name
-        if (milestoneByName.has(milestoneName)) {
-          const existing = milestoneByName.get(milestoneName)!;
-          matchedLinearMilestoneIds.add(existing.id);
-          milestone.linearMilestoneId = existing.id;
-
-          milestoneResults.push({
-            name: milestoneName,
-            linearMilestoneId: existing.id,
-            action: 'existing',
-          });
-          continue;
-        }
-
-        // Create new milestone
-        const created = await client.createProjectMilestone({
-          projectId: linearProjectId,
-          name: milestoneName,
-          description: milestone.description,
-          sortOrder: milestone.number,
-        });
-
-        milestone.linearMilestoneId = created.id;
-        matchedLinearMilestoneIds.add(created.id);
-
-        milestoneResults.push({
-          name: milestoneName,
-          linearMilestoneId: created.id,
-          action: 'created',
-        });
-      } catch (error) {
-        const msg = `Failed to sync milestone ${milestoneName}: ${error instanceof Error ? error.message : String(error)}`;
-        errors.push(msg);
-        logger.error(msg);
-      }
-    }
-
-    // Step 3: Cleanup placeholders if requested
-    const deletedPlaceholders: string[] = [];
-    if (options?.cleanupPlaceholders) {
-      for (const existing of existingMilestones) {
-        if (!matchedLinearMilestoneIds.has(existing.id)) {
-          try {
-            await client.deleteProjectMilestone(existing.id);
-            deletedPlaceholders.push(existing.name);
-            logger.info(`Deleted placeholder milestone: ${existing.name}`);
-          } catch (error) {
-            const msg = `Failed to delete placeholder ${existing.name}: ${error instanceof Error ? error.message : String(error)}`;
-            errors.push(msg);
-            logger.error(msg);
-          }
-        }
-      }
-    }
-
-    // Step 4: Get all project issues and assign to milestones
-    let issuesAssigned = 0;
-
-    try {
-      const issues = await client.getProjectIssues(linearProjectId);
-      logger.info(`Found ${issues.length} issues in Linear project`);
-
-      // Build a map: milestone title keywords → linearMilestoneId
-      // Match epic (parent) issues to milestones by title similarity
-      const parentIssues = issues.filter((i) => !i.parent && i.children.length > 0);
-
-      // Build mapping from milestone to Linear milestone ID
-      const milestoneTitleToId = new Map<string, string>();
-      for (const milestone of project.milestones) {
-        if (milestone.linearMilestoneId) {
-          milestoneTitleToId.set(milestone.title.toLowerCase(), milestone.linearMilestoneId);
-        }
-      }
-
-      // Match parent issues to milestones by fuzzy title matching
-      const parentToMilestone = new Map<string, string>();
-
-      for (const parentIssue of parentIssues) {
-        const parentTitle = parentIssue.title.toLowerCase();
-
-        // Try exact substring match first
-        let bestMatch: string | undefined;
-        let bestMatchLen = 0;
-
-        for (const [milestoneTitle, milestoneId] of milestoneTitleToId) {
-          // Check if milestone title words appear in the issue title
-          const titleWords = milestoneTitle.split(/\s+/);
-          const matchingWords = titleWords.filter(
-            (word) => word.length > 2 && parentTitle.includes(word)
-          );
-
-          if (matchingWords.length > bestMatchLen) {
-            bestMatchLen = matchingWords.length;
-            bestMatch = milestoneId;
-          }
-        }
-
-        if (bestMatch && bestMatchLen >= 2) {
-          parentToMilestone.set(parentIssue.id, bestMatch);
-          logger.info(
-            `Matched epic "${parentIssue.title}" → milestone (${bestMatchLen} word matches)`
-          );
-        }
-      }
-
-      // Assign issues to milestones
-      for (const issue of issues) {
-        // Determine which milestone this issue belongs to
-        let targetMilestoneId: string | undefined;
-
-        // If it's a parent issue with a match, use that
-        if (parentToMilestone.has(issue.id)) {
-          targetMilestoneId = parentToMilestone.get(issue.id);
-        }
-        // If it has a parent, inherit the parent's milestone
-        else if (issue.parent && parentToMilestone.has(issue.parent.id)) {
-          targetMilestoneId = parentToMilestone.get(issue.parent.id);
-        }
-
-        if (!targetMilestoneId) {
-          continue;
-        }
-
-        // Skip if already assigned to the correct milestone
-        if (issue.projectMilestone?.id === targetMilestoneId) {
-          continue;
-        }
-
-        try {
-          await client.assignIssueToMilestone(issue.id, targetMilestoneId);
-          issuesAssigned++;
-        } catch (error) {
-          const msg = `Failed to assign ${issue.identifier} to milestone: ${error instanceof Error ? error.message : String(error)}`;
-          errors.push(msg);
-          logger.error(msg);
-        }
-      }
-    } catch (error) {
-      const msg = `Failed to fetch/assign project issues: ${error instanceof Error ? error.message : String(error)}`;
-      errors.push(msg);
-      logger.error(msg);
-    }
-
-    // Step 5: Persist updated milestones back to project.json
-    try {
-      await this.projectService.updateProject(projectPath, projectSlug, {
-        milestones: project.milestones,
-        linearProjectId,
-      });
-      logger.info(`Persisted linearMilestoneId values to project.json`);
-    } catch (error) {
-      const msg = `Failed to persist milestone IDs: ${error instanceof Error ? error.message : String(error)}`;
-      errors.push(msg);
-      logger.error(msg);
-    }
-
-    // Record metrics
-    this.recordOperation(
-      `project:${projectSlug}`,
-      'push',
-      errors.length === 0 ? 'success' : 'error',
-      Date.now() - startTime,
-      false,
-      errors.length > 0 ? errors[0] : undefined
-    );
-
-    // Emit event
-    if (this.emitter) {
-      this.emitter.emit('linear:project:milestones-synced', {
-        projectPath,
-        projectSlug,
-        linearProjectId,
-        milestonesCreated: milestoneResults.filter((m) => m.action === 'created').length,
-        milestonesUpdated: milestoneResults.filter((m) => m.action === 'updated').length,
-        issuesAssigned,
-        deletedPlaceholders: deletedPlaceholders.length,
-        errors: errors.length,
-        timestamp: new Date().toISOString(),
-      });
-    }
-
-    logger.info(
-      `Project milestone sync complete for ${projectSlug}: ` +
-        `${milestoneResults.filter((m) => m.action === 'created').length} created, ` +
-        `${milestoneResults.filter((m) => m.action === 'updated').length} updated, ` +
-        `${issuesAssigned} issues assigned, ` +
-        `${deletedPlaceholders.length} placeholders deleted, ` +
-        `${errors.length} errors`
-    );
-
+  private buildGuards(): SyncGuards {
+    // Capture emitter reference for use in the getter closure.
+    // Arrow functions below capture `this` lexically from the class method.
+    const emitter = this.emitter;
     return {
-      success: errors.length === 0,
-      linearProjectId,
-      milestones: milestoneResults,
-      issuesAssigned,
-      deletedPlaceholders,
-      errors,
+      shouldSync: (id) => this.shouldSync(id),
+      markSyncing: (id) => this.markSyncing(id),
+      unmarkSyncing: (id) => this.unmarkSyncing(id),
+      isProjectSyncEnabled: (path) => this.isProjectSyncEnabled(path),
+      getSyncMetadata: (id) => this.getSyncMetadata(id),
+      updateSyncMetadata: (m) => this.updateSyncMetadata(m),
+      recordOperation: (id, dir, status, ms, conflict, err) =>
+        this.recordOperation(id, dir, status, ms, conflict, err),
+      get emitter() {
+        return emitter;
+      },
     };
   }
 }

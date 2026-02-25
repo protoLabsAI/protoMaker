@@ -107,8 +107,9 @@ export function createGitHubWebhookHandler(events: EventEmitter, settingsService
       const settings = await settingsService.getGlobalSettings();
       const webhookConfig = settings.githubWebhook;
 
-      // Check if webhook is enabled first (before signature validation)
-      if (!webhookConfig?.enabled) {
+      // Check if webhook is explicitly disabled. Defaults to enabled when not configured,
+      // since the endpoint is protected by HMAC signature verification.
+      if (webhookConfig?.enabled === false) {
         logger.debug('GitHub webhook is disabled');
         res.status(403).json({
           success: false,
