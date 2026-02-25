@@ -57,6 +57,10 @@ export default defineConfig({
         '../../libs/dependency-resolver/src/index.ts'
       ),
       '@protolabs-ai/git-utils': path.resolve(__dirname, '../../libs/git-utils/src/index.ts'),
+      '@protolabs-ai/error-tracking': path.resolve(
+        __dirname,
+        '../../libs/error-tracking/src/index.ts'
+      ),
     },
   },
 });
