@@ -12,10 +12,7 @@ export type VariableResolver = (name: string) => string | number | boolean | nul
 /**
  * Convert PenColor to CSS rgba string
  */
-export function colorToCSS(
-  color: string | PenColor,
-  resolveVariable?: VariableResolver
-): string {
+export function colorToCSS(color: string | PenColor, resolveVariable?: VariableResolver): string {
   if (typeof color === 'string') {
     // Handle theme variables (e.g., $--background)
     if (color.startsWith('$')) {
