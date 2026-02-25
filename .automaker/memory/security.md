@@ -452,3 +452,14 @@ usageStats:
 - **Rejected:** Simple checks: if(path.includes('..')) or if(!path.startsWith('/')) - these fail on paths like 'docs/../../../.env' which normalize to '../../../.env'
 - **Trade-offs:** More code and two function calls per request vs false sense of security from naive checks. Worth the cost for file serving.
 - **Breaking if changed:** Removing normalize() allows paths like 'docs/../../.env' to bypass relative() check. Removing relative() check allows any path that doesn't contain raw '..' (e.g., after normalization).
+#### [Pattern] Privacy controls implemented in `beforeSend` hook before transmission, not post-capture - emails, API keys, tokens scrubbed at source (2026-02-25)
+- **Problem solved:** Sensitive PII redaction for GDPR compliance with explicit user opt-in
+- **Why this works:** Data cannot be recalled after transmission; privacy must be enforced at the last moment before sending. `beforeSend` is the final gate before Sentry receives data
+- **Trade-offs:** More complex initialization logic but guarantees sensitive data never leaves the application
+
+### Default `enabled: false` for error tracking in settings - explicit user opt-in required, no automatic data transmission (2026-02-25)
+- **Context:** GDPR compliance and privacy-respecting default behavior
+- **Why:** Privacy-by-default: users must make conscious choice to enable monitoring. Opposite of opt-out (more ethical, legally safer). Data doesn't flow without explicit consent
+- **Rejected:** Default `enabled: true` with opt-out option (assumes consent, requires users to find and disable, risky legally)
+- **Trade-offs:** Reduced telemetry coverage initially (only opt-in users tracked) but better user trust and legal compliance
+- **Breaking if changed:** If default changes to `enabled: true`, the app starts transmitting error data without user knowledge - GDPR violation

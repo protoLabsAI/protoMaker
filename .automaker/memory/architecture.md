@@ -5,7 +5,7 @@ relevantTo: [architecture]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 47
+  loaded: 49
   referenced: 25
   successfulFeatures: 25
 ---
@@ -3540,3 +3540,35 @@ usageStats:
 - **Rejected:** Direct app.use(router) at module level - tightly couples routes to server initialization, harder to test
 - **Trade-offs:** One extra function call to create router vs direct registration. Gain testability and modularity.
 - **Breaking if changed:** If routes are inlined directly into index.ts instead of returned from factory, tests can't import createDocsRoutes() separately, and circular dependencies may form if routes need to be shared across server instances.
+### GitHub-hosted runners for smoke tests, but self-hosted Linux runner retained for builds. Different tool for different job type (2026-02-25)
+- **Context:** Could use self-hosted for consistency (one infrastructure pattern) or GitHub-hosted for consistency (one runner type)
+- **Why:** GitHub-hosted provides clean, consistent environment for tests (no state accumulation). Self-hosted needed for builds because: complex build dependencies, caching requirements, longer execution time amortization. Smoke tests are stateless; builds are not
+- **Rejected:** All GitHub-hosted (tests too slow/expensive), or all self-hosted (tests have environmental entropy)
+- **Trade-offs:** Operational complexity of two runner types, but each type is optimized for its workload. Tests get clean environment; builds get fast caching
+- **Breaking if changed:** Moving tests to self-hosted would expose them to previous build artifacts causing flaky environment-dependent failures
+
+#### [Pattern] Commit compiled CSS to repository but regenerate in GitHub Actions - hybrid approach to generated files (2026-02-25)
+- **Problem solved:** CSS is generated from config/source (Tailwind) but needed to be available for deployment
+- **Why this works:** Committed CSS ensures: (1) deployment doesn't require build step on server, (2) git history shows what was deployed, (3) works in environments without Node/build tools. GitHub Actions regeneration ensures: (1) source of truth is config, (2) accidental manual edits get overwritten, (3) deploy always uses current config.
+- **Trade-offs:** Slightly larger repo (33KB CSS file) but fast deployments without build. Hybrid approach combines benefits of both worlds.
+
+### Created `@protolabs-ai/error-tracking` wrapper package instead of direct Sentry integration throughout codebase (2026-02-25)
+- **Context:** Abstraction layer over `@sentry/node` and `@sentry/electron` to provide unified API across server and Electron contexts
+- **Why:** Decouples application code from Sentry vendor; allows swapping error tracking provider (e.g., from Sentry to PostHog, DataDog) without changing app code everywhere. Single point of configuration and privacy enforcement
+- **Rejected:** Importing Sentry directly in every module that needs error tracking (tight coupling, vendor lock-in, inconsistent privacy controls)
+- **Trade-offs:** Extra package/indirection adds small performance cost but provides flexibility and consistent privacy enforcement across entire app
+- **Breaking if changed:** Without this wrapper, changing error tracking providers requires updating dozens of import statements and error handling patterns across codebase
+
+### Context set once per request/transaction, inherited by all subsequent errors in that scope via `setFeatureContext()` and `setSessionContext()` (2026-02-25)
+- **Context:** Attaching feature ID, session ID, and execution metadata to errors without manual inclusion in every capture call
+- **Why:** Avoids repetitive context passing; errors automatically know which feature/session they belong to. Follows distributed tracing principle where context propagates through execution
+- **Rejected:** Passing context as argument to every `captureException()` call (verbose, error-prone if context not passed, harder to add new context later)
+- **Trade-offs:** Automatic context inheritance is cleaner but requires careful context management in async/concurrent scenarios - context can leak between unrelated requests if not properly isolated
+- **Breaking if changed:** If context is not cleared between requests in a request pool, errors from request A will be tagged with context from request B
+
+### Progressive disclosure: README shows overview + links to detailed docs, not all content inline (2026-02-25)
+- **Context:** Project has complex architecture (13 shared packages, monorepo structure, multiple apps, integration requirements) that exceeds README readability
+- **Why:** Different users have different needs - some want quick overview, others want architecture details. Progressive disclosure serves both without overwhelming single document. Keeps README under usable length while supporting deep exploration
+- **Rejected:** Inline all architecture/contributing details (creates unmaintainable 3000+ line README). Separate architecture doc without README overview (users don't know it exists)
+- **Trade-offs:** Users must click for details instead of finding everything in one place. But enables maintainability and caters to scanning vs deep reading behaviors
+- **Breaking if changed:** Without external documentation structure, README becomes dumping ground for all complexity. Architecture details require dedicated documentation with proper structure and versioning
