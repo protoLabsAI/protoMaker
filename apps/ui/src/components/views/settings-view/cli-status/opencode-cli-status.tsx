@@ -38,10 +38,12 @@ function getProviderDisplayName(provider: OpenCodeProviderInfo): string {
 }
 
 export type OpencodeAuthMethod =
-  | 'api_key_env' // ANTHROPIC_API_KEY or other provider env vars
-  | 'api_key' // Manually stored API key
+  | 'api_key_env' // Legacy: ANTHROPIC_API_KEY or other provider env vars
+  | 'env_api_key' // Environment variable API keys
+  | 'api_key' // API key in auth file
   | 'oauth' // OAuth authentication
   | 'config_file' // Config file with credentials
+  | 'free_tier' // CLI installed, free tier models available
   | 'none';
 
 export interface OpencodeAuthStatus {
@@ -58,11 +60,14 @@ function getAuthMethodLabel(method: OpencodeAuthMethod): string {
     case 'api_key':
       return 'API Key';
     case 'api_key_env':
+    case 'env_api_key':
       return 'API Key (Environment)';
     case 'oauth':
       return 'OAuth Authentication';
     case 'config_file':
       return 'Configuration File';
+    case 'free_tier':
+      return 'Free Tier';
     default:
       return method || 'Unknown';
   }

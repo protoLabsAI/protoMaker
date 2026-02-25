@@ -284,7 +284,17 @@ export interface InstallationStatus {
   method?: 'cli' | 'wsl' | 'npm' | 'brew' | 'sdk';
   hasApiKey?: boolean;
   hasOAuthToken?: boolean;
+  hasEnvApiKey?: boolean;
   authenticated?: boolean;
+  /**
+   * How the user is authenticated:
+   * - oauth: OpenCode OAuth login
+   * - api_key: API key in auth file
+   * - env_api_key: API key from environment variable
+   * - free_tier: CLI installed, free tier models available (no auth needed)
+   * - none: Not authenticated
+   */
+  authMethod?: 'oauth' | 'api_key' | 'env_api_key' | 'free_tier' | 'none';
   error?: string;
 }
 

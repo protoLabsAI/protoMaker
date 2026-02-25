@@ -1070,6 +1070,25 @@ function OpencodeContent() {
   };
 
   const isReady = opencodeCliStatus?.installed && opencodeCliStatus?.auth?.authenticated;
+  const authMethod = opencodeCliStatus?.auth?.method;
+  const isFreeTierOnly = authMethod === 'free_tier';
+
+  const getAuthDescription = () => {
+    if (!opencodeCliStatus?.installed) return 'Not installed on your system';
+    if (!opencodeCliStatus?.auth?.authenticated) return 'Installed but not authenticated';
+    switch (authMethod) {
+      case 'oauth':
+        return `Authenticated via login${opencodeCliStatus.version ? ` (v${opencodeCliStatus.version})` : ''}`;
+      case 'api_key':
+        return `Authenticated via API key${opencodeCliStatus.version ? ` (v${opencodeCliStatus.version})` : ''}`;
+      case 'env_api_key':
+        return `Authenticated via environment variable${opencodeCliStatus.version ? ` (v${opencodeCliStatus.version})` : ''}`;
+      case 'free_tier':
+        return `Free tier models available${opencodeCliStatus.version ? ` (v${opencodeCliStatus.version})` : ''}`;
+      default:
+        return `Ready${opencodeCliStatus.version ? ` (v${opencodeCliStatus.version})` : ''}`;
+    }
+  };
 
   return (
     <Card className="bg-card border-border">
@@ -1083,13 +1102,7 @@ function OpencodeContent() {
             {isChecking ? <Spinner size="sm" /> : <RefreshCw className="w-4 h-4" />}
           </Button>
         </div>
-        <CardDescription>
-          {opencodeCliStatus?.installed
-            ? opencodeCliStatus.auth?.authenticated
-              ? `Authenticated${opencodeCliStatus.version ? ` (v${opencodeCliStatus.version})` : ''}`
-              : 'Installed but not authenticated'
-            : 'Not installed on your system'}
-        </CardDescription>
+        <CardDescription>{getAuthDescription()}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {isReady && (
@@ -1105,7 +1118,20 @@ function OpencodeContent() {
             </div>
             <div className="flex items-center gap-3 p-4 rounded-lg bg-green-500/10 border border-green-500/20">
               <CheckCircle2 className="w-5 h-5 text-green-500" />
-              <p className="font-medium text-foreground">Authenticated</p>
+              <div>
+                <p className="font-medium text-foreground">
+                  {isFreeTierOnly ? 'Free Tier Ready' : 'Authenticated'}
+                </p>
+                {isFreeTierOnly && (
+                  <p className="text-sm text-muted-foreground">
+                    Free models available. Run{' '}
+                    <code className="text-xs bg-muted px-1 py-0.5 rounded">
+                      opencode auth login
+                    </code>{' '}
+                    to unlock additional providers.
+                  </p>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -1141,61 +1167,6 @@ function OpencodeContent() {
                   <Copy className="w-4 h-4" />
                 </Button>
               </div>
-            </div>
-          </div>
-        )}
-
-        {opencodeCliStatus?.installed && !opencodeCliStatus?.auth?.authenticated && !isChecking && (
-          <div className="space-y-4">
-            {/* Show CLI installed toast */}
-            <div className="flex items-center gap-3 p-4 rounded-lg bg-green-500/10 border border-green-500/20">
-              <CheckCircle2 className="w-5 h-5 text-green-500" />
-              <div>
-                <p className="font-medium text-foreground">CLI Installed</p>
-                <p className="text-sm text-muted-foreground">
-                  {opencodeCliStatus?.version && `Version: ${opencodeCliStatus.version}`}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3 p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
-              <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <p className="font-medium text-foreground">OpenCode CLI not authenticated</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Run the login command to authenticate.
-                </p>
-              </div>
-            </div>
-            <div className="space-y-3 p-4 rounded-lg bg-muted/30 border border-border">
-              <div className="flex items-center gap-2">
-                <code className="flex-1 bg-muted px-3 py-2 rounded text-sm font-mono text-foreground">
-                  {opencodeCliStatus?.loginCommand || 'opencode auth login'}
-                </code>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() =>
-                    copyCommand(opencodeCliStatus?.loginCommand || 'opencode auth login')
-                  }
-                >
-                  <Copy className="w-4 h-4" />
-                </Button>
-              </div>
-              <Button
-                onClick={handleLogin}
-                disabled={isLoggingIn}
-                className="w-full bg-brand-500 hover:bg-brand-600 text-white"
-              >
-                {isLoggingIn ? (
-                  <>
-                    <Spinner size="sm" className="mr-2" />
-                    Waiting for login...
-                  </>
-                ) : (
-                  'Copy Command & Wait for Login'
-                )}
-              </Button>
             </div>
           </div>
         )}

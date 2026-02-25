@@ -19,12 +19,6 @@ export function createOpencodeStatusHandler() {
       const provider = new OpencodeProvider();
       const status = await provider.detectInstallation();
 
-      // Derive auth method from authenticated status and API key presence
-      let authMethod = 'none';
-      if (status.authenticated) {
-        authMethod = status.hasApiKey ? 'api_key_env' : 'cli_authenticated';
-      }
-
       res.json({
         success: true,
         installed: status.installed,
@@ -32,9 +26,9 @@ export function createOpencodeStatusHandler() {
         path: status.path || null,
         auth: {
           authenticated: status.authenticated || false,
-          method: authMethod,
+          method: status.authMethod || 'none',
           hasApiKey: status.hasApiKey || false,
-          hasEnvApiKey: !!process.env.ANTHROPIC_API_KEY || !!process.env.OPENAI_API_KEY,
+          hasEnvApiKey: status.hasEnvApiKey || false,
           hasOAuthToken: status.hasOAuthToken || false,
         },
         recommendation: status.installed

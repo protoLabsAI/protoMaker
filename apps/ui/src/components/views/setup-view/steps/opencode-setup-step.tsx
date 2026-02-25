@@ -150,16 +150,18 @@ export function OpencodeSetupStep({ onNext, onBack, onSkip }: OpencodeSetupStepP
   };
 
   const isReady = opencodeCliStatus?.installed && opencodeCliStatus?.auth?.authenticated;
+  const authMethod = opencodeCliStatus?.auth?.method;
+  const isFreeTierOnly = authMethod === 'free_tier';
 
   const getStatusBadge = () => {
     if (isChecking) {
       return <StatusBadge status="checking" label="Checking..." />;
     }
     if (opencodeCliStatus?.auth?.authenticated) {
-      return <StatusBadge status="authenticated" label="Ready" />;
+      return <StatusBadge status="authenticated" label={isFreeTierOnly ? 'Free Tier' : 'Ready'} />;
     }
     if (opencodeCliStatus?.installed) {
-      return <StatusBadge status="unverified" label="Not Logged In" />;
+      return <StatusBadge status="authenticated" label="Free Tier" />;
     }
     return <StatusBadge status="not_installed" label="Not Installed" />;
   };
@@ -211,7 +213,9 @@ export function OpencodeSetupStep({ onNext, onBack, onSkip }: OpencodeSetupStepP
           <CardDescription>
             {opencodeCliStatus?.installed
               ? opencodeCliStatus.auth?.authenticated
-                ? `Authenticated via ${opencodeCliStatus.auth.method === 'api_key' ? 'API Key' : 'Browser Login'}${opencodeCliStatus.version ? ` (v${opencodeCliStatus.version})` : ''}`
+                ? authMethod === 'free_tier'
+                  ? `Free tier models available${opencodeCliStatus.version ? ` (v${opencodeCliStatus.version})` : ''}`
+                  : `Authenticated via ${authMethod === 'api_key' ? 'API Key' : authMethod === 'env_api_key' ? 'Environment Variable' : 'Browser Login'}${opencodeCliStatus.version ? ` (v${opencodeCliStatus.version})` : ''}`
                 : 'Installed but not authenticated'
               : 'Not installed on your system'}
           </CardDescription>
@@ -219,17 +223,44 @@ export function OpencodeSetupStep({ onNext, onBack, onSkip }: OpencodeSetupStepP
         <CardContent className="space-y-4">
           {/* Success State */}
           {isReady && (
-            <div className="flex items-center gap-3 p-4 rounded-lg bg-green-500/10 border border-green-500/20">
-              <CheckCircle2 className="w-5 h-5 text-green-500" />
-              <div>
-                <p className="font-medium text-foreground">OpenCode CLI is ready!</p>
-                <p className="text-sm text-muted-foreground">
-                  You can use OpenCode models for AI tasks.
-                  {opencodeCliStatus?.version && (
-                    <span className="ml-1">Version: {opencodeCliStatus.version}</span>
-                  )}
-                </p>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 p-4 rounded-lg bg-green-500/10 border border-green-500/20">
+                <CheckCircle2 className="w-5 h-5 text-green-500" />
+                <div>
+                  <p className="font-medium text-foreground">
+                    {isFreeTierOnly ? 'Free Tier Ready' : 'OpenCode CLI is ready!'}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {isFreeTierOnly
+                      ? 'Free models available. Log in to unlock additional providers.'
+                      : 'You can use OpenCode models for AI tasks.'}
+                    {opencodeCliStatus?.version && (
+                      <span className="ml-1">Version: {opencodeCliStatus.version}</span>
+                    )}
+                  </p>
+                </div>
               </div>
+              {isFreeTierOnly && (
+                <div className="space-y-3 p-4 rounded-lg bg-muted/30 border border-border">
+                  <p className="text-sm text-muted-foreground">
+                    Optional: Log in for access to premium models from connected providers:
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 bg-muted px-3 py-2 rounded text-sm font-mono text-foreground">
+                      {opencodeCliStatus?.loginCommand || 'opencode auth login'}
+                    </code>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() =>
+                        copyCommand(opencodeCliStatus?.loginCommand || 'opencode auth login')
+                      }
+                    >
+                      <Copy className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

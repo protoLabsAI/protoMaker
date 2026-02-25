@@ -1223,6 +1223,16 @@ const OPENCODE_PROVIDERS = [
   'amazon-bedrock',
   'github-copilot',
   'copilot',
+  'openrouter',
+  'ollama',
+  'lmstudio',
+  'xai',
+  'deepseek',
+  'azure',
+  'groq',
+  'mistral',
+  'together',
+  'fireworks',
 ] as const;
 
 function getOpenCodeNestedTokens(record: Record<string, unknown>): Record<string, unknown> | null {

@@ -37,9 +37,10 @@ const opencodeLogger = createLogger('OpencodeProvider');
 
 export interface OpenCodeAuthStatus {
   authenticated: boolean;
-  method: 'api_key' | 'oauth' | 'none';
+  method: 'api_key' | 'oauth' | 'env_api_key' | 'free_tier' | 'none';
   hasOAuthToken?: boolean;
   hasApiKey?: boolean;
+  hasEnvApiKey?: boolean;
 }
 
 // =============================================================================
@@ -1139,32 +1140,68 @@ export class OpencodeProvider extends CliProvider {
   // ==========================================================================
 
   /**
+   * Environment variables that indicate API key auth for OpenCode-compatible providers
+   */
+  private static readonly ENV_API_KEY_VARS = [
+    'OPENAI_API_KEY',
+    'ANTHROPIC_API_KEY',
+    'OPENCODE_API_KEY',
+    'GOOGLE_API_KEY',
+    'OPENROUTER_API_KEY',
+    'GROQ_API_KEY',
+    'MISTRAL_API_KEY',
+    'TOGETHER_API_KEY',
+    'FIREWORKS_API_KEY',
+    'DEEPSEEK_API_KEY',
+    'XAI_API_KEY',
+  ] as const;
+
+  /**
    * Check authentication status for OpenCode CLI
    *
-   * Checks for authentication via:
-   * - OAuth token in auth file
-   * - API key in auth file
+   * Checks for authentication via (in priority order):
+   * 1. OAuth token in auth file
+   * 2. API key in auth file
+   * 3. Environment variable API keys
+   *
+   * Note: Even without any auth, OpenCode provides free tier models.
+   * The `detectInstallation()` method handles that case by marking
+   * installed CLIs as authenticated with method 'free_tier'.
    */
   async checkAuth(): Promise<OpenCodeAuthStatus> {
     const authIndicators = await getOpenCodeAuthIndicators();
+    const hasEnvApiKey = OpencodeProvider.ENV_API_KEY_VARS.some((v) => !!process.env[v]?.trim());
 
-    // Check for OAuth token
+    // Check for OAuth token in auth file
     if (authIndicators.hasOAuthToken) {
       return {
         authenticated: true,
         method: 'oauth',
         hasOAuthToken: true,
         hasApiKey: authIndicators.hasApiKey,
+        hasEnvApiKey,
       };
     }
 
-    // Check for API key
+    // Check for API key in auth file
     if (authIndicators.hasApiKey) {
       return {
         authenticated: true,
         method: 'api_key',
         hasOAuthToken: false,
         hasApiKey: true,
+        hasEnvApiKey,
+      };
+    }
+
+    // Check for environment variable API keys
+    if (hasEnvApiKey) {
+      return {
+        authenticated: true,
+        method: 'env_api_key',
+        hasOAuthToken: false,
+        hasApiKey: false,
+        hasEnvApiKey: true,
       };
     }
 
@@ -1173,6 +1210,7 @@ export class OpencodeProvider extends CliProvider {
       method: 'none',
       hasOAuthToken: false,
       hasApiKey: false,
+      hasEnvApiKey: false,
     };
   }
 
@@ -1187,6 +1225,9 @@ export class OpencodeProvider extends CliProvider {
    * - Direct installation (npm global)
    * - NPX (fallback on Windows)
    * Also checks authentication status.
+   *
+   * If the CLI is installed, it's always considered authenticated at minimum
+   * because OpenCode provides free tier models without any auth.
    */
   async detectInstallation(): Promise<InstallationStatus> {
     this.ensureCliDetected();
@@ -1198,9 +1239,12 @@ export class OpencodeProvider extends CliProvider {
       installed,
       path: this.cliPath || undefined,
       method: this.detectedStrategy === 'npx' ? 'npm' : 'cli',
-      authenticated: auth.authenticated,
+      // If CLI is installed, it's at minimum authenticated for free tier models
+      authenticated: installed || auth.authenticated,
+      authMethod: installed && !auth.authenticated ? 'free_tier' : auth.method,
       hasApiKey: auth.hasApiKey,
       hasOAuthToken: auth.hasOAuthToken,
+      hasEnvApiKey: auth.hasEnvApiKey,
     };
   }
 }
