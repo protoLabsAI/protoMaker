@@ -209,10 +209,10 @@ export class GitHubStateChecker {
     const drifts: Drift[] = [];
 
     try {
-      // Load all features in review status
+      // Load all features that could have drift: review, in_progress, and blocked (merged PR).
       const features = await this.featureLoader.getAll(projectPath);
       const reviewFeatures = features.filter(
-        (f) => f.status === 'review' || f.status === 'in_progress'
+        (f) => f.status === 'review' || f.status === 'in_progress' || f.status === 'blocked'
       );
 
       for (const feature of reviewFeatures) {
@@ -232,8 +232,8 @@ export class GitHubStateChecker {
           // Check and emit state change events
           this.checkAndEmitStateChanges(projectPath, feature.id, pr, ciStatus);
 
-          // Check if merged
-          if (pr.merged && feature.status === 'review') {
+          // Check if merged (catches both review and blocked features with landed PRs)
+          if (pr.merged && (feature.status === 'review' || feature.status === 'blocked')) {
             drifts.push({
               type: 'pr-merged-status-stale',
               severity: 'high',
