@@ -3518,3 +3518,25 @@ usageStats:
 - **Situation:** QuarantineEntry has optional stage and violations fields. create.ts needs to return these in HTTP 422 body. Compiler doesn't enforce non-null guarantee.
 - **Root cause:** QuarantineEntry type allows stage/violations to be undefined (accommodates different use cases). HTTP 422 response shape expects these fields. Gap between type definition and API contract.
 - **How to avoid:** Explicit casting documents that HTTP endpoint guarantees these fields (unlike internal service). Adds type safety at call site. Cost: boilerplate cast code.
+
+#### [Pattern] Three-layer model alias system: CLAUDE_CANONICAL_MAP (full IDs like claude-opus-4-6), CLAUDE_MODEL_MAP (short aliases like opus→claude-opus-4-6), DEFAULT_MODELS (fallback). resolveModelString() normalizes all input formats to canonical. (2026-02-25)
+- **Problem solved:** Model string resolution needs to handle user-friendly aliases, prefixed variants, and full model IDs from different sources
+- **Why this works:** Centralizes model ID management; single source of truth when Anthropic updates model versions; different code paths can use different input formats without reimplementing resolver logic
+- **Trade-offs:** Added complexity of maintaining 3 related maps, but eliminated model ID duplication across codebase. Cost is consistency risk if maps drift.
+
+#### [Gotcha] In monorepos, workspace package build order matters: dependency packages must rebuild before consuming packages. libs/types must build before libs/model-resolver, or resolver gets stale types. (2026-02-25)
+- **Situation:** Attempted to rebuild only model-resolver; it loaded old CLAUDE_MODEL_MAP from stale types dist. Only worked after rebuilding types first.
+- **Root cause:** npm workspace resolution loads from dist files in node_modules symlinks. If types dist is older than types source, resolver gets wrong constants.
+- **How to avoid:** Build order adds serialization cost but ensures correctness. Could be automated with proper tsup/tsc dependency declarations in workspace.
+
+#### [Pattern] Shared packages (libs/types) must export model IDs as static constants, not via process.env, because code is used in browser (UI) where process is undefined. (2026-02-25)
+- **Problem solved:** libs/types is consumed by both server and UI. Browser code can't access process.env.
+- **Why this works:** Prevents runtime crash in browser: 'TypeError: process is undefined'. Constants are bundled by Vite.
+- **Trade-offs:** Model IDs are baked into dist at build time, making runtime updates impossible. Mitigated by rebuilding on model change (infrequent).
+
+### Route registered as factory function createDocsRoutes() rather than inline registration (2026-02-25)
+- **Context:** Following established codebase patterns while enabling modularity
+- **Why:** Factory pattern allows routes to be (1) tested in isolation without full server, (2) reused across multiple app instances, (3) potentially configured with injected dependencies. Matches existing codebase convention of Xxx/createXxxRoutes().
+- **Rejected:** Direct app.use(router) at module level - tightly couples routes to server initialization, harder to test
+- **Trade-offs:** One extra function call to create router vs direct registration. Gain testability and modularity.
+- **Breaking if changed:** If routes are inlined directly into index.ts instead of returned from factory, tests can't import createDocsRoutes() separately, and circular dependencies may form if routes need to be shared across server instances.

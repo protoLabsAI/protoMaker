@@ -5,7 +5,7 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 162
+  loaded: 160
   referenced: 74
   successfulFeatures: 74
 ---
@@ -647,7 +647,6 @@ usageStats:
 - **Root cause:** Linear labels are team-scoped resources. The API doesn't support name-based label lookups - you must know the ID beforehand or query the labels list.
 - **How to avoid:** Simplified to text-based label hints in issue description. Trade structured label filtering/querying capability for reduced API calls and complexity. Production may need to query labels upfront and cache.
 
-<<<<<<< Updated upstream
 ### Used two-tier severity classification ('warn' vs 'block') for violations instead of numeric scores (0-10) or detailed enum with many levels. (2026-02-25)
 - **Context:** Defining violation severity to help callers decide whether to reject or log
 - **Why:** Binary severity simplifies decision-making: 'block' violations should always be rejected (safety boundary), 'warn' violations are suspicious but might be legitimate (audit trail). More granular scoring (numeric 0-10) doesn't add value—callers still need a cutoff threshold and reasoning becomes arbitrary.
@@ -680,38 +679,22 @@ usageStats:
 - **Rejected:** Full user object: overkill, harder to serialize. JWT/session claim: requires auth system (out of scope). localStorage only: loses cloud sync.
 - **Trade-offs:** String is lightweight but doesn't scale if features need user ID, email, permissions. Filter logic must handle case sensitivity and exact matches.
 - **Breaking if changed:** If later needing user ID or other fields, must migrate stored string to object structure. Existing string identities need schema upgrade.
-=======
-### Changed PenThemeProvider API from `themes={...} variables={...}` pattern to `document={document}` signature (2026-02-25)
-- **Context:** Updating designs canvas theming infrastructure during brand compliance audit
-- **Why:** Simpler, more focused API surface with explicit document binding; cleaner separation between theme data and application context; reduces prop drilling complexity
-- **Rejected:** Maintaining backwards-compatible props with deprecation warnings; keeping themes/variables structure
-- **Trade-offs:** Easier to use and understand API vs. immediate breaking change for existing consumers; reduced flexibility (must pass document) vs. decoupled design
-- **Breaking if changed:** All existing code using PenThemeProvider with themes/variables props fails immediately; requires coordinated update across codebase
 
-### Changed function signature from `ensureCleanWorktree(workDir, featureId): void` to `ensureCleanWorktree(workDir, featureId, branchName): WorktreeGuardResult` with structured return type (2026-02-25)
-- **Context:** Callers need visibility into what cleanup actions were actually taken (did it commit? did it push?) but void return provides no feedback
-- **Why:** Structured return enables callers to understand operation state without re-querying git. Also documents contract: this function performs cleanup and reports results
-- **Rejected:** Keep void return and have callers check git state afterward (duplicates git queries). Or add separate status methods (more API surface).
-- **Trade-offs:** Observability gained: callers know exactly what happened. API burden gained: all call sites must change to pass branchName parameter.
-- **Breaking if changed:** Any code calling the old void signature will have type errors. The return value is now required information that some callers may not handle
+### Uses query parameter /file?path= instead of path parameter /file/:filename for path traversal validation control (2026-02-25)
+- **Context:** Choosing between REST conventions and security simplicity in file serving endpoint
+- **Why:** Query params are not auto-decoded by Express before handler runs, keeping raw string available for validation. Path params are decoded first, which means validation must account for encoded traversal attempts (e.g., %2e%2e%2f). Query string gives a cleaner validation point.
+- **Rejected:** Path param /file/:filename - would require validating after Express URL-decodes :filename, adding complexity for double-encoding attacks
+- **Trade-offs:** Less 'RESTful' by query param convention, but simpler security model. Trade-off favors security correctness.
+- **Breaking if changed:** If changed to path param, must validate decoded :filename, not raw request. Encoded traversal attacks become possible if validation runs before decoding.
 
-#### [Pattern] Used `setImmediate()` to defer scan execution after HTTP response completion (2026-02-25)
-- **Problem solved:** Scan must run after resume-interrupted endpoint responds, to avoid delaying client response
-- **Why this works:** Ensures non-blocking: HTTP response sends first, then background scan runs. Prevents timeout perception.
-- **Trade-offs:** Slightly more complex control flow vs. guaranteed fast responses. Scan runs asynchronously without visibility to caller.
+#### [Pattern] Title extraction with H1 heading fallback to filename slug - extracts from markdown H1 if present, falls back to derived filename if missing (2026-02-25)
+- **Problem solved:** Generating human-readable document titles for list endpoint and UI display
+- **Why this works:** Solves two UX problems: (1) documents with H1 headings get proper titles, (2) documents without H1 don't cause errors or empty titles. Regex-based extraction is lighter than parsing AST. Fallback to filename slug is always available.
+- **Trade-offs:** More complex logic (regex + fallback) vs simpler single-source logic. Better UX wins the trade-off.
 
-### Made gitWorkflowError field optional in Feature type rather than required-with-null default (2026-02-25)
-- **Context:** Need backward compatibility with existing features that don't have git workflow errors
-- **Why:** Optional field means existing feature.json files are valid without modification; only features that experience git errors need the field populated. Cleaner for data model - field only exists when relevant.
-- **Rejected:** Required field with null default - would force all serialized features to include the field even when empty, polluting JSON
-- **Trade-offs:** Two-state representation (field absent vs present with error) vs single-state (field always present, null when no error); requires null/undefined checks but lighter JSON
-- **Breaking if changed:** Type definitions without gitWorkflowError in older feature.json files are still valid; but code that does `if (feature.gitWorkflowError.message)` without existence check will error
->>>>>>> Stashed changes
-
-
-### Extended DragData interface to support both 'component' and 'node' drag types, allowing single DND provider to handle both component instantiation and node reordering (2026-02-25)
-- **Context:** DndProvider collision detection + handleDragEnd event handling unified for two distinct operations
-- **Why:** Eliminates need for separate drag systems; reuses existing @dnd-kit infrastructure and DndProvider context
-- **Rejected:** Create separate DND contexts/handlers for component instantiation vs node reordering
-- **Trade-offs:** Simpler infrastructure but more complex handleDragEnd logic with type-based operation branching
-- **Breaking if changed:** If drag type discrimination fails (e.g., drag data not properly set), wrong operation executes silently—needs strict validation at drag start
+### Returns 400 (Bad Request) for path traversal attempts, 404 (Not Found) for missing files (2026-02-25)
+- **Context:** Distinguishing between request validation failure and resource not found in error responses
+- **Why:** 400 signals the client sent a malformed/invalid request (traversal attempt fails validation). 404 signals the request was valid but resource doesn't exist. This semantic distinction matters for client error handling and logging.
+- **Rejected:** Always return 404 for both cases - hides validation failures, makes debugging harder. Return 403 for traversal - semantically wrong, 403 is for permission denied, not request validation.
+- **Trade-offs:** More precise semantics vs simpler implementation (could return 404 for everything). Precision helps with monitoring and client-side error recovery.
+- **Breaking if changed:** If changed to always 404, clients cannot distinguish attacks from legitimate missing files. Monitoring/alerting on 400s helps detect traversal attempts.
