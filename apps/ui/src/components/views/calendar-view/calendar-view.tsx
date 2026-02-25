@@ -6,7 +6,7 @@
  * Supports creating, editing, and deleting custom events.
  */
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { DayPicker, getDefaultClassNames } from 'react-day-picker';
 import 'react-day-picker/style.css';
 import { useAppStore } from '@/store/app-store';
@@ -15,9 +15,10 @@ import { CreateEventDialog } from './create-event-dialog';
 import { EventDetailPanel } from './event-detail-panel';
 import { Popover, PopoverContent, PopoverTrigger } from '@protolabs-ai/ui/atoms';
 import { SkeletonPulse, Spinner } from '@protolabs-ai/ui/atoms';
-import { Calendar, ChevronLeft, ChevronRight, ExternalLink, Plus } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, ExternalLink, Plus, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { apiPost } from '@/lib/api-fetch';
 import type { CalendarEvent, CalendarEventType } from '@protolabs-ai/types';
 import type { CreateEventInput, UpdateEventInput } from './use-calendar-events';
 
@@ -215,6 +216,76 @@ function CalendarSkeleton() {
 }
 
 // ============================================================================
+// Google Calendar Nudge
+// ============================================================================
+
+const GCAL_NUDGE_DISMISSED_KEY = 'automaker:gcal-nudge-dismissed';
+
+interface GoogleCalendarNudgeProps {
+  projectPath: string;
+}
+
+function GoogleCalendarNudge({ projectPath }: GoogleCalendarNudgeProps) {
+  const [dismissed, setDismissed] = useState(() => {
+    try {
+      return localStorage.getItem(GCAL_NUDGE_DISMISSED_KEY) === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const [connected, setConnected] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (dismissed) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await apiPost<{ connected: boolean }>('/api/google-calendar/status', {
+          projectPath,
+        });
+        if (!cancelled) setConnected(data.connected);
+      } catch {
+        if (!cancelled) setConnected(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [projectPath, dismissed]);
+
+  const handleDismiss = () => {
+    setDismissed(true);
+    try {
+      localStorage.setItem(GCAL_NUDGE_DISMISSED_KEY, 'true');
+    } catch {
+      // localStorage not available
+    }
+  };
+
+  // Don't show if dismissed, still loading, or already connected
+  if (dismissed || connected === null || connected) return null;
+
+  return (
+    <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-accent/50 border border-border/50 text-xs text-muted-foreground">
+      <Calendar className="h-3.5 w-3.5 shrink-0" />
+      <span>
+        Connect Google Calendar in{' '}
+        <span className="font-medium text-foreground">Project Settings</span> to see your events
+        here.
+      </span>
+      <button
+        onClick={handleDismiss}
+        className="ml-auto p-0.5 rounded hover:bg-accent transition-colors shrink-0"
+        aria-label="Dismiss Google Calendar nudge"
+      >
+        <X className="h-3 w-3" />
+      </button>
+    </div>
+  );
+}
+
+// ============================================================================
 // Main Component
 // ============================================================================
 
@@ -374,6 +445,11 @@ export function CalendarView() {
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
+      </div>
+
+      {/* Google Calendar nudge */}
+      <div className="px-6 pt-2">
+        <GoogleCalendarNudge projectPath={projectPath} />
       </div>
 
       {/* Calendar body */}
