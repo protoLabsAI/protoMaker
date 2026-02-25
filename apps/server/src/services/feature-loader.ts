@@ -33,6 +33,7 @@ import {
 import { addImplementedFeature, type ImplementedFeature } from '../lib/xml-extractor.js';
 import { debugLog } from '../lib/debug-log.js';
 import type { DataIntegrityWatchdogService } from './data-integrity-watchdog-service.js';
+import { featuresByStatus } from '../lib/prometheus.js';
 
 const logger = createLogger('FeatureLoader');
 
@@ -310,6 +311,36 @@ export class FeatureLoader implements FeatureStore {
   }
 
   /**
+   * Sync Prometheus metrics with current feature state
+   * Call this during server initialization to ensure gauges reflect reality
+   */
+  async syncMetrics(projectPath: string): Promise<void> {
+    try {
+      const features = await this.getAll(projectPath);
+      const statusCounts = new Map<string, number>();
+
+      // Count features by status
+      for (const feature of features) {
+        const status = feature.status || 'backlog';
+        statusCounts.set(status, (statusCounts.get(status) || 0) + 1);
+      }
+
+      // Reset gauge and set correct values
+      featuresByStatus.reset();
+      for (const [status, count] of statusCounts.entries()) {
+        featuresByStatus.set({ status }, count);
+      }
+
+      logger.info('Synced Prometheus metrics with feature state', {
+        totalFeatures: features.length,
+        statusCounts: Object.fromEntries(statusCounts),
+      });
+    } catch (error) {
+      logger.error('Failed to sync Prometheus metrics:', error);
+    }
+  }
+
+  /**
    * Normalize a title for comparison (case-insensitive, trimmed)
    */
   private normalizeTitle(title: string): string {
@@ -524,6 +555,9 @@ export class FeatureLoader implements FeatureStore {
       backupDir,
     });
 
+    // Update Prometheus gauge for new feature
+    featuresByStatus.inc({ status: initialStatus });
+
     logger.info(`Created feature ${featureId}`);
     return feature;
   }
@@ -615,6 +649,12 @@ export class FeatureLoader implements FeatureStore {
       };
       updatedStatusHistory = [...updatedStatusHistory, transition];
 
+      // Update Prometheus gauge for status change
+      if (feature.status) {
+        featuresByStatus.dec({ status: feature.status });
+      }
+      featuresByStatus.inc({ status: updates.status });
+
       // Set lifecycle timestamps based on status
       if (updates.status === 'review' && !feature.reviewStartedAt) {
         lifecycleUpdates = { ...lifecycleUpdates, reviewStartedAt: timestamp };
@@ -653,9 +693,18 @@ export class FeatureLoader implements FeatureStore {
    */
   async delete(projectPath: string, featureId: string): Promise<boolean> {
     try {
+      // Get feature status before deleting for metrics
+      const feature = await this.get(projectPath, featureId);
+      const featureStatus = feature?.status;
+
       const featureDir = this.getFeatureDir(projectPath, featureId);
       await secureFs.rm(featureDir, { recursive: true, force: true });
       logger.info(`Deleted feature ${featureId}`);
+
+      // Update Prometheus gauge for deleted feature
+      if (featureStatus) {
+        featuresByStatus.dec({ status: featureStatus });
+      }
 
       // Notify integrity watchdog so it doesn't flag this as data loss
       if (this.integrityWatchdog) {

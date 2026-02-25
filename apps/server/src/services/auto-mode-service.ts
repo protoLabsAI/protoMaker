@@ -86,6 +86,14 @@ import * as secureFs from '../lib/secure-fs.js';
 import type { EventEmitter } from '../lib/events.js';
 import { ensureCleanWorktree } from '../lib/worktree-guard.js';
 import {
+  agentCostTotal,
+  agentExecutionDuration,
+  activeAgentsCount,
+  agentTokensInputTotal,
+  agentTokensOutputTotal,
+  agentExecutionsTotal,
+} from '../lib/prometheus.js';
+import {
   createAutoModeOptions,
   createCustomOptions,
   validateWorkingDirectory,
@@ -1650,6 +1658,7 @@ export class AutoModeService {
       recoveryContext: options?.recoveryContext,
     };
     this.runningFeatures.set(featureId, tempRunningFeature);
+    activeAgentsCount.set(this.runningFeatures.size);
 
     // Save execution state when feature starts
     if (isAutoMode) {
@@ -2082,6 +2091,28 @@ export class AutoModeService {
         await this.featureLoader.update(projectPath, featureId, {
           executionHistory: [...history, record],
         });
+
+        // Increment Prometheus metrics
+        if (record.costUsd) {
+          agentCostTotal.inc({ feature_id: featureId, model: record.model }, record.costUsd);
+        }
+        if (record.durationMs) {
+          agentExecutionDuration.observe(
+            { feature_id: featureId, complexity: currentFeature?.complexity || 'medium' },
+            record.durationMs / 1000
+          );
+        }
+        if (record.inputTokens) {
+          agentTokensInputTotal.inc({ model: record.model }, record.inputTokens);
+        }
+        if (record.outputTokens) {
+          agentTokensOutputTotal.inc({ model: record.model }, record.outputTokens);
+        }
+        agentExecutionsTotal.inc({
+          model: record.model,
+          complexity: currentFeature?.complexity || 'medium',
+          success: 'true',
+        });
       } catch (recordError) {
         logger.warn(`Failed to save execution record for ${featureId}:`, recordError);
       }
@@ -2243,6 +2274,28 @@ export class AutoModeService {
           const history = currentFeature?.executionHistory ?? [];
           await this.featureLoader.update(projectPath, featureId, {
             executionHistory: [...history, record],
+          });
+
+          // Increment Prometheus metrics
+          if (record.costUsd) {
+            agentCostTotal.inc({ feature_id: featureId, model: record.model }, record.costUsd);
+          }
+          if (record.durationMs) {
+            agentExecutionDuration.observe(
+              { feature_id: featureId, complexity: currentFeature?.complexity || 'medium' },
+              record.durationMs / 1000
+            );
+          }
+          if (record.inputTokens) {
+            agentTokensInputTotal.inc({ model: record.model }, record.inputTokens);
+          }
+          if (record.outputTokens) {
+            agentTokensOutputTotal.inc({ model: record.model }, record.outputTokens);
+          }
+          agentExecutionsTotal.inc({
+            model: record.model,
+            complexity: currentFeature?.complexity || 'medium',
+            success: 'false',
           });
         } catch (recordError) {
           logger.warn(`Failed to save execution record for ${featureId}:`, recordError);
@@ -2501,6 +2554,7 @@ export class AutoModeService {
       const current = this.runningFeatures.get(featureId);
       if (current === tempRunningFeature) {
         this.runningFeatures.delete(featureId);
+        activeAgentsCount.set(this.runningFeatures.size);
       }
 
       // Update execution state after feature completes
@@ -2683,6 +2737,7 @@ Complete the pipeline step instructions above. Review the previous work and appl
     // Remove from running features immediately to allow resume
     // The abort signal will still propagate to stop any ongoing execution
     this.runningFeatures.delete(featureId);
+    activeAgentsCount.set(this.runningFeatures.size);
 
     // Cancel retry timer to prevent zombie restart loop
     const retryTimer = this.retryTimers.get(featureId);
@@ -3117,6 +3172,7 @@ Complete the pipeline step instructions above. Review the previous work and appl
       previousErrors: [],
     };
     this.runningFeatures.set(featureId, pipelineRunningFeature);
+    activeAgentsCount.set(this.runningFeatures.size);
 
     try {
       // Validate project path
@@ -3361,6 +3417,7 @@ Complete the pipeline step instructions above. Review the previous work and appl
       const current = this.runningFeatures.get(featureId);
       if (current === pipelineRunningFeature) {
         this.runningFeatures.delete(featureId);
+        activeAgentsCount.set(this.runningFeatures.size);
       }
     }
   }
@@ -3524,6 +3581,7 @@ Address the follow-up instructions above. Review the previous work and make the 
       previousErrors: [],
     };
     this.runningFeatures.set(featureId, followUpRunningFeature);
+    activeAgentsCount.set(this.runningFeatures.size);
 
     try {
       // Update feature status to in_progress BEFORE emitting event
@@ -3774,6 +3832,7 @@ Address the follow-up instructions above. Review the previous work and make the 
       const current = this.runningFeatures.get(featureId);
       if (current === followUpRunningFeature) {
         this.runningFeatures.delete(featureId);
+        activeAgentsCount.set(this.runningFeatures.size);
       }
     }
   }

@@ -82,6 +82,36 @@ export const agentCostTotal = new Counter({
 });
 
 /**
+ * Agent input tokens counter
+ */
+export const agentTokensInputTotal = new Counter({
+  name: 'agent_tokens_input_total',
+  help: 'Total input tokens consumed by agents',
+  labelNames: ['model'],
+  registers: [register],
+});
+
+/**
+ * Agent output tokens counter
+ */
+export const agentTokensOutputTotal = new Counter({
+  name: 'agent_tokens_output_total',
+  help: 'Total output tokens produced by agents',
+  labelNames: ['model'],
+  registers: [register],
+});
+
+/**
+ * Agent executions counter
+ */
+export const agentExecutionsTotal = new Counter({
+  name: 'agent_executions_total',
+  help: 'Total number of agent executions',
+  labelNames: ['model', 'complexity', 'success'],
+  registers: [register],
+});
+
+/**
  * Node.js heap used gauge in bytes
  */
 export const nodeJsHeapUsedBytes = new Gauge({
