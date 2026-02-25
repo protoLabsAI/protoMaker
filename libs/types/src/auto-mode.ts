@@ -29,3 +29,40 @@ export interface RunningFeatureLease {
   /** Unix timestamp (ms) when the lease was first acquired */
   startTime: number;
 }
+
+/**
+ * Public snapshot of the state of a running (or paused) auto-loop.
+ *
+ * Auto-loops are uniquely identified by the composite key
+ * `'projectPath::branchName'` (or `'projectPath::__main__'` for the
+ * main worktree), enabling independent loops per branch within the
+ * same project.
+ */
+export interface AutoLoopState {
+  /** Composite key: `'projectPath::branchName'` or `'projectPath::__main__'` */
+  key: string;
+
+  /** Absolute path to the project being worked on */
+  projectPath: string;
+
+  /** Branch name, or `null` for the main worktree */
+  branchName: string | null;
+
+  /** Whether the loop is currently executing */
+  isRunning: boolean;
+
+  /**
+   * Whether the loop has been paused by the rolling-failure circuit-breaker
+   * or by an explicit call to `pauseLoop`.
+   */
+  isPaused: boolean;
+
+  /** Maximum number of features that may run concurrently in this loop */
+  maxConcurrency: number;
+
+  /**
+   * Number of failures recorded inside the current 60-second rolling window.
+   * When this reaches the threshold (3) the loop is automatically paused.
+   */
+  failureCount: number;
+}
